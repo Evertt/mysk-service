@@ -47,7 +47,7 @@ npm run dev -- --open
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates two demo
 organizations (tenants) and two demo users, both with the password `fieldworks-demo` (set in
-`DEMO_PASSWORD` in `src/lib/server/db/seed.ts`):
+`DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
 | Name        | Email                        | Organizations                                  |
 | ----------- | ---------------------------- | ---------------------------------------------- |
@@ -59,6 +59,26 @@ admins can switch modules on and off under Organization settings). Switch organi
 menu at the top of the sidebar.
 
 These are local demo accounts; don't seed them into a real deployment.
+
+## Testing
+
+```sh
+pnpm test          # everything, once
+pnpm test:unit     # unit and component tests, in watch mode
+pnpm test:e2e      # end-to-end tests only
+```
+
+The browser tests use Playwright's own Chromium, which `pnpm install` downloads (or run
+`pnpm exec playwright install chromium`).
+
+- **Unit tests** sit next to the code they test: `*.spec.ts` runs in Node, `*.svelte.spec.ts` in
+  the browser.
+- **End-to-end tests** are in `e2e/`. They sign in and click through the app like a user, then
+  check the database. Each run seeds a fresh database in a temporary folder and starts its own dev
+  server on a free port (`e2e/global-setup.ts`), so they don't touch `local.db` or a dev server
+  you have running. `e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching
+  organizations, submitting remote forms, and reading the database. Starting the test server
+  makes a running dev server reload once, since both write `.svelte-kit/generated`.
 
 ## Building
 

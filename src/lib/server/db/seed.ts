@@ -28,6 +28,7 @@ import {
 	specialtyForCategory,
 } from "#lib/models.ts";
 
+import { DEMO_PASSWORD, demoUsers } from "./demo.ts";
 import * as schema from "./schema.ts";
 
 const { account, customer, engineer, equipment, material, order, orderLine, session, user } =
@@ -486,28 +487,6 @@ const tenants = [
 		modules: [],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320, contracts: false },
-	},
-];
-
-// --- Demo users ------------------------------------------------------------------------------
-
-/** The password of every demo user. Local demo data only, documented in README.md. */
-const DEMO_PASSWORD = "fieldworks-demo";
-
-/** Who's in which organization, with which role. */
-const demoUsers = [
-	{
-		name: "Avery Admin",
-		email: "admin@fieldworks.example",
-		memberships: [
-			{ organizationId: "org-north", role: "owner" },
-			{ organizationId: "org-south", role: "owner" },
-		],
-	},
-	{
-		name: "Pat Planner",
-		email: "planner@fieldworks.example",
-		memberships: [{ organizationId: "org-north", role: "member" }],
 	},
 ];
 

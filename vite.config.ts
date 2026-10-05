@@ -147,6 +147,22 @@ export default defineConfig({
 					exclude: ["src/**/*.svelte.{test,spec}.{js,ts}"],
 				},
 			},
+
+			{
+				// End-to-end: drives the app in Chrome, against a dev server on a fresh, seeded
+				// database (see e2e/global-setup.ts).
+				test: {
+					name: "e2e",
+					environment: "node",
+					include: ["e2e/**/*.test.ts"],
+					globalSetup: ["e2e/global-setup.ts"],
+					// The files share the database; some check counts or toggle modules.
+					fileParallelism: false,
+					testTimeout: 30_000,
+					hookTimeout: 60_000,
+					expect: { requireAssertions: true },
+				},
+			},
 		],
 	},
 });

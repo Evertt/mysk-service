@@ -1,0 +1,372 @@
+import { describe, expect, test } from "vite-plus/test";
+
+import { countIn, nextCode, organizations, rows, useApp, value } from "./app.ts";
+
+const { north, south } = organizations;
+const app = useApp();
+
+const bodyRows = () => app.page.locator("table").first().locator("tbody tr");
+const customer = (id: number) => rows(`select * from customer where id = ?`, [id]);
+const customerId = (code: string, organizationId: string) =>
+	value<number>(`select id from customer where code = ? and organization_id = ?`, [
+		code,
+		organizationId,
+	]);
+const byName = (a: string, b: string) => a.localeCompare(b);
+
+/** The names of an organization's customers, sorted. */
+async function namesIn(organizationId: string) {
+	const found = await rows<{ name: string }>(
+		`select name from customer where organization_id = ?`,
+		[organizationId],
+	);
+	return found.map((row) => row.name).sort(byName);
+}
+
+/** The customer names on every page of the list, sorted. */
+async function listedNames() {
+	const { page } = app;
+	const names: string[] = [];
+	for (;;) {
+		names.push(...(await bodyRows().locator("td:nth-child(2) a").allInnerTexts()));
+		const next = page.getByRole("button", { name: "Go to next page" });
+		if (await next.isDisabled()) break;
+		await next.click();
+	}
+	await page.getByRole("button", { name: "Go to first page" }).click();
+	return names.sort(byName);
+}
+
+/** Opens a faceted filter of the toolbar and picks one of its options. */
+async function filter(title: string, option: string) {
+	const { page } = app;
+	await page.locator("[data-slot=popover-trigger]", { hasText: title }).click();
+	await page.getByRole("option", { name: new RegExp(`^${option}`) }).click();
+	await page.keyboard.press("Escape");
+}
+
+/** A code that exists in North only (North has more customers than South). */
+const northOnly = () =>
+	value<string>(
+		`select code from customer where organization_id = ? and code not in
+		 (select code from customer where organization_id = ?) order by code limit 1`,
+		[north.id, south.id],
+	);
+
+/** The customer created in North: it has no equipment or orders, so an unscoped delete would
+ * remove it, which makes it the target of the tampering in South. */
+let code: string;
+let target: number;
+
+describe("in North", () => {
+	test("the list shows exactly North's customers, by name, 20 per page", async () => {
+		const { page } = app;
+		await app.go("/customers");
+		const total = await countIn("customer", north.id);
+		expect(await app.rowCount()).toBe(total);
+		expect(await bodyRows().count()).toBe(20);
+		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toBe(
+			`Page 1 of ${Math.ceil(total / 20)}`,
+		);
+		const firstPage = await bodyRows().locator("td:nth-child(2) a").allInnerTexts();
+		expect(firstPage).toEqual([...firstPage].sort(byName));
+		expect(await listedNames()).toEqual(await namesIn(north.id));
+
+		await page.getByRole("button", { name: "Go to next page" }).click();
+		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 2 of/);
+		await page.getByRole("button", { name: "Go to first page" }).click();
+	});
+
+	test("searching finds customers by code and phone", async () => {
+		const { page } = app;
+		const search = page.getByLabel("Search customers…");
+		await search.fill("CUST-0007");
+		await expect.poll(() => bodyRows().count()).toBe(1);
+		expect(await bodyRows().first().innerText()).toContain("CUST-0007");
+
+		const phone = await value<string>(
+			`select phone from customer where organization_id = ? and code = 'CUST-0007'`,
+			[north.id],
+		);
+		await search.fill(phone);
+		await expect.poll(() => bodyRows().first().innerText()).toContain("CUST-0007");
+
+		await search.fill("zzzz-no-match");
+		await page.getByText("No customers found").waitFor();
+
+		await page.getByRole("button", { name: "Reset" }).click();
+		expect(await search.inputValue()).toBe("");
+		expect(await bodyRows().count()).toBe(20);
+	});
+
+	test("filtering by segment and country", async () => {
+		const { page } = app;
+		const count = (where: string) =>
+			value<number>(`select count(*) from customer where organization_id = ? and ${where}`, [
+				north.id,
+			]);
+
+		await filter("Segment", "Enterprise");
+		await expect.poll(() => app.rowCount()).toBe(await count("segment = 'enterprise'"));
+		const segments = await bodyRows().locator('[data-slot="badge"]').allInnerTexts();
+		expect(segments.length).toBeGreaterThan(0);
+		expect(segments.every((segment) => segment.includes("Enterprise"))).toBe(true);
+
+		await filter("Country", "Belgium");
+		await expect
+			.poll(() => app.rowCount())
+			.toBe(await count("segment = 'enterprise' and country = 'Belgium'"));
+
+		await page.getByRole("button", { name: "Reset" }).click();
+		await filter("Country", "Belgium");
+		await expect.poll(() => app.rowCount()).toBe(await count("country = 'Belgium'"));
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
+	});
+
+	test("sorting by open orders puts the busiest customer first", async () => {
+		const { page } = app;
+		const busiest = await rows<{ name: string }>(
+			`with open as (
+				select c.name, count(*) as n from customer c join "order" o on o.customer_id = c.id
+				where c.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
+				group by c.id
+			)
+			select name from open where n = (select max(n) from open)`,
+			[north.id],
+		);
+		await page.locator("th [data-slot=dropdown-menu-trigger]", { hasText: "Open orders" }).click();
+		await page.getByRole("menuitem", { name: "Descending" }).click();
+		const top = await bodyRows().first().locator("td:nth-child(2) a").innerText();
+		expect(busiest.map((row) => row.name)).toContain(top);
+	});
+
+	test("the column menu can show 'Customer since' but not the search column", async () => {
+		const { page } = app;
+		await page.getByRole("button", { name: "View" }).click();
+		const columns = await page.getByRole("menuitemcheckbox").allInnerTexts();
+		expect(columns).toContainEqual(expect.stringContaining("Customer since"));
+		expect(columns.some((column) => /search/i.test(column))).toBe(false);
+		await page.getByRole("menuitemcheckbox", { name: "Customer since" }).click();
+		await page.keyboard.press("Escape");
+		expect(await page.getByRole("columnheader", { name: "Customer since" }).count()).toBe(1);
+	});
+
+	test("the detail page shows the customer's equipment and orders", async () => {
+		const { page } = app;
+		const id = await customerId("CUST-0001", north.id);
+		const units = await value<number>(`select count(*) from equipment where customer_id = ?`, [id]);
+		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
+		const [{ name }] = await customer(id);
+
+		await app.go("/customers/CUST-0001");
+		expect(await page.locator("h1").innerText()).toBe(name);
+		const equipment = page.locator('[data-slot="card"]', { hasText: "Units installed" });
+		expect(await equipment.locator("tbody tr").count()).toBe(units);
+		expect(await equipment.locator("tbody tr a").first().getAttribute("href")).toMatch(
+			/^\/equipment\/[^/]+$/,
+		);
+		const history = page.locator('[data-slot="card"]', { hasText: "most recent first" });
+		expect(await history.locator("tbody tr").count()).toBe(orders);
+		expect(await history.locator("tbody tr a").first().getAttribute("href")).toMatch(
+			/^\/orders\/ORD-/,
+		);
+		expect(await page.locator('a[href^="mailto:"]').count()).toBe(1);
+		expect(await page.locator('a[href^="tel:"]').count()).toBe(1);
+	});
+
+	test("deleting a customer with equipment and orders is refused", async () => {
+		const { page } = app;
+		const id = await customerId("CUST-0001", north.id);
+		const units = await value<number>(`select count(*) from equipment where customer_id = ?`, [id]);
+		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
+
+		await page.getByRole("button", { name: "Delete" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await app.submit(dialog.getByRole("button", { name: "Delete" }));
+		const refusal = await dialog.locator('[data-slot="field-error"]').innerText();
+		expect(refusal).toContain(`${units} equipment unit`);
+		expect(refusal).toContain(`${orders} order`);
+		expect(app.path()).toBe("/customers/CUST-0001");
+		expect(await customerId("CUST-0001", north.id)).toBe(id);
+		await dialog.getByRole("button", { name: "Cancel" }).click();
+	});
+
+	test("the detail page fits a phone screen", async () => {
+		const { page } = app;
+		await page.setViewportSize({ width: 390, height: 844 });
+		try {
+			await app.go("/customers/CUST-0001");
+			expect(
+				await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+			).toBe(true);
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 1000 });
+		}
+	});
+
+	test("an unknown code is a 404", async () => {
+		expect((await app.go("/customers/CUST-9999"))?.status()).toBe(404);
+		expect(await app.page.locator("body").innerText()).toContain("CUST-9999");
+	});
+
+	test("creating a customer validates it first", async () => {
+		const { page } = app;
+		await app.go("/customers/new");
+		await app.submit(page.getByRole("button", { name: "Create customer" }));
+		const issues = await app.issues();
+		expect(issues).toHaveLength(6);
+		expect(issues.some((issue) => issue.includes("\n"))).toBe(false);
+		expect(app.path()).toBe("/customers/new");
+
+		await page.getByLabel("Name").fill("Test Klimaattechniek BV");
+		await page.getByLabel("Segment").selectOption("mid_market");
+		await page.getByLabel("City").fill("Utrecht");
+		await page.getByLabel("Country").selectOption("Netherlands");
+		await page.getByLabel("Contact person").fill("Femke de Vries");
+		await page.getByLabel("Email").fill("femke@klimaat");
+		await page.getByLabel("Phone").fill("call me");
+		await app.submit(page.getByRole("button", { name: "Create customer" }));
+		expect(await app.issues()).toEqual([
+			expect.stringMatching(/valid email/i),
+			expect.stringMatching(/valid phone/i),
+		]);
+		expect(app.path()).toBe("/customers/new");
+	});
+
+	test("a new customer gets North's next code", async () => {
+		const { page } = app;
+		await page.getByLabel("Email").fill("femke@klimaat.example");
+		await page.getByLabel("Phone").fill("+31 30 123 4567");
+		const expected = await nextCode("customer", "code", north.id);
+		await page.getByRole("button", { name: "Create customer" }).click();
+		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
+		await page.waitForLoadState("networkidle");
+		code = app.path().split("/").pop()!;
+		expect(code).toBe(expected);
+		await app.toast("Customer created");
+		await page.getByRole("heading", { level: 1, name: "Test Klimaattechniek BV" }).waitFor();
+		target = await customerId(code, north.id);
+		expect(target).toBeDefined();
+		expect(await page.getByText("No equipment").count()).toBe(1);
+		expect(await page.locator("h1 ~ [data-slot=badge]").innerText()).toContain("Mid-market");
+	});
+
+	test("editing it validates and saves the changes", async () => {
+		const { page } = app;
+		await page.getByRole("link", { name: "Edit" }).click();
+		await page.waitForURL(/\/edit$/);
+		await page.waitForLoadState("networkidle");
+		expect(await page.getByLabel("Name").inputValue()).toBe("Test Klimaattechniek BV");
+		expect(await page.getByLabel("Country").inputValue()).toBe("Netherlands");
+
+		await page.getByLabel("City").fill("");
+		await app.submit(page.getByRole("button", { name: "Save customer" }));
+		expect(await app.issues()).toEqual([expect.stringMatching(/city/i)]);
+		expect(app.path()).toBe(`/customers/${code}/edit`);
+
+		await page.getByLabel("City").fill("Amersfoort");
+		await page.getByLabel("Segment").selectOption("enterprise");
+		await page.getByRole("button", { name: "Save customer" }).click();
+		await page.waitForURL((url) => url.pathname === `/customers/${code}`);
+		// The redirect shows the cached customer first and refreshes it right after.
+		await page.getByText(`${code} · Amersfoort, Netherlands`).waitFor();
+		expect(await page.locator("h1 ~ [data-slot=badge]").innerText()).toContain("Enterprise");
+		const [saved] = await rows(`select code, city, segment from customer where id = ?`, [target]);
+		expect(saved).toEqual({ code, city: "Amersfoort", segment: "enterprise" });
+	});
+});
+
+describe("in South", () => {
+	test("switching organization shows exactly South's customers", async () => {
+		await app.switchOrganization(south.name);
+		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
+		await app.go("/customers");
+		expect(await app.rowCount()).toBe(await countIn("customer", south.id));
+		expect(await listedNames()).toEqual(await namesIn(south.id));
+	});
+
+	test("North's customers are a 404", async () => {
+		const only = await northOnly();
+		for (const path of [`/customers/${only}`, `/customers/${only}/edit`, `/customers/${code}`]) {
+			expect((await app.go(path))?.status(), path).toBe(404);
+		}
+	});
+
+	test("a code both have shows South's customer", async () => {
+		const [own] = await customer(await customerId("CUST-0001", south.id));
+		await app.go("/customers/CUST-0001");
+		expect(await app.page.locator("h1").innerText()).toBe(own.name);
+		await app.go("/customers/CUST-0001/edit");
+		expect(await app.page.getByLabel("Name").inputValue()).toBe(own.name);
+	});
+
+	test("saving with the id of a North customer is refused", async () => {
+		const { page } = app;
+		const own = await customerId("CUST-0001", south.id);
+		const [targetBefore, ownBefore] = [await customer(target), await customer(own)];
+
+		const hidden = page.locator('form input[type="hidden"][name^="id/"]');
+		expect(await hidden.count()).toBe(1);
+		const result = await app.expectingErrors(async () => {
+			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
+			await page.getByLabel("City").fill("Tampered");
+			return app.submit(page.getByRole("button", { name: "Save customer" }));
+		});
+		expect(result).toMatch(/"status":404/);
+		expect(app.path()).toBe("/customers/CUST-0001/edit");
+		expect(await customer(target)).toEqual(targetBefore);
+		expect(await customer(own)).toEqual(ownBefore);
+	});
+
+	test("deleting with the id of a North customer is refused", async () => {
+		const { page } = app;
+		const own = await customerId("CUST-0001", south.id);
+		const [targetBefore, ownBefore] = [await customer(target), await customer(own)];
+
+		await app.go("/customers/CUST-0001");
+		await page.getByRole("button", { name: "Delete" }).click();
+		const dialog = page.getByRole("alertdialog");
+		const hidden = dialog.locator('input[type="hidden"][name^="id/"]');
+		expect(await hidden.count()).toBe(1);
+		const result = await app.expectingErrors(async () => {
+			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
+			return app.submit(dialog.getByRole("button", { name: "Delete" }));
+		});
+		expect(result).toMatch(/"status":404/);
+		expect(app.path()).toBe("/customers/CUST-0001");
+		expect(await customer(target)).toEqual(targetBefore);
+		expect(await customer(own)).toEqual(ownBefore);
+	});
+
+	test("a new customer gets South's next code", async () => {
+		const { page } = app;
+		await app.go("/customers/new");
+		await page.getByLabel("Name").fill("Test Zuid Installaties BV");
+		await page.getByLabel("Segment").selectOption("small_business");
+		await page.getByLabel("City").fill("Eindhoven");
+		await page.getByLabel("Country").selectOption("Netherlands");
+		await page.getByLabel("Contact person").fill("Joris Bakker");
+		await page.getByLabel("Email").fill("joris@zuid.example");
+		await page.getByLabel("Phone").fill("+31 40 123 4567");
+		const expected = await nextCode("customer", "code", south.id);
+		await page.getByRole("button", { name: "Create customer" }).click();
+		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
+		await page.waitForLoadState("networkidle");
+		expect(app.path()).toBe(`/customers/${expected}`);
+		await page.getByRole("heading", { level: 1, name: "Test Zuid Installaties BV" }).waitFor();
+		expect(
+			await rows(`select organization_id from customer where name = 'Test Zuid Installaties BV'`),
+		).toEqual([{ organization_id: south.id }]);
+	});
+
+	test("deleting it removes it, after which it's a 404", async () => {
+		const { page } = app;
+		const created = app.path().split("/").pop()!;
+		await page.getByRole("button", { name: "Delete" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await page.waitForURL((url) => url.pathname === "/customers");
+		expect(await customerId(created, south.id)).toBeUndefined();
+		expect((await app.go(`/customers/${created}`))?.status()).toBe(404);
+	});
+});

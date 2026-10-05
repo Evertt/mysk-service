@@ -1,0 +1,131 @@
+import { describe, expect, test } from "vite-plus/test";
+
+import { organizations, rows, useApp, users, value } from "./app.ts";
+
+const { north, south } = organizations;
+const app = useApp();
+
+const openOrders = (organizationId: string) =>
+	value<number>(
+		`select count(*) from "order" where organization_id = ? and status in ('quote', 'scheduled', 'in_progress')`,
+		[organizationId],
+	);
+const header = () => app.page.locator('[data-sidebar="header"]').innerText();
+const sidebarLink = (name: string) =>
+	app.page.locator('[data-sidebar="content"]').getByRole("link", { name });
+/** The card on the settings page for a module. */
+const moduleCard = (label: string) => app.page.locator("div.rounded-lg.border", { hasText: label });
+
+describe("organizations", () => {
+	test("the admin starts in North, with North's numbers and modules", async () => {
+		await app.go("/");
+		expect(await header()).toContain(north.name);
+		expect(
+			await app.page.getByText("Open orders", { exact: true }).locator("..").innerText(),
+		).toContain(String(await openOrders(north.id)));
+		expect(await sidebarLink("Service contracts").count()).toBe(1);
+	});
+
+	test("switching to South shows South's numbers, without its missing modules", async () => {
+		await app.switchOrganization(south.name);
+		expect(await header()).toContain(south.name);
+		expect(
+			await app.page.getByText("Open orders", { exact: true }).locator("..").innerText(),
+		).toContain(String(await openOrders(south.id)));
+		expect(await sidebarLink("Service contracts").count()).toBe(0);
+		expect((await app.go("/contracts"))?.status()).toBe(404);
+	});
+
+	test("the switch is remembered across page loads", async () => {
+		await app.page.reload();
+		await app.page.waitForLoadState("networkidle");
+		expect(await header()).toContain(south.name);
+	});
+
+	test("switching to an organization you're not a member of is refused", async () => {
+		const { page } = app;
+		await page.locator('[data-sidebar="header"] button').first().click();
+		const result = await app.expectingErrors(async () => {
+			// Point North's entry at an organization the admin doesn't belong to.
+			const entry = page.getByRole("menuitem", { name: north.name });
+			await entry.evaluate((element) => {
+				element.closest("form")!.querySelector<HTMLInputElement>('input[type="hidden"]')!.value =
+					"org-elsewhere";
+			});
+			const [response] = await Promise.all([
+				page.waitForResponse((r) => r.request().method() === "POST"),
+				entry.click(),
+			]);
+			return response.status();
+		});
+		expect(result).toBe(403);
+		await app.go("/");
+		expect(await header()).toContain(south.name);
+	});
+});
+
+describe("modules", () => {
+	const contracts = "Service contracts";
+
+	test("an owner can enable a module for their organization", async () => {
+		const { page } = app;
+		await app.go("/settings");
+		const card = moduleCard(contracts);
+		expect(await card.innerText()).toContain("Disabled");
+		await app.submit(card.getByRole("button", { name: "Enable" }));
+		await card.getByText(/Enabled since/).waitFor();
+		expect(
+			await rows(`select * from organization_module where organization_id = ?`, [south.id]),
+		).toMatchObject([{ module_id: "contracts" }]);
+		// The sidebar follows without a reload.
+		await sidebarLink(contracts).waitFor();
+		await app.go("/contracts");
+		expect(await page.getByRole("heading", { name: "Service contracts" }).count()).toBe(1);
+	});
+
+	test("and disable it again", async () => {
+		await app.go("/settings");
+		const card = moduleCard(contracts);
+		await app.submit(card.getByRole("button", { name: "Disable" }));
+		await card.getByText("Disabled").waitFor();
+		expect(
+			await value(`select count(*) from organization_module where organization_id = ?`, [south.id]),
+		).toBe(0);
+		expect(await sidebarLink(contracts).count()).toBe(0);
+		expect((await app.go("/contracts"))?.status()).toBe(404);
+	});
+
+	test("a member can't change modules", async () => {
+		const { page } = app;
+		// The toggle form as an owner sees it, to submit it as a member.
+		await app.switchOrganization(north.name);
+		await app.go("/settings");
+		const form = await moduleCard(contracts)
+			.locator("form")
+			.evaluate((element: HTMLFormElement) => ({
+				action: element.action,
+				fields: [...new FormData(element)].map(([name, value]) => [name, value as string]),
+				submit: element.querySelector("button")!.name,
+			}));
+
+		await page.context().clearCookies();
+		await app.signIn(users.planner);
+		await app.go("/settings");
+		expect(await header()).toContain(north.name);
+		expect(await page.getByText("Owners and admins can change these.").count()).toBe(1);
+		expect(await moduleCard(contracts).getByRole("button").count()).toBe(0);
+
+		const status = await app.expectingErrors(() =>
+			page.evaluate(async ({ action, fields, submit }) => {
+				// Submitted the way a browser without JavaScript would.
+				const body = new URLSearchParams([...fields, [submit, "off"]]);
+				const headers = { accept: "text/html" };
+				return (await fetch(action, { method: "POST", body, headers })).status;
+			}, form),
+		);
+		expect(status).toBe(403);
+		expect(
+			await value(`select count(*) from organization_module where organization_id = ?`, [north.id]),
+		).toBe(1);
+	});
+});
