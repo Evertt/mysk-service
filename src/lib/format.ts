@@ -5,3 +5,9 @@ const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", 
 export const formatCents = (cents: number) => currency.format(cents / 100);
 
 export const formatDate = (value: Date) => date.format(value);
+
+/** Turns an enum value into a label, e.g. `out_of_service` → `Out of service`. */
+export const humanize = (value: string) => {
+	const text = value.replaceAll("_", " ");
+	return text.charAt(0).toUpperCase() + text.slice(1);
+};

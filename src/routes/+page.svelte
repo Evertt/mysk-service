@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
 
-	import type { PageProps } from "./$types";
+	import { getDashboard } from "./dashboard.remote.js";
 
-	let { data }: PageProps = $props();
+	const data = $derived(await getDashboard());
 </script>
 
 <svelte:head>
@@ -78,7 +79,7 @@
 			<Table.Body>
 				{#each data.upcoming as order (order.id)}
 					<Table.Row>
-						<Table.Cell class="font-medium">{order.number}</Table.Cell>
+						<Table.Cell><OrderLink number={order.number} /></Table.Cell>
 						<Table.Cell>{order.customer}</Table.Cell>
 						<Table.Cell>{order.engineer ?? "Unassigned"}</Table.Cell>
 						<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>

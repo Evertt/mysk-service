@@ -1,14 +1,15 @@
+import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
-
-import type { PageServerLoad } from "./$types";
+import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const openStatuses = ["quote", "scheduled", "in_progress"] as const;
 
-export const load: PageServerLoad = async () => {
+/** Headline numbers and upcoming work for the dashboard. */
+export const getDashboard = query(async () => {
 	const now = new Date();
 	const monthAgo = new Date(now.getTime() - 30 * DAY);
 
@@ -33,7 +34,7 @@ export const load: PageServerLoad = async () => {
 	// Materials plus labour at the engineer's rate, for work completed in the last 30 days.
 	const [revenue] = await db
 		.select({
-			total: sql<number>`coalesce(sum(coalesce(${materials.total}, 0) + ${order.laborHours} * coalesce(${engineer.hourlyRate}, 8500)), 0)`,
+			total: sql<number>`coalesce(sum(coalesce(${materials.total}, 0) + ${order.laborHours} * coalesce(${engineer.hourlyRate}, ${STANDARD_HOURLY_RATE})), 0)`,
 			orders: count(),
 		})
 		.from(order)
@@ -65,4 +66,4 @@ export const load: PageServerLoad = async () => {
 		.limit(6);
 
 	return { open, revenue, fleet, upcoming };
-};
+});

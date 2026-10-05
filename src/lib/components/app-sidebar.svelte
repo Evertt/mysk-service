@@ -9,6 +9,12 @@
 		{ title: "Dashboard", href: resolve("/"), icon: LayoutDashboardIcon },
 		{ title: "Orders", href: resolve("/orders"), icon: ClipboardListIcon },
 	];
+
+	// Sections stay highlighted on their sub-pages, e.g. Orders on an order's detail page.
+	const isActive = (href: string) =>
+		href === resolve("/")
+			? page.url.pathname === href
+			: page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -40,10 +46,7 @@
 				<Sidebar.Menu>
 					{#each items as item (item.href)}
 						<Sidebar.MenuItem>
-							<Sidebar.MenuButton
-								isActive={page.url.pathname === item.href}
-								tooltipContent={item.title}
-							>
+							<Sidebar.MenuButton isActive={isActive(item.href)} tooltipContent={item.title}>
 								{#snippet child({ props })}
 									<a href={item.href} {...props}>
 										<item.icon />

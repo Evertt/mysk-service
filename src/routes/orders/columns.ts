@@ -2,15 +2,16 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import OrderLink from "#lib/components/orders/order-link.svelte";
 import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 import StatusBadge from "#lib/components/orders/status-badge.svelte";
 import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities } from "#lib/models.js";
 
-import type { PageData } from "./$types";
 import OrderActions from "./order-actions.svelte";
+import type { getOrders } from "./orders.remote.js";
 
-export type OrderRow = PageData["orders"][number];
+export type OrderRow = Awaited<ReturnType<typeof getOrders>>[number];
 
 const column = createAppColumnHelper<OrderRow>();
 
@@ -24,6 +25,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("number", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
+		cell: ({ getValue }) => renderComponent(OrderLink, { number: getValue() }),
 		enableHiding: false,
 		meta: { label: "Order" },
 	}),
