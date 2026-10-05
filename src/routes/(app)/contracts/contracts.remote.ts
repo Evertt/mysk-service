@@ -7,16 +7,16 @@ import { formatDate } from "#lib/format.js";
 import { id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireModule } from "#lib/server/session.js";
 
 import { contractFields } from "./contract-schema.js";
 
 /** The day after `date`; contracts run up to and including their last day. */
 const nextDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
-/** All contracts with their customer and the number of units they cover, latest start first. */
+/** The tenant's contracts with their customer and the number of units they cover, latest start first. */
 export const getContracts = query(async () => {
-	requireUser();
+	requireModule("contracts");
 	const coverage = db
 		.select({ contractId: contractEquipment.contractId, units: count().as("units") })
 		.from(contractEquipment)
@@ -39,14 +39,15 @@ export const getContracts = query(async () => {
 		.from(contract)
 		.innerJoin(customer, eq(contract.customerId, customer.id))
 		.leftJoin(coverage, eq(coverage.contractId, contract.id))
+		.where(and(inTenant(contract), inTenant(customer)))
 		.orderBy(desc(contract.startsOn));
 });
 
 /** One contract with its customer and covered equipment, plus the work on that equipment during the contract. */
 export const getContract = query(v.string(), async (number) => {
-	requireUser();
+	requireModule("contracts");
 	const found = await db.query.contract.findFirst({
-		where: eq(contract.number, number),
+		where: and(eq(contract.number, number), inTenant(contract)),
 		with: { customer: true, coverage: { with: { equipment: true } } },
 	});
 	if (!found) error(404, `Contract ${number} not found`);
@@ -73,6 +74,7 @@ export const getContract = query(v.string(), async (number) => {
 					createdAt: true,
 				},
 				where: and(
+					inTenant(order),
 					inArray(
 						order.equipmentId,
 						units.map((unit) => unit.id),
@@ -93,11 +95,12 @@ export const getContract = query(v.string(), async (number) => {
 
 /** Everything the contract form needs to choose from. */
 export const getContractFormOptions = query(async () => {
-	requireUser();
+	requireModule("contracts");
 	const [customers, equipments] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
 			.from(customer)
+			.where(inTenant(customer))
 			.orderBy(asc(customer.name)),
 		db
 			.select({
@@ -110,6 +113,7 @@ export const getContractFormOptions = query(async () => {
 				status: equipment.status,
 			})
 			.from(equipment)
+			.where(inTenant(equipment))
 			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
 	]);
 	return { customers, equipments };
@@ -120,12 +124,17 @@ type ContractInput = v.InferOutput<v.ObjectSchema<typeof contractFields, undefin
 type Problem = { field: "customerId" | "endsOn" | "equipmentIds"; message: string };
 
 /**
- * Checks what the schema can't: the customer exists, the period runs forwards, the units are the
- * customer's own, and none of them is already covered by another contract in the same period.
+ * Checks what the schema can't: the customer exists in the tenant, the period runs forwards, the
+ * units are the customer's own, and none of them is already covered by another of the tenant's
+ * contracts in the same period.
  */
 async function checkContract(id: number | null, input: ContractInput): Promise<Problem[]> {
 	const problems: Problem[] = [];
-	if (!(await db.query.customer.findFirst({ where: eq(customer.id, input.customerId) }))) {
+	const owner = await db.query.customer.findFirst({
+		columns: { id: true },
+		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+	});
+	if (!owner) {
 		problems.push({ field: "customerId", message: "Unknown customer" });
 	}
 	if (input.endsOn <= input.startsOn) {
@@ -135,7 +144,7 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 	const units = await db
 		.select({ id: equipment.id, customerId: equipment.customerId })
 		.from(equipment)
-		.where(inArray(equipment.id, input.equipmentIds));
+		.where(and(inArray(equipment.id, input.equipmentIds), inTenant(equipment)));
 	if (
 		units.length !== new Set(input.equipmentIds).size ||
 		units.some((unit) => unit.customerId !== input.customerId)
@@ -156,6 +165,8 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 			.innerJoin(equipment, eq(contractEquipment.equipmentId, equipment.id))
 			.where(
 				and(
+					inTenant(contract),
+					inTenant(equipment),
 					inArray(contractEquipment.equipmentId, input.equipmentIds),
 					id ? ne(contract.id, id) : undefined,
 					lte(contract.startsOn, input.endsOn),
@@ -173,12 +184,21 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 	return problems;
 }
 
-/** Creates or updates a contract and replaces its coverage; returns the contract number. */
-async function saveContract(id: number | null, input: ContractInput) {
+/**
+ * Creates or updates one of the tenant's contracts and replaces its coverage; returns the contract
+ * number. A new contract gets the tenant's next number: `CTR-<year>-<sequence>`, where the
+ * sequence runs on across years.
+ */
+async function saveContract(organizationId: string, id: number | null, input: ContractInput) {
 	const { equipmentIds, ...fields } = input;
 
 	return db.transaction(async (tx) => {
-		const existing = id ? await tx.query.contract.findFirst({ where: eq(contract.id, id) }) : null;
+		const existing = id
+			? await tx.query.contract.findFirst({
+					columns: { id: true, number: true },
+					where: and(eq(contract.id, id), inTenant(contract)),
+				})
+			: null;
 		if (id && !existing) error(404, "Contract not found");
 
 		let contractId: number;
@@ -186,17 +206,26 @@ async function saveContract(id: number | null, input: ContractInput) {
 		if (existing) {
 			contractId = existing.id;
 			number = existing.number;
-			await tx.update(contract).set(fields).where(eq(contract.id, contractId));
+			await tx
+				.update(contract)
+				.set(fields)
+				.where(and(eq(contract.id, contractId), inTenant(contract)));
+			// The contract was checked to be the tenant's, so its coverage is too.
 			await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, contractId));
 		} else {
-			// The number is derived from the id, which we only know after inserting.
+			// "CTR-2026-0001": the sequence starts at the 10th character.
+			const [last] = await tx
+				.select({
+					sequence: sql<number | null>`max(cast(substr(${contract.number}, 10) as integer))`,
+				})
+				.from(contract)
+				.where(inTenant(contract));
+			number = `CTR-${new Date().getFullYear()}-${String((last?.sequence ?? 0) + 1).padStart(4, "0")}`;
 			const [inserted] = await tx
 				.insert(contract)
-				.values({ ...fields, number: `pending-${crypto.randomUUID()}` })
+				.values({ ...fields, organizationId, number })
 				.returning({ id: contract.id });
 			contractId = inserted.id;
-			number = `CTR-${new Date().getFullYear()}-${String(contractId).padStart(4, "0")}`;
-			await tx.update(contract).set({ number }).where(eq(contract.id, contractId));
 		}
 
 		await tx
@@ -207,10 +236,10 @@ async function saveContract(id: number | null, input: ContractInput) {
 }
 
 export const createContract = form(v.object(contractFields), async (input, issue) => {
-	requireUser();
+	const { organizationId } = requireModule("contracts");
 	const problems = await checkContract(null, input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-	const number = await saveContract(null, input);
+	const number = await saveContract(organizationId, null, input);
 	// Send fresh data along with the redirect (a single-flight mutation); otherwise the page we go
 	// to first shows what it cached before.
 	void getContracts().refresh();
@@ -220,11 +249,11 @@ export const createContract = form(v.object(contractFields), async (input, issue
 export const updateContract = form(
 	v.object({ id: id(), ...contractFields }),
 	async (data, issue) => {
-		requireUser();
+		const { organizationId } = requireModule("contracts");
 		const { id, ...input } = data;
 		const problems = await checkContract(id, input);
 		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-		const number = await saveContract(id, input);
+		const number = await saveContract(organizationId, id, input);
 		void getContracts().refresh();
 		void getContract(number).refresh();
 		redirect(303, `/contracts/${number}`);
@@ -232,11 +261,16 @@ export const updateContract = form(
 );
 
 export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
-	requireUser();
+	requireModule("contracts");
 	// Nothing references a contract; its coverage goes with it.
 	await db.transaction(async (tx) => {
+		const found = await tx.query.contract.findFirst({
+			columns: { id: true },
+			where: and(eq(contract.id, id), inTenant(contract)),
+		});
+		if (!found) error(404, "Contract not found");
 		await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, id));
-		await tx.delete(contract).where(eq(contract.id, id));
+		await tx.delete(contract).where(and(eq(contract.id, id), inTenant(contract)));
 	});
 	void getContracts().refresh();
 	redirect(303, "/contracts");

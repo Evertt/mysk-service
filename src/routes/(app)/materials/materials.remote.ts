@@ -8,30 +8,35 @@ import { id } from "#lib/schema.js";
 import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, material, order, orderLine } from "#lib/server/db/schema.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { materialFields } from "./material-schema.js";
 
-/** Orders that still need their materials. */
-
-/** How many different orders use a material. */
+/** How many different orders of the current tenant use a material. */
 const ordersUsing = async (materialId: number) => {
 	const [row] = await db
 		.select({ count: countDistinct(orderLine.orderId) })
 		.from(orderLine)
-		.where(eq(orderLine.materialId, materialId));
+		.innerJoin(order, eq(orderLine.orderId, order.id))
+		.where(and(eq(orderLine.materialId, materialId), inTenant(order)));
 	return row.count;
 };
 
+/** A material of the current tenant, by id (ids come from the client, so check the tenant). */
+const findMaterial = (id: number) =>
+	db.query.material.findFirst({ where: and(eq(material.id, id), inTenant(material)) });
+
 /** All materials with the number of orders that use them, by name. */
 export const getMaterials = query(async () => {
-	requireUser();
+	requireMember();
 	const usage = db
 		.select({
 			materialId: orderLine.materialId,
 			orders: countDistinct(orderLine.orderId).as("order_count"),
 		})
 		.from(orderLine)
+		.innerJoin(order, eq(orderLine.orderId, order.id))
+		.where(inTenant(order))
 		.groupBy(orderLine.materialId)
 		.as("usage");
 
@@ -47,13 +52,16 @@ export const getMaterials = query(async () => {
 		})
 		.from(material)
 		.leftJoin(usage, eq(usage.materialId, material.id))
+		.where(inTenant(material))
 		.orderBy(asc(material.name));
 });
 
 /** One material with the orders that use it (most recent first) and headline numbers. */
 export const getMaterial = query(v.string(), async (sku) => {
-	requireUser();
-	const found = await db.query.material.findFirst({ where: eq(material.sku, sku) });
+	requireMember();
+	const found = await db.query.material.findFirst({
+		where: and(eq(material.sku, sku), inTenant(material)),
+	});
 	if (!found) error(404, `Material ${sku} not found`);
 
 	// One row per order, in case an order has several lines for the material.
@@ -72,7 +80,7 @@ export const getMaterial = query(v.string(), async (sku) => {
 		.from(orderLine)
 		.innerJoin(order, eq(orderLine.orderId, order.id))
 		.innerJoin(customer, eq(order.customerId, customer.id))
-		.where(eq(orderLine.materialId, found.id))
+		.where(and(eq(orderLine.materialId, found.id), inTenant(order), inTenant(customer)))
 		.groupBy(order.id)
 		.orderBy(desc(order.createdAt), desc(order.id));
 
@@ -93,29 +101,30 @@ export const getMaterial = query(v.string(), async (sku) => {
 	};
 });
 
-/** Another material with the same name (ignoring case), if any. */
+/** Another material of the current tenant with the same name (ignoring case), if any. */
 const sameName = (name: string, exceptId?: number) =>
 	db.query.material.findFirst({
 		columns: { sku: true },
 		where: and(
+			inTenant(material),
 			sql`lower(${material.name}) = lower(${name})`,
 			exceptId ? ne(material.id, exceptId) : undefined,
 		),
 	});
 
 export const createMaterial = form(v.object(materialFields), async (input, issue) => {
-	requireUser();
+	const { organizationId } = requireMember();
 	const duplicate = await sameName(input.name);
 	if (duplicate) invalid(issue.name(`${duplicate.sku} already has this name`));
 
 	const sku = await db.transaction(async (tx) => {
-		// The SKU is derived from the id, which we only know after inserting.
-		const [inserted] = await tx
-			.insert(material)
-			.values({ ...input, sku: `pending-${crypto.randomUUID()}` })
-			.returning({ id: material.id });
-		const sku = `MAT-${String(inserted.id).padStart(4, "0")}`;
-		await tx.update(material).set({ sku }).where(eq(material.id, inserted.id));
+		// SKUs are sequential per tenant: one more than the tenant's highest (MAT-0001 for the first).
+		const [{ last }] = await tx
+			.select({ last: sql<number | null>`max(cast(substr(${material.sku}, 5) as integer))` })
+			.from(material)
+			.where(inTenant(material));
+		const sku = `MAT-${String((last ?? 0) + 1).padStart(4, "0")}`;
+		await tx.insert(material).values({ ...input, organizationId, sku });
 		return sku;
 	});
 	void getMaterials().refresh();
@@ -125,9 +134,9 @@ export const createMaterial = form(v.object(materialFields), async (input, issue
 export const updateMaterial = form(
 	v.object({ id: id(), ...materialFields }),
 	async (data, issue) => {
-		requireUser();
+		requireMember();
 		const { id, ...input } = data;
-		const existing = await db.query.material.findFirst({ where: eq(material.id, id) });
+		const existing = await findMaterial(id);
 		if (!existing) error(404, "Material not found");
 
 		const problems = [];
@@ -146,7 +155,10 @@ export const updateMaterial = form(
 		}
 		if (problems.length) invalid(...problems);
 
-		await db.update(material).set(input).where(eq(material.id, id));
+		await db
+			.update(material)
+			.set(input)
+			.where(and(eq(material.id, id), inTenant(material)));
 		// Send the updated material along, so the page we redirect to doesn't show the old one first.
 		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
@@ -155,7 +167,8 @@ export const updateMaterial = form(
 );
 
 export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
-	requireUser();
+	requireMember();
+	if (!(await findMaterial(id))) error(404, "Material not found");
 	const orders = await ordersUsing(id);
 	if (orders) {
 		invalid(
@@ -163,7 +176,7 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 	await deleteOrRefuse(
-		() => db.delete(material).where(eq(material.id, id)),
+		() => db.delete(material).where(and(eq(material.id, id), inTenant(material))),
 		"Other records still refer to this material. Remove those first.",
 	);
 	void getMaterials().refresh();

@@ -1,6 +1,6 @@
 import { form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
@@ -9,19 +9,19 @@ import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
 
 const orders = (n: number) => (n === 1 ? "1 order" : `${n} orders`);
 
-/** All units with their owner and number of open orders. */
+/** All of the tenant's units with their owner and number of open orders. */
 export const getEquipmentList = query(async () => {
-	requireUser();
+	requireMember();
 	const open = db
 		.select({ equipmentId: order.equipmentId, count: count().as("open_count") })
 		.from(order)
-		.where(inArray(order.status, openOrderStatuses))
+		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)))
 		.groupBy(order.equipmentId)
 		.as("open_orders");
 
@@ -41,14 +41,15 @@ export const getEquipmentList = query(async () => {
 		.from(equipment)
 		.innerJoin(customer, eq(equipment.customerId, customer.id))
 		.leftJoin(open, eq(open.equipmentId, equipment.id))
+		.where(and(inTenant(equipment), inTenant(customer)))
 		.orderBy(asc(equipment.manufacturer), asc(equipment.model));
 });
 
-/** One unit with its owner and service history (most recent first). */
+/** One of the tenant's units with its owner and service history (most recent first). */
 export const getEquipment = query(v.string(), async (serialNumber) => {
-	requireUser();
+	requireMember();
 	const found = await db.query.equipment.findFirst({
-		where: eq(equipment.serialNumber, serialNumber),
+		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
 		with: {
 			customer: true,
 			orders: {
@@ -81,12 +82,13 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 	};
 });
 
-/** Everything the equipment form needs to choose from. */
+/** Everything the equipment form needs to choose from (the tenant's customers). */
 export const getEquipmentFormOptions = query(async () => {
-	requireUser();
+	requireMember();
 	const customers = await db
 		.select({ id: customer.id, code: customer.code, name: customer.name })
 		.from(customer)
+		.where(inTenant(customer))
 		.orderBy(asc(customer.name));
 	return { customers };
 });
@@ -97,7 +99,10 @@ type Problem = {
 	message: string;
 };
 
-/** Checks what the schema can't: uniqueness, references and moving a unit with orders. */
+/**
+ * Checks what the schema can't: a serial number unique within the tenant, a customer of the
+ * tenant, and not moving a unit with orders. `existing` must already be checked to be in the tenant.
+ */
 async function checkUnit(
 	existing: typeof equipment.$inferSelect | undefined,
 	input: EquipmentInput,
@@ -105,7 +110,7 @@ async function checkUnit(
 	const problems: Problem[] = [];
 	const sameSerial = await db.query.equipment.findFirst({
 		columns: { id: true },
-		where: eq(equipment.serialNumber, input.serialNumber),
+		where: and(eq(equipment.serialNumber, input.serialNumber), inTenant(equipment)),
 	});
 	if (sameSerial && sameSerial.id !== existing?.id) {
 		problems.push({
@@ -113,13 +118,17 @@ async function checkUnit(
 			message: "Another unit already has this serial number",
 		});
 	}
-	if (!(await db.query.customer.findFirst({ where: eq(customer.id, input.customerId) }))) {
+	const owner = await db.query.customer.findFirst({
+		columns: { id: true },
+		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+	});
+	if (!owner) {
 		problems.push({ field: "customerId", message: "Unknown customer" });
 	} else if (existing && existing.customerId !== input.customerId) {
 		const [{ total }] = await db
 			.select({ total: count() })
 			.from(order)
-			.where(eq(order.equipmentId, existing.id));
+			.where(and(eq(order.equipmentId, existing.id), inTenant(order)));
 		if (total) {
 			problems.push({
 				field: "customerId",
@@ -137,10 +146,10 @@ async function checkUnit(
 }
 
 export const createEquipment = form(v.object(equipmentFields), async (input, issue) => {
-	requireUser();
+	const { organizationId } = requireMember();
 	const problems = await checkUnit(undefined, input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-	await db.insert(equipment).values(input);
+	await db.insert(equipment).values({ ...input, organizationId });
 	void getEquipmentList().refresh();
 	redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
 });
@@ -148,13 +157,18 @@ export const createEquipment = form(v.object(equipmentFields), async (input, iss
 export const updateEquipment = form(
 	v.object({ id: id(), ...equipmentFields }),
 	async (data, issue) => {
-		requireUser();
+		requireMember();
 		const { id, ...input } = data;
-		const existing = await db.query.equipment.findFirst({ where: eq(equipment.id, id) });
+		const existing = await db.query.equipment.findFirst({
+			where: and(eq(equipment.id, id), inTenant(equipment)),
+		});
 		if (!existing) error(404, "Equipment not found");
 		const problems = await checkUnit(existing, input);
 		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-		await db.update(equipment).set(input).where(eq(equipment.id, id));
+		await db
+			.update(equipment)
+			.set(input)
+			.where(and(eq(equipment.id, id), inTenant(equipment)));
 		void getEquipmentList().refresh();
 		void getEquipment(input.serialNumber).refresh();
 		redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
@@ -162,18 +176,23 @@ export const updateEquipment = form(
 );
 
 export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
-	requireUser();
+	requireMember();
+	const existing = await db.query.equipment.findFirst({
+		columns: { id: true },
+		where: and(eq(equipment.id, id), inTenant(equipment)),
+	});
+	if (!existing) error(404, "Equipment not found");
 	const [{ total }] = await db
 		.select({ total: count() })
 		.from(order)
-		.where(eq(order.equipmentId, id));
+		.where(and(eq(order.equipmentId, id), inTenant(order)));
 	if (total) {
 		invalid(
 			`This unit can't be deleted: ${orders(total)} refer to it. Set its status to decommissioned instead.`,
 		);
 	}
 	await deleteOrRefuse(
-		() => db.delete(equipment).where(eq(equipment.id, id)),
+		() => db.delete(equipment).where(and(eq(equipment.id, id), inTenant(equipment))),
 		"Other records still refer to this unit. Remove those first.",
 	);
 	void getEquipmentList().refresh();

@@ -9,21 +9,19 @@ import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { engineerFields } from "./engineer-schema.js";
 
-/** Orders that still need work: quoted, scheduled or under way. */
-
 const DAY = 24 * 60 * 60 * 1000;
 
-/** All engineers with the number of open orders assigned to them, by name. */
+/** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = query(async () => {
-	requireUser();
+	requireMember();
 	const open = db
 		.select({ engineerId: order.engineerId, count: count().as("open_count") })
 		.from(order)
-		.where(inArray(order.status, openOrderStatuses))
+		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)))
 		.groupBy(order.engineerId)
 		.as("open");
 
@@ -42,21 +40,24 @@ export const getEngineers = query(async () => {
 		})
 		.from(engineer)
 		.leftJoin(open, eq(open.engineerId, engineer.id))
+		.where(inTenant(engineer))
 		.orderBy(asc(engineer.name));
 });
 
-/** Parses an id from the URL, or a 404. */
+/** Parses an id from the URL, or a 404. Ids are global: look them up with `inTenant(engineer)`. */
 function parseId(value: string) {
 	const parsed = Number(value);
 	if (!Number.isSafeInteger(parsed) || parsed < 1) error(404, `Engineer ${value} not found`);
 	return parsed;
 }
 
-/** One engineer with their open and recently completed orders and last month's numbers. */
+/** One of the tenant's engineers with their open and recent orders and last month's numbers. */
 export const getEngineer = query(v.string(), async (param) => {
-	requireUser();
+	requireMember();
 	const engineerId = parseId(param);
-	const found = await db.query.engineer.findFirst({ where: eq(engineer.id, engineerId) });
+	const found = await db.query.engineer.findFirst({
+		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
+	});
 	if (!found) error(404, `Engineer ${param} not found`);
 
 	const columns = {
@@ -78,19 +79,25 @@ export const getEngineer = query(v.string(), async (param) => {
 			.select(columns)
 			.from(order)
 			.innerJoin(customer, eq(order.customerId, customer.id))
-			.where(and(eq(order.engineerId, engineerId), inArray(order.status, openOrderStatuses)))
+			.where(
+				and(
+					inTenant(order),
+					eq(order.engineerId, engineerId),
+					inArray(order.status, openOrderStatuses),
+				),
+			)
 			.orderBy(sql`${order.scheduledFor} is null`, asc(order.scheduledFor), asc(order.id)),
 		db
 			.select(columns)
 			.from(order)
 			.innerJoin(customer, eq(order.customerId, customer.id))
-			.where(and(eq(order.engineerId, engineerId), isNotNull(order.completedAt)))
+			.where(and(inTenant(order), eq(order.engineerId, engineerId), isNotNull(order.completedAt)))
 			.orderBy(desc(order.completedAt))
 			.limit(10),
 		db
 			.select({ laborHours: order.laborHours })
 			.from(order)
-			.where(and(eq(order.engineerId, engineerId), gte(order.completedAt, since))),
+			.where(and(inTenant(order), eq(order.engineerId, engineerId), gte(order.completedAt, since))),
 	]);
 
 	const hours = lastMonth.reduce((sum, row) => sum + row.laborHours, 0);
@@ -106,23 +113,28 @@ export const getEngineer = query(v.string(), async (param) => {
 	};
 });
 
-/** Whether another engineer already uses this email address. */
+/** Whether another of the tenant's engineers already uses this email address. */
 async function emailTaken(email: string, exceptId?: number) {
 	const other = await db.query.engineer.findFirst({
 		columns: { id: true },
-		where: exceptId
-			? and(eq(engineer.email, email), ne(engineer.id, exceptId))
-			: eq(engineer.email, email),
+		where: and(
+			inTenant(engineer),
+			eq(engineer.email, email),
+			exceptId ? ne(engineer.id, exceptId) : undefined,
+		),
 	});
 	return !!other;
 }
 
 export const createEngineer = form(v.object(engineerFields), async (input, issue) => {
-	requireUser();
+	const { organizationId } = requireMember();
 	if (await emailTaken(input.email)) {
 		invalid(issue.email("Another engineer already uses this email address"));
 	}
-	const [created] = await db.insert(engineer).values(input).returning({ id: engineer.id });
+	const [created] = await db
+		.insert(engineer)
+		.values({ ...input, organizationId })
+		.returning({ id: engineer.id });
 	void getEngineers().refresh();
 	redirect(303, `/engineers/${created.id}`);
 });
@@ -130,17 +142,20 @@ export const createEngineer = form(v.object(engineerFields), async (input, issue
 export const updateEngineer = form(
 	v.object({ id: id(), ...engineerFields }),
 	async (data, issue) => {
-		requireUser();
+		requireMember();
 		const { id, ...input } = data;
-		if (
-			!(await db.query.engineer.findFirst({ columns: { id: true }, where: eq(engineer.id, id) }))
-		) {
-			error(404, "Engineer not found");
-		}
+		const found = await db.query.engineer.findFirst({
+			columns: { id: true },
+			where: and(eq(engineer.id, id), inTenant(engineer)),
+		});
+		if (!found) error(404, "Engineer not found");
 		if (await emailTaken(input.email, id)) {
 			invalid(issue.email("Another engineer already uses this email address"));
 		}
-		await db.update(engineer).set(input).where(eq(engineer.id, id));
+		await db
+			.update(engineer)
+			.set(input)
+			.where(and(eq(engineer.id, id), inTenant(engineer)));
 		void getEngineers().refresh();
 		void getEngineer(String(id)).refresh();
 		redirect(303, `/engineers/${id}`);
@@ -148,14 +163,16 @@ export const updateEngineer = form(
 );
 
 export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
-	requireUser();
-	const found = await db.query.engineer.findFirst({ where: eq(engineer.id, id) });
+	requireMember();
+	const found = await db.query.engineer.findFirst({
+		where: and(eq(engineer.id, id), inTenant(engineer)),
+	});
 	if (!found) error(404, "Engineer not found");
 
 	const [{ assigned }] = await db
 		.select({ assigned: count() })
 		.from(order)
-		.where(eq(order.engineerId, id));
+		.where(and(inTenant(order), eq(order.engineerId, id)));
 	if (assigned > 0) {
 		const orders = assigned === 1 ? "1 order is" : `${assigned} orders are`;
 		invalid(
@@ -164,7 +181,7 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 	}
 
 	await deleteOrRefuse(
-		() => db.delete(engineer).where(eq(engineer.id, id)),
+		() => db.delete(engineer).where(and(eq(engineer.id, id), inTenant(engineer))),
 		"Other records still refer to this engineer. Mark them inactive instead.",
 	);
 	void getEngineers().refresh();

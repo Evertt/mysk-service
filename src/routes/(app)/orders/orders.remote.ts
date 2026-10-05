@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { form, query, type RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -14,13 +14,13 @@ import {
 	orderLine,
 } from "#lib/server/db/schema.js";
 import { laborCost, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { orderFields } from "./order-schema.js";
 
 /** All orders with their customer, equipment, engineer and totals, newest first. */
 export const getOrders = query(async () => {
-	requireUser();
+	requireMember();
 	const lines = db
 		.select({
 			orderId: orderLine.orderId,
@@ -28,6 +28,7 @@ export const getOrders = query(async () => {
 			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("line_total"),
 		})
 		.from(orderLine)
+		.innerJoin(order, and(eq(orderLine.orderId, order.id), inTenant(order)))
 		.groupBy(orderLine.orderId)
 		.as("lines");
 
@@ -55,10 +56,11 @@ export const getOrders = query(async () => {
 			materialsTotal: sql<number>`coalesce(${lines.total}, 0)`,
 		})
 		.from(order)
-		.innerJoin(customer, eq(order.customerId, customer.id))
-		.leftJoin(equipment, eq(order.equipmentId, equipment.id))
-		.leftJoin(engineer, eq(order.engineerId, engineer.id))
+		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+		.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
+		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
 		.leftJoin(lines, eq(lines.orderId, order.id))
+		.where(inTenant(order))
 		.orderBy(desc(order.createdAt));
 
 	return rows.map((row) => {
@@ -69,9 +71,9 @@ export const getOrders = query(async () => {
 
 /** One order with everything on it, plus other orders for the same equipment. */
 export const getOrder = query(v.string(), async (number) => {
-	requireUser();
+	requireMember();
 	const found = await db.query.order.findFirst({
-		where: eq(order.number, number),
+		where: and(eq(order.number, number), inTenant(order)),
 		with: {
 			customer: true,
 			equipment: true,
@@ -85,7 +87,11 @@ export const getOrder = query(v.string(), async (number) => {
 	const history = found.equipmentId
 		? await db.query.order.findMany({
 				columns: { id: true, number: true, type: true, status: true, createdAt: true },
-				where: and(eq(order.equipmentId, found.equipmentId), ne(order.id, found.id)),
+				where: and(
+					eq(order.equipmentId, found.equipmentId),
+					ne(order.id, found.id),
+					inTenant(order),
+				),
 				orderBy: desc(order.createdAt),
 				limit: 8,
 			})
@@ -109,11 +115,12 @@ export const getOrder = query(v.string(), async (number) => {
 
 /** Everything the order form needs to choose from. */
 export const getOrderFormOptions = query(async () => {
-	requireUser();
+	requireMember();
 	const [customers, equipments, engineers, materials] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
 			.from(customer)
+			.where(inTenant(customer))
 			.orderBy(asc(customer.name)),
 		db
 			.select({
@@ -124,6 +131,7 @@ export const getOrderFormOptions = query(async () => {
 				serialNumber: equipment.serialNumber,
 			})
 			.from(equipment)
+			.where(inTenant(equipment))
 			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
 		db
 			.select({
@@ -133,6 +141,7 @@ export const getOrderFormOptions = query(async () => {
 				active: engineer.active,
 			})
 			.from(engineer)
+			.where(inTenant(engineer))
 			.orderBy(asc(engineer.name)),
 		db
 			.select({
@@ -143,6 +152,7 @@ export const getOrderFormOptions = query(async () => {
 				unitPrice: material.unitPrice,
 			})
 			.from(material)
+			.where(inTenant(material))
 			.orderBy(asc(material.name)),
 	]);
 	return { customers, equipments, engineers, materials };
@@ -150,14 +160,18 @@ export const getOrderFormOptions = query(async () => {
 
 type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 
-/** Creates or updates an order and replaces its lines; returns the order number. */
+/** Creates or updates an order in the current tenant and replaces its lines; returns its number. */
 async function saveOrder(id: number | null, input: OrderInput) {
+	const { organizationId } = requireMember();
 	const { lines, ...fields } = input;
 	const completed = fields.status === "completed" || fields.status === "invoiced";
 
 	return db.transaction(async (tx) => {
 		const existing = id
-			? await tx.query.order.findFirst({ where: eq(order.id, id), with: { lines: true } })
+			? await tx.query.order.findFirst({
+					where: and(eq(order.id, id), inTenant(order)),
+					with: { lines: true },
+				})
 			: undefined;
 		if (id && !existing) error(404, "Order not found");
 
@@ -172,17 +186,23 @@ async function saveOrder(id: number | null, input: OrderInput) {
 		if (existing) {
 			orderId = existing.id;
 			number = existing.number;
-			await tx.update(order).set(values).where(eq(order.id, orderId));
+			await tx
+				.update(order)
+				.set(values)
+				.where(and(eq(order.id, orderId), inTenant(order)));
 			await tx.delete(orderLine).where(eq(orderLine.orderId, orderId));
 		} else {
-			// The number is derived from the id, which we only know after inserting.
+			// Numbers are sequential per tenant, across years: ORD-2026-00001, ORD-2026-00002, …
+			const [{ last }] = await tx
+				.select({ last: sql<number | null>`max(cast(substr(${order.number}, 10) as integer))` })
+				.from(order)
+				.where(inTenant(order));
+			number = `ORD-${new Date().getFullYear()}-${String((last ?? 0) + 1).padStart(5, "0")}`;
 			const [inserted] = await tx
 				.insert(order)
-				.values({ ...values, number: `pending-${crypto.randomUUID()}` })
+				.values({ ...values, organizationId, number })
 				.returning({ id: order.id });
 			orderId = inserted.id;
-			number = `ORD-${new Date().getFullYear()}-${String(orderId).padStart(5, "0")}`;
-			await tx.update(order).set({ number }).where(eq(order.id, orderId));
 		}
 
 		if (lines.length) {
@@ -194,9 +214,12 @@ async function saveOrder(id: number | null, input: OrderInput) {
 						.select({ id: material.id, unitPrice: material.unitPrice })
 						.from(material)
 						.where(
-							inArray(
-								material.id,
-								lines.map((line) => line.materialId),
+							and(
+								inArray(
+									material.id,
+									lines.map((line) => line.materialId),
+								),
+								inTenant(material),
 							),
 						)
 				).map((row) => [row.id, row.unitPrice]),
@@ -214,46 +237,85 @@ async function saveOrder(id: number | null, input: OrderInput) {
 	});
 }
 
-type Problem = { field: "customerId" | "equipmentId" | "engineerId"; message: string };
+type Problem =
+	| { field: "customerId" | "equipmentId" | "engineerId"; message: string }
+	| { line: number; message: string };
 
-/** Checks that the order's references exist and belong together. */
+/** Checks that the order's references exist in the current tenant and belong together. */
 async function checkReferences(input: OrderInput): Promise<Problem[]> {
 	const problems: Problem[] = [];
-	if (!(await db.query.customer.findFirst({ where: eq(customer.id, input.customerId) }))) {
-		problems.push({ field: "customerId", message: "Unknown customer" });
+	const [found, unit, assignee, materials] = await Promise.all([
+		db.query.customer.findFirst({
+			columns: { id: true },
+			where: and(eq(customer.id, input.customerId), inTenant(customer)),
+		}),
+		input.equipmentId
+			? db.query.equipment.findFirst({
+					columns: { customerId: true },
+					where: and(eq(equipment.id, input.equipmentId), inTenant(equipment)),
+				})
+			: undefined,
+		input.engineerId
+			? db.query.engineer.findFirst({
+					columns: { id: true },
+					where: and(eq(engineer.id, input.engineerId), inTenant(engineer)),
+				})
+			: undefined,
+		input.lines.length
+			? db
+					.select({ id: material.id })
+					.from(material)
+					.where(
+						and(
+							inArray(
+								material.id,
+								input.lines.map((line) => line.materialId),
+							),
+							inTenant(material),
+						),
+					)
+			: [],
+	]);
+	if (!found) problems.push({ field: "customerId", message: "Unknown customer" });
+	if (input.equipmentId && unit?.customerId !== input.customerId) {
+		problems.push({ field: "equipmentId", message: "This equipment belongs to another customer" });
 	}
-	if (input.equipmentId) {
-		const unit = await db.query.equipment.findFirst({ where: eq(equipment.id, input.equipmentId) });
-		if (unit?.customerId !== input.customerId) {
-			problems.push({
-				field: "equipmentId",
-				message: "This equipment belongs to another customer",
-			});
-		}
-	}
-	if (
-		input.engineerId &&
-		!(await db.query.engineer.findFirst({ where: eq(engineer.id, input.engineerId) }))
-	) {
+	if (input.engineerId && !assignee) {
 		problems.push({ field: "engineerId", message: "Unknown engineer" });
 	}
+	const known = new Set(materials.map((row) => row.id));
+	input.lines.forEach((line, index) => {
+		if (!known.has(line.materialId)) problems.push({ line: index, message: "Unknown material" });
+	});
 	return problems;
 }
 
-export const createOrder = form(v.object(orderFields), async (input, issue) => {
-	requireUser();
+const orderSchema = v.object(orderFields);
+
+/** The form issue for a problem found by `checkReferences`. */
+function toIssue(
+	issue: RemoteFormInvalidField<v.InferInput<typeof orderSchema>>,
+	problem: Problem,
+) {
+	return "line" in problem
+		? issue.lines[problem.line].materialId(problem.message)
+		: issue[problem.field](problem.message);
+}
+
+export const createOrder = form(orderSchema, async (input, issue) => {
+	requireMember();
 	const problems = await checkReferences(input);
-	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
 	const number = await saveOrder(null, input);
 	void getOrders().refresh();
 	redirect(303, `/orders/${number}`);
 });
 
 export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (data, issue) => {
-	requireUser();
+	requireMember();
 	const { id, ...input } = data;
 	const problems = await checkReferences(input);
-	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
 	const number = await saveOrder(id, input);
 	void getOrders().refresh();
 	void getOrder(number).refresh();
@@ -261,8 +323,12 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 });
 
 export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
-	requireUser();
-	await db.delete(order).where(eq(order.id, id));
+	requireMember();
+	const deleted = await db
+		.delete(order)
+		.where(and(eq(order.id, id), inTenant(order)))
+		.returning({ id: order.id });
+	if (!deleted.length) error(404, "Order not found");
 	void getOrders().refresh();
 	redirect(303, "/orders");
 });

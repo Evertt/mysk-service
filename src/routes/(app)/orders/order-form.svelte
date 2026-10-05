@@ -40,6 +40,9 @@
 
 	// Equipment is limited to the chosen customer's units.
 	let customerId = $derived(order ? String(order.customerId) : "");
+	// Reset when the customer changes: a select whose value is no longer among its options has no
+	// selection at all, and would then be left out of the submission.
+	let equipmentId = $derived(order?.equipmentId ? String(order.equipmentId) : "");
 	const equipmentOptions = $derived(
 		options.equipments
 			.filter((unit) => String(unit.customerId) === customerId)
@@ -116,14 +119,18 @@
 						value: String(c.id),
 						label: `${c.name} (${c.code})`,
 					}))}
-					onchange={(value: string) => (customerId = value)}
+					onchange={(value: string) => {
+						customerId = value;
+						equipmentId = "";
+					}}
 				/>
 				<SelectField
 					field={fields.equipmentId}
 					label="Equipment"
 					placeholder={customerId ? "None (new installation)" : "Choose a customer first"}
-					value={order?.equipmentId ? String(order.equipmentId) : ""}
+					value={equipmentId}
 					options={equipmentOptions}
+					onchange={(value: string) => (equipmentId = value)}
 				/>
 				<SelectField
 					field={fields.type}
