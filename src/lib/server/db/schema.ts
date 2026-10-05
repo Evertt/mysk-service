@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import {
 	contractLevels,
@@ -13,6 +13,8 @@ import {
 	orderTypes,
 } from "#lib/models.ts";
 
+import { organization } from "./auth.schema.ts";
+
 export const task = sqliteTable("task", {
 	id: text("id")
 		.primaryKey()
@@ -21,84 +23,137 @@ export const task = sqliteTable("task", {
 	priority: integer("priority").notNull().default(1),
 });
 
+/**
+ * The tenant a row belongs to. Every top-level business table has one; child rows (order lines,
+ * contract coverage) belong to their parent's tenant. Queries scope by it with `inTenant()` from
+ * `#lib/server/session.ts`.
+ */
+const organizationId = () =>
+	text("organization_id")
+		.notNull()
+		.references(() => organization.id, { onDelete: "cascade" });
+
 const createdAt = () =>
 	integer("created_at", { mode: "timestamp" })
 		.notNull()
 		.default(sql`(unixepoch())`);
 
 /** A company that owns equipment and places orders. */
-export const customer = sqliteTable("customer", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	code: text("code").notNull().unique(),
-	name: text("name").notNull(),
-	contactName: text("contact_name").notNull(),
-	email: text("email").notNull(),
-	phone: text("phone").notNull(),
-	city: text("city").notNull(),
-	country: text("country").notNull(),
-	segment: text("segment", { enum: customerSegments }).notNull(),
-	createdAt: createdAt(),
-});
+export const customer = sqliteTable(
+	"customer",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		code: text("code").notNull(),
+		name: text("name").notNull(),
+		contactName: text("contact_name").notNull(),
+		email: text("email").notNull(),
+		phone: text("phone").notNull(),
+		city: text("city").notNull(),
+		country: text("country").notNull(),
+		segment: text("segment", { enum: customerSegments }).notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same code.
+		uniqueIndex("customer_organization_code").on(table.organizationId, table.code),
+	],
+);
 
 /** A field engineer who carries out orders. */
-export const engineer = sqliteTable("engineer", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	name: text("name").notNull(),
-	email: text("email").notNull().unique(),
-	phone: text("phone").notNull(),
-	specialty: text("specialty", { enum: engineerSpecialties }).notNull(),
-	region: text("region").notNull(),
-	/** In cents. */
-	hourlyRate: integer("hourly_rate").notNull(),
-	active: integer("active", { mode: "boolean" }).notNull().default(true),
-	hiredAt: integer("hired_at", { mode: "timestamp" }).notNull(),
-});
+export const engineer = sqliteTable(
+	"engineer",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		name: text("name").notNull(),
+		email: text("email").notNull(),
+		phone: text("phone").notNull(),
+		specialty: text("specialty", { enum: engineerSpecialties }).notNull(),
+		region: text("region").notNull(),
+		/** In cents. */
+		hourlyRate: integer("hourly_rate").notNull(),
+		active: integer("active", { mode: "boolean" }).notNull().default(true),
+		hiredAt: integer("hired_at", { mode: "timestamp" }).notNull(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same email.
+		uniqueIndex("engineer_organization_email").on(table.organizationId, table.email),
+	],
+);
 
 /** A machine installed at a customer site. */
-export const equipment = sqliteTable("equipment", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	serialNumber: text("serial_number").notNull().unique(),
-	model: text("model").notNull(),
-	manufacturer: text("manufacturer").notNull(),
-	category: text("category", { enum: equipmentCategories }).notNull(),
-	status: text("status", { enum: equipmentStatuses }).notNull(),
-	customerId: integer("customer_id")
-		.notNull()
-		.references(() => customer.id),
-	installedAt: integer("installed_at", { mode: "timestamp" }).notNull(),
-	warrantyUntil: integer("warranty_until", { mode: "timestamp" }).notNull(),
-});
+export const equipment = sqliteTable(
+	"equipment",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		serialNumber: text("serial_number").notNull(),
+		model: text("model").notNull(),
+		manufacturer: text("manufacturer").notNull(),
+		category: text("category", { enum: equipmentCategories }).notNull(),
+		status: text("status", { enum: equipmentStatuses }).notNull(),
+		customerId: integer("customer_id")
+			.notNull()
+			.references(() => customer.id),
+		installedAt: integer("installed_at", { mode: "timestamp" }).notNull(),
+		warrantyUntil: integer("warranty_until", { mode: "timestamp" }).notNull(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same serialNumber.
+		uniqueIndex("equipment_organization_serial_number").on(
+			table.organizationId,
+			table.serialNumber,
+		),
+	],
+);
 
 /** A stocked part or consumable that orders use. */
-export const material = sqliteTable("material", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	sku: text("sku").notNull().unique(),
-	name: text("name").notNull(),
-	unit: text("unit", { enum: materialUnits }).notNull(),
-	/** In cents. */
-	unitPrice: integer("unit_price").notNull(),
-	stock: integer("stock").notNull(),
-});
+export const material = sqliteTable(
+	"material",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		sku: text("sku").notNull(),
+		name: text("name").notNull(),
+		unit: text("unit", { enum: materialUnits }).notNull(),
+		/** In cents. */
+		unitPrice: integer("unit_price").notNull(),
+		stock: integer("stock").notNull(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same sku.
+		uniqueIndex("material_organization_sku").on(table.organizationId, table.sku),
+	],
+);
 
 /** A work order for a customer, usually on one of their pieces of equipment. */
-export const order = sqliteTable("order", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	number: text("number").notNull().unique(),
-	customerId: integer("customer_id")
-		.notNull()
-		.references(() => customer.id),
-	equipmentId: integer("equipment_id").references(() => equipment.id),
-	/** Unassigned while the order is a quote. */
-	engineerId: integer("engineer_id").references(() => engineer.id),
-	type: text("type", { enum: orderTypes }).notNull(),
-	status: text("status", { enum: orderStatuses }).notNull(),
-	priority: text("priority", { enum: orderPriorities }).notNull(),
-	description: text("description").notNull(),
-	scheduledFor: integer("scheduled_for", { mode: "timestamp" }),
-	completedAt: integer("completed_at", { mode: "timestamp" }),
-	laborHours: real("labor_hours").notNull().default(0),
-	createdAt: createdAt(),
-});
+export const order = sqliteTable(
+	"order",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		number: text("number").notNull(),
+		customerId: integer("customer_id")
+			.notNull()
+			.references(() => customer.id),
+		equipmentId: integer("equipment_id").references(() => equipment.id),
+		/** Unassigned while the order is a quote. */
+		engineerId: integer("engineer_id").references(() => engineer.id),
+		type: text("type", { enum: orderTypes }).notNull(),
+		status: text("status", { enum: orderStatuses }).notNull(),
+		priority: text("priority", { enum: orderPriorities }).notNull(),
+		description: text("description").notNull(),
+		scheduledFor: integer("scheduled_for", { mode: "timestamp" }),
+		completedAt: integer("completed_at", { mode: "timestamp" }),
+		laborHours: real("labor_hours").notNull().default(0),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same number.
+		uniqueIndex("order_organization_number").on(table.organizationId, table.number),
+	],
+);
 
 /** Materials used on an order, with the unit price at the time of ordering. */
 export const orderLine = sqliteTable("order_line", {
@@ -154,24 +209,32 @@ export * from "./auth.schema.ts";
  * a guaranteed response time. Its status (upcoming, active, expired) follows from the period,
  * see `contractStatus` in `#lib/models.ts`.
  */
-export const contract = sqliteTable("contract", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	number: text("number").notNull().unique(),
-	customerId: integer("customer_id")
-		.notNull()
-		.references(() => customer.id),
-	level: text("level", { enum: contractLevels }).notNull(),
-	/** The first day of the contract, at local midnight. */
-	startsOn: integer("starts_on", { mode: "timestamp" }).notNull(),
-	/** The last day of the contract (inclusive), at local midnight. */
-	endsOn: integer("ends_on", { mode: "timestamp" }).notNull(),
-	/** In cents. */
-	monthlyFee: integer("monthly_fee").notNull(),
-	/** The promised response time for a call-out. */
-	responseHours: integer("response_hours").notNull(),
-	notes: text("notes"),
-	createdAt: createdAt(),
-});
+export const contract = sqliteTable(
+	"contract",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		number: text("number").notNull(),
+		customerId: integer("customer_id")
+			.notNull()
+			.references(() => customer.id),
+		level: text("level", { enum: contractLevels }).notNull(),
+		/** The first day of the contract, at local midnight. */
+		startsOn: integer("starts_on", { mode: "timestamp" }).notNull(),
+		/** The last day of the contract (inclusive), at local midnight. */
+		endsOn: integer("ends_on", { mode: "timestamp" }).notNull(),
+		/** In cents. */
+		monthlyFee: integer("monthly_fee").notNull(),
+		/** The promised response time for a call-out. */
+		responseHours: integer("response_hours").notNull(),
+		notes: text("notes"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		// Unique within a tenant; another tenant may use the same number.
+		uniqueIndex("contract_organization_number").on(table.organizationId, table.number),
+	],
+);
 
 /**
  * The equipment a contract covers (only the contract's customer's). Removing a unit or the
@@ -202,3 +265,16 @@ export const contractEquipmentRelations = relations(contractEquipment, ({ one })
 		references: [equipment.id],
 	}),
 }));
+
+// --- Tenants and modules --------------------------------------------------------------------------
+
+/** The optional modules (see `#lib/modules.ts`) a tenant has, e.g. through their subscription. */
+export const organizationModule = sqliteTable(
+	"organization_module",
+	{
+		organizationId: organizationId(),
+		moduleId: text("module_id").notNull(),
+		enabledAt: createdAt(),
+	},
+	(table) => [primaryKey({ columns: [table.organizationId, table.moduleId] })],
+);

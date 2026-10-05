@@ -15,6 +15,24 @@ Put a module next to the code that uses it, in the nearest folder that contains 
 
 When a module gains a user outside its folder, move it up to the nearest common folder (or `src/lib`); when it loses users, move it down.
 
+## Tenants and modules
+
+The app is multi-tenant: organizations (better-auth's organization plugin) own all business data, and
+optional modules (`src/lib/modules.ts`) are enabled per organization (`organization_module`). The
+helpers are in `src/lib/server/session.ts`:
+
+- Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
+  tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization
+  doesn't have it, or `requireRole("owner", "admin")` for organization settings).
+- Every select, update and delete on a tenant table (one with `organizationId`) includes
+  `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
+  the client. Check that submitted references (e.g. a `customerId`) belong to the tenant. Child
+  tables (`order_line`, `contract_equipment`) are only reached through a tenant-checked parent.
+- Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
+  per organization.
+- An optional module's tables reference core tables, never the reverse; core sections don't know
+  about modules.
+
 ---
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:

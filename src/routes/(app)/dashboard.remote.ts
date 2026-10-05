@@ -5,13 +5,13 @@ import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
-import { requireUser } from "#lib/server/session.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {
-	requireUser();
+	requireMember();
 
 	const now = new Date();
 	const monthAgo = new Date(now.getTime() - 30 * DAY);
@@ -23,7 +23,7 @@ export const getDashboard = query(async () => {
 			unassigned: sql<number>`sum(${order.engineerId} is null)`,
 		})
 		.from(order)
-		.where(inArray(order.status, openOrderStatuses));
+		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)));
 
 	const materials = db
 		.select({
@@ -31,6 +31,8 @@ export const getDashboard = query(async () => {
 			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("total"),
 		})
 		.from(orderLine)
+		// Only this tenant's lines, so the aggregate doesn't scan every tenant's orders.
+		.innerJoin(order, and(eq(orderLine.orderId, order.id), inTenant(order)))
 		.groupBy(orderLine.orderId)
 		.as("materials");
 
@@ -42,15 +44,22 @@ export const getDashboard = query(async () => {
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
-		.leftJoin(engineer, eq(order.engineerId, engineer.id))
-		.where(and(inArray(order.status, doneOrderStatuses), gte(order.completedAt, monthAgo)));
+		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.where(
+			and(
+				inTenant(order),
+				inArray(order.status, doneOrderStatuses),
+				gte(order.completedAt, monthAgo),
+			),
+		);
 
 	const [fleet] = await db
 		.select({
 			total: count(),
 			attention: sql<number>`sum(${equipment.status} in ('needs_service', 'out_of_service'))`,
 		})
-		.from(equipment);
+		.from(equipment)
+		.where(inTenant(equipment));
 
 	const upcoming = await db
 		.select({
@@ -62,9 +71,9 @@ export const getDashboard = query(async () => {
 			engineer: { id: engineer.id, name: engineer.name },
 		})
 		.from(order)
-		.innerJoin(customer, eq(order.customerId, customer.id))
-		.leftJoin(engineer, eq(order.engineerId, engineer.id))
-		.where(and(eq(order.status, "scheduled"), gte(order.scheduledFor, now)))
+		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.where(and(inTenant(order), eq(order.status, "scheduled"), gte(order.scheduledFor, now)))
 		.orderBy(asc(order.scheduledFor))
 		.limit(6);
 

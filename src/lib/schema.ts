@@ -6,14 +6,23 @@ import * as v from "valibot";
 
 /** A required id, e.g. from a select. */
 export const id = (message = "Choose one") =>
-	v.pipe(v.string(), v.nonEmpty(message), v.transform(Number), v.integer(message));
-
-/** An optional id; the empty option means "none". */
-export const optionalId = () =>
 	v.pipe(
 		v.string(),
-		v.transform((value) => (value === "" ? null : Number(value))),
+		v.nonEmpty(message),
+		v.transform(Number),
+		v.integer(message),
+		v.minValue(1, message),
 	);
+
+/** An optional id; the empty option means "none". */
+export const optionalId = (message = "Choose one") =>
+	v.union([
+		v.pipe(
+			v.literal(""),
+			v.transform(() => null),
+		),
+		id(message),
+	]);
 
 /** A required, trimmed text. */
 export const text = (message = "Required") => v.pipe(v.string(), v.trim(), v.nonEmpty(message));

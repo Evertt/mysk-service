@@ -6,6 +6,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth } from "#lib/server/auth.ts";
+import { loadTenant } from "#lib/server/session.ts";
 import {
 	MODE_COOKIE,
 	parseMode,
@@ -43,12 +44,28 @@ const handleTheme: Handle = ({ event, resolve }) => {
 	});
 };
 
+/**
+ * The app manages organizations through its own server code (`auth.api.*`), so better-auth's
+ * organization endpoints aren't exposed over HTTP: otherwise an owner could, say, delete their
+ * organization (and with it all its data) or change members outside the app.
+ */
+const blockOrganizationEndpoints: Handle = ({ event, resolve }) => {
+	if (event.url.pathname.startsWith("/api/auth/organization/")) {
+		return new Response("Not found", { status: 404 });
+	}
+	return resolve(event);
+};
+
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	if (session) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
+		event.locals.tenant = await loadTenant(
+			session.user.id,
+			(session.session as { activeOrganizationId?: string | null }).activeOrganizationId,
+		);
 	}
 
 	return svelteKitHandler({ event, resolve, auth, building });
@@ -81,4 +98,10 @@ const handleGuard: Handle = ({ event, resolve }) => {
 };
 
 // The guard runs after `handleBetterAuth`, which sets `locals.user` and answers /api/auth itself.
-export const handle: Handle = sequence(handleParaglide, handleTheme, handleBetterAuth, handleGuard);
+export const handle: Handle = sequence(
+	handleParaglide,
+	handleTheme,
+	blockOrganizationEndpoints,
+	handleBetterAuth,
+	handleGuard,
+);

@@ -46,13 +46,17 @@ npm run dev -- --open
 ## Demo login
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates two demo
-users, both with the password `fieldworks-demo` (set in `DEMO_PASSWORD` in
-`src/lib/server/db/seed.ts`):
+organizations (tenants) and two demo users, both with the password `fieldworks-demo` (set in
+`DEMO_PASSWORD` in `src/lib/server/db/seed.ts`):
 
-| Name        | Email                        |
-| ----------- | ---------------------------- |
-| Avery Admin | `admin@fieldworks.example`   |
-| Pat Planner | `planner@fieldworks.example` |
+| Name        | Email                        | Organizations                                  |
+| ----------- | ---------------------------- | ---------------------------------------------- |
+| Avery Admin | `admin@fieldworks.example`   | owner of Fieldworks North and Fieldworks South |
+| Pat Planner | `planner@fieldworks.example` | member of Fieldworks North                     |
+
+Fieldworks North has the optional Service contracts module; Fieldworks South doesn't (owners and
+admins can switch modules on and off under Organization settings). Switch organizations from the
+menu at the top of the sidebar.
 
 These are local demo accounts; don't seed them into a real deployment.
 
