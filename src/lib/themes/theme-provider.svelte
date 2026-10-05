@@ -12,11 +12,14 @@
 
 	let { name, mode, children }: { name: ThemeName; mode: Mode; children: Snippet } = $props();
 
-	provideTheme(() => themes[name]);
-
 	const systemPrefersDark = new MediaQuery("(prefers-color-scheme: dark)");
 	const dark = $derived(
 		supportsDark(name) && (mode === "dark" || (mode === "system" && systemPrefersDark.current)),
+	);
+
+	provideTheme(
+		() => themes[name],
+		() => dark,
 	);
 
 	// The server renders these (see `hooks.server.ts` and `app.html`); this keeps them in sync on

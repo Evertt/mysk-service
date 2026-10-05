@@ -4,9 +4,14 @@ import type { Slot, SlotProps, SlotStyle, Theme } from "./types.js";
 
 const key = Symbol("theme");
 
-/** Makes a theme available to all components below; `get` is read reactively. */
-export function provideTheme(get: () => Theme) {
-	setContext(key, get);
+interface ThemeContext {
+	get: () => Theme;
+	isDark: () => boolean;
+}
+
+/** Makes a theme available to all components below; both getters are read reactively. */
+export function provideTheme(get: () => Theme, isDark: () => boolean) {
+	setContext<ThemeContext>(key, { get, isDark });
 }
 
 /**
@@ -18,8 +23,13 @@ export function provideTheme(get: () => Theme) {
  * ```
  */
 export function useTheme() {
-	const get = getContext<(() => Theme) | undefined>(key);
+	const context = getContext<ThemeContext | undefined>(key);
+	const get = context?.get;
 	return {
+		/** Whether dark mode is active (the preference allows it and the theme supports it). */
+		get dark() {
+			return context?.isDark() ?? false;
+		},
 		classes<S extends Slot>(slot: S, props: SlotProps<S> = {}) {
 			const style = get?.().components?.[slot] as SlotStyle<S> | undefined;
 			if (!style) return "";

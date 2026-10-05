@@ -8,6 +8,8 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const AlertDialog: typeof import('#ui/alert-dialog')
+  const Avatar: typeof import('#ui/avatar')
   const Badge: typeof import('#ui/badge').Badge
   const Breadcrumb: typeof import('#ui/breadcrumb')
   const Button: typeof import('#ui/button').Button
@@ -17,16 +19,21 @@ declare global {
   const Dialog: typeof import('#ui/dialog')
   const DropdownMenu: typeof import('#ui/dropdown-menu')
   const Empty: typeof import('#ui/empty')
+  const Field: typeof import('#ui/field')
   const Input: typeof import('#ui/input').Input
   const InputGroup: typeof import('#ui/input-group')
+  const Label: typeof import('#ui/label').Label
+  const NativeSelect: typeof import('#ui/native-select')
   const Popover: typeof import('#ui/popover')
   const Select: typeof import('#ui/select')
   const Separator: typeof import('#ui/separator').Separator
   const Sheet: typeof import('#ui/sheet')
   const Sidebar: typeof import('#ui/sidebar')
   const Skeleton: typeof import('#ui/skeleton').Skeleton
+  const Spinner: typeof import('#ui/spinner').Spinner
   const Table: typeof import('#ui/table')
   const Textarea: typeof import('#ui/textarea').Textarea
+  const Toaster: typeof import('#ui/sonner').Toaster
   const Tooltip: typeof import('#ui/tooltip')
   const m: typeof import('#lib/paraglide/messages.js').m
 }

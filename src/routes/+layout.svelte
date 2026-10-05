@@ -20,6 +20,7 @@
 
 <ThemeProvider name={await getTheme()} mode={await getMode()}>
 	{@render children()}
+	<Toaster richColors closeButton />
 </ThemeProvider>
 
 <div style="display:none">
