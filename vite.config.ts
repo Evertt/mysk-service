@@ -123,6 +123,7 @@ export default defineConfig({
 	]),
 	test: {
 		expect: { requireAssertions: true },
+		fsModuleCache: true,
 		projects: [
 			{
 				extends: "./vite.config.ts",
