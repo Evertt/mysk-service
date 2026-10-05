@@ -453,7 +453,11 @@ function generateTenant(size: TenantSize) {
 
 	const contracts = contractTerms.map(({ equipmentIds: _equipmentIds, ...c }) => c);
 	const contractCoverage = contractTerms.flatMap((c) =>
-		c.equipmentIds.map((equipmentId) => ({ contractId: c.id, equipmentId })),
+		c.equipmentIds.map((equipmentId) => ({
+			customerId: c.customerId,
+			contractId: c.id,
+			equipmentId,
+		})),
 	);
 
 	return {
@@ -554,6 +558,7 @@ await db.transaction(async (tx) => {
 			})),
 			orderLines: data.orderLines.map((l) => ({
 				...l,
+				organizationId,
 				orderId: l.orderId + o.order,
 				materialId: l.materialId + o.material,
 			})),
@@ -564,6 +569,7 @@ await db.transaction(async (tx) => {
 				customerId: c.customerId + o.customer,
 			})),
 			coverage: data.contractCoverage.map((c) => ({
+				customerId: c.customerId + o.customer,
 				contractId: c.contractId + o.contract,
 				equipmentId: c.equipmentId + o.equipment,
 			})),

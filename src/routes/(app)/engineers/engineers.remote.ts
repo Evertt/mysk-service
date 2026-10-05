@@ -5,7 +5,7 @@ import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
-import { deleteOrRefuse } from "#lib/server/db/errors.js";
+import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
@@ -78,7 +78,7 @@ export const getEngineer = query(v.string(), async (param) => {
 		db
 			.select(columns)
 			.from(order)
-			.innerJoin(customer, eq(order.customerId, customer.id))
+			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
 			.where(
 				and(
 					inTenant(order),
@@ -90,7 +90,7 @@ export const getEngineer = query(v.string(), async (param) => {
 		db
 			.select(columns)
 			.from(order)
-			.innerJoin(customer, eq(order.customerId, customer.id))
+			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
 			.where(and(inTenant(order), eq(order.engineerId, engineerId), isNotNull(order.completedAt)))
 			.orderBy(desc(order.completedAt))
 			.limit(10),
@@ -180,7 +180,7 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 
-	await deleteOrRefuse(
+	await refuseIfReferenced(
 		() => db.delete(engineer).where(and(eq(engineer.id, id), inTenant(engineer))),
 		"Other records still refer to this engineer. Mark them inactive instead.",
 	);

@@ -28,7 +28,7 @@ export const getOrders = query(async () => {
 			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("line_total"),
 		})
 		.from(orderLine)
-		.innerJoin(order, and(eq(orderLine.orderId, order.id), inTenant(order)))
+		.where(inTenant(orderLine))
 		.groupBy(orderLine.orderId)
 		.as("lines");
 
@@ -190,7 +190,7 @@ async function saveOrder(id: number | null, input: OrderInput) {
 				.update(order)
 				.set(values)
 				.where(and(eq(order.id, orderId), inTenant(order)));
-			await tx.delete(orderLine).where(eq(orderLine.orderId, orderId));
+			await tx.delete(orderLine).where(and(eq(orderLine.orderId, orderId), inTenant(orderLine)));
 		} else {
 			// Numbers are sequential per tenant, across years: ORD-2026-00001, ORD-2026-00002, …
 			const [{ last }] = await tx
@@ -226,6 +226,7 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			);
 			await tx.insert(orderLine).values(
 				lines.map((line) => ({
+					organizationId,
 					orderId,
 					materialId: line.materialId,
 					quantity: line.quantity,

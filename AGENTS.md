@@ -26,10 +26,18 @@ helpers are in `src/lib/server/session.ts`:
   doesn't have it, or `requireRole("owner", "admin")` for organization settings).
 - Every select, update and delete on a tenant table (one with `organizationId`) includes
   `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
-  the client. Check that submitted references (e.g. a `customerId`) belong to the tenant. Child
-  tables (`order_line`, `contract_equipment`) are only reached through a tenant-checked parent.
+  the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
+  clear message (the foreign keys would refuse them anyway). `contract_equipment` has no
+  `organization_id`: reach it through a tenant-checked contract or equipment.
 - Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
-  per organization.
+  per organization: pick the next one and insert it in one `db.transaction` (transactions take
+  turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick the same one).
+- References between tenant tables are composite foreign keys that include the tenant, e.g.
+  `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
+  column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
+  tenant. A new reference gets the same treatment; joins also add `inTenant()` for the joined
+  table. Where a reference must belong to the same customer (an order's equipment, a contract's
+  coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
   about modules.
 

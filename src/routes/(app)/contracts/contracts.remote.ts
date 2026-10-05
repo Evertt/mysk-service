@@ -20,6 +20,7 @@ export const getContracts = query(async () => {
 	const coverage = db
 		.select({ contractId: contractEquipment.contractId, units: count().as("units") })
 		.from(contractEquipment)
+		.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
 		.groupBy(contractEquipment.contractId)
 		.as("coverage");
 
@@ -37,9 +38,9 @@ export const getContracts = query(async () => {
 			units: sql<number>`coalesce(${coverage.units}, 0)`,
 		})
 		.from(contract)
-		.innerJoin(customer, eq(contract.customerId, customer.id))
+		.innerJoin(customer, and(eq(contract.customerId, customer.id), inTenant(customer)))
 		.leftJoin(coverage, eq(coverage.contractId, contract.id))
-		.where(and(inTenant(contract), inTenant(customer)))
+		.where(inTenant(contract))
 		.orderBy(desc(contract.startsOn));
 });
 
@@ -161,12 +162,13 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 				endsOn: contract.endsOn,
 			})
 			.from(contractEquipment)
-			.innerJoin(contract, eq(contractEquipment.contractId, contract.id))
-			.innerJoin(equipment, eq(contractEquipment.equipmentId, equipment.id))
+			.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
+			.innerJoin(
+				equipment,
+				and(eq(contractEquipment.equipmentId, equipment.id), inTenant(equipment)),
+			)
 			.where(
 				and(
-					inTenant(contract),
-					inTenant(equipment),
 					inArray(contractEquipment.equipmentId, input.equipmentIds),
 					id ? ne(contract.id, id) : undefined,
 					lte(contract.startsOn, input.endsOn),
@@ -206,12 +208,13 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 		if (existing) {
 			contractId = existing.id;
 			number = existing.number;
+			// The contract was checked to be the tenant's, so its coverage is too. Remove it before the
+			// customer may change: coverage must be of the contract's customer.
+			await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, contractId));
 			await tx
 				.update(contract)
 				.set(fields)
 				.where(and(eq(contract.id, contractId), inTenant(contract)));
-			// The contract was checked to be the tenant's, so its coverage is too.
-			await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, contractId));
 		} else {
 			// "CTR-2026-0001": the sequence starts at the 10th character.
 			const [last] = await tx
@@ -228,9 +231,13 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 			contractId = inserted.id;
 		}
 
-		await tx
-			.insert(contractEquipment)
-			.values([...new Set(equipmentIds)].map((equipmentId) => ({ contractId, equipmentId })));
+		await tx.insert(contractEquipment).values(
+			[...new Set(equipmentIds)].map((equipmentId) => ({
+				customerId: fields.customerId,
+				contractId,
+				equipmentId,
+			})),
+		);
 		return number;
 	});
 }

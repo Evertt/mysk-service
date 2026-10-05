@@ -5,7 +5,7 @@ import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
-import { deleteOrRefuse } from "#lib/server/db/errors.js";
+import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
@@ -165,10 +165,18 @@ export const updateEquipment = form(
 		if (!existing) error(404, "Equipment not found");
 		const problems = await checkUnit(existing, input);
 		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-		await db
-			.update(equipment)
-			.set(input)
-			.where(and(eq(equipment.id, id), inTenant(equipment)));
+		// Records of optional modules (e.g. a service contract covering it) belong to the unit's
+		// current customer too; the database refuses the move while they exist.
+		await refuseIfReferenced(
+			() =>
+				db
+					.update(equipment)
+					.set(input)
+					.where(and(eq(equipment.id, id), inTenant(equipment))),
+			issue.customerId(
+				"Can't move this unit to another customer while its current customer's records, such as a service contract, include it. Remove it from those first.",
+			),
+		);
 		void getEquipmentList().refresh();
 		void getEquipment(input.serialNumber).refresh();
 		redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
@@ -191,7 +199,7 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 			`This unit can't be deleted: ${orders(total)} refer to it. Set its status to decommissioned instead.`,
 		);
 	}
-	await deleteOrRefuse(
+	await refuseIfReferenced(
 		() => db.delete(equipment).where(and(eq(equipment.id, id), inTenant(equipment))),
 		"Other records still refer to this unit. Remove those first.",
 	);

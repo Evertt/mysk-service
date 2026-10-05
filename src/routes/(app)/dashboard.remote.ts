@@ -31,8 +31,7 @@ export const getDashboard = query(async () => {
 			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("total"),
 		})
 		.from(orderLine)
-		// Only this tenant's lines, so the aggregate doesn't scan every tenant's orders.
-		.innerJoin(order, and(eq(orderLine.orderId, order.id), inTenant(order)))
+		.where(inTenant(orderLine))
 		.groupBy(orderLine.orderId)
 		.as("materials");
 

@@ -5,7 +5,7 @@ import * as v from "valibot";
 
 import { isOpenOrder } from "#lib/models.js";
 import { id } from "#lib/schema.js";
-import { deleteOrRefuse } from "#lib/server/db/errors.js";
+import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, material, order, orderLine } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
@@ -17,8 +17,7 @@ const ordersUsing = async (materialId: number) => {
 	const [row] = await db
 		.select({ count: countDistinct(orderLine.orderId) })
 		.from(orderLine)
-		.innerJoin(order, eq(orderLine.orderId, order.id))
-		.where(and(eq(orderLine.materialId, materialId), inTenant(order)));
+		.where(and(eq(orderLine.materialId, materialId), inTenant(orderLine)));
 	return row.count;
 };
 
@@ -35,8 +34,7 @@ export const getMaterials = query(async () => {
 			orders: countDistinct(orderLine.orderId).as("order_count"),
 		})
 		.from(orderLine)
-		.innerJoin(order, eq(orderLine.orderId, order.id))
-		.where(inTenant(order))
+		.where(inTenant(orderLine))
 		.groupBy(orderLine.materialId)
 		.as("usage");
 
@@ -175,7 +173,7 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 			`This material is used on ${orders === 1 ? "1 order" : `${orders} orders`}, so it can't be deleted. Remove it from ${orders === 1 ? "that order" : "those orders"} first.`,
 		);
 	}
-	await deleteOrRefuse(
+	await refuseIfReferenced(
 		() => db.delete(material).where(and(eq(material.id, id), inTenant(material))),
 		"Other records still refer to this material. Remove those first.",
 	);

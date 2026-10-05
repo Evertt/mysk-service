@@ -5,7 +5,7 @@ import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
-import { deleteOrRefuse } from "#lib/server/db/errors.js";
+import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
@@ -181,7 +181,7 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 
-	await deleteOrRefuse(
+	await refuseIfReferenced(
 		() => db.delete(customer).where(and(eq(customer.id, id), inTenant(customer))),
 		"Other records still refer to this customer, such as service contracts. Remove those first.",
 	);

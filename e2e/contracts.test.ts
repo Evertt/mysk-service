@@ -144,6 +144,28 @@ describe("in North", () => {
 		);
 	});
 
+	test("a covered unit can't move to another customer", async () => {
+		const { page } = app;
+		// One without orders, which would stop the move on their own.
+		const [unit] = await rows<{ id: number; serial_number: string; customer_id: number }>(
+			`select e.id, e.serial_number, e.customer_id from equipment e
+			 where e.organization_id = ? and exists (select 1 from contract_equipment ce where ce.equipment_id = e.id)
+			 and not exists (select 1 from "order" o where o.equipment_id = e.id) order by e.id limit 1`,
+			[north.id],
+		);
+		const other = await value<number>(
+			`select min(id) from customer where organization_id = ? and id != ?`,
+			[north.id, unit.customer_id],
+		);
+		await app.go(`/equipment/${encodeURIComponent(unit.serial_number)}/edit`);
+		await page.getByLabel("Customer").selectOption(String(other));
+		await app.submit(page.getByRole("button", { name: "Save equipment" }));
+		expect(await app.issues()).toContainEqual(expect.stringMatching(/service contract/));
+		expect(await value(`select customer_id from equipment where id = ?`, [unit.id])).toBe(
+			unit.customer_id,
+		);
+	});
+
 	test("creating a contract validates it first", async () => {
 		const { page } = app;
 		await app.go("/contracts/new");
@@ -313,18 +335,13 @@ describe("in South, which doesn't have the module", () => {
 		await page.getByLabel("Ends on").fill(`${year + 1}-12-31`);
 		await page.getByLabel("Monthly fee").fill("10");
 
-		// Another tab of the same session (the page has a context of its own, so: its cookies).
-		const context = await page
-			.context()
-			.browser()!
-			.newContext({ storageState: await page.context().storageState() });
-		const other = await context.newPage();
+		const other = await app.anotherTab();
 		await other.goto(new URL("/", page.url()).href);
 		await other.waitForLoadState("networkidle");
 		await other.locator('[data-sidebar="header"] button').first().click();
 		await other.getByRole("menuitem", { name: south.name }).click();
 		await other.waitForURL((url) => url.pathname === "/");
-		await context.close();
+		await other.context().close();
 
 		const [northBefore, southBefore] = [
 			await countIn("contract", north.id),

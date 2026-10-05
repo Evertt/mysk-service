@@ -4,9 +4,9 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 
-import { deleteOrRefuse, isForeignKeyViolation } from "./errors.ts";
+import { isForeignKeyViolation, refuseIfReferenced } from "./errors.ts";
 
-describe("deleteOrRefuse", () => {
+describe("refuseIfReferenced", () => {
 	let db: ReturnType<typeof drizzle>;
 
 	beforeEach(async () => {
@@ -21,13 +21,16 @@ describe("deleteOrRefuse", () => {
 	});
 
 	it("deletes an unreferenced row", async () => {
-		await deleteOrRefuse(() => db.run(sql`delete from parent where id = 2`), "Still referenced");
+		await refuseIfReferenced(
+			() => db.run(sql`delete from parent where id = 2`),
+			"Still referenced",
+		);
 		const rows = await db.all(sql`select id from parent`);
 		expect(rows).toEqual([{ id: 1 }]);
 	});
 
 	it("refuses with the message while the row is referenced", async () => {
-		const attempt = deleteOrRefuse(
+		const attempt = refuseIfReferenced(
 			() => db.run(sql`delete from parent where id = 1`),
 			"Still referenced",
 		);
@@ -40,8 +43,16 @@ describe("deleteOrRefuse", () => {
 		expect(rows).toHaveLength(2);
 	});
 
+	it("refuses an update that would break a reference", async () => {
+		const attempt = refuseIfReferenced(
+			() => db.run(sql`update child set parent_id = 3 where id = 1`),
+			"No such parent",
+		);
+		await expect(attempt).rejects.toHaveProperty("issues", [{ message: "No such parent" }]);
+	});
+
 	it("rethrows other errors", async () => {
-		const attempt = deleteOrRefuse(() => db.run(sql`delete from missing`), "Still referenced");
+		const attempt = refuseIfReferenced(() => db.run(sql`delete from missing`), "Still referenced");
 		await expect(attempt).rejects.toSatisfy((error) => !isForeignKeyViolation(error));
 	});
 });

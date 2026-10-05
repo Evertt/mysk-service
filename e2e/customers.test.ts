@@ -275,6 +275,51 @@ describe("in North", () => {
 		const [saved] = await rows(`select code, city, segment from customer where id = ?`, [target]);
 		expect(saved).toEqual({ code, city: "Amersfoort", segment: "enterprise" });
 	});
+
+	test("customers created at the same moment get consecutive codes", async () => {
+		const { page } = app;
+		await app.go("/customers/new");
+		await page.getByLabel("Name").fill("Simultaneous BV");
+		await page.getByLabel("Segment").selectOption("small_business");
+		await page.getByLabel("City").fill("Zwolle");
+		await page.getByLabel("Country").selectOption("Netherlands");
+		await page.getByLabel("Contact person").fill("Sam Jansen");
+		await page.getByLabel("Email").fill("sam@simultaneous.example");
+		await page.getByLabel("Phone").fill("+31 38 123 4567");
+		const first = await nextCode("customer", "code", north.id);
+
+		// Submitted all at once, the way a browser without JavaScript would, so they overlap.
+		const form = page.locator("form", {
+			has: page.getByRole("button", { name: "Create customer" }),
+		});
+		const outcomes = await form.evaluate(async (form: HTMLFormElement) => {
+			const fields = [...new FormData(form)] as [string, string][];
+			const submit = (i: number) =>
+				fetch(form.action, {
+					method: "POST",
+					headers: { accept: "text/html" },
+					redirect: "manual",
+					body: new URLSearchParams(
+						fields.map(([name, value]) => [
+							name,
+							name.startsWith("name") ? `${value} ${i}` : value,
+						]),
+					),
+				}).then((response) => (response.type === "opaqueredirect" ? "created" : response.status));
+			return Promise.all(Array.from({ length: 8 }, (_, i) => submit(i + 1)));
+		});
+		expect(outcomes).toEqual(Array(8).fill("created"));
+
+		const stored = await rows<{ code: string }>(
+			`select code from customer where organization_id = ? and name like 'Simultaneous BV %'
+			 order by code`,
+			[north.id],
+		);
+		const start = Number(first.slice(5));
+		expect(stored.map((row) => row.code)).toEqual(
+			Array.from({ length: 8 }, (_, i) => `CUST-${String(start + i).padStart(4, "0")}`),
+		);
+	});
 });
 
 describe("in South", () => {

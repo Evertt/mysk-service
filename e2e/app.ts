@@ -12,7 +12,8 @@ export const baseURL = inject("baseURL");
 
 // --- Database --------------------------------------------------------------------------------
 
-const client = createClient({ url: inject("databaseURL") });
+// The busy timeout: the app may be writing.
+const client = createClient({ url: inject("databaseURL"), timeout: 5000 });
 
 /**
  * Runs a query against the app's database and returns its rows. Only for reading: tests change
@@ -85,6 +86,11 @@ export interface App {
 	rowCount(): Promise<number>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
+	/**
+	 * Opens another tab in the same session, e.g. to do two things at once or to change the
+	 * session elsewhere. Close its context when done.
+	 */
+	anotherTab(): Promise<Page>;
 }
 
 /**
@@ -150,6 +156,13 @@ export function useApp({ user = users.admin }: { user?: string | null } = {}): A
 			return Number(text.replace(/\D/g, ""));
 		},
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
+		async anotherTab() {
+			// The page has a context of its own, so a new context with its cookies.
+			const context = await browser.newContext({
+				storageState: await page.context().storageState(),
+			});
+			return context.newPage();
+		},
 	};
 
 	beforeAll(async () => {
