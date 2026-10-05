@@ -2,7 +2,8 @@ import { defineTheme } from "./types.js";
 
 /**
  * Cool drafting paper, navy ink and a navy sidebar, cobalt and amber accents, monospace type,
- * square corners and dashed construction lines.
+ * square corners and dashed construction lines. Dark mode is an actual blueprint: white-cyan
+ * lines and type on deep blueprint blue.
  */
 export default defineTheme({
 	label: "Blueprint",
@@ -40,6 +41,35 @@ export default defineTheme({
 		"--sidebar-accent-foreground": "oklch(0.98 0.01 250)",
 		"--sidebar-border": "oklch(0.36 0.06 262)",
 		"--sidebar-ring": "oklch(0.8 0.15 80)",
+	},
+	darkVars: {
+		"--background": "oklch(0.3 0.09 260)",
+		"--foreground": "oklch(0.95 0.025 235)",
+		"--card": "oklch(0.33 0.095 260)",
+		"--card-foreground": "oklch(0.95 0.025 235)",
+		"--popover": "oklch(0.35 0.095 260)",
+		"--popover-foreground": "oklch(0.95 0.025 235)",
+		"--primary": "oklch(0.88 0.07 220)",
+		"--primary-foreground": "oklch(0.26 0.09 260)",
+		"--secondary": "oklch(0.38 0.09 258)",
+		"--secondary-foreground": "oklch(0.93 0.035 235)",
+		"--muted": "oklch(0.36 0.085 258)",
+		"--muted-foreground": "oklch(0.8 0.05 240)",
+		"--accent": "oklch(0.42 0.08 70)",
+		"--accent-foreground": "oklch(0.94 0.08 85)",
+		"--destructive": "oklch(0.72 0.16 25)",
+		"--border": "oklch(0.88 0.07 220 / 30%)",
+		"--input": "oklch(0.88 0.07 220 / 35%)",
+		"--ring": "oklch(0.88 0.07 220)",
+		"--chart-1": "oklch(0.88 0.07 220)",
+		"--chart-2": "oklch(0.8 0.15 80)",
+		"--chart-3": "oklch(0.7 0.12 230)",
+		"--chart-4": "oklch(0.95 0.025 235)",
+		"--chart-5": "oklch(0.6 0.1 255)",
+		"--sidebar": "oklch(0.22 0.07 262)",
+		"--sidebar-foreground": "oklch(0.93 0.03 235)",
+		"--sidebar-accent": "oklch(0.3 0.085 262)",
+		"--sidebar-border": "oklch(0.88 0.07 220 / 20%)",
 	},
 	components: {
 		"app-header": { base: "border-dashed border-primary/30" },

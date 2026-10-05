@@ -4,13 +4,14 @@ const pill = "rounded-full";
 const softGlow = "shadow-lg shadow-primary/10";
 const bouncy =
 	"transition-[translate,scale,box-shadow,background-color] duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]";
-const field = `${pill} border-2 border-border bg-card shadow-none focus-visible:border-primary/50 focus-visible:ring-primary/15`;
+const field = `${pill} border-2 border-border bg-card shadow-none focus-visible:border-primary/50 focus-visible:ring-primary/15 dark:bg-card`;
 const menuItem = "rounded-xl font-semibold focus:bg-accent focus:text-accent-foreground";
 const floating = `rounded-2xl ring-border/70 ${softGlow}`;
 
 /**
  * Light, bright and breezy: sky-tinted air, coral, sunshine and sky accents, the rounded Nunito
- * font, pill shapes, soft coloured glows and controls that bounce when you touch them.
+ * font, pill shapes, soft coloured glows and controls that bounce when you touch them. Dark mode
+ * is a summer night: plum and indigo with glowing coral and sunshine.
  */
 export default defineTheme({
 	label: "Sorbet",
@@ -49,6 +50,39 @@ export default defineTheme({
 		"--sidebar-border": "oklch(0.92 0.03 225)",
 		"--sidebar-ring": "oklch(0.66 0.2 15)",
 	},
+	darkVars: {
+		"--background": "oklch(0.2 0.045 285)",
+		"--foreground": "oklch(0.95 0.015 285)",
+		"--card": "oklch(0.25 0.05 285)",
+		"--card-foreground": "oklch(0.95 0.015 285)",
+		"--popover": "oklch(0.27 0.05 285)",
+		"--popover-foreground": "oklch(0.95 0.015 285)",
+		"--primary": "oklch(0.74 0.16 15)",
+		"--primary-foreground": "oklch(0.2 0.045 285)",
+		"--secondary": "oklch(0.33 0.07 240)",
+		"--secondary-foreground": "oklch(0.9 0.06 220)",
+		"--muted": "oklch(0.29 0.045 285)",
+		"--muted-foreground": "oklch(0.75 0.04 285)",
+		"--accent": "oklch(0.38 0.07 90)",
+		"--accent-foreground": "oklch(0.95 0.11 100)",
+		"--destructive": "oklch(0.7 0.18 22)",
+		"--border": "oklch(1 0 0 / 10%)",
+		"--input": "oklch(1 0 0 / 14%)",
+		"--ring": "oklch(0.74 0.16 15)",
+		"--chart-1": "oklch(0.74 0.16 15)",
+		"--chart-2": "oklch(0.78 0.11 220)",
+		"--chart-3": "oklch(0.9 0.13 100)",
+		"--chart-4": "oklch(0.75 0.13 160)",
+		"--chart-5": "oklch(0.75 0.13 300)",
+		"--sidebar": "oklch(0.17 0.045 285)",
+		"--sidebar-foreground": "oklch(0.92 0.015 285)",
+		"--sidebar-primary": "oklch(0.74 0.16 15)",
+		"--sidebar-primary-foreground": "oklch(0.2 0.045 285)",
+		"--sidebar-accent": "oklch(0.27 0.05 285)",
+		"--sidebar-accent-foreground": "oklch(0.95 0.015 285)",
+		"--sidebar-border": "oklch(1 0 0 / 8%)",
+		"--sidebar-ring": "oklch(0.74 0.16 15)",
+	},
 	components: {
 		"app-header": { base: "border-b-0 bg-background/70 backdrop-blur-md" },
 		badge: {
@@ -66,14 +100,20 @@ export default defineTheme({
 				default:
 					"shadow-md shadow-primary/30 hover:bg-primary hover:shadow-lg hover:shadow-primary/40",
 				secondary: "hover:bg-secondary hover:shadow-md hover:shadow-secondary",
-				outline: "border-2 border-border shadow-none hover:border-primary/40 hover:bg-card",
-				ghost: "hover:translate-y-0 hover:bg-accent hover:text-accent-foreground",
-				destructive: "bg-destructive text-white hover:bg-destructive",
+				// The `dark:` classes override shadcn's own dark-mode backgrounds for these variants.
+				outline:
+					"border-2 border-border shadow-none hover:border-primary/40 hover:bg-card dark:border-border dark:bg-card dark:hover:bg-card",
+				ghost:
+					"hover:translate-y-0 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent",
+				destructive:
+					"bg-destructive text-white hover:bg-destructive dark:bg-destructive dark:hover:bg-destructive",
 			},
 		},
 		card: { base: `rounded-3xl ring-border/60 ${softGlow}` },
 		"card-title": { base: "font-extrabold" },
-		checkbox: { base: "size-[1.125rem] rounded-md border-2 data-checked:border-primary" },
+		checkbox: {
+			base: "size-[1.125rem] rounded-md border-2 data-checked:border-primary dark:bg-card",
+		},
 		"command-item": {
 			base: "rounded-xl font-semibold data-selected:bg-accent data-selected:text-accent-foreground",
 		},
@@ -92,8 +132,10 @@ export default defineTheme({
 		"popover-content": { base: floating },
 		"select-content": { base: floating },
 		"select-item": { base: menuItem },
-		"select-trigger": { base: field },
-		"sidebar-inner": { base: "bg-linear-to-b from-sidebar via-sidebar to-accent/60" },
+		"select-trigger": { base: `${field} dark:hover:bg-card` },
+		"sidebar-inner": {
+			base: "bg-linear-to-b from-sidebar via-sidebar to-accent/60 dark:to-primary/15",
+		},
 		"sidebar-container": { base: "group-data-[side=left]:border-e-0" },
 		"sidebar-group-label": { base: "font-extrabold text-primary" },
 		"sidebar-menu-button": {
