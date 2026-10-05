@@ -1,0 +1,14 @@
+# Keep dependencies and generated files in sync with the checked-out branch.
+# $3 is 1 for branch checkouts and 0 for file checkouts (which we ignore).
+[ "$3" = "1" ] || exit 0
+
+# A rebase checks out intermediate commits; post-rewrite syncs once it's done.
+for dir in rebase-merge rebase-apply; do
+	[ -d "$(git rev-parse --git-path "$dir")" ] && exit 0
+done
+
+if git diff --quiet "$1" "$2" -- pnpm-lock.yaml; then
+	pnpm run --silent generate
+else
+	pnpm install # also runs `generate` through the prepare script
+fi

@@ -1,0 +1,5 @@
+# After a rebase, sync dependencies and generated files with the rebased branch.
+# ($1 is "amend" for `git commit --amend`, which doesn't need this.)
+[ "$1" = "rebase" ] || exit 0
+
+pnpm install # also runs `generate` through the prepare script
