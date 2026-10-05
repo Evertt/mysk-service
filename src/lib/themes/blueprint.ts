@@ -1,0 +1,58 @@
+import { defineTheme } from "./types.js";
+
+/**
+ * Cool drafting paper, navy ink and a navy sidebar, cobalt and amber accents, monospace type,
+ * square corners and dashed construction lines.
+ */
+export default defineTheme({
+	label: "Blueprint",
+	vars: {
+		"--font-body": '"JetBrains Mono Variable", monospace',
+		"--background": "oklch(0.975 0.008 250)",
+		"--foreground": "oklch(0.26 0.06 262)",
+		"--card": "oklch(0.995 0.004 250)",
+		"--card-foreground": "oklch(0.26 0.06 262)",
+		"--popover": "oklch(0.995 0.004 250)",
+		"--popover-foreground": "oklch(0.26 0.06 262)",
+		"--primary": "oklch(0.5 0.2 262)",
+		"--primary-foreground": "oklch(0.98 0.01 250)",
+		"--secondary": "oklch(0.93 0.035 255)",
+		"--secondary-foreground": "oklch(0.32 0.1 262)",
+		"--muted": "oklch(0.94 0.015 255)",
+		"--muted-foreground": "oklch(0.5 0.045 260)",
+		"--accent": "oklch(0.93 0.07 85)",
+		"--accent-foreground": "oklch(0.32 0.08 60)",
+		"--destructive": "oklch(0.56 0.22 25)",
+		"--border": "oklch(0.86 0.035 255)",
+		"--input": "oklch(0.86 0.035 255)",
+		"--ring": "oklch(0.5 0.2 262)",
+		"--chart-1": "oklch(0.5 0.2 262)",
+		"--chart-2": "oklch(0.78 0.16 75)",
+		"--chart-3": "oklch(0.65 0.12 230)",
+		"--chart-4": "oklch(0.38 0.12 262)",
+		"--chart-5": "oklch(0.85 0.08 250)",
+		"--radius": "0rem",
+		"--sidebar": "oklch(0.27 0.07 262)",
+		"--sidebar-foreground": "oklch(0.93 0.02 255)",
+		"--sidebar-primary": "oklch(0.8 0.15 80)",
+		"--sidebar-primary-foreground": "oklch(0.26 0.06 262)",
+		"--sidebar-accent": "oklch(0.35 0.085 262)",
+		"--sidebar-accent-foreground": "oklch(0.98 0.01 250)",
+		"--sidebar-border": "oklch(0.36 0.06 262)",
+		"--sidebar-ring": "oklch(0.8 0.15 80)",
+	},
+	components: {
+		badge: { base: "text-[0.65rem] tracking-wide uppercase" },
+		button: { base: "text-xs tracking-wide uppercase" },
+		card: { base: "border border-dashed border-primary/40 shadow-none ring-0" },
+		"card-title": { base: "text-xs font-semibold tracking-widest text-primary uppercase" },
+		"dropdown-menu-content": { base: "shadow-lg ring-primary/30" },
+		"popover-content": { base: "shadow-lg ring-primary/30" },
+		"select-content": { base: "shadow-lg ring-primary/30" },
+		"sidebar-menu-button": {
+			base: "data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground",
+		},
+		"table-head": { base: "text-[0.7rem] tracking-wider text-muted-foreground uppercase" },
+		"table-row": { base: "border-dashed border-primary/25" },
+	},
+});

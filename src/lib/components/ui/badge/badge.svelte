@@ -25,6 +25,7 @@
 <script lang="ts">
 	import type { HTMLAnchorAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -37,6 +38,8 @@
 	}: WithElementRef<HTMLAnchorAttributes> & {
 		variant?: BadgeVariant;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <svelte:element
@@ -44,7 +47,7 @@
 	bind:this={ref}
 	data-slot="badge"
 	{href}
-	class={cn(badgeVariants({ variant }), className)}
+	class={cn(badgeVariants({ variant }), theme.classes("badge", { variant }), className)}
 	{...restProps}
 >
 	{@render children?.()}

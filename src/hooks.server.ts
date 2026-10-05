@@ -5,7 +5,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth } from "#lib/server/auth.ts";
-import { parseTheme, THEME_COOKIE } from "#lib/themes.ts";
+import { parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {

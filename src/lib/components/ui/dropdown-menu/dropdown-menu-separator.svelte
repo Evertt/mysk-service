@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -8,11 +9,13 @@
 		class: className,
 		...restProps
 	}: DropdownMenuPrimitive.SeparatorProps = $props();
+
+	const theme = useTheme();
 </script>
 
 <DropdownMenuPrimitive.Separator
 	bind:ref
 	data-slot="dropdown-menu-separator"
-	class={cn("-mx-1 my-1 h-px bg-border", className)}
+	class={cn("-mx-1 my-1 h-px bg-border", theme.classes("dropdown-menu-separator"), className)}
 	{...restProps}
 />

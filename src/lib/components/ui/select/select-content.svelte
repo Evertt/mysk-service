@@ -2,6 +2,7 @@
 	import { Select as SelectPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithoutChild } from "#lib/utils.js";
 	import type { WithoutChildrenOrChild } from "#lib/utils.js";
 
@@ -20,6 +21,8 @@
 	}: WithoutChild<SelectPrimitive.ContentProps> & {
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof SelectPortal>>;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <SelectPortal {...portalProps}>
@@ -30,6 +33,7 @@
 		data-slot="select-content"
 		class={cn(
 			"relative z-50 max-h-(--bits-select-content-available-height) min-w-36 origin-(--bits-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+			theme.classes("select-content"),
 			className,
 		)}
 		{...restProps}

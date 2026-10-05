@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLThAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLThAttributes> = $props();
+
+	const theme = useTheme();
 </script>
 
 <th
@@ -16,6 +19,7 @@
 	data-slot="table-head"
 	class={cn(
 		"h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+		theme.classes("table-head"),
 		className,
 	)}
 	{...restProps}

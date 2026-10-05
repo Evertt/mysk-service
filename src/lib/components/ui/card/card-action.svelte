@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,12 +10,18 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="card-action"
-	class={cn("col-start-2 row-span-2 row-start-1 self-start justify-self-end", className)}
+	class={cn(
+		"col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+		theme.classes("card-action"),
+		className,
+	)}
 	{...restProps}
 >
 	{@render children?.()}

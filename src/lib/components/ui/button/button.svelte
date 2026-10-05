@@ -50,6 +50,7 @@
 </script>
 
 <script lang="ts">
+	import { useTheme } from "#lib/themes/context.js";
 	let {
 		class: className,
 		variant = "default",
@@ -61,13 +62,19 @@
 		children,
 		...restProps
 	}: ButtonProps = $props();
+
+	const theme = useTheme();
 </script>
 
 {#if href}
 	<a
 		bind:this={ref}
 		data-slot="button"
-		class={cn(buttonVariants({ variant, size }), className)}
+		class={cn(
+			buttonVariants({ variant, size }),
+			theme.classes("button", { variant, size }),
+			className,
+		)}
 		href={disabled ? undefined : href}
 		aria-disabled={disabled}
 		role={disabled ? "link" : undefined}
@@ -80,7 +87,11 @@
 	<button
 		bind:this={ref}
 		data-slot="button"
-		class={cn(buttonVariants({ variant, size }), className)}
+		class={cn(
+			buttonVariants({ variant, size }),
+			theme.classes("button", { variant, size }),
+			className,
+		)}
 		{type}
 		{disabled}
 		{...restProps}

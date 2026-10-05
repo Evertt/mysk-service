@@ -31,6 +31,7 @@
 	import type { HTMLAttributes } from "svelte/elements";
 
 	import * as Tooltip from "#lib/components/ui/tooltip/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef, type WithoutChildrenOrChild } from "#lib/utils.js";
 
 	import { useSidebar } from "./context.svelte.js";
@@ -55,10 +56,16 @@
 		child?: Snippet<[{ props: Record<string, unknown> }]>;
 	} = $props();
 
+	const theme = useTheme();
+
 	const sidebar = useSidebar();
 
 	const buttonProps = $derived({
-		class: cn(sidebarMenuButtonVariants({ variant, size }), className),
+		class: cn(
+			sidebarMenuButtonVariants({ variant, size }),
+			theme.classes("sidebar-menu-button", { variant, size }),
+			className,
+		),
 		"data-slot": "sidebar-menu-button",
 		"data-sidebar": "menu-button",
 		"data-size": size,

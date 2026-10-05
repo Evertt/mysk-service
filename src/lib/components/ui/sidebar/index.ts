@@ -73,3 +73,4 @@ export {
 	Trigger,
 	useSidebar,
 };
+export type { SidebarMenuButtonSize, SidebarMenuButtonVariant } from "./sidebar-menu-button.svelte";
