@@ -87,7 +87,7 @@ export default defineConfig({
 		ignorePatterns: ["src/lib/paraglide/", "src/auto-imports.d.ts"],
 		// Type errors are reported by svelte-check (--tsgo), which understands .svelte files;
 		// tsgolint's typeCheck doesn't and would flag every .svelte import.
-		options: { typeAware: true, typeCheck: true },
+		options: { typeAware: true, typeCheck: false },
 	},
 	plugins: lazyPlugins(() => [
 		AutoImport({
