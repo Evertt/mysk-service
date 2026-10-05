@@ -8,6 +8,8 @@ catalog:
 overrides:
   vite@*: "catalog:"
   vitest@*: "catalog:"
+patchedDependencies:
+  "@tanstack/svelte-table@9.2.5": patches/@tanstack__svelte-table@9.2.5.patch
 peerDependencyRules:
   allowAny:
     - vite

@@ -1,0 +1,149 @@
+diff --git a/dist/AppCell.svelte b/dist/AppCell.svelte
+index 4818989dbe94a8cff33871cf30f960257307d7dc..3cfe86eaaa0e5a446b3d3db45ac8d7b39ec355dc 100644
+--- a/dist/AppCell.svelte
++++ b/dist/AppCell.svelte
+@@ -1,13 +1,18 @@
+ <script lang="ts">
+-  import type { Snippet } from 'svelte'
++  import { setContext, type Snippet } from 'svelte'
+ 
+   interface Props {
+     cell: any
+     cellComponents: any
++    contextKey: string
+     children: Snippet<[any]>
+   }
+ 
+-  let { children, cell, cellComponents }: Props = $props()
++  let { children, cell, cellComponents, contextKey }: Props = $props()
++
++  // Set during this component's own initialization (not in a wrapper that runs before it), so it
++  // also works for cells created after the parent initialized, e.g. when a column is shown.
++  setContext(contextKey, cell)
+ </script>
+ 
+ {@render children?.(Object.assign(cell, cellComponents))}
+diff --git a/dist/AppHeader.svelte b/dist/AppHeader.svelte
+index fd7d091d098e00f9e9aae0033b5e718101973358..4bca62869beca5dcf3fdddb0f4a71bec8f75b3f6 100644
+--- a/dist/AppHeader.svelte
++++ b/dist/AppHeader.svelte
+@@ -1,13 +1,17 @@
+ <script lang="ts">
+-  import type { Snippet } from 'svelte'
++  import { setContext, type Snippet } from 'svelte'
+ 
+   interface Props {
+     header: any
+     headerComponents: any
++    contextKey: string
+     children: Snippet<[any]>
+   }
+ 
+-  let { children, header, headerComponents }: Props = $props()
++  let { children, header, headerComponents, contextKey }: Props = $props()
++
++  // See AppCell.svelte.
++  setContext(contextKey, header)
+ </script>
+ 
+ {@render children?.(Object.assign(header, headerComponents))}
+diff --git a/dist/AppTable.svelte b/dist/AppTable.svelte
+index c335d17674bbe49648a2b00c66b6eab8407495b2..a18046cc3cbd2ad36b1a780c614e00c92debe9e4 100644
+--- a/dist/AppTable.svelte
++++ b/dist/AppTable.svelte
+@@ -1,11 +1,16 @@
+ <script lang="ts">
+-  import type { Snippet } from 'svelte'
++  import { setContext, type Snippet } from 'svelte'
+ 
+   interface Props {
++    table: any
++    contextKey: string
+     children: Snippet
+   }
+ 
+-  let { children }: Props = $props()
++  let { children, table, contextKey }: Props = $props()
++
++  // See AppCell.svelte.
++  setContext(contextKey, table)
+ </script>
+ 
+ {@render children?.()}
+diff --git a/dist/createTableHook.svelte.js b/dist/createTableHook.svelte.js
+index 993c5f2070125cae2de94e48c93810092ce9a3e1..6159b61f30452ec130fdbe03d0a702c46383d14a 100644
+--- a/dist/createTableHook.svelte.js
++++ b/dist/createTableHook.svelte.js
+@@ -1,4 +1,4 @@
+-import { getContext, setContext } from 'svelte';
++import { getContext } from 'svelte';
+ import { createColumnHelper as coreCreateColumnHelper } from '@tanstack/table-core';
+ import { createTable } from './createTable.svelte';
+ import { mergeObjects } from './merge-objects';
+@@ -124,39 +124,34 @@ export function createTableHook({ tableComponents, cellComponents, headerCompone
+             ...(headerComponents ?? {}),
+         };
+         // Create wrapper components using the svelte-form (internal, props) => pattern.
+-        // setContext is called in the closure — this runs during component
+-        // initialization, so Svelte's context API works correctly.
+-        // With keyed {#each} blocks, components are recreated on reorder,
+-        // so context is always fresh.
+-        const AppTable = ((internal, props) => {
+-            setContext(tableContextKey, table);
+-            return AppTableSvelte(internal, { ...props });
+-        });
+-        const AppCell = ((internal, { children, cell }) => {
+-            setContext(cellContextKey, cell);
+-            return AppCellSvelte(internal, {
+-                cell,
+-                cellComponents: cellComponentsWithFlexRender,
+-                children,
+-            });
+-        });
+-        const AppHeader = ((internal, { children, header }) => {
+-            setContext(headerContextKey, header);
+-            return AppHeaderSvelte(internal, {
+-                header,
+-                headerComponents: headerComponentsWithFlexRender,
+-                children,
+-            });
+-        });
++        // They only bind props; the App*Svelte components set the context themselves, during
++        // their own initialization. (Calling setContext here would run in the *parent's*
++        // component context, which Svelte rejects once the parent has initialized, e.g. for
++        // cells created when a column is shown.)
++        const AppTable = ((internal, props) => AppTableSvelte(internal, {
++            ...props,
++            table,
++            contextKey: tableContextKey,
++        }));
++        const AppCell = ((internal, { children, cell }) => AppCellSvelte(internal, {
++            cell,
++            cellComponents: cellComponentsWithFlexRender,
++            contextKey: cellContextKey,
++            children,
++        }));
++        const AppHeader = ((internal, { children, header }) => AppHeaderSvelte(internal, {
++            header,
++            headerComponents: headerComponentsWithFlexRender,
++            contextKey: headerContextKey,
++            children,
++        }));
+         // AppFooter reuses AppHeaderSvelte (footers use Header type in table-core)
+-        const AppFooter = ((internal, { children, header }) => {
+-            setContext(headerContextKey, header);
+-            return AppHeaderSvelte(internal, {
+-                header,
+-                headerComponents: headerComponentsWithFlexRender,
+-                children,
+-            });
+-        });
++        const AppFooter = ((internal, { children, header }) => AppHeaderSvelte(internal, {
++            header,
++            headerComponents: headerComponentsWithFlexRender,
++            contextKey: headerContextKey,
++            children,
++        }));
+         // Combine everything into the extended table API
+         return Object.assign(table, {
+             AppTable,
