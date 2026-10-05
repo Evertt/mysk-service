@@ -47,6 +47,12 @@ function shadcnImports(): ImportsMap {
 }
 
 export default defineConfig({
+	run: {
+		cache: {
+			scripts: true,
+			tasks: true,
+		},
+	},
 	staged: {
 		"*": "vp check --fix",
 	},

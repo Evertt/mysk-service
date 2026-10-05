@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import { resolve } from "$app/paths";
 
-	const demos = [{ name: 'better-auth', href: resolve('/demo/better-auth') }];
+	const demos = [{ name: "better-auth", href: resolve("/demo/better-auth") }];
 </script>
 
 <!--
@@ -20,7 +20,7 @@
 		{/each}
 	</ul>
 
-	<a class="home" href={resolve('/')}>home</a>
+	<a class="home" href={resolve("/")}>home</a>
 </div>
 
 <style>
@@ -34,9 +34,12 @@
 		padding: 1rem 1.125rem 0.875rem;
 		background: linear-gradient(to bottom, #fff9b0, #fff176);
 		color: #3d3500;
-		font: 14px/1.5 system-ui, sans-serif;
+		font:
+			14px/1.5 system-ui,
+			sans-serif;
 		text-align: left;
-		box-shadow: 0 1px 2px rgb(0 0 0 / 0.15),
+		box-shadow:
+			0 1px 2px rgb(0 0 0 / 0.15),
 			0 10px 24px -6px rgb(0 0 0 / 0.35);
 		transform: rotate(-1.5deg);
 	}
