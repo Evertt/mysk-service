@@ -1,13 +1,13 @@
 import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
+import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { requireUser } from "#lib/server/session.js";
 
 const DAY = 24 * 60 * 60 * 1000;
-const openStatuses = ["quote", "scheduled", "in_progress"] as const;
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {
@@ -23,7 +23,7 @@ export const getDashboard = query(async () => {
 			unassigned: sql<number>`sum(${order.engineerId} is null)`,
 		})
 		.from(order)
-		.where(inArray(order.status, openStatuses));
+		.where(inArray(order.status, openOrderStatuses));
 
 	const materials = db
 		.select({
@@ -43,7 +43,7 @@ export const getDashboard = query(async () => {
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(engineer, eq(order.engineerId, engineer.id))
-		.where(and(inArray(order.status, ["completed", "invoiced"]), gte(order.completedAt, monthAgo)));
+		.where(and(inArray(order.status, doneOrderStatuses), gte(order.completedAt, monthAgo)));
 
 	const [fleet] = await db
 		.select({
@@ -58,8 +58,8 @@ export const getDashboard = query(async () => {
 			number: order.number,
 			priority: order.priority,
 			scheduledFor: order.scheduledFor,
-			customer: customer.name,
-			engineer: engineer.name,
+			customer: { code: customer.code, name: customer.name },
+			engineer: { id: engineer.id, name: engineer.name },
 		})
 		.from(order)
 		.innerJoin(customer, eq(order.customerId, customer.id))

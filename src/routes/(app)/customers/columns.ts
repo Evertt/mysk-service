@@ -8,7 +8,6 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { customerSegments } from "#lib/models.js";
 
-import CountCell from "./count-cell.svelte";
 import type { getCustomers } from "./customers.remote.js";
 
 export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
@@ -69,13 +68,13 @@ export const columns = column.columns([
 	}),
 	column.accessor("equipmentCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: () => renderComponent(CountCell),
+		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: "Equipment", align: "end" },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: () => renderComponent(CountCell),
+		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: "Open orders", align: "end" },
 	}),

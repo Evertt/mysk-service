@@ -22,10 +22,11 @@
 	const id = $props.id();
 	// The shadcn checkbox is a button with a hidden input; it takes the field's name, not its
 	// input `type`.
-	const attributes = $derived(field.as("checkbox"));
+	const attributes = $derived(field.as("checkbox", checked));
 	const issues = $derived(field.issues());
-	// Starts from `checked`; the checkbox's hidden input submits it under the field's name.
-	let isChecked = $derived(checked);
+	// Starts from the field's value: `checked`, or what was submitted if the form came back invalid.
+	// The checkbox's hidden input submits it under the field's name.
+	let isChecked = $derived(attributes.checked);
 </script>
 
 <Field.Field orientation="horizontal" data-invalid={issues?.length ? true : undefined}>

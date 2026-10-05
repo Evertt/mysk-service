@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import CustomerLink from "#lib/components/customers/customer-link.svelte";
+	import EngineerLink from "#lib/components/engineers/engineer-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
@@ -80,8 +82,16 @@
 				{#each data.upcoming as order (order.id)}
 					<Table.Row>
 						<Table.Cell><OrderLink number={order.number} /></Table.Cell>
-						<Table.Cell>{order.customer}</Table.Cell>
-						<Table.Cell>{order.engineer ?? "Unassigned"}</Table.Cell>
+						<Table.Cell>
+							<CustomerLink code={order.customer.code} name={order.customer.name} />
+						</Table.Cell>
+						<Table.Cell>
+							{#if order.engineer}
+								<EngineerLink id={order.engineer.id} name={order.engineer.name} />
+							{:else}
+								<span class="text-muted-foreground">Unassigned</span>
+							{/if}
+						</Table.Cell>
 						<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>
 						<Table.Cell class="text-right tabular-nums">
 							{order.scheduledFor && formatDate(order.scheduledFor)}

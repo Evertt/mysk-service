@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import CustomerLink from "#lib/components/customers/customer-link.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import { formatQuantity, unitLabels } from "#lib/components/materials/display.js";
@@ -122,12 +123,7 @@
 										</div>
 									</Table.Cell>
 									<Table.Cell>
-										<div class="flex max-w-48 flex-col">
-											<span class="truncate">{row.customer.name}</span>
-											<span class="truncate text-xs text-muted-foreground">
-												{row.customer.code}
-											</span>
-										</div>
+										<CustomerLink code={row.customer.code} name={row.customer.name} withCode />
 									</Table.Cell>
 									<Table.Cell><StatusBadge status={row.status} /></Table.Cell>
 									<Table.Cell class="text-right tabular-nums">{quantity(row.quantity)}</Table.Cell>

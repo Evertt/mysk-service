@@ -3,12 +3,11 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
 import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
 
-import EngineerCell from "./engineer-cell.svelte";
 import type { getEngineers } from "./engineers.remote.js";
-import OpenOrdersCell from "./open-orders-cell.svelte";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 
@@ -18,10 +17,10 @@ export const columns = column.columns([
 	column.accessor("name", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
-			renderComponent(EngineerCell, {
-				id: row.original.id,
-				name: row.original.name,
-				email: row.original.email,
+			renderComponent(TwoLineCell, {
+				primary: row.original.name,
+				secondary: row.original.email,
+				href: resolve("/(app)/engineers/[id]", { id: String(row.original.id) }),
 			}),
 		enableHiding: false,
 		meta: { label: "Engineer" },
@@ -60,7 +59,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => renderComponent(OpenOrdersCell, { count: getValue() }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: "Open orders", align: "end" },
 	}),

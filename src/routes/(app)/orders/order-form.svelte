@@ -7,6 +7,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { specialties } from "#lib/components/engineers/display.js";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
@@ -53,7 +54,7 @@
 			.map((engineer) => ({
 				value: String(engineer.id),
 				label: engineer.name,
-				group: humanize(engineer.specialty),
+				group: specialties[engineer.specialty].label,
 			})),
 	);
 

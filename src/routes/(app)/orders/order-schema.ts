@@ -13,7 +13,7 @@ export const orderFields = {
 	priority: v.picklist(orderPriorities),
 	description: text("Describe the work"),
 	scheduledFor: optionalDate(),
-	laborHours: v.pipe(v.number(), v.minValue(0, "Can't be negative")),
+	laborHours: v.pipe(v.number("Enter the hours"), v.minValue(0, "Can't be negative")),
 	lines: v.optional(
 		v.array(
 			v.object({

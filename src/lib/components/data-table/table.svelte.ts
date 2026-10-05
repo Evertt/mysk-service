@@ -5,6 +5,7 @@ import CurrencyCell from "./currency-cell.svelte";
 import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
 import { features } from "./features.js";
+import NumberCell from "./number-cell.svelte";
 import Pagination from "./pagination.svelte";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
@@ -28,6 +29,6 @@ export const {
 	globalFilterFn: "includesString",
 	enableRowSelection: true,
 	tableComponents: { Table: DataTable, Toolbar, Pagination, ViewOptions },
-	cellComponents: { SelectCell, DateCell, CurrencyCell },
+	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
 });

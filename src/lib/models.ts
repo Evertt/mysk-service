@@ -50,6 +50,22 @@ export const orderStatuses = [
 ] as const;
 export type OrderStatus = (typeof orderStatuses)[number];
 
+/** Orders still to be done: quoted, scheduled or under way. */
+export const openOrderStatuses = [
+	"quote",
+	"scheduled",
+	"in_progress",
+] as const satisfies OrderStatus[];
+
+/** Orders whose work is done, and which count towards revenue. */
+export const doneOrderStatuses = ["completed", "invoiced"] as const satisfies OrderStatus[];
+
+export const isOpenOrder = (status: OrderStatus) =>
+	(openOrderStatuses as readonly OrderStatus[]).includes(status);
+
+export const isDoneOrder = (status: OrderStatus) =>
+	(doneOrderStatuses as readonly OrderStatus[]).includes(status);
+
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
 

@@ -11,6 +11,8 @@
  * other way round.
  */
 import type { RouteId } from "$app/types";
+import FileCheckIcon from "@lucide/svelte/icons/file-check";
+import type { Component } from "svelte";
 
 export interface AppModule {
 	id: string;
@@ -18,6 +20,7 @@ export interface AppModule {
 	description: string;
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
+	icon: Component;
 }
 
 export const modules = [
@@ -27,6 +30,7 @@ export const modules = [
 		description:
 			"Maintenance agreements: a monthly fee for covering a customer's equipment with a guaranteed response time.",
 		route: "/(app)/contracts",
+		icon: FileCheckIcon,
 	},
 ] as const satisfies readonly AppModule[];
 

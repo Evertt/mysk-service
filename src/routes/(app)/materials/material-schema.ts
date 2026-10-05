@@ -7,8 +7,7 @@ import { cents, text } from "#lib/schema.js";
 export const materialFields = {
 	name: text("Name the material"),
 	unit: v.picklist(materialUnits, "Choose a unit"),
-	// An empty number input arrives as undefined; say so rather than "expected number".
-	unitPrice: v.pipe(v.number("Enter a price"), cents()),
+	unitPrice: cents("Enter a price"),
 	stock: v.pipe(
 		v.number("Enter the stock"),
 		v.integer("Whole units only"),

@@ -245,6 +245,7 @@ export const createOrder = form(v.object(orderFields), async (input, issue) => {
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
 	const number = await saveOrder(null, input);
+	void getOrders().refresh();
 	redirect(303, `/orders/${number}`);
 });
 
@@ -254,11 +255,14 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
 	const number = await saveOrder(id, input);
+	void getOrders().refresh();
+	void getOrder(number).refresh();
 	redirect(303, `/orders/${number}`);
 });
 
 export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	requireUser();
 	await db.delete(order).where(eq(order.id, id));
+	void getOrders().refresh();
 	redirect(303, "/orders");
 });

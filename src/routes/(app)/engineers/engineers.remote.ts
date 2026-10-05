@@ -3,8 +3,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.js";
+import { openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
@@ -13,7 +14,6 @@ import { requireUser } from "#lib/server/session.js";
 import { engineerFields } from "./engineer-schema.js";
 
 /** Orders that still need work: quoted, scheduled or under way. */
-const openStatuses: OrderStatus[] = ["quote", "scheduled", "in_progress"];
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -23,7 +23,7 @@ export const getEngineers = query(async () => {
 	const open = db
 		.select({ engineerId: order.engineerId, count: count().as("open_count") })
 		.from(order)
-		.where(inArray(order.status, openStatuses))
+		.where(inArray(order.status, openOrderStatuses))
 		.groupBy(order.engineerId)
 		.as("open");
 
@@ -78,7 +78,7 @@ export const getEngineer = query(v.string(), async (param) => {
 			.select(columns)
 			.from(order)
 			.innerJoin(customer, eq(order.customerId, customer.id))
-			.where(and(eq(order.engineerId, engineerId), inArray(order.status, openStatuses)))
+			.where(and(eq(order.engineerId, engineerId), inArray(order.status, openOrderStatuses)))
 			.orderBy(sql`${order.scheduledFor} is null`, asc(order.scheduledFor), asc(order.id)),
 		db
 			.select(columns)
@@ -123,6 +123,7 @@ export const createEngineer = form(v.object(engineerFields), async (input, issue
 		invalid(issue.email("Another engineer already uses this email address"));
 	}
 	const [created] = await db.insert(engineer).values(input).returning({ id: engineer.id });
+	void getEngineers().refresh();
 	redirect(303, `/engineers/${created.id}`);
 });
 
@@ -140,6 +141,8 @@ export const updateEngineer = form(
 			invalid(issue.email("Another engineer already uses this email address"));
 		}
 		await db.update(engineer).set(input).where(eq(engineer.id, id));
+		void getEngineers().refresh();
+		void getEngineer(String(id)).refresh();
 		redirect(303, `/engineers/${id}`);
 	},
 );
@@ -160,6 +163,10 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 
-	await db.delete(engineer).where(eq(engineer.id, id));
+	await deleteOrRefuse(
+		() => db.delete(engineer).where(eq(engineer.id, id)),
+		"Other records still refer to this engineer. Mark them inactive instead.",
+	);
+	void getEngineers().refresh();
 	redirect(303, "/engineers");
 });

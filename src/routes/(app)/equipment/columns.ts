@@ -4,12 +4,11 @@ import { renderComponent } from "@tanstack/svelte-table";
 import CustomerLink from "#lib/components/customers/customer-link.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 import StatusBadge from "#lib/components/equipment/status-badge.svelte";
 
 import type { getEquipmentList } from "./equipment.remote.js";
-import OpenOrdersCell from "./open-orders-cell.svelte";
-import UnitCell from "./unit-cell.svelte";
 import WarrantyCell from "./warranty-cell.svelte";
 
 export type EquipmentRow = Awaited<ReturnType<typeof getEquipmentList>>[number];
@@ -28,9 +27,10 @@ export const columns = column.columns([
 		id: "unit",
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
-			renderComponent(UnitCell, {
-				name: getValue(),
-				serialNumber: row.original.serialNumber,
+			renderComponent(TwoLineCell, {
+				primary: getValue(),
+				secondary: row.original.serialNumber,
+				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
 		meta: { label: "Unit" },
@@ -83,7 +83,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => renderComponent(OpenOrdersCell, { count: getValue() }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: "Open orders", align: "end" },
 	}),

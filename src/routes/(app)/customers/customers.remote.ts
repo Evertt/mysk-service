@@ -3,8 +3,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { asc, count, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.js";
+import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
@@ -13,9 +14,7 @@ import { requireUser } from "#lib/server/session.js";
 import { customerFields, europeanCountries } from "./customer-schema.js";
 
 /** Orders that still need work. */
-const openStatuses: OrderStatus[] = ["quote", "scheduled", "in_progress"];
 /** Orders whose work is done and counts as revenue. */
-const revenueStatuses: OrderStatus[] = ["completed", "invoiced"];
 
 /** All customers with how many equipment units and open orders they have, by name. */
 export const getCustomers = query(async () => {
@@ -28,7 +27,7 @@ export const getCustomers = query(async () => {
 	const open = db
 		.select({ customerId: order.customerId, count: count().as("open_count") })
 		.from(order)
-		.where(inArray(order.status, openStatuses))
+		.where(inArray(order.status, openOrderStatuses))
 		.groupBy(order.customerId)
 		.as("open");
 
@@ -81,11 +80,11 @@ export const getCustomer = query(v.string(), async (code) => {
 			laborCost(laborHours, engineer?.hourlyRate),
 	}));
 
-	const done = orders.filter((o) => revenueStatuses.includes(o.status));
+	const done = orders.filter((o) => isDoneOrder(o.status));
 	return {
 		customer: { ...rest, orders },
 		stats: {
-			openOrders: orders.filter((o) => openStatuses.includes(o.status)).length,
+			openOrders: orders.filter((o) => isOpenOrder(o.status)).length,
 			revenue: done.reduce((sum, o) => sum + o.total, 0),
 			revenueOrders: done.length,
 			lastOrderAt: orders[0]?.createdAt ?? null,
@@ -123,6 +122,7 @@ export const createCustomer = form(v.object(customerFields), async (input, issue
 		await tx.update(customer).set({ code }).where(eq(customer.id, inserted.id));
 		return code;
 	});
+	void getCustomers().refresh();
 	redirect(303, `/customers/${code}`);
 });
 
@@ -140,6 +140,8 @@ export const updateCustomer = form(
 		}
 
 		await db.update(customer).set(input).where(eq(customer.id, id));
+		void getCustomers().refresh();
+		void getCustomer(existing.code).refresh();
 		redirect(303, `/customers/${existing.code}`);
 	},
 );
@@ -162,6 +164,10 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 
-	await db.delete(customer).where(eq(customer.id, id));
+	await deleteOrRefuse(
+		() => db.delete(customer).where(eq(customer.id, id)),
+		"Other records still refer to this customer, such as service contracts. Remove those first.",
+	);
+	void getCustomers().refresh();
 	redirect(303, "/customers");
 });

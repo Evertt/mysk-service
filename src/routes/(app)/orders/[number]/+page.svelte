@@ -2,14 +2,21 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import CustomerSegmentBadge from "#lib/components/customers/segment-badge.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
+	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
+	import EquipmentLink from "#lib/components/equipment/equipment-link.svelte";
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
+	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
+	import MaterialLink from "#lib/components/materials/material-link.svelte";
+	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatCents, formatDate, humanize } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.js";
 
 	import { deleteOrder, getOrder } from "../orders.remote.js";
 	import type { PageProps } from "./$types";
@@ -20,7 +27,6 @@
 
 	const order = $derived(data.order);
 	const { customer, equipment, engineer } = $derived(data.order);
-	const underWarranty = $derived(equipment && order.createdAt < equipment.warrantyUntil);
 </script>
 
 <svelte:head>
@@ -82,10 +88,7 @@
 						{#each order.lines as line (line.id)}
 							<Table.Row>
 								<Table.Cell>
-									<div class="flex flex-col">
-										<span>{line.material.name}</span>
-										<span class="text-xs text-muted-foreground">{line.material.sku}</span>
-									</div>
+									<MaterialLink sku={line.material.sku} name={line.material.name} />
 								</Table.Cell>
 								<Table.Cell class="text-right tabular-nums">
 									{line.quantity}
@@ -154,12 +157,7 @@
 								{#each data.history as other (other.id)}
 									<Table.Row>
 										<Table.Cell>
-											<a
-												href={resolve("/(app)/orders/[number]", { number: other.number })}
-												class="font-medium underline-offset-4 hover:underline"
-											>
-												{other.number}
-											</a>
+											<OrderLink number={other.number} />
 										</Table.Cell>
 										<Table.Cell><TypeLabel type={other.type} /></Table.Cell>
 										<Table.Cell><StatusBadge status={other.status} /></Table.Cell>
@@ -208,12 +206,16 @@
 				<Card.Title>Customer</Card.Title>
 				<Card.Description>{customer.code}</Card.Description>
 				<Card.Action>
-					<Badge variant="outline">{humanize(customer.segment)}</Badge>
+					<CustomerSegmentBadge segment={customer.segment} />
 				</Card.Action>
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label="Company" value={customer.name} />
+					<DetailItem
+						label="Company"
+						value={customer.name}
+						href={resolve("/(app)/customers/[code]", { code: customer.code })}
+					/>
 					<DetailItem label="Contact" value={customer.contactName} />
 					<DetailItem label="Email" value={customer.email} href={`mailto:${customer.email}`} />
 					<DetailItem label="Phone" value={customer.phone} href={`tel:${customer.phone}`} />
@@ -226,7 +228,9 @@
 			<Card.Header>
 				<Card.Title>Equipment</Card.Title>
 				{#if equipment}
-					<Card.Description>{equipment.serialNumber}</Card.Description>
+					<Card.Description>
+						<EquipmentLink serialNumber={equipment.serialNumber} />
+					</Card.Description>
 					<Card.Action>
 						<EquipmentStatusBadge status={equipment.status} />
 					</Card.Action>
@@ -236,12 +240,16 @@
 				{#if equipment}
 					<dl class="grid grid-cols-2 gap-4">
 						<DetailItem label="Model" value={`${equipment.manufacturer} ${equipment.model}`} />
-						<DetailItem label="Category" value={humanize(equipment.category)} />
+						<DetailItem label="Category">
+							<CategoryLabel category={equipment.category} />
+						</DetailItem>
 						<DetailItem label="Installed" value={formatDate(equipment.installedAt)} />
-						<DetailItem
-							label="Warranty"
-							value={`${underWarranty ? "Covered" : "Expired"}, until ${formatDate(equipment.warrantyUntil)}`}
-						/>
+						<DetailItem label="Warranty">
+							<span class="flex flex-wrap items-center gap-2">
+								{formatDate(equipment.warrantyUntil)}
+								<WarrantyBadge until={equipment.warrantyUntil} at={order.createdAt} />
+							</span>
+						</DetailItem>
 					</dl>
 				{:else}
 					<p class="text-sm text-muted-foreground">
@@ -257,14 +265,18 @@
 				{#if engineer}
 					<Card.Description>{engineer.region} region</Card.Description>
 					<Card.Action>
-						<Badge variant="outline">{humanize(engineer.specialty)}</Badge>
+						<SpecialtyBadge specialty={engineer.specialty} />
 					</Card.Action>
 				{/if}
 			</Card.Header>
 			<Card.Content>
 				{#if engineer}
 					<dl class="grid grid-cols-2 gap-4">
-						<DetailItem label="Name" value={engineer.name} />
+						<DetailItem
+							label="Name"
+							value={engineer.name}
+							href={resolve("/(app)/engineers/[id]", { id: String(engineer.id) })}
+						/>
 						<DetailItem label="Hourly rate" value={formatCents(engineer.hourlyRate)} />
 						<DetailItem label="Email" value={engineer.email} href={`mailto:${engineer.email}`} />
 						<DetailItem label="Phone" value={engineer.phone} href={`tel:${engineer.phone}`} />

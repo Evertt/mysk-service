@@ -7,7 +7,6 @@ import { stockLevel, stockLevels, unitLabels } from "#lib/components/materials/d
 import MaterialLink from "#lib/components/materials/material-link.svelte";
 
 import type { getMaterials } from "./materials.remote.js";
-import OrderCountCell from "./order-count-cell.svelte";
 import StockCell from "./stock-cell.svelte";
 
 export type MaterialRow = Awaited<ReturnType<typeof getMaterials>>[number];
@@ -59,7 +58,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("orderCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => renderComponent(OrderCountCell, { count: getValue() }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "order" }),
 		enableGlobalFilter: false,
 		meta: { label: "Used on", align: "end" },
 	}),

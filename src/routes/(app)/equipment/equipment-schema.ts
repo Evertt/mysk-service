@@ -1,16 +1,7 @@
 import * as v from "valibot";
 
 import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
-import { id, text } from "#lib/schema.js";
-
-/** A required date from `<input type="date">`, as a local date at the start of the day. */
-const date = (message: string) =>
-	v.pipe(
-		v.string(),
-		v.nonEmpty(message),
-		v.transform((value) => new Date(`${value}T00:00`)),
-		v.check((value) => !Number.isNaN(value.getTime()), "Enter a valid date"),
-	);
+import { date, id, text } from "#lib/schema.js";
 
 /** The fields of the equipment form, shared by registering and editing a unit. */
 export const equipmentFields = {

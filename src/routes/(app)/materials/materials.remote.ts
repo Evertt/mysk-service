@@ -3,8 +3,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.js";
+import { isOpenOrder } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, material, order, orderLine } from "#lib/server/db/schema.js";
 import { requireUser } from "#lib/server/session.js";
@@ -12,7 +13,6 @@ import { requireUser } from "#lib/server/session.js";
 import { materialFields } from "./material-schema.js";
 
 /** Orders that still need their materials. */
-const openStatuses: readonly OrderStatus[] = ["quote", "scheduled", "in_progress"];
 
 /** How many different orders use a material. */
 const ordersUsing = async (materialId: number) => {
@@ -79,7 +79,7 @@ export const getMaterial = query(v.string(), async (sku) => {
 	const yearAgo = new Date();
 	yearAgo.setFullYear(yearAgo.getFullYear() - 1);
 	const lastYear = usage.filter((row) => row.createdAt >= yearAgo && row.status !== "cancelled");
-	const open = usage.filter((row) => openStatuses.includes(row.status));
+	const open = usage.filter((row) => isOpenOrder(row.status));
 	const total = (rows: typeof usage) => rows.reduce((sum, row) => sum + row.quantity, 0);
 
 	return {
@@ -118,6 +118,7 @@ export const createMaterial = form(v.object(materialFields), async (input, issue
 		await tx.update(material).set({ sku }).where(eq(material.id, inserted.id));
 		return sku;
 	});
+	void getMaterials().refresh();
 	redirect(303, `/materials/${sku}`);
 });
 
@@ -147,7 +148,8 @@ export const updateMaterial = form(
 
 		await db.update(material).set(input).where(eq(material.id, id));
 		// Send the updated material along, so the page we redirect to doesn't show the old one first.
-		await getMaterial(existing.sku).refresh();
+		void getMaterials().refresh();
+		void getMaterial(existing.sku).refresh();
 		redirect(303, `/materials/${existing.sku}`);
 	},
 );
@@ -160,6 +162,10 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 			`This material is used on ${orders === 1 ? "1 order" : `${orders} orders`}, so it can't be deleted. Remove it from ${orders === 1 ? "that order" : "those orders"} first.`,
 		);
 	}
-	await db.delete(material).where(eq(material.id, id));
+	await deleteOrRefuse(
+		() => db.delete(material).where(eq(material.id, id)),
+		"Other records still refer to this material. Remove those first.",
+	);
+	void getMaterials().refresh();
 	redirect(303, "/materials");
 });

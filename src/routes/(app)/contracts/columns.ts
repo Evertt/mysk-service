@@ -12,7 +12,6 @@ import { formatDate } from "#lib/format.js";
 import { contractLevels, contractStatus, contractStatuses } from "#lib/models.js";
 
 import type { getContracts } from "./contracts.remote.js";
-import QuantityCell from "./quantity-cell.svelte";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];
 
@@ -74,16 +73,13 @@ export const columns = column.columns([
 	}),
 	column.accessor("units", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) =>
-			renderComponent(QuantityCell, {
-				text: `${getValue()} ${getValue() === 1 ? "unit" : "units"}`,
-			}),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "unit" }),
 		enableGlobalFilter: false,
 		meta: { label: "Covers", align: "end" },
 	}),
 	column.accessor("responseHours", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => renderComponent(QuantityCell, { text: `${getValue()} h` }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "h", plural: "h" }),
 		enableGlobalFilter: false,
 		meta: { label: "Response", align: "end" },
 	}),

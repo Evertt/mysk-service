@@ -37,6 +37,7 @@ export const columns = column.columns([
 			renderComponent(TwoLineCell, {
 				primary: row.original.customer.name,
 				secondary: row.original.customer.code,
+				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
 		meta: { label: "Customer" },
 	}),
@@ -49,6 +50,9 @@ export const columns = column.columns([
 				renderComponent(TwoLineCell, {
 					primary: getValue(),
 					secondary: row.original.equipment?.serialNumber,
+					href:
+						row.original.equipment &&
+						resolve("/(app)/equipment/[serial]", { serial: row.original.equipment.serialNumber }),
 					fallback: "New installation",
 				}),
 			sortUndefined: "last",
@@ -79,8 +83,14 @@ export const columns = column.columns([
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) =>
-			renderComponent(TwoLineCell, { primary: getValue(), fallback: "Unassigned" }),
+		cell: ({ getValue, row }) =>
+			renderComponent(TwoLineCell, {
+				primary: getValue(),
+				href:
+					row.original.engineer &&
+					resolve("/(app)/engineers/[id]", { id: String(row.original.engineer.id) }),
+				fallback: "Unassigned",
+			}),
 		sortUndefined: "last",
 		meta: { label: "Engineer" },
 	}),

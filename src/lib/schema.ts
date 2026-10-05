@@ -32,9 +32,39 @@ export const toDateInput = (date: Date | null | undefined) =>
 		: "";
 
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
-export const cents = (message = "Can't be negative") =>
+export const cents = (required = "Enter an amount") =>
 	v.pipe(
-		v.number(),
-		v.minValue(0, message),
+		// An empty number input arrives as undefined; say so rather than "expected number".
+		v.number(required),
+		v.minValue(0, "Can't be negative"),
 		v.transform((euros) => Math.round(euros * 100)),
 	);
+
+/** A required date from `<input type="date">`, as a local date at the start of the day. */
+export const date = (required = "Choose a date") =>
+	v.pipe(
+		v.string(),
+		v.nonEmpty(required),
+		v.isoDate("Enter a valid date"),
+		v.transform((value) => new Date(`${value}T00:00`)),
+	);
+
+/**
+ * A required, trimmed text in a given format. The format is only checked once there's a value,
+ * so an empty field gets just the "required" message.
+ */
+export const formatted = (required: string, pattern: RegExp, message: string) =>
+	v.pipe(
+		v.string(),
+		v.trim(),
+		v.nonEmpty(required),
+		v.check((value) => value === "" || pattern.test(value), message),
+	);
+
+/** A required email address, stored in lower case. */
+export const email = (required = "Enter an email address") =>
+	v.pipe(formatted(required, v.EMAIL_REGEX, "Enter a valid email address"), v.toLowerCase());
+
+/** A required phone number: digits with optional +, spaces, dots, dashes and brackets. */
+export const phone = (required = "Enter a phone number") =>
+	formatted(required, /^\+?[\d\s().-]{6,20}$/, "Enter a valid phone number");

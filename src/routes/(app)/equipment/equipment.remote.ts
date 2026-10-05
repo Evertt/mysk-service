@@ -3,20 +3,15 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { asc, count, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.js";
+import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { deleteOrRefuse } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { laborCost } from "#lib/server/pricing.js";
 import { requireUser } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
-
-const openStatuses = ["quote", "scheduled", "in_progress"] as const satisfies OrderStatus[];
-const doneStatuses = ["completed", "invoiced"] as const satisfies OrderStatus[];
-
-const isOpen = (status: OrderStatus) => (openStatuses as readonly OrderStatus[]).includes(status);
-const isDone = (status: OrderStatus) => (doneStatuses as readonly OrderStatus[]).includes(status);
 
 const orders = (n: number) => (n === 1 ? "1 order" : `${n} orders`);
 
@@ -26,7 +21,7 @@ export const getEquipmentList = query(async () => {
 	const open = db
 		.select({ equipmentId: order.equipmentId, count: count().as("open_count") })
 		.from(order)
-		.where(inArray(order.status, openStatuses))
+		.where(inArray(order.status, openOrderStatuses))
 		.groupBy(order.equipmentId)
 		.as("open_orders");
 
@@ -73,13 +68,13 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 		return { ...row, total: materials + laborCost(row.laborHours, engineer?.hourlyRate) };
 	});
 	const completed = history
-		.filter((row) => isDone(row.status) && row.completedAt)
+		.filter((row) => isDoneOrder(row.status) && row.completedAt)
 		.map((row) => row.completedAt as Date);
 
 	return {
 		unit,
 		history,
-		openOrders: history.filter((row) => isOpen(row.status)).length,
+		openOrders: history.filter((row) => isOpenOrder(row.status)).length,
 		lastService: completed.length
 			? new Date(Math.max(...completed.map((date) => date.getTime())))
 			: null,
@@ -146,6 +141,7 @@ export const createEquipment = form(v.object(equipmentFields), async (input, iss
 	const problems = await checkUnit(undefined, input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
 	await db.insert(equipment).values(input);
+	void getEquipmentList().refresh();
 	redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
 });
 
@@ -159,6 +155,8 @@ export const updateEquipment = form(
 		const problems = await checkUnit(existing, input);
 		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
 		await db.update(equipment).set(input).where(eq(equipment.id, id));
+		void getEquipmentList().refresh();
+		void getEquipment(input.serialNumber).refresh();
 		redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
 	},
 );
@@ -174,6 +172,10 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 			`This unit can't be deleted: ${orders(total)} refer to it. Set its status to decommissioned instead.`,
 		);
 	}
-	await db.delete(equipment).where(eq(equipment.id, id));
+	await deleteOrRefuse(
+		() => db.delete(equipment).where(eq(equipment.id, id)),
+		"Other records still refer to this unit. Remove those first.",
+	);
+	void getEquipmentList().refresh();
 	redirect(303, "/equipment");
 });
