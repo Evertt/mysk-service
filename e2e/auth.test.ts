@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "../src/lib/server/db/demo.ts";
-import { baseURL, useApp, users } from "./app.ts";
+import { baseURL, hydrated, useApp, users } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -15,15 +15,22 @@ describe("signed out", () => {
 	});
 
 	test("remote functions answer 401", async () => {
-		// As a string: vitest would rewrite an `import()` in a function.
-		const status = await app.expectingErrors(() =>
-			app.page.evaluate(`
-				import("/src/routes/(app)/dashboard.remote.ts").then((remote) =>
-					remote.getDashboard().then(() => "no error", (error) => error.status),
-				)
-			`),
-		);
-		expect(status).toBe(401);
+		// The dashboard's query as a signed-in tab calls it, then again without the session.
+		const tab = await app.anotherTab();
+		let url: string;
+		try {
+			const query = tab.waitForRequest((request) => request.url().includes("/getDashboard"));
+			await tab.goto(`${baseURL}/login`);
+			await hydrated(tab);
+			await tab.getByLabel("Email").fill(users.admin);
+			await tab.getByLabel("Password").fill(DEMO_PASSWORD);
+			await tab.getByRole("button", { name: "Sign in" }).click();
+			url = (await query).url();
+		} finally {
+			await tab.context().close();
+		}
+		const response = await fetch(url);
+		expect(`${response.status} ${await response.text()}`).toMatch(/401|"status":401/);
 	});
 
 	test("better-auth's organization endpoints aren't exposed", async () => {

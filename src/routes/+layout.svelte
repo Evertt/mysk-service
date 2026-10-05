@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from "$app/state";
+	import { onMount } from "svelte";
 
 	import favicon from "#lib/assets/favicon.svg";
 	import { locales, localizeHref } from "#lib/paraglide/runtime.js";
@@ -10,6 +11,11 @@
 	import type { LayoutProps } from "./$types";
 
 	let { children }: LayoutProps = $props();
+
+	// Marks the page as interactive (hydrated), which the end-to-end tests wait for.
+	onMount(() => {
+		document.documentElement.dataset.hydrated = "";
+	});
 </script>
 
 <svelte:head>

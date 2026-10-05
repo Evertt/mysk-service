@@ -31,3 +31,6 @@ project.inlang/cache/
 !.vscode/extensions.json
 
 # dotenv environment variable files
+
+# Agent worktrees
+.claude/worktrees/

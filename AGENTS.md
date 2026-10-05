@@ -44,8 +44,9 @@ helpers are in `src/lib/server/session.ts`:
 ## Tests
 
 `pnpm test` runs everything: unit tests (`*.spec.ts` next to the code, in Node; `*.svelte.spec.ts`
-in the browser) and the end-to-end tests in `e2e/`, which drive the app in Chrome against a fresh,
-seeded database and their own dev server (see the Testing section of README.md).
+in the browser) and the end-to-end tests in `e2e/`, which drive a production build of the app in
+Chromium, one server and fresh, seeded database per test worker (see the Testing section of
+README.md).
 
 - A change to a section's behaviour gets an e2e test in that section's file
   (`e2e/<section>.test.ts`), written like the existing ones: tests are sequential steps sharing
@@ -54,8 +55,9 @@ seeded database and their own dev server (see the Testing section of README.md).
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
   including by tampering with hidden ids (`app.expectingErrors`).
 - Pure helpers (validation, formatting, domain rules) get unit tests next to them.
-- Only run one e2e run at a time: another dev server starting in this folder makes the test
-  server reload pages mid-test.
+- Test files run in parallel, each worker against its own database; within a file, tests run in
+  order. A file may change data (through the UI), but must not rely on another file's changes.
+- Only run one e2e run at a time: each run builds into `.svelte-kit/output`.
 
 ---
 

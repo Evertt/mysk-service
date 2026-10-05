@@ -74,11 +74,13 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
 - **Unit tests** sit next to the code they test: `*.spec.ts` runs in Node, `*.svelte.spec.ts` in
   the browser.
 - **End-to-end tests** are in `e2e/`. They sign in and click through the app like a user, then
-  check the database. Each run seeds a fresh database in a temporary folder and starts its own dev
-  server on a free port (`e2e/global-setup.ts`), so they don't touch `local.db` or a dev server
-  you have running. `e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching
-  organizations, submitting remote forms, and reading the database. Starting the test server
-  makes a running dev server reload once, since both write `.svelte-kit/generated`.
+  check the database. Each run builds the app, seeds a fresh database in a temporary folder and
+  starts a production server per test worker, each with its own copy of the database
+  (`e2e/global-setup.ts`). The test files run in parallel across them, and none of it touches
+  `local.db` or a dev server you have running (which reloads once when the build starts).
+  `e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching organizations, submitting
+  remote forms, and reading the database. `E2E_DEV=1 pnpm test:e2e` runs them against a single dev
+  server instead: slower, but with Svelte's dev-only warnings.
 
 ## Building
 

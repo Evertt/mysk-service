@@ -149,15 +149,17 @@ export default defineConfig({
 			},
 
 			{
-				// End-to-end: drives the app in Chrome, against a dev server on a fresh, seeded
-				// database (see e2e/global-setup.ts).
+				// End-to-end: drives the app in a browser, against servers with fresh, seeded databases
+				// (see e2e/global-setup.ts).
 				test: {
 					name: "e2e",
 					environment: "node",
 					include: ["e2e/**/*.test.ts"],
 					globalSetup: ["e2e/global-setup.ts"],
-					// The files share the database; some check counts or toggle modules.
-					fileParallelism: false,
+					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the
+					// files share, so they take turns.
+					maxWorkers: "60%",
+					fileParallelism: !process.env.E2E_DEV,
 					testTimeout: 30_000,
 					hookTimeout: 60_000,
 					expect: { requireAssertions: true },

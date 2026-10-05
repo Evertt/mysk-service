@@ -8,12 +8,19 @@ import { afterAll, afterEach, beforeAll, expect, inject } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoUsers } from "../src/lib/server/db/demo.ts";
 
-export const baseURL = inject("baseURL");
+/**
+ * This worker's app and database (see `global-setup.ts`): files on other workers run at the same
+ * time against their own.
+ */
+const lanes = inject("lanes");
+const lane = lanes[(Number(process.env.VITEST_POOL_ID ?? 1) - 1) % lanes.length];
+
+export const baseURL = lane.baseURL;
 
 // --- Database --------------------------------------------------------------------------------
 
 // The busy timeout: the app may be writing.
-const client = createClient({ url: inject("databaseURL"), timeout: 5000 });
+const client = createClient({ url: lane.databaseURL, timeout: 5000 });
 
 /**
  * Runs a query against the app's database and returns its rows. Only for reading: tests change
@@ -52,6 +59,13 @@ export async function nextCode(table: string, column: string, organizationId: st
 }
 
 // --- Browser ---------------------------------------------------------------------------------
+
+/** Waits until a page is interactive (see the root layout), or settled if it errored. */
+export const hydrated = (page: Page) =>
+	Promise.race([
+		page.locator("html[data-hydrated]").waitFor({ state: "attached" }),
+		page.waitForLoadState("networkidle"),
+	]);
 
 export const organizations = {
 	north: { id: "org-north", name: "Fieldworks North" },
@@ -110,7 +124,7 @@ export function useApp({ user = users.admin }: { user?: string | null } = {}): A
 		},
 		async go(path) {
 			const response = await page.goto(new URL(path, baseURL).href);
-			await page.waitForLoadState("networkidle");
+			await hydrated(page);
 			return response;
 		},
 		path: () => new URL(page.url()).pathname,

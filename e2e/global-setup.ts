@@ -1,24 +1,37 @@
 /**
- * Starts the app for the end-to-end tests: a fresh, seeded database in a temporary folder and a
- * dev server on a free port that uses it, so the tests neither depend on nor change `local.db`
- * (or a dev server you have running).
+ * Starts the app for the end-to-end tests, in temporary folders, so the tests neither depend on
+ * nor change `local.db` (or a dev server you have running).
+ *
+ * The app is built once and served by one production server per test worker ("lane"), each on a
+ * free port with its own copy of a freshly seeded database. Test files run in parallel across the
+ * lanes; within a lane, one after another.
+ *
+ * With `E2E_DEV=1`, it uses a single dev server instead (and the files run one at a time): slower,
+ * but with Svelte's dev-only warnings, for debugging.
  */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { TestProject } from "vite-plus/test/node";
 
+export interface Lane {
+	/** Where the app under test runs, e.g. `http://localhost:51234`. */
+	baseURL: string;
+	/** Its database, a `file:` URL. */
+	databaseURL: string;
+}
+
 declare module "vitest" {
 	export interface ProvidedContext {
-		/** Where the app under test runs, e.g. `http://localhost:51234`. */
-		baseURL: string;
-		/** The app's database, a `file:` URL. */
-		databaseURL: string;
+		/** One app per test worker, see `useApp` in `app.ts`. */
+		lanes: Lane[];
 	}
 }
+
+const dev = !!process.env.E2E_DEV;
 
 function freePort() {
 	return new Promise<number>((resolve, reject) => {
@@ -32,10 +45,46 @@ function freePort() {
 	});
 }
 
+/** Starts the app on a free port with its own database; resolves once it answers. */
+async function startServer(databaseURL: string) {
+	const port = await freePort();
+	const baseURL = `http://localhost:${port}`;
+	let output = "";
+	// Variables set here win over the ones in .env (BETTER_AUTH_SECRET still comes from there).
+	// Detached: its own process group, so stopping it also stops the Vite process `vp` starts.
+	const server = spawn(
+		"node_modules/.bin/vp",
+		[dev ? "dev" : "preview", "--port", String(port), "--strictPort"],
+		{
+			env: { ...process.env, DATABASE_URL: databaseURL, ORIGIN: baseURL },
+			stdio: ["ignore", "pipe", "pipe"],
+			detached: true,
+		},
+	);
+	server.stdout?.on("data", (chunk) => (output += chunk));
+	server.stderr?.on("data", (chunk) => (output += chunk));
+
+	const stop = async () => {
+		if (server.exitCode === null) {
+			const exited = new Promise((resolve) => server.once("exit", resolve));
+			process.kill(-server.pid!, "SIGTERM");
+			await exited;
+		}
+		if (process.env.E2E_SERVER_LOG) console.error(output);
+	};
+	try {
+		await waitUntilUp(baseURL, server, () => output);
+	} catch (error) {
+		await stop();
+		throw error;
+	}
+	return { baseURL, stop };
+}
+
 async function waitUntilUp(url: string, server: ChildProcess, output: () => string) {
 	const deadline = Date.now() + 60_000;
 	while (Date.now() < deadline) {
-		if (server.exitCode !== null) throw new Error(`The dev server exited:\n${output()}`);
+		if (server.exitCode !== null) throw new Error(`The server exited:\n${output()}`);
 		// Only once our own server says it listens there: another one may have taken the port.
 		if (output().includes(url)) {
 			try {
@@ -45,50 +94,48 @@ async function waitUntilUp(url: string, server: ChildProcess, output: () => stri
 				// Not answering yet.
 			}
 		}
-		await new Promise((resolve) => setTimeout(resolve, 250));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 	}
-	throw new Error(`The dev server didn't start within a minute:\n${output()}`);
+	throw new Error(`The server didn't start within a minute:\n${output()}`);
 }
 
 export default async function setup(project: TestProject) {
 	const folder = mkdtempSync(join(tmpdir(), "fieldworks-e2e-"));
-	const databaseURL = `file:${join(folder, "test.db")}`;
-	const port = await freePort();
-	const baseURL = `http://localhost:${port}`;
-	// Variables set here win over the ones in .env (BETTER_AUTH_SECRET still comes from there).
-	const env = { ...process.env, DATABASE_URL: databaseURL, ORIGIN: baseURL };
-
+	const template = join(folder, "seeded.db");
 	const run = (command: string, args: string[]) =>
-		execFileSync(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+		execFileSync(command, args, {
+			env: { ...process.env, DATABASE_URL: `file:${template}` },
+			stdio: ["ignore", "pipe", "pipe"],
+		});
 	run("node_modules/.bin/drizzle-kit", ["push", "--force"]);
 	run("node", ["--env-file=.env", "src/lib/server/db/seed.ts"]);
+	if (!dev) run("node_modules/.bin/vp", ["build"]);
 
-	let output = "";
-	// Detached: its own process group, so stopping it also stops the Vite process `vp` starts.
-	const server = spawn("node_modules/.bin/vp", ["dev", "--port", String(port), "--strictPort"], {
-		env,
-		stdio: ["ignore", "pipe", "pipe"],
-		detached: true,
-	});
-	server.stdout?.on("data", (chunk) => (output += chunk));
-	server.stderr?.on("data", (chunk) => (output += chunk));
+	const count = dev ? 1 : project.config.maxWorkers;
+	const started = await Promise.allSettled(
+		Array.from({ length: count }, async (_, i) => {
+			const database = join(folder, `lane-${i + 1}.db`);
+			copyFileSync(template, database);
+			const databaseURL = `file:${database}`;
+			return { databaseURL, ...(await startServer(databaseURL)) };
+		}),
+	);
+	const servers = started.flatMap((result) =>
+		result.status === "fulfilled" ? [result.value] : [],
+	);
 	const teardown = async () => {
-		if (server.exitCode === null) {
-			const exited = new Promise((resolve) => server.once("exit", resolve));
-			process.kill(-server.pid!, "SIGTERM");
-			await exited;
-		}
-		if (process.env.E2E_SERVER_LOG) console.error(output);
+		await Promise.all(servers.map((server) => server.stop()));
 		rmSync(folder, { recursive: true, force: true });
 	};
-	try {
-		await waitUntilUp(baseURL, server, () => output);
-	} catch (error) {
+	const failed = started.find((result) => result.status === "rejected");
+	if (failed) {
 		await teardown();
-		throw error;
+		throw failed.reason;
 	}
 
-	project.provide("baseURL", baseURL);
-	project.provide("databaseURL", databaseURL);
+	project.provide(
+		"lanes",
+		servers.map(({ baseURL, databaseURL }) => ({ baseURL, databaseURL })),
+	);
 	return teardown;
 }
