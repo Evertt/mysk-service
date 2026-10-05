@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Separator as SeparatorPrimitive } from "bits-ui";
 
+	import { useTheme } from "#lib/themes/context.js";
+	import type { Slot } from "#lib/themes/types.js";
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -9,6 +11,8 @@
 		"data-slot": dataSlot = "separator",
 		...restProps
 	}: SeparatorPrimitive.RootProps = $props();
+
+	const theme = useTheme();
 </script>
 
 <SeparatorPrimitive.Root
@@ -16,6 +20,7 @@
 	data-slot={dataSlot}
 	class={cn(
 		"shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
+		theme.classes(dataSlot as Slot),
 		className,
 	)}
 	{...restProps}

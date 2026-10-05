@@ -2,6 +2,7 @@
 	import type { Snippet } from "svelte";
 	import type { HTMLAnchorAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -15,9 +16,15 @@
 		child?: Snippet<[{ props: HTMLAnchorAttributes }]>;
 	} = $props();
 
+	const theme = useTheme();
+
 	const attrs = $derived({
 		"data-slot": "breadcrumb-link",
-		class: cn("transition-colors hover:text-foreground", className),
+		class: cn(
+			"transition-colors hover:text-foreground",
+			theme.classes("breadcrumb-link"),
+			className,
+		),
 		href,
 		...restProps,
 	});

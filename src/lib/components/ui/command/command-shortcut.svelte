@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLSpanElement>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <span
@@ -16,6 +19,7 @@
 	data-slot="command-shortcut"
 	class={cn(
 		"ml-auto text-xs tracking-widest text-muted-foreground group-data-selected/command-item:text-foreground",
+		theme.classes("command-shortcut"),
 		className,
 	)}
 	{...restProps}

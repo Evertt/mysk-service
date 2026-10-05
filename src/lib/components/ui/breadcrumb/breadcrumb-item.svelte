@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLLiAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,12 +10,14 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLLiAttributes> = $props();
+
+	const theme = useTheme();
 </script>
 
 <li
 	bind:this={ref}
 	data-slot="breadcrumb-item"
-	class={cn("inline-flex items-center gap-1.5", className)}
+	class={cn("inline-flex items-center gap-1.5", theme.classes("breadcrumb-item"), className)}
 	{...restProps}
 >
 	{@render children?.()}

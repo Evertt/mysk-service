@@ -2,6 +2,7 @@
 	import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef, type WithoutChildren } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		class: className,
 		...restProps
 	}: WithoutChildren<WithElementRef<HTMLAttributes<HTMLSpanElement>>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <span
@@ -16,7 +19,11 @@
 	data-slot="breadcrumb-ellipsis"
 	role="presentation"
 	aria-hidden="true"
-	class={cn("flex size-5 items-center justify-center [&>svg]:size-4", className)}
+	class={cn(
+		"flex size-5 items-center justify-center [&>svg]:size-4",
+		theme.classes("breadcrumb-ellipsis"),
+		className,
+	)}
 	{...restProps}
 >
 	<MoreHorizontalIcon />

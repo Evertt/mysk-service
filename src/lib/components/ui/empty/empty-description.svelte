@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
@@ -16,6 +19,7 @@
 	data-slot="empty-description"
 	class={cn(
 		"text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+		theme.classes("empty-description"),
 		className,
 	)}
 	{...restProps}

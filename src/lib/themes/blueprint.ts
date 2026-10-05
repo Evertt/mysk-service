@@ -42,10 +42,12 @@ export default defineTheme({
 		"--sidebar-ring": "oklch(0.8 0.15 80)",
 	},
 	components: {
+		"app-header": { base: "border-dashed border-primary/30" },
 		badge: { base: "text-[0.65rem] tracking-wide uppercase" },
 		button: { base: "text-xs tracking-wide uppercase" },
 		card: { base: "border border-dashed border-primary/40 shadow-none ring-0" },
 		"card-title": { base: "text-xs font-semibold tracking-widest text-primary uppercase" },
+		"data-table": { base: "rounded-none border-dashed border-primary/40" },
 		"dropdown-menu-content": { base: "shadow-lg ring-primary/30" },
 		"popover-content": { base: "shadow-lg ring-primary/30" },
 		"select-content": { base: "shadow-lg ring-primary/30" },

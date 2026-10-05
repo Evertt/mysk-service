@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Command as CommandPrimitive } from "bits-ui";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
 	export type CommandRootApi = CommandPrimitive.Root;
@@ -14,6 +15,8 @@
 	}: CommandPrimitive.RootProps & {
 		api?: CommandRootApi | null;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <CommandPrimitive.Root
@@ -23,6 +26,7 @@
 	data-slot="command"
 	class={cn(
 		"flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
+		theme.classes("command"),
 		className,
 	)}
 	{...restProps}

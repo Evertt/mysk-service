@@ -23,6 +23,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -34,6 +35,8 @@
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		align?: InputGroupAddonAlign;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
@@ -41,7 +44,11 @@
 	role="group"
 	data-slot="input-group-addon"
 	data-align={align}
-	class={cn(inputGroupAddonVariants({ align }), className)}
+	class={cn(
+		inputGroupAddonVariants({ align }),
+		theme.classes("input-group-addon", { align }),
+		className,
+	)}
 	onclick={(e) => {
 		if ((e.target as HTMLElement).closest("button")) {
 			return;

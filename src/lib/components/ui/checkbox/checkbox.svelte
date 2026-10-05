@@ -32,7 +32,10 @@
 	{#snippet children({ checked, indeterminate })}
 		<div
 			data-slot="checkbox-indicator"
-			class="grid place-content-center text-current transition-none [&>svg]:size-3.5"
+			class={cn(
+				"grid place-content-center text-current transition-none [&>svg]:size-3.5",
+				theme.classes("checkbox-indicator"),
+			)}
 		>
 			{#if checked}
 				<CheckIcon />

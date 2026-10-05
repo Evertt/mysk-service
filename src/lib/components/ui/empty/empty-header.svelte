@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,12 +10,14 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="empty-header"
-	class={cn("flex max-w-sm flex-col items-center gap-2", className)}
+	class={cn("flex max-w-sm flex-col items-center gap-2", theme.classes("empty-header"), className)}
 	{...restProps}
 >
 	{@render children?.()}

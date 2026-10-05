@@ -47,6 +47,7 @@ export default defineTheme({
 		"--sidebar-ring": "oklch(0.17 0 0)",
 	},
 	components: {
+		"app-header": { base: "border-b-2 border-foreground" },
 		badge: {
 			base: "border-2 border-foreground font-bold tracking-wide uppercase",
 			variant: {
@@ -92,6 +93,13 @@ export default defineTheme({
 		"sidebar-menu-button": {
 			base: "font-bold tracking-wide uppercase data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground",
 		},
+		"breadcrumb-link": {
+			base: "font-bold underline decoration-2 underline-offset-4 hover:bg-primary",
+		},
+		"data-table": { base: `rounded-none border-0 ${hardShadow.lg}` },
+		"dialog-content": { base: `${outlined} ${hardShadow.lg}` },
+		separator: { base: "bg-foreground" },
+		"sidebar-container": { base: "group-data-[side=left]:border-e-2" },
 		"table-container": { base: `${outlined} bg-card` },
 		"table-header": { base: "bg-foreground [&_tr]:border-b-0" },
 		"table-head": { base: "text-xs font-bold tracking-wider text-background uppercase" },
@@ -99,5 +107,9 @@ export default defineTheme({
 			base: "border-b-2 border-foreground/15 hover:bg-primary/30 data-[state=selected]:bg-primary",
 		},
 		"table-footer": { base: "border-t-2 border-foreground bg-primary font-bold" },
+		"tooltip-content": {
+			base: "border-2 border-foreground bg-primary font-bold text-primary-foreground uppercase",
+		},
+		"tooltip-arrow": { base: "hidden" },
 	},
 });

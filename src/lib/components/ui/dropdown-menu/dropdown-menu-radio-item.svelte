@@ -29,7 +29,10 @@
 >
 	{#snippet children({ checked })}
 		<span
-			class="pointer-events-none absolute right-2 flex items-center justify-center"
+			class={cn(
+				"pointer-events-none absolute right-2 flex items-center justify-center",
+				theme.classes("dropdown-menu-radio-item-indicator"),
+			)}
 			data-slot="dropdown-menu-radio-item-indicator"
 		>
 			{#if checked}

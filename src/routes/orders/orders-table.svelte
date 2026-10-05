@@ -5,6 +5,7 @@
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { priorityOptions, statusOptions, typeOptions } from "#lib/components/orders/display.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
 	import { columns, type OrderRow } from "./columns.js";
@@ -12,6 +13,8 @@
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let { orders }: { orders: OrderRow[] } = $props();
+
+	const theme = useTheme();
 
 	const table = createAppTable({
 		columns,
@@ -65,7 +68,10 @@
 			</div>
 		</div>
 
-		<div class="overflow-hidden rounded-lg border">
+		<div
+			data-slot="data-table"
+			class={cn("overflow-hidden rounded-lg border", theme.classes("data-table"))}
+		>
 			<Table.Root>
 				<Table.Header>
 					{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}

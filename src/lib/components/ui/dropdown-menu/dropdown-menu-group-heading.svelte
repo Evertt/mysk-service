@@ -2,6 +2,7 @@
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -12,12 +13,18 @@
 	}: ComponentProps<typeof DropdownMenuPrimitive.GroupHeading> & {
 		inset?: boolean;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <DropdownMenuPrimitive.GroupHeading
 	bind:ref
 	data-slot="dropdown-menu-group-heading"
 	data-inset={inset}
-	class={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground data-inset:pl-8", className)}
+	class={cn(
+		"px-2 py-1.5 text-xs font-medium text-muted-foreground data-inset:pl-8",
+		theme.classes("dropdown-menu-group-heading"),
+		className,
+	)}
 	{...restProps}
 />

@@ -1,13 +1,14 @@
 import blueprint from "./blueprint.js";
 import brutalist from "./brutalist.js";
 import neutral from "./neutral.js";
+import sorbet from "./sorbet.js";
 import type { Theme } from "./types.js";
 
 /**
  * The app's themes. Each one is a single file with CSS variables (colours, radius, font) and
  * Tailwind classes per component part. To add one, create the file and register it here.
  */
-export const themes = { neutral, blueprint, brutalist } satisfies Record<string, Theme>;
+export const themes = { neutral, blueprint, brutalist, sorbet } satisfies Record<string, Theme>;
 
 export type ThemeName = keyof typeof themes;
 

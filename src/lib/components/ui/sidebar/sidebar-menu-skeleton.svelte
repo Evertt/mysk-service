@@ -2,6 +2,7 @@
 	import type { HTMLAttributes } from "svelte/elements";
 
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -14,6 +15,8 @@
 		showIcon?: boolean;
 	} = $props();
 
+	const theme = useTheme();
+
 	// Random width between 50% and 90%
 	const width = `${Math.floor(Math.random() * 40) + 50}%`;
 </script>
@@ -22,7 +25,11 @@
 	bind:this={ref}
 	data-slot="sidebar-menu-skeleton"
 	data-sidebar="menu-skeleton"
-	class={cn("flex h-8 items-center gap-2 rounded-md px-2", className)}
+	class={cn(
+		"flex h-8 items-center gap-2 rounded-md px-2",
+		theme.classes("sidebar-menu-skeleton"),
+		className,
+	)}
 	{...restProps}
 >
 	{#if showIcon}

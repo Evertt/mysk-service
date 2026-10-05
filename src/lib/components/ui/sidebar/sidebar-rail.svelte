@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	import { useSidebar } from "./context.svelte.js";
@@ -11,6 +12,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLButtonElement>, HTMLButtonElement> = $props();
+
+	const theme = useTheme();
 
 	const sidebar = useSidebar();
 </script>
@@ -30,6 +33,7 @@
 		"group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full hover:group-data-[collapsible=offcanvas]:bg-sidebar",
 		"[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
 		"[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+		theme.classes("sidebar-rail"),
 		className,
 	)}
 	{...restProps}

@@ -20,3 +20,4 @@ export {
 	Description as EmptyDescription,
 	Content as EmptyContent,
 };
+export type { EmptyMediaVariant } from "./empty-media.svelte";

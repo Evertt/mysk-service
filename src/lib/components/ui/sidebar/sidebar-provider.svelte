@@ -2,6 +2,7 @@
 	import type { HTMLAttributes } from "svelte/elements";
 
 	import * as Tooltip from "#lib/components/ui/tooltip/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	import {
@@ -25,6 +26,8 @@
 		onOpenChange?: (open: boolean) => void;
 	} = $props();
 
+	const theme = useTheme();
+
 	const sidebar = setSidebar({
 		open: () => open,
 		setOpen: (value: boolean) => {
@@ -45,6 +48,7 @@
 		style="--sidebar-width: {SIDEBAR_WIDTH}; --sidebar-width-icon: {SIDEBAR_WIDTH_ICON}; {style}"
 		class={cn(
 			"group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
+			theme.classes("sidebar-wrapper"),
 			className,
 		)}
 		bind:this={ref}

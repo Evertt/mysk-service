@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLElement>> = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
@@ -17,6 +20,7 @@
 	data-sidebar="content"
 	class={cn(
 		"no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+		theme.classes("sidebar-content"),
 		className,
 	)}
 	{...restProps}

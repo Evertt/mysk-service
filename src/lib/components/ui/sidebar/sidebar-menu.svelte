@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,13 +10,15 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLUListElement>, HTMLUListElement> = $props();
+
+	const theme = useTheme();
 </script>
 
 <ul
 	bind:this={ref}
 	data-slot="sidebar-menu"
 	data-sidebar="menu"
-	class={cn("flex w-full min-w-0 flex-col gap-1", className)}
+	class={cn("flex w-full min-w-0 flex-col gap-1", theme.classes("sidebar-menu"), className)}
 	{...restProps}
 >
 	{@render children?.()}

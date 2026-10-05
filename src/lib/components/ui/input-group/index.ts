@@ -20,3 +20,4 @@ export {
 	Text as InputGroupText,
 	Textarea as InputGroupTextarea,
 };
+export type { InputGroupAddonAlign } from "./input-group-addon.svelte";

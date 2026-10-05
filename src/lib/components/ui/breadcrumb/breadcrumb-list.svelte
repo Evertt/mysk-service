@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { HTMLOlAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -9,6 +10,8 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLOlAttributes> = $props();
+
+	const theme = useTheme();
 </script>
 
 <ol
@@ -16,6 +19,7 @@
 	data-slot="breadcrumb-list"
 	class={cn(
 		"flex flex-wrap items-center gap-1.5 text-sm wrap-break-word text-muted-foreground sm:gap-2.5",
+		theme.classes("breadcrumb-list"),
 		className,
 	)}
 	{...restProps}

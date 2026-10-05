@@ -37,7 +37,10 @@
 >
 	{#snippet children({ checked, indeterminate })}
 		<span
-			class="pointer-events-none absolute right-2 flex items-center justify-center"
+			class={cn(
+				"pointer-events-none absolute right-2 flex items-center justify-center",
+				theme.classes("dropdown-menu-checkbox-item-indicator"),
+			)}
 			data-slot="dropdown-menu-checkbox-item-indicator"
 		>
 			{#if indeterminate}

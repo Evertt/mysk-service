@@ -3,6 +3,7 @@
 	import type { HTMLAttributes } from "svelte/elements";
 
 	import { Button } from "#lib/components/ui/button/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -14,12 +15,18 @@
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		showCloseButton?: boolean;
 	} = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="dialog-footer"
-	class={cn("flex flex-col-reverse gap-2 gap-2 sm:flex-row sm:justify-end", className)}
+	class={cn(
+		"flex flex-col-reverse gap-2 gap-2 sm:flex-row sm:justify-end",
+		theme.classes("dialog-footer"),
+		className,
+	)}
 	{...restProps}
 >
 	{@render children?.()}

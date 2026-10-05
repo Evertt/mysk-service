@@ -2,6 +2,7 @@
 	import type { HTMLAttributes } from "svelte/elements";
 
 	import * as Sheet from "#lib/components/ui/sheet/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	import { SIDEBAR_WIDTH_MOBILE } from "./constants.js";
@@ -20,6 +21,8 @@
 		variant?: "sidebar" | "floating" | "inset";
 		collapsible?: "offcanvas" | "icon" | "none";
 	} = $props();
+
+	const theme = useTheme();
 
 	const sidebar = useSidebar();
 </script>
@@ -61,7 +64,7 @@
 {:else}
 	<div
 		bind:this={ref}
-		class="group peer hidden text-sidebar-foreground md:block"
+		class={cn("group peer hidden text-sidebar-foreground md:block", theme.classes("sidebar"))}
 		data-state={sidebar.state}
 		data-collapsible={sidebar.state === "collapsed" ? collapsible : ""}
 		data-variant={variant}
@@ -78,6 +81,7 @@
 				variant === "floating" || variant === "inset"
 					? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_(--spacing(4)))]"
 					: "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+				theme.classes("sidebar-gap"),
 			)}
 		></div>
 		<div
@@ -89,6 +93,7 @@
 				variant === "floating" || variant === "inset"
 					? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_(--spacing(4))_+_2px)]"
 					: "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-e group-data-[side=right]:border-s",
+				theme.classes("sidebar-container"),
 				className,
 			)}
 			{...restProps}
@@ -96,7 +101,10 @@
 			<div
 				data-sidebar="sidebar"
 				data-slot="sidebar-inner"
-				class="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+				class={cn(
+					"flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border",
+					theme.classes("sidebar-inner"),
+				)}
 			>
 				{@render children?.()}
 			</div>

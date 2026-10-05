@@ -1,55 +1,36 @@
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
 import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.js";
+import type { EmptyMediaVariant } from "#lib/components/ui/empty/index.js";
+import type { InputGroupAddonAlign } from "#lib/components/ui/input-group/index.js";
 import type {
 	SidebarMenuButtonSize,
 	SidebarMenuButtonVariant,
 } from "#lib/components/ui/sidebar/index.js";
 
-type NoProps = Record<never, never>;
+import type { GeneratedSlot } from "./slots.js";
 
 /**
- * The component parts a theme can style, keyed by their `data-slot`, with the props a theme can
- * style per value (e.g. a button's `variant` and `size`).
+ * Parts whose classes can also differ per prop value, e.g. a button's `variant` and `size`. These
+ * need `theme.classes("button", { variant, size })` in the component, added by hand.
  */
-export interface ThemeSlots {
+interface SlotsWithProps {
 	badge: { variant: NonNullable<BadgeVariant> };
 	button: { variant: NonNullable<ButtonVariant>; size: NonNullable<ButtonSize> };
 	card: { size: "default" | "sm" };
+	"empty-icon": { variant: NonNullable<EmptyMediaVariant> };
+	"input-group-addon": { align: NonNullable<InputGroupAddonAlign> };
 	"sidebar-menu-button": {
 		variant: NonNullable<SidebarMenuButtonVariant>;
 		size: NonNullable<SidebarMenuButtonSize>;
 	};
-	"card-action": NoProps;
-	"card-content": NoProps;
-	"card-description": NoProps;
-	"card-footer": NoProps;
-	"card-header": NoProps;
-	"card-title": NoProps;
-	checkbox: NoProps;
-	"command-item": NoProps;
-	"dropdown-menu-checkbox-item": NoProps;
-	"dropdown-menu-content": NoProps;
-	"dropdown-menu-item": NoProps;
-	"dropdown-menu-label": NoProps;
-	"dropdown-menu-radio-item": NoProps;
-	"dropdown-menu-separator": NoProps;
-	input: NoProps;
-	"input-group": NoProps;
-	"popover-content": NoProps;
-	"select-content": NoProps;
-	"select-item": NoProps;
-	"select-trigger": NoProps;
-	"sidebar-group-label": NoProps;
-	table: NoProps;
-	"table-body": NoProps;
-	"table-caption": NoProps;
-	"table-cell": NoProps;
-	"table-container": NoProps;
-	"table-footer": NoProps;
-	"table-head": NoProps;
-	"table-header": NoProps;
-	"table-row": NoProps;
 }
+
+/**
+ * The component parts a theme can style, keyed by their `data-slot` (generated from the
+ * components, see `slots.ts`), with the props a theme can style per value.
+ */
+export type ThemeSlots = Omit<Record<GeneratedSlot, Record<never, never>>, keyof SlotsWithProps> &
+	SlotsWithProps;
 
 export type Slot = keyof ThemeSlots;
 

@@ -3,6 +3,7 @@
 	import { Command as CommandPrimitive } from "bits-ui";
 
 	import * as InputGroup from "#lib/components/ui/input-group/index.js";
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
 	let {
@@ -11,9 +12,14 @@
 		value = $bindable(""),
 		...restProps
 	}: CommandPrimitive.InputProps = $props();
+
+	const theme = useTheme();
 </script>
 
-<div data-slot="command-input-wrapper" class="p-1 pb-0">
+<div
+	data-slot="command-input-wrapper"
+	class={cn("p-1 pb-0", theme.classes("command-input-wrapper"))}
+>
 	<InputGroup.Root
 		class="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!"
 	>
@@ -22,6 +28,7 @@
 			data-slot="command-input"
 			class={cn(
 				"w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+				theme.classes("command-input"),
 				className,
 			)}
 			{...restProps}

@@ -20,6 +20,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
+	import { useTheme } from "#lib/themes/context.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 
 	let {
@@ -29,13 +30,15 @@
 		variant = "default",
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & { variant?: EmptyMediaVariant } = $props();
+
+	const theme = useTheme();
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="empty-icon"
 	data-variant={variant}
-	class={cn(emptyMediaVariants({ variant }), className)}
+	class={cn(emptyMediaVariants({ variant }), theme.classes("empty-icon", { variant }), className)}
 	{...restProps}
 >
 	{@render children?.()}
