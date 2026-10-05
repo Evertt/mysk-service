@@ -1,0 +1,43 @@
+<script lang="ts">
+	import { resolve } from "$app/paths";
+
+	import PageHeader from "#lib/components/page-header.svelte";
+
+	import CustomerForm from "../../customer-form.svelte";
+	import { getCustomer, getCustomerFormOptions, updateCustomer } from "../../customers.remote.js";
+	import type { PageProps } from "./$types";
+
+	let { params }: PageProps = $props();
+
+	const { customer } = $derived(await getCustomer(params.code));
+	const customerHref = $derived(resolve("/(app)/customers/[code]", { code: customer.code }));
+</script>
+
+<svelte:head>
+	<title>Edit {customer.name} · Customers</title>
+</svelte:head>
+
+<PageHeader title="Edit {customer.name}" description={customer.code}>
+	<Breadcrumb.Root>
+		<Breadcrumb.List>
+			<Breadcrumb.Item>
+				<Breadcrumb.Link href={resolve("/(app)/customers")}>Customers</Breadcrumb.Link>
+			</Breadcrumb.Item>
+			<Breadcrumb.Separator />
+			<Breadcrumb.Item>
+				<Breadcrumb.Link href={customerHref}>{customer.name}</Breadcrumb.Link>
+			</Breadcrumb.Item>
+			<Breadcrumb.Separator />
+			<Breadcrumb.Item>
+				<Breadcrumb.Page>Edit</Breadcrumb.Page>
+			</Breadcrumb.Item>
+		</Breadcrumb.List>
+	</Breadcrumb.Root>
+</PageHeader>
+
+<CustomerForm
+	form={updateCustomer}
+	{customer}
+	options={await getCustomerFormOptions()}
+	cancelHref={customerHref}
+/>
