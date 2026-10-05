@@ -54,7 +54,12 @@ README.md).
   `rows()`/`value()`.
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
   including by tampering with hidden ids (`app.expectingErrors`).
-- Pure helpers (validation, formatting, domain rules) get unit tests next to them.
+- Pure helpers (validation, formatting, domain rules, form schemas, table columns) get unit tests
+  next to them (`*.spec.ts`).
+- Shared components get component tests next to them (`*.svelte.spec.ts`, rendered with
+  `vitest-browser-svelte`). A component that needs a parent (a table, the theme provider) gets a
+  `*.test-harness.svelte`; form fields take fakes of remote form fields from
+  `src/lib/components/form/fake-form.ts`; remote functions are replaced with `vi.mock`.
 - Test files run in parallel, each worker against its own database; within a file, tests run in
   order. A file may change data (through the UI), but must not rely on another file's changes.
 - Only run one e2e run at a time: each run builds into `.svelte-kit/output`.

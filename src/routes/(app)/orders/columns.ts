@@ -42,7 +42,8 @@ export const columns = column.columns([
 		meta: { label: "Customer" },
 	}),
 	column.accessor(
-		(row) => row.equipment && `${row.equipment.manufacturer} ${row.equipment.model}`,
+		// `undefined` rather than `null`, so new installations sort last (`sortUndefined`).
+		(row) => (row.equipment ? `${row.equipment.manufacturer} ${row.equipment.model}` : undefined),
 		{
 			id: "equipment",
 			header: ({ header }) => renderComponent(header.ColumnHeader),

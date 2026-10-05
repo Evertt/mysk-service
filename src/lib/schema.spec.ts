@@ -57,10 +57,17 @@ describe("dates", () => {
 	test("a required date must be there and valid", () => {
 		expect(parse(date("Choose a start date"), "")).toEqual({ issue: "Choose a start date" });
 		expect(parse(date(), "2026-13-45")).toEqual({ issue: "Enter a valid date" });
+		expect(parse(date(), "2026-02-31")).toEqual({ issue: "Enter a valid date" });
 	});
 
-	test("an optional date may be empty", () => {
+	test("an empty required date only says it's required", () => {
+		expect(v.safeParse(date(), "").issues).toHaveLength(1);
+	});
+
+	test("an optional date may be empty, but not invalid", () => {
 		expect(parse(optionalDate(), "")).toEqual({ value: null });
+		expect(parse(optionalDate(), "garbage")).toEqual({ issue: "Enter a valid date" });
+		expect(parse(optionalDate(), "2026-02-29")).toEqual({ issue: "Enter a valid date" });
 		expect(toDateInput(null)).toBe("");
 	});
 });

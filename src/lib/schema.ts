@@ -27,10 +27,21 @@ export const optionalId = (message = "Choose one") =>
 /** A required, trimmed text. */
 export const text = (message = "Required") => v.pipe(v.string(), v.trim(), v.nonEmpty(message));
 
+/** Whether `value` (`yyyy-mm-dd`) is a day on the calendar, so not e.g. `2026-02-31`. */
+const isDay = (value: string) => {
+	const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)?.map(Number) ?? [];
+	const date = new Date(year, month - 1, day);
+	return date.getMonth() === month - 1 && date.getDate() === day;
+};
+
+/** The day a valid date input stands for (checked only once there's a value). */
+const day = () => v.check((value: string) => value === "" || isDay(value), "Enter a valid date");
+
 /** An optional date from `<input type="date">`, as a local date at the start of the day. */
 export const optionalDate = () =>
 	v.pipe(
 		v.string(),
+		day(),
 		v.transform((value) => (value ? new Date(`${value}T00:00`) : null)),
 	);
 
@@ -54,7 +65,7 @@ export const date = (required = "Choose a date") =>
 	v.pipe(
 		v.string(),
 		v.nonEmpty(required),
-		v.isoDate("Enter a valid date"),
+		day(),
 		v.transform((value) => new Date(`${value}T00:00`)),
 	);
 

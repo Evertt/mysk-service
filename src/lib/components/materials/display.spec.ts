@@ -1,0 +1,27 @@
+import { describe, expect, test } from "vite-plus/test";
+
+import { formatQuantity, stockLevel } from "./display.ts";
+
+describe("stockLevel", () => {
+	test("nothing, or less than nothing, is out of stock", () => {
+		expect(stockLevel(0, "pcs")).toBe("out");
+		expect(stockLevel(-2, "kg")).toBe("out");
+	});
+
+	test("fewer than 10 pieces is low", () => {
+		expect(stockLevel(1, "pcs")).toBe("low");
+		expect(stockLevel(9, "pcs")).toBe("low");
+		expect(stockLevel(10, "pcs")).toBe("in_stock");
+	});
+
+	test.each(["m", "kg", "l"] as const)("less than 50 %s is low", (unit) => {
+		expect(stockLevel(10, unit)).toBe("low");
+		expect(stockLevel(49, unit)).toBe("low");
+		expect(stockLevel(50, unit)).toBe("in_stock");
+	});
+});
+
+test("a quantity is shown with its unit", () => {
+	expect(formatQuantity(12, "pcs")).toBe("12 pcs");
+	expect(formatQuantity(2.5, "kg")).toBe("2.5 kg");
+});

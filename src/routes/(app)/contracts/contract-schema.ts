@@ -22,8 +22,7 @@ export const contractFields = {
 	),
 	// Checkboxes, one per unit; unchecked ones aren't submitted, so none checked means no field.
 	equipmentIds: v.pipe(
-		v.optional(v.array(v.string()), []),
+		v.optional(v.array(id("Choose units from the list")), []),
 		v.minLength(1, "Choose at least one unit"),
-		v.transform((ids) => ids.map(Number)),
 	),
 };

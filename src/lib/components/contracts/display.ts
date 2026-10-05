@@ -41,15 +41,18 @@ const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
 /** A contract's length, e.g. "2 years", "18 months" or "3 months, 10 days"; both days count. */
 export function formatTerm(startsOn: Date, endsOn: Date) {
 	const end = new Date(endsOn.getFullYear(), endsOn.getMonth(), endsOn.getDate() + 1);
+	// `months` after the start; from the 31st, a month later in a shorter month is the 1st after it.
+	const after = (months: number) => {
+		const target = new Date(startsOn.getFullYear(), startsOn.getMonth() + months, 1);
+		const length = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+		return startsOn.getDate() > length
+			? new Date(target.getFullYear(), target.getMonth() + 1, 1)
+			: new Date(target.getFullYear(), target.getMonth(), startsOn.getDate());
+	};
 	let months =
 		(end.getFullYear() - startsOn.getFullYear()) * 12 + end.getMonth() - startsOn.getMonth();
-	if (end.getDate() < startsOn.getDate()) months--;
-	const afterMonths = new Date(
-		startsOn.getFullYear(),
-		startsOn.getMonth() + months,
-		startsOn.getDate(),
-	);
-	const days = Math.round((end.getTime() - afterMonths.getTime()) / (24 * 60 * 60 * 1000));
+	while (months > 0 && after(months) > end) months--;
+	const days = Math.round((end.getTime() - after(months).getTime()) / (24 * 60 * 60 * 1000));
 
 	if (days)
 		return months ? `${plural(months, "month")}, ${plural(days, "day")}` : plural(days, "day");
