@@ -14,7 +14,9 @@ import { inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import {
+	type ContractLevel,
 	customerSegments,
+	defaultResponseHours,
 	engineerSpecialties,
 	equipmentCategories,
 	type EquipmentCategory,
@@ -323,6 +325,120 @@ for (const item of equipments) {
 	if (item.status === "operational" && faker.datatype.boolean(0.04)) item.status = "decommissioned";
 }
 
+// --- Service contracts (optional module) -----------------------------------------------------
+
+/** Monthly fee per covered unit in euros, by level. */
+const feePerUnit: Record<ContractLevel, [number, number]> = {
+	basic: [35, 55],
+	standard: [70, 110],
+	premium: [140, 220],
+};
+
+/** Shorter or longer response times than the level's default, agreed now and then. */
+const customResponseHours: Record<ContractLevel, number[]> = {
+	basic: [48, 96],
+	standard: [12, 48],
+	premium: [2, 8],
+};
+
+const contractNotes = [
+	"Includes the annual statutory inspection.",
+	"Parts included up to €2,000 per year.",
+	"Out-of-hours call-outs are billed separately.",
+	"Site access via the security desk; announce visits 24 hours ahead.",
+	"Fee indexed yearly (CPI + 1%).",
+	"Covers the main site only; satellite locations on request.",
+];
+
+const levelsBySegment: Record<(typeof customerSegments)[number], ContractLevel[]> = {
+	enterprise: ["premium", "premium", "standard"],
+	mid_market: ["standard", "standard", "basic", "premium"],
+	small_business: ["basic", "basic", "standard"],
+};
+
+/** Moves a date by whole years, keeping the day of the month. */
+const addYears = (date: Date, years: number) =>
+	new Date(date.getFullYear() + years, date.getMonth(), date.getDate());
+
+// Mostly larger customers have a contract. Each has a run of consecutive terms (renewals, often
+// upgraded over time): the latest is active or starts soon, unless the customer let it lapse.
+const contractTerms = customers
+	.filter((owner) =>
+		faker.datatype.boolean({ enterprise: 1, mid_market: 0.85, small_business: 0.1 }[owner.segment]),
+	)
+	.flatMap((owner) => {
+		const owned = equipments.filter((e) => e.customerId === owner.id);
+		const lapsed = faker.datatype.boolean(0.15);
+		let level = faker.helpers.arrayElement(levelsBySegment[owner.segment]);
+		let years = faker.helpers.arrayElement([1, 1, 2, 3]);
+		const latestStart = lapsed
+			? faker.date.between({
+					from: addDays(now, -years * 365 - 500),
+					to: addDays(now, -years * 365 - 30),
+				})
+			: faker.date.between({ from: addDays(now, -years * 365 + 30), to: addDays(now, 60) });
+		// Contracts start on the first of a month.
+		let startsOn = new Date(latestStart.getFullYear(), latestStart.getMonth(), 1);
+
+		const terms = [];
+		const termCount = faker.helpers.arrayElement([1, 2, 2, 3]);
+		// Newest first, back to when the customer joined.
+		for (let i = 0; i < termCount && startsOn > owner.createdAt; i++) {
+			const endsOn = addDays(addYears(startsOn, years), -1);
+			const eligible = owned.filter(
+				(e) => e.installedAt < endsOn && (endsOn < now || e.status !== "decommissioned"),
+			);
+			if (eligible.length) {
+				const covered = faker.helpers.arrayElements(
+					eligible,
+					faker.number.int({ min: 1, max: eligible.length }),
+				);
+				const [min, max] = feePerUnit[level];
+				// A volume discount from four units.
+				const fee =
+					covered.length * faker.number.int({ min, max }) * (covered.length >= 4 ? 0.9 : 1);
+				terms.push({
+					customerId: owner.id,
+					level,
+					startsOn,
+					endsOn,
+					monthlyFee: Math.round(fee / 5) * 500,
+					responseHours: faker.datatype.boolean(0.15)
+						? faker.helpers.arrayElement(customResponseHours[level])
+						: defaultResponseHours[level],
+					notes: faker.helpers.maybe(() => faker.helpers.arrayElement(contractNotes), {
+						probability: 0.3,
+					}),
+					createdAt: new Date(
+						Math.min(
+							addDays(startsOn, -faker.number.int({ min: 7, max: 45 })).getTime(),
+							addDays(now, -1).getTime(),
+						),
+					),
+					equipmentIds: covered.map((e) => e.id),
+				});
+			}
+			// The term before this one; customers tend to upgrade, so it may be a level lower.
+			years = faker.helpers.arrayElement([1, 1, 2]);
+			startsOn = addYears(startsOn, -years);
+			if (level !== "basic" && faker.datatype.boolean(0.3)) {
+				level = level === "premium" ? "standard" : "basic";
+			}
+		}
+		return terms;
+	})
+	.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+	.map((c, i) => ({
+		id: i + 1,
+		number: `CTR-${c.createdAt.getFullYear()}-${String(i + 1).padStart(4, "0")}`,
+		...c,
+	}));
+
+const contracts = contractTerms.map(({ equipmentIds: _equipmentIds, ...c }) => c);
+const contractCoverage = contractTerms.flatMap((c) =>
+	c.equipmentIds.map((equipmentId) => ({ contractId: c.id, equipmentId })),
+);
+
 // --- Demo users ------------------------------------------------------------------------------
 
 /** The password of every demo user. Local demo data only, documented in README.md. */
@@ -336,7 +452,16 @@ const demoUsers = [
 // --- Write -----------------------------------------------------------------------------------
 
 await db.transaction(async (tx) => {
-	for (const table of [orderLine, order, equipment, material, engineer, customer]) {
+	for (const table of [
+		schema.contractEquipment,
+		schema.contract,
+		orderLine,
+		order,
+		equipment,
+		material,
+		engineer,
+		customer,
+	]) {
 		await tx.delete(table);
 	}
 	await insertAll(customers, (rows) => tx.insert(customer).values(rows));
@@ -345,6 +470,8 @@ await db.transaction(async (tx) => {
 	await insertAll(materials, (rows) => tx.insert(material).values(rows));
 	await insertAll(orders, (rows) => tx.insert(order).values(rows));
 	await insertAll(orderLines, (rows) => tx.insert(orderLine).values(rows));
+	await insertAll(contracts, (rows) => tx.insert(schema.contract).values(rows));
+	await insertAll(contractCoverage, (rows) => tx.insert(schema.contractEquipment).values(rows));
 });
 
 // Demo users are recreated (with their password account, as better-auth's email sign-up would),
@@ -380,4 +507,7 @@ await db.transaction(async (tx) => {
 console.log(
 	`Seeded ${customers.length} customers, ${engineers.length} engineers, ${equipments.length} equipment, ` +
 		`${materials.length} materials, ${orders.length} orders, ${orderLines.length} order lines and ${demoUsers.length} demo users.`,
+);
+console.log(
+	`Seeded ${contracts.length} service contracts covering ${contractCoverage.length} units.`,
 );

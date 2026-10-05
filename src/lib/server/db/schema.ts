@@ -1,7 +1,8 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import {
+	contractLevels,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
@@ -144,3 +145,60 @@ export const orderLineRelations = relations(orderLine, ({ one }) => ({
 }));
 
 export * from "./auth.schema.ts";
+
+// --- Service contracts (optional module, see `#lib/modules.ts`) --------------------------------
+// These tables reference the core tables, never the other way round.
+
+/**
+ * A maintenance agreement: for a monthly fee, the customer's covered equipment gets service with
+ * a guaranteed response time. Its status (upcoming, active, expired) follows from the period,
+ * see `contractStatus` in `#lib/models.ts`.
+ */
+export const contract = sqliteTable("contract", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	number: text("number").notNull().unique(),
+	customerId: integer("customer_id")
+		.notNull()
+		.references(() => customer.id),
+	level: text("level", { enum: contractLevels }).notNull(),
+	/** The first day of the contract, at local midnight. */
+	startsOn: integer("starts_on", { mode: "timestamp" }).notNull(),
+	/** The last day of the contract (inclusive), at local midnight. */
+	endsOn: integer("ends_on", { mode: "timestamp" }).notNull(),
+	/** In cents. */
+	monthlyFee: integer("monthly_fee").notNull(),
+	/** The promised response time for a call-out. */
+	responseHours: integer("response_hours").notNull(),
+	notes: text("notes"),
+	createdAt: createdAt(),
+});
+
+/**
+ * The equipment a contract covers (only the contract's customer's). Removing a unit or the
+ * contract removes its coverage, so deleting equipment doesn't need to know about contracts.
+ */
+export const contractEquipment = sqliteTable(
+	"contract_equipment",
+	{
+		contractId: integer("contract_id")
+			.notNull()
+			.references(() => contract.id, { onDelete: "cascade" }),
+		equipmentId: integer("equipment_id")
+			.notNull()
+			.references(() => equipment.id, { onDelete: "cascade" }),
+	},
+	(table) => [primaryKey({ columns: [table.contractId, table.equipmentId] })],
+);
+
+export const contractRelations = relations(contract, ({ one, many }) => ({
+	customer: one(customer, { fields: [contract.customerId], references: [customer.id] }),
+	coverage: many(contractEquipment),
+}));
+
+export const contractEquipmentRelations = relations(contractEquipment, ({ one }) => ({
+	contract: one(contract, { fields: [contractEquipment.contractId], references: [contract.id] }),
+	equipment: one(equipment, {
+		fields: [contractEquipment.equipmentId],
+		references: [equipment.id],
+	}),
+}));
