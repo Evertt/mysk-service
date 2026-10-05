@@ -1,7 +1,8 @@
 <!--
 	@component
 	A delete button that asks for confirmation, then submits `form` (a remote form taking the record's
-	`id`) without needing JavaScript for the submission itself.
+	`id`) without needing JavaScript for the submission itself. If the server refuses with
+	`invalid("…")`, the reason is shown in the dialog.
 -->
 <script lang="ts">
 	import type { RemoteForm } from "$app/server";
@@ -38,6 +39,8 @@
 		</AlertDialog.Header>
 		<form {...form}>
 			<input {...form.fields.id.as("hidden", id)} />
+			<!-- E.g. when the record is still referenced and can't be deleted. -->
+			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
 			<AlertDialog.Footer>
 				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
 				<Button type="submit" variant="destructive" disabled={!!form.pending}>

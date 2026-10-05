@@ -30,3 +30,11 @@ export const toDateInput = (date: Date | null | undefined) =>
 	date
 		? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 		: "";
+
+/** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
+export const cents = (message = "Can't be negative") =>
+	v.pipe(
+		v.number(),
+		v.minValue(0, message),
+		v.transform((euros) => Math.round(euros * 100)),
+	);
