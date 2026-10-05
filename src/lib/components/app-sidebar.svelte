@@ -31,7 +31,7 @@
 							</div>
 							<div class="grid flex-1 text-left text-sm leading-tight">
 								<span class="truncate font-medium">Fieldworks</span>
-								<span class="truncate text-xs text-muted-foreground">Service operations</span>
+								<span class="truncate text-xs text-sidebar-foreground/70">Service operations</span>
 							</div>
 						</a>
 					{/snippet}
