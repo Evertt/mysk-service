@@ -5,7 +5,8 @@
 	"type": "module",
 	"imports": {
 		"#lib": "./src/lib/index.js",
-		"#lib/*": "./src/lib/*"
+		"#lib/*": "./src/lib/*",
+		"#ui/*": "./src/lib/components/ui/*/index.ts"
 	},
 	"scripts": {
 		"dev": "vp dev",
@@ -21,11 +22,15 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
-		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
+		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
+		"db:seed": "node --env-file=.env src/lib/server/db/seed.ts",
+		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit push --force && pnpm run db:seed"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^10.6.0",
 		"@fontsource-variable/inter": "^5.3.0",
 		"@inlang/paraglide-js": "^2.18.2",
+		"@internationalized/date": "^3.12.4",
 		"@libsql/client": "^0.17.3",
 		"@lucide/svelte": "^1.52.0",
 		"@sveltejs/adapter-auto": "^8.0.0",
@@ -34,11 +39,13 @@
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.3.0",
+		"@tanstack/svelte-table": "^9.2.5",
 		"@types/node": "^24",
 		"@typescript/native": "npm:typescript@7",
 		"@vitest/browser-playwright": "catalog:",
 		"auth": "^1.6.24",
 		"better-auth": "^1.6.24",
+		"bits-ui": "^2.19.5",
 		"cn": "^0.4.0",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
