@@ -8,7 +8,7 @@
 	import AppSidebar from "#lib/components/app-sidebar.svelte";
 	import { locales, localizeHref } from "#lib/paraglide/runtime.js";
 	import ThemeProvider from "#lib/themes/theme-provider.svelte";
-	import { getTheme } from "#lib/themes/theme.remote.js";
+	import { getMode, getTheme } from "#lib/themes/theme.remote.js";
 
 	import "./layout.css";
 	import type { LayoutProps } from "./$types";
@@ -20,7 +20,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<ThemeProvider name={await getTheme()}>
+<ThemeProvider name={await getTheme()} mode={await getMode()}>
 	<Sidebar.Provider>
 		<AppSidebar />
 		<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->

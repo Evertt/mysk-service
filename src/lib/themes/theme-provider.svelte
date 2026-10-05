@@ -1,21 +1,31 @@
 <!--
 	@component
 	Applies a theme to everything inside it: its variables through `data-theme` on `<html>`, its
-	component classes through context (see `useTheme`).
+	component classes through context (see `useTheme`), and dark mode through the `dark` class.
 -->
 <script lang="ts">
 	import type { Snippet } from "svelte";
+	import { MediaQuery } from "svelte/reactivity";
 
 	import { provideTheme } from "./context.js";
-	import { type ThemeName, themes, themeStylesheet } from "./index.js";
+	import { type Mode, supportsDark, type ThemeName, themes, themeStylesheet } from "./index.js";
 
-	let { name, children }: { name: ThemeName; children: Snippet } = $props();
+	let { name, mode, children }: { name: ThemeName; mode: Mode; children: Snippet } = $props();
 
 	provideTheme(() => themes[name]);
 
-	// The server renders the attribute (see `hooks.server.ts`); this keeps it in sync on switches.
+	const systemPrefersDark = new MediaQuery("(prefers-color-scheme: dark)");
+	const dark = $derived(
+		supportsDark(name) && (mode === "dark" || (mode === "system" && systemPrefersDark.current)),
+	);
+
+	// The server renders these (see `hooks.server.ts` and `app.html`); this keeps them in sync on
+	// switches and when the system preference changes.
 	$effect(() => {
-		document.documentElement.dataset.theme = name;
+		const root = document.documentElement;
+		root.dataset.theme = name;
+		root.dataset.mode = supportsDark(name) ? mode : "light";
+		root.classList.toggle("dark", dark);
 	});
 </script>
 

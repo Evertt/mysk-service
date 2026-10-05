@@ -51,6 +51,11 @@ export interface Theme {
 	label: string;
 	/** CSS custom properties (colours, `--radius`, `--font-body`, …), set on the theme's root. */
 	vars?: Record<`--${string}`, string>;
+	/**
+	 * Variables that change in dark mode (merged over `vars`). Themes without them are light only:
+	 * they ignore the dark mode preference.
+	 */
+	darkVars?: Record<`--${string}`, string>;
 	components?: { [S in Slot]?: SlotStyle<S> };
 }
 
