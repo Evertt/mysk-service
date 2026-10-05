@@ -3,10 +3,14 @@
  * owned by the same customer, get an engineer whose specialty fits the equipment, and have a
  * status that matches their dates. Equipment status reflects the open repair orders on it.
  *
+ * Also (re)creates the demo users you can sign in with, see "Demo login" in README.md.
+ *
  * Run with `pnpm db:seed` (after `pnpm db:push`). Replaces all existing business data.
  */
 import { faker } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
+import { hashPassword } from "better-auth/crypto";
+import { inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import {
@@ -24,7 +28,8 @@ import {
 
 import * as schema from "./schema.ts";
 
-const { customer, engineer, equipment, material, order, orderLine } = schema;
+const { account, customer, engineer, equipment, material, order, orderLine, session, user } =
+	schema;
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
@@ -318,6 +323,16 @@ for (const item of equipments) {
 	if (item.status === "operational" && faker.datatype.boolean(0.04)) item.status = "decommissioned";
 }
 
+// --- Demo users ------------------------------------------------------------------------------
+
+/** The password of every demo user. Local demo data only, documented in README.md. */
+const DEMO_PASSWORD = "fieldworks-demo";
+
+const demoUsers = [
+	{ name: "Avery Admin", email: "admin@fieldworks.example" },
+	{ name: "Pat Planner", email: "planner@fieldworks.example" },
+];
+
 // --- Write -----------------------------------------------------------------------------------
 
 await db.transaction(async (tx) => {
@@ -332,7 +347,37 @@ await db.transaction(async (tx) => {
 	await insertAll(orderLines, (rows) => tx.insert(orderLine).values(rows));
 });
 
+// Demo users are recreated (with their password account, as better-auth's email sign-up would),
+// so a changed name or password always takes effect. Their sessions go with them.
+await db.transaction(async (tx) => {
+	const existing = await tx
+		.select({ id: user.id })
+		.from(user)
+		.where(
+			inArray(
+				user.email,
+				demoUsers.map((u) => u.email),
+			),
+		);
+	const ids = existing.map((u) => u.id);
+	await tx.delete(session).where(inArray(session.userId, ids));
+	await tx.delete(account).where(inArray(account.userId, ids));
+	await tx.delete(user).where(inArray(user.id, ids));
+
+	for (const demo of demoUsers) {
+		const id = crypto.randomUUID();
+		await tx.insert(user).values({ id, ...demo, emailVerified: true });
+		await tx.insert(account).values({
+			id: crypto.randomUUID(),
+			accountId: id,
+			providerId: "credential",
+			userId: id,
+			password: await hashPassword(DEMO_PASSWORD),
+		});
+	}
+});
+
 console.log(
 	`Seeded ${customers.length} customers, ${engineers.length} engineers, ${equipments.length} equipment, ` +
-		`${materials.length} materials, ${orders.length} orders and ${orderLines.length} order lines.`,
+		`${materials.length} materials, ${orders.length} orders, ${orderLines.length} order lines and ${demoUsers.length} demo users.`,
 );

@@ -1,4 +1,5 @@
 import { building } from "$app/env";
+import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
@@ -53,4 +54,31 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-export const handle: Handle = sequence(handleParaglide, handleTheme, handleBetterAuth);
+/** Paths anyone may open: the login page, better-auth's endpoints and SvelteKit's own assets. */
+const isPublic = (pathname: string) =>
+	pathname === "/login" || pathname.startsWith("/api/auth/") || pathname.startsWith("/_app/");
+
+/**
+ * Sends signed-out visitors to the login page, and signed-in ones away from it. This only guards
+ * page requests. Remote function calls pass through (their `event.url` is the calling page's, so a
+ * redirect here would be wrong): they check for themselves with `requireUser()` from
+ * `#lib/server/session.ts`.
+ */
+const handleGuard: Handle = ({ event, resolve }) => {
+	if (event.isRemoteRequest) return resolve(event);
+
+	const { pathname, search } = event.url;
+	if (event.locals.user) {
+		if (pathname === "/login" && event.request.method === "GET") {
+			redirect(303, "/");
+		}
+	} else if (!isPublic(pathname)) {
+		const target = pathname + search;
+		redirect(303, target === "/" ? "/login" : `/login?redirectTo=${encodeURIComponent(target)}`);
+	}
+
+	return resolve(event);
+};
+
+// The guard runs after `handleBetterAuth`, which sets `locals.user` and answers /api/auth itself.
+export const handle: Handle = sequence(handleParaglide, handleTheme, handleBetterAuth, handleGuard);

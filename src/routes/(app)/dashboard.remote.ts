@@ -4,12 +4,15 @@ import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
+import { requireUser } from "#lib/server/session.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const openStatuses = ["quote", "scheduled", "in_progress"] as const;
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {
+	requireUser();
+
 	const now = new Date();
 	const monthAgo = new Date(now.getTime() - 30 * DAY);
 

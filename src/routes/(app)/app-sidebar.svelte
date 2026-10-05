@@ -5,6 +5,8 @@
 	import FactoryIcon from "@lucide/svelte/icons/factory";
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 
+	import UserMenu from "./user-menu.svelte";
+
 	const items = [
 		{ title: "Dashboard", href: resolve("/(app)"), icon: LayoutDashboardIcon },
 		{ title: "Orders", href: resolve("/(app)/orders"), icon: ClipboardListIcon },
@@ -60,5 +62,8 @@
 			</Sidebar.GroupContent>
 		</Sidebar.Group>
 	</Sidebar.Content>
+	<Sidebar.Footer>
+		<UserMenu />
+	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>

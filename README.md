@@ -43,6 +43,19 @@ npm run dev
 npm run dev -- --open
 ```
 
+## Demo login
+
+Everything except the login page needs a signed-in user. `pnpm run db:seed` creates two demo
+users, both with the password `fieldworks-demo` (set in `DEMO_PASSWORD` in
+`src/lib/server/db/seed.ts`):
+
+| Name        | Email                        |
+| ----------- | ---------------------------- |
+| Avery Admin | `admin@fieldworks.example`   |
+| Pat Planner | `planner@fieldworks.example` |
+
+These are local demo accounts; don't seed them into a real deployment.
+
 ## Building
 
 To create a production version of your app:
