@@ -1,7 +1,6 @@
 import { form, getRequestEvent, query } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
-import { isAPIError } from "better-auth/api";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { auth } from "#lib/server/auth.js";
@@ -39,17 +38,18 @@ export const getCurrentTenant = query(async () => {
 export const switchOrganization = form(
 	v.object({ organizationId: v.string() }),
 	async ({ organizationId }) => {
-		requireUser();
-		try {
-			// better-auth checks that the user is a member of it.
-			await auth.api.setActiveOrganization({
-				body: { organizationId },
-				headers: getRequestEvent().request.headers,
-			});
-		} catch (cause) {
-			if (isAPIError(cause)) error(403, "You're not a member of that organization");
-			throw cause;
-		}
+		const user = requireUser();
+		// better-auth checks this too, but then also clears the active organization, which would
+		// move the user to their first one instead of leaving them where they were.
+		const [membership] = await db
+			.select({ id: member.id })
+			.from(member)
+			.where(and(eq(member.userId, user.id), eq(member.organizationId, organizationId)));
+		if (!membership) error(403, "You're not a member of that organization");
+		await auth.api.setActiveOrganization({
+			body: { organizationId },
+			headers: getRequestEvent().request.headers,
+		});
 		// Everything on the page belongs to the previous organization, so start afresh.
 		redirect(303, "/");
 	},
