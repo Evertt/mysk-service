@@ -159,6 +159,8 @@ export default defineConfig({
 					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the
 					// files share, so they take turns.
 					maxWorkers: "60%",
+					// After the unit and component tests (and needed for its own `maxWorkers`).
+					sequence: { groupOrder: 1 },
 					fileParallelism: !process.env.E2E_DEV,
 					testTimeout: 30_000,
 					hookTimeout: 60_000,
