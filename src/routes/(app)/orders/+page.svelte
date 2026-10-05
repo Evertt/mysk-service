@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import PlusIcon from "@lucide/svelte/icons/plus";
+
+	import PageHeader from "#lib/components/page-header.svelte";
+
 	import OrdersTable from "./orders-table.svelte";
 	import { getOrders } from "./orders.remote.js";
 </script>
@@ -7,9 +12,13 @@
 	<title>Orders</title>
 </svelte:head>
 
-<div class="flex flex-col gap-1">
-	<h1 class="text-2xl font-semibold tracking-tight">Orders</h1>
-	<p class="text-muted-foreground">Work orders across all customers and engineers.</p>
-</div>
+<PageHeader title="Orders" description="Work orders across all customers and engineers.">
+	{#snippet actions()}
+		<Button href={resolve("/(app)/orders/new")}>
+			<PlusIcon data-icon="inline-start" />
+			New order
+		</Button>
+	{/snippet}
+</PageHeader>
 
 <OrdersTable orders={await getOrders()} />

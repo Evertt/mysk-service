@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import DetailItem from "#lib/components/detail-item.svelte";
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
+	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
+	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate, humanize } from "#lib/format.js";
 
-	import { getOrder } from "../orders.remote.js";
+	import { deleteOrder, getOrder } from "../orders.remote.js";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -23,20 +27,7 @@
 	<title>{order.number} · Orders</title>
 </svelte:head>
 
-{#snippet field(label: string, value: string | null | undefined, href?: string)}
-	<div class="flex flex-col gap-0.5">
-		<dt class="text-xs text-muted-foreground">{label}</dt>
-		<dd class="text-sm wrap-break-word">
-			{#if value && href}
-				<a {href} class="underline-offset-4 hover:underline">{value}</a>
-			{:else}
-				{value ?? "—"}
-			{/if}
-		</dd>
-	</div>
-{/snippet}
-
-<div class="flex flex-col gap-4">
+<PageHeader title={order.number} description={order.description}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
@@ -48,20 +39,27 @@
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
-
-	<div class="flex flex-col gap-2">
-		<div class="flex flex-wrap items-center gap-3">
-			<h1 class="text-2xl font-semibold tracking-tight">{order.number}</h1>
-			<StatusBadge status={order.status} />
-			<PriorityBadge priority={order.priority} />
-		</div>
-		<div class="flex flex-wrap items-center gap-2 text-muted-foreground">
-			<TypeLabel type={order.type} />
-			<Separator orientation="vertical" class="h-4" />
-			<span>{order.description}</span>
-		</div>
-	</div>
-</div>
+	{#snippet badges()}
+		<StatusBadge status={order.status} />
+		<PriorityBadge priority={order.priority} />
+		<TypeLabel type={order.type} />
+	{/snippet}
+	{#snippet actions()}
+		<Button
+			variant="outline"
+			href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
+		>
+			<PencilIcon data-icon="inline-start" />
+			Edit
+		</Button>
+		<DeleteDialog
+			form={deleteOrder}
+			id={String(order.id)}
+			title="Delete {order.number}?"
+			description="The order and its material lines are removed permanently."
+		/>
+	{/snippet}
+</PageHeader>
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
@@ -192,9 +190,15 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-3 gap-4">
-					{@render field("Created", formatDate(order.createdAt))}
-					{@render field("Scheduled", order.scheduledFor && formatDate(order.scheduledFor))}
-					{@render field("Completed", order.completedAt && formatDate(order.completedAt))}
+					<DetailItem label="Created" value={formatDate(order.createdAt)} />
+					<DetailItem
+						label="Scheduled"
+						value={order.scheduledFor && formatDate(order.scheduledFor)}
+					/>
+					<DetailItem
+						label="Completed"
+						value={order.completedAt && formatDate(order.completedAt)}
+					/>
 				</dl>
 			</Card.Content>
 		</Card.Root>
@@ -209,11 +213,11 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					{@render field("Company", customer.name)}
-					{@render field("Contact", customer.contactName)}
-					{@render field("Email", customer.email, `mailto:${customer.email}`)}
-					{@render field("Phone", customer.phone, `tel:${customer.phone}`)}
-					{@render field("Location", `${customer.city}, ${customer.country}`)}
+					<DetailItem label="Company" value={customer.name} />
+					<DetailItem label="Contact" value={customer.contactName} />
+					<DetailItem label="Email" value={customer.email} href={`mailto:${customer.email}`} />
+					<DetailItem label="Phone" value={customer.phone} href={`tel:${customer.phone}`} />
+					<DetailItem label="Location" value={`${customer.city}, ${customer.country}`} />
 				</dl>
 			</Card.Content>
 		</Card.Root>
@@ -231,13 +235,13 @@
 			<Card.Content>
 				{#if equipment}
 					<dl class="grid grid-cols-2 gap-4">
-						{@render field("Model", `${equipment.manufacturer} ${equipment.model}`)}
-						{@render field("Category", humanize(equipment.category))}
-						{@render field("Installed", formatDate(equipment.installedAt))}
-						{@render field(
-							"Warranty",
-							`${underWarranty ? "Covered" : "Expired"}, until ${formatDate(equipment.warrantyUntil)}`,
-						)}
+						<DetailItem label="Model" value={`${equipment.manufacturer} ${equipment.model}`} />
+						<DetailItem label="Category" value={humanize(equipment.category)} />
+						<DetailItem label="Installed" value={formatDate(equipment.installedAt)} />
+						<DetailItem
+							label="Warranty"
+							value={`${underWarranty ? "Covered" : "Expired"}, until ${formatDate(equipment.warrantyUntil)}`}
+						/>
 					</dl>
 				{:else}
 					<p class="text-sm text-muted-foreground">
@@ -260,10 +264,10 @@
 			<Card.Content>
 				{#if engineer}
 					<dl class="grid grid-cols-2 gap-4">
-						{@render field("Name", engineer.name)}
-						{@render field("Hourly rate", formatCents(engineer.hourlyRate))}
-						{@render field("Email", engineer.email, `mailto:${engineer.email}`)}
-						{@render field("Phone", engineer.phone, `tel:${engineer.phone}`)}
+						<DetailItem label="Name" value={engineer.name} />
+						<DetailItem label="Hourly rate" value={formatCents(engineer.hourlyRate)} />
+						<DetailItem label="Email" value={engineer.email} href={`mailto:${engineer.email}`} />
+						<DetailItem label="Phone" value={engineer.phone} href={`tel:${engineer.phone}`} />
 					</dl>
 				{:else}
 					<p class="text-sm text-muted-foreground">No engineer assigned yet.</p>

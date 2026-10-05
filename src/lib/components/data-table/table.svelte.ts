@@ -2,11 +2,13 @@ import { createTableHook } from "@tanstack/svelte-table";
 
 import ColumnHeader from "./column-header.svelte";
 import CurrencyCell from "./currency-cell.svelte";
+import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
 import { features } from "./features.js";
 import Pagination from "./pagination.svelte";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
+import Toolbar from "./toolbar.svelte";
 import ViewOptions from "./view-options.svelte";
 
 /**
@@ -25,7 +27,7 @@ export const {
 	features,
 	globalFilterFn: "includesString",
 	enableRowSelection: true,
-	tableComponents: { Pagination, ViewOptions },
+	tableComponents: { Table: DataTable, Toolbar, Pagination, ViewOptions },
 	cellComponents: { SelectCell, DateCell, CurrencyCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
 });

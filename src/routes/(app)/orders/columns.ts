@@ -1,5 +1,7 @@
+import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import OrderLink from "#lib/components/orders/order-link.svelte";
@@ -8,7 +10,6 @@ import StatusBadge from "#lib/components/orders/status-badge.svelte";
 import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities } from "#lib/models.js";
 
-import OrderActions from "./order-actions.svelte";
 import type { getOrders } from "./orders.remote.js";
 
 export type OrderRow = Awaited<ReturnType<typeof getOrders>>[number];
@@ -105,6 +106,15 @@ export const columns = column.columns([
 	}),
 	column.display({
 		id: "actions",
-		cell: ({ row }) => renderComponent(OrderActions, { order: row.original }),
+		cell: ({ row }) =>
+			renderComponent(RowActions, {
+				label: row.original.number,
+				href: resolve("/(app)/orders/[number]", { number: row.original.number }),
+				editHref: resolve("/(app)/orders/[number]/edit", { number: row.original.number }),
+				copy: [
+					{ label: "Copy order number", value: row.original.number },
+					{ label: "Copy customer code", value: row.original.customer.code },
+				],
+			}),
 	}),
 ]);

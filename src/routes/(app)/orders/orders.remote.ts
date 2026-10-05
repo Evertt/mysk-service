@@ -1,14 +1,26 @@
-import { query } from "$app/server";
-import { error } from "@sveltejs/kit";
-import { and, count, desc, eq, ne, sql } from "drizzle-orm";
+import { form, query } from "$app/server";
+import { error, invalid, redirect } from "@sveltejs/kit";
+import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
+import {
+	customer,
+	engineer,
+	equipment,
+	material,
+	order,
+	orderLine,
+} from "#lib/server/db/schema.js";
 import { laborCost, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
+import { requireUser } from "#lib/server/session.js";
+
+import { orderFields } from "./order-schema.js";
 
 /** All orders with their customer, equipment, engineer and totals, newest first. */
 export const getOrders = query(async () => {
+	requireUser();
 	const lines = db
 		.select({
 			orderId: orderLine.orderId,
@@ -57,6 +69,7 @@ export const getOrders = query(async () => {
 
 /** One order with everything on it, plus other orders for the same equipment. */
 export const getOrder = query(v.string(), async (number) => {
+	requireUser();
 	const found = await db.query.order.findFirst({
 		where: eq(order.number, number),
 		with: {
@@ -92,4 +105,160 @@ export const getOrder = query(v.string(), async (number) => {
 		},
 		history,
 	};
+});
+
+/** Everything the order form needs to choose from. */
+export const getOrderFormOptions = query(async () => {
+	requireUser();
+	const [customers, equipments, engineers, materials] = await Promise.all([
+		db
+			.select({ id: customer.id, code: customer.code, name: customer.name })
+			.from(customer)
+			.orderBy(asc(customer.name)),
+		db
+			.select({
+				id: equipment.id,
+				customerId: equipment.customerId,
+				model: equipment.model,
+				manufacturer: equipment.manufacturer,
+				serialNumber: equipment.serialNumber,
+			})
+			.from(equipment)
+			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
+		db
+			.select({
+				id: engineer.id,
+				name: engineer.name,
+				specialty: engineer.specialty,
+				active: engineer.active,
+			})
+			.from(engineer)
+			.orderBy(asc(engineer.name)),
+		db
+			.select({
+				id: material.id,
+				sku: material.sku,
+				name: material.name,
+				unit: material.unit,
+				unitPrice: material.unitPrice,
+			})
+			.from(material)
+			.orderBy(asc(material.name)),
+	]);
+	return { customers, equipments, engineers, materials };
+});
+
+type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
+
+/** Creates or updates an order and replaces its lines; returns the order number. */
+async function saveOrder(id: number | null, input: OrderInput) {
+	const { lines, ...fields } = input;
+	const completed = fields.status === "completed" || fields.status === "invoiced";
+
+	return db.transaction(async (tx) => {
+		const existing = id
+			? await tx.query.order.findFirst({ where: eq(order.id, id), with: { lines: true } })
+			: undefined;
+		if (id && !existing) error(404, "Order not found");
+
+		const values = {
+			...fields,
+			// Keep the original completion date; set or clear it when the status changes.
+			completedAt: completed ? (existing?.completedAt ?? new Date()) : null,
+		};
+
+		let orderId: number;
+		let number: string;
+		if (existing) {
+			orderId = existing.id;
+			number = existing.number;
+			await tx.update(order).set(values).where(eq(order.id, orderId));
+			await tx.delete(orderLine).where(eq(orderLine.orderId, orderId));
+		} else {
+			// The number is derived from the id, which we only know after inserting.
+			const [inserted] = await tx
+				.insert(order)
+				.values({ ...values, number: `pending-${crypto.randomUUID()}` })
+				.returning({ id: order.id });
+			orderId = inserted.id;
+			number = `ORD-${new Date().getFullYear()}-${String(orderId).padStart(5, "0")}`;
+			await tx.update(order).set({ number }).where(eq(order.id, orderId));
+		}
+
+		if (lines.length) {
+			// Lines keep the price they were quoted at; new materials get today's price.
+			const quoted = new Map(existing?.lines.map((line) => [line.materialId, line.unitPrice]));
+			const prices = new Map(
+				(
+					await tx
+						.select({ id: material.id, unitPrice: material.unitPrice })
+						.from(material)
+						.where(
+							inArray(
+								material.id,
+								lines.map((line) => line.materialId),
+							),
+						)
+				).map((row) => [row.id, row.unitPrice]),
+			);
+			await tx.insert(orderLine).values(
+				lines.map((line) => ({
+					orderId,
+					materialId: line.materialId,
+					quantity: line.quantity,
+					unitPrice: quoted.get(line.materialId) ?? prices.get(line.materialId) ?? 0,
+				})),
+			);
+		}
+		return number;
+	});
+}
+
+type Problem = { field: "customerId" | "equipmentId" | "engineerId"; message: string };
+
+/** Checks that the order's references exist and belong together. */
+async function checkReferences(input: OrderInput): Promise<Problem[]> {
+	const problems: Problem[] = [];
+	if (!(await db.query.customer.findFirst({ where: eq(customer.id, input.customerId) }))) {
+		problems.push({ field: "customerId", message: "Unknown customer" });
+	}
+	if (input.equipmentId) {
+		const unit = await db.query.equipment.findFirst({ where: eq(equipment.id, input.equipmentId) });
+		if (unit?.customerId !== input.customerId) {
+			problems.push({
+				field: "equipmentId",
+				message: "This equipment belongs to another customer",
+			});
+		}
+	}
+	if (
+		input.engineerId &&
+		!(await db.query.engineer.findFirst({ where: eq(engineer.id, input.engineerId) }))
+	) {
+		problems.push({ field: "engineerId", message: "Unknown engineer" });
+	}
+	return problems;
+}
+
+export const createOrder = form(v.object(orderFields), async (input, issue) => {
+	requireUser();
+	const problems = await checkReferences(input);
+	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	const number = await saveOrder(null, input);
+	redirect(303, `/orders/${number}`);
+});
+
+export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (data, issue) => {
+	requireUser();
+	const { id, ...input } = data;
+	const problems = await checkReferences(input);
+	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	const number = await saveOrder(id, input);
+	redirect(303, `/orders/${number}`);
+});
+
+export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
+	requireUser();
+	await db.delete(order).where(eq(order.id, id));
+	redirect(303, "/orders");
 });

@@ -12,8 +12,7 @@
 		{ value: "system", label: "System", icon: MonitorIcon },
 	] as const;
 
-	const mode = $derived(await getMode());
-	const theme = $derived(await getTheme());
+	const [mode, theme] = $derived(await Promise.all([getMode(), getTheme()]));
 	const current = $derived(options.find((option) => option.value === mode) ?? options[2]);
 
 	async function select(value: Mode) {
