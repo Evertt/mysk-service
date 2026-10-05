@@ -5,7 +5,7 @@
 </script>
 
 <a
-	href={resolve("/orders/[number]", { number })}
+	href={resolve("/(app)/orders/[number]", { number })}
 	class="font-medium whitespace-nowrap underline-offset-4 hover:underline"
 >
 	{number}

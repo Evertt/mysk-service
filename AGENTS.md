@@ -4,6 +4,17 @@
 - **Package Manager**: npm
 - **Add-ons**: vitest, tailwindcss, sveltekit-adapter, drizzle, better-auth, paraglide, ai-tools, experimental
 
+## Where files go
+
+Put a module next to the code that uses it, in the nearest folder that contains all of its users.
+
+- **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
+- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/orders.remote.ts` serves `/orders` and `/orders/[number]`, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../orders.remote.js`).
+- **Used across unrelated parts of the app**, or generic and route-independent (shared UI such as `#lib/components/data-table`, themes, formatting, domain enums): in `src/lib`, imported via `#lib/...`.
+- **Server-only code** (database, secrets, auth): always in `src/lib/server/`, whoever uses it, so SvelteKit keeps it out of client bundles.
+
+When a module gains a user outside its folder, move it up to the nearest common folder (or `src/lib`); when it loses users, move it down.
+
 ---
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:

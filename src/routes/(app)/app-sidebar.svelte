@@ -6,13 +6,13 @@
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 
 	const items = [
-		{ title: "Dashboard", href: resolve("/"), icon: LayoutDashboardIcon },
-		{ title: "Orders", href: resolve("/orders"), icon: ClipboardListIcon },
+		{ title: "Dashboard", href: resolve("/(app)"), icon: LayoutDashboardIcon },
+		{ title: "Orders", href: resolve("/(app)/orders"), icon: ClipboardListIcon },
 	];
 
 	// Sections stay highlighted on their sub-pages, e.g. Orders on an order's detail page.
 	const isActive = (href: string) =>
-		href === resolve("/")
+		href === resolve("/(app)")
 			? page.url.pathname === href
 			: page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 </script>
@@ -23,7 +23,7 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
 					{#snippet child({ props })}
-						<a href={resolve("/")} {...props}>
+						<a href={resolve("/(app)")} {...props}>
 							<div
 								class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
 							>

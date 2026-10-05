@@ -40,7 +40,7 @@
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/orders")}>Orders</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/orders")}>Orders</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -157,7 +157,7 @@
 									<Table.Row>
 										<Table.Cell>
 											<a
-												href={resolve("/orders/[number]", { number: other.number })}
+												href={resolve("/(app)/orders/[number]", { number: other.number })}
 												class="font-medium underline-offset-4 hover:underline"
 											>
 												{other.number}

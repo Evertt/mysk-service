@@ -62,7 +62,7 @@
 		<Card.Title>Upcoming work</Card.Title>
 		<Card.Description>The next scheduled orders.</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/orders")}>All orders</Button>
+			<Button variant="outline" size="sm" href={resolve("/(app)/orders")}>All orders</Button>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
