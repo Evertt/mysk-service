@@ -3,10 +3,13 @@ import { describe, expect, test } from "vite-plus/test";
 import {
 	contractStatus,
 	doneOrderStatuses,
+	fitsUnit,
 	isDoneOrder,
 	isOpenOrder,
+	lineTotal,
 	openOrderStatuses,
 	orderStatuses,
+	quantityStep,
 } from "./models.ts";
 
 describe("contractStatus", () => {
@@ -32,4 +35,27 @@ test("every order status is either open, done or cancelled", () => {
 		expect(groups.filter(Boolean), status).toHaveLength(1);
 	}
 	expect(openOrderStatuses.length + doneOrderStatuses.length + 1).toBe(orderStatuses.length);
+});
+
+describe("quantities", () => {
+	test("pieces are counted whole", () => {
+		expect(quantityStep("pcs")).toBe(1);
+		expect(fitsUnit(3, "pcs")).toBe(true);
+		expect(fitsUnit(2.5, "pcs")).toBe(false);
+	});
+
+	test.each(["m", "kg", "l"] as const)("%s is counted to two decimals", (unit) => {
+		expect(quantityStep(unit)).toBe(0.01);
+		expect(fitsUnit(2.5, unit)).toBe(true);
+		// Not exactly representable, but two decimals all the same.
+		expect(fitsUnit(2.55, unit)).toBe(true);
+		expect(fitsUnit(0.07, unit)).toBe(true);
+		expect(fitsUnit(2.125, unit)).toBe(false);
+	});
+
+	test("a line's amount is rounded to the cent", () => {
+		expect(lineTotal(3, 1250)).toBe(3750);
+		expect(lineTotal(2.5, 1999)).toBe(4998);
+		expect(lineTotal(0.33, 100)).toBe(33);
+	});
 });

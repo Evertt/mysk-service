@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isOpenOrder } from "#lib/models.js";
+import { fitsUnit, isOpenOrder } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
@@ -73,7 +73,9 @@ export const getMaterial = query(v.string(), async (sku) => {
 			quantity: sql<number>`sum(${orderLine.quantity})`.mapWith(Number),
 			// Every line of a material on one order is quoted at the same price.
 			unitPrice: sql<number>`max(${orderLine.unitPrice})`.mapWith(Number),
-			amount: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.mapWith(Number),
+			amount: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.mapWith(
+				Number,
+			),
 		})
 		.from(orderLine)
 		.innerJoin(order, eq(orderLine.orderId, order.id))
@@ -112,8 +114,11 @@ const sameName = (name: string, exceptId?: number) =>
 
 export const createMaterial = form(v.object(materialFields), async (input, issue) => {
 	const { organizationId } = requireMember();
+	const problems = [];
 	const duplicate = await sameName(input.name);
-	if (duplicate) invalid(issue.name(`${duplicate.sku} already has this name`));
+	if (duplicate) problems.push(issue.name(`${duplicate.sku} already has this name`));
+	if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock("Whole pieces only"));
+	if (problems.length) invalid(...problems);
 
 	const sku = await db.transaction(async (tx) => {
 		// SKUs are sequential per tenant: one more than the tenant's highest (MAT-0001 for the first).
@@ -140,6 +145,7 @@ export const updateMaterial = form(
 		const problems = [];
 		const duplicate = await sameName(input.name, id);
 		if (duplicate) problems.push(issue.name(`${duplicate.sku} already has this name`));
+		if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock("Whole pieces only"));
 		// Order lines are counted in the material's unit, so changing it would change them too.
 		if (input.unit !== existing.unit) {
 			const orders = await ordersUsing(id);

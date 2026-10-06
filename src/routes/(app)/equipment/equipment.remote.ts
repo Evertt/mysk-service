@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
+import { isDoneOrder, isOpenOrder, lineTotal, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
@@ -65,7 +65,10 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 
 	const { orders: rows, ...unit } = found;
 	const history = rows.map(({ engineer, lines, ...row }) => {
-		const materials = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+		const materials = lines.reduce(
+			(sum, line) => sum + lineTotal(line.quantity, line.unitPrice),
+			0,
+		);
 		return { ...row, total: materials + laborCost(row.laborHours, engineer?.hourlyRate) };
 	});
 	const completed = history

@@ -24,4 +24,7 @@ describe("stockLevel", () => {
 test("a quantity is shown with its unit", () => {
 	expect(formatQuantity(12, "pcs")).toBe("12 pcs");
 	expect(formatQuantity(2.5, "kg")).toBe("2.5 kg");
+	// Sums of decimals don't show floating-point noise.
+	expect(formatQuantity(0.1 + 0.2, "l")).toBe("0.3 l");
+	expect(formatQuantity(1250.75, "m")).toBe("1,250.75 m");
 });

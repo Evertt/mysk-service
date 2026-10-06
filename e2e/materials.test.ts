@@ -288,6 +288,28 @@ describe("in North", () => {
 		expect(text).toContain("Out of stock");
 	});
 
+	test("metres take decimals, pieces only whole numbers", async () => {
+		const { page } = app;
+		await app.go(`/materials/${sku}/edit`);
+		await page.getByLabel("Stock", { exact: true }).fill("12.75");
+		await page.getByRole("button", { name: "Save material" }).click();
+		await page.waitForURL((url) => url.pathname === `/materials/${sku}`);
+		await page.getByText("12.75 m").first().waitFor();
+		expect(await material(sku, north.id)).toMatchObject({ unit: "m", stock: 12.75 });
+
+		await app.go(`/materials/${sku}/edit`);
+		await page.getByLabel("Unit", { exact: true }).selectOption("pcs");
+		expect(await page.getByLabel("Stock", { exact: true }).getAttribute("step")).toBe("1");
+		// Past the browser's own check of the step, to see the app's.
+		await page
+			.locator("form")
+			.last()
+			.evaluate((form: HTMLFormElement) => (form.noValidate = true));
+		await app.submit(page.getByRole("button", { name: "Save material" }));
+		expect(await app.issues()).toEqual(["Whole pieces only"]);
+		expect(await material(sku, north.id)).toMatchObject({ unit: "m", stock: 12.75 });
+	});
+
 	test("an unknown SKU is a 404", async () => {
 		expect((await app.go("/materials/MAT-9999"))?.status()).toBe(404);
 		expect((await app.go("/materials/MAT-9999/edit"))?.status()).toBe(404);

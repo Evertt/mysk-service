@@ -10,6 +10,7 @@
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
+	import { formatQuantity } from "#lib/components/materials/display.js";
 	import MaterialLink from "#lib/components/materials/material-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
@@ -91,8 +92,7 @@
 									<MaterialLink sku={line.material.sku} name={line.material.name} />
 								</Table.Cell>
 								<Table.Cell class="text-right tabular-nums">
-									{line.quantity}
-									{line.material.unit}
+									{formatQuantity(line.quantity, line.material.unit)}
 								</Table.Cell>
 								<Table.Cell class="text-right tabular-nums">
 									{formatCents(line.unitPrice)}

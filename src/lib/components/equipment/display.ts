@@ -27,5 +27,6 @@ export const categoryOptions = equipmentCategories.map((value) => ({
 }));
 export const statusOptions = equipmentStatuses.map((value) => ({ value, label: humanize(value) }));
 
-/** Whether the unit's warranty still covers work done at `at` (now by default). */
-export const isUnderWarranty = (warrantyUntil: Date, at: Date = new Date()) => at < warrantyUntil;
+/** Whether the unit's warranty still covers work done at `at` (now by default); its last day counts. */
+export const isUnderWarranty = (warrantyUntil: Date, at: Date = new Date()) =>
+	at < new Date(warrantyUntil.getFullYear(), warrantyUntil.getMonth(), warrantyUntil.getDate() + 1);

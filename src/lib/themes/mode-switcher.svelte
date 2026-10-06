@@ -3,8 +3,8 @@
 	import MoonIcon from "@lucide/svelte/icons/moon";
 	import SunIcon from "@lucide/svelte/icons/sun";
 
-	import { type Mode, supportsDark, themes } from "./index.js";
-	import { getMode, getTheme, setMode } from "./theme.remote.js";
+	import type { Mode } from "./index.js";
+	import { getMode, setMode } from "./theme.remote.js";
 
 	const options = [
 		{ value: "light", label: "Light", icon: SunIcon },
@@ -12,7 +12,7 @@
 		{ value: "system", label: "System", icon: MonitorIcon },
 	] as const;
 
-	const [mode, theme] = $derived(await Promise.all([getMode(), getTheme()]));
+	const mode = $derived(await getMode());
 	const current = $derived(options.find((option) => option.value === mode) ?? options[2]);
 
 	async function select(value: Mode) {
@@ -40,11 +40,5 @@
 				{/each}
 			</DropdownMenu.RadioGroup>
 		</DropdownMenu.Group>
-		{#if !supportsDark(theme)}
-			<DropdownMenu.Separator />
-			<p class="px-2 py-1.5 text-xs text-muted-foreground">
-				{themes[theme].label} is a light-only theme.
-			</p>
-		{/if}
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

@@ -7,13 +7,7 @@ import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth } from "#lib/server/auth.ts";
 import { loadTenant } from "#lib/server/session.ts";
-import {
-	MODE_COOKIE,
-	parseMode,
-	parseTheme,
-	supportsDark,
-	THEME_COOKIE,
-} from "#lib/themes/index.ts";
+import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -34,7 +28,7 @@ const handleParaglide: Handle = ({ event, resolve }) =>
  */
 const handleTheme: Handle = ({ event, resolve }) => {
 	const theme = parseTheme(event.cookies.get(THEME_COOKIE));
-	const mode = supportsDark(theme) ? parseMode(event.cookies.get(MODE_COOKIE)) : "light";
+	const mode = parseMode(event.cookies.get(MODE_COOKIE));
 	return resolve(event, {
 		transformPageChunk: ({ html }) =>
 			html

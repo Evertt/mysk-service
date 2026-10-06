@@ -75,15 +75,16 @@ describe("lines", () => {
 		expect(parse(withoutLines)).toHaveProperty("value.lines", []);
 	});
 
-	test("each line needs a material and at least one whole unit", () => {
+	test("each line needs a material and a quantity above zero, to at most two decimals", () => {
 		const lines = [
 			{ materialId: "", quantity: 1 },
 			{ materialId: "3", quantity: 0 },
+			{ materialId: "3", quantity: 1.005 },
 		];
 		expect(parse({ ...form, lines })).toEqual({
-			issues: ["Choose a material", "At least 1"],
+			issues: ["Choose a material", "More than 0", "At most two decimals"],
 		});
-		expect(parse({ ...form, lines: [{ materialId: "3", quantity: 1.5 }] })).toHaveProperty(
+		expect(parse({ ...form, lines: [{ materialId: "3", quantity: 2.5 }] })).not.toHaveProperty(
 			"issues",
 		);
 	});

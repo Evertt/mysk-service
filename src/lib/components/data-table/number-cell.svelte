@@ -5,6 +5,7 @@
 	`{ unit: "h", plural: "h" }` → "24 h".
 -->
 <script lang="ts">
+	import { formatNumber } from "#lib/format.js";
 	import { cn } from "#lib/utils.js";
 
 	import { useCellContext } from "./table.svelte.js";
@@ -19,5 +20,5 @@
 <div
 	class={cn("text-right whitespace-nowrap tabular-nums", value === 0 && "text-muted-foreground")}
 >
-	{value}{suffix ? ` ${suffix}` : ""}
+	{formatNumber(value)}{suffix ? ` ${suffix}` : ""}
 </div>

@@ -24,8 +24,6 @@ export const THEME_COOKIE = "theme";
 export const parseTheme = (value: string | undefined): ThemeName =>
 	themeNames.find((name) => name === value) ?? themeNames[0];
 
-export const supportsDark = (name: ThemeName) => (themes[name] as Theme).darkVars !== undefined;
-
 /** The light/dark mode preference; `system` follows the operating system. */
 export const modes = ["light", "dark", "system"] as const;
 
@@ -51,7 +49,6 @@ export const themeStylesheet = Object.entries(themes as Record<ThemeName, Theme>
 		theme.vars &&
 			`:root[data-theme="${name}"], [data-theme="${name}"] { ${declarations(theme.vars)} }`,
 		theme.darkVars &&
-			Object.keys(theme.darkVars).length > 0 &&
 			`:root.dark[data-theme="${name}"], .dark [data-theme="${name}"] { ${declarations(theme.darkVars)} }`,
 	])
 	.filter(Boolean)

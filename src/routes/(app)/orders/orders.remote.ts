@@ -3,6 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { fitsUnit, lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -25,7 +26,9 @@ export const getOrders = query(async () => {
 		.select({
 			orderId: orderLine.orderId,
 			count: count().as("line_count"),
-			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("line_total"),
+			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as(
+				"line_total",
+			),
 		})
 		.from(orderLine)
 		.where(inTenant(orderLine))
@@ -97,7 +100,10 @@ export const getOrder = query(v.string(), async (number) => {
 			})
 		: [];
 
-	const lines = found.lines.map((line) => ({ ...line, total: line.quantity * line.unitPrice }));
+	const lines = found.lines.map((line) => ({
+		...line,
+		total: lineTotal(line.quantity, line.unitPrice),
+	}));
 	const materialsTotal = lines.reduce((sum, line) => sum + line.total, 0);
 	const laborTotal = laborCost(found.laborHours, found.engineer?.hourlyRate);
 
@@ -240,7 +246,7 @@ async function saveOrder(id: number | null, input: OrderInput) {
 
 type Problem =
 	| { field: "customerId" | "equipmentId" | "engineerId"; message: string }
-	| { line: number; message: string };
+	| { line: number; field: "materialId" | "quantity"; message: string };
 
 /** Checks that the order's references exist in the current tenant and belong together. */
 async function checkReferences(input: OrderInput): Promise<Problem[]> {
@@ -264,7 +270,7 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 			: undefined,
 		input.lines.length
 			? db
-					.select({ id: material.id })
+					.select({ id: material.id, unit: material.unit })
 					.from(material)
 					.where(
 						and(
@@ -284,9 +290,14 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 	if (input.engineerId && !assignee) {
 		problems.push({ field: "engineerId", message: "Unknown engineer" });
 	}
-	const known = new Set(materials.map((row) => row.id));
+	const units = new Map(materials.map((row) => [row.id, row.unit]));
 	input.lines.forEach((line, index) => {
-		if (!known.has(line.materialId)) problems.push({ line: index, message: "Unknown material" });
+		const unit = units.get(line.materialId);
+		if (!unit) {
+			problems.push({ line: index, field: "materialId", message: "Unknown material" });
+		} else if (!fitsUnit(line.quantity, unit)) {
+			problems.push({ line: index, field: "quantity", message: "Whole pieces only" });
+		}
 	});
 	return problems;
 }
@@ -299,7 +310,7 @@ function toIssue(
 	problem: Problem,
 ) {
 	return "line" in problem
-		? issue.lines[problem.line].materialId(problem.message)
+		? issue.lines[problem.line][problem.field](problem.message)
 		: issue[problem.field](problem.message);
 }
 

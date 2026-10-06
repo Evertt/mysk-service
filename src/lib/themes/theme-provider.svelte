@@ -8,14 +8,12 @@
 	import { MediaQuery } from "svelte/reactivity";
 
 	import { provideTheme } from "./context.js";
-	import { type Mode, supportsDark, type ThemeName, themes, themeStylesheet } from "./index.js";
+	import { type Mode, type ThemeName, themes, themeStylesheet } from "./index.js";
 
 	let { name, mode, children }: { name: ThemeName; mode: Mode; children: Snippet } = $props();
 
 	const systemPrefersDark = new MediaQuery("(prefers-color-scheme: dark)");
-	const dark = $derived(
-		supportsDark(name) && (mode === "dark" || (mode === "system" && systemPrefersDark.current)),
-	);
+	const dark = $derived(mode === "dark" || (mode === "system" && systemPrefersDark.current));
 
 	provideTheme(
 		() => themes[name],
@@ -27,7 +25,7 @@
 	$effect(() => {
 		const root = document.documentElement;
 		root.dataset.theme = name;
-		root.dataset.mode = supportsDark(name) ? mode : "light";
+		root.dataset.mode = mode;
 		root.classList.toggle("dark", dark);
 	});
 </script>

@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+import { fitsUnit, orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
 import { id, optionalDate, optionalId, text } from "#lib/schema.js";
 
 /** The fields of the order form, shared by creating and editing an order. */
@@ -18,7 +18,12 @@ export const orderFields = {
 		v.array(
 			v.object({
 				materialId: id("Choose a material"),
-				quantity: v.pipe(v.number(), v.integer(), v.minValue(1, "At least 1")),
+				// Pieces are only counted whole; saving checks that against the material's unit.
+				quantity: v.pipe(
+					v.number("Enter a quantity"),
+					v.gtValue(0, "More than 0"),
+					v.check((quantity) => fitsUnit(quantity, "m"), "At most two decimals"),
+				),
 			}),
 		),
 		[],

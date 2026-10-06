@@ -7,8 +7,10 @@ import { isUnderWarranty, statusOptions } from "./display.ts";
 describe("isUnderWarranty", () => {
 	const until = new Date(2026, 9, 20);
 
-	test("covers work before the warranty ends", () => {
+	test("covers work up to and including its last day", () => {
 		expect(isUnderWarranty(until, new Date(2026, 9, 19, 23, 59))).toBe(true);
+		expect(isUnderWarranty(until, new Date(2026, 9, 20))).toBe(true);
+		expect(isUnderWarranty(until, new Date(2026, 9, 20, 23, 59))).toBe(true);
 	});
 
 	test("no longer covers work after it", () => {

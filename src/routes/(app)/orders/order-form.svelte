@@ -13,7 +13,13 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatCents, humanize } from "#lib/format.js";
-	import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+	import {
+		lineTotal,
+		orderPriorities,
+		orderStatuses,
+		orderTypes,
+		quantityStep,
+	} from "#lib/models.js";
 	import { toDateInput } from "#lib/schema.js";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./orders.remote.js";
@@ -77,7 +83,7 @@
 	const unitPrice = (materialId: string) =>
 		quotedPrices.get(materialId) ?? materials.get(materialId)?.unitPrice ?? 0;
 	const materialsTotal = $derived(
-		lines.reduce((sum, line) => sum + line.quantity * unitPrice(line.materialId), 0),
+		lines.reduce((sum, line) => sum + lineTotal(line.quantity, unitPrice(line.materialId)), 0),
 	);
 
 	// Line inputs take their value from `lines` (rows can be removed, which shifts the indexes), so
@@ -240,9 +246,11 @@
 								</Table.Cell>
 								<Table.Cell>
 									<InputGroup.Root>
+										{@const step = quantityStep(materials.get(line.materialId)?.unit ?? "m")}
 										<InputGroup.Input
 											aria-label="Quantity"
-											min={1}
+											min={step}
+											{step}
 											class="tabular-nums"
 											{...withoutValue(lineFields.quantity.as("number"))}
 											value={line.quantity}
@@ -255,7 +263,7 @@
 									</InputGroup.Root>
 								</Table.Cell>
 								<Table.Cell class="text-right tabular-nums">
-									{formatCents(line.quantity * unitPrice(line.materialId))}
+									{formatCents(lineTotal(line.quantity, unitPrice(line.materialId)))}
 								</Table.Cell>
 								<Table.Cell>
 									<Button

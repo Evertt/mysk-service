@@ -23,14 +23,6 @@ import {
 
 import { organization } from "./auth.schema.ts";
 
-export const task = sqliteTable("task", {
-	id: text("id")
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	title: text("title").notNull(),
-	priority: integer("priority").notNull().default(1),
-});
-
 /**
  * The tenant a row belongs to. Every business table has one, except contract coverage, whose
  * customer pins it to a tenant. Queries scope by it with `inTenant()` from
@@ -139,7 +131,8 @@ export const material = sqliteTable(
 		unit: text("unit", { enum: materialUnits }).notNull(),
 		/** In cents. */
 		unitPrice: integer("unit_price").notNull(),
-		stock: integer("stock").notNull(),
+		/** In the material's unit: whole pieces, or metres, kilos or litres to two decimals. */
+		stock: real("stock").notNull(),
 	},
 	(table) => [
 		// Unique within a tenant; another tenant may use the same sku.
@@ -197,7 +190,8 @@ export const orderLine = sqliteTable(
 		organizationId: organizationId(),
 		orderId: integer("order_id").notNull(),
 		materialId: integer("material_id").notNull(),
-		quantity: integer("quantity").notNull(),
+		/** In the material's unit, like its stock. */
+		quantity: real("quantity").notNull(),
 		/** In cents. */
 		unitPrice: integer("unit_price").notNull(),
 	},

@@ -28,7 +28,7 @@ export const getDashboard = query(async () => {
 	const materials = db
 		.select({
 			orderId: orderLine.orderId,
-			total: sql<number>`sum(${orderLine.quantity} * ${orderLine.unitPrice})`.as("total"),
+			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
 		})
 		.from(orderLine)
 		.where(inTenant(orderLine))

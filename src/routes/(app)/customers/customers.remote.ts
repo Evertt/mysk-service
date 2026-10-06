@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
+import { isDoneOrder, isOpenOrder, lineTotal, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
@@ -75,7 +75,7 @@ export const getCustomer = query(v.string(), async (code) => {
 	const orders = rawOrders.map(({ engineer, lines, laborHours, ...fields }) => ({
 		...fields,
 		total:
-			lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0) +
+			lines.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0) +
 			laborCost(laborHours, engineer?.hourlyRate),
 	}));
 

@@ -108,6 +108,48 @@ describe("in North", () => {
 		expect(order.completed_at).not.toBeNull();
 	});
 
+	test("lines take decimals in kilos, metres and litres, but whole pieces", async () => {
+		const { page } = app;
+		const pick = (unit: string) =>
+			value<number>(`select min(id) from material where organization_id = ? and unit = ?`, [
+				north.id,
+				unit,
+			]);
+		const [kilos, pieces] = [await pick("kg"), await pick("pcs")];
+		const addLine = async (materialId: number, quantity: string) => {
+			await page.getByRole("button", { name: "Add material" }).click();
+			const line = page.locator("tbody tr").last();
+			await line.getByLabel("Material").selectOption(String(materialId));
+			await line.getByLabel("Quantity").fill(quantity);
+			return line;
+		};
+		const id = await orderId(number, north.id);
+		const before = await snapshot(id);
+
+		await app.go(`/orders/${number}/edit`);
+		await addLine(kilos, "2.5");
+		const piecesLine = await addLine(pieces, "1.5");
+		expect(await piecesLine.getByLabel("Quantity").getAttribute("step")).toBe("1");
+		// Past the browser's own check of the step, to see the app's.
+		await page
+			.locator("form")
+			.last()
+			.evaluate((form: HTMLFormElement) => (form.noValidate = true));
+		await app.submit(page.getByRole("button", { name: "Save order" }));
+		expect(await app.issues()).toEqual(["Whole pieces only"]);
+		expect(await snapshot(id)).toEqual(before);
+
+		await piecesLine.getByLabel("Quantity").fill("2");
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		const [line] = await rows<{ quantity: number; unit_price: number }>(
+			`select quantity, unit_price from order_line where order_id = ? and material_id = ?`,
+			[id, kilos],
+		);
+		expect(line.quantity).toBe(2.5);
+		await page.getByText("2.5 kg").waitFor();
+	});
+
 	test("deleting it removes it, after which it's a 404", async () => {
 		const { page } = app;
 		await page.getByRole("button", { name: "Delete" }).click();

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCents, formatDate, humanize } from "./format.ts";
+import { formatCents, formatDate, formatNumber, humanize } from "./format.ts";
 
 describe("formatCents", () => {
 	test("shows euros with two decimals and thousands separators", () => {
@@ -25,6 +25,15 @@ describe("formatDate", () => {
 
 	test("shows the local day, also late in the evening", () => {
 		expect(formatDate(new Date(2026, 0, 1, 23, 59))).toBe("1 Jan 2026");
+	});
+});
+
+describe("formatNumber", () => {
+	test("groups thousands and shows at most two decimals", () => {
+		expect(formatNumber(1250)).toBe("1,250");
+		expect(formatNumber(2.5)).toBe("2.5");
+		expect(formatNumber(2.125)).toBe("2.13");
+		expect(formatNumber(0)).toBe("0");
 	});
 });
 

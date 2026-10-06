@@ -12,7 +12,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { lowStockThreshold, unitLabels } from "#lib/components/materials/display.js";
-	import { materialUnits } from "#lib/models.js";
+	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.js";
 
 	import type { createMaterial, getMaterial, updateMaterial } from "./materials.remote.js";
 
@@ -34,6 +34,8 @@
 		value,
 		label: `${unitLabels[value]} (${value})`,
 	}));
+	// Pieces are counted whole; other units to two decimals.
+	const unit = $derived((fields.unit.value() || material?.unit || "pcs") as MaterialUnit);
 	const stockDescription = `Shown as low below ${lowStockThreshold("pcs")} pieces, or ${lowStockThreshold("m")} of other units.`;
 </script>
 
@@ -79,7 +81,7 @@
 					label="Stock"
 					value={material?.stock ?? 0}
 					min={0}
-					step={1}
+					step={quantityStep(unit)}
 					description={stockDescription}
 				/>
 			</Field.FieldGroup>

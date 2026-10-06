@@ -188,7 +188,10 @@ function generateTenant(size: TenantSize) {
 		name,
 		unit,
 		unitPrice: faker.number.int({ min: min * 100, max: max * 100, multipleOf: 5 }),
-		stock: faker.number.int({ min: 0, max: unit === "pcs" ? 250 : 900 }),
+		stock:
+			unit === "pcs"
+				? faker.number.int({ min: 0, max: 250 })
+				: faker.number.float({ min: 0, max: 900, fractionDigits: 1 }),
 	}));
 
 	// --- Orders ----------------------------------------------------------------------------------
@@ -321,7 +324,10 @@ function generateTenant(size: TenantSize) {
 		return picked.map((m) => ({
 			orderId: o.id,
 			materialId: m.id,
-			quantity: faker.number.int({ min: 1, max: m.unit === "pcs" ? 6 : 25 }),
+			quantity:
+				m.unit === "pcs"
+					? faker.number.int({ min: 1, max: 6 })
+					: faker.number.float({ min: 0.5, max: 25, fractionDigits: 2 }),
 			unitPrice: Math.round(m.unitPrice * (1 - 0.04 * ageInYears)),
 		}));
 	});

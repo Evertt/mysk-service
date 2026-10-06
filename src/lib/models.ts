@@ -37,6 +37,18 @@ export type EquipmentStatus = (typeof equipmentStatuses)[number];
 export const materialUnits = ["pcs", "m", "kg", "l"] as const;
 export type MaterialUnit = (typeof materialUnits)[number];
 
+/** The smallest amount of a unit: whole pieces; metres, kilos and litres to two decimals. */
+export const quantityStep = (unit: MaterialUnit) => (unit === "pcs" ? 1 : 0.01);
+
+/** Whether `quantity` is a multiple of the unit's step, e.g. no half pieces. */
+export const fitsUnit = (quantity: number, unit: MaterialUnit) => {
+	const steps = quantity / quantityStep(unit);
+	return Math.abs(steps - Math.round(steps)) < 1e-9;
+};
+
+/** The amount of an order line in cents: quantity × unit price, rounded to the cent. */
+export const lineTotal = (quantity: number, unitPrice: number) => Math.round(quantity * unitPrice);
+
 export const orderTypes = ["installation", "maintenance", "repair", "inspection"] as const;
 export type OrderType = (typeof orderTypes)[number];
 

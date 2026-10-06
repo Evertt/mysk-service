@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { parseMode, parseTheme, supportsDark, themeNames, themeStylesheet } from "./index.ts";
+import { parseMode, parseTheme, themeNames, themes, themeStylesheet } from "./index.ts";
 
 describe("cookies", () => {
 	test("a known theme is used, anything else falls back to the first", () => {
@@ -24,7 +24,9 @@ describe("themeStylesheet", () => {
 		expect(themeStylesheet).toContain(`:root[data-theme="${name}"], [data-theme="${name}"] {`);
 	});
 
-	test.each(others)("has dark variables for %s only if it supports dark", (name) => {
-		expect(themeStylesheet.includes(`:root.dark[data-theme="${name}"]`)).toBe(supportsDark(name));
+	test.each(others)("has dark variables for %s if it defines them", (name) => {
+		expect(themeStylesheet.includes(`:root.dark[data-theme="${name}"]`)).toBe(
+			"darkVars" in themes[name],
+		);
 	});
 });

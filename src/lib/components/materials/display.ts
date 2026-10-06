@@ -4,6 +4,7 @@ import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { formatNumber } from "#lib/format.js";
 import { type MaterialUnit, materialUnits } from "#lib/models.js";
 
 export const unitLabels: Record<MaterialUnit, string> = {
@@ -17,7 +18,8 @@ export const unitLabels: Record<MaterialUnit, string> = {
 export const unitOptions = materialUnits.map((value) => ({ value, label: unitLabels[value] }));
 
 /** A quantity with its unit, e.g. `12 pcs` or `2.5 kg`. */
-export const formatQuantity = (quantity: number, unit: MaterialUnit) => `${quantity} ${unit}`;
+export const formatQuantity = (quantity: number, unit: MaterialUnit) =>
+	`${formatNumber(quantity)} ${unit}`;
 
 export const stockLevels = ["out", "low", "in_stock"] as const;
 export type StockLevel = (typeof stockLevels)[number];

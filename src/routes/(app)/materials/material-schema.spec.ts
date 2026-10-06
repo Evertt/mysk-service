@@ -29,9 +29,10 @@ test("an empty form says what's missing", () => {
 	});
 });
 
-test("the stock is a whole number, not below zero", () => {
+test("the stock has at most two decimals, and isn't below zero", () => {
 	expect(parse({ ...form, stock: -1 })).toEqual({ issues: ["Can't be negative"] });
-	expect(parse({ ...form, stock: 2.5 })).toEqual({ issues: ["Whole units only"] });
+	expect(parse({ ...form, stock: 2.125 })).toEqual({ issues: ["At most two decimals"] });
+	expect(parse({ ...form, stock: 2.55 })).not.toHaveProperty("issues");
 });
 
 test("the unit is one of the material units", () => {
