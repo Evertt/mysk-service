@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import Building2Icon from "@lucide/svelte/icons/building-2";
+	import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import CogIcon from "@lucide/svelte/icons/cog";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
@@ -23,6 +24,7 @@
 				items: [
 					{ title: "Dashboard", href: resolve("/(app)"), icon: LayoutDashboardIcon },
 					{ title: "Orders", href: resolve("/(app)/orders"), icon: ClipboardListIcon },
+					{ title: "Schedule", href: resolve("/(app)/schedule"), icon: CalendarDaysIcon },
 				],
 			},
 			{

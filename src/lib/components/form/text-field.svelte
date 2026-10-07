@@ -15,7 +15,7 @@
 		label: string;
 		/** The initial value, e.g. of the record being edited. */
 		value?: string | null;
-		type?: "text" | "email" | "tel" | "url" | "date" | "password";
+		type?: "text" | "email" | "tel" | "url" | "date" | "time" | "password";
 		/** Render a textarea instead of an input. */
 		multiline?: boolean;
 		description?: string;
