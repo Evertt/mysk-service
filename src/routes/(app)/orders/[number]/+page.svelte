@@ -63,7 +63,7 @@
 			form={deleteOrder}
 			id={String(order.id)}
 			title="Delete {order.number}?"
-			description="The order and its material lines are removed permanently."
+			description="The order and its material lines are removed permanently; the materials go back into stock."
 		/>
 	{/snippet}
 </PageHeader>

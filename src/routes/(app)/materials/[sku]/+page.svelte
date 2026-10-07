@@ -14,6 +14,9 @@
 
 	import { deleteMaterial, getMaterial } from "../materials.remote.js";
 	import type { PageProps } from "./$types";
+	import CountStockDialog from "./count-stock-dialog.svelte";
+	import ReceiveStockDialog from "./receive-stock-dialog.svelte";
+	import StockHistory from "./stock-history.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -44,6 +47,8 @@
 		<StockBadge stock={material.stock} unit={material.unit} />
 	{/snippet}
 	{#snippet actions()}
+		<ReceiveStockDialog {material} />
+		<CountStockDialog {material} />
 		<Button variant="outline" href={resolve("/(app)/materials/[sku]/edit", { sku: material.sku })}>
 			<PencilIcon data-icon="inline-start" />
 			Edit
@@ -52,7 +57,7 @@
 			form={deleteMaterial}
 			id={String(material.id)}
 			title="Delete {material.name}?"
-			description="The material is removed from the catalogue permanently."
+			description="The material is removed from the catalogue permanently, with its stock history."
 		/>
 	{/snippet}
 </PageHeader>
@@ -79,11 +84,10 @@
 						{quantity(stats.neededForOpenOrders)}
 					</Card.Title>
 				</Card.Header>
-				{#if stats.neededForOpenOrders > material.stock}
+				{#if stats.neededForOpenOrders}
 					<Card.Content>
-						<p class="text-sm text-destructive">
-							{quantity(stats.neededForOpenOrders - material.stock)} more than in stock
-						</p>
+						<!-- Order lines take their materials from stock when they're added. -->
+						<p class="text-sm text-muted-foreground">Already taken from stock</p>
 					</Card.Content>
 				{/if}
 			</Card.Root>
@@ -143,6 +147,18 @@
 						</Empty.Header>
 					</Empty.Root>
 				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Stock history</Card.Title>
+				<Card.Description>
+					Every change to the stock, newest first: deliveries, counts and orders.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<StockHistory movements={data.movements} unit={material.unit} />
 			</Card.Content>
 		</Card.Root>
 	</div>

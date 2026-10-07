@@ -3,6 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { formatNumber } from "#lib/format.js";
 import { fitsUnit, lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
@@ -13,9 +14,11 @@ import {
 	material,
 	order,
 	orderLine,
+	stockMovement,
 } from "#lib/server/db/schema.js";
 import { laborCost, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
+import { moveStock, roundQuantity, StockShortage, stockChanges } from "#lib/server/stock.js";
 
 import { orderFields } from "./order-schema.js";
 
@@ -166,8 +169,12 @@ export const getOrderFormOptions = query(async () => {
 
 type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 
-/** Creates or updates an order in the current tenant and replaces its lines; returns its number. */
-async function saveOrder(id: number | null, input: OrderInput) {
+/**
+ * Creates or updates an order in the current tenant and replaces its lines; returns its number.
+ * The lines take their materials from stock; if there isn't enough, refuses with an issue on the
+ * line.
+ */
+async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { organizationId } = requireMember();
 	const { lines, ...fields } = input;
 	const completed = fields.status === "completed" || fields.status === "invoiced";
@@ -240,6 +247,35 @@ async function saveOrder(id: number | null, input: OrderInput) {
 				})),
 			);
 		}
+
+		// New and larger lines take the difference from stock; smaller and removed ones return it.
+		const before = existing?.lines ?? [];
+		for (const [materialId, change] of stockChanges(before, lines)) {
+			try {
+				await moveStock(tx, {
+					materialId,
+					quantity: -change,
+					kind: change > 0 ? "consumption" : "return",
+					orderId,
+					orderNumber: number,
+				});
+			} catch (error) {
+				if (!(error instanceof StockShortage)) throw error;
+				// What this order can have: the stock, plus what it already took.
+				const { stock, unit, name } = error.material;
+				const taken = before
+					.filter((line) => line.materialId === materialId)
+					.reduce((sum, line) => sum + line.quantity, 0);
+				const available = roundQuantity(stock + taken);
+				invalid(
+					toIssue(issue, {
+						line: lines.findLastIndex((line) => line.materialId === materialId),
+						field: "quantity",
+						message: `Only ${formatNumber(available)} ${unit} of ${name} in stock`,
+					}),
+				);
+			}
+		}
 		return number;
 	});
 }
@@ -304,11 +340,10 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 
 const orderSchema = v.object(orderFields);
 
-/** The form issue for a problem found by `checkReferences`. */
-function toIssue(
-	issue: RemoteFormInvalidField<v.InferInput<typeof orderSchema>>,
-	problem: Problem,
-) {
+type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
+
+/** The form issue for a problem found by `checkReferences` (or by `saveOrder`). */
+function toIssue(issue: OrderIssue, problem: Problem) {
 	return "line" in problem
 		? issue.lines[problem.line][problem.field](problem.message)
 		: issue[problem.field](problem.message);
@@ -318,7 +353,7 @@ export const createOrder = form(orderSchema, async (input, issue) => {
 	requireMember();
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
-	const number = await saveOrder(null, input);
+	const number = await saveOrder(null, input, issue);
 	void getOrders().refresh();
 	redirect(303, `/orders/${number}`);
 });
@@ -328,7 +363,7 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 	const { id, ...input } = data;
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
-	const number = await saveOrder(id, input);
+	const number = await saveOrder(id, input, issue);
 	void getOrders().refresh();
 	void getOrder(number).refresh();
 	redirect(303, `/orders/${number}`);
@@ -336,11 +371,31 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 
 export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
-	const deleted = await db
-		.delete(order)
-		.where(and(eq(order.id, id), inTenant(order)))
-		.returning({ id: order.id });
-	if (!deleted.length) error(404, "Order not found");
+	await db.transaction(async (tx) => {
+		const found = await tx.query.order.findFirst({
+			columns: { id: true, number: true },
+			where: and(eq(order.id, id), inTenant(order)),
+			with: { lines: true },
+		});
+		if (!found) error(404, "Order not found");
+		// Its materials go back into stock. The stock history keeps the order's number, but no
+		// longer refers to the order itself.
+		for (const [materialId, change] of stockChanges(found.lines, [])) {
+			await moveStock(tx, {
+				materialId,
+				quantity: -change,
+				kind: "return",
+				orderId: found.id,
+				orderNumber: found.number,
+				note: "Order deleted",
+			});
+		}
+		await tx
+			.update(stockMovement)
+			.set({ orderId: null })
+			.where(and(eq(stockMovement.orderId, found.id), inTenant(stockMovement)));
+		await tx.delete(order).where(and(eq(order.id, found.id), inTenant(order)));
+	});
 	void getOrders().refresh();
 	redirect(303, "/orders");
 });

@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	integer,
 	primaryKey,
 	real,
@@ -19,9 +20,10 @@ import {
 	orderPriorities,
 	orderStatuses,
 	orderTypes,
+	stockMovementKinds,
 } from "#lib/models.ts";
 
-import { organization } from "./auth.schema.ts";
+import { organization, user } from "./auth.schema.ts";
 
 /**
  * The tenant a row belongs to. Every business table has one, except contract coverage, whose
@@ -256,6 +258,56 @@ export const orderLineRelations = relations(orderLine, ({ one }) => ({
 }));
 
 export * from "./auth.schema.ts";
+
+// --- Stock movements -----------------------------------------------------------------------------
+
+/**
+ * The stock ledger: every change to a material's stock, signed (positive adds, negative takes),
+ * in the material's unit. `material.stock` is the cached balance and always equals the sum of the
+ * material's movements: change it only through `moveStock` in `#lib/server/stock.ts`, which writes
+ * both in one transaction. Deleting a material deletes its movements.
+ */
+export const stockMovement = sqliteTable(
+	"stock_movement",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		materialId: integer("material_id").notNull(),
+		quantity: real("quantity").notNull(),
+		kind: text("kind", { enum: stockMovementKinds }).notNull(),
+		/** The order whose lines consumed or returned the stock; cleared when the order is deleted. */
+		orderId: integer("order_id"),
+		/** The order's number, which the movement keeps after the order is deleted. */
+		orderNumber: text("order_number"),
+		/** Who made the change; empty for seeded movements. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		note: text("note"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("stock_movement_material").on(table.materialId, table.createdAt),
+		foreignKey({
+			columns: [table.organizationId, table.materialId],
+			foreignColumns: [material.organizationId, material.id],
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.organizationId, table.orderId],
+			foreignColumns: [order.organizationId, order.id],
+		}),
+	],
+);
+
+export const stockMovementRelations = relations(stockMovement, ({ one }) => ({
+	material: one(material, {
+		fields: [stockMovement.organizationId, stockMovement.materialId],
+		references: [material.organizationId, material.id],
+	}),
+	order: one(order, {
+		fields: [stockMovement.organizationId, stockMovement.orderId],
+		references: [order.organizationId, order.id],
+	}),
+	user: one(user, { fields: [stockMovement.userId], references: [user.id] }),
+}));
 
 // --- Service contracts (optional module, see `#lib/modules.ts`) --------------------------------
 // These tables reference the core tables, never the other way round.
