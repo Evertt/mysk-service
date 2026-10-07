@@ -16,12 +16,14 @@
  * ```
  *
  * The tenant and the user come from the request (`requireTenant()`, so the engineer portal's
- * changes are logged too). How entries read (the
+ * changes are logged too), unless given as `by` (e.g. accepting an invitation, which is done in
+ * the invitation's organization rather than the current one). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity.ts`.
  */
 import { and, inArray } from "drizzle-orm";
 
 import type { ActivityAction } from "#lib/models.js";
+import { db } from "#lib/server/db/index.js";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.js";
 import { inTenant, requireTenant } from "#lib/server/session.js";
 import { roundQuantity, type Transaction } from "#lib/server/stock.js";
@@ -81,14 +83,24 @@ export function diff(
 	return changes;
 }
 
+/** Who made a change, and in which organization. */
+export interface Actor {
+	organizationId: string;
+	user: { id: string; name: string };
+}
+
 /**
- * Logs a change to a record by the signed-in user, in the current tenant. Call it inside the
- * `db.transaction` that makes the change, after making it. With `before` and `after`, logs the
- * fields that changed, and nothing at all if none did (e.g. a form saved as it was).
+ * Logs a change to a record by the signed-in user, in the current tenant (or by `by`). Call it
+ * inside the `db.transaction` that makes the change, after making it. With `before` and `after`,
+ * logs the fields that changed, and nothing at all if none did (e.g. a form saved as it was).
  * Returns whether it logged anything.
  */
-export async function recordActivity(tx: Transaction, record: ActivityRecord) {
-	const { organizationId, user } = requireTenant();
+export async function recordActivity(
+	tx: Transaction,
+	record: ActivityRecord,
+	by: Actor = requireTenant(),
+) {
+	const { organizationId, user } = by;
 	const { action, subject, parent, before, after, note } = record;
 	let changes: ActivityChanges | null = null;
 	if (before && after) {
@@ -111,6 +123,13 @@ export async function recordActivity(tx: Transaction, record: ActivityRecord) {
 	});
 	return true;
 }
+
+/**
+ * Logs a change that was made outside a transaction of the app's, e.g. by better-auth's
+ * organization endpoints (members, invitations): call it once the change has succeeded.
+ */
+export const recordActivityAfter = (record: ActivityRecord, by?: Actor) =>
+	db.transaction((tx) => recordActivity(tx, record, by));
 
 // --- Order lines ---------------------------------------------------------------------------------
 

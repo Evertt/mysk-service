@@ -22,6 +22,7 @@ import type { Component } from "svelte";
 
 import type { SubjectType } from "#lib/activity.js";
 import { contractSubjects } from "#lib/components/contracts/activity.js";
+import { invoicingSubjects } from "#lib/components/invoicing/activity.js";
 
 /** The places on core pages where modules can add components, with the props each passes. */
 export interface SlotProps {
@@ -83,6 +84,7 @@ export const modules = [
 			dashboard: () => import("#lib/components/invoicing/dashboard-cards.svelte"),
 			order: () => import("#lib/components/invoicing/order-invoice.svelte"),
 		},
+		subjects: invoicingSubjects,
 	},
 ] as const satisfies readonly AppModule[];
 

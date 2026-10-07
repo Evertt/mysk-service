@@ -10,6 +10,7 @@ import * as v from "valibot";
 
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
@@ -122,7 +123,7 @@ async function findMyOrder(
 	action: keyof ReturnType<typeof fieldActions>,
 ) {
 	const found = await tx.query.order.findFirst({
-		columns: { id: true, number: true, status: true },
+		columns: { id: true, number: true, status: true, laborHours: true },
 		where: and(eq(order.id, orderId), inTenant(order), eq(order.engineerId, engineerId)),
 		with: { lines: true },
 	});
@@ -137,18 +138,34 @@ async function findMyOrder(
 	return found;
 }
 
-/** Changes the status of an order (in the transaction), with the stock that follows from it. */
+type MyOrder = Awaited<ReturnType<typeof findMyOrder>>;
+
+/** How an order shows in the activity log. */
+const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
+
+/**
+ * Changes the status of an order (in the transaction), with the stock that follows from it, and
+ * logs it as `action`.
+ */
 async function setStatus(
 	tx: Transaction,
-	found: Awaited<ReturnType<typeof findMyOrder>>,
+	found: MyOrder,
 	status: OrderStatus,
-	values: { completedAt?: Date } = {},
+	action: "work_started" | "completed",
+	{ completedAt, note }: { completedAt?: Date; note?: string } = {},
 ) {
 	await tx
 		.update(order)
-		.set({ status, ...values })
+		.set({ status, completedAt })
 		.where(and(eq(order.id, found.id), inTenant(order)));
 	await moveOrderStock(tx, found, found, { status, lines: found.lines });
+	await recordActivity(tx, {
+		action,
+		subject: subjectOf(found),
+		before: found,
+		after: { status },
+		note,
+	});
 }
 
 /** Refreshes what the portal shows of an order after a change. */
@@ -162,7 +179,7 @@ export const startWork = form(v.object({ id: id() }), async (input) => {
 	const { engineer } = await requireEngineer();
 	const number = await db.transaction(async (tx) => {
 		const found = await findMyOrder(tx, engineer.id, input.id, "start");
-		await setStatus(tx, found, "in_progress");
+		await setStatus(tx, found, "in_progress", "work_started");
 		return found.number;
 	});
 	refresh(number);
@@ -176,10 +193,17 @@ export const logHours = form(
 		if (input.laborHours > 24 * 14) invalid(issue.laborHours("That's more than two weeks"));
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
+			const after = { laborHours: input.laborHours };
 			await tx
 				.update(order)
-				.set({ laborHours: input.laborHours })
+				.set(after)
 				.where(and(eq(order.id, found.id), inTenant(order)));
+			await recordActivity(tx, {
+				action: "updated",
+				subject: subjectOf(found),
+				before: found,
+				after,
+			});
 			return found.number;
 		});
 		refresh(number);
@@ -227,6 +251,11 @@ export const addNote = form(
 				userId: author.id,
 				text: input.text,
 			});
+			await recordActivity(tx, {
+				action: "note_added",
+				subject: subjectOf(found),
+				note: input.text,
+			});
 			return found.number;
 		});
 		refresh(number);
@@ -245,7 +274,10 @@ export const completeWork = form(
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
 			const now = new Date();
-			await setStatus(tx, found, "completed", { completedAt: now });
+			await setStatus(tx, found, "completed", "completed", {
+				completedAt: now,
+				note: `Signed off by ${input.signerName}`,
+			});
 			const signoff = {
 				signerName: input.signerName,
 				signature: input.signature,

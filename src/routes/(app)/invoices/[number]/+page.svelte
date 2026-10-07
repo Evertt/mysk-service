@@ -6,6 +6,7 @@
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 	import SendIcon from "@lucide/svelte/icons/send";
 
+	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { canChange, isEditable } from "#lib/components/invoicing/invoice.js";
 	import StatusBadge from "#lib/components/invoicing/status-badge.svelte";
@@ -137,6 +138,7 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+		<ActivityCard type="invoice" id={invoice.id} />
 	</div>
 </div>
 

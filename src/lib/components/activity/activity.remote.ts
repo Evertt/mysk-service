@@ -127,7 +127,8 @@ async function subjectStates(keys: Map<string, Set<string>>) {
 	for (const row of found) {
 		const key = `${row.type}:${row.id}`;
 		const state = states.get(key) ?? { label: row.label, deleted: false };
-		if (row.action === "deleted") state.deleted = true;
+		// A member who was removed is gone too.
+		if (row.action === "deleted" || row.action === "removed") state.deleted = true;
 		states.set(key, state);
 	}
 	return states;

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import { formatCents, formatNumber } from "../src/lib/format.ts";
 import { baseURL, countIn, organizations, rows, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
@@ -103,6 +104,22 @@ const statusesOf = async (orderIds: number[]) =>
 		)
 	).map((row) => row.status);
 
+/** The activity log's entries about a record (as subject or parent), oldest first. */
+const activityAbout = (type: string, id: number, organizationId: string) =>
+	rows<{
+		action: string;
+		user_name: string;
+		subject_type: string;
+		subject_label: string;
+		changes: string | null;
+		note: string | null;
+	}>(
+		`select action, user_name, subject_type, subject_label, changes, note from activity
+		 where organization_id = ? and ((subject_type = ? and subject_id = ?)
+		 or (parent_type = ? and parent_id = ?)) order by id`,
+		[organizationId, type, String(id), type, String(id)],
+	);
+
 /** An invoice and its lines as stored, to check that a refused request changed nothing. */
 const snapshot = async (id: number) => [
 	await rows(`select * from invoice where id = ?`, [id]),
@@ -173,6 +190,8 @@ let customer: { id: number; code: string };
 let other: { id: number; code: string };
 /** A seeded North draft, for South to tamper with. */
 let northDraft: { id: number; number: string };
+/** The North invoice that was issued and paid, whose activity South mustn't see. */
+let paidInvoice: number;
 
 beforeAll(async () => {
 	[customer] = await rows<typeof customer>(
@@ -430,6 +449,43 @@ describe("in North", () => {
 		expect(await card("Invoice").locator('[data-slot="badge"]').allInnerTexts()).toEqual(["Paid"]);
 	});
 
+	test("the activity log has what was done to it and its orders, on its page too", async () => {
+		const { id } = await invoiceOf(number, north.id);
+		paidInvoice = id;
+		const entries = await activityAbout("invoice", id, north.id);
+		expect(new Set(entries.map((e) => e.user_name))).toEqual(new Set(["Avery Admin"]));
+		expect(entries.filter((e) => e.subject_type === "invoice").map((e) => e.action)).toEqual([
+			"created",
+			"issued",
+			"paid",
+		]);
+		const issued = entries.find((e) => e.action === "issued")!;
+		expect(Object.keys(JSON.parse(issued.changes!))).toEqual(["dueOn"]);
+		// Lines added and removed, by their description, with their amount.
+		expect(entries.find((e) => e.subject_label === "Call-out surcharge")).toMatchObject({
+			action: "created",
+			subject_type: "invoice_line",
+			note: `${formatNumber(2)} × ${formatCents(3750)} = ${formatCents(7500)}`,
+		});
+		const lines = entries.filter((e) => e.subject_type === "invoice_line");
+		expect(lines.filter((e) => e.action === "deleted").length).toBeGreaterThan(0);
+		expect(lines.filter((e) => e.action === "created").length).toBeGreaterThan(1);
+
+		// Issuing it invoiced its orders, which their logs say.
+		for (const orderId of orderIds) {
+			const [entry] = (await activityAbout("order", orderId, north.id)).slice(-1);
+			expect(entry).toMatchObject({ action: "updated", note: `Invoice ${number}` });
+			expect(JSON.parse(entry.changes!)).toEqual({ status: ["completed", "invoiced"] });
+		}
+
+		await app.go(`/invoices/${number}`);
+		const log = card("Activity").getByRole("list", { name: "Activity log", exact: true });
+		await log.waitFor();
+		const shown = await log.locator(":scope > li").allInnerTexts();
+		expect(shown[0]).toMatch(new RegExp(`^Avery Admin recorded the payment of invoice ${number}`));
+		expect(shown[1]).toMatch(new RegExp(`^Avery Admin issued invoice ${number}\\s+due: — →`));
+	});
+
 	test("voiding a sent invoice puts its orders back to completed, to bill again", async () => {
 		const { page } = app;
 		const orders = await billableOrders(other.id);
@@ -505,6 +561,41 @@ describe("in South, which has invoicing but no contracts", () => {
 		expect(lines.some((l) => l.order_id === leftOut)).toBe(false);
 	});
 
+	test("changing the invoicing settings logs the change", async () => {
+		const { page } = app;
+		const save = async (days: string) => {
+			await app.go("/invoices/settings");
+			await page.getByLabel("Payment term (days)").fill(days);
+			await page.getByRole("button", { name: "Save settings" }).click();
+			await page.waitForURL((url) => url.pathname === "/invoices");
+			await page.waitForLoadState("networkidle");
+		};
+		const before = await value<number>(
+			`select payment_term_days from invoicing_settings where organization_id = ?`,
+			[south.id],
+		);
+		await save("14");
+		const [entry] = await rows<{ action: string; subject_label: string; changes: string }>(
+			`select action, subject_label, changes from activity where organization_id = ?
+			 and subject_type = 'invoicing_settings' order by id desc limit 1`,
+			[south.id],
+		);
+		expect(entry).toMatchObject({ action: "updated", subject_label: "" });
+		expect(JSON.parse(entry.changes)).toEqual({ paymentTermDays: [before, 14] });
+
+		await app.go("/activity?type=invoicing_settings");
+		const feed = page.getByRole("list", { name: "Activity log", exact: true });
+		await feed.waitFor();
+		expect((await feed.locator(":scope > li").first().innerText()).replace(/\s+/g, " ")).toMatch(
+			new RegExp(`^Avery Admin updated invoicing settings payment term: ${before} days → 14 days`),
+		);
+		expect(
+			await feed.getByRole("link", { name: "invoicing settings" }).first().getAttribute("href"),
+		).toBe("/invoices/settings");
+		// As it was, for the rest.
+		await save(String(before));
+	});
+
 	test("a North customer is refused", async () => {
 		const { page } = app;
 		const before = await countIn("invoice", south.id);
@@ -538,6 +629,10 @@ describe("in South, which has invoicing but no contracts", () => {
 			.request.get(new URL(`/invoices/${northDraft.number}/pdf`, baseURL).href);
 		expect(response.status()).toBe(404);
 		expect(response.headers()["content-type"]).not.toBe("application/pdf");
+
+		// Nor is their activity, by their id.
+		await app.go(`/activity?type=invoice&id=${paidInvoice}`);
+		expect(await page.getByText("No activity").count()).toBe(1);
 	});
 
 	test("a North order can't be added to South's draft", async () => {
@@ -600,6 +695,17 @@ describe("in South, which has invoicing but no contracts", () => {
 		);
 		await app.go(`/orders/${order.number}`);
 		expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
+		// Opened client-side, the invoice's page loads its Activity card through a remote query.
+		const queries: string[] = [];
+		const record = (request: { url(): string }) => {
+			if (request.url().includes("/getSubjectActivity")) queries.push(request.url());
+		};
+		page.on("request", record);
+		await card("Invoice").getByRole("link", { name: number }).click();
+		await page.waitForURL((url) => url.pathname === `/invoices/${number}`);
+		await card("Activity").getByRole("list", { name: "Activity log", exact: true }).waitFor();
+		page.off("request", record);
+		expect(queries.length).toBeGreaterThan(0);
 
 		await app.go("/settings");
 		const row = page.locator("div.rounded-lg.border", { hasText: "Invoicing" });
@@ -617,6 +723,13 @@ describe("in South, which has invoicing but no contracts", () => {
 		}
 		const pdf = await page.context().request.get(new URL(`/invoices/${number}/pdf`, baseURL).href);
 		expect(pdf.status()).toBe(404);
+		// The invoice's activity too.
+		for (const url of queries) {
+			const response = await page.context().request.get(url);
+			const body = await response.text();
+			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+			expect(body).not.toContain(number);
+		}
 		await app.go(`/orders/${order.number}`);
 		expect(await card("Invoice").count()).toBe(0);
 		await app.go("/");

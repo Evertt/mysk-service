@@ -206,6 +206,27 @@ describe("recordActivity", () => {
 		expect(await log()).toEqual([]);
 	});
 
+	test("logs a field engineer's changes from the engineer portal", async () => {
+		Object.assign(locals, {
+			user: { id: "u3", name: "Eli Engineer" },
+			tenant: { ...tenant("north"), roles: ["engineer"] },
+		});
+		const subject = { type: "order", id: 4, label: "ORD-2026-00004" };
+		expect(await record({ action: "work_started", subject })).toBe(true);
+		expect(await log()).toMatchObject([
+			{ organization_id: "north", user_id: "u3", user_name: "Eli Engineer" },
+		]);
+	});
+
+	test("logs as `by` when given, e.g. in another organization than the current one", async () => {
+		const subject = { type: "invitation", id: "inv1", label: "new@example.com" };
+		const by = { organizationId: "south", user: { id: "u9", name: "New Member" } };
+		await inTransaction((tx) => recordActivity(tx, { action: "accepted", subject }, by));
+		expect(await log()).toMatchObject([
+			{ organization_id: "south", user_id: "u9", user_name: "New Member", action: "accepted" },
+		]);
+	});
+
 	test("needs a signed-in member", async () => {
 		delete locals.tenant;
 		await expect(

@@ -24,11 +24,13 @@
 
 {#snippet subject(link: SubjectLink)}
 	{@const href = link.target && subjectHref(link.type, link.target)}
-	{link.noun}
+	<!-- A subject without a label of its own (e.g. a module's settings) is its noun. -->
+	{@const [noun, label] = link.label ? [link.noun, link.label] : ["", link.noun]}
+	{noun}
 	{#if href}
-		<a {href} class="font-medium underline-offset-4 hover:underline">{link.label}</a>
+		<a {href} class="font-medium underline-offset-4 hover:underline">{label}</a>
 	{:else}
-		<span class="font-medium">{link.label}</span>
+		<span class="font-medium">{label}</span>
 	{/if}
 {/snippet}
 

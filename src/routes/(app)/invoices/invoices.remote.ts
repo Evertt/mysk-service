@@ -3,6 +3,8 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
+import { lineNote } from "#lib/components/invoicing/activity.js";
 import {
 	canChange,
 	dueDate,
@@ -14,8 +16,10 @@ import {
 	SEQUENCE_START,
 	today,
 } from "#lib/components/invoicing/invoice.js";
-import type { InvoiceStatus } from "#lib/models.js";
+import { formatCents } from "#lib/format.js";
+import type { InvoiceStatus, OrderStatus } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, invoicingSettings, order } from "#lib/server/db/schema.js";
 import {
@@ -131,6 +135,38 @@ export const getBillable = query(v.number(), async (customerId) => {
 const billedMeanwhile =
 	"Some of these were billed on another invoice meanwhile. Reload and try again.";
 
+/** How an invoice shows in the activity log. */
+const subjectOf = (found: { id: number; number: string }) => ({
+	type: "invoice",
+	id: found.id,
+	label: found.number,
+});
+
+/** Logs lines added to an invoice, against it. */
+async function recordLines(
+	tx: Transaction,
+	found: { id: number; number: string },
+	lines: { id: number; description: string; quantity: number; unitPrice: number; amount: number }[],
+) {
+	for (const line of lines) {
+		await recordActivity(tx, {
+			action: "created",
+			subject: { type: "invoice_line", id: line.id, label: line.description },
+			parent: subjectOf(found),
+			note: lineNote(line),
+		});
+	}
+}
+
+/** The columns of a line the activity log needs. */
+const loggedLine = {
+	id: invoiceLine.id,
+	description: invoiceLine.description,
+	quantity: invoiceLine.quantity,
+	unitPrice: invoiceLine.unitPrice,
+	amount: invoiceLine.amount,
+};
+
 /**
  * Creates a draft for a customer with the chosen orders and items, then shows it. It gets the
  * tenant's next number (see `invoiceNumber`), and the tenant's payment term and VAT rate.
@@ -180,6 +216,12 @@ export const createInvoice = form(v.object(newInvoiceFields), async (input, issu
 		await tx
 			.insert(invoiceLine)
 			.values(lines.map((line) => ({ ...line, organizationId, invoiceId: created.id })));
+		const total = lines.reduce((sum, line) => sum + line.amount, 0);
+		await recordActivity(tx, {
+			action: "created",
+			subject: subjectOf({ id: created.id, number }),
+			note: `${lines.length} ${lines.length === 1 ? "line" : "lines"}, ${formatCents(total)} before VAT`,
+		});
 		return number;
 	});
 	void getInvoices().refresh();
@@ -196,10 +238,11 @@ async function draftById(tx: Transaction, id: number) {
 }
 
 /** Refreshes what shows a changed invoice. */
-function changed(found: { number: string; customerId: number }) {
+function changed(found: { id: number; number: string; customerId: number }) {
 	void getInvoices().refresh();
 	void getInvoice(found.number).refresh();
 	void getBillable(found.customerId).refresh();
+	void getSubjectActivity({ type: "invoice", id: String(found.id) }).refresh();
 }
 
 /** Adds more of the customer's orders and items to a draft. */
@@ -229,9 +272,11 @@ export const addToInvoice = form(
 		const draft = await db.transaction(async (tx) => {
 			const draft = await draftById(tx, id);
 			if ((await alreadyBilled(tx, lines)).length) invalid(billedMeanwhile);
-			await tx
+			const added = await tx
 				.insert(invoiceLine)
-				.values(lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id })));
+				.values(lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id })))
+				.returning(loggedLine);
+			await recordLines(tx, draft, added);
 			return draft;
 		});
 		changed(draft);
@@ -243,14 +288,18 @@ export const addLine = form(v.object({ id: id(), ...lineFields }), async (input)
 	const { organizationId } = requireModule("invoicing");
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
-		await tx.insert(invoiceLine).values({
-			organizationId,
-			invoiceId: draft.id,
-			description: input.description,
-			quantity: input.quantity,
-			unitPrice: input.unitPrice,
-			amount: lineAmount(input.quantity, input.unitPrice),
-		});
+		const added = await tx
+			.insert(invoiceLine)
+			.values({
+				organizationId,
+				invoiceId: draft.id,
+				description: input.description,
+				quantity: input.quantity,
+				unitPrice: input.unitPrice,
+				amount: lineAmount(input.quantity, input.unitPrice),
+			})
+			.returning(loggedLine);
+		await recordLines(tx, draft, added);
 		return draft;
 	});
 	changed(draft);
@@ -266,7 +315,7 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 		});
 		if (!line) error(404, "Line not found");
 		const draft = await draftById(tx, line.invoiceId);
-		await tx
+		const removed = await tx
 			.delete(invoiceLine)
 			.where(
 				and(
@@ -274,7 +323,16 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 					eq(invoiceLine.invoiceId, draft.id),
 					line.orderId ? eq(invoiceLine.orderId, line.orderId) : eq(invoiceLine.id, line.id),
 				),
-			);
+			)
+			.returning(loggedLine);
+		for (const gone of removed) {
+			await recordActivity(tx, {
+				action: "deleted",
+				subject: { type: "invoice_line", id: gone.id, label: gone.description },
+				parent: subjectOf(draft),
+				note: lineNote(gone),
+			});
+		}
 		return draft;
 	});
 	changed(draft);
@@ -285,10 +343,13 @@ export const updateTerms = form(v.object({ id: id(), ...termsFields }), async (i
 	requireModule("invoicing");
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
+		const terms = { paymentTermDays: input.paymentTermDays, notes: input.notes };
 		await tx
 			.update(invoice)
-			.set({ paymentTermDays: input.paymentTermDays, notes: input.notes })
+			.set(terms)
 			.where(and(eq(invoice.id, draft.id), inTenant(invoice)));
+		const subject = subjectOf(draft);
+		await recordActivity(tx, { action: "updated", subject, before: draft, after: terms });
 		return draft;
 	});
 	changed(draft);
@@ -323,6 +384,24 @@ const orderIdsOf = (found: { lines: { orderId: number | null }[] }) => [
 	...new Set(found.lines.flatMap((line) => (line.orderId ? [line.orderId] : []))),
 ];
 
+/** Logs the change of status of an invoice's orders, which issuing or voiding it makes. */
+async function recordOrderStatuses(
+	tx: Transaction,
+	orders: { id: number; number: string; status: OrderStatus }[],
+	status: OrderStatus,
+	found: { number: string },
+) {
+	for (const changed of orders) {
+		await recordActivity(tx, {
+			action: "updated",
+			subject: { type: "order", id: changed.id, label: changed.number },
+			before: changed,
+			after: { status },
+			note: `Invoice ${found.number}`,
+		});
+	}
+}
+
 /**
  * Issues (sends) a draft: it gets today's date, its due date and the tenant's current VAT rate,
  * and its orders become invoiced. Its lines keep the amounts they have.
@@ -337,7 +416,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		const orderIds = orderIdsOf(found);
 		if (orderIds.length) {
 			const orders = await tx
-				.select({ number: order.number, status: order.status })
+				.select({ id: order.id, number: order.number, status: order.status })
 				.from(order)
 				.where(and(inArray(order.id, orderIds), inTenant(order)));
 			const undone = orders.filter((o) => o.status !== "completed").map((o) => o.number);
@@ -350,18 +429,24 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 				.update(order)
 				.set({ status: "invoiced" })
 				.where(and(inArray(order.id, orderIds), inTenant(order)));
+			await recordOrderStatuses(tx, orders, "invoiced", found);
 		}
 
 		const issuedOn = today();
+		const issued = {
+			status: "sent" as const,
+			issuedOn,
+			dueOn: dueDate(issuedOn, found.paymentTermDays),
+			vatRate: settings.vatRate,
+		};
 		await tx
 			.update(invoice)
-			.set({
-				status: "sent",
-				issuedOn,
-				dueOn: dueDate(issuedOn, found.paymentTermDays),
-				vatRate: settings.vatRate,
-			})
+			.set(issued)
 			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+		// The status follows from the verb.
+		const subject = subjectOf(found);
+		const ignore = ["status", "issuedOn"];
+		await recordActivity(tx, { action: "issued", subject, before: found, after: issued, ignore });
 		return found;
 	});
 	changed(found);
@@ -376,6 +461,7 @@ export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
 			.update(invoice)
 			.set({ status: "paid", paidOn: today() })
 			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+		await recordActivity(tx, { action: "paid", subject: subjectOf(found) });
 		return found;
 	});
 	changed(found);
@@ -391,15 +477,19 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		const found = await changing(tx, id, "void");
 		const orderIds = orderIdsOf(found);
 		if (found.status === "sent" && orderIds.length) {
-			await tx
+			const orders = await tx
 				.update(order)
 				.set({ status: "completed" })
-				.where(and(inArray(order.id, orderIds), eq(order.status, "invoiced"), inTenant(order)));
+				.where(and(inArray(order.id, orderIds), eq(order.status, "invoiced"), inTenant(order)))
+				.returning({ id: order.id, number: order.number });
+			const before = orders.map((o) => ({ ...o, status: "invoiced" as const }));
+			await recordOrderStatuses(tx, before, "completed", found);
 		}
 		await tx
 			.update(invoice)
 			.set({ status: "void", voidedAt: new Date() })
 			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+		await recordActivity(tx, { action: "voided", subject: subjectOf(found) });
 		return found;
 	});
 	changed(found);
@@ -416,11 +506,16 @@ export const getSettings = query(async () => {
 export const saveSettings = form(v.object(settingsFields), async (input) => {
 	requireModule("invoicing");
 	const { organizationId } = requireRole(...managers);
-	await settingsOf(organizationId);
-	await db
-		.update(invoicingSettings)
-		.set(input)
-		.where(eq(invoicingSettings.organizationId, organizationId));
+	const before = await settingsOf(organizationId);
+	await db.transaction(async (tx) => {
+		await tx
+			.update(invoicingSettings)
+			.set(input)
+			.where(eq(invoicingSettings.organizationId, organizationId));
+		// The settings have no name of their own: they read as "invoicing settings".
+		const subject = { type: "invoicing_settings", id: organizationId, label: "" };
+		await recordActivity(tx, { action: "updated", subject, before, after: input });
+	});
 	void getSettings().refresh();
 	redirect(303, "/invoices");
 });

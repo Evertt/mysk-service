@@ -141,6 +141,27 @@ describe("subjectTypes", () => {
 		expect(coreSubjectTypes.order_line.href).toBeUndefined();
 	});
 
+	test("has the invoicing module's types for tenants with it", () => {
+		expect(subjectTypes([]).invoice).toBeUndefined();
+		const types = subjectTypes(["invoicing"]);
+		expect(types.invoice.href?.({ id: "3", label: "INV-2026-00003" })).toBe(
+			"/invoices/INV-2026-00003",
+		);
+		expect(types.invoicing_settings.href?.({ id: "org", label: "" })).toBe("/invoices/settings");
+		expect(describeChanges({ vatRate: [21, 9], status: ["draft", "sent"] }, types.invoice)).toEqual(
+			[
+				{ field: "VAT rate", before: "21%", after: "9%" },
+				{ field: "status", before: "Draft", after: "Sent" },
+			],
+		);
+	});
+
+	test("shows members' roles by their labels", () => {
+		expect(
+			describeChanges({ role: ["member", "owner,engineer"] }, coreSubjectTypes.member),
+		).toEqual([{ field: "role", before: "Member", after: "Owner, Field engineer" }]);
+	});
+
 	test("labels types for the filter", () => {
 		expect(subjectTypeLabel("order_line", coreSubjectTypes.order_line)).toBe("Order line");
 		expect(subjectTypeLabel("invoice")).toBe("Invoice");

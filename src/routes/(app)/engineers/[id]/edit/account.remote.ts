@@ -1,12 +1,14 @@
 import { form, query } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, member, user } from "#lib/server/db/schema.js";
 import { inTenant, requireMember, requireRole } from "#lib/server/session.js";
+import type { Transaction } from "#lib/server/stock.js";
 
 /** Roles that may link engineers to user accounts. */
 const managers = ["owner", "admin"];
@@ -50,7 +52,7 @@ export const linkEngineerAccount = form(
 	async (input, issue) => {
 		const { organizationId } = requireRole(...managers);
 		const found = await db.query.engineer.findFirst({
-			columns: { id: true },
+			columns: { id: true, name: true, userId: true },
 			where: and(eq(engineer.id, input.id), inTenant(engineer)),
 		});
 		if (!found) error(404, "Engineer not found");
@@ -68,10 +70,31 @@ export const linkEngineerAccount = form(
 			});
 			if (other) invalid(issue.userId(`This account is already linked to ${other.name}`));
 		}
-		await db
-			.update(engineer)
-			.set({ userId })
-			.where(and(eq(engineer.id, found.id), inTenant(engineer)));
+		await db.transaction(async (tx) => {
+			await tx
+				.update(engineer)
+				.set({ userId })
+				.where(and(eq(engineer.id, found.id), inTenant(engineer)));
+			// The accounts by name (user ids mean nothing to a reader).
+			const names = await accountNames(tx, [found.userId, userId]);
+			await recordActivity(tx, {
+				action: "updated",
+				subject: { type: "engineer", id: found.id, label: found.name },
+				before: { account: found.userId && names.get(found.userId) },
+				after: { account: userId && names.get(userId) },
+			});
+		});
 		void getEngineerAccount(found.id).refresh();
 	},
 );
+
+/** The names and email addresses of these users, by id. */
+async function accountNames(tx: Transaction, ids: (string | null)[]) {
+	const wanted = ids.filter((id) => id !== null);
+	if (!wanted.length) return new Map<string, string>();
+	const found = await tx
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(inArray(user.id, wanted));
+	return new Map(found.map((row) => [row.id, `${row.name} (${row.email})`]));
+}

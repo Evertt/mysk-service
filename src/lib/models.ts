@@ -174,5 +174,19 @@ export const activityActions = [
 	"stock_adjusted",
 	"module_enabled",
 	"module_disabled",
+	// The engineer portal.
+	"work_started",
+	"note_added",
+	"completed",
+	// Members and invitations.
+	"removed",
+	"sent",
+	"resent",
+	"cancelled",
+	"accepted",
+	// Invoicing.
+	"issued",
+	"paid",
+	"voided",
 ] as const;
 export type ActivityAction = (typeof activityActions)[number];

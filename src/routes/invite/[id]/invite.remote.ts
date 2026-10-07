@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { invitationState, parseRoles } from "#lib/members.js";
+import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
 import { invitation, organization, user } from "#lib/server/db/schema.js";
@@ -22,6 +23,7 @@ async function findInvitation(id: string) {
 			role: invitation.role,
 			status: invitation.status,
 			expiresAt: invitation.expiresAt,
+			organizationId: invitation.organizationId,
 			organization: organization.name,
 			inviter: user.name,
 		})
@@ -64,15 +66,26 @@ async function pendingInvitation(id: string) {
 	return found;
 }
 
-/** Runs better-auth's accept-invitation as the user with `headers`' session. */
-async function accept(id: string, headers: Headers) {
+/**
+ * Runs better-auth's accept-invitation as `user`, with `headers`' session, and logs it in the
+ * invitation's organization (which isn't the user's current one yet).
+ */
+async function accept(
+	found: { id: string; email: string; organizationId: string },
+	user: { id: string; name: string },
+	headers: Headers,
+) {
 	try {
-		await auth.api.acceptInvitation({ body: { invitationId: id }, headers });
+		await auth.api.acceptInvitation({ body: { invitationId: found.id }, headers });
 	} catch (e) {
 		if (isAPIError(e) && e.statusCode < 500)
 			invalid(e.message || "Couldn't accept the invitation.");
 		throw e;
 	}
+	await recordActivityAfter(
+		{ action: "accepted", subject: { type: "invitation", id: found.id, label: found.email } },
+		{ organizationId: found.organizationId, user },
+	);
 }
 
 /** Accepts the invitation as the signed-in user, who then works in its organization. */
@@ -83,7 +96,7 @@ export const acceptInvitation = form(v.object({ id: v.string() }), async ({ id }
 		invalid(`This invitation is for ${found.email}, not ${signedIn.email}.`);
 	}
 	// Also makes the invitation's organization the active one.
-	await accept(id, getRequestEvent().request.headers);
+	await accept(found, signedIn, getRequestEvent().request.headers);
 	redirect(303, "/");
 });
 
@@ -107,7 +120,8 @@ export const createAccount = form(
 	}),
 	async ({ id, name, _password, _confirm }, issue) => {
 		if (_password !== _confirm) invalid(issue._confirm("The passwords don't match."));
-		const { email } = await pendingInvitation(id);
+		const found = await pendingInvitation(id);
+		const { email } = found;
 		const existing = await db.query.user.findFirst({
 			columns: { id: true },
 			where: eq(user.email, email),
@@ -137,7 +151,7 @@ export const createAccount = form(
 			.getSetCookie()
 			.map((setCookie) => setCookie.split(";", 1)[0])
 			.join("; ");
-		await accept(id, new Headers({ cookie }));
+		await accept(found, created, new Headers({ cookie }));
 		redirect(303, "/");
 	},
 );

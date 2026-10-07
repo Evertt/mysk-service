@@ -17,6 +17,8 @@ import {
 	removalRefusal,
 	roleChangeRefusal,
 } from "#lib/members.js";
+import { roleLabels } from "#lib/roles.js";
+import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
 import { invitation, member, user } from "#lib/server/db/schema.js";
@@ -107,6 +109,28 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 	};
 }
 
+/** One of the tenant's members as the activity log shows them (by name), with their role. */
+async function memberSubject(memberId: string) {
+	const [found] = await db
+		.select({ name: user.name, role: member.role })
+		.from(member)
+		.innerJoin(user, eq(member.userId, user.id))
+		.where(and(eq(member.id, memberId), inTenant(member)));
+	if (!found) error(404, "Member not found");
+	return { subject: { type: "member", id: memberId, label: found.name }, role: found.role };
+}
+
+/** How an invitation shows in the activity log: by the email address it's for. */
+const invitationSubject = (found: { id: string; email: string }) => ({
+	type: "invitation",
+	id: found.id,
+	label: found.email,
+});
+
+/** The roles an invitation is for, as a note in the activity log. */
+const asRoles = (roles: readonly MemberRole[]) =>
+	`As ${roles.map((role) => roleLabels[role]).join(", ")}`;
+
 /** One of the tenant's pending invitations, or a 404. Ids are global, so look up in the tenant. */
 async function findInvitation(id: string) {
 	const found = await db.query.invitation.findFirst({
@@ -135,9 +159,16 @@ export const changeRole = form(
 		const { organizationId } = requireRole(...managerRoles);
 		const refusal = roleChangeRefusal(await memberChange(memberId), role);
 		if (refusal) invalid(refusal);
+		const { subject, role: before } = await memberSubject(memberId);
 		await asUser((headers) =>
 			auth.api.updateMemberRole({ body: { memberId, role, organizationId }, headers }),
 		);
+		await recordActivityAfter({
+			action: "updated",
+			subject,
+			before: { role: before },
+			after: { role },
+		});
 		void getMembers().refresh();
 	},
 );
@@ -146,11 +177,13 @@ export const removeMember = form(v.object({ id: v.string() }), async ({ id }) =>
 	const { organizationId } = requireRole(...managerRoles);
 	const refusal = removalRefusal(await memberChange(id));
 	if (refusal) invalid(refusal);
+	const { subject } = await memberSubject(id);
 	// The removed user's next request finds them in another of their organizations, or not a member
 	// of any (see `loadTenant`).
 	await asUser((headers) =>
 		auth.api.removeMember({ body: { memberIdOrEmail: id, organizationId }, headers }),
 	);
+	await recordActivityAfter({ action: "removed", subject });
 	void getMembers().refresh();
 });
 
@@ -186,12 +219,17 @@ export const invite = form(
 		if (pending.some((i) => invitationState(i) === "pending")) {
 			invalid(issue.email(`${email} has been invited already. Resend that invitation instead.`));
 		}
-		await asUser((headers) =>
+		const sent = await asUser((headers) =>
 			auth.api.createInvitation({
 				body: { email, role, organizationId: tenant.organizationId },
 				headers,
 			}),
 		);
+		await recordActivityAfter({
+			action: "sent",
+			subject: invitationSubject({ id: sent.id, email }),
+			note: asRoles([role]),
+		});
 		void getMembers().refresh();
 		return { email };
 	},
@@ -215,13 +253,19 @@ export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }
 		await auth.api.cancelInvitation({ body: { invitationId: id }, headers });
 		return auth.api.createInvitation({ body, headers });
 	});
+	await recordActivityAfter({
+		action: "resent",
+		subject: invitationSubject(found),
+		note: asRoles(role),
+	});
 	void getMembers().refresh();
 	return { email: found.email };
 });
 
 export const cancelInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
 	requireRole(...managerRoles);
-	await findInvitation(id);
+	const found = await findInvitation(id);
 	await asUser((headers) => auth.api.cancelInvitation({ body: { invitationId: id }, headers }));
+	await recordActivityAfter({ action: "cancelled", subject: invitationSubject(found) });
 	void getMembers().refresh();
 });

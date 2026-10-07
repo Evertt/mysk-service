@@ -17,6 +17,7 @@ import { priorities, statuses, types } from "#lib/components/orders/display.js";
 import { formatCents, formatDate, formatDateTime, formatNumber, humanize } from "#lib/format.js";
 import type { ActivityAction } from "#lib/models.js";
 import { modules } from "#lib/modules.js";
+import { type MemberRole, roleLabels } from "#lib/roles.js";
 
 /** What the user did, as in "Avery Admin updated order …". */
 export const actionVerbs: Record<ActivityAction, string> = {
@@ -28,6 +29,17 @@ export const actionVerbs: Record<ActivityAction, string> = {
 	stock_adjusted: "adjusted the stock of",
 	module_enabled: "enabled",
 	module_disabled: "disabled",
+	work_started: "started work on",
+	note_added: "added a note to",
+	completed: "completed",
+	removed: "removed",
+	sent: "sent",
+	resent: "resent",
+	cancelled: "cancelled",
+	accepted: "accepted",
+	issued: "issued",
+	paid: "recorded the payment of",
+	voided: "voided",
 };
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
@@ -64,6 +76,13 @@ const labelled =
 const money = (value: unknown) => formatCents(Number(value));
 const day = (value: unknown) => formatDate(new Date(String(value)));
 const moment = (value: unknown) => formatDateTime(new Date(String(value)));
+/** A member's roles as stored (`owner,engineer`), e.g. "Owner, Field engineer". */
+const roles = (value: unknown) =>
+	String(value)
+		.split(",")
+		.map((role) => role.trim())
+		.map((role) => roleLabels[role as MemberRole] ?? humanize(role))
+		.join(", ");
 
 export const coreSubjectTypes: Record<string, SubjectType> = {
 	customer: {
@@ -121,6 +140,14 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	order_line: { noun: "order line" },
 	/** An optional module (`#lib/modules.ts`), by its id. */
 	module: { noun: "module", href: () => resolve("/(app)/settings") },
+	/** A member of the organization (`member`), by their name. */
+	member: {
+		noun: "member",
+		href: () => resolve("/(app)/settings/members"),
+		fields: { role: { format: roles } },
+	},
+	/** An invitation to join the organization, by the email address it's for. */
+	invitation: { noun: "invitation", fields: { role: { format: roles } } },
 };
 
 /**

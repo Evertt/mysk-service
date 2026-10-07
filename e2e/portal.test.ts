@@ -264,6 +264,83 @@ describe("the engineer portal", () => {
 			await office.context().close();
 		}
 	});
+
+	test("the activity log has what they did, by them, also on the office's order page", async () => {
+		const engineer = await me();
+		const name = await value<string>(`select name from user where id = ?`, [engineer.user_id]);
+		const entries = await rows<{
+			user_id: string;
+			user_name: string;
+			action: string;
+			subject_type: string;
+			changes: string | null;
+			note: string | null;
+		}>(
+			`select user_id, user_name, action, subject_type, changes, note from activity
+			 where organization_id = ? and ((subject_type = 'order' and subject_id = ?)
+			 or (parent_type = 'order' and parent_id = ?)) order by id`,
+			[north.id, String(job.id), String(job.id)],
+		);
+		const theirs = entries.slice(-5);
+		for (const entry of theirs) {
+			expect(entry).toMatchObject({ user_id: engineer.user_id, user_name: name });
+		}
+		expect(
+			theirs.map((e) => ({
+				action: e.action,
+				subject_type: e.subject_type,
+				changes: e.changes && JSON.parse(e.changes),
+				note: e.note,
+			})),
+		).toEqual([
+			{
+				action: "work_started",
+				subject_type: "order",
+				changes: { status: ["scheduled", "in_progress"] },
+				note: null,
+			},
+			{
+				action: "updated",
+				subject_type: "order",
+				changes: { laborHours: [job.labor_hours, 2.75] },
+				note: null,
+			},
+			{
+				action: "created",
+				subject_type: "order_line",
+				changes: { quantity: [null, 2] },
+				note: null,
+			},
+			{
+				action: "note_added",
+				subject_type: "order",
+				changes: null,
+				note: "Replaced the gasket; check again in spring.",
+			},
+			{
+				action: "completed",
+				subject_type: "order",
+				changes: { status: ["in_progress", "completed"] },
+				note: "Signed off by Robin Customer",
+			},
+		]);
+
+		const { page: office } = await signedInPage(users.admin);
+		try {
+			await office.goto(`${baseURL}/orders/${job.number}`);
+			await hydrated(office);
+			const log = office
+				.locator('[data-card="activity"]')
+				.getByRole("list", { name: "Activity log", exact: true });
+			await log.waitFor();
+			const shown = await log.locator(":scope > li").allInnerTexts();
+			expect(shown[0]).toMatch(new RegExp(`^${name} completed order ${job.number}`));
+			expect(shown[0]).toContain("Signed off by Robin Customer");
+			expect(shown[1]).toMatch(new RegExp(`^${name} added a note to order ${job.number}`));
+		} finally {
+			await office.context().close();
+		}
+	});
 });
 
 describe("what a field engineer can't do", () => {

@@ -54,7 +54,8 @@ helpers are in `src/lib/server/session.ts`:
 
 Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity.ts`), inside the
 `db.transaction` that makes the change and after making it, so a refused or rolled-back change logs
-nothing (wrap a single write in a transaction for this). Tenant and user come from the request:
+nothing (wrap a single write in a transaction for this). Tenant and user come from the request
+(`requireTenant()`, so the engineer portal logs too):
 
 ```ts
 await db.transaction(async (tx) => {
@@ -77,7 +78,12 @@ await db.transaction(async (tx) => {
 - A new subject type gets a noun, page and field formats in `coreSubjectTypes`
   (`src/lib/activity.ts`), or, for a module's records, in its `subjects` in `src/lib/modules.ts`.
   Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
-- Log deletions too: a subject links to its page until its deletion is logged.
+- Log deletions too: a subject links to its page until its deletion (or removal) is logged.
+- Changes made outside the app's transactions (better-auth's member and invitation endpoints) log
+  with `recordActivityAfter()` once they succeed. Pass `by` (tenant and user) when the change
+  belongs to another organization than the current one, e.g. accepting an invitation.
+- An order's lines are logged by `saveOrderLines()` (`src/lib/server/orders.ts`); stock that
+  follows an order's status needs no entry of its own beyond the status change.
 
 ## Tests
 

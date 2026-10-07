@@ -240,6 +240,57 @@ describe("roles and removal", () => {
 		await robinsPage!.getByText("You're not a member of any organization").waitFor();
 	});
 
+	test("the activity log has the invitations and the changes to members, by who made them", async () => {
+		const logged = (type: string, label: string) =>
+			rows<{ user_name: string; action: string; changes: string | null; note: string | null }>(
+				`select user_name, action, changes, note from activity where organization_id = ?
+				 and subject_type = ? and subject_label = ? order by id`,
+				[north.id, type, label],
+			).then((found) =>
+				found.map((row) => ({ ...row, changes: row.changes && JSON.parse(row.changes) })),
+			);
+		expect(await logged("invitation", robin.email)).toEqual([
+			{ user_name: "Avery Admin", action: "sent", changes: null, note: "As Admin" },
+			{ user_name: "Avery Admin", action: "resent", changes: null, note: "As Admin" },
+			// In North, although Robin had no organization yet.
+			{ user_name: robin.name, action: "accepted", changes: null, note: null },
+		]);
+		expect((await logged("invitation", "never.mind@example.com")).map((e) => e.action)).toEqual([
+			"sent",
+			"cancelled",
+		]);
+		// The refused change of the admin's own role logged nothing.
+		expect(await logged("member", robin.name)).toEqual([
+			{
+				user_name: "Avery Admin",
+				action: "updated",
+				changes: { role: ["admin", "owner"] },
+				note: null,
+			},
+			{
+				user_name: "Avery Admin",
+				action: "updated",
+				changes: { role: ["owner", "member"] },
+				note: null,
+			},
+			{ user_name: "Avery Admin", action: "removed", changes: null, note: null },
+		]);
+		expect(await logged("member", "Avery Admin")).toEqual([]);
+
+		await app.go("/activity?type=member");
+		const feed = app.page.getByRole("list", { name: "Activity log", exact: true });
+		await feed.waitFor();
+		const entries = (await feed.locator(":scope > li").allInnerTexts()).map((text) =>
+			text.replace(/\s+/g, " "),
+		);
+		expect(entries[0]).toMatch(new RegExp(`^Avery Admin removed member ${robin.name} `));
+		expect(entries[1]).toMatch(
+			new RegExp(`^Avery Admin updated member ${robin.name} role: Owner → Member `),
+		);
+		// Removed, so no longer a link.
+		expect(await feed.getByRole("link", { name: robin.name }).count()).toBe(0);
+	});
+
 	test("a member can't invite, change roles or remove anyone", async () => {
 		const { page } = app;
 		await app.go("/settings/members");
