@@ -11,9 +11,9 @@
 	import { priorities, statuses, types } from "#lib/components/orders/display.js";
 	import { formatDate } from "#lib/format.js";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.js";
+	import { timeOfDay } from "#lib/schema.js";
 	import { cn } from "#lib/utils.js";
 
-	import { timeOfDay } from "./board.js";
 	import type { getSchedule } from "./schedule.remote.js";
 
 	type Order = Awaited<ReturnType<typeof getSchedule>>["orders"][number];

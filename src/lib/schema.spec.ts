@@ -2,14 +2,18 @@ import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	atTime,
 	cents,
 	date,
 	email,
 	id,
 	optionalDate,
 	optionalId,
+	optionalTime,
 	phone,
 	text,
+	time,
+	timeOfDay,
 	toDateInput,
 } from "./schema.ts";
 
@@ -69,6 +73,27 @@ describe("dates", () => {
 		expect(parse(optionalDate(), "garbage")).toEqual({ issue: "Enter a valid date" });
 		expect(parse(optionalDate(), "2026-02-29")).toEqual({ issue: "Enter a valid date" });
 		expect(toDateInput(null)).toBe("");
+	});
+});
+
+describe("times of day", () => {
+	test("are entered as hours and minutes", () => {
+		expect(parse(time(), "13:30")).toEqual({ value: "13:30" });
+		expect(parse(time(), "")).toEqual({ issue: "Choose a time" });
+		expect(parse(time(), "24:00")).toEqual({ issue: "Enter a valid time" });
+		expect(parse(time(), "9:00")).toEqual({ issue: "Enter a valid time" });
+	});
+
+	test("an optional time may be empty, but not invalid", () => {
+		expect(parse(optionalTime(), "")).toEqual({ value: null });
+		expect(parse(optionalTime(), "08:15")).toEqual({ value: "08:15" });
+		expect(parse(optionalTime(), "8.15")).toEqual({ issue: "Enter a valid time" });
+	});
+
+	test("set a day's time, and are shown like the time input does", () => {
+		expect(timeOfDay(new Date(2026, 9, 7, 8, 5))).toBe("08:05");
+		expect(atTime(new Date(2026, 9, 7), "14:30")).toEqual(new Date(2026, 9, 7, 14, 30));
+		expect(atTime(new Date(2026, 9, 7, 23, 59, 59), "09:00")).toEqual(new Date(2026, 9, 7, 9));
 	});
 });
 

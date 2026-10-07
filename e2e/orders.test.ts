@@ -19,6 +19,10 @@ const orderId = (number: string, organizationId: string) =>
 		organizationId,
 	]);
 
+/** When an order is scheduled for, as stored (in seconds). */
+const scheduledFor = async (id: number) =>
+	new Date((await value<number>(`select scheduled_for from "order" where id = ?`, [id])) * 1000);
+
 /** Every material's stock in an organization, by id. */
 const stocks = async (organizationId: string) =>
 	new Map(
@@ -124,6 +128,7 @@ describe("in North", () => {
 		await page.getByLabel("Status").selectOption("scheduled");
 		await page.getByLabel("Engineer").selectOption({ index: 1 });
 		await page.getByLabel("Scheduled for").fill("2026-10-20");
+		await page.getByLabel("Time", { exact: true }).fill("13:30");
 		await page.getByLabel("Labour (hours)").fill("2.5");
 		for (const [material, quantity] of [
 			[3, "4"],
@@ -147,6 +152,7 @@ describe("in North", () => {
 		await app.toast("Order created");
 
 		const id = await orderId(number, north.id);
+		expect(await scheduledFor(id)).toEqual(new Date(2026, 9, 20, 13, 30));
 		expect(await value(`select count(*) from order_line where order_id = ?`, [id])).toBe(2);
 		const lines = page
 			.locator("table")
@@ -183,6 +189,7 @@ describe("in North", () => {
 		await page.waitForLoadState("networkidle");
 		expect(await page.getByLabel("Description").inputValue()).toContain("(test order)");
 		expect(await page.locator("tbody tr").count()).toBe(2);
+		expect(await page.getByLabel("Time", { exact: true }).inputValue()).toBe("13:30");
 
 		await page.getByLabel("Status").selectOption("completed");
 		await page.getByLabel("Labour (hours)").fill("4");
@@ -196,6 +203,26 @@ describe("in North", () => {
 		expect(order.completed_at).not.toBeNull();
 		// The same lines take no more stock.
 		expect(await orderMovements(number, north.id)).toHaveLength(2);
+		// It's still planned at the time of day it had.
+		expect(await scheduledFor(await orderId(number, north.id))).toEqual(
+			new Date(2026, 9, 20, 13, 30),
+		);
+	});
+
+	test("its scheduled time can be changed, and the day", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		await app.go(`/orders/${number}/edit`);
+		await page.getByLabel("Time", { exact: true }).fill("08:15");
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		expect(await scheduledFor(id)).toEqual(new Date(2026, 9, 20, 8, 15));
+
+		await app.go(`/orders/${number}/edit`);
+		await page.getByLabel("Scheduled for").fill("2026-10-22");
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		expect(await scheduledFor(id)).toEqual(new Date(2026, 9, 22, 8, 15));
 	});
 
 	test("lines take decimals in kilos, metres and litres, but whole pieces", async () => {

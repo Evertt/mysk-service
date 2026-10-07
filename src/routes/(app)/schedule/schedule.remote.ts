@@ -4,13 +4,13 @@ import { and, asc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
-import { date, id } from "#lib/schema.js";
+import { atTime, date, id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
-import { addDays, atTime, byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
+import { addDays, byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
 import { moveFields, scheduleFields } from "./schedule-schema.js";
 
 /** What a card on the board shows of an order. */

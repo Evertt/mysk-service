@@ -20,7 +20,7 @@
 		orderTypes,
 		quantityStep,
 	} from "#lib/models.js";
-	import { toDateInput } from "#lib/schema.js";
+	import { timeOfDay, toDateInput } from "#lib/schema.js";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./orders.remote.js";
 
@@ -181,12 +181,20 @@
 					value={order?.engineerId ? String(order.engineerId) : ""}
 					options={engineerOptions}
 				/>
-				<TextField
-					field={fields.scheduledFor}
-					label="Scheduled for"
-					type="date"
-					value={toDateInput(order?.scheduledFor)}
-				/>
+				<div class="grid grid-cols-2 gap-4">
+					<TextField
+						field={fields.scheduledFor}
+						label="Scheduled for"
+						type="date"
+						value={toDateInput(order?.scheduledFor)}
+					/>
+					<TextField
+						field={fields.scheduledTime}
+						label="Time"
+						type="time"
+						value={order?.scheduledFor ? timeOfDay(order.scheduledFor) : ""}
+					/>
+				</div>
 				<NumberField
 					field={fields.laborHours}
 					label="Labour (hours)"

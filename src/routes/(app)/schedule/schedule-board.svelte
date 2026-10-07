@@ -12,11 +12,11 @@
 	import { SvelteSet } from "svelte/reactivity";
 
 	import { specialties } from "#lib/components/engineers/display.js";
+	import { atTime, timeOfDay } from "#lib/schema.js";
 	import { cn } from "#lib/utils.js";
 
 	import {
 		applyMove,
-		atTime,
 		boardEngineers,
 		cellKey,
 		DEFAULT_TIME,
@@ -27,7 +27,6 @@
 		load,
 		type RowId,
 		startOfWeek,
-		timeOfDay,
 		weekDays,
 	} from "./board.js";
 	import OrderCard from "./order-card.svelte";

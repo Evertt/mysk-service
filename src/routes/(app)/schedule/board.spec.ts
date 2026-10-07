@@ -5,7 +5,6 @@ import type { OrderStatus } from "#lib/models.ts";
 import {
 	addDays,
 	applyMove,
-	atTime,
 	boardEngineers,
 	byPriorityThenAge,
 	cellKey,
@@ -18,7 +17,6 @@ import {
 	parseDay,
 	plannedStatus,
 	startOfWeek,
-	timeOfDay,
 	weekDays,
 	weekFromParam,
 	weekNumber,
@@ -81,12 +79,6 @@ describe("days and weeks", () => {
 		expect(weekNumber(new Date(2027, 0, 1))).toBe(53);
 		expect(weekNumber(new Date(2027, 0, 4))).toBe(1);
 		expect(weekNumber(new Date(2024, 11, 30))).toBe(1);
-	});
-
-	test("times of day", () => {
-		expect(timeOfDay(new Date(2026, 9, 7, 8, 5))).toBe("08:05");
-		expect(atTime(new Date(2026, 9, 7), "14:30")).toEqual(new Date(2026, 9, 7, 14, 30));
-		expect(atTime(new Date(2026, 9, 7, 23, 59, 59), "09:00")).toEqual(new Date(2026, 9, 7, 9));
 	});
 
 	test("formatting", () => {

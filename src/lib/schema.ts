@@ -53,6 +53,19 @@ export const toDateInput = (date: Date | null | undefined) =>
 		? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 		: "";
 
+const pad = (value: number) => String(value).padStart(2, "0");
+
+/** The time of day as `HH:MM`, as in `<input type="time">`. */
+export const timeOfDay = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+/** `day` at `time` (`HH:MM`). */
+export function atTime(day: Date, time: string) {
+	const [hours, minutes] = time.split(":").map(Number);
+	const result = new Date(day);
+	result.setHours(hours, minutes, 0, 0);
+	return result;
+}
+
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
 export const cents = (required = "Enter an amount") =>
 	v.pipe(
@@ -81,6 +94,21 @@ export const formatted = (required: string, pattern: RegExp, message: string) =>
 		v.trim(),
 		v.nonEmpty(required),
 		v.check((value) => value === "" || pattern.test(value), message),
+	);
+
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** A time of day from `<input type="time">`, `HH:MM`. */
+export const time = (required = "Choose a time") =>
+	formatted(required, timePattern, "Enter a valid time");
+
+/** An optional time of day from `<input type="time">`, `HH:MM`; `null` if it's left empty. */
+export const optionalTime = () =>
+	v.pipe(
+		v.string(),
+		v.trim(),
+		v.check((value) => value === "" || timePattern.test(value), "Enter a valid time"),
+		v.transform((value) => value || null),
 	);
 
 /** A required email address, stored in lower case. */
