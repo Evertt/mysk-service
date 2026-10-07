@@ -8,14 +8,13 @@
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import OrderStatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatCents, formatDate, humanize } from "#lib/format.js";
+	import { formatDate, humanize } from "#lib/format.js";
 
 	import { deleteEquipment, getEquipment } from "../equipment.remote.js";
 	import type { PageProps } from "./$types";
+	import ServiceStats from "./service-stats.svelte";
+	import ServiceTimeline from "./service-timeline.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -63,79 +62,11 @@
 	{/snippet}
 </PageHeader>
 
-<div class="grid gap-4 sm:grid-cols-3">
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>Open orders</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.openOrders}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			Quoted, scheduled or in progress
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>Last service</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">
-				{data.lastService ? formatDate(data.lastService) : "Never"}
-			</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">Latest completed order</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>Orders</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.history.length}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			Since installation on {formatDate(unit.installedAt)}
-		</Card.Footer>
-	</Card.Root>
-</div>
+<ServiceStats serial={unit.serialNumber} />
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Service history</Card.Title>
-				<Card.Description>All orders on this unit, most recent first.</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				{#if data.history.length}
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Order</Table.Head>
-								<Table.Head>Type</Table.Head>
-								<Table.Head>Status</Table.Head>
-								<Table.Head>Created</Table.Head>
-								<Table.Head class="text-right">Total</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each data.history as order (order.id)}
-								<Table.Row>
-									<Table.Cell><OrderLink number={order.number} /></Table.Cell>
-									<Table.Cell><TypeLabel type={order.type} /></Table.Cell>
-									<Table.Cell><OrderStatusBadge status={order.status} /></Table.Cell>
-									<Table.Cell class="tabular-nums">{formatDate(order.createdAt)}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">
-										{formatCents(order.total)}
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				{:else}
-					<Empty.Root class="p-6">
-						<Empty.Header>
-							<Empty.Title>No orders yet</Empty.Title>
-							<Empty.Description>This unit hasn't been serviced.</Empty.Description>
-						</Empty.Header>
-					</Empty.Root>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+		<ServiceTimeline serial={unit.serialNumber} />
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">
