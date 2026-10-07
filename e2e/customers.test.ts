@@ -1,7 +1,17 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatDate } from "../src/lib/format.ts";
-import { countIn, nextCode, organizations, rows, useApp, value } from "./app.ts";
+import {
+	cents,
+	countIn,
+	nextCode,
+	organizations,
+	priceOf,
+	pricedOrders,
+	rows,
+	useApp,
+	value,
+} from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -265,6 +275,45 @@ describe("in North", () => {
 		const shown = await row().innerText();
 		expect(shown).toContain("Completed");
 		expect(shown).toContain(`Completed ${formatDate(new Date())}`);
+	});
+
+	test("revenue and recent activity cost what the orders' own pages say, less what contracts include", async () => {
+		const { page } = app;
+		// A customer with a contract-covered, done order among their ten latest.
+		const [covered] = await pricedOrders(
+			north.id,
+			`c.level = 'premium' and o.status in ('completed', 'invoiced')
+			 and o.labor_hours > 0 and o.id in (select r.id from "order" r
+			 where r.customer_id = o.customer_id order by r.created_at desc, r.id desc limit 10)`,
+		);
+		expect(covered).toBeDefined();
+		const orders = await pricedOrders(
+			north.id,
+			`o.customer_id = (select id from customer where code = ? and organization_id = ?)`,
+			[covered.customer, north.id],
+		);
+		const done = orders.filter((order) => ["completed", "invoiced"].includes(order.status));
+
+		await app.go(`/customers/${covered.customer}`);
+		const revenue = page.locator('[data-slot="card"]', { hasText: "Lifetime revenue" });
+		expect(cents(await revenue.locator('[data-slot="card-title"]').innerText())).toBe(
+			done.reduce((sum, order) => sum + priceOf(order).total, 0),
+		);
+		expect(await revenue.innerText()).toContain(`From ${done.length} completed or invoiced`);
+
+		const listed = await activity();
+		expect(listed).toContain(covered.number);
+		for (const number of listed) {
+			const order = orders.find((candidate) => candidate.number === number)!;
+			const row = page
+				.getByRole("list", { name: "Recent activity" })
+				.locator(":scope > li")
+				.filter({ has: page.getByRole("link", { name: number }) });
+			expect(cents(await row.locator('[data-cost="total"]').innerText())).toBe(
+				priceOf(order).total,
+			);
+		}
+		expect(priceOf(covered).total).toBe(0);
 	});
 
 	test("the detail page fits a phone screen", async () => {

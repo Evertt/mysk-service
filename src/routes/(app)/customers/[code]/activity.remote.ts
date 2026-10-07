@@ -3,9 +3,10 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
+import { lineTotal } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
-import { orderCost } from "#lib/server/order-cost.js";
+import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 /** How many orders the customer page lists; the orders list has them all. */
@@ -34,6 +35,7 @@ export const getCustomerActivity = query(v.string(), async (code) => {
 				scheduledFor: order.scheduledFor,
 				completedAt: order.completedAt,
 				createdAt: order.createdAt,
+				equipmentId: order.equipmentId,
 				laborHours: order.laborHours,
 				hourlyRate: engineer.hourlyRate,
 				equipment: {
@@ -69,15 +71,22 @@ export const getCustomerActivity = query(v.string(), async (code) => {
 				)
 		: [];
 
+	// Priced like everywhere else, so a covered order costs here what it does on its own page.
+	const prices = await priceOrders(
+		orders.map((row) => ({
+			...row,
+			materials: lines
+				.filter((line) => line.orderId === row.id)
+				.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0),
+		})),
+	);
 	return {
 		total,
-		orders: orders.map(({ laborHours, hourlyRate, ...row }) => ({
-			...row,
-			total: orderCost({
-				laborHours,
-				hourlyRate,
-				lines: lines.filter((line) => line.orderId === row.id),
-			}).total,
-		})),
+		orders: orders.map(
+			({ laborHours: _hours, hourlyRate: _rate, equipmentId: _unit, ...row }, i) => ({
+				...row,
+				total: prices[i].total,
+			}),
+		),
 	};
 });

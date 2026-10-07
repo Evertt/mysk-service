@@ -11,6 +11,7 @@ import {
 	type OrderType,
 	orderTypes,
 } from "#lib/models.js";
+import type { PriceAdjustment } from "#lib/modules.js";
 
 /** An order on the unit, with what it took and cost. */
 export interface HistoryOrder {
@@ -25,8 +26,8 @@ export interface HistoryOrder {
 	laborHours: number;
 	engineer: { id: number; name: string } | null;
 	materials: { id: number; sku: string; name: string; unit: MaterialUnit; quantity: number }[];
-	/** In cents. */
-	cost: { materials: number; labor: number; total: number };
+	/** As `priceOrders()` prices it, with the modules' adjustments (e.g. contract coverage). In cents. */
+	cost: { materials: number; labor: number; adjustments: PriceAdjustment[]; total: number };
 }
 
 export type ServiceEvent =
@@ -86,7 +87,7 @@ export interface ServiceStats {
 	openOrders: number;
 	/** Completed or invoiced. */
 	doneOrders: number;
-	/** What the completed and invoiced orders cost, in cents. */
+	/** What the completed and invoiced orders cost, after adjustments, in cents. */
 	cost: number;
 	/** When the latest completed or invoiced order was completed. */
 	lastService: Date | null;

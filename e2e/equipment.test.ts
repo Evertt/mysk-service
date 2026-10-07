@@ -1,8 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatCents, formatDate } from "../src/lib/format.ts";
-import { STANDARD_HOURLY_RATE } from "../src/lib/server/pricing.ts";
-import { countIn, organizations, rows, useApp, value } from "./app.ts";
+import {
+	cents,
+	countIn,
+	organizations,
+	priceOf,
+	pricedOrders,
+	rows,
+	useApp,
+	value,
+} from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -154,14 +162,15 @@ const daysBetween = (from: Date, to: Date) => {
 	return Math.round((day(to).getTime() - day(from).getTime()) / (24 * 60 * 60 * 1000));
 };
 
-/** What the unit's summary should show; cost and repairs count its done (completed or invoiced) orders. */
+/**
+ * What the unit's summary should show; cost and repairs count its done (completed or invoiced)
+ * orders, the cost less what contracts include, like the orders' own pages.
+ */
 async function expectedStats(id: number) {
 	const done = `o.equipment_id = ? and o.status in ('completed', 'invoiced')`;
-	const cost = await value<number>(
-		`select coalesce(sum(round(o.labor_hours * coalesce(g.hourly_rate, ?)) + coalesce(
-			(select sum(round(l.quantity * l.unit_price)) from order_line l where l.order_id = o.id), 0)
-		 ), 0) from "order" o left join engineer g on g.id = o.engineer_id where ${done}`,
-		[STANDARD_HOURLY_RATE, id],
+	const cost = (await pricedOrders(north.id, done, [id])).reduce(
+		(sum, order) => sum + priceOf(order).total,
+		0,
 	);
 	const lastService = await value<number | null>(
 		`select max(completed_at) from "order" o where ${done}`,
@@ -326,6 +335,20 @@ describe("in North", () => {
 		expect(materials.length).toBeGreaterThan(0);
 		for (const { sku } of materials) expect(shown).toContain(sku);
 		expect(await item.locator('a[href^="/materials/"]').count()).toBe(materials.length);
+
+		// Every order costs what it does on its own page: less what a contract includes, which shows.
+		const priced = await pricedOrders(north.id, `o.equipment_id = ?`, [busy.id]);
+		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
+		for (const order of priced) {
+			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
+			const { total, included } = priceOf(order);
+			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(total);
+			const adjustments = entry.locator('[data-cost="adjustment"]');
+			if (included) {
+				expect(cents(await adjustments.innerText())).toBe(-included);
+				expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
+			} else expect(await adjustments.count()).toBe(0);
+		}
 	});
 
 	test("the summary counts its orders by type, their cost and the time between repairs", async () => {

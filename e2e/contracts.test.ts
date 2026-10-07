@@ -1,6 +1,16 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "./app.ts";
+import {
+	cents,
+	countIn,
+	covered,
+	organizations,
+	priceOf,
+	pricedOrders,
+	rows,
+	useApp,
+	value,
+} from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -47,19 +57,6 @@ const card = (title: string) =>
 
 // --- What contracts mean for orders, as `coverage.ts` defines it -------------------------------
 
-/**
- * The contract that covered each order: one covering its unit on the day the order was created
- * (contracts run up to and including their last day), not for an installation, the fastest
- * response first.
- */
-const covered = `covered as (
-	select o.id as order_id, k.number, k.level, k.response_hours,
-		row_number() over (partition by o.id order by k.response_hours, k.id) as n
-	from "order" o join contract_equipment ce on ce.equipment_id = o.equipment_id
-	join contract k on k.id = ce.contract_id and k.organization_id = o.organization_id
-	where o.type != 'installation' and k.starts_on <= o.created_at and o.created_at < k.ends_on + 86400
-)`;
-
 interface CallOut {
 	number: string;
 	contract: string;
@@ -86,42 +83,9 @@ function slaOf(callOut: CallOut, now = Date.now() / 1000) {
 	return left < callOut.response_hours * 3600 * 0.25 ? "at_risk" : "on_track";
 }
 
-/** The standard hourly rate for orders without an engineer (`#lib/server/pricing.ts`), in cents. */
-const STANDARD_RATE = 8500;
-
-interface Priced {
-	number: string;
-	materials: number;
-	labor_hours: number;
-	hourly_rate: number | null;
-	contract: string | null;
-	level: string | null;
-	equipment: string | null;
-}
-
 /** North's orders matching `where`, with what goes into their price. */
 const pricing = (where: string, args: (string | number)[] = []) =>
-	rows<Priced>(
-		`with ${covered} select o.number, o.labor_hours, e.hourly_rate, c.number as contract, c.level,
-		 u.serial_number as equipment,
-		 (select coalesce(sum(round(l.quantity * l.unit_price)), 0) from order_line l where l.order_id = o.id) as materials
-		 from "order" o left join engineer e on e.id = o.engineer_id
-		 left join equipment u on u.id = o.equipment_id
-		 left join covered c on c.order_id = o.id and c.n = 1
-		 where o.organization_id = ? and ${where} order by o.number`,
-		[north.id, ...args],
-	);
-
-/** An order's price: standard contracts include labour, premium ones labour and materials. */
-function priceOf(order: Priced) {
-	const labor = Math.round(order.labor_hours * (order.hourly_rate ?? STANDARD_RATE));
-	const included =
-		order.level === "premium" ? labor + order.materials : order.level === "standard" ? labor : 0;
-	return { labor, included, total: order.materials + labor - included };
-}
-
-/** An amount as shown, e.g. `-€1,234.50`, in cents. */
-const cents = (text: string) => Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100);
+	pricedOrders(north.id, where, args);
 
 const dateTime = new Intl.DateTimeFormat("en-GB", {
 	day: "numeric",
@@ -502,10 +466,13 @@ describe("in North, contracts count on orders", () => {
 
 	test("a covered order shows what its contract includes, and its total agrees everywhere", async () => {
 		const { page } = app;
-		// A premium-covered repair with both labour and materials.
+		// A premium-covered repair with both labour and materials, among its customer's ten latest
+		// orders (which their page lists).
 		const [order] = await pricing(
 			`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
-			 and exists (select 1 from order_line l where l.order_id = o.id)`,
+			 and exists (select 1 from order_line l where l.order_id = o.id)
+			 and o.id in (select r.id from "order" r where r.customer_id = o.customer_id
+			 order by r.created_at desc, r.id desc limit 10)`,
 		);
 		const price = priceOf(order);
 		expect(price.included).toBe(order.materials + price.labor);
@@ -526,9 +493,28 @@ describe("in North, contracts count on orders", () => {
 			price.total,
 		);
 
+		// The unit's service history shows the same total, and what the contract took off.
 		await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
-		const history = card("Service history").locator("tbody tr", { hasText: order.number });
-		expect(cents(await history.locator("td").last().innerText())).toBe(price.total);
+		const entry = page
+			.getByRole("list", { name: "Service history" })
+			.locator(":scope > li")
+			.filter({ has: page.getByRole("link", { name: order.number }) });
+		expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(price.total);
+		const adjustments = entry.getByRole("list", { name: "Adjustments" });
+		expect(await adjustments.innerText()).toContain(
+			`Covered by ${order.contract} (Premium)\nLabour and materials included`,
+		);
+		expect(cents(await adjustments.locator('[data-cost="adjustment"]').innerText())).toBe(
+			-price.included,
+		);
+
+		// And so does the customer's recent activity.
+		await app.go(`/customers/${order.customer}`);
+		const activity = page
+			.getByRole("list", { name: "Recent activity" })
+			.locator(":scope > li")
+			.filter({ has: page.getByRole("link", { name: order.number }) });
+		expect(cents(await activity.locator('[data-cost="total"]').innerText())).toBe(price.total);
 	});
 
 	test("a standard contract includes the labour only", async () => {

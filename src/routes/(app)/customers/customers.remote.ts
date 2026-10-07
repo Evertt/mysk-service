@@ -1,14 +1,14 @@
 import { form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isOpenOrder, lineTotal, openOrderStatuses } from "#lib/models.js";
+import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
-import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { laborCost } from "#lib/server/pricing.js";
+import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
+import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { customerFields, europeanCountries } from "./customer-schema.js";
@@ -42,7 +42,10 @@ export const getCustomers = query(async () => {
 		.orderBy(asc(customer.name));
 });
 
-/** One customer with their equipment, their orders (newest first, with totals) and key figures. */
+/**
+ * One customer with their equipment and key figures. Their latest orders are
+ * `getCustomerActivity` (`[code]/activity.remote.ts`).
+ */
 export const getCustomer = query(v.string(), async (code) => {
 	requireMember();
 	const found = await db.query.customer.findFirst({
@@ -51,40 +54,45 @@ export const getCustomer = query(v.string(), async (code) => {
 			equipment: {
 				orderBy: (unit, { asc }) => [asc(unit.manufacturer), asc(unit.model)],
 			},
-			orders: {
-				columns: {
-					id: true,
-					number: true,
-					type: true,
-					status: true,
-					scheduledFor: true,
-					createdAt: true,
-					laborHours: true,
-				},
-				with: {
-					engineer: { columns: { hourlyRate: true } },
-					lines: { columns: { quantity: true, unitPrice: true } },
-				},
-				orderBy: (order, { desc }) => [desc(order.createdAt), desc(order.id)],
-			},
 		},
 	});
 	if (!found) error(404, `Customer ${code} not found`);
 
-	const { orders: rawOrders, ...rest } = found;
-	const orders = rawOrders.map(({ engineer, lines, laborHours, ...fields }) => ({
-		...fields,
-		total:
-			lines.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0) +
-			laborCost(laborHours, engineer?.hourlyRate),
-	}));
+	const materials = db
+		.select({
+			orderId: orderLine.orderId,
+			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
+		})
+		.from(orderLine)
+		.where(inTenant(orderLine))
+		.groupBy(orderLine.orderId)
+		.as("materials");
+	const orders = await db
+		.select({
+			id: order.id,
+			type: order.type,
+			status: order.status,
+			equipmentId: order.equipmentId,
+			createdAt: order.createdAt,
+			laborHours: order.laborHours,
+			hourlyRate: engineer.hourlyRate,
+			materials: sql<number>`coalesce(${materials.total}, 0)`,
+		})
+		.from(order)
+		.leftJoin(materials, eq(materials.orderId, order.id))
+		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.where(and(eq(order.customerId, found.id), inTenant(order)))
+		.orderBy(desc(order.createdAt), desc(order.id));
 
+	// The revenue is priced like everywhere else, e.g. without the work their contracts include.
 	const done = orders.filter((o) => isDoneOrder(o.status));
+	const prices = await priceOrders(done);
 	return {
-		customer: { ...rest, orders },
+		customer: found,
 		stats: {
+			orders: orders.length,
 			openOrders: orders.filter((o) => isOpenOrder(o.status)).length,
-			revenue: done.reduce((sum, o) => sum + o.total, 0),
+			revenue: prices.reduce((sum, price) => sum + price.total, 0),
 			revenueOrders: done.length,
 			lastOrderAt: orders[0]?.createdAt ?? null,
 		},

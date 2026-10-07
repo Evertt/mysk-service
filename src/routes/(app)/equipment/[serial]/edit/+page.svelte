@@ -13,7 +13,7 @@
 
 	let { params }: PageProps = $props();
 
-	const { unit, history } = $derived(await getEquipment(params.serial));
+	const { unit, orderCount } = $derived(await getEquipment(params.serial));
 	const unitHref = $derived(resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber }));
 </script>
 
@@ -42,7 +42,7 @@
 <EquipmentForm
 	form={updateEquipment}
 	{unit}
-	orderCount={history.length}
+	{orderCount}
 	options={await getEquipmentFormOptions()}
 	cancelHref={unitHref}
 />

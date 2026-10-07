@@ -59,7 +59,9 @@
 						</div>
 						<StatusBadge status={order.status} />
 						<div class="flex w-32 flex-col items-end">
-							<span class="text-sm font-medium tabular-nums">{formatCents(order.total)}</span>
+							<span data-cost="total" class="text-sm font-medium tabular-nums">
+								{formatCents(order.total)}
+							</span>
 							<span class="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
 								{#if order.completedAt}
 									Completed {formatDate(order.completedAt)}

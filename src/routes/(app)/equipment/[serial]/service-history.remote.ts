@@ -3,9 +3,10 @@ import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
+import { lineTotal } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.js";
-import { orderCost } from "#lib/server/order-cost.js";
+import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.js";
@@ -66,21 +67,31 @@ export const getServiceHistory = query(v.string(), async (serialNumber) => {
 				.orderBy(asc(orderLine.id))
 		: [];
 
-	const history = orders.map(({ engineer, ...row }): HistoryOrder => {
-		const own = lines.filter((line) => line.orderId === row.id);
-		return {
+	const ownLines = orders.map((row) => lines.filter((line) => line.orderId === row.id));
+	// Priced like everywhere else, so a covered order costs here what it does on its own page.
+	const prices = await priceOrders(
+		orders.map((row, i) => ({
 			...row,
-			engineer: engineer && { id: engineer.id, name: engineer.name },
-			materials: own.map(({ id, sku, name, unit, quantity }) => ({
-				id,
-				sku,
-				name,
-				unit,
-				quantity,
-			})),
-			cost: orderCost({ laborHours: row.laborHours, hourlyRate: engineer?.hourlyRate, lines: own }),
-		};
-	});
+			equipmentId: unit.id,
+			materials: ownLines[i].reduce(
+				(sum, line) => sum + lineTotal(line.quantity, line.unitPrice),
+				0,
+			),
+			hourlyRate: row.engineer?.hourlyRate,
+		})),
+	);
+	const history = orders.map(({ engineer, ...row }, i): HistoryOrder => ({
+		...row,
+		engineer: engineer && { id: engineer.id, name: engineer.name },
+		materials: ownLines[i].map(({ id, sku, name, unit, quantity }) => ({
+			id,
+			sku,
+			name,
+			unit,
+			quantity,
+		})),
+		cost: prices[i],
+	}));
 	const now = new Date();
 	return { events: buildTimeline(unit, history, now), stats: serviceStats(history, now) };
 });

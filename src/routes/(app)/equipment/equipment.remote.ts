@@ -3,12 +3,11 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isOpenOrder, lineTotal, openOrderStatuses } from "#lib/models.js";
+import { openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
@@ -45,48 +44,23 @@ export const getEquipmentList = query(async () => {
 		.orderBy(asc(equipment.manufacturer), asc(equipment.model));
 });
 
-/** One of the tenant's units with its owner and service history (most recent first). */
+/**
+ * One of the tenant's units with its owner, and how many orders it has (which keep it from being
+ * moved). Its service history is `getServiceHistory` (`[serial]/service-history.remote.ts`).
+ */
 export const getEquipment = query(v.string(), async (serialNumber) => {
 	requireMember();
-	const found = await db.query.equipment.findFirst({
+	const unit = await db.query.equipment.findFirst({
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
-		with: {
-			customer: true,
-			orders: {
-				with: {
-					engineer: { columns: { hourlyRate: true } },
-					lines: { columns: { quantity: true, unitPrice: true } },
-				},
-				orderBy: (order, { desc }) => [desc(order.createdAt), desc(order.id)],
-			},
-		},
+		with: { customer: true },
 	});
-	if (!found) error(404, `Equipment ${serialNumber} not found`);
+	if (!unit) error(404, `Equipment ${serialNumber} not found`);
 
-	const { orders: rows, ...unit } = found;
-	const prices = await priceOrders(
-		rows.map((row) => ({
-			...row,
-			materials: row.lines.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0),
-			hourlyRate: row.engineer?.hourlyRate,
-		})),
-	);
-	const history = rows.map(({ engineer: _engineer, lines: _lines, ...row }, i) => ({
-		...row,
-		total: prices[i].total,
-	}));
-	const completed = history
-		.filter((row) => isDoneOrder(row.status) && row.completedAt)
-		.map((row) => row.completedAt as Date);
-
-	return {
-		unit,
-		history,
-		openOrders: history.filter((row) => isOpenOrder(row.status)).length,
-		lastService: completed.length
-			? new Date(Math.max(...completed.map((date) => date.getTime())))
-			: null,
-	};
+	const [{ orderCount }] = await db
+		.select({ orderCount: count() })
+		.from(order)
+		.where(and(eq(order.equipmentId, unit.id), inTenant(order)));
+	return { unit, orderCount };
 });
 
 /** Everything the equipment form needs to choose from (the tenant's customers). */

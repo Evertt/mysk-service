@@ -72,7 +72,7 @@
 			<Card.Title class="text-3xl tabular-nums">{stats.openOrders}</Card.Title>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			Of {customer.orders.length} orders in total
+			Of {stats.orders} orders in total
 		</Card.Footer>
 	</Card.Root>
 	<Card.Root>

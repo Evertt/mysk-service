@@ -25,7 +25,7 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		laborHours: 2,
 		engineer: null,
 		materials: [],
-		cost: { materials: 0, labor: 0, total: 10_000 },
+		cost: { materials: 0, labor: 0, adjustments: [], total: 10_000 },
 		...fields,
 	};
 }

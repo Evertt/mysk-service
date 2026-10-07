@@ -1,7 +1,8 @@
 <!--
 	@component
 	Everything that happened to a unit, newest first: its installation, every order on it with who
-	did what, what it took and what it cost, and the end of its warranty, which may be ahead.
+	did what, what it took and what it cost (with what the tenant's modules take off, e.g. the work a
+	service contract includes), and the end of its warranty, which may be ahead.
 -->
 <script lang="ts">
 	import PackageCheckIcon from "@lucide/svelte/icons/package-check";
@@ -82,8 +83,9 @@
 								<span class="font-medium">{types[order.type].label}</span>
 								<OrderLink number={order.number} />
 								<OrderStatusBadge status={order.status} />
-								<span class="ml-auto font-medium tabular-nums">{formatCents(order.cost.total)}</span
-								>
+								<span data-cost="total" class="ml-auto font-medium tabular-nums">
+									{formatCents(order.cost.total)}
+								</span>
 							</div>
 							<p class="text-sm text-muted-foreground">{order.description}</p>
 							<dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -123,6 +125,23 @@
 										{/each}
 									</ul>
 								</div>
+							{/if}
+							{#if order.cost.adjustments.length}
+								<ul aria-label="Adjustments" class="flex flex-col gap-2 text-sm">
+									{#each order.cost.adjustments as adjustment, i (i)}
+										<li class="flex items-start gap-3">
+											<div class="flex min-w-0 flex-1 flex-col">
+												<span>{adjustment.label}</span>
+												{#if adjustment.detail}
+													<span class="text-xs text-muted-foreground">{adjustment.detail}</span>
+												{/if}
+											</div>
+											<span data-cost="adjustment" class="tabular-nums">
+												{formatCents(adjustment.amount)}
+											</span>
+										</li>
+									{/each}
+								</ul>
 							{/if}
 						{/if}
 					</div>
