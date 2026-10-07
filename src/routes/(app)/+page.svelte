@@ -9,6 +9,7 @@
 
 	import { getDashboard } from "./dashboard.remote.js";
 	import ModuleSlots from "./module-slots.svelte";
+	import RecentActivity from "./recent-activity.svelte";
 
 	const data = $derived(await getDashboard());
 </script>
@@ -124,3 +125,5 @@
 		</Table.Root>
 	</Card.Content>
 </Card.Root>
+
+<RecentActivity />

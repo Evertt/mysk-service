@@ -1,0 +1,26 @@
+<!--
+	@component
+	The dashboard's "Recent activity": the latest changes across the organization, with a link to
+	the activity feed.
+-->
+<script lang="ts">
+	import { resolve } from "$app/paths";
+
+	import ActivityList from "#lib/components/activity/activity-list.svelte";
+	import { getRecentActivity } from "#lib/components/activity/activity.remote.js";
+
+	const entries = $derived(await getRecentActivity());
+</script>
+
+<Card.Root data-card="recent-activity">
+	<Card.Header>
+		<Card.Title>Recent activity</Card.Title>
+		<Card.Description>The latest changes across the organization.</Card.Description>
+		<Card.Action>
+			<Button variant="outline" size="sm" href={resolve("/(app)/activity")}>All activity</Button>
+		</Card.Action>
+	</Card.Header>
+	<Card.Content>
+		<ActivityList {entries} label="Recent changes" />
+	</Card.Content>
+</Card.Root>

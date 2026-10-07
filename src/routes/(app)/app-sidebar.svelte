@@ -6,6 +6,7 @@
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import CogIcon from "@lucide/svelte/icons/cog";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
+	import HistoryIcon from "@lucide/svelte/icons/history";
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 	import PackageIcon from "@lucide/svelte/icons/package";
 
@@ -25,6 +26,7 @@
 					{ title: "Dashboard", href: resolve("/(app)"), icon: LayoutDashboardIcon },
 					{ title: "Orders", href: resolve("/(app)/orders"), icon: ClipboardListIcon },
 					{ title: "Schedule", href: resolve("/(app)/schedule"), icon: CalendarDaysIcon },
+					{ title: "Activity", href: resolve("/(app)/activity"), icon: HistoryIcon },
 				],
 			},
 			{

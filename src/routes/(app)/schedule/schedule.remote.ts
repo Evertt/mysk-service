@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { date, id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
@@ -80,7 +81,7 @@ async function plan(input: Plan): Promise<{ field?: "engineerId"; message: strin
 	requireMember();
 	return db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
-			columns: { status: true },
+			columns: { number: true, status: true, engineerId: true, scheduledFor: true },
 			where: and(eq(order.id, input.id), inTenant(order)),
 		});
 		if (!found) error(404, "Order not found");
@@ -97,14 +98,17 @@ async function plan(input: Plan): Promise<{ field?: "engineerId"; message: strin
 				return { field: "engineerId", message: `${assignee.name} is no longer active` };
 			}
 		}
+		const planned = {
+			engineerId: input.engineerId,
+			scheduledFor: atTime(input.day, input.time),
+			status: plannedStatus(found.status, input.engineerId),
+		};
 		await tx
 			.update(order)
-			.set({
-				engineerId: input.engineerId,
-				scheduledFor: atTime(input.day, input.time),
-				status: plannedStatus(found.status, input.engineerId),
-			})
+			.set(planned)
 			.where(and(eq(order.id, input.id), inTenant(order)));
+		const subject = { type: "order", id: input.id, label: found.number };
+		await recordActivity(tx, { action: "scheduled", subject, before: found, after: planned });
 	});
 }
 

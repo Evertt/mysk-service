@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
@@ -131,10 +132,15 @@ export const createEngineer = form(v.object(engineerFields), async (input, issue
 	if (await emailTaken(input.email)) {
 		invalid(issue.email("Another engineer already uses this email address"));
 	}
-	const [created] = await db
-		.insert(engineer)
-		.values({ ...input, organizationId })
-		.returning({ id: engineer.id });
+	const created = await db.transaction(async (tx) => {
+		const [created] = await tx
+			.insert(engineer)
+			.values({ ...input, organizationId })
+			.returning({ id: engineer.id });
+		const subject = { type: "engineer", id: created.id, label: input.name };
+		await recordActivity(tx, { action: "created", subject });
+		return created;
+	});
 	void getEngineers().refresh();
 	redirect(303, `/engineers/${created.id}`);
 });
@@ -145,17 +151,20 @@ export const updateEngineer = form(
 		requireMember();
 		const { id, ...input } = data;
 		const found = await db.query.engineer.findFirst({
-			columns: { id: true },
 			where: and(eq(engineer.id, id), inTenant(engineer)),
 		});
 		if (!found) error(404, "Engineer not found");
 		if (await emailTaken(input.email, id)) {
 			invalid(issue.email("Another engineer already uses this email address"));
 		}
-		await db
-			.update(engineer)
-			.set(input)
-			.where(and(eq(engineer.id, id), inTenant(engineer)));
+		await db.transaction(async (tx) => {
+			await tx
+				.update(engineer)
+				.set(input)
+				.where(and(eq(engineer.id, id), inTenant(engineer)));
+			const subject = { type: "engineer", id, label: input.name };
+			await recordActivity(tx, { action: "updated", subject, before: found, after: input });
+		});
 		void getEngineers().refresh();
 		void getEngineer(String(id)).refresh();
 		redirect(303, `/engineers/${id}`);
@@ -181,7 +190,12 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 	}
 
 	await refuseIfReferenced(
-		() => db.delete(engineer).where(and(eq(engineer.id, id), inTenant(engineer))),
+		() =>
+			db.transaction(async (tx) => {
+				await tx.delete(engineer).where(and(eq(engineer.id, id), inTenant(engineer)));
+				const subject = { type: "engineer", id, label: found.name };
+				await recordActivity(tx, { action: "deleted", subject });
+			}),
 		"Other records still refer to this engineer. Mark them inactive instead.",
 	);
 	void getEngineers().refresh();

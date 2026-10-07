@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { formatNumber } from "#lib/format.js";
 import { fitsUnit, lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity, recordOrderLines } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import {
 	customer,
@@ -288,6 +289,12 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 				);
 			}
 		}
+		const subject = { type: "order", id: orderId, label: number };
+		const action = existing ? "updated" : "created";
+		// The completion date follows from the status.
+		const ignore = ["completedAt"];
+		await recordActivity(tx, { action, subject, before: existing, after: values, ignore });
+		await recordOrderLines(tx, subject, before, lines);
 		return number;
 	});
 }
@@ -408,6 +415,10 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 			.set({ orderId: null })
 			.where(and(eq(stockMovement.orderId, found.id), inTenant(stockMovement)));
 		await tx.delete(order).where(and(eq(order.id, found.id), inTenant(order)));
+		await recordActivity(tx, {
+			action: "deleted",
+			subject: { type: "order", id, label: found.number },
+		});
 	});
 	void getOrders().refresh();
 	redirect(303, "/orders");

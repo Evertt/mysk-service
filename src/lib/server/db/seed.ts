@@ -631,6 +631,7 @@ const count = (table: string, rows: unknown[]) =>
 
 await db.transaction(async (tx) => {
 	for (const table of [
+		schema.activity,
 		schema.contractEquipment,
 		schema.contract,
 		schema.stockMovement,
@@ -719,6 +720,24 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.contracts, (chunk) => tx.insert(schema.contract).values(chunk));
 		await insertAll(rows.coverage, (chunk) => tx.insert(schema.contractEquipment).values(chunk));
 		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
+		// Who created the latest orders, so the activity log starts with some history.
+		const members = demoUsers.filter((u) =>
+			u.memberships.some((m) => m.organizationId === tenant.id),
+		);
+		const created = rows.orders
+			.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+			.slice(-8)
+			.map((o, i) => ({
+				organizationId,
+				userName: members[i % members.length].name,
+				action: "created" as const,
+				subjectType: "order",
+				subjectId: String(o.id),
+				subjectLabel: o.number,
+				createdAt: o.createdAt,
+			}));
+		await tx.insert(schema.activity).values(created);
+		count("activity", created);
 
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;

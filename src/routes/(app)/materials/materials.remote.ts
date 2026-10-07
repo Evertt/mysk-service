@@ -3,8 +3,10 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -178,6 +180,10 @@ export const createMaterial = form(v.object(newMaterialFields), async (input, is
 			.returning({ id: material.id });
 		// The stock it starts with is its first movement.
 		await moveStock(tx, { materialId: created.id, quantity: stock, kind: "opening_balance" });
+		await recordActivity(tx, {
+			action: "created",
+			subject: { type: "material", id: created.id, label: sku },
+		});
 		return sku;
 	});
 	void getMaterials().refresh();
@@ -211,10 +217,14 @@ export const updateMaterial = form(
 		}
 		if (problems.length) invalid(...problems);
 
-		await db
-			.update(material)
-			.set(input)
-			.where(and(eq(material.id, id), inTenant(material)));
+		await db.transaction(async (tx) => {
+			await tx
+				.update(material)
+				.set(input)
+				.where(and(eq(material.id, id), inTenant(material)));
+			const subject = { type: "material", id, label: existing.sku };
+			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
+		});
 		// Send the updated material along, so the page we redirect to doesn't show the old one first.
 		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
@@ -224,7 +234,8 @@ export const updateMaterial = form(
 
 export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
-	if (!(await findMaterial(id))) error(404, "Material not found");
+	const existing = await findMaterial(id);
+	if (!existing) error(404, "Material not found");
 	const orders = await ordersUsing(id);
 	if (orders) {
 		invalid(
@@ -232,7 +243,12 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 	await refuseIfReferenced(
-		() => db.delete(material).where(and(eq(material.id, id), inTenant(material))),
+		() =>
+			db.transaction(async (tx) => {
+				await tx.delete(material).where(and(eq(material.id, id), inTenant(material)));
+				const subject = { type: "material", id, label: existing.sku };
+				await recordActivity(tx, { action: "deleted", subject });
+			}),
 		"Other records still refer to this material. Remove those first.",
 	);
 	void getMaterials().refresh();
@@ -248,11 +264,21 @@ export const receiveStock = form(
 		if (!existing) error(404, "Material not found");
 		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity("Whole pieces only"));
 
-		await db.transaction((tx) =>
-			moveStock(tx, { materialId: id, quantity, kind: "receipt", note }),
-		);
+		await db.transaction(async (tx) => {
+			const { stock } = await moveStock(tx, { materialId: id, quantity, kind: "receipt", note });
+			const subject = { type: "material", id, label: existing.sku };
+			const before = { stock: roundQuantity(stock - quantity) };
+			await recordActivity(tx, {
+				action: "stock_received",
+				subject,
+				before,
+				after: { stock },
+				note,
+			});
+		});
 		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
+		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},
 );
 
@@ -275,8 +301,12 @@ export const countStock = form(
 			const difference = roundQuantity(counted - current.stock);
 			if (!difference) invalid(issue.counted("That's the stock already"));
 			await moveStock(tx, { materialId: id, quantity: difference, kind: "adjustment", note });
+			const subject = { type: "material", id, label: existing.sku };
+			const [before, after] = [{ stock: current.stock }, { stock: counted }];
+			await recordActivity(tx, { action: "stock_adjusted", subject, before, after, note });
 		});
 		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
+		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},
 );

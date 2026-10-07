@@ -133,3 +133,22 @@ export const stockMovementKinds = [
 	"return",
 ] as const;
 export type StockMovementKind = (typeof stockMovementKinds)[number];
+
+// --- Activity log ------------------------------------------------------------------------------
+
+/**
+ * What someone did to a record in the activity log (`activity`): created, updated or deleted it,
+ * or a domain verb that says more, e.g. scheduled an order or received stock for a material. A new
+ * verb also gets a phrase in `actionVerbs` in `#lib/activity.ts`.
+ */
+export const activityActions = [
+	"created",
+	"updated",
+	"deleted",
+	"scheduled",
+	"stock_received",
+	"stock_adjusted",
+	"module_enabled",
+	"module_disabled",
+] as const;
+export type ActivityAction = (typeof activityActions)[number];

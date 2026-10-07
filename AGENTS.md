@@ -50,6 +50,35 @@ helpers are in `src/lib/server/session.ts`:
   shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
   which applies the modules' adjustments.
 
+## Activity log
+
+Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity.ts`), inside the
+`db.transaction` that makes the change and after making it, so a refused or rolled-back change logs
+nothing (wrap a single write in a transaction for this). Tenant and user come from the request:
+
+```ts
+await db.transaction(async (tx) => {
+	await tx
+		.update(customer)
+		.set(input)
+		.where(and(eq(customer.id, id), inTenant(customer)));
+	const subject = { type: "customer", id, label: existing.code };
+	await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
+});
+```
+
+- `action` is one of `activityActions` (`src/lib/models.ts`): created, updated, deleted, or a verb
+  that says more (scheduled, stock_received, …); a new one also gets a phrase in `actionVerbs`.
+- `subject` is the record: its type, id, and the label it's known (and its page found) by now,
+  e.g. the order number. `parent` puts it on another record's card too (an order line's order).
+- For an update, pass the row as loaded as `before` and what the update sets as `after`: only
+  `after`'s fields are compared, and an update that changes nothing logs nothing. `ignore` leaves
+  out fields that follow from others.
+- A new subject type gets a noun, page and field formats in `coreSubjectTypes`
+  (`src/lib/activity.ts`), or, for a module's records, in its `subjects` in `src/lib/modules.ts`.
+  Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
+- Log deletions too: a subject links to its page until its deletion is logged.
+
 ## Tests
 
 `pnpm test` runs everything: unit tests (`*.spec.ts` next to the code, in Node; `*.svelte.spec.ts`

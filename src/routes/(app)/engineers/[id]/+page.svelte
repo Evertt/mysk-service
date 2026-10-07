@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import CustomerLink from "#lib/components/customers/customer-link.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
@@ -185,5 +186,7 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<ActivityCard type="engineer" id={engineer.id} />
 	</div>
 </div>
