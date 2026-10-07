@@ -4,6 +4,7 @@ import { formatCents, formatDate } from "../src/lib/format.ts";
 import {
 	cents,
 	countIn,
+	covered,
 	organizations,
 	priceOf,
 	pricedOrders,
@@ -322,6 +323,7 @@ describe("in North", () => {
 			`select o.id, o.number, g.name as engineer from "order" o
 			 left join engineer g on g.id = o.engineer_id
 			 where o.equipment_id = ? and o.status in ('completed', 'invoiced')
+			 and exists (select 1 from order_line l where l.order_id = o.id)
 			 order by o.completed_at desc limit 1`,
 			[busy.id],
 		);
@@ -337,7 +339,17 @@ describe("in North", () => {
 		expect(await item.locator('a[href^="/materials/"]').count()).toBe(materials.length);
 
 		// Every order costs what it does on its own page: less what a contract includes, which shows.
-		const priced = await pricedOrders(north.id, `o.equipment_id = ?`, [busy.id]);
+		// On the busiest unit with an order that a contract includes something of.
+		const [covering] = await rows<{ id: number; serial: string }>(
+			`with ${covered} select e.id, e.serial_number as serial from equipment e
+			 join "order" o on o.equipment_id = e.id join covered c on c.order_id = o.id and c.n = 1
+			 where e.organization_id = ? and c.level in ('standard', 'premium') and o.labor_hours > 0
+			 group by e.id order by (select count(*) from "order" x where x.equipment_id = e.id) desc, e.id
+			 limit 1`,
+			[north.id],
+		);
+		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
+		const priced = await pricedOrders(north.id, `o.equipment_id = ?`, [covering.id]);
 		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
 		for (const order of priced) {
 			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
@@ -354,6 +366,7 @@ describe("in North", () => {
 	test("the summary counts its orders by type, their cost and the time between repairs", async () => {
 		const { page } = app;
 		const busy = await busiest(north.id);
+		await app.go(`/equipment/${busy.serial}`);
 		const expected = await expectedStats(busy.id);
 		expect(expected.betweenRepairs).not.toBeNull();
 
