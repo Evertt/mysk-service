@@ -12,12 +12,11 @@ import { resolve } from "$app/paths";
 import { segments } from "#lib/components/customers/display.js";
 import { specialties } from "#lib/components/engineers/display.js";
 import { categories } from "#lib/components/equipment/display.js";
-import { unitLabels } from "#lib/components/materials/display.js";
 import { priorities, statuses, types } from "#lib/components/orders/display.js";
-import { formatCents, formatDate, formatDateTime, formatNumber, humanize } from "#lib/format.js";
+import { formatCents, formatDate, formatDateTime, formatNumber } from "#lib/format.js";
+import { labelOrValue } from "#lib/i18n/labels.js";
 import type { ActivityAction } from "#lib/models.js";
 import { modules } from "#lib/modules.js";
-import { type MemberRole, roleLabels } from "#lib/roles.js";
 
 /** What the user did, as in "Avery Admin updated order …". */
 export const actionVerbs: Record<ActivityAction, string> = {
@@ -66,6 +65,12 @@ export interface SubjectType {
 	fields?: Record<string, FieldFormat>;
 }
 
+/** A stored value made readable, e.g. `order_line` → "Order line". */
+const humanize = (value: string) => {
+	const text = value.replaceAll("_", " ");
+	return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
 /** Formats an enum value by its display label, e.g. `in_progress` → "In progress". */
 const labelled =
 	(labels: Record<string, { label: string } | string>) =>
@@ -81,7 +86,7 @@ const roles = (value: unknown) =>
 	String(value)
 		.split(",")
 		.map((role) => role.trim())
-		.map((role) => roleLabels[role as MemberRole] ?? humanize(role))
+		.map((role) => labelOrValue("memberRole", role))
 		.join(", ");
 
 export const coreSubjectTypes: Record<string, SubjectType> = {
@@ -107,7 +112,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: label }),
 		fields: {
 			category: { format: labelled(categories) },
-			status: { format: (value) => humanize(String(value)) },
+			status: { format: (value) => labelOrValue("equipmentStatus", String(value)) },
 			customerId: { label: "owner", ref: "customer" },
 			installedAt: { label: "installed", format: day },
 			warrantyUntil: { label: "warranty until", format: day },
@@ -117,7 +122,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		noun: "material",
 		href: ({ label }) => resolve("/(app)/materials/[sku]", { sku: label }),
 		fields: {
-			unit: { format: labelled(unitLabels) },
+			unit: { format: (value) => labelOrValue("materialUnit", String(value)) },
 			unitPrice: { format: money },
 		},
 	},

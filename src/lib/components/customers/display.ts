@@ -4,19 +4,22 @@ import StoreIcon from "@lucide/svelte/icons/store";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import { type CustomerSegment, customerSegments } from "#lib/models.js";
 
 interface Display {
-	label: string;
 	icon: Component;
 	variant: BadgeVariant;
 }
 
-export const segments: Record<CustomerSegment, Display> = {
-	enterprise: { label: "Enterprise", icon: Building2Icon, variant: "default" },
-	mid_market: { label: "Mid-market", icon: BuildingIcon, variant: "secondary" },
-	small_business: { label: "Small business", icon: StoreIcon, variant: "outline" },
+const segmentDetails: Record<CustomerSegment, Display> = {
+	enterprise: { icon: Building2Icon, variant: "default" },
+	mid_market: { icon: BuildingIcon, variant: "secondary" },
+	small_business: { icon: StoreIcon, variant: "outline" },
 };
 
+/** Each segment's translated `label`, icon and badge variant. */
+export const segments = withLabels("customerSegment", segmentDetails);
+
 /** Options for faceted filters and selects, largest segment first. */
-export const segmentOptions = customerSegments.map((value) => ({ value, ...segments[value] }));
+export const segmentOptions = labelOptions("customerSegment", customerSegments, segmentDetails);

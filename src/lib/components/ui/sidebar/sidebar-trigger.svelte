@@ -34,5 +34,5 @@
 	{...restProps}
 >
 	<PanelLeftIcon class="cn-rtl-flip" />
-	<span class="sr-only">Toggle Sidebar</span>
+	<span class="sr-only">{m.common_toggle_sidebar()}</span>
 </Button>

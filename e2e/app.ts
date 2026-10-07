@@ -188,6 +188,13 @@ export const users = {
 	engineer: demoUsers[2].email,
 };
 
+/**
+ * The browser's language in every test browser: English, so the app is in English (the tests read
+ * its English texts) whatever the language of the machine running them. Pass it to every new
+ * browser context: `browser.newContext({ locale: BROWSER_LOCALE })`.
+ */
+export const BROWSER_LOCALE = "en-GB";
+
 /** A phone's screen, e.g. for the engineer portal. */
 export const mobileViewport = { width: 375, height: 812 };
 
@@ -210,7 +217,7 @@ export interface App {
 	expectingErrors<T>(steps: () => Promise<T>): Promise<T>;
 	/** The validation messages shown in the form. */
 	issues(): Promise<string[]>;
-	/** The data table's "1,234 row(s)" count. */
+	/** The data table's "1,234 rows" count. */
 	rowCount(): Promise<number>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
@@ -283,13 +290,14 @@ export function useApp({
 		},
 		issues: () => page.locator('[data-slot="field-error"]').allInnerTexts(),
 		async rowCount() {
-			const text = await page.getByText(/^[\d,]+ row\(s\)$/).innerText();
+			const text = await page.getByText(/^[\d,]+ rows?$/).innerText();
 			return Number(text.replace(/\D/g, ""));
 		},
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
 			const context = await browser.newContext({
+				locale: BROWSER_LOCALE,
 				storageState: await page.context().storageState(),
 			});
 			return context.newPage();
@@ -298,7 +306,7 @@ export function useApp({
 
 	beforeAll(async () => {
 		browser = await chromium.launch();
-		page = await browser.newPage({ viewport });
+		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE });
 		page.on("pageerror", (error) => expecting || errors.push(`pageerror: ${error.message}`));
 		page.on("console", (message) => {
 			const text = message.text();

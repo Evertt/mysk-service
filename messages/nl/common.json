@@ -1,0 +1,146 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"common_app_name": "Fieldworks",
+	"common_nav_operations": "Werk",
+	"common_nav_records": "Stamgegevens",
+	"common_nav_modules": "Modules",
+	"common_nav_dashboard": "Dashboard",
+	"common_nav_orders": "Opdrachten",
+	"common_nav_schedule": "Planning",
+	"common_nav_activity": "Activiteit",
+	"common_nav_customers": "Klanten",
+	"common_nav_equipment": "Apparatuur",
+	"common_nav_engineers": "Monteurs",
+	"common_nav_materials": "Materialen",
+	"common_organization_tagline": "Servicebeheer",
+	"common_organizations": "Organisaties",
+	"common_organization_settings": "Organisatie-instellingen",
+	"common_sign_out": "Afmelden",
+	"common_language": "Taal",
+	"common_theme": "Thema",
+	"common_mode": "Modus",
+	"common_mode_button": "Kleurmodus: {mode}",
+	"common_mode_light": "Licht",
+	"common_mode_dark": "Donker",
+	"common_mode_system": "Systeem",
+	"common_toggle_sidebar": "Zijbalk in- of uitklappen",
+	"common_sidebar": "Zijbalk",
+	"common_close": "Sluiten",
+	"common_more": "Meer",
+	"common_breadcrumb": "Kruimelpad",
+	"common_notifications": "Meldingen",
+	"common_close_notification": "Melding sluiten",
+	"common_module_contracts": "Servicecontracten",
+	"common_module_contracts_description": "Onderhoudscontracten: een vast bedrag per maand voor de apparatuur van een klant, met een gegarandeerde reactietijd.",
+	"common_module_invoicing": "Facturatie",
+	"common_module_invoicing_description": "Facturen voor afgeronde opdrachten en de vergoedingen van andere modules, met btw, pdf-download en openstaande posten op het dashboard.",
+	"common_error_not_found": "Niet gevonden",
+	"common_error_generic": "Er ging iets mis",
+	"common_error_unexpected": "Er is een onverwachte fout opgetreden.",
+	"common_error_back_to_dashboard": "Terug naar het dashboard",
+	"common_error_back_to_my_work": "Terug naar mijn werk",
+	"common_error_not_signed_in": "Niet ingelogd",
+	"common_error_no_organization": "Je bent geen lid van een organisatie",
+	"common_error_not_a_member": "Je bent geen lid van die organisatie",
+	"common_error_engineers_use_portal": "Monteurs werken in het monteursportaal",
+	"common_error_not_linked": "Je account is niet gekoppeld aan een monteur",
+	"common_error_no_permission": "Je hebt geen toestemming om dit te doen",
+	"common_save": "Opslaan",
+	"common_cancel": "Annuleren",
+	"common_delete": "Verwijderen",
+	"common_edit": "Bewerken",
+	"common_open": "Openen",
+	"common_view": "Bekijken",
+	"common_unassigned": "Niet toegewezen",
+	"common_table_search": "Zoeken…",
+	"common_table_reset": "Wissen",
+	"common_table_view": "Weergave",
+	"common_table_toggle_columns": "Kolommen tonen",
+	"common_table_sort_ascending": "Oplopend",
+	"common_table_sort_descending": "Aflopend",
+	"common_table_hide_column": "Kolom verbergen",
+	"common_table_empty_title": "Geen resultaten",
+	"common_table_empty_description": "Probeer een andere zoekopdracht of wis de filters.",
+	"common_table_filter_selected": "{count} geselecteerd",
+	"common_table_filter_no_results": "Geen resultaten gevonden.",
+	"common_table_filter_clear": "Filters wissen",
+	"common_table_rows": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} rij",
+				"countPlural=*": "{countText} rijen"
+			}
+		}
+	],
+	"common_table_rows_selected": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{selected} van {countText} rij geselecteerd",
+				"countPlural=*": "{selected} van {countText} rijen geselecteerd"
+			}
+		}
+	],
+	"common_table_rows_per_page": "Rijen per pagina",
+	"common_table_page": "Pagina {page} van {pages}",
+	"common_table_first_page": "Naar de eerste pagina",
+	"common_table_previous_page": "Naar de vorige pagina",
+	"common_table_next_page": "Naar de volgende pagina",
+	"common_table_last_page": "Naar de laatste pagina",
+	"common_table_row_actions": "Acties voor {label}",
+	"common_table_select_all": "Alle rijen op deze pagina selecteren",
+	"common_table_select_row": "Rij selecteren",
+	"common_count_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} opdracht",
+				"countPlural=*": "{countText} opdrachten"
+			}
+		}
+	],
+	"common_count_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} apparaat",
+				"countPlural=*": "{countText} apparaten"
+			}
+		}
+	],
+	"common_count_hours_short": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} u",
+				"countPlural=*": "{countText} u"
+			}
+		}
+	]
+}

@@ -53,7 +53,7 @@
 			{side}
 		>
 			<Sheet.Header class="sr-only">
-				<Sheet.Title>Sidebar</Sheet.Title>
+				<Sheet.Title>{m.common_sidebar()}</Sheet.Title>
 				<Sheet.Description>Displays the mobile sidebar.</Sheet.Description>
 			</Sheet.Header>
 			<div class="flex h-full w-full flex-col">

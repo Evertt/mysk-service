@@ -12,7 +12,8 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatCents, humanize } from "#lib/format.js";
+	import { formatCents } from "#lib/format.js";
+	import { labelOptions } from "#lib/i18n/labels.js";
 	import {
 		lineTotal,
 		orderPriorities,
@@ -40,9 +41,6 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
-
-	const enumOptions = (values: readonly string[]) =>
-		values.map((value) => ({ value, label: humanize(value) }));
 
 	// Equipment is limited to the chosen customer's units.
 	let customerId = $derived(order ? String(order.customerId) : "");
@@ -142,13 +140,13 @@
 					field={fields.type}
 					label="Type"
 					value={order?.type ?? "maintenance"}
-					options={enumOptions(orderTypes)}
+					options={labelOptions("orderType", orderTypes)}
 				/>
 				<SelectField
 					field={fields.priority}
 					label="Priority"
 					value={order?.priority ?? "normal"}
-					options={enumOptions(orderPriorities)}
+					options={labelOptions("orderPriority", orderPriorities)}
 				/>
 				<TextField
 					field={fields.description}
@@ -172,7 +170,7 @@
 					field={fields.status}
 					label="Status"
 					value={order?.status ?? "quote"}
-					options={enumOptions(orderStatuses)}
+					options={labelOptions("orderStatus", orderStatuses)}
 				/>
 				<SelectField
 					field={fields.engineerId}

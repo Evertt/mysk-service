@@ -5,6 +5,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
+import { label } from "#lib/i18n/labels.js";
 import {
 	assignableRoles,
 	canManageMembers,
@@ -17,7 +18,6 @@ import {
 	removalRefusal,
 	roleChangeRefusal,
 } from "#lib/members.js";
-import { roleLabels } from "#lib/roles.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
@@ -129,7 +129,7 @@ const invitationSubject = (found: { id: string; email: string }) => ({
 
 /** The roles an invitation is for, as a note in the activity log. */
 const asRoles = (roles: readonly MemberRole[]) =>
-	`As ${roles.map((role) => roleLabels[role]).join(", ")}`;
+	`As ${roles.map((role) => label("memberRole", role)).join(", ")}`;
 
 /** One of the tenant's pending invitations, or a 404. Ids are global, so look up in the tenant. */
 async function findInvitation(id: string) {

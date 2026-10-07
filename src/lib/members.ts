@@ -7,7 +7,7 @@
 
 import { type MemberRole, memberRoles } from "./roles.ts";
 
-export { type MemberRole, memberRoles, roleDescriptions, roleLabels } from "./roles.ts";
+export { type MemberRole, memberRoles } from "./roles.ts";
 
 /** A member's roles: better-auth stores them comma-separated, e.g. `owner` or `admin,member`. */
 export const parseRoles = (role: string) =>

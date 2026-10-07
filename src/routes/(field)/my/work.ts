@@ -4,6 +4,7 @@
  */
 import * as v from "valibot";
 
+import { dateFormatter, formatTime } from "#lib/format.js";
 import type { OrderStatus } from "#lib/models.js";
 
 /** What the engineer can do with one of their orders, by its status. */
@@ -20,17 +21,8 @@ export function fieldActions(status: OrderStatus) {
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-const dayFormat = new Intl.DateTimeFormat("en-GB", {
-	weekday: "long",
-	day: "numeric",
-	month: "long",
-});
-const timeFormat = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
-
-/** A time of day, e.g. `09:30`. */
-export const formatTime = (date: Date) => timeFormat.format(date);
-
-const shortDayFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
+const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });
 
 /**
  * When an order is planned, as a card in its day's group shows it: the time, with the day too if
@@ -38,7 +30,7 @@ const shortDayFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month:
  */
 export function plannedTime(date: Date, today = new Date()) {
 	return date < startOfDay(today)
-		? `${shortDayFormat.format(date)}, ${formatTime(date)}`
+		? `${shortDayFormat(date)}, ${formatTime(date)}`
 		: formatTime(date);
 }
 
@@ -47,7 +39,7 @@ export function dayLabel(day: Date, today = new Date()) {
 	const days = Math.round((startOfDay(day).getTime() - startOfDay(today).getTime()) / 86_400_000);
 	if (days === 0) return "Today";
 	if (days === 1) return "Tomorrow";
-	return dayFormat.format(day);
+	return dayFormat(day);
 }
 
 export interface DayGroup<T> {

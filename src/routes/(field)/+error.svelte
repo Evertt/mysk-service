@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>{notFound ? "Not found" : "Something went wrong"}</title>
+	<title>{notFound ? m.common_error_not_found() : m.common_error_generic()}</title>
 </svelte:head>
 
 <Empty.Root>
@@ -24,12 +24,12 @@
 				<TriangleAlertIcon />
 			{/if}
 		</Empty.Media>
-		<Empty.Title>{notFound ? "Not found" : "Something went wrong"}</Empty.Title>
+		<Empty.Title>{notFound ? m.common_error_not_found() : m.common_error_generic()}</Empty.Title>
 		<Empty.Description>
-			{page.error?.message ?? "An unexpected error occurred."} ({page.status})
+			{page.error?.message ?? m.common_error_unexpected()} ({page.status})
 		</Empty.Description>
 	</Empty.Header>
 	<Empty.Content>
-		<Button href={resolve("/(field)/my")} size="lg">Back to my work</Button>
+		<Button href={resolve("/(field)/my")} size="lg">{m.common_error_back_to_my_work()}</Button>
 	</Empty.Content>
 </Empty.Root>

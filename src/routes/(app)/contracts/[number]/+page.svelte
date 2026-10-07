@@ -13,7 +13,8 @@
 	import OrderStatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatCents, formatDate, humanize } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 	import { contractStatus } from "#lib/models.js";
 
 	import { deleteContract, getContract } from "../contracts.remote.js";
@@ -101,7 +102,7 @@
 										</a>
 									</Table.Cell>
 									<Table.Cell>{unit.manufacturer} {unit.model}</Table.Cell>
-									<Table.Cell>{humanize(unit.category)}</Table.Cell>
+									<Table.Cell>{label("equipmentCategory", unit.category)}</Table.Cell>
 									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
 								</Table.Row>
 							{/each}
@@ -196,7 +197,7 @@
 				<Card.Title>Customer</Card.Title>
 				<Card.Description>{customer.code}</Card.Description>
 				<Card.Action>
-					<Badge variant="outline">{humanize(customer.segment)}</Badge>
+					<Badge variant="outline">{label("customerSegment", customer.segment)}</Badge>
 				</Card.Action>
 			</Card.Header>
 			<Card.Content>

@@ -1,0 +1,62 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"dashboard_title": "Dashboard",
+	"dashboard_description": "Hoe het servicewerk er nu voor staat.",
+	"dashboard_open_orders": "Open opdrachten",
+	"dashboard_without_engineer": "{count} zonder monteur",
+	"dashboard_urgent": "Spoed",
+	"dashboard_urgent_description": "Open opdrachten met spoed",
+	"dashboard_revenue": "Omzet, laatste 30 dagen",
+	"dashboard_revenue_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Uit {countText} afgeronde opdracht",
+				"countPlural=*": "Uit {countText} afgeronde opdrachten"
+			}
+		}
+	],
+	"dashboard_attention": "Apparatuur die aandacht nodig heeft",
+	"dashboard_attention_of": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Van {countText} geïnstalleerd apparaat",
+				"countPlural=*": "Van {countText} geïnstalleerde apparaten"
+			}
+		}
+	],
+	"dashboard_low_stock": "Lage voorraad",
+	"dashboard_low_stock_of": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{out} niet op voorraad, van {countText} materiaal",
+				"countPlural=*": "{out} niet op voorraad, van {countText} materialen"
+			}
+		}
+	],
+	"dashboard_upcoming": "Komend werk",
+	"dashboard_upcoming_description": "De eerstvolgende ingeplande opdrachten.",
+	"dashboard_all_orders": "Alle opdrachten",
+	"dashboard_column_order": "Opdracht",
+	"dashboard_column_customer": "Klant",
+	"dashboard_column_engineer": "Monteur",
+	"dashboard_column_priority": "Prioriteit",
+	"dashboard_column_scheduled": "Gepland"
+}

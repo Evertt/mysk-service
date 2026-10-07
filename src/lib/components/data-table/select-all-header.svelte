@@ -8,5 +8,5 @@
 	checked={table.getIsAllPageRowsSelected()}
 	indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
 	onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
-	aria-label="Select all rows on this page"
+	aria-label={m.common_table_select_all()}
 />

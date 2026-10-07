@@ -13,7 +13,8 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate } from "#lib/format.js";
-	import { type MemberRole, roleDescriptions, roleLabels } from "#lib/members.js";
+	import { label as roleLabel, labelOrValue } from "#lib/i18n/labels.js";
+	import type { MemberRole } from "#lib/members.js";
 
 	import {
 		cancelInvitation,
@@ -26,11 +27,11 @@
 
 	const data = $derived(await getMembers());
 
-	const label = (role: string) => roleLabels[role as MemberRole] ?? role;
+	const label = (role: string) => labelOrValue("memberRole", role);
 	const inviteOptions = $derived(
 		data.inviteRoles.map((role) => ({
 			value: role,
-			label: `${roleLabels[role]}: ${roleDescriptions[role]}`,
+			label: `${roleLabel("memberRole", role)}: ${roleLabel("memberRoleDescription", role)}`,
 		})),
 	);
 </script>

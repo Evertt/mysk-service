@@ -1,7 +1,57 @@
-const currency = new Intl.NumberFormat("en-NL", { style: "currency", currency: "EUR" });
-const number = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
-const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const dateTime = new Intl.DateTimeFormat("en-GB", {
+/**
+ * Formatting for display, in the current language (`getLocale()`: the request's on the server, the
+ * page's in the browser, so server-rendered and hydrated pages agree). The formatters read the
+ * locale on every call, so they're safe to create at module scope; pass `locale` to override it.
+ */
+import { getLocale, type Locale } from "#lib/paraglide/runtime.js";
+
+/**
+ * The `Intl` locale for each language: British conventions for English (day month year, 24-hour
+ * clock), Dutch ones for Dutch (`€ 1.234,56`, `7 okt 2026`).
+ */
+const intlLocales: Record<Locale, string> = { en: "en-GB", nl: "nl-NL" };
+
+/** The `Intl` locale for the current language (or `locale`), e.g. for `localeCompare`. */
+export const intlLocale = (locale: Locale = getLocale()) => intlLocales[locale];
+
+/** A formatter per language, created when first used. */
+function perLocale<T>(create: (locale: string) => T) {
+	const cache = new Map<Locale, T>();
+	return (locale: Locale = getLocale()) => {
+		let formatter = cache.get(locale);
+		if (!formatter) cache.set(locale, (formatter = create(intlLocales[locale])));
+		return formatter;
+	};
+}
+
+/**
+ * Formats dates with `options` in the current language, e.g.
+ * `const weekday = dateFormatter({ weekday: "long" })` → `weekday(date)`: `Monday` or `maandag`.
+ * Also has `.range(start, end)`, e.g. `5–11 Oct 2026`.
+ */
+export function dateFormatter(options: Intl.DateTimeFormatOptions) {
+	const formatter = perLocale((locale) => new Intl.DateTimeFormat(locale, options));
+	return Object.assign((value: Date, locale?: Locale) => formatter(locale).format(value), {
+		range: (start: Date, end: Date, locale?: Locale) => formatter(locale).formatRange(start, end),
+	});
+}
+
+/** Formats numbers with `options` in the current language, like `dateFormatter`. */
+export function numberFormatter(options: Intl.NumberFormatOptions) {
+	const formatter = perLocale((locale) => new Intl.NumberFormat(locale, options));
+	return (value: number, locale?: Locale) => formatter(locale).format(value);
+}
+
+const euros = numberFormatter({ style: "currency", currency: "EUR" });
+
+/** Formats an amount in cents, e.g. `123456` → `€1,234.56`, in Dutch `€ 1.234,56`. */
+export const formatCents = (cents: number, locale?: Locale) => euros(cents / 100, locale);
+
+/** Formats a day, e.g. `7 Oct 2026`, in Dutch `7 okt 2026`. */
+export const formatDate = dateFormatter({ day: "numeric", month: "short", year: "numeric" });
+
+/** Formats a moment to the minute, e.g. `7 Oct 2026, 14:05`, in Dutch `7 okt 2026, 14:05`. */
+export const formatDateTime = dateFormatter({
 	day: "numeric",
 	month: "short",
 	year: "numeric",
@@ -9,19 +59,11 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
 	minute: "2-digit",
 });
 
-/** Formats an amount in cents, e.g. `123456` → `€1,234.56`. */
-export const formatCents = (cents: number) => currency.format(cents / 100);
+/** Formats a time of day, e.g. `09:30`. */
+export const formatTime = dateFormatter({ hour: "2-digit", minute: "2-digit" });
 
-export const formatDate = (value: Date) => date.format(value);
-
-/** Formats a moment to the minute, e.g. `7 Oct 2026, 14:05`. */
-export const formatDateTime = (value: Date) => dateTime.format(value);
-
-/** Formats a count or quantity, with at most two decimals, e.g. `2.5` or `1,250`. */
-export const formatNumber = (value: number) => number.format(value);
-
-/** Turns an enum value into a label, e.g. `out_of_service` → `Out of service`. */
-export const humanize = (value: string) => {
-	const text = value.replaceAll("_", " ");
-	return text.charAt(0).toUpperCase() + text.slice(1);
-};
+/**
+ * Formats a count or quantity, with at most two decimals, e.g. `2.5` or `1,250`; in Dutch `2,5`
+ * or `1.250`.
+ */
+export const formatNumber = numberFormatter({ maximumFractionDigits: 2 });

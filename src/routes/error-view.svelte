@@ -21,12 +21,12 @@
 				<TriangleAlertIcon />
 			{/if}
 		</Empty.Media>
-		<Empty.Title>{notFound ? "Not found" : "Something went wrong"}</Empty.Title>
+		<Empty.Title>{notFound ? m.common_error_not_found() : m.common_error_generic()}</Empty.Title>
 		<Empty.Description>
-			{page.error?.message ?? "An unexpected error occurred."} ({page.status})
+			{page.error?.message ?? m.common_error_unexpected()} ({page.status})
 		</Empty.Description>
 	</Empty.Header>
 	<Empty.Content>
-		<Button href={resolve("/(app)")}>Back to the dashboard</Button>
+		<Button href={resolve("/(app)")}>{m.common_error_back_to_dashboard()}</Button>
 	</Empty.Content>
 </Empty.Root>

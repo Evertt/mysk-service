@@ -25,7 +25,9 @@
 	</div>
 	<div class="grid flex-1 text-left text-sm leading-tight">
 		<span class="truncate font-medium">{tenant.name}</span>
-		<span class="truncate text-xs text-sidebar-foreground/70">Service operations</span>
+		<span class="truncate text-xs text-sidebar-foreground/70"
+			>{m.common_organization_tagline()}</span
+		>
 	</div>
 {/snippet}
 
@@ -47,7 +49,7 @@
 				sideOffset={4}
 			>
 				<DropdownMenu.Group>
-					<DropdownMenu.Label>Organizations</DropdownMenu.Label>
+					<DropdownMenu.Label>{m.common_organizations()}</DropdownMenu.Label>
 					{#each tenant.organizations as organization (organization.id)}
 						{@const current = organization.id === tenant.organizationId}
 						{@const choose = switchOrganization.for(organization.id)}
@@ -75,7 +77,7 @@
 						{#snippet child({ props })}
 							<a {...props} href={resolve("/(app)/settings")}>
 								<SettingsIcon />
-								Organization settings
+								{m.common_organization_settings()}
 							</a>
 						{/snippet}
 					</DropdownMenu.Item>

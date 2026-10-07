@@ -14,9 +14,10 @@
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import { formatDate } from "#lib/format.js";
+	import { formatTime } from "#lib/format.js";
 
 	import { addNote, getMyOrder, logHours, startWork } from "../portal.remote.js";
-	import { dayLabel, fieldActions, formatTime } from "../work.js";
+	import { dayLabel, fieldActions } from "../work.js";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
 	import MaterialsForm from "./materials-form.svelte";

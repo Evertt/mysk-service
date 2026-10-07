@@ -1,7 +1,8 @@
 <!--
 	@component
 	An amount in euros, for a field stored in cents: pair it with `cents()` from `#lib/schema.js`,
-	and pass the stored value in cents.
+	and pass the stored value in cents. A number input, so the browser takes the decimal separator
+	of its own language (`12,50` in a Dutch browser) and submits the value with a dot either way.
 -->
 <script lang="ts">
 	import type { RemoteFormField } from "$app/server";

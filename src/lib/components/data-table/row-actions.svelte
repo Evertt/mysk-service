@@ -25,7 +25,12 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant="ghost" size="icon-sm" aria-label="Actions for {label}">
+			<Button
+				{...props}
+				variant="ghost"
+				size="icon-sm"
+				aria-label={m.common_table_row_actions({ label })}
+			>
 				<EllipsisIcon />
 			</Button>
 		{/snippet}
@@ -36,14 +41,14 @@
 			{#if href}
 				<DropdownMenu.Item>
 					{#snippet child({ props })}
-						<a {...props} {href}><EyeIcon />Open</a>
+						<a {...props} {href}><EyeIcon />{m.common_open()}</a>
 					{/snippet}
 				</DropdownMenu.Item>
 			{/if}
 			{#if editHref}
 				<DropdownMenu.Item>
 					{#snippet child({ props })}
-						<a {...props} href={editHref}><PencilIcon />Edit</a>
+						<a {...props} href={editHref}><PencilIcon />{m.common_edit()}</a>
 					{/snippet}
 				</DropdownMenu.Item>
 			{/if}

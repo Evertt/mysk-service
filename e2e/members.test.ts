@@ -3,6 +3,7 @@ import { afterAll, describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "../src/lib/server/db/demo.ts";
 import {
+	BROWSER_LOCALE,
 	baseURL,
 	hydrated,
 	linkInMail,
@@ -47,7 +48,7 @@ const invitations = (email: string) =>
 
 /** A signed-out browser of someone else, e.g. the invited person's. */
 async function otherBrowser() {
-	const context = await app.page.context().browser()!.newContext();
+	const context = await app.page.context().browser()!.newContext({ locale: BROWSER_LOCALE });
 	return context.newPage();
 }
 

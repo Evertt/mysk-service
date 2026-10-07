@@ -2,7 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate, humanize } from "#lib/format.js";
+	import { formatDate } from "#lib/format.js";
+	import { labelOrValue } from "#lib/i18n/labels.js";
 	import { modules as moduleRegistry } from "#lib/modules.js";
 
 	import { getSettings, setModule } from "./settings.remote.js";
@@ -98,7 +99,7 @@
 								<div class="flex gap-1">
 									{#each member.roles as role (role)}
 										<Badge variant={role === "member" ? "outline" : "secondary"}
-											>{humanize(role)}</Badge
+											>{labelOrValue("memberRole", role)}</Badge
 										>
 									{/each}
 								</div>

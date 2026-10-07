@@ -56,7 +56,7 @@
 		}),
 		column.accessor("quantity", {
 			header: ({ header }) => renderComponent(header.ColumnHeader),
-			cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "unit" }),
+			cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
 			enableGlobalFilter: false,
 			meta: { label: "Quantity", align: "end" },
 		}),

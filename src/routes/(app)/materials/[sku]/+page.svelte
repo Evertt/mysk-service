@@ -6,12 +6,13 @@
 	import CustomerLink from "#lib/components/customers/customer-link.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatQuantity, unitLabels } from "#lib/components/materials/display.js";
+	import { formatQuantity } from "#lib/components/materials/display.js";
 	import StockBadge from "#lib/components/materials/stock-badge.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 
 	import { deleteMaterial, getMaterial } from "../materials.remote.js";
 	import type { PageProps } from "./$types";
@@ -173,7 +174,10 @@
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
 					<DetailItem label="SKU" value={material.sku} />
-					<DetailItem label="Unit" value={`${unitLabels[material.unit]} (${material.unit})`} />
+					<DetailItem
+						label="Unit"
+						value={`${label("materialUnit", material.unit)} (${label("materialUnitSymbol", material.unit)})`}
+					/>
 					<DetailItem
 						label="List price"
 						value={`${formatCents(material.unitPrice)} / ${material.unit}`}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { isFieldEngineer, memberRoles, officeRoles, roleDescriptions } from "./roles.ts";
+import { isFieldEngineer, memberRoles, officeRoles } from "./roles.ts";
 
 describe("isFieldEngineer", () => {
 	test("is a member whose only role is engineer", () => {
@@ -17,8 +17,7 @@ describe("isFieldEngineer", () => {
 	});
 });
 
-test("every role has a description, and every role but engineer works in the office", () => {
-	expect(Object.keys(roleDescriptions)).toEqual([...memberRoles]);
+test("every role but engineer works in the office", () => {
 	expect(memberRoles.filter((role) => !(officeRoles as readonly string[]).includes(role))).toEqual([
 		"engineer",
 	]);

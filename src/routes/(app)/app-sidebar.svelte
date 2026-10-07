@@ -21,25 +21,33 @@
 	const groups = $derived(
 		[
 			{
-				label: "Operations",
+				label: m.common_nav_operations(),
 				items: [
-					{ title: "Dashboard", href: resolve("/(app)"), icon: LayoutDashboardIcon },
-					{ title: "Orders", href: resolve("/(app)/orders"), icon: ClipboardListIcon },
-					{ title: "Schedule", href: resolve("/(app)/schedule"), icon: CalendarDaysIcon },
-					{ title: "Activity", href: resolve("/(app)/activity"), icon: HistoryIcon },
+					{ title: m.common_nav_dashboard(), href: resolve("/(app)"), icon: LayoutDashboardIcon },
+					{ title: m.common_nav_orders(), href: resolve("/(app)/orders"), icon: ClipboardListIcon },
+					{
+						title: m.common_nav_schedule(),
+						href: resolve("/(app)/schedule"),
+						icon: CalendarDaysIcon,
+					},
+					{ title: m.common_nav_activity(), href: resolve("/(app)/activity"), icon: HistoryIcon },
 				],
 			},
 			{
-				label: "Records",
+				label: m.common_nav_records(),
 				items: [
-					{ title: "Customers", href: resolve("/(app)/customers"), icon: Building2Icon },
-					{ title: "Equipment", href: resolve("/(app)/equipment"), icon: CogIcon },
-					{ title: "Engineers", href: resolve("/(app)/engineers"), icon: HardHatIcon },
-					{ title: "Materials", href: resolve("/(app)/materials"), icon: PackageIcon },
+					{
+						title: m.common_nav_customers(),
+						href: resolve("/(app)/customers"),
+						icon: Building2Icon,
+					},
+					{ title: m.common_nav_equipment(), href: resolve("/(app)/equipment"), icon: CogIcon },
+					{ title: m.common_nav_engineers(), href: resolve("/(app)/engineers"), icon: HardHatIcon },
+					{ title: m.common_nav_materials(), href: resolve("/(app)/materials"), icon: PackageIcon },
 				],
 			},
 			{
-				label: "Modules",
+				label: m.common_nav_modules(),
 				// Only the modules the current organization has.
 				items: modules
 					.filter((module) => tenant.modules.includes(module.id))

@@ -4,6 +4,8 @@
 	import ChevronsLeftIcon from "@lucide/svelte/icons/chevrons-left";
 	import ChevronsRightIcon from "@lucide/svelte/icons/chevrons-right";
 
+	import { formatNumber } from "#lib/format.js";
+
 	import { useTableContext } from "./table.svelte.js";
 
 	let { pageSizes = [10, 20, 50, 100] }: { pageSizes?: number[] } = $props();
@@ -17,20 +19,23 @@
 <div class="flex flex-wrap items-center justify-between gap-4">
 	<p class="text-sm text-muted-foreground">
 		{#if selectedCount}
-			{selectedCount.toLocaleString()} of {filteredCount.toLocaleString()} row(s) selected
+			{m.common_table_rows_selected({
+				selected: formatNumber(selectedCount),
+				count: filteredCount,
+			})}
 		{:else}
-			{filteredCount.toLocaleString()} row(s)
+			{m.common_table_rows({ count: filteredCount })}
 		{/if}
 	</p>
 	<div class="flex flex-wrap items-center gap-4 lg:gap-8">
 		<div class="flex items-center gap-2">
-			<span class="text-sm font-medium">Rows per page</span>
+			<span class="text-sm font-medium">{m.common_table_rows_per_page()}</span>
 			<Select.Root
 				type="single"
 				value={String(pagination.pageSize)}
 				onValueChange={(value) => table.setPageSize(Number(value))}
 			>
-				<Select.Trigger size="sm" class="w-20" aria-label="Rows per page">
+				<Select.Trigger size="sm" class="w-20" aria-label={m.common_table_rows_per_page()}>
 					{pagination.pageSize}
 				</Select.Trigger>
 				<Select.Content side="top">
@@ -43,14 +48,17 @@
 			</Select.Root>
 		</div>
 		<span class="text-sm font-medium">
-			Page {pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+			{m.common_table_page({
+				page: formatNumber(pagination.pageIndex + 1),
+				pages: formatNumber(Math.max(table.getPageCount(), 1)),
+			})}
 		</span>
 		<div class="flex items-center gap-2">
 			<Button
 				variant="outline"
 				size="icon-sm"
 				class="hidden lg:inline-flex"
-				aria-label="Go to first page"
+				aria-label={m.common_table_first_page()}
 				disabled={!table.getCanPreviousPage()}
 				onclick={() => table.firstPage()}
 			>
@@ -59,7 +67,7 @@
 			<Button
 				variant="outline"
 				size="icon-sm"
-				aria-label="Go to previous page"
+				aria-label={m.common_table_previous_page()}
 				disabled={!table.getCanPreviousPage()}
 				onclick={() => table.previousPage()}
 			>
@@ -68,7 +76,7 @@
 			<Button
 				variant="outline"
 				size="icon-sm"
-				aria-label="Go to next page"
+				aria-label={m.common_table_next_page()}
 				disabled={!table.getCanNextPage()}
 				onclick={() => table.nextPage()}
 			>
@@ -78,7 +86,7 @@
 				variant="outline"
 				size="icon-sm"
 				class="hidden lg:inline-flex"
-				aria-label="Go to last page"
+				aria-label={m.common_table_last_page()}
 				disabled={!table.getCanNextPage()}
 				onclick={() => table.lastPage()}
 			>

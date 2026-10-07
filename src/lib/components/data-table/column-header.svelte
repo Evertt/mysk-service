@@ -11,12 +11,13 @@
 
 	import { cn } from "#lib/utils.js";
 
+	import { columnLabel } from "./features.js";
 	import { useHeaderContext } from "./table.svelte.js";
 
 	const header = useHeaderContext();
 	const column = $derived(header.column);
 	const meta = $derived(column.columnDef.meta);
-	const label = $derived(meta?.label ?? column.id);
+	const label = $derived(columnLabel(column));
 	const sorted = $derived(column.getIsSorted());
 </script>
 
@@ -44,11 +45,11 @@
 					<DropdownMenu.Group>
 						<DropdownMenu.Item onclick={() => column.toggleSorting(false)}>
 							<ArrowUpIcon />
-							Ascending
+							{m.common_table_sort_ascending()}
 						</DropdownMenu.Item>
 						<DropdownMenu.Item onclick={() => column.toggleSorting(true)}>
 							<ArrowDownIcon />
-							Descending
+							{m.common_table_sort_descending()}
 						</DropdownMenu.Item>
 					</DropdownMenu.Group>
 				{/if}
@@ -59,7 +60,7 @@
 					<DropdownMenu.Group>
 						<DropdownMenu.Item onclick={() => column.toggleVisibility(false)}>
 							<EyeOffIcon />
-							Hide column
+							{m.common_table_hide_column()}
 						</DropdownMenu.Item>
 					</DropdownMenu.Group>
 				{/if}

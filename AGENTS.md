@@ -85,6 +85,63 @@ await db.transaction(async (tx) => {
 - An order's lines are logged by `saveOrderLines()` (`src/lib/server/orders.ts`); stock that
   follows an order's status needs no entry of its own beyond the status change.
 
+## Translations
+
+The app is in English (the base locale) and Dutch, with Paraglide JS 2. The language comes from the
+`PARAGLIDE_LOCALE` cookie (the language switchers set it and reload), else the browser's language,
+else English; on the server `paraglideMiddleware` (`hooks.server.ts`) sets it per request, also for
+remote functions. Every user-facing text goes through a message; nothing English is hard-coded.
+
+- **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
+  `auth`, `dashboard`, `orders`, `schedule`, `customers`, `equipment`, `engineers`, `materials`,
+  `contracts`, `invoices`, `settings`, `portal`), each listed in `project.inlang/settings.json`. A
+  new file goes in every locale folder and in that list.
+- **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
+  `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
+  `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or
+  variables that differ between languages.
+- **Using them**: `m.orders_title()` (auto-imported in `.svelte`; in `.ts`,
+  `import { m } from "#lib/paraglide/messages.js"`). Variables: `"Delete {name}?"` →
+  `m.customers_delete_title({ name })`; pass numbers as `formatNumber(n)` unless they're a plural's
+  `count`. Plurals are variant messages on `count`, shown as `{countText}` (formatted), e.g.
+  `"common_count_orders"` in `messages/en/common.json`; copy its shape.
+- **Not at module scope**: a message, label or format call in a `.ts` module's top level (or a
+  `<script module>`) runs once, so the server would render every request in the language of the
+  first. Pass the message function where it's read later: column labels
+  (`meta: { label: m.orders_column_customer }`), validation messages, `NumberCell`'s
+  `format: m.common_count_units`. In component scripts, templates, `$derived` and function bodies
+  (including remote functions) call it.
+- **Enum values** (statuses, types, units, roles, …) are shown with `label("orderStatus", value)`
+  from `#lib/i18n/labels.ts`, options with `labelOptions(kind, values, details?)` and display maps
+  with `withLabels(kind, details)` (their `label` is a getter, read when shown). The texts are in
+  `enum.json`; a new enum gets a kind there.
+- **Validation**: valibot messages are message functions, e.g. `v.nonEmpty(m.orders_description_required)`
+  or `(issue) => m.orders_quantity_max({ max: issue.requirement })`, so they're translated where the
+  validation runs. The helpers in `#lib/schema.ts` take a `Message` and default to
+  `validation.json`.
+- **Server refusals**: `error(404, m.orders_not_found())`, `invalid(m.orders_delete_refused())` in
+  the remote function's body, so they're in the request's language. Shared ones are
+  `common_error_*` (`requireMember()` and friends use them).
+- **Formatting**: money, dates, times and numbers only through `#lib/format.ts` (`formatCents`,
+  `formatDate`, `formatDateTime`, `formatTime`, `formatNumber`; `dateFormatter(options)` and
+  `numberFormatter(options)` for other formats, safe at module scope), never `new Intl.*("en-GB")`
+  or `toLocaleString()`. Number and date inputs stay `type="number"`/`"date"`: the browser shows
+  them in its own language and submits a dot and `yyyy-mm-dd`.
+- **Stored text** (e.g. an invoice line's description) is in the language of whoever made it; store
+  values and translate when showing where you can.
+- **Dutch**: informal (`je`, never `u`), short, sentence case like the English. Terms: order →
+  opdracht, schedule → planning, customer → klant, equipment → apparatuur (a unit → apparaat),
+  engineer → monteur, engineer portal → monteursportaal, material → materiaal, stock → voorraad,
+  service contract → servicecontract, response time → reactietijd, invoice → factuur, invoicing →
+  facturatie, draft → concept, quote → offerte, VAT → btw, labour → arbeid, due date → vervaldatum,
+  serial number → serienummer, manufacturer → fabrikant, warranty → garantie, organization →
+  organisatie, member → lid, settings → instellingen, sign in/out → inloggen/afmelden, save →
+  opslaan, cancel → annuleren, delete → verwijderen, edit → bewerken.
+- **Tests** run in English: e2e browsers use `BROWSER_LOCALE` (pass it to every new browser
+  context), so e2e and component tests keep asserting English texts; `e2e/i18n.test.ts` covers
+  Dutch. Unit tests check Dutch output with the `locale` argument of the format helpers, or
+  `overwriteGetLocale(() => "nl")` (see `src/lib/i18n/labels.spec.ts`).
+
 ## Tests
 
 `pnpm test` runs everything: unit tests (`*.spec.ts` next to the code, in Node; `*.svelte.spec.ts`

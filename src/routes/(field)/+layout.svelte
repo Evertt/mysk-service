@@ -7,6 +7,7 @@
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
+	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
@@ -34,10 +35,11 @@
 			</span>
 		</a>
 		<div class="ml-auto flex items-center gap-1">
+			<LanguageSwitcher />
 			<ThemeSwitcher />
 			<ModeSwitcher />
 			<form {...signOut}>
-				<Button type="submit" variant="ghost" size="icon-sm" aria-label="Sign out">
+				<Button type="submit" variant="ghost" size="icon-sm" aria-label={m.common_sign_out()}>
 					<LogOutIcon />
 				</Button>
 			</form>

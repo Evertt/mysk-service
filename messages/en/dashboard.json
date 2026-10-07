@@ -1,0 +1,62 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"dashboard_title": "Dashboard",
+	"dashboard_description": "How service operations are doing right now.",
+	"dashboard_open_orders": "Open orders",
+	"dashboard_without_engineer": "{count} without an engineer",
+	"dashboard_urgent": "Urgent",
+	"dashboard_urgent_description": "Open orders with urgent priority",
+	"dashboard_revenue": "Revenue, last 30 days",
+	"dashboard_revenue_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "From {countText} completed order",
+				"countPlural=*": "From {countText} completed orders"
+			}
+		}
+	],
+	"dashboard_attention": "Equipment needing attention",
+	"dashboard_attention_of": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Of {countText} installed unit",
+				"countPlural=*": "Of {countText} installed units"
+			}
+		}
+	],
+	"dashboard_low_stock": "Low stock",
+	"dashboard_low_stock_of": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{out} out of stock, of {countText} material",
+				"countPlural=*": "{out} out of stock, of {countText} materials"
+			}
+		}
+	],
+	"dashboard_upcoming": "Upcoming work",
+	"dashboard_upcoming_description": "The next scheduled orders.",
+	"dashboard_all_orders": "All orders",
+	"dashboard_column_order": "Order",
+	"dashboard_column_customer": "Customer",
+	"dashboard_column_engineer": "Engineer",
+	"dashboard_column_priority": "Priority",
+	"dashboard_column_scheduled": "Scheduled"
+}

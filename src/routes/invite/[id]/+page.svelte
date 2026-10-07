@@ -7,7 +7,7 @@
 	import { resolve } from "$app/paths";
 
 	import { formatDate } from "#lib/format.js";
-	import { type MemberRole, roleLabels } from "#lib/members.js";
+	import { labelOrValue } from "#lib/i18n/labels.js";
 
 	import PublicShell from "../../public-shell.svelte";
 	import type { PageProps } from "./$types";
@@ -30,7 +30,7 @@
 
 	/** E.g. `an admin`. */
 	const role = (roles: string[]) => {
-		const text = roles.map((r) => (roleLabels[r as MemberRole] ?? r).toLowerCase()).join(" and ");
+		const text = roles.map((r) => labelOrValue("memberRole", r).toLowerCase()).join(" and ");
 		return `${/^[aeiou]/.test(text) ? "an" : "a"} ${text}`;
 	};
 

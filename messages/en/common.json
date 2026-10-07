@@ -1,0 +1,146 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"common_app_name": "Fieldworks",
+	"common_nav_operations": "Operations",
+	"common_nav_records": "Records",
+	"common_nav_modules": "Modules",
+	"common_nav_dashboard": "Dashboard",
+	"common_nav_orders": "Orders",
+	"common_nav_schedule": "Schedule",
+	"common_nav_activity": "Activity",
+	"common_nav_customers": "Customers",
+	"common_nav_equipment": "Equipment",
+	"common_nav_engineers": "Engineers",
+	"common_nav_materials": "Materials",
+	"common_organization_tagline": "Service operations",
+	"common_organizations": "Organizations",
+	"common_organization_settings": "Organization settings",
+	"common_sign_out": "Sign out",
+	"common_language": "Language",
+	"common_theme": "Theme",
+	"common_mode": "Mode",
+	"common_mode_button": "Colour mode: {mode}",
+	"common_mode_light": "Light",
+	"common_mode_dark": "Dark",
+	"common_mode_system": "System",
+	"common_toggle_sidebar": "Toggle sidebar",
+	"common_sidebar": "Sidebar",
+	"common_close": "Close",
+	"common_more": "More",
+	"common_breadcrumb": "Breadcrumb",
+	"common_notifications": "Notifications",
+	"common_close_notification": "Close notification",
+	"common_module_contracts": "Service contracts",
+	"common_module_contracts_description": "Maintenance agreements: a monthly fee for covering a customer's equipment with a guaranteed response time.",
+	"common_module_invoicing": "Invoicing",
+	"common_module_invoicing_description": "Invoices for completed orders and other modules' fees, with VAT, PDF download and receivables on the dashboard.",
+	"common_error_not_found": "Not found",
+	"common_error_generic": "Something went wrong",
+	"common_error_unexpected": "An unexpected error occurred.",
+	"common_error_back_to_dashboard": "Back to the dashboard",
+	"common_error_back_to_my_work": "Back to my work",
+	"common_error_not_signed_in": "Not signed in",
+	"common_error_no_organization": "You're not a member of any organization",
+	"common_error_not_a_member": "You're not a member of that organization",
+	"common_error_engineers_use_portal": "Field engineers use the engineer portal",
+	"common_error_not_linked": "Your account isn't linked to an engineer",
+	"common_error_no_permission": "You don't have permission to do this",
+	"common_save": "Save",
+	"common_cancel": "Cancel",
+	"common_delete": "Delete",
+	"common_edit": "Edit",
+	"common_open": "Open",
+	"common_view": "View",
+	"common_unassigned": "Unassigned",
+	"common_table_search": "Search…",
+	"common_table_reset": "Reset",
+	"common_table_view": "View",
+	"common_table_toggle_columns": "Toggle columns",
+	"common_table_sort_ascending": "Ascending",
+	"common_table_sort_descending": "Descending",
+	"common_table_hide_column": "Hide column",
+	"common_table_empty_title": "No results",
+	"common_table_empty_description": "Try a different search or clear the filters.",
+	"common_table_filter_selected": "{count} selected",
+	"common_table_filter_no_results": "No results found.",
+	"common_table_filter_clear": "Clear filters",
+	"common_table_rows": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} row",
+				"countPlural=*": "{countText} rows"
+			}
+		}
+	],
+	"common_table_rows_selected": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{selected} of {countText} row selected",
+				"countPlural=*": "{selected} of {countText} rows selected"
+			}
+		}
+	],
+	"common_table_rows_per_page": "Rows per page",
+	"common_table_page": "Page {page} of {pages}",
+	"common_table_first_page": "Go to first page",
+	"common_table_previous_page": "Go to previous page",
+	"common_table_next_page": "Go to next page",
+	"common_table_last_page": "Go to last page",
+	"common_table_row_actions": "Actions for {label}",
+	"common_table_select_all": "Select all rows on this page",
+	"common_table_select_row": "Select row",
+	"common_count_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} order",
+				"countPlural=*": "{countText} orders"
+			}
+		}
+	],
+	"common_count_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} unit",
+				"countPlural=*": "{countText} units"
+			}
+		}
+	],
+	"common_count_hours_short": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} h",
+				"countPlural=*": "{countText} h"
+			}
+		}
+	]
+}

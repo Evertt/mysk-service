@@ -7,7 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SelectField from "#lib/components/form/select-field.svelte";
-	import { humanize } from "#lib/format.js";
+	import { labelOrValue } from "#lib/i18n/labels.js";
 
 	import { getEngineerAccount, linkEngineerAccount } from "./account.remote.js";
 
@@ -44,7 +44,10 @@
 					value={account.linked?.userId ?? ""}
 					options={account.members.map((m) => ({
 						value: m.userId,
-						label: `${m.name} (${m.email}) · ${m.role.split(",").map(humanize).join(", ")}`,
+						label: `${m.name} (${m.email}) · ${m.role
+							.split(",")
+							.map((role) => labelOrValue("memberRole", role))
+							.join(", ")}`,
 					}))}
 					description="Members with the engineer role only use the portal."
 				/>

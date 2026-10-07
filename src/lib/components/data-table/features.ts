@@ -22,10 +22,19 @@ import {
 } from "@tanstack/svelte-table";
 
 export interface DataTableColumnMeta {
-	/** Human readable column name, for the header and the column visibility menu. */
-	label?: string;
+	/**
+	 * The column's name, for the header and the column visibility menu: a message function, e.g.
+	 * `m.orders_column_number`, so it's translated when shown. (A plain string isn't translated.)
+	 */
+	label?: string | (() => string);
 	/** Right-align numeric columns. */
 	align?: "start" | "end";
+}
+
+/** A column's name as shown: its translated `meta.label`, or its id. */
+export function columnLabel(column: { id: string; columnDef: { meta?: DataTableColumnMeta } }) {
+	const label = column.columnDef.meta?.label;
+	return (typeof label === "function" ? label() : label) ?? column.id;
 }
 
 /** Keeps rows whose value is one of the selected values (used by the faceted filters). */

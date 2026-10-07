@@ -8,7 +8,8 @@
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatCents, formatDate, humanize } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 
 	import { deleteCustomer, getCustomer } from "../customers.remote.js";
 	import type { PageProps } from "./$types";
@@ -138,7 +139,7 @@
 											<span class="text-xs text-muted-foreground">{unit.serialNumber}</span>
 										</div>
 									</Table.Cell>
-									<Table.Cell>{humanize(unit.category)}</Table.Cell>
+									<Table.Cell>{label("equipmentCategory", unit.category)}</Table.Cell>
 									<Table.Cell class="tabular-nums">{formatDate(unit.installedAt)}</Table.Cell>
 									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
 								</Table.Row>

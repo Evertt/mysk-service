@@ -4,7 +4,7 @@
 	Nothing while there's neither.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/format.js";
+	import { formatDate, formatTime } from "#lib/format.js";
 
 	import { getWorkReport } from "./work-report.remote.js";
 
@@ -12,8 +12,7 @@
 
 	const report = $derived(await getWorkReport(number));
 
-	const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
-	const formatMoment = (date: Date) => `${formatDate(date)} ${time.format(date)}`;
+	const formatMoment = (date: Date) => `${formatDate(date)} ${formatTime(date)}`;
 </script>
 
 {#if report.signoff || report.notes.length}
