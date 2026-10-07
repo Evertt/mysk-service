@@ -39,6 +39,103 @@ const state = () =>
 const sidebar = () => app.page.locator('[data-sidebar="content"]').innerText();
 const units = () => app.page.locator('input[name^="equipmentIds"]');
 const tableRows = () => app.page.locator('[data-slot="data-table"] tbody tr');
+/** A card on the page, by its title. */
+const card = (title: string) =>
+	app.page.locator('main [data-slot="card"]', {
+		has: app.page.locator('[data-slot="card-title"]', { hasText: new RegExp(`^${title}$`) }),
+	});
+
+// --- What contracts mean for orders, as `coverage.ts` defines it -------------------------------
+
+/**
+ * The contract that covered each order: one covering its unit on the day the order was created
+ * (contracts run up to and including their last day), not for an installation, the fastest
+ * response first.
+ */
+const covered = `covered as (
+	select o.id as order_id, k.number, k.level, k.response_hours,
+		row_number() over (partition by o.id order by k.response_hours, k.id) as n
+	from "order" o join contract_equipment ce on ce.equipment_id = o.equipment_id
+	join contract k on k.id = ce.contract_id and k.organization_id = o.organization_id
+	where o.type != 'installation' and k.starts_on <= o.created_at and o.created_at < k.ends_on + 86400
+)`;
+
+interface CallOut {
+	number: string;
+	contract: string;
+	level: string;
+	response_hours: number;
+	/** In seconds, like the database's timestamps. */
+	due: number;
+}
+
+/** North's covered repairs waiting to be scheduled, by deadline. */
+const callOuts = () =>
+	rows<CallOut>(
+		`with ${covered} select o.number, c.number as contract, c.level, c.response_hours,
+		 o.created_at + c.response_hours * 3600 as due
+		 from "order" o join covered c on c.order_id = o.id and c.n = 1
+		 where o.organization_id = ? and o.type = 'repair' and o.status = 'quote' order by due, o.number`,
+		[north.id],
+	);
+
+/** Overdue from the deadline on; at risk with less than a quarter of the response time left. */
+function slaOf(callOut: CallOut, now = Date.now() / 1000) {
+	const left = callOut.due - now;
+	if (left <= 0) return "overdue";
+	return left < callOut.response_hours * 3600 * 0.25 ? "at_risk" : "on_track";
+}
+
+/** The standard hourly rate for orders without an engineer (`#lib/server/pricing.ts`), in cents. */
+const STANDARD_RATE = 8500;
+
+interface Priced {
+	number: string;
+	materials: number;
+	labor_hours: number;
+	hourly_rate: number | null;
+	contract: string | null;
+	level: string | null;
+	equipment: string | null;
+}
+
+/** North's orders matching `where`, with what goes into their price. */
+const pricing = (where: string, args: (string | number)[] = []) =>
+	rows<Priced>(
+		`with ${covered} select o.number, o.labor_hours, e.hourly_rate, c.number as contract, c.level,
+		 u.serial_number as equipment,
+		 (select coalesce(sum(round(l.quantity * l.unit_price)), 0) from order_line l where l.order_id = o.id) as materials
+		 from "order" o left join engineer e on e.id = o.engineer_id
+		 left join equipment u on u.id = o.equipment_id
+		 left join covered c on c.order_id = o.id and c.n = 1
+		 where o.organization_id = ? and ${where} order by o.number`,
+		[north.id, ...args],
+	);
+
+/** An order's price: standard contracts include labour, premium ones labour and materials. */
+function priceOf(order: Priced) {
+	const labor = Math.round(order.labor_hours * (order.hourly_rate ?? STANDARD_RATE));
+	const included =
+		order.level === "premium" ? labor + order.materials : order.level === "standard" ? labor : 0;
+	return { labor, included, total: order.materials + labor - included };
+}
+
+/** An amount as shown, e.g. `-€1,234.50`, in cents. */
+const cents = (text: string) => Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100);
+
+const dateTime = new Intl.DateTimeFormat("en-GB", {
+	day: "numeric",
+	month: "short",
+	year: "numeric",
+	hour: "2-digit",
+	minute: "2-digit",
+});
+/** A deadline as shown, e.g. `7 Oct 2026, 14:05`. */
+const formatDue = (seconds: number) => dateTime.format(new Date(seconds * 1000));
+const levelLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+/** The remote queries of the module's cards on core pages, as loaded in North. */
+const moduleQueries: string[] = [];
 
 let seeded: Awaited<ReturnType<typeof state>>;
 /** A North customer without contracts that owns at least two units. */
@@ -47,6 +144,8 @@ let free: number;
 let busy: { id: number; number: string; customer_id: number; equipment_id: number };
 /** A South customer with at least two units. */
 let southCustomer: number;
+/** A North unit covered by an active premium contract, with its customer and contract. */
+let premium: { id: number; customer_id: number; number: string; response_hours: number };
 
 beforeAll(async () => {
 	seeded = await state();
@@ -66,6 +165,13 @@ beforeAll(async () => {
 		`select c.id from customer c where c.organization_id = ?
 		 and (select count(*) from equipment e where e.customer_id = c.id) >= 2 order by c.id limit 1`,
 		[south.id],
+	);
+	[premium] = await rows<typeof premium>(
+		`select e.id, e.customer_id, k.number, k.response_hours from contract k
+		 join contract_equipment ce on ce.contract_id = k.id join equipment e on e.id = ce.equipment_id
+		 where k.organization_id = ? and k.level = 'premium' and e.status != 'decommissioned'
+		 and k.starts_on <= unixepoch() and k.ends_on + 86400 > unixepoch() order by k.id, e.id limit 1`,
+		[north.id],
 	);
 });
 
@@ -301,6 +407,300 @@ describe("in North", () => {
 	});
 });
 
+describe("in North, contracts count on orders", () => {
+	/** The seeded call-outs that are overdue and at risk (see the seed). */
+	let overdue: CallOut;
+	let atRisk: CallOut;
+
+	beforeAll(async () => {
+		const waiting = await callOuts();
+		overdue = waiting.find((callOut) => slaOf(callOut) === "overdue")!;
+		atRisk = waiting.find((callOut) => slaOf(callOut) === "at_risk")!;
+	});
+
+	/** The badges next to the order's title. */
+	const badges = () => app.page.locator('h1 ~ [data-slot="badge"]').allInnerTexts();
+
+	test("an overdue call-out shows its contract, deadline and badge", async () => {
+		expect(overdue).toBeDefined();
+		await app.go(`/orders/${overdue.number}`);
+		expect(await badges()).toContain("SLA overdue");
+		const coverage = card("Service contract");
+		const text = await coverage.innerText();
+		expect(text).toContain(`Covered by ${overdue.contract} (${levelLabel(overdue.level)})`);
+		expect(text).toContain(`· respond by ${formatDue(overdue.due)}`);
+		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["Overdue"]);
+		expect(await coverage.getByRole("link", { name: overdue.contract }).count()).toBe(1);
+	});
+
+	test("one at risk says so", async () => {
+		expect(atRisk).toBeDefined();
+		await app.go(`/orders/${atRisk.number}`);
+		expect(await badges()).toContain("SLA at risk");
+		const coverage = card("Service contract");
+		expect(await coverage.innerText()).toContain(`· respond by ${formatDue(atRisk.due)}`);
+		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["At risk"]);
+	});
+
+	test("the orders table shows the same badges", async () => {
+		const { page } = app;
+		await app.go("/orders");
+		for (const [callOut, badge] of [
+			[overdue, "SLA overdue"],
+			[atRisk, "SLA at risk"],
+		] as const) {
+			await page.getByLabel("Search orders…").fill(callOut.number);
+			await expect.poll(() => app.rowCount()).toBe(1);
+			expect(await tableRows().first().locator('[data-slot="badge"]').allInnerTexts()).toContain(
+				badge,
+			);
+		}
+		await page.getByLabel("Search orders…").fill("");
+		const tagged = await page
+			.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ })
+			.count();
+		expect(tagged).toBeGreaterThanOrEqual(2);
+	});
+
+	test("the dashboard lists the call-outs at risk or overdue, most urgent first", async () => {
+		await app.go("/");
+		const expected = (await callOuts())
+			.filter((callOut) => slaOf(callOut) !== "on_track")
+			.map((callOut) => callOut.number);
+		const listed = card("Response times at risk").locator('a[href^="/orders/"]');
+		expect(await listed.allInnerTexts()).toEqual(expected);
+	});
+
+	test("and the contracts ending in the next 60 days that weren't renewed", async () => {
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const horizon = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+		const expected = await rows<{ number: string }>(
+			`select number from contract k where organization_id = ? and starts_on <= unixepoch()
+			 and ends_on >= ? and ends_on < ? and not exists (select 1 from contract later
+			 where later.customer_id = k.customer_id and later.starts_on > k.ends_on)
+			 order by ends_on, number`,
+			[north.id, today.getTime() / 1000, horizon.getTime() / 1000],
+		);
+		expect(expected.length).toBeGreaterThan(0);
+		const listed = card("Contracts ending soon").locator('a[href^="/contracts/CTR-"]');
+		expect(await listed.allInnerTexts()).toEqual(expected.map((row) => row.number));
+	});
+
+	test("the dashboard's revenue takes off what contracts include", async () => {
+		const done = await pricing(`o.status in ('completed', 'invoiced') and o.completed_at >= ?`, [
+			Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60,
+		]);
+		expect(done.some((order) => priceOf(order).included > 0)).toBe(true);
+		const expected = done.reduce((sum, order) => sum + priceOf(order).total, 0);
+		const revenue = app.page
+			.getByText("Revenue, last 30 days", { exact: true })
+			.locator("..")
+			.locator('[data-slot="card-title"]');
+		expect(cents(await revenue.innerText())).toBe(expected);
+	});
+
+	test("a covered order shows what its contract includes, and its total agrees everywhere", async () => {
+		const { page } = app;
+		// A premium-covered repair with both labour and materials.
+		const [order] = await pricing(
+			`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
+			 and exists (select 1 from order_line l where l.order_id = o.id)`,
+		);
+		const price = priceOf(order);
+		expect(price.included).toBe(order.materials + price.labor);
+
+		await app.go(`/orders/${order.number}`);
+		const lines = card("Materials and labour");
+		const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
+		expect(await adjustment.innerText()).toContain(
+			`Covered by ${order.contract} (Premium)\nLabour and materials included`,
+		);
+		expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.included);
+		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(price.total);
+
+		await app.go("/orders");
+		await page.getByLabel("Search orders…").fill(order.number);
+		await expect.poll(() => app.rowCount()).toBe(1);
+		expect(cents(await tableRows().first().locator("td:nth-last-child(2)").innerText())).toBe(
+			price.total,
+		);
+
+		await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
+		const history = card("Service history").locator("tbody tr", { hasText: order.number });
+		expect(cents(await history.locator("td").last().innerText())).toBe(price.total);
+	});
+
+	test("a standard contract includes the labour only", async () => {
+		const [order] = await pricing(
+			`c.level = 'standard' and o.labor_hours > 0
+			 and exists (select 1 from order_line l where l.order_id = o.id)`,
+		);
+		const price = priceOf(order);
+		await app.go(`/orders/${order.number}`);
+		const lines = card("Materials and labour");
+		const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
+		expect(await adjustment.innerText()).toContain("Labour included");
+		expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.labor);
+		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(order.materials);
+	});
+
+	test("a unit's page lists the contracts covering it, with their level and end", async () => {
+		const [unit] = await rows<{ serial_number: string }>(
+			`select serial_number from equipment where id = ?`,
+			[busy.equipment_id],
+		);
+		const covering = await rows<{ number: string; level: string; ends_on: number }>(
+			`select k.number, k.level, k.ends_on from contract_equipment ce
+			 join contract k on k.id = ce.contract_id where ce.equipment_id = ? order by k.starts_on desc`,
+			[busy.equipment_id],
+		);
+		await app.go(`/equipment/${encodeURIComponent(unit.serial_number)}`);
+		const contracts = card("Service contracts");
+		const items = contracts.locator("li");
+		expect(await items.locator('a[href^="/contracts/"]').allInnerTexts()).toEqual(
+			covering.map((row) => row.number),
+		);
+		const date = new Intl.DateTimeFormat("en-GB", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		});
+		for (const [i, row] of covering.entries()) {
+			const text = await items.nth(i).innerText();
+			expect(text).toContain(levelLabel(row.level));
+			expect(text).toContain(date.format(new Date(row.ends_on * 1000)));
+		}
+	});
+
+	test("the cards load through the module's own queries", async () => {
+		const { page } = app;
+		const record = (request: { url(): string; method(): string }) => {
+			if (
+				/\/_app\/remote\/.*\/get(OrderCoverage|UnitCoverage|ContractsOverview)/.test(request.url())
+			) {
+				moduleQueries.push(request.url());
+			}
+		};
+		page.on("request", record);
+		// Client-side, so the pages load their data through remote queries.
+		await app.go("/orders");
+		await page.getByLabel("Search orders…").fill(overdue.number);
+		await page.getByRole("link", { name: overdue.number }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${overdue.number}`);
+		await card("Service contract").waitFor();
+		await card("Equipment").locator('a[href^="/equipment/"]').click();
+		await page.waitForURL((url) => url.pathname.startsWith("/equipment/"));
+		await card("Service contracts").waitFor();
+		await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Dashboard" }).click();
+		await page.waitForURL((url) => url.pathname === "/");
+		await card("Response times at risk").waitFor();
+		page.off("request", record);
+		const names = moduleQueries.map((url) => new URL(url).pathname.split("/").pop());
+		expect([...new Set(names)].toSorted((a, b) => a!.localeCompare(b!))).toEqual([
+			"getContractsOverview",
+			"getOrderCoverage",
+			"getUnitCoverage",
+		]);
+	});
+
+	test("a new call-out on a covered unit gets the contract's deadline, met once scheduled", async () => {
+		const { page } = app;
+		await app.go("/orders/new");
+		await page.getByLabel("Customer").selectOption(String(premium.customer_id));
+		await page.getByLabel("Equipment").selectOption(String(premium.id));
+		await page.getByLabel("Type").selectOption("repair");
+		await page.getByLabel("Description").fill("Pressure drops overnight (test call-out)");
+		await page.getByLabel("Labour (hours)").fill("1.5");
+		await page.getByRole("button", { name: "Add material" }).click();
+		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
+		const before = Math.floor(Date.now() / 1000);
+		await page.getByRole("button", { name: "Create order" }).click();
+		await page.waitForURL(/\/orders\/ORD-/);
+		await page.waitForLoadState("networkidle");
+		const number = app.path().split("/").pop()!;
+
+		const [stored] = await rows<{ created_at: number }>(
+			`select created_at from "order" where number = ? and organization_id = ?`,
+			[number, north.id],
+		);
+		expect(stored.created_at).toBeGreaterThanOrEqual(before);
+		const coverage = card("Service contract");
+		const text = await coverage.innerText();
+		expect(text).toContain(`Covered by ${premium.number} (Premium)`);
+		expect(text).toContain(
+			`· respond by ${formatDue(stored.created_at + premium.response_hours * 3600)}`,
+		);
+		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["On track"]);
+		expect(await badges()).not.toContainEqual(expect.stringMatching(/^SLA/));
+		// Premium: labour and materials included, so nothing to pay.
+		const [order] = await pricing(`o.number = ?`, [number]);
+		expect(priceOf(order).total).toBe(0);
+		const lines = card("Materials and labour");
+		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(0);
+
+		await page.getByRole("link", { name: "Edit" }).click();
+		await page.waitForURL(/\/edit$/);
+		await page.waitForLoadState("networkidle");
+		await page.getByLabel("Status").selectOption("scheduled");
+		await page.getByLabel("Engineer").selectOption({ index: 1 });
+		await page.getByLabel("Scheduled for").fill(new Date().toISOString().slice(0, 10));
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		await page.waitForLoadState("networkidle");
+		await expect
+			.poll(() => card("Service contract").locator('[data-slot="badge"]').allInnerTexts())
+			.toEqual(["Responded"]);
+
+		await page.getByRole("button", { name: "Delete" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await page.waitForURL((url) => url.pathname === "/orders");
+		expect(
+			await value(`select count(*) from "order" where number = ? and organization_id = ?`, [
+				number,
+				north.id,
+			]),
+		).toBe(0);
+	});
+
+	test("with the module switched off, orders are priced in full and nothing of it shows", async () => {
+		const { page } = app;
+		const [order] = await pricing(
+			`c.level = 'premium' and o.labor_hours > 0
+			 and exists (select 1 from order_line l where l.order_id = o.id)`,
+		);
+		await app.go("/settings");
+		const row = page.locator("div.rounded-lg.border", { hasText: "Service contracts" });
+		await row.getByRole("button", { name: "Disable" }).click();
+		await row.getByText("Disabled").waitFor();
+
+		await app.go(`/orders/${order.number}`);
+		expect(await card("Service contract").count()).toBe(0);
+		const lines = card("Materials and labour");
+		expect(await lines.locator("tbody tr", { hasText: "Covered by" }).count()).toBe(0);
+		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(
+			order.materials + priceOf(order).labor,
+		);
+		await app.go(`/orders/${overdue.number}`);
+		expect(await badges()).not.toContainEqual(expect.stringMatching(/^SLA/));
+		await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
+		expect(await card("Service contracts").count()).toBe(0);
+		await app.go("/orders");
+		expect(
+			await page.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ }).count(),
+		).toBe(0);
+		await app.go("/");
+		expect(await card("Response times at risk").count()).toBe(0);
+		expect(await card("Contracts ending soon").count()).toBe(0);
+
+		await app.go("/settings");
+		await row.getByRole("button", { name: "Enable" }).click();
+		await row.getByText(/Enabled since/).waitFor();
+		await app.go(`/orders/${overdue.number}`);
+		expect(await badges()).toContain("SLA overdue");
+	});
+});
+
 describe("in South, which doesn't have the module", () => {
 	/** The remote queries the contracts pages made in North, to replay them from South. */
 	const queries: string[] = [];
@@ -377,6 +777,31 @@ describe("in South, which doesn't have the module", () => {
 			expect(body).not.toContain("CTR-");
 		}
 	});
+
+	test("orders, equipment and the dashboard show none of it, and its queries are refused", async () => {
+		await app.go("/");
+		expect(await card("Response times at risk").count()).toBe(0);
+		expect(await card("Contracts ending soon").count()).toBe(0);
+		const [order] = await rows<{ number: string; serial_number: string }>(
+			`select o.number, e.serial_number from "order" o join equipment e on e.id = o.equipment_id
+			 where o.organization_id = ? and o.type = 'repair' order by o.id limit 1`,
+			[south.id],
+		);
+		await app.go(`/orders/${order.number}`);
+		expect(await card("Service contract").count()).toBe(0);
+		const lines = card("Materials and labour");
+		expect(await lines.locator("tbody tr", { hasText: "Covered by" }).count()).toBe(0);
+		await app.go(`/equipment/${encodeURIComponent(order.serial_number)}`);
+		expect(await card("Service contracts").count()).toBe(0);
+
+		expect(moduleQueries.length).toBeGreaterThanOrEqual(3);
+		for (const url of moduleQueries) {
+			const response = await app.page.context().request.get(url);
+			const body = await response.text();
+			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+			expect(body).not.toContain("CTR-");
+		}
+	});
 });
 
 describe("in South, with the module enabled", () => {
@@ -403,6 +828,20 @@ describe("in South, with the module enabled", () => {
 		expect(await page.getByText("No contracts found").count()).toBe(1);
 		expect((await app.go(`/contracts/${busy.number}`))?.status()).toBe(404);
 		expect((await app.go(`/contracts/${busy.number}/edit`))?.status()).toBe(404);
+	});
+
+	test("the module's cards show South's (none), and North's orders and units stay out of reach", async () => {
+		await app.go("/");
+		expect(await card("Response times at risk").innerText()).toContain("All on track");
+		expect(await card("Contracts ending soon").innerText()).toContain("Nothing ending soon");
+		for (const url of moduleQueries) {
+			const response = await app.page.context().request.get(url);
+			const body = await response.text();
+			if (!url.includes("getContractsOverview")) {
+				expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+			}
+			expect(body).not.toContain("CTR-");
+		}
 	});
 
 	test("the form only offers South's customers", async () => {

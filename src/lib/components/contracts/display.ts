@@ -1,9 +1,13 @@
+import AlarmClockCheckIcon from "@lucide/svelte/icons/alarm-clock-check";
+import AlarmClockOffIcon from "@lucide/svelte/icons/alarm-clock-off";
 import CalendarCheckIcon from "@lucide/svelte/icons/calendar-check";
 import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 import CalendarXIcon from "@lucide/svelte/icons/calendar-x";
+import ClockAlertIcon from "@lucide/svelte/icons/clock-alert";
 import ShieldIcon from "@lucide/svelte/icons/shield";
 import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
 import ShieldPlusIcon from "@lucide/svelte/icons/shield-plus";
+import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
@@ -13,6 +17,8 @@ import {
 	type ContractStatus,
 	contractStatuses,
 } from "#lib/models.js";
+
+import type { SlaState } from "./coverage.js";
 
 interface Display {
 	label: string;
@@ -30,6 +36,14 @@ export const statuses: Record<ContractStatus, Display> = {
 	upcoming: { label: "Upcoming", icon: CalendarClockIcon, variant: "outline" },
 	active: { label: "Active", icon: CalendarCheckIcon, variant: "default" },
 	expired: { label: "Expired", icon: CalendarXIcon, variant: "ghost" },
+};
+
+/** Where a covered order's response stands, see `coverage.ts`. */
+export const slaStates: Record<SlaState, Display> = {
+	on_track: { label: "On track", icon: TimerIcon, variant: "outline" },
+	at_risk: { label: "At risk", icon: ClockAlertIcon, variant: "secondary" },
+	overdue: { label: "Overdue", icon: AlarmClockOffIcon, variant: "destructive" },
+	responded: { label: "Responded", icon: AlarmClockCheckIcon, variant: "ghost" },
 };
 
 /** Options for the faceted filters, in order. */

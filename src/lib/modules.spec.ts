@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 
-import { expect, test } from "vite-plus/test";
+import { describe, expect, test } from "vite-plus/test";
 
-import { modules } from "./modules.ts";
+import { modules, type SlotName, slotLoaders } from "./modules.ts";
 
 test("module ids are unique", () => {
 	const ids = modules.map((module) => module.id);
@@ -11,4 +11,23 @@ test("module ids are unique", () => {
 
 test.each(modules)("the $id module's route is a page", ({ route }) => {
 	expect(existsSync(new URL(`../routes${route}/+page.svelte`, import.meta.url))).toBe(true);
+});
+
+describe("slotLoaders", () => {
+	const slots: SlotName[] = ["dashboard", "order", "equipment"];
+
+	test.each(slots)(
+		"gives the %s slot the contracts module's component when it's enabled",
+		(name) => {
+			expect(slotLoaders(name, ["contracts"])).toEqual([modules[0].slots[name]]);
+		},
+	);
+
+	test.each(slots)("leaves the %s slot empty without modules", (name) => {
+		expect(slotLoaders(name, [])).toEqual([]);
+	});
+
+	test("ignores modules that don't exist", () => {
+		expect(slotLoaders("order", ["no-such-module"])).toEqual([]);
+	});
 });

@@ -14,6 +14,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate, humanize } from "#lib/format.js";
 
+	import ModuleSlots from "../../module-slots.svelte";
 	import { deleteEquipment, getEquipment } from "../equipment.remote.js";
 	import type { PageProps } from "./$types";
 
@@ -184,5 +185,7 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<ModuleSlots name="equipment" props={{ serialNumber: unit.serialNumber }} />
 	</div>
 </div>

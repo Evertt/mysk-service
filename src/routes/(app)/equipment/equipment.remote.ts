@@ -8,7 +8,7 @@ import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { laborCost } from "#lib/server/pricing.js";
+import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
@@ -64,13 +64,17 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 	if (!found) error(404, `Equipment ${serialNumber} not found`);
 
 	const { orders: rows, ...unit } = found;
-	const history = rows.map(({ engineer, lines, ...row }) => {
-		const materials = lines.reduce(
-			(sum, line) => sum + lineTotal(line.quantity, line.unitPrice),
-			0,
-		);
-		return { ...row, total: materials + laborCost(row.laborHours, engineer?.hourlyRate) };
-	});
+	const prices = await priceOrders(
+		rows.map((row) => ({
+			...row,
+			materials: row.lines.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0),
+			hourlyRate: row.engineer?.hourlyRate,
+		})),
+	);
+	const history = rows.map(({ engineer: _engineer, lines: _lines, ...row }, i) => ({
+		...row,
+		total: prices[i].total,
+	}));
 	const completed = history
 		.filter((row) => isDoneOrder(row.status) && row.completedAt)
 		.map((row) => row.completedAt as Date);

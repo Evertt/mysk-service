@@ -14,7 +14,8 @@ import {
 	order,
 	orderLine,
 } from "#lib/server/db/schema.js";
-import { laborCost, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
+import { orderSaved, tagOrders } from "#lib/server/modules.js";
+import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { orderFields } from "./order-schema.js";
@@ -66,10 +67,20 @@ export const getOrders = query(async () => {
 		.where(inTenant(order))
 		.orderBy(desc(order.createdAt));
 
-	return rows.map((row) => {
-		const laborTotal = laborCost(row.laborHours, row.engineer?.hourlyRate);
-		return { ...row, laborTotal, total: row.materialsTotal + laborTotal };
-	});
+	const facts = rows.map((row) => ({
+		...row,
+		equipmentId: row.equipment?.id ?? null,
+		materials: row.materialsTotal,
+		hourlyRate: row.engineer?.hourlyRate,
+	}));
+	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
+	return rows.map((row, i) => ({
+		...row,
+		laborTotal: prices[i].labor,
+		total: prices[i].total,
+		/** From the tenant's modules, e.g. a response time about to be missed. */
+		tags: tags[i],
+	}));
 });
 
 /** One order with everything on it, plus other orders for the same equipment. */
@@ -104,17 +115,18 @@ export const getOrder = query(v.string(), async (number) => {
 		...line,
 		total: lineTotal(line.quantity, line.unitPrice),
 	}));
-	const materialsTotal = lines.reduce((sum, line) => sum + line.total, 0);
-	const laborTotal = laborCost(found.laborHours, found.engineer?.hourlyRate);
+	const facts = {
+		...found,
+		materials: lines.reduce((sum, line) => sum + line.total, 0),
+		hourlyRate: found.engineer?.hourlyRate,
+	};
+	const [[price], [tags]] = await Promise.all([priceOrders([facts]), tagOrders([facts])]);
 
 	return {
 		order: { ...found, lines },
-		totals: {
-			materials: materialsTotal,
-			laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE,
-			labor: laborTotal,
-			total: materialsTotal + laborTotal,
-		},
+		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
+		/** From the tenant's modules, e.g. a response time about to be missed. */
+		tags,
 		history,
 	};
 });
@@ -331,6 +343,7 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 	const number = await saveOrder(id, input);
 	void getOrders().refresh();
 	void getOrder(number).refresh();
+	orderSaved(number);
 	redirect(303, `/orders/${number}`);
 });
 

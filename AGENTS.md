@@ -44,7 +44,11 @@ helpers are in `src/lib/server/session.ts`:
   table. Where a reference must belong to the same customer (an order's equipment, a contract's
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
-  about modules.
+  about modules. A module adds to core pages through `slots` in `src/lib/modules.ts` (components
+  that load their own data with `requireModule()`), and to core server logic through hooks in
+  `src/lib/server/modules.ts`; both only take part for tenants that have the module. Anything that
+  shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
+  which applies the modules' adjustments.
 
 ## Tests
 
