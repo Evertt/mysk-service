@@ -27,6 +27,16 @@ describe("slotLoaders", () => {
 		expect(slotLoaders(name, [])).toEqual([]);
 	});
 
+	test("gives the components of several modules in registry order", () => {
+		const [contracts, invoicing] = modules;
+		expect(slotLoaders("dashboard", ["invoicing", "contracts"])).toEqual([
+			contracts.slots.dashboard,
+			invoicing.slots.dashboard,
+		]);
+		expect(slotLoaders("order", ["invoicing"])).toEqual([invoicing.slots.order]);
+		expect(slotLoaders("equipment", ["invoicing"])).toEqual([]);
+	});
+
 	test("ignores modules that don't exist", () => {
 		expect(slotLoaders("order", ["no-such-module"])).toEqual([]);
 	});

@@ -2,6 +2,7 @@ import { expect, test, vi } from "vite-plus/test";
 
 import { contracts } from "./contracts.ts";
 import {
+	billableItems,
 	enabledServerModules,
 	type OrderFacts,
 	orderSaved,
@@ -19,6 +20,11 @@ vi.mock("$app/server", () => ({
 const refreshed = vi.hoisted(() => [] as string[]);
 vi.mock("#lib/components/contracts/coverage.remote.js", () => ({
 	getOrderCoverage: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
+}));
+vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({
+	getOrderInvoice: (number: string) => ({
+		refresh: async () => void refreshed.push(`invoice:${number}`),
+	}),
 }));
 
 const order = (id: number): OrderFacts => ({
@@ -87,4 +93,34 @@ test("a saved order lets the modules refresh what they show about it", () => {
 test("the contracts module refreshes the order's coverage", () => {
 	orderSaved("ORD-2026-00002", enabledServerModules(["contracts"]));
 	expect(refreshed).toEqual(["ORD-2026-00002"]);
+});
+
+test("the invoicing module refreshes the invoice card of a saved order", () => {
+	orderSaved("ORD-2026-00003", enabledServerModules(["invoicing"]));
+	expect(refreshed).toContain("invoice:ORD-2026-00003");
+});
+
+test("billable items come from each module that has any, by date", async () => {
+	const period = { from: new Date(2026, 0, 1), until: new Date(2026, 9, 7) };
+	const asked: unknown[] = [];
+	const item = (reference: string, date: Date) => ({
+		reference,
+		description: reference,
+		quantity: 1,
+		unitPrice: 100,
+		date,
+	});
+	const fees: ServerModule = {
+		async billableItems(customerId, at) {
+			asked.push([customerId, at]);
+			return [item("fees:2", new Date(2026, 8, 1)), item("fees:1", new Date(2026, 7, 1))];
+		},
+	};
+	const rentals: ServerModule = {
+		billableItems: async () => [item("rentals:1", new Date(2026, 7, 15))],
+	};
+	const items = await billableItems(7, period, [fees, {}, rentals]);
+	expect(items.map((i) => i.reference)).toEqual(["fees:1", "rentals:1", "fees:2"]);
+	expect(asked).toEqual([[7, period]]);
+	expect(await billableItems(7, period, [{}])).toEqual([]);
 });

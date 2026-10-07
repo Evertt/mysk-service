@@ -13,6 +13,7 @@ import {
 vi.mock("#lib/server/db/index.js", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
 vi.mock("#lib/components/contracts/coverage.remote.js", () => ({}));
+vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({}));
 
 test("labour is charged at the engineer's hourly rate", () => {
 	expect(laborCost(2.5, 6000)).toBe(15_000);

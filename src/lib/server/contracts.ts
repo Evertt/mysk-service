@@ -1,10 +1,12 @@
 /**
  * The server side of the service contracts module (see `#lib/modules.ts`): which contract covered
- * an order, and the hooks that make that count in core (see `#lib/server/modules.ts`). The rules
- * themselves are in `#lib/components/contracts/coverage.ts`.
+ * an order, and the hooks that make that count in core (see `#lib/server/modules.ts`), and that
+ * offer the monthly fees for billing. The rules themselves are in
+ * `#lib/components/contracts/coverage.ts` and `billing.ts`.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 
+import { contractMonths, monthlyFee } from "#lib/components/contracts/billing.js";
 import {
 	coveredAmount,
 	coveredBy,
@@ -93,6 +95,31 @@ export const contracts: ServerModule = {
 
 	orderSaved(number) {
 		void getOrderCoverage(number).refresh();
+	},
+
+	// A month's fee for each month of the customer's contracts.
+	async billableItems(customerId, { from, until }) {
+		const found = await db
+			.select({
+				id: contract.id,
+				number: contract.number,
+				level: contract.level,
+				startsOn: contract.startsOn,
+				endsOn: contract.endsOn,
+				monthlyFee: contract.monthlyFee,
+			})
+			.from(contract)
+			.where(
+				and(
+					eq(contract.customerId, customerId),
+					inTenant(contract),
+					lte(contract.startsOn, until),
+					gte(contract.endsOn, from),
+				),
+			);
+		return found.flatMap((term) =>
+			contractMonths(term, from, until).map((month) => monthlyFee(term, month)),
+		);
 	},
 
 	async tagOrders(orders, now) {

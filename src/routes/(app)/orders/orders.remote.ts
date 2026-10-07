@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { formatNumber } from "#lib/format.js";
 import { fitsUnit, lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import {
 	customer,
@@ -384,7 +385,7 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 
 export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
-	await db.transaction(async (tx) => {
+	const deleting = db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
 			columns: { id: true, number: true },
 			where: and(eq(order.id, id), inTenant(order)),
@@ -409,6 +410,11 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 			.where(and(eq(stockMovement.orderId, found.id), inTenant(stockMovement)));
 		await tx.delete(order).where(and(eq(order.id, found.id), inTenant(order)));
 	});
+	// E.g. an optional module's record, such as an invoice, may still refer to it.
+	await refuseIfReferenced(
+		() => deleting,
+		"Other records still refer to this order, such as an invoice, so it can't be deleted.",
+	);
 	void getOrders().refresh();
 	redirect(303, "/orders");
 });

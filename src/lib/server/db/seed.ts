@@ -13,6 +13,14 @@ import { hashPassword } from "better-auth/crypto";
 import { inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
+import { contractMonths, monthlyFee } from "#lib/components/contracts/billing.ts";
+import {
+	dueDate,
+	invoiceNumber,
+	itemLine,
+	type LineDraft,
+	orderLines,
+} from "#lib/components/invoicing/invoice.ts";
 import {
 	type ContractLevel,
 	customerSegments,
@@ -600,15 +608,174 @@ function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: n
 	);
 }
 
+// --- Invoices (invoicing module) -------------------------------------------------------------
+
+/** From when the demo tenants bill contract fees through the app (see the invoicing settings). */
+const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+
+const levelLabel = (level: ContractLevel) => level.charAt(0).toUpperCase() + level.slice(1);
+
+/**
+ * Invoices for the orders the generator marked invoiced: one per customer for each month's work,
+ * issued early the next month, with that month's contract fees from `billFrom` on (so only this
+ * month's are still to bill). Older ones are paid; of the last two months', some are still open,
+ * and past their due date overdue. A few were voided and issued again, and two customers have a
+ * draft for their completed orders. Priced like `priceOrders()` does, which the seed can't call.
+ * With a faker of its own, so the rest of the data is the same with or without it. Contract ids
+ * in the fees' references are shifted by `contractOffset`, like the contracts when inserted.
+ */
+function generateInvoices(
+	data: ReturnType<typeof generateTenant>,
+	seed: number,
+	contractOffset: number,
+) {
+	const random = new Faker({ locale: [en] });
+	random.seed(seed);
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const engineers = new Map(data.engineers.map((e) => [e.id, e]));
+	const linesOf = Map.groupBy(data.orderLines, (line) => line.orderId);
+	const contracts = new Map(data.contracts.map((c) => [c.id, c]));
+	const coverage = Map.groupBy(data.contractCoverage, (c) => c.equipmentId);
+	type Order = (typeof data.orders)[number];
+
+	/** The contract that covered an order, as in `#lib/components/contracts/coverage.ts`. */
+	const coveredBy = (o: Order) =>
+		o.type === "installation" || !o.equipmentId
+			? undefined
+			: (coverage.get(o.equipmentId) ?? [])
+					.map((c) => contracts.get(c.contractId)!)
+					.filter((c) => {
+						const end = new Date(
+							c.endsOn.getFullYear(),
+							c.endsOn.getMonth(),
+							c.endsOn.getDate() + 1,
+						);
+						return c.startsOn <= o.createdAt && o.createdAt < end;
+					})
+					.sort((a, b) => a.responseHours - b.responseHours)[0];
+
+	/** An order's price, as `priceOrders()` makes it with the contracts module. */
+	function price(o: Order) {
+		const materials = (linesOf.get(o.id) ?? []).reduce(
+			(sum, line) => sum + Math.round(line.quantity * line.unitPrice),
+			0,
+		);
+		const rate = o.engineerId ? engineers.get(o.engineerId)!.hourlyRate : 8500;
+		const labor = Math.round(o.laborHours * rate);
+		const contract = coveredBy(o);
+		const level = contract?.level;
+		const included = level === "premium" ? labor + materials : level === "standard" ? labor : 0;
+		const adjustments =
+			contract && included
+				? [
+						{
+							label: `Covered by ${contract.number} (${levelLabel(contract.level)})`,
+							detail: `${level === "premium" ? "Labour and materials" : "Labour"} included`,
+							amount: -included,
+						},
+					]
+				: [];
+		return { materials, labor, adjustments, total: materials + labor - included };
+	}
+
+	// One invoice per customer and month of work (or of fees).
+	const groups = new Map<string, { customerId: number; month: Date; lines: LineDraft[] }>();
+	const groupOf = (customerId: number, date: Date) => {
+		const month = new Date(date.getFullYear(), date.getMonth(), 1);
+		const key = `${month.getTime()}:${customerId}`;
+		if (!groups.has(key)) groups.set(key, { customerId, month, lines: [] });
+		return groups.get(key)!;
+	};
+	const invoiced = data.orders
+		.filter((o) => o.status === "invoiced")
+		.sort((a, b) => a.completedAt!.getTime() - b.completedAt!.getTime());
+	for (const o of invoiced)
+		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o)));
+	const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+	for (const c of data.contracts) {
+		for (const month of contractMonths(c, billFrom, lastMonthEnd)) {
+			groupOf(c.customerId, month.startsOn).lines.push(
+				itemLine(monthlyFee({ ...c, id: c.id + contractOffset }, month)),
+			);
+		}
+	}
+
+	const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);
+	const atNine = (day: Date) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
+	const issued = [...groups.values()]
+		.sort((a, b) => a.month.getTime() - b.month.getTime() || a.customerId - b.customerId)
+		.flatMap(({ customerId, month, lines }) => {
+			const third = new Date(month.getFullYear(), month.getMonth() + 1, 3);
+			const issuedOn = third < today ? third : today;
+			const age = days(issuedOn, today);
+			const paid =
+				age > 75 ||
+				(age > 30 && random.datatype.boolean(0.7)) ||
+				(age >= 2 && random.datatype.boolean(0.35));
+			const paidAfter = random.number.int({ min: Math.min(3, age), max: Math.min(age, 45) });
+			const invoice = {
+				customerId,
+				issuedOn,
+				dueOn: dueDate(issuedOn, 30),
+				status: paid ? ("paid" as const) : ("sent" as const),
+				paidOn: paid ? dueDate(issuedOn, paidAfter) : null,
+				voidedAt: null as Date | null,
+				createdAt: atNine(issuedOn),
+				lines,
+			};
+			// Now and then one went out wrong, was voided and issued again.
+			if (!random.datatype.boolean(0.04)) return [invoice];
+			const voided = {
+				...invoice,
+				status: "void" as const,
+				paidOn: null,
+				voidedAt: new Date(invoice.createdAt.getTime() + 2 * 60 * 60 * 1000),
+			};
+			return [voided, invoice];
+		});
+
+	// Drafts for two customers' completed orders.
+	const completed = data.orders.filter(
+		(o) => o.status === "completed" && o.completedAt! < addDays(now, -3),
+	);
+	const drafted = random.helpers.arrayElements(
+		[...new Set(completed.map((o) => o.customerId))],
+		Math.min(2, completed.length),
+	);
+	const drafts = drafted.map((customerId) => ({
+		customerId,
+		issuedOn: null,
+		dueOn: null,
+		status: "draft" as const,
+		paidOn: null,
+		voidedAt: null,
+		createdAt: addDays(now, -1),
+		lines: completed
+			.filter((o) => o.customerId === customerId)
+			.flatMap((o) => orderLines(o, price(o))),
+	}));
+
+	return [...issued, ...drafts].map((invoice, i) => ({
+		...invoice,
+		id: i + 1,
+		number: invoiceNumber((invoice.issuedOn ?? invoice.createdAt).getFullYear(), i + 1),
+		paymentTermDays: 30,
+		vatRate: 21,
+	}));
+}
+
 // --- Tenants ---------------------------------------------------------------------------------
 
-/** The demo organizations. North has the service contracts module; South doesn't. */
+/**
+ * The demo organizations. North has the service contracts and invoicing modules; South only
+ * invoicing.
+ */
 const tenants = [
 	{
 		id: "org-north",
 		name: "Fieldworks North",
 		slug: "north",
-		modules: ["contracts"],
+		modules: ["contracts", "invoicing"],
 		seed: 20261005,
 		size: { customers: 60, engineers: 18, orders: 750, contracts: true },
 	},
@@ -616,7 +783,7 @@ const tenants = [
 		id: "org-south",
 		name: "Fieldworks South",
 		slug: "south",
-		modules: [],
+		modules: ["invoicing"],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320, contracts: false },
 	},
@@ -631,6 +798,9 @@ const count = (table: string, rows: unknown[]) =>
 
 await db.transaction(async (tx) => {
 	for (const table of [
+		schema.invoiceLine,
+		schema.invoice,
+		schema.invoicingSettings,
 		schema.contractEquipment,
 		schema.contract,
 		schema.stockMovement,
@@ -649,7 +819,15 @@ await db.transaction(async (tx) => {
 	}
 
 	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
-	const offset = { customer: 0, engineer: 0, equipment: 0, material: 0, order: 0, contract: 0 };
+	const offset = {
+		customer: 0,
+		engineer: 0,
+		equipment: 0,
+		material: 0,
+		order: 0,
+		contract: 0,
+		invoice: 0,
+	};
 	for (const tenant of tenants) {
 		await tx.insert(schema.organization).values({
 			id: tenant.id,
@@ -709,6 +887,28 @@ await db.transaction(async (tx) => {
 				orderId: m.orderId && m.orderId + o.order,
 			})),
 		};
+		const invoices = tenant.modules.includes("invoicing")
+			? generateInvoices(data, tenant.seed, o.contract)
+			: [];
+		const invoicing = {
+			invoices: invoices.map(({ lines: _lines, ...i }) => ({
+				...i,
+				organizationId,
+				id: i.id + o.invoice,
+				customerId: i.customerId + o.customer,
+			})),
+			invoiceLines: invoices.flatMap((i) =>
+				i.lines.map((line) => ({
+					...line,
+					organizationId,
+					invoiceId: i.id + o.invoice,
+					orderId: line.orderId && line.orderId + o.order,
+				})),
+			),
+			invoicingSettings: tenant.modules.includes("invoicing")
+				? [{ organizationId, vatRate: 21, paymentTermDays: 30, billFrom }]
+				: [],
+		};
 
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
@@ -719,6 +919,11 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.contracts, (chunk) => tx.insert(schema.contract).values(chunk));
 		await insertAll(rows.coverage, (chunk) => tx.insert(schema.contractEquipment).values(chunk));
 		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
+		await insertAll(invoicing.invoices, (chunk) => tx.insert(schema.invoice).values(chunk));
+		await insertAll(invoicing.invoiceLines, (chunk) => tx.insert(schema.invoiceLine).values(chunk));
+		await insertAll(invoicing.invoicingSettings, (chunk) =>
+			tx.insert(schema.invoicingSettings).values(chunk),
+		);
 
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
@@ -726,7 +931,8 @@ await db.transaction(async (tx) => {
 		offset.material += rows.materials.length;
 		offset.order += rows.orders.length;
 		offset.contract += rows.contracts.length;
-		for (const [table, list] of Object.entries(rows)) count(table, list);
+		offset.invoice += invoicing.invoices.length;
+		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
 	}
 });
 
