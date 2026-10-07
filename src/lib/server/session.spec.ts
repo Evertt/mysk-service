@@ -9,9 +9,11 @@ import { customer } from "#lib/server/db/schema.js";
 import {
 	inTenant,
 	loadTenant,
+	requireEngineer,
 	requireMember,
 	requireModule,
 	requireRole,
+	requireTenant,
 	requireUser,
 	type Tenant,
 } from "./session.ts";
@@ -24,7 +26,8 @@ vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 vi.mock("#lib/server/db/index.js", async () => {
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	return { db: drizzle(createClient({ url: ":memory:" })) };
+	const schema = await import("#lib/server/db/schema.js");
+	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 
 const user = { id: "u1", name: "Jo" };
@@ -77,6 +80,64 @@ describe("requireMember", () => {
 	test("asks a visitor to sign in first", () => {
 		locals.tenant = tenant;
 		expect(statusOf(requireMember)).toBe(401);
+	});
+});
+
+describe("field engineers", () => {
+	const fieldEngineer = { ...tenant, roles: ["engineer"] };
+
+	/** The status of the HTTP error a promise rejects with. */
+	const rejection = async (promise: Promise<unknown>) => {
+		const error = await promise.catch((e) => e);
+		if (isHttpError(error)) return error.status;
+		throw new Error("Expected an HTTP error");
+	};
+
+	beforeAll(async () => {
+		await db.run(sql`create table engineer (
+			id integer primary key, organization_id text, name text, email text, phone text,
+			specialty text, region text, hourly_rate integer, active integer, hired_at integer,
+			user_id text
+		)`);
+		await db.run(sql`insert into engineer (id, organization_id, name, user_id) values
+			(1, 'north', 'Eli', 'u1'),
+			(2, 'south', 'Sam', 'u2'),
+			(3, 'north', 'Kim', null)`);
+	});
+
+	test("are refused by the office's remote functions with a 403", () => {
+		Object.assign(locals, { user, tenant: fieldEngineer });
+		expect(statusOf(requireMember)).toBe(403);
+		expect(statusOf(() => requireRole("engineer"))).toBe(403);
+	});
+
+	test("are still in their tenant, for the portal's queries", () => {
+		Object.assign(locals, { user, tenant: fieldEngineer });
+		expect(requireTenant()).toEqual({ user, ...fieldEngineer });
+		expect(new SQLiteSyncDialect().sqlToQuery(inTenant(customer)).params).toEqual(["north"]);
+	});
+
+	test("get their engineer record in the tenant", async () => {
+		Object.assign(locals, { user, tenant: fieldEngineer });
+		expect(await requireEngineer()).toMatchObject({
+			organizationId: "north",
+			engineer: { id: 1, name: "Eli" },
+		});
+	});
+
+	test("are refused by the portal while their account isn't linked in this tenant", async () => {
+		// u2 is linked in South only.
+		Object.assign(locals, { user: { id: "u2", name: "Sam" }, tenant: fieldEngineer });
+		expect(await rejection(requireEngineer())).toBe(403);
+		locals.user = { id: "u3", name: "Lou" };
+		expect(await rejection(requireEngineer())).toBe(403);
+		delete locals.user;
+		expect(await rejection(requireEngineer())).toBe(401);
+	});
+
+	test("may also work in the office when they have an office role", () => {
+		Object.assign(locals, { user, tenant: { ...tenant, roles: ["engineer", "member"] } });
+		expect(requireMember()).toMatchObject({ organizationId: "north" });
 	});
 });
 

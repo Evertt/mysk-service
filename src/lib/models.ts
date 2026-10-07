@@ -78,6 +78,20 @@ export const isOpenOrder = (status: OrderStatus) =>
 export const isDoneOrder = (status: OrderStatus) =>
 	(doneOrderStatuses as readonly OrderStatus[]).includes(status);
 
+/**
+ * Orders whose material lines hold stock: from scheduled on. A quote's lines are only a proposal,
+ * and a cancelled order gives its materials back.
+ */
+export const stockHoldingStatuses = [
+	"scheduled",
+	"in_progress",
+	"completed",
+	"invoiced",
+] as const satisfies OrderStatus[];
+
+export const holdsStock = (status: OrderStatus) =>
+	(stockHoldingStatuses as readonly OrderStatus[]).includes(status);
+
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
 

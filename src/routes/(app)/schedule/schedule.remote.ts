@@ -8,6 +8,7 @@ import { date, id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { addDays, atTime, byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
 import { moveFields, scheduleFields } from "./schedule-schema.js";
@@ -74,14 +75,28 @@ type Plan = { id: number; engineerId: number | null; day: Date; time: string };
 
 /**
  * Plans an order of the current tenant: assigns `engineerId` (or nobody) and schedules it on `day`
- * at `time`. Returns what's wrong if it can't be planned; a 404 if there's no such order.
+ * at `time`. A quote that gets scheduled takes its materials from stock. Returns what's wrong if it
+ * can't be planned; a 404 if there's no such order.
  */
-async function plan(input: Plan): Promise<{ field?: "engineerId"; message: string } | undefined> {
+async function plan(input: Plan): Promise<Problem | undefined> {
 	requireMember();
-	return db.transaction(async (tx) => {
+	try {
+		return await planInTransaction(input);
+	} catch (error) {
+		// Thrown, so the transaction stores nothing of it.
+		if (error instanceof OrderStockShortage) return { message: error.message };
+		throw error;
+	}
+}
+
+type Problem = { field?: "engineerId"; message: string };
+
+function planInTransaction(input: Plan) {
+	return db.transaction(async (tx): Promise<Problem | undefined> => {
 		const found = await tx.query.order.findFirst({
-			columns: { status: true },
+			columns: { id: true, number: true, status: true },
 			where: and(eq(order.id, input.id), inTenant(order)),
+			with: { lines: true },
 		});
 		if (!found) error(404, "Order not found");
 		if (!isOpenOrder(found.status)) {
@@ -97,14 +112,13 @@ async function plan(input: Plan): Promise<{ field?: "engineerId"; message: strin
 				return { field: "engineerId", message: `${assignee.name} is no longer active` };
 			}
 		}
+		const status = plannedStatus(found.status, input.engineerId);
 		await tx
 			.update(order)
-			.set({
-				engineerId: input.engineerId,
-				scheduledFor: atTime(input.day, input.time),
-				status: plannedStatus(found.status, input.engineerId),
-			})
+			.set({ engineerId: input.engineerId, scheduledFor: atTime(input.day, input.time), status })
 			.where(and(eq(order.id, input.id), inTenant(order)));
+		await moveOrderStock(tx, found, found, { status, lines: found.lines });
+		return undefined;
 	});
 }
 

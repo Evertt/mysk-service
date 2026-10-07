@@ -4,6 +4,7 @@ import {
 	contractStatus,
 	doneOrderStatuses,
 	fitsUnit,
+	holdsStock,
 	isDoneOrder,
 	isOpenOrder,
 	lineTotal,
@@ -35,6 +36,12 @@ test("every order status is either open, done or cancelled", () => {
 		expect(groups.filter(Boolean), status).toHaveLength(1);
 	}
 	expect(openOrderStatuses.length + doneOrderStatuses.length + 1).toBe(orderStatuses.length);
+});
+
+test("orders hold stock from scheduled on, but not as a quote or once cancelled", () => {
+	expect(orderStatuses.filter((status) => !holdsStock(status))).toEqual(["quote", "cancelled"]);
+	expect(holdsStock("scheduled")).toBe(true);
+	expect(holdsStock("invoiced")).toBe(true);
 });
 
 describe("quantities", () => {

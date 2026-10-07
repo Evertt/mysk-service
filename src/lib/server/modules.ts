@@ -11,7 +11,7 @@ import type { OrderStatus, OrderType } from "#lib/models.js";
 import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.js";
 
 import { contracts } from "./contracts.ts";
-import { requireMember } from "./session.ts";
+import { requireTenant } from "./session.ts";
 
 /** What a module gets to know about an order. All of the current tenant's. */
 export interface OrderFacts {
@@ -45,7 +45,7 @@ const serverModules: { [Id in ModuleId]?: ServerModule } = { contracts };
 
 /** The server hooks of the `enabled` modules (by default the current tenant's). */
 export function enabledServerModules(
-	enabled: readonly string[] = requireMember().modules,
+	enabled: readonly string[] = requireTenant().modules,
 ): ServerModule[] {
 	return Object.entries(serverModules).flatMap(([id, module]) =>
 		module && enabled.includes(id) ? [module] : [],

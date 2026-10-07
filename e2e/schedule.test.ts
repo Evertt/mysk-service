@@ -1,7 +1,7 @@
 import type { Locator } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, value } from "./app.ts";
+import { organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -191,6 +191,20 @@ describe("in North", () => {
 		planned = await orderByNumber(number, north.id);
 		expect(planned).toMatchObject({ status: "scheduled", engineer_id: engineer.id });
 		expect(scheduledAt(planned)).toEqual(weekday(2, 13, 30));
+		// Scheduled, the quote's lines take their materials from stock.
+		const consumed = await rows(
+			`select material_id, -quantity as quantity from stock_movement
+			 where order_id = ? and kind = 'consumption' order by material_id`,
+			[planned.id],
+		);
+		expect(consumed).toEqual(
+			await rows(
+				`select material_id, quantity from order_line where order_id = ? order by material_id`,
+				[planned.id],
+			),
+		);
+		expect(consumed.length).toBeGreaterThan(0);
+		expect(await unbalancedStock(north.id)).toEqual([]);
 		await cell(engineer.name, weekday(2)).locator(`[data-order="${number}"]`).waitFor();
 		expect(await backlog().locator(`[data-order="${number}"]`).count()).toBe(0);
 	});

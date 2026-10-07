@@ -5,22 +5,9 @@
  * it doesn't (e.g. changing your own role).
  */
 
-/** better-auth's built-in member roles, most powerful first. */
-export const memberRoles = ["owner", "admin", "member"] as const;
+import { type MemberRole, memberRoles } from "./roles.ts";
 
-export type MemberRole = (typeof memberRoles)[number];
-
-export const roleLabels: Record<MemberRole, string> = {
-	owner: "Owner",
-	admin: "Admin",
-	member: "Member",
-};
-
-export const roleDescriptions: Record<MemberRole, string> = {
-	owner: "Everything, including managing owners.",
-	admin: "Manages settings, members and invitations.",
-	member: "Works with the organization's records.",
-};
+export { type MemberRole, memberRoles, roleDescriptions, roleLabels } from "./roles.ts";
 
 /** A member's roles: better-auth stores them comma-separated, e.g. `owner` or `admin,member`. */
 export const parseRoles = (role: string) =>

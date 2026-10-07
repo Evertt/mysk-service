@@ -184,7 +184,12 @@ export const organizations = {
 export const users = {
 	admin: demoUsers[0].email,
 	planner: demoUsers[1].email,
+	/** A field engineer in North, who only uses the engineer portal. */
+	engineer: demoUsers[2].email,
 };
+
+/** A phone's screen, e.g. for the engineer portal. */
+export const mobileViewport = { width: 375, height: 812 };
 
 export interface App {
 	page: Page;
@@ -218,10 +223,13 @@ export interface App {
 
 /**
  * Gives the tests in a file one browser page, signed in as `user` (the admin by default, who
- * starts in Fieldworks North; `null` for signed out). After each test, checks that the app logged
- * no errors or hydration warnings.
+ * starts in Fieldworks North; `null` for signed out), on a desktop screen unless `viewport` says
+ * otherwise. After each test, checks that the app logged no errors or hydration warnings.
  */
-export function useApp({ user = users.admin }: { user?: string | null } = {}): App {
+export function useApp({
+	user = users.admin,
+	viewport = { width: 1440, height: 1000 },
+}: { user?: string | null; viewport?: { width: number; height: number } } = {}): App {
 	let browser: Browser;
 	let page: Page;
 	const errors: string[] = [];
@@ -290,7 +298,7 @@ export function useApp({ user = users.admin }: { user?: string | null } = {}): A
 
 	beforeAll(async () => {
 		browser = await chromium.launch();
-		page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+		page = await browser.newPage({ viewport });
 		page.on("pageerror", (error) => expecting || errors.push(`pageerror: ${error.message}`));
 		page.on("console", (message) => {
 			const text = message.text();

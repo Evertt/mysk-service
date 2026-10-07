@@ -4,6 +4,8 @@
  */
 import * as v from "valibot";
 
+import { fitsUnit } from "#lib/models.js";
+
 /** A required id, e.g. from a select. */
 export const id = (message = "Choose one") =>
 	v.pipe(
@@ -88,3 +90,26 @@ export const email = (required = "Enter an email address") =>
 /** A required phone number: digits with optional +, spaces, dots, dashes and brackets. */
 export const phone = (required = "Enter a phone number") =>
 	formatted(required, /^\+?[\d\s().-]{6,20}$/, "Enter a valid phone number");
+
+/** The hours of labour on an order. */
+export const laborHours = () =>
+	v.pipe(v.number("Enter the hours"), v.minValue(0, "Can't be negative"));
+
+/**
+ * An order's material lines, for the order form and the engineer portal: a material and a
+ * quantity each. Pieces are only counted whole; saving checks that against the material's unit.
+ */
+export const orderLines = () =>
+	v.optional(
+		v.array(
+			v.object({
+				materialId: id("Choose a material"),
+				quantity: v.pipe(
+					v.number("Enter a quantity"),
+					v.gtValue(0, "More than 0"),
+					v.check((quantity) => fitsUnit(quantity, "m"), "At most two decimals"),
+				),
+			}),
+		),
+		[],
+	);

@@ -13,7 +13,10 @@ import {
 vi.mock("#lib/server/db/index.js", () => ({ db: {} }));
 vi.mock("$app/server", () => ({
 	getRequestEvent: () => ({
-		locals: { user: { id: "u1" }, tenant: { organizationId: "north", modules: ["contracts"] } },
+		locals: {
+			user: { id: "u1" },
+			tenant: { organizationId: "north", roles: ["member"], modules: ["contracts"] },
+		},
 	}),
 }));
 const refreshed = vi.hoisted(() => [] as string[]);

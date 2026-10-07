@@ -98,8 +98,8 @@ describe("removing a member", () => {
 });
 
 test("only owners can invite or promote owners", () => {
-	expect(assignableRoles(["owner"])).toEqual(["owner", "admin", "member"]);
-	expect(assignableRoles(["admin"])).toEqual(["admin", "member"]);
+	expect(assignableRoles(["owner"])).toEqual(["owner", "admin", "member", "engineer"]);
+	expect(assignableRoles(["admin"])).toEqual(["admin", "member", "engineer"]);
 	expect(assignableRoles(["member"])).toEqual([]);
 });
 

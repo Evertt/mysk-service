@@ -252,7 +252,12 @@ describe("roles and removal", () => {
 		// Field names are namespaced, e.g. `memberId/abc123/changeRole`.
 		const has = (f: (typeof forms)[number], field: string) =>
 			f.fields.some(([name]) => name.split("/")[0] === field);
-		const changeForm = forms.find((f) => has(f, "memberId"))!;
+		// Pat the planner's row, whose role is member.
+		const changeForm = forms.find(
+			(f) =>
+				has(f, "memberId") &&
+				f.fields.some(([name, value]) => name.split("/")[0] === "role" && value === "member"),
+		)!;
 		const inviteForm = forms.find((f) => has(f, "email"))!;
 		expect(changeForm.fields.map(([name, value]) => [name.split("/")[0], value])).toContainEqual([
 			"role",

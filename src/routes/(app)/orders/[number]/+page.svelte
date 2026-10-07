@@ -23,6 +23,7 @@
 	import OrderTags from "../order-tags.svelte";
 	import { deleteOrder, getOrder } from "../orders.remote.js";
 	import type { PageProps } from "./$types";
+	import WorkReport from "./work-report.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -220,6 +221,8 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<WorkReport number={order.number} />
 
 		<Card.Root>
 			<Card.Header>

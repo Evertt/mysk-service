@@ -3,10 +3,12 @@ import { getRequestEvent } from "$app/server";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { organization } from "better-auth/plugins/organization";
+import { adminAc, memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { sql } from "drizzle-orm";
 
 import { INVITATION_EXPIRES_IN } from "#lib/members.ts";
+import type { MemberRole } from "#lib/roles.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitationMail } from "#lib/server/invitation-mail.ts";
 import { sendMail } from "#lib/server/mail.ts";
@@ -44,6 +46,13 @@ export const auth = betterAuth({
 		organization({
 			allowUserToCreateOrganization: false,
 			disableOrganizationDeletion: true,
+			// better-auth's roles plus field engineers, who may manage nothing (see `#lib/roles.ts`).
+			roles: {
+				owner: ownerAc,
+				admin: adminAc,
+				member: memberAc,
+				engineer: memberAc,
+			} satisfies Record<MemberRole, unknown>,
 			invitationExpiresIn: INVITATION_EXPIRES_IN,
 			sendInvitationEmail: async ({ id, email, role, organization, inviter, invitation }) => {
 				const origin = ORIGIN || getRequestEvent().url.origin;
