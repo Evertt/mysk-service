@@ -475,6 +475,90 @@ describe("in North", () => {
 		expect(await orderId(quote, north.id)).toBeUndefined();
 		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
 	});
+
+	describe("an invoiced order", () => {
+		/** The first of North's invoiced orders, and a completed one that can still be changed. */
+		let invoiced: { id: number; number: string };
+		let completed: { id: number; number: string };
+
+		test("has no edit or delete, and its edit page says why", async () => {
+			const first = (status: string) =>
+				rows<{ id: number; number: string }>(
+					`select id, number from "order" where organization_id = ? and status = ?
+					 order by id limit 1`,
+					[north.id, status],
+				).then(([row]) => row);
+			[invoiced, completed] = [await first("invoiced"), await first("completed")];
+			const { page } = app;
+			await app.go(`/orders/${invoiced.number}`);
+			expect(await page.getByRole("link", { name: "Edit" }).count()).toBe(0);
+			expect(await page.getByRole("button", { name: "Delete" }).count()).toBe(0);
+
+			await app.go(`/orders/${invoiced.number}/edit`);
+			await page.getByText(`${invoiced.number} is invoiced`).waitFor();
+			expect(await page.getByRole("button", { name: "Save order" }).count()).toBe(0);
+		});
+
+		test("isn't a status to choose in the form", async () => {
+			const { page } = app;
+			await app.go(`/orders/${completed.number}/edit`);
+			const options = await page.getByLabel("Status").locator("option").allInnerTexts();
+			expect(options).toContain("Completed");
+			expect(options).not.toContain("Invoiced");
+		});
+
+		test("can't be chosen through a tampered form", async () => {
+			const { page } = app;
+			const before = await snapshot(completed.id);
+			await page.evaluate(() =>
+				document
+					.querySelector<HTMLSelectElement>('select[name^="status"]')!
+					.add(new Option("Invoiced", "invoiced")),
+			);
+			await page.getByLabel("Status").selectOption("invoiced");
+			await app.submit(page.getByRole("button", { name: "Save order" }));
+			expect(await app.issues()).not.toEqual([]);
+			expect(app.path()).toBe(`/orders/${completed.number}/edit`);
+			expect(await snapshot(completed.id)).toEqual(before);
+		});
+
+		test("saving another order's form with its id is refused", async () => {
+			const { page } = app;
+			await app.go(`/orders/${completed.number}/edit`);
+			const before = [await snapshot(invoiced.id), await snapshot(completed.id)];
+			await page.evaluate((id) => {
+				document.querySelector<HTMLInputElement>('form input[type="hidden"][name^="id/"]')!.value =
+					String(id);
+			}, invoiced.id);
+			await page.getByLabel("Labour (hours)").fill("99");
+			await app.submit(page.getByRole("button", { name: "Save order" }));
+			expect(await app.issues()).toContainEqual(
+				expect.stringMatching(`${invoiced.number} is invoiced.*can't be changed`),
+			);
+			expect(app.path()).toBe(`/orders/${completed.number}/edit`);
+			expect([await snapshot(invoiced.id), await snapshot(completed.id)]).toEqual(before);
+		});
+
+		test("deleting another order with its id is refused", async () => {
+			const { page } = app;
+			await app.go(`/orders/${completed.number}`);
+			const before = await snapshot(invoiced.id);
+			await page.getByRole("button", { name: "Delete" }).click();
+			const dialog = page.getByRole("alertdialog");
+			await dialog.waitFor();
+			await page.evaluate((id) => {
+				document.querySelector<HTMLInputElement>('[role="alertdialog"] input[name^="id/"]')!.value =
+					String(id);
+			}, invoiced.id);
+			await app.submit(dialog.getByRole("button", { name: "Delete" }));
+			expect(await app.issues()).toContainEqual(
+				expect.stringMatching(`${invoiced.number} is invoiced.*can't be deleted`),
+			);
+			expect(await snapshot(invoiced.id)).toEqual(before);
+			expect(await orderId(completed.number, north.id)).toBe(completed.id);
+			await page.keyboard.press("Escape");
+		});
+	});
 });
 
 describe("in South", () => {

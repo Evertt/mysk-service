@@ -79,6 +79,24 @@ export const isDoneOrder = (status: OrderStatus) =>
 	(doneOrderStatuses as readonly OrderStatus[]).includes(status);
 
 /**
+ * The statuses an order can be given by hand, e.g. in the order form. Not `invoiced`: an order is
+ * invoiced when an invoice for it is issued, and completed again if that invoice is voided.
+ */
+export const manualOrderStatuses = [
+	"quote",
+	"scheduled",
+	"in_progress",
+	"completed",
+	"cancelled",
+] as const satisfies OrderStatus[];
+
+/**
+ * Whether an order can still be changed or deleted. Not once it's invoiced: it's on an invoice
+ * that has been sent, with its amounts, so its status, lines, hours and engineer stay as they are.
+ */
+export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
+
+/**
  * Orders whose material lines hold stock: from scheduled on. A quote's lines are only a proposal,
  * and a cancelled order gives its materials back.
  */

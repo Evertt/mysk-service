@@ -6,9 +6,12 @@ import {
 	fitsUnit,
 	holdsStock,
 	isDoneOrder,
+	isEditableOrder,
 	isOpenOrder,
 	lineTotal,
+	manualOrderStatuses,
 	openOrderStatuses,
+	type OrderStatus,
 	orderStatuses,
 	quantityStep,
 } from "./models.ts";
@@ -36,6 +39,14 @@ test("every order status is either open, done or cancelled", () => {
 		expect(groups.filter(Boolean), status).toHaveLength(1);
 	}
 	expect(openOrderStatuses.length + doneOrderStatuses.length + 1).toBe(orderStatuses.length);
+});
+
+test("an invoiced order can't be changed, nor be made invoiced by hand", () => {
+	expect(orderStatuses.filter((status) => !isEditableOrder(status))).toEqual(["invoiced"]);
+	const manual: readonly OrderStatus[] = manualOrderStatuses;
+	expect(orderStatuses.filter((status) => !manual.includes(status))).toEqual(["invoiced"]);
+	// Every status that can be chosen can be changed again.
+	expect(manualOrderStatuses.every(isEditableOrder)).toBe(true);
 });
 
 test("orders hold stock from scheduled on, but not as a quote or once cancelled", () => {

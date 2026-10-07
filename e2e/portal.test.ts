@@ -385,7 +385,9 @@ async function signedInPage(email: string) {
  */
 async function captureDelete(office: Page) {
 	const number = await value<string>(
-		`select number from "order" where organization_id = ? order by id limit 1`,
+		// One that isn't invoiced, which can't be deleted.
+		`select number from "order" where organization_id = ? and status <> 'invoiced'
+		 order by id limit 1`,
 		[north.id],
 	);
 	await office.goto(`${baseURL}/orders/${number}`);

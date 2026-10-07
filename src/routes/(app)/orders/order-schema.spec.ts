@@ -57,6 +57,11 @@ test("the type, status and priority are chosen from the lists", () => {
 	expect(result.issues).toHaveLength(3);
 });
 
+test("an order can't be made invoiced by hand", () => {
+	expect(parse({ ...form, status: "invoiced" })).toHaveProperty("issues");
+	expect(parse({ ...form, status: "completed" })).toHaveProperty("value.status", "completed");
+});
+
 describe("laborHours", () => {
 	test("may be fractional or zero", () => {
 		expect(parse({ ...form, laborHours: 0 })).toHaveProperty("value.laborHours", 0);

@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { lineTotal } from "#lib/models.js";
+import { isDoneOrder, isEditableOrder, lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
@@ -182,6 +182,10 @@ export const getOrderFormOptions = query(async () => {
 
 type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 
+/** Why an order can't be changed or deleted (see `isEditableOrder`). */
+const notEditable = (number: string, change: "changed" | "deleted") =>
+	`${number} is invoiced: it's on an invoice that has been sent, so it can't be ${change}`;
+
 /**
  * Creates or updates an order in the current tenant and replaces its lines; returns its number.
  * The lines take their materials from stock while the status holds stock (see `holdsStock`); if
@@ -190,7 +194,7 @@ type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { organizationId } = requireMember();
 	const { lines, ...fields } = input;
-	const completed = fields.status === "completed" || fields.status === "invoiced";
+	const completed = isDoneOrder(fields.status);
 
 	return db.transaction(async (tx) => {
 		const existing = id
@@ -200,6 +204,9 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 				})
 			: undefined;
 		if (id && !existing) error(404, "Order not found");
+		if (existing && !isEditableOrder(existing.status)) {
+			invalid(notEditable(existing.number, "changed"));
+		}
 
 		const values = {
 			...fields,
@@ -327,6 +334,7 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 			with: { lines: true },
 		});
 		if (!found) error(404, "Order not found");
+		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "deleted"));
 		// What it held goes back into stock. The stock history keeps the order's number, but no
 		// longer refers to the order itself.
 		await moveOrderStock(tx, found, found, { status: found.status, lines: [] }, "Order deleted");

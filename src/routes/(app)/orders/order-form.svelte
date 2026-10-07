@@ -15,8 +15,8 @@
 	import { formatCents, humanize } from "#lib/format.js";
 	import {
 		lineTotal,
+		manualOrderStatuses,
 		orderPriorities,
-		orderStatuses,
 		orderTypes,
 		quantityStep,
 	} from "#lib/models.js";
@@ -172,7 +172,7 @@
 					field={fields.status}
 					label="Status"
 					value={order?.status ?? "quote"}
-					options={enumOptions(orderStatuses)}
+					options={enumOptions(manualOrderStatuses)}
 				/>
 				<SelectField
 					field={fields.engineerId}
@@ -294,6 +294,8 @@
 		</Card.Content>
 	</Card.Root>
 
+	<!-- E.g. when the order was invoiced meanwhile, and can't be changed any more. -->
+	<Field.FieldError errors={fields.issues()} />
 	<FormActions
 		pending={form.pending}
 		submitLabel={order ? "Save order" : "Create order"}

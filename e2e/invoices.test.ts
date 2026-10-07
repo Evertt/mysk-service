@@ -459,17 +459,32 @@ describe("in North", () => {
 		expect(await page.getByRole("button", { name: "Create draft" }).count()).toBe(1);
 	});
 
-	test("an order on an invoice can't be deleted", async () => {
+	test("an invoiced order can't be edited or deleted", async () => {
 		const { page } = app;
 		const [order] = await rows<{ number: string }>(`select number from "order" where id = ?`, [
 			orderIds[0],
 		]);
 		await app.go(`/orders/${order.number}`);
+		expect(await page.getByRole("link", { name: "Edit" }).count()).toBe(0);
+		expect(await page.getByRole("button", { name: "Delete" }).count()).toBe(0);
+		await app.go(`/orders/${order.number}/edit`);
+		await page.getByText(`${order.number} is invoiced`).waitFor();
+		expect(await page.getByRole("button", { name: "Save order" }).count()).toBe(0);
+	});
+
+	test("an order on a draft can't be deleted", async () => {
+		const { page } = app;
+		const [order] = await rows<{ id: number; number: string }>(
+			`select o.id, o.number from "order" o join invoice_line l on l.order_id = o.id
+			 where l.invoice_id = ? order by o.id limit 1`,
+			[northDraft.id],
+		);
+		await app.go(`/orders/${order.number}`);
 		await page.getByRole("button", { name: "Delete" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await app.submit(dialog.getByRole("button", { name: "Delete" }));
 		expect(await app.issues()).toContainEqual(expect.stringMatching(/such as an invoice/));
-		expect(await value(`select count(*) from "order" where id = ?`, [orderIds[0]])).toBe(1);
+		expect(await value(`select count(*) from "order" where id = ?`, [order.id])).toBe(1);
 		await page.keyboard.press("Escape");
 	});
 });
