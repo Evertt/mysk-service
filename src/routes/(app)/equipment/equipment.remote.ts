@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
@@ -130,7 +131,14 @@ export const createEquipment = form(v.object(equipmentFields), async (input, iss
 	const { organizationId } = requireMember();
 	const problems = await checkUnit(undefined, input);
 	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
-	await db.insert(equipment).values({ ...input, organizationId });
+	await db.transaction(async (tx) => {
+		const [created] = await tx
+			.insert(equipment)
+			.values({ ...input, organizationId })
+			.returning({ id: equipment.id });
+		const subject = { type: "equipment", id: created.id, label: input.serialNumber };
+		await recordActivity(tx, { action: "created", subject });
+	});
 	void getEquipmentList().refresh();
 	redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
 });
@@ -150,10 +158,14 @@ export const updateEquipment = form(
 		// current customer too; the database refuses the move while they exist.
 		await refuseIfReferenced(
 			() =>
-				db
-					.update(equipment)
-					.set(input)
-					.where(and(eq(equipment.id, id), inTenant(equipment))),
+				db.transaction(async (tx) => {
+					await tx
+						.update(equipment)
+						.set(input)
+						.where(and(eq(equipment.id, id), inTenant(equipment)));
+					const subject = { type: "equipment", id, label: input.serialNumber };
+					await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
+				}),
 			issue.customerId(
 				"Can't move this unit to another customer while its current customer's records, such as a service contract, include it. Remove it from those first.",
 			),
@@ -167,7 +179,7 @@ export const updateEquipment = form(
 export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
 	const existing = await db.query.equipment.findFirst({
-		columns: { id: true },
+		columns: { id: true, serialNumber: true },
 		where: and(eq(equipment.id, id), inTenant(equipment)),
 	});
 	if (!existing) error(404, "Equipment not found");
@@ -181,7 +193,12 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 		);
 	}
 	await refuseIfReferenced(
-		() => db.delete(equipment).where(and(eq(equipment.id, id), inTenant(equipment))),
+		() =>
+			db.transaction(async (tx) => {
+				await tx.delete(equipment).where(and(eq(equipment.id, id), inTenant(equipment)));
+				const subject = { type: "equipment", id, label: existing.serialNumber };
+				await recordActivity(tx, { action: "deleted", subject });
+			}),
 		"Other records still refer to this unit. Remove those first.",
 	);
 	void getEquipmentList().refresh();

@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
@@ -129,7 +130,14 @@ export const createCustomer = form(v.object(customerFields), async (input, issue
 			.from(customer)
 			.where(inTenant(customer));
 		const code = `CUST-${String((last ?? 0) + 1).padStart(4, "0")}`;
-		await tx.insert(customer).values({ ...input, organizationId, code });
+		const [created] = await tx
+			.insert(customer)
+			.values({ ...input, organizationId, code })
+			.returning({ id: customer.id });
+		await recordActivity(tx, {
+			action: "created",
+			subject: { type: "customer", id: created.id, label: code },
+		});
 		return code;
 	});
 	void getCustomers().refresh();
@@ -141,7 +149,6 @@ export const updateCustomer = form(
 	async ({ id, ...input }, issue) => {
 		requireMember();
 		const existing = await db.query.customer.findFirst({
-			columns: { code: true },
 			where: and(eq(customer.id, id), inTenant(customer)),
 		});
 		if (!existing) error(404, "Customer not found");
@@ -149,10 +156,14 @@ export const updateCustomer = form(
 			invalid(issue.country("Choose a country from the list"));
 		}
 
-		await db
-			.update(customer)
-			.set(input)
-			.where(and(eq(customer.id, id), inTenant(customer)));
+		await db.transaction(async (tx) => {
+			await tx
+				.update(customer)
+				.set(input)
+				.where(and(eq(customer.id, id), inTenant(customer)));
+			const subject = { type: "customer", id, label: existing.code };
+			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
+		});
 		void getCustomers().refresh();
 		void getCustomer(existing.code).refresh();
 		redirect(303, `/customers/${existing.code}`);
@@ -164,7 +175,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
 	const existing = await db.query.customer.findFirst({
-		columns: { id: true },
+		columns: { id: true, code: true },
 		where: and(eq(customer.id, id), inTenant(customer)),
 	});
 	if (!existing) error(404, "Customer not found");
@@ -190,7 +201,12 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 	}
 
 	await refuseIfReferenced(
-		() => db.delete(customer).where(and(eq(customer.id, id), inTenant(customer))),
+		() =>
+			db.transaction(async (tx) => {
+				await tx.delete(customer).where(and(eq(customer.id, id), inTenant(customer)));
+				const subject = { type: "customer", id, label: existing.code };
+				await recordActivity(tx, { action: "deleted", subject });
+			}),
 		"Other records still refer to this customer, such as service contracts. Remove those first.",
 	);
 	void getCustomers().refresh();

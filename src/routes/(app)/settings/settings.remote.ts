@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { modules } from "#lib/modules.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { member, organizationModule, user } from "#lib/server/db/schema.js";
 import { requireMember, requireRole } from "#lib/server/session.js";
@@ -47,21 +48,29 @@ export const setModule = form(
 	}),
 	async ({ moduleId, enabled }) => {
 		const { organizationId } = requireRole(...managers);
-		if (enabled === "on") {
-			await db
-				.insert(organizationModule)
-				.values({ organizationId, moduleId })
-				.onConflictDoNothing();
-		} else {
-			await db
-				.delete(organizationModule)
-				.where(
-					and(
-						eq(organizationModule.organizationId, organizationId),
-						eq(organizationModule.moduleId, moduleId),
-					),
-				);
-		}
+		await db.transaction(async (tx) => {
+			const changed =
+				enabled === "on"
+					? await tx
+							.insert(organizationModule)
+							.values({ organizationId, moduleId })
+							.onConflictDoNothing()
+							.returning()
+					: await tx
+							.delete(organizationModule)
+							.where(
+								and(
+									eq(organizationModule.organizationId, organizationId),
+									eq(organizationModule.moduleId, moduleId),
+								),
+							)
+							.returning();
+			// Only a change of state: enabling an enabled module changes nothing.
+			if (!changed.length) return;
+			const label = modules.find((m) => m.id === moduleId)?.label ?? moduleId;
+			const action = enabled === "on" ? "module_enabled" : "module_disabled";
+			await recordActivity(tx, { action, subject: { type: "module", id: moduleId, label } });
+		});
 		// The tenant was loaded at the start of this request; bring it up to date before the
 		// sidebar's query is refreshed with it.
 		const { tenant } = getRequestEvent().locals;

@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -246,6 +247,11 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 				}),
 			);
 		}
+		// Its lines are logged by `saveOrderLines`; the completion date follows from the status.
+		const subject = { type: "order", id: orderId, label: number };
+		const action = existing ? "updated" : "created";
+		const ignore = ["completedAt"];
+		await recordActivity(tx, { action, subject, before: existing, after: values, ignore });
 		return number;
 	});
 }
@@ -335,6 +341,10 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 			.set({ orderId: null })
 			.where(and(eq(stockMovement.orderId, found.id), inTenant(stockMovement)));
 		await tx.delete(order).where(and(eq(order.id, found.id), inTenant(order)));
+		await recordActivity(tx, {
+			action: "deleted",
+			subject: { type: "order", id, label: found.number },
+		});
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
 	await refuseIfReferenced(

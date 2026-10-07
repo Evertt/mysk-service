@@ -20,6 +20,9 @@ import FileCheckIcon from "@lucide/svelte/icons/file-check";
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
+import type { SubjectType } from "#lib/activity.js";
+import { contractSubjects } from "#lib/components/contracts/activity.js";
+
 /** The places on core pages where modules can add components, with the props each passes. */
 export interface SlotProps {
 	/** Cards on the dashboard, below the headline numbers (laid out in two columns). */
@@ -50,6 +53,8 @@ export interface AppModule {
 	 * nothing to say.
 	 */
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
+	/** How the activity log reads for the module's records, by subject type (`#lib/activity.ts`). */
+	subjects?: Record<string, SubjectType>;
 }
 
 export const modules = [
@@ -65,6 +70,7 @@ export const modules = [
 			order: () => import("#lib/components/contracts/order-coverage.svelte"),
 			equipment: () => import("#lib/components/contracts/equipment-coverage.svelte"),
 		},
+		subjects: contractSubjects,
 	},
 	{
 		id: "invoicing",

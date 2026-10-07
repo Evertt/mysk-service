@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import CustomerSegmentBadge from "#lib/components/customers/segment-badge.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
@@ -309,5 +310,7 @@
 				{/if}
 			</Card.Content>
 		</Card.Root>
+
+		<ActivityCard type="order" id={order.id} />
 	</div>
 </div>

@@ -5,6 +5,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import { fitsUnit, type OrderStatus } from "#lib/models.js";
+import { recordOrderLines } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
 import { inTenant, requireTenant } from "#lib/server/session.js";
@@ -55,8 +56,9 @@ export async function checkLines(lines: LineInput[]): Promise<LineProblem[]> {
  * Replaces an order's lines with `after.lines` and takes or returns stock for the change from
  * `before` (its status and lines as stored, or none for a new order) to `after` (see
  * `moveOrderStock`). Lines keep the price they were quoted at; new materials get today's price.
- * Call it in the transaction that saves the order, after checking the lines with `checkLines`.
- * Throws an `OrderStockShortage` if there isn't enough of a material.
+ * Logs the lines that changed against the order (`recordOrderLines`). Call it in the transaction
+ * that saves the order, after checking the lines with `checkLines`. Throws an
+ * `OrderStockShortage` if there isn't enough of a material.
  */
 export async function saveOrderLines(
 	tx: Transaction,
@@ -98,4 +100,6 @@ export async function saveOrderLines(
 	}
 
 	await moveOrderStock(tx, order, before ?? { status: after.status, lines: [] }, after);
+	const subject = { type: "order", id: order.id, label: order.number };
+	await recordOrderLines(tx, subject, before?.lines ?? [], lines);
 }

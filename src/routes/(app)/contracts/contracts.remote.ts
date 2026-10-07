@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { formatDate } from "#lib/format.js";
 import { id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, requireModule } from "#lib/server/session.js";
@@ -197,8 +198,8 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 	return db.transaction(async (tx) => {
 		const existing = id
 			? await tx.query.contract.findFirst({
-					columns: { id: true, number: true },
 					where: and(eq(contract.id, id), inTenant(contract)),
+					with: { coverage: { columns: { equipmentId: true } } },
 				})
 			: null;
 		if (id && !existing) error(404, "Contract not found");
@@ -238,6 +239,14 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 				equipmentId,
 			})),
 		);
+		const covered = (ids: number[]) => [...new Set(ids)].sort((a, b) => a - b);
+		const before = existing && {
+			...existing,
+			equipmentIds: covered(existing.coverage.map((row) => row.equipmentId)),
+		};
+		const after = { ...fields, equipmentIds: covered(equipmentIds) };
+		const subject = { type: "contract", id: contractId, label: number };
+		await recordActivity(tx, { action: existing ? "updated" : "created", subject, before, after });
 		return number;
 	});
 }
@@ -272,12 +281,14 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 	// Nothing references a contract; its coverage goes with it.
 	await db.transaction(async (tx) => {
 		const found = await tx.query.contract.findFirst({
-			columns: { id: true },
+			columns: { id: true, number: true },
 			where: and(eq(contract.id, id), inTenant(contract)),
 		});
 		if (!found) error(404, "Contract not found");
 		await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, id));
 		await tx.delete(contract).where(and(eq(contract.id, id), inTenant(contract)));
+		const subject = { type: "contract", id, label: found.number };
+		await recordActivity(tx, { action: "deleted", subject });
 	});
 	void getContracts().refresh();
 	redirect(303, "/contracts");

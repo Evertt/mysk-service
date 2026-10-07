@@ -802,6 +802,7 @@ const count = (table: string, rows: unknown[]) =>
 
 await db.transaction(async (tx) => {
 	for (const table of [
+		schema.activity,
 		schema.invoiceLine,
 		schema.invoice,
 		schema.invoicingSettings,
@@ -930,6 +931,25 @@ await db.transaction(async (tx) => {
 		await insertAll(invoicing.invoicingSettings, (chunk) =>
 			tx.insert(schema.invoicingSettings).values(chunk),
 		);
+		// Who created the latest orders, so the activity log starts with some history: the office
+		// staff, not the field engineers.
+		const members = demoUsers.filter((u) =>
+			u.memberships.some((m) => m.organizationId === tenant.id && m.role !== "engineer"),
+		);
+		const created = rows.orders
+			.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+			.slice(-8)
+			.map((row, i) => ({
+				organizationId,
+				userName: members[i % members.length].name,
+				action: "created" as const,
+				subjectType: "order",
+				subjectId: String(row.id),
+				subjectLabel: row.number,
+				createdAt: row.createdAt,
+			}));
+		await tx.insert(schema.activity).values(created);
+		count("activity", created);
 
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;

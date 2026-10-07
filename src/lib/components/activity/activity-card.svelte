@@ -1,0 +1,53 @@
+<!--
+	@component
+	The "Activity" card on a record's page: the latest changes to it (and to its parts, e.g. an
+	order's lines), with a link to all of them in the activity feed.
+-->
+<script lang="ts">
+	import { resolve } from "$app/paths";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+
+	import ActivityList from "./activity-list.svelte";
+	import { getSubjectActivity } from "./activity.remote.js";
+
+	let {
+		type,
+		id,
+		description = "The latest changes, newest first.",
+	}: {
+		/** The subject type, e.g. `order` (see `#lib/activity.ts`). */
+		type: string;
+		id: string | number;
+		description?: string;
+	} = $props();
+
+	const all = $derived(
+		`${resolve("/(app)/activity")}?${new URLSearchParams({ type, id: String(id) })}`,
+	);
+</script>
+
+<Card.Root data-card="activity">
+	<Card.Header>
+		<Card.Title>Activity</Card.Title>
+		<Card.Description>{description}</Card.Description>
+		<Card.Action>
+			<Button variant="outline" size="sm" href={all}>
+				View all
+				<ArrowRightIcon data-icon="inline-end" />
+			</Button>
+		</Card.Action>
+	</Card.Header>
+	<Card.Content>
+		<!-- Loads on its own, so the page doesn't wait for it. -->
+		<svelte:boundary>
+			<ActivityList
+				entries={await getSubjectActivity({ type, id: String(id) })}
+				label="Activity log"
+				empty="No changes have been made here yet."
+			/>
+			{#snippet pending()}
+				<Skeleton class="h-16 w-full" />
+			{/snippet}
+		</svelte:boundary>
+	</Card.Content>
+</Card.Root>

@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { date, id } from "#lib/schema.js";
+import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
@@ -94,7 +95,7 @@ type Problem = { field?: "engineerId"; message: string };
 function planInTransaction(input: Plan) {
 	return db.transaction(async (tx): Promise<Problem | undefined> => {
 		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true, status: true },
+			columns: { id: true, number: true, status: true, engineerId: true, scheduledFor: true },
 			where: and(eq(order.id, input.id), inTenant(order)),
 			with: { lines: true },
 		});
@@ -112,12 +113,18 @@ function planInTransaction(input: Plan) {
 				return { field: "engineerId", message: `${assignee.name} is no longer active` };
 			}
 		}
-		const status = plannedStatus(found.status, input.engineerId);
+		const planned = {
+			engineerId: input.engineerId,
+			scheduledFor: atTime(input.day, input.time),
+			status: plannedStatus(found.status, input.engineerId),
+		};
 		await tx
 			.update(order)
-			.set({ engineerId: input.engineerId, scheduledFor: atTime(input.day, input.time), status })
+			.set(planned)
 			.where(and(eq(order.id, input.id), inTenant(order)));
-		await moveOrderStock(tx, found, found, { status, lines: found.lines });
+		await moveOrderStock(tx, found, found, { status: planned.status, lines: found.lines });
+		const subject = { type: "order", id: input.id, label: found.number };
+		await recordActivity(tx, { action: "scheduled", subject, before: found, after: planned });
 		return undefined;
 	});
 }

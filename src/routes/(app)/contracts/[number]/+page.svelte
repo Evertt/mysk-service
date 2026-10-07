@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import { formatTerm, levels } from "#lib/components/contracts/display.js";
 	import LevelBadge from "#lib/components/contracts/level-badge.svelte";
 	import ContractStatusBadge from "#lib/components/contracts/status-badge.svelte";
@@ -212,5 +213,7 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<ActivityCard type="contract" id={contract.id} />
 	</div>
 </div>

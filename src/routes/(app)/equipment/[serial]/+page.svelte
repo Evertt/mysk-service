@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
+	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 	import { categories } from "#lib/components/equipment/display.js";
@@ -118,5 +119,7 @@
 		</Card.Root>
 
 		<ModuleSlots name="equipment" props={{ serialNumber: unit.serialNumber }} />
+
+		<ActivityCard type="equipment" id={unit.id} />
 	</div>
 </div>

@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import {
+	activityActions,
 	contractLevels,
 	customerSegments,
 	engineerSpecialties,
@@ -579,3 +580,46 @@ export const invoiceLineRelations = relations(invoiceLine, ({ one }) => ({
 		references: [order.organizationId, order.id],
 	}),
 }));
+
+// --- Activity log ---------------------------------------------------------------------------------
+
+/** An update's changed fields with their values before and after, e.g. `{ status: ["quote", "scheduled"] }`. */
+export type ActivityChanges = Record<string, [unknown, unknown]>;
+
+/**
+ * Who did what to which record, and when: one row per change, written by `recordActivity()` in
+ * `#lib/server/activity.ts` in the same transaction as the change. The subject (and the optional
+ * parent, e.g. the order of an order line) is a type and id without a foreign key, so it can be
+ * any table's, a module's included, and outlives the record: its label and the user's name are
+ * kept as they were. Rows are never changed afterwards.
+ */
+export const activity = sqliteTable(
+	"activity",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		/** Cleared when the user is deleted; `userName` keeps who it was. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		userName: text("user_name").notNull(),
+		action: text("action", { enum: activityActions }).notNull(),
+		/** E.g. `order`, see `subjectTypes` in `#lib/activity.ts`. */
+		subjectType: text("subject_type").notNull(),
+		/** The record's id, as text (the auth tables' ids are text). */
+		subjectId: text("subject_id").notNull(),
+		/** How the record read at the time, e.g. its order number or customer code. */
+		subjectLabel: text("subject_label").notNull(),
+		parentType: text("parent_type"),
+		parentId: text("parent_id"),
+		parentLabel: text("parent_label"),
+		/** The fields an update changed, see `ActivityChanges`. */
+		changes: text("changes", { mode: "json" }).$type<ActivityChanges>(),
+		/** Anything else worth saying, e.g. the note with received stock. */
+		note: text("note"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("activity_organization").on(table.organizationId, table.id),
+		index("activity_subject").on(table.organizationId, table.subjectType, table.subjectId),
+		index("activity_parent").on(table.organizationId, table.parentType, table.parentId),
+	],
+);
