@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
-import adapter from "@sveltejs/adapter-auto";
+import adapter from "@sveltejs/adapter-node";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import type { ImportsMap } from "unplugin-auto-import/types";
@@ -106,9 +106,7 @@ export default defineConfig({
 				experimental: { async: true },
 			},
 
-			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+			// A Node server (`node build`), next to its SQLite database file. See "Deploying" in README.md.
 			adapter: adapter(),
 			experimental: { remoteFunctions: true },
 		}),

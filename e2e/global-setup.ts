@@ -22,6 +22,8 @@ export interface Lane {
 	baseURL: string;
 	/** Its database, a `file:` URL. */
 	databaseURL: string;
+	/** The file the app writes its mail to (`MAIL_OUTBOX`), one JSON object per line. */
+	outbox: string;
 }
 
 declare module "vitest" {
@@ -45,18 +47,21 @@ function freePort() {
 	});
 }
 
-/** Starts the app on a free port with its own database; resolves once it answers. */
-async function startServer(databaseURL: string) {
+/**
+ * Starts the app on a free port with its own database and mail outbox; resolves once it answers.
+ */
+async function startServer(databaseURL: string, outbox: string) {
 	const port = await freePort();
 	const baseURL = `http://localhost:${port}`;
 	let output = "";
-	// Variables set here win over the ones in .env (BETTER_AUTH_SECRET still comes from there).
+	// Variables set here win over the ones in .env (BETTER_AUTH_SECRET still comes from there). The
+	// outbox also keeps mail from going out through an SMTP_URL in .env.
 	// Detached: its own process group, so stopping it also stops the Vite process `vp` starts.
 	const server = spawn(
 		"node_modules/.bin/vp",
 		[dev ? "dev" : "preview", "--port", String(port), "--strictPort"],
 		{
-			env: { ...process.env, DATABASE_URL: databaseURL, ORIGIN: baseURL },
+			env: { ...process.env, DATABASE_URL: databaseURL, ORIGIN: baseURL, MAIL_OUTBOX: outbox },
 			stdio: ["ignore", "pipe", "pipe"],
 			detached: true,
 		},
@@ -117,7 +122,8 @@ export default async function setup(project: TestProject) {
 			const database = join(folder, `lane-${i + 1}.db`);
 			copyFileSync(template, database);
 			const databaseURL = `file:${database}`;
-			return { databaseURL, ...(await startServer(databaseURL)) };
+			const outbox = join(folder, `lane-${i + 1}-outbox.jsonl`);
+			return { databaseURL, outbox, ...(await startServer(databaseURL, outbox)) };
 		}),
 	);
 	const servers = started.flatMap((result) =>
@@ -135,7 +141,7 @@ export default async function setup(project: TestProject) {
 
 	project.provide(
 		"lanes",
-		servers.map(({ baseURL, databaseURL }) => ({ baseURL, databaseURL })),
+		servers.map(({ baseURL, databaseURL, outbox }) => ({ baseURL, databaseURL, outbox })),
 	);
 	return teardown;
 }

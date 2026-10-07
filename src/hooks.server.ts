@@ -65,9 +65,15 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-/** Paths anyone may open: the login page, better-auth's endpoints and SvelteKit's own assets. */
+/**
+ * Paths anyone may open: the login page, invitations (`/invite/[id]`), better-auth's endpoints and
+ * SvelteKit's own assets.
+ */
 const isPublic = (pathname: string) =>
-	pathname === "/login" || pathname.startsWith("/api/auth/") || pathname.startsWith("/_app/");
+	pathname === "/login" ||
+	pathname.startsWith("/invite/") ||
+	pathname.startsWith("/api/auth/") ||
+	pathname.startsWith("/_app/");
 
 /**
  * Sends signed-out visitors to the login page, and signed-in ones away from it. This only guards
