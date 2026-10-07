@@ -6,14 +6,12 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate, humanize } from "#lib/format.js";
 
 	import { deleteCustomer, getCustomer } from "../customers.remote.js";
 	import type { PageProps } from "./$types";
+	import RecentActivity from "./recent-activity.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -157,54 +155,7 @@
 			</Card.Content>
 		</Card.Root>
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Orders</Card.Title>
-				<Card.Description>All work for this customer, most recent first.</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				{#if customer.orders.length}
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Order</Table.Head>
-								<Table.Head>Type</Table.Head>
-								<Table.Head>Status</Table.Head>
-								<Table.Head>Scheduled</Table.Head>
-								<Table.Head class="text-right">Total</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each customer.orders as order (order.id)}
-								<Table.Row>
-									<Table.Cell><OrderLink number={order.number} /></Table.Cell>
-									<Table.Cell><TypeLabel type={order.type} /></Table.Cell>
-									<Table.Cell><StatusBadge status={order.status} /></Table.Cell>
-									<Table.Cell class="tabular-nums">
-										{#if order.scheduledFor}
-											{formatDate(order.scheduledFor)}
-										{:else}
-											<span class="text-muted-foreground">—</span>
-										{/if}
-									</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">{formatCents(order.total)}</Table.Cell
-									>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				{:else}
-					<Empty.Root class="p-6">
-						<Empty.Header>
-							<Empty.Title>No orders</Empty.Title>
-							<Empty.Description
-								>Nothing has been quoted or done for this customer yet.</Empty.Description
-							>
-						</Empty.Header>
-					</Empty.Root>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+		<RecentActivity code={customer.code} />
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">

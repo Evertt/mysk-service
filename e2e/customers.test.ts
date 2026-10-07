@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { formatDate } from "../src/lib/format.ts";
 import { countIn, nextCode, organizations, rows, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
@@ -13,6 +14,22 @@ const customerId = (code: string, organizationId: string) =>
 		organizationId,
 	]);
 const byName = (a: string, b: string) => a.localeCompare(b);
+
+/** The order numbers in the detail page's recent activity. */
+const activity = () =>
+	app.page
+		.getByRole("list", { name: "Recent activity" })
+		.locator('a[href^="/orders/"]')
+		.allInnerTexts();
+
+/** A customer's latest ten orders across all their equipment, newest first. */
+async function latestOrders(customerId: number) {
+	const found = await rows<{ number: string }>(
+		`select number from "order" where customer_id = ? order by created_at desc, id desc limit 10`,
+		[customerId],
+	);
+	return found.map((row) => row.number);
+}
 
 /** The names of an organization's customers, sorted. */
 async function namesIn(organizationId: string) {
@@ -166,11 +183,11 @@ describe("in North", () => {
 		expect(await equipment.locator("tbody tr a").first().getAttribute("href")).toMatch(
 			/^\/equipment\/[^/]+$/,
 		);
-		const history = page.locator('[data-slot="card"]', { hasText: "most recent first" });
-		expect(await history.locator("tbody tr").count()).toBe(orders);
-		expect(await history.locator("tbody tr a").first().getAttribute("href")).toMatch(
-			/^\/orders\/ORD-/,
-		);
+		expect(orders).toBeGreaterThan(10);
+		expect(await activity()).toEqual(await latestOrders(id));
+		expect(
+			await page.getByRole("link", { name: `View all ${orders} orders` }).getAttribute("href"),
+		).toBe("/orders?customer=CUST-0001");
 		expect(await page.locator('a[href^="mailto:"]').count()).toBe(1);
 		expect(await page.locator('a[href^="tel:"]').count()).toBe(1);
 	});
@@ -190,6 +207,64 @@ describe("in North", () => {
 		expect(app.path()).toBe("/customers/CUST-0001");
 		expect(await customerId("CUST-0001", north.id)).toBe(id);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
+	});
+
+	test("its recent activity links to all its orders in the orders list", async () => {
+		const { page } = app;
+		const id = await customerId("CUST-0001", north.id);
+		const name = await value<string>(`select name from customer where id = ?`, [id]);
+		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
+
+		await app.go("/customers/CUST-0001");
+		await page.getByRole("link", { name: `View all ${orders} orders` }).click();
+		await page.waitForURL((url) => url.search === "?customer=CUST-0001");
+		await page.waitForLoadState("networkidle");
+		await expect.poll(() => app.rowCount()).toBe(orders);
+		const customers = await bodyRows().locator("td:nth-child(3)").allInnerTexts();
+		expect(customers.length).toBeGreaterThan(0);
+		expect(customers.every((cell) => cell.includes("CUST-0001"))).toBe(true);
+
+		await page.getByRole("link", { name: `Customer: ${name}` }).click();
+		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
+		await page.waitForLoadState("networkidle");
+		await expect.poll(() => app.rowCount()).toBe(await countIn("order", north.id));
+	});
+
+	test("completing an order shows in the customer's recent activity", async () => {
+		const { page } = app;
+		const [open] = await rows<{ number: string; code: string }>(
+			`with recent as (
+				select o.*, row_number() over (
+					partition by o.customer_id order by o.created_at desc, o.id desc
+				) as position from "order" o where o.organization_id = ?
+			)
+			select r.number, c.code from recent r join customer c on c.id = r.customer_id
+			where r.position <= 10 and r.status in ('scheduled', 'in_progress') order by r.id limit 1`,
+			[north.id],
+		);
+		const row = () =>
+			page
+				.getByRole("list", { name: "Recent activity" })
+				.locator("li")
+				.filter({ has: page.getByRole("link", { name: open.number }) });
+		await app.go(`/customers/${open.code}`);
+		expect(await row().locator('[data-slot="badge"]').innerText()).not.toContain("Completed");
+
+		await app.go(`/orders/${open.number}/edit`);
+		await page.getByLabel("Status").selectOption("completed");
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${open.number}`);
+		expect(
+			await value(`select status from "order" where number = ? and organization_id = ?`, [
+				open.number,
+				north.id,
+			]),
+		).toBe("completed");
+
+		await app.go(`/customers/${open.code}`);
+		const shown = await row().innerText();
+		expect(shown).toContain("Completed");
+		expect(shown).toContain(`Completed ${formatDate(new Date())}`);
 	});
 
 	test("the detail page fits a phone screen", async () => {
@@ -249,6 +324,7 @@ describe("in North", () => {
 		target = await customerId(code, north.id);
 		expect(target).toBeDefined();
 		expect(await page.getByText("No equipment").count()).toBe(1);
+		expect(await page.getByText("No orders", { exact: true }).count()).toBe(1);
 		expect(await page.locator("h1 ~ [data-slot=badge]").innerText()).toContain("Mid-market");
 	});
 
@@ -338,10 +414,17 @@ describe("in South", () => {
 		}
 	});
 
+	test("the orders list doesn't show North's customers' orders by their code", async () => {
+		const only = await northOnly();
+		await app.go(`/orders?customer=${only}`);
+		expect(await app.rowCount()).toBe(0);
+	});
+
 	test("a code both have shows South's customer", async () => {
 		const [own] = await customer(await customerId("CUST-0001", south.id));
 		await app.go("/customers/CUST-0001");
 		expect(await app.page.locator("h1").innerText()).toBe(own.name);
+		expect(await activity()).toEqual(await latestOrders(own.id as number));
 		await app.go("/customers/CUST-0001/edit");
 		expect(await app.page.getByLabel("Name").inputValue()).toBe(own.name);
 	});

@@ -1,0 +1,83 @@
+import { query } from "$app/server";
+import { error } from "@sveltejs/kit";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
+import * as v from "valibot";
+
+import { db } from "#lib/server/db/index.js";
+import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
+import { orderCost } from "#lib/server/order-cost.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
+
+/** How many orders the customer page lists; the orders list has them all. */
+const RECENT = 10;
+
+/** A customer's latest orders across all their equipment, newest first, and how many they have. */
+export const getCustomerActivity = query(v.string(), async (code) => {
+	requireMember();
+	const [found] = await db
+		.select({ id: customer.id })
+		.from(customer)
+		.where(and(eq(customer.code, code), inTenant(customer)));
+	if (!found) error(404, `Customer ${code} not found`);
+
+	const [[{ total }], orders] = await Promise.all([
+		db
+			.select({ total: count() })
+			.from(order)
+			.where(and(eq(order.customerId, found.id), inTenant(order))),
+		db
+			.select({
+				id: order.id,
+				number: order.number,
+				type: order.type,
+				status: order.status,
+				scheduledFor: order.scheduledFor,
+				completedAt: order.completedAt,
+				createdAt: order.createdAt,
+				laborHours: order.laborHours,
+				hourlyRate: engineer.hourlyRate,
+				equipment: {
+					serialNumber: equipment.serialNumber,
+					manufacturer: equipment.manufacturer,
+					model: equipment.model,
+				},
+			})
+			.from(order)
+			.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
+			.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+			.where(and(eq(order.customerId, found.id), inTenant(order)))
+			.orderBy(desc(order.createdAt), desc(order.id))
+			.limit(RECENT),
+	]);
+
+	const lines = orders.length
+		? await db
+				.select({
+					orderId: orderLine.orderId,
+					quantity: orderLine.quantity,
+					unitPrice: orderLine.unitPrice,
+				})
+				.from(orderLine)
+				.where(
+					and(
+						inArray(
+							orderLine.orderId,
+							orders.map((row) => row.id),
+						),
+						inTenant(orderLine),
+					),
+				)
+		: [];
+
+	return {
+		total,
+		orders: orders.map(({ laborHours, hourlyRate, ...row }) => ({
+			...row,
+			total: orderCost({
+				laborHours,
+				hourlyRate,
+				lines: lines.filter((line) => line.orderId === row.id),
+			}).total,
+		})),
+	};
+});
