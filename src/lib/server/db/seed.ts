@@ -466,13 +466,70 @@ function generateTenant(size: TenantSize) {
 		})),
 	);
 
+	// --- Call-outs waiting for a response (service contracts) ----------------------------------
+
+	// Repairs on covered units that aren't scheduled yet, so the module's response times (see
+	// `#lib/components/contracts/coverage.ts`) have something to show: one overdue, one at risk
+	// (on the slowest contract, so it stays at risk for a while), one on track. Fixed rather than
+	// random, and made last, so the rest of the data stays the same.
+	const running = contractTerms
+		.filter((c) => c.startsOn <= now && now < addDays(c.endsOn, 1))
+		.sort((a, b) => a.responseHours - b.responseHours || a.id - b.id);
+	const waiting =
+		running.length >= 3
+			? [
+					{
+						term: running[0],
+						hoursAgo: running[0].responseHours + 2,
+						description: "Unit down after a power cut; customer called twice",
+					},
+					{
+						term: running[running.length - 1],
+						hoursAgo: running[running.length - 1].responseHours * 0.85,
+						description: "Intermittent fault, alarm on the controller",
+					},
+					{
+						term: running[Math.floor(running.length / 2)],
+						hoursAgo: 0.5,
+						description: "Abnormal noise since this morning",
+					},
+				]
+			: [];
+	const callOuts = waiting.map(({ term, hoursAgo, description }, i) => {
+		const id = orders.length + i + 1;
+		const createdAt = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+		const unit = equipments[term.equipmentIds[0] - 1];
+		unit.status = "needs_service";
+		return {
+			id,
+			number: `ORD-${createdAt.getFullYear()}-${String(id).padStart(5, "0")}`,
+			customerId: term.customerId,
+			equipmentId: unit.id,
+			engineerId: null,
+			type: "repair" as const,
+			status: "quote" as const,
+			priority: "high" as const,
+			description,
+			scheduledFor: null,
+			completedAt: null,
+			laborHours: 2,
+			createdAt,
+		};
+	});
+	const callOutLines = callOuts.map((o) => ({
+		orderId: o.id,
+		materialId: materials[3].id,
+		quantity: 2,
+		unitPrice: materials[3].unitPrice,
+	}));
+
 	return {
 		customers,
 		engineers,
 		equipments,
 		materials,
-		orders,
-		orderLines,
+		orders: [...orders, ...callOuts],
+		orderLines: [...orderLines, ...callOutLines],
 		contracts,
 		contractCoverage,
 	};

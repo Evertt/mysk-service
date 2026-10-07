@@ -12,7 +12,7 @@ import {
 	order,
 	orderLine,
 } from "#lib/server/db/schema.js";
-import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
+import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -43,11 +43,17 @@ export const getDashboard = query(async () => {
 		.groupBy(orderLine.orderId)
 		.as("materials");
 
-	// Materials plus labour at the engineer's rate, for work completed in the last 30 days.
-	const [revenue] = await db
+	// Work completed in the last 30 days, priced like everywhere else.
+	const done = await db
 		.select({
-			total: sql<number>`coalesce(sum(coalesce(${materials.total}, 0) + ${order.laborHours} * coalesce(${engineer.hourlyRate}, ${STANDARD_HOURLY_RATE})), 0)`,
-			orders: count(),
+			id: order.id,
+			type: order.type,
+			status: order.status,
+			equipmentId: order.equipmentId,
+			createdAt: order.createdAt,
+			laborHours: order.laborHours,
+			hourlyRate: engineer.hourlyRate,
+			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
@@ -59,6 +65,11 @@ export const getDashboard = query(async () => {
 				gte(order.completedAt, monthAgo),
 			),
 		);
+	const prices = await priceOrders(done);
+	const revenue = {
+		total: prices.reduce((sum, price) => sum + price.total, 0),
+		orders: done.length,
+	};
 
 	const [fleet] = await db
 		.select({

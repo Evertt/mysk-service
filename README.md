@@ -56,7 +56,8 @@ organizations (tenants) and two demo users, both with the password `fieldworks-d
 
 Fieldworks North has the optional Service contracts module; Fieldworks South doesn't (owners and
 admins can switch modules on and off under Organization settings). Switch organizations from the
-menu at the top of the sidebar.
+menu at the top of the sidebar. North's data includes call-outs on covered equipment that are
+overdue, at risk and on track for their contract's response time, as of when you seeded.
 
 These are local demo accounts; don't seed them into a real deployment.
 

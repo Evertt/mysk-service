@@ -6,11 +6,11 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import OrderLink from "#lib/components/orders/order-link.svelte";
 import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-import StatusBadge from "#lib/components/orders/status-badge.svelte";
 import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities } from "#lib/models.js";
 
 import type { getOrders } from "./orders.remote.js";
+import StatusCell from "./status-cell.svelte";
 
 export type OrderRow = Awaited<ReturnType<typeof getOrders>>[number];
 
@@ -68,7 +68,8 @@ export const columns = column.columns([
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
+		cell: ({ getValue, row }) =>
+			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
 		filterFn: "oneOf",
 		meta: { label: "Status" },
 	}),

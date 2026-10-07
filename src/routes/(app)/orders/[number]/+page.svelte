@@ -19,6 +19,8 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
 
+	import ModuleSlots from "../../module-slots.svelte";
+	import OrderTags from "../order-tags.svelte";
 	import { deleteOrder, getOrder } from "../orders.remote.js";
 	import type { PageProps } from "./$types";
 
@@ -48,6 +50,7 @@
 	</Breadcrumb.Root>
 	{#snippet badges()}
 		<StatusBadge status={order.status} />
+		<OrderTags tags={data.tags} />
 		<PriorityBadge priority={order.priority} />
 		<TypeLabel type={order.type} />
 	{/snippet}
@@ -123,6 +126,21 @@
 								{formatCents(data.totals.labor)}
 							</Table.Cell>
 						</Table.Row>
+						{#each data.totals.adjustments as adjustment, i (i)}
+							<Table.Row>
+								<Table.Cell colspan={3}>
+									<div class="flex flex-col">
+										<span>{adjustment.label}</span>
+										{#if adjustment.detail}
+											<span class="text-xs text-muted-foreground">{adjustment.detail}</span>
+										{/if}
+									</div>
+								</Table.Cell>
+								<Table.Cell class="text-right tabular-nums">
+									{formatCents(adjustment.amount)}
+								</Table.Cell>
+							</Table.Row>
+						{/each}
 					</Table.Body>
 					<Table.Footer>
 						<Table.Row>
@@ -182,6 +200,8 @@
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">
+		<ModuleSlots name="order" props={{ number: order.number }} />
+
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Schedule</Card.Title>

@@ -8,6 +8,7 @@
 	import { formatCents, formatDate } from "#lib/format.js";
 
 	import { getDashboard } from "./dashboard.remote.js";
+	import ModuleSlots from "./module-slots.svelte";
 
 	const data = $derived(await getDashboard());
 </script>
@@ -77,6 +78,8 @@
 		</Card.Footer>
 	</Card.Root>
 </div>
+
+<ModuleSlots name="dashboard" props={{}} class="grid items-start gap-6 lg:grid-cols-2" />
 
 <Card.Root>
 	<Card.Header>

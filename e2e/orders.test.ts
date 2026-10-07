@@ -556,4 +556,33 @@ describe("in South", () => {
 		).toBe(south.id);
 		expect(await unbalancedStock(south.id)).toEqual([]);
 	});
+
+	test("an order's total is its materials and labour, the same on its page and in the list", async () => {
+		const { page } = app;
+		const [order] = await rows<{
+			materials: number;
+			labor_hours: number;
+			hourly_rate: number | null;
+		}>(
+			`select o.labor_hours, e.hourly_rate, (select sum(round(l.quantity * l.unit_price))
+			 from order_line l where l.order_id = o.id) as materials
+			 from "order" o left join engineer e on e.id = o.engineer_id where o.number = ? and o.organization_id = ?`,
+			[shared, south.id],
+		);
+		const total =
+			(order.materials ?? 0) + Math.round(order.labor_hours * (order.hourly_rate ?? 8500));
+		const cents = (text: string) => Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100);
+
+		await app.go(`/orders/${shared}`);
+		const table = page.locator("main table").first();
+		expect(cents(await table.locator("tfoot td").last().innerText())).toBe(total);
+		// South has no modules, so nothing adjusts the price.
+		expect(await table.locator("tbody tr").filter({ hasText: "Covered by" }).count()).toBe(0);
+
+		await app.go("/orders");
+		await page.getByLabel("Search orders…").fill(shared);
+		await expect.poll(() => app.rowCount()).toBe(1);
+		const row = page.locator('[data-slot="data-table"] tbody tr').first();
+		expect(cents(await row.locator("td:nth-last-child(2)").innerText())).toBe(total);
+	});
 });

@@ -23,6 +23,7 @@ const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	materialsTotal: 0,
 	laborTotal: 6000,
 	total: 6000,
+	tags: [],
 	...fields,
 });
 
