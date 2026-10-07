@@ -1,0 +1,18 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"validation_required": "Verplicht",
+	"validation_choose_one": "Maak een keuze",
+	"validation_date_required": "Kies een datum",
+	"validation_date_invalid": "Vul een geldige datum in",
+	"validation_amount_required": "Vul een bedrag in",
+	"validation_not_negative": "Mag niet negatief zijn",
+	"validation_email_required": "Vul een e-mailadres in",
+	"validation_email_invalid": "Vul een geldig e-mailadres in",
+	"validation_phone_required": "Vul een telefoonnummer in",
+	"validation_phone_invalid": "Vul een geldig telefoonnummer in",
+	"validation_hours_required": "Vul het aantal uren in",
+	"validation_material_required": "Kies een materiaal",
+	"validation_quantity_required": "Vul een aantal in",
+	"validation_more_than_zero": "Meer dan 0",
+	"validation_two_decimals": "Maximaal twee decimalen"
+}

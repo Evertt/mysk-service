@@ -2,6 +2,7 @@
  * Week maths and grouping for the dispatch board. Days are local days, like the dates entered in
  * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
+import { dateFormatter, formatDate } from "#lib/format.js";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.js";
 import { toDateInput } from "#lib/schema.js";
 
@@ -50,30 +51,17 @@ export function weekNumber(date: Date) {
 	return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
 }
 
-const shortDay = new Intl.DateTimeFormat("en-GB", {
-	weekday: "short",
-	day: "numeric",
-	month: "short",
-});
-const longDay = new Intl.DateTimeFormat("en-GB", {
-	weekday: "long",
-	day: "numeric",
-	month: "long",
-});
-const range = new Intl.DateTimeFormat("en-GB", {
-	day: "numeric",
-	month: "short",
-	year: "numeric",
-});
+const shortDay = dateFormatter({ weekday: "short", day: "numeric", month: "short" });
+const longDay = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 
-/** A day in a column header, e.g. `Mon 5 Oct`. */
-export const formatDay = (day: Date) => shortDay.format(day);
+/** A day in a column header, e.g. `Mon 5 Oct` (in Dutch `ma 5 okt`). */
+export const formatDay = (day: Date) => shortDay(day);
 
-/** A day in full, e.g. `Monday 5 October`. */
-export const formatLongDay = (day: Date) => longDay.format(day);
+/** A day in full, e.g. `Monday 5 October` (in Dutch `maandag 5 oktober`). */
+export const formatLongDay = (day: Date) => longDay(day);
 
 /** The week starting at `start`, e.g. `5–11 Oct 2026`. */
-export const formatWeek = (start: Date) => range.formatRange(start, addDays(start, 6));
+export const formatWeek = (start: Date) => formatDate.range(start, addDays(start, 6));
 
 const pad = (value: number) => String(value).padStart(2, "0");
 

@@ -9,8 +9,8 @@
 	import { useTableContext } from "./table.svelte.js";
 
 	let {
-		emptyTitle = "No results",
-		emptyDescription = "Try a different search or clear the filters.",
+		emptyTitle = m.common_table_empty_title(),
+		emptyDescription = m.common_table_empty_description(),
 	}: { emptyTitle?: string; emptyDescription?: string } = $props();
 
 	const table = useTableContext();

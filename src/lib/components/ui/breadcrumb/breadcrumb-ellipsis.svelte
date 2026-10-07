@@ -27,5 +27,5 @@
 	{...restProps}
 >
 	<MoreHorizontalIcon />
-	<span class="sr-only">More</span>
+	<span class="sr-only">{m.common_more()}</span>
 </span>

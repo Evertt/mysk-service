@@ -6,23 +6,25 @@ import SendIcon from "@lucide/svelte/icons/send";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 
 import { type InvoiceState, invoiceStates } from "./invoice.js";
 
 interface Display {
-	label: string;
 	icon: Component;
 	variant: BadgeVariant;
 }
 
-/** An invoice's status as shown, with overdue for sent ones past their due date. */
-export const states: Record<InvoiceState, Display> = {
-	draft: { label: "Draft", icon: FilePenLineIcon, variant: "outline" },
-	sent: { label: "Sent", icon: SendIcon, variant: "secondary" },
-	overdue: { label: "Overdue", icon: ClockAlertIcon, variant: "destructive" },
-	paid: { label: "Paid", icon: CircleCheckBigIcon, variant: "default" },
-	void: { label: "Void", icon: BanIcon, variant: "ghost" },
+const stateDetails: Record<InvoiceState, Display> = {
+	draft: { icon: FilePenLineIcon, variant: "outline" },
+	sent: { icon: SendIcon, variant: "secondary" },
+	overdue: { icon: ClockAlertIcon, variant: "destructive" },
+	paid: { icon: CircleCheckBigIcon, variant: "default" },
+	void: { icon: BanIcon, variant: "ghost" },
 };
 
+/** An invoice's status as shown (overdue for sent ones past their due date), translated. */
+export const states = withLabels("invoiceState", stateDetails);
+
 /** Options for the faceted filter, in order. */
-export const stateOptions = invoiceStates.map((value) => ({ value, ...states[value] }));
+export const stateOptions = labelOptions("invoiceState", invoiceStates, stateDetails);

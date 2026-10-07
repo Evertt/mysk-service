@@ -5,7 +5,7 @@
 	import EngineerLink from "#lib/components/engineers/engineer-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-	import { formatCents, formatDate } from "#lib/format.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 
 	import { getDashboard } from "./dashboard.remote.js";
 	import ModuleSlots from "./module-slots.svelte";
@@ -14,54 +14,59 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard</title>
+	<title>{m.dashboard_title()}</title>
 </svelte:head>
 
 <div class="flex flex-col gap-1">
-	<h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
-	<p class="text-muted-foreground">How service operations are doing right now.</p>
+	<h1 class="text-2xl font-semibold tracking-tight">{m.dashboard_title()}</h1>
+	<p class="text-muted-foreground">{m.dashboard_description()}</p>
 </div>
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Open orders</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.open.total}</Card.Title>
+			<Card.Description>{m.dashboard_open_orders()}</Card.Description>
+			<Card.Title class="text-3xl tabular-nums">{formatNumber(data.open.total)}</Card.Title>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			{data.open.unassigned ?? 0} without an engineer
+			{m.dashboard_without_engineer({ count: formatNumber(data.open.unassigned ?? 0) })}
 		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Urgent</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.open.urgent ?? 0}</Card.Title>
+			<Card.Description>{m.dashboard_urgent()}</Card.Description>
+			<Card.Title class="text-3xl tabular-nums">{formatNumber(data.open.urgent ?? 0)}</Card.Title>
 		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">Open orders with urgent priority</Card.Footer
-		>
+		<Card.Footer class="text-sm text-muted-foreground">
+			{m.dashboard_urgent_description()}
+		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Revenue, last 30 days</Card.Description>
+			<Card.Description>{m.dashboard_revenue()}</Card.Description>
 			<Card.Title class="text-3xl tabular-nums">{formatCents(data.revenue.total)}</Card.Title>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			From {data.revenue.orders} completed orders
+			{m.dashboard_revenue_orders({ count: data.revenue.orders })}
 		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Equipment needing attention</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.fleet.attention ?? 0}</Card.Title>
+			<Card.Description>{m.dashboard_attention()}</Card.Description>
+			<Card.Title class="text-3xl tabular-nums"
+				>{formatNumber(data.fleet.attention ?? 0)}</Card.Title
+			>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			Of {data.fleet.total} installed units
+			{m.dashboard_attention_of({ count: data.fleet.total })}
 		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Low stock</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{data.stock.low + data.stock.out}</Card.Title>
+			<Card.Description>{m.dashboard_low_stock()}</Card.Description>
+			<Card.Title class="text-3xl tabular-nums"
+				>{formatNumber(data.stock.low + data.stock.out)}</Card.Title
+			>
 			<Card.Action>
 				<!-- The materials list, filtered to the low and out of stock ones. -->
 				<Button
@@ -69,12 +74,12 @@
 					size="sm"
 					href="{resolve('/(app)/materials')}?stockLevel=out&stockLevel=low"
 				>
-					View
+					{m.common_view()}
 				</Button>
 			</Card.Action>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			{data.stock.out} out of stock, of {data.stock.total} materials
+			{m.dashboard_low_stock_of({ out: formatNumber(data.stock.out), count: data.stock.total })}
 		</Card.Footer>
 	</Card.Root>
 </div>
@@ -83,21 +88,23 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Upcoming work</Card.Title>
-		<Card.Description>The next scheduled orders.</Card.Description>
+		<Card.Title>{m.dashboard_upcoming()}</Card.Title>
+		<Card.Description>{m.dashboard_upcoming_description()}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/orders")}>All orders</Button>
+			<Button variant="outline" size="sm" href={resolve("/(app)/orders")}>
+				{m.dashboard_all_orders()}
+			</Button>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>Order</Table.Head>
-					<Table.Head>Customer</Table.Head>
-					<Table.Head>Engineer</Table.Head>
-					<Table.Head>Priority</Table.Head>
-					<Table.Head class="text-right">Scheduled</Table.Head>
+					<Table.Head>{m.dashboard_column_order()}</Table.Head>
+					<Table.Head>{m.dashboard_column_customer()}</Table.Head>
+					<Table.Head>{m.dashboard_column_engineer()}</Table.Head>
+					<Table.Head>{m.dashboard_column_priority()}</Table.Head>
+					<Table.Head class="text-right">{m.dashboard_column_scheduled()}</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -111,7 +118,7 @@
 							{#if order.engineer}
 								<EngineerLink id={order.engineer.id} name={order.engineer.name} />
 							{:else}
-								<span class="text-muted-foreground">Unassigned</span>
+								<span class="text-muted-foreground">{m.common_unassigned()}</span>
 							{/if}
 						</Table.Cell>
 						<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>

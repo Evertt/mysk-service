@@ -15,6 +15,7 @@ import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import {
 	type OrderPriority,
 	orderPriorities,
@@ -25,35 +26,39 @@ import {
 } from "#lib/models.js";
 
 interface Display {
-	label: string;
 	icon: Component;
 	variant: BadgeVariant;
 }
 
-export const statuses: Record<OrderStatus, Display> = {
-	quote: { label: "Quote", icon: FileTextIcon, variant: "outline" },
-	scheduled: { label: "Scheduled", icon: CalendarClockIcon, variant: "secondary" },
-	in_progress: { label: "In progress", icon: TimerIcon, variant: "default" },
-	completed: { label: "Completed", icon: CircleCheckIcon, variant: "secondary" },
-	invoiced: { label: "Invoiced", icon: ReceiptIcon, variant: "outline" },
-	cancelled: { label: "Cancelled", icon: CircleXIcon, variant: "destructive" },
+const statusDetails: Record<OrderStatus, Display> = {
+	quote: { icon: FileTextIcon, variant: "outline" },
+	scheduled: { icon: CalendarClockIcon, variant: "secondary" },
+	in_progress: { icon: TimerIcon, variant: "default" },
+	completed: { icon: CircleCheckIcon, variant: "secondary" },
+	invoiced: { icon: ReceiptIcon, variant: "outline" },
+	cancelled: { icon: CircleXIcon, variant: "destructive" },
 };
 
-export const priorities: Record<OrderPriority, Display> = {
-	low: { label: "Low", icon: ArrowDownIcon, variant: "ghost" },
-	normal: { label: "Normal", icon: ArrowRightIcon, variant: "outline" },
-	high: { label: "High", icon: ArrowUpIcon, variant: "secondary" },
-	urgent: { label: "Urgent", icon: TriangleAlertIcon, variant: "destructive" },
+const priorityDetails: Record<OrderPriority, Display> = {
+	low: { icon: ArrowDownIcon, variant: "ghost" },
+	normal: { icon: ArrowRightIcon, variant: "outline" },
+	high: { icon: ArrowUpIcon, variant: "secondary" },
+	urgent: { icon: TriangleAlertIcon, variant: "destructive" },
 };
 
-export const types: Record<OrderType, Omit<Display, "variant">> = {
-	installation: { label: "Installation", icon: PackagePlusIcon },
-	maintenance: { label: "Maintenance", icon: WrenchIcon },
-	repair: { label: "Repair", icon: HammerIcon },
-	inspection: { label: "Inspection", icon: ClipboardCheckIcon },
+const typeDetails: Record<OrderType, Omit<Display, "variant">> = {
+	installation: { icon: PackagePlusIcon },
+	maintenance: { icon: WrenchIcon },
+	repair: { icon: HammerIcon },
+	inspection: { icon: ClipboardCheckIcon },
 };
+
+/** Each value's translated `label`, icon and badge variant. */
+export const statuses = withLabels("orderStatus", statusDetails);
+export const priorities = withLabels("orderPriority", priorityDetails);
+export const types = withLabels("orderType", typeDetails);
 
 /** Options for the faceted filters, in workflow order. */
-export const statusOptions = orderStatuses.map((value) => ({ value, ...statuses[value] }));
-export const priorityOptions = orderPriorities.map((value) => ({ value, ...priorities[value] }));
-export const typeOptions = orderTypes.map((value) => ({ value, ...types[value] }));
+export const statusOptions = labelOptions("orderStatus", orderStatuses, statusDetails);
+export const priorityOptions = labelOptions("orderPriority", orderPriorities, priorityDetails);
+export const typeOptions = labelOptions("orderType", orderTypes, typeDetails);

@@ -9,5 +9,5 @@
 	checked={row.getIsSelected()}
 	disabled={!row.getCanSelect()}
 	onCheckedChange={(value) => row.toggleSelected(value)}
-	aria-label="Select row"
+	aria-label={m.common_table_select_row()}
 />

@@ -1,13 +1,24 @@
 /**
  * Valibot building blocks for remote form schemas. Form fields arrive as strings, so ids and
  * optional values are transformed here; number inputs (`.as("number")`) arrive as numbers.
+ *
+ * Messages are translated when validation runs (on the server in the request's language, in the
+ * browser in the page's): pass a message function, e.g. `text(m.customers_name_required)`, never
+ * its text (`m.customers_name_required()` at module scope would always be English).
  */
 import * as v from "valibot";
 
 import { fitsUnit } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
+
+/**
+ * A validation message: a message function (`m.…`) or one that builds the text, e.g.
+ * `() => m.orders_quantity_max({ max })`. A plain string isn't translated; avoid it.
+ */
+export type Message = string | (() => string);
 
 /** A required id, e.g. from a select. */
-export const id = (message = "Choose one") =>
+export const id = (message: Message = m.validation_choose_one) =>
 	v.pipe(
 		v.string(),
 		v.nonEmpty(message),
@@ -17,7 +28,7 @@ export const id = (message = "Choose one") =>
 	);
 
 /** An optional id; the empty option means "none". */
-export const optionalId = (message = "Choose one") =>
+export const optionalId = (message: Message = m.validation_choose_one) =>
 	v.union([
 		v.pipe(
 			v.literal(""),
@@ -27,7 +38,8 @@ export const optionalId = (message = "Choose one") =>
 	]);
 
 /** A required, trimmed text. */
-export const text = (message = "Required") => v.pipe(v.string(), v.trim(), v.nonEmpty(message));
+export const text = (message: Message = m.validation_required) =>
+	v.pipe(v.string(), v.trim(), v.nonEmpty(message));
 
 /** Whether `value` (`yyyy-mm-dd`) is a day on the calendar, so not e.g. `2026-02-31`. */
 const isDay = (value: string) => {
@@ -37,7 +49,8 @@ const isDay = (value: string) => {
 };
 
 /** The day a valid date input stands for (checked only once there's a value). */
-const day = () => v.check((value: string) => value === "" || isDay(value), "Enter a valid date");
+const day = () =>
+	v.check((value: string) => value === "" || isDay(value), m.validation_date_invalid);
 
 /** An optional date from `<input type="date">`, as a local date at the start of the day. */
 export const optionalDate = () =>
@@ -54,16 +67,16 @@ export const toDateInput = (date: Date | null | undefined) =>
 		: "";
 
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
-export const cents = (required = "Enter an amount") =>
+export const cents = (required: Message = m.validation_amount_required) =>
 	v.pipe(
 		// An empty number input arrives as undefined; say so rather than "expected number".
 		v.number(required),
-		v.minValue(0, "Can't be negative"),
+		v.minValue(0, m.validation_not_negative),
 		v.transform((euros) => Math.round(euros * 100)),
 	);
 
 /** A required date from `<input type="date">`, as a local date at the start of the day. */
-export const date = (required = "Choose a date") =>
+export const date = (required: Message = m.validation_date_required) =>
 	v.pipe(
 		v.string(),
 		v.nonEmpty(required),
@@ -75,7 +88,7 @@ export const date = (required = "Choose a date") =>
  * A required, trimmed text in a given format. The format is only checked once there's a value,
  * so an empty field gets just the "required" message.
  */
-export const formatted = (required: string, pattern: RegExp, message: string) =>
+export const formatted = (required: Message, pattern: RegExp, message: Message) =>
 	v.pipe(
 		v.string(),
 		v.trim(),
@@ -84,16 +97,16 @@ export const formatted = (required: string, pattern: RegExp, message: string) =>
 	);
 
 /** A required email address, stored in lower case. */
-export const email = (required = "Enter an email address") =>
-	v.pipe(formatted(required, v.EMAIL_REGEX, "Enter a valid email address"), v.toLowerCase());
+export const email = (required: Message = m.validation_email_required) =>
+	v.pipe(formatted(required, v.EMAIL_REGEX, m.validation_email_invalid), v.toLowerCase());
 
 /** A required phone number: digits with optional +, spaces, dots, dashes and brackets. */
-export const phone = (required = "Enter a phone number") =>
-	formatted(required, /^\+?[\d\s().-]{6,20}$/, "Enter a valid phone number");
+export const phone = (required: Message = m.validation_phone_required) =>
+	formatted(required, /^\+?[\d\s().-]{6,20}$/, m.validation_phone_invalid);
 
 /** The hours of labour on an order. */
 export const laborHours = () =>
-	v.pipe(v.number("Enter the hours"), v.minValue(0, "Can't be negative"));
+	v.pipe(v.number(m.validation_hours_required), v.minValue(0, m.validation_not_negative));
 
 /**
  * An order's material lines, for the order form and the engineer portal: a material and a
@@ -103,11 +116,11 @@ export const orderLines = () =>
 	v.optional(
 		v.array(
 			v.object({
-				materialId: id("Choose a material"),
+				materialId: id(m.validation_material_required),
 				quantity: v.pipe(
-					v.number("Enter a quantity"),
-					v.gtValue(0, "More than 0"),
-					v.check((quantity) => fitsUnit(quantity, "m"), "At most two decimals"),
+					v.number(m.validation_quantity_required),
+					v.gtValue(0, m.validation_more_than_zero),
+					v.check((quantity) => fitsUnit(quantity, "m"), m.validation_two_decimals),
 				),
 			}),
 		),

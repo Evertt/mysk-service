@@ -24,7 +24,7 @@ describe("isUnderWarranty", () => {
 	});
 });
 
-test("status options are the humanized statuses, in order", () => {
+test("status options are the translated statuses, in order", () => {
 	expect(statusOptions).toEqual([
 		{ value: "operational", label: "Operational" },
 		{ value: "needs_service", label: "Needs service" },

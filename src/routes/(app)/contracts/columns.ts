@@ -10,6 +10,7 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatDate } from "#lib/format.js";
 import { contractLevels, contractStatus, contractStatuses } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getContracts } from "./contracts.remote.js";
 
@@ -73,13 +74,13 @@ export const columns = column.columns([
 	}),
 	column.accessor("units", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "unit" }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
 		enableGlobalFilter: false,
 		meta: { label: "Covers", align: "end" },
 	}),
 	column.accessor("responseHours", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "h", plural: "h" }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_hours_short }),
 		enableGlobalFilter: false,
 		meta: { label: "Response", align: "end" },
 	}),

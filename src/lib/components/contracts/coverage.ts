@@ -15,7 +15,7 @@
  *   at risk once less than a quarter of the response time is left, and overdue from the deadline
  *   on. Cancelled orders and other types of work (maintenance, inspections) have no deadline.
  */
-import { humanize } from "#lib/format.js";
+import { label } from "#lib/i18n/labels.js";
 import {
 	type ContractLevel,
 	contractStatus,
@@ -62,7 +62,7 @@ export function coveredAmount(level: ContractLevel, price: { materials: number; 
 
 /** "Covered by CTR-2026-0004 (Premium)" */
 export const coveredBy = (contract: { number: string; level: ContractLevel }) =>
-	`Covered by ${contract.number} (${humanize(contract.level)})`;
+	`Covered by ${contract.number} (${label("contractLevel", contract.level)})`;
 
 // --- Response time ---------------------------------------------------------------------------
 

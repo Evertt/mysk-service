@@ -11,6 +11,7 @@ import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import {
 	type ContractLevel,
 	contractLevels,
@@ -21,34 +22,38 @@ import {
 import type { SlaState } from "./coverage.js";
 
 interface Display {
-	label: string;
 	icon: Component;
 	variant: BadgeVariant;
 }
 
-export const levels: Record<ContractLevel, Display> = {
-	basic: { label: "Basic", icon: ShieldIcon, variant: "outline" },
-	standard: { label: "Standard", icon: ShieldCheckIcon, variant: "outline" },
-	premium: { label: "Premium", icon: ShieldPlusIcon, variant: "secondary" },
+const levelDetails: Record<ContractLevel, Display> = {
+	basic: { icon: ShieldIcon, variant: "outline" },
+	standard: { icon: ShieldCheckIcon, variant: "outline" },
+	premium: { icon: ShieldPlusIcon, variant: "secondary" },
 };
 
-export const statuses: Record<ContractStatus, Display> = {
-	upcoming: { label: "Upcoming", icon: CalendarClockIcon, variant: "outline" },
-	active: { label: "Active", icon: CalendarCheckIcon, variant: "default" },
-	expired: { label: "Expired", icon: CalendarXIcon, variant: "ghost" },
+const statusDetails: Record<ContractStatus, Display> = {
+	upcoming: { icon: CalendarClockIcon, variant: "outline" },
+	active: { icon: CalendarCheckIcon, variant: "default" },
+	expired: { icon: CalendarXIcon, variant: "ghost" },
 };
 
 /** Where a covered order's response stands, see `coverage.ts`. */
-export const slaStates: Record<SlaState, Display> = {
-	on_track: { label: "On track", icon: TimerIcon, variant: "outline" },
-	at_risk: { label: "At risk", icon: ClockAlertIcon, variant: "secondary" },
-	overdue: { label: "Overdue", icon: AlarmClockOffIcon, variant: "destructive" },
-	responded: { label: "Responded", icon: AlarmClockCheckIcon, variant: "ghost" },
+const slaStateDetails: Record<SlaState, Display> = {
+	on_track: { icon: TimerIcon, variant: "outline" },
+	at_risk: { icon: ClockAlertIcon, variant: "secondary" },
+	overdue: { icon: AlarmClockOffIcon, variant: "destructive" },
+	responded: { icon: AlarmClockCheckIcon, variant: "ghost" },
 };
 
+/** Each value's translated `label`, icon and badge variant. */
+export const levels = withLabels("contractLevel", levelDetails);
+export const statuses = withLabels("contractStatus", statusDetails);
+export const slaStates = withLabels("slaState", slaStateDetails);
+
 /** Options for the faceted filters, in order. */
-export const levelOptions = contractLevels.map((value) => ({ value, ...levels[value] }));
-export const statusOptions = contractStatuses.map((value) => ({ value, ...statuses[value] }));
+export const levelOptions = labelOptions("contractLevel", contractLevels, levelDetails);
+export const statusOptions = labelOptions("contractStatus", contractStatuses, statusDetails);
 
 const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
 

@@ -3,6 +3,7 @@ import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { isFieldEngineer } from "#lib/roles.js";
 import { auth } from "#lib/server/auth.js";
 import { loadTenant } from "#lib/server/session.js";
@@ -18,13 +19,13 @@ export const login = form(
 			v.pipe(
 				v.string(),
 				v.trim(),
-				v.nonEmpty("Enter your email address."),
-				v.email("Enter a valid email address."),
+				v.nonEmpty(m.auth_email_required),
+				v.email(m.auth_email_invalid),
 			),
 			{ abortPipeEarly: true },
 		),
 		// The leading underscore keeps the password out of the page after a failed submission.
-		_password: v.pipe(v.string(), v.nonEmpty("Enter your password.")),
+		_password: v.pipe(v.string(), v.nonEmpty(m.auth_password_required)),
 		redirectTo: v.optional(v.string()),
 	}),
 	async ({ email, _password, redirectTo }) => {
@@ -38,8 +39,8 @@ export const login = form(
 				headers: getRequestEvent().request.headers,
 			}));
 		} catch (e) {
-			if (isAPIError(e) && e.statusCode === 401) invalid("Incorrect email or password.");
-			if (isAPIError(e) && e.statusCode < 500) invalid(e.message || "Couldn't sign you in.");
+			if (isAPIError(e) && e.statusCode === 401) invalid(m.auth_incorrect());
+			if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_failed());
 			throw e;
 		}
 		// Field engineers start in their portal; the office app isn't theirs.

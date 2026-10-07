@@ -9,7 +9,8 @@
 	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate, humanize } from "#lib/format.js";
+	import { formatDate } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import { deleteEquipment, getEquipment } from "../equipment.remote.js";
@@ -99,7 +100,7 @@
 				<Card.Title>Owner</Card.Title>
 				<Card.Description>{owner.code}</Card.Description>
 				<Card.Action>
-					<Badge variant="outline">{humanize(owner.segment)}</Badge>
+					<Badge variant="outline">{label("customerSegment", owner.segment)}</Badge>
 				</Card.Action>
 			</Card.Header>
 			<Card.Content>

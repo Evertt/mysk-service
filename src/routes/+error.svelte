@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status === 404 ? "Not found" : "Something went wrong"}</title>
+	<title>{page.status === 404 ? m.common_error_not_found() : m.common_error_generic()}</title>
 </svelte:head>
 
 <div class="flex min-h-svh items-center justify-center p-6">

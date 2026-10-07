@@ -1,12 +1,13 @@
 <!--
 	@component
-	The signed-in user in the sidebar footer, with a menu to sign out. Signing out is a real form, so
-	it also works without JavaScript.
+	The signed-in user in the sidebar footer, with a menu to choose the language and to sign out.
+	Signing out is a real form, so it also works without JavaScript.
 -->
 <script lang="ts">
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
+	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { useSidebar } from "#ui/sidebar";
 
 	import { getCurrentUser, signOut } from "./session.remote.js";
@@ -59,6 +60,10 @@
 					</div>
 				</DropdownMenu.Label>
 				<DropdownMenu.Separator />
+				<DropdownMenu.Group>
+					<LanguageSwitcher submenu />
+				</DropdownMenu.Group>
+				<DropdownMenu.Separator />
 				<form {...signOut}>
 					<DropdownMenu.Group>
 						<!-- Keep the menu open while signing out, so the form stays mounted and shows progress. -->
@@ -70,7 +75,7 @@
 									{:else}
 										<LogOutIcon />
 									{/if}
-									Sign out
+									{m.common_sign_out()}
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>

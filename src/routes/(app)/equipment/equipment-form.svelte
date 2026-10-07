@@ -10,7 +10,7 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { humanize } from "#lib/format.js";
+	import { labelOptions } from "#lib/i18n/labels.js";
 	import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 	import { toDateInput } from "#lib/schema.js";
 
@@ -72,7 +72,7 @@
 					field={fields.status}
 					label="Status"
 					value={unit?.status ?? "operational"}
-					options={equipmentStatuses.map((value) => ({ value, label: humanize(value) }))}
+					options={labelOptions("equipmentStatus", equipmentStatuses)}
 				/>
 				<TextField field={fields.manufacturer} label="Manufacturer" value={unit?.manufacturer} />
 				<TextField field={fields.model} label="Model" value={unit?.model} />

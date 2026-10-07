@@ -3,8 +3,10 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
-import { stockLevel, stockLevels, unitLabels } from "#lib/components/materials/display.js";
+import { stockLevel, stockLevels } from "#lib/components/materials/display.js";
 import MaterialLink from "#lib/components/materials/material-link.svelte";
+import { label } from "#lib/i18n/labels.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getMaterials } from "./materials.remote.js";
 import StockCell from "./stock-cell.svelte";
@@ -28,7 +30,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("unit", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ getValue }) => unitLabels[getValue()],
+		cell: ({ getValue }) => label("materialUnit", getValue()),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
 		meta: { label: "Unit" },
@@ -58,7 +60,7 @@ export const columns = column.columns([
 	}),
 	column.accessor("orderCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
-		cell: ({ cell }) => renderComponent(cell.NumberCell, { unit: "order" }),
+		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
 		meta: { label: "Used on", align: "end" },
 	}),

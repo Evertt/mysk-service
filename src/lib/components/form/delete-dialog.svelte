@@ -13,7 +13,7 @@
 		id,
 		title,
 		description,
-		label = "Delete",
+		label = m.common_delete(),
 	}: {
 		form: RemoteForm<{ id: string }, unknown>;
 		id: string;
@@ -42,7 +42,7 @@
 			<!-- E.g. when the record is still referenced and can't be deleted. -->
 			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
+				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
 				<Button type="submit" variant="destructive" disabled={!!form.pending}>
 					{#if form.pending}
 						<Spinner data-icon="inline-start" />

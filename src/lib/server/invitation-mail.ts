@@ -1,4 +1,5 @@
-import { roleLabels, type MemberRole } from "#lib/members.js";
+import { dateFormatter } from "#lib/format.js";
+import { labelOrValue } from "#lib/i18n/labels.js";
 
 import type { Mail } from "./mail.ts";
 
@@ -8,11 +9,7 @@ const escape = (text: string) =>
 		(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
 	);
 
-const expiry = new Intl.DateTimeFormat("en-GB", {
-	dateStyle: "long",
-	timeStyle: "short",
-	timeZone: "UTC",
-});
+const expiry = dateFormatter({ dateStyle: "long", timeStyle: "short", timeZone: "UTC" });
 
 /** The email inviting someone to an organization, with the link to accept it. */
 export function invitationMail({
@@ -31,8 +28,8 @@ export function invitationMail({
 	url: string;
 	expiresAt: Date;
 }): Mail {
-	const roleLabel = (roleLabels[role as MemberRole] ?? role).toLowerCase();
-	const until = `${expiry.format(expiresAt)} (UTC)`;
+	const roleLabel = labelOrValue("memberRole", role).toLowerCase();
+	const until = `${expiry(expiresAt)} (UTC)`;
 	return {
 		to,
 		subject: `${inviter} invited you to ${organization} on Fieldworks`,

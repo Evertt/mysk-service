@@ -11,7 +11,7 @@
 	import { useTableContext } from "./table.svelte.js";
 
 	let {
-		searchLabel = "Search…",
+		searchLabel = m.common_table_search(),
 		children,
 		actions,
 	}: { searchLabel?: string; children?: Snippet; actions?: Snippet } = $props();
@@ -43,7 +43,7 @@
 				table.resetGlobalFilter();
 			}}
 		>
-			Reset
+			{m.common_table_reset()}
 			<XIcon data-icon="inline-end" />
 		</Button>
 	{/if}

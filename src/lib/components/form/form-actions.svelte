@@ -5,7 +5,7 @@
 <script lang="ts">
 	let {
 		pending = false,
-		submitLabel = "Save",
+		submitLabel = m.common_save(),
 		cancelHref,
 	}: {
 		/** Whether the form is submitting; a remote form's `pending` count works too. */
@@ -17,7 +17,7 @@
 
 <div class="flex items-center justify-end gap-2">
 	{#if cancelHref}
-		<Button variant="ghost" href={cancelHref}>Cancel</Button>
+		<Button variant="ghost" href={cancelHref}>{m.common_cancel()}</Button>
 	{/if}
 	<Button type="submit" disabled={!!pending}>
 		{#if pending}

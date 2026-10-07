@@ -180,7 +180,7 @@ describe("filtering", () => {
 		await page.getByRole("textbox", { name: "Search items…" }).fill("nothing like this");
 
 		await expect.element(page.getByText("No items found")).toBeVisible();
-		await expect.element(page.getByText("0 row(s)")).toBeInTheDocument();
+		await expect.element(page.getByText("0 rows")).toBeInTheDocument();
 	});
 
 	test("the faceted filter shows how many rows have each value", async () => {
@@ -233,7 +233,7 @@ describe("pagination", () => {
 	test("shows the row count and pages through the rows", async () => {
 		render(Harness, { items });
 
-		await expect.element(page.getByText("7 row(s)")).toBeInTheDocument();
+		await expect.element(page.getByText("7 rows")).toBeInTheDocument();
 		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "Go to previous page" })).toBeDisabled();
 
@@ -273,7 +273,7 @@ describe("row selection", () => {
 		await expect
 			.element(page.getByRole("row").filter({ hasText: "Boiler service" }))
 			.toHaveAttribute("data-state", "selected");
-		await expect.element(page.getByText("1 of 7 row(s) selected")).toBeInTheDocument();
+		await expect.element(page.getByText("1 of 7 rows selected")).toBeInTheDocument();
 		await expect
 			.element(page.getByRole("checkbox", { name: "Select all rows on this page" }))
 			.toHaveAttribute("aria-checked", "mixed");
@@ -284,12 +284,12 @@ describe("row selection", () => {
 
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
 
-		await expect.element(page.getByText("5 of 7 row(s) selected")).toBeInTheDocument();
+		await expect.element(page.getByText("5 of 7 rows selected")).toBeInTheDocument();
 		await expect
 			.element(page.getByRole("checkbox", { name: "Select all rows on this page" }))
 			.toBeChecked();
 
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
-		await expect.element(page.getByText("7 row(s)")).toBeInTheDocument();
+		await expect.element(page.getByText("7 rows")).toBeInTheDocument();
 	});
 });

@@ -20,6 +20,8 @@ import FileCheckIcon from "@lucide/svelte/icons/file-check";
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
+import { m } from "#lib/paraglide/messages.js";
+
 /** The places on core pages where modules can add components, with the props each passes. */
 export interface SlotProps {
 	/** Cards on the dashboard, below the headline numbers (laid out in two columns). */
@@ -39,8 +41,9 @@ export type SlotLoader<Name extends SlotName> = () => Promise<{
 
 export interface AppModule {
 	id: string;
-	label: string;
-	description: string;
+	/** Translated when read (a getter), so read it when showing it, not at module scope. */
+	readonly label: string;
+	readonly description: string;
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
 	icon: Component;
@@ -55,9 +58,12 @@ export interface AppModule {
 export const modules = [
 	{
 		id: "contracts",
-		label: "Service contracts",
-		description:
-			"Maintenance agreements: a monthly fee for covering a customer's equipment with a guaranteed response time.",
+		get label() {
+			return m.common_module_contracts();
+		},
+		get description() {
+			return m.common_module_contracts_description();
+		},
 		route: "/(app)/contracts",
 		icon: FileCheckIcon,
 		slots: {
@@ -68,9 +74,12 @@ export const modules = [
 	},
 	{
 		id: "invoicing",
-		label: "Invoicing",
-		description:
-			"Invoices for completed orders and other modules' fees, with VAT, PDF download and receivables on the dashboard.",
+		get label() {
+			return m.common_module_invoicing();
+		},
+		get description() {
+			return m.common_module_invoicing_description();
+		},
 		route: "/(app)/invoices",
 		icon: ReceiptTextIcon,
 		slots: {

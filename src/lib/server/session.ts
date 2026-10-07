@@ -4,6 +4,7 @@ import { and, asc, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { ModuleId } from "#lib/modules.js";
+import { m } from "#lib/paraglide/messages.js";
 import { isFieldEngineer } from "#lib/roles.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.js";
@@ -38,7 +39,7 @@ export async function loadTenant(
 		.where(eq(member.userId, userId))
 		.orderBy(asc(member.createdAt));
 	const current =
-		memberships.find((m) => m.organizationId === activeOrganizationId) ?? memberships[0];
+		memberships.find((row) => row.organizationId === activeOrganizationId) ?? memberships[0];
 	if (!current) return undefined;
 
 	const modules = await db
@@ -50,7 +51,7 @@ export async function loadTenant(
 		name: current.name,
 		slug: current.slug,
 		roles: current.role.split(",").map((role) => role.trim()),
-		modules: modules.map((m) => m.id),
+		modules: modules.map((row) => row.id),
 	};
 }
 
@@ -61,7 +62,7 @@ export async function loadTenant(
  */
 export function requireUser() {
 	const { user } = getRequestEvent().locals;
-	if (!user) error(401, "Not signed in");
+	if (!user) error(401, m.common_error_not_signed_in());
 	return user;
 }
 
@@ -73,7 +74,7 @@ export function requireUser() {
 export function requireTenant() {
 	const user = requireUser();
 	const { tenant } = getRequestEvent().locals;
-	if (!tenant) error(403, "You're not a member of any organization");
+	if (!tenant) error(403, m.common_error_no_organization());
 	return { user, ...tenant };
 }
 
@@ -83,7 +84,7 @@ export function requireTenant() {
  */
 export function requireMember() {
 	const tenant = requireTenant();
-	if (isFieldEngineer(tenant.roles)) error(403, "Field engineers use the engineer portal");
+	if (isFieldEngineer(tenant.roles)) error(403, m.common_error_engineers_use_portal());
 	return tenant;
 }
 
@@ -97,7 +98,7 @@ export async function requireEngineer() {
 	const linked = await db.query.engineer.findFirst({
 		where: and(eq(engineer.userId, tenant.user.id), inTenant(engineer)),
 	});
-	if (!linked) error(403, "Your account isn't linked to an engineer");
+	if (!linked) error(403, m.common_error_not_linked());
 	return { ...tenant, engineer: linked };
 }
 
@@ -115,7 +116,7 @@ export function inTenant(table: { organizationId: SQLiteColumn }): SQL {
  */
 export function requireModule(moduleId: ModuleId) {
 	const tenant = requireMember();
-	if (!tenant.modules.includes(moduleId)) error(404, "Not found");
+	if (!tenant.modules.includes(moduleId)) error(404, m.common_error_not_found());
 	return tenant;
 }
 
@@ -123,7 +124,7 @@ export function requireModule(moduleId: ModuleId) {
 export function requireRole(...roles: string[]) {
 	const tenant = requireMember();
 	if (!tenant.roles.some((role) => roles.includes(role))) {
-		error(403, "You don't have permission to do this");
+		error(403, m.common_error_no_permission());
 	}
 	return tenant;
 }

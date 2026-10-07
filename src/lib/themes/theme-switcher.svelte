@@ -16,7 +16,7 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button {...props} variant="ghost" size="sm" aria-label="Theme">
+			<Button {...props} variant="ghost" size="sm" aria-label={m.common_theme()}>
 				<PaletteIcon data-icon="inline-start" />
 				{themes[current].label}
 				<ChevronDownIcon data-icon="inline-end" class="text-muted-foreground" />
@@ -25,7 +25,7 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end" class="w-48">
 		<DropdownMenu.Group>
-			<DropdownMenu.Label>Theme</DropdownMenu.Label>
+			<DropdownMenu.Label>{m.common_theme()}</DropdownMenu.Label>
 			<DropdownMenu.RadioGroup
 				value={current}
 				onValueChange={(value) => select(value as ThemeName)}

@@ -3,6 +3,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { isFieldEngineer } from "#lib/roles.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
@@ -48,7 +49,7 @@ export const switchOrganization = form(
 			.select({ id: member.id })
 			.from(member)
 			.where(and(eq(member.userId, user.id), eq(member.organizationId, organizationId)));
-		if (!membership) error(403, "You're not a member of that organization");
+		if (!membership) error(403, m.common_error_not_a_member());
 		await auth.api.setActiveOrganization({
 			body: { organizationId },
 			headers: getRequestEvent().request.headers,

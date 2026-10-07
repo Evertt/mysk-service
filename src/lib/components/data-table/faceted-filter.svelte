@@ -43,7 +43,9 @@
 				{#if selected.size}
 					<Separator orientation="vertical" class="mx-0.5 h-4" />
 					{#if selected.size > 2}
-						<Badge variant="secondary">{selected.size} selected</Badge>
+						<Badge variant="secondary"
+							>{m.common_table_filter_selected({ count: selected.size })}</Badge
+						>
 					{:else}
 						{#each options.filter((option) => selected.has(option.value)) as option (option.value)}
 							<Badge variant="secondary">{option.label}</Badge>
@@ -57,7 +59,7 @@
 		<Command.Root>
 			<Command.Input placeholder={title} />
 			<Command.List>
-				<Command.Empty>No results found.</Command.Empty>
+				<Command.Empty>{m.common_table_filter_no_results()}</Command.Empty>
 				<Command.Group>
 					{#each options as option (option.value)}
 						<Command.Item value={option.label} onSelect={() => toggle(option.value)}>
@@ -85,7 +87,7 @@
 					<Command.Separator />
 					<Command.Group>
 						<Command.Item class="justify-center" onSelect={() => column?.setFilterValue(undefined)}>
-							Clear filters
+							{m.common_table_filter_clear()}
 						</Command.Item>
 					</Command.Group>
 				{/if}

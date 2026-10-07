@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-	import { humanize } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 	import type { EquipmentStatus } from "#lib/models.js";
 
 	let { status }: { status: EquipmentStatus } = $props();
@@ -13,4 +13,4 @@
 	};
 </script>
 
-<Badge variant={variants[status]}>{humanize(status)}</Badge>
+<Badge variant={variants[status]}>{label("equipmentStatus", status)}</Badge>

@@ -5,23 +5,27 @@ import FanIcon from "@lucide/svelte/icons/fan";
 import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
+import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import { type EngineerSpecialty, engineerSpecialties } from "#lib/models.js";
 
 interface Display {
-	label: string;
 	icon: Component;
 }
 
-export const specialties: Record<EngineerSpecialty, Display> = {
-	electrical: { label: "Electrical", icon: ZapIcon },
-	mechanical: { label: "Mechanical", icon: CogIcon },
-	hvac: { label: "HVAC", icon: FanIcon },
-	plumbing: { label: "Plumbing", icon: DropletsIcon },
-	controls: { label: "Controls", icon: CpuIcon },
+const specialtyDetails: Record<EngineerSpecialty, Display> = {
+	electrical: { icon: ZapIcon },
+	mechanical: { icon: CogIcon },
+	hvac: { icon: FanIcon },
+	plumbing: { icon: DropletsIcon },
+	controls: { icon: CpuIcon },
 };
 
+/** Each specialty's translated `label` and icon. */
+export const specialties = withLabels("engineerSpecialty", specialtyDetails);
+
 /** Options for the specialty filter and select, in the order of `engineerSpecialties`. */
-export const specialtyOptions = engineerSpecialties.map((value) => ({
-	value,
-	...specialties[value],
-}));
+export const specialtyOptions = labelOptions(
+	"engineerSpecialty",
+	engineerSpecialties,
+	specialtyDetails,
+);
