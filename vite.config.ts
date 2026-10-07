@@ -125,6 +125,14 @@ export default defineConfig({
 		projects: [
 			{
 				extends: "./vite.config.ts",
+				// Vite pre-bundles the dependencies it finds by scanning the test files' imports, but the
+				// shadcn-svelte components are auto-imported (see `shadcnImports`), so the scan doesn't
+				// reach them or what they import (e.g. their icons). Those would be found mid-run, after
+				// the deps cache was cleared (e.g. by a change to the lockfile): Vite then pre-bundles
+				// them again and reloads the browser, which fails the test files that were loading
+				// ("Failed to fetch dynamically imported module", an iframe that isn't ready, or a second
+				// copy of Svelte's runtime). Scanning the components as well finds them up front.
+				optimizeDeps: { entries: ["src/lib/components/ui/**/*.svelte"] },
 				test: {
 					name: "client",
 					browser: {
