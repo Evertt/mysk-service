@@ -17,6 +17,7 @@
  */
 import type { RouteId } from "$app/types";
 import FileCheckIcon from "@lucide/svelte/icons/file-check";
+import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
 /** The places on core pages where modules can add components, with the props each passes. */
@@ -63,6 +64,18 @@ export const modules = [
 			dashboard: () => import("#lib/components/contracts/dashboard-cards.svelte"),
 			order: () => import("#lib/components/contracts/order-coverage.svelte"),
 			equipment: () => import("#lib/components/contracts/equipment-coverage.svelte"),
+		},
+	},
+	{
+		id: "invoicing",
+		label: "Invoicing",
+		description:
+			"Invoices for completed orders and other modules' fees, with VAT, PDF download and receivables on the dashboard.",
+		route: "/(app)/invoices",
+		icon: ReceiptTextIcon,
+		slots: {
+			dashboard: () => import("#lib/components/invoicing/dashboard-cards.svelte"),
+			order: () => import("#lib/components/invoicing/order-invoice.svelte"),
 		},
 	},
 ] as const satisfies readonly AppModule[];

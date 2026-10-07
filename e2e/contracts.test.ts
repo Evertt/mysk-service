@@ -741,10 +741,10 @@ describe("in South, which doesn't have the module", () => {
 		expect(await countIn("contract", south.id)).toBe(southBefore);
 	});
 
-	test("the sidebar has no modules and the contracts pages are 404s", async () => {
+	test("the sidebar lacks the module and the contracts pages are 404s", async () => {
 		await app.go("/");
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
-		expect(await sidebar()).not.toMatch(/Modules|Service contracts/);
+		expect(await sidebar()).not.toContain("Service contracts");
 		for (const path of [
 			"/contracts",
 			"/contracts/new",
@@ -800,8 +800,11 @@ describe("in South, with the module enabled", () => {
 		await row.getByRole("button", { name: "Enable" }).click();
 		await row.getByText(/Enabled since/).waitFor();
 		expect(
-			await rows(`select module_id from organization_module where organization_id = ?`, [south.id]),
-		).toEqual([{ module_id: "contracts" }]);
+			await rows(
+				`select module_id from organization_module where organization_id = ? order by module_id`,
+				[south.id],
+			),
+		).toEqual([{ module_id: "contracts" }, { module_id: "invoicing" }]);
 		await app.go("/settings");
 		expect(await sidebar()).toContain("Service contracts");
 	});

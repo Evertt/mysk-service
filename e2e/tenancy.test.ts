@@ -75,8 +75,10 @@ describe("modules", () => {
 		await app.submit(card.getByRole("button", { name: "Enable" }));
 		await card.getByText(/Enabled since/).waitFor();
 		expect(
-			await rows(`select * from organization_module where organization_id = ?`, [south.id]),
-		).toMatchObject([{ module_id: "contracts" }]);
+			await rows(`select * from organization_module where organization_id = ? order by module_id`, [
+				south.id,
+			]),
+		).toMatchObject([{ module_id: "contracts" }, { module_id: "invoicing" }]);
 		// The sidebar follows without a reload.
 		await sidebarLink(contracts).waitFor();
 		await app.go("/contracts");
@@ -88,9 +90,10 @@ describe("modules", () => {
 		const card = moduleCard(contracts);
 		await app.submit(card.getByRole("button", { name: "Disable" }));
 		await card.getByText("Disabled").waitFor();
+		// South's own module (invoicing) stays.
 		expect(
-			await value(`select count(*) from organization_module where organization_id = ?`, [south.id]),
-		).toBe(0);
+			await rows(`select module_id from organization_module where organization_id = ?`, [south.id]),
+		).toEqual([{ module_id: "invoicing" }]);
 		expect(await sidebarLink(contracts).count()).toBe(0);
 		expect((await app.go("/contracts"))?.status()).toBe(404);
 	});
@@ -126,6 +129,6 @@ describe("modules", () => {
 		expect(status).toBe(403);
 		expect(
 			await value(`select count(*) from organization_module where organization_id = ?`, [north.id]),
-		).toBe(1);
+		).toBe(2);
 	});
 });

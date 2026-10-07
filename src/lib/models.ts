@@ -147,3 +147,13 @@ export const stockMovementKinds = [
 	"return",
 ] as const;
 export type StockMovementKind = (typeof stockMovementKinds)[number];
+
+// --- Invoicing (optional module, see `#lib/modules.ts`) ----------------------------------------
+
+/**
+ * Where an invoice is: a draft (still editable), sent to the customer, paid, or void (cancelled;
+ * it keeps its number, so the numbers have no gaps). Overdue isn't stored: it's a sent invoice
+ * past its due date, see `invoiceState` in `#lib/components/invoicing/invoice.ts`.
+ */
+export const invoiceStatuses = ["draft", "sent", "paid", "void"] as const;
+export type InvoiceStatus = (typeof invoiceStatuses)[number];

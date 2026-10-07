@@ -55,10 +55,13 @@ organizations (tenants) and three demo users, all with the password `fieldworks-
 | Pat Planner  | `planner@fieldworks.example`  | member of Fieldworks North                     |
 | Eli Engineer | `engineer@fieldworks.example` | engineer in Fieldworks North                   |
 
-Fieldworks North has the optional Service contracts module; Fieldworks South doesn't (owners and
-admins can switch modules on and off under Organization settings). Switch organizations from the
-menu at the top of the sidebar. North's data includes call-outs on covered equipment that are
-overdue, at risk and on track for their contract's response time, as of when you seeded.
+Fieldworks North has the optional Service contracts and Invoicing modules; Fieldworks South has
+Invoicing only (owners and admins can switch modules on and off under Organization settings).
+Switch organizations from the menu at the top of the sidebar. North's data includes call-outs on
+covered equipment that are overdue, at risk and on track for their contract's response time, as of
+when you seeded. Both have invoices for their invoiced orders (North's with the contracts' monthly
+fees from six months back), paid, sent, overdue and a few voided, plus two drafts each; this month's
+contract fees and the completed orders that aren't invoiced yet are left to bill.
 
 Eli is a field engineer: members whose only role is `engineer` (roles are listed in
 `src/lib/roles.ts`) use the mobile engineer portal at `/my` instead of the office app, and see only
