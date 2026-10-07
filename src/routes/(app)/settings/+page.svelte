@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
+
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate, humanize } from "#lib/format.js";
 	import { modules as moduleRegistry } from "#lib/modules.js";
@@ -69,6 +71,11 @@
 		<Card.Header>
 			<Card.Title>Members</Card.Title>
 			<Card.Description>People who can sign in to this organization.</Card.Description>
+			<Card.Action>
+				<Button href={resolve("/(app)/settings/members")} variant="outline" size="sm">
+					{settings.canManage ? "Manage members" : "View members"}
+				</Button>
+			</Card.Action>
 		</Card.Header>
 		<Card.Content>
 			<Table.Root>

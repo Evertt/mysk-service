@@ -28,6 +28,9 @@
 		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit push --force && pnpm run db:seed",
 		"themes:sync": "node scripts/theme-components.ts && vp check --fix"
 	},
+	"dependencies": {
+		"@libsql/client": "^0.17.4"
+	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.6.0",
 		"@fontsource-variable/ibm-plex-sans": "^5.3.0",
@@ -37,9 +40,8 @@
 		"@fontsource-variable/space-grotesk": "^5.3.0",
 		"@inlang/paraglide-js": "^2.18.2",
 		"@internationalized/date": "^3.12.4",
-		"@libsql/client": "^0.17.3",
 		"@lucide/svelte": "^1.52.0",
-		"@sveltejs/adapter-auto": "^8.0.0",
+		"@sveltejs/adapter-node": "^6.0.0",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/forms": "^0.5.11",
@@ -47,6 +49,7 @@
 		"@tailwindcss/vite": "^4.3.0",
 		"@tanstack/svelte-table": "^9.2.5",
 		"@types/node": "^24",
+		"@types/nodemailer": "^8.0.2",
 		"@typescript/native": "npm:typescript@7",
 		"@vitest/browser-playwright": "catalog:",
 		"auth": "^1.6.24",
@@ -55,6 +58,7 @@
 		"cn": "^0.4.0",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
+		"nodemailer": "^10.0.15",
 		"playwright": "^1.60.0",
 		"shadcn-svelte": "^1.7.0",
 		"svelte": "^5.57.1",
