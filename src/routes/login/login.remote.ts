@@ -3,7 +3,9 @@ import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
+import { isFieldEngineer } from "#lib/roles.js";
 import { auth } from "#lib/server/auth.js";
+import { loadTenant } from "#lib/server/session.js";
 
 /** Only local paths, so the login can't be used to send people to another site. */
 const safeRedirect = (path: string | undefined) =>
@@ -26,16 +28,24 @@ export const login = form(
 		redirectTo: v.optional(v.string()),
 	}),
 	async ({ email, _password, redirectTo }) => {
+		let userId: string;
 		try {
 			// Sets the session cookie through the `sveltekitCookies` plugin.
-			await auth.api.signInEmail({
+			({
+				user: { id: userId },
+			} = await auth.api.signInEmail({
 				body: { email, password: _password },
 				headers: getRequestEvent().request.headers,
-			});
+			}));
 		} catch (e) {
 			if (isAPIError(e) && e.statusCode === 401) invalid("Incorrect email or password.");
 			if (isAPIError(e) && e.statusCode < 500) invalid(e.message || "Couldn't sign you in.");
 			throw e;
+		}
+		// Field engineers start in their portal; the office app isn't theirs.
+		const tenant = await loadTenant(userId, null);
+		if (tenant && isFieldEngineer(tenant.roles) && !safeRedirect(redirectTo).startsWith("/my")) {
+			redirect(303, "/my");
 		}
 		redirect(303, safeRedirect(redirectTo));
 	},

@@ -6,6 +6,7 @@
 	import EngineerForm from "../../engineer-form.svelte";
 	import { getEngineer, updateEngineer } from "../../engineers.remote.js";
 	import type { PageProps } from "./$types";
+	import AccountCard from "./account-card.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -36,3 +37,5 @@
 </PageHeader>
 
 <EngineerForm form={updateEngineer} {engineer} cancelHref={engineerHref} />
+
+<AccountCard engineerId={engineer.id} />

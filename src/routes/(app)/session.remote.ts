@@ -3,10 +3,11 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { isFieldEngineer } from "#lib/roles.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
 import { member, organization } from "#lib/server/db/schema.js";
-import { requireMember, requireUser } from "#lib/server/session.js";
+import { requireMember, requireTenant, requireUser } from "#lib/server/session.js";
 
 /** Who is signed in, for the user menu. */
 export const getCurrentUser = query(async () => {
@@ -19,6 +20,8 @@ export const getCurrentUser = query(async () => {
  * organizations they can switch to.
  */
 export const getCurrentTenant = query(async () => {
+	// The app shell awaits this, so field engineers who navigate here go to their portal instead.
+	if (isFieldEngineer(requireTenant().roles)) redirect(303, "/my");
 	const tenant = requireMember();
 	const organizations = await db
 		.select({ id: organization.id, name: organization.name })

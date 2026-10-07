@@ -40,6 +40,15 @@ const ordersUsing = async (id: number) =>
 	Number(
 		await value(`select count(distinct order_id) from order_line where material_id = ?`, [id]),
 	);
+/** The number of orders using a material that hold stock: not quotes, nor cancelled orders. */
+const ordersHolding = async (id: number) =>
+	Number(
+		await value(
+			`select count(distinct l.order_id) from order_line l join "order" o on o.id = l.order_id
+			 where l.material_id = ? and o.status not in ('quote', 'cancelled')`,
+			[id],
+		),
+	);
 
 interface Movement {
 	kind: string;
@@ -117,8 +126,15 @@ describe("in North", () => {
 
 	test("every material's stock is the sum of its movements", async () => {
 		expect(await unbalancedStock(north.id)).toEqual([]);
+		// An opening balance per material, and the lines of orders that hold stock.
 		expect(await countIn("stock_movement", north.id)).toBeGreaterThan(
-			await countIn("order_line", north.id),
+			Number(
+				await value(
+					`select count(*) from order_line l join "order" o on o.id = l.order_id
+					 where l.organization_id = ? and o.status not in ('quote', 'cancelled')`,
+					[north.id],
+				),
+			),
 		);
 	});
 
@@ -255,7 +271,7 @@ describe("in North", () => {
 		expect(shown[0]).toContain(`${formatNumber(busy.stock)} ${busy.unit}`);
 		expect(shown.at(-1)).toContain("Opening balance");
 		const consumed = stored.filter((m) => m.kind === "consumption");
-		expect(consumed.length).toBeGreaterThanOrEqual(await ordersUsing(busy.id));
+		expect(consumed.length).toBeGreaterThanOrEqual(await ordersHolding(busy.id));
 		const card = app.page.locator('[data-slot="card"]', { hasText: "Stock history" });
 		expect(await card.locator('a[href^="/orders/"]').count()).toBe(consumed.length);
 	});

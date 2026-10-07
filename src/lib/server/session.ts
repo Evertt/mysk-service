@@ -1,18 +1,19 @@
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { ModuleId } from "#lib/modules.js";
+import { isFieldEngineer } from "#lib/roles.js";
 import { db } from "#lib/server/db/index.js";
-import { member, organization, organizationModule } from "#lib/server/db/schema.js";
+import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.js";
 
 /** The organization a request works in, with the signed-in user's role there. */
 export interface Tenant {
 	organizationId: string;
 	name: string;
 	slug: string;
-	/** better-auth's member roles: owner, admin or member (a member may have several). */
+	/** The member's roles, see `memberRoles` in `#lib/roles.ts` (a member may have several). */
 	roles: string[];
 	modules: string[];
 }
@@ -64,8 +65,12 @@ export function requireUser() {
 	return user;
 }
 
-/** The signed-in user and their current tenant, or a 401/403. */
-export function requireMember() {
+/**
+ * The signed-in user and their current tenant, whatever their role there, or a 401/403. For code
+ * that both the office and the engineer portal use (`inTenant`, the stock ledger); remote functions
+ * start with `requireMember()` or `requireEngineer()` instead.
+ */
+export function requireTenant() {
 	const user = requireUser();
 	const { tenant } = getRequestEvent().locals;
 	if (!tenant) error(403, "You're not a member of any organization");
@@ -73,11 +78,35 @@ export function requireMember() {
 }
 
 /**
+ * The signed-in user and their current tenant, or a 401/403. Refuses field engineers (see
+ * `isFieldEngineer`), who only use the engineer portal.
+ */
+export function requireMember() {
+	const tenant = requireTenant();
+	if (isFieldEngineer(tenant.roles)) error(403, "Field engineers use the engineer portal");
+	return tenant;
+}
+
+/**
+ * The signed-in user, their current tenant and the engineer record linked to their account there
+ * (`engineer.userId`), or a 401/403. Call it first in every remote function of the engineer
+ * portal, and scope its queries to `engineer.id` as well as the tenant.
+ */
+export async function requireEngineer() {
+	const tenant = requireTenant();
+	const linked = await db.query.engineer.findFirst({
+		where: and(eq(engineer.userId, tenant.user.id), inTenant(engineer)),
+	});
+	if (!linked) error(403, "Your account isn't linked to an engineer");
+	return { ...tenant, engineer: linked };
+}
+
+/**
  * Scopes a query to the current tenant: `.where(and(inTenant(customer), …))`. Every query on a
  * tenant table needs it, also when looking up a record by id (ids are global).
  */
 export function inTenant(table: { organizationId: SQLiteColumn }): SQL {
-	return eq(table.organizationId, requireMember().organizationId);
+	return eq(table.organizationId, requireTenant().organizationId);
 }
 
 /**

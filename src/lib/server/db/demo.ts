@@ -21,4 +21,11 @@ export const demoUsers = [
 		email: "planner@fieldworks.example",
 		memberships: [{ organizationId: "org-north", role: "member" }],
 	},
+	{
+		name: "Eli Engineer",
+		email: "engineer@fieldworks.example",
+		memberships: [{ organizationId: "org-north", role: "engineer" }],
+		/** A field engineer: linked to the organization's first engineer, with work today and soon. */
+		engineerIn: "org-north",
+	},
 ];

@@ -10,7 +10,7 @@
 import { en, Faker, faker } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { hashPassword } from "better-auth/crypto";
-import { inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import {
@@ -21,6 +21,7 @@ import {
 	equipmentCategories,
 	type EquipmentCategory,
 	type EquipmentStatus,
+	holdsStock,
 	type MaterialUnit,
 	type OrderPriority,
 	type OrderStatus,
@@ -482,7 +483,8 @@ function generateTenant(size: TenantSize) {
 
 /**
  * The stock ledger that adds up to each generated material's stock: an opening balance before
- * the first order, consumption by every order line, and a few recent deliveries (no larger than
+ * the first order, consumption by the lines of every order that holds stock, and a few recent
+ * deliveries (no larger than
  * the stock now, so the stock was never below zero). With a faker of its own, so the rest of the
  * data is the same with or without it.
  */
@@ -492,8 +494,10 @@ function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: n
 	const round = (quantity: number) => Math.round(quantity * 100) / 100;
 	const orders = new Map(data.orders.map((o) => [o.id, o]));
 
-	const consumption = data.orderLines.map((line) => {
+	// Only orders that hold stock took it: not quotes, nor cancelled orders (see `holdsStock`).
+	const consumption = data.orderLines.flatMap((line) => {
 		const o = orders.get(line.orderId)!;
+		if (!holdsStock(o.status)) return [];
 		return {
 			materialId: line.materialId,
 			quantity: -line.quantity,
@@ -576,6 +580,8 @@ await db.transaction(async (tx) => {
 	for (const table of [
 		schema.contractEquipment,
 		schema.contract,
+		schema.orderSignoff,
+		schema.orderNote,
 		schema.stockMovement,
 		orderLine,
 		order,
@@ -673,6 +679,57 @@ await db.transaction(async (tx) => {
 	}
 });
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Links a demo field engineer's account to their organization's first engineer, and plans some of
+ * the organization's scheduled work (of engineers with the same specialty) for them: a job under
+ * way and another one today, then a few on the next days, so the engineer portal has work to show.
+ */
+async function linkDemoEngineer(tx: Transaction, userId: string, organizationId: string) {
+	const [first] = await tx
+		.select({ id: engineer.id, specialty: engineer.specialty })
+		.from(engineer)
+		.where(and(eq(engineer.organizationId, organizationId), eq(engineer.active, true)))
+		.orderBy(asc(engineer.id))
+		.limit(1);
+	await tx.update(engineer).set({ userId }).where(eq(engineer.id, first.id));
+
+	const work = await tx
+		.select({ id: order.id })
+		.from(order)
+		.innerJoin(engineer, eq(order.engineerId, engineer.id))
+		.where(
+			and(
+				eq(order.organizationId, organizationId),
+				eq(order.status, "scheduled"),
+				eq(engineer.specialty, first.specialty),
+			),
+		)
+		.orderBy(asc(order.id))
+		.limit(4);
+	const plan = [
+		{ days: 0, hours: 8, minutes: 0, status: "in_progress" },
+		{ days: 0, hours: 13, minutes: 30, status: "scheduled" },
+		{ days: 1, hours: 9, minutes: 0, status: "scheduled" },
+		{ days: 3, hours: 10, minutes: 30, status: "scheduled" },
+	] as const;
+	for (const [i, { id }] of work.entries()) {
+		const { days, hours, minutes, status } = plan[i];
+		const scheduledFor = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate() + days,
+			hours,
+			minutes,
+		);
+		await tx
+			.update(order)
+			.set({ engineerId: first.id, scheduledFor, status })
+			.where(eq(order.id, id));
+	}
+}
+
 // Demo users are recreated (with their password account, as better-auth's email sign-up would),
 // so a changed name or password always takes effect. Their sessions go with them.
 await db.transaction(async (tx) => {
@@ -690,7 +747,7 @@ await db.transaction(async (tx) => {
 	await tx.delete(account).where(inArray(account.userId, ids));
 	await tx.delete(user).where(inArray(user.id, ids));
 
-	for (const { memberships, ...demo } of demoUsers) {
+	for (const { memberships, engineerIn, ...demo } of demoUsers) {
 		const id = crypto.randomUUID();
 		await tx.insert(user).values({ id, ...demo, emailVerified: true });
 		await tx.insert(schema.member).values(
@@ -709,6 +766,7 @@ await db.transaction(async (tx) => {
 			userId: id,
 			password: await hashPassword(DEMO_PASSWORD),
 		});
+		if (engineerIn) await linkDemoEngineer(tx, id, engineerIn);
 	}
 });
 

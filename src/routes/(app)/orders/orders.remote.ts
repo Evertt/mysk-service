@@ -1,10 +1,9 @@
 import { form, query, type RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatNumber } from "#lib/format.js";
-import { fitsUnit, lineTotal } from "#lib/models.js";
+import { lineTotal } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -16,9 +15,10 @@ import {
 	orderLine,
 	stockMovement,
 } from "#lib/server/db/schema.js";
+import { checkLines, type LineProblem, saveOrderLines } from "#lib/server/orders.js";
 import { laborCost, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
-import { moveStock, roundQuantity, StockShortage, stockChanges } from "#lib/server/stock.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { orderFields } from "./order-schema.js";
 
@@ -171,8 +171,8 @@ type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 
 /**
  * Creates or updates an order in the current tenant and replaces its lines; returns its number.
- * The lines take their materials from stock; if there isn't enough, refuses with an issue on the
- * line.
+ * The lines take their materials from stock while the status holds stock (see `holdsStock`); if
+ * there isn't enough, refuses with an issue on the line.
  */
 async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { organizationId } = requireMember();
@@ -203,7 +203,6 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 				.update(order)
 				.set(values)
 				.where(and(eq(order.id, orderId), inTenant(order)));
-			await tx.delete(orderLine).where(and(eq(orderLine.orderId, orderId), inTenant(orderLine)));
 		} else {
 			// Numbers are sequential per tenant, across years: ORD-2026-00001, ORD-2026-00002, …
 			const [{ last }] = await tx
@@ -218,63 +217,21 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 			orderId = inserted.id;
 		}
 
-		if (lines.length) {
-			// Lines keep the price they were quoted at; new materials get today's price.
-			const quoted = new Map(existing?.lines.map((line) => [line.materialId, line.unitPrice]));
-			const prices = new Map(
-				(
-					await tx
-						.select({ id: material.id, unitPrice: material.unitPrice })
-						.from(material)
-						.where(
-							and(
-								inArray(
-									material.id,
-									lines.map((line) => line.materialId),
-								),
-								inTenant(material),
-							),
-						)
-				).map((row) => [row.id, row.unitPrice]),
+		// The lines take their materials from stock, or return them, as the status says.
+		try {
+			await saveOrderLines(tx, { id: orderId, number }, existing, {
+				status: fields.status,
+				lines,
+			});
+		} catch (error) {
+			if (!(error instanceof OrderStockShortage)) throw error;
+			invalid(
+				toIssue(issue, {
+					line: lines.findLastIndex((line) => line.materialId === error.materialId),
+					field: "quantity",
+					message: error.message,
+				}),
 			);
-			await tx.insert(orderLine).values(
-				lines.map((line) => ({
-					organizationId,
-					orderId,
-					materialId: line.materialId,
-					quantity: line.quantity,
-					unitPrice: quoted.get(line.materialId) ?? prices.get(line.materialId) ?? 0,
-				})),
-			);
-		}
-
-		// New and larger lines take the difference from stock; smaller and removed ones return it.
-		const before = existing?.lines ?? [];
-		for (const [materialId, change] of stockChanges(before, lines)) {
-			try {
-				await moveStock(tx, {
-					materialId,
-					quantity: -change,
-					kind: change > 0 ? "consumption" : "return",
-					orderId,
-					orderNumber: number,
-				});
-			} catch (error) {
-				if (!(error instanceof StockShortage)) throw error;
-				// What this order can have: the stock, plus what it already took.
-				const { stock, unit, name } = error.material;
-				const taken = before
-					.filter((line) => line.materialId === materialId)
-					.reduce((sum, line) => sum + line.quantity, 0);
-				const available = roundQuantity(stock + taken);
-				invalid(
-					toIssue(issue, {
-						line: lines.findLastIndex((line) => line.materialId === materialId),
-						field: "quantity",
-						message: `Only ${formatNumber(available)} ${unit} of ${name} in stock`,
-					}),
-				);
-			}
 		}
 		return number;
 	});
@@ -282,12 +239,12 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 
 type Problem =
 	| { field: "customerId" | "equipmentId" | "engineerId"; message: string }
-	| { line: number; field: "materialId" | "quantity"; message: string };
+	| LineProblem;
 
 /** Checks that the order's references exist in the current tenant and belong together. */
 async function checkReferences(input: OrderInput): Promise<Problem[]> {
 	const problems: Problem[] = [];
-	const [found, unit, assignee, materials] = await Promise.all([
+	const [found, unit, assignee, lineProblems] = await Promise.all([
 		db.query.customer.findFirst({
 			columns: { id: true },
 			where: and(eq(customer.id, input.customerId), inTenant(customer)),
@@ -304,20 +261,7 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 					where: and(eq(engineer.id, input.engineerId), inTenant(engineer)),
 				})
 			: undefined,
-		input.lines.length
-			? db
-					.select({ id: material.id, unit: material.unit })
-					.from(material)
-					.where(
-						and(
-							inArray(
-								material.id,
-								input.lines.map((line) => line.materialId),
-							),
-							inTenant(material),
-						),
-					)
-			: [],
+		checkLines(input.lines),
 	]);
 	if (!found) problems.push({ field: "customerId", message: "Unknown customer" });
 	if (input.equipmentId && unit?.customerId !== input.customerId) {
@@ -326,16 +270,7 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 	if (input.engineerId && !assignee) {
 		problems.push({ field: "engineerId", message: "Unknown engineer" });
 	}
-	const units = new Map(materials.map((row) => [row.id, row.unit]));
-	input.lines.forEach((line, index) => {
-		const unit = units.get(line.materialId);
-		if (!unit) {
-			problems.push({ line: index, field: "materialId", message: "Unknown material" });
-		} else if (!fitsUnit(line.quantity, unit)) {
-			problems.push({ line: index, field: "quantity", message: "Whole pieces only" });
-		}
-	});
-	return problems;
+	return [...problems, ...lineProblems];
 }
 
 const orderSchema = v.object(orderFields);
@@ -373,23 +308,14 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
 	await db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true },
+			columns: { id: true, number: true, status: true },
 			where: and(eq(order.id, id), inTenant(order)),
 			with: { lines: true },
 		});
 		if (!found) error(404, "Order not found");
-		// Its materials go back into stock. The stock history keeps the order's number, but no
+		// What it held goes back into stock. The stock history keeps the order's number, but no
 		// longer refers to the order itself.
-		for (const [materialId, change] of stockChanges(found.lines, [])) {
-			await moveStock(tx, {
-				materialId,
-				quantity: -change,
-				kind: "return",
-				orderId: found.id,
-				orderNumber: found.number,
-				note: "Order deleted",
-			});
-		}
+		await moveOrderStock(tx, found, found, { status: found.status, lines: [] }, "Order deleted");
 		await tx
 			.update(stockMovement)
 			.set({ orderId: null })

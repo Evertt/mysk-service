@@ -7,7 +7,11 @@ import { db } from "#lib/server/db/index.js";
 
 import type { Tenant } from "./session.ts";
 import {
+	heldLines,
+	moveOrderStock,
 	moveStock,
+	type OrderStock,
+	OrderStockShortage,
 	roundQuantity,
 	StockShortage,
 	stockChanges,
@@ -136,6 +140,109 @@ describe("moveStock", () => {
 		const error = await move({ materialId: 2, quantity: 5, kind: "receipt" }).catch((e) => e);
 		expect(isHttpError(error) && error.status).toBe(404);
 		expect(await ledger(2)).toEqual({ stock: 5, movements: [] });
+	});
+});
+
+describe("heldLines", () => {
+	const lines = [{ materialId: 1, quantity: 2 }];
+
+	test("an order holds its lines' stock from scheduled on", () => {
+		for (const status of ["scheduled", "in_progress", "completed", "invoiced"] as const) {
+			expect(heldLines({ status, lines }), status).toBe(lines);
+		}
+	});
+
+	test("a quote and a cancelled order hold nothing", () => {
+		expect(heldLines({ status: "quote", lines })).toEqual([]);
+		expect(heldLines({ status: "cancelled", lines })).toEqual([]);
+	});
+});
+
+describe("moveOrderStock", () => {
+	const order = { id: 7, number: "ORD-7" };
+	const lines = [
+		{ materialId: 1, quantity: 4 },
+		{ materialId: 3, quantity: 2 },
+	];
+	/** Runs `moveOrderStock` in a transaction, like the app does. */
+	const moveOrder = (
+		movedOrder: typeof order,
+		before: OrderStock,
+		after: OrderStock,
+		note?: string,
+	) =>
+		db.transaction((tx) =>
+			moveOrderStock(tx as unknown as Transaction, movedOrder, before, after, note),
+		);
+
+	beforeEach(async () => {
+		Object.assign(locals, { user: { id: "u1", name: "Jo" }, tenant: tenant("north") });
+		await db.$client.executeMultiple(`
+			delete from stock_movement;
+			delete from material;
+			insert into material values (1, 'north', 'MAT-0001', 'Copper pipe', 'm', 900, 10);
+			insert into material values (3, 'north', 'MAT-0003', 'Ball valve', 'pcs', 1800, 5);
+		`);
+	});
+
+	test("a quote's lines take nothing; scheduling it takes them", async () => {
+		await moveOrder(order, { status: "quote", lines: [] }, { status: "quote", lines });
+		expect((await ledger(1)).movements).toEqual([]);
+
+		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
+		expect(await ledger(1)).toMatchObject({
+			stock: 6,
+			movements: [{ quantity: -4, kind: "consumption", order_number: "ORD-7" }],
+		});
+		expect((await ledger(3)).stock).toBe(3);
+	});
+
+	test("moving on from scheduled takes nothing more", async () => {
+		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
+		await moveOrder(order, { status: "scheduled", lines }, { status: "in_progress", lines });
+		await moveOrder(order, { status: "in_progress", lines }, { status: "completed", lines });
+		expect((await ledger(1)).movements).toHaveLength(1);
+	});
+
+	test("cancelling returns what it held, and reopening takes it again", async () => {
+		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
+		await moveOrder(order, { status: "scheduled", lines }, { status: "cancelled", lines });
+		expect(await ledger(1)).toMatchObject({
+			stock: 10,
+			movements: [{ kind: "consumption" }, { quantity: 4, kind: "return" }],
+		});
+		await moveOrder(order, { status: "cancelled", lines }, { status: "scheduled", lines });
+		expect((await ledger(1)).stock).toBe(6);
+	});
+
+	test("removing the lines of a cancelled order returns nothing", async () => {
+		await moveOrder(order, { status: "cancelled", lines }, { status: "cancelled", lines: [] }, "x");
+		expect((await ledger(1)).movements).toEqual([]);
+	});
+
+	test("refuses a shortage, saying what the order can have, and the transaction takes nothing", async () => {
+		const more = [
+			{ materialId: 1, quantity: 4 },
+			{ materialId: 3, quantity: 6 },
+		];
+		const error = await moveOrder(
+			order,
+			{ status: "quote", lines: [] },
+			{ status: "scheduled", lines: more },
+		).catch((e) => e);
+		expect(error).toBeInstanceOf(OrderStockShortage);
+		expect(error).toMatchObject({ materialId: 3, available: 5 });
+		expect(error.message).toBe("Only 5 pcs of Ball valve in stock");
+		expect((await ledger(1)).movements).toEqual([]);
+
+		// What it already holds counts towards what it can have.
+		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
+		const again = await moveOrder(
+			order,
+			{ status: "scheduled", lines },
+			{ status: "scheduled", lines: more },
+		).catch((e) => e);
+		expect(again).toMatchObject({ materialId: 3, available: 5 });
 	});
 });
 

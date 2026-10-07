@@ -5,6 +5,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
+import { isFieldEngineer } from "#lib/roles.ts";
 import { auth } from "#lib/server/auth.ts";
 import { loadTenant } from "#lib/server/session.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
@@ -69,10 +70,14 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 const isPublic = (pathname: string) =>
 	pathname === "/login" || pathname.startsWith("/api/auth/") || pathname.startsWith("/_app/");
 
+/** The engineer portal, the only part of the app field engineers use. */
+const isPortal = (pathname: string) => pathname === "/my" || pathname.startsWith("/my/");
+
 /**
- * Sends signed-out visitors to the login page, and signed-in ones away from it. This only guards
- * page requests. Remote function calls pass through (their `event.url` is the calling page's, so a
- * redirect here would be wrong): they check for themselves with `requireUser()` from
+ * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers
+ * from the office app to their portal. This only guards page requests. Remote function calls pass
+ * through (their `event.url` is the calling page's, so a redirect here would be wrong): they check
+ * for themselves with `requireUser()`, `requireMember()` or `requireEngineer()` from
  * `#lib/server/session.ts`.
  */
 const handleGuard: Handle = ({ event, resolve }) => {
@@ -82,6 +87,10 @@ const handleGuard: Handle = ({ event, resolve }) => {
 	if (event.locals.user) {
 		if (pathname === "/login" && event.request.method === "GET") {
 			redirect(303, "/");
+		}
+		const { tenant } = event.locals;
+		if (tenant && isFieldEngineer(tenant.roles) && !isPortal(pathname) && !isPublic(pathname)) {
+			redirect(303, "/my");
 		}
 	} else if (!isPublic(pathname)) {
 		const target = pathname + search;

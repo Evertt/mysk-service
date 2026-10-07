@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "./app.ts";
+import { countIn, organizations, rows, useApp, users, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -12,6 +12,7 @@ interface Engineer {
 	email: string;
 	active: number;
 	hourly_rate: number;
+	user_id: string | null;
 }
 
 const engineer = async (id: number) =>
@@ -325,6 +326,40 @@ describe("in North", () => {
 		expect(await engineer(created)).toMatchObject({ active: 1, hourly_rate: 8000 });
 	});
 
+	test("an owner links an engineer to a member's account for the portal, and unlinks it", async () => {
+		const { page } = app;
+		const userId = (email: string) => value<string>(`select id from user where email = ?`, [email]);
+		const account = () => page.getByLabel("User account");
+		await app.go(`/engineers/${created}/edit`);
+		expect(await account().inputValue()).toBe("");
+		// Eli is already another engineer's account.
+		const options = await account().locator("option").allInnerTexts();
+		expect(options.some((option) => option.includes("Pat Planner"))).toBe(true);
+		expect(options.some((option) => option.includes("Eli Engineer"))).toBe(false);
+
+		await account().selectOption(await userId(users.planner));
+		await page.getByRole("button", { name: "Save account" }).click();
+		await app.toast("Account saved");
+		expect((await engineer(created)).user_id).toBe(await userId(users.planner));
+		await page.getByText("Signs in as Pat Planner").waitFor();
+
+		// Eli's engineer can't take Pat's account too.
+		const eli = await value<number>(
+			`select id from engineer where user_id = ? and organization_id = ?`,
+			[await userId(users.engineer), north.id],
+		);
+		await app.go(`/engineers/${eli}/edit`);
+		expect(
+			(await account().locator("option").allInnerTexts()).some((o) => o.includes("Pat Planner")),
+		).toBe(false);
+
+		await app.go(`/engineers/${created}/edit`);
+		await account().selectOption("");
+		await page.getByRole("button", { name: "Save account" }).click();
+		await app.toast("Account saved");
+		expect((await engineer(created)).user_id).toBeNull();
+	});
+
 	test("an engineer added inactive is stored inactive, and can be deleted", async () => {
 		await app.go("/engineers/new");
 		await fill({ name: "Test Engineer Two", email: "test-engineer-2@fieldservice.example" });
@@ -409,6 +444,29 @@ describe("in South", () => {
 		expect(result).toMatch(/"status":404/);
 		expect(app.path()).toBe(`/engineers/${own.id}`);
 		expect(await snapshot(created)).toEqual(victimBefore);
+		expect(await snapshot(own.id)).toEqual(ownBefore);
+	});
+
+	test("linking an account with the id of a North engineer is refused", async () => {
+		const { page } = app;
+		const [victimBefore, ownBefore] = [await snapshot(busy.id), await snapshot(own.id)];
+		await app.go(`/engineers/${own.id}/edit`);
+		const save = page.getByRole("button", { name: "Save account" });
+		// Only South's members to choose from: the admin, not North's planner or engineer.
+		const options = await page.getByLabel("User account").locator("option").allInnerTexts();
+		expect(options.filter((option) => option !== "No account")).toEqual([
+			expect.stringContaining("Avery Admin"),
+		]);
+		await page.getByLabel("User account").selectOption({ index: 1 });
+		const result = await app.expectingErrors(async () => {
+			await save.evaluate((button, id) => {
+				button.closest("form")!.querySelector<HTMLInputElement>('input[name^="id"]')!.value =
+					String(id);
+			}, busy.id);
+			return app.submit(save);
+		});
+		expect(result).toMatch(/"status":404/);
+		expect(await snapshot(busy.id)).toEqual(victimBefore);
 		expect(await snapshot(own.id)).toEqual(ownBefore);
 	});
 

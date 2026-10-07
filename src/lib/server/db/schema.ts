@@ -83,11 +83,15 @@ export const engineer = sqliteTable(
 		hourlyRate: integer("hourly_rate").notNull(),
 		active: integer("active", { mode: "boolean" }).notNull().default(true),
 		hiredAt: integer("hired_at", { mode: "timestamp" }).notNull(),
+		/** The user account they sign in to the engineer portal with, if any. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 	},
 	(table) => [
 		// Unique within a tenant; another tenant may use the same email.
 		uniqueIndex("engineer_organization_email").on(table.organizationId, table.email),
 		uniqueIndex("engineer_organization_id").on(table.organizationId, table.id),
+		// A user is at most one engineer per tenant.
+		uniqueIndex("engineer_organization_user").on(table.organizationId, table.userId),
 	],
 );
 
@@ -404,3 +408,58 @@ export const organizationModule = sqliteTable(
 	},
 	(table) => [primaryKey({ columns: [table.organizationId, table.moduleId] })],
 );
+
+// --- Engineer portal ------------------------------------------------------------------------------
+// What engineers record on their orders in the field (see `src/routes/(field)/my`).
+
+/** A note written on an order while working on it. */
+export const orderNote = sqliteTable(
+	"order_note",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		orderId: integer("order_id").notNull(),
+		/** Who wrote it; empty once their account is deleted. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		text: text("text").notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("order_note_order").on(table.orderId, table.createdAt),
+		foreignKey({
+			columns: [table.organizationId, table.orderId],
+			foreignColumns: [order.organizationId, order.id],
+		}).onDelete("cascade"),
+	],
+);
+
+/**
+ * The customer's sign-off of a completed order: who signed, and their signature as drawn on the
+ * engineer's screen (a PNG data URL). One per order; completing it again replaces it.
+ */
+export const orderSignoff = sqliteTable(
+	"order_signoff",
+	{
+		orderId: integer("order_id").primaryKey(),
+		organizationId: organizationId(),
+		signerName: text("signer_name").notNull(),
+		signature: text("signature").notNull(),
+		/** Who collected it; empty once their account is deleted. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		signedAt: integer("signed_at", { mode: "timestamp" }).notNull(),
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.organizationId, table.orderId],
+			foreignColumns: [order.organizationId, order.id],
+		}).onDelete("cascade"),
+	],
+);
+
+export const orderNoteRelations = relations(orderNote, ({ one }) => ({
+	order: one(order, {
+		fields: [orderNote.organizationId, orderNote.orderId],
+		references: [order.organizationId, order.id],
+	}),
+	user: one(user, { fields: [orderNote.userId], references: [user.id] }),
+}));

@@ -1,0 +1,269 @@
+/**
+ * The engineer portal's data: only the signed-in engineer's own orders. Every function starts with
+ * `requireEngineer()`, and every order lookup is scoped to the tenant and to their engineer id, so
+ * another engineer's order (or another tenant's) is a 404, also by a tampered id.
+ */
+import { form, getRequestEvent, query } from "$app/server";
+import { error, invalid, redirect } from "@sveltejs/kit";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import * as v from "valibot";
+
+import { doneOrderStatuses, type OrderStatus } from "#lib/models.js";
+import { id, laborHours, orderLines, text } from "#lib/schema.js";
+import { auth } from "#lib/server/auth.js";
+import { db } from "#lib/server/db/index.js";
+import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
+import { checkLines, saveOrderLines } from "#lib/server/orders.js";
+import { inTenant, requireEngineer } from "#lib/server/session.js";
+import { moveOrderStock, OrderStockShortage, type Transaction } from "#lib/server/stock.js";
+
+import { fieldActions, signature } from "./work.js";
+
+/** Who is signed in, for the portal's header. */
+export const getMe = query(async () => {
+	const { engineer, name } = await requireEngineer();
+	return { name: engineer.name, organization: name };
+});
+
+/** The columns of an order in the lists. */
+const listColumns = {
+	id: order.id,
+	number: order.number,
+	type: order.type,
+	status: order.status,
+	priority: order.priority,
+	description: order.description,
+	scheduledFor: order.scheduledFor,
+	completedAt: order.completedAt,
+	customer: { name: customer.name, city: customer.city },
+};
+
+/** The engineer's open work (scheduled or under way), and what they completed recently. */
+export const getMyWork = query(async () => {
+	const { engineer } = await requireEngineer();
+	const mine = and(inTenant(order), eq(order.engineerId, engineer.id));
+	const [open, recent] = await Promise.all([
+		db
+			.select(listColumns)
+			.from(order)
+			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.where(and(mine, inArray(order.status, ["scheduled", "in_progress"])))
+			.orderBy(asc(order.scheduledFor)),
+		db
+			.select(listColumns)
+			.from(order)
+			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.where(and(mine, inArray(order.status, doneOrderStatuses), isNotNull(order.completedAt)))
+			.orderBy(desc(order.completedAt))
+			.limit(10),
+	]);
+	return { open, recent };
+});
+
+/** One of the engineer's orders, with what they need on site; a 404 for anyone else's. */
+export const getMyOrder = query(v.string(), async (number) => {
+	const { engineer } = await requireEngineer();
+	const found = await db.query.order.findFirst({
+		where: and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineer.id)),
+		with: {
+			customer: {
+				columns: { name: true, contactName: true, phone: true, email: true, city: true },
+			},
+			equipment: {
+				columns: { model: true, manufacturer: true, serialNumber: true, category: true },
+			},
+			lines: {
+				columns: { id: true, materialId: true, quantity: true },
+				with: { material: { columns: { sku: true, name: true, unit: true } } },
+				orderBy: (line, { asc }) => asc(line.id),
+			},
+		},
+	});
+	if (!found) error(404, `Order ${number} not found`);
+
+	const [notes, signoff] = await Promise.all([
+		db
+			.select({
+				id: orderNote.id,
+				text: orderNote.text,
+				createdAt: orderNote.createdAt,
+				author: user.name,
+			})
+			.from(orderNote)
+			.leftJoin(user, eq(orderNote.userId, user.id))
+			.where(and(eq(orderNote.orderId, found.id), inTenant(orderNote)))
+			.orderBy(asc(orderNote.createdAt), asc(orderNote.id)),
+		db.query.orderSignoff.findFirst({
+			columns: { signerName: true, signature: true, signedAt: true },
+			where: and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff)),
+		}),
+	]);
+	return { order: found, notes, signoff: signoff ?? null };
+});
+
+/** The materials an engineer can use on a job, by name. */
+export const getMaterials = query(async () => {
+	await requireEngineer();
+	return db
+		.select({ id: material.id, sku: material.sku, name: material.name, unit: material.unit })
+		.from(material)
+		.where(inTenant(material))
+		.orderBy(asc(material.name));
+});
+
+/**
+ * One of the engineer's (`engineerId`) orders, with its lines, in a transaction, if they may do
+ * `action` with it in its current status; otherwise a 404 (not theirs) or what's in the way.
+ */
+async function findMyOrder(
+	tx: Transaction,
+	engineerId: number,
+	orderId: number,
+	action: keyof ReturnType<typeof fieldActions>,
+) {
+	const found = await tx.query.order.findFirst({
+		columns: { id: true, number: true, status: true },
+		where: and(eq(order.id, orderId), inTenant(order), eq(order.engineerId, engineerId)),
+		with: { lines: true },
+	});
+	if (!found) error(404, "Order not found");
+	if (!fieldActions(found.status)[action]) {
+		invalid(
+			found.status === "scheduled"
+				? "Start the job first"
+				: `This order is ${found.status.replaceAll("_", " ")}; it can't be changed here`,
+		);
+	}
+	return found;
+}
+
+/** Changes the status of an order (in the transaction), with the stock that follows from it. */
+async function setStatus(
+	tx: Transaction,
+	found: Awaited<ReturnType<typeof findMyOrder>>,
+	status: OrderStatus,
+	values: { completedAt?: Date } = {},
+) {
+	await tx
+		.update(order)
+		.set({ status, ...values })
+		.where(and(eq(order.id, found.id), inTenant(order)));
+	await moveOrderStock(tx, found, found, { status, lines: found.lines });
+}
+
+/** Refreshes what the portal shows of an order after a change. */
+function refresh(number: string) {
+	void getMyOrder(number).refresh();
+	void getMyWork().refresh();
+}
+
+/** Starts a scheduled job: it's then in progress. */
+export const startWork = form(v.object({ id: id() }), async (input) => {
+	const { engineer } = await requireEngineer();
+	const number = await db.transaction(async (tx) => {
+		const found = await findMyOrder(tx, engineer.id, input.id, "start");
+		await setStatus(tx, found, "in_progress");
+		return found.number;
+	});
+	refresh(number);
+});
+
+/** Sets the hours of labour on a job under way. */
+export const logHours = form(
+	v.object({ id: id(), laborHours: laborHours() }),
+	async (input, issue) => {
+		const { engineer } = await requireEngineer();
+		if (input.laborHours > 24 * 14) invalid(issue.laborHours("That's more than two weeks"));
+		const number = await db.transaction(async (tx) => {
+			const found = await findMyOrder(tx, engineer.id, input.id, "work");
+			await tx
+				.update(order)
+				.set({ laborHours: input.laborHours })
+				.where(and(eq(order.id, found.id), inTenant(order)));
+			return found.number;
+		});
+		refresh(number);
+	},
+);
+
+/**
+ * Replaces the materials used on a job under way, through the same code as the office's order
+ * form: they take or return stock, and more than there is in stock is refused on the line.
+ */
+export const saveMaterials = form(
+	v.object({ id: id(), lines: orderLines() }),
+	async (input, issue) => {
+		const { engineer } = await requireEngineer();
+		const problems = await checkLines(input.lines);
+		if (problems.length) {
+			invalid(...problems.map((p) => issue.lines[p.line][p.field](p.message)));
+		}
+		const number = await db
+			.transaction(async (tx) => {
+				const found = await findMyOrder(tx, engineer.id, input.id, "work");
+				await saveOrderLines(tx, found, found, { status: found.status, lines: input.lines });
+				return found.number;
+			})
+			.catch((error) => {
+				if (!(error instanceof OrderStockShortage)) throw error;
+				const line = input.lines.findLastIndex((line) => line.materialId === error.materialId);
+				invalid(issue.lines[line].quantity(error.message));
+			});
+		refresh(number);
+	},
+);
+
+/** Adds a note to a job. */
+export const addNote = form(
+	v.object({ id: id(), text: text("Write a note") }),
+	async (input, issue) => {
+		const { organizationId, user: author, engineer } = await requireEngineer();
+		if (input.text.length > 2000) invalid(issue.text("Keep it under 2,000 characters"));
+		const number = await db.transaction(async (tx) => {
+			const found = await findMyOrder(tx, engineer.id, input.id, "note");
+			await tx.insert(orderNote).values({
+				organizationId,
+				orderId: found.id,
+				userId: author.id,
+				text: input.text,
+			});
+			return found.number;
+		});
+		refresh(number);
+	},
+);
+
+/** Completes a job under way with the customer's sign-off: their name and signature. */
+export const completeWork = form(
+	v.object({
+		id: id(),
+		signerName: text("Enter the name of who signs"),
+		signature: signature(),
+	}),
+	async (input) => {
+		const { organizationId, user: signedInUser, engineer } = await requireEngineer();
+		const number = await db.transaction(async (tx) => {
+			const found = await findMyOrder(tx, engineer.id, input.id, "work");
+			const now = new Date();
+			await setStatus(tx, found, "completed", { completedAt: now });
+			const signoff = {
+				signerName: input.signerName,
+				signature: input.signature,
+				userId: signedInUser.id,
+				signedAt: now,
+			};
+			await tx
+				.insert(orderSignoff)
+				.values({ orderId: found.id, organizationId, ...signoff })
+				.onConflictDoUpdate({ target: orderSignoff.orderId, set: signoff });
+			return found.number;
+		});
+		refresh(number);
+	},
+);
+
+/** Signs out, back to the login page. */
+export const signOut = form(async () => {
+	await auth.api.signOut({ headers: getRequestEvent().request.headers });
+	redirect(303, "/login");
+});

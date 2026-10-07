@@ -6,10 +6,15 @@ import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { formatNumber } from "#lib/format.js";
-import type { MaterialUnit, StockMovementKind } from "#lib/models.js";
+import {
+	holdsStock,
+	type MaterialUnit,
+	type OrderStatus,
+	type StockMovementKind,
+} from "#lib/models.js";
 import type { db } from "#lib/server/db/index.js";
 import { material, stockMovement } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { inTenant, requireTenant } from "#lib/server/session.js";
 
 /** A transaction on the app's database, as `db.transaction` passes it to its callback. */
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -45,7 +50,7 @@ export interface Movement {
  * another tenant. A zero quantity changes nothing. Returns the material with its new stock.
  */
 export async function moveStock(tx: Transaction, movement: Movement) {
-	const { organizationId, user } = requireMember();
+	const { organizationId, user } = requireTenant();
 	const found = await tx.query.material.findFirst({
 		columns: { id: true, sku: true, name: true, unit: true, stock: true },
 		where: and(eq(material.id, movement.materialId), inTenant(material)),
@@ -86,6 +91,69 @@ export function stockChanges(
 			.map(([materialId, change]) => [materialId, roundQuantity(change)] as const)
 			.filter(([, change]) => change !== 0),
 	);
+}
+
+/** An order's status and material lines, which decide what it holds of the stock. */
+export interface OrderStock {
+	status: OrderStatus;
+	lines: { materialId: number; quantity: number }[];
+}
+
+/**
+ * The lines of an order that hold stock: all of them while its status holds stock (see
+ * `holdsStock`), none while it's a quote or once it's cancelled.
+ */
+export const heldLines = (order: OrderStock) => (holdsStock(order.status) ? order.lines : []);
+
+/** An order that needs more of a material than is in stock, with what it can have. */
+export class OrderStockShortage extends Error {
+	constructor(
+		readonly materialId: number,
+		/** The stock, plus what the order already held of it. */
+		readonly available: number,
+		material: { name: string; unit: MaterialUnit },
+	) {
+		super(`Only ${formatNumber(available)} ${material.unit} of ${material.name} in stock`);
+	}
+}
+
+/**
+ * Takes or returns stock for an order whose status or lines change from `before` to `after`: the
+ * difference in what it holds (see `heldLines`), recorded with the order. So scheduling a quote
+ * takes its materials, cancelling an order returns them, and an order that holds nothing returns
+ * nothing. Call it in the transaction that changes the order. Throws an `OrderStockShortage` if
+ * there isn't enough of a material.
+ */
+export async function moveOrderStock(
+	tx: Transaction,
+	order: { id: number; number: string },
+	before: OrderStock,
+	after: OrderStock,
+	note: string | null = null,
+) {
+	const held = heldLines(before);
+	for (const [materialId, change] of stockChanges(held, heldLines(after))) {
+		try {
+			await moveStock(tx, {
+				materialId,
+				quantity: -change,
+				kind: change > 0 ? "consumption" : "return",
+				orderId: order.id,
+				orderNumber: order.number,
+				note,
+			});
+		} catch (error) {
+			if (!(error instanceof StockShortage)) throw error;
+			const taken = held
+				.filter((line) => line.materialId === materialId)
+				.reduce((sum, line) => sum + line.quantity, 0);
+			throw new OrderStockShortage(
+				materialId,
+				roundQuantity(error.material.stock + taken),
+				error.material,
+			);
+		}
+	}
 }
 
 /**

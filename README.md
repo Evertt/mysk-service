@@ -46,17 +46,25 @@ npm run dev -- --open
 ## Demo login
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates two demo
-organizations (tenants) and two demo users, both with the password `fieldworks-demo` (set in
+organizations (tenants) and three demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
-| Name        | Email                        | Organizations                                  |
-| ----------- | ---------------------------- | ---------------------------------------------- |
-| Avery Admin | `admin@fieldworks.example`   | owner of Fieldworks North and Fieldworks South |
-| Pat Planner | `planner@fieldworks.example` | member of Fieldworks North                     |
+| Name         | Email                         | Organizations                                  |
+| ------------ | ----------------------------- | ---------------------------------------------- |
+| Avery Admin  | `admin@fieldworks.example`    | owner of Fieldworks North and Fieldworks South |
+| Pat Planner  | `planner@fieldworks.example`  | member of Fieldworks North                     |
+| Eli Engineer | `engineer@fieldworks.example` | engineer in Fieldworks North                   |
 
 Fieldworks North has the optional Service contracts module; Fieldworks South doesn't (owners and
 admins can switch modules on and off under Organization settings). Switch organizations from the
 menu at the top of the sidebar.
+
+Eli is a field engineer: members whose only role is `engineer` (roles are listed in
+`src/lib/roles.ts`) use the mobile engineer portal at `/my` instead of the office app, and see only
+the orders of the engineer their account is linked to (owners and admins link accounts on an
+engineer's edit page). Eli is linked to North's first engineer, with work planned today and in the
+next days. There they start jobs, log hours, materials and notes, and complete a job with the
+customer's signature, which the office sees on the order.
 
 These are local demo accounts; don't seed them into a real deployment.
 

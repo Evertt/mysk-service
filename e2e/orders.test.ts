@@ -69,13 +69,26 @@ const shared = "ORD-2026-00320";
 describe("in North", () => {
 	let number: string;
 
-	test("the seeded order lines took their materials from stock", async () => {
+	test("the seeded order lines took their materials from stock, except quotes' and cancelled ones'", async () => {
 		expect(
 			await value(
 				`select count(*) from stock_movement where kind = 'consumption' and organization_id = ?`,
 				[north.id],
 			),
-		).toBe(await countIn("order_line", north.id));
+		).toBe(
+			await value(
+				`select count(*) from order_line l join "order" o on o.id = l.order_id
+				 where l.organization_id = ? and o.status not in ('quote', 'cancelled')`,
+				[north.id],
+			),
+		);
+		expect(
+			await value(
+				`select count(*) from stock_movement s join "order" o on o.id = s.order_id
+				 where s.organization_id = ? and o.status in ('quote', 'cancelled')`,
+				[north.id],
+			),
+		).toBe(0);
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
@@ -350,6 +363,52 @@ describe("in North", () => {
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
+	test("cancelling it returns its materials, and reopening it takes them again", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const lines = await orderLines(id);
+		const before = await stocks(north.id);
+		const history = await orderMovements(number, north.id);
+		const setStatus = async (status: string) => {
+			await app.go(`/orders/${number}/edit`);
+			await page.getByLabel("Status").selectOption(status);
+			await page.getByRole("button", { name: "Save order" }).click();
+			await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+			await page.waitForLoadState("networkidle");
+		};
+		const moved = (kind: string, sign: number) =>
+			lines.map((line) => ({
+				material_id: line.material_id,
+				quantity: sign * line.quantity,
+				kind,
+				order_number: number,
+				note: null,
+			}));
+
+		await setStatus("cancelled");
+		expect((await orderMovements(number, north.id)).slice(history.length)).toEqual(
+			moved("return", 1),
+		);
+		const cancelled = await stocks(north.id);
+		for (const line of lines) {
+			expect(cancelled.get(line.material_id)).toBeCloseTo(
+				before.get(line.material_id)! + line.quantity,
+				2,
+			);
+		}
+
+		await setStatus("scheduled");
+		expect((await orderMovements(number, north.id)).slice(history.length)).toEqual([
+			...moved("return", 1),
+			...moved("consumption", -1),
+		]);
+		const reopened = await stocks(north.id);
+		for (const line of lines) {
+			expect(reopened.get(line.material_id)).toBeCloseTo(before.get(line.material_id)!, 2);
+		}
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
 	test("deleting it removes it and returns its materials, after which it's a 404", async () => {
 		const { page } = app;
 		const id = await orderId(number, north.id);
@@ -391,6 +450,30 @@ describe("in North", () => {
 		]);
 		await app.go(`/materials/${sku}`);
 		await page.getByText(`${number} (deleted)`).first().waitFor();
+	});
+
+	test("a quote's lines take no stock, so deleting it returns none", async () => {
+		const { page } = app;
+		await app.go("/orders/new");
+		await page.getByLabel("Customer").selectOption({ index: 1 });
+		await page.getByLabel("Description").fill("Quote for a new pump (test order)");
+		await page.getByRole("button", { name: "Add material" }).click();
+		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
+		expect(await page.getByLabel("Status").inputValue()).toBe("quote");
+		// It may get the number of the order deleted above, whose history keeps that number.
+		const before = [await stocks(north.id), await countIn("stock_movement", north.id)];
+		await page.getByRole("button", { name: "Create order" }).click();
+		await page.waitForURL(/\/orders\/ORD-/);
+		await page.waitForLoadState("networkidle");
+		const quote = app.path().split("/").pop()!;
+		expect(await orderLines(await orderId(quote, north.id))).toHaveLength(1);
+		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
+
+		await page.getByRole("button", { name: "Delete" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await page.waitForURL((url) => url.pathname === "/orders");
+		expect(await orderId(quote, north.id)).toBeUndefined();
+		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
 	});
 });
 
@@ -484,16 +567,20 @@ describe("in South", () => {
 		expect(issues).toContainEqual(expect.stringMatching(/Unknown material/));
 		expect(app.path()).toBe(`/orders/${shared}/edit`);
 		expect(await snapshot(own)).toEqual(before);
-		// North's material kept its stock.
+		// North's material kept its stock: its order with that number still holds what it held.
 		expect(await unbalancedStock(north.id)).toEqual([]);
+		const northern = await orderId(shared, north.id);
+		const status = await value<string>(`select status from "order" where id = ?`, [northern]);
 		expect(await orderMovements(shared, north.id)).toEqual(
-			(await orderLines(await orderId(shared, north.id))).map((line) => ({
-				material_id: line.material_id,
-				quantity: -line.quantity,
-				kind: "consumption",
-				order_number: shared,
-				note: null,
-			})),
+			["quote", "cancelled"].includes(status)
+				? []
+				: (await orderLines(northern)).map((line) => ({
+						material_id: line.material_id,
+						quantity: -line.quantity,
+						kind: "consumption",
+						order_number: shared,
+						note: null,
+					})),
 		);
 	});
 
@@ -534,6 +621,8 @@ describe("in South", () => {
 		await material.selectOption({ index: 1 });
 		await page.getByLabel("Customer").selectOption({ index: 1 });
 		await page.getByLabel("Description").fill("South test order");
+		// Scheduled, so its line takes stock.
+		await page.getByLabel("Status").selectOption("scheduled");
 
 		const expected = await nextCode("order", "number", south.id);
 		await page.getByRole("button", { name: "Create order" }).click();
