@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, nextCode, organizations, rows, useApp, value } from "./app.ts";
+import { formatNumber } from "../src/lib/format.ts";
+import { countIn, nextCode, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -18,12 +19,65 @@ const orderId = (number: string, organizationId: string) =>
 		organizationId,
 	]);
 
+/** Every material's stock in an organization, by id. */
+const stocks = async (organizationId: string) =>
+	new Map(
+		(
+			await rows<{ id: number; stock: number }>(
+				`select id, stock from material where organization_id = ?`,
+				[organizationId],
+			)
+		).map((row) => [row.id, row.stock]),
+	);
+
+interface Movement {
+	material_id: number;
+	quantity: number;
+	kind: string;
+	order_number: string | null;
+	note: string | null;
+}
+
+/** The stock movements of an order (by its number, which they keep), oldest first. */
+const orderMovements = (number: string, organizationId: string) =>
+	rows<Movement>(
+		`select material_id, quantity, kind, order_number, note from stock_movement
+		 where order_number = ? and organization_id = ? order by id`,
+		[number, organizationId],
+	);
+
+/** An order's lines as stored, in order. */
+const orderLines = (id: number) =>
+	rows<{ material_id: number; quantity: number }>(
+		`select material_id, quantity from order_line where order_id = ? order by id`,
+		[id],
+	);
+
+/** A material as stored. */
+const materialById = async (id: number) =>
+	(
+		await rows<{ id: number; name: string; unit: string; stock: number }>(
+			`select id, name, unit, stock from material where id = ?`,
+			[id],
+		)
+	)[0];
+
 /** Numbers that exist only in North (it has 750 orders, South 320), and in both. */
 const northOnly = "ORD-2026-00750";
 const shared = "ORD-2026-00320";
 
 describe("in North", () => {
 	let number: string;
+
+	test("the seeded order lines took their materials from stock", async () => {
+		expect(
+			await value(
+				`select count(*) from stock_movement where kind = 'consumption' and organization_id = ?`,
+				[north.id],
+			),
+		).toBe(await countIn("order_line", north.id));
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
 
 	test("the list shows North's orders", async () => {
 		await app.go("/orders");
@@ -71,6 +125,7 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Remove line" }).nth(1).click();
 
 		const expected = await nextCode("order", "number", north.id);
+		const before = await stocks(north.id);
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
@@ -86,6 +141,26 @@ describe("in North", () => {
 			.locator("tbody tr")
 			.filter({ hasNotText: "Labour" });
 		expect(await lines.count()).toBe(2);
+
+		// The lines took their materials from stock, recorded with the order.
+		const stored = await orderLines(id);
+		expect(await orderMovements(number, north.id)).toEqual(
+			stored.map((line) => ({
+				material_id: line.material_id,
+				quantity: -line.quantity,
+				kind: "consumption",
+				order_number: number,
+				note: null,
+			})),
+		);
+		const after = await stocks(north.id);
+		for (const line of stored) {
+			expect(after.get(line.material_id)).toBeCloseTo(
+				before.get(line.material_id)! - line.quantity,
+				2,
+			);
+		}
+		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
 	test("editing it saves the changes", async () => {
@@ -106,6 +181,8 @@ describe("in North", () => {
 		);
 		expect(order).toMatchObject({ status: "completed", labor_hours: 4 });
 		expect(order.completed_at).not.toBeNull();
+		// The same lines take no more stock.
+		expect(await orderMovements(number, north.id)).toHaveLength(2);
 	});
 
 	test("lines take decimals in kilos, metres and litres, but whole pieces", async () => {
@@ -138,6 +215,7 @@ describe("in North", () => {
 		await app.submit(page.getByRole("button", { name: "Save order" }));
 		expect(await app.issues()).toEqual(["Whole pieces only"]);
 		expect(await snapshot(id)).toEqual(before);
+		expect(await orderMovements(number, north.id)).toHaveLength(2);
 
 		await piecesLine.getByLabel("Quantity").fill("2");
 		await page.getByRole("button", { name: "Save order" }).click();
@@ -148,15 +226,171 @@ describe("in North", () => {
 		);
 		expect(line.quantity).toBe(2.5);
 		await page.getByText("2.5 kg").waitFor();
+		expect((await orderMovements(number, north.id)).slice(2)).toMatchObject([
+			{ material_id: kilos, quantity: -2.5, kind: "consumption" },
+			{ material_id: pieces, quantity: -2, kind: "consumption" },
+		]);
 	});
 
-	test("deleting it removes it, after which it's a 404", async () => {
+	test("changing a line's quantity takes or returns the difference", async () => {
 		const { page } = app;
+		const id = await orderId(number, north.id);
+		const lines = await orderLines(id);
+		expect(lines).toHaveLength(4);
+		const before = await stocks(north.id);
+
+		await app.go(`/orders/${number}/edit`);
+		const rowsInForm = page.locator("tbody tr");
+		await rowsInForm.nth(0).getByLabel("Quantity").fill("1");
+		await rowsInForm.nth(2).getByLabel("Quantity").fill("4");
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		await app.toast("Order saved");
+
+		const returned = lines[0].quantity - 1;
+		expect((await orderMovements(number, north.id)).slice(4)).toEqual([
+			{
+				material_id: lines[0].material_id,
+				quantity: returned,
+				kind: "return",
+				order_number: number,
+				note: null,
+			},
+			{
+				material_id: lines[2].material_id,
+				quantity: -1.5,
+				kind: "consumption",
+				order_number: number,
+				note: null,
+			},
+		]);
+		const after = await stocks(north.id);
+		expect(after.get(lines[0].material_id)).toBe(before.get(lines[0].material_id)! + returned);
+		expect(after.get(lines[2].material_id)).toBeCloseTo(before.get(lines[2].material_id)! - 1.5, 2);
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
+	test("taking more than is in stock is refused, naming the material and what's available", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const lines = await orderLines(id);
+		const before = [
+			await snapshot(id),
+			await stocks(north.id),
+			await orderMovements(number, north.id),
+		];
+
+		// A line already on the order can have the stock plus what it took already.
+		const onOrder = await materialById(lines[0].material_id);
+		await app.go(`/orders/${number}/edit`);
+		const rowsInForm = page.locator("tbody tr");
+		await rowsInForm
+			.nth(0)
+			.getByLabel("Quantity")
+			.fill(String(Math.round((onOrder.stock + 2) * 100) / 100));
+		await app.submit(page.getByRole("button", { name: "Save order" }));
+		const available = formatNumber(onOrder.stock + lines[0].quantity);
+		expect(await app.issues()).toEqual([
+			`Only ${available} ${onOrder.unit} of ${onOrder.name} in stock`,
+		]);
+		expect(app.path()).toBe(`/orders/${number}/edit`);
+
+		// A new line can have the stock.
+		const [scarce] = await rows<{ id: number }>(
+			`select id from material where organization_id = ? and unit = 'pcs' and stock > 0
+			 and id not in (select material_id from order_line where order_id = ?)
+			 order by stock limit 1`,
+			[north.id, id],
+		);
+		const other = await materialById(scarce.id);
+		await rowsInForm.nth(0).getByLabel("Quantity").fill(String(lines[0].quantity));
+		await page.getByRole("button", { name: "Add material" }).click();
+		await rowsInForm.last().getByLabel("Material").selectOption(String(other.id));
+		await rowsInForm
+			.last()
+			.getByLabel("Quantity")
+			.fill(String(other.stock + 1));
+		await app.submit(page.getByRole("button", { name: "Save order" }));
+		expect(await app.issues()).toEqual([
+			`Only ${formatNumber(other.stock)} pcs of ${other.name} in stock`,
+		]);
+
+		// Nothing changed: not the order, not the stock, not its history.
+		expect([
+			await snapshot(id),
+			await stocks(north.id),
+			await orderMovements(number, north.id),
+		]).toEqual(before);
+	});
+
+	test("removing a line returns its material", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const lines = await orderLines(id);
+		const before = await stocks(north.id);
+
+		await app.go(`/orders/${number}/edit`);
+		await page.getByRole("button", { name: "Remove line" }).nth(2).click();
+		await page.getByRole("button", { name: "Save order" }).click();
+		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
+		await app.toast("Order saved");
+
+		expect(await orderLines(id)).toHaveLength(3);
+		expect((await orderMovements(number, north.id)).at(-1)).toEqual({
+			material_id: lines[2].material_id,
+			quantity: lines[2].quantity,
+			kind: "return",
+			order_number: number,
+			note: null,
+		});
+		expect((await stocks(north.id)).get(lines[2].material_id)).toBeCloseTo(
+			before.get(lines[2].material_id)! + lines[2].quantity,
+			2,
+		);
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
+	test("deleting it removes it and returns its materials, after which it's a 404", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const lines = await orderLines(id);
+		const before = await stocks(north.id);
+		const history = await orderMovements(number, north.id);
+
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
 		expect(await orderId(number, north.id)).toBeUndefined();
 		expect((await app.go(`/orders/${number}`))?.status()).toBe(404);
+
+		// The history keeps the order's number, without referring to the deleted order.
+		const after = await orderMovements(number, north.id);
+		expect(after.slice(0, history.length)).toEqual(history);
+		expect(after.slice(history.length)).toEqual(
+			lines.map((line) => ({
+				material_id: line.material_id,
+				quantity: line.quantity,
+				kind: "return",
+				order_number: number,
+				note: "Order deleted",
+			})),
+		);
+		expect(await value(`select count(*) from stock_movement where order_id = ?`, [id])).toBe(0);
+		const stocksAfter = await stocks(north.id);
+		for (const line of lines) {
+			expect(stocksAfter.get(line.material_id)).toBeCloseTo(
+				before.get(line.material_id)! + line.quantity,
+				2,
+			);
+		}
+		expect(await unbalancedStock(north.id)).toEqual([]);
+
+		// The material's history still shows it, by number.
+		const sku = await value<string>(`select sku from material where id = ?`, [
+			lines[0].material_id,
+		]);
+		await app.go(`/materials/${sku}`);
+		await page.getByText(`${number} (deleted)`).first().waitFor();
 	});
 });
 
@@ -250,6 +484,17 @@ describe("in South", () => {
 		expect(issues).toContainEqual(expect.stringMatching(/Unknown material/));
 		expect(app.path()).toBe(`/orders/${shared}/edit`);
 		expect(await snapshot(own)).toEqual(before);
+		// North's material kept its stock.
+		expect(await unbalancedStock(north.id)).toEqual([]);
+		expect(await orderMovements(shared, north.id)).toEqual(
+			(await orderLines(await orderId(shared, north.id))).map((line) => ({
+				material_id: line.material_id,
+				quantity: -line.quantity,
+				kind: "consumption",
+				order_number: shared,
+				note: null,
+			})),
+		);
 	});
 
 	test("deleting with the id of a North order is refused", async () => {
@@ -302,5 +547,13 @@ describe("in South", () => {
 			[expected, south.id],
 		);
 		expect(line.unit_price).toBe(line.price);
+
+		// From South's stock.
+		const [movement] = await orderMovements(expected, south.id);
+		expect(movement).toMatchObject({ quantity: -1, kind: "consumption" });
+		expect(
+			await value(`select organization_id from material where id = ?`, [movement.material_id]),
+		).toBe(south.id);
+		expect(await unbalancedStock(south.id)).toEqual([]);
 	});
 });

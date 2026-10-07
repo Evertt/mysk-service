@@ -44,6 +44,21 @@ export async function countIn(table: string, organizationId: string) {
 	);
 }
 
+/**
+ * An organization's materials whose stock isn't the sum of their stock movements (to two
+ * decimals), which should be none.
+ */
+export function unbalancedStock(organizationId: string) {
+	return rows<{ sku: string; stock: number; movements: number }>(
+		`select sku, stock, movements from (
+			select m.sku, m.stock, round(coalesce(sum(s.quantity), 0), 2) as movements
+			from material m left join stock_movement s on s.material_id = m.id
+			where m.organization_id = ? group by m.id
+		) where round(stock, 2) <> movements`,
+		[organizationId],
+	);
+}
+
 /** The next code in a sequence like `CUS-00061`: the highest number in use, plus one. */
 export async function nextCode(table: string, column: string, organizationId: string) {
 	const last = String(

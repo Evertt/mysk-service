@@ -7,7 +7,7 @@
  *
  * Run with `pnpm db:seed` (after `pnpm db:push`). Replaces all existing business data.
  */
-import { faker } from "@faker-js/faker";
+import { en, Faker, faker } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { hashPassword } from "better-auth/crypto";
 import { inArray } from "drizzle-orm";
@@ -478,6 +478,71 @@ function generateTenant(size: TenantSize) {
 	};
 }
 
+// --- Stock movements -------------------------------------------------------------------------
+
+/**
+ * The stock ledger that adds up to each generated material's stock: an opening balance before
+ * the first order, consumption by every order line, and a few recent deliveries (no larger than
+ * the stock now, so the stock was never below zero). With a faker of its own, so the rest of the
+ * data is the same with or without it.
+ */
+function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: number) {
+	const random = new Faker({ locale: [en] });
+	random.seed(seed);
+	const round = (quantity: number) => Math.round(quantity * 100) / 100;
+	const orders = new Map(data.orders.map((o) => [o.id, o]));
+
+	const consumption = data.orderLines.map((line) => {
+		const o = orders.get(line.orderId)!;
+		return {
+			materialId: line.materialId,
+			quantity: -line.quantity,
+			kind: "consumption" as const,
+			orderId: o.id,
+			orderNumber: o.number,
+			note: null as string | null,
+			createdAt: o.createdAt,
+		};
+	});
+
+	const receipts = random.helpers
+		.arrayElements(data.materials, Math.ceil(data.materials.length / 3))
+		.filter((m) => m.stock >= 1)
+		.map((m) => ({
+			materialId: m.id,
+			quantity:
+				m.unit === "pcs"
+					? random.number.int({ min: 1, max: m.stock })
+					: random.number.float({ min: 1, max: m.stock, fractionDigits: 1 }),
+			kind: "receipt" as const,
+			orderId: null,
+			orderNumber: null,
+			note: `Delivery note ${random.string.numeric(6)}`,
+			createdAt: random.date.between({ from: addDays(now, -120), to: addDays(now, -1) }),
+		}));
+
+	const opening = data.materials
+		.map((m) => {
+			const change = [...consumption, ...receipts]
+				.filter((movement) => movement.materialId === m.id)
+				.reduce((sum, movement) => sum + movement.quantity, 0);
+			return {
+				materialId: m.id,
+				quantity: round(m.stock - change),
+				kind: "opening_balance" as const,
+				orderId: null,
+				orderNumber: null,
+				note: null,
+				createdAt: addDays(now, -560),
+			};
+		})
+		.filter((movement) => movement.quantity !== 0);
+
+	return [...opening, ...consumption, ...receipts].toSorted(
+		(a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+	);
+}
+
 // --- Tenants ---------------------------------------------------------------------------------
 
 /** The demo organizations. North has the service contracts module; South doesn't. */
@@ -511,6 +576,7 @@ await db.transaction(async (tx) => {
 	for (const table of [
 		schema.contractEquipment,
 		schema.contract,
+		schema.stockMovement,
 		orderLine,
 		order,
 		equipment,
@@ -579,6 +645,12 @@ await db.transaction(async (tx) => {
 				contractId: c.contractId + o.contract,
 				equipmentId: c.equipmentId + o.equipment,
 			})),
+			stockMovements: generateStockMovements(data, tenant.seed).map((m) => ({
+				...m,
+				organizationId,
+				materialId: m.materialId + o.material,
+				orderId: m.orderId && m.orderId + o.order,
+			})),
 		};
 
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
@@ -589,6 +661,7 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.orderLines, (chunk) => tx.insert(orderLine).values(chunk));
 		await insertAll(rows.contracts, (chunk) => tx.insert(schema.contract).values(chunk));
 		await insertAll(rows.coverage, (chunk) => tx.insert(schema.contractEquipment).values(chunk));
+		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
 
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;

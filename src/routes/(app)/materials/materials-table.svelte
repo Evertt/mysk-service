@@ -1,7 +1,14 @@
 <script lang="ts">
+	import { page } from "$app/state";
+
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { stockLevelOptions, unitOptions } from "#lib/components/materials/display.js";
+	import {
+		type StockLevel,
+		stockLevelOptions,
+		stockLevels,
+		unitOptions,
+	} from "#lib/components/materials/display.js";
 
 	import { columns, type MaterialRow } from "./columns.js";
 
@@ -21,6 +28,13 @@
 			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
+
+	// E.g. `?stockLevel=out&stockLevel=low` (from the dashboard) starts filtered on those levels.
+	// Set rather than part of the initial state, which the toolbar's reset would return to.
+	const levels = page.url.searchParams
+		.getAll("stockLevel")
+		.filter((level): level is StockLevel => (stockLevels as readonly string[]).includes(level));
+	if (levels.length) table.getColumn("stockLevel")?.setFilterValue(levels);
 </script>
 
 <table.AppTable>

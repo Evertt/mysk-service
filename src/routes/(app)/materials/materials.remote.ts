@@ -3,14 +3,27 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { fitsUnit, isOpenOrder } from "#lib/models.js";
+import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
 import { id } from "#lib/schema.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
-import { customer, material, order, orderLine } from "#lib/server/db/schema.js";
+import {
+	customer,
+	material,
+	order,
+	orderLine,
+	stockMovement,
+	user,
+} from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
+import { moveStock, roundQuantity, withBalances } from "#lib/server/stock.js";
 
-import { materialFields } from "./material-schema.js";
+import {
+	countFields,
+	materialFields,
+	newMaterialFields,
+	receiveFields,
+} from "./material-schema.js";
 
 /** How many different orders of the current tenant use a material. */
 const ordersUsing = async (materialId: number) => {
@@ -24,6 +37,15 @@ const ordersUsing = async (materialId: number) => {
 /** A material of the current tenant, by id (ids come from the client, so check the tenant). */
 const findMaterial = (id: number) =>
 	db.query.material.findFirst({ where: and(eq(material.id, id), inTenant(material)) });
+
+/** Whether every stock movement of a material can be counted in `unit` (e.g. whole pieces). */
+const historyFits = async (materialId: number, unit: MaterialUnit) => {
+	const movements = await db
+		.select({ quantity: stockMovement.quantity })
+		.from(stockMovement)
+		.where(and(eq(stockMovement.materialId, materialId), inTenant(stockMovement)));
+	return movements.every((movement) => fitsUnit(movement.quantity, unit));
+};
 
 /** All materials with the number of orders that use them, by name. */
 export const getMaterials = query(async () => {
@@ -54,7 +76,10 @@ export const getMaterials = query(async () => {
 		.orderBy(asc(material.name));
 });
 
-/** One material with the orders that use it (most recent first) and headline numbers. */
+/**
+ * One material with the orders that use it (most recent first), its stock movements (newest first,
+ * with the stock after each) and headline numbers.
+ */
 export const getMaterial = query(v.string(), async (sku) => {
 	requireMember();
 	const found = await db.query.material.findFirst({
@@ -84,6 +109,24 @@ export const getMaterial = query(v.string(), async (sku) => {
 		.groupBy(order.id)
 		.orderBy(desc(order.createdAt), desc(order.id));
 
+	const movements = await db
+		.select({
+			id: stockMovement.id,
+			kind: stockMovement.kind,
+			quantity: stockMovement.quantity,
+			note: stockMovement.note,
+			createdAt: stockMovement.createdAt,
+			// The number stays when the order is deleted; `order` is only there while it exists.
+			orderNumber: stockMovement.orderNumber,
+			order: { number: order.number },
+			user: { name: user.name },
+		})
+		.from(stockMovement)
+		.leftJoin(order, and(eq(stockMovement.orderId, order.id), inTenant(order)))
+		.leftJoin(user, eq(stockMovement.userId, user.id))
+		.where(and(eq(stockMovement.materialId, found.id), inTenant(stockMovement)))
+		.orderBy(desc(stockMovement.createdAt), desc(stockMovement.id));
+
 	const yearAgo = new Date();
 	yearAgo.setFullYear(yearAgo.getFullYear() - 1);
 	const lastYear = usage.filter((row) => row.createdAt >= yearAgo && row.status !== "cancelled");
@@ -93,6 +136,7 @@ export const getMaterial = query(v.string(), async (sku) => {
 	return {
 		material: found,
 		usage,
+		movements: withBalances(movements, found.stock),
 		stats: {
 			usedLastYear: total(lastYear),
 			openOrders: open.length,
@@ -112,7 +156,7 @@ const sameName = (name: string, exceptId?: number) =>
 		),
 	});
 
-export const createMaterial = form(v.object(materialFields), async (input, issue) => {
+export const createMaterial = form(v.object(newMaterialFields), async (input, issue) => {
 	const { organizationId } = requireMember();
 	const problems = [];
 	const duplicate = await sameName(input.name);
@@ -120,6 +164,7 @@ export const createMaterial = form(v.object(materialFields), async (input, issue
 	if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock("Whole pieces only"));
 	if (problems.length) invalid(...problems);
 
+	const { stock, ...fields } = input;
 	const sku = await db.transaction(async (tx) => {
 		// SKUs are sequential per tenant: one more than the tenant's highest (MAT-0001 for the first).
 		const [{ last }] = await tx
@@ -127,7 +172,12 @@ export const createMaterial = form(v.object(materialFields), async (input, issue
 			.from(material)
 			.where(inTenant(material));
 		const sku = `MAT-${String((last ?? 0) + 1).padStart(4, "0")}`;
-		await tx.insert(material).values({ ...input, organizationId, sku });
+		const [created] = await tx
+			.insert(material)
+			.values({ ...fields, organizationId, sku, stock: 0 })
+			.returning({ id: material.id });
+		// The stock it starts with is its first movement.
+		await moveStock(tx, { materialId: created.id, quantity: stock, kind: "opening_balance" });
 		return sku;
 	});
 	void getMaterials().refresh();
@@ -145,7 +195,6 @@ export const updateMaterial = form(
 		const problems = [];
 		const duplicate = await sameName(input.name, id);
 		if (duplicate) problems.push(issue.name(`${duplicate.sku} already has this name`));
-		if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock("Whole pieces only"));
 		// Order lines are counted in the material's unit, so changing it would change them too.
 		if (input.unit !== existing.unit) {
 			const orders = await ordersUsing(id);
@@ -155,6 +204,9 @@ export const updateMaterial = form(
 						`Can't change the unit: ${orders === 1 ? "1 order counts" : `${orders} orders count`} this material in ${existing.unit}`,
 					),
 				);
+			} else if (!(await historyFits(id, input.unit))) {
+				// Its stock movements are counted in the new unit from now on.
+				problems.push(issue.unit("Whole pieces only: the stock history has part pieces"));
 			}
 		}
 		if (problems.length) invalid(...problems);
@@ -186,3 +238,45 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 	void getMaterials().refresh();
 	redirect(303, "/materials");
 });
+
+/** Adds received stock (e.g. a delivery) to a material. */
+export const receiveStock = form(
+	v.object({ id: id(), ...receiveFields }),
+	async ({ id, quantity, note }, issue) => {
+		requireMember();
+		const existing = await findMaterial(id);
+		if (!existing) error(404, "Material not found");
+		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity("Whole pieces only"));
+
+		await db.transaction((tx) =>
+			moveStock(tx, { materialId: id, quantity, kind: "receipt", note }),
+		);
+		void getMaterials().refresh();
+		void getMaterial(existing.sku).refresh();
+	},
+);
+
+/** Sets a material's stock to what was counted, recording the difference as an adjustment. */
+export const countStock = form(
+	v.object({ id: id(), ...countFields }),
+	async ({ id, counted, note }, issue) => {
+		requireMember();
+		const existing = await findMaterial(id);
+		if (!existing) error(404, "Material not found");
+		if (!fitsUnit(counted, existing.unit)) invalid(issue.counted("Whole pieces only"));
+
+		await db.transaction(async (tx) => {
+			// The difference with the stock as it is now, inside the transaction, so that the stock
+			// ends up as counted even if it changed since the form was opened.
+			const [current] = await tx
+				.select({ stock: material.stock })
+				.from(material)
+				.where(and(eq(material.id, id), inTenant(material)));
+			const difference = roundQuantity(counted - current.stock);
+			if (!difference) invalid(issue.counted("That's the stock already"));
+			await moveStock(tx, { materialId: id, quantity: difference, kind: "adjustment", note });
+		});
+		void getMaterials().refresh();
+		void getMaterial(existing.sku).refresh();
+	},
+);

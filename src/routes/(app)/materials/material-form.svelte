@@ -36,7 +36,7 @@
 	}));
 	// Pieces are counted whole; other units to two decimals.
 	const unit = $derived((fields.unit.value() || material?.unit || "pcs") as MaterialUnit);
-	const stockDescription = `Shown as low below ${lowStockThreshold("pcs")} pieces, or ${lowStockThreshold("m")} of other units.`;
+	const stockDescription = `What's in stock now, recorded as the opening balance. Shown as low below ${lowStockThreshold("pcs")} pieces, or ${lowStockThreshold("m")} of other units.`;
 </script>
 
 <form
@@ -76,14 +76,17 @@
 					cents={material?.unitPrice}
 					description="List price per unit. Existing orders keep the price they were quoted."
 				/>
-				<NumberField
-					field={fields.stock}
-					label="Stock"
-					value={material?.stock ?? 0}
-					min={0}
-					step={quantityStep(unit)}
-					description={stockDescription}
-				/>
+				{#if !material}
+					<!-- Only a new material takes its stock; after that it changes through movements. -->
+					<NumberField
+						field={(form as typeof createMaterial).fields.stock}
+						label="Opening stock"
+						value={0}
+						min={0}
+						step={quantityStep(unit)}
+						description={stockDescription}
+					/>
+				{/if}
 			</Field.FieldGroup>
 		</Card.Content>
 	</Card.Root>

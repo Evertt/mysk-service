@@ -118,3 +118,18 @@ export function contractStatus(
 	afterEnd.setDate(afterEnd.getDate() + 1);
 	return now < afterEnd ? "active" : "expired";
 }
+
+// --- Stock movements ---------------------------------------------------------------------------
+
+/**
+ * Why a material's stock changed: its opening balance, a delivery, a count that found a different
+ * amount, or an order line taking it (consumption) or giving it back (return).
+ */
+export const stockMovementKinds = [
+	"opening_balance",
+	"receipt",
+	"adjustment",
+	"consumption",
+	"return",
+] as const;
+export type StockMovementKind = (typeof stockMovementKinds)[number];

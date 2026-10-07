@@ -21,7 +21,7 @@
 	<p class="text-muted-foreground">How service operations are doing right now.</p>
 </div>
 
-<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 	<Card.Root>
 		<Card.Header>
 			<Card.Description>Open orders</Card.Description>
@@ -55,6 +55,25 @@
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
 			Of {data.fleet.total} installed units
+		</Card.Footer>
+	</Card.Root>
+	<Card.Root>
+		<Card.Header>
+			<Card.Description>Low stock</Card.Description>
+			<Card.Title class="text-3xl tabular-nums">{data.stock.low + data.stock.out}</Card.Title>
+			<Card.Action>
+				<!-- The materials list, filtered to the low and out of stock ones. -->
+				<Button
+					variant="outline"
+					size="sm"
+					href="{resolve('/(app)/materials')}?stockLevel=out&stockLevel=low"
+				>
+					View
+				</Button>
+			</Card.Action>
+		</Card.Header>
+		<Card.Footer class="text-sm text-muted-foreground">
+			{data.stock.out} out of stock, of {data.stock.total} materials
 		</Card.Footer>
 	</Card.Root>
 </div>

@@ -1,9 +1,17 @@
 import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
+import { stockLevel } from "#lib/components/materials/display.js";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
+import {
+	customer,
+	engineer,
+	equipment,
+	material,
+	order,
+	orderLine,
+} from "#lib/server/db/schema.js";
 import { STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
@@ -76,5 +84,18 @@ export const getDashboard = query(async () => {
 		.orderBy(asc(order.scheduledFor))
 		.limit(6);
 
-	return { open, revenue, fleet, upcoming };
+	// Materials running low or out, by the same levels as the materials list.
+	const levels = (
+		await db
+			.select({ stock: material.stock, unit: material.unit })
+			.from(material)
+			.where(inTenant(material))
+	).map((row) => stockLevel(row.stock, row.unit));
+	const stock = {
+		low: levels.filter((level) => level === "low").length,
+		out: levels.filter((level) => level === "out").length,
+		total: levels.length,
+	};
+
+	return { open, revenue, fleet, upcoming, stock };
 });
