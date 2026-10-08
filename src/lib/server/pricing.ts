@@ -66,6 +66,10 @@ export const orderTotal = (materials: number, labor: number, adjustments: PriceA
  * What orders cost: materials, labour, and the adjustments of the tenant's modules. Everything that
  * shows or adds up order totals (the order's page, the orders table, the dashboard's revenue, an
  * invoice) prices them here, so they agree. Returns the prices in the same order as `orders`.
+ *
+ * The one place the modules' `orders.adjustPrices` is called. It's a collector (see
+ * `#lib/server/modules.ts`): asked in parallel about all the orders at once, the adjustments
+ * merged in registry order; a module that throws fails the pricing.
  */
 export async function priceOrders(
 	orders: OrderToPrice[],
@@ -77,7 +81,9 @@ export async function priceOrders(
 	}));
 	if (!priced.length) return [];
 	const answers = await Promise.all(
-		modules.flatMap((module) => (module.adjustPrices ? [module.adjustPrices(priced)] : [])),
+		modules.flatMap((module) =>
+			module.orders?.adjustPrices ? [module.orders.adjustPrices(priced)] : [],
+		),
 	);
 	return priced.map(({ id, materials, labor }) => {
 		const adjustments = answers.flatMap((adjusted) => adjusted.get(id) ?? []);

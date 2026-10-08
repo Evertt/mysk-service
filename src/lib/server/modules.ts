@@ -1,17 +1,30 @@
 /**
  * The server side of the optional modules (see `#lib/modules.ts`): hooks through which a module
- * takes part in core server logic without core importing the module. Core calls them through
- * `priceOrders()` (`#lib/server/pricing.ts`) and `tagOrders()` below, for the modules the current
- * tenant has. Modules can use them among themselves too: invoicing bills what the others offer
- * through `billableItems()`, without knowing which module offers what.
+ * takes part in core server logic without core importing the module. A module implements them with
+ * `defineServerModule()`, grouped by the core domain they belong to (`orders`, `billing`). Core
+ * calls each from one function of its own, for the modules the current tenant has: `priceOrders()`
+ * (`#lib/server/pricing.ts`), `tagOrders()`, `orderCommitted()` and `billableItems()` below.
+ * Modules can use them among themselves too: invoicing bills what the others offer through
+ * `billableItems()`, without knowing which module offers what.
  *
- * A hook gets a batch of orders (a whole list at once, to keep it to a query or two) and answers
- * for the orders it has something to say about, by id.
+ * A hook is one of these kinds, and keeps to its rules:
+ *
+ * - Collector (`adjustPrices`, `tag`, `billableItems`): asked in parallel, about a batch (a whole
+ *   list of orders at once, to keep it to a query or two), and answers for the ones it has
+ *   something to say about, by id. The answers are merged in registry order. A hook that throws
+ *   fails the request: a broken price must not quietly become a wrong total.
+ * - Event after commit (`committed`): called in registry order once the change is committed, in
+ *   the same request (see `afterCommit()` in `#lib/server/db/serialize.ts`). Errors are caught and
+ *   logged, never thrown: the change is made.
+ *
+ * Registry order is the order of `serverModules()` below. Add a hook (a guard that refuses a
+ * change, an event inside the transaction) when a module needs one, not before.
  */
 import type { OrderStatus, OrderType } from "#lib/models.js";
 import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.js";
 
 import { contracts } from "./contracts.ts";
+import { afterCommit } from "./db/serialize.ts";
 import { invoicing } from "./invoicing.ts";
 import { requireTenant } from "./session.ts";
 
@@ -30,22 +43,37 @@ export interface PricedOrderFacts extends OrderFacts {
 	labor: number;
 }
 
+/** What happened to an order that core has saved. */
+export interface OrderChange {
+	number: string;
+}
+
+/** The hooks a module can implement; it implements the ones it needs. */
 export interface ServerModule {
-	/** Changes to orders' prices, e.g. the work a contract includes, as a discount. */
-	adjustPrices?(orders: PricedOrderFacts[]): Promise<Map<number, PriceAdjustment[]>>;
-	/** Badges for orders, e.g. a response time about to be missed (at `now`). */
-	tagOrders?(orders: OrderFacts[], now: Date): Promise<Map<number, OrderTag[]>>;
-	/**
-	 * Called when core has saved an order: refreshes the module's own queries about it (e.g. what
-	 * its card on the order's page shows), so they come back with the save, like core's.
-	 */
-	orderSaved?(number: string): void;
-	/**
-	 * What a customer owes for besides orders, e.g. a contract's monthly fees: the items that
-	 * became due in `period` (both days inclusive). Whoever bills them (the invoicing module)
-	 * remembers which references it billed and leaves those out.
-	 */
-	billableItems?(customerId: number, period: BillingPeriod): Promise<BillableItem[]>;
+	orders?: {
+		/** Collector: changes to orders' prices, e.g. the work a contract includes, as a discount. */
+		adjustPrices?(orders: PricedOrderFacts[]): Promise<Map<number, PriceAdjustment[]>>;
+		/** Collector: badges for orders, e.g. a response time about to be missed (at `now`). */
+		tag?(orders: OrderFacts[], now: Date): Promise<Map<number, OrderTag[]>>;
+		/**
+		 * Event after commit: core has saved an order. Refreshes the module's own queries about it
+		 * (e.g. what its card on the order's page shows), so they come back with the save, like core's.
+		 */
+		committed?(change: OrderChange): void | Promise<void>;
+	};
+	billing?: {
+		/**
+		 * Collector: what a customer owes for besides orders, e.g. a contract's monthly fees: the
+		 * items that became due in `period` (both days inclusive). Whoever bills them (the invoicing
+		 * module) remembers which references it billed and leaves those out.
+		 */
+		billableItems?(customerId: number, period: BillingPeriod): Promise<BillableItem[]>;
+	};
+}
+
+/** Declares a module's server hooks (`id` is checked against the module registry). */
+export function defineServerModule<const Hooks extends ServerModule>(id: ModuleId, hooks: Hooks) {
+	return { id, ...hooks };
 }
 
 /** From and until which days (at midnight, both inclusive) to look for billable items. */
@@ -69,14 +97,16 @@ export interface BillableItem {
 	date: Date;
 }
 
-/** Each module's server hooks; a module without any isn't listed. */
-const serverModules: { [Id in ModuleId]?: ServerModule } = { contracts, invoicing };
+/** Each module's server hooks, in registry order; a module without any isn't listed. */
+function serverModules(): { [Id in ModuleId]?: ServerModule } {
+	return { contracts, invoicing };
+}
 
 /** The server hooks of the `enabled` modules (by default the current tenant's). */
 export function enabledServerModules(
 	enabled: readonly string[] = requireTenant().modules,
 ): ServerModule[] {
-	return Object.entries(serverModules).flatMap(([id, module]) =>
+	return Object.entries(serverModules()).flatMap(([id, module]) =>
 		module && enabled.includes(id) ? [module] : [],
 	);
 }
@@ -89,14 +119,19 @@ export async function tagOrders(
 ): Promise<OrderTag[][]> {
 	if (!orders.length) return [];
 	const answers = await Promise.all(
-		modules.flatMap((module) => (module.tagOrders ? [module.tagOrders(orders, now)] : [])),
+		modules.flatMap((module) => (module.orders?.tag ? [module.orders.tag(orders, now)] : [])),
 	);
 	return orders.map((order) => answers.flatMap((tags) => tags.get(order.id) ?? []));
 }
 
-/** Lets the modules refresh what they show about an order that core has just saved. */
-export function orderSaved(number: string, modules = enabledServerModules()) {
-	for (const module of modules) module.orderSaved?.(number);
+/**
+ * Lets the modules refresh what they show about an order that core has saved, once the
+ * transaction it was saved in (if any) has committed.
+ */
+export function orderCommitted(change: OrderChange, modules = enabledServerModules()) {
+	for (const module of modules) {
+		if (module.orders?.committed) afterCommit(() => module.orders!.committed!(change));
+	}
 }
 
 /** The modules' billable items for a customer in `period`, by date. */
@@ -107,7 +142,7 @@ export async function billableItems(
 ): Promise<BillableItem[]> {
 	const answers = await Promise.all(
 		modules.flatMap((module) =>
-			module.billableItems ? [module.billableItems(customerId, period)] : [],
+			module.billing?.billableItems ? [module.billing.billableItems(customerId, period)] : [],
 		),
 	);
 	return answers.flat().sort((a, b) => a.date.getTime() - b.date.getTime());

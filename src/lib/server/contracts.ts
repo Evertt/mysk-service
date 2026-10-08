@@ -24,7 +24,7 @@ import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
 import { contract, contractEquipment, equipment } from "./db/schema.ts";
-import type { OrderFacts, ServerModule } from "./modules.ts";
+import { defineServerModule, type OrderFacts } from "./modules.ts";
 import { inTenant, tenantJoin } from "./session.ts";
 
 /** The contract that covered an order. */
@@ -112,73 +112,77 @@ function responseTag(order: OrderFacts, coverage: Coverage, now: Date): OrderTag
 	return undefined;
 }
 
-export const contracts: ServerModule = {
-	async adjustPrices(orders) {
-		const coverage = await coverageOf(orders);
-		return new Map(
-			orders.flatMap((order) => {
-				const covering = coverage.get(order.id);
-				const amount = covering ? coveredAmount(covering.level, order) : 0;
-				if (!covering || !amount) return [];
-				const adjustment = {
-					label: coveredBy(covering),
-					detail: m.contracts_included_detail({ included: includedLabel(covering.level) }),
-					amount: -amount,
-				};
-				return [[order.id, [adjustment]]];
-			}),
-		);
+export const contracts = defineServerModule("contracts", {
+	orders: {
+		async adjustPrices(orders) {
+			const coverage = await coverageOf(orders);
+			return new Map(
+				orders.flatMap((order) => {
+					const covering = coverage.get(order.id);
+					const amount = covering ? coveredAmount(covering.level, order) : 0;
+					if (!covering || !amount) return [];
+					const adjustment = {
+						label: coveredBy(covering),
+						detail: m.contracts_included_detail({ included: includedLabel(covering.level) }),
+						amount: -amount,
+					};
+					return [[order.id, [adjustment]]];
+				}),
+			);
+		},
+
+		async tag(orders, now) {
+			const coverage = await coverageOf(orders);
+			return new Map(
+				orders.flatMap((order) => {
+					const covering = coverage.get(order.id);
+					const tag = covering && responseTag(order, covering, now);
+					return tag ? [[order.id, [tag]]] : [];
+				}),
+			);
+		},
+
+		committed({ number }) {
+			void getOrderCoverage(number).refresh();
+		},
 	},
 
-	orderSaved(number) {
-		void getOrderCoverage(number).refresh();
-	},
-
-	// A month's fee for each month of the customer's contracts.
-	async billableItems(customerId, { from, until }) {
-		const found = await db
-			.select({
-				id: contract.id,
-				number: contract.number,
-				level: contract.level,
-				startsOn: contract.startsOn,
-				endsOn: contract.endsOn,
-				monthlyFee: contract.monthlyFee,
-			})
-			.from(contract)
-			.where(
-				and(
-					eq(contract.customerId, customerId),
-					inTenant(contract),
-					lte(contract.startsOn, until),
-					gte(contract.endsOn, from),
+	billing: {
+		// A month's fee for each month of the customer's contracts.
+		async billableItems(customerId, { from, until }) {
+			const found = await db
+				.select({
+					id: contract.id,
+					number: contract.number,
+					level: contract.level,
+					startsOn: contract.startsOn,
+					endsOn: contract.endsOn,
+					monthlyFee: contract.monthlyFee,
+				})
+				.from(contract)
+				.where(
+					and(
+						eq(contract.customerId, customerId),
+						inTenant(contract),
+						lte(contract.startsOn, until),
+						gte(contract.endsOn, from),
+					),
+				);
+			return found.flatMap((term) =>
+				contractMonths(term, from, until).map((month) =>
+					// Stored on the invoice line, in the language of whoever bills it.
+					monthlyFee(term, month, {
+						description: m.contracts_fee_description({
+							number: term.number,
+							level: contractLabels.label("contractLevel", term.level),
+						}),
+						detail: m.contracts_fee_detail({
+							from: formatDate(month.startsOn),
+							until: formatDate(month.endsOn),
+						}),
+					}),
 				),
 			);
-		return found.flatMap((term) =>
-			contractMonths(term, from, until).map((month) =>
-				// Stored on the invoice line, in the language of whoever bills it.
-				monthlyFee(term, month, {
-					description: m.contracts_fee_description({
-						number: term.number,
-						level: contractLabels.label("contractLevel", term.level),
-					}),
-					detail: m.contracts_fee_detail({
-						from: formatDate(month.startsOn),
-						until: formatDate(month.endsOn),
-					}),
-				}),
-			),
-		);
+		},
 	},
-
-	async tagOrders(orders, now) {
-		const coverage = await coverageOf(orders);
-		return new Map(
-			orders.flatMap((order) => {
-				const covering = coverage.get(order.id);
-				const tag = covering && responseTag(order, covering, now);
-				return tag ? [[order.id, [tag]]] : [];
-			}),
-		);
-	},
-};
+});
