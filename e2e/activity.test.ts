@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "../src/lib/format.ts";
-import { organizations, rows, useApp, users, value } from "./app.ts";
+import { baseURL, organizations, rows, useApp, users, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -52,6 +52,9 @@ const dayFromNow = (days: number) => {
 	const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
+
+/** South's customer that is created and deleted, to read about in Dutch. */
+const fleeting = { id: 0, code: "" };
 
 /** What North changes here, to look for from South. */
 const fromNorth = { customer: 0, order: 0, number: "", material: 0, labels: [] as string[] };
@@ -318,6 +321,7 @@ describe("in South", () => {
 			["deleted", code, "Avery Admin"],
 		]);
 		expect(await entriesAbout("customer", id, north.id)).toEqual([]);
+		Object.assign(fleeting, { id, code });
 
 		await app.go(`/activity?type=customer&id=${id}`);
 		expect(await logEntries()).toEqual([
@@ -344,5 +348,35 @@ describe("in South", () => {
 		// Once it has loaded.
 		await card.getByText("No activity").or(card.getByRole("list")).first().waitFor();
 		expect(await card.innerText()).not.toContain("Activityville");
+	});
+});
+
+describe("in Dutch", () => {
+	/** Switches the language as the language menus do: Paraglide's cookie, read on every request. */
+	const useLanguage = (locale: string) =>
+		app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
+
+	test("the feed reads in Dutch, with the words where Dutch puts them", async () => {
+		await useLanguage("nl");
+		await app.go(`/activity?type=customer&id=${fleeting.id}`);
+		expect(await entriesIn("Activiteitenlog")).toEqual([
+			expect.stringMatching(new RegExp(`^Avery Admin heeft klant ${fleeting.code} verwijderd `)),
+			expect.stringMatching(new RegExp(`^Avery Admin heeft klant ${fleeting.code} aangemaakt `)),
+		]);
+		expect(await app.page.getByText("Alleen klant", { exact: true }).count()).toBe(1);
+	});
+
+	test("the invoices read in Dutch", async () => {
+		const { page } = app;
+		await app.go("/invoices");
+		await page.getByRole("heading", { name: "Facturen" }).waitFor();
+		expect(await page.getByRole("link", { name: "Nieuwe factuur" }).count()).toBe(1);
+		expect(await page.locator("thead").getByText("Vervaldatum").count()).toBe(1);
+	});
+
+	test("switching back to English", async () => {
+		await useLanguage("en");
+		await app.go("/activity");
+		expect((await entriesIn("Activity log")).length).toBeGreaterThan(0);
 	});
 });

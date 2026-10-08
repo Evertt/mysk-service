@@ -12,28 +12,31 @@
 	import { getReceivables } from "./invoicing.remote.js";
 
 	const data = $derived(await getReceivables());
-	const invoices = (n: number) => `${n} ${n === 1 ? "invoice" : "invoices"}`;
 </script>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Receivables</Card.Title>
-		<Card.Description>What customers owe on invoices sent, including VAT.</Card.Description>
+		<Card.Title>{m.invoices_receivables()}</Card.Title>
+		<Card.Description>{m.invoices_receivables_description()}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/invoices")}>All invoices</Button>
+			<Button variant="outline" size="sm" href={resolve("/(app)/invoices")}
+				>{m.invoices_all()}</Button
+			>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
 		<dl class="grid grid-cols-2 gap-4">
 			<div class="flex flex-col gap-1">
-				<dt class="text-sm text-muted-foreground">Outstanding</dt>
+				<dt class="text-sm text-muted-foreground">{m.invoices_outstanding()}</dt>
 				<dd class="text-3xl font-semibold tabular-nums">
 					{formatCents(data.outstanding.total)}
 				</dd>
-				<dd class="text-sm text-muted-foreground">{invoices(data.outstanding.count)}</dd>
+				<dd class="text-sm text-muted-foreground">
+					{m.invoices_count({ count: data.outstanding.count })}
+				</dd>
 			</div>
 			<div class="flex flex-col gap-1">
-				<dt class="text-sm text-muted-foreground">Overdue</dt>
+				<dt class="text-sm text-muted-foreground">{m.invoices_overdue()}</dt>
 				<dd
 					class={[
 						"text-3xl font-semibold tabular-nums",
@@ -42,24 +45,25 @@
 				>
 					{formatCents(data.overdue.total)}
 				</dd>
-				<dd class="text-sm text-muted-foreground">{invoices(data.overdue.count)}</dd>
+				<dd class="text-sm text-muted-foreground">
+					{m.invoices_count({ count: data.overdue.count })}
+				</dd>
 			</div>
 		</dl>
 	</Card.Content>
 	<Card.Footer class="text-sm text-muted-foreground">
-		{data.drafts}
-		{data.drafts === 1 ? "draft" : "drafts"} waiting to be issued
+		{m.invoices_drafts_waiting({ count: data.drafts })}
 	</Card.Footer>
 </Card.Root>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Overdue invoices</Card.Title>
-		<Card.Description>Sent and past their due date, most overdue first.</Card.Description>
+		<Card.Title>{m.invoices_overdue_title()}</Card.Title>
+		<Card.Description>{m.invoices_overdue_description()}</Card.Description>
 		{#if data.overdue.count}
 			<Card.Action>
 				<Button variant="outline" size="sm" href="{resolve('/(app)/invoices')}?status=overdue">
-					View all
+					{m.invoices_view_all()}
 				</Button>
 			</Card.Action>
 		{/if}
@@ -69,9 +73,9 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Invoice</Table.Head>
-						<Table.Head>Due</Table.Head>
-						<Table.Head class="text-right">Total</Table.Head>
+						<Table.Head>{m.invoices_column_invoice()}</Table.Head>
+						<Table.Head>{m.invoices_column_due()}</Table.Head>
+						<Table.Head class="text-right">{m.invoices_column_total()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -96,9 +100,8 @@
 		{:else}
 			<Empty.Root class="p-6">
 				<Empty.Header>
-					<Empty.Title>Nothing overdue</Empty.Title>
-					<Empty.Description>Every sent invoice is still within its payment term.</Empty.Description
-					>
+					<Empty.Title>{m.invoices_nothing_overdue()}</Empty.Title>
+					<Empty.Description>{m.invoices_nothing_overdue_description()}</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}

@@ -10,21 +10,18 @@
 </script>
 
 <svelte:head>
-	<title>Invoices</title>
+	<title>{m.invoices_title()}</title>
 </svelte:head>
 
-<PageHeader
-	title="Invoices"
-	description="Bills for completed orders and other fees, from draft to paid."
->
+<PageHeader title={m.invoices_title()} description={m.invoices_description()}>
 	{#snippet actions()}
 		<Button variant="outline" href={resolve("/(app)/invoices/settings")}>
 			<SettingsIcon data-icon="inline-start" />
-			Settings
+			{m.invoices_settings()}
 		</Button>
 		<Button href={resolve("/(app)/invoices/new")}>
 			<PlusIcon data-icon="inline-start" />
-			New invoice
+			{m.invoices_new()}
 		</Button>
 	{/snippet}
 </PageHeader>

@@ -24,21 +24,18 @@
 </script>
 
 <svelte:head>
-	<title>New invoice · Invoices</title>
+	<title>{m.invoices_new()} · {m.invoices_title()}</title>
 </svelte:head>
 
-<PageHeader
-	title="New invoice"
-	description="Bill a customer for their completed orders and fees; it starts as a draft."
->
+<PageHeader title={m.invoices_new()} description={m.invoices_new_description()}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/invoices")}>Invoices</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>New</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.invoices_new_breadcrumb()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
@@ -47,20 +44,20 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the draft; otherwise the form shows what's wrong.
-		if (await submit()) toast.success("Draft invoice created");
+		if (await submit()) toast.success(m.invoices_draft_created());
 	})}
 	class="flex flex-col gap-6"
 >
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Customer</Card.Title>
-			<Card.Description>Who the invoice is for.</Card.Description>
+			<Card.Title>{m.invoices_column_customer()}</Card.Title>
+			<Card.Description>{m.invoices_customer_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<SelectField
 				field={form.fields.customerId}
-				label="Customer"
-				placeholder="Choose a customer"
+				label={m.invoices_column_customer()}
+				placeholder={m.invoices_customer_required()}
 				value={customerId}
 				options={customers.map((c) => ({ value: String(c.id), label: `${c.name} (${c.code})` }))}
 				onchange={(value: string) => (customerId = value)}
@@ -71,11 +68,9 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>What to bill</Card.Title>
+			<Card.Title>{m.invoices_what_to_bill()}</Card.Title>
 			<Card.Description>
-				{billable
-					? "Completed orders that aren't invoiced yet, priced as on their page, and fees that are due."
-					: "Choose a customer to see what they can be billed for."}
+				{billable ? m.invoices_what_to_bill_description() : m.invoices_what_to_bill_choose()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -88,7 +83,7 @@
 	<Field.FieldError errors={form.fields.issues()} />
 	<FormActions
 		pending={form.pending}
-		submitLabel="Create draft"
+		submitLabel={m.invoices_create_draft()}
 		cancelHref={resolve("/(app)/invoices")}
 	/>
 </form>

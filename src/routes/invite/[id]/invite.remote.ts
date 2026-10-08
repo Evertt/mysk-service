@@ -4,7 +4,9 @@ import { isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { formatNumber } from "#lib/format.js";
 import { invitationState, parseRoles } from "#lib/members.js";
+import { m } from "#lib/paraglide/messages.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
@@ -62,7 +64,7 @@ export const getInvitation = query(v.string(), async (id) => {
 /** The invitation, if it can still be accepted; otherwise the form says why not. */
 async function pendingInvitation(id: string) {
 	const found = await findInvitation(id);
-	if (found?.state !== "pending") invalid("This invitation can no longer be accepted.");
+	if (found?.state !== "pending") invalid(m.auth_invite_no_longer());
 	return found;
 }
 
@@ -78,8 +80,8 @@ async function accept(
 	try {
 		await auth.api.acceptInvitation({ body: { invitationId: found.id }, headers });
 	} catch (e) {
-		if (isAPIError(e) && e.statusCode < 500)
-			invalid(e.message || "Couldn't accept the invitation.");
+		// better-auth's own messages are in English.
+		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_invite_accept_failed());
 		throw e;
 	}
 	await recordActivityAfter(
@@ -93,7 +95,7 @@ export const acceptInvitation = form(v.object({ id: v.string() }), async ({ id }
 	const signedIn = requireUser();
 	const found = await pendingInvitation(id);
 	if (found.email !== signedIn.email.toLowerCase()) {
-		invalid(`This invitation is for ${found.email}, not ${signedIn.email}.`);
+		invalid(m.auth_invite_wrong_email({ email: found.email, current: signedIn.email }));
 	}
 	// Also makes the invitation's organization the active one.
 	await accept(found, signedIn, getRequestEvent().request.headers);
@@ -109,24 +111,28 @@ const MIN_PASSWORD = 8;
 export const createAccount = form(
 	v.object({
 		id: v.string(),
-		name: v.pipe(v.string(), v.trim(), v.nonEmpty("Enter your name.")),
+		name: v.pipe(v.string(), v.trim(), v.nonEmpty(m.auth_invite_name_required)),
 		// The leading underscores keep the passwords out of the page after a failed submission.
 		_password: v.pipe(
 			v.string(),
-			v.minLength(MIN_PASSWORD, `Use at least ${MIN_PASSWORD} characters.`),
-			v.maxLength(128, "Use at most 128 characters."),
+			v.minLength(MIN_PASSWORD, (issue) =>
+				m.auth_invite_password_min({ min: formatNumber(issue.requirement) }),
+			),
+			v.maxLength(128, (issue) =>
+				m.auth_invite_password_max({ max: formatNumber(issue.requirement) }),
+			),
 		),
 		_confirm: v.string(),
 	}),
 	async ({ id, name, _password, _confirm }, issue) => {
-		if (_password !== _confirm) invalid(issue._confirm("The passwords don't match."));
+		if (_password !== _confirm) invalid(issue._confirm(m.auth_invite_passwords_differ()));
 		const found = await pendingInvitation(id);
 		const { email } = found;
 		const existing = await db.query.user.findFirst({
 			columns: { id: true },
 			where: eq(user.email, email),
 		});
-		if (existing) invalid(`There's an account for ${email} already. Sign in to accept.`);
+		if (existing) invalid(m.auth_invite_account_exists({ email }));
 
 		const context = await auth.$context;
 		const created = await context.internalAdapter.createUser(

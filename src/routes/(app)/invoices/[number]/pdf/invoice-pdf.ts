@@ -1,11 +1,15 @@
 /**
  * An invoice as a PDF (A4), laid out like its page (`invoice-document.svelte`): who it's from and
- * for, its dates, lines and totals. Uses PDF's standard Helvetica, so nothing is embedded.
+ * for, its dates, lines and totals. Uses PDF's standard Helvetica, so nothing is embedded. Made
+ * per request, in the request's language (the lines are as they were billed).
  */
 import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
-import { formatRate, type InvoiceState } from "#lib/components/invoicing/invoice.js";
+import { formatRate } from "#lib/components/invoicing/display.js";
+import type { InvoiceState } from "#lib/components/invoicing/invoice.js";
 import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+import { label as enumLabel } from "#lib/i18n/labels.js";
+import { m } from "#lib/paraglide/messages.js";
 
 export interface PdfInvoice {
 	organization: string;
@@ -46,7 +50,7 @@ const columns = { quantity: 370, unitPrice: 455, amount: A4.width - MARGIN };
 
 export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	const pdf = await PDFDocument.create();
-	pdf.setTitle(`Invoice ${invoice.number}`);
+	pdf.setTitle(m.invoices_invoice_number({ number: invoice.number }));
 	pdf.setAuthor(invoice.organization);
 	pdf.setCreator("Fieldworks");
 	const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -104,10 +108,10 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	};
 
 	const tableHeader = () => {
-		text("Description", MARGIN, { size: 9, color: muted });
-		text("Quantity", columns.quantity, { size: 9, color: muted, align: "right" });
-		text("Unit price", columns.unitPrice, { size: 9, color: muted, align: "right" });
-		text("Amount", columns.amount, { size: 9, color: muted, align: "right" });
+		text(m.invoices_description_column(), MARGIN, { size: 9, color: muted });
+		text(m.invoices_quantity(), columns.quantity, { size: 9, color: muted, align: "right" });
+		text(m.invoices_unit_price(), columns.unitPrice, { size: 9, color: muted, align: "right" });
+		text(m.invoices_amount(), columns.amount, { size: 9, color: muted, align: "right" });
 		y -= 8;
 		line();
 		y -= 16;
@@ -118,22 +122,23 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 		if (y - needed >= MARGIN) return;
 		page = pdf.addPage([A4.width, A4.height]);
 		y = A4.height - MARGIN;
-		text(`${invoice.organization} · Invoice ${invoice.number} (continued)`, MARGIN, {
-			size: 9,
-			color: muted,
+		const continued = m.invoices_pdf_continued({
+			organization: invoice.organization,
+			number: invoice.number,
 		});
+		text(continued, MARGIN, { size: 9, color: muted });
 		y -= 28;
 		tableHeader();
 	};
 
 	// --- Header ---------------------------------------------------------------------------------
 	text(invoice.organization, MARGIN, { size: 18, font: bold });
-	text("INVOICE", A4.width - MARGIN, { size: 18, font: bold, align: "right" });
+	text(m.invoices_pdf_heading(), A4.width - MARGIN, { size: 18, font: bold, align: "right" });
 	y -= 20;
 	text(invoice.number, A4.width - MARGIN, { size: 11, align: "right" });
-	const label = { draft: "DRAFT", void: "VOID", overdue: "OVERDUE", paid: "PAID", sent: "" }[
-		invoice.state
-	];
+	// Its status, unless it's simply sent.
+	const label =
+		invoice.state === "sent" ? "" : enumLabel("invoiceState", invoice.state).toUpperCase();
 	if (label) {
 		y -= 16;
 		text(label, A4.width - MARGIN, { size: 11, font: bold, color: muted, align: "right" });
@@ -142,15 +147,15 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	// --- Bill to and dates ----------------------------------------------------------------------
 	y -= 36;
 	const top = y;
-	text("Bill to", MARGIN, { size: 9, color: muted });
+	text(m.invoices_bill_to(), MARGIN, { size: 9, color: muted });
 	y -= 15;
 	const { customer } = invoice;
 	for (const [value, font] of [
 		[customer.name, bold],
-		[`Attn. ${customer.contactName}`, regular],
+		[m.invoices_attention({ name: customer.contactName }), regular],
 		[`${customer.city}, ${customer.country}`, regular],
 		[customer.email, regular],
-		[`Customer ${customer.code}`, regular],
+		[m.invoices_customer_code({ code: customer.code }), regular],
 	] as const) {
 		text(value, MARGIN, { font });
 		y -= 14;
@@ -159,12 +164,19 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 
 	y = top;
 	const dates: [string, string][] = [
-		["Issued", invoice.issuedOn ? formatDate(invoice.issuedOn) : "Not yet"],
 		[
-			"Due",
-			invoice.dueOn ? formatDate(invoice.dueOn) : `${invoice.paymentTermDays} days after issuing`,
+			m.invoices_column_issued(),
+			invoice.issuedOn ? formatDate(invoice.issuedOn) : m.invoices_not_yet(),
 		],
-		...(invoice.paidOn ? [["Paid", formatDate(invoice.paidOn)] as [string, string]] : []),
+		[
+			m.invoices_column_due(),
+			invoice.dueOn
+				? formatDate(invoice.dueOn)
+				: m.invoices_due_after_issuing({ count: invoice.paymentTermDays }),
+		],
+		...(invoice.paidOn
+			? [[m.invoices_paid(), formatDate(invoice.paidOn)] as [string, string]]
+			: []),
 	];
 	for (const [name, value] of dates) {
 		text(name, A4.width - MARGIN - 150, { size: 9, color: muted });
@@ -194,7 +206,7 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 		y -= 6;
 	}
 	if (!invoice.lines.length) {
-		text("Nothing on this invoice yet.", MARGIN, { color: muted });
+		text(m.invoices_nothing_yet(), MARGIN, { color: muted });
 		y -= 19;
 	}
 
@@ -203,9 +215,9 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	line();
 	y -= 18;
 	const totals: [string, number, PDFFont][] = [
-		["Subtotal", invoice.totals.subtotal, regular],
-		[`VAT ${formatRate(invoice.vatRate)}`, invoice.totals.vat, regular],
-		["Total", invoice.totals.total, bold],
+		[m.invoices_subtotal(), invoice.totals.subtotal, regular],
+		[m.invoices_vat({ rate: formatRate(invoice.vatRate) }), invoice.totals.vat, regular],
+		[m.invoices_total(), invoice.totals.total, bold],
 	];
 	for (const [name, amount, font] of totals) {
 		text(name, columns.unitPrice, { font, align: "right" });
@@ -219,7 +231,11 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 		...(invoice.notes ? invoice.notes.split("\n") : []),
 		...(invoice.dueOn && invoice.state !== "void"
 			? [
-					`Please pay ${formatCents(invoice.totals.total)} by ${formatDate(invoice.dueOn)}, quoting ${invoice.number}.`,
+					m.invoices_please_pay({
+						amount: formatCents(invoice.totals.total),
+						date: formatDate(invoice.dueOn),
+						number: invoice.number,
+					}),
 				]
 			: []),
 	];

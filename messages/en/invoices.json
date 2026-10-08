@@ -1,3 +1,222 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"invoices_title": "Invoices",
+	"invoices_description": "Bills for completed orders and other fees, from draft to paid.",
+	"invoices_settings": "Settings",
+	"invoices_new": "New invoice",
+	"invoices_new_breadcrumb": "New",
+	"invoices_column_invoice": "Invoice",
+	"invoices_column_customer": "Customer",
+	"invoices_column_status": "Status",
+	"invoices_column_issued": "Issued",
+	"invoices_column_due": "Due",
+	"invoices_column_total": "Total",
+	"invoices_column_created": "Created",
+	"invoices_copy_number": "Copy invoice number",
+	"invoices_copy_customer_code": "Copy customer code",
+	"invoices_search": "Search invoices…",
+	"invoices_empty": "No invoices found",
+	"invoices_what_to_bill": "What to bill",
+	"invoices_completed_on": "Completed {date}",
+	"invoices_nothing_to_bill": "Nothing to bill: no completed orders or fees that aren't invoiced yet.",
+	"invoices_days_required": "Enter a number of days",
+	"invoices_days_whole": "Whole days only",
+	"invoices_days_max": "At most {max} days",
+	"invoices_orders_from_list": "Choose orders from the list",
+	"invoices_customer_required": "Choose a customer",
+	"invoices_line_description_required": "Describe what's billed",
+	"invoices_unit_price_required": "Enter a unit price",
+	"invoices_rate_required": "Enter a rate",
+	"invoices_rate_max": "At most {max}",
+	"invoices_bill_from_required": "Choose a day",
+	"invoices_customer_not_found": "Customer not found",
+	"invoices_unknown_customer": "Unknown customer",
+	"invoices_billed_meanwhile": "Some of these were billed on another invoice meanwhile. Reload and try again.",
+	"invoices_only_billable_orders": "Only the customer's completed orders that aren't billed yet",
+	"invoices_only_billable_items": "Only the customer's items that aren't billed yet",
+	"invoices_choose_something": "Choose at least one order or item to bill",
+	"invoices_choose_to_add": "Choose orders or items to add",
+	"invoices_created_note": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} line, {amount} before VAT",
+				"countPlural=*": "{countText} lines, {amount} before VAT"
+			}
+		}
+	],
+	"invoices_not_editable": "{number} has been issued and can't be changed",
+	"invoices_not_found": "Invoice not found",
+	"invoices_number_not_found": "Invoice {number} not found",
+	"invoices_order_not_found": "Order {number} not found",
+	"invoices_line_not_found": "Line not found",
+	"invoices_is_draft": "a draft",
+	"invoices_is_sent": "sent",
+	"invoices_is_paid": "paid",
+	"invoices_is_void": "void",
+	"invoices_change_draft": "made a draft",
+	"invoices_change_sent": "issued",
+	"invoices_change_paid": "marked paid",
+	"invoices_change_void": "voided",
+	"invoices_cannot_change": "{number} is {status}, so it can't be {change}",
+	"invoices_add_before_issuing": "Add something to bill before issuing the invoice",
+	"invoices_orders_not_completed": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{orders} isn't completed anymore; remove it first",
+				"countPlural=*": "{orders} aren't completed anymore; remove them first"
+			}
+		}
+	],
+	"invoices_invoice_number": "Invoice {number}",
+	"invoices_line_materials_labour": "Materials and labour",
+	"invoices_for": "Invoice for {customer}",
+	"invoices_print": "Print",
+	"invoices_download_pdf": "Download PDF",
+	"invoices_void": "Void",
+	"invoices_void_title": "Void {number}?",
+	"invoices_void_draft_description": "The draft is kept under its number but bills nothing; its orders and fees can go on another invoice.",
+	"invoices_void_sent_description": "The invoice is kept under its number but no longer bills anything: its orders go back to completed, and its orders and fees can go on another invoice.",
+	"invoices_voided": "Invoice voided",
+	"invoices_mark_paid": "Mark paid",
+	"invoices_mark_paid_title": "Mark {number} paid?",
+	"invoices_mark_paid_description": "Records that {customer} paid it today.",
+	"invoices_marked_paid": "Invoice marked paid",
+	"invoices_issue": "Issue",
+	"invoices_issue_title": "Issue {number}?",
+	"invoices_issue_description": "It's dated today and can't be changed afterwards; its orders become invoiced.",
+	"invoices_issued": "Invoice issued",
+	"invoices_history": "History",
+	"invoices_payment_term": "Payment term",
+	"invoices_paid": "Paid",
+	"invoices_voided_at": "Voided",
+	"invoices_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day",
+				"countPlural=*": "{countText} days"
+			}
+		}
+	],
+	"invoices_new_description": "Bill a customer for their completed orders and fees; it starts as a draft.",
+	"invoices_draft_created": "Draft invoice created",
+	"invoices_customer_description": "Who the invoice is for.",
+	"invoices_what_to_bill_description": "Completed orders that aren't invoiced yet, priced as on their page, and fees that are due.",
+	"invoices_what_to_bill_choose": "Choose a customer to see what they can be billed for.",
+	"invoices_create_draft": "Create draft",
+	"invoices_add_title": "Add to the invoice",
+	"invoices_add_description": "{customer}'s completed orders and fees that aren't invoiced yet.",
+	"invoices_added": "Added to the invoice",
+	"invoices_add_submit": "Add to invoice",
+	"invoices_add_line_title": "Add a line",
+	"invoices_add_line_description": "For anything else, e.g. travel costs.",
+	"invoices_line_added": "Line added",
+	"invoices_add_line_submit": "Add line",
+	"invoices_terms": "Terms",
+	"invoices_terms_description": "The VAT rate is the organization's when the invoice is issued.",
+	"invoices_terms_saved": "Terms saved",
+	"invoices_payment_term_days": "Payment term (days)",
+	"invoices_notes": "Notes",
+	"invoices_notes_description": "Printed on the invoice.",
+	"invoices_save_terms": "Save terms",
+	"invoices_not_yet": "Not yet",
+	"invoices_due_after_issuing": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day after issuing",
+				"countPlural=*": "{countText} days after issuing"
+			}
+		}
+	],
+	"invoices_bill_to": "Bill to",
+	"invoices_attention": "Attn. {name}",
+	"invoices_customer_code": "Customer {code}",
+	"invoices_description_column": "Description",
+	"invoices_quantity": "Quantity",
+	"invoices_unit_price": "Unit price",
+	"invoices_amount": "Amount",
+	"invoices_remove": "Remove",
+	"invoices_remove_line": "Remove line",
+	"invoices_remove_order_lines": "Remove the order's lines",
+	"invoices_nothing_yet": "Nothing on this invoice yet.",
+	"invoices_subtotal": "Subtotal",
+	"invoices_vat": "VAT {rate}",
+	"invoices_total": "Total",
+	"invoices_please_pay": "Please pay {amount} by {date}, quoting {number}.",
+	"invoices_pdf_heading": "INVOICE",
+	"invoices_pdf_continued": "{organization} · Invoice {number} (continued)",
+	"invoices_settings_title": "Invoicing settings",
+	"invoices_settings_description": "What new invoices start with.",
+	"invoices_settings_saved": "Settings saved",
+	"invoices_vat_rate_percent": "VAT rate (%)",
+	"invoices_vat_rate_description": "Fixed on an invoice when it's issued.",
+	"invoices_payment_term_description": "For new drafts; each draft can have its own.",
+	"invoices_bill_from": "Bill fees from",
+	"invoices_bill_from_description": "Other modules' fees (e.g. service contracts) are billed from this day on.",
+	"invoices_save_settings": "Save settings",
+	"invoices_settings_managers": "Owners and admins can change these.",
+	"invoices_vat_rate": "VAT rate",
+	"invoices_receivables": "Receivables",
+	"invoices_receivables_description": "What customers owe on invoices sent, including VAT.",
+	"invoices_all": "All invoices",
+	"invoices_outstanding": "Outstanding",
+	"invoices_overdue": "Overdue",
+	"invoices_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} invoice",
+				"countPlural=*": "{countText} invoices"
+			}
+		}
+	],
+	"invoices_drafts_waiting": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} draft waiting to be issued",
+				"countPlural=*": "{countText} drafts waiting to be issued"
+			}
+		}
+	],
+	"invoices_overdue_title": "Overdue invoices",
+	"invoices_overdue_description": "Sent and past their due date, most overdue first.",
+	"invoices_view_all": "View all",
+	"invoices_nothing_overdue": "Nothing overdue",
+	"invoices_nothing_overdue_description": "Every sent invoice is still within its payment term.",
+	"invoices_invoiced_on": "Invoiced on {invoice}, {date}",
+	"invoices_on_draft": "On draft invoice {invoice}",
+	"invoices_not_invoiced": "Not invoiced yet",
+	"invoices_voided_list": "Voided: {numbers}",
+	"invoices_new_for_customer": "New invoice for this customer",
+	"invoices_once_completed": "It can be invoiced once it's completed."
 }

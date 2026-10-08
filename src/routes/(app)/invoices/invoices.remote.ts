@@ -18,6 +18,7 @@ import {
 } from "#lib/components/invoicing/invoice.js";
 import { formatCents } from "#lib/format.js";
 import type { InvoiceStatus, OrderStatus } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
@@ -112,7 +113,7 @@ export const getBillable = query(v.number(), async (customerId) => {
 		columns: { id: true },
 		where: and(eq(customer.id, customerId), inTenant(customer)),
 	});
-	if (!owner) error(404, "Customer not found");
+	if (!owner) error(404, m.invoices_customer_not_found());
 
 	const { orders, items } = await billableFor(customerId);
 	return {
@@ -131,9 +132,6 @@ export const getBillable = query(v.number(), async (customerId) => {
 });
 
 // --- Making and changing drafts ----------------------------------------------------------------
-
-const billedMeanwhile =
-	"Some of these were billed on another invoice meanwhile. Reload and try again.";
 
 /** How an invoice shows in the activity log. */
 const subjectOf = (found: { id: number; number: string }) => ({
@@ -177,22 +175,20 @@ export const createInvoice = form(v.object(newInvoiceFields), async (input, issu
 		columns: { id: true },
 		where: and(eq(customer.id, input.customerId), inTenant(customer)),
 	});
-	if (!owner) invalid(issue.customerId("Unknown customer"));
+	if (!owner) invalid(issue.customerId(m.invoices_unknown_customer()));
 
 	const { lines, unknownOrders, unknownItems } = await linesFor(
 		input.customerId,
 		input.orderIds,
 		input.items,
 	);
-	if (unknownOrders.length) {
-		invalid(issue.orderIds("Only the customer's completed orders that aren't billed yet"));
-	}
-	if (unknownItems.length) invalid(issue.items("Only the customer's items that aren't billed yet"));
-	if (!lines.length) invalid("Choose at least one order or item to bill");
+	if (unknownOrders.length) invalid(issue.orderIds(m.invoices_only_billable_orders()));
+	if (unknownItems.length) invalid(issue.items(m.invoices_only_billable_items()));
+	if (!lines.length) invalid(m.invoices_choose_something());
 
 	const settings = await settingsOf(organizationId);
 	const number = await db.transaction(async (tx) => {
-		if ((await alreadyBilled(tx, lines)).length) invalid(billedMeanwhile);
+		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
 		const [last] = await tx
 			.select({
 				sequence: sql<
@@ -220,7 +216,8 @@ export const createInvoice = form(v.object(newInvoiceFields), async (input, issu
 		await recordActivity(tx, {
 			action: "created",
 			subject: subjectOf({ id: created.id, number }),
-			note: `${lines.length} ${lines.length === 1 ? "line" : "lines"}, ${formatCents(total)} before VAT`,
+			// In the language of whoever made it, like the lines.
+			note: m.invoices_created_note({ count: lines.length, amount: formatCents(total) }),
 		});
 		return number;
 	});
@@ -233,7 +230,7 @@ export const createInvoice = form(v.object(newInvoiceFields), async (input, issu
 /** The tenant's draft by id, inside a transaction; refuses anything else. */
 async function draftById(tx: Transaction, id: number) {
 	const found = await invoiceById(tx, id);
-	if (!isEditable(found.status)) invalid(`${found.number} has been issued and can't be changed`);
+	if (!isEditable(found.status)) invalid(m.invoices_not_editable({ number: found.number }));
 	return found;
 }
 
@@ -254,24 +251,20 @@ export const addToInvoice = form(
 			columns: { customerId: true },
 			where: and(eq(invoice.id, id), inTenant(invoice)),
 		});
-		if (!found) error(404, "Invoice not found");
+		if (!found) error(404, m.invoices_not_found());
 
 		const { lines, unknownOrders, unknownItems } = await linesFor(
 			found.customerId,
 			orderIds,
 			items,
 		);
-		if (unknownOrders.length) {
-			invalid(issue.orderIds("Only the customer's completed orders that aren't billed yet"));
-		}
-		if (unknownItems.length) {
-			invalid(issue.items("Only the customer's items that aren't billed yet"));
-		}
-		if (!lines.length) invalid("Choose orders or items to add");
+		if (unknownOrders.length) invalid(issue.orderIds(m.invoices_only_billable_orders()));
+		if (unknownItems.length) invalid(issue.items(m.invoices_only_billable_items()));
+		if (!lines.length) invalid(m.invoices_choose_to_add());
 
 		const draft = await db.transaction(async (tx) => {
 			const draft = await draftById(tx, id);
-			if ((await alreadyBilled(tx, lines)).length) invalid(billedMeanwhile);
+			if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
 			const added = await tx
 				.insert(invoiceLine)
 				.values(lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id })))
@@ -313,7 +306,7 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 			columns: { id: true, invoiceId: true, orderId: true },
 			where: and(eq(invoiceLine.id, id), inTenant(invoiceLine)),
 		});
-		if (!line) error(404, "Line not found");
+		if (!line) error(404, m.invoices_line_not_found());
 		const draft = await draftById(tx, line.invoiceId);
 		const removed = await tx
 			.delete(invoiceLine)
@@ -357,25 +350,33 @@ export const updateTerms = form(v.object({ id: id(), ...termsFields }), async (i
 
 // --- Issuing, payment and voiding --------------------------------------------------------------
 
-const statusLabel: Record<InvoiceStatus, string> = {
-	draft: "a draft",
-	sent: "sent",
-	paid: "paid",
-	void: "void",
+/** What an invoice is, as in "… is a draft". */
+const statusLabel: Record<InvoiceStatus, () => string> = {
+	draft: m.invoices_is_draft,
+	sent: m.invoices_is_sent,
+	paid: m.invoices_is_paid,
+	void: m.invoices_is_void,
 };
 
-const changeLabel: Record<InvoiceStatus, string> = {
-	draft: "made a draft",
-	sent: "issued",
-	paid: "marked paid",
-	void: "voided",
+/** What can't be done to it, as in "… can't be issued". */
+const changeLabel: Record<InvoiceStatus, () => string> = {
+	draft: m.invoices_change_draft,
+	sent: m.invoices_change_sent,
+	paid: m.invoices_change_paid,
+	void: m.invoices_change_void,
 };
 
 /** The tenant's invoice by id, if it can go to `to`; refuses otherwise. */
 async function changing(tx: Transaction, id: number, to: InvoiceStatus) {
 	const found = await invoiceById(tx, id);
 	if (!canChange(found.status, to)) {
-		invalid(`${found.number} is ${statusLabel[found.status]}, so it can't be ${changeLabel[to]}`);
+		invalid(
+			m.invoices_cannot_change({
+				number: found.number,
+				status: statusLabel[found.status](),
+				change: changeLabel[to](),
+			}),
+		);
 	}
 	return found;
 }
@@ -397,7 +398,7 @@ async function recordOrderStatuses(
 			subject: { type: "order", id: changed.id, label: changed.number },
 			before: changed,
 			after: { status },
-			note: `Invoice ${found.number}`,
+			note: m.invoices_invoice_number({ number: found.number }),
 		});
 	}
 }
@@ -411,7 +412,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 	const settings = await settingsOf(organizationId);
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "sent");
-		if (!found.lines.length) invalid("Add something to bill before issuing the invoice");
+		if (!found.lines.length) invalid(m.invoices_add_before_issuing());
 
 		const orderIds = orderIdsOf(found);
 		if (orderIds.length) {
@@ -422,7 +423,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 			const undone = orders.filter((o) => o.status !== "completed").map((o) => o.number);
 			if (undone.length) {
 				invalid(
-					`${undone.join(", ")} ${undone.length === 1 ? "isn't" : "aren't"} completed anymore; remove ${undone.length === 1 ? "it" : "them"} first`,
+					m.invoices_orders_not_completed({ count: undone.length, orders: undone.join(", ") }),
 				);
 			}
 			await tx

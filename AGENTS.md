@@ -69,7 +69,8 @@ await db.transaction(async (tx) => {
 ```
 
 - `action` is one of `activityActions` (`src/lib/models.ts`): created, updated, deleted, or a verb
-  that says more (scheduled, stock_received, …); a new one also gets a phrase in `actionVerbs`.
+  that says more (scheduled, stock_received, …); a new one also gets a sentence in `actionVerbs`
+  (`messages/<locale>/activity.json`).
 - `subject` is the record: its type, id, and the label it's known (and its page found) by now,
   e.g. the order number. `parent` puts it on another record's card too (an order line's order).
 - For an update, pass the row as loaded as `before` and what the update sets as `after`: only
@@ -94,8 +95,8 @@ remote functions. Every user-facing text goes through a message; nothing English
 
 - **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
   `auth`, `dashboard`, `orders`, `schedule`, `customers`, `equipment`, `engineers`, `materials`,
-  `contracts`, `invoices`, `settings`, `portal`), each listed in `project.inlang/settings.json`. A
-  new file goes in every locale folder and in that list.
+  `contracts`, `invoices`, `settings`, `portal`, `activity`), each listed in
+  `project.inlang/settings.json`. A new file goes in every locale folder and in that list.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
   `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or

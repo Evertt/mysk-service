@@ -35,10 +35,10 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search invoices…">
-			<FacetedFilter columnId="status" title="Status" options={stateOptions} />
+		<table.Toolbar searchLabel={m.invoices_search()}>
+			<FacetedFilter columnId="status" title={m.invoices_column_status()} options={stateOptions} />
 		</table.Toolbar>
-		<table.Table emptyTitle="No invoices found" />
+		<table.Table emptyTitle={m.invoices_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

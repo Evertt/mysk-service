@@ -18,6 +18,7 @@ import {
 	removalRefusal,
 	roleChangeRefusal,
 } from "#lib/members.js";
+import { m } from "#lib/paraglide/messages.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
@@ -101,7 +102,7 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 		.from(member)
 		.where(inTenant(member));
 	const target = members.find((m) => m.id === memberId);
-	if (!target) error(404, "Member not found");
+	if (!target) error(404, m.settings_member_not_found());
 	return {
 		actor: { userId: tenant.user.id, roles: tenant.roles },
 		target: { userId: target.userId, roles: parseRoles(target.role) },
@@ -116,7 +117,7 @@ async function memberSubject(memberId: string) {
 		.from(member)
 		.innerJoin(user, eq(member.userId, user.id))
 		.where(and(eq(member.id, memberId), inTenant(member)));
-	if (!found) error(404, "Member not found");
+	if (!found) error(404, m.settings_member_not_found());
 	return { subject: { type: "member", id: memberId, label: found.name }, role: found.role };
 }
 
@@ -127,16 +128,19 @@ const invitationSubject = (found: { id: string; email: string }) => ({
 	label: found.email,
 });
 
-/** The roles an invitation is for, as a note in the activity log. */
+/**
+ * The roles an invitation is for, as a note in the activity log: stored as text, in the language
+ * of whoever sent it.
+ */
 const asRoles = (roles: readonly MemberRole[]) =>
-	`As ${roles.map((role) => label("memberRole", role)).join(", ")}`;
+	m.settings_invitation_note({ roles: roles.map((role) => label("memberRole", role)).join(", ") });
 
 /** One of the tenant's pending invitations, or a 404. Ids are global, so look up in the tenant. */
 async function findInvitation(id: string) {
 	const found = await db.query.invitation.findFirst({
 		where: and(eq(invitation.id, id), inTenant(invitation), eq(invitation.status, "pending")),
 	});
-	if (!found) error(404, "Invitation not found");
+	if (!found) error(404, m.settings_invitation_not_found());
 	return found;
 }
 
@@ -148,7 +152,8 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 	try {
 		return await call(getRequestEvent().request.headers);
 	} catch (e) {
-		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || "That isn't possible.");
+		// better-auth's own messages are in English.
+		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.settings_not_possible());
 		throw e;
 	}
 }
@@ -193,31 +198,31 @@ export const invite = form(
 			v.pipe(
 				v.string(),
 				v.trim(),
-				v.nonEmpty("Enter their email address."),
-				v.email("Enter a valid email address."),
+				v.nonEmpty(m.settings_email_required),
+				v.email(m.settings_email_invalid),
 				v.toLowerCase(),
 			),
 			{ abortPipeEarly: true },
 		),
-		role: v.picklist(memberRoles, "Choose a role"),
+		role: v.picklist(memberRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {
 		const tenant = requireRole(...managerRoles);
 		if (!assignableRoles(tenant.roles).includes(role)) {
-			invalid(issue.role("Only owners can invite owners."));
+			invalid(issue.role(m.settings_only_owners_invite_owners()));
 		}
 		const [existing] = await db
 			.select({ id: member.id })
 			.from(member)
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), eq(user.email, email)));
-		if (existing) invalid(issue.email(`${email} is already a member.`));
+		if (existing) invalid(issue.email(m.settings_already_member({ email })));
 		const pending = await db.query.invitation.findMany({
 			columns: { status: true, expiresAt: true },
 			where: and(inTenant(invitation), eq(invitation.email, email)),
 		});
 		if (pending.some((i) => invitationState(i) === "pending")) {
-			invalid(issue.email(`${email} has been invited already. Resend that invitation instead.`));
+			invalid(issue.email(m.settings_already_invited({ email })));
 		}
 		const sent = await asUser((headers) =>
 			auth.api.createInvitation({
@@ -241,7 +246,7 @@ export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
 	if (role.includes("owner") && !tenant.roles.includes("owner")) {
-		invalid("Only owners can invite owners.");
+		invalid(m.settings_only_owners_invite_owners());
 	}
 	await asUser(async (headers) => {
 		const body = { email: found.email, role, organizationId: tenant.organizationId };

@@ -46,7 +46,7 @@
 {/snippet}
 
 <Field.FieldSet data-invalid={issues.length ? true : undefined}>
-	<Field.FieldLegend class="sr-only">What to bill</Field.FieldLegend>
+	<Field.FieldLegend class="sr-only">{m.invoices_what_to_bill()}</Field.FieldLegend>
 	{#if billable.orders.length || billable.items.length}
 		<Field.FieldGroup class="gap-0 divide-y rounded-lg border">
 			{#each billable.orders as order (order.id)}
@@ -59,7 +59,9 @@
 							<span class="font-normal">{order.description}</span>
 						</Field.FieldLabel>
 						<Field.FieldDescription>
-							{#if order.completedAt}Completed {formatDate(order.completedAt)}{/if}
+							{#if order.completedAt}{m.invoices_completed_on({
+									date: formatDate(order.completedAt),
+								})}{/if}
 							{#each order.lines.slice(1) as line, i (i)}
 								· {line.description}: {formatCents(line.amount)}
 							{/each}
@@ -84,7 +86,7 @@
 		</Field.FieldGroup>
 	{:else}
 		<p class="text-sm text-muted-foreground">
-			Nothing to bill: no completed orders or fees that aren't invoiced yet.
+			{m.invoices_nothing_to_bill()}
 		</p>
 	{/if}
 	<Field.FieldError errors={issues} />

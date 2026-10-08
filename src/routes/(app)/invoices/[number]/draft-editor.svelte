@@ -27,15 +27,15 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Add to the invoice</Card.Title>
+		<Card.Title>{m.invoices_add_title()}</Card.Title>
 		<Card.Description>
-			{invoice.customer.name}'s completed orders and fees that aren't invoiced yet.
+			{m.invoices_add_description({ customer: invoice.customer.name })}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<form
 			{...addToInvoice.enhance(async ({ submit }) => {
-				if (await submit()) toast.success("Added to the invoice");
+				if (await submit()) toast.success(m.invoices_added());
 			})}
 			class="flex flex-col gap-4"
 		>
@@ -52,7 +52,7 @@
 					{#if addToInvoice.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Add to invoice
+					{m.invoices_add_submit()}
 				</Button>
 			{/if}
 		</form>
@@ -61,36 +61,40 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Add a line</Card.Title>
-		<Card.Description>For anything else, e.g. travel costs.</Card.Description>
+		<Card.Title>{m.invoices_add_line_title()}</Card.Title>
+		<Card.Description>{m.invoices_add_line_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<form
 			{...addLine.enhance(async ({ element, submit }) => {
 				if (await submit()) {
 					element.reset();
-					toast.success("Line added");
+					toast.success(m.invoices_line_added());
 				}
 			})}
 			class="flex flex-col gap-4"
 		>
 			<input {...addLine.fields.id.as("hidden", String(invoice.id))} />
 			<Field.FieldGroup class="grid gap-4 sm:grid-cols-2">
-				<TextField field={addLine.fields.description} label="Description" class="sm:col-span-2" />
+				<TextField
+					field={addLine.fields.description}
+					label={m.invoices_description_column()}
+					class="sm:col-span-2"
+				/>
 				<NumberField
 					field={addLine.fields.quantity}
-					label="Quantity"
+					label={m.invoices_quantity()}
 					value={1}
 					min={0.01}
 					step={0.01}
 				/>
-				<MoneyField field={addLine.fields.unitPrice} label="Unit price" />
+				<MoneyField field={addLine.fields.unitPrice} label={m.invoices_unit_price()} />
 			</Field.FieldGroup>
 			<Button type="submit" variant="outline" class="self-end" disabled={!!addLine.pending}>
 				{#if addLine.pending}
 					<Spinner data-icon="inline-start" />
 				{/if}
-				Add line
+				{m.invoices_add_line_submit()}
 			</Button>
 		</form>
 	</Card.Content>
@@ -98,15 +102,13 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Terms</Card.Title>
-		<Card.Description
-			>The VAT rate is the organization's when the invoice is issued.</Card.Description
-		>
+		<Card.Title>{m.invoices_terms()}</Card.Title>
+		<Card.Description>{m.invoices_terms_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<form
 			{...updateTerms.enhance(async ({ submit }) => {
-				if (await submit()) toast.success("Terms saved");
+				if (await submit()) toast.success(m.invoices_terms_saved());
 			})}
 			class="flex flex-col gap-4"
 		>
@@ -114,24 +116,24 @@
 			<Field.FieldGroup>
 				<NumberField
 					field={updateTerms.fields.paymentTermDays}
-					label="Payment term (days)"
+					label={m.invoices_payment_term_days()}
 					value={invoice.paymentTermDays}
 					min={0}
 					step={1}
 				/>
 				<TextField
 					field={updateTerms.fields.notes}
-					label="Notes"
+					label={m.invoices_notes()}
 					value={invoice.notes}
 					multiline
-					description="Printed on the invoice."
+					description={m.invoices_notes_description()}
 				/>
 			</Field.FieldGroup>
 			<Button type="submit" variant="outline" class="self-end" disabled={!!updateTerms.pending}>
 				{#if updateTerms.pending}
 					<Spinner data-icon="inline-start" />
 				{/if}
-				Save terms
+				{m.invoices_save_terms()}
 			</Button>
 		</form>
 	</Card.Content>

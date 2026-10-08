@@ -7,6 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, order } from "#lib/server/db/schema.js";
 import { inTenant, requireModule } from "#lib/server/session.js";
@@ -27,7 +28,7 @@ export const getOrderInvoice = query(v.string(), async (number) => {
 		where: and(eq(order.number, number), inTenant(order)),
 		with: { customer: { columns: { code: true } } },
 	});
-	if (!found) error(404, `Order ${number} not found`);
+	if (!found) error(404, m.invoices_order_not_found({ number }));
 
 	const invoices = await db
 		.selectDistinct({

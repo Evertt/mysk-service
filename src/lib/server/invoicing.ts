@@ -21,6 +21,7 @@ import {
 } from "#lib/components/invoicing/invoice.js";
 // The module's queries, to refresh; they use this file in turn.
 import { getOrderInvoice } from "#lib/components/invoicing/invoicing.remote.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
 import {
@@ -129,7 +130,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 		number: row.number,
 		description: row.description,
 		completedAt: row.completedAt,
-		lines: orderLines(row, prices[i]),
+		lines: orderLines(row, prices[i], m.invoices_line_materials_labour()),
 		total: prices[i].total,
 	}));
 }
@@ -223,7 +224,7 @@ export async function loadInvoice(number: string, now = new Date()) {
 			},
 		},
 	});
-	if (!found) error(404, `Invoice ${number} not found`);
+	if (!found) error(404, m.invoices_number_not_found({ number }));
 	return {
 		invoice: { ...found, state: invoiceState(found, now) },
 		totals: invoiceTotals(found.lines, found.vatRate),
@@ -236,6 +237,6 @@ export async function invoiceById(tx: Transaction, id: number) {
 		where: and(eq(invoice.id, id), inTenant(invoice)),
 		with: { lines: { columns: { id: true, orderId: true } } },
 	});
-	if (!found) error(404, "Invoice not found");
+	if (!found) error(404, m.invoices_not_found());
 	return found;
 }

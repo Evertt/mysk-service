@@ -701,6 +701,8 @@ function generateInvoices(
 		return { materials, labor, adjustments, total: materials + labor - included };
 	}
 
+	// The seed's texts are in English.
+	const billedDetail = "Materials and labour";
 	// One invoice per customer and month of work (or of fees).
 	const groups = new Map<string, { customerId: number; month: Date; lines: LineDraft[] }>();
 	const groupOf = (customerId: number, date: Date) => {
@@ -713,7 +715,7 @@ function generateInvoices(
 		.filter((o) => o.status === "invoiced")
 		.sort((a, b) => a.completedAt!.getTime() - b.completedAt!.getTime());
 	for (const o of invoiced)
-		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o)));
+		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o), billedDetail));
 	const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 	for (const c of data.contracts) {
 		for (const month of contractMonths(c, billFrom, lastMonthEnd)) {
@@ -775,7 +777,7 @@ function generateInvoices(
 		createdAt: addDays(now, -1),
 		lines: completed
 			.filter((o) => o.customerId === customerId)
-			.flatMap((o) => orderLines(o, price(o))),
+			.flatMap((o) => orderLines(o, price(o), billedDetail)),
 	}));
 
 	return [...issued, ...drafts].map((invoice, i) => ({

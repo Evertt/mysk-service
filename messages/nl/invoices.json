@@ -1,3 +1,222 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"invoices_title": "Facturen",
+	"invoices_description": "Facturen voor afgeronde opdrachten en andere vergoedingen, van concept tot betaald.",
+	"invoices_settings": "Instellingen",
+	"invoices_new": "Nieuwe factuur",
+	"invoices_new_breadcrumb": "Nieuw",
+	"invoices_column_invoice": "Factuur",
+	"invoices_column_customer": "Klant",
+	"invoices_column_status": "Status",
+	"invoices_column_issued": "Factuurdatum",
+	"invoices_column_due": "Vervaldatum",
+	"invoices_column_total": "Totaal",
+	"invoices_column_created": "Aangemaakt",
+	"invoices_copy_number": "Factuurnummer kopiëren",
+	"invoices_copy_customer_code": "Klantcode kopiëren",
+	"invoices_search": "Facturen zoeken…",
+	"invoices_empty": "Geen facturen gevonden",
+	"invoices_what_to_bill": "Wat je factureert",
+	"invoices_completed_on": "Afgerond op {date}",
+	"invoices_nothing_to_bill": "Niets te factureren: er zijn geen afgeronde opdrachten of vergoedingen die nog niet gefactureerd zijn.",
+	"invoices_days_required": "Vul een aantal dagen in",
+	"invoices_days_whole": "Alleen hele dagen",
+	"invoices_days_max": "Maximaal {max} dagen",
+	"invoices_orders_from_list": "Kies opdrachten uit de lijst",
+	"invoices_customer_required": "Kies een klant",
+	"invoices_line_description_required": "Omschrijf wat je factureert",
+	"invoices_unit_price_required": "Vul een stukprijs in",
+	"invoices_rate_required": "Vul een tarief in",
+	"invoices_rate_max": "Maximaal {max}",
+	"invoices_bill_from_required": "Kies een dag",
+	"invoices_customer_not_found": "Klant niet gevonden",
+	"invoices_unknown_customer": "Onbekende klant",
+	"invoices_billed_meanwhile": "Een deel hiervan staat intussen op een andere factuur. Laad de pagina opnieuw en probeer het nog eens.",
+	"invoices_only_billable_orders": "Alleen afgeronde opdrachten van de klant die nog niet gefactureerd zijn",
+	"invoices_only_billable_items": "Alleen posten van de klant die nog niet gefactureerd zijn",
+	"invoices_choose_something": "Kies minstens één opdracht of post om te factureren",
+	"invoices_choose_to_add": "Kies opdrachten of posten om toe te voegen",
+	"invoices_created_note": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} regel, {amount} exclusief btw",
+				"countPlural=*": "{countText} regels, {amount} exclusief btw"
+			}
+		}
+	],
+	"invoices_not_editable": "{number} is al verstuurd en kan niet meer worden gewijzigd",
+	"invoices_not_found": "Factuur niet gevonden",
+	"invoices_number_not_found": "Factuur {number} niet gevonden",
+	"invoices_order_not_found": "Opdracht {number} niet gevonden",
+	"invoices_line_not_found": "Regel niet gevonden",
+	"invoices_is_draft": "een concept",
+	"invoices_is_sent": "verstuurd",
+	"invoices_is_paid": "betaald",
+	"invoices_is_void": "geannuleerd",
+	"invoices_change_draft": "teruggezet naar concept",
+	"invoices_change_sent": "verstuurd",
+	"invoices_change_paid": "als betaald gemarkeerd",
+	"invoices_change_void": "geannuleerd",
+	"invoices_cannot_change": "{number} is {status} en kan dus niet worden {change}",
+	"invoices_add_before_issuing": "Voeg iets toe om te factureren voordat je de factuur verstuurt",
+	"invoices_orders_not_completed": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{orders} is niet meer afgerond; haal die eerst weg",
+				"countPlural=*": "{orders} zijn niet meer afgerond; haal ze eerst weg"
+			}
+		}
+	],
+	"invoices_invoice_number": "Factuur {number}",
+	"invoices_line_materials_labour": "Materialen en arbeid",
+	"invoices_for": "Factuur voor {customer}",
+	"invoices_print": "Afdrukken",
+	"invoices_download_pdf": "Pdf downloaden",
+	"invoices_void": "Factuur annuleren",
+	"invoices_void_title": "{number} annuleren?",
+	"invoices_void_draft_description": "Het concept blijft bewaard onder zijn nummer, maar factureert niets; de opdrachten en vergoedingen kunnen op een andere factuur.",
+	"invoices_void_sent_description": "De factuur blijft bewaard onder haar nummer, maar factureert niets meer: de opdrachten gaan terug naar afgerond, en de opdrachten en vergoedingen kunnen op een andere factuur.",
+	"invoices_voided": "Factuur geannuleerd",
+	"invoices_mark_paid": "Markeren als betaald",
+	"invoices_mark_paid_title": "{number} markeren als betaald?",
+	"invoices_mark_paid_description": "Legt vast dat {customer} de factuur vandaag heeft betaald.",
+	"invoices_marked_paid": "Factuur gemarkeerd als betaald",
+	"invoices_issue": "Versturen",
+	"invoices_issue_title": "{number} versturen?",
+	"invoices_issue_description": "De factuur krijgt de datum van vandaag en kan daarna niet meer worden gewijzigd; de opdrachten worden gefactureerd.",
+	"invoices_issued": "Factuur verstuurd",
+	"invoices_history": "Geschiedenis",
+	"invoices_payment_term": "Betalingstermijn",
+	"invoices_paid": "Betaald",
+	"invoices_voided_at": "Geannuleerd",
+	"invoices_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag",
+				"countPlural=*": "{countText} dagen"
+			}
+		}
+	],
+	"invoices_new_description": "Factureer een klant voor afgeronde opdrachten en vergoedingen; de factuur begint als concept.",
+	"invoices_draft_created": "Conceptfactuur aangemaakt",
+	"invoices_customer_description": "Voor wie de factuur is.",
+	"invoices_what_to_bill_description": "Afgeronde opdrachten die nog niet gefactureerd zijn, geprijsd zoals op hun pagina, en vergoedingen die verschuldigd zijn.",
+	"invoices_what_to_bill_choose": "Kies een klant om te zien wat je kunt factureren.",
+	"invoices_create_draft": "Concept aanmaken",
+	"invoices_add_title": "Toevoegen aan de factuur",
+	"invoices_add_description": "Afgeronde opdrachten en vergoedingen van {customer} die nog niet gefactureerd zijn.",
+	"invoices_added": "Toegevoegd aan de factuur",
+	"invoices_add_submit": "Aan factuur toevoegen",
+	"invoices_add_line_title": "Regel toevoegen",
+	"invoices_add_line_description": "Voor al het andere, bijvoorbeeld reiskosten.",
+	"invoices_line_added": "Regel toegevoegd",
+	"invoices_add_line_submit": "Regel toevoegen",
+	"invoices_terms": "Voorwaarden",
+	"invoices_terms_description": "Het btw-tarief is dat van de organisatie op het moment dat de factuur wordt verstuurd.",
+	"invoices_terms_saved": "Voorwaarden opgeslagen",
+	"invoices_payment_term_days": "Betalingstermijn (dagen)",
+	"invoices_notes": "Notities",
+	"invoices_notes_description": "Komt op de factuur te staan.",
+	"invoices_save_terms": "Voorwaarden opslaan",
+	"invoices_not_yet": "Nog niet",
+	"invoices_due_after_issuing": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag na verzending",
+				"countPlural=*": "{countText} dagen na verzending"
+			}
+		}
+	],
+	"invoices_bill_to": "Factureren aan",
+	"invoices_attention": "T.a.v. {name}",
+	"invoices_customer_code": "Klant {code}",
+	"invoices_description_column": "Omschrijving",
+	"invoices_quantity": "Aantal",
+	"invoices_unit_price": "Stukprijs",
+	"invoices_amount": "Bedrag",
+	"invoices_remove": "Verwijderen",
+	"invoices_remove_line": "Regel verwijderen",
+	"invoices_remove_order_lines": "Regels van de opdracht verwijderen",
+	"invoices_nothing_yet": "Nog niets op deze factuur.",
+	"invoices_subtotal": "Subtotaal",
+	"invoices_vat": "Btw {rate}",
+	"invoices_total": "Totaal",
+	"invoices_please_pay": "Graag ontvangen we {amount} uiterlijk {date}, onder vermelding van {number}.",
+	"invoices_pdf_heading": "FACTUUR",
+	"invoices_pdf_continued": "{organization} · Factuur {number} (vervolg)",
+	"invoices_settings_title": "Facturatie-instellingen",
+	"invoices_settings_description": "Waarmee nieuwe facturen beginnen.",
+	"invoices_settings_saved": "Instellingen opgeslagen",
+	"invoices_vat_rate_percent": "Btw-tarief (%)",
+	"invoices_vat_rate_description": "Ligt vast op een factuur zodra die wordt verstuurd.",
+	"invoices_payment_term_description": "Voor nieuwe concepten; elk concept kan een eigen termijn hebben.",
+	"invoices_bill_from": "Vergoedingen factureren vanaf",
+	"invoices_bill_from_description": "Vergoedingen van andere modules (zoals servicecontracten) worden vanaf deze dag gefactureerd.",
+	"invoices_save_settings": "Instellingen opslaan",
+	"invoices_settings_managers": "Eigenaren en beheerders kunnen deze wijzigen.",
+	"invoices_vat_rate": "Btw-tarief",
+	"invoices_receivables": "Openstaande posten",
+	"invoices_receivables_description": "Wat klanten nog moeten betalen op verstuurde facturen, inclusief btw.",
+	"invoices_all": "Alle facturen",
+	"invoices_outstanding": "Openstaand",
+	"invoices_overdue": "Achterstallig",
+	"invoices_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} factuur",
+				"countPlural=*": "{countText} facturen"
+			}
+		}
+	],
+	"invoices_drafts_waiting": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} concept wacht op verzending",
+				"countPlural=*": "{countText} concepten wachten op verzending"
+			}
+		}
+	],
+	"invoices_overdue_title": "Achterstallige facturen",
+	"invoices_overdue_description": "Verstuurd en over de vervaldatum, langst achterstallig eerst.",
+	"invoices_view_all": "Alles bekijken",
+	"invoices_nothing_overdue": "Niets achterstallig",
+	"invoices_nothing_overdue_description": "Alle verstuurde facturen vallen nog binnen hun betalingstermijn.",
+	"invoices_invoiced_on": "Gefactureerd met {invoice} op {date}",
+	"invoices_on_draft": "Op conceptfactuur {invoice}",
+	"invoices_not_invoiced": "Nog niet gefactureerd",
+	"invoices_voided_list": "Geannuleerd: {numbers}",
+	"invoices_new_for_customer": "Nieuwe factuur voor deze klant",
+	"invoices_once_completed": "Je kunt de opdracht factureren zodra die is afgerond."
 }

@@ -7,7 +7,8 @@
 	import { resolve } from "$app/paths";
 
 	import { formatDate } from "#lib/format.js";
-	import { labelOrValue } from "#lib/i18n/labels.js";
+	import { messageParts } from "#lib/i18n/parts.js";
+	import { invitedAsText } from "#lib/members.js";
 
 	import PublicShell from "../../public-shell.svelte";
 	import type { PageProps } from "./$types";
@@ -28,11 +29,22 @@
 	const confirmId = `${nameId}-confirm`;
 	const { name, _password, _confirm } = createAccount.fields;
 
-	/** E.g. `an admin`. */
-	const role = (roles: string[]) => {
-		const text = roles.map((r) => labelOrValue("memberRole", r).toLowerCase()).join(" and ");
-		return `${/^[aeiou]/.test(text) ? "an" : "a"} ${text}`;
-	};
+	/** Who invited whom where, with the email address (a slot) to show in bold. */
+	const invited = (found: {
+		inviter: string | null;
+		organization: string;
+		roles: string[];
+		expiresAt: Date;
+	}) =>
+		messageParts<"email">((slot) =>
+			m.auth_invite_description({
+				inviter: found.inviter ?? m.auth_invite_someone(),
+				email: slot("email"),
+				organization: found.organization,
+				role: invitedAsText(found.roles),
+				date: formatDate(found.expiresAt),
+			}),
+		);
 
 	const loginHref = $derived(
 		`${resolve("/login")}?redirectTo=${encodeURIComponent(`/invite/${params.id}`)}`,
@@ -41,7 +53,9 @@
 
 <svelte:head>
 	<title>
-		{invitation?.state === "pending" ? `Join ${invitation.organization}` : "Invitation"} · Fieldworks
+		{invitation?.state === "pending"
+			? m.auth_invite_join({ organization: invitation.organization })
+			: m.auth_invite_title()} · {m.common_app_name()}
 	</title>
 </svelte:head>
 
@@ -52,40 +66,46 @@
 			<Card.Description>{description}</Card.Description>
 		</Card.Header>
 		<Card.Footer>
-			<Button href={resolve("/(app)")} variant="outline" class="w-full">Go to Fieldworks</Button>
+			<Button href={resolve("/(app)")} variant="outline" class="w-full">{m.auth_invite_go()}</Button
+			>
 		</Card.Footer>
 	</Card.Root>
 {/snippet}
 
 <PublicShell>
 	{#if !invitation}
-		{@render message(
-			"This invitation link isn't valid",
-			"Check that you opened the whole link from the email, or ask for a new invitation.",
-		)}
+		{@render message(m.auth_invite_invalid(), m.auth_invite_invalid_description())}
 	{:else if invitation.state === "expired"}
 		{@render message(
-			"This invitation has expired",
-			`Ask ${invitation.inviter ?? "an owner or admin"} of ${invitation.organization} to send you a new one.`,
+			m.auth_invite_expired(),
+			m.auth_invite_expired_description({
+				inviter: invitation.inviter ?? m.auth_invite_owner_or_admin(),
+				organization: invitation.organization,
+			}),
 		)}
 	{:else if invitation.state === "accepted"}
 		{@render message(
-			"This invitation has been used",
-			`It was accepted already. Sign in to work in ${invitation.organization}.`,
+			m.auth_invite_used(),
+			m.auth_invite_used_description({ organization: invitation.organization }),
 		)}
 	{:else if invitation.state !== "pending"}
 		{@render message(
-			"This invitation was cancelled",
-			`Ask ${invitation.inviter ?? "an owner or admin"} of ${invitation.organization} if you should still join.`,
+			m.auth_invite_cancelled(),
+			m.auth_invite_cancelled_description({
+				inviter: invitation.inviter ?? m.auth_invite_owner_or_admin(),
+				organization: invitation.organization,
+			}),
 		)}
 	{:else}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title class="text-xl">Join {invitation.organization}</Card.Title>
+				<Card.Title class="text-xl">
+					{m.auth_invite_join({ organization: invitation.organization })}
+				</Card.Title>
 				<Card.Description>
-					{invitation.inviter ?? "Someone"} invited <strong>{invitation.email}</strong> to work in
-					{invitation.organization} as {role(invitation.roles)}. The invitation is valid until
-					{formatDate(invitation.expiresAt)}.
+					{#each invited(invitation) as part, i (i)}{#if "text" in part}{part.text}{:else}<strong
+								>{invitation.email}</strong
+							>{/if}{/each}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -98,7 +118,7 @@
 								{#if acceptInvitation.pending}
 									<Spinner data-icon="inline-start" />
 								{/if}
-								Join {invitation.organization}
+								{m.auth_invite_join({ organization: invitation.organization })}
 							</Button>
 						</Field.FieldGroup>
 					</form>
@@ -107,46 +127,50 @@
 						<input {...signOutForInvitation.fields.id.as("hidden", invitation.id)} />
 						<Field.FieldGroup>
 							<p class="text-sm text-muted-foreground">
-								You're signed in as {invitation.signedInAs}. Sign out to accept it as
-								{invitation.email}.
+								{m.auth_invite_signed_in_as({
+									current: invitation.signedInAs,
+									email: invitation.email,
+								})}
 							</p>
 							<Button type="submit" variant="outline" disabled={!!signOutForInvitation.pending}>
-								Sign out
+								{m.common_sign_out()}
 							</Button>
 						</Field.FieldGroup>
 					</form>
 				{:else if invitation.hasAccount}
 					<div class="flex flex-col gap-4">
 						<p class="text-sm text-muted-foreground">
-							You have a Fieldworks account already. Sign in as {invitation.email} to accept.
+							{m.auth_invite_has_account({ email: invitation.email })}
 						</p>
-						<Button href={loginHref}>Sign in to accept</Button>
+						<Button href={loginHref}>{m.auth_invite_sign_in_to_accept()}</Button>
 					</div>
 				{:else}
 					<!-- novalidate: show our own, themed messages rather than the browser's. -->
 					<form {...createAccount} novalidate>
 						<input {...createAccount.fields.id.as("hidden", invitation.id)} />
 						<Field.FieldGroup>
-							<Field.FieldDescription>Create your account to accept.</Field.FieldDescription>
+							<Field.FieldDescription>{m.auth_invite_create_description()}</Field.FieldDescription>
 							<Field.FieldError errors={createAccount.fields.issues()} />
 							<Field.Field>
-								<Field.FieldLabel for={emailId}>Email</Field.FieldLabel>
+								<Field.FieldLabel for={emailId}>{m.auth_email()}</Field.FieldLabel>
 								<!-- Not submitted: the account is for the invited address. Also tells password
 								     managers which username the new password belongs to. -->
 								<Input id={emailId} autocomplete="username" value={invitation.email} readonly />
 							</Field.Field>
 							<Field.Field data-invalid={name.issues() ? true : undefined}>
-								<Field.FieldLabel for={nameId}>Your name</Field.FieldLabel>
+								<Field.FieldLabel for={nameId}>{m.auth_invite_your_name()}</Field.FieldLabel>
 								<Input id={nameId} autocomplete="name" {...name.as("text")} />
 								<Field.FieldError errors={name.issues()} />
 							</Field.Field>
 							<Field.Field data-invalid={_password.issues() ? true : undefined}>
-								<Field.FieldLabel for={passwordId}>Password</Field.FieldLabel>
+								<Field.FieldLabel for={passwordId}>{m.auth_password()}</Field.FieldLabel>
 								<Input id={passwordId} autocomplete="new-password" {..._password.as("password")} />
 								<Field.FieldError errors={_password.issues()} />
 							</Field.Field>
 							<Field.Field data-invalid={_confirm.issues() ? true : undefined}>
-								<Field.FieldLabel for={confirmId}>Repeat the password</Field.FieldLabel>
+								<Field.FieldLabel for={confirmId}
+									>{m.auth_invite_repeat_password()}</Field.FieldLabel
+								>
 								<Input id={confirmId} autocomplete="new-password" {..._confirm.as("password")} />
 								<Field.FieldError errors={_confirm.issues()} />
 							</Field.Field>
@@ -154,7 +178,7 @@
 								{#if createAccount.pending}
 									<Spinner data-icon="inline-start" />
 								{/if}
-								Create account and join
+								{m.auth_invite_create_and_join()}
 							</Button>
 						</Field.FieldGroup>
 					</form>

@@ -13,19 +13,20 @@
 </script>
 
 <svelte:head>
-	<title>Organization settings</title>
+	<title>{m.common_organization_settings()}</title>
 </svelte:head>
 
-<PageHeader title="Organization settings" description={settings.name} />
+<PageHeader title={m.common_organization_settings()} description={settings.name} />
 
 <div class="grid items-start gap-6 lg:grid-cols-2">
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Modules</Card.Title>
+			<Card.Title>{m.settings_modules()}</Card.Title>
 			<Card.Description>
-				Optional features on top of the core. {settings.canManage
-					? "In a live setup these would follow the organization's subscription."
-					: "Owners and admins can change these."}
+				{m.settings_modules_description()}
+				{settings.canManage
+					? m.settings_modules_subscription()
+					: m.settings_managers_change_these()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
@@ -40,9 +41,11 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="font-medium">{module.label}</span>
 							{#if module.enabledAt}
-								<Badge variant="secondary">Enabled since {formatDate(module.enabledAt)}</Badge>
+								<Badge variant="secondary"
+									>{m.settings_enabled_since({ date: formatDate(module.enabledAt) })}</Badge
+								>
 							{:else}
-								<Badge variant="outline">Disabled</Badge>
+								<Badge variant="outline">{m.settings_disabled()}</Badge>
 							{/if}
 						</div>
 						<p class="text-sm text-muted-foreground">{module.description}</p>
@@ -59,7 +62,7 @@
 								{#if toggle.pending}
 									<Spinner data-icon="inline-start" />
 								{/if}
-								{module.enabledAt ? "Disable" : "Enable"}
+								{module.enabledAt ? m.settings_disable() : m.settings_enable()}
 							</Button>
 						</form>
 					{/if}
@@ -70,11 +73,11 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Members</Card.Title>
-			<Card.Description>People who can sign in to this organization.</Card.Description>
+			<Card.Title>{m.settings_members()}</Card.Title>
+			<Card.Description>{m.settings_members_description()}</Card.Description>
 			<Card.Action>
 				<Button href={resolve("/(app)/settings/members")} variant="outline" size="sm">
-					{settings.canManage ? "Manage members" : "View members"}
+					{settings.canManage ? m.settings_manage_members() : m.settings_view_members()}
 				</Button>
 			</Card.Action>
 		</Card.Header>
@@ -82,8 +85,8 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Name</Table.Head>
-						<Table.Head>Role</Table.Head>
+						<Table.Head>{m.settings_column_name()}</Table.Head>
+						<Table.Head>{m.settings_column_role()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>

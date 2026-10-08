@@ -2,10 +2,10 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { invoiceStatuses } from "#lib/models.js";
 
+import { formatRate } from "./display.ts";
 import {
 	canChange,
 	dueDate,
-	formatRate,
 	invoiceNumber,
 	invoiceSequence,
 	invoiceState,
@@ -79,9 +79,10 @@ describe("amounts", () => {
 		expect(invoiceTotals([], 21)).toEqual({ subtotal: 0, vat: 0, total: 0 });
 	});
 
-	test("rates show without trailing zeros", () => {
+	test("rates show without trailing zeros, in the language's notation", () => {
 		expect(formatRate(21)).toBe("21%");
 		expect(formatRate(5.5)).toBe("5.5%");
+		expect(formatRate(5.5, "nl")).toBe("5,5%");
 	});
 });
 
@@ -124,20 +125,25 @@ describe("status", () => {
 
 describe("lines", () => {
 	const order = { id: 7, number: "ORD-2026-00007", description: "Leak at main seal" };
+	const detail = "Materials and labour";
 
 	test("an order is its materials and labour, then each adjustment, adding up to its total", () => {
-		const lines = orderLines(order, {
-			materials: 12_000,
-			labor: 8500,
-			adjustments: [
-				{
-					label: "Covered by CTR-2026-0001 (Standard)",
-					detail: "Labour included",
-					amount: -8500,
-				},
-			],
-			total: 12_000,
-		});
+		const lines = orderLines(
+			order,
+			{
+				materials: 12_000,
+				labor: 8500,
+				adjustments: [
+					{
+						label: "Covered by CTR-2026-0001 (Standard)",
+						detail: "Labour included",
+						amount: -8500,
+					},
+				],
+				total: 12_000,
+			},
+			detail,
+		);
 		expect(lines).toEqual([
 			{
 				description: "ORD-2026-00007: Leak at main seal",
@@ -162,21 +168,29 @@ describe("lines", () => {
 	});
 
 	test("without adjustments, an order is one line", () => {
-		const lines = orderLines(order, { materials: 100, labor: 200, adjustments: [], total: 300 });
+		const lines = orderLines(
+			order,
+			{ materials: 100, labor: 200, adjustments: [], total: 300 },
+			detail,
+		);
 		expect(lines).toHaveLength(1);
 		expect(lines[0]).toMatchObject({ amount: 300, detail: "Materials and labour" });
 	});
 
 	test("adjustments that take off more than the order costs stop at zero, like its total", () => {
-		const lines = orderLines(order, {
-			materials: 1000,
-			labor: 2000,
-			adjustments: [
-				{ label: "Goodwill", amount: -1500 },
-				{ label: "Covered", amount: -2500 },
-			],
-			total: 0,
-		});
+		const lines = orderLines(
+			order,
+			{
+				materials: 1000,
+				labor: 2000,
+				adjustments: [
+					{ label: "Goodwill", amount: -1500 },
+					{ label: "Covered", amount: -2500 },
+				],
+				total: 0,
+			},
+			detail,
+		);
 		expect(lines.map((line) => line.amount)).toEqual([3000, -1500, -1500]);
 		expect(lines[2].unitPrice).toBe(-1500);
 	});

@@ -6,7 +6,7 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { formatRate } from "#lib/components/invoicing/invoice.js";
+	import { formatRate } from "#lib/components/invoicing/display.js";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 
@@ -34,41 +34,47 @@
 	<Card.Header class="gap-6 sm:grid-cols-[1fr_auto]">
 		<div class="flex flex-col gap-1">
 			<p class="text-lg font-semibold">{data.organization}</p>
-			<p class="text-sm text-muted-foreground">Invoice {invoice.number}</p>
+			<p class="text-sm text-muted-foreground">
+				{m.invoices_invoice_number({ number: invoice.number })}
+			</p>
 		</div>
 		<dl class="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm sm:justify-self-end">
-			<dt class="text-muted-foreground">Issued</dt>
-			<dd class="tabular-nums">{invoice.issuedOn ? formatDate(invoice.issuedOn) : "Not yet"}</dd>
-			<dt class="text-muted-foreground">Due</dt>
+			<dt class="text-muted-foreground">{m.invoices_column_issued()}</dt>
+			<dd class="tabular-nums">
+				{invoice.issuedOn ? formatDate(invoice.issuedOn) : m.invoices_not_yet()}
+			</dd>
+			<dt class="text-muted-foreground">{m.invoices_column_due()}</dt>
 			<dd class="tabular-nums">
 				{invoice.dueOn
 					? formatDate(invoice.dueOn)
-					: `${invoice.paymentTermDays} days after issuing`}
+					: m.invoices_due_after_issuing({ count: invoice.paymentTermDays })}
 			</dd>
 			{#if invoice.paidOn}
-				<dt class="text-muted-foreground">Paid</dt>
+				<dt class="text-muted-foreground">{m.invoices_paid()}</dt>
 				<dd class="tabular-nums">{formatDate(invoice.paidOn)}</dd>
 			{/if}
 		</dl>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
 		<div class="flex flex-col gap-0.5 text-sm">
-			<p class="text-xs text-muted-foreground">Bill to</p>
+			<p class="text-xs text-muted-foreground">{m.invoices_bill_to()}</p>
 			<p class="font-medium">{customer.name}</p>
-			<p>Attn. {customer.contactName}</p>
+			<p>{m.invoices_attention({ name: customer.contactName })}</p>
 			<p>{customer.city}, {customer.country}</p>
-			<p class="text-muted-foreground">{customer.email} · Customer {customer.code}</p>
+			<p class="text-muted-foreground">
+				{customer.email} · {m.invoices_customer_code({ code: customer.code })}
+			</p>
 		</div>
 
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>Description</Table.Head>
-					<Table.Head class="text-right">Quantity</Table.Head>
-					<Table.Head class="text-right">Unit price</Table.Head>
-					<Table.Head class="text-right">Amount</Table.Head>
+					<Table.Head>{m.invoices_description_column()}</Table.Head>
+					<Table.Head class="text-right">{m.invoices_quantity()}</Table.Head>
+					<Table.Head class="text-right">{m.invoices_unit_price()}</Table.Head>
+					<Table.Head class="text-right">{m.invoices_amount()}</Table.Head>
 					{#if editable}
-						<Table.Head class="w-10"><span class="sr-only">Remove</span></Table.Head>
+						<Table.Head class="w-10"><span class="sr-only">{m.invoices_remove()}</span></Table.Head>
 					{/if}
 				</Table.Row>
 			</Table.Header>
@@ -104,8 +110,10 @@
 											type="submit"
 											variant="ghost"
 											size="icon-sm"
-											aria-label="Remove line"
-											title={line.orderId ? "Remove the order's lines" : "Remove line"}
+											aria-label={m.invoices_remove_line()}
+											title={line.orderId
+												? m.invoices_remove_order_lines()
+												: m.invoices_remove_line()}
 											disabled={!!remove.pending}
 										>
 											<XIcon />
@@ -118,26 +126,28 @@
 				{:else}
 					<Table.Row>
 						<Table.Cell colspan={editable ? 5 : 4} class="text-center text-muted-foreground">
-							Nothing on this invoice yet.
+							{m.invoices_nothing_yet()}
 						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
 			<Table.Footer>
 				<Table.Row>
-					<Table.Cell colspan={3}>Subtotal</Table.Cell>
+					<Table.Cell colspan={3}>{m.invoices_subtotal()}</Table.Cell>
 					<Table.Cell class="text-right tabular-nums"
 						>{formatCents(data.totals.subtotal)}</Table.Cell
 					>
 					{#if editable}<Table.Cell></Table.Cell>{/if}
 				</Table.Row>
 				<Table.Row>
-					<Table.Cell colspan={3}>VAT {formatRate(invoice.vatRate)}</Table.Cell>
+					<Table.Cell colspan={3}
+						>{m.invoices_vat({ rate: formatRate(invoice.vatRate) })}</Table.Cell
+					>
 					<Table.Cell class="text-right tabular-nums">{formatCents(data.totals.vat)}</Table.Cell>
 					{#if editable}<Table.Cell></Table.Cell>{/if}
 				</Table.Row>
 				<Table.Row class="font-semibold">
-					<Table.Cell colspan={3}>Total</Table.Cell>
+					<Table.Cell colspan={3}>{m.invoices_total()}</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">{formatCents(data.totals.total)}</Table.Cell>
 					{#if editable}<Table.Cell></Table.Cell>{/if}
 				</Table.Row>
@@ -149,8 +159,11 @@
 		{/if}
 		{#if invoice.dueOn && invoice.status !== "void"}
 			<p class="text-sm text-muted-foreground">
-				Please pay {formatCents(data.totals.total)} by {formatDate(invoice.dueOn)}, quoting
-				{invoice.number}.
+				{m.invoices_please_pay({
+					amount: formatCents(data.totals.total),
+					date: formatDate(invoice.dueOn),
+					number: invoice.number,
+				})}
 			</p>
 		{/if}
 	</Card.Content>
