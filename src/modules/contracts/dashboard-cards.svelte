@@ -6,9 +6,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
 	import { formatDate, formatDateTime, formatNumber } from "#lib/format.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import ContractLink from "./contract-link.svelte";
 	import { getContractsOverview } from "./coverage.remote.js";

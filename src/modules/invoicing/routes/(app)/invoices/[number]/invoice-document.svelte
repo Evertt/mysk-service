@@ -6,8 +6,8 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import { formatRate } from "../../../../display.js";
 	import type { getInvoice } from "../invoices.remote.js";

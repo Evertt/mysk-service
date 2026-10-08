@@ -6,13 +6,13 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import OrderStatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
+	import OrderStatusBadge from "#lib/orders/status-badge.svelte";
+	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import { formatTerm, levels } from "../../../../display.js";
 	import LevelBadge from "../../../../level-badge.svelte";

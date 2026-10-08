@@ -3,7 +3,7 @@
  * takes part in core server logic without core importing the module. A module implements them with
  * `defineServerModule()`, grouped by the core domain they belong to (`orders`, `billing`). Core
  * calls each from one function of its own, for the modules the current tenant has: `priceOrders()`
- * (`#lib/server/pricing.ts`), `tagOrders()`, `orderCommitted()` and `billableItems()` below.
+ * (`#lib/orders/server/pricing.ts`), `tagOrders()`, `orderCommitted()` and `billableItems()` below.
  * Modules can use them among themselves too: invoicing bills what the others offer through
  * `billableItems()`, without knowing which module offers what.
  *

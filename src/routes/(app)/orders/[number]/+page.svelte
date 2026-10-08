@@ -5,9 +5,6 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import CustomerCard from "#lib/customers/customer-card.svelte";
 	import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
@@ -17,6 +14,9 @@
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
 	import { isEditableOrder } from "#lib/models.js";
+	import PriorityBadge from "#lib/orders/priority-badge.svelte";
+	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import OrderTags from "../order-tags.svelte";

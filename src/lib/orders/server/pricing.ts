@@ -1,11 +1,10 @@
 import { sql, type SQLWrapper } from "drizzle-orm";
 
 import type { PriceAdjustment } from "#lib/modules.js";
-
-import { db } from "./db/index.ts";
-import { orderLine } from "./db/schema.ts";
-import { enabledServerModules, type OrderFacts, type ServerModule } from "./modules.ts";
-import { inTenant } from "./session.ts";
+import { db } from "#lib/server/db/index.ts";
+import { orderLine } from "#lib/server/db/schema.ts";
+import { enabledServerModules, type OrderFacts, type ServerModule } from "#lib/server/modules.ts";
+import { inTenant } from "#lib/server/session.ts";
 
 /** Used to estimate labour cost while no engineer is assigned yet. In cents. */
 export const STANDARD_HOURLY_RATE = 8500;

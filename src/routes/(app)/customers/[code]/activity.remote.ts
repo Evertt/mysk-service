@@ -4,10 +4,10 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.js";
+import { priceOrders } from "#lib/orders/server/pricing.js";
 import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
-import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 /** How many orders the customer page lists; the orders list has them all. */

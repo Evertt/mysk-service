@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { DAY } from "#lib/dates.js";
 import { openOrderStatuses } from "#lib/models.js";
+import { laborCost } from "#lib/orders/server/pricing.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
@@ -12,7 +13,6 @@ import { bulkChange, idsTarget } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { type Problem, refuse } from "#lib/server/forms.js";
-import { laborCost } from "#lib/server/pricing.js";
 import { deleteAndLog } from "#lib/server/records.js";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 

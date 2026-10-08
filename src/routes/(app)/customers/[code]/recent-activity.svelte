@@ -8,10 +8,10 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import { joinValues } from "#lib/components/data-table/url-state.js";
-	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
+	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import { getCustomerActivity } from "./activity.remote.js";
 

@@ -68,7 +68,7 @@ helpers are in `src/lib/server/session.ts`:
   logged, not thrown). Core calls each hook from one function (`priceOrders()`, `tagOrders()`,
   `orderCommitted()`, `billableItems()`); a new extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
-  (`src/lib/server/pricing.ts`), which applies the modules' adjustments.
+  (`src/lib/orders/server/pricing.ts`), which applies the modules' adjustments.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
   `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
@@ -208,7 +208,7 @@ await db.transaction(async (tx) => {
 - Changes made outside the app's transactions (better-auth's member and invitation endpoints) log
   with `recordActivityAfter()` once they succeed. Pass `by` (tenant and user) when the change
   belongs to another organization than the current one, e.g. accepting an invitation.
-- An order's lines are logged by `saveOrderLines()` (`src/lib/server/orders.ts`); stock that
+- An order's lines are logged by `saveOrderLines()` (`src/lib/orders/server/lines.ts`); stock that
   follows an order's status needs no entry of its own beyond the status change.
 
 ## Translations
