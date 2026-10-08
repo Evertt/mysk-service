@@ -5,7 +5,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { ModuleId } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer } from "#lib/roles.js";
+import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.js";
 
@@ -50,7 +50,7 @@ export async function loadTenant(
 		organizationId: current.organizationId,
 		name: current.name,
 		slug: current.slug,
-		roles: current.role.split(",").map((role) => role.trim()),
+		roles: parseRoles(current.role),
 		modules: modules.map((row) => row.id),
 	};
 }
@@ -152,3 +152,6 @@ export function requireRole(...roles: string[]) {
 	}
 	return tenant;
 }
+
+/** The current tenant, if the user is an owner or an admin (`managerRoles`) in it; otherwise a 403. */
+export const requireManager = () => requireRole(...managerRoles);

@@ -1,30 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import {
-	assignableRoles,
-	canManageMembers,
-	invitationState,
-	parseRoles,
-	removalRefusal,
-	roleChangeRefusal,
-} from "./members.ts";
+import { assignableRoles, invitationState, removalRefusal, roleChangeRefusal } from "./members.ts";
 
 const owner = { userId: "owner", roles: ["owner"] };
 const otherOwner = { userId: "owner-2", roles: ["owner"] };
 const admin = { userId: "admin", roles: ["admin"] };
 const member = { userId: "member", roles: ["member"] };
-
-test("roles are stored comma-separated", () => {
-	expect(parseRoles("owner")).toEqual(["owner"]);
-	expect(parseRoles("admin, member")).toEqual(["admin", "member"]);
-	expect(parseRoles("")).toEqual([]);
-});
-
-test("owners and admins manage members", () => {
-	expect(canManageMembers(["owner"])).toBe(true);
-	expect(canManageMembers(["admin"])).toBe(true);
-	expect(canManageMembers(["member"])).toBe(false);
-});
 
 describe("changing a role", () => {
 	test("an owner can change anyone else's", () => {

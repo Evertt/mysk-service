@@ -20,6 +20,7 @@ import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.
 import type { ActivityAction } from "#lib/models.js";
 import { modules } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
+import { parseRoles } from "#lib/roles.js";
 
 /** A text in the current language, read when it's shown. */
 export type Text = () => string;
@@ -164,9 +165,7 @@ const moment = (value: unknown) => formatDateTime(new Date(String(value)));
 const hours = (value: unknown) => m.common_count_hours_short({ count: Number(value) });
 /** A member's roles as stored (`owner,engineer`), e.g. "Owner, Field engineer". */
 const roles = (value: unknown) =>
-	String(value)
-		.split(",")
-		.map((role) => role.trim())
+	parseRoles(String(value))
 		.map((role) => labelOrValue("memberRole", role))
 		.join(", ");
 

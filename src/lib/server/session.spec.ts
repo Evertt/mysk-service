@@ -12,6 +12,7 @@ import {
 	inTenant,
 	loadTenant,
 	requireEngineer,
+	requireManager,
 	requireMember,
 	requireModule,
 	requireRole,
@@ -170,6 +171,20 @@ describe("requireRole", () => {
 	test("refuses a user without any of the roles with a 403", () => {
 		Object.assign(locals, { user, tenant });
 		expect(statusOf(() => requireRole("owner", "admin"))).toBe(403);
+	});
+});
+
+describe("requireManager", () => {
+	test("returns the tenant for an owner or an admin", () => {
+		for (const role of ["owner", "admin"]) {
+			Object.assign(locals, { user, tenant: { ...tenant, roles: ["member", role] } });
+			expect(requireManager()).toMatchObject({ organizationId: "north" });
+		}
+	});
+
+	test("refuses anyone else with a 403", () => {
+		Object.assign(locals, { user, tenant });
+		expect(statusOf(requireManager)).toBe(403);
 	});
 });
 

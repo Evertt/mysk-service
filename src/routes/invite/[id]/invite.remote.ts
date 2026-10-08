@@ -5,8 +5,9 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatNumber } from "#lib/format.js";
-import { invitationState, parseRoles } from "#lib/members.js";
+import { invitationState } from "#lib/members.js";
 import { m } from "#lib/paraglide/messages.js";
+import { parseRoles } from "#lib/roles.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
