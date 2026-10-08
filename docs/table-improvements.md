@@ -19,7 +19,7 @@ stands. Status: ⬜ to do · 🔄 in progress (branch) · ✅ done (merged into 
 
 | #   | Item                                                                                                                                       | Status                  |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
-| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | 🔄 `saved-views`        |
+| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | ✅                      |
 | 9   | **CSV export** of the current filtered view; server-side for the big tables.                                                               | ⬜                      |
 | 10  | **Bulk actions on selected rows**, e.g. assign an engineer, change status, add to an invoice. (Row selection exists but does nothing yet.) | ⬜                      |
 | 11  | **Range filters for dates and numbers**, e.g. "scheduled this week", "stock below 10".                                                     | ⬜                      |
