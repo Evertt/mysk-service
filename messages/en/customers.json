@@ -135,5 +135,10 @@
 	"customers_recent_empty_description": "Nothing has been quoted or done for this customer yet.",
 	"customers_bulk_delete_title": "Delete the selected customers?",
 	"customers_bulk_delete_description": "The customers are removed permanently. Customers with equipment or orders can't be deleted.",
+	"customers_card_company": "Company",
+	"customers_card_contact": "Contact",
+	"customers_card_email": "Email",
+	"customers_card_phone": "Phone",
+	"customers_card_location": "Location",
 	"customers_bulk_has_equipment": "{name} has equipment"
 }
