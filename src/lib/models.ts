@@ -206,5 +206,8 @@ export const activityActions = [
 	"issued",
 	"paid",
 	"voided",
+	// Saved views shared with the organization.
+	"shared",
+	"unshared",
 ] as const;
 export type ActivityAction = (typeof activityActions)[number];

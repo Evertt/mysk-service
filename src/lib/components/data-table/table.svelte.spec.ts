@@ -10,6 +10,8 @@ vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svel
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
+// The toolbar's saved views (see `saved-views.svelte.spec.ts`): none.
+vi.mock("./views.remote.js", () => import("./fake-views.svelte.ts"));
 
 beforeEach(() => visit("/items"));
 
@@ -348,7 +350,7 @@ describe("column visibility", () => {
 	test("the view menu lists the hideable columns and toggles them", async () => {
 		render(Harness, { items });
 
-		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("button", { name: "View", exact: true }).click();
 		const options = page.getByRole("menuitemcheckbox");
 		await expect.element(options.first()).toBeVisible();
 		expect(options.elements().map((option) => option.textContent?.trim())).toEqual([

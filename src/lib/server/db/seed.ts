@@ -1096,6 +1096,7 @@ const count = (table: string, rows: unknown[]) =>
 await db.transaction(async (tx) => {
 	for (const table of [
 		schema.activity,
+		schema.savedView,
 		schema.invoiceLine,
 		schema.invoice,
 		schema.invoicingSettings,

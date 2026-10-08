@@ -48,6 +48,8 @@ export const actionVerbs: Record<ActivityAction, Sentence> = {
 	issued: m.activity_action_issued,
 	paid: m.activity_action_paid,
 	voided: m.activity_action_voided,
+	shared: m.activity_action_shared,
+	unshared: m.activity_action_unshared,
 };
 
 /** The sentence of an action as logged; one this version doesn't know reads as its value. */
@@ -233,6 +235,14 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	},
 	/** An invitation to join the organization, by the email address it's for. */
 	invitation: { noun: m.activity_subject_invitation, fields: { role: { format: roles } } },
+	/**
+	 * A data table's saved view, by its name. Only shared views are logged: personal ones concern
+	 * nobody else. Its filters show as their URL parameters.
+	 */
+	saved_view: {
+		noun: m.activity_subject_saved_view,
+		fields: { query: { label: m.activity_field_query } },
+	},
 };
 
 /**
