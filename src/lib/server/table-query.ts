@@ -52,7 +52,7 @@ import {
 
 /**
  * The argument of a list's remote queries: the table's URL parameters as a search string (see
- * `serverTableQuery` in `#lib/components/data-table/server-table.ts`).
+ * `serverTableQuery` in `#lib/components/data-table/server-table.svelte.ts`).
  */
 export const tableParams = v.pipe(v.string(), v.maxLength(4000));
 

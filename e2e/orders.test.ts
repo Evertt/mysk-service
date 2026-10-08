@@ -925,8 +925,10 @@ describe("bulk actions on selected orders, in North", () => {
 		await bar().getByRole("button", { name: "Assign engineer" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await dialog.getByText("Assign 2 orders").waitFor();
-		// Only active engineers, and nobody.
-		const options = await dialog.getByLabel("Engineer").locator("option").allInnerTexts();
+		// Only active engineers, and nobody (once they've loaded).
+		const engineerField = dialog.getByLabel("Engineer");
+		await engineerField.locator("option", { hasText: "Unassigned" }).waitFor({ state: "attached" });
+		const options = await engineerField.locator("option").allInnerTexts();
 		expect(options).toContain("Unassigned");
 		const inactive = await rows<{ name: string }>(
 			`select name from engineer where organization_id = ? and active = 0`,

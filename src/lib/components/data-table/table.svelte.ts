@@ -89,10 +89,10 @@ export type AppTableOptions<TData extends RowData> = HookTableOptions<TData> & {
 	urlState?: false | UrlStateOptions;
 	/**
 	 * The rows are one page that the server searched, filtered, sorted and paged (see
-	 * `server-table.ts`): the table only shows them, and `rowCount` says how many match in all. The
-	 * selection is cleared when the rows change, as it can only be of rows the table shows. When
-	 * grouped, the server sorts by the group first, and `<table.Table groups>` says what it knows
-	 * of the page's groups (see `grouping.ts`).
+	 * `server-table.svelte.ts`): the table only shows them, and `rowCount` says how many match in
+	 * all. The selection is cleared when the rows change, as it can only be of rows the table shows.
+	 * When grouped, the server sorts by the group first, and `<table.Table groups>` says what it
+	 * knows of the page's groups (see `grouping.ts`).
 	 */
 	serverSide?: boolean;
 };

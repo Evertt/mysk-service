@@ -12,13 +12,11 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
 import {
-	invoiceNumber,
 	invoiceState,
 	invoiceTotals,
 	itemLine,
 	type LineDraft,
 	orderLines,
-	SEQUENCE_START,
 	today,
 } from "#lib/components/invoicing/invoice.js";
 // The module's queries, to refresh; they use this file in turn.
@@ -27,27 +25,18 @@ import { formatCents } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { recordActivity } from "./activity.ts";
-import { db } from "./db/index.ts";
-import {
-	customer,
-	engineer,
-	invoice,
-	invoiceLine,
-	invoicingSettings,
-	order,
-	orderLine,
-} from "./db/schema.ts";
+import { db, type Transaction } from "./db/index.ts";
+import { customer, engineer, invoice, invoiceLine, invoicingSettings, order } from "./db/schema.ts";
 import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
-import { priceOrders } from "./pricing.ts";
-import { inTenant, requireMember } from "./session.ts";
+import { nextNumber } from "./numbering.ts";
+import { materialsPerOrder, priceOrders } from "./pricing.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "./session.ts";
 
 export const invoicing: ServerModule = {
 	orderSaved(number) {
 		void getOrderInvoice(number).refresh();
 	},
 };
-
-export type InvoicingSettings = typeof invoicingSettings.$inferSelect;
 
 /**
  * The tenant's invoicing settings. Made with the defaults the first time they're needed, billing
@@ -65,9 +54,6 @@ export async function settingsOf(organizationId = requireMember().organizationId
 	return (await db.query.invoicingSettings.findFirst({ where }))!;
 }
 
-/** A database transaction, as `db.transaction()` passes it. */
-export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 /** A completed order that can be billed, with the lines it becomes. */
 export interface BillableOrder {
 	id: number;
@@ -80,15 +66,7 @@ export interface BillableOrder {
 
 /** The customer's completed orders that aren't on an invoice yet, oldest first, priced. */
 async function billableOrders(customerId: number): Promise<BillableOrder[]> {
-	const materials = db
-		.select({
-			orderId: orderLine.orderId,
-			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("materials");
+	const materials = materialsPerOrder();
 
 	const rows = await db
 		.select({
@@ -106,7 +84,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
 				inTenant(order),
@@ -116,7 +94,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 					db
 						.select({ id: invoiceLine.id })
 						.from(invoiceLine)
-						.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+						.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 						.where(
 							and(
 								inTenant(invoiceLine),
@@ -146,7 +124,7 @@ async function billedReferences(references: string[]) {
 	const rows = await db
 		.select({ source: invoiceLine.source })
 		.from(invoiceLine)
-		.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+		.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 		.where(
 			and(
 				inTenant(invoiceLine),
@@ -204,7 +182,7 @@ export async function alreadyBilled(
 	return tx
 		.select({ orderId: invoiceLine.orderId, source: invoiceLine.source })
 		.from(invoiceLine)
-		.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+		.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 		.where(
 			and(
 				inTenant(invoiceLine),
@@ -226,7 +204,7 @@ export interface DraftProblem {
 /**
  * Makes a draft invoice for one of the tenant's customers with the chosen completed orders and
  * other modules' items, all of which must be billable (see `linesFor`). It gets the tenant's next
- * number (see `invoiceNumber`), payment term and VAT rate. Returns its number, or what's wrong;
+ * number (see `nextNumber`), payment term and VAT rate. Returns its number, or what's wrong;
  * refuses with `invalid()` if another request billed some of it meanwhile. The new invoice form
  * and the orders list's "Create invoice" share it.
  */
@@ -238,7 +216,7 @@ export async function createDraft(input: {
 	const { organizationId } = requireMember();
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
-		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+		where: idInTenant(customer, input.customerId),
 	});
 	if (!owner) return { problem: { field: "customerId", message: m.invoices_unknown_customer() } };
 
@@ -258,15 +236,7 @@ export async function createDraft(input: {
 	const settings = await settingsOf(organizationId);
 	return db.transaction(async (tx) => {
 		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
-		const [last] = await tx
-			.select({
-				sequence: sql<
-					number | null
-				>`max(cast(substr(${invoice.number}, ${SEQUENCE_START}) as integer))`,
-			})
-			.from(invoice)
-			.where(inTenant(invoice));
-		const number = invoiceNumber(new Date().getFullYear(), (last?.sequence ?? 0) + 1);
+		const number = await nextNumber(tx, "invoice");
 		const [created] = await tx
 			.insert(invoice)
 			.values({
@@ -314,7 +284,7 @@ export async function loadInvoice(number: string, now = new Date()) {
 /** The tenant's invoice by id (e.g. from a form), with its lines' orders; or a 404. */
 export async function invoiceById(tx: Transaction, id: number) {
 	const found = await tx.query.invoice.findFirst({
-		where: and(eq(invoice.id, id), inTenant(invoice)),
+		where: idInTenant(invoice, id),
 		with: { lines: { columns: { id: true, orderId: true } } },
 	});
 	if (!found) error(404, m.invoices_not_found());

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { isFieldEngineer, memberRoles, officeRoles } from "./roles.ts";
+import { isFieldEngineer, isManager, memberRoles, officeRoles, parseRoles } from "./roles.ts";
 
 describe("isFieldEngineer", () => {
 	test("is a member whose only role is engineer", () => {
@@ -14,6 +14,26 @@ describe("isFieldEngineer", () => {
 	test("isn't an office member, nor someone without roles", () => {
 		for (const role of officeRoles) expect(isFieldEngineer([role]), role).toBe(false);
 		expect(isFieldEngineer([])).toBe(false);
+	});
+});
+
+test("roles are stored comma-separated", () => {
+	expect(parseRoles("owner")).toEqual(["owner"]);
+	expect(parseRoles("admin, member")).toEqual(["admin", "member"]);
+	expect(parseRoles("")).toEqual([]);
+});
+
+describe("isManager", () => {
+	test("is an owner or an admin", () => {
+		expect(isManager(["owner"])).toBe(true);
+		expect(isManager(["admin"])).toBe(true);
+		expect(isManager(["engineer", "admin"])).toBe(true);
+	});
+
+	test("isn't anyone else", () => {
+		expect(isManager(["member"])).toBe(false);
+		expect(isManager(["engineer"])).toBe(false);
+		expect(isManager([])).toBe(false);
 	});
 });
 

@@ -29,15 +29,21 @@ helpers are in `src/lib/server/session.ts`:
 
 - Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
   tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization
-  doesn't have it, or `requireRole("owner", "admin")` for organization settings).
+  doesn't have it, or `requireManager()` (an owner or admin) for organization settings).
 - Every select, update and delete on a tenant table (one with `organizationId`) includes
   `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
   the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
-  clear message (the foreign keys would refuse them anyway). `contract_equipment` has no
-  `organization_id`: reach it through a tenant-checked contract or equipment.
+  clear message (the foreign keys would refuse them anyway). Write the tenant scope with
+  `idInTenant(table, id)` and `idsInTenant(table, ids)` (`session.ts`) instead of spelling out
+  `and(eq(table.id, id), inTenant(table))`, and a join to a tenant table with
+  `.leftJoin(...tenantJoin(engineer, order.engineerId))`: a bare `eq(table.id, id)` then stands out
+  in review. `contract_equipment` has no `organization_id`: reach it through a tenant-checked
+  contract or equipment.
 - Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
-  per organization: pick the next one and insert it in one `db.transaction` (transactions take
-  turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick the same one).
+  per organization: pick the next one with `nextNumber(tx, "order")` (`src/lib/server/numbering.ts`;
+  the formats are in `src/lib/numbering.ts`) and insert it in the same `db.transaction`
+  (transactions take turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick
+  the same one).
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
@@ -50,6 +56,10 @@ helpers are in `src/lib/server/session.ts`:
   `src/lib/server/modules.ts`; both only take part for tenants that have the module. Anything that
   shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
   which applies the modules' adjustments.
+- Shared server helpers, so each section doesn't write them again: `bulkChange()` and
+  `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
+  (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
+  `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
 ## Database schema
 
@@ -69,10 +79,7 @@ nothing (wrap a single write in a transaction for this). Tenant and user come fr
 
 ```ts
 await db.transaction(async (tx) => {
-	await tx
-		.update(customer)
-		.set(input)
-		.where(and(eq(customer.id, id), inTenant(customer)));
+	await tx.update(customer).set(input).where(idInTenant(customer, id));
 	const subject = { type: "customer", id, label: existing.code };
 	await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 });

@@ -19,7 +19,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, invoicingSettings, order } from "#lib/server/db/schema.js";
 import {
 	alreadyBilled,
@@ -29,7 +29,6 @@ import {
 	linesFor,
 	loadInvoice,
 	settingsOf,
-	type Transaction,
 } from "#lib/server/invoicing.js";
 import { inTenant, requireModule, requireRole } from "#lib/server/session.js";
 

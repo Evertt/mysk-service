@@ -13,9 +13,9 @@ import { parseTableUrl, type SearchParams, tableUrlKey, type TableUrlSpec } from
 /**
  * The arguments for a server-side table's queries, from the URL: `rows` for the page of rows,
  * `facets` for the counts in its filters, which stays the same while only the page, the
- * sorting or the grouping changes (so those don't count again). Both are the table's own parameters, in a fixed
- * order without the defaults (e.g. `status=quote&sort=number`), so the same state is the same
- * query, whatever else is in the URL.
+ * sorting or the grouping changes (so those don't count again). Both are the table's own
+ * parameters, in a fixed order without the defaults (e.g. `status=quote&sort=number`), so the same
+ * state is the same query, whatever else is in the URL.
  */
 export function serverTableQuery(params: SearchParams, spec: TableUrlSpec) {
 	const state = parseTableUrl(params, spec);
