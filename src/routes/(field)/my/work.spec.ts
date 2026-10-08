@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { orderStatuses } from "#lib/models.js";
+import { orderStatuses } from "#lib/models.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import {

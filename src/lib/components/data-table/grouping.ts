@@ -14,7 +14,7 @@
  */
 import { createSortedRowModel } from "@tanstack/svelte-table";
 
-import type { DataTableColumnMeta } from "./features.js";
+import type { DataTableColumnMeta } from "./features.ts";
 
 /** A group's key: its value as text, `""` for none. Server and client key groups the same way. */
 export function groupKey(value: unknown): string {

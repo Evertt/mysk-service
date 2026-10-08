@@ -2,11 +2,11 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { badgeVariants } from "#lib/components/ui/badge/index.js";
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { badgeVariants } from "#lib/components/ui/badge/index.ts";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 
 import LevelBadge from "./level-badge.svelte";
-import type { ContractLevel } from "./model.js";
+import type { ContractLevel } from "./model.ts";
 
 test.each<[ContractLevel, string, BadgeVariant]>([
 	["basic", "Basic", "outline"],

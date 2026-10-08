@@ -2,11 +2,11 @@
  * Week maths and grouping for the dispatch board. Days are local days, like the dates entered in
  * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
-import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.js";
-import { dateFormatter, formatDate } from "#lib/format.js";
-import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.js";
+import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.ts";
+import { dateFormatter, formatDate } from "#lib/format.ts";
+import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 
-import type { getSchedule } from "./schedule.remote.js";
+import type { getSchedule } from "./schedule.remote.ts";
 
 /** What the schedule query returns for a week, and one of its orders. */
 export type Schedule = Awaited<ReturnType<typeof getSchedule>>;
@@ -16,7 +16,7 @@ export type ScheduleOrder = Schedule["orders"][number];
 export const DEFAULT_TIME = "09:00";
 
 /** Orders per engineer per day before the day counts as full; more is over-booked. */
-export const DAILY_CAPACITY = 3;
+const DAILY_CAPACITY = 3;
 
 /** A day as `yyyy-mm-dd`, as in the `?week=` search param and `<input type="date">`. */
 export const dayKey = (date: Date) => toDateInput(date);

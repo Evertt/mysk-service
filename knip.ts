@@ -1,0 +1,52 @@
+import type { KnipConfig } from "knip";
+
+/**
+ * Unused files, exports and dependencies: `pnpm knip` (a few seconds). Fix what it reports, or, for
+ * code that is used in a way knip can't follow, say so here with a comment why.
+ *
+ * Knip skips what git ignores, so the generated files (`*.gen.ts`, the route stubs for the modules,
+ * paraglide's output) are not part of what it checks; the entries below stand in for what they
+ * import.
+ */
+const config: KnipConfig = {
+	entry: [
+		// SvelteKit's files that Kit itself calls (this project has no svelte.config.js, which is
+		// where knip's plugin would learn about them): the typed environment variables.
+		"src/hooks.ts",
+		"src/env.ts",
+		// Run by drizzle-kit (`drizzle.config.ts` reads `DATABASE_URL`, so knip's plugin can't).
+		"drizzle.config.ts",
+		// The modules' files that `scripts/modules.ts` links into the app: the registries import the
+		// manifests and server halves, and the route stubs import the routes (all generated).
+		"src/modules/*/module.ts",
+		"src/modules/*/server/{index,schema,seed}.ts",
+		"src/modules/*/routes/**/+*.{ts,svelte}",
+		// The tests of every Vitest project, including the modules' end-to-end tests.
+		"src/**/*.{test,spec}.{ts,js}",
+		"e2e/**/*.test.ts",
+		"scripts/**/*.spec.ts",
+	],
+	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
+	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)
+	project: ["src/**/*.{ts,svelte,css,vue}", "e2e/**/*.ts", "scripts/**/*.ts", "*.ts"],
+	ignore: [
+		// shadcn-svelte's components are kept whether or not they are used, and `vite.config.ts`
+		// auto-imports them (`<Card.Root>` without an import), so knip sees no uses of them.
+		"src/lib/components/ui/**",
+	],
+	ignoreDependencies: [
+		// The native TypeScript, which `svelte-check --tsgo` runs (`pnpm check`).
+		"@typescript/native",
+	],
+	// Would load `drizzle.config.ts`, which throws without `DATABASE_URL`.
+	drizzle: false,
+	compilers: {
+		// `layout.css` imports the tailwind plugins and fonts: `@import "x"` and `@plugin 'x'`.
+		css: (text: string) =>
+			[...text.matchAll(/@(?:import|plugin)\s+["']([^"']+)["']/g)]
+				.map(([, specifier]) => `import "${specifier}";`)
+				.join("\n"),
+	},
+};
+
+export default config;

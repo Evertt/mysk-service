@@ -6,17 +6,17 @@
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 
-import { formatDate, formatDateTime } from "#lib/format.js";
-import type { OrderTag } from "#lib/modules.js";
+import { formatDate, formatDateTime } from "#lib/format.ts";
+import type { OrderTag } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.ts";
 import { defineServerModule, type OrderFacts } from "#lib/server/modules.ts";
 import { inTenant } from "#lib/server/session.ts";
 
-import { contractMonths, monthlyFee } from "../billing.js";
-import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.js";
-import { getOrderCoverage } from "../coverage.remote.js";
-import { contractLabels } from "../labels.js";
+import { contractMonths, monthlyFee } from "../billing.ts";
+import { getOrderCoverage } from "../coverage.remote.ts";
+import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.ts";
+import { contractLabels } from "../labels.ts";
 import { type Coverage, coverageOf } from "./contracts.ts";
 import { contract } from "./schema.ts";
 

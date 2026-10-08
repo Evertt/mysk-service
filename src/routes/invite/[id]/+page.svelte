@@ -6,9 +6,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { formatDate } from "#lib/format.js";
-	import { messageParts } from "#lib/i18n/parts.js";
-	import { invitedAsText } from "#lib/members.js";
+	import { formatDate } from "#lib/format.ts";
+	import { messageParts } from "#lib/i18n/parts.ts";
+	import { invitedAsText } from "#lib/members.ts";
 
 	import PublicShell from "../../public-shell.svelte";
 	import type { PageProps } from "./$types";
@@ -17,7 +17,7 @@
 		createAccount,
 		getInvitation,
 		signOutForInvitation,
-	} from "./invite.remote.js";
+	} from "./invite.remote.ts";
 
 	let { params }: PageProps = $props();
 

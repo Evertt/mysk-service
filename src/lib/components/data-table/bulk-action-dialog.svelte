@@ -6,9 +6,9 @@
 	each time it asks (e.g. in a `{#key}`), so it starts without a choice.
 -->
 <script lang="ts" generics="TData, Where = never">
-	import { formatNumber } from "#lib/format.js";
+	import { formatNumber } from "#lib/format.ts";
 
-	import type { BulkAction } from "./bulk-actions.js";
+	import type { BulkAction } from "./bulk-actions.ts";
 
 	let {
 		action,

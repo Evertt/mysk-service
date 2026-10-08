@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import EngineerForm from "../engineer-form.svelte";
-	import { createEngineer } from "../engineers.remote.js";
+	import { createEngineer } from "../engineers.remote.ts";
 </script>
 
 <svelte:head>

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import CalendarCheckIcon from "@lucide/svelte/icons/calendar-check";
 
-	import { formatNumber } from "#lib/format.js";
+	import { formatNumber } from "#lib/format.ts";
 
-	import { getMyWork } from "./portal.remote.js";
+	import { getMyWork } from "./portal.remote.ts";
 	import WorkCard from "./work-card.svelte";
-	import { groupByDay } from "./work.js";
+	import { groupByDay } from "./work.ts";
 
 	const work = $derived(await getMyWork());
 	const days = $derived(groupByDay(work.open));

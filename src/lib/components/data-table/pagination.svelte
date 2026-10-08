@@ -4,10 +4,10 @@
 	import ChevronsLeftIcon from "@lucide/svelte/icons/chevrons-left";
 	import ChevronsRightIcon from "@lucide/svelte/icons/chevrons-right";
 
-	import { formatNumber } from "#lib/format.js";
+	import { formatNumber } from "#lib/format.ts";
 
-	import { useTableContext } from "./table.svelte.js";
-	import { defaultPageSizes } from "./url-state.js";
+	import { useTableContext } from "./table.svelte.ts";
+	import { defaultPageSizes } from "./url-state.ts";
 
 	/** The sizes to choose from; a table with other ones also passes them to `urlState`. */
 	let { pageSizes = defaultPageSizes }: { pageSizes?: readonly number[] } = $props();

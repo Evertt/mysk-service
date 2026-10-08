@@ -9,10 +9,10 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { label } from "#lib/i18n/labels.js";
-	import { quantityStep } from "#lib/models.js";
+	import { label } from "#lib/i18n/labels.ts";
+	import { quantityStep } from "#lib/models.ts";
 
-	import { getUsableMaterials, saveMaterials } from "../portal.remote.js";
+	import { getUsableMaterials, saveMaterials } from "../portal.remote.ts";
 
 	let {
 		orderId,

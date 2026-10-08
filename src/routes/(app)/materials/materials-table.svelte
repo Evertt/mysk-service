@@ -1,15 +1,15 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.js";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { stockLevelOptions, unitOptions } from "#lib/materials/display.js";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import { stockLevelOptions, unitOptions } from "#lib/materials/display.ts";
 
-	import { deleteMaterials } from "./bulk-actions.js";
-	import { columns } from "./columns.js";
-	import type { getMaterialFacets, getMaterials } from "./material-list.remote.js";
-	import { materialsList } from "./materials-list.js";
+	import { deleteMaterials } from "./bulk-actions.ts";
+	import { columns } from "./columns.ts";
+	import type { getMaterialFacets, getMaterials } from "./material-list.remote.ts";
+	import { materialsList } from "./materials-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.

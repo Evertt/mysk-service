@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { useTheme } from "#lib/themes/context.js";
+	import { useTheme } from "#lib/themes/context.ts";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
-	import { cn } from "#lib/utils.js";
+	import { cn } from "#lib/utils.ts";
 
 	const theme = useTheme();
 </script>

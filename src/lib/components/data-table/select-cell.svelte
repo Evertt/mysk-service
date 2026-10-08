@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { useCellContext } from "./table.svelte.js";
+	import { useCellContext } from "./table.svelte.ts";
 
 	const cell = useCellContext();
 	const row = $derived(cell.row);

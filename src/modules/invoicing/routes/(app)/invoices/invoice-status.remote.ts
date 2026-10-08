@@ -4,22 +4,22 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.js";
+import type { OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, idsTarget } from "#lib/server/bulk.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { order } from "#lib/server/db/schema.js";
-import { idInTenant, idsInTenant, requireModule } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { order } from "#lib/server/db/schema.ts";
+import { idInTenant, idsInTenant, requireModule } from "#lib/server/session.ts";
 
-import { canChange, dueDate, today } from "../../../invoice.js";
-import type { InvoiceStatus } from "../../../model.js";
+import { canChange, dueDate, today } from "../../../invoice.ts";
+import type { InvoiceStatus } from "../../../model.ts";
 import { invoiceById, invoiceSubject } from "../../../server/invoices.ts";
 import { invoice } from "../../../server/schema.ts";
 import { settingsOf } from "../../../server/settings.ts";
 import { refreshInvoice } from "./invoice-refresh.server.ts";
-import { getInvoices } from "./invoices.remote.js";
+import { getInvoices } from "./invoices.remote.ts";
 
 /** What an invoice is, as in "… is a draft". */
 const statusLabel: Record<InvoiceStatus, () => string> = {

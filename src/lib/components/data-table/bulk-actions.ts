@@ -11,10 +11,10 @@
  */
 import type { Component } from "svelte";
 
-import { formatNumber } from "#lib/format.js";
+import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { ListColumns, ListWhere } from "./list-definition.js";
+import type { ListColumns, ListWhere } from "./list-definition.ts";
 
 /** The most records a bulk action changes at once. */
 export const MAX_BULK_RECORDS = 500;
@@ -33,7 +33,7 @@ export type BulkTarget<Where = never> =
 	| ([Where] extends [never] ? never : { matching: Where });
 
 /** A record a bulk action left as it was, and why. */
-export interface BulkSkip {
+interface BulkSkip {
 	/** What the record is known by, e.g. an order's number. */
 	label: string;
 	reason: string;
@@ -52,7 +52,7 @@ export interface BulkResult {
 }
 
 /** A choice in an action's parameter, e.g. an engineer to assign. */
-export interface BulkOption {
+interface BulkOption {
 	value: string;
 	label: string;
 }

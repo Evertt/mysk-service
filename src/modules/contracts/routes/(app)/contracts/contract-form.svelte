@@ -12,18 +12,18 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.js";
+	import { toDateInput } from "#lib/dates.ts";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { label } from "#lib/i18n/labels.js";
+	import { label } from "#lib/i18n/labels.ts";
 
-	import { levels } from "../../../display.js";
-	import { type ContractLevel, contractLevels, defaultResponseHours } from "../../../model.js";
+	import { levels } from "../../../display.ts";
+	import { type ContractLevel, contractLevels, defaultResponseHours } from "../../../model.ts";
 	import type {
 		createContract,
 		getContract,
 		getContractFormOptions,
 		updateContract,
-	} from "./contracts.remote.js";
+	} from "./contracts.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getContractFormOptions>>;
 	type Contract = Awaited<ReturnType<typeof getContract>>["contract"];

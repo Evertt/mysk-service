@@ -3,9 +3,9 @@
 	Right-aligned amount for a column whose value is in cents.
 -->
 <script lang="ts">
-	import { formatCents } from "#lib/format.js";
+	import { formatCents } from "#lib/format.ts";
 
-	import { useCellContext } from "./table.svelte.js";
+	import { useCellContext } from "./table.svelte.ts";
 
 	const cell = useCellContext<number>();
 </script>

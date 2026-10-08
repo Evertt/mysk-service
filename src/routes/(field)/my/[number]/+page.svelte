@@ -8,14 +8,14 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatDateTime, formatTime } from "#lib/format.js";
-	import { formatQuantity } from "#lib/materials/display.js";
+	import { formatDateTime, formatTime } from "#lib/format.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";
 
-	import { getMyOrder, startWork } from "../portal.remote.js";
-	import { dayLabel, fieldActions } from "../work.js";
+	import { getMyOrder, startWork } from "../portal.remote.ts";
+	import { dayLabel, fieldActions } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
 	import HoursForm from "./hours-form.svelte";

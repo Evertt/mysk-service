@@ -1,6 +1,6 @@
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import type { PriceAdjustment } from "#lib/modules.js";
+import type { PriceAdjustment } from "#lib/modules.ts";
 import { db } from "#lib/server/db/index.ts";
 import { orderLine } from "#lib/server/db/schema.ts";
 import { enabledServerModules, type OrderFacts, type ServerModule } from "#lib/server/modules.ts";

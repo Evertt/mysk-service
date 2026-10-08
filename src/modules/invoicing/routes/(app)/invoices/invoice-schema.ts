@@ -1,10 +1,10 @@
 import * as v from "valibot";
 
-import { formatNumber } from "#lib/format.js";
+import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { cents, date, id, text } from "#lib/schema.js";
+import { cents, date, id, text } from "#lib/schema.ts";
 
-import { formatRate } from "../../../display.js";
+import { formatRate } from "../../../display.ts";
 
 /** Days to pay: whole days, up to a year. */
 const days = () =>

@@ -1,4 +1,4 @@
-import { defineTheme } from "./types.js";
+import { defineTheme } from "./types.ts";
 
 const pill = "rounded-full";
 const softGlow = "shadow-lg shadow-primary/10";

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
-	import * as Sheet from "#lib/components/ui/sheet/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithElementRef } from "#lib/utils.js";
+	import * as Sheet from "#lib/components/ui/sheet/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithElementRef } from "#lib/utils.ts";
 
-	import { SIDEBAR_WIDTH_MOBILE } from "./constants.js";
-	import { useSidebar } from "./context.svelte.js";
+	import { SIDEBAR_WIDTH_MOBILE } from "./constants.ts";
+	import { useSidebar } from "./context.svelte.ts";
 
 	let {
 		ref = $bindable(null),

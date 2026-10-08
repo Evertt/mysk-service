@@ -31,7 +31,7 @@ import type * as schema from "../schema.ts";
 import type { TenantData } from "./tenant.ts";
 
 /** A transaction on the seed's database: the core's tables and the modules'. */
-export type SeedTransaction = Parameters<
+type SeedTransaction = Parameters<
 	Parameters<LibSQLDatabase<typeof schema & typeof moduleSchema>["transaction"]>[0]
 >[0];
 
@@ -65,7 +65,7 @@ export interface SeedTenant<Data = unknown> {
 	collect: SeedCollectors;
 }
 
-export interface SeedContext<Data = unknown> {
+interface SeedContext<Data = unknown> {
 	tx: SeedTransaction;
 	faker: Faker;
 	/** Only the tenants that have the module. */

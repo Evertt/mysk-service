@@ -3,27 +3,27 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { nextDay } from "#lib/dates.js";
-import { formatDate } from "#lib/format.js";
+import { nextDay } from "#lib/dates.ts";
+import { formatDate } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, idsTarget } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { refuse, type Problem } from "#lib/server/forms.js";
-import { nextNumber } from "#lib/server/numbering.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { refuse, type Problem } from "#lib/server/forms.ts";
+import { nextNumber } from "#lib/server/numbering.ts";
 import {
 	idInTenant,
 	idsInTenant,
 	inTenant,
 	requireModule,
 	tenantJoin,
-} from "#lib/server/session.js";
+} from "#lib/server/session.ts";
 
 import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";
 import { contract, contractEquipment } from "../../../server/schema.ts";
-import { contractFields } from "./contract-schema.js";
+import { contractFields } from "./contract-schema.ts";
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
 export const getContracts = query(async () => {

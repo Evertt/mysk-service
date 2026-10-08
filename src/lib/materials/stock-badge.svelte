@@ -3,9 +3,9 @@
 	The stock level of a material (out of stock, low, in stock) as a badge.
 -->
 <script lang="ts">
-	import type { MaterialUnit } from "#lib/models.js";
+	import type { MaterialUnit } from "#lib/models.ts";
 
-	import { stockLevel, stockLevelDisplay } from "./display.js";
+	import { stockLevel, stockLevelDisplay } from "./display.ts";
 
 	let { stock, unit }: { stock: number; unit: MaterialUnit } = $props();
 

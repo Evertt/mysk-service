@@ -3,7 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import DeleteDialog from "./delete-dialog.svelte";
-import { fakeIdForm } from "./fake-form.js";
+import { fakeIdForm } from "./fake-form.ts";
 
 const props = {
 	id: "42",

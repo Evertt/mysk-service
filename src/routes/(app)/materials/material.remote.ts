@@ -3,15 +3,15 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { label } from "#lib/i18n/labels.js";
-import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.js";
-import { moveStock, withBalances } from "#lib/materials/server/stock.js";
-import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
-import { lineTotalSql } from "#lib/orders/server/pricing.js";
+import { label } from "#lib/i18n/labels.ts";
+import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.ts";
+import { moveStock, withBalances } from "#lib/materials/server/stock.ts";
+import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
+import { lineTotalSql } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
 	material,
@@ -19,12 +19,12 @@ import {
 	orderLine,
 	stockMovement,
 	user,
-} from "#lib/server/db/schema.js";
-import { type Problem, refuse } from "#lib/server/forms.js";
-import { nextNumber } from "#lib/server/numbering.js";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
+} from "#lib/server/db/schema.ts";
+import { type Problem, refuse } from "#lib/server/forms.ts";
+import { nextNumber } from "#lib/server/numbering.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
-import { materialFields, newMaterialFields } from "./material-schema.js";
+import { materialFields, newMaterialFields } from "./material-schema.ts";
 
 /** Whether every stock movement of a material can be counted in `unit` (e.g. whole pieces). */
 const historyFits = async (materialId: number, unit: MaterialUnit) => {

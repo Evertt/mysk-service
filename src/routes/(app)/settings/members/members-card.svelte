@@ -7,11 +7,11 @@
 	import { toast } from "svelte-sonner";
 
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatDate } from "#lib/format.js";
-	import { labelOrValue } from "#lib/i18n/labels.js";
-	import type { MemberRole } from "#lib/members.js";
+	import { formatDate } from "#lib/format.ts";
+	import { labelOrValue } from "#lib/i18n/labels.ts";
+	import type { MemberRole } from "#lib/members.ts";
 
-	import { changeRole, getMembers, removeMember } from "./members.remote.js";
+	import { changeRole, getMembers, removeMember } from "./members.remote.ts";
 
 	type Member = Awaited<ReturnType<typeof getMembers>>["members"][number];
 

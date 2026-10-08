@@ -8,10 +8,10 @@
 	import type { RemoteFormField } from "$app/server";
 	import CheckIcon from "@lucide/svelte/icons/check";
 
-	import { formatCents, formatDate } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
-	import type { getBillable } from "./invoices.remote.js";
+	import type { getBillable } from "./invoices.remote.ts";
 
 	type Billable = Awaited<ReturnType<typeof getBillable>>;
 

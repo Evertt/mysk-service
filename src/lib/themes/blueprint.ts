@@ -1,4 +1,4 @@
-import { defineTheme } from "./types.js";
+import { defineTheme } from "./types.ts";
 
 /**
  * Cool drafting paper, navy ink and a navy sidebar, cobalt and amber accents, monospace type,

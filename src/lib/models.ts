@@ -2,7 +2,7 @@
  * Domain enums shared by the database schema, the seed script and the UI. Kept out of
  * `$lib/server` so client code (filters, badges) can import the option lists.
  */
-import type { ModuleAction } from "#lib/modules.js";
+import type { ModuleAction } from "#lib/modules.ts";
 
 export const customerSegments = ["enterprise", "mid_market", "small_business"] as const;
 export type CustomerSegment = (typeof customerSegments)[number];
@@ -125,7 +125,7 @@ export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
  * Orders whose material lines hold stock: from scheduled on. A quote's lines are only a proposal,
  * and a cancelled order gives its materials back.
  */
-export const stockHoldingStatuses = [
+const stockHoldingStatuses = [
 	"scheduled",
 	"in_progress",
 	"completed",

@@ -3,20 +3,20 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { DAY } from "#lib/dates.js";
-import { openOrderStatuses } from "#lib/models.js";
-import { laborCost } from "#lib/orders/server/pricing.js";
+import { DAY } from "#lib/dates.ts";
+import { openOrderStatuses } from "#lib/models.ts";
+import { laborCost } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, idsTarget } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, order } from "#lib/server/db/schema.js";
-import { type Problem, refuse } from "#lib/server/forms.js";
-import { deleteAndLog } from "#lib/server/records.js";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, order } from "#lib/server/db/schema.ts";
+import { type Problem, refuse } from "#lib/server/forms.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
-import { engineerFields } from "./engineer-schema.js";
+import { engineerFields } from "./engineer-schema.ts";
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = query(async () => {

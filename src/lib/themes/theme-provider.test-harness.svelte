@@ -3,10 +3,10 @@
 	A themed button and badge inside a `ThemeProvider`, for `theme-provider.svelte.spec.ts`.
 -->
 <script lang="ts">
-	import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-	import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.js";
+	import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+	import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.ts";
 
-	import type { Mode, ThemeName } from "./index.js";
+	import type { Mode, ThemeName } from "./index.ts";
 	import ThemeProvider from "./theme-provider.svelte";
 
 	let {

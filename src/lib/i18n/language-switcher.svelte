@@ -8,7 +8,7 @@
 
 	import { getLocale, type Locale, locales } from "#lib/paraglide/runtime.js";
 
-	import { languageNames, switchLanguage } from "./languages.js";
+	import { languageNames, switchLanguage } from "./languages.ts";
 
 	let { submenu = false }: { submenu?: boolean } = $props();
 

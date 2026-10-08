@@ -22,18 +22,18 @@
 	the keyboard navigation.
 -->
 <script lang="ts">
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn } from "#lib/utils.ts";
 
-	import { SELECT_COLUMN } from "./default-pinning.js";
-	import { groupExpansion } from "./group-expansion.svelte.js";
+	import { SELECT_COLUMN } from "./default-pinning.ts";
+	import { groupExpansion } from "./group-expansion.svelte.ts";
 	import GroupRow from "./group-row.svelte";
-	import { groupedPage, groupRowId, type PageGroups } from "./grouping.js";
-	import { createPinning } from "./pinning.svelte.js";
-	import { createRowNavigation } from "./row-navigation.svelte.js";
-	import { compact, focusRing, opaque } from "./table-classes.js";
-	import { useTableContext } from "./table.svelte.js";
-	import { trackOverflow } from "./track-overflow.js";
+	import { groupedPage, groupRowId, type PageGroups } from "./grouping.ts";
+	import { createPinning } from "./pinning.svelte.ts";
+	import { createRowNavigation } from "./row-navigation.svelte.ts";
+	import { compact, focusRing, opaque } from "./table-classes.ts";
+	import { useTableContext } from "./table.svelte.ts";
+	import { trackOverflow } from "./track-overflow.ts";
 
 	let {
 		emptyTitle = m.common_table_empty_title(),

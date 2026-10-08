@@ -8,13 +8,13 @@ import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "driz
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { addDays, startOfDay } from "#lib/dates.js";
+import { addDays, startOfDay } from "#lib/dates.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.js";
+import { db } from "#lib/server/db/index.ts";
+import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
-import { includedLabel, needsAttention, responseDeadline } from "./coverage.js";
+import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
 import { coverageOf } from "./server/contracts.ts";
 import { contract, contractEquipment } from "./server/schema.ts";
 

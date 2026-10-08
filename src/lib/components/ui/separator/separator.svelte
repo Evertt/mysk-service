@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Separator as SeparatorPrimitive } from "bits-ui";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import type { Slot } from "#lib/themes/types.js";
-	import { cn } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import type { Slot } from "#lib/themes/types.ts";
+	import { cn } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

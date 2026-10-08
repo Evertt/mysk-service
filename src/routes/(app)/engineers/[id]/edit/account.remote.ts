@@ -4,12 +4,12 @@ import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
-import { isManager } from "#lib/roles.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { engineer, member, user } from "#lib/server/db/schema.js";
-import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/session.js";
+import { isManager } from "#lib/roles.ts";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { engineer, member, user } from "#lib/server/db/schema.ts";
+import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/session.ts";
 
 /**
  * The user account an engineer signs in to the engineer portal with, and (for owners and admins)

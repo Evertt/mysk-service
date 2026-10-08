@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import MaterialForm from "../material-form.svelte";
-	import { createMaterial } from "../material.remote.js";
+	import { createMaterial } from "../material.remote.ts";
 </script>
 
 <svelte:head>

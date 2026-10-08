@@ -15,8 +15,8 @@ import {
 	oneOf as oneOfKind,
 	toListQuery,
 	whereOf,
-} from "#lib/components/data-table/list-definition.js";
-import { parseTableUrl } from "#lib/components/data-table/url-state.js";
+} from "#lib/components/data-table/list-definition.ts";
+import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 
 import {
 	type ListSql,

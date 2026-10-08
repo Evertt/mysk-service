@@ -19,11 +19,11 @@
 <script lang="ts">
 	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
 
-	import { formatCents } from "#lib/format.js";
+	import { formatCents } from "#lib/format.ts";
 
 	import FacetedFilter from "./faceted-filter.svelte";
 	import RowActions from "./row-actions.svelte";
-	import { createAppColumnHelper, createAppTable } from "./table.svelte.js";
+	import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
 	import TwoLineCell from "./two-line-cell.svelte";
 
 	let {

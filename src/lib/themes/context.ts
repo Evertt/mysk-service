@@ -1,6 +1,6 @@
 import { getContext, setContext } from "svelte";
 
-import type { Slot, SlotProps, SlotStyle, Theme } from "./types.js";
+import type { Slot, SlotProps, SlotStyle, Theme } from "./types.ts";
 
 const key = Symbol("theme");
 

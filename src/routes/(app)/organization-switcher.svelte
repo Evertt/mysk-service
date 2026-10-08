@@ -11,7 +11,7 @@
 
 	import { useSidebar } from "#ui/sidebar";
 
-	import { getCurrentTenant, switchOrganization } from "./session.remote.js";
+	import { getCurrentTenant, switchOrganization } from "./session.remote.ts";
 
 	const sidebar = useSidebar();
 	const tenant = $derived(await getCurrentTenant());

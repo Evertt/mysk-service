@@ -3,11 +3,11 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { isModuleId, type ModuleId } from "#lib/module-ids.js";
+import { isModuleId, type ModuleId } from "#lib/module-ids.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.js";
-import { db } from "#lib/server/db/index.js";
-import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.js";
+import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.ts";
+import { db } from "#lib/server/db/index.ts";
+import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 
 /** The organization a request works in, with the signed-in user's role there. */
 export interface Tenant {

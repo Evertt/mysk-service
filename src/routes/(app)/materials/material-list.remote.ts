@@ -1,17 +1,17 @@
 import { command, query } from "$app/server";
 import { and, countDistinct, inArray } from "drizzle-orm";
 
-import { queryKey } from "#lib/components/data-table/list-definition.js";
-import { removeMaterial } from "#lib/materials/server/materials.js";
-import { stockLevelSql } from "#lib/materials/server/stock.js";
-import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { material, orderLine } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
-import { pageGroupsOf, planList } from "#lib/server/table-query.js";
+import { queryKey } from "#lib/components/data-table/list-definition.ts";
+import { removeMaterial } from "#lib/materials/server/materials.ts";
+import { stockLevelSql } from "#lib/materials/server/stock.ts";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { material, orderLine } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
+import { pageGroupsOf, planList } from "#lib/server/table-query.ts";
 
-import { materialsSql } from "./material-list.server.js";
-import { materialsList } from "./materials-list.js";
+import { materialsSql } from "./material-list.server.ts";
+import { materialsList } from "./materials-list.ts";
 
 /**
  * A page of the materials list with the number of orders that use them, searched, filtered and

@@ -12,8 +12,8 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import BillablePicker from "../billable-picker.svelte";
-	import { getBillable, type getInvoice } from "../invoices.remote.js";
-	import { addLine, addToInvoice, updateTerms } from "./draft.remote.js";
+	import { getBillable, type getInvoice } from "../invoices.remote.ts";
+	import { addLine, addToInvoice, updateTerms } from "./draft.remote.ts";
 
 	let { invoice }: { invoice: Awaited<ReturnType<typeof getInvoice>>["invoice"] } = $props();
 

@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import type { EngineerSpecialty } from "#lib/models.js";
+import type { EngineerSpecialty } from "#lib/models.ts";
 
 import SpecialtyBadge from "./specialty-badge.svelte";
 

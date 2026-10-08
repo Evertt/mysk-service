@@ -1,4 +1,4 @@
-import type { PriceAdjustment } from "#lib/modules.js";
+import type { PriceAdjustment } from "#lib/modules.ts";
 
 /**
  * What an invoice is, as rules: its number, its totals, where it stands, and the lines an order
@@ -17,7 +17,7 @@ import type { PriceAdjustment } from "#lib/modules.js";
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
-import type { InvoiceStatus } from "./model.js";
+import type { InvoiceStatus } from "./model.ts";
 
 // --- Status ----------------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ export const invoiceState = (
 ): InvoiceState => (isOverdue(invoice, now) ? "overdue" : invoice.status);
 
 /** Where an invoice of each status can go next. */
-export const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
+const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
 	draft: ["sent", "void"],
 	sent: ["paid", "void"],
 	paid: [],

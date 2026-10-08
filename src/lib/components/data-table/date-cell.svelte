@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { formatDate } from "#lib/format.js";
+	import { formatDate } from "#lib/format.ts";
 
-	import { useCellContext } from "./table.svelte.js";
+	import { useCellContext } from "./table.svelte.ts";
 
 	const cell = useCellContext<Date | null>();
 	const value = $derived(cell.getValue());

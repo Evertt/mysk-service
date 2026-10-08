@@ -8,7 +8,7 @@
 		getEquipment,
 		getEquipmentFormOptions,
 		updateEquipment,
-	} from "../../equipment.remote.js";
+	} from "../../equipment.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

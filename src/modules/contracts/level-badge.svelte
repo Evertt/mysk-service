@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { levels } from "./display.js";
-	import type { ContractLevel } from "./model.js";
+	import { levels } from "./display.ts";
+	import type { ContractLevel } from "./model.ts";
 
 	let { level }: { level: ContractLevel } = $props();
 

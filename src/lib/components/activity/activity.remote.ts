@@ -8,15 +8,15 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
-import { subjectTypeLabel, subjectTypes } from "#lib/activity.js";
-import { nextDay } from "#lib/dates.js";
-import { intlLocale } from "#lib/format.js";
-import { modules as appModules } from "#lib/modules.js";
+import { subjectTypeLabel, subjectTypes } from "#lib/activity.ts";
+import { nextDay } from "#lib/dates.ts";
+import { intlLocale } from "#lib/format.ts";
+import { modules as appModules } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { present } from "#lib/server/activity-feed.js";
-import { db } from "#lib/server/db/index.js";
-import { activity } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { present } from "#lib/server/activity-feed.ts";
+import { db } from "#lib/server/db/index.ts";
+import { activity } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
 
 const allModules = appModules.map((module) => module.id);
 

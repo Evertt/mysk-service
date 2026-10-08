@@ -2,15 +2,15 @@ import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
-import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 import OrderLink from "#lib/orders/order-link.svelte";
 import PriorityBadge from "#lib/orders/priority-badge.svelte";
 import TypeLabel from "#lib/orders/type-label.svelte";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getOrders } from "./order-list.remote.js";
+import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";
 
 /** A row of the orders list, a page of which comes from the server (see `ordersList`). */

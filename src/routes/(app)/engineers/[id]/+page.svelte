@@ -9,13 +9,13 @@
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
 	import ActiveBadge from "#lib/engineers/active-badge.svelte";
-	import { regionLabel } from "#lib/engineers/display.js";
+	import { regionLabel } from "#lib/engineers/display.ts";
 	import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 
-	import { deleteEngineer, getEngineer } from "../engineers.remote.js";
+	import { deleteEngineer, getEngineer } from "../engineers.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

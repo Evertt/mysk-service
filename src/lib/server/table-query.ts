@@ -25,7 +25,7 @@
 import { and, count as countRows, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import type { SelectedFields, SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.js";
+import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.ts";
 import type {
 	FilterId,
 	FilterValue,
@@ -34,7 +34,7 @@ import type {
 	ListQuery,
 	ListWhere,
 	SortId,
-} from "#lib/components/data-table/list-definition.js";
+} from "#lib/components/data-table/list-definition.ts";
 
 /**
  * The SQL for every column a list's definition sorts, groups or filters by, and nothing else: a

@@ -9,13 +9,13 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { timeOfDay, toDateInput } from "#lib/dates.js";
-	import { specialties } from "#lib/engineers/display.js";
-	import { labelOptions } from "#lib/i18n/labels.js";
-	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.js";
+	import { timeOfDay, toDateInput } from "#lib/dates.ts";
+	import { specialties } from "#lib/engineers/display.ts";
+	import { labelOptions } from "#lib/i18n/labels.ts";
+	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
 	import OrderLinesField from "./order-lines-field.svelte";
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.js";
+	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];

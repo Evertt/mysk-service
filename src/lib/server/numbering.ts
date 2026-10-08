@@ -7,7 +7,7 @@ import {
 	type NumberKind,
 	numberFormats,
 	sequenceStart,
-} from "#lib/numbering.js";
+} from "#lib/numbering.ts";
 
 import type { Transaction } from "./db/index.ts";
 import { customer, material, order } from "./db/schema.ts";

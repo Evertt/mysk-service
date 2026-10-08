@@ -2,11 +2,11 @@
 import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
-import type { SubjectType } from "#lib/activity.js";
-import { formatCents, formatDate } from "#lib/format.js";
+import type { SubjectType } from "#lib/activity.ts";
+import { formatCents, formatDate } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import { contractLabels } from "./labels.js";
+import { contractLabels } from "./labels.ts";
 
 const day = (value: unknown) => formatDate(new Date(String(value)));
 

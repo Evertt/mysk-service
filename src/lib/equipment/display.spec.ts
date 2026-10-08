@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { equipmentStatuses } from "#lib/models.js";
+import { equipmentStatuses } from "#lib/models.ts";
 
 import { isUnderWarranty, statusOptions } from "./display.ts";
 

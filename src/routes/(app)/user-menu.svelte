@@ -10,7 +10,7 @@
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { useSidebar } from "#ui/sidebar";
 
-	import { getCurrentUser, signOut } from "./session.remote.js";
+	import { getCurrentUser, signOut } from "./session.remote.ts";
 
 	const sidebar = useSidebar();
 	const user = $derived(await getCurrentUser());

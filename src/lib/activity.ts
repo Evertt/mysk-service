@@ -14,12 +14,12 @@
  */
 import { resolve } from "$app/paths";
 
-import { formatCents, formatDate, formatDateTime } from "#lib/format.js";
-import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.js";
-import type { CoreActivityAction } from "#lib/models.js";
-import { type AppModule, modules } from "#lib/modules.js";
+import { formatCents, formatDate, formatDateTime } from "#lib/format.ts";
+import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.ts";
+import type { CoreActivityAction } from "#lib/models.ts";
+import { type AppModule, modules } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { parseRoles } from "#lib/roles.js";
+import { parseRoles } from "#lib/roles.ts";
 
 import type { ReferenceType } from "./activity-format.ts";
 

@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import * as v from "valibot";
 import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
 import {
 	code,

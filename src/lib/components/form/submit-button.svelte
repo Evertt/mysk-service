@@ -6,7 +6,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 
-	import type { ButtonProps } from "#lib/components/ui/button/index.js";
+	import type { ButtonProps } from "#lib/components/ui/button/index.ts";
 
 	let {
 		pending = false,

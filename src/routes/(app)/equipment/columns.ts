@@ -2,15 +2,15 @@ import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
-import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import CustomerLink from "#lib/customers/customer-link.svelte";
 import CategoryLabel from "#lib/equipment/category-label.svelte";
 import StatusBadge from "#lib/equipment/status-badge.svelte";
-import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
+import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getEquipmentList } from "./equipment-list.remote.js";
+import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
 
 /** A row of the equipment list, a page of which comes from the server (see `equipmentList`). */

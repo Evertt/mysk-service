@@ -4,7 +4,9 @@
 - **Package Manager**: pnpm
 - **Add-ons**: vitest, tailwindcss, sveltekit-adapter, drizzle, better-auth, paraglide, ai-tools, experimental
 - **Before committing**: `pnpm run check` (code generation, format, lint and svelte-check; plain
-  `vp check` skips the type check), then `pnpm test`.
+  `vp check` skips the type check), then `pnpm knip` (unused files, exports and dependencies; about
+  3 seconds; drop what's unused, or, if it's used in a way knip can't follow, say why in `knip.ts`),
+  then `pnpm test`.
 - **Parallel agents** that edit code each get their own worktree (`isolation: "worktree"`), rename
   its branch after the task, copy in `.env` (`git worktreeinclude apply`) and run `pnpm install`
   first: in a shared checkout they type-check each other's half-written files and reload each
@@ -15,10 +17,18 @@
 Put a module next to the code that uses it, in the nearest folder that contains all of its users.
 
 - **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
-- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.js`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
-- **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.js`.
+- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.ts`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
+- **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.ts`.
 - **Generic, domain-free code** (UI kit, data table, forms, formatting, themes, `models.ts`, `schema.ts`): `src/lib/components/` and `src/lib/*.ts`. Infrastructure on the server (database, auth, session, activity log, bulk and table-query helpers, mail, the modules' extension points): `src/lib/server/`.
 - **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
+
+**Imports name a file by its real extension**: `.ts` for TypeScript (`allowImportingTsExtensions` is
+on, and plain Node, which runs the seed, `org:create` and `scripts/modules.ts`, needs it), `.svelte.ts`
+for rune modules, `.svelte` for components, and `.js` only for real JavaScript, which is paraglide's
+generated output (`#lib/paraglide/messages.js`, `runtime.js`). So `../order.remote.ts`, never
+`../order.remote.js` or `../order.remote`; the same goes for `vi.mock(...)` paths and `import()`.
+`src/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
+`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`.
 
 Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 

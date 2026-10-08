@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import type { WithElementRef } from "#lib/utils.js";
-	import { cn } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import type { WithElementRef } from "#lib/utils.ts";
+	import { cn } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

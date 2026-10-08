@@ -7,11 +7,11 @@ import { query } from "$app/server";
 import { and, asc, inArray, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
-import { nocase, searchMatch } from "#lib/server/table-query.js";
+import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
+import { nocase, searchMatch } from "#lib/server/table-query.ts";
 
 /** A unit as the lists show it: manufacturer and model. */
 const unitName = sql<string>`${equipment.manufacturer} || ' ' || ${equipment.model}`;

@@ -6,10 +6,10 @@
 <script lang="ts">
 	import Settings2Icon from "@lucide/svelte/icons/settings-2";
 
-	import { densities, parseDensity, tableDensity } from "./density.svelte.js";
-	import { columnLabel } from "./features.js";
-	import { groupExpansion } from "./group-expansion.svelte.js";
-	import { useTableContext } from "./table.svelte.js";
+	import { densities, parseDensity, tableDensity } from "./density.svelte.ts";
+	import { columnLabel } from "./features.ts";
+	import { groupExpansion } from "./group-expansion.svelte.ts";
+	import { useTableContext } from "./table.svelte.ts";
 
 	const table = useTableContext();
 	const columns = $derived(

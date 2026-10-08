@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { useTableContext } from "./table.svelte.js";
+	import { useTableContext } from "./table.svelte.ts";
 
 	const table = useTableContext();
 </script>

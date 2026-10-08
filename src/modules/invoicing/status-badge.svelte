@@ -1,11 +1,11 @@
 <!--
 	@component
 	An invoice's status, with overdue for a sent one past its due date; derive it with
-	`invoiceState` from `./invoice.js`.
+	`invoiceState` from `./invoice.ts`.
 -->
 <script lang="ts">
-	import { states } from "./display.js";
-	import type { InvoiceState } from "./invoice.js";
+	import { states } from "./display.ts";
+	import type { InvoiceState } from "./invoice.ts";
 
 	let { state }: { state: InvoiceState } = $props();
 

@@ -12,15 +12,15 @@
 	import EquipmentLink from "#lib/equipment/equipment-link.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
-	import { formatCents, formatDate } from "#lib/format.js";
-	import { isEditableOrder } from "#lib/models.js";
+	import { formatCents, formatDate } from "#lib/format.ts";
+	import { isEditableOrder } from "#lib/models.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import OrderTags from "../order-tags.svelte";
-	import { deleteOrder, getOrder } from "../order.remote.js";
+	import { deleteOrder, getOrder } from "../order.remote.ts";
 	import type { PageProps } from "./$types";
 	import EquipmentHistoryCard from "./equipment-history-card.svelte";
 	import OrderLinesCard from "./order-lines-card.svelte";

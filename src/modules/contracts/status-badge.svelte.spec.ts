@@ -2,10 +2,10 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { badgeVariants } from "#lib/components/ui/badge/index.js";
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { badgeVariants } from "#lib/components/ui/badge/index.ts";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 
-import type { ContractStatus } from "./model.js";
+import type { ContractStatus } from "./model.ts";
 import StatusBadge from "./status-badge.svelte";
 
 test.each<[ContractStatus, string, BadgeVariant]>([

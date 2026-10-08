@@ -7,15 +7,15 @@ import SnowflakeIcon from "@lucide/svelte/icons/snowflake";
 import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { nextDay } from "#lib/dates.js";
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { nextDay } from "#lib/dates.ts";
+import { labelOptions, withLabels } from "#lib/i18n/labels.ts";
 import {
 	type EquipmentCategory,
 	equipmentCategories,
 	type EquipmentStatus,
 	equipmentStatuses,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 
 const categoryDetails: Record<EquipmentCategory, { icon: Component }> = {
 	generator: { icon: ZapIcon },

@@ -5,12 +5,12 @@ import FilePenLineIcon from "@lucide/svelte/icons/file-pen-line";
 import SendIcon from "@lucide/svelte/icons/send";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { numberFormatter } from "#lib/format.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { numberFormatter } from "#lib/format.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
-import { type InvoiceState, invoiceStates } from "./invoice.js";
-import { invoicingLabels } from "./labels.js";
+import { type InvoiceState, invoiceStates } from "./invoice.ts";
+import { invoicingLabels } from "./labels.ts";
 
 interface Display {
 	icon: Component;

@@ -3,9 +3,9 @@ import Building2Icon from "@lucide/svelte/icons/building-2";
 import StoreIcon from "@lucide/svelte/icons/store";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
-import { type CustomerSegment, customerSegments } from "#lib/models.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { labelOptions, withLabels } from "#lib/i18n/labels.ts";
+import { type CustomerSegment, customerSegments } from "#lib/models.ts";
 
 interface Display {
 	icon: Component;

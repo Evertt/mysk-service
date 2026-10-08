@@ -2,17 +2,17 @@ import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
-import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { formatCents, formatDate } from "#lib/format.js";
+import { formatCents, formatDate } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import ContractLink from "../../../contract-link.svelte";
-import { formatTerm } from "../../../display.js";
+import { formatTerm } from "../../../display.ts";
 import LevelBadge from "../../../level-badge.svelte";
-import { contractLevels, contractStatus, contractStatuses } from "../../../model.js";
+import { contractLevels, contractStatus, contractStatuses } from "../../../model.ts";
 import StatusBadge from "../../../status-badge.svelte";
-import type { getContracts } from "./contracts.remote.js";
+import type { getContracts } from "./contracts.remote.ts";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];
 

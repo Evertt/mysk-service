@@ -2,8 +2,8 @@
 	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import PaletteIcon from "@lucide/svelte/icons/palette";
 
-	import { type ThemeName, themeNames, themes } from "./index.js";
-	import { getTheme, setTheme } from "./theme.remote.js";
+	import { type ThemeName, themeNames, themes } from "./index.ts";
+	import { getTheme, setTheme } from "./theme.remote.ts";
 
 	const current = $derived(await getTheme());
 

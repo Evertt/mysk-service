@@ -12,13 +12,13 @@ import ColumnHeader from "./column-header.svelte";
 import CurrencyCell from "./currency-cell.svelte";
 import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
-import { features } from "./features.js";
+import { features } from "./features.ts";
 import NumberCell from "./number-cell.svelte";
 import Pagination from "./pagination.svelte";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
 import Toolbar from "./toolbar.svelte";
-import { syncTableWithUrl, type UrlStateOptions } from "./url-sync.svelte.js";
+import { syncTableWithUrl, type UrlStateOptions } from "./url-sync.svelte.ts";
 import ViewOptions from "./view-options.svelte";
 
 /** Shift-, Cmd- or Ctrl-clicking a column header adds it to the sort (see `ColumnHeader`). */

@@ -2,7 +2,7 @@ import { DATABASE_URL } from "$app/env/private";
 import { createClient } from "@libsql/client";
 
 import * as moduleSchema from "./modules.gen.ts";
-import * as schema from "./schema";
+import * as schema from "./schema.ts";
 import { drizzleQueued } from "./serialize.ts";
 
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");

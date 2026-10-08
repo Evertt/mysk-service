@@ -1,9 +1,9 @@
 /** The translated names of the contracts module's enum values, see `#lib/i18n/labels.ts`. */
-import { defineLabels, type Labels } from "#lib/i18n/labels.js";
+import { defineLabels, type Labels } from "#lib/i18n/labels.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { SlaState } from "./coverage.js";
-import type { ContractLevel, ContractStatus } from "./model.js";
+import type { SlaState } from "./coverage.ts";
+import type { ContractLevel, ContractStatus } from "./model.ts";
 
 export const contractLabels = defineLabels({
 	contractLevel: {

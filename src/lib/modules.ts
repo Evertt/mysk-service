@@ -24,10 +24,10 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity.js";
-import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import type { OrderStatus } from "#lib/models.js";
-import type { ModuleId } from "#lib/module-ids.js";
+import type { Sentence, SubjectType } from "#lib/activity.ts";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import type { OrderStatus } from "#lib/models.ts";
+import type { ModuleId } from "#lib/module-ids.ts";
 
 import { manifests } from "./modules.gen.ts";
 
@@ -49,7 +49,7 @@ export type SlotLoader<Name extends SlotName> = () => Promise<{
 }>;
 
 /** What a module contributes besides its name; both its manifest and its registry entry have it. */
-export interface ModuleParts {
+interface ModuleParts {
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
 	icon: Component;
@@ -102,7 +102,7 @@ export interface OrderBulkRow {
 }
 
 /** The core tables where modules can add bulk actions, with the rows each passes. */
-export interface BulkActionRows {
+interface BulkActionRows {
 	orders: OrderBulkRow;
 }
 

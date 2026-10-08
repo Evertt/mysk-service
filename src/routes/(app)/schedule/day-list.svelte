@@ -4,7 +4,7 @@
 	orders scroll by. The orders can't be dragged here, only planned with `onschedule`.
 -->
 <script lang="ts">
-	import { dayKey, formatLongDay, type ScheduleOrder } from "./board.js";
+	import { dayKey, formatLongDay, type ScheduleOrder } from "./board.ts";
 	import OrderCard from "./order-card.svelte";
 
 	let {

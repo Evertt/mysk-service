@@ -7,13 +7,13 @@
  * their name) and their value as stored (dates and numbers formatted).
  */
 // Only types from `#lib/activity.ts`, which uses this file's types in turn.
-import type { FieldFormat, SubjectType, Text } from "#lib/activity.js";
-import { formatDate, formatDateTime, formatNumber } from "#lib/format.js";
-import { modules } from "#lib/modules.js";
+import type { FieldFormat, SubjectType, Text } from "#lib/activity.ts";
+import { formatDate, formatDateTime, formatNumber } from "#lib/format.ts";
+import { modules } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
-export const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;
+const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;
 export type ReferenceType = (typeof referenceTypes)[number];
 
 /** The names of referenced records by type and id, e.g. `{ engineer: { "3": "Jan de Vries" } }`. */
@@ -24,7 +24,7 @@ export type Names = Partial<Record<ReferenceType, Record<string, string>>>;
  * its subject types); a subject type's `fields` can give another (e.g. a unit's customer is its
  * "owner").
  */
-export const fieldLabels: Record<string, Text> = {
+const fieldLabels: Record<string, Text> = {
 	code: m.activity_field_code,
 	name: m.activity_field_name,
 	contactName: m.activity_field_contact_name,

@@ -12,7 +12,7 @@
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
 	import type { LayoutProps } from "./$types";
-	import { getMe, signOut } from "./my/portal.remote.js";
+	import { getMe, signOut } from "./my/portal.remote.ts";
 
 	let { children }: LayoutProps = $props();
 

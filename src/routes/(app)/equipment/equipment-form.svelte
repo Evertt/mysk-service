@@ -9,17 +9,17 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.js";
-	import { categories } from "#lib/equipment/display.js";
-	import { labelOptions } from "#lib/i18n/labels.js";
-	import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
+	import { toDateInput } from "#lib/dates.ts";
+	import { categories } from "#lib/equipment/display.ts";
+	import { labelOptions } from "#lib/i18n/labels.ts";
+	import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
 	import type {
 		createEquipment,
 		getEquipment,
 		getEquipmentFormOptions,
 		updateEquipment,
-	} from "./equipment.remote.js";
+	} from "./equipment.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getEquipmentFormOptions>>;
 	type Unit = Awaited<ReturnType<typeof getEquipment>>["unit"];

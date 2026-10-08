@@ -9,9 +9,9 @@
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { onMount } from "svelte";
 
-import type { Features } from "./features.js";
-import { type List, queryKey, toListQuery } from "./list-definition.js";
-import { parseTableUrl, type TableUrlSpec } from "./url-state.js";
+import type { Features } from "./features.ts";
+import { type List, queryKey, toListQuery } from "./list-definition.ts";
+import { parseTableUrl, type TableUrlSpec } from "./url-state.ts";
 
 /**
  * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names
@@ -41,7 +41,7 @@ export function urlGrammar(spec: TableUrlSpec) {
  * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
  * rows' query answered with (`queryKey(input)`).
  */
-export function isStale<TData extends RowData>(
+function isStale<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
 	list: List<any>,
 	key: string,

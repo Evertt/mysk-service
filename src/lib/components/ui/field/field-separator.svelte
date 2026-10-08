@@ -2,9 +2,9 @@
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 
-	import { Separator } from "#lib/components/ui/separator/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithElementRef } from "#lib/utils.js";
+	import { Separator } from "#lib/components/ui/separator/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithElementRef } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

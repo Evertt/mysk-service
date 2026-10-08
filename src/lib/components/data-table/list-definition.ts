@@ -36,7 +36,7 @@ import {
 	parseTableUrl,
 	type TableUrlSpec,
 	type TableUrlState,
-} from "./url-state.js";
+} from "./url-state.ts";
 
 /** What a query may hold, so that its URL stays well under the servers' limit (16 KB). */
 export const listLimits = {
@@ -89,7 +89,7 @@ export const oneOf = <const T extends readonly [string, ...string[]]>(
 // `none`. A kind is all a new filter needs.
 
 /** What a column of a list can do. */
-export interface ListColumn {
+interface ListColumn {
 	/** Its name in the URL, if not its id (see `TableUrlColumn.param`). */
 	param?: string;
 	/** Whether the list can be sorted by it. */

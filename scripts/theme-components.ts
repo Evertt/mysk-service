@@ -145,11 +145,11 @@ function themeFile(source: string): { source: string; count: number } {
 	const props = source.indexOf("$props();");
 	const scriptStart = source.lastIndexOf('<script lang="ts">', props) + '<script lang="ts">'.length;
 	const imports = [
-		!source.includes("useTheme") && 'import { useTheme } from "#lib/themes/context.js";',
+		!source.includes("useTheme") && 'import { useTheme } from "#lib/themes/context.ts";',
 		source.includes("as Slot)") &&
 			!source.includes("type Slot") &&
-			'import type { Slot } from "#lib/themes/types.js";',
-		!/import \{[^}]*\bcn\b/.test(source) && 'import { cn } from "#lib/utils.js";',
+			'import type { Slot } from "#lib/themes/types.ts";',
+		!/import \{[^}]*\bcn\b/.test(source) && 'import { cn } from "#lib/utils.ts";',
 	].filter(Boolean);
 	if (!source.includes("useTheme()")) {
 		const lineEnd = source.indexOf("\n", props);

@@ -4,21 +4,21 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { manualOrderStatuses } from "#lib/models.js";
+import { manualOrderStatuses } from "#lib/models.ts";
 import {
 	assigneeProblem,
 	assignOrder,
 	changeOrderStatus,
 	removeOrder,
-} from "#lib/orders/server/order-changes.js";
-import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { engineer, order } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+} from "#lib/orders/server/order-changes.ts";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { engineer, order } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
 
-import { getOrderFacets, getOrders } from "./order-list.remote.js";
-import { ordersSql } from "./order-list.server.js";
-import { ordersList } from "./orders-list.js";
+import { getOrderFacets, getOrders } from "./order-list.remote.ts";
+import { ordersSql } from "./order-list.server.ts";
+import { ordersList } from "./orders-list.ts";
 
 /** The selected orders, or all those matching the list's search and filters. */
 const ordersTarget = listTarget(ordersList.where);

@@ -5,7 +5,7 @@
 	page's record; a view is deleted by a command from the menu.)
 -->
 <script lang="ts">
-	import type { TableView } from "./views.remote.js";
+	import type { TableView } from "./views.remote.ts";
 
 	let {
 		open = $bindable(false),

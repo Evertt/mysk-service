@@ -5,7 +5,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { label } from "#lib/i18n/labels.js";
+import { label } from "#lib/i18n/labels.ts";
 import {
 	assignableRoles,
 	invitationState,
@@ -14,14 +14,14 @@ import {
 	memberRoles,
 	removalRefusal,
 	roleChangeRefusal,
-} from "#lib/members.js";
+} from "#lib/members.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { isManager, parseRoles } from "#lib/roles.js";
-import { recordActivityAfter } from "#lib/server/activity.js";
-import { auth } from "#lib/server/auth.js";
-import { db } from "#lib/server/db/index.js";
-import { invitation, member, user } from "#lib/server/db/schema.js";
-import { inTenant, requireManager, requireMember } from "#lib/server/session.js";
+import { isManager, parseRoles } from "#lib/roles.ts";
+import { recordActivityAfter } from "#lib/server/activity.ts";
+import { auth } from "#lib/server/auth.ts";
+import { db } from "#lib/server/db/index.ts";
+import { invitation, member, user } from "#lib/server/db/schema.ts";
+import { inTenant, requireManager, requireMember } from "#lib/server/session.ts";
 
 /**
  * The organization's members, and for owners and admins its pending invitations, with what the

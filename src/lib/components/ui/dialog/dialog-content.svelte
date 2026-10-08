@@ -4,12 +4,12 @@
 	import type { Snippet } from "svelte";
 	import type { ComponentProps } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
+	import { Button } from "#lib/components/ui/button/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.ts";
 
 	import DialogPortal from "./dialog-portal.svelte";
-	import * as Dialog from "./index.js";
+	import * as Dialog from "./index.ts";
 
 	let {
 		ref = $bindable(null),

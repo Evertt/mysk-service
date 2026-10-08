@@ -4,9 +4,9 @@ import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer } from "#lib/roles.js";
-import { auth } from "#lib/server/auth.js";
-import { loadTenant } from "#lib/server/session.js";
+import { isFieldEngineer } from "#lib/roles.ts";
+import { auth } from "#lib/server/auth.ts";
+import { loadTenant } from "#lib/server/session.ts";
 
 /** Only local paths, so the login can't be used to send people to another site. */
 const safeRedirect = (path: string | undefined) =>

@@ -8,7 +8,7 @@
 	import XIcon from "@lucide/svelte/icons/x";
 	import type { Snippet } from "svelte";
 
-	import { useTableContext } from "./table.svelte.js";
+	import { useTableContext } from "./table.svelte.ts";
 	import ViewsMenu from "./views-menu.svelte";
 
 	let {

@@ -3,17 +3,17 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { removeEquipment } from "#lib/equipment/server/equipment.js";
+import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { refuseIfReferenced } from "#lib/server/db/errors.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { type Problem, refuse } from "#lib/server/forms.js";
-import { idInTenant, inTenant, requireMember } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { refuseIfReferenced } from "#lib/server/db/errors.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { type Problem, refuse } from "#lib/server/forms.ts";
+import { idInTenant, inTenant, requireMember } from "#lib/server/session.ts";
 
-import { equipmentFields } from "./equipment-schema.js";
+import { equipmentFields } from "./equipment-schema.ts";
 
 /**
  * One of the tenant's units with its owner, and how many orders it has (which keep it from being

@@ -10,15 +10,15 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate, formatDateTime } from "#lib/format.js";
+	import { formatDate, formatDateTime } from "#lib/format.ts";
 
-	import { canChange, isEditable } from "../../../../invoice.js";
+	import { canChange, isEditable } from "../../../../invoice.ts";
 	import StatusBadge from "../../../../status-badge.svelte";
-	import { issueInvoice, markPaid, voidInvoice } from "../invoice-status.remote.js";
-	import { getInvoice } from "../invoices.remote.js";
+	import { issueInvoice, markPaid, voidInvoice } from "../invoice-status.remote.ts";
+	import { getInvoice } from "../invoices.remote.ts";
 	import ConfirmDialog from "./confirm-dialog.svelte";
 	import DraftEditor from "./draft-editor.svelte";
-	import { removeLine } from "./draft.remote.js";
+	import { removeLine } from "./draft.remote.ts";
 	import InvoiceDocument from "./invoice-document.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/invoices/[number]"> } = $props();

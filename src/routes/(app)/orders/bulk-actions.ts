@@ -7,10 +7,10 @@ import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 
-import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { labelOptions } from "#lib/i18n/labels.js";
-import { isEditableOrder, manualOrderStatuses } from "#lib/models.js";
-import type { OrderBulkRow } from "#lib/modules.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import { labelOptions } from "#lib/i18n/labels.ts";
+import { isEditableOrder, manualOrderStatuses } from "#lib/models.ts";
+import type { OrderBulkRow } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import {
@@ -18,8 +18,8 @@ import {
 	bulkDeleteOrders,
 	bulkSetOrderStatus,
 	getAssignableEngineers,
-} from "./order-bulk.remote.js";
-import { getOrderFacets, getOrders } from "./order-list.remote.js";
+} from "./order-bulk.remote.ts";
+import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 
 /** An invoiced order stays as it is (see `isEditableOrder`). */
 const invoiced = (row: OrderBulkRow) =>

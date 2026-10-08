@@ -10,11 +10,11 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatNumber } from "#lib/format.js";
-	import { label as roleLabel } from "#lib/i18n/labels.js";
-	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/members.js";
+	import { formatNumber } from "#lib/format.ts";
+	import { label as roleLabel } from "#lib/i18n/labels.ts";
+	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/members.ts";
 
-	import { invite } from "./members.remote.js";
+	import { invite } from "./members.remote.ts";
 
 	let { organization, roles }: { organization: string; roles: MemberRole[] } = $props();
 

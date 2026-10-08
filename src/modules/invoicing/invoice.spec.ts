@@ -15,7 +15,7 @@ import {
 	today,
 	vatOf,
 } from "./invoice.ts";
-import { invoiceStatuses } from "./model.js";
+import { invoiceStatuses } from "./model.ts";
 
 describe("amounts", () => {
 	test("round to the cent, halves away from zero", () => {

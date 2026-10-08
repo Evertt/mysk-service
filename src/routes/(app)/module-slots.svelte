@@ -5,9 +5,9 @@
 	`contents`, so the components lay out as the page's own), or nothing if no module adds anything.
 -->
 <script lang="ts" generics="Name extends SlotName">
-	import { type SlotName, type SlotProps, slotLoaders } from "#lib/modules.js";
+	import { type SlotName, type SlotProps, slotLoaders } from "#lib/modules.ts";
 
-	import { getCurrentTenant } from "./session.remote.js";
+	import { getCurrentTenant } from "./session.remote.ts";
 
 	let {
 		name,

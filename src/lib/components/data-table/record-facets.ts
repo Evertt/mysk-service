@@ -1,6 +1,6 @@
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 
-import type { Features } from "./features.js";
+import type { Features } from "./features.ts";
 
 /** A related record of a row, e.g. its customer: its filter value, name and code. */
 export interface RowRecord {

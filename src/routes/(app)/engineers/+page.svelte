@@ -5,7 +5,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import EngineersTable from "./engineers-table.svelte";
-	import { getEngineers } from "./engineers.remote.js";
+	import { getEngineers } from "./engineers.remote.ts";
 </script>
 
 <svelte:head>

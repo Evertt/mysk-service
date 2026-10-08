@@ -1,22 +1,22 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.js";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders/display.js";
+	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders/display.ts";
 
 	import {
 		getCustomerOptions,
 		getEngineerOptions,
 		getEquipmentOptions,
-	} from "../filter-options.remote.js";
-	import { moduleBulkActions } from "../module-bulk-actions.svelte.js";
-	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.js";
-	import { columns } from "./columns.js";
-	import type { getOrderFacets, getOrders } from "./order-list.remote.js";
-	import { ordersList } from "./orders-list.js";
+	} from "../filter-options.remote.ts";
+	import { moduleBulkActions } from "../module-bulk-actions.svelte.ts";
+	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
+	import { columns } from "./columns.ts";
+	import type { getOrderFacets, getOrders } from "./order-list.remote.ts";
+	import { ordersList } from "./orders-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.

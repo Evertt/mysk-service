@@ -5,7 +5,7 @@
  * the URL, and are read back through the table's own grammar: a parameter the table no longer
  * knows is ignored, like in a link.
  */
-import { parseTableUrl, tableUrlKey, type TableUrlSpec, type TableUrlState } from "./url-state.js";
+import { parseTableUrl, tableUrlKey, type TableUrlSpec, type TableUrlState } from "./url-state.ts";
 
 /** The longest name a view can have. */
 export const viewNameMax = 60;

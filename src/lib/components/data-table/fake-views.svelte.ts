@@ -4,12 +4,12 @@
  * `sent` instead.
  *
  * ```ts
- * vi.mock("./views.remote.js", () => import("./fake-views.svelte.ts"));
+ * vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
  * ```
  */
-import { fakeField } from "#lib/components/form/fake-form.js";
+import { fakeField } from "#lib/components/form/fake-form.ts";
 
-import type { TableView } from "./views.remote.js";
+import type { TableView } from "./views.remote.ts";
 
 export type { TableView };
 

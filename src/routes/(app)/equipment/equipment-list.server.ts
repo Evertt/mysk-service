@@ -6,13 +6,13 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { openOrderStatuses } from "#lib/models.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant, tenantJoin } from "#lib/server/session.js";
-import { type ListSql, nocase } from "#lib/server/table-query.js";
+import { openOrderStatuses } from "#lib/models.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { inTenant, tenantJoin } from "#lib/server/session.ts";
+import { type ListSql, nocase } from "#lib/server/table-query.ts";
 
-import { equipmentList } from "./equipment-list.js";
+import { equipmentList } from "./equipment-list.ts";
 
 /**
  * The equipment list's joins: the unit's owner, scoped to the tenant. Written once, for the rows,

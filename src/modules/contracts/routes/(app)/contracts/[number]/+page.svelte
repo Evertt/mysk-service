@@ -8,17 +8,17 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { formatCents, formatDate } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
+	import { formatCents, formatDate } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import OrderStatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";
 
-	import { formatTerm, levels } from "../../../../display.js";
+	import { formatTerm, levels } from "../../../../display.ts";
 	import LevelBadge from "../../../../level-badge.svelte";
-	import { contractStatus } from "../../../../model.js";
+	import { contractStatus } from "../../../../model.ts";
 	import ContractStatusBadge from "../../../../status-badge.svelte";
-	import { deleteContract, getContract } from "../contracts.remote.js";
+	import { deleteContract, getContract } from "../contracts.remote.ts";
 
 	let { params }: { params: RouteParams<"/(app)/contracts/[number]"> } = $props();
 

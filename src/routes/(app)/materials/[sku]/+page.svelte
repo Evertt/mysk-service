@@ -8,14 +8,14 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
-	import { formatQuantity } from "#lib/materials/display.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
 	import StockBadge from "#lib/materials/stock-badge.svelte";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 
-	import { deleteMaterial, getMaterial } from "../material.remote.js";
+	import { deleteMaterial, getMaterial } from "../material.remote.ts";
 	import type { PageProps } from "./$types";
 	import CountStockDialog from "./count-stock-dialog.svelte";
 	import ReceiveStockDialog from "./receive-stock-dialog.svelte";

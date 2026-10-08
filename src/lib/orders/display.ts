@@ -14,8 +14,8 @@ import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { labelOptions, withLabels } from "#lib/i18n/labels.ts";
 import {
 	type OrderPriority,
 	orderPriorities,
@@ -23,7 +23,7 @@ import {
 	orderStatuses,
 	type OrderType,
 	orderTypes,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 
 interface Display {
 	icon: Component;

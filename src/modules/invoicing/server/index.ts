@@ -5,7 +5,7 @@
  */
 import { defineServerModule } from "#lib/server/modules.ts";
 
-import { getOrderInvoice } from "../invoicing.remote.js";
+import { getOrderInvoice } from "../invoicing.remote.ts";
 
 export default defineServerModule("invoicing", {
 	orders: {

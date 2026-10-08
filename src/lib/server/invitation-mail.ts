@@ -1,4 +1,4 @@
-import { dateFormatter } from "#lib/format.js";
+import { dateFormatter } from "#lib/format.ts";
 import { invitedAsText } from "#lib/members.ts";
 import { m } from "#lib/paraglide/messages.js";
 

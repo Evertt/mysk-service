@@ -9,7 +9,7 @@ import {
 	orderPriorities,
 	orderStatuses,
 	orderTypes,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 
 import * as customers from "./customers/display.ts";
 import * as engineers from "./engineers/display.ts";

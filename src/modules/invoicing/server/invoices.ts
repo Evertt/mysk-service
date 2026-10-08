@@ -5,7 +5,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { formatCents } from "#lib/format.js";
+import { formatCents } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "#lib/server/activity.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -14,14 +14,14 @@ import type { Problem } from "#lib/server/forms.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/session.ts";
 
-import { invoiceState, invoiceTotals } from "../invoice.js";
-import { invoiceNumberFormat } from "../model.js";
+import { invoiceState, invoiceTotals } from "../invoice.ts";
+import { invoiceNumberFormat } from "../model.ts";
 import { alreadyBilled, linesFor } from "./billable.ts";
 import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
 
 /** Where invoice numbers are kept, for `nextNumber()`. */
-export const invoiceNumbers: NumberTarget = {
+const invoiceNumbers: NumberTarget = {
 	format: invoiceNumberFormat,
 	table: invoice,
 	column: invoice.number,

@@ -10,9 +10,9 @@ import {
 	orderStatuses,
 	orderTypes,
 	stockMovementKinds,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { memberRoles } from "#lib/roles.js";
+import { memberRoles } from "#lib/roles.ts";
 
 import {
 	defineLabels,

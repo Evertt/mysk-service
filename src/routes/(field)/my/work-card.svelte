@@ -7,12 +7,12 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import MapPinIcon from "@lucide/svelte/icons/map-pin";
 
-	import { formatDate } from "#lib/format.js";
-	import type { OrderPriority, OrderStatus } from "#lib/models.js";
+	import { formatDate } from "#lib/format.ts";
+	import type { OrderPriority, OrderStatus } from "#lib/models.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 
-	import { plannedTime } from "./work.js";
+	import { plannedTime } from "./work.ts";
 
 	let {
 		order,

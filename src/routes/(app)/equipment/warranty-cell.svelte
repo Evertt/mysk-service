@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
-	import { formatDate } from "#lib/format.js";
+	import { formatDate } from "#lib/format.ts";
 
 	let { until }: { until: Date } = $props();
 </script>

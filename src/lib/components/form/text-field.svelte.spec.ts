@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { fakeField } from "./fake-form.js";
+import { fakeField } from "./fake-form.ts";
 import TextField from "./text-field.svelte";
 
 test("the label names an input for the field, filled with the initial value", async () => {

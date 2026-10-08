@@ -2,16 +2,16 @@ import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
-import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { countryName } from "#lib/customers/countries.js";
+import { countryName } from "#lib/customers/countries.ts";
 import CustomerLink from "#lib/customers/customer-link.svelte";
 import SegmentBadge from "#lib/customers/segment-badge.svelte";
-import { intlLocale } from "#lib/format.js";
-import { customerSegments } from "#lib/models.js";
+import { intlLocale } from "#lib/format.ts";
+import { customerSegments } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getCustomers } from "./customers.remote.js";
+import type { getCustomers } from "./customers.remote.ts";
 
 export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
 

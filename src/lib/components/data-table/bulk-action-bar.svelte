@@ -22,8 +22,8 @@
 	import type { RowData } from "@tanstack/svelte-table";
 	import { toast } from "svelte-sonner";
 
-	import { formatNumber } from "#lib/format.js";
-	import { errorMessage } from "#lib/utils.js";
+	import { formatNumber } from "#lib/format.ts";
+	import { errorMessage } from "#lib/utils.ts";
 
 	import BulkActionDialog from "./bulk-action-dialog.svelte";
 	import {
@@ -32,8 +32,8 @@
 		type BulkTarget,
 		MAX_BULK_RECORDS,
 		summarizeBulkResult,
-	} from "./bulk-actions.js";
-	import { useTableContext } from "./table.svelte.js";
+	} from "./bulk-actions.ts";
+	import { useTableContext } from "./table.svelte.ts";
 
 	let {
 		actions,

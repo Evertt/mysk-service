@@ -2,9 +2,9 @@
  * What shows a changed invoice, for the remote functions that change one
  * (`invoice-status.remote.ts`, `[number]/draft.remote.ts`).
  */
-import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
+import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
 
-import { getBillable, getInvoice, getInvoices } from "./invoices.remote.js";
+import { getBillable, getInvoice, getInvoices } from "./invoices.remote.ts";
 
 /** Refreshes what shows a changed invoice. */
 export function refreshInvoice(found: { id: number; number: string; customerId: number }) {

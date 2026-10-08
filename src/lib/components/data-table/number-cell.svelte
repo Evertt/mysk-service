@@ -5,10 +5,10 @@
 	→ "1 order", "3 orders" (in Dutch "1 opdracht", "3 opdrachten").
 -->
 <script lang="ts">
-	import { formatNumber } from "#lib/format.js";
-	import { cn } from "#lib/utils.js";
+	import { formatNumber } from "#lib/format.ts";
+	import { cn } from "#lib/utils.ts";
 
-	import { useCellContext } from "./table.svelte.js";
+	import { useCellContext } from "./table.svelte.ts";
 
 	let { format }: { format?: (inputs: { count: number }) => string } = $props();
 

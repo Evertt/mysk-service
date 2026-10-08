@@ -11,11 +11,11 @@ import {
 	type Names,
 	referencedIds,
 	type ReferenceType,
-} from "#lib/activity-format.js";
-import { subjectNoun, type SubjectType, subjectTypes } from "#lib/activity.js";
-import { db } from "#lib/server/db/index.js";
-import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+} from "#lib/activity-format.ts";
+import { subjectNoun, type SubjectType, subjectTypes } from "#lib/activity.ts";
+import { db } from "#lib/server/db/index.ts";
+import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
 
 export interface SubjectLink {
 	/** E.g. `order`. */

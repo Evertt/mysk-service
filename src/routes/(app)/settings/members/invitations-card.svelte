@@ -7,10 +7,10 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatDate } from "#lib/format.js";
-	import { labelOrValue } from "#lib/i18n/labels.js";
+	import { formatDate } from "#lib/format.ts";
+	import { labelOrValue } from "#lib/i18n/labels.ts";
 
-	import { cancelInvitation, getMembers, resendInvitation } from "./members.remote.js";
+	import { cancelInvitation, getMembers, resendInvitation } from "./members.remote.ts";
 
 	type Invitation = Awaited<ReturnType<typeof getMembers>>["invitations"][number];
 

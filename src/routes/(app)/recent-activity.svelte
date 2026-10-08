@@ -7,7 +7,7 @@
 	import { resolve } from "$app/paths";
 
 	import ActivityList from "#lib/components/activity/activity-list.svelte";
-	import { getRecentActivity } from "#lib/components/activity/activity.remote.js";
+	import { getRecentActivity } from "#lib/components/activity/activity.remote.ts";
 
 	const entries = $derived(await getRecentActivity());
 </script>

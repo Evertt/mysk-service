@@ -1,4 +1,4 @@
-import type { ModuleManifest } from "#lib/modules.js";
+import type { ModuleManifest } from "#lib/modules.ts";
 
 /**
  * Declares a module in its `module.ts` (`src/modules/<id>/module.ts`, default export), checked

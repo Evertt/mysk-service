@@ -15,8 +15,8 @@
 	import { renderComponent } from "@tanstack/svelte-table";
 
 	import BulkActionBar from "./bulk-action-bar.svelte";
-	import type { BulkAction } from "./bulk-actions.js";
-	import { createAppColumnHelper, createAppTable } from "./table.svelte.js";
+	import type { BulkAction } from "./bulk-actions.ts";
+	import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
 
 	let {
 		jobs,

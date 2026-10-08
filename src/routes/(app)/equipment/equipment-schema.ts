@@ -1,8 +1,8 @@
 import * as v from "valibot";
 
-import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
+import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { date, id, text } from "#lib/schema.js";
+import { date, id, text } from "#lib/schema.ts";
 
 /** The fields of the equipment form, shared by registering and editing a unit. */
 export const equipmentFields = {

@@ -8,7 +8,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 
-	import { logHours } from "../portal.remote.js";
+	import { logHours } from "../portal.remote.ts";
 
 	let { orderId, hours }: { orderId: number; hours: number } = $props();
 </script>

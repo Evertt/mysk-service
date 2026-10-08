@@ -30,11 +30,11 @@
 	import type { ComponentProps, Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 
-	import * as Tooltip from "#lib/components/ui/tooltip/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithElementRef, type WithoutChildrenOrChild } from "#lib/utils.js";
+	import * as Tooltip from "#lib/components/ui/tooltip/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithElementRef, type WithoutChildrenOrChild } from "#lib/utils.ts";
 
-	import { useSidebar } from "./context.svelte.js";
+	import { useSidebar } from "./context.svelte.ts";
 
 	let {
 		ref = $bindable(null),
