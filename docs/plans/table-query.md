@@ -2,7 +2,7 @@
 
 How the server-side lists (orders, equipment, materials) get their state from the URL into SQL,
 what's good and awkward about it, the alternatives, and a recommended design with a migration plan.
-Nothing here is implemented yet.
+Implemented (steps 1–6; the optional step 7 is not done). The code is the reference now; this stays as the rationale.
 
 ## Summary
 

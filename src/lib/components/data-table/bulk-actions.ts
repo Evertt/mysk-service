@@ -23,14 +23,14 @@ export const MAX_BULK_RECORDS = 500;
 export type AnyListWhere = ListWhere<ListColumns>;
 
 /**
- * What a bulk command acts on: the selected rows by id, or (in a server-side list) all the rows
- * matching the list's search and filters, as the `where` of the rows' query says. The server reads
- * either within the current tenant only.
- *
- * TRANSITIONAL: `Where` is a string, the rows' key (the table's URL parameters), for a list that
- * has no definition yet. Once all have one, it is `AnyListWhere` and the parameter goes.
+ * What a bulk command acts on: the selected rows by id, or (in a server-side list, whose
+ * actions say its `Where`, e.g. `AnyListWhere`) all the rows matching the list's search and
+ * filters, as the `where` of the rows' query says. The server reads either within the current
+ * tenant only. A client-side table's actions leave `Where` out and only get ids.
  */
-export type BulkTarget<Where = string> = { ids: number[] } | { matching: Where };
+export type BulkTarget<Where = never> =
+	| { ids: number[] }
+	| ([Where] extends [never] ? never : { matching: Where });
 
 /** A record a bulk action left as it was, and why. */
 export interface BulkSkip {
@@ -60,7 +60,7 @@ export interface BulkOption {
 /** A translated text: a message function, read when shown. */
 type Text = () => string;
 
-export interface BulkAction<TData, Where = string> {
+export interface BulkAction<TData, Where = never> {
 	id: string;
 	label: Text;
 	icon?: Component;

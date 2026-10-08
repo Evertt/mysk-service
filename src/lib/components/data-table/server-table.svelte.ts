@@ -5,49 +5,19 @@
  * `whereOf()`), so the URL (which the table keeps in sync, debouncing the search) decides what's
  * fetched. The table itself (`createAppTable` with `serverSide`) shows the rows as they come, and
  * `isStale()` and `serverTableLoading()` tell whether they are the table's.
- *
- * TRANSITIONAL: `serverTableQuery()`, and the URL spec that `isStale()` and `serverTableLoading()`
- * take instead of a list, are for the lists that have no definition yet (they ask the server with
- * the URL's parameters as a string).
  */
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { onMount } from "svelte";
 
 import type { Features } from "./features.js";
 import { type List, queryKey, toListQuery } from "./list-definition.js";
-import { parseTableUrl, type SearchParams, tableUrlKey, type TableUrlSpec } from "./url-state.js";
+import { parseTableUrl, type TableUrlSpec } from "./url-state.js";
 
 /**
- * TRANSITIONAL (see above): the arguments for a server-side table's queries, from the URL: `rows` for the page of rows,
- * `facets` for the counts in its filters, which stays the same while only the page, the
- * sorting or the grouping changes (so those don't count again). Both are the table's own
- * parameters, in a fixed order without the defaults (e.g. `status=quote&sort=number`), so the same
- * state is the same query, whatever else is in the URL.
- */
-export function serverTableQuery(params: SearchParams, spec: TableUrlSpec) {
-	const state = parseTableUrl(params, spec);
-	const defaults = parseTableUrl(new URLSearchParams(), spec);
-	const key = (search: string) => search.replace(/^\?/, "");
-	return {
-		rows: key(tableUrlKey(state, spec)),
-		facets: key(
-			tableUrlKey(
-				{
-					...state,
-					sorting: defaults.sorting,
-					pagination: defaults.pagination,
-					grouping: defaults.grouping,
-				},
-				spec,
-			),
-		),
-	};
-}
-
-/**
- * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names in the URL,
- * and its defaults. A server-side table's spec (from its columns, see `tableUrlSpec`) and the
- * server's (plain data) must agree on it, which its `columns.spec.ts` checks.
+ * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names
+ * in the URL, and its defaults. A server-side table's spec (from its columns, see `tableUrlSpec`)
+ * and its list's (`urlSpec`, from the definition) must agree on it, which its `columns.spec.ts`
+ * checks.
  */
 export function urlGrammar(spec: TableUrlSpec) {
 	return {
@@ -69,12 +39,11 @@ export function urlGrammar(spec: TableUrlSpec) {
 /**
  * Whether the rows a server-side table shows are for another state than the table's: its search,
  * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
- * rows' query answered with (`queryKey(input)`). TRANSITIONAL: for a list without a definition,
- * pass its URL spec instead of the list, and `key` is the URL's parameters.
+ * rows' query answered with (`queryKey(input)`).
  */
 export function isStale<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
-	list: List<any> | TableUrlSpec,
+	list: List<any>,
 	key: string,
 ) {
 	const state = {
@@ -84,8 +53,7 @@ export function isStale<TData extends RowData>(
 		pagination: table.atoms.pagination.get(),
 		grouping: table.atoms.grouping.get(),
 	};
-	if ("urlSpec" in list) return queryKey(toListQuery(list, state)) !== key;
-	return tableUrlKey(state, list).replace(/^\?/, "") !== key.replace(/^\?/, "");
+	return queryKey(toListQuery(list, state)) !== key;
 }
 
 /**
@@ -96,7 +64,7 @@ export function isStale<TData extends RowData>(
  */
 export function serverTableLoading<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
-	list: List<any> | TableUrlSpec,
+	list: List<any>,
 	key: () => string,
 ) {
 	// Hydrating counts as pending work, which the server didn't render.

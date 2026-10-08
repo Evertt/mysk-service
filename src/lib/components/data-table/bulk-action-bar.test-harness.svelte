@@ -27,7 +27,7 @@
 		jobs: Job[];
 		actions: BulkAction<Job, any>[];
 		/** As for a server-side table: all the rows that match. */
-		matching?: { where?: unknown; key: string; count: number };
+		matching?: { where: unknown; key: string; count: number };
 		pageSize?: number;
 	} = $props();
 

@@ -15,7 +15,7 @@
 	Place it after `<table.Table>`; it sticks to the bottom of the screen when the page scrolls. The
 	number selected is announced to screen readers, and Escape in the bar clears the selection.
 -->
-<script lang="ts" generics="TData extends RowData, Where = string">
+<script lang="ts" generics="TData extends RowData, Where = never">
 	import { goto } from "$app/navigation";
 	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import XIcon from "@lucide/svelte/icons/x";
@@ -43,10 +43,9 @@
 		actions: BulkAction<TData, Where>[];
 		/**
 		 * A server-side table's rows: what decides which match (the rows' query `where`), the key
-		 * they came with and how many match in all. TRANSITIONAL: a list without a definition has no
-		 * `where`, and its `key` (URL parameters) is the target.
+		 * they came with and how many match in all.
 		 */
-		matching?: { where?: Where; key: string; count: number };
+		matching?: { where: Where; key: string; count: number };
 		/** How many actions show as buttons; with more, all but the first ones go in a menu. */
 		inline?: number;
 	} = $props();
@@ -103,9 +102,7 @@
 
 	async function run(action: BulkAction<TData, Where>, value?: string) {
 		const target = (
-			allMatching
-				? { matching: matching!.where ?? matching!.key }
-				: { ids: selected.map((row) => Number(row.id)) }
+			allMatching ? { matching: matching!.where } : { ids: selected.map((row) => Number(row.id)) }
 		) as BulkTarget<Where>;
 		busy = true;
 		try {

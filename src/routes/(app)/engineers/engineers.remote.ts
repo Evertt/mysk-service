@@ -8,7 +8,7 @@ import { openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
+import { bulkChange, idsTarget } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { type Problem, refuse } from "#lib/server/forms.js";
@@ -174,7 +174,7 @@ export const updateEngineer = form(
  * engineers can be assigned new orders; what's assigned to them stays.
  */
 export const bulkSetEngineersActive = command(
-	v.object({ target: bulkTarget, active: v.boolean() }),
+	v.object({ target: idsTarget, active: v.boolean() }),
 	async ({ target, active }) => {
 		requireMember();
 		const result = await bulkChange(target, {

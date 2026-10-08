@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createClient } from "@libsql/client";
-import { count, eq, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { integer, type SQLiteSelect, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { afterAll, beforeAll, describe, expect, expectTypeOf, test } from "vite-plus/test";
@@ -16,19 +16,14 @@ import {
 	toListQuery,
 	whereOf,
 } from "#lib/components/data-table/list-definition.js";
-import { parseTableUrl, type TableUrlSpec } from "#lib/components/data-table/url-state.js";
+import { parseTableUrl } from "#lib/components/data-table/url-state.js";
 
 import {
-	facetCounts,
-	groupCounts,
 	type ListSql,
 	nocase,
-	oneOf,
 	planList,
-	planTable,
 	rank,
 	searchMatch,
-	type ServerTable,
 	type SqlColumns,
 } from "./table-query.ts";
 
@@ -118,39 +113,7 @@ afterAll(() => {
 const kinds = ["heating", "cooling", "plumbing"] as const;
 const priorities = ["low", "normal", "high", "urgent"] as const;
 
-/** The old way: a URL spec, and the SQL for the columns it names (`ServerTable`). */
-const spec: TableUrlSpec = {
-	columns: [
-		{ id: "name", sortable: true },
-		{ id: "code", sortable: true, filter: "set" },
-		{ id: "kind", sortable: true, groupable: true, filter: "set", values: kinds },
-		{ id: "priority", sortable: true, groupable: true, filter: "set", values: priorities },
-		{ id: "due", sortable: true },
-		{ id: "tenant", groupable: true },
-	],
-	defaults: { sorting: [{ id: "name", desc: false }], pagination: { pageIndex: 0, pageSize: 2 } },
-	pageSizes: [2, 5],
-};
-
-const table: ServerTable = {
-	spec,
-	columns: {
-		name: { sort: nocase(item.name) },
-		code: { sort: item.code, filter: oneOf(item.code) },
-		kind: { sort: item.kind, filter: oneOf(item.kind), group: item.kind },
-		priority: {
-			sort: rank(item.priority, priorities),
-			filter: oneOf(item.priority),
-			group: item.priority,
-		},
-		due: { sort: item.due, nullsLast: true },
-	},
-	search: [item.name, item.code],
-	tieBreaker: item.id,
-	scope: () => eq(item.tenant, "a"),
-};
-
-/** The new way: a list definition, and the SQL for it (`ListSql`). */
+/** A list definition, and the SQL for it (`ListSql`). */
 const itemList = defineList({
 	columns: {
 		name: { sort: true },
@@ -197,56 +160,12 @@ const itemSql = (): ListSql<ItemColumns> => ({
 const fromUrl = (search: string) =>
 	toListQuery(itemList, parseTableUrl(new URLSearchParams(search), itemList.urlSpec));
 
-const countBy = async (where: SQL | undefined, by: SQLWrapper) =>
-	db
-		.select({ value: sql<unknown>`${by}`, count: count() })
-		.from(item)
-		.where(where)
-		.groupBy(sql`${by}`);
-
 /**
- * The two ways to plan a list, which must agree: each gets the URL's parameters, and answers with
- * the ids of the page, how many match in all, and when grouped, the rows just before and after it.
+ * What a URL's parameters ask of a list: the ids of the page, how many match in all, and when
+ * grouped, the rows just before and after it; the counts for the filters and the groups.
  */
-interface Planner {
-	grouped: (params: string) => Promise<{
-		page: { ids: number[]; total: number };
-		previous?: number;
-		next?: number;
-	}>;
-	facets: (
-		params: string,
-	) => Promise<{ kind: Record<string, number>; priority: Record<string, number> }>;
-	groupCounts: (params: string) => Promise<Record<string, number> | undefined>;
-	groupId: (params: string) => string | undefined;
-}
-
-const byTable: Planner = {
-	async grouped(params) {
-		const plan = planTable(table, params);
-		const fetched = await db
-			.select({ id: item.id })
-			.from(item)
-			.where(plan.where())
-			.orderBy(...plan.orderBy)
-			.limit(plan.limit)
-			.offset(plan.offset);
-		const [{ total }] = await db.select({ total: count() }).from(item).where(plan.where());
-		const { rows, previous, next } = plan.page(fetched);
-		return {
-			page: { ids: rows.map((row) => row.id), total },
-			previous: previous?.id,
-			next: next?.id,
-		};
-	},
-	facets: (params) =>
-		facetCounts(planTable(table, params), { kind: item.kind, priority: item.priority }, countBy),
-	groupCounts: (params) => groupCounts(planTable(table, params), countBy),
-	groupId: (params) => planTable(table, params).group?.id,
-};
-
-const byList: Planner = {
-	async grouped(params) {
+const planner = {
+	grouped: async (params: string) => {
 		const plan = planList(itemSql(), fromUrl(params));
 		const fetched = await plan.paged(withLabel(db.select({ id: item.id }).from(item).$dynamic()));
 		const { rows, previous, next } = plan.page(fetched);
@@ -256,19 +175,16 @@ const byList: Planner = {
 			next: next?.id,
 		};
 	},
-	facets: (params) =>
+	facets: (params: string) =>
 		planList(itemSql(), whereOf(fromUrl(params))).facets({
 			kind: item.kind,
 			priority: item.priority,
 		}),
-	groupCounts: (params) => planList(itemSql(), fromUrl(params)).groupCounts(),
-	groupId: (params) => planList(itemSql(), fromUrl(params)).group?.id,
+	groupCounts: (params: string) => planList(itemSql(), fromUrl(params)).groupCounts(),
+	groupId: (params: string) => planList(itemSql(), fromUrl(params)).group?.id,
 };
 
-describe.each([
-	["planTable", byTable],
-	["planList", byList],
-])("%s", (_, planner) => {
+describe("planList on a URL's parameters", () => {
 	/** The ids of the page the URL's parameters ask for, and how many match in all. */
 	const page = async (params: string) => (await planner.grouped(params)).page;
 	const grouped = planner.grouped;
@@ -419,14 +335,7 @@ test("searchMatch is nothing for an empty search", () => {
 	expect(searchMatch([], "boiler")).toBeUndefined();
 });
 
-test("planTable's key is the same for the same state, whatever the URL's order or extras", () => {
-	const key = planTable(table, "priority=low&kind=heating&sort=-due&other=1").key;
-	expect(planTable(table, "kind=heating&sort=-due&priority=low").key).toBe(key);
-	expect(planTable(table, "kind=cooling&sort=-due&priority=low").key).not.toBe(key);
-	expect(planTable(table, "sort=name&size=2&page=1").key).toBe("");
-});
-
-describe("planList", () => {
+describe("planList on typed queries", () => {
 	const query = (change: Partial<ListQuery<ItemColumns>> = {}): ListQuery<ItemColumns> => ({
 		q: "",
 		filters: {},
@@ -468,7 +377,7 @@ describe("planList", () => {
 		const where = whereOf(fromUrl("q=warm"));
 		expect(await planList(itemSql(), where).ids(10)).toEqual([1, 4, 6]);
 		expect(await planList(itemSql(), where).count()).toBe(3);
-		expect((await byList.grouped("q=warm&size=5")).page).toEqual({ ids: [1, 6, 4], total: 3 });
+		expect((await planner.grouped("q=warm&size=5")).page).toEqual({ ids: [1, 6, 4], total: 3 });
 		expect(await planList(itemSql(), where).facets({ kind: item.kind })).toEqual({
 			kind: { heating: 3 },
 		});

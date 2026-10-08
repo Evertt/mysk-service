@@ -93,8 +93,7 @@ export interface BulkActionRows {
 export type BulkTableName = keyof BulkActionRows;
 
 /**
- * A module's bulk actions for a table, as the table runs them: on a server-side list's `where`
- * (TRANSITIONAL: only lists with a definition can have them).
+ * A module's bulk actions for a table, as the table runs them: on a server-side list's `where`.
  */
 export type TableBulkAction<Table extends BulkTableName> = BulkAction<
 	BulkActionRows[Table],

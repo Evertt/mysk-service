@@ -147,31 +147,6 @@ describe("bulkChange", () => {
 		await expect(attempt).rejects.toMatchObject({ status: 400 });
 	});
 
-	test("takes the ids matching a list's URL parameters, if it has such a query", async () => {
-		const matching = vi.fn(async () => [2, 3]);
-		const seen: number[] = [];
-		const result = await bulkChange(
-			{ matching: "status=active" },
-			{
-				table: equipment,
-				label: equipment.serialNumber,
-				matching,
-				change: async (unit) => void seen.push(unit.id),
-			},
-		);
-		expect(matching).toHaveBeenCalledWith("status=active", expect.any(Number));
-		expect(seen).toEqual([2, 3]);
-		expect(result.done).toBe(2);
-	});
-
-	test("refuses a list's filters when the table has no such query", async () => {
-		const attempt = bulkChange(
-			{ matching: "status=active" },
-			{ table: equipment, label: equipment.serialNumber, change: async () => {} },
-		);
-		await expect(attempt).rejects.toMatchObject({ status: 400 });
-	});
-
 	test("refuses outside a tenant", async () => {
 		delete locals.tenant;
 		const attempt = bulkChange(

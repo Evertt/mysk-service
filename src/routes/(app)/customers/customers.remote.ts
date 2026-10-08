@@ -8,7 +8,7 @@ import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
+import { bulkChange, idsTarget } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
 import { type Problem, refuse } from "#lib/server/forms.js";
@@ -208,7 +208,7 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 });
 
 /** Deletes the selected customers, with the same refusals as deleting one. */
-export const bulkDeleteCustomers = command(bulkTarget, async (target) => {
+export const bulkDeleteCustomers = command(idsTarget, async (target) => {
 	requireMember();
 	const result = await bulkChange(target, {
 		table: customer,

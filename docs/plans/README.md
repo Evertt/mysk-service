@@ -60,7 +60,7 @@ parallel agents in their own worktrees.
 2. **Sections** (parallel) ✅ done: cleanup batch 1 for orders, materials + equipment, customers +
    engineers, schedule/members/portal/dashboard, activity, seed and e2e support. Contracts and
    invoicing get only the shared helpers here.
-3. **Typed table queries**: table-query steps 3–6 (orders, equipment, materials, then remove the
+3. **Typed table queries** ✅ done: table-query steps 3–6 (orders, equipment, materials, then remove the
    string path), then cleanup batch 2 (the data-table split).
 4. **Modules**: plugins steps 2–6 (server hooks and `afterCommit()`, the generator with zero
    modules, move contracts, move invoicing, remove the transition code).
