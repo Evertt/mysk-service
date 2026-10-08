@@ -2,7 +2,7 @@ import type { ColumnPinningState, TableFeature } from "@tanstack/svelte-table";
 
 /** The ids of the columns that `defaultColumnPinning` pins. */
 export const SELECT_COLUMN = "select";
-export const ACTIONS_COLUMN = "actions";
+const ACTIONS_COLUMN = "actions";
 
 interface ColumnDefLike {
 	id?: string;

@@ -11,7 +11,7 @@ import { baseURL } from "./lane.ts";
 
 export { baseURL } from "./lane.ts";
 export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
-export { linkInMail, type SentMail, sentMail } from "./mail.ts";
+export { linkInMail, sentMail } from "./mail.ts";
 export { isRemote } from "./remote-functions.ts";
 
 // --- Browser ---------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ export interface App {
 }
 
 /** A group row of a data table that's grouped by a column. */
-export interface TableGroup {
+interface TableGroup {
 	/** The group's value, e.g. `chiller`, `""` for none. */
 	key: string;
 	/** What it shows, e.g. `Chiller`. */

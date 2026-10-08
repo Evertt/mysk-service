@@ -41,7 +41,7 @@ export function urlGrammar(spec: TableUrlSpec) {
  * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
  * rows' query answered with (`queryKey(input)`).
  */
-export function isStale<TData extends RowData>(
+function isStale<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
 	list: List<any>,
 	key: string,

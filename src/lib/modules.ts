@@ -49,7 +49,7 @@ export type SlotLoader<Name extends SlotName> = () => Promise<{
 }>;
 
 /** What a module contributes besides its name; both its manifest and its registry entry have it. */
-export interface ModuleParts {
+interface ModuleParts {
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
 	icon: Component;
@@ -102,7 +102,7 @@ export interface OrderBulkRow {
 }
 
 /** The core tables where modules can add bulk actions, with the rows each passes. */
-export interface BulkActionRows {
+interface BulkActionRows {
 	orders: OrderBulkRow;
 }
 

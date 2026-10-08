@@ -29,7 +29,7 @@ interface SlotsWithProps {
  * The component parts a theme can style, keyed by their `data-slot` (generated from the
  * components, see `slots.ts`), with the props a theme can style per value.
  */
-export type ThemeSlots = Omit<Record<GeneratedSlot, Record<never, never>>, keyof SlotsWithProps> &
+type ThemeSlots = Omit<Record<GeneratedSlot, Record<never, never>>, keyof SlotsWithProps> &
 	SlotsWithProps;
 
 export type Slot = keyof ThemeSlots;

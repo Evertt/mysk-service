@@ -125,7 +125,7 @@ export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
  * Orders whose material lines hold stock: from scheduled on. A quote's lines are only a proposal,
  * and a cancelled order gives its materials back.
  */
-export const stockHoldingStatuses = [
+const stockHoldingStatuses = [
 	"scheduled",
 	"in_progress",
 	"completed",

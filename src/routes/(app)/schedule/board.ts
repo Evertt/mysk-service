@@ -16,7 +16,7 @@ export type ScheduleOrder = Schedule["orders"][number];
 export const DEFAULT_TIME = "09:00";
 
 /** Orders per engineer per day before the day counts as full; more is over-booked. */
-export const DAILY_CAPACITY = 3;
+const DAILY_CAPACITY = 3;
 
 /** A day as `yyyy-mm-dd`, as in the `?week=` search param and `<input type="date">`. */
 export const dayKey = (date: Date) => toDateInput(date);

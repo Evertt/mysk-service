@@ -22,7 +22,7 @@ import { contractLabels } from "./labels.js";
 import { type ContractLevel, contractStatus } from "./model.js";
 
 /** What each level includes. */
-export const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {
+const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {
 	basic: { labor: false, materials: false },
 	standard: { labor: true, materials: false },
 	premium: { labor: true, materials: true },
@@ -69,16 +69,16 @@ export const coveredBy = (contract: { number: string; level: ContractLevel }) =>
 
 // --- Response time ---------------------------------------------------------------------------
 
-export const slaStates = ["on_track", "at_risk", "overdue", "responded"] as const;
+const slaStates = ["on_track", "at_risk", "overdue", "responded"] as const;
 export type SlaState = (typeof slaStates)[number];
 
 /** At risk once less than this share of the response time is left. */
-export const AT_RISK_SHARE = 0.25;
+const AT_RISK_SHARE = 0.25;
 
 const HOUR = 60 * 60 * 1000;
 
 /** Whether this type of work has to be responded to within the contract's response time. */
-export const hasResponseTime = (type: OrderType) => type === "repair";
+const hasResponseTime = (type: OrderType) => type === "repair";
 
 /**
  * A covered order's response deadline and where it stands at `now`, or `null` if it has none (not

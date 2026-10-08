@@ -45,7 +45,7 @@ export const idsTarget = v.object({
 	),
 });
 
-export type IdsTarget = v.InferOutput<typeof idsTarget>;
+type IdsTarget = v.InferOutput<typeof idsTarget>;
 
 /** The selected rows of a server-side list, or all those matching its search and filters. */
 export type ListTarget<C> = IdsTarget | { matching: ListWhere<C> };
@@ -81,7 +81,7 @@ export async function targetIds<C>(target: ListTarget<C>, list?: () => ListSql<C
  * a bug: it's logged, and the record is skipped with a generic reason, so the result still says
  * what was done to the others.
  */
-export async function forEachRecord<T>(
+async function forEachRecord<T>(
 	records: T[],
 	requested: number,
 	label: (record: T) => string,

@@ -82,7 +82,7 @@ export const date = (required: Message = m.validation_date_required) =>
  * A required, trimmed text in a given format. The format is only checked once there's a value,
  * so an empty field gets just the "required" message.
  */
-export const formatted = (required: Message, pattern: RegExp, message: Message) =>
+const formatted = (required: Message, pattern: RegExp, message: Message) =>
 	v.pipe(
 		v.string(),
 		v.trim(),

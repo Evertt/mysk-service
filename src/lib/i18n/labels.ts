@@ -175,7 +175,5 @@ const withLabel = <T extends object>(entry: T, get: () => string) =>
 	};
 
 export type LabelKind = keyof typeof coreLabels;
-/** The values a kind of label has, e.g. the order statuses for `orderStatus`. */
-export type LabelValue<K extends LabelKind> = keyof (typeof coreLabels)[K] & string;
 
 export const { hasLabel, label, labelOrValue, withLabels, labelOptions } = defineLabels(coreLabels);

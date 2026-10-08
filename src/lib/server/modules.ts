@@ -37,7 +37,7 @@ export interface OrderFacts {
 }
 
 /** An order with its price before adjustments, in cents. */
-export interface PricedOrderFacts extends OrderFacts {
+interface PricedOrderFacts extends OrderFacts {
 	materials: number;
 	labor: number;
 }

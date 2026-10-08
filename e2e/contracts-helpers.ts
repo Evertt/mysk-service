@@ -9,7 +9,7 @@
 import { rows } from "./app.ts";
 
 /** The standard hourly rate for orders without an engineer (`#lib/orders/server/pricing.ts`), in cents. */
-export const STANDARD_RATE = 8500;
+const STANDARD_RATE = 8500;
 
 /**
  * The contract that covered each order, as `src/modules/contracts/coverage.ts` defines it:

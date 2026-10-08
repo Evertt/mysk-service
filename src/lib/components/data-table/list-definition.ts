@@ -89,7 +89,7 @@ export const oneOf = <const T extends readonly [string, ...string[]]>(
 // `none`. A kind is all a new filter needs.
 
 /** What a column of a list can do. */
-export interface ListColumn {
+interface ListColumn {
 	/** Its name in the URL, if not its id (see `TableUrlColumn.param`). */
 	param?: string;
 	/** Whether the list can be sorted by it. */

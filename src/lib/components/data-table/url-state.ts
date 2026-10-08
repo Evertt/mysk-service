@@ -43,7 +43,7 @@ export interface TableUrlState {
 }
 
 /** A column that can be filtered or sorted by through the URL. */
-export interface TableUrlColumn {
+interface TableUrlColumn {
 	/** The column's id in the table. */
 	id: string;
 	/**

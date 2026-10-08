@@ -40,7 +40,7 @@ export const invoiceState = (
 ): InvoiceState => (isOverdue(invoice, now) ? "overdue" : invoice.status);
 
 /** Where an invoice of each status can go next. */
-export const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
+const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
 	draft: ["sent", "void"],
 	sent: ["paid", "void"],
 	paid: [],

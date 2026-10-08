@@ -16,13 +16,7 @@ export const formatQuantity = (quantity: number, unit: MaterialUnit) =>
 	`${formatNumber(quantity)} ${label("materialUnitSymbol", unit)}`;
 
 // The stock levels are defined with the units, in `#lib/models.ts`.
-export {
-	lowStockThreshold,
-	lowStockThresholds,
-	type StockLevel,
-	stockLevel,
-	stockLevels,
-} from "#lib/models.js";
+export { lowStockThreshold, type StockLevel, stockLevel, stockLevels } from "#lib/models.js";
 
 const stockLevelDetails: Record<StockLevel, { icon: Component; variant: BadgeVariant }> = {
 	out: { icon: CircleXIcon, variant: "destructive" },

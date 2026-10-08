@@ -33,7 +33,7 @@ export type BulkTarget<Where = never> =
 	| ([Where] extends [never] ? never : { matching: Where });
 
 /** A record a bulk action left as it was, and why. */
-export interface BulkSkip {
+interface BulkSkip {
 	/** What the record is known by, e.g. an order's number. */
 	label: string;
 	reason: string;
@@ -52,7 +52,7 @@ export interface BulkResult {
 }
 
 /** A choice in an action's parameter, e.g. an engineer to assign. */
-export interface BulkOption {
+interface BulkOption {
 	value: string;
 	label: string;
 }

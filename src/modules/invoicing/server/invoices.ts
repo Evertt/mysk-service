@@ -21,7 +21,7 @@ import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
 
 /** Where invoice numbers are kept, for `nextNumber()`. */
-export const invoiceNumbers: NumberTarget = {
+const invoiceNumbers: NumberTarget = {
 	format: invoiceNumberFormat,
 	table: invoice,
 	column: invoice.number,
