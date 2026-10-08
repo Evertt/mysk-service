@@ -412,12 +412,14 @@ describe("in North, contracts count on orders", () => {
 			[atRisk, "SLA at risk"],
 		] as const) {
 			await page.getByLabel("Search orders…").fill(callOut.number);
+			await app.tableSettled();
 			await expect.poll(() => app.rowCount()).toBe(1);
 			expect(await tableRows().first().locator('[data-slot="badge"]').allInnerTexts()).toContain(
 				badge,
 			);
 		}
 		await page.getByLabel("Search orders…").fill("");
+		await app.tableSettled();
 		await expect.poll(() => tableRows().count()).toBeGreaterThan(1);
 		// The first page shows the latest orders: the call-outs among them that are overdue or at
 		// risk have their badge (the at-risk one may be older than the first page's orders).

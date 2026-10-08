@@ -292,7 +292,12 @@ describe("in North", () => {
 		expect(customers.length).toBeGreaterThan(0);
 		expect(customers.every((cell) => cell.includes(code))).toBe(true);
 
-		await page.getByRole("button", { name: `Customer: ${name}` }).click();
+		// The customer filter names the customer, and clears.
+		const filter = page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" });
+		await expect.poll(() => filter.innerText()).toContain(name);
+		await filter.click();
+		await page.getByRole("option", { name: "Clear filters" }).click();
+		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
 		await page.waitForLoadState("networkidle");
 		await expect.poll(() => app.rowCount()).toBe(await countIn("order", north.id));

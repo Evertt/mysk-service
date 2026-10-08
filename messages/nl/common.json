@@ -69,6 +69,12 @@
 	"common_table_filter_selected": "{count} geselecteerd",
 	"common_table_filter_no_results": "Geen resultaten gevonden.",
 	"common_table_filter_clear": "Filters wissen",
+	"common_table_filter_searching": "Zoeken…",
+	"common_table_filter_more": "Er zijn er meer: typ om ze te vinden.",
+	"common_table_loading": "Laden…",
+	"common_table_search_customers": "Klanten zoeken…",
+	"common_table_search_engineers": "Monteurs zoeken…",
+	"common_table_search_equipment": "Apparatuur zoeken…",
 	"common_table_rows": [
 		{
 			"declarations": [

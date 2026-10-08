@@ -10,8 +10,6 @@
 	"orders_edit_page_title": "Edit {number} · Orders",
 	"orders_breadcrumb_new": "New",
 	"orders_search": "Search orders…",
-	"orders_show_all": "Show all orders",
-	"orders_customer_filter": "Customer: {name}",
 	"orders_empty": "No orders found",
 	"orders_column_order": "Order",
 	"orders_column_customer": "Customer",

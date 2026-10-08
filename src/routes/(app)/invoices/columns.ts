@@ -38,7 +38,9 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
-		meta: { label: m.invoices_column_customer },
+		// By the customer's code, e.g. `?customer=CUST-0001`.
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		meta: { label: m.invoices_column_customer, filter: "set" },
 	}),
 	// The status, with sent invoices past their due date as overdue.
 	column.accessor("state", {

@@ -1,9 +1,20 @@
 import { form, query, type RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	inArray,
+	ne,
+	type SQL,
+	sql,
+	type SQLWrapper,
+} from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isEditableOrder, lineTotal } from "#lib/models.js";
+import { isDoneOrder, isEditableOrder, lineTotal, orderPriorities } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { atTime, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
@@ -23,70 +34,163 @@ import { checkLines, type LineProblem, saveOrderLines } from "#lib/server/orders
 import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
+import {
+	facetCounts,
+	nocase,
+	oneOf,
+	planTable,
+	rank,
+	type ServerTable,
+	tableParams,
+} from "#lib/server/table-query.js";
 
 import { orderFields } from "./order-schema.js";
+import { ordersUrl } from "./orders-url.js";
 
-/** All orders with their customer, equipment, engineer and totals, newest first. */
-export const getOrders = query(async () => {
-	requireMember();
-	const lines = db
-		.select({
-			orderId: orderLine.orderId,
-			count: count().as("line_count"),
-			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as(
-				"line_total",
-			),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("lines");
+/** The orders list's columns in SQL, for its URL state (`ordersUrl`). */
+const ordersTable: ServerTable = {
+	spec: ordersUrl,
+	columns: {
+		number: { sort: order.number },
+		customer: { sort: nocase(customer.name), filter: oneOf(customer.code) },
+		equipment: {
+			sort: [nocase(equipment.manufacturer), nocase(equipment.model)],
+			nullsLast: true,
+			filter: oneOf(equipment.serialNumber),
+		},
+		type: { sort: order.type, filter: oneOf(order.type) },
+		status: { sort: order.status, filter: oneOf(order.status) },
+		// By urgency rather than alphabetically.
+		priority: { sort: rank(order.priority, orderPriorities), filter: oneOf(order.priority) },
+		engineer: {
+			sort: nocase(engineer.name),
+			nullsLast: true,
+			filter: (ids) => inArray(order.engineerId, ids.map(Number).filter(Number.isSafeInteger)),
+		},
+		scheduledFor: { sort: order.scheduledFor, nullsLast: true },
+		createdAt: { sort: order.createdAt },
+	},
+	search: [
+		order.number,
+		customer.name,
+		customer.code,
+		equipment.manufacturer,
+		equipment.model,
+		equipment.serialNumber,
+		engineer.name,
+	],
+	tieBreaker: order.id,
+	scope: () => inTenant(order),
+};
 
-	const rows = await db
-		.select({
-			id: order.id,
-			number: order.number,
-			type: order.type,
-			status: order.status,
-			priority: order.priority,
-			description: order.description,
-			scheduledFor: order.scheduledFor,
-			completedAt: order.completedAt,
-			createdAt: order.createdAt,
-			laborHours: order.laborHours,
-			customer: { id: customer.id, code: customer.code, name: customer.name },
-			equipment: {
-				id: equipment.id,
-				model: equipment.model,
-				manufacturer: equipment.manufacturer,
-				serialNumber: equipment.serialNumber,
-			},
-			engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
-			lineCount: sql<number>`coalesce(${lines.count}, 0)`,
-			materialsTotal: sql<number>`coalesce(${lines.total}, 0)`,
-		})
+/**
+ * How many orders match `where` (with their customer, unit and engineer, as in the list): in all,
+ * or per value of `by`.
+ */
+function countOrders(where: SQL | undefined, by?: SQLWrapper) {
+	const counted = db
+		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
 		.from(order)
 		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
 		.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
 		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
-		.leftJoin(lines, eq(lines.orderId, order.id))
-		.where(inTenant(order))
-		.orderBy(desc(order.createdAt));
+		.where(where);
+	return by ? counted.groupBy(sql`${by}`) : counted;
+}
 
-	const facts = rows.map((row) => ({
+/**
+ * A page of the orders list with their customer, equipment, engineer and totals, searched,
+ * filtered and sorted as the URL's parameters say (`ordersUrl`, e.g. `status=quote&page=2`), and
+ * how many orders match in all.
+ */
+export const getOrders = query(tableParams, async (params) => {
+	requireMember();
+	const plan = planTable(ordersTable, params);
+	const [rows, [{ count: rowCount }]] = await Promise.all([
+		db
+			.select({
+				id: order.id,
+				number: order.number,
+				type: order.type,
+				status: order.status,
+				priority: order.priority,
+				description: order.description,
+				scheduledFor: order.scheduledFor,
+				completedAt: order.completedAt,
+				createdAt: order.createdAt,
+				laborHours: order.laborHours,
+				customer: { id: customer.id, code: customer.code, name: customer.name },
+				equipment: {
+					id: equipment.id,
+					model: equipment.model,
+					manufacturer: equipment.manufacturer,
+					serialNumber: equipment.serialNumber,
+				},
+				engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
+			})
+			.from(order)
+			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
+			.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+			.where(plan.where())
+			.orderBy(...plan.orderBy)
+			.limit(plan.limit)
+			.offset(plan.offset),
+		countOrders(plan.where()),
+	]);
+
+	// The page's lines (only), to price it.
+	const ids = rows.map((row) => row.id);
+	const lines = ids.length
+		? await db
+				.select({
+					orderId: orderLine.orderId,
+					count: count(),
+					total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`,
+				})
+				.from(orderLine)
+				.where(and(inTenant(orderLine), inArray(orderLine.orderId, ids)))
+				.groupBy(orderLine.orderId)
+		: [];
+	const linesOf = new Map(lines.map((line) => [line.orderId, line]));
+
+	const page = rows.map((row) => ({
+		...row,
+		lineCount: linesOf.get(row.id)?.count ?? 0,
+		materialsTotal: linesOf.get(row.id)?.total ?? 0,
+	}));
+	const facts = page.map((row) => ({
 		...row,
 		equipmentId: row.equipment?.id ?? null,
 		materials: row.materialsTotal,
 		hourlyRate: row.engineer?.hourlyRate,
 	}));
 	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
-	return rows.map((row, i) => ({
-		...row,
-		laborTotal: prices[i].labor,
-		total: prices[i].total,
-		/** From the tenant's modules, e.g. a response time about to be missed. */
-		tags: tags[i],
-	}));
+	return {
+		rows: page.map((row, i) => ({
+			...row,
+			laborTotal: prices[i].labor,
+			total: prices[i].total,
+			/** From the tenant's modules, e.g. a response time about to be missed. */
+			tags: tags[i],
+		})),
+		rowCount,
+		/** The state the rows are for (see `isStale`). */
+		key: plan.key,
+	};
+});
+
+/**
+ * How many orders have each type, status and priority, for the counts in the list's filters: of
+ * those matching the search and the other filters in the URL's parameters.
+ */
+export const getOrderFacets = query(tableParams, async (params) => {
+	requireMember();
+	return facetCounts(
+		planTable(ordersTable, params),
+		{ type: order.type, status: order.status, priority: order.priority },
+		countOrders,
+	);
 });
 
 /** One order with everything on it, plus other orders for the same equipment. */
@@ -319,7 +423,6 @@ export const createOrder = form(orderSchema, async (input, issue) => {
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
 	const number = await saveOrder(null, input, issue);
-	void getOrders().refresh();
 	redirect(303, `/orders/${number}`);
 });
 
@@ -329,7 +432,6 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map((p) => toIssue(issue, p)));
 	const number = await saveOrder(id, input, issue);
-	void getOrders().refresh();
 	void getOrder(number).refresh();
 	orderSaved(number);
 	redirect(303, `/orders/${number}`);
@@ -362,6 +464,5 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
 	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
-	void getOrders().refresh();
 	redirect(303, "/orders");
 });

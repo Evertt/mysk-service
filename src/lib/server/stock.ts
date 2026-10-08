@@ -3,14 +3,17 @@
  * movements, and `moveStock` is the only thing that changes it.
  */
 import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 
 import { formatNumber } from "#lib/format.js";
 import { label } from "#lib/i18n/labels.js";
 import {
 	holdsStock,
+	lowStockThresholds,
 	type MaterialUnit,
+	materialUnits,
 	type OrderStatus,
+	type StockLevel,
 	type StockMovementKind,
 } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
@@ -20,6 +23,19 @@ import { inTenant, requireTenant } from "#lib/server/session.js";
 
 /** A transaction on the app's database, as `db.transaction` passes it to its callback. */
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * A material's stock level in SQL, as `stockLevel()` works it out (with the same thresholds), to
+ * filter and sort by in the database, e.g. `stockLevelSql(material.stock, material.unit)`.
+ */
+export function stockLevelSql(stock: SQLWrapper, unit: SQLWrapper) {
+	const thresholds = materialUnits.map(
+		(each) => sql`when ${each} then ${lowStockThresholds[each]}`,
+	);
+	const threshold = sql`(case ${unit} ${sql.join(thresholds, sql` `)} end)`;
+	const [out, low, inStock]: StockLevel[] = ["out", "low", "in_stock"];
+	return sql<StockLevel>`(case when ${stock} <= 0 then ${out} when ${stock} < ${threshold} then ${low} else ${inStock} end)`;
+}
 
 /** A quantity to two decimals (the finest any unit is counted in), without floating-point noise. */
 export const roundQuantity = (quantity: number) => Math.round(quantity * 100) / 100 || 0;

@@ -3,7 +3,9 @@ import { rmSync } from "node:fs";
 import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import { type MaterialUnit, stockLevel } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
+import { material } from "#lib/server/db/schema.js";
 
 import type { Tenant } from "./session.ts";
 import {
@@ -15,6 +17,7 @@ import {
 	roundQuantity,
 	StockShortage,
 	stockChanges,
+	stockLevelSql,
 	type Transaction,
 	withBalances,
 } from "./stock.ts";
@@ -298,4 +301,45 @@ test("balances count back from the current stock, newest first", () => {
 		[2, 10.5],
 		[1, 10],
 	]);
+});
+
+describe("stockLevelSql", () => {
+	test("says what stockLevel() says, at and around every unit's threshold", async () => {
+		const cases: [number, MaterialUnit][] = [
+			[-1, "pcs"],
+			[0, "pcs"],
+			[1, "pcs"],
+			[9, "pcs"],
+			[10, "pcs"],
+			[0.01, "m"],
+			[49.99, "m"],
+			[50, "kg"],
+			[49.5, "l"],
+			[120, "l"],
+		];
+		await db.$client.execute("delete from material");
+		await db.insert(material).values(
+			cases.map(([stock, unit], i) => ({
+				id: i + 1,
+				organizationId: "north",
+				sku: `MAT-${i}`,
+				name: `Material ${i}`,
+				unit,
+				unitPrice: 100,
+				stock,
+			})),
+		);
+		const levels = await db
+			.select({
+				stock: material.stock,
+				unit: material.unit,
+				level: stockLevelSql(material.stock, material.unit),
+			})
+			.from(material)
+			.orderBy(material.id);
+		expect(levels.map((row) => row.level)).toEqual(
+			cases.map(([stock, unit]) => stockLevel(stock, unit)),
+		);
+		expect(new Set(levels.map((row) => row.level))).toEqual(new Set(["out", "low", "in_stock"]));
+	});
 });

@@ -12,7 +12,8 @@ import { m } from "#lib/paraglide/messages.js";
 import type { getMaterials } from "./materials.remote.js";
 import StockCell from "./stock-cell.svelte";
 
-export type MaterialRow = Awaited<ReturnType<typeof getMaterials>>[number];
+/** A row of the materials list, a page of which comes from the server (see `materialsUrl`). */
+export type MaterialRow = Awaited<ReturnType<typeof getMaterials>>["rows"][number];
 
 const column = createAppColumnHelper<MaterialRow>();
 

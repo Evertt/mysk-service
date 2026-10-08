@@ -67,6 +67,8 @@ export const customer = sqliteTable(
 		// Unique within a tenant; another tenant may use the same code.
 		uniqueIndex("customer_organization_code").on(table.organizationId, table.code),
 		uniqueIndex("customer_organization_id").on(table.organizationId, table.id),
+		// The lists' filters search and sort customers by name.
+		index("customer_organization_name").on(table.organizationId, table.name),
 	],
 );
 
@@ -94,6 +96,7 @@ export const engineer = sqliteTable(
 		uniqueIndex("engineer_organization_id").on(table.organizationId, table.id),
 		// A user is at most one engineer per tenant.
 		uniqueIndex("engineer_organization_user").on(table.organizationId, table.userId),
+		index("engineer_organization_name").on(table.organizationId, table.name),
 	],
 );
 
@@ -121,6 +124,9 @@ export const equipment = sqliteTable(
 		uniqueIndex("equipment_organization_id").on(table.organizationId, table.id),
 		// For orders and contract coverage, which must refer to a unit of their own customer.
 		uniqueIndex("equipment_customer_id").on(table.customerId, table.id),
+		// For the equipment list, which filters by customer and sorts by unit.
+		index("equipment_organization_customer").on(table.organizationId, table.customerId),
+		index("equipment_organization_unit").on(table.organizationId, table.manufacturer, table.model),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -146,6 +152,7 @@ export const material = sqliteTable(
 		// Unique within a tenant; another tenant may use the same sku.
 		uniqueIndex("material_organization_sku").on(table.organizationId, table.sku),
 		uniqueIndex("material_organization_id").on(table.organizationId, table.id),
+		index("material_organization_name").on(table.organizationId, table.name),
 	],
 );
 
@@ -174,6 +181,13 @@ export const order = sqliteTable(
 		// Unique within a tenant; another tenant may use the same number.
 		uniqueIndex("order_organization_number").on(table.organizationId, table.number),
 		uniqueIndex("order_organization_id").on(table.organizationId, table.id),
+		// For the orders list, which is newest first by default and filters by these.
+		index("order_organization_created").on(table.organizationId, table.createdAt),
+		index("order_organization_status").on(table.organizationId, table.status),
+		index("order_organization_customer").on(table.organizationId, table.customerId),
+		index("order_organization_engineer").on(table.organizationId, table.engineerId),
+		// A unit's (open) orders, e.g. in the equipment list.
+		index("order_equipment_status").on(table.equipmentId, table.status),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -204,6 +218,9 @@ export const orderLine = sqliteTable(
 		unitPrice: integer("unit_price").notNull(),
 	},
 	(table) => [
+		// An order's lines, and the orders using a material (in the materials list).
+		index("order_line_order").on(table.organizationId, table.orderId),
+		index("order_line_material").on(table.organizationId, table.materialId, table.orderId),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [order.organizationId, order.id],

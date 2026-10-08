@@ -6,7 +6,7 @@ import type { Component } from "svelte";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
 import { formatNumber } from "#lib/format.js";
 import { label, labelOptions, withLabels } from "#lib/i18n/labels.js";
-import { type MaterialUnit, materialUnits } from "#lib/models.js";
+import { type MaterialUnit, materialUnits, type StockLevel, stockLevels } from "#lib/models.js";
 
 /** Options for a unit select or faceted filter, e.g. `Pieces`. */
 export const unitOptions = labelOptions("materialUnit", materialUnits);
@@ -15,14 +15,14 @@ export const unitOptions = labelOptions("materialUnit", materialUnits);
 export const formatQuantity = (quantity: number, unit: MaterialUnit) =>
 	`${formatNumber(quantity)} ${label("materialUnitSymbol", unit)}`;
 
-export const stockLevels = ["out", "low", "in_stock"] as const;
-export type StockLevel = (typeof stockLevels)[number];
-
-/** Below this much a material is running low: 10 pieces, or 50 metres, kilos or litres. */
-export const lowStockThreshold = (unit: MaterialUnit) => (unit === "pcs" ? 10 : 50);
-
-export const stockLevel = (stock: number, unit: MaterialUnit): StockLevel =>
-	stock <= 0 ? "out" : stock < lowStockThreshold(unit) ? "low" : "in_stock";
+// The stock levels are defined with the units, in `#lib/models.ts`.
+export {
+	lowStockThreshold,
+	lowStockThresholds,
+	type StockLevel,
+	stockLevel,
+	stockLevels,
+} from "#lib/models.js";
 
 const stockLevelDetails: Record<StockLevel, { icon: Component; variant: BadgeVariant }> = {
 	out: { icon: CircleXIcon, variant: "destructive" },

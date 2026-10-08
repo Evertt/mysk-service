@@ -1,11 +1,22 @@
 import { form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
+import {
+	and,
+	count,
+	countDistinct,
+	desc,
+	eq,
+	inArray,
+	ne,
+	type SQL,
+	sql,
+	type SQLWrapper,
+} from "drizzle-orm";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
 import { label } from "#lib/i18n/labels.js";
-import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
+import { fitsUnit, isOpenOrder, type MaterialUnit, stockLevels } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
@@ -20,7 +31,16 @@ import {
 	user,
 } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
-import { moveStock, roundQuantity, withBalances } from "#lib/server/stock.js";
+import { moveStock, roundQuantity, stockLevelSql, withBalances } from "#lib/server/stock.js";
+import {
+	facetCounts,
+	nocase,
+	oneOf,
+	planTable,
+	rank,
+	type ServerTable,
+	tableParams,
+} from "#lib/server/table-query.js";
 
 import {
 	countFields,
@@ -28,6 +48,7 @@ import {
 	newMaterialFields,
 	receiveFields,
 } from "./material-schema.js";
+import { materialsUrl } from "./materials-url.js";
 
 /** How many different orders of the current tenant use a material. */
 const ordersUsing = async (materialId: number) => {
@@ -51,33 +72,100 @@ const historyFits = async (materialId: number, unit: MaterialUnit) => {
 	return movements.every((movement) => fitsUnit(movement.quantity, unit));
 };
 
-/** All materials with the number of orders that use them, by name. */
-export const getMaterials = query(async () => {
-	requireMember();
-	const usage = db
-		.select({
-			materialId: orderLine.materialId,
-			orders: countDistinct(orderLine.orderId).as("order_count"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.materialId)
-		.as("usage");
+/** The materials list's columns in SQL, for its URL state (`materialsUrl`). */
+const materialsTable = (): ServerTable => {
+	const level = stockLevelSql(material.stock, material.unit);
+	return {
+		spec: materialsUrl,
+		columns: {
+			name: { sort: nocase(material.name) },
+			sku: { sort: material.sku },
+			unit: { sort: material.unit, filter: oneOf(material.unit) },
+			unitPrice: { sort: material.unitPrice },
+			stock: { sort: material.stock },
+			// From out of stock to in stock rather than alphabetically.
+			stockLevel: {
+				sort: rank(level, stockLevels),
+				filter: (levels) => inArray(level, levels),
+			},
+			// Counted for every material only to sort by them (the page's own are counted apart).
+			orderCount: {
+				sort: sql`(select count(distinct ${orderLine.orderId}) from ${orderLine} where ${and(
+					inTenant(orderLine),
+					eq(orderLine.materialId, material.id),
+				)})`,
+			},
+		},
+		search: [material.name, material.sku],
+		tieBreaker: material.id,
+		scope: () => inTenant(material),
+	};
+};
 
-	return db
-		.select({
-			id: material.id,
-			sku: material.sku,
-			name: material.name,
-			unit: material.unit,
-			unitPrice: material.unitPrice,
-			stock: material.stock,
-			orderCount: sql<number>`coalesce(${usage.orders}, 0)`,
-		})
+/** How many materials match `where`: in all, or per value of `by`. */
+function countMaterials(where: SQL | undefined, by?: SQLWrapper) {
+	const counted = db
+		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
 		.from(material)
-		.leftJoin(usage, eq(usage.materialId, material.id))
-		.where(inTenant(material))
-		.orderBy(asc(material.name));
+		.where(where);
+	return by ? counted.groupBy(sql`${by}`) : counted;
+}
+
+/**
+ * A page of the materials list with the number of orders that use them, searched, filtered and
+ * sorted as the URL's parameters say (`materialsUrl`), and how many match in all.
+ */
+export const getMaterials = query(tableParams, async (params) => {
+	requireMember();
+	const plan = planTable(materialsTable(), params);
+	const [rows, [{ count: rowCount }]] = await Promise.all([
+		db
+			.select({
+				id: material.id,
+				sku: material.sku,
+				name: material.name,
+				unit: material.unit,
+				unitPrice: material.unitPrice,
+				stock: material.stock,
+			})
+			.from(material)
+			.where(plan.where())
+			.orderBy(...plan.orderBy)
+			.limit(plan.limit)
+			.offset(plan.offset),
+		countMaterials(plan.where()),
+	]);
+
+	// The page's usage (only).
+	const ids = rows.map((row) => row.id);
+	const usage = ids.length
+		? await db
+				.select({ materialId: orderLine.materialId, orders: countDistinct(orderLine.orderId) })
+				.from(orderLine)
+				.where(and(inTenant(orderLine), inArray(orderLine.materialId, ids)))
+				.groupBy(orderLine.materialId)
+		: [];
+	const usageOf = new Map(usage.map((row) => [row.materialId, row.orders]));
+
+	return {
+		rows: rows.map((row) => ({ ...row, orderCount: usageOf.get(row.id) ?? 0 })),
+		rowCount,
+		/** The state the rows are for (see `isStale`). */
+		key: plan.key,
+	};
+});
+
+/**
+ * How many materials have each unit and stock level, for the list's filters: of those matching
+ * the search and the other filters in the URL's parameters.
+ */
+export const getMaterialFacets = query(tableParams, async (params) => {
+	requireMember();
+	return facetCounts(
+		planTable(materialsTable(), params),
+		{ unit: material.unit, stockLevel: stockLevelSql(material.stock, material.unit) },
+		countMaterials,
+	);
 });
 
 /**
@@ -188,7 +276,6 @@ export const createMaterial = form(v.object(newMaterialFields), async (input, is
 		});
 		return sku;
 	});
-	void getMaterials().refresh();
 	redirect(303, `/materials/${sku}`);
 });
 
@@ -231,7 +318,6 @@ export const updateMaterial = form(
 			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 		});
 		// Send the updated material along, so the page we redirect to doesn't show the old one first.
-		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
 		redirect(303, `/materials/${existing.sku}`);
 	},
@@ -254,7 +340,6 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 			}),
 		m.materials_delete_referenced(),
 	);
-	void getMaterials().refresh();
 	redirect(303, "/materials");
 });
 
@@ -279,7 +364,6 @@ export const receiveStock = form(
 				note,
 			});
 		});
-		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
 		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},
@@ -308,7 +392,6 @@ export const countStock = form(
 			const [before, after] = [{ stock: current.stock }, { stock: counted }];
 			await recordActivity(tx, { action: "stock_adjusted", subject, before, after, note });
 		});
-		void getMaterials().refresh();
 		void getMaterial(existing.sku).refresh();
 		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},

@@ -169,6 +169,10 @@ export function linkInMail(to: string) {
 
 // --- Browser ---------------------------------------------------------------------------------
 
+/** Whether a request (its URL) calls the remote function `name`, e.g. `getOrders`. */
+export const isRemote = (url: string, name: string) =>
+	url.includes("/_app/remote/") && new URL(url).pathname.endsWith(`/${name}`);
+
 /** Waits until a page is interactive (see the root layout), or settled if it errored. */
 export const hydrated = (page: Page) =>
 	Promise.race([
@@ -230,6 +234,11 @@ export interface App {
 	 * unsorted) until it's sorted that way.
 	 */
 	sortBy(column: string, direction: "ascending" | "descending"): Promise<void>;
+	/**
+	 * Waits until a server-side table shows the rows for its search, filters, sorting and page
+	 * (it's `aria-busy` until they're in), e.g. after clicking a header or typing a search.
+	 */
+	tableSettled(): Promise<void>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
 	/**
@@ -253,6 +262,11 @@ export function useApp({
 	const errors: string[] = [];
 	let expecting = false;
 
+	/** Until a (server-side) table shows the rows for its state: it's `aria-busy` until then. */
+	const settled = async () => {
+		await page.waitForLoadState("networkidle");
+		await page.locator('[data-slot="data-table"][aria-busy="true"]').waitFor({ state: "detached" });
+	};
 	const app: App = {
 		get page() {
 			return page;
@@ -310,12 +324,14 @@ export function useApp({
 			const state = async () => (await header.textContent())?.replace(/\s+/g, " ").trim();
 			for (let clicks = 0; clicks < 3; clicks++) {
 				const before = await state();
-				if (before?.endsWith(`sorted ${direction}`)) return;
+				if (before?.endsWith(`sorted ${direction}`)) return settled();
 				await header.click();
 				await expect.poll(state).not.toBe(before);
 			}
 			expect(await state()).toMatch(new RegExp(`sorted ${direction}$`));
+			await settled();
 		},
+		tableSettled: () => settled(),
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.

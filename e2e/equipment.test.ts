@@ -4,6 +4,7 @@ import { formatCents, formatDate } from "../src/lib/format.ts";
 import {
 	cents,
 	countIn,
+	isRemote,
 	covered,
 	organizations,
 	priceOf,
@@ -82,12 +83,14 @@ async function listedSerials() {
 	await app.go("/equipment");
 	await page.getByLabel("Rows per page").click();
 	await page.getByRole("option", { name: "100", exact: true }).click();
+	await app.tableSettled();
 	const found: string[] = [];
 	for (;;) {
 		found.push(...(await shownSerials()));
 		const next = page.getByRole("button", { name: "Go to next page" });
 		if (await next.isDisabled()) break;
 		await next.click();
+		await app.tableSettled();
 	}
 	return found.sort();
 }
@@ -322,6 +325,7 @@ describe("in North", () => {
 		expect(first).toMatch(/Covered|Expired/);
 
 		await page.getByRole("button", { name: "Go to next page" }).click();
+		await app.tableSettled();
 		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 2 of/);
 		expect(await bodyRows().first().innerText()).not.toBe(first);
 
@@ -339,6 +343,50 @@ describe("in North", () => {
 		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 1 of/);
 		const [top] = await shownSerials();
 		expect(busiest.map((row) => row.serial)).toContain(top);
+	});
+
+	test("the server sends one page at a time", async () => {
+		const { page } = app;
+		const total = await countIn("equipment", north.id);
+		const second = await rows<{ serial: string }>(
+			`select serial_number as serial from equipment where organization_id = ?
+			 order by manufacturer collate nocase, model collate nocase, id limit 20 offset 20`,
+			[north.id],
+		);
+		await app.go("/equipment");
+		const [response] = await Promise.all([
+			page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
+			page.getByRole("button", { name: "Go to next page" }).click(),
+		]);
+		// Twenty units came, not all of them.
+		expect((await response.text()).split("serialNumber").length - 1).toBe(20);
+		await app.tableSettled();
+		expect(await shownSerials()).toEqual(second.map((row) => row.serial));
+		expect(await app.rowCount()).toBe(total);
+	});
+
+	test("filtering by customer, found by searching the filter", async () => {
+		const { page } = app;
+		const [owner] = await rows<{ code: string; name: string; units: number }>(
+			`select c.code, c.name, count(*) as units from equipment e join customer c on c.id = e.customer_id
+			 where e.organization_id = ? group by c.id order by units desc, c.id limit 1`,
+			[north.id],
+		);
+		await app.go("/equipment");
+		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await page.getByPlaceholder("Search customers…").fill(owner.code.toLowerCase());
+		await page.getByRole("option", { name: new RegExp(owner.code) }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("customer") === owner.code);
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(owner.units);
+		for (const row of await bodyRows().allInnerTexts()) expect(row).toContain(owner.code);
+		expect(
+			await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).innerText(),
+		).toContain(owner.name);
+		await page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 	});
 
 	test("the detail page shows the unit's service history, newest first", async () => {
@@ -572,6 +620,26 @@ describe("in South", () => {
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
 		expect(await listedSerials()).toEqual(await serialsIn(south.id));
 		expect(await app.rowCount()).toBe(await countIn("equipment", south.id));
+	});
+
+	test("the list never shows North's units, whatever its filters say", async () => {
+		const { page } = app;
+		const northCode = await value<string>(
+			`select code from customer where organization_id = ?
+			 and code not in (select code from customer where organization_id = ?) order by code limit 1`,
+			[north.id, south.id],
+		);
+		await app.go(`/equipment?customer=${northCode}`);
+		expect(await app.rowCount()).toBe(0);
+
+		// The filters count South's units only.
+		await app.go("/equipment");
+		await page.locator('[data-slot="popover-trigger"]', { hasText: "Category" }).click();
+		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
+			Number(/(\d+)$/.exec(text.trim())![1]),
+		);
+		expect(counts.reduce((sum, n) => sum + n, 0)).toBe(await countIn("equipment", south.id));
+		await page.keyboard.press("Escape");
 	});
 
 	test("North's units are a 404", async () => {

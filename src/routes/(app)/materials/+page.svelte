@@ -1,11 +1,20 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import MaterialsTable from "./materials-table.svelte";
-	import { getMaterials } from "./materials.remote.js";
+	import { materialsUrl } from "./materials-url.js";
+	import { getMaterialFacets, getMaterials } from "./materials.remote.js";
+
+	// The server pages, filters and sorts the materials, as the URL says (see the orders page).
+	const query = $derived(serverTableQuery(page.url.searchParams, materialsUrl));
+	// Both start at once.
+	const materials = $derived(getMaterials(query.rows));
+	const facets = $derived(getMaterialFacets(query.facets));
 </script>
 
 <svelte:head>
@@ -21,4 +30,4 @@
 	{/snippet}
 </PageHeader>
 
-<MaterialsTable materials={await getMaterials()} />
+<MaterialsTable materials={await materials} facets={await facets} />

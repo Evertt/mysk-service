@@ -15,7 +15,8 @@
 	const table = useTableContext();
 	const pagination = $derived(table.atoms.pagination.get());
 	const selectedCount = $derived(table.getFilteredSelectedRowModel().rows.length);
-	const filteredCount = $derived(table.getFilteredRowModel().rows.length);
+	// All the rows that match, on every page (for a server-side table, as the server counted them).
+	const filteredCount = $derived(table.getRowCount());
 </script>
 
 <div class="flex flex-wrap items-center justify-between gap-4">
