@@ -3,13 +3,17 @@
 	The dispatch board for a week: a row per engineer (and one for unassigned orders) and a column
 	per day, with the backlog of unscheduled orders beside it. Orders are planned by dragging them
 	onto a cell, or with the schedule dialog. Narrow screens get a list per day instead.
+
+	Like a list page, the board fits the viewport on wide screens (that aren't too low, see the
+	`desktop` variant) and scrolls inside, both ways: its row of days and its column of engineers
+	stay in view. Elsewhere the page scrolls, and the day headings of the list stick to the top.
 -->
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { isHttpError } from "@sveltejs/kit";
 	import { toast } from "svelte-sonner";
-	import { SvelteSet } from "svelte/reactivity";
+	import { MediaQuery, SvelteSet } from "svelte/reactivity";
 
 	import { specialties } from "#lib/components/engineers/display.js";
 	import { atTime, timeOfDay } from "#lib/schema.js";
@@ -39,6 +43,10 @@
 	let { schedule, week }: { schedule: Schedule; week: string } = $props();
 
 	const today = dayKey(new Date());
+	// Where the board is shown (`lg`), the page fits the viewport (see `(app)/+layout.svelte`); below
+	// that, the list scrolls with the page. Assumed wide until known, so the board doesn't jump on
+	// load; on a narrower screen the switch happens before anything's scrolled.
+	const wide = new MediaQuery("min-width: 64rem", true);
 	const days = $derived(weekDays(schedule.start));
 	const engineers = $derived(boardEngineers(schedule.engineers, schedule.orders));
 	// Unassigned work first, next to the backlog: it's what still needs an engineer.
@@ -146,18 +154,29 @@
 	} as const;
 </script>
 
-<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
-	<section aria-label={m.schedule_week()} class="min-w-0">
-		<!-- Wide screens: engineers × days. -->
-		<div class="hidden overflow-x-auto rounded-lg border bg-card lg:block">
+<div
+	data-fill-viewport={wide.current || undefined}
+	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem] lg:desktop:min-h-0 lg:desktop:grid-rows-[minmax(0,1fr)]"
+>
+	<section
+		aria-label={m.schedule_week()}
+		class="min-w-0 lg:desktop:flex lg:desktop:max-h-full lg:desktop:flex-col"
+	>
+		<!-- Wide screens: engineers × days. The header row and the engineers' column are sticky and
+			opaque, above the cells (z-10 to z-30). Scrolling a card into view keeps it clear of them. -->
+		<div
+			class="hidden min-h-0 scroll-ps-32 scroll-pt-10 overflow-auto rounded-lg border bg-card lg:block"
+		>
 			<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
-				<div class="sticky left-0 bg-card p-2"></div>
-				{#each days as day (dayKey(day))}
+				<div class="sticky start-0 top-0 z-30 border-e border-b bg-card p-2"></div>
+				{#each days as day, i (dayKey(day))}
 					{@const isToday = dayKey(day) === today}
 					{@const count = ordersOn(day).length}
 					<div
+						data-day={dayKey(day)}
 						class={cn(
-							"flex items-baseline justify-between gap-1 border-l p-2",
+							"sticky top-0 z-20 flex items-baseline justify-between gap-1 border-b bg-card p-2",
+							i > 0 && "border-s",
 							isToday && "bg-accent",
 						)}
 						aria-current={isToday ? "date" : undefined}
@@ -174,8 +193,13 @@
 					</div>
 				{/each}
 
-				{#each rows as row (row.id)}
-					<div class="sticky left-0 z-10 flex flex-col gap-0.5 border-t bg-card p-2">
+				{#each rows as row, r (row.id)}
+					<div
+						class={cn(
+							"sticky start-0 z-10 flex flex-col gap-0.5 border-e bg-card p-2",
+							r > 0 && "border-t",
+						)}
+					>
 						{#if row.id === "unassigned"}
 							<span class="font-medium">{row.name}</span>
 						{:else}
@@ -190,7 +214,7 @@
 							{row.droppable ? row.detail : m.schedule_inactive()}
 						</span>
 					</div>
-					{#each days as day (dayKey(day))}
+					{#each days as day, i (dayKey(day))}
 						{@const key = cellKey(row.id, day)}
 						{@const orders = cells.get(key) ?? []}
 						{@const level = load(orders.length)}
@@ -199,7 +223,9 @@
 							aria-label={m.schedule_cell({ name: row.name, day: formatLongDay(day) })}
 							data-load={level}
 							class={cn(
-								"flex min-h-24 min-w-0 flex-col gap-1 border-t border-l p-1 transition-colors",
+								"flex min-h-24 min-w-0 flex-col gap-1 p-1 transition-colors",
+								r > 0 && "border-t",
+								i > 0 && "border-s",
 								dayKey(day) === today && "bg-accent/40",
 								row.id !== "unassigned" && level === "over" && "bg-destructive/5",
 								target === key && "bg-primary/10 ring-2 ring-primary ring-inset",
@@ -238,8 +264,9 @@
 				{@const orders = ordersOn(day)}
 				{@const isToday = dayKey(day) === today}
 				<section aria-label={formatLongDay(day)} class="flex flex-col gap-2">
+					<!-- Sticks to the top while its day's orders scroll by, opaque above them. -->
 					<h2
-						class="flex items-center gap-2 text-sm font-medium"
+						class="sticky top-0 z-10 -my-1.5 flex items-center gap-2 bg-background py-1.5 text-sm font-medium"
 						aria-current={isToday ? "date" : undefined}
 					>
 						{formatLongDay(day)}
@@ -266,7 +293,7 @@
 		size="sm"
 		role="region"
 		aria-label={m.schedule_backlog()}
-		class="lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)]"
+		class="lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)] lg:desktop:max-h-full"
 	>
 		<Card.Header>
 			<Card.Title>{m.schedule_backlog()}</Card.Title>
