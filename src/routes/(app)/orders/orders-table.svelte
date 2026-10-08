@@ -41,7 +41,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.orders_search()}>
 			{#if customer}
 				<Button
@@ -62,7 +62,7 @@
 				options={priorityOptions}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.orders_empty()} />
+		<table.Table emptyTitle={m.orders_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -221,6 +221,39 @@ describe("in North", () => {
 		expect(await bodyRows().count()).toBe(20);
 	});
 
+	test("on a laptop screen the list fits it, its rows scrolling under the header", async () => {
+		const { page } = app;
+		await page.setViewportSize({ width: 1440, height: 900 });
+		try {
+			await app.go("/equipment");
+			expect(await bodyRows().count()).toBe(20);
+			const pagination = await page.getByRole("button", { name: "Go to next page" }).boundingBox();
+			expect(pagination!.y + pagination!.height).toBeLessThanOrEqual(900);
+			expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(900);
+
+			const area = page.locator('[data-slot="data-table"] [data-slot="table-container"]');
+			const header = page.getByRole("columnheader", { name: "Unit" });
+			const top = (await area.boundingBox())!.y;
+			await area.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+			await expect.poll(() => area.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+			expect((await header.boundingBox())!.y).toBeCloseTo(top, 0);
+			// Nothing covers it: it's what's at its place on the screen.
+			const box = (await header.boundingBox())!;
+			expect(
+				await page.evaluate(
+					({ x, y }) => document.elementFromPoint(x, y)?.closest("th")?.textContent?.trim(),
+					{ x: box.x + 8, y: box.y + box.height / 2 },
+				),
+			).toBe("Unit");
+			// And the pagination is still in view.
+			expect(await page.getByRole("button", { name: "Go to next page" }).boundingBox()).toEqual(
+				pagination,
+			);
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 1000 });
+		}
+	});
+
 	test("searching finds a unit by its serial number, case-insensitively", async () => {
 		const { page } = app;
 		const { serial: busy } = await busiest(north.id);

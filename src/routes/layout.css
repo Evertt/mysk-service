@@ -35,6 +35,9 @@
 	}
 }
 
+/* Screens big enough for a list page to fit the viewport, with its rows scrolling inside the
+   table (`fillViewport` in `data-table.svelte`): not phones, also not on their side. */
+@custom-variant desktop (@media (width >= 48rem) and (height >= 30rem));
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 

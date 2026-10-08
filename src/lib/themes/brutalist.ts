@@ -121,7 +121,9 @@ export default defineTheme({
 		"breadcrumb-link": {
 			base: "font-bold underline decoration-2 underline-offset-4 hover:bg-primary",
 		},
-		"data-table": { base: `rounded-none border-0 ${hardShadow.lg}` },
+		"data-table": {
+			base: `rounded-none border-0 ${hardShadow.lg} [--data-table-surface:var(--card)]`,
+		},
 		"dialog-content": { base: `${outlined} ${hardShadow.lg}` },
 		separator: { base: "bg-foreground" },
 		"sidebar-container": { base: "group-data-[side=left]:border-e-2" },

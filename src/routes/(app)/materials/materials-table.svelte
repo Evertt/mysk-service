@@ -38,7 +38,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.materials_search()}>
 			<FacetedFilter columnId="unit" title={m.materials_unit()} options={unitOptions} />
 			<FacetedFilter
@@ -47,7 +47,7 @@
 				options={stockLevelOptions}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.materials_empty()} />
+		<table.Table emptyTitle={m.materials_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>

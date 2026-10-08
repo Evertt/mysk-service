@@ -15,12 +15,20 @@
 </script>
 
 <script lang="ts">
-	import { renderComponent } from "@tanstack/svelte-table";
+	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
 
 	import FacetedFilter from "./faceted-filter.svelte";
+	import RowActions from "./row-actions.svelte";
 	import { createAppColumnHelper, createAppTable } from "./table.svelte.js";
 
-	let { items }: { items: Item[] } = $props();
+	let {
+		items,
+		columnPinning,
+	}: {
+		items: Item[];
+		/** Instead of the default pinning (the selection and name columns, and the actions). */
+		columnPinning?: ColumnPinningState;
+	} = $props();
 
 	const statusOptions = [
 		{ value: "draft", label: "Draft" },
@@ -68,8 +76,14 @@
 			enableHiding: false,
 			meta: { label: "Due" },
 		}),
+		column.display({
+			id: "actions",
+			cell: ({ row }) => renderComponent(RowActions, { label: row.original.name }),
+		}),
 	]);
 
+	// The initial pinning, read once.
+	// svelte-ignore state_referenced_locally
 	const table = createAppTable({
 		columns,
 		get data() {
@@ -79,6 +93,7 @@
 		initialState: {
 			sorting: [{ id: "name", desc: false }],
 			pagination: { pageIndex: 0, pageSize: 5 },
+			...(columnPinning && { columnPinning }),
 		},
 	});
 </script>

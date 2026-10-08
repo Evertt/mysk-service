@@ -117,7 +117,9 @@ export default defineTheme({
 		"command-item": {
 			base: "rounded-xl font-semibold data-selected:bg-accent data-selected:text-accent-foreground",
 		},
-		"data-table": { base: `rounded-3xl border-0 bg-card ring-1 ring-border/60 ${softGlow}` },
+		"data-table": {
+			base: `rounded-3xl border-0 bg-card ring-1 ring-border/60 ${softGlow} [--data-table-surface:var(--card)]`,
+		},
 		"dialog-content": { base: "rounded-3xl" },
 		"dropdown-menu-content": { base: floating },
 		"dropdown-menu-item": { base: menuItem },

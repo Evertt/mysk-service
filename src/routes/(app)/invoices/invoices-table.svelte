@@ -34,11 +34,11 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.invoices_search()}>
 			<FacetedFilter columnId="status" title={m.invoices_column_status()} options={stateOptions} />
 		</table.Toolbar>
-		<table.Table emptyTitle={m.invoices_empty()} />
+		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>

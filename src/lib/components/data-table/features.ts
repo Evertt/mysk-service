@@ -1,6 +1,7 @@
 import {
 	columnFacetingFeature,
 	columnFilteringFeature,
+	columnPinningFeature,
 	columnVisibilityFeature,
 	constructFilterFn,
 	createFacetedRowModel,
@@ -20,6 +21,8 @@ import {
 	sortFn_text,
 	tableFeatures,
 } from "@tanstack/svelte-table";
+
+import { defaultColumnPinningFeature } from "./default-pinning.js";
 
 export interface DataTableColumnMeta {
 	/**
@@ -47,7 +50,7 @@ const filterFn_oneOf = constructFilterFn({
  * The table features every data table in the app opts into. TanStack Table v9 is tree-shaken:
  * only registered features, row models and sort/filter functions end up in the bundle.
  */
-export const features = tableFeatures({
+const tableFeatureSet = tableFeatures({
 	rowSortingFeature,
 	rowPaginationFeature,
 	rowSelectionFeature,
@@ -55,6 +58,7 @@ export const features = tableFeatures({
 	columnFacetingFeature,
 	columnVisibilityFeature,
 	globalFilteringFeature,
+	columnPinningFeature,
 	columnMeta: metaHelper<DataTableColumnMeta>(),
 	sortedRowModel: createSortedRowModel(),
 	filteredRowModel: createFilteredRowModel(),
@@ -72,5 +76,16 @@ export const features = tableFeatures({
 		text: sortFn_text,
 	},
 });
+
+/**
+ * Plus `defaultColumnPinningFeature`, which pins each table's identifying and actions columns.
+ * `tableFeatures()` only types TanStack's own features (a custom one would be declared on
+ * table-core's `Plugins`, which isn't a dependency we can augment), and this one adds no state
+ * or APIs, so it's added at runtime only, after `columnPinningFeature`.
+ */
+export const features = {
+	...tableFeatureSet,
+	defaultColumnPinningFeature,
+} as typeof tableFeatureSet;
 
 export type Features = typeof features;
