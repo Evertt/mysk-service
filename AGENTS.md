@@ -53,9 +53,16 @@ helpers are in `src/lib/server/session.ts`:
 - An optional module's tables reference core tables, never the reverse; core sections don't know
   about modules. A module adds to core pages through `slots` in `src/lib/modules.ts` (components
   that load their own data with `requireModule()`), and to core server logic through hooks in
-  `src/lib/server/modules.ts`; both only take part for tenants that have the module. Anything that
-  shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
-  which applies the modules' adjustments.
+  `src/lib/server/modules.ts`; both only take part for tenants that have the module. A module
+  declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
+  `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
+  `tag`, `billableItems`: asked in parallel about a batch, answers merged in registry order, an
+  error fails the request) or an event after commit (`committed`: in registry order once the
+  transaction has committed, via `afterCommit()` in `src/lib/server/db/serialize.ts`; errors are
+  logged, not thrown). Core calls each hook from one function (`priceOrders()`, `tagOrders()`,
+  `orderCommitted()`, `billableItems()`); a new extension point is added when a module needs it.
+  Anything that shows or adds up order totals prices them with `priceOrders()`
+  (`src/lib/server/pricing.ts`), which applies the modules' adjustments.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
   `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing

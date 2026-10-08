@@ -128,17 +128,21 @@ describe("priceOrders", () => {
 	test("applies each module's adjustments, in the modules' order, to the orders they name", async () => {
 		const seen: unknown[] = [];
 		const halfLabour: ServerModule = {
-			async adjustPrices(orders) {
-				seen.push(...orders);
-				return new Map([[2, [{ label: "Half labour", amount: -orders[1].labor / 2 }]]]);
+			orders: {
+				async adjustPrices(orders) {
+					seen.push(...orders);
+					return new Map([[2, [{ label: "Half labour", amount: -orders[1].labor / 2 }]]]);
+				},
 			},
 		};
 		const fee: ServerModule = {
-			async adjustPrices() {
-				return new Map([[2, [{ label: "Fee", amount: 500 }]]]);
+			orders: {
+				async adjustPrices() {
+					return new Map([[2, [{ label: "Fee", amount: 500 }]]]);
+				},
 			},
 		};
-		const tagsOnly: ServerModule = { tagOrders: async () => new Map() };
+		const tagsOnly: ServerModule = { orders: { tag: async () => new Map() } };
 
 		const [first, second] = await priceOrders([order(1), order(2)], [halfLabour, tagsOnly, fee]);
 		expect(first).toEqual({ materials: 10_000, labor: 12_000, adjustments: [], total: 22_000 });
@@ -151,7 +155,7 @@ describe("priceOrders", () => {
 
 	test("doesn't ask the modules about no orders", async () => {
 		const module: ServerModule = {
-			adjustPrices: () => Promise.reject(new Error("Shouldn't be asked")),
+			orders: { adjustPrices: () => Promise.reject(new Error("Shouldn't be asked")) },
 		};
 		expect(await priceOrders([], [module])).toEqual([]);
 	});

@@ -15,8 +15,10 @@
  * - here too, `bulkActions`: actions a module adds to a core table's selection (e.g. invoicing's
  *   "Create invoice" on the orders list), loaded by `module-bulk-actions.svelte.ts` in
  *   `src/routes/(app)/` only for the modules the tenant has;
- * - `#lib/server/modules.ts`: server hooks, e.g. adjusting an order's price (applied by
- *   `priceOrders()` in `#lib/server/pricing.ts`) or tagging orders (`tagOrders()`).
+ * - `#lib/server/modules.ts`: server hooks, grouped by the core domain they belong to and named
+ *   for their kind (a collector, an event after commit), e.g. `orders.adjustPrices` (applied by
+ *   `priceOrders()` in `#lib/server/pricing.ts`), `orders.tag` (`tagOrders()`) and
+ *   `orders.committed` (`orderCommitted()`).
  */
 import type { RouteId } from "$app/types";
 import FileCheckIcon from "@lucide/svelte/icons/file-check";

@@ -10,7 +10,7 @@ import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";
-import { orderSaved, tagOrders } from "#lib/server/modules.js";
+import { orderCommitted, tagOrders } from "#lib/server/modules.js";
 import { nextNumber } from "#lib/server/numbering.js";
 import { completedAt, notEditable, removeOrder } from "#lib/server/order-changes.js";
 import {
@@ -264,7 +264,7 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 		throw error;
 	});
 	void getOrder(number).refresh();
-	orderSaved(number);
+	orderCommitted({ number });
 	redirect(303, `/orders/${number}`);
 });
 
