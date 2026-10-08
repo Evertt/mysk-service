@@ -61,6 +61,33 @@ helpers are in `src/lib/server/session.ts`:
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
   `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
+## Server-side lists
+
+Orders, equipment and materials page, filter and sort in the database. A list is three layers (the
+orders list in `src/routes/(app)/orders/` is the example):
+
+1. **The definition**, `defineList()` in `<section>-list.ts` (`orders-list.ts`; isomorphic, no
+   server imports): the columns, what each sorts, groups and filters by, and the filter's value
+   type (`code`, `id`, `oneOf(values)`). It makes the valibot schemas `list.query` and `list.where`,
+   the typed `ListQuery`/`ListWhere`, and the URL spec. The table's URL state is read into a query
+   with `toListQuery()`; the URL stays lenient (bad values are dropped), the remote query strict
+   (a malformed argument is a 400).
+2. **The SQL**, `ListSql` from a per-request factory (`ordersSql()`) in a route-local
+   `<section>-list.server.ts`: the SQL of every column the definition sorts, groups or filters by
+   (a missing or extra one is a type error), the search columns, the id and the tenant scope. Write
+   the joins once in a helper generic over the query (`withOrderJoins`, drizzle's `$dynamic()`
+   pattern) and use it for the rows and in `ListSql.from`, so rows, counts, facets and bulk ids can't
+   drift apart. Never build a `ListSql` at module scope: `inTenant()` reads the request.
+3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/table-query.ts`): `paged()` for the
+   rows, and `count()`, `facets()`, `groupCounts()` and `ids()`, each written once.
+
+Remote queries take `list.query` (the rows) or `list.where` (the filters' counts) as their argument
+and answer with the `query` and `queryKey()` they ran, which the table compares with its state
+(`isStale()`, `serverTableLoading()`). Bulk commands take ids or the list's where:
+`listTarget(list.where)` for a list (and `list: ordersSql` to `bulkChange()`), `idsTarget` for a
+client-side table. A new column is one edit in the definition, one in `ListSql` and one in the
+table's columns (`columns.spec.ts` checks the table against `list.urlSpec`).
+
 ## Database schema
 
 The schema is `src/lib/server/db/schema.ts`; the database gets it through the migrations in
