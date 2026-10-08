@@ -8,12 +8,14 @@ import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
-import { refuseIfReferenced } from "#lib/server/db/errors.js";
+import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
-import { priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
+import { type Problem, refuse } from "#lib/server/forms.js";
+import { nextNumber } from "#lib/server/numbering.js";
+import { materialsPerOrder, priceOrders } from "#lib/server/pricing.js";
+import { deleteAndLog } from "#lib/server/records.js";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 import { customerFields } from "./customer-schema.js";
 
@@ -62,15 +64,7 @@ export const getCustomer = query(v.string(), async (code) => {
 	});
 	if (!found) error(404, m.customers_code_not_found({ code }));
 
-	const materials = db
-		.select({
-			orderId: orderLine.orderId,
-			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("materials");
+	const materials = materialsPerOrder();
 	const orders = await db
 		.select({
 			id: order.id,
@@ -84,7 +78,7 @@ export const getCustomer = query(v.string(), async (code) => {
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(and(eq(order.customerId, found.id), inTenant(order)))
 		.orderBy(desc(order.createdAt), desc(order.id));
 
@@ -114,6 +108,12 @@ async function knownCountries() {
 	);
 }
 
+/** The form problem of a country that isn't one of the known ones, if it isn't. */
+async function countryProblems(country: string): Promise<Problem<"country">[]> {
+	if ((await knownCountries()).includes(country)) return [];
+	return [{ field: "country", message: m.customers_country_unknown() }];
+}
+
 /** Everything the customer form needs to choose from. */
 export const getCustomerFormOptions = query(async () => {
 	requireMember();
@@ -122,17 +122,10 @@ export const getCustomerFormOptions = query(async () => {
 
 export const createCustomer = form(v.object(customerFields), async (input, issue) => {
 	const { organizationId } = requireMember();
-	if (!(await knownCountries()).includes(input.country)) {
-		invalid(issue.country(m.customers_country_unknown()));
-	}
+	refuse(issue, await countryProblems(input.country));
 
 	const code = await db.transaction(async (tx) => {
-		// Codes are sequential per tenant: CUST-0001, CUST-0002, …
-		const [{ last }] = await tx
-			.select({ last: sql<number | null>`max(cast(substr(${customer.code}, 6) as integer))` })
-			.from(customer)
-			.where(inTenant(customer));
-		const code = `CUST-${String((last ?? 0) + 1).padStart(4, "0")}`;
+		const code = await nextNumber(tx, "customer");
 		const [created] = await tx
 			.insert(customer)
 			.values({ ...input, organizationId, code })
@@ -151,19 +144,12 @@ export const updateCustomer = form(
 	v.object({ id: id(), ...customerFields }),
 	async ({ id, ...input }, issue) => {
 		requireMember();
-		const existing = await db.query.customer.findFirst({
-			where: and(eq(customer.id, id), inTenant(customer)),
-		});
+		const existing = await db.query.customer.findFirst({ where: idInTenant(customer, id) });
 		if (!existing) error(404, m.customers_not_found());
-		if (!(await knownCountries()).includes(input.country)) {
-			invalid(issue.country(m.customers_country_unknown()));
-		}
+		refuse(issue, await countryProblems(input.country));
 
 		await db.transaction(async (tx) => {
-			await tx
-				.update(customer)
-				.set(input)
-				.where(and(eq(customer.id, id), inTenant(customer)));
+			await tx.update(customer).set(input).where(idInTenant(customer, id));
 			const subject = { type: "customer", id, label: existing.code };
 			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 		});
@@ -181,7 +167,7 @@ export const updateCustomer = form(
 async function removeCustomer(id: number) {
 	const existing = await db.query.customer.findFirst({
 		columns: { id: true, code: true },
-		where: and(eq(customer.id, id), inTenant(customer)),
+		where: idInTenant(customer, id),
 	});
 	if (!existing) error(404, m.customers_not_found());
 
@@ -207,13 +193,9 @@ async function removeCustomer(id: number) {
 		invalid(m.customers_delete_refused({ references }));
 	}
 
-	await refuseIfReferenced(
-		() =>
-			db.transaction(async (tx) => {
-				await tx.delete(customer).where(and(eq(customer.id, id), inTenant(customer)));
-				const subject = { type: "customer", id, label: existing.code };
-				await recordActivity(tx, { action: "deleted", subject });
-			}),
+	await deleteAndLog(
+		customer,
+		{ type: "customer", id, label: existing.code },
 		m.customers_delete_referenced(),
 	);
 }
@@ -228,18 +210,11 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 /** Deletes the selected customers, with the same refusals as deleting one. */
 export const bulkDeleteCustomers = command(bulkTarget, async (target) => {
 	requireMember();
-	const ids = await targetIds(target);
-	const found = await db
-		.select({ id: customer.id, code: customer.code })
-		.from(customer)
-		.where(and(inArray(customer.id, ids), inTenant(customer)))
-		.orderBy(customer.code);
-	const result = await forEachRecord(
-		found,
-		ids.length,
-		(each) => each.code,
-		(each) => removeCustomer(each.id),
-	);
+	const result = await bulkChange(target, {
+		table: customer,
+		label: customer.code,
+		change: (each) => removeCustomer(each.id),
+	});
 	void getCustomers().refresh();
 	return result;
 });

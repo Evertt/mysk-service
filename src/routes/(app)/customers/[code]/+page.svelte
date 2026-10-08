@@ -9,6 +9,7 @@
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
@@ -63,48 +64,30 @@
 </PageHeader>
 
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.customers_column_open_orders()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatNumber(stats.openOrders)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.customers_stats_orders_total({ count: stats.orders })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.customers_stats_revenue()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatCents(stats.revenue)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.customers_stats_revenue_orders({ count: stats.revenueOrders })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.customers_column_equipment()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums"
-				>{formatNumber(customer.equipment.length)}</Card.Title
-			>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{needsAttention
-				? m.customers_stats_attention({ count: needsAttention })
-				: m.customers_stats_all_working()}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.customers_column_since()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{customer.createdAt.getFullYear()}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{stats.lastOrderAt
-				? m.customers_stats_last_order({ date: formatDate(stats.lastOrderAt) })
-				: m.customers_stats_no_orders()}
-		</Card.Footer>
-	</Card.Root>
+	<StatCard
+		label={m.customers_column_open_orders()}
+		value={formatNumber(stats.openOrders)}
+		detail={m.customers_stats_orders_total({ count: stats.orders })}
+	/>
+	<StatCard
+		label={m.customers_stats_revenue()}
+		value={formatCents(stats.revenue)}
+		detail={m.customers_stats_revenue_orders({ count: stats.revenueOrders })}
+	/>
+	<StatCard
+		label={m.customers_column_equipment()}
+		value={formatNumber(customer.equipment.length)}
+		detail={needsAttention
+			? m.customers_stats_attention({ count: needsAttention })
+			: m.customers_stats_all_working()}
+	/>
+	<StatCard
+		label={m.customers_column_since()}
+		value={String(customer.createdAt.getFullYear())}
+		detail={stats.lastOrderAt
+			? m.customers_stats_last_order({ date: formatDate(stats.lastOrderAt) })
+			: m.customers_stats_no_orders()}
+	/>
 </div>
 
 <div class="grid items-start gap-6 lg:grid-cols-3">

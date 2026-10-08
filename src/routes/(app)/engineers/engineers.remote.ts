@@ -3,20 +3,20 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { DAY } from "#lib/dates.js";
 import { openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
-import { refuseIfReferenced } from "#lib/server/db/errors.js";
+import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
+import { type Problem, refuse } from "#lib/server/forms.js";
 import { laborCost } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { deleteAndLog } from "#lib/server/records.js";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 import { engineerFields } from "./engineer-schema.js";
-
-const DAY = 24 * 60 * 60 * 1000;
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = query(async () => {
@@ -59,9 +59,7 @@ function parseId(value: string) {
 export const getEngineer = query(v.string(), async (param) => {
 	requireMember();
 	const engineerId = parseId(param);
-	const found = await db.query.engineer.findFirst({
-		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
-	});
+	const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, engineerId) });
 	if (!found) error(404, m.engineers_id_not_found({ id: param }));
 
 	const columns = {
@@ -82,7 +80,7 @@ export const getEngineer = query(v.string(), async (param) => {
 		db
 			.select(columns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(
 				and(
 					inTenant(order),
@@ -94,7 +92,7 @@ export const getEngineer = query(v.string(), async (param) => {
 		db
 			.select(columns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(and(inTenant(order), eq(order.engineerId, engineerId), isNotNull(order.completedAt)))
 			.orderBy(desc(order.completedAt))
 			.limit(10),
@@ -130,11 +128,15 @@ async function emailTaken(email: string, exceptId?: number) {
 	return !!other;
 }
 
+/** The form problem of an email address another engineer uses, if there is one. */
+async function emailProblems(email: string, exceptId?: number): Promise<Problem<"email">[]> {
+	if (!(await emailTaken(email, exceptId))) return [];
+	return [{ field: "email", message: m.engineers_email_taken() }];
+}
+
 export const createEngineer = form(v.object(engineerFields), async (input, issue) => {
 	const { organizationId } = requireMember();
-	if (await emailTaken(input.email)) {
-		invalid(issue.email(m.engineers_email_taken()));
-	}
+	refuse(issue, await emailProblems(input.email));
 	const created = await db.transaction(async (tx) => {
 		const [created] = await tx
 			.insert(engineer)
@@ -153,18 +155,11 @@ export const updateEngineer = form(
 	async (data, issue) => {
 		requireMember();
 		const { id, ...input } = data;
-		const found = await db.query.engineer.findFirst({
-			where: and(eq(engineer.id, id), inTenant(engineer)),
-		});
+		const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, id) });
 		if (!found) error(404, m.engineers_not_found());
-		if (await emailTaken(input.email, id)) {
-			invalid(issue.email(m.engineers_email_taken()));
-		}
+		refuse(issue, await emailProblems(input.email, id));
 		await db.transaction(async (tx) => {
-			await tx
-				.update(engineer)
-				.set(input)
-				.where(and(eq(engineer.id, id), inTenant(engineer)));
+			await tx.update(engineer).set(input).where(idInTenant(engineer, id));
 			const subject = { type: "engineer", id, label: input.name };
 			await recordActivity(tx, { action: "updated", subject, before: found, after: input });
 		});
@@ -182,36 +177,31 @@ export const bulkSetEngineersActive = command(
 	v.object({ target: bulkTarget, active: v.boolean() }),
 	async ({ target, active }) => {
 		requireMember();
-		const ids = await targetIds(target);
-		const found = await db
-			.select({ id: engineer.id, name: engineer.name, active: engineer.active })
-			.from(engineer)
-			.where(and(inArray(engineer.id, ids), inTenant(engineer)))
-			.orderBy(asc(engineer.name));
-		const result = await forEachRecord(
-			found,
-			ids.length,
-			(each) => each.name,
-			(each) =>
+		const result = await bulkChange(target, {
+			table: engineer,
+			label: engineer.name,
+			columns: { active: engineer.active },
+			change: (each) =>
 				db.transaction(async (tx) => {
 					if (each.active === active) return;
-					await tx
-						.update(engineer)
-						.set({ active })
-						.where(and(eq(engineer.id, each.id), inTenant(engineer)));
-					const subject = { type: "engineer", id: each.id, label: each.name };
+					await tx.update(engineer).set({ active }).where(idInTenant(engineer, each.id));
+					const subject = { type: "engineer", id: each.id, label: each.label };
 					await recordActivity(tx, { action: "updated", subject, before: each, after: { active } });
 				}),
-		);
+		});
 		void getEngineers().refresh();
 		return result;
 	},
 );
 
-export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+/**
+ * Deletes one of the tenant's engineers; refuses one with orders assigned (or other records
+ * referring to it). A 404 if there's no such engineer.
+ */
+async function removeEngineer(id: number) {
 	const found = await db.query.engineer.findFirst({
-		where: and(eq(engineer.id, id), inTenant(engineer)),
+		columns: { id: true, name: true },
+		where: idInTenant(engineer, id),
 	});
 	if (!found) error(404, m.engineers_not_found());
 
@@ -223,15 +213,16 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 		invalid(m.engineers_delete_refused({ name: found.name, count: assigned }));
 	}
 
-	await refuseIfReferenced(
-		() =>
-			db.transaction(async (tx) => {
-				await tx.delete(engineer).where(and(eq(engineer.id, id), inTenant(engineer)));
-				const subject = { type: "engineer", id, label: found.name };
-				await recordActivity(tx, { action: "deleted", subject });
-			}),
+	await deleteAndLog(
+		engineer,
+		{ type: "engineer", id, label: found.name },
 		m.engineers_delete_referenced(),
 	);
+}
+
+export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
+	requireMember();
+	await removeEngineer(id);
 	void getEngineers().refresh();
 	redirect(303, "/engineers");
 });

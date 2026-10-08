@@ -8,7 +8,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 /** How many orders the customer page lists; the orders list has them all. */
 const RECENT = 10;
@@ -46,8 +46,8 @@ export const getCustomerActivity = query(v.string(), async (code) => {
 				},
 			})
 			.from(order)
-			.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
-			.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+			.leftJoin(...tenantJoin(equipment, order.equipmentId))
+			.leftJoin(...tenantJoin(engineer, order.engineerId))
 			.where(and(eq(order.customerId, found.id), inTenant(order)))
 			.orderBy(desc(order.createdAt), desc(order.id))
 			.limit(RECENT),

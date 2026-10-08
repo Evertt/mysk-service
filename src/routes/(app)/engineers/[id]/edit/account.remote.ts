@@ -4,14 +4,12 @@ import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
+import { isManager } from "#lib/roles.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { engineer, member, user } from "#lib/server/db/schema.js";
-import { inTenant, requireMember, requireRole } from "#lib/server/session.js";
-
-/** Roles that may link engineers to user accounts. */
-const managers = ["owner", "admin"];
+import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/session.js";
 
 /**
  * The user account an engineer signs in to the engineer portal with, and (for owners and admins)
@@ -21,11 +19,11 @@ export const getEngineerAccount = query(v.number(), async (engineerId) => {
 	const tenant = requireMember();
 	const found = await db.query.engineer.findFirst({
 		columns: { id: true, userId: true },
-		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
+		where: idInTenant(engineer, engineerId),
 	});
 	if (!found) error(404, m.engineers_not_found());
 
-	const canManage = tenant.roles.some((role) => managers.includes(role));
+	const canManage = isManager(tenant.roles);
 	const [members, taken] = await Promise.all([
 		db
 			.select({ userId: user.id, name: user.name, email: user.email, role: member.role })
@@ -50,10 +48,10 @@ export const getEngineerAccount = query(v.number(), async (engineerId) => {
 export const linkEngineerAccount = form(
 	v.object({ id: id(), userId: v.string() }),
 	async (input, issue) => {
-		const { organizationId } = requireRole(...managers);
+		const { organizationId } = requireManager();
 		const found = await db.query.engineer.findFirst({
 			columns: { id: true, name: true, userId: true },
-			where: and(eq(engineer.id, input.id), inTenant(engineer)),
+			where: idInTenant(engineer, input.id),
 		});
 		if (!found) error(404, m.engineers_not_found());
 
@@ -71,10 +69,7 @@ export const linkEngineerAccount = form(
 			if (other) invalid(issue.userId(m.engineers_account_taken({ name: other.name })));
 		}
 		await db.transaction(async (tx) => {
-			await tx
-				.update(engineer)
-				.set({ userId })
-				.where(and(eq(engineer.id, found.id), inTenant(engineer)));
+			await tx.update(engineer).set({ userId }).where(idInTenant(engineer, found.id));
 			// The accounts by name (user ids mean nothing to a reader).
 			const names = await accountNames(tx, [found.userId, userId]);
 			await recordActivity(tx, {

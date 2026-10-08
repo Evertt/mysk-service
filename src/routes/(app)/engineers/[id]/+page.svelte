@@ -12,6 +12,7 @@
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 
 	import { deleteEngineer, getEngineer } from "../engineers.remote.js";
@@ -69,18 +70,11 @@
 <PageHeader
 	title={engineer.name}
 	description={m.engineers_region_description({ region: regionLabel(engineer.region) })}
+	breadcrumbs={[
+		{ label: m.engineers_title(), href: resolve("/(app)/engineers") },
+		{ label: engineer.name },
+	]}
 >
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/engineers")}>{m.engineers_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{engineer.name}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
 	{#snippet badges()}
 		<ActiveBadge active={engineer.active} />
 		<SpecialtyBadge specialty={engineer.specialty} />
@@ -105,28 +99,21 @@
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
 		<div class="grid gap-4 sm:grid-cols-3">
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.engineers_stats_open_orders()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums"
-						>{formatNumber(data.stats.openOrders)}</Card.Title
-					>
-				</Card.Header>
-			</Card.Root>
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.engineers_stats_hours()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">
-						{m.common_count_hours_short({ count: data.stats.hours })}
-					</Card.Title>
-				</Card.Header>
-			</Card.Root>
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.engineers_stats_revenue()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{formatCents(data.stats.revenue)}</Card.Title>
-				</Card.Header>
-			</Card.Root>
+			<StatCard
+				size="small"
+				label={m.engineers_stats_open_orders()}
+				value={formatNumber(data.stats.openOrders)}
+			/>
+			<StatCard
+				size="small"
+				label={m.engineers_stats_hours()}
+				value={m.common_count_hours_short({ count: data.stats.hours })}
+			/>
+			<StatCard
+				size="small"
+				label={m.engineers_stats_revenue()}
+				value={formatCents(data.stats.revenue)}
+			/>
 		</div>
 
 		<Card.Root>
