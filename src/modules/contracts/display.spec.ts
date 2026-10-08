@@ -2,7 +2,8 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
-import { formatTerm } from "./display.ts";
+import { formatTerm, levelOptions, statusOptions } from "./display.ts";
+import { contractLevels, contractStatuses } from "./model.ts";
 
 const day = (value: string) => new Date(`${value}T00:00`);
 
@@ -57,5 +58,24 @@ describe("formatTerm", () => {
 		} finally {
 			overwriteGetLocale(englishByDefault);
 		}
+	});
+});
+
+describe.each([
+	["contract levels", levelOptions, contractLevels],
+	["contract statuses", statusOptions, contractStatuses],
+])("%s", (_, options, values) => {
+	test("offer every value once, in the order of the enum", () => {
+		expect(options.map((option) => option.value)).toEqual(values);
+	});
+
+	test("have a distinct label for each value", () => {
+		const labels = options.map((option) => option.label);
+		expect(labels.every((label) => label.trim() !== "")).toBe(true);
+		expect(new Set(labels).size).toBe(labels.length);
+	});
+
+	test("have an icon for each value", () => {
+		expect(options.every((option) => typeof option.icon === "function")).toBe(true);
 	});
 });

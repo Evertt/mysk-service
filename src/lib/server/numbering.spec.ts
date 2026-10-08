@@ -1,12 +1,13 @@
 import { rmSync } from "node:fs";
 
 import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { formatCode, type NumberKind } from "#lib/numbering.js";
 import { db } from "#lib/server/db/index.js";
 
-import { nextNumber } from "./numbering.ts";
+import { nextNumber, type NumberTarget } from "./numbering.ts";
 import type { Tenant } from "./session.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
@@ -33,7 +34,7 @@ vi.mock("#lib/server/db/index.js", async () => {
 		create table customer (id integer primary key, organization_id text, code text);
 		create table material (id integer primary key, organization_id text, sku text);
 		create table "order" (id integer primary key, organization_id text, number text);
-		create table contract (id integer primary key, organization_id text, number text);
+		create table widget (id integer primary key, organization_id text, number text);
 		create table invoice (id integer primary key, organization_id text, number text);
 	`);
 	return { db: drizzle(client, { schema }) };
@@ -53,7 +54,19 @@ const tenantOf = (organizationId: string): Tenant => ({
 	modules: [],
 });
 
-const next = (kind: NumberKind) => db.transaction((tx) => nextNumber(tx, kind));
+// A module's own kind of number: its format, and the table it is kept in.
+const widget = sqliteTable("widget", {
+	id: integer("id").primaryKey(),
+	organizationId: text("organization_id").notNull(),
+	number: text("number").notNull(),
+});
+const widgets: NumberTarget = {
+	format: { prefix: "WID-", digits: 4, yearly: true },
+	table: widget,
+	column: widget.number,
+};
+
+const next = (kind: NumberKind | NumberTarget) => db.transaction((tx) => nextNumber(tx, kind));
 
 beforeEach(() => {
 	Object.assign(locals, { user, tenant: tenantOf("north") });
@@ -80,11 +93,11 @@ describe("nextNumber", () => {
 	test("reads the sequence after each kind's own prefix", async () => {
 		await db.run(sql`insert into customer (organization_id, code) values ('north', 'CUST-0012')`);
 		await db.run(sql`insert into material (organization_id, sku) values ('north', 'MAT-0003')`);
-		await db.run(sql`insert into contract (organization_id, number)
-			values ('north', 'CTR-2026-0020')`);
+		await db.run(sql`insert into widget (organization_id, number)
+			values ('north', 'WID-2026-0020')`);
 		expect(await next("customer")).toBe("CUST-0013");
 		expect(await next("material")).toBe("MAT-0004");
-		expect(await next("contract")).toBe(formatCode("contract", 21));
+		expect(await next(widgets)).toBe(formatCode(widgets.format, 21));
 	});
 
 	test("only counts the current tenant's records", async () => {

@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { contractLabels } from "#lib/components/contracts/labels.js";
-import { contractLevels, contractStatuses } from "#lib/components/contracts/model.js";
 import { invoicingLabels } from "#lib/components/invoicing/labels.js";
 import {
 	customerSegments,
@@ -70,27 +68,6 @@ function testKinds(set: LabelSet, kinds: readonly (readonly [string, readonly st
 }
 
 testKinds({ hasLabel, label }, kinds);
-
-describe("contracts labels", () => {
-	testKinds(contractLabels, [
-		["contractLevel", contractLevels],
-		["contractStatus", contractStatuses],
-		["slaState", ["on_track", "at_risk", "overdue", "responded"]],
-	]);
-
-	test("are in the current language", () => {
-		expect(contractLabels.label("slaState", "at_risk")).toBe("At risk");
-		inLanguage("nl");
-		expect(contractLabels.label("slaState", "at_risk")).toBe("Risico");
-	});
-
-	test("have their own kinds, apart from the core's", () => {
-		expect(contractLabels.hasLabel("contractLevel", "premium")).toBe(true);
-		expect(contractLabels.hasLabel("contractLevel", "gold")).toBe(false);
-		expect(contractLabels.labelOrValue("contractLevel", "gold")).toBe("gold");
-		expect(hasLabel("orderStatus", "quote")).toBe(true);
-	});
-});
 
 describe("invoicing labels", () => {
 	testKinds(invoicingLabels, [["invoiceState", ["draft", "sent", "overdue", "paid", "void"]]]);

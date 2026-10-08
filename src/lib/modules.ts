@@ -7,8 +7,8 @@
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its
  * tables reference the core tables, never the other way round. Core pages and core server code
  * don't import a module's code; they take what the tenant's modules contribute through these
- * registries. A module is either in the static list `modules` below (contracts and invoicing,
- * until they move) or a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
+ * registries. A module is either in the static list `modules` below (invoicing, until it moves)
+ * or a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
  * `#lib/define-module.ts`), which `scripts/modules.ts` collects in `modules.gen.ts`:
  *
  * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
@@ -23,12 +23,10 @@
  *   `orders.committed` (`orderCommitted()`).
  */
 import type { RouteId } from "$app/types";
-import FileCheckIcon from "@lucide/svelte/icons/file-check";
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity.js";
-import { contractSubjects } from "#lib/components/contracts/activity.js";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { invoicingActions, invoicingSubjects } from "#lib/components/invoicing/activity.js";
 import type { OrderStatus } from "#lib/models.js";
@@ -127,25 +125,8 @@ export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
 	default: TableBulkAction<Table>[];
 }>;
 
-/** The modules that still live in the core, until they move to `src/modules`. */
+/** The module that still lives in the core, until it moves to `src/modules`. */
 const staticModules = [
-	{
-		id: "contracts",
-		get label() {
-			return m.contracts_module_name();
-		},
-		get description() {
-			return m.contracts_module_description();
-		},
-		route: "/(app)/contracts",
-		icon: FileCheckIcon,
-		slots: {
-			dashboard: () => import("#lib/components/contracts/dashboard-cards.svelte"),
-			order: () => import("#lib/components/contracts/order-coverage.svelte"),
-			equipment: () => import("#lib/components/contracts/equipment-coverage.svelte"),
-		},
-		subjects: contractSubjects,
-	},
 	{
 		id: "invoicing",
 		get label() {
@@ -169,10 +150,11 @@ const staticModules = [
 ] as const satisfies readonly AppModule[];
 
 /**
- * All the modules in registry order: the static ones, then the folders in `src/modules` by id (the
- * order `scripts/modules.ts` lists them in).
+ * All the modules in registry order: the folders in `src/modules` by id (the order
+ * `scripts/modules.ts` lists them in), then the static ones. With invoicing there, that is the
+ * order by id (contracts, invoicing) it keeps when invoicing moves too.
  */
-export const modules = [...staticModules, ...manifests] as const satisfies readonly AppModule[];
+export const modules = [...manifests, ...staticModules] as const satisfies readonly AppModule[];
 
 export type { ModuleId };
 

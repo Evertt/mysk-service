@@ -44,6 +44,8 @@ describe("organizations", () => {
 
 	test("switching to an organization you're not a member of is refused", async () => {
 		const { page } = app;
+		// From a page that exists: on a module's 404 page, the module guard answers a refused form too.
+		await app.go("/");
 		await page.locator('[data-sidebar="header"] button').first().click();
 		const result = await app.expectingErrors(async () => {
 			// Point North's entry at an organization the admin doesn't belong to.
@@ -60,6 +62,14 @@ describe("organizations", () => {
 		});
 		expect(result).toBe(403);
 		await app.go("/");
+		expect(await header()).toContain(south.name);
+	});
+
+	test("the switcher works on a module's 404 page too", async () => {
+		expect((await app.go("/contracts"))?.status()).toBe(404);
+		await app.switchOrganization(north.name);
+		expect(await header()).toContain(north.name);
+		await app.switchOrganization(south.name);
 		expect(await header()).toContain(south.name);
 	});
 });

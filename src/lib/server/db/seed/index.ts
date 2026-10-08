@@ -26,7 +26,7 @@ import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
 import { billFrom, generateInvoices } from "./invoices.ts";
-import { orderSeeds, type SeedTenant } from "./module-seed.ts";
+import { orderSeeds, type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateStockMovements } from "./stock.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
@@ -58,14 +58,14 @@ const tenants = [
 		slug: "north",
 		modules: [...moduleIds] as string[],
 		seed: 20261005,
-		size: { customers: 60, engineers: 18, orders: 750, contracts: true },
+		size: { customers: 60, engineers: 18, orders: 750 },
 	},
 	{
 		...demoOrganizations.south,
 		slug: "south",
 		modules: ["invoicing"] as string[],
 		seed: 20261006,
-		size: { customers: 30, engineers: 10, orders: 320, contracts: false },
+		size: { customers: 30, engineers: 10, orders: 320 },
 	},
 ];
 
@@ -88,8 +88,6 @@ await db.transaction(async (tx) => {
 		schema.invoiceLine,
 		schema.invoice,
 		schema.invoicingSettings,
-		schema.contractEquipment,
-		schema.contract,
 		schema.orderSignoff,
 		schema.orderNote,
 		schema.stockMovement,
@@ -114,10 +112,12 @@ await db.transaction(async (tx) => {
 		equipment: 0,
 		material: 0,
 		order: 0,
-		contract: 0,
 		invoice: 0,
 	};
-	const seeded: SeedTenant[] = [];
+	const seeded: SeedTenant<Record<string, unknown>>[] = [];
+	// What each module's `generate()` made, by module id: for all the tenants so far (a module
+	// continues where the tenants before left off), and for the tenant at hand.
+	const generatedBefore: Record<string, unknown[]> = {};
 	for (const tenant of tenants) {
 		await tx.insert(schema.organization).values({
 			id: tenant.id,
@@ -133,6 +133,15 @@ await db.transaction(async (tx) => {
 
 		faker.seed(tenant.seed);
 		const data = generateTenant(faker, tenant.size);
+		// The modules' data follows from the core's, with the same faker, and may add to it.
+		const generated: Record<string, unknown> = {};
+		for (const { id, seed } of seeds) {
+			if (!tenant.modules.includes(id) || !seed.generate) continue;
+			const before = (generatedBefore[id] ??= []);
+			generated[id] = seed.generate({ ...data, faker }, before);
+			before.push(generated[id]);
+		}
+		const collect = seedCollectors(seeds, tenant, generated);
 		const organizationId = tenant.id;
 		const o = { ...offset };
 		const rows = {
@@ -159,17 +168,6 @@ await db.transaction(async (tx) => {
 				orderId: l.orderId + o.order,
 				materialId: l.materialId + o.material,
 			})),
-			contracts: data.contracts.map((c) => ({
-				...c,
-				organizationId,
-				id: c.id + o.contract,
-				customerId: c.customerId + o.customer,
-			})),
-			coverage: data.contractCoverage.map((c) => ({
-				customerId: c.customerId + o.customer,
-				contractId: c.contractId + o.contract,
-				equipmentId: c.equipmentId + o.equipment,
-			})),
 			stockMovements: generateStockMovements(data, tenant.seed).map((m) => ({
 				...m,
 				organizationId,
@@ -178,7 +176,7 @@ await db.transaction(async (tx) => {
 			})),
 		};
 		const invoices = tenant.modules.includes("invoicing")
-			? generateInvoices(data, tenant.seed, o.contract)
+			? generateInvoices(data, tenant.seed, collect)
 			: [];
 		const invoicing = {
 			invoices: invoices.map(({ lines: _lines, ...i }) => ({
@@ -206,8 +204,6 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.materials, (chunk) => tx.insert(material).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
 		await insertAll(rows.orderLines, (chunk) => tx.insert(orderLine).values(chunk));
-		await insertAll(rows.contracts, (chunk) => tx.insert(schema.contract).values(chunk));
-		await insertAll(rows.coverage, (chunk) => tx.insert(schema.contractEquipment).values(chunk));
 		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
 		await insertAll(invoicing.invoices, (chunk) => tx.insert(schema.invoice).values(chunk));
 		await insertAll(invoicing.invoiceLines, (chunk) => tx.insert(schema.invoiceLine).values(chunk));
@@ -242,19 +238,21 @@ await db.transaction(async (tx) => {
 			customerIds: rows.customers.map((row) => row.id),
 			equipmentIds: rows.equipments.map((row) => row.id),
 			orderIds: rows.orders.map((row) => row.id),
+			data: generated,
 		});
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
 		offset.material += rows.materials.length;
 		offset.order += rows.orders.length;
-		offset.contract += rows.contracts.length;
 		offset.invoice += invoicing.invoices.length;
 		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
 	}
 
 	for (const { id, seed } of seeds) {
-		const having = seeded.filter((tenant) => tenant.modules.includes(id));
+		const having = seeded
+			.filter((tenant) => tenant.modules.includes(id))
+			.map((tenant) => ({ ...tenant, data: tenant.data[id] }));
 		await seed.run({ tx, faker, tenants: having, insertAll, count });
 	}
 });

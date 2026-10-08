@@ -1,21 +1,17 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
-import ContractLink from "#lib/components/contracts/contract-link.svelte";
-import { formatTerm } from "#lib/components/contracts/display.js";
-import LevelBadge from "#lib/components/contracts/level-badge.svelte";
-import {
-	contractLevels,
-	contractStatus,
-	contractStatuses,
-} from "#lib/components/contracts/model.js";
-import StatusBadge from "#lib/components/contracts/status-badge.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatCents, formatDate } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
+import ContractLink from "../../../contract-link.svelte";
+import { formatTerm } from "../../../display.js";
+import LevelBadge from "../../../level-badge.svelte";
+import { contractLevels, contractStatus, contractStatuses } from "../../../model.js";
+import StatusBadge from "../../../status-badge.svelte";
 import type { getContracts } from "./contracts.remote.js";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];

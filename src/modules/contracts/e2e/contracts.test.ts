@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { cents, countIn, organizations, rows, useApp, value } from "./app.ts";
-import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
+import { cents, countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { covered, priceOf, pricedOrders } from "#e2e/contracts-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();

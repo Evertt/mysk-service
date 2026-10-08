@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { contractStatus } from "./model.ts";
+import { formatCode, sequenceStart } from "#lib/numbering.ts";
+
+import { contractNumberFormat, contractStatus } from "./model.ts";
 
 describe("contractStatus", () => {
 	const contract = { startsOn: new Date(2026, 0, 1), endsOn: new Date(2026, 11, 31) };
@@ -16,5 +18,12 @@ describe("contractStatus", () => {
 
 	test("has expired after the last day", () => {
 		expect(contractStatus(contract, new Date(2027, 0, 1))).toBe("expired");
+	});
+});
+
+describe("contractNumberFormat", () => {
+	test("numbers contracts per year, like CTR-2027-0007", () => {
+		expect(formatCode(contractNumberFormat, 7, 2027)).toBe("CTR-2027-0007");
+		expect(sequenceStart(contractNumberFormat)).toBe(10);
 	});
 });

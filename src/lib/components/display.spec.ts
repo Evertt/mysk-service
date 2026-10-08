@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { contractLevels, contractStatuses } from "#lib/components/contracts/model.js";
 import {
 	customerSegments,
 	engineerSpecialties,
@@ -12,7 +11,6 @@ import {
 	orderTypes,
 } from "#lib/models.js";
 
-import * as contracts from "./contracts/display.ts";
 import * as customers from "./customers/display.ts";
 import * as engineers from "./engineers/display.ts";
 import * as equipment from "./equipment/display.ts";
@@ -27,8 +25,6 @@ interface Option {
 
 /** Each domain's options for filters and selects, with the values they must offer. */
 const optionLists: [string, readonly Option[], readonly string[]][] = [
-	["contract levels", contracts.levelOptions, contractLevels],
-	["contract statuses", contracts.statusOptions, contractStatuses],
 	["customer segments", customers.segmentOptions, customerSegments],
 	["engineer specialties", engineers.specialtyOptions, engineerSpecialties],
 	["equipment categories", equipment.categoryOptions, equipmentCategories],

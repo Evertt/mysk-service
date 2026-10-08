@@ -1,12 +1,6 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
 import {
-	type ContractMonth,
-	contractMonths,
-	monthlyFee,
-} from "#lib/components/contracts/billing.ts";
-import type { ContractLevel } from "#lib/components/contracts/model.ts";
-import {
 	dueDate,
 	itemLine,
 	type LineDraft,
@@ -15,88 +9,47 @@ import {
 import { formatCode } from "#lib/numbering.ts";
 
 import { addDays, DAY, now } from "./clock.ts";
+import type { SeedCollectors, SeedOrder } from "./module-seed.ts";
 import type { TenantData } from "./tenant.ts";
 
 /** From when the demo tenants bill contract fees through the app (see the invoicing settings). */
 export const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
-/** A contract level's name in Dutch, as `contractLabels.label("contractLevel", level)` shows it. */
-const levelLabel = (level: ContractLevel) =>
-	({ basic: "Basis", standard: "Standaard", premium: "Premium" })[level];
-
-// Like `formatDate` in `#lib/format.ts` in Dutch, which the seed script can't import.
-const day = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" });
-
-/** A contract's month on an invoice, worded like the app does in Dutch (the demo's language). */
-const monthlyFeeText = (
-	contract: { number: string; level: ContractLevel },
-	month: ContractMonth,
-) => ({
-	description: `Servicecontract ${contract.number} (${levelLabel(contract.level)})`,
-	detail: `Maandbedrag, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
-});
-
 /**
  * Invoices for the orders the generator marked invoiced: one per customer for each month's work,
- * issued early the next month, with that month's contract fees from `billFrom` on (so only this
- * month's are still to bill). Older ones are paid; of the last two months', some are still open,
- * and past their due date overdue. A few were voided and issued again, and two customers have a
- * draft for their completed orders. Priced like `priceOrders()` does, which the seed can't call.
- * With a faker of its own, so the rest of the data is the same with or without it. Contract ids
- * in the fees' references are shifted by `contractOffset`, like the contracts when inserted.
+ * issued early the next month, with that month's fees that other modules offer (a contract's) from
+ * `billFrom` on (so only this month's are still to bill). Older ones are paid; of the last two
+ * months', some are still open, and past their due date overdue. A few were voided and issued
+ * again, and two customers have a
+ * draft for their completed orders. Priced like `priceOrders()` does, and billed like invoicing
+ * does, which the seed can't call: through the tenant's modules' collectors (see `module-seed.ts`).
+ * With a faker of its own, so the rest of the data is the same with or without it.
  */
 export function generateInvoices(
-	data: Pick<TenantData, "engineers" | "orders" | "orderLines" | "contracts" | "contractCoverage">,
+	data: Pick<TenantData, "engineers" | "orders" | "orderLines">,
 	seed: number,
-	contractOffset: number,
+	collect: SeedCollectors,
 ) {
 	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const engineers = new Map(data.engineers.map((e) => [e.id, e]));
 	const linesOf = Map.groupBy(data.orderLines, (line) => line.orderId);
-	const contracts = new Map(data.contracts.map((c) => [c.id, c]));
-	const coverage = Map.groupBy(data.contractCoverage, (c) => c.equipmentId);
-	type Order = (typeof data.orders)[number];
 
-	/** The contract that covered an order, as in `#lib/components/contracts/coverage.ts`. */
-	const coveredBy = (o: Order) =>
-		o.type === "installation" || !o.equipmentId
-			? undefined
-			: (coverage.get(o.equipmentId) ?? [])
-					.map((c) => contracts.get(c.contractId)!)
-					.filter((c) => {
-						const end = new Date(
-							c.endsOn.getFullYear(),
-							c.endsOn.getMonth(),
-							c.endsOn.getDate() + 1,
-						);
-						return c.startsOn <= o.createdAt && o.createdAt < end;
-					})
-					.sort((a, b) => a.responseHours - b.responseHours)[0];
-
-	/** An order's price, as `priceOrders()` makes it with the contracts module. */
-	function price(o: Order) {
+	/** An order's price, as `priceOrders()` makes it with the tenant's modules. */
+	function price(o: SeedOrder) {
 		const materials = (linesOf.get(o.id) ?? []).reduce(
 			(sum, line) => sum + Math.round(line.quantity * line.unitPrice),
 			0,
 		);
 		const rate = o.engineerId ? engineers.get(o.engineerId)!.hourlyRate : 8500;
 		const labor = Math.round(o.laborHours * rate);
-		const contract = coveredBy(o);
-		const level = contract?.level;
-		const included = level === "premium" ? labor + materials : level === "standard" ? labor : 0;
-		const adjustments =
-			contract && included
-				? [
-						{
-							label: `Gedekt door ${contract.number} (${levelLabel(contract.level)})`,
-							detail: `${level === "premium" ? "Arbeid en materialen" : "Arbeid"} inbegrepen`,
-							amount: -included,
-						},
-					]
-				: [];
-		return { materials, labor, adjustments, total: materials + labor - included };
+		const adjustments = collect.adjustPrices(o, { materials, labor });
+		const total = Math.max(
+			0,
+			adjustments.reduce((sum, adjustment) => sum + adjustment.amount, materials + labor),
+		);
+		return { materials, labor, adjustments, total };
 	}
 
 	// The seed's texts are in Dutch.
@@ -115,12 +68,8 @@ export function generateInvoices(
 	for (const o of invoiced)
 		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o), billedDetail));
 	const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-	for (const c of data.contracts) {
-		for (const month of contractMonths(c, billFrom, lastMonthEnd)) {
-			groupOf(c.customerId, month.startsOn).lines.push(
-				itemLine(monthlyFee({ ...c, id: c.id + contractOffset }, month, monthlyFeeText(c, month))),
-			);
-		}
+	for (const item of collect.billableItems({ from: billFrom, until: lastMonthEnd })) {
+		groupOf(item.customerId, item.date).lines.push(itemLine(item));
 	}
 
 	const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);

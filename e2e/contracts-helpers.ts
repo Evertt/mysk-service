@@ -1,6 +1,8 @@
 /**
  * What the contracts module does to an order's price, worked out in SQL for the e2e tests: which
- * contract covers an order, and what the order costs.
+ * contract covers an order, and what the order costs. It stays here, not in the module's `e2e/`,
+ * because the core's tests of prices (a customer's revenue, a unit's cost) need it too, and only
+ * the module's own files may import from the module. It names the module's tables in SQL only.
  */
 import { rows } from "./app.ts";
 
@@ -8,7 +10,7 @@ import { rows } from "./app.ts";
 export const STANDARD_RATE = 8500;
 
 /**
- * The contract that covered each order, as `#lib/components/contracts/coverage.ts` defines it:
+ * The contract that covered each order, as `src/modules/contracts/coverage.ts` defines it:
  * one covering its unit on the day the order was created (contracts run up to and including their
  * last day), not for an installation, the fastest response first (`n = 1`).
  */

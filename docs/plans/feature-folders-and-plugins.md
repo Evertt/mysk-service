@@ -663,6 +663,20 @@ Each step leaves `pnpm check` and `pnpm test` green and can merge on its own.
    `routes/(app)/contracts/**` (now stubs), its messages, its seed slice → `server/seed.ts`,
    `e2e/contracts.test.ts` → `e2e/`. Remote function URLs change with their file paths; that's
    harmless, but expect `moduleQueries` in its e2e to pick up the new names.
+   _Done. Differences from the text above: `lib/server/contracts.ts` became `server/index.ts`
+   (the hooks) and `server/contracts.ts` (`coverageOf()`, `overlappingCoverage()`, its number
+   target); the files in `lib/components/contracts` sit at the module root, those of the pages
+   stay next to them in `routes/(app)/contracts`. Numbering takes a module's own target:
+   `nextNumber(tx, { format, table, column })` and `formatCode(format, …)`, with `contract` gone
+   from `numberFormats`. The seed needed more than a move: contract terms depend on the faker's
+   state after the core's data, and the call-outs add orders and change units, so a module seed has
+   a `generate()` step in the tenant loop (with `previous`, for ids that continue across tenants)
+   before its `run()`, and the collectors `adjustPrices()` and `billableItems()` that invoicing's
+   seed asks instead of reaching into contract data; the seeded data is identical (compared
+   with a frozen clock). The registries list the folders before the static list, so the order stays
+   contracts, invoicing until invoicing moves. Core e2e tests of prices (customers, equipment
+   detail) keep their SQL helper `e2e/contracts-helpers.ts` in core, since the boundaries spec
+   forbids importing the module's._
 5. **Move invoicing** the same way, including the PDF `+server.ts` and `/invoices/settings`.
    Invoicing's seed then bills contract fees through the seed collectors.
 6. **Remove the transition code** (the static list, `#lib/components/{contracts,invoicing}`) and

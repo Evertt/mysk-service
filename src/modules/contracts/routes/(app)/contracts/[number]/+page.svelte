@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import type { RouteParams } from "$app/types";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
-	import { formatTerm, levels } from "#lib/components/contracts/display.js";
-	import LevelBadge from "#lib/components/contracts/level-badge.svelte";
-	import { contractStatus } from "#lib/components/contracts/model.js";
-	import ContractStatusBadge from "#lib/components/contracts/status-badge.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
@@ -17,10 +14,13 @@
 	import { formatCents, formatDate } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
+	import { formatTerm, levels } from "../../../../display.js";
+	import LevelBadge from "../../../../level-badge.svelte";
+	import { contractStatus } from "../../../../model.js";
+	import ContractStatusBadge from "../../../../status-badge.svelte";
 	import { deleteContract, getContract } from "../contracts.remote.js";
-	import type { PageProps } from "./$types";
 
-	let { params }: PageProps = $props();
+	let { params }: { params: RouteParams<"/(app)/contracts/[number]"> } = $props();
 
 	const data = $derived(await getContract(params.number));
 

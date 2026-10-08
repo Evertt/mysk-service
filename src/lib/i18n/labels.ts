@@ -115,7 +115,7 @@ const coreLabels = {
 
 /**
  * Binds the label functions to a map of label kinds. The core's kinds are bound below; an optional
- * module defines its own next to its code (e.g. `#lib/components/contracts/labels.ts`), so this
+ * module defines its own next to its code (e.g. `src/modules/contracts/labels.ts`), so this
  * file doesn't import the modules.
  */
 export function defineLabels<L extends Record<string, Record<string, () => string>>>(labels: L) {

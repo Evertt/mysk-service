@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { levelOptions, statusOptions } from "#lib/components/contracts/display.js";
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { recordFacets } from "#lib/components/data-table/record-facets.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 
+	import { levelOptions, statusOptions } from "../../../display.js";
 	import { deleteContracts } from "./bulk-actions.js";
 	import { columns, type ContractRow } from "./columns.js";
 
