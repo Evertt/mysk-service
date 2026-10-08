@@ -6,10 +6,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { formatCents, formatDate } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.ts";
 
 	import InvoiceLink from "./invoice-link.svelte";
-	import { getReceivables } from "./invoicing.remote.js";
+	import { getReceivables } from "./invoicing.remote.ts";
 
 	const data = $derived(await getReceivables());
 </script>

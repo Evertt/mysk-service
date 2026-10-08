@@ -5,14 +5,14 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.js";
-import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { refuseIfReferenced } from "#lib/server/db/errors.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { engineer, order, stockMovement } from "#lib/server/db/schema.js";
-import { idInTenant, inTenant } from "#lib/server/session.js";
+import { recordActivity } from "#lib/server/activity.ts";
+import { refuseIfReferenced } from "#lib/server/db/errors.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { engineer, order, stockMovement } from "#lib/server/db/schema.ts";
+import { idInTenant, inTenant } from "#lib/server/session.ts";
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 export const notEditable = (number: string, change: "changed" | "deleted") =>

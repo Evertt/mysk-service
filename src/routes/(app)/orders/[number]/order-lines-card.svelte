@@ -3,11 +3,11 @@
 	An order's materials, labour and adjustments, and what it adds up to.
 -->
 <script lang="ts">
-	import { formatCents } from "#lib/format.js";
-	import { formatQuantity } from "#lib/materials/display.js";
+	import { formatCents } from "#lib/format.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
 	import MaterialLink from "#lib/materials/material-link.svelte";
 
-	import type { getOrder } from "../order.remote.js";
+	import type { getOrder } from "../order.remote.ts";
 
 	type Data = Awaited<ReturnType<typeof getOrder>>;
 

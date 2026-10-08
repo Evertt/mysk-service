@@ -5,8 +5,8 @@
 import { error } from "@sveltejs/kit";
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import { formatNumber } from "#lib/format.js";
-import { label } from "#lib/i18n/labels.js";
+import { formatNumber } from "#lib/format.ts";
+import { label } from "#lib/i18n/labels.ts";
 import {
 	holdsStock,
 	lowStockThresholds,
@@ -16,11 +16,11 @@ import {
 	roundQuantity,
 	type StockLevel,
 	type StockMovementKind,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import type { Transaction } from "#lib/server/db/index.js";
-import { material, stockMovement } from "#lib/server/db/schema.js";
-import { idInTenant, requireTenant } from "#lib/server/session.js";
+import type { Transaction } from "#lib/server/db/index.ts";
+import { material, stockMovement } from "#lib/server/db/schema.ts";
+import { idInTenant, requireTenant } from "#lib/server/session.ts";
 
 /**
  * A material's stock level in SQL, as `stockLevel()` works it out (with the same thresholds), to

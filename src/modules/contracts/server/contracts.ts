@@ -11,8 +11,8 @@ import type { OrderFacts } from "#lib/server/modules.ts";
 import type { NumberTarget } from "#lib/server/numbering.ts";
 import { tenantJoin } from "#lib/server/session.ts";
 
-import { coveringContract, isCoveredWork } from "../coverage.js";
-import { contractNumberFormat } from "../model.js";
+import { coveringContract, isCoveredWork } from "../coverage.ts";
+import { contractNumberFormat } from "../model.ts";
 import { contract, contractEquipment } from "./schema.ts";
 
 /** Where contract numbers are kept, for `nextNumber()`. */

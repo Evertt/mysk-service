@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Label as LabelPrimitive } from "bits-ui";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

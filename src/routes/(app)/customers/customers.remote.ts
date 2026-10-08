@@ -3,21 +3,21 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { europeanCountries } from "#lib/customers/countries.js";
-import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.js";
+import { europeanCountries } from "#lib/customers/countries.ts";
+import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, idsTarget } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
-import { type Problem, refuse } from "#lib/server/forms.js";
-import { nextNumber } from "#lib/server/numbering.js";
-import { deleteAndLog } from "#lib/server/records.js";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { type Problem, refuse } from "#lib/server/forms.ts";
+import { nextNumber } from "#lib/server/numbering.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
-import { customerFields } from "./customer-schema.js";
+import { customerFields } from "./customer-schema.ts";
 
 /** All customers with how many equipment units and open orders they have, by name. */
 export const getCustomers = query(async () => {

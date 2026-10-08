@@ -6,13 +6,13 @@
 import { inArray } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { orderPriorities } from "#lib/models.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant, tenantJoin } from "#lib/server/session.js";
-import { type ListSql, nocase, rank } from "#lib/server/table-query.js";
+import { orderPriorities } from "#lib/models.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { inTenant, tenantJoin } from "#lib/server/session.ts";
+import { type ListSql, nocase, rank } from "#lib/server/table-query.ts";
 
-import { ordersList } from "./orders-list.js";
+import { ordersList } from "./orders-list.ts";
 
 /**
  * The orders list's joins: the order's customer, unit and engineer, each scoped to the tenant.

@@ -8,11 +8,11 @@
 	import { resolve } from "$app/paths";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { formatDate } from "#lib/format.js";
-	import { messageParts } from "#lib/i18n/parts.js";
+	import { formatDate } from "#lib/format.ts";
+	import { messageParts } from "#lib/i18n/parts.ts";
 
 	import InvoiceLink from "./invoice-link.svelte";
-	import { getOrderInvoice } from "./invoicing.remote.js";
+	import { getOrderInvoice } from "./invoicing.remote.ts";
 	import StatusBadge from "./status-badge.svelte";
 
 	let { number }: { number: string } = $props();

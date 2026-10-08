@@ -1,12 +1,12 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { recordFacets } from "#lib/components/data-table/record-facets.js";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
+	import { recordFacets } from "#lib/components/data-table/record-facets.ts";
+	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
-	import { stateOptions } from "../../../display.js";
-	import { markPaid } from "./bulk-actions.js";
-	import { columns, type InvoiceRow } from "./columns.js";
+	import { stateOptions } from "../../../display.ts";
+	import { markPaid } from "./bulk-actions.ts";
+	import { columns, type InvoiceRow } from "./columns.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.

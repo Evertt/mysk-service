@@ -15,20 +15,20 @@
 	import UsersIcon from "@lucide/svelte/icons/users";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.js";
+	import { errorMessage } from "#lib/utils.ts";
 
 	import DeleteViewDialog from "./delete-view-dialog.svelte";
 	import RenameViewDialog from "./rename-view-dialog.svelte";
 	import SaveViewDialog from "./save-view-dialog.svelte";
-	import type { TableUrlSync } from "./url-sync.svelte.js";
-	import { matchingViews, viewQuery, viewState } from "./views.js";
+	import type { TableUrlSync } from "./url-sync.svelte.ts";
 	import {
 		deleteView,
 		getTableViews,
 		shareView,
 		type TableView,
 		updateView,
-	} from "./views.remote.js";
+	} from "./views.remote.ts";
+	import { matchingViews, viewQuery, viewState } from "./views.ts";
 
 	let { sync }: { sync: TableUrlSync } = $props();
 

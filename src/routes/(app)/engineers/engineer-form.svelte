@@ -11,10 +11,10 @@
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.js";
-	import { regionOptions, specialtyOptions } from "#lib/engineers/display.js";
+	import { toDateInput } from "#lib/dates.ts";
+	import { regionOptions, specialtyOptions } from "#lib/engineers/display.ts";
 
-	import type { createEngineer, getEngineer, updateEngineer } from "./engineers.remote.js";
+	import type { createEngineer, getEngineer, updateEngineer } from "./engineers.remote.ts";
 
 	type Engineer = Awaited<ReturnType<typeof getEngineer>>["engineer"];
 

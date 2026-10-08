@@ -5,14 +5,14 @@
 import { command } from "$app/server";
 import { error, isValidationError } from "@sveltejs/kit";
 
-import type { BulkResult } from "#lib/components/data-table/bulk-actions.js";
+import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { idsTarget, targetIds } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { order } from "#lib/server/db/schema.js";
-import { idsInTenant, requireModule } from "#lib/server/session.js";
+import { idsTarget, targetIds } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { order } from "#lib/server/db/schema.ts";
+import { idsInTenant, requireModule } from "#lib/server/session.ts";
 
-import { getOrderInvoice } from "./invoicing.remote.js";
+import { getOrderInvoice } from "./invoicing.remote.ts";
 import { billableFor } from "./server/billable.ts";
 import { createDraft } from "./server/invoices.ts";
 

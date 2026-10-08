@@ -2,18 +2,18 @@
 import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { statusOptions } from "#lib/equipment/display.js";
-import type { EquipmentStatus } from "#lib/models.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import { statusOptions } from "#lib/equipment/display.ts";
+import type { EquipmentStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { EquipmentRow } from "./columns.js";
+import type { EquipmentRow } from "./columns.ts";
 import {
 	bulkDeleteEquipment,
 	bulkSetEquipmentStatus,
 	getEquipmentFacets,
 	getEquipmentList,
-} from "./equipment-list.remote.js";
+} from "./equipment-list.remote.ts";
 
 export const changeStatus: BulkAction<EquipmentRow, AnyListWhere> = {
 	id: "status",

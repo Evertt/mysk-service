@@ -8,9 +8,9 @@
 	import type { Snippet } from "svelte";
 	import type { ComponentProps } from "svelte";
 
-	import { Button } from "#lib/components/ui/button/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
+	import { Button } from "#lib/components/ui/button/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.ts";
 
 	import SheetOverlay from "./sheet-overlay.svelte";
 	import SheetPortal from "./sheet-portal.svelte";

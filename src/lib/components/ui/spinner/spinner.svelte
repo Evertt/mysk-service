@@ -2,7 +2,7 @@
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import type { SVGAttributes } from "svelte/elements";
 
-	import { cn } from "#lib/utils.js";
+	import { cn } from "#lib/utils.ts";
 
 	let {
 		class: className,

@@ -7,16 +7,16 @@
 <script lang="ts">
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
-	import { formatNumber } from "#lib/format.js";
-	import { cn } from "#lib/utils.js";
+	import { formatNumber } from "#lib/format.ts";
+	import { cn } from "#lib/utils.ts";
 
-	import { columnLabel, type DataTableColumnMeta } from "./features.js";
-	import { groupExpansion } from "./group-expansion.svelte.js";
-	import { groupRowId, type PageGroup } from "./grouping.js";
-	import type { createPinning } from "./pinning.svelte.js";
-	import type { createRowNavigation } from "./row-navigation.svelte.js";
-	import { compact, focusRing, opaque } from "./table-classes.js";
-	import { useTableContext } from "./table.svelte.js";
+	import { columnLabel, type DataTableColumnMeta } from "./features.ts";
+	import { groupExpansion } from "./group-expansion.svelte.ts";
+	import { groupRowId, type PageGroup } from "./grouping.ts";
+	import type { createPinning } from "./pinning.svelte.ts";
+	import type { createRowNavigation } from "./row-navigation.svelte.ts";
+	import { compact, focusRing, opaque } from "./table-classes.ts";
+	import { useTableContext } from "./table.svelte.ts";
 
 	const table = useTableContext();
 

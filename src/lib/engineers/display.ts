@@ -5,8 +5,8 @@ import FanIcon from "@lucide/svelte/icons/fan";
 import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
-import { type EngineerSpecialty, engineerSpecialties } from "#lib/models.js";
+import { labelOptions, withLabels } from "#lib/i18n/labels.ts";
+import { type EngineerSpecialty, engineerSpecialties } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 interface Display {

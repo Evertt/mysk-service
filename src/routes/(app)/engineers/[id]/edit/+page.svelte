@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import EngineerForm from "../../engineer-form.svelte";
-	import { getEngineer, updateEngineer } from "../../engineers.remote.js";
+	import { getEngineer, updateEngineer } from "../../engineers.remote.ts";
 	import type { PageProps } from "./$types";
 	import AccountCard from "./account-card.svelte";
 

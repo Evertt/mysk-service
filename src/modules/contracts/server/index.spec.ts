@@ -5,12 +5,12 @@ import { orderCommitted } from "#lib/server/modules.ts";
 import contracts from "./index.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
-vi.mock("#lib/server/db/index.js", () => ({ db: {} }));
+vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
 // The core, without the modules in `src/modules`.
 vi.mock("#lib/server/modules.gen.ts", () => ({ generatedServerModules: () => [] }));
 const refreshed = vi.hoisted(() => [] as string[]);
-vi.mock("../coverage.remote.js", () => ({
+vi.mock("../coverage.remote.ts", () => ({
 	getOrderCoverage: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
 }));
 

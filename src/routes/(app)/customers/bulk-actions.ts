@@ -1,11 +1,11 @@
 /** The customers list's bulk actions (see `#lib/components/data-table/bulk-actions.ts`). */
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { CustomerRow } from "./columns.js";
-import { bulkDeleteCustomers } from "./customers.remote.js";
+import type { CustomerRow } from "./columns.ts";
+import { bulkDeleteCustomers } from "./customers.remote.ts";
 
 // Whether a customer has orders (closed ones too), only the server knows.
 export const deleteCustomers: BulkAction<CustomerRow> = {

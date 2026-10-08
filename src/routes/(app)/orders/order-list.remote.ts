@@ -1,16 +1,16 @@
 import { query } from "$app/server";
 import { and, count, inArray, sql } from "drizzle-orm";
 
-import { queryKey } from "#lib/components/data-table/list-definition.js";
-import { lineTotalSql, priceOrders } from "#lib/orders/server/pricing.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
-import { tagOrders } from "#lib/server/modules.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
-import { pageGroupsOf, planList } from "#lib/server/table-query.js";
+import { queryKey } from "#lib/components/data-table/list-definition.ts";
+import { lineTotalSql, priceOrders } from "#lib/orders/server/pricing.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
+import { tagOrders } from "#lib/server/modules.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
+import { pageGroupsOf, planList } from "#lib/server/table-query.ts";
 
-import { ordersSql, withOrderJoins } from "./order-list.server.js";
-import { ordersList } from "./orders-list.js";
+import { ordersSql, withOrderJoins } from "./order-list.server.ts";
+import { ordersList } from "./orders-list.ts";
 
 /**
  * A page of the orders list with their customer, equipment, engineer and totals, searched,

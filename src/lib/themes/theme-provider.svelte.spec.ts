@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { buttonVariants } from "#lib/components/ui/button/index.js";
+import { buttonVariants } from "#lib/components/ui/button/index.ts";
 
 import Harness from "./theme-provider.test-harness.svelte";
 

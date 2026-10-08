@@ -6,7 +6,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import ContractsTable from "./contracts-table.svelte";
-	import { getContracts } from "./contracts.remote.js";
+	import { getContracts } from "./contracts.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/contracts"> } = $props();

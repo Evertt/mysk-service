@@ -8,13 +8,13 @@
 	import { resolve } from "$app/paths";
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
-	import { timeOfDay } from "#lib/dates.js";
-	import { formatDate } from "#lib/format.js";
-	import { isOpenOrder, type OrderPriority } from "#lib/models.js";
-	import { priorities, statuses, types } from "#lib/orders/display.js";
-	import { cn } from "#lib/utils.js";
+	import { timeOfDay } from "#lib/dates.ts";
+	import { formatDate } from "#lib/format.ts";
+	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
+	import { priorities, statuses, types } from "#lib/orders/display.ts";
+	import { cn } from "#lib/utils.ts";
 
-	import type { getSchedule } from "./schedule.remote.js";
+	import type { getSchedule } from "./schedule.remote.ts";
 
 	type Order = Awaited<ReturnType<typeof getSchedule>>["orders"][number];
 

@@ -4,13 +4,13 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { moveOrderStock } from "#lib/materials/server/stock.js";
-import { fitsUnit, type OrderStatus } from "#lib/models.js";
+import { moveOrderStock } from "#lib/materials/server/stock.ts";
+import { fitsUnit, type OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { recordOrderLines } from "#lib/server/activity.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { material, orderLine } from "#lib/server/db/schema.js";
-import { idsInTenant, inTenant, requireTenant } from "#lib/server/session.js";
+import { recordOrderLines } from "#lib/server/activity.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { material, orderLine } from "#lib/server/db/schema.ts";
+import { idsInTenant, inTenant, requireTenant } from "#lib/server/session.ts";
 
 export interface LineInput {
 	materialId: number;

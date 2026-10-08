@@ -10,11 +10,11 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { label } from "#lib/i18n/labels.js";
-	import { formatQuantity } from "#lib/materials/display.js";
-	import { type MaterialUnit, quantityStep } from "#lib/models.js";
+	import { label } from "#lib/i18n/labels.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
+	import { type MaterialUnit, quantityStep } from "#lib/models.ts";
 
-	import { receiveStock } from "./stock.remote.js";
+	import { receiveStock } from "./stock.remote.ts";
 
 	let { material }: { material: { id: number; name: string; unit: MaterialUnit; stock: number } } =
 		$props();

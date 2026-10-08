@@ -7,9 +7,9 @@
  * their name) and their value as stored (dates and numbers formatted).
  */
 // Only types from `#lib/activity.ts`, which uses this file's types in turn.
-import type { FieldFormat, SubjectType, Text } from "#lib/activity.js";
-import { formatDate, formatDateTime, formatNumber } from "#lib/format.js";
-import { modules } from "#lib/modules.js";
+import type { FieldFormat, SubjectType, Text } from "#lib/activity.ts";
+import { formatDate, formatDateTime, formatNumber } from "#lib/format.ts";
+import { modules } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */

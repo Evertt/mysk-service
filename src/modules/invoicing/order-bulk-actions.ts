@@ -4,10 +4,10 @@
  */
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
-import type { TableBulkAction } from "#lib/modules.js";
+import type { TableBulkAction } from "#lib/modules.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import { invoiceOrders } from "./bulk.remote.js";
+import { invoiceOrders } from "./bulk.remote.ts";
 
 export const createInvoice: TableBulkAction<"orders"> = {
 	id: "invoicing:create-invoice",

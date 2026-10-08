@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
-import { lineTotal } from "#lib/models.js";
-import { db } from "#lib/server/db/index.js";
+import { lineTotal } from "#lib/models.ts";
+import { db } from "#lib/server/db/index.ts";
 import type { ServerModule } from "#lib/server/modules.ts";
 
 import {
@@ -19,10 +19,10 @@ const locals = { user: { id: "u1", name: "Jo" }, tenant: { organizationId: "nort
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`. The priceOrders tests
 // pass their own modules.
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));

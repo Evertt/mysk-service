@@ -5,12 +5,12 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { addDays } from "#lib/dates.js";
-	import { formatNumber } from "#lib/format.js";
+	import { addDays } from "#lib/dates.ts";
+	import { formatNumber } from "#lib/format.ts";
 
-	import { dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.js";
+	import { dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.ts";
 	import ScheduleBoard from "./schedule-board.svelte";
-	import { getSchedule } from "./schedule.remote.js";
+	import { getSchedule } from "./schedule.remote.ts";
 
 	// The week is in the URL (`?week=` any day of it), so it can be linked to; this week by default.
 	const start = $derived(weekFromParam(page.url.searchParams.get("week")));

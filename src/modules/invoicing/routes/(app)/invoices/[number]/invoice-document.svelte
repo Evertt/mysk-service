@@ -6,12 +6,12 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
-	import { formatRate } from "../../../../display.js";
-	import type { getInvoice } from "../invoices.remote.js";
-	import { removeLine } from "./draft.remote.js";
+	import { formatRate } from "../../../../display.ts";
+	import type { getInvoice } from "../invoices.remote.ts";
+	import { removeLine } from "./draft.remote.ts";
 
 	let { data, editable }: { data: Awaited<ReturnType<typeof getInvoice>>; editable: boolean } =
 		$props();

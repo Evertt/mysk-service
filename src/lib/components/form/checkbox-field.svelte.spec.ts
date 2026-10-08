@@ -3,7 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import CheckboxField from "./checkbox-field.svelte";
-import { fakeField } from "./fake-form.js";
+import { fakeField } from "./fake-form.ts";
 
 test("starts from the initial state", async () => {
 	render(CheckboxField, { field: fakeField("active"), label: "Active", checked: true });

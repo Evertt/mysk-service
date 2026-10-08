@@ -2,9 +2,9 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { badgeVariants } from "#lib/components/ui/badge/index.js";
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import type { OrderStatus } from "#lib/models.js";
+import { badgeVariants } from "#lib/components/ui/badge/index.ts";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { OrderStatus } from "#lib/models.ts";
 
 import StatusBadge from "./status-badge.svelte";
 

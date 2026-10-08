@@ -10,10 +10,10 @@
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 	import PackageIcon from "@lucide/svelte/icons/package";
 
-	import { modules } from "#lib/modules.js";
+	import { modules } from "#lib/modules.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
-	import { getCurrentTenant } from "./session.remote.js";
+	import { getCurrentTenant } from "./session.remote.ts";
 	import UserMenu from "./user-menu.svelte";
 
 	const tenant = $derived(await getCurrentTenant());

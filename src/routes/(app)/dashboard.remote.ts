@@ -1,13 +1,13 @@
 import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
-import { DAY } from "#lib/dates.js";
-import { stockLevel } from "#lib/materials/display.js";
-import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
+import { DAY } from "#lib/dates.ts";
+import { stockLevel } from "#lib/materials/display.ts";
+import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {

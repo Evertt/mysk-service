@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { CustomerSegment } from "#lib/models.js";
+	import type { CustomerSegment } from "#lib/models.ts";
 
-	import { segments } from "./display.js";
+	import { segments } from "./display.ts";
 
 	let { segment }: { segment: CustomerSegment } = $props();
 

@@ -1,12 +1,12 @@
 /** The invoices list's bulk actions (see `#lib/components/data-table/bulk-actions.ts`). */
 import BadgeCheckIcon from "@lucide/svelte/icons/badge-check";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import { canChange } from "../../../invoice.js";
-import type { InvoiceRow } from "./columns.js";
-import { bulkMarkPaid } from "./invoice-status.remote.js";
+import { canChange } from "../../../invoice.ts";
+import type { InvoiceRow } from "./columns.ts";
+import { bulkMarkPaid } from "./invoice-status.remote.ts";
 
 export const markPaid: BulkAction<InvoiceRow> = {
 	id: "mark-paid",

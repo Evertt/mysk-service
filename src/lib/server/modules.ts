@@ -20,8 +20,8 @@
  * Registry order is the order of `serverModules()` below. Add a hook (a guard that refuses a
  * change, an event inside the transaction) when a module needs one, not before.
  */
-import type { OrderStatus, OrderType } from "#lib/models.js";
-import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.js";
+import type { OrderStatus, OrderType } from "#lib/models.ts";
+import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.ts";
 
 import { afterCommit } from "./db/serialize.ts";
 import { generatedServerModules } from "./modules.gen.ts";

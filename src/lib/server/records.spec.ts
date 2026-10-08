@@ -3,8 +3,8 @@ import { rmSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { db } from "#lib/server/db/index.js";
-import { material } from "#lib/server/db/schema.js";
+import { db } from "#lib/server/db/index.ts";
+import { material } from "#lib/server/db/schema.ts";
 
 import { deleteAndLog } from "./records.ts";
 import type { Tenant } from "./session.ts";
@@ -23,11 +23,11 @@ const folder = await vi.hoisted(async () => {
 	]);
 	return fs.mkdtempSync(path.join(os.tmpdir(), "records-spec-"));
 });
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const path = await import("node:path");
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
 	await client.executeMultiple(`
 		create table material (id integer primary key, organization_id text not null, sku text not null);

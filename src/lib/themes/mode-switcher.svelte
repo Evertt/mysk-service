@@ -3,8 +3,8 @@
 	import MoonIcon from "@lucide/svelte/icons/moon";
 	import SunIcon from "@lucide/svelte/icons/sun";
 
-	import type { Mode } from "./index.js";
-	import { getMode, setMode } from "./theme.remote.js";
+	import type { Mode } from "./index.ts";
+	import { getMode, setMode } from "./theme.remote.ts";
 
 	const options = [
 		{ value: "light", label: m.common_mode_light(), icon: SunIcon },

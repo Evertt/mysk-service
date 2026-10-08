@@ -2,12 +2,12 @@
 import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
-import type { FieldFormat, Sentence, SubjectType } from "#lib/activity.js";
-import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+import type { FieldFormat, Sentence, SubjectType } from "#lib/activity.ts";
+import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import { formatRate } from "./display.js";
-import { invoicingLabels } from "./labels.js";
+import { formatRate } from "./display.ts";
+import { invoicingLabels } from "./labels.ts";
 
 const day = (value: unknown) => formatDate(new Date(String(value)));
 const days = (value: unknown) => m.invoices_activity_value_days({ count: Number(value) });

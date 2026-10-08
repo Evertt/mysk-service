@@ -4,8 +4,8 @@
 	`invoiceState` from `./invoice.js`.
 -->
 <script lang="ts">
-	import { states } from "./display.js";
-	import type { InvoiceState } from "./invoice.js";
+	import { states } from "./display.ts";
+	import type { InvoiceState } from "./invoice.ts";
 
 	let { state }: { state: InvoiceState } = $props();
 

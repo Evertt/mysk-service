@@ -3,10 +3,10 @@ import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { formatNumber } from "#lib/format.js";
-import { label, labelOptions, withLabels } from "#lib/i18n/labels.js";
-import { type MaterialUnit, materialUnits, type StockLevel, stockLevels } from "#lib/models.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { formatNumber } from "#lib/format.ts";
+import { label, labelOptions, withLabels } from "#lib/i18n/labels.ts";
+import { type MaterialUnit, materialUnits, type StockLevel, stockLevels } from "#lib/models.ts";
 
 /** Options for a unit select or faceted filter, e.g. `Pieces`. */
 export const unitOptions = labelOptions("materialUnit", materialUnits);
@@ -16,7 +16,7 @@ export const formatQuantity = (quantity: number, unit: MaterialUnit) =>
 	`${formatNumber(quantity)} ${label("materialUnitSymbol", unit)}`;
 
 // The stock levels are defined with the units, in `#lib/models.ts`.
-export { lowStockThreshold, type StockLevel, stockLevel, stockLevels } from "#lib/models.js";
+export { lowStockThreshold, type StockLevel, stockLevel, stockLevels } from "#lib/models.ts";
 
 const stockLevelDetails: Record<StockLevel, { icon: Component; variant: BadgeVariant }> = {
 	out: { icon: CircleXIcon, variant: "destructive" },

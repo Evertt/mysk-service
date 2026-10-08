@@ -1,5 +1,5 @@
-import { code, defineList, id, oneOf } from "#lib/components/data-table/list-definition.js";
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+import { code, defineList, id, oneOf } from "#lib/components/data-table/list-definition.ts";
+import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
 /**
  * The orders list: what it sorts, groups and filters by, and with which values. The page, the

@@ -10,17 +10,17 @@ import ShieldPlusIcon from "@lucide/svelte/icons/shield-plus";
 import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { SlaState } from "./coverage.js";
-import { contractLabels } from "./labels.js";
+import type { SlaState } from "./coverage.ts";
+import { contractLabels } from "./labels.ts";
 import {
 	type ContractLevel,
 	contractLevels,
 	type ContractStatus,
 	contractStatuses,
-} from "./model.js";
+} from "./model.ts";
 
 interface Display {
 	icon: Component;

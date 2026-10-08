@@ -4,10 +4,10 @@
 	changed fields and when. Subjects link to their page while they exist.
 -->
 <script lang="ts">
-	import { actionSentence, subjectHref } from "#lib/activity.js";
-	import { formatDateTime } from "#lib/format.js";
-	import { messageParts } from "#lib/i18n/parts.js";
-	import type { ActivityEntry, SubjectLink } from "#lib/server/activity-feed.js";
+	import { actionSentence, subjectHref } from "#lib/activity.ts";
+	import { formatDateTime } from "#lib/format.ts";
+	import { messageParts } from "#lib/i18n/parts.ts";
+	import type { ActivityEntry, SubjectLink } from "#lib/server/activity-feed.ts";
 
 	let {
 		entries,

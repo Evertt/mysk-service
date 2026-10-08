@@ -5,18 +5,18 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { idInTenant, inTenant, requireModule } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { idInTenant, inTenant, requireModule } from "#lib/server/session.ts";
 
-import { lineNote } from "../../../../activity.js";
-import { isEditable, lineAmount } from "../../../../invoice.js";
+import { lineNote } from "../../../../activity.ts";
+import { isEditable, lineAmount } from "../../../../invoice.ts";
 import { alreadyBilled, linesFor } from "../../../../server/billable.ts";
 import { invoiceById, invoiceSubject } from "../../../../server/invoices.ts";
 import { invoice, invoiceLine } from "../../../../server/schema.ts";
 import { refreshInvoice } from "../invoice-refresh.server.ts";
-import { billingFields, lineFields, termsFields } from "../invoice-schema.js";
+import { billingFields, lineFields, termsFields } from "../invoice-schema.ts";
 
 /** Logs lines added to an invoice, against it. */
 async function recordLines(

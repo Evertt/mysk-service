@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.js";
+import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 import {
 	id,
@@ -10,7 +10,7 @@ import {
 	optionalTime,
 	orderLines,
 	text,
-} from "#lib/schema.js";
+} from "#lib/schema.ts";
 
 /** The fields of the order form, shared by creating and editing an order. */
 export const orderFields = {

@@ -13,7 +13,7 @@ vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
 // The table's toolbar (unused here) brings in the saved views: none.
-vi.mock("./views.remote.js", () => import("./fake-views.svelte.ts"));
+vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
 
 const jobs: Job[] = [
 	{ id: 1, name: "Boiler service", status: "open" },

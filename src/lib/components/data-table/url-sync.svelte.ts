@@ -3,7 +3,7 @@ import { page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { untrack } from "svelte";
 
-import type { Features } from "./features.js";
+import type { Features } from "./features.ts";
 import {
 	parseTableUrl,
 	searchString,
@@ -11,8 +11,8 @@ import {
 	type TableUrlSpec,
 	type TableUrlState,
 	writeTableUrl,
-} from "./url-state.js";
-import { tableViewsKey } from "./views.js";
+} from "./url-state.ts";
+import { tableViewsKey } from "./views.ts";
 
 /** How a table keeps its state in the URL (see `url-state.ts` for the grammar). */
 export interface UrlStateOptions {

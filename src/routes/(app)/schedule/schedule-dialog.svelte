@@ -9,12 +9,12 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { timeOfDay } from "#lib/dates.js";
-	import { specialties } from "#lib/engineers/display.js";
-	import { formatDate } from "#lib/format.js";
+	import { timeOfDay } from "#lib/dates.ts";
+	import { specialties } from "#lib/engineers/display.ts";
+	import { formatDate } from "#lib/format.ts";
 
-	import { DEFAULT_TIME, dayKey, parseDay } from "./board.js";
-	import { getSchedule, scheduleOrder } from "./schedule.remote.js";
+	import { DEFAULT_TIME, dayKey, parseDay } from "./board.ts";
+	import { getSchedule, scheduleOrder } from "./schedule.remote.ts";
 
 	type Schedule = Awaited<ReturnType<typeof getSchedule>>;
 

@@ -1,4 +1,4 @@
-import { defineTheme } from "./types.js";
+import { defineTheme } from "./types.ts";
 
 /**
  * Calm and professional: cool slate neutrals, a deep teal for actions and highlights, a warm sand

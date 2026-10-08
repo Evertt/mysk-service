@@ -2,7 +2,7 @@ import { rmSync } from "node:fs";
 
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { db, type Transaction } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.ts";
 
 import {
 	type ActivityRecord,
@@ -27,11 +27,11 @@ const folder = await vi.hoisted(async () => {
 	]);
 	return fs.mkdtempSync(path.join(os.tmpdir(), "activity-spec-"));
 });
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const path = await import("node:path");
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
 	await client.executeMultiple(`
 		create table material (

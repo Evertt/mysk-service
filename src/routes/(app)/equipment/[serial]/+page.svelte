@@ -6,16 +6,16 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { countryName } from "#lib/customers/countries.js";
+	import { countryName } from "#lib/customers/countries.ts";
 	import CategoryLabel from "#lib/equipment/category-label.svelte";
-	import { categories } from "#lib/equipment/display.js";
+	import { categories } from "#lib/equipment/display.ts";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
-	import { formatDate } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
+	import { formatDate } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
 
 	import ModuleSlots from "../../module-slots.svelte";
-	import { deleteEquipment, getEquipment } from "../equipment.remote.js";
+	import { deleteEquipment, getEquipment } from "../equipment.remote.ts";
 	import type { PageProps } from "./$types";
 	import ServiceStats from "./service-stats.svelte";
 	import ServiceTimeline from "./service-timeline.svelte";

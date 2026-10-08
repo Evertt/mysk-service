@@ -4,14 +4,14 @@
 	after it, and who did it.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
-	import { formatQuantity } from "#lib/materials/display.js";
-	import type { MaterialUnit } from "#lib/models.js";
+	import { formatDate } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
+	import type { MaterialUnit } from "#lib/models.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
-	import type { getMaterial } from "../material.remote.js";
-	import { formatChange } from "./stock-history.js";
+	import type { getMaterial } from "../material.remote.ts";
+	import { formatChange } from "./stock-history.ts";
 
 	type Movement = Awaited<ReturnType<typeof getMaterial>>["movements"][number];
 

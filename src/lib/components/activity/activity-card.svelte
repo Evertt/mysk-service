@@ -8,7 +8,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import ActivityList from "./activity-list.svelte";
-	import { getSubjectActivity } from "./activity.remote.js";
+	import { getSubjectActivity } from "./activity.remote.ts";
 
 	let {
 		type,

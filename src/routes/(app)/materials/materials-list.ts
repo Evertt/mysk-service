@@ -1,5 +1,5 @@
-import { defineList, oneOf } from "#lib/components/data-table/list-definition.js";
-import { materialUnits, stockLevels } from "#lib/models.js";
+import { defineList, oneOf } from "#lib/components/data-table/list-definition.ts";
+import { materialUnits, stockLevels } from "#lib/models.ts";
 
 /**
  * The materials list: what it sorts, groups and filters by, and with which values. The page, the

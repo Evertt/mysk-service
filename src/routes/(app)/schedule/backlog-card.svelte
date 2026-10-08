@@ -4,8 +4,8 @@
 	planned with `onschedule`.
 -->
 <script lang="ts">
-	import type { createBoardDrag } from "./board-drag.svelte.js";
-	import type { ScheduleOrder } from "./board.js";
+	import type { createBoardDrag } from "./board-drag.svelte.ts";
+	import type { ScheduleOrder } from "./board.ts";
 	import OrderCard from "./order-card.svelte";
 
 	let {

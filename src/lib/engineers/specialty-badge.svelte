@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { EngineerSpecialty } from "#lib/models.js";
+	import type { EngineerSpecialty } from "#lib/models.ts";
 
-	import { specialties } from "./display.js";
+	import { specialties } from "./display.ts";
 
 	let { specialty }: { specialty: EngineerSpecialty } = $props();
 

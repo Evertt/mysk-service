@@ -9,9 +9,9 @@
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { onMount } from "svelte";
 
-import type { Features } from "./features.js";
-import { type List, queryKey, toListQuery } from "./list-definition.js";
-import { parseTableUrl, type TableUrlSpec } from "./url-state.js";
+import type { Features } from "./features.ts";
+import { type List, queryKey, toListQuery } from "./list-definition.ts";
+import { parseTableUrl, type TableUrlSpec } from "./url-state.ts";
 
 /**
  * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names

@@ -2,19 +2,19 @@ import { form } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
-import { findMaterial } from "#lib/materials/server/materials.js";
-import { moveStock } from "#lib/materials/server/stock.js";
-import { fitsUnit, roundQuantity } from "#lib/models.js";
+import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
+import { findMaterial } from "#lib/materials/server/materials.ts";
+import { moveStock } from "#lib/materials/server/stock.ts";
+import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
-import { material } from "#lib/server/db/schema.js";
-import { idInTenant, requireMember } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db } from "#lib/server/db/index.ts";
+import { material } from "#lib/server/db/schema.ts";
+import { idInTenant, requireMember } from "#lib/server/session.ts";
 
-import { countFields, receiveFields } from "../material-schema.js";
-import { getMaterial } from "../material.remote.js";
+import { countFields, receiveFields } from "../material-schema.ts";
+import { getMaterial } from "../material.remote.ts";
 
 /** Adds received stock (e.g. a delivery) to a material. */
 export const receiveStock = form(

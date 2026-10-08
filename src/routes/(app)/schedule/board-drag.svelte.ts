@@ -1,9 +1,9 @@
 import { toast } from "svelte-sonner";
 import { SvelteSet } from "svelte/reactivity";
 
-import { atTime, timeOfDay } from "#lib/dates.js";
+import { atTime, timeOfDay } from "#lib/dates.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { errorMessage } from "#lib/utils.js";
+import { errorMessage } from "#lib/utils.ts";
 
 import {
 	applyMove,
@@ -12,8 +12,8 @@ import {
 	formatDay,
 	type RowId,
 	type ScheduleOrder,
-} from "./board.js";
-import { getSchedule, moveOrder } from "./schedule.remote.js";
+} from "./board.ts";
+import { getSchedule, moveOrder } from "./schedule.remote.ts";
 
 /**
  * Drag and drop on the board: the order being dragged and the cell it's over, and the move when it

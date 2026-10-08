@@ -3,9 +3,9 @@
 	An equipment category with its icon.
 -->
 <script lang="ts">
-	import type { EquipmentCategory } from "#lib/models.js";
+	import type { EquipmentCategory } from "#lib/models.ts";
 
-	import { categories } from "./display.js";
+	import { categories } from "./display.ts";
 
 	let { category }: { category: EquipmentCategory } = $props();
 

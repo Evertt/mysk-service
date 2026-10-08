@@ -11,7 +11,7 @@
 	import InvitationsCard from "./invitations-card.svelte";
 	import InviteCard from "./invite-card.svelte";
 	import MembersCard from "./members-card.svelte";
-	import { getMembers } from "./members.remote.js";
+	import { getMembers } from "./members.remote.ts";
 
 	const data = $derived(await getMembers());
 </script>

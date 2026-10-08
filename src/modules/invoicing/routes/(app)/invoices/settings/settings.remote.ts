@@ -4,14 +4,14 @@ import { redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager } from "#lib/roles.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
-import { requireManager, requireModule } from "#lib/server/session.js";
+import { isManager } from "#lib/roles.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db } from "#lib/server/db/index.ts";
+import { requireManager, requireModule } from "#lib/server/session.ts";
 
 import { invoicingSettings } from "../../../../server/schema.ts";
 import { settingsOf } from "../../../../server/settings.ts";
-import { settingsFields } from "../invoice-schema.js";
+import { settingsFields } from "../invoice-schema.ts";
 
 export const getInvoicingSettings = query(async () => {
 	const tenant = requireModule("invoicing");

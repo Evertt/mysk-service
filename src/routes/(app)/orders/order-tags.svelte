@@ -7,7 +7,7 @@
 	import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
-	import type { OrderTag } from "#lib/modules.js";
+	import type { OrderTag } from "#lib/modules.ts";
 
 	let { tags }: { tags: OrderTag[] } = $props();
 

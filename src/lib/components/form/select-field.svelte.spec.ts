@@ -2,7 +2,7 @@ import { expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { fakeField } from "./fake-form.js";
+import { fakeField } from "./fake-form.ts";
 import SelectField from "./select-field.svelte";
 
 const options = [

@@ -1,13 +1,13 @@
-import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.js";
-import type { EmptyMediaVariant } from "#lib/components/ui/empty/index.js";
-import type { InputGroupAddonAlign } from "#lib/components/ui/input-group/index.js";
+import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.ts";
+import type { EmptyMediaVariant } from "#lib/components/ui/empty/index.ts";
+import type { InputGroupAddonAlign } from "#lib/components/ui/input-group/index.ts";
 import type {
 	SidebarMenuButtonSize,
 	SidebarMenuButtonVariant,
-} from "#lib/components/ui/sidebar/index.js";
+} from "#lib/components/ui/sidebar/index.ts";
 
-import type { GeneratedSlot } from "./slots.js";
+import type { GeneratedSlot } from "./slots.ts";
 
 /**
  * Parts whose classes can also differ per prop value, e.g. a button's `variant` and `size`. These

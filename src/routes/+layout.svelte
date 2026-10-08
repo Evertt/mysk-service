@@ -3,7 +3,7 @@
 
 	import favicon from "#lib/assets/favicon.svg";
 	import ThemeProvider from "#lib/themes/theme-provider.svelte";
-	import { getMode, getTheme } from "#lib/themes/theme.remote.js";
+	import { getMode, getTheme } from "#lib/themes/theme.remote.ts";
 
 	import "./layout.css";
 	import type { LayoutProps } from "./$types";

@@ -9,7 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import type { ButtonVariant } from "#lib/components/ui/button/index.js";
+	import type { ButtonVariant } from "#lib/components/ui/button/index.ts";
 
 	let {
 		form,

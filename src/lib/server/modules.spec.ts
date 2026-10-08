@@ -12,7 +12,7 @@ import {
 } from "./modules.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
-vi.mock("#lib/server/db/index.js", () => ({ db: {} }));
+vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 vi.mock("$app/server", () => ({
 	getRequestEvent: () => ({
 		locals: {

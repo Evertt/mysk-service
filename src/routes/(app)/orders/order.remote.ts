@@ -3,27 +3,27 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { atTime } from "#lib/dates.js";
-import { OrderStockShortage } from "#lib/materials/server/stock.js";
-import { isEditableOrder, lineTotal } from "#lib/models.js";
+import { atTime } from "#lib/dates.ts";
+import { OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { isEditableOrder, lineTotal } from "#lib/models.ts";
 import {
 	checkLines,
 	type LineInput,
 	type LineProblem,
 	saveOrderLines,
-} from "#lib/orders/server/lines.js";
-import { completedAt, notEditable, removeOrder } from "#lib/orders/server/order-changes.js";
-import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/orders/server/pricing.js";
+} from "#lib/orders/server/lines.ts";
+import { completedAt, notEditable, removeOrder } from "#lib/orders/server/order-changes.ts";
+import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";
-import { orderCommitted, tagOrders } from "#lib/server/modules.js";
-import { nextNumber } from "#lib/server/numbering.js";
-import { idInTenant, inTenant, requireMember } from "#lib/server/session.js";
+import { id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { orderCommitted, tagOrders } from "#lib/server/modules.ts";
+import { nextNumber } from "#lib/server/numbering.ts";
+import { idInTenant, inTenant, requireMember } from "#lib/server/session.ts";
 
-import { orderFields } from "./order-schema.js";
+import { orderFields } from "./order-schema.ts";
 
 /** One order with everything on it, plus other orders for the same equipment. */
 export const getOrder = query(v.string(), async (number) => {

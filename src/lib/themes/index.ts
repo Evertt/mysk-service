@@ -1,9 +1,9 @@
-import blueprint from "./blueprint.js";
-import brutalist from "./brutalist.js";
-import harbor from "./harbor.js";
-import neutral from "./neutral.js";
-import sorbet from "./sorbet.js";
-import type { Theme } from "./types.js";
+import blueprint from "./blueprint.ts";
+import brutalist from "./brutalist.ts";
+import harbor from "./harbor.ts";
+import neutral from "./neutral.ts";
+import sorbet from "./sorbet.ts";
+import type { Theme } from "./types.ts";
 
 /**
  * The app's themes. Each one is a single file with CSS variables (colours, radius, font) and

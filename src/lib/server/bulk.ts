@@ -27,9 +27,9 @@ import type { GetColumnData } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.js";
-import type { ListWhere } from "#lib/components/data-table/list-definition.js";
-import { formatNumber } from "#lib/format.js";
+import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.ts";
+import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
+import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";

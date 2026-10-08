@@ -1,5 +1,5 @@
-import { code, defineList, oneOf } from "#lib/components/data-table/list-definition.js";
-import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
+import { code, defineList, oneOf } from "#lib/components/data-table/list-definition.ts";
+import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
 /**
  * The equipment list: what it sorts, groups and filters by, and with which values. The page, the

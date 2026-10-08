@@ -1,7 +1,7 @@
 import { command, getRequestEvent, query } from "$app/server";
 import * as v from "valibot";
 
-import { MODE_COOKIE, modes, parseMode, parseTheme, THEME_COOKIE, themeNames } from "./index.js";
+import { MODE_COOKIE, modes, parseMode, parseTheme, THEME_COOKIE, themeNames } from "./index.ts";
 
 export const getTheme = query(async () => parseTheme(getRequestEvent().cookies.get(THEME_COOKIE)));
 

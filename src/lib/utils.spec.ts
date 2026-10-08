@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
 import { expect, test } from "vite-plus/test";
 
-import { errorMessage } from "./utils.js";
+import { errorMessage } from "./utils.ts";
 
 test("a thrown error(status, message) gives its message", () => {
 	const thrown = (() => {

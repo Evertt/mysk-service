@@ -7,7 +7,7 @@
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { StockLevel } from "#lib/materials/display.js";
+import type { StockLevel } from "#lib/materials/display.ts";
 import type {
 	CustomerSegment,
 	EngineerSpecialty,
@@ -18,9 +18,9 @@ import type {
 	OrderStatus,
 	OrderType,
 	StockMovementKind,
-} from "#lib/models.js";
+} from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import type { MemberRole } from "#lib/roles.js";
+import type { MemberRole } from "#lib/roles.ts";
 
 export type Labels<T extends string> = Record<T, () => string>;
 

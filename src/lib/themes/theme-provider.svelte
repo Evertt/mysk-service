@@ -7,8 +7,8 @@
 	import type { Snippet } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
 
-	import { provideTheme } from "./context.js";
-	import { type Mode, type ThemeName, themes, themeStylesheet } from "./index.js";
+	import { provideTheme } from "./context.ts";
+	import { type Mode, type ThemeName, themes, themeStylesheet } from "./index.ts";
 
 	let { name, mode, children }: { name: ThemeName; mode: Mode; children: Snippet } = $props();
 

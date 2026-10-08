@@ -3,12 +3,12 @@
 	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.js";
-	import { parseTableUrl } from "#lib/components/data-table/url-state.js";
+	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 
-	import { getMaterialFacets, getMaterials } from "./material-list.remote.js";
-	import { materialsList } from "./materials-list.js";
+	import { getMaterialFacets, getMaterials } from "./material-list.remote.ts";
+	import { materialsList } from "./materials-list.ts";
 	import MaterialsTable from "./materials-table.svelte";
 
 	// The server pages, filters and sorts the materials, as the URL says (see the orders page).

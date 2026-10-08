@@ -13,14 +13,14 @@ import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
-import { id, text } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { user } from "#lib/server/db/auth.schema.js";
-import { db, type Transaction } from "#lib/server/db/index.js";
-import { savedView } from "#lib/server/db/schema.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { id, text } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { user } from "#lib/server/db/auth.schema.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { savedView } from "#lib/server/db/schema.ts";
+import { inTenant, requireMember } from "#lib/server/session.ts";
 
-import { canShareViews, viewNameMax, viewQueryMax } from "./views.js";
+import { canShareViews, viewNameMax, viewQueryMax } from "./views.ts";
 
 const tableKey = v.pipe(v.string(), v.nonEmpty(), v.maxLength(200));
 

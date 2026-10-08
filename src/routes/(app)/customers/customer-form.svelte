@@ -9,15 +9,15 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { countryOptions } from "#lib/customers/countries.js";
-	import { segmentOptions } from "#lib/customers/display.js";
+	import { countryOptions } from "#lib/customers/countries.ts";
+	import { segmentOptions } from "#lib/customers/display.ts";
 
 	import type {
 		createCustomer,
 		getCustomer,
 		getCustomerFormOptions,
 		updateCustomer,
-	} from "./customers.remote.js";
+	} from "./customers.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getCustomerFormOptions>>;
 	type Customer = Awaited<ReturnType<typeof getCustomer>>["customer"];

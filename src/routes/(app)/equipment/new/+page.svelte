@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import EquipmentForm from "../equipment-form.svelte";
-	import { createEquipment, getEquipmentFormOptions } from "../equipment.remote.js";
+	import { createEquipment, getEquipmentFormOptions } from "../equipment.remote.ts";
 </script>
 
 <svelte:head>

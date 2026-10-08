@@ -5,7 +5,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import CustomersTable from "./customers-table.svelte";
-	import { getCustomers } from "./customers.remote.js";
+	import { getCustomers } from "./customers.remote.ts";
 </script>
 
 <svelte:head>

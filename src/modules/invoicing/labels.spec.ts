@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { hasLabel } from "#lib/i18n/labels.js";
+import { hasLabel } from "#lib/i18n/labels.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import { invoiceStates } from "./invoice.ts";

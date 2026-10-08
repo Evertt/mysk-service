@@ -23,8 +23,8 @@ import {
 	tableFeatures,
 } from "@tanstack/svelte-table";
 
-import { defaultColumnPinningFeature } from "./default-pinning.js";
-import { sortGroupsFirst } from "./grouping.js";
+import { defaultColumnPinningFeature } from "./default-pinning.ts";
+import { sortGroupsFirst } from "./grouping.ts";
 
 export interface DataTableColumnMeta {
 	/**

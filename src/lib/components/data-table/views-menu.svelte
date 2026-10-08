@@ -8,8 +8,8 @@
 	import BookmarkIcon from "@lucide/svelte/icons/bookmark";
 
 	import SavedViews from "./saved-views.svelte";
-	import { useTableContext } from "./table.svelte.js";
-	import { tableUrlSync } from "./url-sync.svelte.js";
+	import { useTableContext } from "./table.svelte.ts";
+	import { tableUrlSync } from "./url-sync.svelte.ts";
 
 	const table = useTableContext();
 	const sync = tableUrlSync(table);

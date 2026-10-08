@@ -6,7 +6,7 @@
 	import { page } from "$app/state";
 
 	import PublicShell from "../public-shell.svelte";
-	import { login } from "./login.remote.js";
+	import { login } from "./login.remote.ts";
 
 	const { email, _password, redirectTo } = login.fields;
 	const emailId = $props.id();

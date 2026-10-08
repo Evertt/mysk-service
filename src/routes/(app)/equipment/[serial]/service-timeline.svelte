@@ -11,15 +11,15 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EngineerLink from "#lib/engineers/engineer-link.svelte";
-	import { formatCents, formatDate } from "#lib/format.js";
-	import { formatQuantity } from "#lib/materials/display.js";
+	import { formatCents, formatDate } from "#lib/format.ts";
+	import { formatQuantity } from "#lib/materials/display.ts";
 	import MaterialLink from "#lib/materials/material-link.svelte";
-	import { types } from "#lib/orders/display.js";
+	import { types } from "#lib/orders/display.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import OrderStatusBadge from "#lib/orders/status-badge.svelte";
 
-	import type { ServiceEvent } from "./service-history.js";
-	import { getServiceHistory } from "./service-history.remote.js";
+	import { getServiceHistory } from "./service-history.remote.ts";
+	import type { ServiceEvent } from "./service-history.ts";
 
 	let { serial }: { serial: string } = $props();
 

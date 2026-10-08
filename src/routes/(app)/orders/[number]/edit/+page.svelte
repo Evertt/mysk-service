@@ -3,10 +3,10 @@
 	import LockIcon from "@lucide/svelte/icons/lock";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { isEditableOrder } from "#lib/models.js";
+	import { isEditableOrder } from "#lib/models.ts";
 
 	import OrderForm from "../../order-form.svelte";
-	import { getOrder, getOrderFormOptions, updateOrder } from "../../order.remote.js";
+	import { getOrder, getOrderFormOptions, updateOrder } from "../../order.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

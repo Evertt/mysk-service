@@ -13,10 +13,10 @@
 	import { resolve } from "$app/paths";
 	import { MediaQuery } from "svelte/reactivity";
 
-	import { specialties } from "#lib/engineers/display.js";
+	import { specialties } from "#lib/engineers/display.ts";
 
 	import BacklogCard from "./backlog-card.svelte";
-	import { createBoardDrag } from "./board-drag.svelte.js";
+	import { createBoardDrag } from "./board-drag.svelte.ts";
 	import {
 		type BoardRow,
 		boardEngineers,
@@ -27,7 +27,7 @@
 		type ScheduleOrder,
 		startOfWeek,
 		weekDays,
-	} from "./board.js";
+	} from "./board.ts";
 	import DayList from "./day-list.svelte";
 	import ScheduleDialog from "./schedule-dialog.svelte";
 	import WeekGrid from "./week-grid.svelte";

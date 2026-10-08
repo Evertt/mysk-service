@@ -1,9 +1,9 @@
-import { DAY, startOfDay } from "#lib/dates.js";
+import { DAY, startOfDay } from "#lib/dates.ts";
 /**
  * A unit's service history: what happened to it in order (`buildTimeline`) and the figures that
  * sum it up (`serviceStats`).
  */
-import { isUnderWarranty } from "#lib/equipment/display.js";
+import { isUnderWarranty } from "#lib/equipment/display.ts";
 import {
 	isDoneOrder,
 	isOpenOrder,
@@ -11,8 +11,8 @@ import {
 	type OrderStatus,
 	type OrderType,
 	orderTypes,
-} from "#lib/models.js";
-import type { PriceAdjustment } from "#lib/modules.js";
+} from "#lib/models.ts";
+import type { PriceAdjustment } from "#lib/modules.ts";
 
 /** An order on the unit, with what it took and cost. */
 export interface HistoryOrder {

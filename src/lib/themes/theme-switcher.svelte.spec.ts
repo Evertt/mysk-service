@@ -2,9 +2,9 @@ import { beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { type Mode, type ThemeName, themeNames } from "./index.js";
+import { type Mode, type ThemeName, themeNames } from "./index.ts";
 import ThemeSwitcher from "./theme-switcher.svelte";
-import { setTheme } from "./theme.remote.js";
+import { setTheme } from "./theme.remote.ts";
 
 // The remote functions read and set cookies on the server; these stand in for them.
 const remote = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ const remote = vi.hoisted(() => ({
 	updates: vi.fn(async () => {}),
 }));
 
-vi.mock("./theme.remote.js", () => {
+vi.mock("./theme.remote.ts", () => {
 	const query = <T>(value: () => T) =>
 		vi.fn(() => Object.assign(Promise.resolve(value()), { withOverride: vi.fn() }));
 	return {

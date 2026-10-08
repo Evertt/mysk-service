@@ -7,9 +7,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { cn } from "#lib/utils.js";
+	import { cn } from "#lib/utils.ts";
 
-	import type { createBoardDrag } from "./board-drag.svelte.js";
+	import type { createBoardDrag } from "./board-drag.svelte.ts";
 	import {
 		type BoardRow,
 		cellKey,
@@ -18,7 +18,7 @@
 		formatLongDay,
 		load,
 		type ScheduleOrder,
-	} from "./board.js";
+	} from "./board.ts";
 	import OrderCard from "./order-card.svelte";
 
 	let {

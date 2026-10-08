@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { date, optionalId, time } from "#lib/schema.js";
+import { date, optionalId, time } from "#lib/schema.ts";
 
 /** Who does an order and when: the fields of the schedule dialog and of a drag and drop move. */
 export const scheduleFields = {

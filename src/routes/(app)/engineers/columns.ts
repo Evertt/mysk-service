@@ -2,15 +2,15 @@ import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
-import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import ActiveBadge from "#lib/engineers/active-badge.svelte";
-import { regionLabel } from "#lib/engineers/display.js";
+import { regionLabel } from "#lib/engineers/display.ts";
 import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
-import { engineerSpecialties } from "#lib/models.js";
+import { engineerSpecialties } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getEngineers } from "./engineers.remote.js";
+import type { getEngineers } from "./engineers.remote.ts";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 

@@ -7,7 +7,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import InvoicesTable from "./invoices-table.svelte";
-	import { getInvoices } from "./invoices.remote.js";
+	import { getInvoices } from "./invoices.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/invoices"> } = $props();

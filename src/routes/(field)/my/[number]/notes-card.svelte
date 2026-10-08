@@ -7,9 +7,9 @@
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDateTime } from "#lib/format.js";
+	import { formatDateTime } from "#lib/format.ts";
 
-	import { addNote, type getMyOrder } from "../portal.remote.js";
+	import { addNote, type getMyOrder } from "../portal.remote.ts";
 
 	type Note = Awaited<ReturnType<typeof getMyOrder>>["notes"][number];
 

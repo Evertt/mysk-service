@@ -14,7 +14,7 @@ import { engineer, order } from "#lib/server/db/schema.ts";
 import { type BillableItem, billableItems } from "#lib/server/modules.ts";
 import { inTenant, tenantJoin } from "#lib/server/session.ts";
 
-import { itemLine, type LineDraft, orderLines, today } from "../invoice.js";
+import { itemLine, type LineDraft, orderLines, today } from "../invoice.ts";
 import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
 

@@ -6,7 +6,7 @@
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 	import { Toaster as Sonner, type ToasterProps as SonnerProps } from "svelte-sonner";
 
-	import { useTheme } from "#lib/themes/context.js";
+	import { useTheme } from "#lib/themes/context.ts";
 
 	let { ...restProps }: SonnerProps = $props();
 

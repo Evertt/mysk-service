@@ -5,11 +5,11 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { formatDateTime } from "#lib/format.js";
+	import { formatDateTime } from "#lib/format.ts";
 
 	import ContractLink from "./contract-link.svelte";
-	import { getOrderCoverage } from "./coverage.remote.js";
-	import { levels } from "./display.js";
+	import { getOrderCoverage } from "./coverage.remote.ts";
+	import { levels } from "./display.ts";
 	import SlaBadge from "./sla-badge.svelte";
 
 	let { number }: { number: string } = $props();

@@ -9,9 +9,9 @@
 	import CirclePlusIcon from "@lucide/svelte/icons/circle-plus";
 	import type { Component } from "svelte";
 
-	import { cn } from "#lib/utils.js";
+	import { cn } from "#lib/utils.ts";
 
-	import { useTableContext } from "./table.svelte.js";
+	import { useTableContext } from "./table.svelte.ts";
 
 	interface Option {
 		value: string;

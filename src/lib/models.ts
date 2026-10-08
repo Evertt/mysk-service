@@ -2,7 +2,7 @@
  * Domain enums shared by the database schema, the seed script and the UI. Kept out of
  * `$lib/server` so client code (filters, badges) can import the option lists.
  */
-import type { ModuleAction } from "#lib/modules.js";
+import type { ModuleAction } from "#lib/modules.ts";
 
 export const customerSegments = ["enterprise", "mid_market", "small_business"] as const;
 export type CustomerSegment = (typeof customerSegments)[number];

@@ -5,11 +5,11 @@
 -->
 <script lang="ts">
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
-	import { orderTypes } from "#lib/models.js";
-	import { types } from "#lib/orders/display.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { orderTypes } from "#lib/models.ts";
+	import { types } from "#lib/orders/display.ts";
 
-	import { getServiceHistory } from "./service-history.remote.js";
+	import { getServiceHistory } from "./service-history.remote.ts";
 
 	let { serial }: { serial: string } = $props();
 

@@ -4,8 +4,8 @@ import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { formatCode, type NumberKind } from "#lib/numbering.js";
-import { db } from "#lib/server/db/index.js";
+import { formatCode, type NumberKind } from "#lib/numbering.ts";
+import { db } from "#lib/server/db/index.ts";
 
 import { nextNumber, type NumberTarget } from "./numbering.ts";
 import type { Tenant } from "./session.ts";
@@ -24,11 +24,11 @@ const folder = await vi.hoisted(async () => {
 	]);
 	return fs.mkdtempSync(path.join(os.tmpdir(), "numbering-spec-"));
 });
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const path = await import("node:path");
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
 	await client.executeMultiple(`
 		create table customer (id integer primary key, organization_id text, code text);

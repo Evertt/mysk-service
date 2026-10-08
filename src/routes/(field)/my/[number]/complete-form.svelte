@@ -9,7 +9,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
-	import { completeWork } from "../portal.remote.js";
+	import { completeWork } from "../portal.remote.ts";
 	import SignaturePad from "./signature-pad.svelte";
 
 	let { orderId, contactName }: { orderId: number; contactName: string } = $props();

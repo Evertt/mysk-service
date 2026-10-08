@@ -2,14 +2,14 @@ import { form, getRequestEvent, query } from "$app/server";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { modules } from "#lib/modules.js";
-import { isManager, parseRoles } from "#lib/roles.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
-import { member, organizationModule, user } from "#lib/server/db/schema.js";
-import { inTenant, requireManager, requireMember } from "#lib/server/session.js";
+import { modules } from "#lib/modules.ts";
+import { isManager, parseRoles } from "#lib/roles.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { db } from "#lib/server/db/index.ts";
+import { member, organizationModule, user } from "#lib/server/db/schema.ts";
+import { inTenant, requireManager, requireMember } from "#lib/server/session.ts";
 
-import { getCurrentTenant } from "../session.remote.js";
+import { getCurrentTenant } from "../session.remote.ts";
 
 export const getOrganizationSettings = query(async () => {
 	const tenant = requireMember();

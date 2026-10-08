@@ -7,11 +7,11 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-	import { formatCents } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
-	import { lineTotal, quantityStep } from "#lib/models.js";
+	import { formatCents } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
+	import { lineTotal, quantityStep } from "#lib/models.ts";
 
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.js";
+	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.ts";
 
 	let {
 		field,

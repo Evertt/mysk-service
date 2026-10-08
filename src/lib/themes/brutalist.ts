@@ -1,4 +1,4 @@
-import { defineTheme } from "./types.js";
+import { defineTheme } from "./types.ts";
 
 const hardShadow = {
 	sm: "shadow-[2px_2px_0_0_var(--foreground)]",

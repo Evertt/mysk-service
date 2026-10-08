@@ -7,7 +7,7 @@
 
 	import TextField from "#lib/components/form/text-field.svelte";
 
-	import { renameView, type TableView } from "./views.remote.js";
+	import { renameView, type TableView } from "./views.remote.ts";
 
 	let { open = $bindable(false), view }: { open?: boolean; view: TableView } = $props();
 

@@ -8,11 +8,11 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, order } from "#lib/server/db/schema.js";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.js";
+import { db } from "#lib/server/db/index.ts";
+import { customer, order } from "#lib/server/db/schema.ts";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
-import { invoiceState, invoiceTotals, isOverdue } from "./invoice.js";
+import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";
 
 /** How many overdue invoices the dashboard lists. */

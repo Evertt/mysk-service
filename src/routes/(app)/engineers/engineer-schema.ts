@@ -1,9 +1,9 @@
 import * as v from "valibot";
 
-import { engineerRegions } from "#lib/engineers/display.js";
-import { engineerSpecialties } from "#lib/models.js";
+import { engineerRegions } from "#lib/engineers/display.ts";
+import { engineerSpecialties } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { cents, date, email, phone, text } from "#lib/schema.js";
+import { cents, date, email, phone, text } from "#lib/schema.ts";
 
 /** The fields of the engineer form, shared by creating and editing an engineer. */
 export const engineerFields = {

@@ -7,13 +7,13 @@
 	import { resolve } from "$app/paths";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
-	import { joinValues } from "#lib/components/data-table/url-state.js";
-	import { formatCents, formatDate } from "#lib/format.js";
+	import { joinValues } from "#lib/components/data-table/url-state.ts";
+	import { formatCents, formatDate } from "#lib/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";
 
-	import { getCustomerActivity } from "./activity.remote.js";
+	import { getCustomerActivity } from "./activity.remote.ts";
 
 	let { code }: { code: string } = $props();
 

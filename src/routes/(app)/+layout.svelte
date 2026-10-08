@@ -6,7 +6,7 @@
 	import type { LayoutProps } from "./$types";
 	import AppHeader from "./app-header.svelte";
 	import AppSidebar from "./app-sidebar.svelte";
-	import { getCurrentTenant } from "./session.remote.js";
+	import { getCurrentTenant } from "./session.remote.ts";
 
 	let { children }: LayoutProps = $props();
 

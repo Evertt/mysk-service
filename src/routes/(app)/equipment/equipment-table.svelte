@@ -1,17 +1,17 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.js";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { categoryOptions, statusOptions } from "#lib/equipment/display.js";
+	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import { categoryOptions, statusOptions } from "#lib/equipment/display.ts";
 
-	import { getCustomerOptions } from "../filter-options.remote.js";
-	import { changeStatus, deleteEquipment } from "./bulk-actions.js";
-	import { columns } from "./columns.js";
-	import { equipmentList } from "./equipment-list.js";
-	import type { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.js";
+	import { getCustomerOptions } from "../filter-options.remote.ts";
+	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
+	import { columns } from "./columns.ts";
+	import type { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
+	import { equipmentList } from "./equipment-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.

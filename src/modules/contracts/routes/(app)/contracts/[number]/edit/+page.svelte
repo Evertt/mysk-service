@@ -5,7 +5,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import ContractForm from "../../contract-form.svelte";
-	import { getContract, getContractFormOptions, updateContract } from "../../contracts.remote.js";
+	import { getContract, getContractFormOptions, updateContract } from "../../contracts.remote.ts";
 
 	let { params }: { params: RouteParams<"/(app)/contracts/[number]/edit"> } = $props();
 

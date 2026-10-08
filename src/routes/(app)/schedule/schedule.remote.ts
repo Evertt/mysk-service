@@ -3,21 +3,21 @@ import { error } from "@sveltejs/kit";
 import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { addDays, atTime } from "#lib/dates.js";
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.js";
-import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
-import { assigneeProblem } from "#lib/orders/server/order-changes.js";
+import { addDays, atTime } from "#lib/dates.ts";
+import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
+import { assigneeProblem } from "#lib/orders/server/order-changes.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { date, id } from "#lib/schema.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { refreshRequested } from "#lib/server/bulk.js";
-import { db } from "#lib/server/db/index.js";
-import { customer, engineer, order } from "#lib/server/db/schema.js";
-import { type Problem, refuse } from "#lib/server/forms.js";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
+import { date, id } from "#lib/schema.ts";
+import { recordActivity } from "#lib/server/activity.ts";
+import { refreshRequested } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, order } from "#lib/server/db/schema.ts";
+import { type Problem, refuse } from "#lib/server/forms.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
-import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
-import { moveFields, scheduleFields } from "./schedule-schema.js";
+import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.ts";
+import { moveFields, scheduleFields } from "./schedule-schema.ts";
 
 /** What a card on the board shows of an order. */
 const cardColumns = {

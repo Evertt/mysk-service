@@ -12,10 +12,10 @@
 	import { untrack } from "svelte";
 	import { SvelteMap } from "svelte/reactivity";
 
-	import { cn } from "#lib/utils.js";
+	import { cn } from "#lib/utils.ts";
 
-	import type { RecordOption, RecordOptions } from "./server-table.svelte.js";
-	import { useTableContext } from "./table.svelte.js";
+	import type { RecordOption, RecordOptions } from "./server-table.svelte.ts";
+	import { useTableContext } from "./table.svelte.ts";
 
 	let {
 		columnId,

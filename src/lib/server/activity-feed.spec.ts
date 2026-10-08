@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { db } from "#lib/server/db/index.js";
-import { activity } from "#lib/server/db/schema.js";
+import { db } from "#lib/server/db/index.ts";
+import { activity } from "#lib/server/db/schema.ts";
 
 import { lookUpNames, present, subjectStates } from "./activity-feed.ts";
 import type { Tenant } from "./session.ts";
@@ -18,10 +18,10 @@ vi.mock("#lib/modules.gen.ts", async () => ({
 
 // An in-memory database with just the tables the feed reads, instead of the app's, which needs
 // `DATABASE_URL`.
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 

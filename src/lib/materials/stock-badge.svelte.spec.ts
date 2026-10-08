@@ -2,8 +2,8 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { type BadgeVariant, badgeVariants } from "#lib/components/ui/badge/index.js";
-import type { MaterialUnit } from "#lib/models.js";
+import { type BadgeVariant, badgeVariants } from "#lib/components/ui/badge/index.ts";
+import type { MaterialUnit } from "#lib/models.ts";
 
 import StockBadge from "./stock-badge.svelte";
 

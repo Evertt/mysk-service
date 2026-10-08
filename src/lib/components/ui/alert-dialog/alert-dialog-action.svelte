@@ -5,9 +5,9 @@
 		buttonVariants,
 		type ButtonVariant,
 		type ButtonSize,
-	} from "#lib/components/ui/button/index.js";
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn } from "#lib/utils.js";
+	} from "#lib/components/ui/button/index.ts";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

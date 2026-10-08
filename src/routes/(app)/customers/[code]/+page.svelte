@@ -7,13 +7,13 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { countryName } from "#lib/customers/countries.js";
+	import { countryName } from "#lib/customers/countries.ts";
 	import SegmentBadge from "#lib/customers/segment-badge.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
-	import { label } from "#lib/i18n/labels.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { label } from "#lib/i18n/labels.ts";
 
-	import { deleteCustomer, getCustomer } from "../customers.remote.js";
+	import { deleteCustomer, getCustomer } from "../customers.remote.ts";
 	import type { PageProps } from "./$types";
 	import RecentActivity from "./recent-activity.svelte";
 

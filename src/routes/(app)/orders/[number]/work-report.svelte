@@ -4,9 +4,9 @@
 	Nothing while there's neither.
 -->
 <script lang="ts">
-	import { formatDateTime } from "#lib/format.js";
+	import { formatDateTime } from "#lib/format.ts";
 
-	import { getWorkReport } from "./work-report.remote.js";
+	import { getWorkReport } from "./work-report.remote.ts";
 
 	let { number }: { number: string } = $props();
 

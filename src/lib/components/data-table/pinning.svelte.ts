@@ -1,7 +1,7 @@
 import type { Attachment } from "svelte/attachments";
 import { SvelteMap } from "svelte/reactivity";
 
-import { cn } from "#lib/utils.js";
+import { cn } from "#lib/utils.ts";
 
 /** What the pinning needs of a column. */
 interface PinnableColumn {

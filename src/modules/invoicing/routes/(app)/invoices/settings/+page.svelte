@@ -8,11 +8,11 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { toDateInput } from "#lib/dates.js";
-	import { formatDate } from "#lib/format.js";
+	import { toDateInput } from "#lib/dates.ts";
+	import { formatDate } from "#lib/format.ts";
 
-	import { formatRate } from "../../../../display.js";
-	import { getInvoicingSettings, saveSettings } from "./settings.remote.js";
+	import { formatRate } from "../../../../display.ts";
+	import { getInvoicingSettings, saveSettings } from "./settings.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/invoices/settings"> } = $props();

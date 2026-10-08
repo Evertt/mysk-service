@@ -2,8 +2,8 @@
 	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.ts";
 
 	import DropdownMenuPortal from "./dropdown-menu-portal.svelte";
 

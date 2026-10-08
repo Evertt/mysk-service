@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { EquipmentStatus } from "#lib/models.js";
+	import type { EquipmentStatus } from "#lib/models.ts";
 
-	import { statuses } from "./display.js";
+	import { statuses } from "./display.ts";
 
 	let { status }: { status: EquipmentStatus } = $props();
 

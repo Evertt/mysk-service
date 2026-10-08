@@ -1,8 +1,8 @@
 import * as v from "valibot";
 
-import { fitsUnit, materialUnits } from "#lib/models.js";
+import { fitsUnit, materialUnits } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { cents, text } from "#lib/schema.js";
+import { cents, text } from "#lib/schema.ts";
 
 /**
  * Quantities of a material have at most two decimals. Pieces are only counted whole; the server

@@ -2,8 +2,8 @@
 	import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
 	import { Select as SelectPrimitive } from "bits-ui";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.ts";
 
 	let {
 		ref = $bindable(null),

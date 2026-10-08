@@ -7,11 +7,11 @@
 	import { resolve } from "$app/paths";
 
 	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import { formatDate, formatDateTime, formatNumber } from "#lib/format.js";
+	import { formatDate, formatDateTime, formatNumber } from "#lib/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import ContractLink from "./contract-link.svelte";
-	import { getContractsOverview } from "./coverage.remote.js";
+	import { getContractsOverview } from "./coverage.remote.ts";
 	import LevelBadge from "./level-badge.svelte";
 	import SlaBadge from "./sla-badge.svelte";
 

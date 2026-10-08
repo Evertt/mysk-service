@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import CustomerForm from "../customer-form.svelte";
-	import { createCustomer, getCustomerFormOptions } from "../customers.remote.js";
+	import { createCustomer, getCustomerFormOptions } from "../customers.remote.ts";
 </script>
 
 <svelte:head>

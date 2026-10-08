@@ -11,10 +11,10 @@
  */
 import type { Component } from "svelte";
 
-import { formatNumber } from "#lib/format.js";
+import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { ListColumns, ListWhere } from "./list-definition.js";
+import type { ListColumns, ListWhere } from "./list-definition.ts";
 
 /** The most records a bulk action changes at once. */
 export const MAX_BULK_RECORDS = 500;

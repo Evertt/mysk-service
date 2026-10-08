@@ -9,7 +9,7 @@
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
-	import { createView } from "./views.remote.js";
+	import { createView } from "./views.remote.ts";
 
 	let {
 		open = $bindable(false),

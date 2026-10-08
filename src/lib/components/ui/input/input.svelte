@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
 
-	import { useTheme } from "#lib/themes/context.js";
-	import type { Slot } from "#lib/themes/types.js";
-	import { cn, type WithElementRef } from "#lib/utils.js";
+	import { useTheme } from "#lib/themes/context.ts";
+	import type { Slot } from "#lib/themes/types.ts";
+	import { cn, type WithElementRef } from "#lib/utils.ts";
 
 	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
 

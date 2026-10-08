@@ -24,10 +24,10 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity.js";
-import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import type { OrderStatus } from "#lib/models.js";
-import type { ModuleId } from "#lib/module-ids.js";
+import type { Sentence, SubjectType } from "#lib/activity.ts";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import type { OrderStatus } from "#lib/models.ts";
+import type { ModuleId } from "#lib/module-ids.ts";
 
 import { manifests } from "./modules.gen.ts";
 

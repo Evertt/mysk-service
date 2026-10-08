@@ -36,7 +36,7 @@ import {
 	parseTableUrl,
 	type TableUrlSpec,
 	type TableUrlState,
-} from "./url-state.js";
+} from "./url-state.ts";
 
 /** What a query may hold, so that its URL stays well under the servers' limit (16 KB). */
 export const listLimits = {

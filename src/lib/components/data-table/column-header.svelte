@@ -12,11 +12,11 @@
 	import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 
-	import { formatNumber } from "#lib/format.js";
-	import { cn } from "#lib/utils.js";
+	import { formatNumber } from "#lib/format.ts";
+	import { cn } from "#lib/utils.ts";
 
-	import { columnLabel } from "./features.js";
-	import { isMultiSortEvent, useHeaderContext, useTableContext } from "./table.svelte.js";
+	import { columnLabel } from "./features.ts";
+	import { isMultiSortEvent, useHeaderContext, useTableContext } from "./table.svelte.ts";
 
 	const header = useHeaderContext();
 	const table = useTableContext();

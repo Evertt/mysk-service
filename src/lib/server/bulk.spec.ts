@@ -3,9 +3,9 @@ import { inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { code, defineList } from "#lib/components/data-table/list-definition.js";
-import { db } from "#lib/server/db/index.js";
-import { equipment } from "#lib/server/db/schema.js";
+import { code, defineList } from "#lib/components/data-table/list-definition.ts";
+import { db } from "#lib/server/db/index.ts";
+import { equipment } from "#lib/server/db/schema.ts";
 
 import { bulkChange, idsTarget, listTarget, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
 import { inTenant, type Tenant } from "./session.ts";
@@ -21,10 +21,10 @@ vi.mock("$app/server", () => ({
 }));
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`.
-vi.mock("#lib/server/db/index.js", async () => {
+vi.mock("#lib/server/db/index.ts", async () => {
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.js");
+	const schema = await import("#lib/server/db/schema.ts");
 	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 

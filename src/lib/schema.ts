@@ -8,7 +8,7 @@
  */
 import * as v from "valibot";
 
-import { fitsUnit } from "#lib/models.js";
+import { fitsUnit } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 /**

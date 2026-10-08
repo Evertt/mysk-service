@@ -5,12 +5,12 @@
  */
 import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
-import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import { formatRate } from "../../../../../display.js";
-import type { InvoiceState } from "../../../../../invoice.js";
-import { invoicingLabels } from "../../../../../labels.js";
+import { formatRate } from "../../../../../display.ts";
+import type { InvoiceState } from "../../../../../invoice.ts";
+import { invoicingLabels } from "../../../../../labels.ts";
 
 export interface PdfInvoice {
 	organization: string;

@@ -3,12 +3,12 @@
 	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.js";
-	import { parseTableUrl } from "#lib/components/data-table/url-state.js";
+	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 
-	import { equipmentList } from "./equipment-list.js";
-	import { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.js";
+	import { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
+	import { equipmentList } from "./equipment-list.ts";
 	import EquipmentTable from "./equipment-table.svelte";
 
 	// The server pages, filters and sorts the units, as the URL says (see the orders page).
