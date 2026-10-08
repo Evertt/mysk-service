@@ -23,10 +23,10 @@
 import { and, inArray } from "drizzle-orm";
 
 import type { ActivityAction } from "#lib/models.js";
-import { db } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.js";
 import { inTenant, requireTenant } from "#lib/server/session.js";
-import { roundQuantity, type Transaction } from "#lib/server/stock.js";
+import { roundQuantity } from "#lib/server/stock.js";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {

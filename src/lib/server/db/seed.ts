@@ -46,6 +46,7 @@ import {
 } from "#lib/models.ts";
 
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "./demo.ts";
+import type { Transaction } from "./index.ts";
 import * as schema from "./schema.ts";
 
 const { account, customer, engineer, equipment, material, order, orderLine, session, user } =
@@ -1255,8 +1256,6 @@ await db.transaction(async (tx) => {
 		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
 	}
 });
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Links a demo field engineer's account to their organization's first engineer, and plans some of

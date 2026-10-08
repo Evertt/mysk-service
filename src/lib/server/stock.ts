@@ -17,12 +17,9 @@ import {
 	type StockMovementKind,
 } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
-import type { db } from "#lib/server/db/index.js";
+import type { Transaction } from "#lib/server/db/index.js";
 import { material, stockMovement } from "#lib/server/db/schema.js";
 import { inTenant, requireTenant } from "#lib/server/session.js";
-
-/** A transaction on the app's database, as `db.transaction` passes it to its callback. */
-export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * A material's stock level in SQL, as `stockLevel()` works it out (with the same thresholds), to

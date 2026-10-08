@@ -27,7 +27,7 @@ import { formatCents } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { recordActivity } from "./activity.ts";
-import { db } from "./db/index.ts";
+import { db, type Transaction } from "./db/index.ts";
 import {
 	customer,
 	engineer,
@@ -64,9 +64,6 @@ export async function settingsOf(organizationId = requireMember().organizationId
 		.onConflictDoNothing();
 	return (await db.query.invoicingSettings.findFirst({ where }))!;
 }
-
-/** A database transaction, as `db.transaction()` passes it. */
-export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** A completed order that can be billed, with the lines it becomes. */
 export interface BillableOrder {

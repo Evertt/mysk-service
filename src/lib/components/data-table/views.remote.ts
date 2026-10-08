@@ -16,10 +16,9 @@ import { m } from "#lib/paraglide/messages.js";
 import { id, text } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { user } from "#lib/server/db/auth.schema.js";
-import { db } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
 import { savedView } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
-import type { Transaction } from "#lib/server/stock.js";
 
 import { canShareViews, viewNameMax, viewQueryMax } from "./views.js";
 
