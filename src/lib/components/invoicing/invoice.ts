@@ -52,9 +52,6 @@ export const canChange = (from: InvoiceStatus, to: InvoiceStatus) =>
 /** Only drafts can have their lines and terms changed. */
 export const isEditable = (status: InvoiceStatus) => status === "draft";
 
-/** Outstanding: sent and not yet paid (overdue or not). */
-export const isOutstanding = (status: InvoiceStatus) => status === "sent";
-
 /** Today at midnight. */
 export const today = (now = new Date()) =>
 	new Date(now.getFullYear(), now.getMonth(), now.getDate());

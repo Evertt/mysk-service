@@ -38,8 +38,6 @@ export const invoicing: ServerModule = {
 	},
 };
 
-export type InvoicingSettings = typeof invoicingSettings.$inferSelect;
-
 /**
  * The tenant's invoicing settings. Made with the defaults the first time they're needed, billing
  * other modules' items from the start of that month.
