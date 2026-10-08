@@ -7,8 +7,7 @@
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its
  * tables reference the core tables, never the other way round. Core pages and core server code
  * don't import a module's code; they take what the tenant's modules contribute through these
- * registries. A module is either in the static list `modules` below (invoicing, until it moves)
- * or a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
+ * registries. A module is a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
  * `#lib/define-module.ts`), which `scripts/modules.ts` collects in `modules.gen.ts`:
  *
  * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
@@ -23,15 +22,12 @@
  *   `orders.committed` (`orderCommitted()`).
  */
 import type { RouteId } from "$app/types";
-import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity.js";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { invoicingActions, invoicingSubjects } from "#lib/components/invoicing/activity.js";
 import type { OrderStatus } from "#lib/models.js";
 import type { ModuleId } from "#lib/module-ids.js";
-import { m } from "#lib/paraglide/messages.js";
 
 import { manifests } from "./modules.gen.ts";
 
@@ -125,36 +121,8 @@ export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
 	default: TableBulkAction<Table>[];
 }>;
 
-/** The module that still lives in the core, until it moves to `src/modules`. */
-const staticModules = [
-	{
-		id: "invoicing",
-		get label() {
-			return m.invoices_module_name();
-		},
-		get description() {
-			return m.invoices_module_description();
-		},
-		route: "/(app)/invoices",
-		icon: ReceiptTextIcon,
-		slots: {
-			dashboard: () => import("#lib/components/invoicing/dashboard-cards.svelte"),
-			order: () => import("#lib/components/invoicing/order-invoice.svelte"),
-		},
-		subjects: invoicingSubjects,
-		actions: invoicingActions,
-		bulkActions: {
-			orders: () => import("#lib/components/invoicing/order-bulk-actions.js"),
-		},
-	},
-] as const satisfies readonly AppModule[];
-
-/**
- * All the modules in registry order: the folders in `src/modules` by id (the order
- * `scripts/modules.ts` lists them in), then the static ones. With invoicing there, that is the
- * order by id (contracts, invoicing) it keeps when invoicing moves too.
- */
-export const modules = [...manifests, ...staticModules] as const satisfies readonly AppModule[];
+/** All the modules in registry order: the folders in `src/modules` by id (`scripts/modules.ts`). */
+export const modules = manifests satisfies readonly AppModule[];
 
 export type { ModuleId };
 
@@ -166,8 +134,9 @@ type ActionsOf<Module> = Module extends { actions: infer Actions } ? keyof Actio
 export function slotLoaders<Name extends SlotName>(
 	name: Name,
 	enabled: readonly string[],
+	registry: readonly AppModule[] = modules,
 ): SlotLoader<Name>[] {
-	return (modules as readonly AppModule[]).flatMap((module) => {
+	return registry.flatMap((module) => {
 		const load = module.slots?.[name];
 		return load && enabled.includes(module.id) ? [load] : [];
 	});
@@ -177,8 +146,9 @@ export function slotLoaders<Name extends SlotName>(
 export function bulkActionLoaders<Table extends BulkTableName>(
 	table: Table,
 	enabled: readonly string[],
+	registry: readonly AppModule[] = modules,
 ): BulkActionLoader<Table>[] {
-	return (modules as readonly AppModule[]).flatMap((module) => {
+	return registry.flatMap((module) => {
 		const load = module.bulkActions?.[table];
 		return load && enabled.includes(module.id) ? [load] : [];
 	});

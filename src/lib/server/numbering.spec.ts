@@ -35,7 +35,6 @@ vi.mock("#lib/server/db/index.js", async () => {
 		create table material (id integer primary key, organization_id text, sku text);
 		create table "order" (id integer primary key, organization_id text, number text);
 		create table widget (id integer primary key, organization_id text, number text);
-		create table invoice (id integer primary key, organization_id text, number text);
 	`);
 	return { db: drizzle(client, { schema }) };
 });
@@ -85,9 +84,9 @@ describe("nextNumber", () => {
 	});
 
 	test("counts numerically, not alphabetically", async () => {
-		await db.run(sql`insert into invoice (organization_id, number) values
-			('north', 'INV-2026-00009'), ('north', 'INV-2026-00010'), ('north', 'INV-2026-100000')`);
-		expect(await next("invoice")).toBe(formatCode("invoice", 100001));
+		await db.run(sql`insert into "order" (organization_id, number) values
+			('north', 'ORD-2026-00009'), ('north', 'ORD-2026-00010'), ('north', 'ORD-2026-100000')`);
+		expect(await next("order")).toBe(formatCode("order", 100001));
 	});
 
 	test("reads the sequence after each kind's own prefix", async () => {

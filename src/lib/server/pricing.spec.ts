@@ -28,7 +28,6 @@ vi.mock("#lib/server/db/index.js", async () => {
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 // The core, without the modules in `src/modules`.
 vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [] }));
-vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({}));
 
 test("labour is charged at the engineer's hourly rate", () => {
 	expect(laborCost(2.5, 6000)).toBe(15_000);

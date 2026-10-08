@@ -1,8 +1,10 @@
 /**
- * What the contracts module does to an order's price, worked out in SQL for the e2e tests: which
- * contract covers an order, and what the order costs. It stays here, not in the module's `e2e/`,
- * because the core's tests of prices (a customer's revenue, a unit's cost) need it too, and only
- * the module's own files may import from the module. It names the module's tables in SQL only.
+ * What the contracts module does to an order's price and to what is billed, worked out in SQL for
+ * the e2e tests: which contract covers an order, what the order costs, and which monthly fees are
+ * due. It stays here, not in the module's `e2e/`, because the core's tests of prices (a customer's
+ * revenue, a unit's cost) need it, and so do the invoicing module's, which bills the discounts and
+ * fees of contracts; only a module's own files may import from it (`src/modules/boundaries.spec.ts`).
+ * It names the contracts' tables in SQL only.
  */
 import { rows } from "./app.ts";
 
@@ -63,4 +65,20 @@ export function priceOf(order: PricedOrder) {
 	const included =
 		order.level === "premium" ? labor + order.materials : order.level === "standard" ? labor : 0;
 	return { labor, included, total: order.materials + labor - included };
+}
+
+/**
+ * This month's fee of each of a customer's active contracts (they start on the 1st), with the
+ * reference that whoever bills it remembers it by (see `monthlyFee` in
+ * `src/modules/contracts/billing.ts`): `contracts:<id>:<month>`.
+ */
+export async function feesDue(customerId: number) {
+	const now = new Date();
+	const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+	const active = await rows<{ id: number; monthly_fee: number }>(
+		`select id, monthly_fee from contract where customer_id = ?
+		 and starts_on <= unixepoch() and ends_on + 86400 > unixepoch() order by id`,
+		[customerId],
+	);
+	return active.map((c) => ({ reference: `contracts:${c.id}:${month}`, fee: c.monthly_fee }));
 }

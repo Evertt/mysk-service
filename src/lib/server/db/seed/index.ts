@@ -25,7 +25,6 @@ import { moduleSeeds } from "../module-seeds.gen.ts";
 import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
-import { billFrom, generateInvoices } from "./invoices.ts";
 import { orderSeeds, type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateStockMovements } from "./stock.ts";
 import { generateTenant } from "./tenant.ts";
@@ -85,9 +84,6 @@ await db.transaction(async (tx) => {
 	for (const table of [
 		schema.activity,
 		schema.savedView,
-		schema.invoiceLine,
-		schema.invoice,
-		schema.invoicingSettings,
 		schema.orderSignoff,
 		schema.orderNote,
 		schema.stockMovement,
@@ -112,7 +108,6 @@ await db.transaction(async (tx) => {
 		equipment: 0,
 		material: 0,
 		order: 0,
-		invoice: 0,
 	};
 	const seeded: SeedTenant<Record<string, unknown>>[] = [];
 	// What each module's `generate()` made, by module id: for all the tenants so far (a module
@@ -141,7 +136,6 @@ await db.transaction(async (tx) => {
 			generated[id] = seed.generate({ ...data, faker }, before);
 			before.push(generated[id]);
 		}
-		const collect = seedCollectors(seeds, tenant, generated);
 		const organizationId = tenant.id;
 		const o = { ...offset };
 		const rows = {
@@ -175,28 +169,6 @@ await db.transaction(async (tx) => {
 				orderId: m.orderId && m.orderId + o.order,
 			})),
 		};
-		const invoices = tenant.modules.includes("invoicing")
-			? generateInvoices(data, tenant.seed, collect)
-			: [];
-		const invoicing = {
-			invoices: invoices.map(({ lines: _lines, ...i }) => ({
-				...i,
-				organizationId,
-				id: i.id + o.invoice,
-				customerId: i.customerId + o.customer,
-			})),
-			invoiceLines: invoices.flatMap((i) =>
-				i.lines.map((line) => ({
-					...line,
-					organizationId,
-					invoiceId: i.id + o.invoice,
-					orderId: line.orderId && line.orderId + o.order,
-				})),
-			),
-			invoicingSettings: tenant.modules.includes("invoicing")
-				? [{ organizationId, vatRate: 21, paymentTermDays: 30, billFrom }]
-				: [],
-		};
 
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
@@ -205,11 +177,6 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
 		await insertAll(rows.orderLines, (chunk) => tx.insert(orderLine).values(chunk));
 		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
-		await insertAll(invoicing.invoices, (chunk) => tx.insert(schema.invoice).values(chunk));
-		await insertAll(invoicing.invoiceLines, (chunk) => tx.insert(schema.invoiceLine).values(chunk));
-		await insertAll(invoicing.invoicingSettings, (chunk) =>
-			tx.insert(schema.invoicingSettings).values(chunk),
-		);
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>
@@ -239,14 +206,14 @@ await db.transaction(async (tx) => {
 			equipmentIds: rows.equipments.map((row) => row.id),
 			orderIds: rows.orders.map((row) => row.id),
 			data: generated,
+			collect: seedCollectors(seeds, tenant, generated),
 		});
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
 		offset.material += rows.materials.length;
 		offset.order += rows.orders.length;
-		offset.invoice += invoicing.invoices.length;
-		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
+		for (const [table, list] of Object.entries(rows)) count(table, list);
 	}
 
 	for (const { id, seed } of seeds) {

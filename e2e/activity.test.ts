@@ -372,14 +372,6 @@ describe("in Dutch", () => {
 		expect(await app.page.getByText("Alleen klant", { exact: true }).count()).toBe(1);
 	});
 
-	test("the invoices read in Dutch", async () => {
-		const { page } = app;
-		await app.go("/invoices");
-		await page.getByRole("heading", { name: "Facturen" }).waitFor();
-		expect(await page.getByRole("link", { name: "Nieuwe factuur" }).count()).toBe(1);
-		expect(await page.locator("thead").getByText("Vervaldatum").count()).toBe(1);
-	});
-
 	test("switching back to English", async () => {
 		await useLanguage("en");
 		await app.go("/activity");

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { invoicingLabels } from "#lib/components/invoicing/labels.js";
 import {
 	customerSegments,
 	engineerSpecialties,
@@ -68,26 +67,6 @@ function testKinds(set: LabelSet, kinds: readonly (readonly [string, readonly st
 }
 
 testKinds({ hasLabel, label }, kinds);
-
-describe("invoicing labels", () => {
-	testKinds(invoicingLabels, [["invoiceState", ["draft", "sent", "overdue", "paid", "void"]]]);
-
-	test("make options and displays in the current language", () => {
-		const details = { draft: { rank: 1 }, sent: { rank: 2 } };
-		const options = invoicingLabels.labelOptions("invoiceState", ["sent", "draft"], details);
-		const states = invoicingLabels.withLabels("invoiceState", {
-			...details,
-			overdue: { rank: 3 },
-			paid: { rank: 4 },
-			void: { rank: 5 },
-		});
-		expect(options.map((option) => option.value)).toEqual(["sent", "draft"]);
-		expect(states.sent).toEqual({ rank: 2, label: "Sent" });
-		inLanguage("nl");
-		expect(states.sent.label).toBe("Verzonden");
-		expect(options[0].label).toBe("Verzonden");
-	});
-});
 
 describe("defineLabels", () => {
 	const colours = defineLabels({ colour: { red: () => "Red", blue: () => "Blue" } });

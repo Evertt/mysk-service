@@ -7,8 +7,8 @@ import contracts from "./index.ts";
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.js", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
-// The core still loads invoicing's server hooks, which bring its remote functions along.
-vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({}));
+// The core, without the modules in `src/modules`.
+vi.mock("#lib/server/modules.gen.ts", () => ({ generatedServerModules: () => [] }));
 const refreshed = vi.hoisted(() => [] as string[]);
 vi.mock("../coverage.remote.js", () => ({
 	getOrderCoverage: (number: string) => ({ refresh: async () => void refreshed.push(number) }),

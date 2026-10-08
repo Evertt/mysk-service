@@ -17,11 +17,11 @@
 			"./messages/{locale}/equipment.json",
 			"./messages/{locale}/engineers.json",
 			"./messages/{locale}/materials.json",
-			"./messages/{locale}/invoices.json",
 			"./messages/{locale}/settings.json",
 			"./messages/{locale}/portal.json",
 			"./messages/{locale}/activity.json",
-			"./src/modules/contracts/messages/{locale}/contracts.json"
+			"./src/modules/contracts/messages/{locale}/contracts.json",
+			"./src/modules/invoicing/messages/{locale}/invoices.json"
 		]
 	},
 	"baseLocale": "en",

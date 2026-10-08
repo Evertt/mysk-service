@@ -18,7 +18,7 @@ describe("formatCode", () => {
 
 	test("puts the year of yearly numbers between the prefix and the sequence", () => {
 		expect(formatCode("order", 1, 2026)).toBe("ORD-2026-00001");
-		expect(formatCode("invoice", 1234, 2027)).toBe("INV-2027-01234");
+		expect(formatCode("order", 1234, 2027)).toBe("ORD-2027-01234");
 	});
 
 	test("uses this year by default, and ignores the year of the others", () => {
@@ -27,7 +27,7 @@ describe("formatCode", () => {
 	});
 
 	test("keeps counting past the padding", () => {
-		expect(formatCode("invoice", 123456, 2030)).toBe("INV-2030-123456");
+		expect(formatCode("order", 123456, 2030)).toBe("ORD-2030-123456");
 		expect(formatCode("customer", 12345)).toBe("CUST-12345");
 	});
 });
@@ -37,7 +37,6 @@ describe("sequenceStart", () => {
 		expect(sequenceStart("customer")).toBe(6);
 		expect(sequenceStart("material")).toBe(5);
 		expect(sequenceStart("order")).toBe(10);
-		expect(sequenceStart("invoice")).toBe(10);
 	});
 
 	test.each(kinds)("agrees with the format of %s", (kind) => {

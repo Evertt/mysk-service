@@ -11,6 +11,10 @@ import type { Tenant } from "./session.ts";
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+// Made-up modules instead of the ones in `src/modules`.
+vi.mock("#lib/modules.gen.ts", async () => ({
+	manifests: (await import("#lib/fake-modules.ts")).fakeModules,
+}));
 
 // An in-memory database with just the tables the feed reads, instead of the app's, which needs
 // `DATABASE_URL`.
@@ -276,24 +280,24 @@ describe("present", () => {
 	});
 
 	test("shows a module's records, with a page only for tenants with the module", async () => {
-		const row = await log({ subjectType: "contract", subjectId: "2", subjectLabel: "CON-2" });
+		const row = await log({ subjectType: "widget", subjectId: "2", subjectLabel: "W-2" });
 		const [without] = await present([row]);
-		expect(without.subject).toMatchObject({ noun: "contract", label: "CON-2", target: null });
+		expect(without.subject).toMatchObject({ noun: "widget", label: "W-2", target: null });
 
-		locals.tenant = tenantOf("north", ["contracts"]);
+		locals.tenant = tenantOf("north", ["widgets"]);
 		const [withModule] = await present([row]);
-		expect(withModule.subject.target).toEqual({ id: "2", label: "CON-2" });
+		expect(withModule.subject.target).toEqual({ id: "2", label: "W-2" });
 	});
 
 	test("shows a module by its name", async () => {
 		const row = await log({
 			subjectType: "module",
-			subjectId: "contracts",
-			subjectLabel: "contracts",
+			subjectId: "widgets",
+			subjectLabel: "widgets",
 			action: "module_enabled",
 		});
 		const [entry] = await present([row]);
-		expect(entry.subject.label).toBe("Service contracts");
+		expect(entry.subject.label).toBe("Widgets");
 		expect(entry.subject.target).not.toBeNull();
 	});
 });
