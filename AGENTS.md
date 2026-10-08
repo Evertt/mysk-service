@@ -86,9 +86,10 @@ functions, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder na
 (`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 
-- `scripts/modules.ts` links the folders in; `pnpm generate` runs it before `svelte-kit sync`,
-  `vite.config.ts` runs it when it loads, and in dev it reruns when a module's files come or go. It
-  writes the registries (`src/lib/modules.gen.ts`, `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
+- `scripts/modules.ts` (its parts, each with a spec, are in `scripts/modules/`) links the folders in;
+  `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
+  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules.gen.ts`,
+  `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
   `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
   for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
   `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
