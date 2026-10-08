@@ -112,7 +112,7 @@ export default async function setup(project: TestProject) {
 			env: { ...process.env, DATABASE_URL: `file:${template}` },
 			stdio: ["ignore", "pipe", "pipe"],
 		});
-	run("node_modules/.bin/drizzle-kit", ["push", "--force"]);
+	run("node_modules/.bin/drizzle-kit", ["migrate"]);
 	run("node", ["--env-file=.env", "src/lib/server/db/seed.ts"]);
 	if (!dev) run("node_modules/.bin/vp", ["build"]);
 

@@ -117,9 +117,12 @@ its SQLite database file.
 ```sh
 pnpm install
 pnpm build                                  # the server, in build/
-DATABASE_URL=file:/var/lib/fieldworks/fieldworks.db pnpm db:push   # create or update the tables
+DATABASE_URL=file:/var/lib/fieldworks/fieldworks.db pnpm db:migrate   # create or update the tables
 node --env-file=.env build                  # listens on port 3000 (PORT, HOST to change)
 ```
+
+Run `pnpm db:migrate` with every new version, before starting it: it applies the migrations in
+`drizzle/` that the database doesn't have yet (and does nothing if it's up to date).
 
 To run it, a server needs `build/`, `package.json` and the production dependencies (`pnpm install
 --prod`: the database driver, `@libsql/client`, which has native code and isn't bundled).

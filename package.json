@@ -19,14 +19,13 @@
 		"test:unit": "vp test --project server --project client",
 		"test:e2e": "vp test run --project e2e",
 		"test": "vp test run",
-		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"db:seed": "node --env-file=.env src/lib/server/db/seed.ts",
 		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
-		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit push --force && pnpm run db:seed",
+		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit migrate && pnpm run db:seed",
 		"themes:sync": "node scripts/theme-components.ts && vp check --fix"
 	},
 	"dependencies": {

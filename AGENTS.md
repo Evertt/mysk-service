@@ -50,6 +50,15 @@ helpers are in `src/lib/server/session.ts`:
   shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
   which applies the modules' adjustments.
 
+## Database schema
+
+The schema is `src/lib/server/db/schema.ts`; the database gets it through the migrations in
+`drizzle/`, never `drizzle-kit push`. After changing the schema, run
+`pnpm db:generate --name <what-changed>` (e.g. `add-invoice-reference`), check the SQL it wrote,
+and commit it with the change; `pnpm db:migrate` applies it to `local.db` (`pnpm db:reset` starts
+over from the migrations and the seed). `src/lib/server/db/migrations.spec.ts` fails while the
+schema has changes no migration makes. Never edit a migration that's been committed: add another.
+
 ## Activity log
 
 Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity.ts`), inside the
