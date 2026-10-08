@@ -29,6 +29,6 @@ stands. Status: ⬜ to do · 🔄 in progress (branch) · ✅ done (merged into 
 
 ## Other
 
-| #   | Item                                                                                                                                                                 | Status               |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch. | 🔄 `dutch-seed-data` |
+| #   | Item                                                                                                                                                                 | Status |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch. | ✅     |
