@@ -82,7 +82,7 @@ describe("drizzleQueued", () => {
 	});
 
 	describe("afterCommit", () => {
-		const insert = (tx: ReturnType<typeof open>, code: string) =>
+		const insert = (tx: { run: ReturnType<typeof open>["run"] }, code: string) =>
 			tx.run(sql`insert into thing (code) values (${code})`);
 
 		it("runs the callbacks once the transaction has committed, in order", async () => {
