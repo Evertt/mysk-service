@@ -4,9 +4,9 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
-import { regionLabel } from "#lib/components/engineers/display.js";
-import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
+import ActiveBadge from "#lib/engineers/active-badge.svelte";
+import { regionLabel } from "#lib/engineers/display.js";
+import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
 import { engineerSpecialties } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 

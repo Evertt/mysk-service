@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { engineerRegions } from "#lib/components/engineers/display.js";
+import { engineerRegions } from "#lib/engineers/display.js";
 import { engineerSpecialties } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { cents, date, email, phone, text } from "#lib/schema.js";

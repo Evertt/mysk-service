@@ -13,7 +13,7 @@
 	import { resolve } from "$app/paths";
 	import { MediaQuery } from "svelte/reactivity";
 
-	import { specialties } from "#lib/components/engineers/display.js";
+	import { specialties } from "#lib/engineers/display.js";
 
 	import BacklogCard from "./backlog-card.svelte";
 	import { createBoardDrag } from "./board-drag.svelte.js";

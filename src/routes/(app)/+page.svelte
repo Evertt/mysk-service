@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import EngineerLink from "#lib/components/engineers/engineer-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
+	import EngineerLink from "#lib/engineers/engineer-link.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 
 	import { getDashboard } from "./dashboard.remote.js";
