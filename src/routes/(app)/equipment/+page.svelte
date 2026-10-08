@@ -3,18 +3,21 @@
 	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
+	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.js";
+	import { parseTableUrl } from "#lib/components/data-table/url-state.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
+	import { equipmentList } from "./equipment-list.js";
 	import { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.js";
 	import EquipmentTable from "./equipment-table.svelte";
-	import { equipmentUrl } from "./equipment-url.js";
 
 	// The server pages, filters and sorts the units, as the URL says (see the orders page).
-	const query = $derived(serverTableQuery(page.url.searchParams, equipmentUrl));
+	const query = $derived(
+		toListQuery(equipmentList, parseTableUrl(page.url.searchParams, equipmentList.urlSpec)),
+	);
 	// Both start at once.
-	const equipment = $derived(getEquipmentList(query.rows));
-	const facets = $derived(getEquipmentFacets(query.facets));
+	const equipment = $derived(getEquipmentList(query));
+	const facets = $derived(getEquipmentFacets(whereOf(query)));
 </script>
 
 <svelte:head>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import type { PageGroups } from "#lib/components/data-table/grouping.js";
+	import { whereOf } from "#lib/components/data-table/list-definition.js";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
@@ -9,8 +9,9 @@
 
 	import { getCustomerOptions } from "../filter-options.remote.js";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.js";
-	import { columns, type EquipmentRow } from "./columns.js";
-	import { equipmentUrl } from "./equipment-url.js";
+	import { columns } from "./columns.js";
+	import { equipmentList } from "./equipment-list.js";
+	import type { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
@@ -19,14 +20,9 @@
 		facets,
 	}: {
 		/** A page of units, as the URL says, how many match in all, and its groups when grouped. */
-		equipment: {
-			rows: EquipmentRow[];
-			rowCount: number;
-			key: string;
-			groups?: PageGroups<EquipmentRow>;
-		};
+		equipment: Awaited<ReturnType<typeof getEquipmentList>>;
 		/** How many units have each value of the filters'. */
-		facets: Record<"category" | "status" | "manufacturer", Record<string, number>>;
+		facets: Awaited<ReturnType<typeof getEquipmentFacets>>;
 	} = $props();
 
 	const table = createAppTable({
@@ -41,7 +37,7 @@
 		getRowId: (row) => String(row.id),
 		initialState: {
 			// By unit, 20 per page: the defaults the server has too.
-			...equipmentUrl.defaults,
+			...equipmentList.urlSpec.defaults,
 			// Only there to search and filter by; the unit column shows them.
 			columnVisibility: { serialNumber: false, manufacturer: false },
 		},
@@ -56,7 +52,7 @@
 			.map((value) => ({ value, label: value }));
 	});
 
-	const loading = serverTableLoading(table, equipmentUrl, () => equipment.key);
+	const loading = serverTableLoading(table, equipmentList, () => equipment.key);
 </script>
 
 <table.AppTable>
@@ -95,7 +91,7 @@
 		/>
 		<BulkActionBar
 			actions={[changeStatus, deleteEquipment]}
-			matching={{ key: equipment.key, count: equipment.rowCount }}
+			matching={{ where: whereOf(equipment.query), key: equipment.key, count: equipment.rowCount }}
 		/>
 		<table.Pagination />
 	</div>

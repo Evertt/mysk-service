@@ -2,7 +2,7 @@
 import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { statusOptions } from "#lib/components/equipment/display.js";
 import type { EquipmentStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
@@ -15,7 +15,7 @@ import {
 	getEquipmentList,
 } from "./equipment-list.remote.js";
 
-export const changeStatus: BulkAction<EquipmentRow> = {
+export const changeStatus: BulkAction<EquipmentRow, AnyListWhere> = {
 	id: "status",
 	label: m.equipment_bulk_status,
 	icon: CircleDotIcon,
@@ -32,7 +32,7 @@ export const changeStatus: BulkAction<EquipmentRow> = {
 };
 
 // Whether a unit has orders (closed ones too), only the server knows.
-export const deleteEquipment: BulkAction<EquipmentRow> = {
+export const deleteEquipment: BulkAction<EquipmentRow, AnyListWhere> = {
 	id: "delete",
 	label: m.common_delete,
 	icon: Trash2Icon,
