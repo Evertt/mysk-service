@@ -11,19 +11,14 @@
 	<title>{m.orders_new_page_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.orders_new()} description={m.orders_new_description()}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/orders")}>{m.orders_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.orders_breadcrumb_new()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.orders_new()}
+	description={m.orders_new_description()}
+	breadcrumbs={[
+		{ label: m.orders_title(), href: resolve("/(app)/orders") },
+		{ label: m.orders_breadcrumb_new() },
+	]}
+/>
 
 <OrderForm
 	form={createOrder}

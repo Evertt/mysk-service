@@ -11,9 +11,6 @@
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatQuantity } from "#lib/components/materials/display.js";
-	import MaterialLink from "#lib/components/materials/material-link.svelte";
-	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
@@ -25,6 +22,8 @@
 	import OrderTags from "../order-tags.svelte";
 	import { deleteOrder, getOrder } from "../order.remote.js";
 	import type { PageProps } from "./$types";
+	import EquipmentHistoryCard from "./equipment-history-card.svelte";
+	import OrderLinesCard from "./order-lines-card.svelte";
 	import WorkReport from "./work-report.svelte";
 
 	let { params }: PageProps = $props();
@@ -75,135 +74,10 @@
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.orders_materials_labour()}</Card.Title>
-				<Card.Description>{m.orders_materials_labour_description()}</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<Table.Root>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head>{m.orders_line_material()}</Table.Head>
-							<Table.Head class="text-right">{m.orders_line_quantity()}</Table.Head>
-							<Table.Head class="text-right">{m.orders_line_unit_price()}</Table.Head>
-							<Table.Head class="text-right">{m.orders_line_amount()}</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each order.lines as line (line.id)}
-							<Table.Row>
-								<Table.Cell>
-									<MaterialLink sku={line.material.sku} name={line.material.name} />
-								</Table.Cell>
-								<Table.Cell class="text-right tabular-nums">
-									{formatQuantity(line.quantity, line.material.unit)}
-								</Table.Cell>
-								<Table.Cell class="text-right tabular-nums">
-									{formatCents(line.unitPrice)}
-								</Table.Cell>
-								<Table.Cell class="text-right tabular-nums">{formatCents(line.total)}</Table.Cell>
-							</Table.Row>
-						{:else}
-							<Table.Row>
-								<Table.Cell colspan={4} class="text-center text-muted-foreground">
-									{m.orders_no_materials()}
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-						<Table.Row>
-							<Table.Cell>
-								<div class="flex flex-col">
-									<span>{m.orders_labour()}</span>
-									<span class="text-xs text-muted-foreground">
-										{engineer
-											? m.orders_labour_rate({ name: engineer.name })
-											: m.orders_labour_standard_rate()}
-									</span>
-								</div>
-							</Table.Cell>
-							<Table.Cell class="text-right tabular-nums">
-								{m.common_count_hours_short({ count: order.laborHours })}
-							</Table.Cell>
-							<Table.Cell class="text-right tabular-nums">
-								{formatCents(data.totals.laborRate)}
-							</Table.Cell>
-							<Table.Cell class="text-right tabular-nums">
-								{formatCents(data.totals.labor)}
-							</Table.Cell>
-						</Table.Row>
-						{#each data.totals.adjustments as adjustment, i (i)}
-							<Table.Row>
-								<Table.Cell colspan={3}>
-									<div class="flex flex-col">
-										<span>{adjustment.label}</span>
-										{#if adjustment.detail}
-											<span class="text-xs text-muted-foreground">{adjustment.detail}</span>
-										{/if}
-									</div>
-								</Table.Cell>
-								<Table.Cell class="text-right tabular-nums">
-									{formatCents(adjustment.amount)}
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-					<Table.Footer>
-						<Table.Row>
-							<Table.Cell colspan={3}>{m.orders_column_total()}</Table.Cell>
-							<Table.Cell class="text-right tabular-nums">
-								{formatCents(data.totals.total)}
-							</Table.Cell>
-						</Table.Row>
-					</Table.Footer>
-				</Table.Root>
-			</Card.Content>
-		</Card.Root>
+		<OrderLinesCard {order} totals={data.totals} />
 
 		{#if equipment}
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>{m.orders_history()}</Card.Title>
-					<Card.Description>
-						{m.orders_history_description({ serial: equipment.serialNumber })}
-					</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					{#if data.history.length}
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>{m.orders_column_order()}</Table.Head>
-									<Table.Head>{m.orders_column_type()}</Table.Head>
-									<Table.Head>{m.orders_column_status()}</Table.Head>
-									<Table.Head class="text-right">{m.orders_column_created()}</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each data.history as other (other.id)}
-									<Table.Row>
-										<Table.Cell>
-											<OrderLink number={other.number} />
-										</Table.Cell>
-										<Table.Cell><TypeLabel type={other.type} /></Table.Cell>
-										<Table.Cell><StatusBadge status={other.status} /></Table.Cell>
-										<Table.Cell class="text-right tabular-nums">
-											{formatDate(other.createdAt)}
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					{:else}
-						<Empty.Root class="p-6">
-							<Empty.Header>
-								<Empty.Title>{m.orders_history_empty_title()}</Empty.Title>
-								<Empty.Description>{m.orders_history_empty_description()}</Empty.Description>
-							</Empty.Header>
-						</Empty.Root>
-					{/if}
-				</Card.Content>
-			</Card.Root>
+			<EquipmentHistoryCard serialNumber={equipment.serialNumber} history={data.history} />
 		{/if}
 	</div>
 

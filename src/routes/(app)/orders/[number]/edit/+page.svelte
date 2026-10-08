@@ -19,23 +19,15 @@
 	<title>{m.orders_edit_page_title({ number: order.number })}</title>
 </svelte:head>
 
-<PageHeader title={m.orders_edit_title({ number: order.number })} description={order.customer.name}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/orders")}>{m.orders_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={orderHref}>{order.number}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.orders_edit_title({ number: order.number })}
+	description={order.customer.name}
+	breadcrumbs={[
+		{ label: m.orders_title(), href: resolve("/(app)/orders") },
+		{ label: order.number, href: orderHref },
+		{ label: m.common_edit() },
+	]}
+/>
 
 {#if isEditableOrder(order.status)}
 	<OrderForm
