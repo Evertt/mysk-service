@@ -17,18 +17,20 @@ stands. Status: ⬜ to do · 🔄 in progress (branch) · ✅ done (merged into 
 
 ## Suggested
 
-| #   | Item                                                                                                                                       | Status                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
-| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | 🔄 `saved-views`            |
-| 9   | **CSV export** of the current filtered view; server-side for the big tables.                                                               | ⬜                          |
-| 10  | **Bulk actions on selected rows**, e.g. assign an engineer, change status, add to an invoice. (Row selection exists but does nothing yet.) | ⬜                          |
-| 11  | **Range filters for dates and numbers**, e.g. "scheduled this week", "stock below 10".                                                     | ⬜                          |
-| 12  | **Remembered column settings and resizing.** Column visibility, order and width persist per user; drag to resize.                          | ⬜                          |
-| 13  | **Density toggle and keyboard navigation.** Compact/comfortable rows; arrow keys move between rows, Enter opens one.                       | 🔄 `table-density-keyboard` |
-| 14  | **Loading state for server-side tables.** While a page, filter or sort loads, keep the previous rows (dimmed) instead of flashing empty.   | 🔄 `server-side-tables`     |
+| #   | Item                                                                                                                                       | Status                  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | 🔄 `saved-views`        |
+| 9   | **CSV export** of the current filtered view; server-side for the big tables.                                                               | ⬜                      |
+| 10  | **Bulk actions on selected rows**, e.g. assign an engineer, change status, add to an invoice. (Row selection exists but does nothing yet.) | ⬜                      |
+| 11  | **Range filters for dates and numbers**, e.g. "scheduled this week", "stock below 10".                                                     | ⬜                      |
+| 12  | **Remembered column settings and resizing.** Column visibility, order and width persist per user; drag to resize.                          | ⬜                      |
+| 13  | **Density toggle and keyboard navigation.** Compact/comfortable rows; arrow keys move between rows, Enter opens one.                       | ✅                      |
+| 14  | **Loading state for server-side tables.** While a page, filter or sort loads, keep the previous rows (dimmed) instead of flashing empty.   | 🔄 `server-side-tables` |
 
 ## Other
 
-| #   | Item                                                                                                                                                                 | Status |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch. | ✅     |
+| #   | Item                                                                                                                                                                                                       | Status                      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch.                                       | ✅                          |
+| 16  | **Sorting on a plain click.** A header click cycles ascending → descending → unsorted (no menu; hiding columns stays in the View menu); shift/cmd/ctrl-click still adds the column to a multi-column sort. | 🔄 `sort-on-click`          |
+| 17  | **Sticky dates on the planning page.** The schedule's row of day headers stays at the top while scrolling down.                                                                                            | 🔄 `sticky-schedule-header` |
