@@ -8,8 +8,8 @@
 	import type { RemoteFormField } from "$app/server";
 	import CheckIcon from "@lucide/svelte/icons/check";
 
-	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import type { getBillable } from "./invoices.remote.js";
 

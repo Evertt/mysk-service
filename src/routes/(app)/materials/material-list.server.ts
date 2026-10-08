@@ -5,11 +5,11 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 
+import { stockLevelSql } from "#lib/materials/server/stock.js";
 import { stockLevels } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
 import { inTenant } from "#lib/server/session.js";
-import { stockLevelSql } from "#lib/server/stock.js";
 import { type ListSql, nocase, rank } from "#lib/server/table-query.js";
 
 import { materialsList } from "./materials-list.js";

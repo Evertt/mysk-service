@@ -5,7 +5,7 @@
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { priorityOptions, statusOptions, typeOptions } from "#lib/components/orders/display.js";
+	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders/display.js";
 
 	import {
 		getCustomerOptions,

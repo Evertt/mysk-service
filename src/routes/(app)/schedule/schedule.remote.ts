@@ -4,7 +4,9 @@ import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { addDays, atTime } from "#lib/dates.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.js";
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
+import { assigneeProblem } from "#lib/orders/server/order-changes.js";
 import { m } from "#lib/paraglide/messages.js";
 import { date, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
@@ -12,9 +14,7 @@ import { refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
 import { type Problem, refuse } from "#lib/server/forms.js";
-import { assigneeProblem } from "#lib/server/orders.js";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
-import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
 import { moveFields, scheduleFields } from "./schedule-schema.js";

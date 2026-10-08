@@ -52,7 +52,7 @@ export type StockLevel = (typeof stockLevels)[number];
 
 /**
  * Below how much of each unit a material is running low: 10 pieces, or 50 metres, kilos or
- * litres. The materials list works out stock levels in SQL from these too (`stockLevelSql` in `#lib/server/stock.ts`).
+ * litres. The materials list works out stock levels in SQL from these too (`stockLevelSql` in `#lib/materials/server/stock.ts`).
  */
 export const lowStockThresholds: Readonly<Record<MaterialUnit, number>> = {
 	pcs: 10,
@@ -70,6 +70,9 @@ export const stockLevel = (stock: number, unit: MaterialUnit): StockLevel =>
 
 /** The amount of an order line in cents: quantity × unit price, rounded to the cent. */
 export const lineTotal = (quantity: number, unitPrice: number) => Math.round(quantity * unitPrice);
+
+/** A quantity to two decimals (the finest any unit is counted in), without floating-point noise. */
+export const roundQuantity = (quantity: number) => Math.round(quantity * 100) / 100 || 0;
 
 export const orderTypes = ["installation", "maintenance", "repair", "inspection"] as const;
 export type OrderType = (typeof orderTypes)[number];

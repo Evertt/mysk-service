@@ -8,11 +8,11 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatQuantity } from "#lib/components/materials/display.js";
-	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import { formatDateTime, formatTime } from "#lib/format.js";
+	import { formatQuantity } from "#lib/materials/display.js";
+	import PriorityBadge from "#lib/orders/priority-badge.svelte";
+	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import { getMyOrder, startWork } from "../portal.remote.js";
 	import { dayLabel, fieldActions } from "../work.js";

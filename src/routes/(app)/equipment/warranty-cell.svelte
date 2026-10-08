@@ -3,7 +3,7 @@
 	The end of a unit's warranty, and whether it still covers the unit.
 -->
 <script lang="ts">
-	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
+	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
 	import { formatDate } from "#lib/format.js";
 
 	let { until }: { until: Date } = $props();

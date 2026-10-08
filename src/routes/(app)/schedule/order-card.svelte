@@ -8,10 +8,10 @@
 	import { resolve } from "$app/paths";
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
-	import { priorities, statuses, types } from "#lib/components/orders/display.js";
 	import { timeOfDay } from "#lib/dates.js";
 	import { formatDate } from "#lib/format.js";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.js";
+	import { priorities, statuses, types } from "#lib/orders/display.js";
 	import { cn } from "#lib/utils.js";
 
 	import type { getSchedule } from "./schedule.remote.js";

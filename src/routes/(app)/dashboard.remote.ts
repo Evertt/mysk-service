@@ -1,12 +1,12 @@
 import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
-import { stockLevel } from "#lib/components/materials/display.js";
 import { DAY } from "#lib/dates.js";
+import { stockLevel } from "#lib/materials/display.js";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";
-import { materialsPerOrder, priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 /** Headline numbers and upcoming work for the dashboard. */

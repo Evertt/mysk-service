@@ -7,7 +7,7 @@
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { StockLevel } from "#lib/components/materials/display.js";
+import type { StockLevel } from "#lib/materials/display.js";
 import type {
 	CustomerSegment,
 	EngineerSpecialty,

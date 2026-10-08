@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { specialties } from "#lib/components/engineers/display.js";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay } from "#lib/dates.js";
+	import { specialties } from "#lib/engineers/display.js";
 	import { formatDate } from "#lib/format.js";
 
 	import { DEFAULT_TIME, dayKey, parseDay } from "./board.js";

@@ -3,12 +3,12 @@ import { and, count, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { queryKey } from "#lib/components/data-table/list-definition.js";
+import { removeEquipment } from "#lib/equipment/server/equipment.js";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
-import { removeEquipment } from "#lib/server/equipment.js";
 import { idInTenant, inTenant, requireMember } from "#lib/server/session.js";
 import { pageGroupsOf, planList } from "#lib/server/table-query.js";
 

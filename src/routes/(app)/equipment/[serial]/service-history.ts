@@ -1,9 +1,9 @@
+import { DAY, startOfDay } from "#lib/dates.js";
 /**
  * A unit's service history: what happened to it in order (`buildTimeline`) and the figures that
  * sum it up (`serviceStats`).
  */
-import { isUnderWarranty } from "#lib/components/equipment/display.js";
-import { DAY, startOfDay } from "#lib/dates.js";
+import { isUnderWarranty } from "#lib/equipment/display.js";
 import {
 	isDoneOrder,
 	isOpenOrder,

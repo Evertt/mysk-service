@@ -5,14 +5,14 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
+import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.js";
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
-import { db } from "#lib/server/db/index.js";
-import { order, stockMovement } from "#lib/server/db/schema.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
+import { engineer, order, stockMovement } from "#lib/server/db/schema.js";
 import { idInTenant, inTenant } from "#lib/server/session.js";
-import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 export const notEditable = (number: string, change: "changed" | "deleted") =>
@@ -90,6 +90,23 @@ export async function changeOrderStatus(id: number, status: OrderStatus) {
 		if (error instanceof OrderStockShortage) invalid(error.message);
 		throw error;
 	}
+}
+
+/**
+ * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another
+ * tenant's (or don't exist), or inactive. The planning board and bulk assigning share it.
+ */
+export async function assigneeProblem(
+	engineerId: number,
+	tx: Transaction | typeof db = db,
+): Promise<string | undefined> {
+	const assignee = await tx.query.engineer.findFirst({
+		columns: { name: true, active: true },
+		where: idInTenant(engineer, engineerId),
+	});
+	if (!assignee) return m.schedule_unknown_engineer();
+	if (!assignee.active) return m.schedule_engineer_inactive({ name: assignee.name });
+	return undefined;
 }
 
 /** Assigns one of the tenant's orders to an engineer (checked already), or to nobody. */

@@ -4,10 +4,10 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import OrderLink from "#lib/components/orders/order-link.svelte";
-import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
+import OrderLink from "#lib/orders/order-link.svelte";
+import PriorityBadge from "#lib/orders/priority-badge.svelte";
+import TypeLabel from "#lib/orders/type-label.svelte";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getOrders } from "./order-list.remote.js";

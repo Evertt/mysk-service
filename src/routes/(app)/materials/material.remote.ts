@@ -4,7 +4,10 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { label } from "#lib/i18n/labels.js";
+import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.js";
+import { moveStock, withBalances } from "#lib/materials/server/stock.js";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
+import { lineTotalSql } from "#lib/orders/server/pricing.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
@@ -18,11 +21,8 @@ import {
 	user,
 } from "#lib/server/db/schema.js";
 import { type Problem, refuse } from "#lib/server/forms.js";
-import { findMaterial, ordersUsing, removeMaterial } from "#lib/server/materials.js";
 import { nextNumber } from "#lib/server/numbering.js";
-import { lineTotalSql } from "#lib/server/pricing.js";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
-import { moveStock, withBalances } from "#lib/server/stock.js";
 
 import { materialFields, newMaterialFields } from "./material-schema.js";
 
