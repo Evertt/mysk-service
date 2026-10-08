@@ -4,5 +4,12 @@
 		"strict": true,
 		"types": ["$app/types", "node"]
 	},
-	"include": ["src", "e2e", "vite.config.ts", "drizzle.config.ts"]
+	"include": [
+		"src",
+		"e2e",
+		"scripts/modules.ts",
+		"scripts/modules.spec.ts",
+		"vite.config.ts",
+		"drizzle.config.ts"
+	]
 }

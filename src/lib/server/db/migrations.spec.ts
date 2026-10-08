@@ -10,7 +10,11 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { afterAll, expect, test } from "vite-plus/test";
 
-import * as schema from "./schema.ts";
+import * as moduleSchema from "./modules.gen.ts";
+import * as coreSchema from "./schema.ts";
+
+/** The core's tables and the modules'. */
+const schema = { ...coreSchema, ...moduleSchema };
 
 const migrationsFolder = join(import.meta.dirname, "../../../../drizzle");
 

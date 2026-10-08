@@ -4,10 +4,12 @@
  * (`organization_module`); `requireModule()` in `#lib/server/session.ts` refuses a module's remote
  * functions to the others.
  *
- * A module keeps to itself so it can be switched off: its routes live under `route`, its
- * components in `#lib/components/<id>/`, and its tables reference the core tables, never the
- * other way round. Core pages and core server code don't import a module's code; they take what
- * the tenant's modules contribute through these registries:
+ * A module keeps to itself so it can be switched off: its routes live under `route`, and its
+ * tables reference the core tables, never the other way round. Core pages and core server code
+ * don't import a module's code; they take what the tenant's modules contribute through these
+ * registries. A module is either in the static list `modules` below (contracts and invoicing,
+ * until they move) or a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
+ * `#lib/define-module.ts`), which `scripts/modules.ts` collects in `modules.gen.ts`:
  *
  * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
  *   of equipment's page), rendered by `module-slots.svelte` in `src/routes/(app)/` only for the
@@ -33,6 +35,8 @@ import type { OrderStatus } from "#lib/models.js";
 import type { ModuleId } from "#lib/module-ids.js";
 import { m } from "#lib/paraglide/messages.js";
 
+import { manifests } from "./modules.gen.ts";
+
 /** The places on core pages where modules can add components, with the props each passes. */
 export interface SlotProps {
 	/** Cards on the dashboard, below the headline numbers (laid out in two columns). */
@@ -50,12 +54,8 @@ export type SlotLoader<Name extends SlotName> = () => Promise<{
 	default: Component<SlotProps[Name]>;
 }>;
 
-export interface AppModule {
-	/** Also in `moduleIds` (`#lib/module-ids.ts`), for code that can't import the registry. */
-	id: ModuleId;
-	/** Translated when read (a getter), so read it when showing it, not at module scope. */
-	readonly label: string;
-	readonly description: string;
+/** What a module contributes besides its name; both its manifest and its registry entry have it. */
+export interface ModuleParts {
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
 	icon: Component;
@@ -77,6 +77,26 @@ export interface AppModule {
 	 * table's own. Their commands start with `requireModule()`.
 	 */
 	bulkActions?: { [Table in BulkTableName]?: BulkActionLoader<Table> };
+}
+
+/** A module as the registry has it. */
+export interface AppModule extends ModuleParts {
+	/** Also in `moduleIds` (`#lib/module-ids.ts`), for code that can't import the registry. */
+	id: ModuleId;
+	/** Translated when read (a getter), so read it when showing it, not at module scope. */
+	readonly label: string;
+	readonly description: string;
+}
+
+/**
+ * A module as its `module.ts` writes it (see `defineModule()`): message functions instead of
+ * texts, so it can name them at module scope and they are read when shown.
+ */
+export interface ModuleManifest<Id extends string = string> extends ModuleParts {
+	/** The module's folder name in `src/modules`. */
+	id: Id;
+	label: () => string;
+	description: () => string;
 }
 
 /** An order as a module's bulk action sees a selected row of the orders list. */
@@ -107,7 +127,8 @@ export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
 	default: TableBulkAction<Table>[];
 }>;
 
-export const modules = [
+/** The modules that still live in the core, until they move to `src/modules`. */
+const staticModules = [
 	{
 		id: "contracts",
 		get label() {
@@ -146,6 +167,12 @@ export const modules = [
 		},
 	},
 ] as const satisfies readonly AppModule[];
+
+/**
+ * All the modules in registry order: the static ones, then the folders in `src/modules` by id (the
+ * order `scripts/modules.ts` lists them in).
+ */
+export const modules = [...staticModules, ...manifests] as const satisfies readonly AppModule[];
 
 export type { ModuleId };
 

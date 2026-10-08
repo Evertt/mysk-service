@@ -9,6 +9,12 @@ import AutoImport from "unplugin-auto-import/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright";
 
+import { generateModules, modulesPlugin } from "./scripts/modules.ts";
+
+// Links the modules in `src/modules` into the app before anything reads `src/routes` or the
+// registries (SvelteKit's sync, Vitest, the editor), see scripts/modules.ts.
+generateModules(import.meta.dirname);
+
 /**
  * Auto-import every shadcn-svelte component the way its docs import it:
  * - multi-part components as a namespace: `import * as Card from '#ui/card'` → `<Card.Root>`,
@@ -90,6 +96,7 @@ export default defineConfig({
 		options: { typeAware: true, typeCheck: false },
 	},
 	plugins: lazyPlugins(() => [
+		modulesPlugin(import.meta.dirname),
 		AutoImport({
 			include: [/\.svelte$/, /\.svelte\?svelte/, /\.ts$/],
 			// Paraglide's messages (`m.title()`), and the shadcn-svelte components.
@@ -135,7 +142,11 @@ export default defineConfig({
 				// entries replace the default ones, so they name the test files too, and every component
 				// in `src/lib` (not only `ui/`: e.g. the data table's own icons).
 				optimizeDeps: {
-					entries: ["src/**/*.svelte.{test,spec}.{js,ts}", "src/lib/**/*.svelte"],
+					entries: [
+						"src/**/*.svelte.{test,spec}.{js,ts}",
+						"src/lib/**/*.svelte",
+						"src/modules/**/*.svelte",
+					],
 				},
 				test: {
 					name: "client",
@@ -145,7 +156,8 @@ export default defineConfig({
 						instances: [{ browser: "chromium", headless: true }],
 					},
 					include: ["src/**/*.svelte.{test,spec}.{js,ts}"],
-					exclude: ["src/lib/server/**"],
+					// Server code (`server/` folders, also the modules') doesn't run in the browser.
+					exclude: ["src/**/server/**"],
 					setupFiles: ["./src/vitest-setup-client.ts"],
 				},
 			},
@@ -155,8 +167,9 @@ export default defineConfig({
 				test: {
 					name: "server",
 					environment: "node",
-					include: ["src/**/*.{test,spec}.{js,ts}"],
-					exclude: ["src/**/*.svelte.{test,spec}.{js,ts}"],
+					include: ["src/**/*.{test,spec}.{js,ts}", "scripts/**/*.spec.ts"],
+					// The modules' end-to-end tests run in the e2e project.
+					exclude: ["src/**/*.svelte.{test,spec}.{js,ts}", "src/modules/*/e2e/**"],
 				},
 			},
 
@@ -166,7 +179,7 @@ export default defineConfig({
 				test: {
 					name: "e2e",
 					environment: "node",
-					include: ["e2e/**/*.test.ts"],
+					include: ["e2e/**/*.test.ts", "src/modules/*/e2e/**/*.test.ts"],
 					globalSetup: ["e2e/global-setup.ts"],
 					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the
 					// files share, so they take turns.

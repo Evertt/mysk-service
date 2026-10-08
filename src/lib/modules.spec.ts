@@ -1,12 +1,29 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 
 import { describe, expect, test } from "vite-plus/test";
 
+import { generatedModuleIds } from "./module-ids.gen.ts";
 import { moduleIds } from "./module-ids.ts";
+import { manifests } from "./modules.gen.ts";
 import { modules, type SlotName, slotLoaders } from "./modules.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
+});
+
+test("the folders in src/modules with a module.ts have their manifest in the registry, by id", () => {
+	const dir = new URL("../modules/", import.meta.url);
+	const folders = existsSync(dir)
+		? readdirSync(dir, { withFileTypes: true })
+				.filter(
+					(entry) => entry.isDirectory() && existsSync(new URL(`${entry.name}/module.ts`, dir)),
+				)
+				.map((entry) => entry.name)
+				.toSorted()
+		: [];
+	// If this fails, run `pnpm generate`.
+	expect((manifests as readonly { id: string }[]).map((manifest) => manifest.id)).toEqual(folders);
+	expect([...generatedModuleIds]).toEqual(folders);
 });
 
 test("module ids are unique", () => {

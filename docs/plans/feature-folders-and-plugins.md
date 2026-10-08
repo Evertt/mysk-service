@@ -649,6 +649,14 @@ Each step leaves `pnpm check` and `pnpm test` green and can merge on its own.
    `#modules`/`#e2e` aliases, the vitest globs, the drizzle schema glob, merging `db/modules.gen.ts`,
    the seed loader, `messages.spec`, the boundaries spec, `defineModule`. During the transition,
    `modules` = the old static list + `manifests`, so both kinds work side by side.
+   _Done (see "Modules" in AGENTS.md), proven with a throwaway module. Differences from the text
+   above: `defineModule()` lives in `src/lib/define-module.ts`, not `modules.ts`, so a `module.ts`
+   can load without the registry that imports it (a cycle); it returns the manifest with `label` and
+   `description` as getters, which is what `AppModule` already has. `module-ids.gen.ts` lists the ids for
+   plain Node (the registry can't load there). The stubs repeat literal page options and name the
+   other exports (`export *` makes Kit give up on static analysis), and a layout stub renders its
+   `children` itself (Kit warns otherwise). `columns.ts` shares `organizationId()`/`createdAt()` with
+   the module schemas. No `nav` or `order` field yet: `route` and `icon` are enough for the sidebar._
 4. **Move contracts** to `src/modules/contracts/`. This is mostly `git mv` plus rewriting imports:
    `lib/components/contracts/*` → the module root, `lib/server/contracts.ts` → `server/`, its
    tables → `server/schema.ts` (`db:generate` must produce nothing), `routes/(app)/contracts/**` →
