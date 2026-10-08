@@ -12,7 +12,7 @@ import {
 	useApp,
 	value,
 } from "./app.ts";
-import { tamperWithCommand } from "./remote-functions.ts";
+import { tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -190,6 +190,48 @@ describe("in North", () => {
 		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toBe(
 			`Page 2 of ${Math.ceil(total / 20)}`,
 		);
+	});
+
+	test("a malformed query for the list is refused with a 400", async () => {
+		const { page } = app;
+		type Query = Record<string, unknown>;
+		/** The status of the response to the next `name` request, with its argument changed. */
+		const statusOf = async (
+			name: string,
+			change: (arg: Query) => Query,
+			trigger: () => unknown,
+		) => {
+			await app.go("/orders");
+			await tamperWithQuery<Query>(page, name, change);
+			const [response] = await app.expectingErrors(() =>
+				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
+			);
+			return response.status();
+		};
+		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
+		const search = () => page.getByLabel("Search orders…").fill("ORD");
+
+		// An unknown status, a filter the list doesn't have, a string for an id, a page size it
+		// doesn't offer.
+		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
+		for (const change of [
+			{ filters: { status: ["bogus"] } },
+			{ filters: { total: [1] } },
+			{ filters: { engineer: ["1"] } },
+			{ pageSize: 5000 },
+		]) {
+			expect(await statusOf("getOrders", rowsWith(change), nextPage), JSON.stringify(change)).toBe(
+				400,
+			);
+		}
+		// The counts in the filters take the same care.
+		expect(
+			await statusOf("getOrderFacets", rowsWith({ filters: { status: ["bogus"] } }), search),
+		).toBe(400);
+
+		// The list works as before once the request is right.
+		await app.go("/orders");
+		expect(await app.rowCount()).toBe(await countIn("order", north.id));
 	});
 
 	test("searching, filtering and sorting happen in the database", async () => {
@@ -964,6 +1006,74 @@ describe("bulk actions on selected orders, in North", () => {
 			await expect.poll(() => page.locator("tbody tr", { hasText: order.number }).count()).toBe(0);
 		}
 		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
+	test("selecting all the matching orders acts on exactly the filtered ones", async () => {
+		const { page } = app;
+		// More than fit on a page.
+		const cancelled = await rows<{ id: number }>(
+			`select id from "order" where organization_id = ? and status = 'cancelled'`,
+			[north.id],
+		);
+		expect(cancelled.length).toBeGreaterThan(20);
+		const matching = new Set(cancelled.map((o) => o.id));
+		const [engineer] = await rows<{ id: number; name: string }>(
+			`select id, name from engineer where organization_id = ? and active = 1 order by id desc limit 1`,
+			[north.id],
+		);
+		/** Every order of every organization with its engineer. */
+		const engineers = () =>
+			rows<{ id: number; engineer_id: number | null }>(
+				`select id, engineer_id from "order" order by id`,
+			);
+		const before = await engineers();
+
+		await app.go("/orders?status=cancelled&sort=number");
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		const total = formatNumber(cancelled.length);
+		await bar()
+			.getByRole("button", { name: `Select all ${total} matching` })
+			.click();
+		await bar().getByText(`All ${total} matching selected`).waitFor();
+		await bar().getByRole("button", { name: "Assign engineer" }).click();
+		const dialog = page.getByRole("alertdialog");
+		const field = dialog.getByLabel("Engineer");
+		await field.locator("option", { hasText: engineer.name }).waitFor({ state: "attached" });
+		await field.selectOption({ label: engineer.name });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+		await app.toast(`${total} updated`);
+
+		// The cancelled orders of North, all of them, and nothing else (not even South's).
+		expect(await engineers()).toEqual(
+			before.map((o) => (matching.has(o.id) ? { ...o, engineer_id: engineer.id } : o)),
+		);
+	});
+
+	test("a bulk action with a malformed target is refused with a 400", async () => {
+		const { page } = app;
+		const [quote] = await rows<{ id: number }>(
+			`select id from "order" where organization_id = ? and status = 'quote' order by number limit 1`,
+			[north.id],
+		);
+		const before = await snapshot(quote.id);
+		await app.go("/orders?status=quote&sort=number");
+		await select((await shownNumbers())[0]);
+		await bar().getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
+		// The command goes out with a filter that doesn't exist, instead of the selected order.
+		await tamperWithCommand<{ status: string }>(page, "bulkSetOrderStatus", (arg) => ({
+			...arg,
+			target: { matching: { q: "", filters: { status: ["bogus"] } } },
+		}));
+		const [response] = await app.expectingErrors(() =>
+			Promise.all([
+				page.waitForResponse((r) => isRemote(r.url(), "bulkSetOrderStatus")),
+				dialog.getByRole("button", { name: "Apply" }).click(),
+			]),
+		);
+		expect(response.status()).toBe(400);
+		expect(await snapshot(quote.id)).toEqual(before);
 	});
 
 	test("creating an invoice from two completed orders of one customer opens the draft", async () => {

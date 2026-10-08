@@ -7,7 +7,7 @@ import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { labelOptions } from "#lib/i18n/labels.js";
 import { isEditableOrder, manualOrderStatuses } from "#lib/models.js";
 import type { OrderBulkRow } from "#lib/modules.js";
@@ -30,7 +30,7 @@ const orders = (count: number) => m.common_count_orders({ count });
 /** Value of the "Unassigned" choice. */
 const NOBODY = "none";
 
-export const assignEngineer: BulkAction<OrderBulkRow> = {
+export const assignEngineer: BulkAction<OrderBulkRow, AnyListWhere> = {
 	id: "assign",
 	label: m.orders_bulk_assign,
 	icon: UserRoundCheckIcon,
@@ -51,7 +51,7 @@ export const assignEngineer: BulkAction<OrderBulkRow> = {
 		),
 };
 
-export const changeStatus: BulkAction<OrderBulkRow> = {
+export const changeStatus: BulkAction<OrderBulkRow, AnyListWhere> = {
 	id: "status",
 	label: m.orders_bulk_status,
 	icon: CircleDotIcon,
@@ -69,7 +69,7 @@ export const changeStatus: BulkAction<OrderBulkRow> = {
 		}).updates(getOrders, getOrderFacets),
 };
 
-export const deleteOrders: BulkAction<OrderBulkRow> = {
+export const deleteOrders: BulkAction<OrderBulkRow, AnyListWhere> = {
 	id: "delete",
 	label: m.common_delete,
 	icon: Trash2Icon,

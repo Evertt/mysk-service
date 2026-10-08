@@ -7,7 +7,7 @@ import { error, isValidationError } from "@sveltejs/kit";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.js";
 import { m } from "#lib/paraglide/messages.js";
-import { bulkTarget, targetIds } from "#lib/server/bulk.js";
+import { idsTarget, targetIds } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { order } from "#lib/server/db/schema.js";
 import { billableFor, createDraft } from "#lib/server/invoicing.js";
@@ -21,9 +21,9 @@ import { getOrderInvoice } from "./invoicing.remote.js";
  * are skipped with the reason. The draft is made all at once, through the new invoice form's code
  * (`createDraft`); its page is the result's `href`, to open.
  */
-export const invoiceOrders = command(bulkTarget, async (target): Promise<BulkResult> => {
+export const invoiceOrders = command(idsTarget, async (target): Promise<BulkResult> => {
 	requireModule("invoicing");
-	// Only the selected ids: it checks the selection as a whole.
+	// Only the selected ids (never "all matching"): it checks the selection as a whole.
 	const ids = await targetIds(target);
 	const found = await db
 		.select({

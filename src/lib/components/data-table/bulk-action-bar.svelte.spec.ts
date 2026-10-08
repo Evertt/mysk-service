@@ -240,6 +240,16 @@ describe("in a server-side table", () => {
 		expect(run).toHaveBeenCalledWith({ matching: "status=open" }, undefined);
 	});
 
+	test("a list with a where acts on it rather than on the key", async () => {
+		const where = { q: "pump", filters: { status: ["open"] } };
+		const run = vi.fn(async () => done({ done: 40 }));
+		render(Harness, { jobs, actions: [close(run)], matching: { ...matching, where } });
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await bar().getByRole("button", { name: "Select all 40 matching" }).click();
+		await bar().getByRole("button", { name: "Close" }).click();
+		expect(run).toHaveBeenCalledWith({ matching: where }, undefined);
+	});
+
 	test("unselecting a row goes back to the selected ones", async () => {
 		render(Harness, { jobs, actions: [close()], matching });
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();

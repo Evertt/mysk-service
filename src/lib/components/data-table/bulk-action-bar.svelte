@@ -7,14 +7,15 @@
 	(a confirmation, an engineer to assign) open a dialog; the result shows as a toast, e.g.
 	"7 updated, 2 skipped" with the reasons, and the selection is cleared.
 
-	For a server-side table, pass `matching` (the rows' query key and how many match in all): with
-	every row of the page selected, it offers to select all the rows that match, and the action then
-	acts on the filters rather than on ids (the server finds the rows again, in the tenant).
+	For a server-side table, pass `matching` (the rows' query `where` and key, and how many match in
+	all): with every row of the page selected, it offers to select all the rows that match, and the
+	action then acts on the `where`, the search and filters, rather than on ids (the server finds the
+	rows again, in the tenant).
 
 	Place it after `<table.Table>`; it sticks to the bottom of the screen when the page scrolls. The
 	number selected is announced to screen readers, and Escape in the bar clears the selection.
 -->
-<script lang="ts" generics="TData extends RowData">
+<script lang="ts" generics="TData extends RowData, Where = string">
 	import { goto } from "$app/navigation";
 	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import XIcon from "@lucide/svelte/icons/x";
@@ -39,9 +40,13 @@
 		matching,
 		inline = 3,
 	}: {
-		actions: BulkAction<TData>[];
-		/** A server-side table's rows: the key they came with and how many match in all. */
-		matching?: { key: string; count: number };
+		actions: BulkAction<TData, Where>[];
+		/**
+		 * A server-side table's rows: what decides which match (the rows' query `where`), the key
+		 * they came with and how many match in all. TRANSITIONAL: a list without a definition has no
+		 * `where`, and its `key` (URL parameters) is the target.
+		 */
+		matching?: { where?: Where; key: string; count: number };
 		/** How many actions show as buttons; with more, all but the first ones go in a menu. */
 		inline?: number;
 	} = $props();
@@ -97,9 +102,11 @@
 	}
 
 	async function run(action: BulkAction<TData>, value?: string) {
-		const target: BulkTarget = allMatching
-			? { matching: matching!.key }
-			: { ids: selected.map((row) => Number(row.id)) };
+		const target = (
+			allMatching
+				? { matching: matching!.where ?? matching!.key }
+				: { ids: selected.map((row) => Number(row.id)) }
+		) as BulkTarget<Where>;
 		busy = true;
 		try {
 			const result = await action.run(target, value);

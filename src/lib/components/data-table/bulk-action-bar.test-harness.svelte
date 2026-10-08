@@ -25,9 +25,9 @@
 		pageSize = 10,
 	}: {
 		jobs: Job[];
-		actions: BulkAction<Job>[];
+		actions: BulkAction<Job, any>[];
 		/** As for a server-side table: all the rows that match. */
-		matching?: { key: string; count: number };
+		matching?: { where?: unknown; key: string; count: number };
 		pageSize?: number;
 	} = $props();
 

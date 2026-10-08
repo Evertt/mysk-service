@@ -1,12 +1,15 @@
 import { invalid } from "@sveltejs/kit";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
+import * as v from "valibot";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import { code, defineList } from "#lib/components/data-table/list-definition.js";
 import { db } from "#lib/server/db/index.js";
 import { equipment } from "#lib/server/db/schema.js";
 
-import { bulkChange, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
-import type { Tenant } from "./session.ts";
+import { bulkChange, idsTarget, listTarget, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
+import { inTenant, type Tenant } from "./session.ts";
+import type { ListSql } from "./table-query.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const refreshAll = vi.fn();
@@ -49,6 +52,18 @@ beforeEach(() => {
 	locals.tenant = tenantOf("north");
 	requested.mockClear();
 	refreshAll.mockClear();
+});
+
+const unitList = defineList({ columns: { serial: { filter: code } } });
+
+/** The units list's SQL, built per request like a real list's. */
+const unitSql = (): ListSql<typeof unitList.columns> => ({
+	list: unitList,
+	from: (fields) => db.select(fields).from(equipment).$dynamic(),
+	columns: { serial: { filter: (serials) => inArray(equipment.serialNumber, serials) } },
+	search: [equipment.serialNumber],
+	id: equipment.id,
+	scope: () => inTenant(equipment),
 });
 
 describe("bulkChange", () => {
@@ -103,7 +118,36 @@ describe("bulkChange", () => {
 		});
 	});
 
-	test("takes the ids matching a list's filters, if it has such a query", async () => {
+	test("takes the ids matching a list's search and filters, of the tenant only", async () => {
+		const seen: number[] = [];
+		const act = (matching: { q: string; filters: { serial?: string[] } }) =>
+			bulkChange(
+				{ matching },
+				{
+					table: equipment,
+					label: equipment.serialNumber,
+					list: unitSql,
+					change: async (unit) => void seen.push(unit.id),
+				},
+			);
+		// SN-D is South's.
+		await act({ q: "", filters: { serial: ["SN-A", "SN-C", "SN-D"] } });
+		expect(seen).toEqual([2, 3]);
+		seen.length = 0;
+		const result = await act({ q: "sn-b", filters: {} });
+		expect(seen).toEqual([1]);
+		expect(result).toEqual({ done: 1, skipped: [], missing: 0 });
+	});
+
+	test("refuses all matching rows when the table has no list", async () => {
+		const attempt = bulkChange(
+			{ matching: { q: "", filters: {} } },
+			{ table: equipment, label: equipment.serialNumber, change: async () => {} },
+		);
+		await expect(attempt).rejects.toMatchObject({ status: 400 });
+	});
+
+	test("takes the ids matching a list's URL parameters, if it has such a query", async () => {
 		const matching = vi.fn(async () => [2, 3]);
 		const seen: number[] = [];
 		const result = await bulkChange(
@@ -135,6 +179,34 @@ describe("bulkChange", () => {
 			{ table: equipment, label: equipment.serialNumber, change: async () => {} },
 		);
 		await expect(attempt).rejects.toMatchObject({ status: 403 });
+	});
+});
+
+describe("targets", () => {
+	const where = { q: "", filters: { serial: ["SN-A"] } };
+
+	test("are ids, or what the list's where says", () => {
+		const target = listTarget(unitList.where);
+		expect(v.is(target, { ids: [1, 2] })).toBe(true);
+		expect(v.is(target, { matching: where })).toBe(true);
+		expect(v.is(idsTarget, { ids: [1, 2] })).toBe(true);
+	});
+
+	test("are refused when malformed", () => {
+		const target = listTarget(unitList.where);
+		for (const bad of [
+			{},
+			{ ids: [] },
+			{ ids: [0] },
+			{ ids: ["1"] },
+			{ matching: "serial=SN-A" },
+			{ matching: { ...where, filters: { unknown: ["x"] } } },
+			{ matching: { ...where, filters: { serial: [1] } } },
+			{ matching: { ...where, sort: [] } },
+		]) {
+			expect(v.is(target, bad), JSON.stringify(bad)).toBe(false);
+		}
+		expect(v.is(idsTarget, { matching: where })).toBe(false);
 	});
 });
 

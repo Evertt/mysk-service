@@ -4,13 +4,12 @@
  */
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import type { OrderBulkRow } from "#lib/modules.js";
+import type { TableBulkAction } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { invoiceOrders } from "./bulk.remote.js";
 
-export const createInvoice: BulkAction<OrderBulkRow> = {
+export const createInvoice: TableBulkAction<"orders"> = {
 	id: "invoicing:create-invoice",
 	label: m.invoices_bulk_create,
 	icon: ReceiptTextIcon,
@@ -26,7 +25,8 @@ export const createInvoice: BulkAction<OrderBulkRow> = {
 		title: (count) => m.invoices_bulk_create_title({ orders: m.common_count_orders({ count }) }),
 		description: m.invoices_bulk_create_description,
 	},
-	run: (target) => invoiceOrders(target),
+	// Never "all matching" (see `matching`): the action bar only sends ids.
+	run: (target) => invoiceOrders(target as { ids: number[] }),
 	done: m.invoices_bulk_created,
 };
 

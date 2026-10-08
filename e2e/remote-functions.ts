@@ -51,3 +51,23 @@ export async function tamperWithCommand<T>(page: Page, name: string, change: (ar
 		{ times: 1 },
 	);
 }
+
+/**
+ * Changes the argument of the next call of the remote query `name` from `page` on its way to the
+ * server, like someone tampering with the request.
+ */
+export async function tamperWithQuery<T>(page: Page, name: string, change: (arg: T) => unknown) {
+	await page.route(
+		(url) => isRemote(url.href, name),
+		async (route) => {
+			const url = new URL(route.request().url());
+			const flat = JSON.parse(
+				Buffer.from(url.searchParams.get("payload")!, "base64url").toString(),
+			) as unknown[];
+			const payload = flatten(change(unflatten(flat) as T));
+			url.searchParams.set("payload", Buffer.from(payload).toString("base64url"));
+			await route.continue({ url: url.href });
+		},
+		{ times: 1 },
+	);
+}
