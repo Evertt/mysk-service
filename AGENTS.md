@@ -33,8 +33,12 @@ helpers are in `src/lib/server/session.ts`:
 - Every select, update and delete on a tenant table (one with `organizationId`) includes
   `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
   the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
-  clear message (the foreign keys would refuse them anyway). `contract_equipment` has no
-  `organization_id`: reach it through a tenant-checked contract or equipment.
+  clear message (the foreign keys would refuse them anyway). Write the tenant scope with
+  `idInTenant(table, id)` and `idsInTenant(table, ids)` (`session.ts`) instead of spelling out
+  `and(eq(table.id, id), inTenant(table))`, and a join to a tenant table with
+  `.leftJoin(...tenantJoin(engineer, order.engineerId))`: a bare `eq(table.id, id)` then stands out
+  in review. `contract_equipment` has no `organization_id`: reach it through a tenant-checked
+  contract or equipment.
 - Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
   per organization: pick the next one and insert it in one `db.transaction` (transactions take
   turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick the same one).
@@ -69,10 +73,7 @@ nothing (wrap a single write in a transaction for this). Tenant and user come fr
 
 ```ts
 await db.transaction(async (tx) => {
-	await tx
-		.update(customer)
-		.set(input)
-		.where(and(eq(customer.id, id), inTenant(customer)));
+	await tx.update(customer).set(input).where(idInTenant(customer, id));
 	const subject = { type: "customer", id, label: existing.code };
 	await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 });

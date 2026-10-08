@@ -1,6 +1,6 @@
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { ModuleId } from "#lib/modules.js";
@@ -109,6 +109,30 @@ export async function requireEngineer() {
 export function inTenant(table: { organizationId: SQLiteColumn }): SQL {
 	return eq(table.organizationId, requireTenant().organizationId);
 }
+
+/** A table of tenant records: with an `id` and the `organizationId` that `inTenant()` compares. */
+export interface TenantTable {
+	id: SQLiteColumn;
+	organizationId: SQLiteColumn;
+}
+
+/**
+ * `table.id = id` in the current tenant: the way to look a record up by an id from the client
+ * (ids are global). An `eq(table.id, id)` without `inTenant()` stands out in review.
+ */
+export const idInTenant = (table: TenantTable, id: number): SQL =>
+	and(eq(table.id, id), inTenant(table))!;
+
+/** `table.id in ids` in the current tenant: the way to load the records of ids from the client. */
+export const idsInTenant = (table: TenantTable, ids: number[]): SQL =>
+	and(inArray(table.id, ids), inTenant(table))!;
+
+/**
+ * The arguments of a join on `table` through `foreignKey`, kept in the tenant (ids are global):
+ * `.leftJoin(...tenantJoin(engineer, order.engineerId))`.
+ */
+export const tenantJoin = <T extends TenantTable>(table: T, foreignKey: SQLiteColumn) =>
+	[table, and(eq(foreignKey, table.id), inTenant(table))!] as const;
 
 /**
  * The current tenant, if it has `moduleId`; otherwise a 404, as if the module's pages and data

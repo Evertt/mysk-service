@@ -5,7 +5,7 @@
  *
  * ```ts
  * await db.transaction(async (tx) => {
- *   await tx.update(customer).set(input).where(and(eq(customer.id, id), inTenant(customer)));
+ *   await tx.update(customer).set(input).where(idInTenant(customer, id));
  *   await recordActivity(tx, {
  *     action: "updated",
  *     subject: { type: "customer", id, label: existing.code },
@@ -20,12 +20,10 @@
  * the invitation's organization rather than the current one). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity.ts`.
  */
-import { and, inArray } from "drizzle-orm";
-
 import type { ActivityAction } from "#lib/models.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.js";
-import { inTenant, requireTenant } from "#lib/server/session.js";
+import { idsInTenant, requireTenant } from "#lib/server/session.js";
 import { roundQuantity } from "#lib/server/stock.js";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
@@ -170,7 +168,7 @@ export async function recordOrderLines(
 			await tx
 				.select({ id: material.id, name: material.name })
 				.from(material)
-				.where(and(inArray(material.id, changed), inTenant(material)))
+				.where(idsInTenant(material, changed))
 		).map((row) => [row.id, row.name]),
 	);
 	for (const id of changed) {

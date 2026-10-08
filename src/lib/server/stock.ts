@@ -3,7 +3,7 @@
  * movements, and `moveStock` is the only thing that changes it.
  */
 import { error } from "@sveltejs/kit";
-import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
+import { sql, type SQLWrapper } from "drizzle-orm";
 
 import { formatNumber } from "#lib/format.js";
 import { label } from "#lib/i18n/labels.js";
@@ -19,7 +19,7 @@ import {
 import { m } from "#lib/paraglide/messages.js";
 import type { Transaction } from "#lib/server/db/index.js";
 import { material, stockMovement } from "#lib/server/db/schema.js";
-import { inTenant, requireTenant } from "#lib/server/session.js";
+import { idInTenant, requireTenant } from "#lib/server/session.js";
 
 /**
  * A material's stock level in SQL, as `stockLevel()` works it out (with the same thresholds), to
@@ -68,7 +68,7 @@ export async function moveStock(tx: Transaction, movement: Movement) {
 	const { organizationId, user } = requireTenant();
 	const found = await tx.query.material.findFirst({
 		columns: { id: true, sku: true, name: true, unit: true, stock: true },
-		where: and(eq(material.id, movement.materialId), inTenant(material)),
+		where: idInTenant(material, movement.materialId),
 	});
 	if (!found) error(404, m.materials_not_found());
 
@@ -78,10 +78,7 @@ export async function moveStock(tx: Transaction, movement: Movement) {
 	if (stock < 0) throw new StockShortage(found);
 
 	await tx.insert(stockMovement).values({ ...movement, quantity, organizationId, userId: user.id });
-	await tx
-		.update(material)
-		.set({ stock })
-		.where(and(eq(material.id, found.id), inTenant(material)));
+	await tx.update(material).set({ stock }).where(idInTenant(material, found.id));
 	return { ...found, stock };
 }
 

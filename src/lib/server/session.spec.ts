@@ -4,9 +4,11 @@ import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { db } from "#lib/server/db/index.js";
-import { customer } from "#lib/server/db/schema.js";
+import { customer, engineer, order } from "#lib/server/db/schema.js";
 
 import {
+	idInTenant,
+	idsInTenant,
 	inTenant,
 	loadTenant,
 	requireEngineer,
@@ -16,6 +18,7 @@ import {
 	requireTenant,
 	requireUser,
 	type Tenant,
+	tenantJoin,
 } from "./session.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
@@ -182,6 +185,43 @@ describe("inTenant", () => {
 	test("refuses to build a query outside a tenant", () => {
 		locals.user = user;
 		expect(statusOf(() => inTenant(customer))).toBe(403);
+	});
+});
+
+describe("idInTenant and idsInTenant", () => {
+	const dialect = new SQLiteSyncDialect();
+
+	test("match a record by id and by the current tenant", () => {
+		Object.assign(locals, { user, tenant });
+		expect(dialect.sqlToQuery(idInTenant(customer, 7))).toMatchObject({
+			sql: '("customer"."id" = ? and "customer"."organization_id" = ?)',
+			params: [7, "north"],
+		});
+		expect(dialect.sqlToQuery(idsInTenant(customer, [7, 8]))).toMatchObject({
+			sql: '("customer"."id" in (?, ?) and "customer"."organization_id" = ?)',
+			params: [7, 8, "north"],
+		});
+	});
+
+	test("refuse to build a query outside a tenant", () => {
+		locals.user = user;
+		expect(statusOf(() => idInTenant(customer, 7))).toBe(403);
+		expect(statusOf(() => idsInTenant(customer, [7]))).toBe(403);
+	});
+});
+
+describe("tenantJoin", () => {
+	test("joins a table through a foreign key, kept in the tenant", () => {
+		Object.assign(locals, { user, tenant });
+		const query = db
+			.select({ id: order.id })
+			.from(order)
+			.leftJoin(...tenantJoin(engineer, order.engineerId))
+			.toSQL();
+		expect(query.sql).toContain(
+			'left join "engineer" on ("order"."engineer_id" = "engineer"."id" and "engineer"."organization_id" = ?)',
+		);
+		expect(query.params).toEqual(["north"]);
 	});
 });
 

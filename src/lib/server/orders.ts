@@ -2,14 +2,14 @@
  * An order's material lines, shared by the office's order form and the engineer portal, so both
  * check, price and take stock for lines the same way.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { fitsUnit, type OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { recordOrderLines } from "#lib/server/activity.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { engineer, material, orderLine } from "#lib/server/db/schema.js";
-import { inTenant, requireTenant } from "#lib/server/session.js";
+import { idInTenant, idsInTenant, inTenant, requireTenant } from "#lib/server/session.js";
 import { moveOrderStock } from "#lib/server/stock.js";
 
 /**
@@ -22,7 +22,7 @@ export async function assigneeProblem(
 ): Promise<string | undefined> {
 	const assignee = await tx.query.engineer.findFirst({
 		columns: { name: true, active: true },
-		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
+		where: idInTenant(engineer, engineerId),
 	});
 	if (!assignee) return m.schedule_unknown_engineer();
 	if (!assignee.active) return m.schedule_engineer_inactive({ name: assignee.name });
@@ -49,12 +49,9 @@ export async function checkLines(lines: LineInput[]): Promise<LineProblem[]> {
 		.select({ id: material.id, unit: material.unit })
 		.from(material)
 		.where(
-			and(
-				inArray(
-					material.id,
-					lines.map((line) => line.materialId),
-				),
-				inTenant(material),
+			idsInTenant(
+				material,
+				lines.map((line) => line.materialId),
 			),
 		);
 	const units = new Map(materials.map((row) => [row.id, row.unit]));
@@ -96,12 +93,9 @@ export async function saveOrderLines(
 					.select({ id: material.id, unitPrice: material.unitPrice })
 					.from(material)
 					.where(
-						and(
-							inArray(
-								material.id,
-								lines.map((line) => line.materialId),
-							),
-							inTenant(material),
+						idsInTenant(
+							material,
+							lines.map((line) => line.materialId),
 						),
 					)
 			).map((row) => [row.id, row.unitPrice]),

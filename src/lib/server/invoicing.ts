@@ -39,7 +39,7 @@ import {
 } from "./db/schema.ts";
 import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
 import { priceOrders } from "./pricing.ts";
-import { inTenant, requireMember } from "./session.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "./session.ts";
 
 export const invoicing: ServerModule = {
 	orderSaved(number) {
@@ -103,7 +103,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
 				inTenant(order),
@@ -113,7 +113,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 					db
 						.select({ id: invoiceLine.id })
 						.from(invoiceLine)
-						.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+						.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 						.where(
 							and(
 								inTenant(invoiceLine),
@@ -143,7 +143,7 @@ async function billedReferences(references: string[]) {
 	const rows = await db
 		.select({ source: invoiceLine.source })
 		.from(invoiceLine)
-		.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+		.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 		.where(
 			and(
 				inTenant(invoiceLine),
@@ -201,7 +201,7 @@ export async function alreadyBilled(
 	return tx
 		.select({ orderId: invoiceLine.orderId, source: invoiceLine.source })
 		.from(invoiceLine)
-		.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+		.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 		.where(
 			and(
 				inTenant(invoiceLine),
@@ -235,7 +235,7 @@ export async function createDraft(input: {
 	const { organizationId } = requireMember();
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
-		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+		where: idInTenant(customer, input.customerId),
 	});
 	if (!owner) return { problem: { field: "customerId", message: m.invoices_unknown_customer() } };
 
@@ -311,7 +311,7 @@ export async function loadInvoice(number: string, now = new Date()) {
 /** The tenant's invoice by id (e.g. from a form), with its lines' orders; or a 404. */
 export async function invoiceById(tx: Transaction, id: number) {
 	const found = await tx.query.invoice.findFirst({
-		where: and(eq(invoice.id, id), inTenant(invoice)),
+		where: idInTenant(invoice, id),
 		with: { lines: { columns: { id: true, orderId: true } } },
 	});
 	if (!found) error(404, m.invoices_not_found());
