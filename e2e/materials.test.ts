@@ -13,6 +13,7 @@ import {
 	userNames,
 	value,
 } from "./app.ts";
+import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -157,6 +158,49 @@ describe("in North", () => {
 		expect(await tableRows().count()).toBe(Math.min(20, total - 20));
 		await page.getByRole("button", { name: "Go to previous page" }).click();
 		await app.tableSettled();
+	});
+
+	test("a malformed query for the list is refused with a 400", async () => {
+		const { page } = app;
+		type Query = Record<string, unknown>;
+		/** The error status of the response to the next `name` request, with its argument changed. */
+		const statusOf = async (
+			name: string,
+			change: (arg: Query) => Query,
+			trigger: () => unknown,
+		) => {
+			await app.go("/materials");
+			await tamperWithQuery<Query>(page, name, change);
+			const [response] = await app.expectingErrors(() =>
+				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
+			);
+			return remoteErrorStatus(response);
+		};
+		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
+		const searchFor = () => search().fill("MAT");
+
+		// An unknown stock level, a filter the list doesn't have, a string for a list of units, a
+		// page size it doesn't offer.
+		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
+		for (const change of [
+			{ filters: { stockLevel: ["bogus"] } },
+			{ filters: { unitPrice: [1] } },
+			{ filters: { unit: "pcs" } },
+			{ pageSize: 5000 },
+		]) {
+			expect(
+				await statusOf("getMaterials", rowsWith(change), nextPage),
+				JSON.stringify(change),
+			).toBe(400);
+		}
+		// The counts in the filters take the same care.
+		expect(
+			await statusOf("getMaterialFacets", rowsWith({ filters: { unit: ["bogus"] } }), searchFor),
+		).toBe(400);
+
+		// The list works as before once the request is right.
+		await app.go("/materials");
+		expect(await app.rowCount()).toBe(await countIn("material", north.id));
 	});
 
 	test("searching finds materials by SKU and by name", async () => {
@@ -650,6 +694,70 @@ describe("in North", () => {
 		expect(await material("MAT-0004", north.id)).toEqual(pieces);
 		expect(await movements(pieces.id)).toEqual(before);
 		await page.keyboard.press("Escape");
+	});
+
+	test("selecting all the matching materials acts on exactly the filtered ones", async () => {
+		const { page } = app;
+		// A material nobody uses, so deleting it works: the others are used on orders.
+		await app.go("/materials/new");
+		await page.getByLabel("Name", { exact: true }).fill("Bulk check gasket");
+		await page.getByLabel("Unit", { exact: true }).selectOption("pcs");
+		await page.getByLabel("Unit price").fill("12.5");
+		await page.getByLabel("Opening stock").fill("4");
+		await page.getByRole("button", { name: "Create material" }).click();
+		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
+		const created = await material(app.path().split("/").pop()!, north.id);
+
+		/** Every material of every organization. */
+		const all = () => rows<{ id: number }>(`select id from material order by id`);
+		const pieces = await rows<{ id: number }>(
+			`select id from material where organization_id = ? and unit = 'pcs'`,
+			[north.id],
+		);
+		// More than fit on a page.
+		expect(pieces.length).toBeGreaterThan(20);
+		const unused = [];
+		for (const { id } of pieces) if (!(await ordersUsing(id))) unused.push(id);
+		expect(unused).toEqual([created.id]);
+		const before = await all();
+
+		await app.go("/materials?unit=pcs&sort=sku");
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		const total = formatNumber(pieces.length);
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
+		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByRole("button", { name: "Delete" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await app.toast(`1 deleted, ${pieces.length - 1} skipped`);
+
+		// The unused piece goes. Those used on orders stay, as do the other units and South's.
+		expect(await all()).toEqual(before.filter((m) => m.id !== created.id));
+	});
+
+	test("a bulk delete with a malformed target is refused with a 400", async () => {
+		const { page } = app;
+		const before = await rows(`select * from material order by id`);
+		await app.go("/materials?sort=sku");
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		// Materials used on orders can't be deleted, so the action only applies to all matching.
+		const total = formatNumber(await countIn("material", north.id));
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
+		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByRole("button", { name: "Delete" }).click();
+		// The command goes out with a filter that doesn't exist, instead of the matching ones.
+		await tamperWithCommand<Record<string, unknown>>(page, "bulkDeleteMaterials", () => ({
+			matching: { q: "", filters: { stockLevel: ["bogus"] } },
+		}));
+		const [response] = await app.expectingErrors(() =>
+			Promise.all([
+				page.waitForResponse((r) => isRemote(r.url(), "bulkDeleteMaterials")),
+				page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click(),
+			]),
+		);
+		expect(await remoteErrorStatus(response)).toBe(400);
+		expect(await rows(`select * from material order by id`)).toEqual(before);
 	});
 
 	test("an unknown SKU is a 404", async () => {
