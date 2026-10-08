@@ -176,7 +176,9 @@ export default defineConfig({
 					fileParallelism: !process.env.E2E_DEV,
 					testTimeout: 30_000,
 					hookTimeout: 60_000,
-					expect: { requireAssertions: true },
+					// Polls wait up to 10 s, not Vitest's 1 s: a server-side table's debounced search or
+					// filter, answered under the load of a full run, can take longer than that.
+					expect: { requireAssertions: true, poll: { timeout: 10_000 } },
 				},
 			},
 		],
