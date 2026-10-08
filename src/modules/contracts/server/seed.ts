@@ -1,13 +1,18 @@
 import type { Faker } from "@faker-js/faker";
 
-import { type ContractLevel, defaultResponseHours } from "#lib/components/contracts/model.ts";
 import type { customerSegments } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
+import { addDays, now } from "#lib/server/db/seed/clock.ts";
+import {
+	defineSeed,
+	type SeedBillableItem,
+	type SeedOrder,
+	type TenantDraft,
+} from "#lib/server/db/seed/module-seed.ts";
 
-import { addDays, now } from "./clock.ts";
-import type { generateCustomers } from "./customers.ts";
-import type { generateEquipment } from "./equipment.ts";
-import type { generateMaterials } from "./materials.ts";
+import { type ContractMonth, contractMonths, monthlyFee } from "../billing.ts";
+import { type ContractLevel, contractNumberFormat, defaultResponseHours } from "../model.ts";
+import { contract, contractEquipment } from "./schema.ts";
 
 /** Monthly fee per covered unit in euros, by level. */
 const feePerUnit: Record<ContractLevel, [number, number]> = {
@@ -52,8 +57,8 @@ export type ContractTerm = ReturnType<typeof generateContractTerms>[number];
  */
 export function generateContractTerms(
 	faker: Faker,
-	customers: ReturnType<typeof generateCustomers>,
-	equipments: ReturnType<typeof generateEquipment>,
+	customers: TenantDraft["customers"],
+	equipments: TenantDraft["equipments"],
 ) {
 	const contractTerms = customers
 		.filter((owner) =>
@@ -125,7 +130,7 @@ export function generateContractTerms(
 		.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 		.map((c, i) => ({
 			id: i + 1,
-			number: formatCode("contract", i + 1, c.createdAt.getFullYear()),
+			number: formatCode(contractNumberFormat, i + 1, c.createdAt.getFullYear()),
 			...c,
 		}));
 
@@ -144,22 +149,9 @@ export function generateContractTerms(
 	return contractTerms;
 }
 
-/** The contract rows and the rows that say which units each covers. */
-export function splitContractTerms(contractTerms: ContractTerm[]) {
-	const contracts = contractTerms.map(({ equipmentIds: _equipmentIds, ...c }) => c);
-	const contractCoverage = contractTerms.flatMap((c) =>
-		c.equipmentIds.map((equipmentId) => ({
-			customerId: c.customerId,
-			contractId: c.id,
-			equipmentId,
-		})),
-	);
-	return { contracts, contractCoverage };
-}
-
 /**
  * Repairs on covered units that aren't scheduled yet, with their lines, so the module's response
- * times (see `#lib/components/contracts/coverage.ts`) have something to show: one overdue, one at
+ * times (see `../coverage.ts`) have something to show: one overdue, one at
  * risk (on the slowest contract, so it stays at risk for a while), one on track. Fixed rather than
  * random, and made last, so the rest of the data stays the same. The orders get ids after the
  * `orderCount` generated ones, and their units are set to need service (in place).
@@ -167,8 +159,8 @@ export function splitContractTerms(contractTerms: ContractTerm[]) {
 export function generateCallOuts(
 	contractTerms: ContractTerm[],
 	orderCount: number,
-	equipments: ReturnType<typeof generateEquipment>,
-	materials: ReturnType<typeof generateMaterials>,
+	equipments: TenantDraft["equipments"],
+	materials: TenantDraft["materials"],
 ) {
 	const running = contractTerms
 		.filter((c) => c.startsOn <= now && now < addDays(c.endsOn, 1))
@@ -222,3 +214,124 @@ export function generateCallOuts(
 	}));
 	return { orders, orderLines };
 }
+
+// --- What invoices need to know (collectors, see `ModuleSeed`) ----------------------------------
+
+/** A contract level's name in Dutch, as `contractLabels.label("contractLevel", level)` shows it. */
+const levelLabel = (level: ContractLevel) =>
+	({ basic: "Basis", standard: "Standaard", premium: "Premium" })[level];
+
+// Like `formatDate` in `#lib/format.ts` in Dutch, which the seed script can't import.
+const day = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" });
+
+/** A contract's month on an invoice, worded like the app does in Dutch (the demo's language). */
+const monthlyFeeText = (term: { number: string; level: ContractLevel }, month: ContractMonth) => ({
+	description: `Servicecontract ${term.number} (${levelLabel(term.level)})`,
+	detail: `Maandbedrag, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
+});
+
+/**
+ * The contract that covered an order, as `coveringContract()` in `../coverage.ts` has it: of the
+ * contracts covering the unit, the ones running when the order was made, the fastest first.
+ */
+function coveringTerm(coverage: Map<number, ContractTerm[]>, order: SeedOrder) {
+	if (order.type === "installation" || !order.equipmentId) return undefined;
+	return (coverage.get(order.equipmentId) ?? [])
+		.filter((term) => {
+			const end = new Date(
+				term.endsOn.getFullYear(),
+				term.endsOn.getMonth(),
+				term.endsOn.getDate() + 1,
+			);
+			return term.startsOn <= order.createdAt && order.createdAt < end;
+		})
+		.sort((a, b) => a.responseHours - b.responseHours)[0];
+}
+
+/** What `generate()` makes for a tenant. */
+interface ContractsSeed {
+	terms: ContractTerm[];
+	/** The terms by the units they cover, in the order of the terms. */
+	coverage: Map<number, ContractTerm[]>;
+	/** How many contracts the tenants before this one have: ids are global, so this one's follow. */
+	contractOffset: number;
+}
+
+export default defineSeed<ContractsSeed>({
+	clear: async (tx) => {
+		await tx.delete(contractEquipment);
+		await tx.delete(contract);
+	},
+
+	// Right after the core's data, with its faker: the terms and the call-outs follow from it.
+	generate(draft, previous) {
+		const terms = generateContractTerms(draft.faker, draft.customers, draft.equipments);
+		const callOuts = generateCallOuts(
+			terms,
+			draft.orders.length,
+			draft.equipments,
+			draft.materials,
+		);
+		draft.orders.push(...callOuts.orders);
+		draft.orderLines.push(...callOuts.orderLines);
+		const coverage = new Map<number, ContractTerm[]>();
+		for (const term of terms) {
+			for (const id of term.equipmentIds) coverage.set(id, [...(coverage.get(id) ?? []), term]);
+		}
+		const contractOffset = previous.reduce((sum, earlier) => sum + earlier.terms.length, 0);
+		return { terms, coverage, contractOffset };
+	},
+
+	// The work a contract includes is free, like `orders.adjustPrices` in `server/index.ts`.
+	adjustPrices({ coverage }, order, { materials, labor }) {
+		const term = coveringTerm(coverage, order);
+		const included =
+			term?.level === "premium" ? labor + materials : term?.level === "standard" ? labor : 0;
+		if (!term || !included) return [];
+		return [
+			{
+				label: `Gedekt door ${term.number} (${levelLabel(term.level)})`,
+				detail: `${term.level === "premium" ? "Arbeid en materialen" : "Arbeid"} inbegrepen`,
+				amount: -included,
+			},
+		];
+	},
+
+	// A month's fee for each month of the customers' contracts, like `billing.billableItems`.
+	billableItems({ terms, contractOffset }, { from, until }): SeedBillableItem[] {
+		return terms.flatMap((term) =>
+			contractMonths(term, from, until).map((month) => ({
+				customerId: term.customerId,
+				...monthlyFee(
+					{ ...term, id: term.id + contractOffset },
+					month,
+					monthlyFeeText(term, month),
+				),
+			})),
+		);
+	},
+
+	async run({ tx, tenants, insertAll, count }) {
+		for (const tenant of tenants) {
+			const { terms, contractOffset } = tenant.data;
+			const customerId = (term: { customerId: number }) => tenant.customerIds[term.customerId - 1];
+			const contracts = terms.map(({ equipmentIds: _equipmentIds, ...term }) => ({
+				...term,
+				organizationId: tenant.id,
+				id: term.id + contractOffset,
+				customerId: customerId(term),
+			}));
+			const coverage = terms.flatMap((term) =>
+				term.equipmentIds.map((equipmentId) => ({
+					customerId: customerId(term),
+					contractId: term.id + contractOffset,
+					equipmentId: tenant.equipmentIds[equipmentId - 1],
+				})),
+			);
+			await insertAll(contracts, (chunk) => tx.insert(contract).values(chunk));
+			await insertAll(coverage, (chunk) => tx.insert(contractEquipment).values(chunk));
+			count("contracts", contracts);
+			count("coverage", coverage);
+		}
+	},
+});

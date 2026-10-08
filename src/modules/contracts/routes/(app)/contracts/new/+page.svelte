@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import ContractForm from "../contract-form.svelte";
 	import { createContract, getContractFormOptions } from "../contracts.remote.js";
+
+	// The props the route passes; this page needs none of them.
+	const _props: { params: RouteParams<"/(app)/contracts/new"> } = $props();
 </script>
 
 <svelte:head>

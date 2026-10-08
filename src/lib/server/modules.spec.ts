@@ -1,8 +1,8 @@
 import { createClient } from "@libsql/client";
 import { expect, test, vi } from "vite-plus/test";
 
-import { contracts } from "./contracts.ts";
 import { drizzleQueued } from "./db/serialize.ts";
+import { invoicing } from "./invoicing.ts";
 import {
 	billableItems,
 	enabledServerModules,
@@ -18,14 +18,13 @@ vi.mock("$app/server", () => ({
 	getRequestEvent: () => ({
 		locals: {
 			user: { id: "u1" },
-			tenant: { organizationId: "north", roles: ["member"], modules: ["contracts"] },
+			tenant: { organizationId: "north", roles: ["member"], modules: ["invoicing"] },
 		},
 	}),
 }));
+// The core, without the modules in `src/modules`.
+vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [] }));
 const refreshed = vi.hoisted(() => [] as string[]);
-vi.mock("#lib/components/contracts/coverage.remote.js", () => ({
-	getOrderCoverage: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
-}));
 vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({
 	getOrderInvoice: (number: string) => ({
 		refresh: async () => void refreshed.push(`invoice:${number}`),
@@ -44,13 +43,13 @@ const order = (id: number): OrderFacts => ({
 });
 
 test("only the enabled modules take part", () => {
-	expect(enabledServerModules(["contracts"])).toEqual([contracts]);
+	expect(enabledServerModules(["invoicing"])).toEqual([invoicing]);
 	expect(enabledServerModules([])).toEqual([]);
 	expect(enabledServerModules(["something-else"])).toEqual([]);
 });
 
 test("by default, the current tenant's modules take part", () => {
-	expect(enabledServerModules()).toEqual([contracts]);
+	expect(enabledServerModules()).toEqual([invoicing]);
 });
 
 test("tags come from each module, in the modules' order, for the orders they name", async () => {
@@ -152,16 +151,10 @@ test("the modules are told once the transaction has committed, and not when it r
 	expect(saved).toEqual(["ORD-2026-00001"]);
 });
 
-test("the contracts module refreshes the order's coverage", async () => {
-	orderCommitted({ number: "ORD-2026-00002" }, enabledServerModules(["contracts"]));
-	await flush();
-	expect(refreshed).toEqual(["ORD-2026-00002"]);
-});
-
 test("the invoicing module refreshes the invoice card of a saved order", async () => {
 	orderCommitted({ number: "ORD-2026-00003" }, enabledServerModules(["invoicing"]));
 	await flush();
-	expect(refreshed).toContain("invoice:ORD-2026-00003");
+	expect(refreshed).toEqual(["invoice:ORD-2026-00003"]);
 });
 
 test("billable items come from each module that has any, by date", async () => {

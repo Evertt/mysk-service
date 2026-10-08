@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import ContractForm from "../../contract-form.svelte";
 	import { getContract, getContractFormOptions, updateContract } from "../../contracts.remote.js";
-	import type { PageProps } from "./$types";
 
-	let { params }: PageProps = $props();
+	let { params }: { params: RouteParams<"/(app)/contracts/[number]/edit"> } = $props();
 
 	const { contract } = $derived(await getContract(params.number));
 	const contractHref = $derived(resolve("/(app)/contracts/[number]", { number: contract.number }));

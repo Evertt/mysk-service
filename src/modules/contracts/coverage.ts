@@ -1,6 +1,6 @@
 /**
  * What a service contract means for an order. The one place that says so; the server applies it
- * (`#lib/server/contracts.ts`) and the pages show it.
+ * (`server/index.ts`) and the pages show it.
  *
  * - **Coverage**: an order is covered when its unit was covered by a contract that was active on
  *   the day the order was created, unless it's an installation: contracts cover servicing a unit,

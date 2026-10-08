@@ -23,7 +23,6 @@
 import type { OrderStatus, OrderType } from "#lib/models.js";
 import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.js";
 
-import { contracts } from "./contracts.ts";
 import { afterCommit } from "./db/serialize.ts";
 import { invoicing } from "./invoicing.ts";
 import { generatedServerModules } from "./modules.gen.ts";
@@ -99,16 +98,16 @@ export interface BillableItem {
 }
 
 /**
- * Each module's server hooks, in registry order: the static ones, then the folders in
- * `src/modules` by id (their `server/index.ts`, via `modules.gen.ts`). A module without any isn't
- * listed. A function, so that a module can import `defineServerModule()` from here.
+ * Each module's server hooks, in registry order: the folders in `src/modules` by id (their
+ * `server/index.ts`, via `modules.gen.ts`), then the static ones, like `modules` in
+ * `#lib/modules.ts`. A module without any isn't listed. A function, so that a module can import
+ * `defineServerModule()` from here.
  */
 function serverModules(): { [Id in ModuleId]?: ServerModule } {
 	const generated: readonly ({ id: ModuleId } & ServerModule)[] = generatedServerModules();
 	return {
-		contracts,
-		invoicing,
 		...Object.fromEntries(generated.map((module) => [module.id, module])),
+		invoicing,
 	};
 }
 

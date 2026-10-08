@@ -26,7 +26,8 @@ vi.mock("#lib/server/db/index.js", async () => {
 	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
-vi.mock("#lib/components/contracts/coverage.remote.js", () => ({}));
+// The core, without the modules in `src/modules`.
+vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [] }));
 vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({}));
 
 test("labour is charged at the engineer's hourly rate", () => {

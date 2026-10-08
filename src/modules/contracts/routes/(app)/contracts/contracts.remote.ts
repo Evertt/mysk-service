@@ -9,9 +9,8 @@ import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { bulkChange, idsTarget } from "#lib/server/bulk.js";
-import { overlappingCoverage } from "#lib/server/contracts.js";
 import { db } from "#lib/server/db/index.js";
-import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
+import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { refuse, type Problem } from "#lib/server/forms.js";
 import { nextNumber } from "#lib/server/numbering.js";
 import {
@@ -22,6 +21,8 @@ import {
 	tenantJoin,
 } from "#lib/server/session.js";
 
+import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";
+import { contract, contractEquipment } from "../../../server/schema.ts";
 import { contractFields } from "./contract-schema.js";
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
@@ -209,7 +210,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 			await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, contractId));
 			await tx.update(contract).set(fields).where(idInTenant(contract, contractId));
 		} else {
-			number = await nextNumber(tx, "contract");
+			number = await nextNumber(tx, contractNumbers);
 			const [inserted] = await tx
 				.insert(contract)
 				.values({ ...fields, organizationId, number })

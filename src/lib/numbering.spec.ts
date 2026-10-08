@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCode, type NumberKind, numberFormats, sequenceStart } from "./numbering.ts";
+import {
+	formatCode,
+	type NumberFormat,
+	type NumberKind,
+	numberFormats,
+	sequenceStart,
+} from "./numbering.ts";
 
 const kinds = Object.keys(numberFormats) as NumberKind[];
 
@@ -12,7 +18,6 @@ describe("formatCode", () => {
 
 	test("puts the year of yearly numbers between the prefix and the sequence", () => {
 		expect(formatCode("order", 1, 2026)).toBe("ORD-2026-00001");
-		expect(formatCode("contract", 7, 2027)).toBe("CTR-2027-0007");
 		expect(formatCode("invoice", 1234, 2027)).toBe("INV-2027-01234");
 	});
 
@@ -32,7 +37,6 @@ describe("sequenceStart", () => {
 		expect(sequenceStart("customer")).toBe(6);
 		expect(sequenceStart("material")).toBe(5);
 		expect(sequenceStart("order")).toBe(10);
-		expect(sequenceStart("contract")).toBe(10);
 		expect(sequenceStart("invoice")).toBe(10);
 	});
 
@@ -41,5 +45,15 @@ describe("sequenceStart", () => {
 		expect(formatCode(kind, 42, 2026).slice(sequenceStart(kind) - 1)).toBe(
 			"42".padStart(digits, "0"),
 		);
+	});
+});
+
+describe("a format of a module's own", () => {
+	const format: NumberFormat = { prefix: "WID-", digits: 3, yearly: true };
+
+	test("is used like a kind", () => {
+		expect(formatCode(format, 7, 2027)).toBe("WID-2027-007");
+		expect(sequenceStart(format)).toBe(10);
+		expect(formatCode(format, 42, 2026).slice(sequenceStart(format) - 1)).toBe("042");
 	});
 });

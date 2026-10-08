@@ -37,11 +37,13 @@ test.each(modules)("the $id module's route is a page", ({ route }) => {
 
 describe("slotLoaders", () => {
 	const slots: SlotName[] = ["dashboard", "order", "equipment"];
+	const contracts = modules.find((module) => module.id === "contracts")!;
+	const invoicing = modules.find((module) => module.id === "invoicing")!;
 
 	test.each(slots)(
 		"gives the %s slot the contracts module's component when it's enabled",
 		(name) => {
-			expect(slotLoaders(name, ["contracts"])).toEqual([modules[0].slots[name]]);
+			expect(slotLoaders(name, ["contracts"])).toEqual([contracts.slots[name]]);
 		},
 	);
 
@@ -50,7 +52,6 @@ describe("slotLoaders", () => {
 	});
 
 	test("gives the components of several modules in registry order", () => {
-		const [contracts, invoicing] = modules;
 		expect(slotLoaders("dashboard", ["invoicing", "contracts"])).toEqual([
 			contracts.slots.dashboard,
 			invoicing.slots.dashboard,

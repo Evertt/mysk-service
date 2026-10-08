@@ -1,8 +1,9 @@
 import * as v from "valibot";
 
-import { contractLevels } from "#lib/components/contracts/model.js";
 import { m } from "#lib/paraglide/messages.js";
 import { cents, date, id } from "#lib/schema.js";
+
+import { contractLevels } from "../../../model.js";
 
 /** The fields of the contract form, shared by creating and editing a contract. */
 export const contractFields = {

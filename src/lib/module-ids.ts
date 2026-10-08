@@ -5,10 +5,10 @@ import { generatedModuleIds } from "./module-ids.gen.ts";
  * the registry in `#lib/modules.ts` because that registers Svelte components (the
  * `org:create` script, which runs in plain Node) or doesn't want to carry them along (the tenant
  * loader). Every module in the registry must have its id here, and the other way round (checked by
- * `modules.spec.ts`). The ones still in the static list are named here; the folders in
- * `src/modules` come from `scripts/modules.ts`.
+ * `modules.spec.ts`). The folders in `src/modules` come from `scripts/modules.ts`; the one still in
+ * the static list is named here.
  */
-export const moduleIds = ["contracts", "invoicing", ...generatedModuleIds] as const;
+export const moduleIds = [...generatedModuleIds, "invoicing"] as const;
 
 export type ModuleId = (typeof moduleIds)[number];
 
