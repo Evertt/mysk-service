@@ -17,8 +17,8 @@
 		value: string;
 		label: string;
 		icon?: Component;
-		/** Other words the search box finds it by, e.g. a customer's code. */
-		keywords?: string[];
+		/** Shown after the label, e.g. a customer's code; the search box finds it by it too. */
+		detail?: string;
 	}
 
 	let {
@@ -80,8 +80,8 @@
 				<Command.Group>
 					{#each options as option (option.value)}
 						<Command.Item
-							value={option.label}
-							keywords={option.keywords}
+							value={option.value}
+							keywords={option.detail ? [option.label, option.detail] : [option.label]}
 							onSelect={() => toggle(option.value)}
 						>
 							<div
@@ -97,7 +97,11 @@
 							{#if option.icon}
 								<option.icon class="text-muted-foreground" />
 							{/if}
-							<span>{option.label}</span>
+							<span class="truncate">{option.label}</span>
+							{#if option.detail}
+								<span class="shrink-0 font-mono text-xs text-muted-foreground">{option.detail}</span
+								>
+							{/if}
 							<span class="ml-auto font-mono text-xs text-muted-foreground">
 								{counts.get(option.value) ?? 0}
 							</span>

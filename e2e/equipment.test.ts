@@ -82,12 +82,14 @@ async function listedSerials() {
 	await app.go("/equipment");
 	await page.getByLabel("Rows per page").click();
 	await page.getByRole("option", { name: "100", exact: true }).click();
+	await app.tableSettled();
 	const found: string[] = [];
 	for (;;) {
 		found.push(...(await shownSerials()));
 		const next = page.getByRole("button", { name: "Go to next page" });
 		if (await next.isDisabled()) break;
 		await next.click();
+		await app.tableSettled();
 	}
 	return found.sort();
 }
@@ -304,6 +306,7 @@ describe("in North", () => {
 		const sort = async (column: string, direction: "Ascending" | "Descending") => {
 			await page.locator("thead").getByRole("button", { name: column }).click();
 			await page.getByRole("menuitem", { name: direction }).click();
+			await app.tableSettled();
 		};
 		// The warranty cell's date is followed by its covered/expired badge.
 		const warranties = () =>
@@ -326,6 +329,7 @@ describe("in North", () => {
 		expect(first).toMatch(/Covered|Expired/);
 
 		await page.getByRole("button", { name: "Go to next page" }).click();
+		await app.tableSettled();
 		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 2 of/);
 		expect(await bodyRows().first().innerText()).not.toBe(first);
 

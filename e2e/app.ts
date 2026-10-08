@@ -225,6 +225,11 @@ export interface App {
 	issues(): Promise<string[]>;
 	/** The data table's "1,234 rows" count. */
 	rowCount(): Promise<number>;
+	/**
+	 * Waits until a server-side table shows the rows for its search, filters, sorting and page
+	 * (it's `aria-busy` until they're in), e.g. after clicking a header or typing a search.
+	 */
+	tableSettled(): Promise<void>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
 	/**
@@ -298,6 +303,12 @@ export function useApp({
 		async rowCount() {
 			const text = await page.getByText(/^[\d,]+ rows?$/).innerText();
 			return Number(text.replace(/\D/g, ""));
+		},
+		async tableSettled() {
+			await page.waitForLoadState("networkidle");
+			await page
+				.locator('[data-slot="data-table"][aria-busy="true"]')
+				.waitFor({ state: "detached" });
 		},
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
 		async anotherTab() {

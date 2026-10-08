@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { levelOptions, statusOptions } from "#lib/components/contracts/display.js";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import { recordFacets } from "#lib/components/data-table/record-facets.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 
 	import { columns, type ContractRow } from "./columns.js";
@@ -21,6 +22,14 @@
 			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
+
+	const customers = $derived(
+		recordFacets(table, "customer", (row) => ({
+			value: row.customer.code,
+			label: row.customer.name,
+			detail: row.customer.code,
+		})),
+	);
 </script>
 
 <table.AppTable>
@@ -28,6 +37,12 @@
 		<table.Toolbar searchLabel={m.contracts_search()}>
 			<FacetedFilter columnId="status" title={m.contracts_status()} options={statusOptions} />
 			<FacetedFilter columnId="level" title={m.contracts_level()} options={levelOptions} />
+			<FacetedFilter
+				columnId="customer"
+				title={m.contracts_customer()}
+				options={customers.options}
+				counts={customers.counts}
+			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
 		<table.Pagination />

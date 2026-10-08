@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import { recordFacets } from "#lib/components/data-table/record-facets.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { stateOptions } from "#lib/components/invoicing/display.js";
 
@@ -21,12 +22,26 @@
 			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
+
+	const customers = $derived(
+		recordFacets(table, "customer", (row) => ({
+			value: row.customer.code,
+			label: row.customer.name,
+			detail: row.customer.code,
+		})),
+	);
 </script>
 
 <table.AppTable>
 	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.invoices_search()}>
 			<FacetedFilter columnId="status" title={m.invoices_column_status()} options={stateOptions} />
+			<FacetedFilter
+				columnId="customer"
+				title={m.invoices_column_customer()}
+				options={customers.options}
+				counts={customers.counts}
+			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
 		<table.Pagination />

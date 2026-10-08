@@ -40,7 +40,9 @@ export const columns = column.columns([
 				primary: row.original.customer.name,
 				secondary: row.original.customer.code,
 			}),
-		meta: { label: m.contracts_customer },
+		// By the customer's code, e.g. `?customer=CUST-0001`.
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		meta: { label: m.contracts_customer, filter: "set" },
 	}),
 	column.accessor("level", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),

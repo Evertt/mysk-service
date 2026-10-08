@@ -99,6 +99,7 @@ async function filter(title: string, ...options: RegExp[]) {
 	await page.locator('[data-slot="popover-trigger"]', { hasText: title }).click();
 	for (const option of options) await page.getByRole("option", { name: option }).click();
 	await page.keyboard.press("Escape");
+	await app.tableSettled();
 }
 
 /** Sorts the table by a column through its header menu. */
@@ -106,12 +107,14 @@ async function sortBy(column: string, direction: "Ascending" | "Descending") {
 	const { page } = app;
 	await page.locator("thead").getByRole("button", { name: column }).click();
 	await page.getByRole("menuitem", { name: direction }).click();
+	await app.tableSettled();
 }
 
 /** Checks that searching the list for MAT-0001 shows the organization's price and usage. */
 async function expectFirstMaterial(organizationId: string) {
 	const first = await material("MAT-0001", organizationId);
 	await search().fill("MAT-0001");
+	await app.tableSettled();
 	const text = (await tableRows().allInnerTexts()).map((row) => row.replace(/\s+/g, " "));
 	expect(text).toHaveLength(1);
 	expect(text[0]).toContain(first.name);
@@ -119,6 +122,7 @@ async function expectFirstMaterial(organizationId: string) {
 	const used = await ordersUsing(first.id);
 	expect(text[0]).toContain(`${used} ${used === 1 ? "order" : "orders"}`);
 	await app.page.getByRole("button", { name: "Reset" }).click();
+	await app.tableSettled();
 }
 
 describe("in North", () => {
@@ -155,18 +159,22 @@ describe("in North", () => {
 		const pages = Math.ceil(total / 20);
 		expect(await page.getByText(`Page 1 of ${pages}`).count()).toBe(1);
 		await page.getByRole("button", { name: "Go to next page" }).click();
+		await app.tableSettled();
 		expect(await page.getByText(`Page 2 of ${pages}`).count()).toBe(1);
 		expect(await tableRows().count()).toBe(Math.min(20, total - 20));
 		await page.getByRole("button", { name: "Go to previous page" }).click();
+		await app.tableSettled();
 	});
 
 	test("searching finds materials by SKU and by name", async () => {
 		const { page } = app;
 		const third = await material("MAT-0003", north.id);
 		await search().fill("MAT-0003");
+		await app.tableSettled();
 		expect(await names()).toEqual([third.name]);
 
 		await search().fill("koudemiddel");
+		await app.tableSettled();
 		const refrigerants = await rows<{ name: string }>(
 			`select name from material where organization_id = ? and name like '%koudemiddel%' order by name`,
 			[north.id],
@@ -174,6 +182,7 @@ describe("in North", () => {
 		expect(refrigerants.length).toBeGreaterThan(0);
 		expect((await names()).toSorted()).toEqual(refrigerants.map((row) => row.name).toSorted());
 		await page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
 	});
 
 	test("filtering by unit shows only those", async () => {
@@ -187,6 +196,7 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(litres);
 		for (const row of await tableRows().allInnerTexts()) expect(row).toContain("Litres");
 		await app.page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
 	});
 
 	test("filtering by stock level shows the low and out of stock ones", async () => {
@@ -203,6 +213,7 @@ describe("in North", () => {
 			expect(row).toMatch(/Out of stock|Low/);
 		}
 		await app.page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
 	});
 
 	test("the dashboard counts the low and out of stock ones, and links to them", async () => {
@@ -228,6 +239,7 @@ describe("in North", () => {
 			expect(row).toMatch(/Out of stock|Low/);
 		}
 		await page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await countIn("material", north.id));
 	});
 
@@ -245,9 +257,12 @@ describe("in North", () => {
 		await app.go("/materials");
 		await sortBy("Unit price", "Descending");
 		await page.waitForURL(() => search() === "?sort=-price");
+		await app.tableSettled();
 		const first = await names();
 		await page.getByRole("button", { name: "Go to next page" }).click();
+		await app.tableSettled();
 		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await app.tableSettled();
 		const second = await names();
 		expect(second).toHaveLength(Math.min(20, total - 20));
 
@@ -264,9 +279,11 @@ describe("in North", () => {
 		// Filtering goes back to the first page.
 		await filter("Unit", /Litres/);
 		await page.waitForURL(() => search() === "?unit=l&sort=-price");
+		await app.tableSettled();
 		// Each choice is a step back.
 		await filter("Unit", /Kilograms/);
 		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price");
+		await app.tableSettled();
 		const litresAndKilos = priced.filter((row) => ["l", "kg"].includes(row.unit));
 		expect(await app.rowCount()).toBe(litresAndKilos.length);
 		expect((await names()).toSorted()).toEqual(litresAndKilos.map((row) => row.name).toSorted());
@@ -277,24 +294,30 @@ describe("in North", () => {
 			.getByRole("button", { name: /^Material/ })
 			.click({ modifiers: ["Shift"] });
 		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price,name");
+		await app.tableSettled();
 		await expect.poll(() => page.locator("thead").innerText()).toMatch(/Unit price\s*1/);
 
 		// Back and forward retrace the steps.
 		await page.goBack();
 		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price");
+		await app.tableSettled();
 		await page.goBack();
 		await page.waitForURL(() => search() === "?unit=l&sort=-price");
+		await app.tableSettled();
 		await page.goBack();
 		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await app.tableSettled();
 		await expect.poll(names).toEqual(second);
 		expect(
 			await page.locator('[data-slot="popover-trigger"]', { hasText: "Unit" }).innerText(),
 		).toBe("Unit");
 		await page.goBack();
 		await page.waitForURL(() => search() === "?sort=-price");
+		await app.tableSettled();
 		await expect.poll(names).toEqual(first);
 		await page.goForward();
 		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await app.tableSettled();
 		await expect.poll(names).toEqual(second);
 
 		// A link with the state in it opens the list that way; unknown values are ignored.
