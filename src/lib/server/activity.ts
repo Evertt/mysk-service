@@ -1,4 +1,3 @@
-import { roundQuantity } from "#lib/models.js";
 /**
  * The activity log (`activity`): who changed which record, and how. Every mutation records itself
  * with `recordActivity()`, inside the `db.transaction` that makes the change, so a change that is
@@ -21,7 +20,7 @@ import { roundQuantity } from "#lib/models.js";
  * the invitation's organization rather than the current one). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity.ts`.
  */
-import type { ActivityAction } from "#lib/models.js";
+import { type ActivityAction, roundQuantity } from "#lib/models.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.js";
 import { idsInTenant, requireTenant } from "#lib/server/session.js";

@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { type MaterialUnit, stockLevel } from "#lib/models.js";
+import { type MaterialUnit, roundQuantity, stockLevel } from "#lib/models.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { material } from "#lib/server/db/schema.js";
 import type { Tenant } from "#lib/server/session.ts";
@@ -14,7 +14,6 @@ import {
 	moveStock,
 	type OrderStock,
 	OrderStockShortage,
-	roundQuantity,
 	StockShortage,
 	stockChanges,
 	stockLevelSql,
