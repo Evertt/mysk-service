@@ -2,7 +2,6 @@ import { createClient } from "@libsql/client";
 import { expect, test, vi } from "vite-plus/test";
 
 import { drizzleQueued } from "./db/serialize.ts";
-import { invoicing } from "./invoicing.ts";
 import {
 	billableItems,
 	enabledServerModules,
@@ -18,18 +17,14 @@ vi.mock("$app/server", () => ({
 	getRequestEvent: () => ({
 		locals: {
 			user: { id: "u1" },
-			tenant: { organizationId: "north", roles: ["member"], modules: ["invoicing"] },
+			tenant: { organizationId: "north", roles: ["member"], modules: ["widgets"] },
 		},
 	}),
 }));
-// The core, without the modules in `src/modules`.
-vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [] }));
-const refreshed = vi.hoisted(() => [] as string[]);
-vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({
-	getOrderInvoice: (number: string) => ({
-		refresh: async () => void refreshed.push(`invoice:${number}`),
-	}),
-}));
+// Made-up modules instead of the ones in `src/modules`.
+const widgets = vi.hoisted(() => ({ id: "widgets", orders: {} }));
+const gadgets = vi.hoisted(() => ({ id: "gadgets", orders: {} }));
+vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [gadgets, widgets] }));
 
 /** Lets the promises that hooks run in settle. */
 const flush = () => new Promise((resolve) => setTimeout(resolve));
@@ -43,13 +38,14 @@ const order = (id: number): OrderFacts => ({
 });
 
 test("only the enabled modules take part", () => {
-	expect(enabledServerModules(["invoicing"])).toEqual([invoicing]);
+	expect(enabledServerModules(["widgets"])).toEqual([widgets]);
+	expect(enabledServerModules(["widgets", "gadgets"])).toEqual([gadgets, widgets]);
 	expect(enabledServerModules([])).toEqual([]);
 	expect(enabledServerModules(["something-else"])).toEqual([]);
 });
 
 test("by default, the current tenant's modules take part", () => {
-	expect(enabledServerModules()).toEqual([invoicing]);
+	expect(enabledServerModules()).toEqual([widgets]);
 });
 
 test("tags come from each module, in the modules' order, for the orders they name", async () => {
@@ -149,12 +145,6 @@ test("the modules are told once the transaction has committed, and not when it r
 		})
 		.catch(() => {});
 	expect(saved).toEqual(["ORD-2026-00001"]);
-});
-
-test("the invoicing module refreshes the invoice card of a saved order", async () => {
-	orderCommitted({ number: "ORD-2026-00003" }, enabledServerModules(["invoicing"]));
-	await flush();
-	expect(refreshed).toEqual(["invoice:ORD-2026-00003"]);
 });
 
 test("billable items come from each module that has any, by date", async () => {

@@ -102,7 +102,7 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
 
 - **Unit tests** sit next to the code they test: `*.spec.ts` runs in Node, `*.svelte.spec.ts` in
   the browser.
-- **End-to-end tests** are in `e2e/`. They sign in and click through the app like a user, then
+- **End-to-end tests** are in `e2e/` (a module's in `src/modules/<id>/e2e/`). They sign in and click through the app like a user, then
   check the database. Each run builds the app, seeds a fresh database in a temporary folder and
   starts a production server per test worker, each with its own copy of the database
   (`e2e/global-setup.ts`). The test files run in parallel across them, and none of it touches

@@ -679,8 +679,29 @@ Each step leaves `pnpm check` and `pnpm test` green and can merge on its own.
    forbids importing the module's._
 5. **Move invoicing** the same way, including the PDF `+server.ts` and `/invoices/settings`.
    Invoicing's seed then bills contract fees through the seed collectors.
+   _Done. Differences from the text above: `invoices.remote.ts` and `lib/server/invoicing.ts` were
+   split as they moved (file-splits plan, A.1 and A.2): the remote functions into
+   `invoices.remote.ts` (list, one invoice, creation), `invoice-status.remote.ts`,
+   `[number]/draft.remote.ts` and `settings/settings.remote.ts`, with `refreshInvoice()` in
+   `invoice-refresh.server.ts`; the server code into `server/billable.ts`, `server/invoices.ts`,
+   `server/settings.ts` (apart because both of the others need it) and the hook in
+   `server/index.ts`. The invoice number format is the module's (`invoiceNumberFormat` in
+   `model.ts`, `invoiceNumbers` as the target of `nextNumber()`), with `invoice` gone from
+   `numberFormats`. The seed makes the invoices in `run()`, not `generate()`: they follow from the
+   draft's orders (kept by reference) and need every module's data for the collectors, which
+   `generate()` can't promise whatever order the modules are in, so a tenant's `collect` is passed
+   to `run()`; the seeded data is identical (compared with a frozen clock). The e2e SQL that
+   spans both modules (the covered CTE, the fee references) is in `e2e/contracts-helpers.ts`, and
+   the core tests of what invoicing adds (the bulk action on the orders list, the Dutch invoices)
+   are in the module's `e2e/`._
 6. **Remove the transition code** (the static list, `#lib/components/{contracts,invoicing}`) and
    update CLAUDE.md: the "Modules" section below, and the "Where files go" text from Part 1.
+   _Done. The static list went with the move of invoicing (`modules`, `moduleIds` and the server
+   registry are the generated ones), and `slotLoaders()` and `bulkActionLoaders()` take the
+   registry as an optional argument, so the core's specs test the extension points with made-up
+   modules (`src/lib/fake-modules.ts`, mocked in for `modules.gen.ts`) instead of the real ones.
+   AGENTS.md describes the finished system. The "Where files go" text from Part 1 is used as far as
+   it applies: the domain folders in `src/lib` (step 8) are not there yet._
 7. **Add extension points when they're needed:** `order.actions` and the other action slots,
    `settings.cards`, row actions, module table columns and filters, guards. The interfaces above
    are the plan; build each when its first user arrives.

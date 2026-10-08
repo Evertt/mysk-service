@@ -12,7 +12,9 @@
  *
  * What the module does at runtime through hooks (`#lib/server/modules.ts`), it does at seed time
  * through collectors, which the seed of whoever consumes it asks without knowing the module:
- * `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for `billing.billableItems`.
+ * `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for `billing.billableItems`. They
+ * answer from what the modules made in `generate()`, so a consumer asks in `run()` (a tenant's
+ * `collect`), when every module's data is there, whatever the order the modules are in.
  *
  * Like the rest of the seed, it runs in plain Node: import with `.ts` extensions, and from `#lib`
  * only modules that don't need SvelteKit (types are free).
@@ -59,6 +61,8 @@ export interface SeedTenant<Data = unknown> {
 	orderIds: number[];
 	/** What the module's `generate()` made for the tenant. */
 	data: Data;
+	/** What all of the tenant's modules say about prices and billing, see `SeedCollectors`. */
+	collect: SeedCollectors;
 }
 
 export interface SeedContext<Data = unknown> {

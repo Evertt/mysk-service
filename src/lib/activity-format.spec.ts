@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import { describeChanges, fieldLabel, formatValue, referencedIds } from "./activity-format.ts";
 import { coreSubjectTypes, subjectTypes } from "./activity.ts";
 import { formatCents, formatDate, formatDateTime } from "./format.ts";
+
+// Made-up modules instead of the ones in `src/modules`.
+vi.mock("./modules.gen.ts", async () => ({
+	manifests: (await import("./fake-modules.ts")).fakeModules,
+}));
 
 const { order, equipment, engineer, customer, material } = coreSubjectTypes;
 
@@ -105,7 +110,7 @@ describe("referencedIds", () => {
 		const ids = referencedIds({ engineerId: [2, 3], status: ["a", "b"] }, order);
 		referencedIds(
 			{ equipmentIds: [[1], [1, 4]], customerId: [null, 9] },
-			subjectTypes(["contracts"]).contract,
+			subjectTypes(["widgets"]).widget,
 			ids,
 		);
 		expect(Object.fromEntries([...ids].map(([type, set]) => [type, [...set]]))).toEqual({
@@ -117,12 +122,15 @@ describe("referencedIds", () => {
 });
 
 describe("describeChanges for a module's subject types", () => {
-	test("reads the invoicing module's fields", () => {
-		const { invoice } = subjectTypes(["invoicing"]);
-		expect(describeChanges({ vatRate: [21, 9], status: ["draft", "sent"] }, invoice)).toEqual([
-			{ field: "VAT rate", before: "21%", after: "9%" },
-			{ field: "status", before: "Draft", after: "Sent" },
+	test("reads a module's fields with the labels and formats it gives them", () => {
+		const { widget } = subjectTypes(["widgets"]);
+		expect(describeChanges({ size: [10, 12] }, widget)).toEqual([
+			{ field: "size of the widget", before: "10 cm", after: "12 cm" },
 		]);
+	});
+
+	test("labels a module's field for tenants without the module as well", () => {
+		expect(fieldLabel("size")).toBe("size of the widget");
 	});
 
 	test("shows members' roles by their labels", () => {
@@ -147,10 +155,5 @@ describe("in Dutch", () => {
 			{ field: "actief", before: "ja", after: "nee" },
 		]);
 		expect(fieldLabel("customerId", equipment.fields?.customerId)).toBe("eigenaar");
-		const invoice = subjectTypes(["invoicing"]).invoice;
-		expect(describeChanges({ paymentTermDays: [14, 30], vatRate: [21, 5.5] }, invoice)).toEqual([
-			{ field: "betalingstermijn", before: "14 dagen", after: "30 dagen" },
-			{ field: "btw-tarief", before: "21%", after: "5,5%" },
-		]);
 	});
 });

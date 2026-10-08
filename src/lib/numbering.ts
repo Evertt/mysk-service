@@ -22,7 +22,6 @@ export const numberFormats = {
 	customer: { prefix: "CUST-", digits: 4 },
 	material: { prefix: "MAT-", digits: 4 },
 	order: { prefix: "ORD-", digits: 5, yearly: true },
-	invoice: { prefix: "INV-", digits: 5, yearly: true },
 } as const satisfies Record<string, NumberFormat>;
 
 export type NumberKind = keyof typeof numberFormats;

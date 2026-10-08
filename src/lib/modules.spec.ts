@@ -2,10 +2,11 @@ import { existsSync, readdirSync } from "node:fs";
 
 import { describe, expect, test } from "vite-plus/test";
 
+import { gadgets, widgets } from "./fake-modules.ts";
 import { generatedModuleIds } from "./module-ids.gen.ts";
 import { moduleIds } from "./module-ids.ts";
 import { manifests } from "./modules.gen.ts";
-import { modules, type SlotName, slotLoaders } from "./modules.ts";
+import { bulkActionLoaders, modules, type SlotName, slotLoaders } from "./modules.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
@@ -36,31 +37,39 @@ test.each(modules)("the $id module's route is a page", ({ route }) => {
 });
 
 describe("slotLoaders", () => {
+	const registry = [gadgets, widgets];
 	const slots: SlotName[] = ["dashboard", "order", "equipment"];
-	const contracts = modules.find((module) => module.id === "contracts")!;
-	const invoicing = modules.find((module) => module.id === "invoicing")!;
-
-	test.each(slots)(
-		"gives the %s slot the contracts module's component when it's enabled",
-		(name) => {
-			expect(slotLoaders(name, ["contracts"])).toEqual([contracts.slots[name]]);
-		},
-	);
 
 	test.each(slots)("leaves the %s slot empty without modules", (name) => {
-		expect(slotLoaders(name, [])).toEqual([]);
+		expect(slotLoaders(name, [], registry)).toEqual([]);
+	});
+
+	test("gives a module's component only when it's enabled", () => {
+		expect(slotLoaders("order", ["widgets"], registry)).toEqual([widgets.slots.order]);
+		expect(slotLoaders("equipment", ["gadgets"], registry)).toEqual([gadgets.slots.equipment]);
+		expect(slotLoaders("equipment", ["widgets"], registry)).toEqual([]);
 	});
 
 	test("gives the components of several modules in registry order", () => {
-		expect(slotLoaders("dashboard", ["invoicing", "contracts"])).toEqual([
-			contracts.slots.dashboard,
-			invoicing.slots.dashboard,
+		expect(slotLoaders("dashboard", ["widgets", "gadgets"], registry)).toEqual([
+			gadgets.slots.dashboard,
+			widgets.slots.dashboard,
 		]);
-		expect(slotLoaders("order", ["invoicing"])).toEqual([invoicing.slots.order]);
-		expect(slotLoaders("equipment", ["invoicing"])).toEqual([]);
 	});
 
 	test("ignores modules that don't exist", () => {
-		expect(slotLoaders("order", ["no-such-module"])).toEqual([]);
+		expect(slotLoaders("order", ["no-such-module"], registry)).toEqual([]);
+	});
+});
+
+describe("bulkActionLoaders", () => {
+	const registry = [gadgets, widgets];
+
+	test("gives the bulk actions of the enabled modules that have any", () => {
+		expect(bulkActionLoaders("orders", ["gadgets", "widgets"], registry)).toEqual([
+			widgets.bulkActions.orders,
+		]);
+		expect(bulkActionLoaders("orders", ["gadgets"], registry)).toEqual([]);
+		expect(bulkActionLoaders("orders", [], registry)).toEqual([]);
 	});
 });

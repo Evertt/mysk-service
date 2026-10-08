@@ -18,13 +18,16 @@ Put a module next to the code that uses it, in the nearest folder that contains 
 - **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.js`).
 - **Used across unrelated parts of the app**, or generic and route-independent (shared UI such as `#lib/components/data-table`, themes, formatting, domain enums): in `src/lib`, imported via `#lib/...`.
 - **Server-only code** (database, secrets, auth): always in `src/lib/server/`, whoever uses it, so SvelteKit keeps it out of client bundles. One exception: plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles too.
+- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
 
-When a module gains a user outside its folder, move it up to the nearest common folder (or `src/lib`); when it loses users, move it down.
+Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser. Never put secrets or database code anywhere else.
+
+When a file gains a user outside its folder, move it up to the nearest common folder (or `src/lib`); when it loses users, move it down.
 
 ## Tenants and modules
 
 The app is multi-tenant: organizations (better-auth's organization plugin) own all business data, and
-optional modules (`src/lib/modules.ts`) are enabled per organization (`organization_module`). The
+optional modules (`src/modules/<id>/`, see "Modules") are enabled per organization (`organization_module`). The
 helpers are in `src/lib/server/session.ts`:
 
 - Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
@@ -45,7 +48,8 @@ helpers are in `src/lib/server/session.ts`:
   (transactions take turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick
   the same one). A module numbers its own records with a format and table of its own:
   `nextNumber(tx, { format, table, column })`, e.g. `contractNumbers` in
-  `src/modules/contracts/server/contracts.ts`.
+  `src/modules/contracts/server/contracts.ts` and `invoiceNumbers` in
+  `src/modules/invoicing/server/invoices.ts`.
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
@@ -112,26 +116,30 @@ migration committed.
   foreign key to a module table. A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
   its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
 
-Contracts is a module in this folder structure (`src/modules/contracts/`: look there for an
-example of each part). Invoicing is not built yet: it is still in the static list in
-`src/lib/modules.ts`, in `src/lib/server/invoicing.ts` and in `src/routes/(app)` (the generated
-modules come before it in the registries), and its messages are core files. Also missing, to be added
-with the first module that needs them: several `nav` entries per module, module columns, filters and
-row actions in tables, `order.actions`-style slots, `settings.cards`, and the server
-`refuseChange`/`saved` hooks.
+Contracts and invoicing are the modules (`src/modules/contracts/`, `src/modules/invoicing/`: look
+there for an example of each part; the registries list them by id). Extension points are added with
+the first module that needs them. Not there yet: several `nav` entries per module, module
+columns, filters and row actions in tables, `order.actions`-style slots, `settings.cards`, and the
+server `refuseChange`/`saved` hooks.
 
 - A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`): `generate()` makes its
   data for a tenant right after the core's, with the same faker (so the demo data doesn't change
   with where the module's code lives), and may add to the core's draft (contracts adds call-out
   orders); `run()` inserts it. What a module does at runtime through hooks it does at seed time
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
-  asks without knowing the module: invoicing's seed prices orders and bills fees through them.
+  asks without knowing the module, from `run()` (a tenant's `collect`), when every module has made
+  its data: invoicing's seed prices orders and bills fees through them.
 - The page guard is a layout load, so it also answers a form posted from a module's page (the
   organization switcher's) in an organization without the module: a refused form is a 404 there, not
   its own status. Tests that tamper with such a form start from a page that exists.
 - A core e2e test of something a module changes (a customer's revenue less what contracts include)
-  can't import the module's helpers, so `e2e/contracts-helpers.ts`, which works the contracts' effect
-  on prices out in SQL, stays in `e2e/`; the module's own e2e imports it from there.
+  can't import the module's helpers, and a module's e2e can't import another module's, so
+  `e2e/contracts-helpers.ts`, which works the contracts' effect on prices and billing out in SQL
+  (which contract covers an order, the fees due), stays in `e2e/`; the e2e of contracts and
+  invoicing import it from there. A core test of what a module adds (invoicing's bulk action on the
+  orders list) is that module's e2e test, not the core's.
+- Core specs test core with made-up modules (`src/lib/fake-modules.ts`, mocked in as `modules.gen.ts`
+  or passed to the function as the registry); what a module does is tested in its own folder.
 
 ## Server-side lists
 
@@ -193,7 +201,8 @@ await db.transaction(async (tx) => {
   `after`'s fields are compared, and an update that changes nothing logs nothing. `ignore` leaves
   out fields that follow from others.
 - A new subject type gets a noun, page and field formats in `coreSubjectTypes`
-  (`src/lib/activity.ts`), or, for a module's records, in its `subjects` in `src/lib/modules.ts`.
+  (`src/lib/activity.ts`), or, for a module's records, in the `subjects` of its manifest
+  (`src/modules/<id>/module.ts`; its verbs are its `actions`).
   Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
 - Log deletions too: a subject links to its page until its deletion (or removal) is logged.
 - Changes made outside the app's transactions (better-auth's member and invitation endpoints) log
@@ -211,9 +220,10 @@ remote functions. Every user-facing text goes through a message; nothing English
 
 - **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
   `auth`, `dashboard`, `orders`, `schedule`, `customers`, `equipment`, `engineers`, `materials`,
-  `invoices`, `settings`, `portal`, `activity`), each listed in `project.inlang/settings.json`. A new
-  file goes in every locale folder and in that list. A module's sections are in its own folder
-  (`src/modules/contracts/messages/<locale>/contracts.json`), which the generator lists.
+  `settings`, `portal`, `activity`), each listed in `project.inlang/settings.json`. A new file goes
+  in every locale folder and in that list. A module's sections are in its own folder
+  (`src/modules/contracts/messages/<locale>/contracts.json`, and `invoices.json` of the invoicing
+  module: the section's name is the key prefix, not the module's id), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
   `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or
@@ -273,7 +283,10 @@ README.md).
   `e2e/<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
   one signed-in page from `useApp()`, changes go through the UI, checks read the database with
   `rows()`/`value()`. Split a file by its independent `describe` blocks when it passes a few
-  hundred lines: the longest file sets the e2e wall-clock time.
+  hundred lines: the longest file sets the e2e wall-clock time. A module's e2e tests are in its
+  own folder (`src/modules/<id>/e2e/*.test.ts`, importing `#e2e/app.ts`) and cover a tenant that
+  has the module, one that hasn't (its pages and endpoints are 404s, the sidebar lacks it, the
+  slots are empty, its remote queries are refused) and tenant isolation.
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
   including by tampering with hidden ids (`app.expectingErrors`).
 - Pure helpers (validation, formatting, domain rules, form schemas, table columns) get unit tests
