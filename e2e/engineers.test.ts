@@ -178,6 +178,62 @@ describe("in North", () => {
 		expect(open).toBe(busy.open);
 	});
 
+	test("grouping by specialty counts each one's engineers, and its groups collapse and expand", async () => {
+		const { page } = app;
+		await app.go("/engineers");
+		await app.groupBy("Specialty");
+		expect(new URL(page.url()).searchParams.get("group")).toBe("specialty");
+
+		const counts = Object.fromEntries(
+			(
+				await rows<{ specialty: string; n: number }>(
+					`select specialty, count(*) as n from engineer where organization_id = ? group by specialty`,
+					[north.id],
+				)
+			).map((row) => [row.specialty, row.n]),
+		);
+		const groups = await app.groups();
+		expect(groups.length).toBeGreaterThan(1);
+		for (const group of groups) expect(group.count, group.key).toBe(counts[group.key]);
+
+		/** How many of a group's rows show (on this page). */
+		const rowsOf = (key: string) =>
+			page.locator("tbody tr").evaluateAll((trs: HTMLElement[], key) => {
+				const start = trs.findIndex((tr) => tr.dataset.group === key);
+				const end = trs.findIndex((tr, i) => i > start && tr.dataset.group !== undefined);
+				return (end === -1 ? trs.length : end) - start - 1;
+			}, key);
+		const [first, second] = groups;
+		const shown = await rowsOf(first.key);
+		expect(shown).toBeGreaterThan(0);
+
+		const toggle = page.getByRole("button", { name: first.label, exact: true });
+		await toggle.click();
+		expect(await rowsOf(first.key)).toBe(0);
+		expect((await app.groups())[0].collapsed).toBe(true);
+		await toggle.click();
+		expect(await rowsOf(first.key)).toBe(shown);
+
+		// From the keyboard, on the group's row.
+		await page.locator(`tbody tr[data-group="${second.key}"]`).focus();
+		await page.keyboard.press("Enter");
+		expect(await rowsOf(second.key)).toBe(0);
+		await page.keyboard.press(" ");
+		expect(await rowsOf(second.key)).toBeGreaterThan(0);
+
+		await page.getByRole("button", { name: "View", exact: true }).click();
+		await page.getByRole("menuitem", { name: "Collapse all groups" }).click();
+		expect((await app.groups()).every((group) => group.collapsed)).toBe(true);
+		expect(await page.locator("tbody tr:not([data-group])").count()).toBe(0);
+		await page.getByRole("button", { name: "View", exact: true }).click();
+		await page.getByRole("menuitem", { name: "Expand all groups" }).click();
+		expect(await rowsOf(first.key)).toBe(shown);
+
+		await app.groupBy("None");
+		expect(new URL(page.url()).searchParams.has("group")).toBe(false);
+		expect(await page.locator("tbody tr[data-group]").count()).toBe(0);
+	});
+
 	test("unknown ids and South's engineers are a 404", async () => {
 		const southId = await value<number>(`select min(id) from engineer where organization_id = ?`, [
 			south.id,

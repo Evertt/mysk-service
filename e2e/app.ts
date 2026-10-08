@@ -239,6 +239,10 @@ export interface App {
 	 * (it's `aria-busy` until they're in), e.g. after clicking a header or typing a search.
 	 */
 	tableSettled(): Promise<void>;
+	/** Groups the data table's rows by a column (or `None`) through its View menu. */
+	groupBy(column: string): Promise<void>;
+	/** The data table's group rows on the page, in order. */
+	groups(): Promise<TableGroup[]>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
 	/**
@@ -246,6 +250,22 @@ export interface App {
 	 * session elsewhere. Close its context when done.
 	 */
 	anotherTab(): Promise<Page>;
+}
+
+/** A group row of a data table that's grouped by a column. */
+export interface TableGroup {
+	/** The group's value, e.g. `chiller`, `""` for none. */
+	key: string;
+	/** What it shows, e.g. `Chiller`. */
+	label: string;
+	/** How many rows it has, on every page. */
+	count: number;
+	/** It started on the previous page. */
+	continued: boolean;
+	/** It goes on on the next page. */
+	continues: boolean;
+	/** Its rows are hidden. */
+	collapsed: boolean;
 }
 
 /**
@@ -332,6 +352,31 @@ export function useApp({
 			await settled();
 		},
 		tableSettled: () => settled(),
+		async groupBy(column) {
+			await page.getByRole("button", { name: "View", exact: true }).click();
+			await page.getByRole("menuitem", { name: "Group by" }).click();
+			await page.getByRole("menuitemradio", { name: column, exact: true }).click();
+			await page.keyboard.press("Escape");
+			await page.keyboard.press("Escape");
+			await settled();
+		},
+		groups: () =>
+			page.locator("tbody tr[data-group]").evaluateAll((trs: HTMLElement[]) =>
+				trs.map((tr) => {
+					const notes = [...tr.querySelectorAll("[data-group-note]")].map((note) =>
+						note.textContent!.trim(),
+					);
+					const toggle = tr.querySelector("[data-group-toggle]")!;
+					return {
+						key: tr.dataset.group!,
+						label: document.getElementById(toggle.getAttribute("aria-labelledby")!)!.innerText,
+						count: Number(tr.querySelector("[data-group-count]")!.textContent!.replace(/\D/g, "")),
+						continued: notes.includes("continued from the previous page"),
+						continues: notes.includes("continues on the next page"),
+						collapsed: toggle.getAttribute("aria-expanded") === "false",
+					};
+				}),
+			),
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
