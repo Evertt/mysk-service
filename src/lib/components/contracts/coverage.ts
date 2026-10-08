@@ -15,7 +15,6 @@
  *   at risk once less than a quarter of the response time is left, and overdue from the deadline
  *   on. Cancelled orders and other types of work (maintenance, inspections) have no deadline.
  */
-import { label } from "#lib/i18n/labels.js";
 import {
 	type ContractLevel,
 	contractStatus,
@@ -23,6 +22,8 @@ import {
 	type OrderType,
 } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
+
+import { contractLabels } from "./labels.js";
 
 /** What each level includes. */
 export const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {
@@ -67,7 +68,7 @@ export function coveredAmount(level: ContractLevel, price: { materials: number; 
 export const coveredBy = (contract: { number: string; level: ContractLevel }) =>
 	m.contracts_covered_by({
 		number: contract.number,
-		level: label("contractLevel", contract.level),
+		level: contractLabels.label("contractLevel", contract.level),
 	});
 
 // --- Response time ---------------------------------------------------------------------------

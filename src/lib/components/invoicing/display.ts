@@ -7,10 +7,10 @@ import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
 import { numberFormatter } from "#lib/format.js";
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { type InvoiceState, invoiceStates } from "./invoice.js";
+import { invoicingLabels } from "./labels.js";
 
 interface Display {
 	icon: Component;
@@ -26,10 +26,14 @@ const stateDetails: Record<InvoiceState, Display> = {
 };
 
 /** An invoice's status as shown (overdue for sent ones past their due date), translated. */
-export const states = withLabels("invoiceState", stateDetails);
+export const states = invoicingLabels.withLabels("invoiceState", stateDetails);
 
 /** Options for the faceted filter, in order. */
-export const stateOptions = labelOptions("invoiceState", invoiceStates, stateDetails);
+export const stateOptions = invoicingLabels.labelOptions(
+	"invoiceState",
+	invoiceStates,
+	stateDetails,
+);
 
 const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
 

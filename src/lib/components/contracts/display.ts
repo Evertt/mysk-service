@@ -11,7 +11,6 @@ import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
-import { labelOptions, withLabels } from "#lib/i18n/labels.js";
 import {
 	type ContractLevel,
 	contractLevels,
@@ -21,6 +20,7 @@ import {
 import { m } from "#lib/paraglide/messages.js";
 
 import type { SlaState } from "./coverage.js";
+import { contractLabels } from "./labels.js";
 
 interface Display {
 	icon: Component;
@@ -48,13 +48,21 @@ const slaStateDetails: Record<SlaState, Display> = {
 };
 
 /** Each value's translated `label`, icon and badge variant. */
-export const levels = withLabels("contractLevel", levelDetails);
-export const statuses = withLabels("contractStatus", statusDetails);
-export const slaStates = withLabels("slaState", slaStateDetails);
+export const levels = contractLabels.withLabels("contractLevel", levelDetails);
+export const statuses = contractLabels.withLabels("contractStatus", statusDetails);
+export const slaStates = contractLabels.withLabels("slaState", slaStateDetails);
 
 /** Options for the faceted filters, in order. */
-export const levelOptions = labelOptions("contractLevel", contractLevels, levelDetails);
-export const statusOptions = labelOptions("contractStatus", contractStatuses, statusDetails);
+export const levelOptions = contractLabels.labelOptions(
+	"contractLevel",
+	contractLevels,
+	levelDetails,
+);
+export const statusOptions = contractLabels.labelOptions(
+	"contractStatus",
+	contractStatuses,
+	statusDetails,
+);
 
 /** A contract's length, e.g. "2 years", "18 months" or "3 months, 10 days"; both days count. */
 export function formatTerm(startsOn: Date, endsOn: Date) {

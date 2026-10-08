@@ -7,8 +7,8 @@ import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf
 
 import { formatRate } from "#lib/components/invoicing/display.js";
 import type { InvoiceState } from "#lib/components/invoicing/invoice.js";
+import { invoicingLabels } from "#lib/components/invoicing/labels.js";
 import { formatCents, formatDate, formatNumber } from "#lib/format.js";
-import { label as enumLabel } from "#lib/i18n/labels.js";
 import { m } from "#lib/paraglide/messages.js";
 
 export interface PdfInvoice {
@@ -138,7 +138,9 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	text(invoice.number, A4.width - MARGIN, { size: 11, align: "right" });
 	// Its status, unless it's simply sent.
 	const label =
-		invoice.state === "sent" ? "" : enumLabel("invoiceState", invoice.state).toUpperCase();
+		invoice.state === "sent"
+			? ""
+			: invoicingLabels.label("invoiceState", invoice.state).toUpperCase();
 	if (label) {
 		y -= 16;
 		text(label, A4.width - MARGIN, { size: 11, font: bold, color: muted, align: "right" });

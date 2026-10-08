@@ -1,4 +1,3 @@
-import type { SlaState } from "#lib/components/contracts/coverage.js";
 /**
  * The translated names of the domain's enum values (statuses, types, units, roles, …): the one
  * place that maps a stored value to what users read. Show one with `label("orderStatus", status)`;
@@ -8,11 +7,8 @@ import type { SlaState } from "#lib/components/contracts/coverage.js";
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { InvoiceState } from "#lib/components/invoicing/invoice.js";
 import type { StockLevel } from "#lib/components/materials/display.js";
 import type {
-	ContractLevel,
-	ContractStatus,
 	CustomerSegment,
 	EngineerSpecialty,
 	EquipmentCategory,
@@ -26,9 +22,9 @@ import type {
 import { m } from "#lib/paraglide/messages.js";
 import type { MemberRole } from "#lib/roles.js";
 
-type Labels<T extends string> = Record<T, () => string>;
+export type Labels<T extends string> = Record<T, () => string>;
 
-const labels = {
+const coreLabels = {
 	orderStatus: {
 		quote: m.enum_order_status_quote,
 		scheduled: m.enum_order_status_scheduled,
@@ -102,29 +98,6 @@ const labels = {
 		consumption: m.enum_stock_movement_kind_consumption,
 		return: m.enum_stock_movement_kind_return,
 	} satisfies Labels<StockMovementKind>,
-	contractLevel: {
-		basic: m.enum_contract_level_basic,
-		standard: m.enum_contract_level_standard,
-		premium: m.enum_contract_level_premium,
-	} satisfies Labels<ContractLevel>,
-	contractStatus: {
-		upcoming: m.enum_contract_status_upcoming,
-		active: m.enum_contract_status_active,
-		expired: m.enum_contract_status_expired,
-	} satisfies Labels<ContractStatus>,
-	slaState: {
-		on_track: m.enum_sla_state_on_track,
-		at_risk: m.enum_sla_state_at_risk,
-		overdue: m.enum_sla_state_overdue,
-		responded: m.enum_sla_state_responded,
-	} satisfies Labels<SlaState>,
-	invoiceState: {
-		draft: m.enum_invoice_state_draft,
-		sent: m.enum_invoice_state_sent,
-		overdue: m.enum_invoice_state_overdue,
-		paid: m.enum_invoice_state_paid,
-		void: m.enum_invoice_state_void,
-	} satisfies Labels<InvoiceState>,
 	memberRole: {
 		owner: m.enum_member_role_owner,
 		admin: m.enum_member_role_admin,
@@ -140,24 +113,60 @@ const labels = {
 	} satisfies Labels<MemberRole>,
 };
 
-export type LabelKind = keyof typeof labels;
-/** The values a kind of label has, e.g. the order statuses for `orderStatus`. */
-export type LabelValue<K extends LabelKind> = keyof (typeof labels)[K] & string;
-
-/** Whether `value` is one of a kind's values, e.g. a role read from the database. */
-export const hasLabel = <K extends LabelKind>(kind: K, value: string): value is LabelValue<K> =>
-	Object.hasOwn(labels[kind], value);
-
-/** The translated label of an enum value, e.g. `label("orderStatus", "in_progress")` → `In progress`. */
-export const label = <K extends LabelKind>(kind: K, value: LabelValue<K>): string =>
-	(labels[kind] as Labels<string>)[value]();
-
 /**
- * The label of a value that may be unknown (e.g. a role stored by an older version): the value
- * itself if there's no label for it.
+ * Binds the label functions to a map of label kinds. The core's kinds are bound below; an optional
+ * module defines its own next to its code (e.g. `#lib/components/contracts/labels.ts`), so this
+ * file doesn't import the modules.
  */
-export const labelOrValue = (kind: LabelKind, value: string) =>
-	hasLabel(kind, value) ? label(kind, value) : value;
+export function defineLabels<L extends Record<string, Record<string, () => string>>>(labels: L) {
+	type Kind = keyof L & string;
+	/** The values a kind of label has, e.g. the order statuses for `orderStatus`. */
+	type Value<K extends Kind> = keyof L[K] & string;
+
+	/** Whether `value` is one of a kind's values, e.g. a role read from the database. */
+	const hasLabel = <K extends Kind>(kind: K, value: string): value is Value<K> =>
+		Object.hasOwn(labels[kind], value);
+
+	/** The translated label of an enum value, e.g. `label("orderStatus", "in_progress")` → `In progress`. */
+	const label = <K extends Kind>(kind: K, value: Value<K>): string =>
+		(labels[kind] as Labels<string>)[value]();
+
+	/**
+	 * The label of a value that may be unknown (e.g. a role stored by an older version): the value
+	 * itself if there's no label for it.
+	 */
+	const labelOrValue = (kind: Kind, value: string) =>
+		hasLabel(kind, value) ? label(kind, value) : value;
+
+	/**
+	 * Adds each value's translated `label` to a map of display details, e.g. icons and badge variants:
+	 * `withLabels("orderStatus", { quote: { icon, variant }, … })[status].label`.
+	 */
+	function withLabels<K extends Kind, E extends Record<Value<K>, object>>(kind: K, entries: E) {
+		return Object.fromEntries(
+			Object.entries(entries).map(([value, entry]) => [
+				value,
+				withLabel(entry as object, () => label(kind, value as Value<K>)),
+			]),
+		) as { [V in keyof E]: E[V] & { readonly label: string } };
+	}
+
+	/**
+	 * Options for a select or faceted filter: `{ value, label }` for each of `values`, in order, plus
+	 * the value's entry in `details` (e.g. its icon) if given.
+	 */
+	function labelOptions<
+		K extends Kind,
+		V extends Value<K>,
+		D extends object = Record<never, never>,
+	>(kind: K, values: readonly V[], details?: Record<V, D>) {
+		return values.map((value) =>
+			withLabel({ ...details?.[value], value }, () => label(kind, value)),
+		) as (Omit<D, "label"> & { value: V; readonly label: string })[];
+	}
+
+	return { hasLabel, label, labelOrValue, withLabels, labelOptions };
+}
 
 /** `entry` with a `label` getter, so the label is translated when it's read. */
 const withLabel = <T extends object>(entry: T, get: () => string) =>
@@ -165,32 +174,8 @@ const withLabel = <T extends object>(entry: T, get: () => string) =>
 		readonly label: string;
 	};
 
-/**
- * Adds each value's translated `label` to a map of display details, e.g. icons and badge variants:
- * `withLabels("orderStatus", { quote: { icon, variant }, … })[status].label`.
- */
-export function withLabels<K extends LabelKind, E extends Record<LabelValue<K>, object>>(
-	kind: K,
-	entries: E,
-) {
-	return Object.fromEntries(
-		Object.entries(entries).map(([value, entry]) => [
-			value,
-			withLabel(entry as object, () => label(kind, value as LabelValue<K>)),
-		]),
-	) as { [V in keyof E]: E[V] & { readonly label: string } };
-}
+export type LabelKind = keyof typeof coreLabels;
+/** The values a kind of label has, e.g. the order statuses for `orderStatus`. */
+export type LabelValue<K extends LabelKind> = keyof (typeof coreLabels)[K] & string;
 
-/**
- * Options for a select or faceted filter: `{ value, label }` for each of `values`, in order, plus
- * the value's entry in `details` (e.g. its icon) if given.
- */
-export function labelOptions<
-	K extends LabelKind,
-	V extends LabelValue<K>,
-	D extends object = Record<never, never>,
->(kind: K, values: readonly V[], details?: Record<V, D>) {
-	return values.map((value) =>
-		withLabel({ ...details?.[value], value }, () => label(kind, value)),
-	) as (Omit<D, "label"> & { value: V; readonly label: string })[];
-}
+export const { hasLabel, label, labelOrValue, withLabels, labelOptions } = defineLabels(coreLabels);

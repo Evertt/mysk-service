@@ -896,7 +896,7 @@ function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: n
 /** From when the demo tenants bill contract fees through the app (see the invoicing settings). */
 const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
-/** A contract level's name in Dutch, as `label("contractLevel", level)` shows it. */
+/** A contract level's name in Dutch, as `contractLabels.label("contractLevel", level)` shows it. */
 const levelLabel = (level: ContractLevel) =>
 	({ basic: "Basis", standard: "Standaard", premium: "Premium" })[level];
 

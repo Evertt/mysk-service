@@ -4,10 +4,10 @@ import { resolve } from "$app/paths";
 // Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
 import type { SubjectType } from "#lib/activity.js";
 import { formatCents, formatDate, formatNumber } from "#lib/format.js";
-import { labelOrValue } from "#lib/i18n/labels.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { formatRate } from "./display.js";
+import { invoicingLabels } from "./labels.js";
 
 const day = (value: unknown) => formatDate(new Date(String(value)));
 const days = (value: unknown) => m.activity_value_days({ count: Number(value) });
@@ -18,7 +18,7 @@ export const invoicingSubjects: Record<string, SubjectType> = {
 		noun: m.activity_subject_invoice,
 		href: ({ label }) => resolve("/(app)/invoices/[number]", { number: label }),
 		fields: {
-			status: { format: (value) => labelOrValue("invoiceState", String(value)) },
+			status: { format: (value) => invoicingLabels.labelOrValue("invoiceState", String(value)) },
 			customerId: { ref: "customer" },
 			paymentTermDays: { format: days },
 			vatRate: { format: rate },

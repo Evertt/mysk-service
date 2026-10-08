@@ -17,8 +17,8 @@ import {
 } from "#lib/components/contracts/coverage.js";
 // The module's queries, to refresh; they use `coverageOf` below in turn.
 import { getOrderCoverage } from "#lib/components/contracts/coverage.remote.js";
+import { contractLabels } from "#lib/components/contracts/labels.js";
 import { formatDate, formatDateTime } from "#lib/format.js";
-import { label } from "#lib/i18n/labels.js";
 import type { OrderTag } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
 
@@ -130,7 +130,7 @@ export const contracts: ServerModule = {
 				monthlyFee(term, month, {
 					description: m.contracts_fee_description({
 						number: term.number,
-						level: label("contractLevel", term.level),
+						level: contractLabels.label("contractLevel", term.level),
 					}),
 					detail: m.contracts_fee_detail({
 						from: formatDate(month.startsOn),
