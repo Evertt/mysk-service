@@ -86,7 +86,9 @@ export default defineTheme({
 		button: { base: "font-medium", variant: { default: "shadow-sm" } },
 		card: { base: "shadow-sm ring-border dark:shadow-none" },
 		"card-title": { base: "font-semibold tracking-tight" },
-		"data-table": { base: "rounded-xl bg-card shadow-sm dark:shadow-none" },
+		"data-table": {
+			base: "rounded-xl bg-card shadow-sm [--data-table-surface:var(--card)] dark:shadow-none",
+		},
 		"sidebar-group-label": { base: "text-[0.7rem] font-semibold tracking-wider uppercase" },
 		"sidebar-menu-button": {
 			base: "data-active:bg-primary/10 data-active:font-semibold data-active:text-primary dark:data-active:bg-primary/15",

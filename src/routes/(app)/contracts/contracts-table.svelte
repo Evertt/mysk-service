@@ -24,12 +24,12 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.contracts_search()}>
 			<FacetedFilter columnId="status" title={m.contracts_status()} options={statusOptions} />
 			<FacetedFilter columnId="level" title={m.contracts_level()} options={levelOptions} />
 		</table.Toolbar>
-		<table.Table emptyTitle={m.contracts_empty()} />
+		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>

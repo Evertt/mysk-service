@@ -1,6 +1,7 @@
 import {
 	columnFacetingFeature,
 	columnFilteringFeature,
+	columnPinningFeature,
 	columnVisibilityFeature,
 	constructFilterFn,
 	createFacetedRowModel,
@@ -20,6 +21,8 @@ import {
 	sortFn_text,
 	tableFeatures,
 } from "@tanstack/svelte-table";
+
+import { defaultColumnPinningFeature } from "./default-pinning.js";
 
 export interface DataTableColumnMeta {
 	/**
@@ -55,6 +58,9 @@ export const features = tableFeatures({
 	columnFacetingFeature,
 	columnVisibilityFeature,
 	globalFilteringFeature,
+	columnPinningFeature,
+	// After `columnPinningFeature`: pins each table's identifying and actions columns.
+	defaultColumnPinningFeature,
 	columnMeta: metaHelper<DataTableColumnMeta>(),
 	sortedRowModel: createSortedRowModel(),
 	filteredRowModel: createFilteredRowModel(),

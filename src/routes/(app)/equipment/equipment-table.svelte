@@ -31,7 +31,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.equipment_search()}>
 			<FacetedFilter
 				columnId="category"
@@ -49,7 +49,7 @@
 				options={manufacturerOptions}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.equipment_empty()} />
+		<table.Table emptyTitle={m.equipment_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -27,7 +27,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex flex-col gap-4">
+	<div class="flex min-h-0 flex-col gap-4">
 		<table.Toolbar searchLabel={m.customers_search()}>
 			<FacetedFilter
 				columnId="segment"
@@ -36,7 +36,7 @@
 			/>
 			<FacetedFilter columnId="country" title={m.customers_column_country()} options={countries} />
 		</table.Toolbar>
-		<table.Table emptyTitle={m.customers_empty()} />
+		<table.Table emptyTitle={m.customers_empty()} fillViewport />
 		<table.Pagination />
 	</div>
 </table.AppTable>
