@@ -1,4 +1,6 @@
-import { expect, test } from "vite-plus/test";
+import { afterEach, expect, test } from "vite-plus/test";
+
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import { invitationMail } from "./invitation-mail.ts";
 
@@ -26,4 +28,16 @@ test("escapes names in the HTML", () => {
 	expect(mail.html).toContain("&lt;b&gt;Eve&lt;/b&gt;");
 	expect(mail.html).not.toContain("<b>Eve</b>");
 	expect(mail.text).toContain("as a member");
+});
+
+const englishByDefault = getLocale;
+afterEach(() => overwriteGetLocale(englishByDefault));
+
+test("is in the language of whoever invites", () => {
+	overwriteGetLocale(() => "nl");
+	const mail = invitationMail({ ...invitation, role: "engineer" });
+	expect(mail.subject).toBe("Avery Admin heeft je uitgenodigd voor Fieldworks North op Fieldworks");
+	expect(mail.text).toContain("op Fieldworks, als monteur.");
+	expect(mail.html).toContain("<strong>Fieldworks North</strong>");
+	expect(mail.html).toContain(">Uitnodiging accepteren</a>");
 });

@@ -7,6 +7,7 @@ import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import InvoiceLink from "#lib/components/invoicing/invoice-link.svelte";
 import { invoiceStates } from "#lib/components/invoicing/invoice.js";
 import StatusBadge from "#lib/components/invoicing/status-badge.svelte";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getInvoices } from "./invoices.remote.js";
 
@@ -26,7 +27,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(InvoiceLink, { number: getValue() }),
 		enableHiding: false,
-		meta: { label: "Invoice" },
+		meta: { label: m.invoices_column_invoice },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
@@ -37,7 +38,7 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
-		meta: { label: "Customer" },
+		meta: { label: m.invoices_column_customer },
 	}),
 	// The status, with sent invoices past their due date as overdue.
 	column.accessor("state", {
@@ -48,7 +49,7 @@ export const columns = column.columns([
 		// In the order an invoice goes through them rather than alphabetically.
 		sortFn: (a, b, id) =>
 			invoiceStates.indexOf(a.getValue(id)) - invoiceStates.indexOf(b.getValue(id)),
-		meta: { label: "Status" },
+		meta: { label: m.invoices_column_status },
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {
@@ -57,7 +58,7 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: "Issued" },
+		meta: { label: m.invoices_column_issued },
 	}),
 	column.accessor((row) => row.dueOn ?? undefined, {
 		id: "dueOn",
@@ -65,19 +66,19 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: "Due" },
+		meta: { label: m.invoices_column_due },
 	}),
 	column.accessor("total", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: "Total", align: "end" },
+		meta: { label: m.invoices_column_total, align: "end" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Created" },
+		meta: { label: m.invoices_column_created },
 	}),
 	column.display({
 		id: "actions",
@@ -86,8 +87,8 @@ export const columns = column.columns([
 				label: row.original.number,
 				href: resolve("/(app)/invoices/[number]", { number: row.original.number }),
 				copy: [
-					{ label: "Copy invoice number", value: row.original.number },
-					{ label: "Copy customer code", value: row.original.customer.code },
+					{ label: m.invoices_copy_number(), value: row.original.number },
+					{ label: m.invoices_copy_customer_code(), value: row.original.customer.code },
 				],
 			}),
 	}),

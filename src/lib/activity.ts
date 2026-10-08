@@ -1,45 +1,60 @@
 /**
  * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity.ts`)
- * reads: a phrase per action, and per subject type its noun, its page and how its fields show,
- * e.g. "Avery Admin updated order ORD-2026-00012 · status: Scheduled → In progress".
+ * reads: a sentence per action, and per subject type its noun, its page and how its fields show,
+ * e.g. "Avery Admin updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
+ * "Avery Admin heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
+ *
+ * The log stores values (the action, field names, raw values); they're translated here when shown.
+ * The texts are in `messages/<locale>/activity.json`. Nouns and labels are message functions, so
+ * they're read in the current language when shown, never at module scope.
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
  * records, in its `subjects` in `#lib/modules.ts`. Fields without an entry still show, with a
- * label made from their name and their value as stored (dates and numbers formatted).
+ * label from `fieldLabels` (or made from their name) and their value as stored (dates and numbers
+ * formatted).
  */
 import { resolve } from "$app/paths";
 
-import { segments } from "#lib/components/customers/display.js";
-import { specialties } from "#lib/components/engineers/display.js";
-import { categories } from "#lib/components/equipment/display.js";
-import { priorities, statuses, types } from "#lib/components/orders/display.js";
 import { formatCents, formatDate, formatDateTime, formatNumber } from "#lib/format.js";
-import { labelOrValue } from "#lib/i18n/labels.js";
+import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.js";
 import type { ActivityAction } from "#lib/models.js";
 import { modules } from "#lib/modules.js";
+import { m } from "#lib/paraglide/messages.js";
 
-/** What the user did, as in "Avery Admin updated order …". */
-export const actionVerbs: Record<ActivityAction, string> = {
-	created: "created",
-	updated: "updated",
-	deleted: "deleted",
-	scheduled: "scheduled",
-	stock_received: "received stock of",
-	stock_adjusted: "adjusted the stock of",
-	module_enabled: "enabled",
-	module_disabled: "disabled",
-	work_started: "started work on",
-	note_added: "added a note to",
-	completed: "completed",
-	removed: "removed",
-	sent: "sent",
-	resent: "resent",
-	cancelled: "cancelled",
-	accepted: "accepted",
-	issued: "issued",
-	paid: "recorded the payment of",
-	voided: "voided",
+/** A text in the current language, read when it's shown. */
+export type Text = () => string;
+
+/** An entry's sentence, with who did it and the subject (its noun and label) as variables. */
+type Sentence = (inputs: { user: string; subject: string }) => string;
+
+/** What the user did, as in "Avery Admin updated order …": a sentence per action. */
+export const actionVerbs: Record<ActivityAction, Sentence> = {
+	created: m.activity_action_created,
+	updated: m.activity_action_updated,
+	deleted: m.activity_action_deleted,
+	scheduled: m.activity_action_scheduled,
+	stock_received: m.activity_action_stock_received,
+	stock_adjusted: m.activity_action_stock_adjusted,
+	module_enabled: m.activity_action_module_enabled,
+	module_disabled: m.activity_action_module_disabled,
+	work_started: m.activity_action_work_started,
+	note_added: m.activity_action_note_added,
+	completed: m.activity_action_completed,
+	removed: m.activity_action_removed,
+	sent: m.activity_action_sent,
+	resent: m.activity_action_resent,
+	cancelled: m.activity_action_cancelled,
+	accepted: m.activity_action_accepted,
+	issued: m.activity_action_issued,
+	paid: m.activity_action_paid,
+	voided: m.activity_action_voided,
 };
+
+/** The sentence of an action as logged; one this version doesn't know reads as its value. */
+export const actionSentence = (action: string): Sentence =>
+	Object.hasOwn(actionVerbs, action)
+		? actionVerbs[action as ActivityAction]
+		: (inputs) => m.activity_action_other({ ...inputs, action });
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
 export const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;
@@ -49,8 +64,8 @@ export type ReferenceType = (typeof referenceTypes)[number];
 export type Names = Partial<Record<ReferenceType, Record<string, string>>>;
 
 export interface FieldFormat {
-	/** E.g. "scheduled for"; by default made from the field's name (`engineerId` → "engineer"). */
-	label?: string;
+	/** E.g. "owner"; by default the field's entry in `fieldLabels`, or made from its name. */
+	label?: Text;
 	/** Shows a value (never an empty one: that's "—"). */
 	format?: (value: unknown) => string;
 	/** The field holds the id (or ids) of a record of this type: shows its name. */
@@ -59,11 +74,73 @@ export interface FieldFormat {
 
 export interface SubjectType {
 	/** Lower case and singular, as in "updated order ORD-…". */
-	noun: string;
+	noun: Text;
+	/**
+	 * How a subject of this type reads, if not by the label it was logged with (e.g. a module, by
+	 * its name in the current language).
+	 */
+	label?: (subject: { id: string; label: string }) => string;
 	/** The subject's page, if it has one, from its id and latest label (see `subjectHref()`). */
 	href?: (subject: { id: string; label: string }) => string;
 	fields?: Record<string, FieldFormat>;
 }
+
+/**
+ * The labels of the fields the app logs, by field name, whatever the subject; a subject type's
+ * `fields` can give another (e.g. a unit's customer is its "owner").
+ */
+export const fieldLabels: Record<string, Text> = {
+	code: m.activity_field_code,
+	name: m.activity_field_name,
+	contactName: m.activity_field_contact_name,
+	email: m.activity_field_email,
+	phone: m.activity_field_phone,
+	city: m.activity_field_city,
+	country: m.activity_field_country,
+	segment: m.activity_field_segment,
+	specialty: m.activity_field_specialty,
+	region: m.activity_field_region,
+	hourlyRate: m.activity_field_hourly_rate,
+	active: m.activity_field_active,
+	hiredAt: m.activity_field_hired_at,
+	account: m.activity_field_account,
+	serialNumber: m.activity_field_serial_number,
+	model: m.activity_field_model,
+	manufacturer: m.activity_field_manufacturer,
+	category: m.activity_field_category,
+	status: m.activity_field_status,
+	customerId: m.activity_field_customer,
+	installedAt: m.activity_field_installed_at,
+	warrantyUntil: m.activity_field_warranty_until,
+	sku: m.activity_field_sku,
+	unit: m.activity_field_unit,
+	unitPrice: m.activity_field_unit_price,
+	stock: m.activity_field_stock,
+	number: m.activity_field_number,
+	equipmentId: m.activity_field_equipment,
+	equipmentIds: m.activity_field_equipment,
+	engineerId: m.activity_field_engineer,
+	type: m.activity_field_type,
+	priority: m.activity_field_priority,
+	description: m.activity_field_description,
+	scheduledFor: m.activity_field_scheduled_for,
+	completedAt: m.activity_field_completed_at,
+	laborHours: m.activity_field_labor_hours,
+	quantity: m.activity_field_quantity,
+	level: m.activity_field_level,
+	startsOn: m.activity_field_starts_on,
+	endsOn: m.activity_field_ends_on,
+	monthlyFee: m.activity_field_monthly_fee,
+	responseHours: m.activity_field_response_hours,
+	notes: m.activity_field_notes,
+	paymentTermDays: m.activity_field_payment_term_days,
+	vatRate: m.activity_field_vat_rate,
+	issuedOn: m.activity_field_issued_on,
+	dueOn: m.activity_field_due_on,
+	paidOn: m.activity_field_paid_on,
+	billFrom: m.activity_field_bill_from,
+	role: m.activity_field_role,
+};
 
 /** A stored value made readable, e.g. `order_line` → "Order line". */
 const humanize = (value: string) => {
@@ -71,16 +148,18 @@ const humanize = (value: string) => {
 	return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-/** Formats an enum value by its display label, e.g. `in_progress` → "In progress". */
+/** Formats an enum value by its translated label, e.g. `in_progress` → "In progress". */
 const labelled =
-	(labels: Record<string, { label: string } | string>) =>
+	(kind: LabelKind) =>
 	(value: unknown): string => {
-		const found = labels[String(value)];
-		return typeof found === "string" ? found : (found?.label ?? humanize(String(value)));
+		const text = String(value);
+		return hasLabel(kind, text) ? label(kind, text) : humanize(text);
 	};
 const money = (value: unknown) => formatCents(Number(value));
 const day = (value: unknown) => formatDate(new Date(String(value)));
 const moment = (value: unknown) => formatDateTime(new Date(String(value)));
+/** A number of hours, e.g. "2.5 h". */
+const hours = (value: unknown) => m.common_count_hours_short({ count: Number(value) });
 /** A member's roles as stored (`owner,engineer`), e.g. "Owner, Field engineer". */
 const roles = (value: unknown) =>
 	String(value)
@@ -91,68 +170,69 @@ const roles = (value: unknown) =>
 
 export const coreSubjectTypes: Record<string, SubjectType> = {
 	customer: {
-		noun: "customer",
+		noun: m.activity_subject_customer,
 		href: ({ label }) => resolve("/(app)/customers/[code]", { code: label }),
-		fields: {
-			contactName: { label: "contact person" },
-			segment: { format: labelled(segments) },
-		},
+		fields: { segment: { format: labelled("customerSegment") } },
 	},
 	engineer: {
-		noun: "engineer",
+		noun: m.activity_subject_engineer,
 		href: ({ id }) => resolve("/(app)/engineers/[id]", { id }),
 		fields: {
-			specialty: { format: labelled(specialties) },
+			specialty: { format: labelled("engineerSpecialty") },
 			hourlyRate: { format: money },
-			hiredAt: { label: "hired", format: day },
+			hiredAt: { format: day },
 		},
 	},
 	equipment: {
-		noun: "equipment",
+		noun: m.activity_subject_equipment,
 		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: label }),
 		fields: {
-			category: { format: labelled(categories) },
-			status: { format: (value) => labelOrValue("equipmentStatus", String(value)) },
-			customerId: { label: "owner", ref: "customer" },
-			installedAt: { label: "installed", format: day },
-			warrantyUntil: { label: "warranty until", format: day },
+			category: { format: labelled("equipmentCategory") },
+			status: { format: labelled("equipmentStatus") },
+			customerId: { label: m.activity_field_owner, ref: "customer" },
+			installedAt: { format: day },
+			warrantyUntil: { format: day },
 		},
 	},
 	material: {
-		noun: "material",
+		noun: m.activity_subject_material,
 		href: ({ label }) => resolve("/(app)/materials/[sku]", { sku: label }),
 		fields: {
-			unit: { format: (value) => labelOrValue("materialUnit", String(value)) },
+			unit: { format: labelled("materialUnit") },
 			unitPrice: { format: money },
 		},
 	},
 	order: {
-		noun: "order",
+		noun: m.activity_subject_order,
 		href: ({ label }) => resolve("/(app)/orders/[number]", { number: label }),
 		fields: {
 			customerId: { ref: "customer" },
 			equipmentId: { ref: "equipment" },
 			engineerId: { ref: "engineer" },
-			type: { format: labelled(types) },
-			status: { format: labelled(statuses) },
-			priority: { format: labelled(priorities) },
+			type: { format: labelled("orderType") },
+			status: { format: labelled("orderStatus") },
+			priority: { format: labelled("orderPriority") },
 			scheduledFor: { format: moment },
-			completedAt: { label: "completed", format: moment },
-			laborHours: { label: "labour", format: (value) => `${formatNumber(Number(value))} h` },
+			completedAt: { format: moment },
+			laborHours: { format: hours },
 		},
 	},
 	/** An order's materials, told apart by material: the subject's id is the material's. */
-	order_line: { noun: "order line" },
-	/** An optional module (`#lib/modules.ts`), by its id. */
-	module: { noun: "module", href: () => resolve("/(app)/settings") },
+	order_line: { noun: m.activity_subject_order_line },
+	/** An optional module (`#lib/modules.ts`), by its id; shown by its name. */
+	module: {
+		noun: m.activity_subject_module,
+		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,
+		href: () => resolve("/(app)/settings"),
+	},
 	/** A member of the organization (`member`), by their name. */
 	member: {
-		noun: "member",
+		noun: m.activity_subject_member,
 		href: () => resolve("/(app)/settings/members"),
 		fields: { role: { format: roles } },
 	},
 	/** An invitation to join the organization, by the email address it's for. */
-	invitation: { noun: "invitation", fields: { role: { format: roles } } },
+	invitation: { noun: m.activity_subject_invitation, fields: { role: { format: roles } } },
 };
 
 /**
@@ -178,13 +258,18 @@ export function subjectHref(type: string, subject: { id: string; label: string }
 	return known?.href?.(subject) ?? null;
 }
 
+/** A subject type's noun, e.g. "order line"; one without an entry is made from its name. */
+export const subjectNoun = (type: string, known?: SubjectType) =>
+	known?.noun() ?? humanize(type).toLowerCase();
+
 /** How a subject type reads in the type filter, e.g. "Order line". */
 export const subjectTypeLabel = (type: string, known?: SubjectType) =>
-	humanize(known?.noun ?? type);
+	humanize(subjectNoun(type, known));
 
 /** A field's label: "engineer" for `engineerId`, "scheduled for" for `scheduledFor`. */
 export function fieldLabel(field: string, format?: FieldFormat) {
-	if (format?.label) return format.label;
+	const known = format?.label ?? (Object.hasOwn(fieldLabels, field) ? fieldLabels[field] : null);
+	if (known) return known();
 	return field
 		.replace(/Ids?$/, "")
 		.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)
@@ -206,7 +291,7 @@ export function formatValue(value: unknown, format: FieldFormat = {}, names: Nam
 	}
 	if (format.ref) return names[format.ref]?.[idText(value)] ?? `#${idText(value)}`;
 	if (format.format) return format.format(value);
-	if (typeof value === "boolean") return value ? "yes" : "no";
+	if (typeof value === "boolean") return value ? m.activity_value_yes() : m.activity_value_no();
 	if (typeof value === "number") return formatNumber(value);
 	if (typeof value === "string" && isoDate.test(value)) {
 		const date = new Date(value);

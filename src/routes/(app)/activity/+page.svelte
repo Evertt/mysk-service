@@ -5,9 +5,13 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import XIcon from "@lucide/svelte/icons/x";
 
+	import { subjectNoun, subjectTypes } from "#lib/activity.js";
 	import ActivityList from "#lib/components/activity/activity-list.svelte";
 	import { getActivity, getActivityFilters } from "#lib/components/activity/activity.remote.js";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { modules } from "#lib/modules.js";
+
+	const allModules = modules.map((module) => module.id);
 
 	/** The filters in the URL, without empty or malformed ones. */
 	const filters = $derived.by(() => {
@@ -34,7 +38,10 @@
 	const subject = $derived.by(() => {
 		if (!filters.id) return undefined;
 		const first = feed.entries[0];
-		if (!first) return { noun: filters.type, label: `#${filters.id}` };
+		if (!first) {
+			const type = filters.type ?? "";
+			return { noun: subjectNoun(type, subjectTypes(allModules)[type]), label: `#${filters.id}` };
+		}
 		return first.parent && first.parent.noun !== first.subject.noun ? first.parent : first.subject;
 	});
 
@@ -51,27 +58,31 @@
 </script>
 
 <svelte:head>
-	<title>Activity</title>
+	<title>{m.activity_title()}</title>
 </svelte:head>
 
-<PageHeader title="Activity" description="Who changed what in the organization, newest first." />
+<PageHeader title={m.activity_title()} description={m.activity_description()} />
 
 <Card.Root>
 	<Card.Header>
-		<form method="GET" class="flex flex-wrap items-end gap-3" aria-label="Filter activity">
+		<form
+			method="GET"
+			class="flex flex-wrap items-end gap-3"
+			aria-label={m.activity_filter_label()}
+		>
 			{#if filters.id}
 				<input type="hidden" name="type" value={filters.type} />
 				<input type="hidden" name="id" value={filters.id} />
 			{:else}
 				<Field.Field class="w-44">
-					<Field.FieldLabel for="activity-type">Record type</Field.FieldLabel>
+					<Field.FieldLabel for="activity-type">{m.activity_filter_type()}</Field.FieldLabel>
 					<NativeSelect.Root
 						id="activity-type"
 						name="type"
 						value={filters.type ?? ""}
 						class="w-full"
 					>
-						<NativeSelect.Option value="">All types</NativeSelect.Option>
+						<NativeSelect.Option value="">{m.activity_filter_all_types()}</NativeSelect.Option>
 						{#each options.types as option (option.value)}
 							<NativeSelect.Option value={option.value}>{option.label}</NativeSelect.Option>
 						{/each}
@@ -79,34 +90,36 @@
 				</Field.Field>
 			{/if}
 			<Field.Field class="w-44">
-				<Field.FieldLabel for="activity-user">User</Field.FieldLabel>
+				<Field.FieldLabel for="activity-user">{m.activity_filter_user()}</Field.FieldLabel>
 				<NativeSelect.Root id="activity-user" name="user" value={filters.user ?? ""} class="w-full">
-					<NativeSelect.Option value="">Everyone</NativeSelect.Option>
+					<NativeSelect.Option value="">{m.activity_filter_everyone()}</NativeSelect.Option>
 					{#each options.users as option (option.value)}
 						<NativeSelect.Option value={option.value}>{option.label}</NativeSelect.Option>
 					{/each}
 				</NativeSelect.Root>
 			</Field.Field>
 			<Field.Field class="w-40">
-				<Field.FieldLabel for="activity-from">From</Field.FieldLabel>
+				<Field.FieldLabel for="activity-from">{m.activity_filter_from()}</Field.FieldLabel>
 				<Input id="activity-from" type="date" name="from" value={filters.from ?? ""} />
 			</Field.Field>
 			<Field.Field class="w-40">
-				<Field.FieldLabel for="activity-to">To</Field.FieldLabel>
+				<Field.FieldLabel for="activity-to">{m.activity_filter_to()}</Field.FieldLabel>
 				<Input id="activity-to" type="date" name="to" value={filters.to ?? ""} />
 			</Field.Field>
 			<div class="flex gap-2">
-				<Button type="submit">Filter</Button>
-				<Button variant="ghost" href={resolve("/(app)/activity")}>Reset</Button>
+				<Button type="submit">{m.activity_filter()}</Button>
+				<Button variant="ghost" href={resolve("/(app)/activity")}
+					>{m.activity_filter_reset()}</Button
+				>
 			</div>
 		</form>
 		{#if subject}
 			<div class="flex flex-wrap items-center gap-2 pt-2 text-sm">
-				<span class="text-muted-foreground">Only the {subject.noun}</span>
+				<span class="text-muted-foreground">{m.activity_only_subject({ noun: subject.noun })}</span>
 				<Badge variant="secondary">{subject.label}</Badge>
 				<Button variant="ghost" size="sm" href={withParams({ type: null, id: null, before: null })}>
 					<XIcon data-icon="inline-start" />
-					Show everything
+					{m.activity_show_everything()}
 				</Button>
 			</div>
 		{/if}
@@ -114,9 +127,7 @@
 	<Card.Content>
 		<ActivityList
 			entries={feed.entries}
-			empty={filters.before
-				? "There's nothing older."
-				: "Nothing matches these filters. Try a wider date range."}
+			empty={filters.before ? m.activity_nothing_older() : m.activity_nothing_matches()}
 		/>
 	</Card.Content>
 	{#if filters.before || feed.older}
@@ -124,14 +135,14 @@
 			{#if filters.before}
 				<Button variant="outline" size="sm" href={withParams({ before: null })}>
 					<ArrowLeftIcon data-icon="inline-start" />
-					Newest
+					{m.activity_newest()}
 				</Button>
 			{:else}
 				<span></span>
 			{/if}
 			{#if feed.older}
 				<Button variant="outline" size="sm" href={withParams({ before: String(feed.older) })}>
-					Older
+					{m.activity_older()}
 					<ArrowRightIcon data-icon="inline-end" />
 				</Button>
 			{/if}

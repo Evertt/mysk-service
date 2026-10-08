@@ -1,6 +1,9 @@
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test } from "vite-plus/test";
+
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import {
+	actionSentence,
 	actionVerbs,
 	coreSubjectTypes,
 	describeChanges,
@@ -15,9 +18,24 @@ import { activityActions } from "./models.ts";
 
 const { order, equipment, engineer, customer, material, module } = coreSubjectTypes;
 
+const englishByDefault = getLocale;
+afterEach(() => overwriteGetLocale(englishByDefault));
+
 describe("actionVerbs", () => {
-	test("has a phrase for every action", () => {
-		for (const action of activityActions) expect(actionVerbs[action]).toBeTruthy();
+	test("has a sentence for every action", () => {
+		const inputs = { user: "Avery", subject: "order ORD-1" };
+		for (const action of activityActions) {
+			expect(actionVerbs[action](inputs)).toMatch(/^Avery .+order ORD-1/);
+		}
+		expect(actionSentence("updated")(inputs)).toBe("Avery updated order ORD-1");
+		expect(actionSentence("archived")(inputs)).toBe("Avery: archived order ORD-1");
+	});
+
+	test("puts the words where Dutch wants them", () => {
+		overwriteGetLocale(() => "nl");
+		expect(actionSentence("updated")({ user: "Avery", subject: "opdracht ORD-1" })).toBe(
+			"Avery heeft opdracht ORD-1 bijgewerkt",
+		);
 	});
 });
 
@@ -129,7 +147,7 @@ describe("referencedIds", () => {
 describe("subjectTypes", () => {
 	test("has the modules' types only for tenants with the module", () => {
 		expect(subjectTypes([]).contract).toBeUndefined();
-		expect(subjectTypes(["contracts"]).contract?.noun).toBe("contract");
+		expect(subjectTypes(["contracts"]).contract?.noun()).toBe("contract");
 		expect(subjectTypes(["contracts"]).order).toBe(order);
 	});
 
@@ -166,5 +184,40 @@ describe("subjectTypes", () => {
 		expect(subjectTypeLabel("order_line", coreSubjectTypes.order_line)).toBe("Order line");
 		expect(subjectTypeLabel("invoice")).toBe("Invoice");
 		expect(subjectTypeLabel("time_entry")).toBe("Time entry");
+	});
+
+	test("shows a module by its name in the current language", () => {
+		expect(module.label?.({ id: "contracts", label: "Service contracts" })).toBe(
+			"Service contracts",
+		);
+		overwriteGetLocale(() => "nl");
+		expect(module.label?.({ id: "contracts", label: "Service contracts" })).toBe(
+			"Servicecontracten",
+		);
+		expect(module.label?.({ id: "gone", label: "Gone" })).toBe("Gone");
+	});
+});
+
+describe("in Dutch", () => {
+	test("reads nouns, field labels and values in Dutch", () => {
+		overwriteGetLocale(() => "nl");
+		expect(subjectTypeLabel("order_line", coreSubjectTypes.order_line)).toBe("Opdrachtregel");
+		expect(
+			describeChanges(
+				{ status: ["scheduled", "in_progress"], customerId: [null, 1], active: [true, false] },
+				order,
+				{ customer: { "1": "Acme" } },
+			),
+		).toEqual([
+			{ field: "status", before: "Ingepland", after: "In uitvoering" },
+			{ field: "klant", before: "—", after: "Acme" },
+			{ field: "actief", before: "ja", after: "nee" },
+		]);
+		expect(fieldLabel("customerId", equipment.fields?.customerId)).toBe("eigenaar");
+		const invoice = subjectTypes(["invoicing"]).invoice;
+		expect(describeChanges({ paymentTermDays: [14, 30], vatRate: [21, 5.5] }, invoice)).toEqual([
+			{ field: "betalingstermijn", before: "14 dagen", after: "30 dagen" },
+			{ field: "btw-tarief", before: "21%", after: "5,5%" },
+		]);
 	});
 });

@@ -14,13 +14,15 @@
 
 <Card.Root data-card="recent-activity">
 	<Card.Header>
-		<Card.Title>Recent activity</Card.Title>
-		<Card.Description>The latest changes across the organization.</Card.Description>
+		<Card.Title>{m.activity_recent_title()}</Card.Title>
+		<Card.Description>{m.activity_recent_description()}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/activity")}>All activity</Button>
+			<Button variant="outline" size="sm" href={resolve("/(app)/activity")}
+				>{m.activity_recent_all()}</Button
+			>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
-		<ActivityList {entries} label="Recent changes" />
+		<ActivityList {entries} label={m.activity_recent_label()} />
 	</Card.Content>
 </Card.Root>

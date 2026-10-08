@@ -9,6 +9,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
 	import { formatDate } from "#lib/format.js";
+	import { messageParts } from "#lib/i18n/parts.js";
 
 	import InvoiceLink from "./invoice-link.svelte";
 	import { getOrderInvoice } from "./invoicing.remote.js";
@@ -22,16 +23,20 @@
 {#if data.invoice || data.status !== "cancelled"}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Invoice</Card.Title>
+			<Card.Title>{m.invoices_column_invoice()}</Card.Title>
 			<Card.Description>
-				{#if data.invoice?.issuedOn}
-					Invoiced on <InvoiceLink number={data.invoice.number} />, {formatDate(
-						data.invoice.issuedOn,
+				{#if data.invoice}
+					{@const { number, issuedOn } = data.invoice}
+					{@const parts = messageParts((slot) =>
+						issuedOn
+							? m.invoices_invoiced_on({ invoice: slot("invoice"), date: formatDate(issuedOn) })
+							: m.invoices_on_draft({ invoice: slot("invoice") }),
 					)}
-				{:else if data.invoice}
-					On draft invoice <InvoiceLink number={data.invoice.number} />
+					{#each parts as part, i (i)}{#if "text" in part}{part.text}{:else}<InvoiceLink
+								{number}
+							/>{/if}{/each}
 				{:else}
-					Not invoiced yet
+					{m.invoices_not_invoiced()}
 				{/if}
 			</Card.Description>
 			{#if data.invoice}
@@ -43,7 +48,9 @@
 		{#if !data.invoice || data.voided.length}
 			<Card.Content class="flex flex-col items-start gap-3 text-sm">
 				{#if data.voided.length}
-					<p class="text-muted-foreground">Voided: {data.voided.join(", ")}</p>
+					<p class="text-muted-foreground">
+						{m.invoices_voided_list({ numbers: data.voided.join(", ") })}
+					</p>
 				{/if}
 				{#if !data.invoice && data.status === "completed"}
 					<Button
@@ -52,10 +59,10 @@
 						href="{resolve('/(app)/invoices/new')}?customer={encodeURIComponent(data.customerCode)}"
 					>
 						<PlusIcon data-icon="inline-start" />
-						New invoice for this customer
+						{m.invoices_new_for_customer()}
 					</Button>
 				{:else if !data.invoice}
-					<p class="text-muted-foreground">It can be invoiced once it's completed.</p>
+					<p class="text-muted-foreground">{m.invoices_once_completed()}</p>
 				{/if}
 			</Card.Content>
 		{/if}

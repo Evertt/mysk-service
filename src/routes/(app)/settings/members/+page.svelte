@@ -12,9 +12,9 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate } from "#lib/format.js";
+	import { formatDate, formatNumber } from "#lib/format.js";
 	import { label as roleLabel, labelOrValue } from "#lib/i18n/labels.js";
-	import type { MemberRole } from "#lib/members.js";
+	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/members.js";
 
 	import {
 		cancelInvitation,
@@ -37,18 +37,20 @@
 </script>
 
 <svelte:head>
-	<title>Members · Organization settings</title>
+	<title>{m.settings_members()} · {m.common_organization_settings()}</title>
 </svelte:head>
 
-<PageHeader title="Members" description={data.name}>
+<PageHeader title={m.settings_members()} description={data.name}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/settings")}>Organization settings</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/settings")}
+					>{m.common_organization_settings()}</Breadcrumb.Link
+				>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>Members</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.settings_members()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
@@ -57,16 +59,19 @@
 {#if data.canManage}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Invite someone</Card.Title>
+			<Card.Title>{m.settings_invite_title()}</Card.Title>
 			<Card.Description>
-				They get an email with a link to join {data.name}, which works for 7 days.
+				{m.settings_invite_description({
+					organization: data.name,
+					days: formatNumber(INVITATION_EXPIRES_IN / (24 * 60 * 60)),
+				})}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<form
 				{...invite.enhance(async ({ element, submit }) => {
 					if (!(await submit())) return;
-					toast.success(`Invitation sent to ${invite.result?.email}`);
+					toast.success(m.settings_invitation_sent({ email: invite.result?.email ?? "" }));
 					element.reset();
 				})}
 				class="flex flex-col gap-4 md:flex-row md:items-start"
@@ -74,15 +79,15 @@
 			>
 				<TextField
 					field={invite.fields.email}
-					label="Email"
+					label={m.settings_email()}
 					type="email"
-					placeholder="name@example.com"
+					placeholder={m.settings_email_placeholder()}
 					autocomplete="off"
 					class="md:flex-1"
 				/>
 				<SelectField
 					field={invite.fields.role}
-					label="Role"
+					label={m.settings_role()}
 					value="member"
 					options={inviteOptions}
 					class="md:flex-1"
@@ -93,7 +98,7 @@
 					{:else}
 						<MailIcon data-icon="inline-start" />
 					{/if}
-					Send invitation
+					{m.settings_send_invitation()}
 				</Button>
 			</form>
 			<Field.FieldError errors={invite.fields.issues()} class="mt-4" />
@@ -103,21 +108,21 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Members</Card.Title>
+		<Card.Title>{m.settings_members()}</Card.Title>
 		<Card.Description>
-			{data.members.length === 1 ? "1 person" : `${data.members.length} people`} can sign in to
-			{data.name}.{data.canManage ? "" : " Owners and admins can change this."}
+			{m.settings_people({ count: data.members.length, organization: data.name })}
+			{data.canManage ? "" : m.settings_managers_change_this()}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>Name</Table.Head>
-					<Table.Head>Role</Table.Head>
-					<Table.Head>Joined</Table.Head>
+					<Table.Head>{m.settings_column_name()}</Table.Head>
+					<Table.Head>{m.settings_column_role()}</Table.Head>
+					<Table.Head>{m.settings_column_joined()}</Table.Head>
 					{#if data.canManage}
-						<Table.Head><span class="sr-only">Actions</span></Table.Head>
+						<Table.Head><span class="sr-only">{m.settings_column_actions()}</span></Table.Head>
 					{/if}
 				</Table.Row>
 			</Table.Header>
@@ -130,7 +135,7 @@
 								<span class="flex items-center gap-2 font-medium">
 									{member.name}
 									{#if member.isYou}
-										<Badge variant="outline">You</Badge>
+										<Badge variant="outline">{m.settings_you()}</Badge>
 									{/if}
 								</span>
 								<span class="text-xs text-muted-foreground">{member.email}</span>
@@ -140,7 +145,8 @@
 							{#if member.roleOptions.length}
 								<form
 									{...change.enhance(async ({ submit }) => {
-										if (await submit()) toast.success(`${member.name}'s role changed`);
+										if (await submit())
+											toast.success(m.settings_role_changed({ name: member.name }));
 									})}
 									class="flex flex-col gap-1"
 								>
@@ -148,7 +154,7 @@
 									<div class="flex items-center gap-2">
 										<!-- Saves as soon as another role is chosen. -->
 										<NativeSelect.Root
-											aria-label="Role of {member.name}"
+											aria-label={m.settings_role_of({ name: member.name })}
 											size="sm"
 											{...change.fields.role.as("select", member.roles[0] as MemberRole)}
 											onchange={(event) => event.currentTarget.form?.requestSubmit()}
@@ -161,7 +167,7 @@
 											<Spinner />
 										{/if}
 										<noscript>
-											<Button type="submit" variant="outline" size="sm">Save</Button>
+											<Button type="submit" variant="outline" size="sm">{m.common_save()}</Button>
 										</noscript>
 									</div>
 									<Field.FieldError errors={change.fields.allIssues()} />
@@ -183,9 +189,9 @@
 									<DeleteDialog
 										form={removeMember.for(member.id)}
 										id={member.id}
-										title="Remove {member.name}?"
-										description="They can no longer sign in to {data.name}. What they did in it stays. To bring them back, invite them again."
-										label="Remove"
+										title={m.settings_remove_title({ name: member.name })}
+										description={m.settings_remove_description({ organization: data.name })}
+										label={m.settings_remove()}
 									/>
 								{/if}
 							</Table.Cell>
@@ -200,19 +206,19 @@
 {#if data.canManage}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Pending invitations</Card.Title>
-			<Card.Description>Invitations that haven't been accepted yet.</Card.Description>
+			<Card.Title>{m.settings_pending()}</Card.Title>
+			<Card.Description>{m.settings_pending_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			{#if data.invitations.length}
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
-							<Table.Head>Email</Table.Head>
-							<Table.Head>Role</Table.Head>
-							<Table.Head>Invited</Table.Head>
-							<Table.Head>Expires</Table.Head>
-							<Table.Head><span class="sr-only">Actions</span></Table.Head>
+							<Table.Head>{m.settings_column_email()}</Table.Head>
+							<Table.Head>{m.settings_column_role()}</Table.Head>
+							<Table.Head>{m.settings_column_invited()}</Table.Head>
+							<Table.Head>{m.settings_column_expires()}</Table.Head>
+							<Table.Head><span class="sr-only">{m.settings_column_actions()}</span></Table.Head>
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
@@ -226,13 +232,15 @@
 									<div class="flex flex-col">
 										<span class="tabular-nums">{formatDate(invitation.invitedAt)}</span>
 										{#if invitation.invitedBy}
-											<span class="text-xs text-muted-foreground">by {invitation.invitedBy}</span>
+											<span class="text-xs text-muted-foreground">
+												{m.settings_invited_by({ name: invitation.invitedBy })}
+											</span>
 										{/if}
 									</div>
 								</Table.Cell>
 								<Table.Cell>
 									{#if invitation.expired}
-										<Badge variant="destructive">Expired</Badge>
+										<Badge variant="destructive">{m.settings_expired()}</Badge>
 									{:else}
 										<span class="tabular-nums">{formatDate(invitation.expiresAt)}</span>
 									{/if}
@@ -242,7 +250,7 @@
 										<form
 											{...resend.enhance(async ({ submit }) => {
 												if (await submit())
-													toast.success(`Invitation sent to ${invitation.email} again`);
+													toast.success(m.settings_sent_again({ email: invitation.email }));
 											})}
 										>
 											<input {...resend.fields.id.as("hidden", invitation.id)} />
@@ -250,13 +258,15 @@
 												{#if resend.pending}
 													<Spinner data-icon="inline-start" />
 												{/if}
-												Resend
+												{m.settings_resend()}
 											</Button>
 										</form>
 										<form
 											{...cancel.enhance(async ({ submit }) => {
 												if (await submit())
-													toast.success(`Invitation to ${invitation.email} cancelled`);
+													toast.success(
+														m.settings_invitation_cancelled({ email: invitation.email }),
+													);
 											})}
 										>
 											<input {...cancel.fields.id.as("hidden", invitation.id)} />
@@ -264,7 +274,7 @@
 												{#if cancel.pending}
 													<Spinner data-icon="inline-start" />
 												{/if}
-												Cancel
+												{m.settings_cancel_invitation()}
 											</Button>
 										</form>
 									</div>
@@ -281,7 +291,7 @@
 					</Table.Body>
 				</Table.Root>
 			{:else}
-				<p class="text-sm text-muted-foreground">No pending invitations.</p>
+				<p class="text-sm text-muted-foreground">{m.settings_no_pending()}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>

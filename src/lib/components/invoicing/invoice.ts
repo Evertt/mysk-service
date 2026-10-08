@@ -106,9 +106,6 @@ export function invoiceTotals(
 	return { subtotal, vat, total: subtotal + vat };
 }
 
-/** A rate as shown, e.g. `21%` or `5.5%`. */
-export const formatRate = (rate: number) => `${Math.round(rate * 100) / 100}%`;
-
 // --- Lines -----------------------------------------------------------------------------------
 
 /** A line to put on an invoice. */
@@ -141,15 +138,17 @@ const single = (
 /**
  * The lines for an order: its materials and labour, then each adjustment. They add up to the
  * order's `total`, which is never below zero: should the adjustments take off more than the
- * order costs, the last one takes off only what's left.
+ * order costs, the last one takes off only what's left. `detail` is the first line's detail,
+ * "Materials and labour" in the language of whoever bills it (lines are stored as text).
  */
 export function orderLines(
 	order: { id: number; number: string; description: string },
 	price: { materials: number; labor: number; adjustments: PriceAdjustment[]; total: number },
+	detail: string,
 ): LineDraft[] {
 	const gross = price.materials + price.labor;
 	const lines = [
-		single(`${order.number}: ${order.description}`, "Materials and labour", gross, {
+		single(`${order.number}: ${order.description}`, detail, gross, {
 			orderId: order.id,
 		}),
 		...price.adjustments.map((adjustment) =>

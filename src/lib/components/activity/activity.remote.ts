@@ -1,6 +1,7 @@
 /**
  * The activity log, as the feed at /activity, a record's "Activity" card and the dashboard show
- * it: entries newest first, each with its sentence parts, changes and links ready to show.
+ * it: entries newest first, each with its subject's noun, its changes and links ready to show, in
+ * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
 import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
@@ -9,16 +10,18 @@ import * as v from "valibot";
 
 import {
 	type Change,
-	actionVerbs,
 	describeChanges,
 	type Names,
 	referencedIds,
 	type ReferenceType,
+	subjectNoun,
 	subjectTypeLabel,
 	subjectTypes,
 	type SubjectType,
 } from "#lib/activity.js";
+import { intlLocale } from "#lib/format.js";
 import { modules as appModules } from "#lib/modules.js";
+import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
@@ -35,7 +38,7 @@ export interface SubjectLink {
 	type: string;
 	/** E.g. "order". */
 	noun: string;
-	/** How it read at the time. */
+	/** How it read at the time (or, for some types, how it reads now, e.g. a module's name). */
 	label: string;
 	/**
 	 * What its page is found by (`subjectHref()` makes the link, in the browser: `resolve()` can't
@@ -48,8 +51,8 @@ export interface ActivityEntry {
 	id: number;
 	at: Date;
 	user: string;
-	/** E.g. "updated" or "received stock of". */
-	verb: string;
+	/** What they did, e.g. `updated` (see `actionVerbs` in `#lib/activity.ts`). */
+	action: string;
 	subject: SubjectLink;
 	parent: SubjectLink | null;
 	changes: Change[];
@@ -154,8 +157,8 @@ async function present(rows: Row[]): Promise<ActivityEntry[]> {
 		const state = states.get(`${type}:${id}`);
 		return {
 			type,
-			noun: known?.noun ?? subjectTypeLabel(type).toLowerCase(),
-			label,
+			noun: subjectNoun(type, known),
+			label: known?.label?.({ id, label }) ?? label,
 			target: known?.href && !state?.deleted ? { id, label: state?.label ?? label } : null,
 		};
 	};
@@ -163,7 +166,7 @@ async function present(rows: Row[]): Promise<ActivityEntry[]> {
 		id: row.id,
 		at: row.createdAt,
 		user: row.userName,
-		verb: actionVerbs[row.action] ?? row.action,
+		action: row.action,
 		subject: link(row.subjectType, row.subjectId, row.subjectLabel),
 		parent:
 			row.parentType && row.parentId
@@ -236,7 +239,7 @@ export const getSubjectActivity = query(
 		const { modules } = requireMember();
 		// A module's records are a 404 to a tenant without the module, like the rest of it.
 		if (!(type in subjectTypes(modules)) && type in subjectTypes(allModules)) {
-			error(404, "Not found");
+			error(404, m.common_error_not_found());
 		}
 		const rows = await db
 			.select()
@@ -271,7 +274,8 @@ export const getActivityFilters = query(async () => {
 			.from(activity)
 			.where(and(inTenant(activity), isNotNull(activity.userId))),
 	]);
-	const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
+	const byLabel = (a: { label: string }, b: { label: string }) =>
+		a.label.localeCompare(b.label, intlLocale());
 	return {
 		types: subjects
 			.map(({ type }) => ({ value: type, label: subjectTypeLabel(type, types[type]) }))

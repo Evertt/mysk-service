@@ -20,7 +20,8 @@
 			"./messages/{locale}/contracts.json",
 			"./messages/{locale}/invoices.json",
 			"./messages/{locale}/settings.json",
-			"./messages/{locale}/portal.json"
+			"./messages/{locale}/portal.json",
+			"./messages/{locale}/activity.json"
 		]
 	},
 	"baseLocale": "en",

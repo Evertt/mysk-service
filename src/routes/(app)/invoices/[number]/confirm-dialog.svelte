@@ -59,7 +59,7 @@
 			<input {...form.fields.id.as("hidden", id)} />
 			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">Cancel</AlertDialog.Cancel>
+				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
 				<Button type="submit" {variant} disabled={!!form.pending}>
 					{#if form.pending}
 						<Spinner data-icon="inline-start" />

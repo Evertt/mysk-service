@@ -13,7 +13,7 @@
 	let {
 		type,
 		id,
-		description = "The latest changes, newest first.",
+		description = m.activity_card_description(),
 	}: {
 		/** The subject type, e.g. `order` (see `#lib/activity.ts`). */
 		type: string;
@@ -28,11 +28,11 @@
 
 <Card.Root data-card="activity">
 	<Card.Header>
-		<Card.Title>Activity</Card.Title>
+		<Card.Title>{m.activity_title()}</Card.Title>
 		<Card.Description>{description}</Card.Description>
 		<Card.Action>
 			<Button variant="outline" size="sm" href={all}>
-				View all
+				{m.activity_card_view_all()}
 				<ArrowRightIcon data-icon="inline-end" />
 			</Button>
 		</Card.Action>
@@ -42,8 +42,8 @@
 		<svelte:boundary>
 			<ActivityList
 				entries={await getSubjectActivity({ type, id: String(id) })}
-				label="Activity log"
-				empty="No changes have been made here yet."
+				label={m.activity_log()}
+				empty={m.activity_card_empty()}
 			/>
 			{#snippet pending()}
 				<Skeleton class="h-16 w-full" />

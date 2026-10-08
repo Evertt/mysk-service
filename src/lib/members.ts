@@ -1,9 +1,11 @@
 /**
  * The rules for an organization's team: who may change whose role, remove whom, and invite with
  * which role, and whether an invitation can still be accepted. better-auth's organization plugin
- * enforces most of these too; checking them here first gives clear messages, and covers the ones
- * it doesn't (e.g. changing your own role).
+ * enforces most of these too; checking them here first gives clear messages (in the current
+ * language), and covers the ones it doesn't (e.g. changing your own role).
  */
+
+import { m } from "#lib/paraglide/messages.js";
 
 import { type MemberRole, memberRoles } from "./roles.ts";
 
@@ -38,26 +40,22 @@ export function roleChangeRefusal(
 	{ actor, target, owners }: MemberChange,
 	role: MemberRole,
 ): string | null {
-	if (!canManageMembers(actor.roles)) return "Only owners and admins can change roles.";
+	if (!canManageMembers(actor.roles)) return m.settings_refusal_change_roles();
 	if (isOwner(target.roles) && role !== "owner" && owners <= 1) {
-		return "The organization needs at least one owner. Make someone else an owner first.";
+		return m.settings_refusal_last_owner_role();
 	}
-	if (actor.userId === target.userId) return "You can't change your own role.";
-	if (isOwner(target.roles) && !isOwner(actor.roles)) {
-		return "Only owners can change an owner's role.";
-	}
-	if (role === "owner" && !isOwner(actor.roles)) return "Only owners can make someone an owner.";
+	if (actor.userId === target.userId) return m.settings_refusal_own_role();
+	if (isOwner(target.roles) && !isOwner(actor.roles)) return m.settings_refusal_owner_role();
+	if (role === "owner" && !isOwner(actor.roles)) return m.settings_refusal_make_owner();
 	return null;
 }
 
 /** Why `actor` may not remove `target` from the organization, or `null` if they may. */
 export function removalRefusal({ actor, target, owners }: MemberChange): string | null {
-	if (!canManageMembers(actor.roles)) return "Only owners and admins can remove members.";
-	if (isOwner(target.roles) && owners <= 1) {
-		return "The organization needs at least one owner, so its last owner can't be removed.";
-	}
-	if (actor.userId === target.userId) return "You can't remove yourself.";
-	if (isOwner(target.roles) && !isOwner(actor.roles)) return "Only owners can remove an owner.";
+	if (!canManageMembers(actor.roles)) return m.settings_refusal_remove_members();
+	if (isOwner(target.roles) && owners <= 1) return m.settings_refusal_last_owner_removal();
+	if (actor.userId === target.userId) return m.settings_refusal_remove_yourself();
+	if (isOwner(target.roles) && !isOwner(actor.roles)) return m.settings_refusal_remove_owner();
 	return null;
 }
 
@@ -66,6 +64,26 @@ export const assignableRoles = (actorRoles: string[]): MemberRole[] =>
 	canManageMembers(actorRoles)
 		? memberRoles.filter((role) => role !== "owner" || isOwner(actorRoles))
 		: [];
+
+/** Each role as in "invited … as an admin": with its article in English, without in Dutch. */
+const invitedAs: Record<MemberRole, () => string> = {
+	owner: m.auth_invite_as_owner,
+	admin: m.auth_invite_as_admin,
+	member: m.auth_invite_as_member,
+	engineer: m.auth_invite_as_engineer,
+};
+
+/**
+ * The roles someone is invited with, to follow "as", e.g. "an admin" or "an admin and a field
+ * engineer"; an unknown role as it's stored.
+ */
+export function invitedAsText(roles: readonly string[]) {
+	const texts = roles.map((role) =>
+		Object.hasOwn(invitedAs, role) ? invitedAs[role as MemberRole]() : role,
+	);
+	if (!texts.length) return "";
+	return texts.reduce((first, second) => m.auth_invite_roles_and({ first, second }));
+}
 
 /** How long an invitation can be accepted, in seconds. */
 export const INVITATION_EXPIRES_IN = 7 * 24 * 60 * 60;

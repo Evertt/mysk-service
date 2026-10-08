@@ -36,15 +36,18 @@
 </script>
 
 <svelte:head>
-	<title>{invoice.number} · Invoices</title>
+	<title>{invoice.number} · {m.invoices_title()}</title>
 </svelte:head>
 
 <div class="print:hidden">
-	<PageHeader title={invoice.number} description="Invoice for {invoice.customer.name}">
+	<PageHeader
+		title={invoice.number}
+		description={m.invoices_for({ customer: invoice.customer.name })}
+	>
 		<Breadcrumb.Root>
 			<Breadcrumb.List>
 				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve("/(app)/invoices")}>Invoices</Breadcrumb.Link>
+					<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
 				</Breadcrumb.Item>
 				<Breadcrumb.Separator />
 				<Breadcrumb.Item>
@@ -58,7 +61,7 @@
 		{#snippet actions()}
 			<Button variant="outline" onclick={() => window.print()}>
 				<PrinterIcon data-icon="inline-start" />
-				Print
+				{m.invoices_print()}
 			</Button>
 			<Button
 				variant="outline"
@@ -67,42 +70,42 @@
 				data-sveltekit-reload
 			>
 				<FileDownIcon data-icon="inline-start" />
-				Download PDF
+				{m.invoices_download_pdf()}
 			</Button>
 			{#if canChange(invoice.status, "void")}
 				<ConfirmDialog
 					form={voidInvoice}
 					id={String(invoice.id)}
-					label="Void"
+					label={m.invoices_void()}
 					icon={BanIcon}
 					variant="destructive"
-					title="Void {invoice.number}?"
+					title={m.invoices_void_title({ number: invoice.number })}
 					description={invoice.status === "draft"
-						? "The draft is kept under its number but bills nothing; its orders and fees can go on another invoice."
-						: "The invoice is kept under its number but no longer bills anything: its orders go back to completed, and its orders and fees can go on another invoice."}
-					done="Invoice voided"
+						? m.invoices_void_draft_description()
+						: m.invoices_void_sent_description()}
+					done={m.invoices_voided()}
 				/>
 			{/if}
 			{#if canChange(invoice.status, "paid")}
 				<ConfirmDialog
 					form={markPaid}
 					id={String(invoice.id)}
-					label="Mark paid"
+					label={m.invoices_mark_paid()}
 					icon={CircleCheckBigIcon}
-					title="Mark {invoice.number} paid?"
-					description="Records that {invoice.customer.name} paid it today."
-					done="Invoice marked paid"
+					title={m.invoices_mark_paid_title({ number: invoice.number })}
+					description={m.invoices_mark_paid_description({ customer: invoice.customer.name })}
+					done={m.invoices_marked_paid()}
 				/>
 			{/if}
 			{#if canChange(invoice.status, "sent")}
 				<ConfirmDialog
 					form={issueInvoice}
 					id={String(invoice.id)}
-					label="Issue"
+					label={m.invoices_issue()}
 					icon={SendIcon}
-					title="Issue {invoice.number}?"
-					description="It's dated today and can't be changed afterwards; its orders become invoiced."
-					done="Invoice issued"
+					title={m.invoices_issue_title({ number: invoice.number })}
+					description={m.invoices_issue_description()}
+					done={m.invoices_issued()}
 				/>
 			{/if}
 		{/snippet}
@@ -122,17 +125,29 @@
 		{:else}
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>History</Card.Title>
+					<Card.Title>{m.invoices_history()}</Card.Title>
 				</Card.Header>
 				<Card.Content>
 					<dl class="grid grid-cols-2 gap-4">
-						<DetailItem label="Created" value={formatDate(invoice.createdAt)} />
-						<DetailItem label="Issued" value={invoice.issuedOn && formatDate(invoice.issuedOn)} />
-						<DetailItem label="Due" value={invoice.dueOn && formatDate(invoice.dueOn)} />
-						<DetailItem label="Payment term" value="{invoice.paymentTermDays} days" />
-						<DetailItem label="Paid" value={invoice.paidOn && formatDate(invoice.paidOn)} />
+						<DetailItem label={m.invoices_column_created()} value={formatDate(invoice.createdAt)} />
+						<DetailItem
+							label={m.invoices_column_issued()}
+							value={invoice.issuedOn && formatDate(invoice.issuedOn)}
+						/>
+						<DetailItem
+							label={m.invoices_column_due()}
+							value={invoice.dueOn && formatDate(invoice.dueOn)}
+						/>
+						<DetailItem
+							label={m.invoices_payment_term()}
+							value={m.invoices_days({ count: invoice.paymentTermDays })}
+						/>
+						<DetailItem
+							label={m.invoices_paid()}
+							value={invoice.paidOn && formatDate(invoice.paidOn)}
+						/>
 						{#if invoice.voidedAt}
-							<DetailItem label="Voided" value={formatDateTime(invoice.voidedAt)} />
+							<DetailItem label={m.invoices_voided_at()} value={formatDateTime(invoice.voidedAt)} />
 						{/if}
 					</dl>
 				</Card.Content>

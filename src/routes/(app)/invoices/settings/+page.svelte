@@ -6,7 +6,7 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatRate } from "#lib/components/invoicing/invoice.js";
+	import { formatRate } from "#lib/components/invoicing/display.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate } from "#lib/format.js";
 	import { toDateInput } from "#lib/schema.js";
@@ -17,18 +17,18 @@
 </script>
 
 <svelte:head>
-	<title>Settings · Invoices</title>
+	<title>{m.invoices_settings()} · {m.invoices_title()}</title>
 </svelte:head>
 
-<PageHeader title="Invoicing settings" description="What new invoices start with.">
+<PageHeader title={m.invoices_settings_title()} description={m.invoices_settings_description()}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/invoices")}>Invoices</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>Settings</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.invoices_settings()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
@@ -37,7 +37,7 @@
 {#if settings.canManage}
 	<form
 		{...saveSettings.enhance(async ({ submit }) => {
-			if (await submit()) toast.success("Settings saved");
+			if (await submit()) toast.success(m.invoices_settings_saved());
 		})}
 		class="flex max-w-2xl flex-col gap-6"
 	>
@@ -46,47 +46,50 @@
 				<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 					<NumberField
 						field={saveSettings.fields.vatRate}
-						label="VAT rate (%)"
+						label={m.invoices_vat_rate_percent()}
 						value={settings.vatRate}
 						min={0}
 						max={100}
 						step={0.01}
-						description="Fixed on an invoice when it's issued."
+						description={m.invoices_vat_rate_description()}
 					/>
 					<NumberField
 						field={saveSettings.fields.paymentTermDays}
-						label="Payment term (days)"
+						label={m.invoices_payment_term_days()}
 						value={settings.paymentTermDays}
 						min={0}
 						step={1}
-						description="For new drafts; each draft can have its own."
+						description={m.invoices_payment_term_description()}
 					/>
 					<TextField
 						field={saveSettings.fields.billFrom}
-						label="Bill fees from"
+						label={m.invoices_bill_from()}
 						type="date"
 						value={toDateInput(settings.billFrom)}
-						description="Other modules' fees (e.g. service contracts) are billed from this day on."
+						description={m.invoices_bill_from_description()}
 					/>
 				</Field.FieldGroup>
 			</Card.Content>
 		</Card.Root>
 		<FormActions
 			pending={saveSettings.pending}
-			submitLabel="Save settings"
+			submitLabel={m.invoices_save_settings()}
 			cancelHref={resolve("/(app)/invoices")}
 		/>
 	</form>
 {:else}
 	<Card.Root class="max-w-2xl">
 		<Card.Header>
-			<Card.Description>Owners and admins can change these.</Card.Description>
+			<Card.Description>{m.invoices_settings_managers()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<dl class="grid grid-cols-3 gap-4">
-				<DetailItem label="VAT rate" value={formatRate(settings.vatRate)} />
-				<DetailItem label="Payment term" value="{settings.paymentTermDays} days" />
-				<DetailItem label="Bill fees from" value={formatDate(settings.billFrom)} />
+				<DetailItem label={m.invoices_vat_rate()} value={formatRate(settings.vatRate)} />
+				<DetailItem
+					label={m.invoices_payment_term()}
+					value={m.invoices_days({ count: settings.paymentTermDays })}
+				/>
+				<DetailItem label={m.invoices_bill_from()} value={formatDate(settings.billFrom)} />
 			</dl>
 		</Card.Content>
 	</Card.Root>
