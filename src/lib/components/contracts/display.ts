@@ -11,16 +11,16 @@ import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { m } from "#lib/paraglide/messages.js";
+
+import type { SlaState } from "./coverage.js";
+import { contractLabels } from "./labels.js";
 import {
 	type ContractLevel,
 	contractLevels,
 	type ContractStatus,
 	contractStatuses,
-} from "#lib/models.js";
-import { m } from "#lib/paraglide/messages.js";
-
-import type { SlaState } from "./coverage.js";
-import { contractLabels } from "./labels.js";
+} from "./model.js";
 
 interface Display {
 	icon: Component;

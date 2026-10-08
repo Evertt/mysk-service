@@ -10,14 +10,14 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { contractLevels } from "#lib/components/contracts/model.ts";
+import { invoiceStatuses } from "#lib/components/invoicing/model.ts";
 import {
 	activityActions,
-	contractLevels,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
 	equipmentStatuses,
-	invoiceStatuses,
 	materialUnits,
 	orderPriorities,
 	orderStatuses,
@@ -338,7 +338,7 @@ export const stockMovementRelations = relations(stockMovement, ({ one }) => ({
 /**
  * A maintenance agreement: for a monthly fee, the customer's covered equipment gets service with
  * a guaranteed response time. Its status (upcoming, active, expired) follows from the period,
- * see `contractStatus` in `#lib/models.ts`.
+ * see `contractStatus` in `#lib/components/contracts/model.ts`.
  */
 export const contract = sqliteTable(
 	"contract",

@@ -15,15 +15,11 @@
  *   at risk once less than a quarter of the response time is left, and overdue from the deadline
  *   on. Cancelled orders and other types of work (maintenance, inspections) have no deadline.
  */
-import {
-	type ContractLevel,
-	contractStatus,
-	type OrderStatus,
-	type OrderType,
-} from "#lib/models.js";
+import type { OrderStatus, OrderType } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { contractLabels } from "./labels.js";
+import { type ContractLevel, contractStatus } from "./model.js";
 
 /** What each level includes. */
 export const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {

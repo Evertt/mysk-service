@@ -22,6 +22,7 @@ import {
 	contractMonths,
 	monthlyFee,
 } from "#lib/components/contracts/billing.ts";
+import { type ContractLevel, defaultResponseHours } from "#lib/components/contracts/model.ts";
 import {
 	dueDate,
 	invoiceNumber,
@@ -30,9 +31,7 @@ import {
 	orderLines,
 } from "#lib/components/invoicing/invoice.ts";
 import {
-	type ContractLevel,
 	customerSegments,
-	defaultResponseHours,
 	engineerSpecialties,
 	equipmentCategories,
 	type EquipmentCategory,

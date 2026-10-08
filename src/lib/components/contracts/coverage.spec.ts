@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import type { ContractLevel, OrderStatus, OrderType } from "#lib/models.js";
+import type { OrderStatus, OrderType } from "#lib/models.js";
 
 import {
 	coveredAmount,
@@ -10,6 +10,7 @@ import {
 	responseDeadline,
 	slaState,
 } from "./coverage.ts";
+import type { ContractLevel } from "./model.js";
 
 const day = (value: string) => new Date(`${value}T00:00`);
 const HOUR = 60 * 60 * 1000;

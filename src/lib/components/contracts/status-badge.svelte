@@ -1,12 +1,11 @@
 <!--
 	@component
 	A contract's status; derive it from the contract's period with `contractStatus` from
-	`#lib/models.js`.
+	`./model.js`.
 -->
 <script lang="ts">
-	import type { ContractStatus } from "#lib/models.js";
-
 	import { statuses } from "./display.js";
+	import type { ContractStatus } from "./model.js";
 
 	let { status }: { status: ContractStatus } = $props();
 

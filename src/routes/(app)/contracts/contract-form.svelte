@@ -8,6 +8,11 @@
 	import { toast } from "svelte-sonner";
 
 	import { levels } from "#lib/components/contracts/display.js";
+	import {
+		type ContractLevel,
+		contractLevels,
+		defaultResponseHours,
+	} from "#lib/components/contracts/model.js";
 	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
@@ -15,7 +20,6 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { label } from "#lib/i18n/labels.js";
-	import { type ContractLevel, contractLevels, defaultResponseHours } from "#lib/models.js";
 	import { toDateInput } from "#lib/schema.js";
 
 	import type {

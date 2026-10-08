@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { contractLabels } from "#lib/components/contracts/labels.js";
+import { contractLevels, contractStatuses } from "#lib/components/contracts/model.js";
 import { invoicingLabels } from "#lib/components/invoicing/labels.js";
 import {
-	contractLevels,
-	contractStatuses,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
