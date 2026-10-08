@@ -86,9 +86,10 @@ functions, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder na
 (`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 
-- `scripts/modules.ts` links the folders in; `pnpm generate` runs it before `svelte-kit sync`,
-  `vite.config.ts` runs it when it loads, and in dev it reruns when a module's files come or go. It
-  writes the registries (`src/lib/modules.gen.ts`, `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
+- `scripts/modules.ts` (its parts, each with a spec, are in `scripts/modules/`) links the folders in;
+  `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
+  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules.gen.ts`,
+  `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
   `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
   for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
   `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
@@ -284,7 +285,8 @@ README.md).
   one signed-in page from `useApp()`, changes go through the UI, checks read the database with
   `rows()`/`value()`. Split a file by its independent `describe` blocks when it passes a few
   hundred lines: the longest file sets the e2e wall-clock time. A module's e2e tests are in its
-  own folder (`src/modules/<id>/e2e/*.test.ts`, importing `#e2e/app.ts`) and cover a tenant that
+  own folder (`src/modules/<id>/e2e/<section>.test.ts` and `<section>.<aspect>.test.ts`, with the
+  helpers they share in `helpers.ts`, importing `#e2e/app.ts`) and cover a tenant that
   has the module, one that hasn't (its pages and endpoints are 404s, the sidebar lacks it, the
   slots are empty, its remote queries are refused) and tenant isolation.
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
