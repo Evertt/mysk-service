@@ -13,6 +13,7 @@ import {
 	type MaterialUnit,
 	materialUnits,
 	type OrderStatus,
+	roundQuantity,
 	type StockLevel,
 	type StockMovementKind,
 } from "#lib/models.js";
@@ -33,9 +34,6 @@ export function stockLevelSql(stock: SQLWrapper, unit: SQLWrapper) {
 	const [out, low, inStock]: StockLevel[] = ["out", "low", "in_stock"];
 	return sql<StockLevel>`(case when ${stock} <= 0 then ${out} when ${stock} < ${threshold} then ${low} else ${inStock} end)`;
 }
-
-/** A quantity to two decimals (the finest any unit is counted in), without floating-point noise. */
-export const roundQuantity = (quantity: number) => Math.round(quantity * 100) / 100 || 0;
 
 /** A material whose stock is too low for a movement, with the stock it does have. */
 export class StockShortage extends Error {

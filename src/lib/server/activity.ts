@@ -20,11 +20,10 @@
  * the invitation's organization rather than the current one). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity.ts`.
  */
-import type { ActivityAction } from "#lib/models.js";
+import { type ActivityAction, roundQuantity } from "#lib/models.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.js";
 import { idsInTenant, requireTenant } from "#lib/server/session.js";
-import { roundQuantity } from "#lib/server/stock.js";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {

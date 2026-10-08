@@ -6,13 +6,13 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { regionOptions, specialtyOptions } from "#lib/components/engineers/display.js";
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.js";
+	import { regionOptions, specialtyOptions } from "#lib/engineers/display.js";
 
 	import type { createEngineer, getEngineer, updateEngineer } from "./engineers.remote.js";
 

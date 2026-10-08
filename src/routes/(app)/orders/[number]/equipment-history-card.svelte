@@ -3,10 +3,10 @@
 	Other orders for the same unit as an order, for context.
 -->
 <script lang="ts">
-	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
-	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import { formatDate } from "#lib/format.js";
+	import OrderLink from "#lib/orders/order-link.svelte";
+	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import TypeLabel from "#lib/orders/type-label.svelte";
 
 	import type { getOrder } from "../order.remote.js";
 

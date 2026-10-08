@@ -1,12 +1,12 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
-import { countryName } from "#lib/components/customers/countries.js";
-import CustomerLink from "#lib/components/customers/customer-link.svelte";
-import SegmentBadge from "#lib/components/customers/segment-badge.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { countryName } from "#lib/customers/countries.js";
+import CustomerLink from "#lib/customers/customer-link.svelte";
+import SegmentBadge from "#lib/customers/segment-badge.svelte";
 import { intlLocale } from "#lib/format.js";
 import { customerSegments } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";

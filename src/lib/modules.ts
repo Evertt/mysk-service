@@ -18,7 +18,7 @@
  *   `src/routes/(app)/` only for the modules the tenant has;
  * - `#lib/server/modules.ts`: server hooks, grouped by the core domain they belong to and named
  *   for their kind (a collector, an event after commit), e.g. `orders.adjustPrices` (applied by
- *   `priceOrders()` in `#lib/server/pricing.ts`), `orders.tag` (`tagOrders()`) and
+ *   `priceOrders()` in `#lib/orders/server/pricing.ts`), `orders.tag` (`tagOrders()`) and
  *   `orders.committed` (`orderCommitted()`).
  */
 import type { RouteId } from "$app/types";

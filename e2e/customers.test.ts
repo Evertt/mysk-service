@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countryName } from "../src/lib/components/customers/countries.ts";
+import { countryName } from "../src/lib/customers/countries.ts";
 import { formatDate } from "../src/lib/format.ts";
 import {
 	baseURL,

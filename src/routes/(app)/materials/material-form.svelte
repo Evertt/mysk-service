@@ -11,9 +11,9 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { lowStockThreshold } from "#lib/components/materials/display.js";
 	import { formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
+	import { lowStockThreshold } from "#lib/materials/display.js";
 	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.js";
 
 	import type { createMaterial, getMaterial, updateMaterial } from "./material.remote.js";

@@ -2,12 +2,12 @@ import { command, query } from "$app/server";
 import { and, countDistinct, inArray } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.js";
+import { removeMaterial } from "#lib/materials/server/materials.js";
+import { stockLevelSql } from "#lib/materials/server/stock.js";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
-import { removeMaterial } from "#lib/server/materials.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
-import { stockLevelSql } from "#lib/server/stock.js";
 import { pageGroupsOf, planList } from "#lib/server/table-query.js";
 
 import { materialsSql } from "./material-list.server.js";

@@ -5,7 +5,7 @@
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
-	import { categoryOptions, statusOptions } from "#lib/components/equipment/display.js";
+	import { categoryOptions, statusOptions } from "#lib/equipment/display.js";
 
 	import { getCustomerOptions } from "../filter-options.remote.js";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.js";

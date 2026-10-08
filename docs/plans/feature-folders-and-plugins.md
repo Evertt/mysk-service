@@ -701,11 +701,22 @@ Each step leaves `pnpm check` and `pnpm test` green and can merge on its own.
    registry as an optional argument, so the core's specs test the extension points with made-up
    modules (`src/lib/fake-modules.ts`, mocked in for `modules.gen.ts`) instead of the real ones.
    AGENTS.md describes the finished system. The "Where files go" text from Part 1 is used as far as
-   it applies: the domain folders in `src/lib` (step 8) are not there yet._
+   it applies; the domain folders (step 8) are in it too._
 7. **Add extension points when they're needed:** `order.actions` and the other action slots,
    `settings.cards`, row actions, module table columns and filters, guards. The interfaces above
    are the plan; build each when its first user arrives.
 8. **Optional:** the Part 1 domain folders (`src/lib/<domain>/`).
+   _Done. `src/lib/{customers,engineers,equipment,materials,orders}/` hold what was in
+   `src/lib/components/<domain>/`, and the domain logic left `src/lib/server/` for
+   `src/lib/<domain>/server/`: `stock.ts` (+ spec) and `materials.ts` in `materials/server/`,
+   `equipment.ts` in `equipment/server/`, and in `orders/server/` the order lines (`orders.ts`,
+   now `lines.ts`: `checkLines()` and `saveOrderLines()`), `order-changes.ts` and `pricing.ts`
+   (+ spec). `assigneeProblem()` moved from the lines to `order-changes.ts`, next to
+   `assignOrder()`: it has nothing to do with lines. `src/lib/server/` keeps the infrastructure.
+   `components/display.spec.ts`, which checks every domain's option lists, became
+   `src/lib/display.spec.ts`. A client component importing `#lib/materials/server/stock.js`
+   fails the build with `server_only_import`, so Kit 3 does protect every `server/` folder outside
+   `src/routes`. The "Where files go" text from Part 1 is in AGENTS.md. One commit per domain._
 
 ### CLAUDE.md: the module part of "Tenants and modules" becomes
 

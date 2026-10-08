@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { countryOptions } from "#lib/components/customers/countries.js";
-	import { segmentOptions } from "#lib/components/customers/display.js";
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
+	import { countryOptions } from "#lib/customers/countries.js";
+	import { segmentOptions } from "#lib/customers/display.js";
 
 	import { deleteCustomers } from "./bulk-actions.js";
 	import { columns, type CustomerRow } from "./columns.js";

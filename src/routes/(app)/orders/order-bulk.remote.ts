@@ -5,11 +5,15 @@ import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { manualOrderStatuses } from "#lib/models.js";
+import {
+	assigneeProblem,
+	assignOrder,
+	changeOrderStatus,
+	removeOrder,
+} from "#lib/orders/server/order-changes.js";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, order } from "#lib/server/db/schema.js";
-import { assignOrder, changeOrderStatus, removeOrder } from "#lib/server/order-changes.js";
-import { assigneeProblem } from "#lib/server/orders.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { getOrderFacets, getOrders } from "./order-list.remote.js";

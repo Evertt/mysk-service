@@ -4,30 +4,13 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { moveOrderStock } from "#lib/materials/server/stock.js";
 import { fitsUnit, type OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { recordOrderLines } from "#lib/server/activity.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
-import { engineer, material, orderLine } from "#lib/server/db/schema.js";
-import { idInTenant, idsInTenant, inTenant, requireTenant } from "#lib/server/session.js";
-import { moveOrderStock } from "#lib/server/stock.js";
-
-/**
- * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another
- * tenant's (or don't exist), or inactive. The planning board and bulk assigning share it.
- */
-export async function assigneeProblem(
-	engineerId: number,
-	tx: Transaction | typeof db = db,
-): Promise<string | undefined> {
-	const assignee = await tx.query.engineer.findFirst({
-		columns: { name: true, active: true },
-		where: idInTenant(engineer, engineerId),
-	});
-	if (!assignee) return m.schedule_unknown_engineer();
-	if (!assignee.active) return m.schedule_engineer_inactive({ name: assignee.name });
-	return undefined;
-}
+import { material, orderLine } from "#lib/server/db/schema.js";
+import { idsInTenant, inTenant, requireTenant } from "#lib/server/session.js";
 
 export interface LineInput {
 	materialId: number;

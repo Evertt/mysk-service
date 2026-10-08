@@ -7,10 +7,10 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import MapPinIcon from "@lucide/svelte/icons/map-pin";
 
-	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
-	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import { formatDate } from "#lib/format.js";
 	import type { OrderPriority, OrderStatus } from "#lib/models.js";
+	import PriorityBadge from "#lib/orders/priority-badge.svelte";
+	import StatusBadge from "#lib/orders/status-badge.svelte";
 
 	import { plannedTime } from "./work.js";
 
