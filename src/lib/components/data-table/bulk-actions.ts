@@ -14,15 +14,23 @@ import type { Component } from "svelte";
 import { formatNumber } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
+import type { ListColumns, ListWhere } from "./list-definition.js";
+
 /** The most records a bulk action changes at once. */
 export const MAX_BULK_RECORDS = 500;
 
+/** The `where` of any server-side list (`ListWhere`), for code that handles several lists. */
+export type AnyListWhere = ListWhere<ListColumns>;
+
 /**
- * What a bulk command acts on: the selected rows by id, or (in a server-side table) all the rows
- * matching the table's search and filters, as its URL parameters say (the rows' query `key`).
- * The server reads either within the current tenant only.
+ * What a bulk command acts on: the selected rows by id, or (in a server-side list) all the rows
+ * matching the list's search and filters, as the `where` of the rows' query says. The server reads
+ * either within the current tenant only.
+ *
+ * TRANSITIONAL: `Where` is a string, the rows' key (the table's URL parameters), for a list that
+ * has no definition yet. Once all have one, it is `AnyListWhere` and the parameter goes.
  */
-export type BulkTarget = { ids: number[] } | { matching: string };
+export type BulkTarget<Where = string> = { ids: number[] } | { matching: Where };
 
 /** A record a bulk action left as it was, and why. */
 export interface BulkSkip {
@@ -52,7 +60,7 @@ export interface BulkOption {
 /** A translated text: a message function, read when shown. */
 type Text = () => string;
 
-export interface BulkAction<TData> {
+export interface BulkAction<TData, Where = string> {
 	id: string;
 	label: Text;
 	icon?: Component;
@@ -81,7 +89,7 @@ export interface BulkAction<TData> {
 		description?: Text;
 	};
 	/** Calls the action's remote command. */
-	run: (target: BulkTarget, value?: string) => Promise<BulkResult>;
+	run: (target: BulkTarget<Where>, value?: string) => Promise<BulkResult>;
 	/** What it did, e.g. `m.common_bulk_updated` ("3 updated"); updated by default. */
 	done?: (inputs: { count: string }) => string;
 }

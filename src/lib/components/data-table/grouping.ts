@@ -6,7 +6,7 @@
  * Grouping arranges a page rather than replacing pagination: the rows are sorted by the grouped
  * column first (then as the table is sorted), and paged as usual, so a group can start on one page
  * and go on on the next. That works the same for server-side tables, whose server sorts the same
- * way (see `planTable`) and says what it knows beyond the page (`PageGroups`): how many rows each
+ * way (see `planList`) and says what it knows beyond the page (`PageGroups`): how many rows each
  * group has in all, and the rows just before and after the page. A group header never claims more
  * than that: its count is the group's whole count, and a group cut off by the page says so.
  *

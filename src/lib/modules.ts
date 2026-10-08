@@ -25,7 +25,7 @@ import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity.js";
 import { contractSubjects } from "#lib/components/contracts/activity.js";
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { invoicingActions, invoicingSubjects } from "#lib/components/invoicing/activity.js";
 import type { OrderStatus } from "#lib/models.js";
 import type { ModuleId } from "#lib/module-ids.js";
@@ -92,9 +92,18 @@ export interface BulkActionRows {
 
 export type BulkTableName = keyof BulkActionRows;
 
+/**
+ * A module's bulk actions for a table, as the table runs them: on a server-side list's `where`
+ * (TRANSITIONAL: only lists with a definition can have them).
+ */
+export type TableBulkAction<Table extends BulkTableName> = BulkAction<
+	BulkActionRows[Table],
+	AnyListWhere
+>;
+
 /** Loads a module's bulk actions for a table, so a tenant without the module doesn't download them. */
 export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
-	default: BulkAction<BulkActionRows[Table]>[];
+	default: TableBulkAction<Table>[];
 }>;
 
 export const modules = [

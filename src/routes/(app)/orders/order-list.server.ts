@@ -1,41 +1,69 @@
 /**
  * The orders list in SQL, shared by its queries (`order-list.remote.ts`) and the bulk commands that
- * act on the orders matching its URL (`order-bulk.remote.ts`). A remote file can only export remote
- * functions, so it can't be shared from there.
+ * act on the orders matching its filters (`order-bulk.remote.ts`). A remote file can only export
+ * remote functions, so it can't be shared from there.
  */
-import { count, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
+import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { orderPriorities } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, tenantJoin } from "#lib/server/session.js";
-import { nocase, oneOf, planTable, rank, type ServerTable } from "#lib/server/table-query.js";
+import { type ListSql, nocase, rank } from "#lib/server/table-query.js";
 
-import { ordersUrl } from "./orders-url.js";
+import { ordersList } from "./orders-list.js";
 
-/** The orders list's columns in SQL, for its URL state (`ordersUrl`). */
-export const ordersTable: ServerTable = {
-	spec: ordersUrl,
+/**
+ * The orders list's joins: the order's customer, unit and engineer, each scoped to the tenant.
+ * Written once, for the rows, the counts, the facets and the bulk ids alike, and generic over the
+ * query it joins (drizzle's `$dynamic()` pattern), so each keeps its own fields.
+ */
+export const withOrderJoins = <T extends SQLiteSelect>(query: T) =>
+	query
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.leftJoin(...tenantJoin(equipment, order.equipmentId))
+		.leftJoin(...tenantJoin(engineer, order.engineerId));
+
+/**
+ * The orders list's columns in SQL, checked against its definition (`ordersList`). Call it for
+ * each request, not at module scope: `inTenant()` reads the request.
+ */
+export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
+	list: ordersList,
+	from: (fields) => withOrderJoins(db.select(fields).from(order).$dynamic()),
 	columns: {
 		number: { sort: order.number },
-		customer: { sort: nocase(customer.name), filter: oneOf(customer.code), group: customer.code },
+		customer: {
+			sort: nocase(customer.name),
+			filter: (codes) => inArray(customer.code, codes),
+			group: customer.code,
+		},
 		equipment: {
 			sort: [nocase(equipment.manufacturer), nocase(equipment.model)],
 			nullsLast: true,
-			filter: oneOf(equipment.serialNumber),
+			filter: (serials) => inArray(equipment.serialNumber, serials),
 		},
-		type: { sort: order.type, filter: oneOf(order.type), group: order.type },
-		status: { sort: order.status, filter: oneOf(order.status), group: order.status },
+		type: {
+			sort: order.type,
+			filter: (types) => inArray(order.type, types),
+			group: order.type,
+		},
+		status: {
+			sort: order.status,
+			filter: (statuses) => inArray(order.status, statuses),
+			group: order.status,
+		},
 		// By urgency rather than alphabetically.
 		priority: {
 			sort: rank(order.priority, orderPriorities),
-			filter: oneOf(order.priority),
+			filter: (priorities) => inArray(order.priority, priorities),
 			group: order.priority,
 		},
 		engineer: {
 			sort: nocase(engineer.name),
 			nullsLast: true,
-			filter: (ids) => inArray(order.engineerId, ids.map(Number).filter(Number.isSafeInteger)),
+			filter: (ids) => inArray(order.engineerId, ids),
 			group: order.engineerId,
 		},
 		scheduledFor: { sort: order.scheduledFor, nullsLast: true },
@@ -50,35 +78,6 @@ export const ordersTable: ServerTable = {
 		equipment.serialNumber,
 		engineer.name,
 	],
-	tieBreaker: order.id,
+	id: order.id,
 	scope: () => inTenant(order),
-};
-
-/**
- * How many orders match `where` (with their customer, unit and engineer, as in the list): in all,
- * or per value of `by`.
- */
-export function countOrders(where: SQL | undefined, by?: SQLWrapper) {
-	const counted = db
-		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
-		.from(order)
-		.innerJoin(...tenantJoin(customer, order.customerId))
-		.leftJoin(...tenantJoin(equipment, order.equipmentId))
-		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(where);
-	return by ? counted.groupBy(sql`${by}`) : counted;
-}
-
-/** The ids of the tenant's orders matching the list's search and filters (`ordersUrl`). */
-export async function matchingOrderIds(params: string, limit: number) {
-	const rows = await db
-		.select({ id: order.id })
-		.from(order)
-		.innerJoin(...tenantJoin(customer, order.customerId))
-		.leftJoin(...tenantJoin(equipment, order.equipmentId))
-		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(planTable(ordersTable, params).where())
-		.orderBy(order.id)
-		.limit(limit);
-	return rows.map((row) => row.id);
-}
+});

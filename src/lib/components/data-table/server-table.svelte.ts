@@ -1,17 +1,24 @@
 /**
  * The client side of a server-side table (see `#lib/server/table-query.ts`): the page reads the
- * table's state from the URL and asks its remote queries for that page of rows and its filters'
- * counts, so the URL (which the table keeps in sync, debouncing the search) decides what's
- * fetched. The table itself (`createAppTable` with `serverSide`) shows the rows as they come.
+ * table's state from the URL into the list's query (`toListQuery()` in `list-definition.ts`) and
+ * asks its remote queries for that page of rows (the query) and its filters' counts (its
+ * `whereOf()`), so the URL (which the table keeps in sync, debouncing the search) decides what's
+ * fetched. The table itself (`createAppTable` with `serverSide`) shows the rows as they come, and
+ * `isStale()` and `serverTableLoading()` tell whether they are the table's.
+ *
+ * TRANSITIONAL: `serverTableQuery()`, and the URL spec that `isStale()` and `serverTableLoading()`
+ * take instead of a list, are for the lists that have no definition yet (they ask the server with
+ * the URL's parameters as a string).
  */
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { onMount } from "svelte";
 
 import type { Features } from "./features.js";
+import { type List, queryKey, toListQuery } from "./list-definition.js";
 import { parseTableUrl, type SearchParams, tableUrlKey, type TableUrlSpec } from "./url-state.js";
 
 /**
- * The arguments for a server-side table's queries, from the URL: `rows` for the page of rows,
+ * TRANSITIONAL (see above): the arguments for a server-side table's queries, from the URL: `rows` for the page of rows,
  * `facets` for the counts in its filters, which stays the same while only the page, the
  * sorting or the grouping changes (so those don't count again). Both are the table's own
  * parameters, in a fixed order without the defaults (e.g. `status=quote&sort=number`), so the same
@@ -62,11 +69,12 @@ export function urlGrammar(spec: TableUrlSpec) {
 /**
  * Whether the rows a server-side table shows are for another state than the table's: its search,
  * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
- * rows' query answered with (`TablePlan.key`).
+ * rows' query answered with (`queryKey(input)`). TRANSITIONAL: for a list without a definition,
+ * pass its URL spec instead of the list, and `key` is the URL's parameters.
  */
 export function isStale<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
-	spec: TableUrlSpec,
+	list: List<any> | TableUrlSpec,
 	key: string,
 ) {
 	const state = {
@@ -76,7 +84,8 @@ export function isStale<TData extends RowData>(
 		pagination: table.atoms.pagination.get(),
 		grouping: table.atoms.grouping.get(),
 	};
-	return tableUrlKey(state, spec).replace(/^\?/, "") !== key.replace(/^\?/, "");
+	if ("urlSpec" in list) return queryKey(toListQuery(list, state)) !== key;
+	return tableUrlKey(state, list).replace(/^\?/, "") !== key.replace(/^\?/, "");
 }
 
 /**
@@ -87,7 +96,7 @@ export function isStale<TData extends RowData>(
  */
 export function serverTableLoading<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
-	spec: TableUrlSpec,
+	list: List<any> | TableUrlSpec,
 	key: () => string,
 ) {
 	// Hydrating counts as pending work, which the server didn't render.
@@ -95,7 +104,7 @@ export function serverTableLoading<TData extends RowData>(
 	onMount(() => {
 		hydrated = true;
 	});
-	const loading = $derived((hydrated && $effect.pending() > 0) || isStale(table, spec, key()));
+	const loading = $derived((hydrated && $effect.pending() > 0) || isStale(table, list, key()));
 	return {
 		get current() {
 			return loading;

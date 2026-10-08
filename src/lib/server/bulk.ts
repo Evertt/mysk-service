@@ -12,8 +12,9 @@
  *
  * `bulkChange()` does 2 to 4, and `refreshRequested()` is 5 for a server-side table, which asks
  * for its pages with `requested()` on the server. A table that loads all its rows in one query
- * (`getCustomers().refresh()`) refreshes that query instead. A server-side table's command passes
- * `matching` (its list's query for the ids matching its URL); a client-side table's only takes ids.
+ * (`getCustomers().refresh()`) refreshes that query instead. A server-side list's command takes a
+ * `listTarget()` and passes `list` (its `ListSql`, built per request, to find the ids matching the
+ * target's `where`); a client-side table's takes an `idsTarget`.
  *
  * Each record changes in a transaction of its own (the single-record path's), not all or nothing:
  * the records of a bulk action don't depend on each other, so one that's refused (an invoiced
@@ -27,46 +28,75 @@ import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.js";
+import type { ListWhere } from "#lib/components/data-table/list-definition.js";
 import { formatNumber } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
 import { idsInTenant, type TenantTable } from "./session.ts";
-import { tableParams } from "./table-query.ts";
+import { planList, type ListSql, tableParams } from "./table-query.ts";
 
-/** A bulk command's target (`BulkTarget`): ids, or a server-side list's URL parameters. */
-export const bulkTarget = v.union([
-	v.object({
-		ids: v.pipe(
-			v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
-			v.minLength(1),
-			v.maxLength(MAX_BULK_RECORDS),
-		),
-	}),
-	v.object({ matching: tableParams }),
-]);
+/** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */
+export const idsTarget = v.object({
+	ids: v.pipe(
+		v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		v.minLength(1),
+		v.maxLength(MAX_BULK_RECORDS),
+	),
+});
 
+export type IdsTarget = v.InferOutput<typeof idsTarget>;
+
+/** The selected rows of a server-side list, or all those matching its search and filters. */
+export type ListTarget<C> = IdsTarget | { matching: ListWhere<C> };
+
+/**
+ * A bulk command's target in a server-side list (`BulkTarget` in the client): ids, or the list's
+ * `where`, e.g. `listTarget(ordersList.where)`. The command then passes the list's SQL (a function,
+ * as it is built per request) to `targetIds()` or `bulkChange()`.
+ */
+export const listTarget = <C>(where: v.GenericSchema<ListWhere<C>>) =>
+	v.union([idsTarget, v.object({ matching: where })]);
+
+/**
+ * TRANSITIONAL, until the equipment and materials lists have a definition: the target of a list
+ * that still works from its URL parameters (`tableParams`). Then `idsTarget` replaces it for the
+ * client-side tables, `listTarget()` for the lists, and this, `BulkTargetInput` and `MatchingIds`
+ * go.
+ */
+export const bulkTarget = v.union([idsTarget, v.object({ matching: tableParams })]);
+
+/** TRANSITIONAL: what `bulkTarget` reads. */
 export type BulkTargetInput = v.InferOutput<typeof bulkTarget>;
 
 /**
- * Finds the ids of a server-side list's rows that match its URL parameters (`planTable(…).where()`,
- * which is scoped to the tenant), at most `limit` of them.
+ * TRANSITIONAL: finds the ids of a list's rows that match its URL parameters
+ * (`planTable(…).where()`, which is scoped to the tenant), at most `limit` of them.
  */
 export type MatchingIds = (params: string, limit: number) => Promise<number[]>;
 
 /**
  * The ids a bulk command acts on: the selected ones, or those of the rows matching the list's
- * search and filters (`matching`; a table without it only takes ids). Refuses more than
- * `MAX_BULK_RECORDS`.
+ * search and filters (`matching`), found with `list`, the list's SQL, built for this request (see
+ * `ListSql`). A table without a list only takes ids. Refuses more than `MAX_BULK_RECORDS`.
+ *
+ * (Until every list has a definition, `list` can also be a `MatchingIds`, for a target of
+ * URL parameters.)
  */
-export async function targetIds(target: BulkTargetInput, matching?: MatchingIds) {
+export async function targetIds<C>(
+	target: ListTarget<C> | BulkTargetInput,
+	list?: (() => ListSql<C>) | MatchingIds,
+) {
 	if ("ids" in target) return [...new Set(target.ids)];
-	if (!matching) error(400, m.common_error_generic());
-	const ids = await matching(target.matching, MAX_BULK_RECORDS + 1);
-	if (ids.length > MAX_BULK_RECORDS) {
+	if (!list) error(400, m.common_error_generic());
+	const found =
+		typeof target.matching === "string"
+			? await (list as MatchingIds)(target.matching, MAX_BULK_RECORDS + 1)
+			: await planList((list as () => ListSql<C>)(), target.matching).ids(MAX_BULK_RECORDS + 1);
+	if (found.length > MAX_BULK_RECORDS) {
 		error(400, m.common_bulk_too_many({ max: formatNumber(MAX_BULK_RECORDS) }));
 	}
-	return ids;
+	return found;
 }
 
 /**
@@ -113,21 +143,26 @@ type Loaded<C extends Record<string, SQLiteColumn>> = {
  * with `change`. It's `targetIds`, the load and `forEachRecord` in one, and what the three do
  * (see above) applies. `table` is the records' table, `label` its column that names a record in the
  * result and orders the work (e.g. `order.number`), `columns` more fields `change` needs (e.g.
- * `{ status: equipment.status }`), and `matching` the list's query for the ids matching its URL
- * (see `MatchingIds`). Refresh the queries that show the records afterwards.
+ * `{ status: equipment.status }`), and `list` the SQL of the server-side list whose rows the
+ * target may match (see `targetIds`). Refresh the queries that show the records afterwards.
  */
-export async function bulkChange<C extends Record<string, SQLiteColumn> = Record<never, never>>(
-	target: BulkTargetInput,
+export async function bulkChange<
+	C extends Record<string, SQLiteColumn> = Record<never, never>,
+	L = never,
+>(
+	target: ListTarget<L> | BulkTargetInput,
 	options: {
 		table: SQLiteTable & TenantTable;
 		label: SQLiteColumn;
 		columns?: C;
+		list?: () => ListSql<L>;
+		/** TRANSITIONAL: for a target of URL parameters, instead of `list`. */
 		matching?: MatchingIds;
 		change: (record: { id: number; label: string } & Loaded<C>) => Promise<unknown>;
 	},
 ): Promise<BulkResult> {
-	const { table, label, columns, matching, change } = options;
-	const ids = await targetIds(target, matching);
+	const { table, label, columns, list, matching, change } = options;
+	const ids = await targetIds(target, list ?? matching);
 	const found = (await db
 		.select({ ...columns, id: table.id, label })
 		.from(table)

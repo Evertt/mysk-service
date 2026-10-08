@@ -6,7 +6,6 @@ import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
 
-import { ordersUrl } from "../../../routes/(app)/orders/orders-url.ts";
 import {
 	code,
 	defineList,
@@ -22,7 +21,7 @@ import {
 } from "./list-definition.ts";
 import { parseTableUrl, type TableUrlState } from "./url-state.ts";
 
-/** The orders list as `orders-url.ts` has it. */
+/** The orders list, as `orders-list.ts` defines it. */
 const ordersList = defineList({
 	columns: {
 		number: { sort: true },
@@ -56,8 +55,24 @@ const canonical: ListQuery<OrdersColumns> = {
 const accepts = (input: unknown) => v.safeParse(ordersList.query, input).success;
 
 describe("toUrlSpec", () => {
-	test("gives the spec orders-url.ts has", () => {
-		expect(ordersList.urlSpec).toEqual(ordersUrl);
+	test("gives the URL spec the orders list has had by hand", () => {
+		expect(ordersList.urlSpec).toEqual({
+			columns: [
+				{ id: "number", sortable: true },
+				{ id: "customer", sortable: true, groupable: true, filter: "set" },
+				{ id: "equipment", sortable: true, filter: "set" },
+				{ id: "type", sortable: true, groupable: true, filter: "set", values: orderTypes },
+				{ id: "status", sortable: true, groupable: true, filter: "set", values: orderStatuses },
+				{ id: "priority", sortable: true, groupable: true, filter: "set", values: orderPriorities },
+				{ id: "engineer", sortable: true, groupable: true, filter: "set" },
+				{ id: "scheduledFor", param: "scheduled", sortable: true },
+				{ id: "createdAt", param: "created", sortable: true },
+			],
+			defaults: {
+				sorting: [{ id: "createdAt", desc: true }],
+				pagination: { pageIndex: 0, pageSize: 20 },
+			},
+		});
 	});
 
 	test("has the defaults: group, filters and page sizes", () => {

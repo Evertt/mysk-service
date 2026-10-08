@@ -1,62 +1,55 @@
 import { query } from "$app/server";
 import { and, count, inArray, sql } from "drizzle-orm";
 
+import { queryKey } from "#lib/components/data-table/list-definition.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { tagOrders } from "#lib/server/modules.js";
 import { lineTotalSql, priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
-import {
-	facetCounts,
-	groupCounts,
-	pageGroupsOf,
-	planTable,
-	tableParams,
-} from "#lib/server/table-query.js";
+import { inTenant, requireMember } from "#lib/server/session.js";
+import { pageGroupsOf, planList } from "#lib/server/table-query.js";
 
-import { countOrders, ordersTable } from "./order-list.server.js";
+import { ordersSql, withOrderJoins } from "./order-list.server.js";
+import { ordersList } from "./orders-list.js";
 
 /**
  * A page of the orders list with their customer, equipment, engineer and totals, searched,
- * filtered, sorted and grouped as the URL's parameters say (`ordersUrl`, e.g.
- * `status=quote&page=2`), how many orders match in all, and, when grouped, what the table needs to
- * know of the page's groups.
+ * filtered, sorted and grouped as the query says (see `ordersList`), how many orders match in all,
+ * and, when grouped, what the table needs to know of the page's groups.
  */
-export const getOrders = query(tableParams, async (params) => {
+export const getOrders = query(ordersList.query, async (input) => {
 	requireMember();
-	const plan = planTable(ordersTable, params);
-	const [rows, [{ count: rowCount }], counts] = await Promise.all([
-		db
-			.select({
-				id: order.id,
-				number: order.number,
-				type: order.type,
-				status: order.status,
-				priority: order.priority,
-				description: order.description,
-				scheduledFor: order.scheduledFor,
-				completedAt: order.completedAt,
-				createdAt: order.createdAt,
-				laborHours: order.laborHours,
-				customer: { id: customer.id, code: customer.code, name: customer.name },
-				equipment: {
-					id: equipment.id,
-					model: equipment.model,
-					manufacturer: equipment.manufacturer,
-					serialNumber: equipment.serialNumber,
-				},
-				engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
-			})
-			.from(order)
-			.innerJoin(...tenantJoin(customer, order.customerId))
-			.leftJoin(...tenantJoin(equipment, order.equipmentId))
-			.leftJoin(...tenantJoin(engineer, order.engineerId))
-			.where(plan.where())
-			.orderBy(...plan.orderBy)
-			.limit(plan.limit)
-			.offset(plan.offset),
-		countOrders(plan.where()),
-		groupCounts(plan, countOrders),
+	const plan = planList(ordersSql(), input);
+	const [rows, rowCount, counts] = await Promise.all([
+		plan.paged(
+			withOrderJoins(
+				db
+					.select({
+						id: order.id,
+						number: order.number,
+						type: order.type,
+						status: order.status,
+						priority: order.priority,
+						description: order.description,
+						scheduledFor: order.scheduledFor,
+						completedAt: order.completedAt,
+						createdAt: order.createdAt,
+						laborHours: order.laborHours,
+						customer: { id: customer.id, code: customer.code, name: customer.name },
+						equipment: {
+							id: equipment.id,
+							model: equipment.model,
+							manufacturer: equipment.manufacturer,
+							serialNumber: equipment.serialNumber,
+						},
+						engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
+					})
+					.from(order)
+					.$dynamic(),
+			),
+		),
+		plan.count(),
+		plan.groupCounts(),
 	]);
 
 	// The page's lines (only, with the rows around it when grouped), to price it.
@@ -98,21 +91,23 @@ export const getOrders = query(tableParams, async (params) => {
 	return {
 		rows: priced.rows,
 		rowCount,
-		/** The state the rows are for (see `isStale`). */
-		key: plan.key,
+		/** The query the rows are for (its `where` is the target of "select all matching"). */
+		query: input,
+		/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
+		key: queryKey(input),
 		groups: pageGroupsOf(counts, priced),
 	};
 });
 
 /**
  * How many orders have each type, status and priority, for the counts in the list's filters: of
- * those matching the search and the other filters in the URL's parameters.
+ * those matching the search and the other filters.
  */
-export const getOrderFacets = query(tableParams, async (params) => {
+export const getOrderFacets = query(ordersList.where, async (where) => {
 	requireMember();
-	return facetCounts(
-		planTable(ordersTable, params),
-		{ type: order.type, status: order.status, priority: order.priority },
-		countOrders,
-	);
+	return planList(ordersSql(), where).facets({
+		type: order.type,
+		status: order.status,
+		priority: order.priority,
+	});
 });

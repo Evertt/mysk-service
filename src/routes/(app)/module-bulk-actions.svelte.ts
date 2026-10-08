@@ -3,14 +3,13 @@
  * `bulkActions` in `#lib/modules.ts`), e.g. invoicing's "Create invoice" on the orders list. They
  * load after the table, so `current` is empty at first (and for a tenant without such modules).
  */
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { type BulkActionRows, bulkActionLoaders, type BulkTableName } from "#lib/modules.js";
+import { bulkActionLoaders, type BulkTableName, type TableBulkAction } from "#lib/modules.js";
 
 import { getCurrentTenant } from "./session.remote.js";
 
 /** Call it while the table's component initializes. */
 export function moduleBulkActions<Table extends BulkTableName>(table: Table) {
-	let actions = $state.raw<BulkAction<BulkActionRows[Table]>[]>([]);
+	let actions = $state.raw<TableBulkAction<Table>[]>([]);
 	$effect(() => {
 		let current = true;
 		void (async () => {

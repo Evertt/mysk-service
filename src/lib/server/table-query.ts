@@ -14,10 +14,12 @@
  * const facets = await plan.facets({ status: order.status });
  * ```
  *
- * `ListSql` is built per request (a function), as `inTenant()` reads the request.
+ * `ListSql` is built per request (a function), as `inTenant()` reads the request. The orders list
+ * (`src/routes/(app)/orders/order-list.server.ts`) is the example.
  *
- * The older way (`planTable()`, a `ServerTable` and the table's URL parameters as a string) is
- * what the lists use until they have a definition; it is `planList()` underneath.
+ * TRANSITIONAL: the older way (`planTable()`, a `ServerTable` and the table's URL parameters as a
+ * string) is what the lists use until they have a definition (equipment and materials); it is
+ * `planList()` underneath.
  *
  * Grouped (see `#lib/components/data-table/grouping.ts`), the rows are sorted by the group first,
  * and the plan fetches one row more on either side of the page: `plan.page()` splits them off, for
@@ -51,8 +53,9 @@ import {
 } from "#lib/components/data-table/url-state.js";
 
 /**
- * The argument of a list's remote queries: the table's URL parameters as a search string (see
- * `serverTableQuery` in `#lib/components/data-table/server-table.svelte.ts`).
+ * TRANSITIONAL: the argument of the remote queries of a list without a definition: the table's URL
+ * parameters as a search string (see `serverTableQuery` in
+ * `#lib/components/data-table/server-table.svelte.ts`).
  */
 export const tableParams = v.pipe(v.string(), v.maxLength(4000));
 
