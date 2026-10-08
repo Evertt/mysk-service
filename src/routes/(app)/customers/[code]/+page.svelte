@@ -4,12 +4,12 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { countryName } from "#lib/customers/countries.js";
 	import SegmentBadge from "#lib/customers/segment-badge.svelte";
+	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 

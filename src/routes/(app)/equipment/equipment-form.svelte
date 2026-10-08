@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { categories } from "#lib/components/equipment/display.js";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.js";
+	import { categories } from "#lib/equipment/display.js";
 	import { labelOptions } from "#lib/i18n/labels.js";
 	import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 

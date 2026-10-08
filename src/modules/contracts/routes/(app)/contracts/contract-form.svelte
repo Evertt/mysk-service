@@ -7,13 +7,13 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import { toast } from "svelte-sonner";
 
-	import EquipmentStatusBadge from "#lib/components/equipment/status-badge.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.js";
+	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import { label } from "#lib/i18n/labels.js";
 
 	import { levels } from "../../../display.js";

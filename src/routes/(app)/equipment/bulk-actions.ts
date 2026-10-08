@@ -3,7 +3,7 @@ import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { statusOptions } from "#lib/components/equipment/display.js";
+import { statusOptions } from "#lib/equipment/display.js";
 import type { EquipmentStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
