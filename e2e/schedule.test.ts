@@ -142,6 +142,49 @@ describe("in North", () => {
 		);
 	});
 
+	test("the row of days stays at the top of the board, above the cards, when it scrolls", async () => {
+		const { page } = app;
+		/** Scrolls the board (not the page) and says where a day's header ends up. */
+		const scrollBoard = (date: Date, to: { top: number; left: number }) =>
+			page.evaluate(
+				({ day, label, to }) => {
+					const header = document.querySelector<HTMLElement>(`[data-day="${day}"]`)!;
+					let area = header.parentElement!;
+					while (getComputedStyle(area).overflowY !== "auto") area = area.parentElement!;
+					area.scrollTo(to);
+					const box = header.getBoundingClientRect();
+					const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+					// A cell in that day's column, further down.
+					const cell = document.querySelector(`[role="group"][aria-label$=" on ${label}"]`)!;
+					return {
+						scrolled: { top: area.scrollTop, left: area.scrollLeft },
+						page: document.scrollingElement!.scrollTop,
+						offset: box.top - area.getBoundingClientRect().top - area.clientTop,
+						covered: !header.contains(hit),
+						misaligned: cell.getBoundingClientRect().left - box.left,
+					};
+				},
+				{ day: dayKey(date), label: longDay(date), to },
+			);
+		const thursday = weekday(3);
+
+		// On a desktop screen the board is taller than the screen, and scrolls inside.
+		const down = await scrollBoard(thursday, { top: 600, left: 0 });
+		expect(down).toMatchObject({ page: 0, offset: 0, covered: false, misaligned: 0 });
+		expect(down.scrolled.top).toBe(600);
+
+		// On a narrower one it scrolls sideways too, and the days go along with their columns.
+		await page.setViewportSize({ width: 1100, height: 900 });
+		try {
+			const across = await scrollBoard(thursday, { top: 600, left: 150 });
+			expect(across).toMatchObject({ page: 0, offset: 0, covered: false, misaligned: 0 });
+			expect(across.scrolled.left).toBe(150);
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 1000 });
+			await scrollBoard(thursday, { top: 0, left: 0 });
+		}
+	});
+
 	test("the week is in the URL, and can be paged through", async () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Next week" }).click();
