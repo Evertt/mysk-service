@@ -218,5 +218,16 @@
 	"invoices_not_invoiced": "Not invoiced yet",
 	"invoices_voided_list": "Voided: {numbers}",
 	"invoices_new_for_customer": "New invoice for this customer",
-	"invoices_once_completed": "It can be invoiced once it's completed."
+	"invoices_once_completed": "It can be invoiced once it's completed.",
+	"invoices_bulk_create": "Create invoice",
+	"invoices_bulk_create_title": "Create an invoice for {orders}?",
+	"invoices_bulk_create_description": "A draft invoice for their customer, with those that are completed and not on an invoice yet. You can check it before issuing it.",
+	"invoices_bulk_created": "{count} on a new draft",
+	"invoices_bulk_one_customer": "Select orders of one customer",
+	"invoices_bulk_not_completed": "{number} isn't completed",
+	"invoices_bulk_already_billed": "{number} is on an invoice already",
+	"invoices_bulk_mark_paid_title": "Mark the selected invoices paid?",
+	"invoices_bulk_mark_paid_description": "Records that they were paid today. Only sent invoices can be marked paid.",
+	"invoices_bulk_marked_paid": "{count} marked paid",
+	"invoices_bulk_not_sent": "{number} isn't a sent invoice"
 }

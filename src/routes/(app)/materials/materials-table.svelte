@@ -1,9 +1,11 @@
 <script lang="ts">
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { stockLevelOptions, unitOptions } from "#lib/components/materials/display.js";
 
+	import { deleteMaterials } from "./bulk-actions.js";
 	import { columns, type MaterialRow } from "./columns.js";
 	import { materialsUrl } from "./materials-url.js";
 
@@ -53,6 +55,10 @@
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.materials_empty()} fillViewport loading={loading.current} />
+		<BulkActionBar
+			actions={[deleteMaterials]}
+			matching={{ key: materials.key, count: materials.rowCount }}
+		/>
 		<table.Pagination />
 	</div>
 </table.AppTable>

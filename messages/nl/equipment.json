@@ -160,5 +160,9 @@
 				"countPlural=*": "{countText} dagen"
 			}
 		}
-	]
+	],
+	"equipment_bulk_status": "Status wijzigen",
+	"equipment_bulk_status_title": "Status van de geselecteerde apparaten wijzigen",
+	"equipment_bulk_delete_title": "Geselecteerde apparaten verwijderen?",
+	"equipment_bulk_delete_description": "De apparaten worden definitief verwijderd. Apparaten met opdrachten kun je niet verwijderen; voer ze in plaats daarvan af."
 }

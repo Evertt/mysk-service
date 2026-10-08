@@ -160,5 +160,9 @@
 				"countPlural=*": "{countText} days"
 			}
 		}
-	]
+	],
+	"equipment_bulk_status": "Change status",
+	"equipment_bulk_status_title": "Change the status of the selected units",
+	"equipment_bulk_delete_title": "Delete the selected units?",
+	"equipment_bulk_delete_description": "The units are removed permanently. Units with orders can't be deleted; decommission them instead."
 }

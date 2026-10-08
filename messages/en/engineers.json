@@ -98,5 +98,9 @@
 	"engineers_account_save": "Save account",
 	"engineers_account_saved": "Account saved",
 	"engineers_account_not_member": "Choose a member of this organization",
-	"engineers_account_taken": "This account is already linked to {name}"
+	"engineers_account_taken": "This account is already linked to {name}",
+	"engineers_bulk_activate": "Activate",
+	"engineers_bulk_deactivate": "Deactivate",
+	"engineers_bulk_already_active": "{name} is active already",
+	"engineers_bulk_already_inactive": "{name} is inactive already"
 }

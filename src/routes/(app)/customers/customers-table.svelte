@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { countryOptions } from "#lib/components/customers/countries.js";
 	import { segmentOptions } from "#lib/components/customers/display.js";
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 
+	import { deleteCustomers } from "./bulk-actions.js";
 	import { columns, type CustomerRow } from "./columns.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -37,6 +39,7 @@
 			<FacetedFilter columnId="country" title={m.customers_column_country()} options={countries} />
 		</table.Toolbar>
 		<table.Table emptyTitle={m.customers_empty()} fillViewport />
+		<BulkActionBar actions={[deleteCustomers]} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -8,24 +8,23 @@ import { lineNote } from "#lib/components/invoicing/activity.js";
 import {
 	canChange,
 	dueDate,
-	invoiceNumber,
 	invoiceState,
 	invoiceTotals,
 	isEditable,
 	lineAmount,
-	SEQUENCE_START,
 	today,
 } from "#lib/components/invoicing/invoice.js";
-import { formatCents } from "#lib/format.js";
 import type { InvoiceStatus, OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, invoicingSettings, order } from "#lib/server/db/schema.js";
 import {
 	alreadyBilled,
 	billableFor,
+	createDraft,
 	invoiceById,
 	linesFor,
 	loadInvoice,
@@ -170,61 +169,16 @@ const loggedLine = {
  * tenant's next number (see `invoiceNumber`), and the tenant's payment term and VAT rate.
  */
 export const createInvoice = form(v.object(newInvoiceFields), async (input, issue) => {
-	const { organizationId } = requireModule("invoicing");
-	const owner = await db.query.customer.findFirst({
-		columns: { id: true },
-		where: and(eq(customer.id, input.customerId), inTenant(customer)),
-	});
-	if (!owner) invalid(issue.customerId(m.invoices_unknown_customer()));
-
-	const { lines, unknownOrders, unknownItems } = await linesFor(
-		input.customerId,
-		input.orderIds,
-		input.items,
-	);
-	if (unknownOrders.length) invalid(issue.orderIds(m.invoices_only_billable_orders()));
-	if (unknownItems.length) invalid(issue.items(m.invoices_only_billable_items()));
-	if (!lines.length) invalid(m.invoices_choose_something());
-
-	const settings = await settingsOf(organizationId);
-	const number = await db.transaction(async (tx) => {
-		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
-		const [last] = await tx
-			.select({
-				sequence: sql<
-					number | null
-				>`max(cast(substr(${invoice.number}, ${SEQUENCE_START}) as integer))`,
-			})
-			.from(invoice)
-			.where(inTenant(invoice));
-		const number = invoiceNumber(new Date().getFullYear(), (last?.sequence ?? 0) + 1);
-		const [created] = await tx
-			.insert(invoice)
-			.values({
-				organizationId,
-				number,
-				customerId: input.customerId,
-				status: "draft",
-				paymentTermDays: settings.paymentTermDays,
-				vatRate: settings.vatRate,
-			})
-			.returning({ id: invoice.id });
-		await tx
-			.insert(invoiceLine)
-			.values(lines.map((line) => ({ ...line, organizationId, invoiceId: created.id })));
-		const total = lines.reduce((sum, line) => sum + line.amount, 0);
-		await recordActivity(tx, {
-			action: "created",
-			subject: subjectOf({ id: created.id, number }),
-			// In the language of whoever made it, like the lines.
-			note: m.invoices_created_note({ count: lines.length, amount: formatCents(total) }),
-		});
-		return number;
-	});
+	requireModule("invoicing");
+	const created = await createDraft(input);
+	if ("problem" in created) {
+		const { field, message } = created.problem;
+		invalid(field ? issue[field](message) : message);
+	}
 	void getInvoices().refresh();
 	// The draft's page offers what's left to bill.
 	void getBillable(input.customerId).refresh();
-	redirect(303, `/invoices/${number}`);
+	redirect(303, `/invoices/${created.number}`);
 });
 
 /** The tenant's draft by id, inside a transaction; refuses anything else. */
@@ -453,10 +407,12 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 	changed(found);
 });
 
-/** Records that a sent invoice was paid, today. */
-export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("invoicing");
-	const found = await db.transaction(async (tx) => {
+/**
+ * Records that one of the tenant's sent invoices was paid, today; refuses any other. The invoice's
+ * page and the list's bulk action share it.
+ */
+function payInvoice(id: number) {
+	return db.transaction(async (tx) => {
 		const found = await changing(tx, id, "paid");
 		await tx
 			.update(invoice)
@@ -465,7 +421,31 @@ export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
 		await recordActivity(tx, { action: "paid", subject: subjectOf(found) });
 		return found;
 	});
-	changed(found);
+}
+
+/** Records that a sent invoice was paid, today. */
+export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
+	requireModule("invoicing");
+	changed(await payInvoice(id));
+});
+
+/** Marks the selected invoices paid, today: the sent ones (see `canChange`). */
+export const bulkMarkPaid = command(bulkTarget, async (target) => {
+	requireModule("invoicing");
+	const ids = await targetIds(target);
+	const found = await db
+		.select({ id: invoice.id, number: invoice.number })
+		.from(invoice)
+		.where(and(inArray(invoice.id, ids), inTenant(invoice)))
+		.orderBy(invoice.number);
+	const result = await forEachRecord(
+		found,
+		ids.length,
+		(each) => each.number,
+		(each) => payInvoice(each.id),
+	);
+	void getInvoices().refresh();
+	return result;
 });
 
 /**

@@ -218,5 +218,16 @@
 	"invoices_not_invoiced": "Nog niet gefactureerd",
 	"invoices_voided_list": "Geannuleerd: {numbers}",
 	"invoices_new_for_customer": "Nieuwe factuur voor deze klant",
-	"invoices_once_completed": "Je kunt de opdracht factureren zodra die is afgerond."
+	"invoices_once_completed": "Je kunt de opdracht factureren zodra die is afgerond.",
+	"invoices_bulk_create": "Factuur maken",
+	"invoices_bulk_create_title": "Factuur maken voor {orders}?",
+	"invoices_bulk_create_description": "Een conceptfactuur voor hun klant, met de opdrachten die afgerond zijn en nog niet op een factuur staan. Je kunt hem controleren voordat je hem verstuurt.",
+	"invoices_bulk_created": "{count} op een nieuw concept",
+	"invoices_bulk_one_customer": "Selecteer opdrachten van één klant",
+	"invoices_bulk_not_completed": "{number} is niet afgerond",
+	"invoices_bulk_already_billed": "{number} staat al op een factuur",
+	"invoices_bulk_mark_paid_title": "Geselecteerde facturen markeren als betaald?",
+	"invoices_bulk_mark_paid_description": "Legt vast dat ze vandaag betaald zijn. Alleen verstuurde facturen kun je markeren als betaald.",
+	"invoices_bulk_marked_paid": "{count} gemarkeerd als betaald",
+	"invoices_bulk_not_sent": "{number} is geen verstuurde factuur"
 }

@@ -7,11 +7,14 @@
  * A module keeps to itself so it can be switched off: its routes live under `route`, its
  * components in `#lib/components/<id>/`, and its tables reference the core tables, never the
  * other way round. Core pages and core server code don't import a module's code; they take what
- * the tenant's modules contribute through two registries:
+ * the tenant's modules contribute through these registries:
  *
  * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
  *   of equipment's page), rendered by `module-slots.svelte` in `src/routes/(app)/` only for the
  *   modules the tenant has;
+ * - here too, `bulkActions`: actions a module adds to a core table's selection (e.g. invoicing's
+ *   "Create invoice" on the orders list), loaded by `module-bulk-actions.svelte.ts` in
+ *   `src/routes/(app)/` only for the modules the tenant has;
  * - `#lib/server/modules.ts`: server hooks, e.g. adjusting an order's price (applied by
  *   `priceOrders()` in `#lib/server/pricing.ts`) or tagging orders (`tagOrders()`).
  */
@@ -22,7 +25,9 @@ import type { Component } from "svelte";
 
 import type { SubjectType } from "#lib/activity.js";
 import { contractSubjects } from "#lib/components/contracts/activity.js";
+import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { invoicingSubjects } from "#lib/components/invoicing/activity.js";
+import type { OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 /** The places on core pages where modules can add components, with the props each passes. */
@@ -58,7 +63,32 @@ export interface AppModule {
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity.ts`). */
 	subjects?: Record<string, SubjectType>;
+	/**
+	 * Bulk actions the module adds to core tables' selections (see `BulkActionRows`), after the
+	 * table's own. Their commands start with `requireModule()`.
+	 */
+	bulkActions?: { [Table in BulkTableName]?: BulkActionLoader<Table> };
 }
+
+/** An order as a module's bulk action sees a selected row of the orders list. */
+export interface OrderBulkRow {
+	id: number;
+	number: string;
+	status: OrderStatus;
+	customer: { id: number; code: string; name: string };
+}
+
+/** The core tables where modules can add bulk actions, with the rows each passes. */
+export interface BulkActionRows {
+	orders: OrderBulkRow;
+}
+
+export type BulkTableName = keyof BulkActionRows;
+
+/** Loads a module's bulk actions for a table, so a tenant without the module doesn't download them. */
+export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
+	default: BulkAction<BulkActionRows[Table]>[];
+}>;
 
 export const modules = [
 	{
@@ -93,6 +123,9 @@ export const modules = [
 			order: () => import("#lib/components/invoicing/order-invoice.svelte"),
 		},
 		subjects: invoicingSubjects,
+		bulkActions: {
+			orders: () => import("#lib/components/invoicing/order-bulk-actions.js"),
+		},
 	},
 ] as const satisfies readonly AppModule[];
 
@@ -105,6 +138,17 @@ export function slotLoaders<Name extends SlotName>(
 ): SlotLoader<Name>[] {
 	return (modules as readonly AppModule[]).flatMap((module) => {
 		const load = module.slots?.[name];
+		return load && enabled.includes(module.id) ? [load] : [];
+	});
+}
+
+/** The loaders of the bulk actions that the `enabled` modules add to `table`, in registry order. */
+export function bulkActionLoaders<Table extends BulkTableName>(
+	table: Table,
+	enabled: readonly string[],
+): BulkActionLoader<Table>[] {
+	return (modules as readonly AppModule[]).flatMap((module) => {
+		const load = module.bulkActions?.[table];
 		return load && enabled.includes(module.id) ? [load] : [];
 	});
 }

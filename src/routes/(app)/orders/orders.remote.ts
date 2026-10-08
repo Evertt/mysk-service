@@ -1,4 +1,4 @@
-import { form, query, type RemoteFormInvalidField } from "$app/server";
+import { command, form, query, type RemoteFormInvalidField, requested } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import {
 	and,
@@ -14,10 +14,18 @@ import {
 } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isDoneOrder, isEditableOrder, lineTotal, orderPriorities } from "#lib/models.js";
+import {
+	isDoneOrder,
+	isEditableOrder,
+	lineTotal,
+	manualOrderStatuses,
+	type OrderStatus,
+	orderPriorities,
+} from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { atTime, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, type BulkTargetInput, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -30,7 +38,12 @@ import {
 	stockMovement,
 } from "#lib/server/db/schema.js";
 import { orderSaved, tagOrders } from "#lib/server/modules.js";
-import { checkLines, type LineProblem, saveOrderLines } from "#lib/server/orders.js";
+import {
+	assigneeProblem,
+	checkLines,
+	type LineProblem,
+	saveOrderLines,
+} from "#lib/server/orders.js";
 import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
@@ -294,6 +307,10 @@ const notEditable = (number: string, change: "changed" | "deleted") =>
 		? m.orders_invoiced_cant_change({ number })
 		: m.orders_invoiced_cant_delete({ number });
 
+/** When an order with `status` was completed: kept from before, set when it's done, else none. */
+const completedAt = (status: OrderStatus, existing?: { completedAt: Date | null }) =>
+	isDoneOrder(status) ? (existing?.completedAt ?? new Date()) : null;
+
 /**
  * Creates or updates an order in the current tenant and replaces its lines; returns its number.
  * The lines take their materials from stock while the status holds stock (see `holdsStock`); if
@@ -302,7 +319,6 @@ const notEditable = (number: string, change: "changed" | "deleted") =>
 async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { organizationId } = requireMember();
 	const { lines, scheduledTime, ...fields } = input;
-	const completed = isDoneOrder(fields.status);
 
 	return db.transaction(async (tx) => {
 		const existing = id
@@ -320,7 +336,7 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 			...fields,
 			scheduledFor: fields.scheduledFor && atTime(fields.scheduledFor, scheduledTime ?? "00:00"),
 			// Keep the original completion date; set or clear it when the status changes.
-			completedAt: completed ? (existing?.completedAt ?? new Date()) : null,
+			completedAt: completedAt(fields.status, existing),
 		};
 
 		let orderId: number;
@@ -437,8 +453,12 @@ export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (d
 	redirect(303, `/orders/${number}`);
 });
 
-export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+/**
+ * Deletes one of the current tenant's orders; what it held goes back into stock. Refuses an
+ * invoiced order, and one that an optional module's record (e.g. an invoice) still refers to; a
+ * 404 if there's no such order. The order's page and the list's bulk delete share it.
+ */
+async function removeOrder(id: number) {
 	const deleting = db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
 			columns: { id: true, number: true, status: true },
@@ -464,5 +484,165 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
 	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
+}
+
+export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
+	requireMember();
+	await removeOrder(id);
 	redirect(303, "/orders");
+});
+
+// --- Bulk actions on the list's selected orders (see `bulk-actions.ts`) ------------------------
+
+/** The ids of the tenant's orders matching the list's search and filters (`ordersUrl`). */
+async function matchingOrderIds(params: string, limit: number) {
+	const rows = await db
+		.select({ id: order.id })
+		.from(order)
+		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+		.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
+		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.where(planTable(ordersTable, params).where())
+		.orderBy(order.id)
+		.limit(limit);
+	return rows.map((row) => row.id);
+}
+
+/**
+ * The orders a bulk action acts on, of the current tenant only (another tenant's ids aren't
+ * found), and how many it asked for.
+ */
+async function targetOrders(target: BulkTargetInput) {
+	const ids = await targetIds(target, matchingOrderIds);
+	const found = await db
+		.select({ id: order.id, number: order.number })
+		.from(order)
+		.where(and(inArray(order.id, ids), inTenant(order)))
+		.orderBy(order.number);
+	return { found, asked: ids.length };
+}
+
+/** Refreshes the pages of the list and its filters' counts that the client asked for. */
+async function refreshList() {
+	await requested(getOrders, 4).refreshAll();
+	await requested(getOrderFacets, 4).refreshAll();
+}
+
+/**
+ * Gives one of the tenant's orders another status, as saving it in the order form would: not an
+ * invoiced one; its completion date set or cleared; its materials taken from or returned to stock
+ * (refused if there isn't enough). A 404 if there's no such order.
+ */
+async function changeOrderStatus(id: number, status: OrderStatus) {
+	try {
+		await db.transaction(async (tx) => {
+			const found = await tx.query.order.findFirst({
+				where: and(eq(order.id, id), inTenant(order)),
+				with: { lines: true },
+			});
+			if (!found) error(404, m.orders_not_found_plain());
+			if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
+			if (found.status === status) return;
+			const values = { status, completedAt: completedAt(status, found) };
+			await tx
+				.update(order)
+				.set(values)
+				.where(and(eq(order.id, id), inTenant(order)));
+			await moveOrderStock(tx, found, found, { status, lines: found.lines });
+			const subject = { type: "order", id, label: found.number };
+			const ignore = ["completedAt"];
+			await recordActivity(tx, {
+				action: "updated",
+				subject,
+				before: found,
+				after: values,
+				ignore,
+			});
+		});
+	} catch (error) {
+		// Thrown, so the transaction stores nothing of it.
+		if (error instanceof OrderStockShortage) invalid(error.message);
+		throw error;
+	}
+}
+
+/** Assigns one of the tenant's orders to an engineer (checked already), or to nobody. */
+async function assignOrder(id: number, engineerId: number | null) {
+	await db.transaction(async (tx) => {
+		const found = await tx.query.order.findFirst({
+			columns: { id: true, number: true, status: true, engineerId: true },
+			where: and(eq(order.id, id), inTenant(order)),
+		});
+		if (!found) error(404, m.orders_not_found_plain());
+		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
+		if (found.engineerId === engineerId) return;
+		await tx
+			.update(order)
+			.set({ engineerId })
+			.where(and(eq(order.id, id), inTenant(order)));
+		const subject = { type: "order", id, label: found.number };
+		await recordActivity(tx, { action: "updated", subject, before: found, after: { engineerId } });
+	});
+}
+
+/** The tenant's active engineers, to assign orders to. */
+export const getAssignableEngineers = query(async () => {
+	requireMember();
+	return db
+		.select({ id: engineer.id, name: engineer.name })
+		.from(engineer)
+		.where(and(inTenant(engineer), eq(engineer.active, true)))
+		.orderBy(asc(engineer.name));
+});
+
+/** Assigns the selected orders to an active engineer of the tenant, or to nobody (`null`). */
+export const bulkAssignOrders = command(
+	v.object({ target: bulkTarget, engineerId: v.nullable(v.pipe(v.number(), v.integer())) }),
+	async ({ target, engineerId }) => {
+		requireMember();
+		if (engineerId !== null) {
+			const problem = await assigneeProblem(engineerId);
+			if (problem) error(400, problem);
+		}
+		const { found, asked } = await targetOrders(target);
+		const result = await forEachRecord(
+			found,
+			asked,
+			(o) => o.number,
+			(o) => assignOrder(o.id, engineerId),
+		);
+		await refreshList();
+		return result;
+	},
+);
+
+/** Gives the selected orders a status that can be given by hand (`manualOrderStatuses`). */
+export const bulkSetOrderStatus = command(
+	v.object({ target: bulkTarget, status: v.picklist(manualOrderStatuses) }),
+	async ({ target, status }) => {
+		requireMember();
+		const { found, asked } = await targetOrders(target);
+		const result = await forEachRecord(
+			found,
+			asked,
+			(o) => o.number,
+			(o) => changeOrderStatus(o.id, status),
+		);
+		await refreshList();
+		return result;
+	},
+);
+
+/** Deletes the selected orders, with the same refusals as deleting one. */
+export const bulkDeleteOrders = command(bulkTarget, async (target) => {
+	requireMember();
+	const { found, asked } = await targetOrders(target);
+	const result = await forEachRecord(
+		found,
+		asked,
+		(o) => o.number,
+		(o) => removeOrder(o.id),
+	);
+	await refreshList();
+	return result;
 });

@@ -1,12 +1,13 @@
-import { form, query } from "$app/server";
+import { command, form, query, requested } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
-import { openOrderStatuses } from "#lib/models.js";
+import { equipmentStatuses, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, type BulkTargetInput, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
@@ -263,8 +264,11 @@ export const updateEquipment = form(
 	},
 );
 
-export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+/**
+ * Deletes one of the tenant's units; refuses one that orders (or an optional module's records)
+ * refer to. A 404 if there's no such unit. The unit's page and the list's bulk delete share it.
+ */
+async function removeEquipment(id: number) {
 	const existing = await db.query.equipment.findFirst({
 		columns: { id: true, serialNumber: true },
 		where: and(eq(equipment.id, id), inTenant(equipment)),
@@ -286,5 +290,81 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 			}),
 		m.equipment_delete_referenced(),
 	);
+}
+
+export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
+	requireMember();
+	await removeEquipment(id);
 	redirect(303, "/equipment");
+});
+
+// --- Bulk actions on the list's selected units (see `bulk-actions.ts`) -------------------------
+
+/** The ids of the tenant's units matching the list's search and filters (`equipmentUrl`). */
+async function matchingEquipmentIds(params: string, limit: number) {
+	const rows = await db
+		.select({ id: equipment.id })
+		.from(equipment)
+		.innerJoin(customer, and(eq(equipment.customerId, customer.id), inTenant(customer)))
+		.where(planTable(equipmentTable(), params).where())
+		.orderBy(equipment.id)
+		.limit(limit);
+	return rows.map((row) => row.id);
+}
+
+/** The tenant's units a bulk action acts on (another tenant's ids aren't found). */
+async function targetEquipment(target: BulkTargetInput) {
+	const ids = await targetIds(target, matchingEquipmentIds);
+	const found = await db
+		.select({ id: equipment.id, serialNumber: equipment.serialNumber, status: equipment.status })
+		.from(equipment)
+		.where(and(inArray(equipment.id, ids), inTenant(equipment)))
+		.orderBy(equipment.serialNumber);
+	return { found, asked: ids.length };
+}
+
+/** Refreshes the pages of the list and its filters' counts that the client asked for. */
+async function refreshList() {
+	await requested(getEquipmentList, 4).refreshAll();
+	await requested(getEquipmentFacets, 4).refreshAll();
+}
+
+/** Gives the selected units another status, e.g. decommissioned. */
+export const bulkSetEquipmentStatus = command(
+	v.object({ target: bulkTarget, status: v.picklist(equipmentStatuses) }),
+	async ({ target, status }) => {
+		requireMember();
+		const { found, asked } = await targetEquipment(target);
+		const result = await forEachRecord(
+			found,
+			asked,
+			(unit) => unit.serialNumber,
+			(unit) =>
+				db.transaction(async (tx) => {
+					if (unit.status === status) return;
+					await tx
+						.update(equipment)
+						.set({ status })
+						.where(and(eq(equipment.id, unit.id), inTenant(equipment)));
+					const subject = { type: "equipment", id: unit.id, label: unit.serialNumber };
+					await recordActivity(tx, { action: "updated", subject, before: unit, after: { status } });
+				}),
+		);
+		await refreshList();
+		return result;
+	},
+);
+
+/** Deletes the selected units, with the same refusals as deleting one. */
+export const bulkDeleteEquipment = command(bulkTarget, async (target) => {
+	requireMember();
+	const { found, asked } = await targetEquipment(target);
+	const result = await forEachRecord(
+		found,
+		asked,
+		(unit) => unit.serialNumber,
+		(unit) => removeEquipment(unit.id),
+	);
+	await refreshList();
+	return result;
 });

@@ -8,23 +8,28 @@
  * monthly fees). Either is billed while it's on an invoice that isn't void: on a draft, or sent or
  * paid. Issuing an invoice marks its orders invoiced; voiding a sent one puts them back.
  */
-import { error } from "@sveltejs/kit";
+import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
 import {
+	invoiceNumber,
 	invoiceState,
 	invoiceTotals,
 	itemLine,
 	type LineDraft,
 	orderLines,
+	SEQUENCE_START,
 	today,
 } from "#lib/components/invoicing/invoice.js";
 // The module's queries, to refresh; they use this file in turn.
 import { getOrderInvoice } from "#lib/components/invoicing/invoicing.remote.js";
+import { formatCents } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
+import { recordActivity } from "./activity.ts";
 import { db } from "./db/index.ts";
 import {
+	customer,
 	engineer,
 	invoice,
 	invoiceLine,
@@ -210,6 +215,81 @@ export async function alreadyBilled(
 				),
 			),
 		);
+}
+
+/** Why a draft can't be made, at the field it's about (if any). */
+export interface DraftProblem {
+	field?: "customerId" | "orderIds" | "items";
+	message: string;
+}
+
+/**
+ * Makes a draft invoice for one of the tenant's customers with the chosen completed orders and
+ * other modules' items, all of which must be billable (see `linesFor`). It gets the tenant's next
+ * number (see `invoiceNumber`), payment term and VAT rate. Returns its number, or what's wrong;
+ * refuses with `invalid()` if another request billed some of it meanwhile. The new invoice form
+ * and the orders list's "Create invoice" share it.
+ */
+export async function createDraft(input: {
+	customerId: number;
+	orderIds: number[];
+	items: string[];
+}): Promise<{ id: number; number: string } | { problem: DraftProblem }> {
+	const { organizationId } = requireMember();
+	const owner = await db.query.customer.findFirst({
+		columns: { id: true },
+		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+	});
+	if (!owner) return { problem: { field: "customerId", message: m.invoices_unknown_customer() } };
+
+	const { lines, unknownOrders, unknownItems } = await linesFor(
+		input.customerId,
+		input.orderIds,
+		input.items,
+	);
+	if (unknownOrders.length) {
+		return { problem: { field: "orderIds", message: m.invoices_only_billable_orders() } };
+	}
+	if (unknownItems.length) {
+		return { problem: { field: "items", message: m.invoices_only_billable_items() } };
+	}
+	if (!lines.length) return { problem: { message: m.invoices_choose_something() } };
+
+	const settings = await settingsOf(organizationId);
+	return db.transaction(async (tx) => {
+		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
+		const [last] = await tx
+			.select({
+				sequence: sql<
+					number | null
+				>`max(cast(substr(${invoice.number}, ${SEQUENCE_START}) as integer))`,
+			})
+			.from(invoice)
+			.where(inTenant(invoice));
+		const number = invoiceNumber(new Date().getFullYear(), (last?.sequence ?? 0) + 1);
+		const [created] = await tx
+			.insert(invoice)
+			.values({
+				organizationId,
+				number,
+				customerId: input.customerId,
+				status: "draft",
+				paymentTermDays: settings.paymentTermDays,
+				vatRate: settings.vatRate,
+			})
+			.returning({ id: invoice.id });
+		await tx
+			.insert(invoiceLine)
+			.values(lines.map((line) => ({ ...line, organizationId, invoiceId: created.id })));
+		const total = lines.reduce((sum, line) => sum + line.amount, 0);
+		await recordActivity(tx, {
+			action: "created",
+			subject: { type: "invoice", id: created.id, label: number },
+			// In the language of whoever made it, like the lines.
+			note: m.invoices_created_note({ count: lines.length, amount: formatCents(total) }),
+		});
+		return { id: created.id, number };
+	});
 }
 
 /** One of the tenant's invoices with its customer, lines and totals, or a 404. */

@@ -1,0 +1,33 @@
+/**
+ * The invoicing module's bulk actions on the orders list (see `bulkActions` in `#lib/modules.ts`):
+ * a draft invoice for the selected completed orders of one customer, which then opens.
+ */
+import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
+
+import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { OrderBulkRow } from "#lib/modules.js";
+import { m } from "#lib/paraglide/messages.js";
+
+import { invoiceOrders } from "./bulk.remote.js";
+
+export const createInvoice: BulkAction<OrderBulkRow> = {
+	id: "invoicing:create-invoice",
+	label: m.invoices_bulk_create,
+	icon: ReceiptTextIcon,
+	// Whether one is on an invoice already, only the server knows.
+	skip: (row) =>
+		row.status === "completed" ? undefined : m.invoices_bulk_not_completed({ number: row.number }),
+	disabled: (rows) =>
+		new Set(rows.map((row) => row.customer.id)).size > 1
+			? m.invoices_bulk_one_customer()
+			: undefined,
+	matching: false,
+	confirm: {
+		title: (count) => m.invoices_bulk_create_title({ orders: m.common_count_orders({ count }) }),
+		description: m.invoices_bulk_create_description,
+	},
+	run: (target) => invoiceOrders(target),
+	done: m.invoices_bulk_created,
+};
+
+export default [createInvoice];

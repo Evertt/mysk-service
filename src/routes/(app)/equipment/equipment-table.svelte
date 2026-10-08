@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
@@ -6,6 +7,7 @@
 	import { categoryOptions, statusOptions } from "#lib/components/equipment/display.js";
 
 	import { getCustomerOptions } from "../filter-options.remote.js";
+	import { changeStatus, deleteEquipment } from "./bulk-actions.js";
 	import { columns, type EquipmentRow } from "./columns.js";
 	import { equipmentUrl } from "./equipment-url.js";
 
@@ -80,6 +82,10 @@
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.equipment_empty()} fillViewport loading={loading.current} />
+		<BulkActionBar
+			actions={[changeStatus, deleteEquipment]}
+			matching={{ key: equipment.key, count: equipment.rowCount }}
+		/>
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -246,7 +246,10 @@
 			{...navigation.body}
 			class={cn("transition-opacity", loading && "opacity-50 delay-150")}
 		>
-			{#each table.getRowModel().rows as row (row.id)}
+			<!-- Keyed by the row itself, not its id: Svelte doesn't update a kept item, and when the data
+			     changes (e.g. a bulk action's refresh) a row with the same id is a new row object with
+			     the new values. Sorting, filtering and paging keep the row objects. -->
+			{#each table.getRowModel().rows as row (row)}
 				<Table.Row
 					data-state={row.getIsSelected() ? "selected" : undefined}
 					data-row-id={row.id}
