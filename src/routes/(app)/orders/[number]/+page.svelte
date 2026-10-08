@@ -39,18 +39,14 @@
 	<title>{m.orders_page_title({ number: order.number })}</title>
 </svelte:head>
 
-<PageHeader title={order.number} description={order.description}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/orders")}>{m.orders_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{order.number}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
+<PageHeader
+	title={order.number}
+	description={order.description}
+	breadcrumbs={[
+		{ label: m.orders_title(), href: resolve("/(app)/orders") },
+		{ label: order.number },
+	]}
+>
 	{#snippet badges()}
 		<StatusBadge status={order.status} />
 		<OrderTags tags={data.tags} />

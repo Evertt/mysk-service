@@ -37,3 +37,43 @@ test("puts breadcrumbs above the title, badges next to it and actions on the rig
 	expect(badge.parentElement).toBe(heading.parentElement);
 	expect(heading.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
+
+test("shows breadcrumbs as links, with the last item as the current page", async () => {
+	render(PageHeader, {
+		title: "WO-2026-0042",
+		breadcrumbs: [
+			{ label: "Orders", href: "/orders" },
+			{ label: "WO-2026-0042", href: "/orders/WO-2026-0042" },
+			{ label: "Edit" },
+		],
+	});
+
+	const nav = page.getByRole("navigation", { name: "Breadcrumb" });
+	await expect
+		.element(nav.getByRole("link", { name: "Orders" }))
+		.toHaveAttribute("href", "/orders");
+	await expect
+		.element(nav.getByRole("link", { name: "WO-2026-0042" }))
+		.toHaveAttribute("href", "/orders/WO-2026-0042");
+	await expect.element(nav.getByText("Edit")).toHaveAttribute("aria-current", "page");
+	expect(nav.element().querySelectorAll("a[href]")).toHaveLength(2);
+});
+
+test("puts breadcrumbs before anything else passed as children", async () => {
+	render(PageHeader, {
+		title: "Customers",
+		breadcrumbs: [{ label: "Customers" }],
+		children: html('<p data-testid="extra">Extra</p>'),
+	});
+
+	const nav = page.getByRole("navigation", { name: "Breadcrumb" }).element();
+	const extra = page.getByTestId("extra").element();
+
+	expect(nav.compareDocumentPosition(extra)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+});
+
+test("renders no breadcrumbs without the prop", async () => {
+	const { container } = await render(PageHeader, { title: "Customers" });
+
+	expect(container.querySelector("nav")).toBeNull();
+});
