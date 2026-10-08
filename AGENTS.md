@@ -15,7 +15,7 @@
 Put a module next to the code that uses it, in the nearest folder that contains all of its users.
 
 - **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
-- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/orders.remote.ts` serves `/orders` and `/orders/[number]`, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../orders.remote.js`).
+- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.js`).
 - **Used across unrelated parts of the app**, or generic and route-independent (shared UI such as `#lib/components/data-table`, themes, formatting, domain enums): in `src/lib`, imported via `#lib/...`.
 - **Server-only code** (database, secrets, auth): always in `src/lib/server/`, whoever uses it, so SvelteKit keeps it out of client bundles.
 
