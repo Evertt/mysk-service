@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
-import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { drizzleQueued } from "./serialize.ts";
+import { afterCommit, drizzleQueued } from "./serialize.ts";
 
 describe("drizzleQueued", () => {
 	// A file, not `:memory:`: transactions get a connection of their own, as in the app.
@@ -79,5 +79,105 @@ describe("drizzleQueued", () => {
 		});
 		await expect(failed).rejects.toThrow("Changed my mind");
 		expect(await create(db)).toBe("1");
+	});
+
+	describe("afterCommit", () => {
+		const insert = (tx: ReturnType<typeof open>, code: string) =>
+			tx.run(sql`insert into thing (code) values (${code})`);
+
+		it("runs the callbacks once the transaction has committed, in order", async () => {
+			const db = open(true);
+			const seen: unknown[] = [];
+			const result = await db.transaction(async (tx) => {
+				afterCommit(() => void seen.push("first"));
+				await insert(tx, "1");
+				afterCommit(async () => {
+					seen.push("second", await db.all(sql`select code from thing`));
+				});
+				seen.push("in the transaction");
+				return "done";
+			});
+			expect(result).toBe("done");
+			expect(seen).toEqual(["in the transaction", "first", "second", [{ code: "1" }]]);
+		});
+
+		it("runs none when the transaction rolls back", async () => {
+			const db = open(true);
+			const callback = vi.fn();
+			const failed = db.transaction(async (tx) => {
+				await insert(tx, "1");
+				afterCommit(callback);
+				throw new Error("Changed my mind");
+			});
+			await expect(failed).rejects.toThrow("Changed my mind");
+			expect(callback).not.toHaveBeenCalled();
+			// Nor does it leak into the next transaction.
+			await db.transaction(() => Promise.resolve());
+			expect(callback).not.toHaveBeenCalled();
+		});
+
+		it("waits for the outermost transaction when they nest", async () => {
+			const db = open(true);
+			const seen: string[] = [];
+			await db.transaction(async (tx) => {
+				afterCommit(() => void seen.push("outer"));
+				await tx.transaction(async (inner) => {
+					await insert(inner, "1");
+					afterCommit(() => void seen.push("inner"));
+				});
+				seen.push("inner done");
+			});
+			expect(seen).toEqual(["inner done", "outer", "inner"]);
+		});
+
+		it("runs the callbacks of each transaction after its own commit", async () => {
+			const db = open(true);
+			const seen: string[] = [];
+			await Promise.all(
+				["a", "b"].map((name) =>
+					db.transaction(async (tx) => {
+						await insert(tx, name);
+						afterCommit(() => void seen.push(name));
+					}),
+				),
+			);
+			expect(seen).toEqual(["a", "b"]);
+		});
+
+		it("runs right away outside a transaction", () => {
+			const callback = vi.fn();
+			afterCommit(callback);
+			expect(callback).toHaveBeenCalledOnce();
+		});
+
+		it("logs a callback that fails, and carries on", async () => {
+			const log = vi.spyOn(console, "error").mockImplementation(() => {});
+			try {
+				const db = open(true);
+				const after = vi.fn();
+				const result = await db.transaction(async () => {
+					afterCommit(() => {
+						throw new Error("Broken");
+					});
+					afterCommit(() => Promise.reject(new Error("Broken too")));
+					afterCommit(after);
+					return "committed";
+				});
+				expect(result).toBe("committed");
+				expect(after).toHaveBeenCalledOnce();
+				expect(log.mock.calls.map(([error]) => (error as Error).message)).toEqual([
+					"Broken",
+					"Broken too",
+				]);
+
+				afterCommit(() => {
+					throw new Error("Outside");
+				});
+				await Promise.resolve();
+				expect(log).toHaveBeenCalledTimes(3);
+			} finally {
+				log.mockRestore();
+			}
+		});
 	});
 });
