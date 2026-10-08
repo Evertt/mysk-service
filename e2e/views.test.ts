@@ -6,6 +6,7 @@ import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, userNames, users, value } from "./app.ts";
+import { tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const admin = useApp();
@@ -69,24 +70,6 @@ async function saveView(page: Page, name: string, { share = false } = {}) {
 async function act(page: Page, action: string) {
 	await menu(page).click();
 	await page.getByRole("menuitem", { name: action }).click();
-}
-
-/**
- * Sends the next request to a remote command with `from` (a view id) in its argument replaced by
- * `to`, like a tampered client would.
- */
-async function tamperNextCommand(page: Page, from: number, to: number) {
-	await page.route(
-		"**/_app/remote/**",
-		async (route) => {
-			const body = route.request().postDataJSON() as { payload: string };
-			const values = JSON.parse(Buffer.from(body.payload, "base64url").toString()) as unknown[];
-			const tampered = values.map((item) => (item === from ? to : item));
-			const payload = Buffer.from(JSON.stringify(tampered)).toString("base64url");
-			await route.continue({ postData: JSON.stringify({ ...body, payload }) });
-		},
-		{ times: 1 },
-	);
 }
 
 describe("in North", () => {
@@ -225,7 +208,7 @@ describe("in North", () => {
 		const own = (await viewNamed("Small ones", north.id))!;
 		const shared = (await viewNamed("Every segment", north.id))!;
 		await planner.expectingErrors(async () => {
-			await tamperNextCommand(page, own.id, shared.id);
+			await tamperWithCommand<number>(page, "deleteView", () => shared.id);
 			await act(page, "Delete…");
 			const [response] = await Promise.all([
 				page.waitForResponse((r) => r.url().includes("/_app/remote")),
@@ -317,14 +300,17 @@ describe("in South", () => {
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.search === "?segment=enterprise,mid_market");
 		await admin.expectingErrors(async () => {
-			await tamperNextCommand(page, own.id, target.id);
+			await tamperWithCommand<{ id: number }>(page, "updateView", (arg) => ({
+				...arg,
+				id: target.id,
+			}));
 			const [update] = await Promise.all([
 				page.waitForResponse((r) => r.url().includes("/_app/remote")),
 				act(page, "Update with the current view"),
 			]);
 			expect(await update.text()).toMatch(/"status":404/);
 
-			await tamperNextCommand(page, own.id, target.id);
+			await tamperWithCommand<number>(page, "deleteView", () => target.id);
 			await act(page, "Delete…");
 			const [remove] = await Promise.all([
 				page.waitForResponse((r) => r.url().includes("/_app/remote")),
