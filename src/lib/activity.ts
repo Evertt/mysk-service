@@ -1,8 +1,8 @@
 /**
  * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity.ts`)
  * reads: a sentence per action, and per subject type its noun, its page and how its fields show,
- * e.g. "Avery Admin updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
- * "Avery Admin heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
+ * e.g. "Anouk de Vries updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
+ * "Anouk de Vries heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
  *
  * The log stores values (the action, field names, raw values); they're translated here when shown.
  * The texts are in `messages/<locale>/activity.json`. Nouns and labels are message functions, so
@@ -27,7 +27,7 @@ export type Text = () => string;
 /** An entry's sentence, with who did it and the subject (its noun and label) as variables. */
 type Sentence = (inputs: { user: string; subject: string }) => string;
 
-/** What the user did, as in "Avery Admin updated order …": a sentence per action. */
+/** What the user did, as in "Anouk de Vries updated order …": a sentence per action. */
 export const actionVerbs: Record<ActivityAction, Sentence> = {
 	created: m.activity_action_created,
 	updated: m.activity_action_updated,

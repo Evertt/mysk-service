@@ -1,6 +1,6 @@
 <!--
 	@component
-	Activity log entries, newest first: "Avery Admin updated order ORD-2026-00012", with the
+	Activity log entries, newest first: "Anouk de Vries updated order ORD-2026-00012", with the
 	changed fields and when. Subjects link to their page while they exist.
 -->
 <script lang="ts">

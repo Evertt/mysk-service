@@ -12,6 +12,7 @@ import {
 	sentMail,
 	useApp,
 	users,
+	userNames,
 	value,
 } from "./app.ts";
 
@@ -91,13 +92,13 @@ describe("members", () => {
 		await app.page.waitForURL((url) => url.pathname === "/settings/members");
 		await hydrated(app.page);
 		expect(await memberRow(users.admin).innerText()).toContain("You");
-		expect(await memberRow(users.planner).innerText()).toContain("Pat Planner");
+		expect(await memberRow(users.planner).innerText()).toContain(userNames.planner);
 		// Nobody changes or removes themselves; the others' roles can be changed.
 		expect(await memberRow(users.admin).locator("select").count()).toBe(0);
 		expect(await memberRow(users.admin).getByRole("button", { name: "Remove" }).count()).toBe(0);
-		expect(await memberRow(users.planner).getByLabel("Role of Pat Planner").inputValue()).toBe(
-			"member",
-		);
+		expect(
+			await memberRow(users.planner).getByLabel(`Role of ${userNames.planner}`).inputValue(),
+		).toBe("member");
 	});
 });
 
@@ -110,7 +111,7 @@ describe("invitations", () => {
 		]);
 		expect(await invitationRow(robin.email).innerText()).toContain("Admin");
 		const [mail] = sentMail(robin.email);
-		expect(mail.subject).toBe(`Avery Admin invited you to ${north.name} on Fieldworks`);
+		expect(mail.subject).toBe(`${userNames.admin} invited you to ${north.name} on Fieldworks`);
 		expect(linkInMail(robin.email)).toBe(
 			`${baseURL}/invite/${(await invitations(robin.email))[0].id}`,
 		);
@@ -251,8 +252,8 @@ describe("roles and removal", () => {
 				found.map((row) => ({ ...row, changes: row.changes && JSON.parse(row.changes) })),
 			);
 		expect(await logged("invitation", robin.email)).toEqual([
-			{ user_name: "Avery Admin", action: "sent", changes: null, note: "As Admin" },
-			{ user_name: "Avery Admin", action: "resent", changes: null, note: "As Admin" },
+			{ user_name: userNames.admin, action: "sent", changes: null, note: "As Admin" },
+			{ user_name: userNames.admin, action: "resent", changes: null, note: "As Admin" },
 			// In North, although Robin had no organization yet.
 			{ user_name: robin.name, action: "accepted", changes: null, note: null },
 		]);
@@ -263,20 +264,20 @@ describe("roles and removal", () => {
 		// The refused change of the admin's own role logged nothing.
 		expect(await logged("member", robin.name)).toEqual([
 			{
-				user_name: "Avery Admin",
+				user_name: userNames.admin,
 				action: "updated",
 				changes: { role: ["admin", "owner"] },
 				note: null,
 			},
 			{
-				user_name: "Avery Admin",
+				user_name: userNames.admin,
 				action: "updated",
 				changes: { role: ["owner", "member"] },
 				note: null,
 			},
-			{ user_name: "Avery Admin", action: "removed", changes: null, note: null },
+			{ user_name: userNames.admin, action: "removed", changes: null, note: null },
 		]);
-		expect(await logged("member", "Avery Admin")).toEqual([]);
+		expect(await logged("member", userNames.admin)).toEqual([]);
 
 		await app.go("/activity?type=member");
 		const feed = app.page.getByRole("list", { name: "Activity log", exact: true });
@@ -284,9 +285,9 @@ describe("roles and removal", () => {
 		const entries = (await feed.locator(":scope > li").allInnerTexts()).map((text) =>
 			text.replace(/\s+/g, " "),
 		);
-		expect(entries[0]).toMatch(new RegExp(`^Avery Admin removed member ${robin.name} `));
+		expect(entries[0]).toMatch(new RegExp(`^${userNames.admin} removed member ${robin.name} `));
 		expect(entries[1]).toMatch(
-			new RegExp(`^Avery Admin updated member ${robin.name} role: Owner → Member `),
+			new RegExp(`^${userNames.admin} updated member ${robin.name} role: Owner → Member `),
 		);
 		// Removed, so no longer a link.
 		expect(await feed.getByRole("link", { name: robin.name }).count()).toBe(0);
@@ -402,7 +403,7 @@ describe("other organizations", () => {
 
 		const row = memberRow(users.planner);
 		await tamper(row.locator("form"), "memberId", ownMemberId);
-		await chooseRole(users.planner, "Pat Planner", "admin");
+		await chooseRole(users.planner, userNames.planner, "admin");
 		await row.getByText(/needs at least one owner/).waitFor();
 
 		await row.getByRole("button", { name: "Remove" }).click();
@@ -440,7 +441,7 @@ describe("other organizations", () => {
 
 			await app.go("/settings/members");
 			await tamper(memberRow(users.planner).locator("form"), "memberId", plannerInNorth);
-			results.push(await chooseRole(users.planner, "Pat Planner", "admin"));
+			results.push(await chooseRole(users.planner, userNames.planner, "admin"));
 
 			await app.go("/settings/members");
 			await memberRow(users.planner).getByRole("button", { name: "Remove" }).click();

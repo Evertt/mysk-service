@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "../src/lib/format.ts";
-import { baseURL, organizations, rows, useApp, users, value } from "./app.ts";
+import { baseURL, organizations, rows, useApp, userNames, users, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -83,7 +83,7 @@ describe("in North", () => {
 			{
 				id: expect.any(Number),
 				user_id: await adminId(),
-				user_name: "Avery Admin",
+				user_name: userNames.admin,
 				action: "updated",
 				subject_type: "customer",
 				subject_id: String(id),
@@ -107,7 +107,7 @@ describe("in North", () => {
 	test("the customer's page shows it on its Activity card", async () => {
 		await app.go("/customers/CUST-0002");
 		expect((await logEntries())[0]).toMatch(
-			/^Avery Admin updated customer CUST-0002 city: .+ → Activityville /,
+			new RegExp(`^${userNames.admin} updated customer CUST-0002 city: .+ → Activityville `),
 		);
 	});
 
@@ -138,7 +138,7 @@ describe("in North", () => {
 			},
 		]);
 		expect((await logEntries())[0]).toMatch(
-			new RegExp(`^Avery Admin updated order ${order.number} status: Quote → Scheduled `),
+			new RegExp(`^${userNames.admin} updated order ${order.number} status: Quote → Scheduled `),
 		);
 
 		// A line's change is logged against the order, and shows on its card.
@@ -208,7 +208,9 @@ describe("in North", () => {
 		await expect
 			.poll(async () => (await logEntries())[0])
 			.toMatch(
-				/^Avery Admin received stock of material MAT-0001 stock: .+ → .+ Activity delivery /,
+				new RegExp(
+					`^${userNames.admin} received stock of material MAT-0001 stock: .+ → .+ Activity delivery `,
+				),
 			);
 		fromNorth.labels.push("Activity delivery");
 	});
@@ -317,16 +319,16 @@ describe("in South", () => {
 
 		const entries = await entriesAbout("customer", id, south.id);
 		expect(entries.map((e) => [e.action, e.subject_label, e.user_name])).toEqual([
-			["created", code, "Avery Admin"],
-			["deleted", code, "Avery Admin"],
+			["created", code, userNames.admin],
+			["deleted", code, userNames.admin],
 		]);
 		expect(await entriesAbout("customer", id, north.id)).toEqual([]);
 		Object.assign(fleeting, { id, code });
 
 		await app.go(`/activity?type=customer&id=${id}`);
 		expect(await logEntries()).toEqual([
-			expect.stringMatching(new RegExp(`^Avery Admin deleted customer ${code} `)),
-			expect.stringMatching(new RegExp(`^Avery Admin created customer ${code} `)),
+			expect.stringMatching(new RegExp(`^${userNames.admin} deleted customer ${code} `)),
+			expect.stringMatching(new RegExp(`^${userNames.admin} created customer ${code} `)),
 		]);
 		const feed = page.getByRole("list", { name: "Activity log", exact: true });
 		expect(await feed.getByRole("link", { name: code }).count()).toBe(0);
@@ -360,8 +362,12 @@ describe("in Dutch", () => {
 		await useLanguage("nl");
 		await app.go(`/activity?type=customer&id=${fleeting.id}`);
 		expect(await entriesIn("Activiteitenlog")).toEqual([
-			expect.stringMatching(new RegExp(`^Avery Admin heeft klant ${fleeting.code} verwijderd `)),
-			expect.stringMatching(new RegExp(`^Avery Admin heeft klant ${fleeting.code} aangemaakt `)),
+			expect.stringMatching(
+				new RegExp(`^${userNames.admin} heeft klant ${fleeting.code} verwijderd `),
+			),
+			expect.stringMatching(
+				new RegExp(`^${userNames.admin} heeft klant ${fleeting.code} aangemaakt `),
+			),
 		]);
 		expect(await app.page.getByText("Alleen klant", { exact: true }).count()).toBe(1);
 	});

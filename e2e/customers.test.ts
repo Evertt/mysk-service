@@ -27,6 +27,15 @@ const customerId = (code: string, organizationId: string) =>
 	]);
 const byName = (a: string, b: string) => a.localeCompare(b);
 
+/** The code of North's customer with the most orders (and some equipment), for its detail page. */
+const busyCustomer = () =>
+	value<string>(
+		`select c.code from customer c where c.organization_id = ?
+		 and exists (select 1 from equipment e where e.customer_id = c.id)
+		 order by (select count(*) from "order" o where o.customer_id = c.id) desc, c.id limit 1`,
+		[north.id],
+	);
+
 /** The order numbers in the detail page's recent activity. */
 const activity = () =>
 	app.page
@@ -183,12 +192,13 @@ describe("in North", () => {
 
 	test("the detail page shows the customer's equipment and orders", async () => {
 		const { page } = app;
-		const id = await customerId("CUST-0001", north.id);
+		const code = await busyCustomer();
+		const id = await customerId(code, north.id);
 		const units = await value<number>(`select count(*) from equipment where customer_id = ?`, [id]);
 		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
 		const [{ name }] = await customer(id);
 
-		await app.go("/customers/CUST-0001");
+		await app.go(`/customers/${code}`);
 		expect(await page.locator("h1").innerText()).toBe(name);
 		const equipment = page.locator('[data-slot="card"]', { hasText: "Units installed" });
 		expect(await equipment.locator("tbody tr").count()).toBe(units);
@@ -199,14 +209,15 @@ describe("in North", () => {
 		expect(await activity()).toEqual(await latestOrders(id));
 		expect(
 			await page.getByRole("link", { name: `View all ${orders} orders` }).getAttribute("href"),
-		).toBe("/orders?customer=CUST-0001");
+		).toBe(`/orders?customer=${code}`);
 		expect(await page.locator('a[href^="mailto:"]').count()).toBe(1);
 		expect(await page.locator('a[href^="tel:"]').count()).toBe(1);
 	});
 
 	test("deleting a customer with equipment and orders is refused", async () => {
 		const { page } = app;
-		const id = await customerId("CUST-0001", north.id);
+		const code = await busyCustomer();
+		const id = await customerId(code, north.id);
 		const units = await value<number>(`select count(*) from equipment where customer_id = ?`, [id]);
 		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
 
@@ -216,25 +227,26 @@ describe("in North", () => {
 		const refusal = await dialog.locator('[data-slot="field-error"]').innerText();
 		expect(refusal).toContain(`${units} equipment unit`);
 		expect(refusal).toContain(`${orders} order`);
-		expect(app.path()).toBe("/customers/CUST-0001");
-		expect(await customerId("CUST-0001", north.id)).toBe(id);
+		expect(app.path()).toBe(`/customers/${code}`);
+		expect(await customerId(code, north.id)).toBe(id);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
 	});
 
 	test("its recent activity links to all its orders in the orders list", async () => {
 		const { page } = app;
-		const id = await customerId("CUST-0001", north.id);
+		const code = await busyCustomer();
+		const id = await customerId(code, north.id);
 		const name = await value<string>(`select name from customer where id = ?`, [id]);
 		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
 
-		await app.go("/customers/CUST-0001");
+		await app.go(`/customers/${code}`);
 		await page.getByRole("link", { name: `View all ${orders} orders` }).click();
-		await page.waitForURL((url) => url.search === "?customer=CUST-0001");
+		await page.waitForURL((url) => url.search === `?customer=${code}`);
 		await page.waitForLoadState("networkidle");
 		await expect.poll(() => app.rowCount()).toBe(orders);
 		const customers = await bodyRows().locator("td:nth-child(3)").allInnerTexts();
 		expect(customers.length).toBeGreaterThan(0);
-		expect(customers.every((cell) => cell.includes("CUST-0001"))).toBe(true);
+		expect(customers.every((cell) => cell.includes(code))).toBe(true);
 
 		await page.getByRole("link", { name: `Customer: ${name}` }).click();
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
@@ -320,9 +332,10 @@ describe("in North", () => {
 
 	test("the detail page fits a phone screen", async () => {
 		const { page } = app;
+		const code = await busyCustomer();
 		await page.setViewportSize({ width: 390, height: 844 });
 		try {
-			await app.go("/customers/CUST-0001");
+			await app.go(`/customers/${code}`);
 			expect(
 				await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
 			).toBe(true);
