@@ -29,7 +29,7 @@ helpers are in `src/lib/server/session.ts`:
 
 - Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
   tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization
-  doesn't have it, or `requireRole("owner", "admin")` for organization settings).
+  doesn't have it, or `requireManager()` (an owner or admin) for organization settings).
 - Every select, update and delete on a tenant table (one with `organizationId`) includes
   `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
   the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
@@ -56,6 +56,10 @@ helpers are in `src/lib/server/session.ts`:
   `src/lib/server/modules.ts`; both only take part for tenants that have the module. Anything that
   shows or adds up order totals prices them with `priceOrders()` (`src/lib/server/pricing.ts`),
   which applies the modules' adjustments.
+- Shared server helpers, so each section doesn't write them again: `bulkChange()` and
+  `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
+  (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
+  `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
 ## Database schema
 
