@@ -64,10 +64,14 @@ parallel agents in their own worktrees.
    string path), then cleanup batch 2 (the data-table split).
 4. **Modules** ✅ done: plugins steps 2–6 (server hooks and `afterCommit()`, the generator with
    zero modules, move contracts, move invoicing, remove the transition code).
-5. **Optional**: domain folders in `src/lib` ✅ done, splitting the three largest e2e files, `knip`, one
-   rule for import extensions.
+5. **Optional** ✅ done: domain folders in `src/lib`, splitting the largest e2e files (orders,
+   equipment, contracts; invoicing only in two), `knip` (`pnpm knip`), and one rule for import
+   extensions (a file is imported by its real extension, checked by `src/import-extensions.spec.ts`).
 
-## Worth weighing before phase 4
+All phases are done. Plugins step 7 (new extension points) stays as planned: add one when a
+module needs it.
+
+## Worth weighing before phase 4 (decided: built)
 
 The generator (route stubs, `*.gen.ts` registries, the 404 guard per module) is the largest new
 piece of infrastructure in these plans. It pays off once there are more than the two current
