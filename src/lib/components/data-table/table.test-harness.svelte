@@ -46,15 +46,8 @@
 
 	const column = createAppColumnHelper<Item>();
 	const columns = column.columns([
-		column.display({
-			id: "select",
-			header: ({ header }) => renderComponent(header.SelectAllHeader),
-			cell: ({ cell }) => renderComponent(cell.SelectCell),
-			enableSorting: false,
-			enableHiding: false,
-		}),
+		column.select(),
 		column.accessor("name", {
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ row }) =>
 				links
 					? renderComponent(TwoLineCell, {
@@ -66,26 +59,22 @@
 			meta: { label: "Name" },
 		}),
 		column.accessor("status", {
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			filterFn: "oneOf",
 			enableSorting: false,
 			enableGrouping: true,
 			meta: { label: "Status", filterValues: ["draft", "open", "closed"] },
 		}),
 		column.accessor("amount", {
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 			enableGlobalFilter: false,
 			meta: { label: "Amount", align: "end", groupSum: (sum) => formatCents(sum) },
 		}),
 		column.accessor("quantity", {
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
 			enableGlobalFilter: false,
 			meta: { label: "Quantity", align: "end" },
 		}),
 		column.accessor("dueOn", {
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ cell }) => renderComponent(cell.DateCell),
 			enableGlobalFilter: false,
 			enableSorting: false,
