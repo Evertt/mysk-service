@@ -8,6 +8,7 @@
 
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import BillablePicker from "../billable-picker.svelte";
@@ -48,12 +49,9 @@
 			/>
 			<Field.FieldError errors={addToInvoice.fields.issues()} />
 			{#if !nothingToAdd}
-				<Button type="submit" variant="outline" class="self-end" disabled={!!addToInvoice.pending}>
-					{#if addToInvoice.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
+				<SubmitButton variant="outline" class="self-end" pending={addToInvoice.pending}>
 					{m.invoices_add_submit()}
-				</Button>
+				</SubmitButton>
 			{/if}
 		</form>
 	</Card.Content>
@@ -90,12 +88,9 @@
 				/>
 				<MoneyField field={addLine.fields.unitPrice} label={m.invoices_unit_price()} />
 			</Field.FieldGroup>
-			<Button type="submit" variant="outline" class="self-end" disabled={!!addLine.pending}>
-				{#if addLine.pending}
-					<Spinner data-icon="inline-start" />
-				{/if}
+			<SubmitButton variant="outline" class="self-end" pending={addLine.pending}>
 				{m.invoices_add_line_submit()}
-			</Button>
+			</SubmitButton>
 		</form>
 	</Card.Content>
 </Card.Root>
@@ -129,12 +124,9 @@
 					description={m.invoices_notes_description()}
 				/>
 			</Field.FieldGroup>
-			<Button type="submit" variant="outline" class="self-end" disabled={!!updateTerms.pending}>
-				{#if updateTerms.pending}
-					<Spinner data-icon="inline-start" />
-				{/if}
+			<SubmitButton variant="outline" class="self-end" pending={updateTerms.pending}>
 				{m.invoices_save_terms()}
-			</Button>
+			</SubmitButton>
 		</form>
 	</Card.Content>
 </Card.Root>

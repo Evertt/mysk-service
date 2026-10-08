@@ -17,22 +17,14 @@ export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
 const column = createAppColumnHelper<InvoiceRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor("number", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(InvoiceLink, { number: getValue() }),
 		enableHiding: false,
 		meta: { label: m.invoices_column_invoice },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.customer.name,
@@ -48,7 +40,6 @@ export const columns = column.columns([
 	// The status, with sent invoices past their due date as overdue.
 	column.accessor("state", {
 		id: "status",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { state: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -60,7 +51,6 @@ export const columns = column.columns([
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {
 		id: "issuedOn",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
@@ -68,20 +58,17 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.dueOn ?? undefined, {
 		id: "dueOn",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
 		meta: { label: m.invoices_column_due, param: "due" },
 	}),
 	column.accessor("total", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
 	}),
 	column.accessor("createdAt", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.invoices_column_created, param: "created" },
