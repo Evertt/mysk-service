@@ -7,8 +7,15 @@ import SnowflakeIcon from "@lucide/svelte/icons/snowflake";
 import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
+import type { BadgeVariant } from "#lib/components/ui/badge/index.js";
+import { nextDay } from "#lib/dates.js";
 import { labelOptions, withLabels } from "#lib/i18n/labels.js";
-import { type EquipmentCategory, equipmentCategories, equipmentStatuses } from "#lib/models.js";
+import {
+	type EquipmentCategory,
+	equipmentCategories,
+	type EquipmentStatus,
+	equipmentStatuses,
+} from "#lib/models.js";
 
 const categoryDetails: Record<EquipmentCategory, { icon: Component }> = {
 	generator: { icon: ZapIcon },
@@ -31,6 +38,16 @@ export const categoryOptions = labelOptions(
 );
 export const statusOptions = labelOptions("equipmentStatus", equipmentStatuses);
 
+const statusDetails: Record<EquipmentStatus, { variant: BadgeVariant }> = {
+	operational: { variant: "secondary" },
+	needs_service: { variant: "outline" },
+	out_of_service: { variant: "destructive" },
+	decommissioned: { variant: "ghost" },
+};
+
+/** Each status's translated `label` and badge variant. */
+export const statuses = withLabels("equipmentStatus", statusDetails);
+
 /** Whether the unit's warranty still covers work done at `at` (now by default); its last day counts. */
 export const isUnderWarranty = (warrantyUntil: Date, at: Date = new Date()) =>
-	at < new Date(warrantyUntil.getFullYear(), warrantyUntil.getMonth(), warrantyUntil.getDate() + 1);
+	at < nextDay(warrantyUntil);

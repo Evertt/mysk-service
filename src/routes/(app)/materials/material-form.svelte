@@ -16,7 +16,7 @@
 	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.js";
 
-	import type { createMaterial, getMaterial, updateMaterial } from "./materials.remote.js";
+	import type { createMaterial, getMaterial, updateMaterial } from "./material.remote.js";
 
 	type Material = Awaited<ReturnType<typeof getMaterial>>["material"];
 

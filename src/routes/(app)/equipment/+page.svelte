@@ -6,9 +6,9 @@
 	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
+	import { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.js";
 	import EquipmentTable from "./equipment-table.svelte";
 	import { equipmentUrl } from "./equipment-url.js";
-	import { getEquipmentFacets, getEquipmentList } from "./equipment.remote.js";
 
 	// The server pages, filters and sorts the units, as the URL says (see the orders page).
 	const query = $derived(serverTableQuery(page.url.searchParams, equipmentUrl));

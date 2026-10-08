@@ -6,9 +6,9 @@
 	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
+	import { getMaterialFacets, getMaterials } from "./material-list.remote.js";
 	import MaterialsTable from "./materials-table.svelte";
 	import { materialsUrl } from "./materials-url.js";
-	import { getMaterialFacets, getMaterials } from "./materials.remote.js";
 
 	// The server pages, filters and sorts the materials, as the URL says (see the orders page).
 	const query = $derived(serverTableQuery(page.url.searchParams, materialsUrl));

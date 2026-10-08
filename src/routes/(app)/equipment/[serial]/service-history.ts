@@ -3,6 +3,7 @@
  * sum it up (`serviceStats`).
  */
 import { isUnderWarranty } from "#lib/components/equipment/display.js";
+import { DAY, startOfDay } from "#lib/dates.js";
 import {
 	isDoneOrder,
 	isOpenOrder,
@@ -70,13 +71,10 @@ export function buildTimeline(
 	);
 }
 
-const DAY = 24 * 60 * 60 * 1000;
-
 /** Calendar days from one date to another, e.g. 1 from late on Monday to early on Tuesday. */
 export function daysBetween(from: Date, to: Date) {
-	const day = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 	// Rounded, as a day across a daylight saving change is an hour shorter or longer.
-	return Math.round((day(to).getTime() - day(from).getTime()) / DAY);
+	return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / DAY);
 }
 
 export interface ServiceStats {
