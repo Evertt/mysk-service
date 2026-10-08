@@ -60,25 +60,6 @@ export const optionalDate = () =>
 		v.transform((value) => (value ? new Date(`${value}T00:00`) : null)),
 	);
 
-/** A date for `<input type="date">`, e.g. as the initial value of an edit form. */
-export const toDateInput = (date: Date | null | undefined) =>
-	date
-		? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-		: "";
-
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/** The time of day as `HH:MM`, as in `<input type="time">`. */
-export const timeOfDay = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-
-/** `day` at `time` (`HH:MM`). */
-export function atTime(day: Date, time: string) {
-	const [hours, minutes] = time.split(":").map(Number);
-	const result = new Date(day);
-	result.setHours(hours, minutes, 0, 0);
-	return result;
-}
-
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
 export const cents = (required: Message = m.validation_amount_required) =>
 	v.pipe(

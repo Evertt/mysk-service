@@ -34,18 +34,14 @@
 	<title>{customer.name} · {m.customers_title()}</title>
 </svelte:head>
 
-<PageHeader title={customer.name} description="{customer.code} · {location}">
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/customers")}>{m.customers_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{customer.name}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
+<PageHeader
+	title={customer.name}
+	description="{customer.code} · {location}"
+	breadcrumbs={[
+		{ label: m.customers_title(), href: resolve("/(app)/customers") },
+		{ label: customer.name },
+	]}
+>
 	{#snippet badges()}
 		<SegmentBadge segment={customer.segment} />
 	{/snippet}

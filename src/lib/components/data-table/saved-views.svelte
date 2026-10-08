@@ -13,11 +13,11 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import UserXIcon from "@lucide/svelte/icons/user-x";
 	import UsersIcon from "@lucide/svelte/icons/users";
-	import { isHttpError } from "@sveltejs/kit";
 	import { toast } from "svelte-sonner";
 
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import { errorMessage } from "#lib/utils.js";
 
 	import type { TableUrlSync } from "./url-sync.svelte.js";
 	import { matchingViews, viewQuery, viewState } from "./views.js";
@@ -74,7 +74,7 @@
 			toast.success(done);
 			return true;
 		} catch (error) {
-			toast.error(isHttpError(error) ? error.body.message : m.common_error_generic());
+			toast.error(errorMessage(error, m.common_error_generic()));
 			return false;
 		} finally {
 			busy = false;

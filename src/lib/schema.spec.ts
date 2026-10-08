@@ -1,8 +1,8 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
+import { toDateInput } from "./dates.ts";
 import {
-	atTime,
 	cents,
 	date,
 	email,
@@ -13,8 +13,6 @@ import {
 	phone,
 	text,
 	time,
-	timeOfDay,
-	toDateInput,
 } from "./schema.ts";
 
 /** The parsed value, or the first issue's message. */
@@ -88,12 +86,6 @@ describe("times of day", () => {
 		expect(parse(optionalTime(), "")).toEqual({ value: null });
 		expect(parse(optionalTime(), "08:15")).toEqual({ value: "08:15" });
 		expect(parse(optionalTime(), "8.15")).toEqual({ issue: "Enter a valid time" });
-	});
-
-	test("set a day's time, and are shown like the time input does", () => {
-		expect(timeOfDay(new Date(2026, 9, 7, 8, 5))).toBe("08:05");
-		expect(atTime(new Date(2026, 9, 7), "14:30")).toEqual(new Date(2026, 9, 7, 14, 30));
-		expect(atTime(new Date(2026, 9, 7, 23, 59, 59), "09:00")).toEqual(new Date(2026, 9, 7, 9));
 	});
 });
 

@@ -18,11 +18,11 @@
 	import { goto } from "$app/navigation";
 	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import XIcon from "@lucide/svelte/icons/x";
-	import { isHttpError } from "@sveltejs/kit";
 	import type { RowData } from "@tanstack/svelte-table";
 	import { toast } from "svelte-sonner";
 
 	import { formatNumber } from "#lib/format.js";
+	import { errorMessage } from "#lib/utils.js";
 
 	import BulkActionDialog from "./bulk-action-dialog.svelte";
 	import {
@@ -115,7 +115,7 @@
 			clear();
 			if (result.href) await goto(result.href);
 		} catch (error) {
-			toast.error(isHttpError(error) ? error.body.message : m.common_error_generic());
+			toast.error(errorMessage(error, m.common_error_generic()));
 		} finally {
 			busy = false;
 		}
