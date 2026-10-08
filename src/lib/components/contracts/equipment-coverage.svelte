@@ -5,11 +5,11 @@
 -->
 <script lang="ts">
 	import { formatDate } from "#lib/format.js";
-	import { contractStatus } from "#lib/models.js";
 
 	import ContractLink from "./contract-link.svelte";
 	import { getUnitCoverage } from "./coverage.remote.js";
 	import LevelBadge from "./level-badge.svelte";
+	import { contractStatus } from "./model.js";
 	import ContractStatusBadge from "./status-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();

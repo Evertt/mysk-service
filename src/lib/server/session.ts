@@ -3,7 +3,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import type { ModuleId } from "#lib/modules.js";
+import { isModuleId, type ModuleId } from "#lib/module-ids.js";
 import { m } from "#lib/paraglide/messages.js";
 import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.js";
 import { db } from "#lib/server/db/index.js";
@@ -51,7 +51,8 @@ export async function loadTenant(
 		name: current.name,
 		slug: current.slug,
 		roles: parseRoles(current.role),
-		modules: modules.map((row) => row.id),
+		// A row for a module that's no longer there (removed from the app) does nothing.
+		modules: modules.map((row) => row.id).filter(isModuleId),
 	};
 }
 

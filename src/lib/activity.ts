@@ -9,16 +9,16 @@
  * they're read in the current language when shown, never at module scope.
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
- * records, in its `subjects` in `#lib/modules.ts`. Fields without an entry still show, with a
- * label from `fieldLabels` (or made from their name) and their value as stored (dates and numbers
- * formatted).
+ * records, in its `subjects` in `#lib/modules.ts`; likewise its verbs go in its `actions`. Fields
+ * without an entry still show, with a label from `fieldLabels` (or made from their name) and their
+ * value as stored (dates and numbers formatted).
  */
 import { resolve } from "$app/paths";
 
 import { formatCents, formatDate, formatDateTime, formatNumber } from "#lib/format.js";
 import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.js";
-import type { ActivityAction } from "#lib/models.js";
-import { modules } from "#lib/modules.js";
+import type { CoreActivityAction } from "#lib/models.js";
+import { type AppModule, modules } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
 import { parseRoles } from "#lib/roles.js";
 
@@ -26,10 +26,10 @@ import { parseRoles } from "#lib/roles.js";
 export type Text = () => string;
 
 /** An entry's sentence, with who did it and the subject (its noun and label) as variables. */
-type Sentence = (inputs: { user: string; subject: string }) => string;
+export type Sentence = (inputs: { user: string; subject: string }) => string;
 
 /** What the user did, as in "Anouk de Vries updated order …": a sentence per action. */
-export const actionVerbs: Record<ActivityAction, Sentence> = {
+export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	created: m.activity_action_created,
 	updated: m.activity_action_updated,
 	deleted: m.activity_action_deleted,
@@ -46,18 +46,22 @@ export const actionVerbs: Record<ActivityAction, Sentence> = {
 	resent: m.activity_action_resent,
 	cancelled: m.activity_action_cancelled,
 	accepted: m.activity_action_accepted,
-	issued: m.activity_action_issued,
-	paid: m.activity_action_paid,
-	voided: m.activity_action_voided,
 	shared: m.activity_action_shared,
 	unshared: m.activity_action_unshared,
 };
 
-/** The sentence of an action as logged; one this version doesn't know reads as its value. */
-export const actionSentence = (action: string): Sentence =>
-	Object.hasOwn(actionVerbs, action)
-		? actionVerbs[action as ActivityAction]
-		: (inputs) => m.activity_action_other({ ...inputs, action });
+/**
+ * The sentence of an action as logged: the core's, or one of an optional module's `actions` (of
+ * all modules, not only the tenant's, so the log keeps reading the same after a module is switched
+ * off); one this version doesn't know reads as its value.
+ */
+export const actionSentence = (action: string): Sentence => {
+	if (Object.hasOwn(actionVerbs, action)) return actionVerbs[action as CoreActivityAction];
+	const actions = (modules as readonly AppModule[]).find((module) =>
+		Object.hasOwn(module.actions ?? {}, action),
+	)?.actions;
+	return actions?.[action] ?? ((inputs) => m.activity_action_other({ ...inputs, action }));
+};
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
 export const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;
@@ -89,8 +93,9 @@ export interface SubjectType {
 }
 
 /**
- * The labels of the fields the app logs, by field name, whatever the subject; a subject type's
- * `fields` can give another (e.g. a unit's customer is its "owner").
+ * The labels of the core's fields, by field name, whatever the subject (an optional module's are on
+ * its subject types); a subject type's `fields` can give another (e.g. a unit's customer is its
+ * "owner").
  */
 export const fieldLabels: Record<string, Text> = {
 	code: m.activity_field_code,
@@ -130,18 +135,7 @@ export const fieldLabels: Record<string, Text> = {
 	completedAt: m.activity_field_completed_at,
 	laborHours: m.activity_field_labor_hours,
 	quantity: m.activity_field_quantity,
-	level: m.activity_field_level,
-	startsOn: m.activity_field_starts_on,
-	endsOn: m.activity_field_ends_on,
-	monthlyFee: m.activity_field_monthly_fee,
-	responseHours: m.activity_field_response_hours,
 	notes: m.activity_field_notes,
-	paymentTermDays: m.activity_field_payment_term_days,
-	vatRate: m.activity_field_vat_rate,
-	issuedOn: m.activity_field_issued_on,
-	dueOn: m.activity_field_due_on,
-	paidOn: m.activity_field_paid_on,
-	billFrom: m.activity_field_bill_from,
 	role: m.activity_field_role,
 };
 
@@ -275,9 +269,20 @@ export const subjectNoun = (type: string, known?: SubjectType) =>
 export const subjectTypeLabel = (type: string, known?: SubjectType) =>
 	humanize(subjectNoun(type, known));
 
+/**
+ * The label a module gives a field of its records, whether or not the tenant has the module (any
+ * more): its entries in the log keep reading the same.
+ */
+const moduleFieldLabel = (field: string) =>
+	modules
+		.flatMap((module) => ("subjects" in module ? Object.values(module.subjects) : []))
+		.find((type) => type.fields?.[field]?.label)?.fields?.[field]?.label ?? null;
+
 /** A field's label: "engineer" for `engineerId`, "scheduled for" for `scheduledFor`. */
 export function fieldLabel(field: string, format?: FieldFormat) {
-	const known = format?.label ?? (Object.hasOwn(fieldLabels, field) ? fieldLabels[field] : null);
+	const known =
+		format?.label ??
+		(Object.hasOwn(fieldLabels, field) ? fieldLabels[field] : moduleFieldLabel(field));
 	if (known) return known();
 	return field
 		.replace(/Ids?$/, "")

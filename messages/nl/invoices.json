@@ -229,5 +229,38 @@
 	"invoices_bulk_mark_paid_title": "Geselecteerde facturen markeren als betaald?",
 	"invoices_bulk_mark_paid_description": "Legt vast dat ze vandaag betaald zijn. Alleen verstuurde facturen kun je markeren als betaald.",
 	"invoices_bulk_marked_paid": "{count} gemarkeerd als betaald",
-	"invoices_bulk_not_sent": "{number} is geen verstuurde factuur"
+	"invoices_bulk_not_sent": "{number} is geen verstuurde factuur",
+	"invoices_module_name": "Facturatie",
+	"invoices_module_description": "Facturen voor afgeronde opdrachten en de vergoedingen van andere modules, met btw, pdf-download en openstaande posten op het dashboard.",
+	"invoices_state_draft": "Concept",
+	"invoices_state_sent": "Verzonden",
+	"invoices_state_overdue": "Achterstallig",
+	"invoices_state_paid": "Betaald",
+	"invoices_state_void": "Geannuleerd",
+	"invoices_action_issued": "{user} heeft {subject} verstuurd",
+	"invoices_action_paid": "{user} heeft de betaling van {subject} geregistreerd",
+	"invoices_action_voided": "{user} heeft {subject} geannuleerd",
+	"invoices_activity_subject": "factuur",
+	"invoices_activity_subject_line": "factuurregel",
+	"invoices_activity_subject_settings": "facturatie-instellingen",
+	"invoices_activity_field_payment_term_days": "betalingstermijn",
+	"invoices_activity_field_vat_rate": "btw-tarief",
+	"invoices_activity_field_issued_on": "factuurdatum",
+	"invoices_activity_field_due_on": "vervaldatum",
+	"invoices_activity_field_paid_on": "betaald",
+	"invoices_activity_field_bill_from": "vergoedingen factureren vanaf",
+	"invoices_activity_value_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag",
+				"countPlural=*": "{countText} dagen"
+			}
+		}
+	]
 }

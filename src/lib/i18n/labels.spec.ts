@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
+import { contractLabels } from "#lib/components/contracts/labels.js";
+import { contractLevels, contractStatuses } from "#lib/components/contracts/model.js";
+import { invoicingLabels } from "#lib/components/invoicing/labels.js";
 import {
-	contractLevels,
-	contractStatuses,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
@@ -17,6 +18,7 @@ import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runti
 import { memberRoles } from "#lib/roles.js";
 
 import {
+	defineLabels,
 	hasLabel,
 	label,
 	type LabelKind,
@@ -43,20 +45,81 @@ const kinds: [LabelKind, readonly string[]][] = [
 	["materialUnitSymbol", materialUnits],
 	["stockLevel", ["out", "low", "in_stock"]],
 	["stockMovementKind", stockMovementKinds],
-	["contractLevel", contractLevels],
-	["contractStatus", contractStatuses],
-	["slaState", ["on_track", "at_risk", "overdue", "responded"]],
-	["invoiceState", ["draft", "sent", "overdue", "paid", "void"]],
 	["memberRole", memberRoles],
 	["memberRoleDescription", memberRoles],
 ];
 
-describe.each(kinds)("%s", (kind, values) => {
-	test.each<Locale>(["en", "nl"])("has a distinct label for every value in %s", (locale) => {
-		inLanguage(locale);
-		const labels = values.map((value) => (hasLabel(kind, value) ? label(kind, value) : ""));
-		expect(labels.every((text) => text.trim() !== "")).toBe(true);
-		expect(new Set(labels).size).toBe(labels.length);
+/** What the tests need of a set of labels: the core's, or one made by `defineLabels()`. */
+interface LabelSet {
+	hasLabel(kind: string, value: string): boolean;
+	label(kind: string, value: string): string;
+}
+
+/** Every kind has a distinct, non-empty label for each of its values, in both languages. */
+function testKinds(set: LabelSet, kinds: readonly (readonly [string, readonly string[]])[]) {
+	describe.each(kinds)("%s", (kind, values) => {
+		test.each<Locale>(["en", "nl"])("has a distinct label for every value in %s", (locale) => {
+			inLanguage(locale);
+			const labels = values.map((value) =>
+				set.hasLabel(kind, value) ? set.label(kind, value) : "",
+			);
+			expect(labels.every((text) => text.trim() !== "")).toBe(true);
+			expect(new Set(labels).size).toBe(labels.length);
+		});
+	});
+}
+
+testKinds({ hasLabel, label }, kinds);
+
+describe("contracts labels", () => {
+	testKinds(contractLabels, [
+		["contractLevel", contractLevels],
+		["contractStatus", contractStatuses],
+		["slaState", ["on_track", "at_risk", "overdue", "responded"]],
+	]);
+
+	test("are in the current language", () => {
+		expect(contractLabels.label("slaState", "at_risk")).toBe("At risk");
+		inLanguage("nl");
+		expect(contractLabels.label("slaState", "at_risk")).toBe("Risico");
+	});
+
+	test("have their own kinds, apart from the core's", () => {
+		expect(contractLabels.hasLabel("contractLevel", "premium")).toBe(true);
+		expect(contractLabels.hasLabel("contractLevel", "gold")).toBe(false);
+		expect(contractLabels.labelOrValue("contractLevel", "gold")).toBe("gold");
+		expect(hasLabel("orderStatus", "quote")).toBe(true);
+	});
+});
+
+describe("invoicing labels", () => {
+	testKinds(invoicingLabels, [["invoiceState", ["draft", "sent", "overdue", "paid", "void"]]]);
+
+	test("make options and displays in the current language", () => {
+		const details = { draft: { rank: 1 }, sent: { rank: 2 } };
+		const options = invoicingLabels.labelOptions("invoiceState", ["sent", "draft"], details);
+		const states = invoicingLabels.withLabels("invoiceState", {
+			...details,
+			overdue: { rank: 3 },
+			paid: { rank: 4 },
+			void: { rank: 5 },
+		});
+		expect(options.map((option) => option.value)).toEqual(["sent", "draft"]);
+		expect(states.sent).toEqual({ rank: 2, label: "Sent" });
+		inLanguage("nl");
+		expect(states.sent.label).toBe("Verzonden");
+		expect(options[0].label).toBe("Verzonden");
+	});
+});
+
+describe("defineLabels", () => {
+	const colours = defineLabels({ colour: { red: () => "Red", blue: () => "Blue" } });
+
+	test("binds the functions to the kinds it's given", () => {
+		expect(colours.label("colour", "red")).toBe("Red");
+		expect(colours.hasLabel("colour", "green")).toBe(false);
+		expect(colours.labelOrValue("colour", "green")).toBe("green");
+		expect(colours.labelOptions("colour", ["blue"])).toEqual([{ value: "blue", label: "Blue" }]);
 	});
 });
 

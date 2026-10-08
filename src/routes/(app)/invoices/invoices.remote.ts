@@ -14,7 +14,8 @@ import {
 	lineAmount,
 	today,
 } from "#lib/components/invoicing/invoice.js";
-import type { InvoiceStatus, OrderStatus } from "#lib/models.js";
+import type { InvoiceStatus } from "#lib/components/invoicing/model.js";
+import type { OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";

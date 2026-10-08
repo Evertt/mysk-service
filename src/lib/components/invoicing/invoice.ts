@@ -1,3 +1,5 @@
+import type { PriceAdjustment } from "#lib/modules.js";
+
 /**
  * What an invoice is, as rules: its number, its totals, where it stands, and the lines an order
  * turns into. The one place that says so; the server applies it (`invoices.remote.ts`,
@@ -15,8 +17,7 @@
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
-import type { InvoiceStatus } from "#lib/models.js";
-import type { PriceAdjustment } from "#lib/modules.js";
+import type { InvoiceStatus } from "./model.js";
 
 // --- Status ----------------------------------------------------------------------------------
 

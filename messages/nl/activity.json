@@ -43,9 +43,6 @@
 	"activity_action_resent": "{user} heeft {subject} opnieuw verstuurd",
 	"activity_action_cancelled": "{user} heeft {subject} ingetrokken",
 	"activity_action_accepted": "{user} heeft {subject} geaccepteerd",
-	"activity_action_issued": "{user} heeft {subject} verstuurd",
-	"activity_action_paid": "{user} heeft de betaling van {subject} geregistreerd",
-	"activity_action_voided": "{user} heeft {subject} geannuleerd",
 	"activity_action_shared": "{user} heeft {subject} gedeeld met de organisatie",
 	"activity_action_unshared": "{user} deelt {subject} niet meer",
 	"activity_action_other": "{user}: {action} {subject}",
@@ -60,10 +57,6 @@
 	"activity_subject_member": "lid",
 	"activity_subject_invitation": "uitnodiging",
 	"activity_subject_saved_view": "opgeslagen weergave",
-	"activity_subject_contract": "servicecontract",
-	"activity_subject_invoice": "factuur",
-	"activity_subject_invoice_line": "factuurregel",
-	"activity_subject_invoicing_settings": "facturatie-instellingen",
 	"activity_field_code": "code",
 	"activity_field_name": "naam",
 	"activity_field_contact_name": "contactpersoon",
@@ -93,7 +86,6 @@
 	"activity_field_stock": "voorraad",
 	"activity_field_number": "nummer",
 	"activity_field_equipment": "apparatuur",
-	"activity_field_covered_equipment": "gedekte apparatuur",
 	"activity_field_engineer": "monteur",
 	"activity_field_type": "soort",
 	"activity_field_priority": "prioriteit",
@@ -102,34 +94,9 @@
 	"activity_field_completed_at": "afgerond",
 	"activity_field_labor_hours": "arbeid",
 	"activity_field_quantity": "aantal",
-	"activity_field_level": "niveau",
-	"activity_field_starts_on": "begint",
-	"activity_field_ends_on": "eindigt",
-	"activity_field_monthly_fee": "maandbedrag",
-	"activity_field_response_hours": "reactietijd",
 	"activity_field_notes": "notities",
-	"activity_field_payment_term_days": "betalingstermijn",
-	"activity_field_vat_rate": "btw-tarief",
-	"activity_field_issued_on": "factuurdatum",
-	"activity_field_due_on": "vervaldatum",
-	"activity_field_paid_on": "betaald",
-	"activity_field_bill_from": "vergoedingen factureren vanaf",
 	"activity_field_role": "rol",
 	"activity_field_query": "filters",
 	"activity_value_yes": "ja",
-	"activity_value_no": "nee",
-	"activity_value_days": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "{countText} dag",
-				"countPlural=*": "{countText} dagen"
-			}
-		}
-	]
+	"activity_value_no": "nee"
 }

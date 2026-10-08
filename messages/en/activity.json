@@ -43,9 +43,6 @@
 	"activity_action_resent": "{user} resent {subject}",
 	"activity_action_cancelled": "{user} cancelled {subject}",
 	"activity_action_accepted": "{user} accepted {subject}",
-	"activity_action_issued": "{user} issued {subject}",
-	"activity_action_paid": "{user} recorded the payment of {subject}",
-	"activity_action_voided": "{user} voided {subject}",
 	"activity_action_shared": "{user} shared {subject} with the organization",
 	"activity_action_unshared": "{user} stopped sharing {subject}",
 	"activity_action_other": "{user}: {action} {subject}",
@@ -60,10 +57,6 @@
 	"activity_subject_member": "member",
 	"activity_subject_invitation": "invitation",
 	"activity_subject_saved_view": "saved view",
-	"activity_subject_contract": "contract",
-	"activity_subject_invoice": "invoice",
-	"activity_subject_invoice_line": "invoice line",
-	"activity_subject_invoicing_settings": "invoicing settings",
 	"activity_field_code": "code",
 	"activity_field_name": "name",
 	"activity_field_contact_name": "contact person",
@@ -93,7 +86,6 @@
 	"activity_field_stock": "stock",
 	"activity_field_number": "number",
 	"activity_field_equipment": "equipment",
-	"activity_field_covered_equipment": "covered equipment",
 	"activity_field_engineer": "engineer",
 	"activity_field_type": "type",
 	"activity_field_priority": "priority",
@@ -102,34 +94,9 @@
 	"activity_field_completed_at": "completed",
 	"activity_field_labor_hours": "labour",
 	"activity_field_quantity": "quantity",
-	"activity_field_level": "level",
-	"activity_field_starts_on": "starts",
-	"activity_field_ends_on": "ends",
-	"activity_field_monthly_fee": "monthly fee",
-	"activity_field_response_hours": "response time",
 	"activity_field_notes": "notes",
-	"activity_field_payment_term_days": "payment term",
-	"activity_field_vat_rate": "VAT rate",
-	"activity_field_issued_on": "issued",
-	"activity_field_due_on": "due",
-	"activity_field_paid_on": "paid",
-	"activity_field_bill_from": "bill fees from",
 	"activity_field_role": "role",
 	"activity_field_query": "filters",
 	"activity_value_yes": "yes",
-	"activity_value_no": "no",
-	"activity_value_days": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "{countText} day",
-				"countPlural=*": "{countText} days"
-			}
-		}
-	]
+	"activity_value_no": "no"
 }

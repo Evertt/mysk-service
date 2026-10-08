@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { modules } from "#lib/modules.ts";
+import { moduleIds } from "#lib/module-ids.ts";
 
-import { moduleIds, parseCreateArgs, UsageError } from "./create-organization-args.ts";
+import { parseCreateArgs, UsageError } from "./create-organization-args.ts";
 
 const args = [
 	"--org",
@@ -96,7 +96,9 @@ describe("modules", () => {
 		);
 	});
 
-	test("are the registry's", () => {
-		expect([...moduleIds]).toEqual(modules.map((module) => module.id));
+	test("are the modules there are", () => {
+		expect(parseCreateArgs([...args, "--modules", moduleIds.join(",")])).toHaveProperty("modules", [
+			...moduleIds,
+		]);
 	});
 });

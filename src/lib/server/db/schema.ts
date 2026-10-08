@@ -10,14 +10,14 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { contractLevels } from "#lib/components/contracts/model.ts";
+import { invoiceStatuses } from "#lib/components/invoicing/model.ts";
 import {
-	activityActions,
-	contractLevels,
+	type ActivityAction,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
 	equipmentStatuses,
-	invoiceStatuses,
 	materialUnits,
 	orderPriorities,
 	orderStatuses,
@@ -338,7 +338,7 @@ export const stockMovementRelations = relations(stockMovement, ({ one }) => ({
 /**
  * A maintenance agreement: for a monthly fee, the customer's covered equipment gets service with
  * a guaranteed response time. Its status (upcoming, active, expired) follows from the period,
- * see `contractStatus` in `#lib/models.ts`.
+ * see `contractStatus` in `#lib/components/contracts/model.ts`.
  */
 export const contract = sqliteTable(
 	"contract",
@@ -661,7 +661,7 @@ export const activity = sqliteTable(
 		/** Cleared when the user is deleted; `userName` keeps who it was. */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 		userName: text("user_name").notNull(),
-		action: text("action", { enum: activityActions }).notNull(),
+		action: text("action").$type<ActivityAction>().notNull(),
 		/** E.g. `order`, see `subjectTypes` in `#lib/activity.ts`. */
 		subjectType: text("subject_type").notNull(),
 		/** The record's id, as text (the auth tables' ids are text). */

@@ -1,7 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { invoiceStatuses } from "#lib/models.js";
-
 import { formatRate } from "./display.ts";
 import {
 	canChange,
@@ -17,6 +15,7 @@ import {
 	today,
 	vatOf,
 } from "./invoice.ts";
+import { invoiceStatuses } from "./model.js";
 
 describe("amounts", () => {
 	test("round to the cent, halves away from zero", () => {

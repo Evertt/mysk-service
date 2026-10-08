@@ -1,18 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatCents, formatDate } from "../src/lib/format.ts";
-import {
-	cents,
-	countIn,
-	isRemote,
-	covered,
-	organizations,
-	priceOf,
-	pricedOrders,
-	rows,
-	useApp,
-	value,
-} from "./app.ts";
+import { cents, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
+import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();

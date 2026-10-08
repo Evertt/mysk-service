@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { contractLevels, contractStatuses } from "#lib/components/contracts/model.js";
 import {
-	contractLevels,
-	contractStatuses,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
