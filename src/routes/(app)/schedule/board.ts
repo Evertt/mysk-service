@@ -1,10 +1,16 @@
-import { toDateInput } from "#lib/dates.js";
 /**
  * Week maths and grouping for the dispatch board. Days are local days, like the dates entered in
  * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
+import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.js";
 import { dateFormatter, formatDate } from "#lib/format.js";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.js";
+
+import type { getSchedule } from "./schedule.remote.js";
+
+/** What the schedule query returns for a week, and one of its orders. */
+export type Schedule = Awaited<ReturnType<typeof getSchedule>>;
+export type ScheduleOrder = Schedule["orders"][number];
 
 /** When an order from the backlog is planned, unless another time is chosen. */
 export const DEFAULT_TIME = "09:00";
@@ -24,16 +30,9 @@ export function parseDay(value: string | null | undefined): Date | undefined {
 	return date.getMonth() === month - 1 && date.getDate() === day ? date : undefined;
 }
 
-/** `date` plus a number of calendar days, keeping the time of day across daylight saving. */
-export function addDays(date: Date, days: number) {
-	const result = new Date(date);
-	result.setDate(result.getDate() + days);
-	return result;
-}
-
 /** The Monday of the week `date` falls in, at the start of the day. */
 export function startOfWeek(date: Date) {
-	const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+	const day = startOfDay(date);
 	return addDays(day, -((day.getDay() + 6) % 7));
 }
 
@@ -48,7 +47,7 @@ export const weekDays = (start: Date) => Array.from({ length: 7 }, (_, i) => add
 export function weekNumber(date: Date) {
 	const thursday = addDays(startOfWeek(date), 3);
 	const firstThursday = addDays(startOfWeek(new Date(thursday.getFullYear(), 0, 4)), 3);
-	return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+	return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * DAY));
 }
 
 const shortDay = dateFormatter({ weekday: "short", day: "numeric", month: "short" });
@@ -65,6 +64,14 @@ export const formatWeek = (start: Date) => formatDate.range(start, addDays(start
 
 /** An engineer's row on the board, or the unassigned orders' row. */
 export type RowId = number | "unassigned";
+
+/** A row's heading on the board, and whether orders can be dropped on it. */
+export interface BoardRow {
+	id: RowId;
+	name: string;
+	detail: string;
+	droppable: boolean;
+}
 
 /** Identifies a cell of the board: a row on a day. */
 export const cellKey = (row: RowId, day: Date) => `${row}/${dayKey(day)}`;

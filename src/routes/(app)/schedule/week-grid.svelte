@@ -1,0 +1,145 @@
+<!--
+	@component
+	The board on wide screens: engineers × days. The header row and the engineers' column are sticky
+	and opaque, above the cells (z-10 to z-30). Scrolling a card into view keeps it clear of them.
+	Cards are dragged between cells (`drag`), or planned with `onschedule`.
+-->
+<script lang="ts">
+	import { resolve } from "$app/paths";
+
+	import { cn } from "#lib/utils.js";
+
+	import type { createBoardDrag } from "./board-drag.svelte.js";
+	import {
+		type BoardRow,
+		cellKey,
+		dayKey,
+		formatDay,
+		formatLongDay,
+		load,
+		type ScheduleOrder,
+	} from "./board.js";
+	import OrderCard from "./order-card.svelte";
+
+	let {
+		days,
+		rows,
+		cells,
+		today,
+		ordersOn,
+		drag,
+		onschedule,
+	}: {
+		days: Date[];
+		rows: BoardRow[];
+		/** The orders by cell (see `cellKey`). */
+		cells: Map<string, ScheduleOrder[]>;
+		/** The day to highlight (`yyyy-mm-dd`). */
+		today: string;
+		/** The orders scheduled on a day, for the count in its header. */
+		ordersOn: (day: Date) => ScheduleOrder[];
+		drag: ReturnType<typeof createBoardDrag>;
+		onschedule: (order: ScheduleOrder) => void;
+	} = $props();
+
+	const loadVariant = {
+		none: "ghost",
+		normal: "ghost",
+		full: "secondary",
+		over: "destructive",
+	} as const;
+</script>
+
+<div
+	class="hidden min-h-0 scroll-ps-32 scroll-pt-10 overflow-auto rounded-lg border bg-card lg:block"
+>
+	<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
+		<div class="sticky start-0 top-0 z-30 border-e border-b bg-card p-2"></div>
+		{#each days as day, i (dayKey(day))}
+			{@const isToday = dayKey(day) === today}
+			{@const count = ordersOn(day).length}
+			<div
+				data-day={dayKey(day)}
+				class={cn(
+					"sticky top-0 z-20 flex items-baseline justify-between gap-1 border-b bg-card p-2",
+					i > 0 && "border-s",
+					isToday && "bg-accent",
+				)}
+				aria-current={isToday ? "date" : undefined}
+			>
+				<span
+					class={cn(
+						"font-medium",
+						isToday && "-mx-1.5 rounded-md bg-primary px-1.5 text-primary-foreground",
+					)}
+				>
+					{formatDay(day)}
+				</span>
+				<span class="text-xs text-muted-foreground tabular-nums">{count || ""}</span>
+			</div>
+		{/each}
+
+		{#each rows as row, r (row.id)}
+			<div
+				class={cn(
+					"sticky start-0 z-10 flex flex-col gap-0.5 border-e bg-card p-2",
+					r > 0 && "border-t",
+				)}
+			>
+				{#if row.id === "unassigned"}
+					<span class="font-medium">{row.name}</span>
+				{:else}
+					<a
+						href={resolve("/(app)/engineers/[id]", { id: String(row.id) })}
+						class="truncate font-medium underline-offset-4 hover:underline"
+					>
+						{row.name}
+					</a>
+				{/if}
+				<span class="truncate text-xs text-muted-foreground">
+					{row.droppable ? row.detail : m.schedule_inactive()}
+				</span>
+			</div>
+			{#each days as day, i (dayKey(day))}
+				{@const key = cellKey(row.id, day)}
+				{@const orders = cells.get(key) ?? []}
+				{@const level = load(orders.length)}
+				<div
+					role="group"
+					aria-label={m.schedule_cell({ name: row.name, day: formatLongDay(day) })}
+					data-load={level}
+					class={cn(
+						"flex min-h-24 min-w-0 flex-col gap-1 p-1 transition-colors",
+						r > 0 && "border-t",
+						i > 0 && "border-s",
+						dayKey(day) === today && "bg-accent/40",
+						row.id !== "unassigned" && level === "over" && "bg-destructive/5",
+						drag.target === key && "bg-primary/10 ring-2 ring-primary ring-inset",
+					)}
+					ondragover={row.droppable ? (event) => drag.over(event, key) : undefined}
+					ondragleave={(event) => drag.leave(event, key)}
+					ondrop={row.droppable ? (event) => drag.drop(event, row.id, day) : undefined}
+				>
+					{#if orders.length && row.id !== "unassigned"}
+						<Badge
+							variant={loadVariant[level]}
+							class="h-4 self-end px-1 text-[0.625rem] tabular-nums"
+							title={level === "over" ? m.schedule_over_booked() : undefined}
+						>
+							{m.common_count_orders({ count: orders.length })}
+						</Badge>
+					{/if}
+					{#each orders as order (order.id)}
+						<OrderCard
+							{order}
+							pending={drag.isMoving(order)}
+							ondragstart={(event) => drag.start(event, order)}
+							ondragend={drag.end}
+							onschedule={() => onschedule(order)}
+						/>
+					{/each}
+				</div>
+			{/each}
+		{/each}
+	</div>
+</div>

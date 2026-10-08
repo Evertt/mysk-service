@@ -8,17 +8,18 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { label } from "#lib/i18n/labels.js";
 	import { quantityStep } from "#lib/models.js";
 
-	import { getMaterials, saveMaterials } from "../portal.remote.js";
+	import { getUsableMaterials, saveMaterials } from "../portal.remote.js";
 
 	let {
 		orderId,
 		lines: saved,
 	}: { orderId: number; lines: { materialId: number; quantity: number }[] } = $props();
 
-	const materials = $derived(await getMaterials());
+	const materials = $derived(await getUsableMaterials());
 	const units = $derived(
 		new Map(materials.map((material) => [String(material.id), material.unit])),
 	);
@@ -106,11 +107,8 @@
 			<PlusIcon data-icon="inline-start" />
 			{m.portal_add_material()}
 		</Button>
-		<Button type="submit" size="lg" disabled={!!saveMaterials.pending}>
-			{#if saveMaterials.pending}
-				<Spinner data-icon="inline-start" />
-			{/if}
+		<SubmitButton size="lg" pending={saveMaterials.pending}>
 			{m.portal_save_materials()}
-		</Button>
+		</SubmitButton>
 	</div>
 </form>

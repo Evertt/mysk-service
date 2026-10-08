@@ -16,12 +16,12 @@ import {
 	roleChangeRefusal,
 } from "#lib/members.js";
 import { m } from "#lib/paraglide/messages.js";
-import { isManager, managerRoles, parseRoles } from "#lib/roles.js";
+import { isManager, parseRoles } from "#lib/roles.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
 import { invitation, member, user } from "#lib/server/db/schema.js";
-import { inTenant, requireMember, requireRole } from "#lib/server/session.js";
+import { inTenant, requireManager, requireMember } from "#lib/server/session.js";
 
 /**
  * The organization's members, and for owners and admins its pending invitations, with what the
@@ -159,7 +159,7 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 export const changeRole = form(
 	v.object({ memberId: v.string(), role: v.picklist(memberRoles) }),
 	async ({ memberId, role }) => {
-		const { organizationId } = requireRole(...managerRoles);
+		const { organizationId } = requireManager();
 		const refusal = roleChangeRefusal(await memberChange(memberId), role);
 		if (refusal) invalid(refusal);
 		const { subject, role: before } = await memberSubject(memberId);
@@ -177,7 +177,7 @@ export const changeRole = form(
 );
 
 export const removeMember = form(v.object({ id: v.string() }), async ({ id }) => {
-	const { organizationId } = requireRole(...managerRoles);
+	const { organizationId } = requireManager();
 	const refusal = removalRefusal(await memberChange(id));
 	if (refusal) invalid(refusal);
 	const { subject } = await memberSubject(id);
@@ -205,7 +205,7 @@ export const invite = form(
 		role: v.picklist(memberRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {
-		const tenant = requireRole(...managerRoles);
+		const tenant = requireManager();
 		if (!assignableRoles(tenant.roles).includes(role)) {
 			invalid(issue.role(m.settings_only_owners_invite_owners()));
 		}
@@ -240,7 +240,7 @@ export const invite = form(
 
 /** Sends an invitation again, with a new expiry date. */
 export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
-	const tenant = requireRole(...managerRoles);
+	const tenant = requireManager();
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
 	if (role.includes("owner") && !tenant.roles.includes("owner")) {
@@ -266,7 +266,7 @@ export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }
 });
 
 export const cancelInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
-	requireRole(...managerRoles);
+	requireManager();
 	const found = await findInvitation(id);
 	await asUser((headers) => auth.api.cancelInvitation({ body: { invitationId: id }, headers }));
 	await recordActivityAfter({ action: "cancelled", subject: invitationSubject(found) });

@@ -5,9 +5,10 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { addDays } from "#lib/dates.js";
 	import { formatNumber } from "#lib/format.js";
 
-	import { addDays, dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.js";
+	import { dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.js";
 	import ScheduleBoard from "./schedule-board.svelte";
 	import { getSchedule } from "./schedule.remote.js";
 
