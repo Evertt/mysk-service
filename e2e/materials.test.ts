@@ -101,13 +101,6 @@ async function filter(title: string, ...options: RegExp[]) {
 	await page.keyboard.press("Escape");
 }
 
-/** Sorts the table by a column through its header menu. */
-async function sortBy(column: string, direction: "Ascending" | "Descending") {
-	const { page } = app;
-	await page.locator("thead").getByRole("button", { name: column }).click();
-	await page.getByRole("menuitem", { name: direction }).click();
-}
-
 /** Checks that searching the list for MAT-0001 shows the organization's price and usage. */
 async function expectFirstMaterial(organizationId: string) {
 	const first = await material("MAT-0001", organizationId);
@@ -243,7 +236,7 @@ describe("in North", () => {
 		const pageOf = (pages: number) => page.getByText(new RegExp(`^Page \\d+ of ${pages}$`));
 
 		await app.go("/materials");
-		await sortBy("Unit price", "Descending");
+		await app.sortBy("Unit price", "descending");
 		await page.waitForURL(() => search() === "?sort=-price");
 		const first = await names();
 		await page.getByRole("button", { name: "Go to next page" }).click();
@@ -313,7 +306,7 @@ describe("in North", () => {
 	});
 
 	test("sorting by unit price puts the most expensive first", async () => {
-		await sortBy("Unit price", "Descending");
+		await app.sortBy("Unit price", "descending");
 		const prices = (await tableRows().allInnerTexts()).map((row) =>
 			Number(/€([\d,]+\.\d\d)/.exec(row)![1].replaceAll(",", "")),
 		);
@@ -327,7 +320,7 @@ describe("in North", () => {
 
 	test("sorting by usage puts the busiest first, whose page lists its orders", async () => {
 		const { page } = app;
-		await sortBy("Used on", "Descending");
+		await app.sortBy("Used on", "descending");
 		const [most] = await rows<{ orders: number }>(
 			`select count(distinct l.order_id) as orders from material m
 			 join order_line l on l.material_id = m.id where m.organization_id = ?

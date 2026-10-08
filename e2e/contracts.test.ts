@@ -173,10 +173,8 @@ describe("in North", () => {
 	});
 
 	test("sorting by monthly fee puts the highest first", async () => {
-		const { page } = app;
 		await app.go("/contracts");
-		await page.locator('[data-slot="dropdown-menu-trigger"]', { hasText: "Monthly fee" }).click();
-		await page.getByRole("menuitem", { name: "Descending" }).click();
+		await app.sortBy("Monthly fee", "descending");
 		const highest = Number(
 			await value(`select max(monthly_fee) from contract where organization_id = ?`, [north.id]),
 		);

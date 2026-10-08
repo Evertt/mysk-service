@@ -42,24 +42,29 @@ const names = () =>
 const cell = (name: string, index: number) =>
 	page.getByRole("row").filter({ hasText: name }).getByRole("cell").nth(index);
 
-/** A column's header button, which opens its menu (its name goes on to say how it's sorted). */
-const columnMenu = (name: string) =>
+/** A column's header button, which sorts by it (its name goes on to say how it's sorted). */
+const columnHeader = (name: string) =>
 	page
 		.getByRole("row")
 		.first()
 		.getByRole("button", { name: new RegExp(`^${name}( sorted|$)`) });
 
 /** Shift-clicks a column's header, which adds it to the sort or turns it around there. */
-const addToSort = (name: string) => columnMenu(name).click({ modifiers: ["Shift"] });
+const addToSort = (name: string) => columnHeader(name).click({ modifiers: ["Shift"] });
 
 /** The place a column's header shows in the sort order, if it shows one. */
 const precedence = (name: string) => () =>
-	columnMenu(name).element().querySelector("span[aria-hidden=true]")?.textContent?.trim();
+	columnHeader(name).element().querySelector("span[aria-hidden=true]")?.textContent?.trim();
 
-/** Sorts by a column alone through its header menu. */
-async function sortBy(name: string, direction: "Ascending" | "Descending") {
-	await columnMenu(name).click();
-	await page.getByRole("menuitem", { name: direction }).click();
+/** Sorts by a column alone, clicking its header until it's sorted that way. */
+async function sortBy(name: string, direction: "ascending" | "descending") {
+	for (let clicks = 0; clicks < 3; clicks++) {
+		const before = textOf(columnHeader(name))();
+		if (before === `${name} sorted ${direction}`) return;
+		await columnHeader(name).click();
+		await expect.poll(textOf(columnHeader(name))).not.toBe(before);
+	}
+	await expect.element(columnHeader(name)).toHaveAccessibleName(`${name} sorted ${direction}`);
 }
 
 /** The names in the rows, in order, sorted by amount (then as given). */
@@ -72,11 +77,8 @@ const byAmount = (names: string[]) =>
 /** An option of the faceted filter, named by its label (its accessible name ends in its count). */
 const facet = (label: string) => page.getByRole("option", { name: new RegExp(`^${label}`) });
 
-/**
- * The faceted filter's button, whose name grows with the selection. It comes before the column
- * header's button of the same name.
- */
-const statusFilter = () => page.getByRole("button", { name: /^Status/ }).first();
+/** The faceted filter's button, whose name grows with the selection. */
+const statusFilter = () => page.getByRole("button", { name: /^Status/ });
 
 /** Reads a locator's text with its whitespace collapsed, for `expect.poll`. */
 const textOf = (locator: Locator) => () =>
@@ -124,39 +126,60 @@ describe("sorting", () => {
 		await expect.poll(names).toEqual(byName.slice(0, 5));
 	});
 
-	test("the column header menu sorts descending and back to ascending", async () => {
+	test("clicking a header goes descending, unsorted, then ascending, without a menu", async () => {
 		render(Harness, { items });
 
-		await columnMenu("Name").click();
-		await page.getByRole("menuitem", { name: "Descending" }).click();
+		// Sorted by name ascending to start with.
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name sorted ascending");
+		await columnHeader("Name").click();
 		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name sorted descending");
+		expect(page.getByRole("menu").elements()).toHaveLength(0);
 
-		await columnMenu("Name").click();
-		await page.getByRole("menuitem", { name: "Ascending" }).click();
+		await columnHeader("Name").click();
+		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
+
+		await columnHeader("Name").click();
 		await expect.poll(names).toEqual(byName.slice(0, 5));
 	});
 
-	test("a column that can only be hidden offers no sorting", async () => {
+	test("clicking another header sorts by that column alone, ascending", async () => {
 		render(Harness, { items });
 
-		await columnMenu("Status").click();
-		await expect.element(page.getByRole("menuitem", { name: "Hide column" })).toBeVisible();
-		expect(page.getByRole("menuitem", { name: "Ascending" }).elements()).toHaveLength(0);
+		await columnHeader("Amount").click();
+		await expect.poll(names).toEqual(byAmount(items.map((item) => item.name)).slice(0, 5));
+		await expect.element(columnHeader("Amount")).toHaveAccessibleName("Amount sorted ascending");
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
 	});
 
-	test("a column that can only be sorted offers no hiding", async () => {
+	test("Enter and Space on a header sort from the keyboard", async () => {
 		render(Harness, { items });
 
-		await columnMenu("Name").click();
-		await expect.element(page.getByRole("menuitem", { name: "Ascending" })).toBeVisible();
-		expect(page.getByRole("menuitem", { name: "Hide column" }).elements()).toHaveLength(0);
+		columnHeader("Name").element().focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await userEvent.keyboard(" ");
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
 	});
 
-	test("a column that can neither sort nor hide has a plain label", async () => {
+	test("the header explains how to sort by more than one column", async () => {
 		render(Harness, { items });
 
-		await expect.element(page.getByRole("row").first().getByText("Due")).toBeInTheDocument();
-		expect(columnMenu("Due").elements()).toHaveLength(0);
+		await expect
+			.element(columnHeader("Amount"))
+			.toHaveAttribute("title", "Click to sort; shift-click to sort by more than one column");
+	});
+
+	test("a column that can't be sorted has a plain label, also when it can be hidden", async () => {
+		render(Harness, { items });
+
+		const headerRow = page.getByRole("row").first();
+		await expect.element(headerRow.getByText("Due")).toBeInTheDocument();
+		expect(columnHeader("Due").elements()).toHaveLength(0);
+		// Hidden from the View menu only.
+		await expect.element(headerRow.getByText("Status")).toBeInTheDocument();
+		expect(headerRow.getByRole("button", { name: "Status" }).elements()).toHaveLength(0);
 	});
 });
 
@@ -167,40 +190,27 @@ describe("sorting by more than one column", () => {
 		// Sorted by name ascending to start with.
 		await addToSort("Name");
 		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
-		await expect.element(columnMenu("Name")).toHaveAccessibleName(/sorted descending/);
+		await expect.element(columnHeader("Name")).toHaveAccessibleName(/sorted descending/);
 
 		await addToSort("Name");
 		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
-		expect(columnMenu("Name").element().textContent).not.toMatch(/sorted/);
-		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+		expect(columnHeader("Name").element().textContent).not.toMatch(/sorted/);
 
 		await addToSort("Name");
 		await expect.poll(names).toEqual(byName.slice(0, 5));
 	});
 
-	test("the menu clears a column's sorting", async () => {
-		render(Harness, { items });
-
-		await columnMenu("Name").click();
-		await page.getByRole("menuitem", { name: "Clear sorting" }).click();
-		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
-
-		await columnMenu("Name").click();
-		await expect.element(page.getByRole("menuitem", { name: "Ascending" })).toBeVisible();
-		expect(page.getByRole("menuitem", { name: "Clear sorting" }).elements()).toHaveLength(0);
-	});
-
 	test("shift-clicking adds a column to the sort, numbered by precedence", async () => {
 		render(Harness, { items });
 
-		await sortBy("Amount", "Ascending");
+		await sortBy("Amount", "ascending");
 		await addToSort("Name");
 		// The four at €1.00 by name, after the one at €0.00.
 		await expect.poll(names).toEqual(byAmount(byName).slice(0, 5));
 		await expect.poll(precedence("Amount")).toBe("1");
 		await expect.poll(precedence("Name")).toBe("2");
 		await expect
-			.element(columnMenu("Name"))
+			.element(columnHeader("Name"))
 			.toHaveAccessibleName("Name sorted ascending, sort 2 of 2");
 
 		// Turned around within the sort, keeping its place.
@@ -208,22 +218,22 @@ describe("sorting by more than one column", () => {
 		await expect.poll(names).toEqual(byAmount(byName.toReversed()).slice(0, 5));
 		await expect.poll(precedence("Name")).toBe("2");
 
-		// A plain choice from the menu sorts by that column alone.
-		await sortBy("Name", "Ascending");
-		await expect.poll(names).toEqual(byName.slice(0, 5));
-		await expect.element(columnMenu("Amount")).toHaveAccessibleName("Amount");
-		await expect.element(columnMenu("Name")).toHaveAccessibleName("Name sorted ascending");
-		expect(precedence("Name")()).toBeUndefined();
+		// A plain click takes a column to its next direction and sorts by it alone.
+		await columnHeader("Amount").click();
+		await expect.element(columnHeader("Amount")).toHaveAccessibleName("Amount sorted descending");
+		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
+		expect(precedence("Amount")()).toBeUndefined();
+		expect(names()[0]).toBe("Boiler service");
 	});
 
 	test("shift+Enter on a header adds it to the sort from the keyboard", async () => {
 		render(Harness, { items });
 
-		await sortBy("Amount", "Descending");
-		columnMenu("Name").element().focus();
+		await sortBy("Amount", "descending");
+		columnHeader("Name").element().focus();
 		await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
 		await expect.poll(precedence("Name")).toBe("2");
-		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+		await expect.element(columnHeader("Amount")).toHaveAccessibleName(/sorted descending/);
 	});
 });
 
@@ -246,8 +256,10 @@ describe("the URL", () => {
 		await expect.poll(lastSearch).toBe("?status=open,draft,closed");
 		await userEvent.keyboard("{Escape}");
 
-		await sortBy("Amount", "Descending");
 		const filtered = "?status=open,draft,closed";
+		await columnHeader("Amount").click();
+		await expect.poll(lastSearch).toBe(`${filtered}&sort=amount`);
+		await columnHeader("Amount").click();
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount`);
 		await addToSort("Name");
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name`);
@@ -282,7 +294,7 @@ describe("the URL", () => {
 		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
 		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
 		await expect.poll(textOf(statusFilter())).toBe("Status 3 selected");
-		await expect.element(columnMenu("Amount")).toHaveAccessibleName(/sorted descending/);
+		await expect.element(columnHeader("Amount")).toHaveAccessibleName(/sorted descending/);
 		expect(visits).toEqual([]);
 	});
 
@@ -335,16 +347,6 @@ describe("the URL", () => {
 });
 
 describe("column visibility", () => {
-	test("the column header menu hides its column", async () => {
-		render(Harness, { items });
-
-		await columnMenu("Amount").click();
-		await page.getByRole("menuitem", { name: "Hide column" }).click();
-
-		await expect.poll(headers).not.toContain("Amount");
-		await expect.element(page.getByText("€1,234.56")).not.toBeInTheDocument();
-	});
-
 	test("the view menu lists the hideable columns and toggles them", async () => {
 		render(Harness, { items });
 
