@@ -28,6 +28,8 @@
  */
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
+
 import {
 	defaultPageSizes,
 	filterValues,
@@ -237,7 +239,6 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 		q: v.pipe(v.string(), v.maxLength(listLimits.search)),
 		filters,
 	};
-	const tooBig = "The query is too big.";
 	const query = v.pipe(
 		v.strictObject({
 			...whereEntries,
@@ -245,18 +246,18 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 				v.array(v.strictObject({ id: v.picklist(sortIds), desc: v.boolean() })),
 				v.check(
 					(sort) => new Set(sort.map((item) => item.id)).size === sort.length,
-					"A column is sorted by twice.",
+					m.common_error_generic,
 				),
 			),
 			group: v.nullable(v.picklist(groupIds)),
 			pageIndex: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(listLimits.pageIndex)),
 			pageSize: v.picklist(pageSizes),
 		}),
-		v.check((input) => jsonBytes(input) <= listLimits.bytes, tooBig),
+		v.check((input) => jsonBytes(input) <= listLimits.bytes, m.common_error_generic),
 	);
 	const where = v.pipe(
 		v.strictObject(whereEntries),
-		v.check((input) => jsonBytes(input) <= listLimits.bytes, tooBig),
+		v.check((input) => jsonBytes(input) <= listLimits.bytes, m.common_error_generic),
 	);
 
 	return {
