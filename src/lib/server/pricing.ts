@@ -1,6 +1,11 @@
+import { sql, type SQLWrapper } from "drizzle-orm";
+
 import type { PriceAdjustment } from "#lib/modules.js";
 
+import { db } from "./db/index.ts";
+import { orderLine } from "./db/schema.ts";
 import { enabledServerModules, type OrderFacts, type ServerModule } from "./modules.ts";
+import { inTenant } from "./session.ts";
 
 /** Used to estimate labour cost while no engineer is assigned yet. In cents. */
 export const STANDARD_HOURLY_RATE = 8500;
@@ -8,6 +13,29 @@ export const STANDARD_HOURLY_RATE = 8500;
 /** Labour cost in cents, at the engineer's rate or the standard rate when unassigned. */
 export const laborCost = (hours: number, hourlyRate: number | null | undefined) =>
 	Math.round(hours * (hourlyRate ?? STANDARD_HOURLY_RATE));
+
+/**
+ * An order line's total in cents, in SQL: the twin of `lineTotal()` in `#lib/models.ts`, which
+ * rounds the same way. To add the lines up, wrap it in `sum()` in a `sql` template.
+ */
+export const lineTotalSql = (line: { quantity: SQLWrapper; unitPrice: SQLWrapper } = orderLine) =>
+	sql<number>`round(${line.quantity} * ${line.unitPrice})`;
+
+/**
+ * The tenant's order lines added up per order, as a subquery to join to `order` and feed
+ * `priceOrders()`: `.leftJoin(materials, eq(materials.orderId, order.id))`. Select `materials.total`
+ * with a `coalesce(…, 0)`, for an order without lines.
+ */
+export const materialsPerOrder = () =>
+	db
+		.select({
+			orderId: orderLine.orderId,
+			total: sql<number>`sum(${lineTotalSql()})`.as("total"),
+		})
+		.from(orderLine)
+		.where(inTenant(orderLine))
+		.groupBy(orderLine.orderId)
+		.as("materials");
 
 /** An order to price: what modules know about it, its materials (in cents) and its labour. */
 export interface OrderToPrice extends OrderFacts {

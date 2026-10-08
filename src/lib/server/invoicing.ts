@@ -26,18 +26,10 @@ import { m } from "#lib/paraglide/messages.js";
 
 import { recordActivity } from "./activity.ts";
 import { db, type Transaction } from "./db/index.ts";
-import {
-	customer,
-	engineer,
-	invoice,
-	invoiceLine,
-	invoicingSettings,
-	order,
-	orderLine,
-} from "./db/schema.ts";
+import { customer, engineer, invoice, invoiceLine, invoicingSettings, order } from "./db/schema.ts";
 import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
 import { nextNumber } from "./numbering.ts";
-import { priceOrders } from "./pricing.ts";
+import { materialsPerOrder, priceOrders } from "./pricing.ts";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "./session.ts";
 
 export const invoicing: ServerModule = {
@@ -76,15 +68,7 @@ export interface BillableOrder {
 
 /** The customer's completed orders that aren't on an invoice yet, oldest first, priced. */
 async function billableOrders(customerId: number): Promise<BillableOrder[]> {
-	const materials = db
-		.select({
-			orderId: orderLine.orderId,
-			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("materials");
+	const materials = materialsPerOrder();
 
 	const rows = await db
 		.select({
