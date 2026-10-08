@@ -604,6 +604,55 @@ describe("in North", () => {
 		expect(saved).toEqual({ model: "TX-2", status: "needs_service", customer_id: Number(moved) });
 	});
 
+	test("selected units get another status, and those with orders aren't deleted", async () => {
+		const { page } = app;
+		const id = await unitId(serial, north.id);
+		const [{ code, customer_id }] = await rows<{ code: string; customer_id: number }>(
+			`select c.code, e.customer_id from equipment e join customer c on c.id = e.customer_id
+			 where e.id = ?`,
+			[id],
+		);
+		const [used] = await rows<{ id: number; serial_number: string }>(
+			`select e.id, e.serial_number from equipment e where e.customer_id = ?
+			 and exists (select 1 from "order" o where o.equipment_id = e.id) order by e.id limit 1`,
+			[customer_id],
+		);
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		const select = (serialNumber: string) =>
+			bodyRows().filter({ hasText: serialNumber }).getByRole("checkbox").click();
+
+		await app.go(`/equipment?customer=${code}&size=100`);
+		await select(serial);
+		await bar.getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByLabel("Status").selectOption({ label: "Out of service" });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+		await app.toast("1 updated");
+		expect(await value(`select status from equipment where id = ?`, [id])).toBe("out_of_service");
+		expect(
+			await value(
+				`select action from activity where organization_id = ? and subject_type = 'equipment'
+				 and subject_id = ? order by id desc limit 1`,
+				[north.id, String(id)],
+			),
+		).toBe("updated");
+		await expect.poll(() => bar.count()).toBe(0);
+
+		const before = await unit(used.id);
+		await select(used.serial_number);
+		await bar.getByRole("button", { name: "Delete" }).click();
+		await dialog.getByText("Delete the selected units?").waitFor();
+		await dialog.getByRole("button", { name: "Delete" }).click();
+		await app.toast("1 skipped");
+		await page
+			.locator("[data-sonner-toast]", {
+				hasText: `${used.serial_number}: This unit can't be deleted`,
+			})
+			.waitFor();
+		expect(await unit(used.id)).toEqual(before);
+		await app.go(`/equipment/${serial}`);
+	});
+
 	test("deleting it removes it, after which it's a 404", async () => {
 		const { page } = app;
 		await page.getByRole("button", { name: "Delete" }).click();

@@ -366,6 +366,52 @@ describe("in North", () => {
 		expect(await engineer(id)).toBeUndefined();
 		expect((await app.go(`/engineers/${id}`))?.status()).toBe(404);
 	});
+
+	test("selected engineers are deactivated and activated together, and it's logged", async () => {
+		const { page } = app;
+		const picked = await rows<{ id: number; name: string }>(
+			`select id, name from engineer where organization_id = ? and active = 1
+			 order by id desc limit 2`,
+			[north.id],
+		);
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		const select = async () => {
+			for (const { name } of picked) {
+				await page.locator("tbody tr", { hasText: name }).getByRole("checkbox").click();
+			}
+			await bar.getByText("2 selected").waitFor();
+		};
+		const activeOf = async () =>
+			Promise.all(picked.map(async ({ id }) => (await engineer(id)).active));
+
+		await app.go("/engineers?size=50");
+		await select();
+		// They're all active: activating would do nothing.
+		await expect
+			.poll(() =>
+				bar.getByRole("button", { name: "Activate", exact: true }).getAttribute("aria-disabled"),
+			)
+			.toBe("true");
+		await bar.getByRole("button", { name: "Deactivate", exact: true }).click();
+		await app.toast("2 updated");
+		expect(await activeOf()).toEqual([0, 0]);
+		for (const { id } of picked) {
+			const [logged] = await rows<{ action: string; changes: string }>(
+				`select action, changes from activity where organization_id = ? and subject_type = 'engineer'
+				 and subject_id = ? order by id desc limit 1`,
+				[north.id, String(id)],
+			);
+			expect(logged.action).toBe("updated");
+			expect(JSON.parse(logged.changes)).toEqual({ active: [true, false] });
+		}
+		await expect.poll(() => bar.count()).toBe(0);
+
+		await select();
+		await bar.getByRole("button", { name: "Activate", exact: true }).click();
+		// (The first toast may still show.)
+		await expect.poll(() => bar.count()).toBe(0);
+		expect(await activeOf()).toEqual([1, 1]);
+	});
 });
 
 describe("in South", () => {

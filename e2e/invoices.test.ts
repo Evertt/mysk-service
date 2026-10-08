@@ -570,6 +570,42 @@ describe("in North", () => {
 		expect(await value(`select count(*) from "order" where id = ?`, [order.id])).toBe(1);
 		await page.keyboard.press("Escape");
 	});
+
+	test("selected invoices are marked paid, except those that aren't sent", async () => {
+		const { page } = app;
+		const pick = (status: string) =>
+			rows<{ id: number; number: string }>(
+				`select id, number from invoice where organization_id = ? and status = ?
+				 order by id desc limit 1`,
+				[north.id, status],
+			).then(([row]) => row);
+		const [sent, draft] = [await pick("sent"), await pick("draft")];
+		const before = await rows(`select * from invoice where id = ?`, [draft.id]);
+
+		await app.go("/invoices?size=100");
+		for (const { number } of [sent, draft]) {
+			await page.locator("tbody tr", { hasText: number }).getByRole("checkbox").click();
+		}
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		await bar.getByRole("button", { name: "Mark paid" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText("Applies to 1 of the 2 selected; the others are skipped.").waitFor();
+		await dialog.getByRole("button", { name: "Mark paid" }).click();
+
+		await app.toast("1 marked paid, 1 skipped");
+		await page.locator("[data-sonner-toast]", { hasText: `${draft.number} is a draft` }).waitFor();
+		expect(
+			await rows(`select status, paid_on is not null as paid from invoice where id = ?`, [sent.id]),
+		).toEqual([{ status: "paid", paid: 1 }]);
+		expect(await rows(`select * from invoice where id = ?`, [draft.id])).toEqual(before);
+		expect(
+			await value(
+				`select action from activity where organization_id = ? and subject_type = 'invoice'
+				 and subject_id = ? order by id desc limit 1`,
+				[north.id, String(sent.id)],
+			),
+		).toBe("paid");
+	});
 });
 
 describe("in South, which has invoicing but no contracts", () => {
