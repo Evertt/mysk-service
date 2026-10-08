@@ -20,7 +20,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { isManager } from "#lib/roles.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
+import { bulkChange, idsTarget } from "#lib/server/bulk.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, invoicingSettings, order } from "#lib/server/db/schema.js";
 import { refuse } from "#lib/server/forms.js";
@@ -424,7 +424,7 @@ export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
 });
 
 /** Marks the selected invoices paid, today: the sent ones (see `canChange`). */
-export const bulkMarkPaid = command(bulkTarget, async (target) => {
+export const bulkMarkPaid = command(idsTarget, async (target) => {
 	requireModule("invoicing");
 	const result = await bulkChange(target, {
 		table: invoice,

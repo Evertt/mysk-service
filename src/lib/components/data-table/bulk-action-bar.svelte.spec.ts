@@ -29,7 +29,7 @@ const done = (result: Partial<BulkResult> = {}): BulkResult => ({
 });
 
 /** An action that runs at once, for the open jobs. */
-const close = (run = vi.fn(async () => done())): BulkAction<Job> => ({
+const close = (run = vi.fn(async () => done())): BulkAction<Job, any> => ({
 	id: "close",
 	label: () => "Close",
 	skip: (job) => (job.status === "done" ? `${job.name} is done` : undefined),
@@ -218,7 +218,8 @@ test("the table shows the new values of rows that come back changed, e.g. after 
 });
 
 describe("in a server-side table", () => {
-	const matching = { key: "status=open", count: 40 };
+	const where = { q: "pump", filters: { status: ["open"] } };
+	const matching = { where, key: "status=open", count: 40 };
 
 	test("with the whole page selected, offers to select all matching rows, and acts on them", async () => {
 		const run = vi.fn(async () => done({ done: 40 }));
@@ -237,16 +238,6 @@ describe("in a server-side table", () => {
 			.not.toHaveAttribute("aria-disabled");
 
 		await bar().getByRole("button", { name: "Close" }).click();
-		expect(run).toHaveBeenCalledWith({ matching: "status=open" }, undefined);
-	});
-
-	test("a list with a where acts on it rather than on the key", async () => {
-		const where = { q: "pump", filters: { status: ["open"] } };
-		const run = vi.fn(async () => done({ done: 40 }));
-		render(Harness, { jobs, actions: [close(run)], matching: { ...matching, where } });
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
-		await bar().getByRole("button", { name: "Select all 40 matching" }).click();
-		await bar().getByRole("button", { name: "Close" }).click();
 		expect(run).toHaveBeenCalledWith({ matching: where }, undefined);
 	});
 
@@ -259,7 +250,7 @@ describe("in a server-side table", () => {
 	});
 
 	test("an action that can't act on all matching rows is disabled for them", async () => {
-		const once: BulkAction<Job> = { ...close(), matching: false };
+		const once: BulkAction<Job, any> = { ...close(), matching: false };
 		render(Harness, { jobs, actions: [once], matching });
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
 		await expect

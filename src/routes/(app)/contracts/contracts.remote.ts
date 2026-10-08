@@ -8,7 +8,7 @@ import { formatDate } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
+import { bulkChange, idsTarget } from "#lib/server/bulk.js";
 import { overlappingCoverage } from "#lib/server/contracts.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
@@ -288,7 +288,7 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 });
 
 /** Deletes the selected contracts, with their coverage. */
-export const bulkDeleteContracts = command(bulkTarget, async (target) => {
+export const bulkDeleteContracts = command(idsTarget, async (target) => {
 	requireModule("contracts");
 	const result = await bulkChange(target, {
 		table: contract,

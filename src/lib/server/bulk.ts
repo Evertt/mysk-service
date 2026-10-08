@@ -34,7 +34,7 @@ import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
 import { idsInTenant, type TenantTable } from "./session.ts";
-import { planList, type ListSql, tableParams } from "./table-query.ts";
+import { type ListSql, planList } from "./table-query.ts";
 
 /** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */
 export const idsTarget = v.object({
@@ -59,40 +59,14 @@ export const listTarget = <C>(where: v.GenericSchema<ListWhere<C>>) =>
 	v.union([idsTarget, v.object({ matching: where })]);
 
 /**
- * TRANSITIONAL, until the equipment and materials lists have a definition: the target of a list
- * that still works from its URL parameters (`tableParams`). Then `idsTarget` replaces it for the
- * client-side tables, `listTarget()` for the lists, and this, `BulkTargetInput` and `MatchingIds`
- * go.
- */
-export const bulkTarget = v.union([idsTarget, v.object({ matching: tableParams })]);
-
-/** TRANSITIONAL: what `bulkTarget` reads. */
-export type BulkTargetInput = v.InferOutput<typeof bulkTarget>;
-
-/**
- * TRANSITIONAL: finds the ids of a list's rows that match its URL parameters
- * (`planTable(…).where()`, which is scoped to the tenant), at most `limit` of them.
- */
-export type MatchingIds = (params: string, limit: number) => Promise<number[]>;
-
-/**
  * The ids a bulk command acts on: the selected ones, or those of the rows matching the list's
  * search and filters (`matching`), found with `list`, the list's SQL, built for this request (see
  * `ListSql`). A table without a list only takes ids. Refuses more than `MAX_BULK_RECORDS`.
- *
- * (Until every list has a definition, `list` can also be a `MatchingIds`, for a target of
- * URL parameters.)
  */
-export async function targetIds<C>(
-	target: ListTarget<C> | BulkTargetInput,
-	list?: (() => ListSql<C>) | MatchingIds,
-) {
+export async function targetIds<C>(target: ListTarget<C>, list?: () => ListSql<C>) {
 	if ("ids" in target) return [...new Set(target.ids)];
 	if (!list) error(400, m.common_error_generic());
-	const found =
-		typeof target.matching === "string"
-			? await (list as MatchingIds)(target.matching, MAX_BULK_RECORDS + 1)
-			: await planList((list as () => ListSql<C>)(), target.matching).ids(MAX_BULK_RECORDS + 1);
+	const found = await planList(list(), target.matching).ids(MAX_BULK_RECORDS + 1);
 	if (found.length > MAX_BULK_RECORDS) {
 		error(400, m.common_bulk_too_many({ max: formatNumber(MAX_BULK_RECORDS) }));
 	}
@@ -150,19 +124,17 @@ export async function bulkChange<
 	C extends Record<string, SQLiteColumn> = Record<never, never>,
 	L = never,
 >(
-	target: ListTarget<L> | BulkTargetInput,
+	target: ListTarget<L>,
 	options: {
 		table: SQLiteTable & TenantTable;
 		label: SQLiteColumn;
 		columns?: C;
 		list?: () => ListSql<L>;
-		/** TRANSITIONAL: for a target of URL parameters, instead of `list`. */
-		matching?: MatchingIds;
 		change: (record: { id: number; label: string } & Loaded<C>) => Promise<unknown>;
 	},
 ): Promise<BulkResult> {
-	const { table, label, columns, list, matching, change } = options;
-	const ids = await targetIds(target, list ?? matching);
+	const { table, label, columns, list, change } = options;
+	const ids = await targetIds(target, list);
 	const found = (await db
 		.select({ ...columns, id: table.id, label })
 		.from(table)
