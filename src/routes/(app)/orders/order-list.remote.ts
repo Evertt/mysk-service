@@ -1,11 +1,11 @@
 import { query } from "$app/server";
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, inArray, sql } from "drizzle-orm";
 
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { tagOrders } from "#lib/server/modules.js";
-import { priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { lineTotalSql, priceOrders } from "#lib/server/pricing.js";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 import {
 	facetCounts,
 	groupCounts,
@@ -48,9 +48,9 @@ export const getOrders = query(tableParams, async (params) => {
 				engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
 			})
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
-			.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
-			.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
+			.leftJoin(...tenantJoin(equipment, order.equipmentId))
+			.leftJoin(...tenantJoin(engineer, order.engineerId))
 			.where(plan.where())
 			.orderBy(...plan.orderBy)
 			.limit(plan.limit)
@@ -66,7 +66,7 @@ export const getOrders = query(tableParams, async (params) => {
 				.select({
 					orderId: orderLine.orderId,
 					count: count(),
-					total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`,
+					total: sql<number>`sum(${lineTotalSql()})`,
 				})
 				.from(orderLine)
 				.where(and(inTenant(orderLine), inArray(orderLine.orderId, ids)))

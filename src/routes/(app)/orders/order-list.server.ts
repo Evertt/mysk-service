@@ -3,12 +3,12 @@
  * act on the orders matching its URL (`order-bulk.remote.ts`). A remote file can only export remote
  * functions, so it can't be shared from there.
  */
-import { and, count, eq, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { count, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
 
 import { orderPriorities } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant } from "#lib/server/session.js";
+import { inTenant, tenantJoin } from "#lib/server/session.js";
 import { nocase, oneOf, planTable, rank, type ServerTable } from "#lib/server/table-query.js";
 
 import { ordersUrl } from "./orders-url.js";
@@ -62,9 +62,9 @@ export function countOrders(where: SQL | undefined, by?: SQLWrapper) {
 	const counted = db
 		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
 		.from(order)
-		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
-		.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.leftJoin(...tenantJoin(equipment, order.equipmentId))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(where);
 	return by ? counted.groupBy(sql`${by}`) : counted;
 }
@@ -74,9 +74,9 @@ export async function matchingOrderIds(params: string, limit: number) {
 	const rows = await db
 		.select({ id: order.id })
 		.from(order)
-		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
-		.leftJoin(equipment, and(eq(order.equipmentId, equipment.id), inTenant(equipment)))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.leftJoin(...tenantJoin(equipment, order.equipmentId))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(planTable(ordersTable, params).where())
 		.orderBy(order.id)
 		.limit(limit);
