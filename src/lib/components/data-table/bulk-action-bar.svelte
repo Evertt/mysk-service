@@ -101,7 +101,7 @@
 		}
 	}
 
-	async function run(action: BulkAction<TData>, value?: string) {
+	async function run(action: BulkAction<TData, Where>, value?: string) {
 		const target = (
 			allMatching
 				? { matching: matching!.where ?? matching!.key }

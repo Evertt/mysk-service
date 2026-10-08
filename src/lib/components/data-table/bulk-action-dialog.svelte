@@ -5,7 +5,7 @@
 	rows it applies to, if not all. `onrun` runs the action with the chosen value. Make it anew for
 	each time it asks (e.g. in a `{#key}`), so it starts without a choice.
 -->
-<script lang="ts" generics="TData">
+<script lang="ts" generics="TData, Where = string">
 	import { formatNumber } from "#lib/format.js";
 
 	import type { BulkAction } from "./bulk-actions.js";
@@ -18,7 +18,7 @@
 		busy = false,
 		onrun,
 	}: {
-		action: BulkAction<TData>;
+		action: BulkAction<TData, Where>;
 		open?: boolean;
 		/** How many rows are selected. */
 		count: number;
