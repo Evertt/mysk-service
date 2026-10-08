@@ -112,15 +112,15 @@ export const formatted = (required: Message, pattern: RegExp, message: Message) 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** A time of day from `<input type="time">`, `HH:MM`. */
-export const time = (required = "Choose a time") =>
-	formatted(required, timePattern, "Enter a valid time");
+export const time = (required: Message = m.validation_time_required) =>
+	formatted(required, timePattern, m.validation_time_invalid);
 
 /** An optional time of day from `<input type="time">`, `HH:MM`; `null` if it's left empty. */
 export const optionalTime = () =>
 	v.pipe(
 		v.string(),
 		v.trim(),
-		v.check((value) => value === "" || timePattern.test(value), "Enter a valid time"),
+		v.check((value) => value === "" || timePattern.test(value), m.validation_time_invalid),
 		v.transform((value) => value || null),
 	);
 

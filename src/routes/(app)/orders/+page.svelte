@@ -10,14 +10,14 @@
 </script>
 
 <svelte:head>
-	<title>Orders</title>
+	<title>{m.orders_title()}</title>
 </svelte:head>
 
-<PageHeader title="Orders" description="Work orders across all customers and engineers.">
+<PageHeader title={m.orders_title()} description={m.orders_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/orders/new")}>
 			<PlusIcon data-icon="inline-start" />
-			New order
+			{m.orders_new()}
 		</Button>
 	{/snippet}
 </PageHeader>

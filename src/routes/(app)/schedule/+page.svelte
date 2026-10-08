@@ -5,6 +5,7 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { formatNumber } from "#lib/format.js";
 
 	import { addDays, dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.js";
 	import ScheduleBoard from "./schedule-board.svelte";
@@ -20,26 +21,34 @@
 </script>
 
 <svelte:head>
-	<title>Schedule</title>
+	<title>{m.schedule_title()}</title>
 </svelte:head>
 
 <PageHeader
-	title="Schedule"
-	description="Week {weekNumber(start)}, {formatWeek(start)}: who does what, and when."
+	title={m.schedule_title()}
+	description={m.schedule_description({
+		week: formatNumber(weekNumber(start)),
+		range: formatWeek(start),
+	})}
 >
 	{#snippet actions()}
 		<Button
 			href={href(addDays(start, -7))}
 			variant="outline"
 			size="icon"
-			aria-label="Previous week"
+			aria-label={m.schedule_previous_week()}
 		>
 			<ChevronLeftIcon />
 		</Button>
 		<Button href={resolve("/(app)/schedule")} variant="outline" disabled={isThisWeek}>
-			This week
+			{m.schedule_this_week()}
 		</Button>
-		<Button href={href(addDays(start, 7))} variant="outline" size="icon" aria-label="Next week">
+		<Button
+			href={href(addDays(start, 7))}
+			variant="outline"
+			size="icon"
+			aria-label={m.schedule_next_week()}
+		>
 			<ChevronRightIcon />
 		</Button>
 	{/snippet}

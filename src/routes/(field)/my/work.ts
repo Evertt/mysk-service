@@ -6,6 +6,7 @@ import * as v from "valibot";
 
 import { dateFormatter, formatTime } from "#lib/format.js";
 import type { OrderStatus } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 /** What the engineer can do with one of their orders, by its status. */
 export function fieldActions(status: OrderStatus) {
@@ -37,8 +38,8 @@ export function plannedTime(date: Date, today = new Date()) {
 /** A day relative to today: `Today`, `Tomorrow` or e.g. `Friday 9 October`. */
 export function dayLabel(day: Date, today = new Date()) {
 	const days = Math.round((startOfDay(day).getTime() - startOfDay(today).getTime()) / 86_400_000);
-	if (days === 0) return "Today";
-	if (days === 1) return "Tomorrow";
+	if (days === 0) return m.portal_today();
+	if (days === 1) return m.portal_tomorrow();
 	return dayFormat(day);
 }
 
@@ -78,7 +79,7 @@ export function groupByDay<T extends { scheduledFor: Date | null }>(
 			label: dayLabel(new Date(time), today),
 			orders: dayOrders,
 		}));
-	if (undated.length) groups.push({ day: null, label: "Not planned yet", orders: undated });
+	if (undated.length) groups.push({ day: null, label: m.portal_not_planned(), orders: undated });
 	return groups;
 }
 
@@ -89,10 +90,10 @@ export const MAX_SIGNATURE_LENGTH = 500_000;
 export const signature = () =>
 	v.pipe(
 		v.string(),
-		v.nonEmpty("Ask the customer to sign"),
+		v.nonEmpty(m.portal_signature_required),
 		v.check(
 			(value) => value === "" || /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(value),
-			"The signature isn't an image",
+			m.portal_signature_not_image,
 		),
-		v.maxLength(MAX_SIGNATURE_LENGTH, "The signature is too large; clear it and sign again"),
+		v.maxLength(MAX_SIGNATURE_LENGTH, m.portal_signature_too_large),
 	);

@@ -43,7 +43,12 @@
 	const engineers = $derived(boardEngineers(schedule.engineers, schedule.orders));
 	// Unassigned work first, next to the backlog: it's what still needs an engineer.
 	const rows = $derived([
-		{ id: "unassigned" as RowId, name: "Unassigned", detail: "No engineer yet", droppable: true },
+		{
+			id: "unassigned" as RowId,
+			name: m.common_unassigned(),
+			detail: m.schedule_no_engineer_yet(),
+			droppable: true,
+		},
 		...engineers.map((engineer) => ({
 			id: engineer.id as RowId,
 			name: engineer.name,
@@ -106,10 +111,12 @@
 					applyMove(current, { id: order.id, engineerId, scheduledFor }),
 				),
 			);
-			const who = engineerId ? names.get(engineerId) : "nobody";
-			toast.success(`${order.number}: ${who}, ${formatDay(day)} ${time}`);
+			const who = (engineerId && names.get(engineerId)) || m.schedule_nobody();
+			toast.success(m.schedule_moved({ number: order.number, who, day: formatDay(day), time }));
 		} catch (error) {
-			toast.error(isHttpError(error) ? error.body.message : `Couldn't move ${order.number}`);
+			toast.error(
+				isHttpError(error) ? error.body.message : m.schedule_move_failed({ number: order.number }),
+			);
 		} finally {
 			moving.delete(order.id);
 		}
@@ -140,7 +147,7 @@
 </script>
 
 <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
-	<section aria-label="Week" class="min-w-0">
+	<section aria-label={m.schedule_week()} class="min-w-0">
 		<!-- Wide screens: engineers × days. -->
 		<div class="hidden overflow-x-auto rounded-lg border bg-card lg:block">
 			<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
@@ -180,7 +187,7 @@
 							</a>
 						{/if}
 						<span class="truncate text-xs text-muted-foreground">
-							{row.droppable ? row.detail : "Inactive"}
+							{row.droppable ? row.detail : m.schedule_inactive()}
 						</span>
 					</div>
 					{#each days as day (dayKey(day))}
@@ -189,7 +196,7 @@
 						{@const level = load(orders.length)}
 						<div
 							role="group"
-							aria-label="{row.name} on {formatLongDay(day)}"
+							aria-label={m.schedule_cell({ name: row.name, day: formatLongDay(day) })}
 							data-load={level}
 							class={cn(
 								"flex min-h-24 min-w-0 flex-col gap-1 border-t border-l p-1 transition-colors",
@@ -205,10 +212,9 @@
 								<Badge
 									variant={loadVariant[level]}
 									class="h-4 self-end px-1 text-[0.625rem] tabular-nums"
-									title={level === "over" ? "Over-booked" : undefined}
+									title={level === "over" ? m.schedule_over_booked() : undefined}
 								>
-									{orders.length}
-									{orders.length === 1 ? "order" : "orders"}
+									{m.common_count_orders({ count: orders.length })}
 								</Badge>
 							{/if}
 							{#each orders as order (order.id)}
@@ -237,20 +243,19 @@
 						aria-current={isToday ? "date" : undefined}
 					>
 						{formatLongDay(day)}
-						{#if isToday}<Badge>Today</Badge>{/if}
+						{#if isToday}<Badge>{m.schedule_today()}</Badge>{/if}
 						<span class="ms-auto text-xs text-muted-foreground tabular-nums">
-							{orders.length}
-							{orders.length === 1 ? "order" : "orders"}
+							{m.common_count_orders({ count: orders.length })}
 						</span>
 					</h2>
 					{#each orders as order (order.id)}
 						<OrderCard
 							{order}
-							engineer={order.engineerId ? names.get(order.engineerId) : "Unassigned"}
+							engineer={order.engineerId ? names.get(order.engineerId) : m.common_unassigned()}
 							onschedule={() => openDialog(order)}
 						/>
 					{:else}
-						<p class="text-sm text-muted-foreground">Nothing scheduled.</p>
+						<p class="text-sm text-muted-foreground">{m.schedule_nothing_scheduled()}</p>
 					{/each}
 				</section>
 			{/each}
@@ -260,14 +265,13 @@
 	<Card.Root
 		size="sm"
 		role="region"
-		aria-label="Backlog"
+		aria-label={m.schedule_backlog()}
 		class="lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)]"
 	>
 		<Card.Header>
-			<Card.Title>Backlog</Card.Title>
+			<Card.Title>{m.schedule_backlog()}</Card.Title>
 			<Card.Description>
-				{schedule.backlog.length} open {schedule.backlog.length === 1 ? "order" : "orders"} without a
-				date. Drag one onto the week.
+				{m.schedule_backlog_description({ count: schedule.backlog.length })}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
@@ -280,7 +284,7 @@
 					onschedule={() => openDialog(order)}
 				/>
 			{:else}
-				<p class="text-sm text-muted-foreground">Everything is scheduled.</p>
+				<p class="text-sm text-muted-foreground">{m.schedule_backlog_empty()}</p>
 			{/each}
 		</Card.Content>
 	</Card.Root>

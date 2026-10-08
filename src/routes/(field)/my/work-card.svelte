@@ -41,7 +41,7 @@
 				{#if when.date}
 					{when.show === "time" ? plannedTime(when.date) : formatDate(when.date)}
 				{:else}
-					No time set
+					{m.portal_no_time()}
 				{/if}
 			</span>
 			<span class="text-xs text-muted-foreground tabular-nums">{order.number}</span>

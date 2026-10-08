@@ -13,7 +13,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatCents } from "#lib/format.js";
-	import { labelOptions } from "#lib/i18n/labels.js";
+	import { label, labelOptions } from "#lib/i18n/labels.js";
 	import {
 		lineTotal,
 		manualOrderStatuses,
@@ -74,7 +74,9 @@
 			quantity: line.quantity,
 		})) ?? [];
 	let lines = $state(initialLines());
-	const materials = $derived(new Map(options.materials.map((m) => [String(m.id), m])));
+	const materials = $derived(
+		new Map(options.materials.map((material) => [String(material.id), material])),
+	);
 	const quotedPrices = $derived(
 		new Map(order?.lines.map((line) => [String(line.materialId), line.unitPrice])),
 	);
@@ -98,7 +100,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the order; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(order ? "Order saved" : "Order created");
+		if (await submit()) toast.success(order ? m.orders_saved() : m.orders_created());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -109,15 +111,15 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Work</Card.Title>
-			<Card.Description>Who it's for, what needs doing and who does it.</Card.Description>
+			<Card.Title>{m.orders_form_work()}</Card.Title>
+			<Card.Description>{m.orders_form_work_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<SelectField
 					field={fields.customerId}
-					label="Customer"
-					placeholder="Choose a customer"
+					label={m.orders_field_customer()}
+					placeholder={m.orders_choose_customer()}
 					value={customerId}
 					options={options.customers.map((c) => ({
 						value: String(c.id),
@@ -130,27 +132,27 @@
 				/>
 				<SelectField
 					field={fields.equipmentId}
-					label="Equipment"
-					placeholder={customerId ? "None (new installation)" : "Choose a customer first"}
+					label={m.orders_field_equipment()}
+					placeholder={customerId ? m.orders_equipment_none() : m.orders_equipment_customer_first()}
 					value={equipmentId}
 					options={equipmentOptions}
 					onchange={(value: string) => (equipmentId = value)}
 				/>
 				<SelectField
 					field={fields.type}
-					label="Type"
+					label={m.orders_field_type()}
 					value={order?.type ?? "maintenance"}
 					options={labelOptions("orderType", orderTypes)}
 				/>
 				<SelectField
 					field={fields.priority}
-					label="Priority"
+					label={m.orders_field_priority()}
 					value={order?.priority ?? "normal"}
 					options={labelOptions("orderPriority", orderPriorities)}
 				/>
 				<TextField
 					field={fields.description}
-					label="Description"
+					label={m.orders_field_description()}
 					value={order?.description}
 					multiline
 					class="md:col-span-2"
@@ -161,41 +163,41 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Planning</Card.Title>
-			<Card.Description>Status, schedule and the engineer doing the work.</Card.Description>
+			<Card.Title>{m.orders_form_planning()}</Card.Title>
+			<Card.Description>{m.orders_form_planning_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<SelectField
 					field={fields.status}
-					label="Status"
+					label={m.orders_field_status()}
 					value={order?.status ?? "quote"}
 					options={labelOptions("orderStatus", manualOrderStatuses)}
 				/>
 				<SelectField
 					field={fields.engineerId}
-					label="Engineer"
-					placeholder="Unassigned"
+					label={m.orders_field_engineer()}
+					placeholder={m.common_unassigned()}
 					value={order?.engineerId ? String(order.engineerId) : ""}
 					options={engineerOptions}
 				/>
 				<div class="grid grid-cols-2 gap-4">
 					<TextField
 						field={fields.scheduledFor}
-						label="Scheduled for"
+						label={m.orders_field_scheduled_for()}
 						type="date"
 						value={toDateInput(order?.scheduledFor)}
 					/>
 					<TextField
 						field={fields.scheduledTime}
-						label="Time"
+						label={m.orders_field_time()}
 						type="time"
 						value={order?.scheduledFor ? timeOfDay(order.scheduledFor) : ""}
 					/>
 				</div>
 				<NumberField
 					field={fields.laborHours}
-					label="Labour (hours)"
+					label={m.orders_field_labor()}
 					value={order?.laborHours ?? 0}
 					min={0}
 					step={0.25}
@@ -206,16 +208,14 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Materials</Card.Title>
+			<Card.Title>{m.orders_materials()}</Card.Title>
 			<Card.Description>
-				{order
-					? "Existing lines keep the price they were quoted at."
-					: "Priced at today's list price."}
+				{order ? m.orders_materials_quoted() : m.orders_materials_list_price()}
 			</Card.Description>
 			<Card.Action>
 				<Button type="button" variant="outline" size="sm" onclick={addLine}>
 					<PlusIcon data-icon="inline-start" />
-					Add material
+					{m.orders_add_material()}
 				</Button>
 			</Card.Action>
 		</Card.Header>
@@ -224,10 +224,12 @@
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
-							<Table.Head>Material</Table.Head>
-							<Table.Head class="w-28">Quantity</Table.Head>
-							<Table.Head class="text-right">Amount</Table.Head>
-							<Table.Head class="w-10"><span class="sr-only">Remove</span></Table.Head>
+							<Table.Head>{m.orders_line_material()}</Table.Head>
+							<Table.Head class="w-28">{m.orders_line_quantity()}</Table.Head>
+							<Table.Head class="text-right">{m.orders_line_amount()}</Table.Head>
+							<Table.Head class="w-10"
+								><span class="sr-only">{m.orders_line_remove()}</span></Table.Head
+							>
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
@@ -237,12 +239,12 @@
 								<Table.Cell>
 									<NativeSelect.Root
 										class="w-full"
-										aria-label="Material"
+										aria-label={m.orders_line_material()}
 										{...withoutValue(lineFields.materialId.as("select"))}
 										value={line.materialId}
 										onchange={(event) => (line.materialId = event.currentTarget.value)}
 									>
-										<NativeSelect.Option value="">Choose a material</NativeSelect.Option>
+										<NativeSelect.Option value="">{m.orders_choose_material()}</NativeSelect.Option>
 										{#each options.materials as material (material.id)}
 											<NativeSelect.Option value={String(material.id)}>
 												{material.name} ({material.sku})
@@ -252,9 +254,10 @@
 								</Table.Cell>
 								<Table.Cell>
 									<InputGroup.Root>
-										{@const step = quantityStep(materials.get(line.materialId)?.unit ?? "m")}
+										{@const unit = materials.get(line.materialId)?.unit}
+										{@const step = quantityStep(unit ?? "m")}
 										<InputGroup.Input
-											aria-label="Quantity"
+											aria-label={m.orders_line_quantity()}
 											min={step}
 											{step}
 											class="tabular-nums"
@@ -263,7 +266,8 @@
 											oninput={(event) => (line.quantity = Number(event.currentTarget.value))}
 										/>
 										<InputGroup.Addon align="inline-end">
-											<InputGroup.Text>{materials.get(line.materialId)?.unit ?? ""}</InputGroup.Text
+											<InputGroup.Text
+												>{unit ? label("materialUnitSymbol", unit) : ""}</InputGroup.Text
 											>
 										</InputGroup.Addon>
 									</InputGroup.Root>
@@ -276,7 +280,7 @@
 										type="button"
 										variant="ghost"
 										size="icon-sm"
-										aria-label="Remove line"
+										aria-label={m.orders_line_remove_line()}
 										onclick={() => lines.splice(index, 1)}
 									>
 										<Trash2Icon />
@@ -287,7 +291,7 @@
 					</Table.Body>
 					<Table.Footer>
 						<Table.Row>
-							<Table.Cell colspan={2}>Materials total</Table.Cell>
+							<Table.Cell colspan={2}>{m.orders_materials_total()}</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{formatCents(materialsTotal)}</Table.Cell>
 							<Table.Cell></Table.Cell>
 						</Table.Row>
@@ -295,7 +299,7 @@
 				</Table.Root>
 				<Field.FieldError errors={fields.lines.allIssues()} />
 			{:else}
-				<p class="text-sm text-muted-foreground">No materials on this order yet.</p>
+				<p class="text-sm text-muted-foreground">{m.orders_no_materials_yet()}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
@@ -304,7 +308,7 @@
 	<Field.FieldError errors={fields.issues()} />
 	<FormActions
 		pending={form.pending}
-		submitLabel={order ? "Save order" : "Create order"}
+		submitLabel={order ? m.orders_save() : m.orders_create()}
 		{cancelHref}
 	/>
 </form>

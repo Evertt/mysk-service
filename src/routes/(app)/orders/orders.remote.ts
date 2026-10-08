@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isDoneOrder, isEditableOrder, lineTotal } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { atTime, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
@@ -100,7 +101,7 @@ export const getOrder = query(v.string(), async (number) => {
 			lines: { with: { material: true }, orderBy: (line, { asc }) => asc(line.id) },
 		},
 	});
-	if (!found) error(404, `Order ${number} not found`);
+	if (!found) error(404, m.orders_not_found({ number }));
 
 	// Earlier and later work on the same unit, for context.
 	const history = found.equipmentId
@@ -185,7 +186,9 @@ type OrderInput = v.InferOutput<v.ObjectSchema<typeof orderFields, undefined>>;
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 const notEditable = (number: string, change: "changed" | "deleted") =>
-	`${number} is invoiced: it's on an invoice that has been sent, so it can't be ${change}`;
+	change === "changed"
+		? m.orders_invoiced_cant_change({ number })
+		: m.orders_invoiced_cant_delete({ number });
 
 /**
  * Creates or updates an order in the current tenant and replaces its lines; returns its number.
@@ -204,7 +207,7 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 					with: { lines: true },
 				})
 			: undefined;
-		if (id && !existing) error(404, "Order not found");
+		if (id && !existing) error(404, m.orders_not_found_plain());
 		if (existing && !isEditableOrder(existing.status)) {
 			invalid(notEditable(existing.number, "changed"));
 		}
@@ -290,12 +293,12 @@ async function checkReferences(input: OrderInput): Promise<Problem[]> {
 			: undefined,
 		checkLines(input.lines),
 	]);
-	if (!found) problems.push({ field: "customerId", message: "Unknown customer" });
+	if (!found) problems.push({ field: "customerId", message: m.orders_unknown_customer() });
 	if (input.equipmentId && unit?.customerId !== input.customerId) {
-		problems.push({ field: "equipmentId", message: "This equipment belongs to another customer" });
+		problems.push({ field: "equipmentId", message: m.orders_equipment_other_customer() });
 	}
 	if (input.engineerId && !assignee) {
-		problems.push({ field: "engineerId", message: "Unknown engineer" });
+		problems.push({ field: "engineerId", message: m.orders_unknown_engineer() });
 	}
 	return [...problems, ...lineProblems];
 }
@@ -340,11 +343,13 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 			where: and(eq(order.id, id), inTenant(order)),
 			with: { lines: true },
 		});
-		if (!found) error(404, "Order not found");
+		if (!found) error(404, m.orders_not_found_plain());
 		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "deleted"));
 		// What it held goes back into stock. The stock history keeps the order's number, but no
 		// longer refers to the order itself.
-		await moveOrderStock(tx, found, found, { status: found.status, lines: [] }, "Order deleted");
+		// The note is stored, in the language of whoever deletes it.
+		const note = m.orders_stock_note_deleted();
+		await moveOrderStock(tx, found, found, { status: found.status, lines: [] }, note);
 		await tx
 			.update(stockMovement)
 			.set({ orderId: null })
@@ -356,10 +361,7 @@ export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
 		});
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
-	await refuseIfReferenced(
-		() => deleting,
-		"Other records still refer to this order, such as an invoice, so it can't be deleted.",
-	);
+	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
 	void getOrders().refresh();
 	redirect(303, "/orders");
 });

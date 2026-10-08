@@ -13,8 +13,7 @@
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
-	import { formatDate } from "#lib/format.js";
-	import { formatTime } from "#lib/format.js";
+	import { formatDateTime, formatTime } from "#lib/format.js";
 
 	import { addNote, getMyOrder, logHours, startWork } from "../portal.remote.js";
 	import { dayLabel, fieldActions } from "../work.js";
@@ -31,13 +30,13 @@
 </script>
 
 <svelte:head>
-	<title>{order.number} · My work</title>
+	<title>{m.portal_order_page_title({ number: order.number })}</title>
 </svelte:head>
 
 <div class="flex flex-col gap-3">
 	<Button href={resolve("/(field)/my")} variant="ghost" size="sm" class="-ml-2 self-start">
 		<ArrowLeftIcon data-icon="inline-start" />
-		My work
+		{m.portal_title()}
 	</Button>
 	<div class="flex flex-col gap-1">
 		<span class="text-sm text-muted-foreground tabular-nums">{order.number}</span>
@@ -46,7 +45,7 @@
 			{#if order.scheduledFor}
 				{dayLabel(order.scheduledFor)}, {formatTime(order.scheduledFor)}
 			{:else}
-				No time set
+				{m.portal_no_time()}
 			{/if}
 		</p>
 	</div>
@@ -60,7 +59,7 @@
 {#if actions.start}
 	<form
 		{...startWork.enhance(async ({ submit }) => {
-			if (await submit()) toast.success("Job started");
+			if (await submit()) toast.success(m.portal_job_started());
 		})}
 	>
 		<input {...startWork.fields.id.as("hidden", String(order.id))} />
@@ -70,7 +69,7 @@
 			{:else}
 				<PlayIcon data-icon="inline-start" />
 			{/if}
-			Start job
+			{m.portal_start_job()}
 		</Button>
 		<Field.FieldError errors={startWork.fields.allIssues()} class="mt-2" />
 	</form>
@@ -78,16 +77,19 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>The job</Card.Title>
+		<Card.Title>{m.portal_job()}</Card.Title>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<p class="whitespace-pre-line">{order.description}</p>
 		<dl class="grid grid-cols-2 gap-4">
 			{#if equipment}
-				<DetailItem label="Equipment" value={`${equipment.manufacturer} ${equipment.model}`} />
-				<DetailItem label="Serial number" value={equipment.serialNumber} />
+				<DetailItem
+					label={m.portal_equipment()}
+					value={`${equipment.manufacturer} ${equipment.model}`}
+				/>
+				<DetailItem label={m.portal_serial_number()} value={equipment.serialNumber} />
 			{:else}
-				<DetailItem label="Equipment" value="New installation" />
+				<DetailItem label={m.portal_equipment()} value={m.portal_new_installation()} />
 			{/if}
 		</dl>
 	</Card.Content>
@@ -95,22 +97,22 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Customer</Card.Title>
+		<Card.Title>{m.portal_customer()}</Card.Title>
 		<Card.Description>{customer.city}</Card.Description>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<dl class="grid grid-cols-2 gap-4">
-			<DetailItem label="Contact" value={customer.contactName} />
-			<DetailItem label="City" value={customer.city} />
+			<DetailItem label={m.portal_contact()} value={customer.contactName} />
+			<DetailItem label={m.portal_city()} value={customer.city} />
 		</dl>
 		<div class="grid grid-cols-2 gap-2">
 			<Button href={`tel:${customer.phone}`} variant="outline" size="lg" class="h-12">
 				<PhoneIcon data-icon="inline-start" />
-				Call
+				{m.portal_call()}
 			</Button>
 			<Button href={`mailto:${customer.email}`} variant="outline" size="lg" class="h-12">
 				<MailIcon data-icon="inline-start" />
-				Email
+				{m.portal_email()}
 			</Button>
 		</div>
 		<p class="text-sm text-muted-foreground tabular-nums">{customer.phone}</p>
@@ -119,21 +121,21 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Labour</Card.Title>
-		<Card.Description>Hours worked on this job so far.</Card.Description>
+		<Card.Title>{m.portal_labour()}</Card.Title>
+		<Card.Description>{m.portal_labour_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		{#if actions.work}
 			<form
 				{...logHours.enhance(async ({ submit }) => {
-					if (await submit()) toast.success("Hours saved");
+					if (await submit()) toast.success(m.portal_hours_saved());
 				})}
 				class="flex items-end gap-2"
 			>
 				<input {...logHours.fields.id.as("hidden", String(order.id))} />
 				<NumberField
 					field={logHours.fields.laborHours}
-					label="Hours"
+					label={m.portal_hours()}
 					value={order.laborHours}
 					min={0}
 					step={0.25}
@@ -143,20 +145,20 @@
 					{#if logHours.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Save hours
+					{m.portal_save_hours()}
 				</Button>
 			</form>
 		{:else}
-			<p class="text-lg tabular-nums">{order.laborHours} h</p>
+			<p class="text-lg tabular-nums">{m.common_count_hours_short({ count: order.laborHours })}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Materials</Card.Title>
+		<Card.Title>{m.portal_materials()}</Card.Title>
 		<Card.Description>
-			{actions.work ? "What you used; it comes out of stock." : "Used on this job."}
+			{actions.work ? m.portal_materials_work() : m.portal_materials_done()}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
@@ -174,33 +176,32 @@
 				{/each}
 			</ul>
 		{:else}
-			<p class="text-sm text-muted-foreground">No materials used.</p>
+			<p class="text-sm text-muted-foreground">{m.portal_no_materials()}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Notes</Card.Title>
+		<Card.Title>{m.portal_notes()}</Card.Title>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		{#each data.notes as note (note.id)}
 			<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
 				<p class="text-sm whitespace-pre-line">{note.text}</p>
 				<span class="text-xs text-muted-foreground">
-					{note.author ?? "Someone"} · {formatDate(note.createdAt)}
-					{formatTime(note.createdAt)}
+					{note.author ?? m.portal_someone()} · {formatDateTime(note.createdAt)}
 				</span>
 			</div>
 		{:else}
-			<p class="text-sm text-muted-foreground">No notes yet.</p>
+			<p class="text-sm text-muted-foreground">{m.portal_no_notes()}</p>
 		{/each}
 		{#if actions.note}
 			<form
 				{...addNote.enhance(async ({ element, submit }) => {
 					if (await submit()) {
 						element.reset();
-						toast.success("Note added");
+						toast.success(m.portal_note_added());
 					}
 				})}
 				class="flex flex-col gap-2"
@@ -208,15 +209,15 @@
 				<input {...addNote.fields.id.as("hidden", String(order.id))} />
 				<TextField
 					field={addNote.fields.text}
-					label="Add a note"
+					label={m.portal_note_label()}
 					multiline
-					placeholder="E.g. what you found, or what's needed next time"
+					placeholder={m.portal_note_placeholder()}
 				/>
 				<Button type="submit" variant="outline" size="lg" class="h-12" disabled={!!addNote.pending}>
 					{#if addNote.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Add note
+					{m.portal_add_note()}
 				</Button>
 			</form>
 		{/if}
@@ -226,8 +227,8 @@
 {#if actions.work}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Complete the job</Card.Title>
-			<Card.Description>Ask the customer to check the work and sign.</Card.Description>
+			<Card.Title>{m.portal_complete_title()}</Card.Title>
+			<Card.Description>{m.portal_complete_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<CompleteForm orderId={order.id} contactName={customer.contactName} />
@@ -236,16 +237,18 @@
 {:else if data.signoff}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Signed off</Card.Title>
+			<Card.Title>{m.portal_signed_off()}</Card.Title>
 			<Card.Description>
-				By {data.signoff.signerName}, {formatDate(data.signoff.signedAt)}
-				{formatTime(data.signoff.signedAt)}
+				{m.portal_signed_off_by({
+					name: data.signoff.signerName,
+					date: formatDateTime(data.signoff.signedAt),
+				})}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<img
 				src={data.signoff.signature}
-				alt="Signature of {data.signoff.signerName}"
+				alt={m.portal_signature_of({ name: data.signoff.signerName })}
 				class="h-32 w-full rounded-lg border bg-white object-contain"
 			/>
 		</Card.Content>

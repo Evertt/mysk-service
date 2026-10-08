@@ -3,6 +3,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
@@ -14,7 +15,7 @@ export const getWorkReport = query(v.string(), async (number) => {
 		columns: { id: true },
 		where: and(eq(order.number, number), inTenant(order)),
 	});
-	if (!found) error(404, `Order ${number} not found`);
+	if (!found) error(404, m.orders_not_found({ number }));
 
 	const [notes, signoff] = await Promise.all([
 		db

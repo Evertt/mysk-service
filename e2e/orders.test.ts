@@ -1,7 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "../src/lib/format.ts";
-import { countIn, nextCode, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
+import {
+	baseURL,
+	countIn,
+	nextCode,
+	organizations,
+	rows,
+	unbalancedStock,
+	useApp,
+	value,
+} from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -784,5 +793,50 @@ describe("in South", () => {
 		await expect.poll(() => app.rowCount()).toBe(1);
 		const row = page.locator('[data-slot="data-table"] tbody tr').first();
 		expect(cents(await row.locator("td:nth-last-child(2)").innerText())).toBe(total);
+	});
+});
+
+describe("in Dutch", () => {
+	/** Sets the language as the language switchers do: Paraglide's cookie. */
+	const speak = (locale: "en" | "nl") =>
+		app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
+
+	test("the orders list is in Dutch", async () => {
+		const { page } = app;
+		await speak("nl");
+		await app.go("/orders");
+		await page.getByRole("heading", { name: "Opdrachten" }).waitFor();
+		expect(await page.title()).toBe("Opdrachten");
+		expect(await page.getByRole("link", { name: "Nieuwe opdracht" }).count()).toBe(1);
+		expect(await page.getByPlaceholder("Opdrachten zoeken…").count()).toBe(1);
+		for (const name of ["Klant", "Apparaat", "Prioriteit", "Monteur"]) {
+			expect(await page.getByRole("columnheader", { name }).count(), name).toBe(1);
+		}
+	});
+
+	test("an order's page is in Dutch", async () => {
+		const { page } = app;
+		await app.go(`/orders/${shared}`);
+		expect(await page.title()).toBe(`${shared} · Opdrachten`);
+		const main = await page.locator("main").innerText();
+		for (const text of ["Materialen en arbeid", "Arbeid", "Totaal", "Planning", "Aangemaakt"]) {
+			expect(main, text).toContain(text);
+		}
+	});
+
+	test("the order form's validation is in Dutch", async () => {
+		const { page } = app;
+		await app.go("/orders/new");
+		await app.submit(page.getByRole("button", { name: "Opdracht aanmaken" }));
+		expect(await app.issues()).toEqual(
+			expect.arrayContaining(["Kies een klant", "Omschrijf het werk"]),
+		);
+	});
+
+	test("switching back to English", async () => {
+		await speak("en");
+		await app.go("/orders");
+		await app.page.getByRole("heading", { name: "Orders" }).waitFor();
+		expect(await app.page.title()).toBe("Orders");
 	});
 });

@@ -8,6 +8,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { label } from "#lib/i18n/labels.js";
 	import { quantityStep } from "#lib/models.js";
 
 	import { getMaterials, saveMaterials } from "../portal.remote.js";
@@ -18,7 +19,9 @@
 	}: { orderId: number; lines: { materialId: number; quantity: number }[] } = $props();
 
 	const materials = $derived(await getMaterials());
-	const units = $derived(new Map(materials.map((m) => [String(m.id), m.unit])));
+	const units = $derived(
+		new Map(materials.map((material) => [String(material.id), material.unit])),
+	);
 
 	// Kept here so lines can be added and removed; the inputs' names make them part of the form.
 	const initialLines = () =>
@@ -38,7 +41,7 @@
 
 <form
 	{...saveMaterials.enhance(async ({ submit }) => {
-		if (await submit()) toast.success("Materials saved");
+		if (await submit()) toast.success(m.portal_materials_saved());
 	})}
 	class="flex flex-col gap-4"
 >
@@ -49,12 +52,12 @@
 		<div class="flex flex-col gap-2 rounded-lg border p-3" data-line>
 			<NativeSelect.Root
 				class="h-11 w-full"
-				aria-label="Material"
+				aria-label={m.portal_material()}
 				{...withoutValue(lineFields.materialId.as("select"))}
 				value={line.materialId}
 				onchange={(event) => (line.materialId = event.currentTarget.value)}
 			>
-				<NativeSelect.Option value="">Choose a material</NativeSelect.Option>
+				<NativeSelect.Option value="">{m.portal_choose_material()}</NativeSelect.Option>
 				{#each materials as material (material.id)}
 					<NativeSelect.Option value={String(material.id)}>
 						{material.name} ({material.sku})
@@ -64,7 +67,7 @@
 			<div class="flex items-center gap-2">
 				<InputGroup.Root class="h-11 flex-1">
 					<InputGroup.Input
-						aria-label="Quantity"
+						aria-label={m.portal_quantity()}
 						inputmode="decimal"
 						min={quantityStep(unit ?? "m")}
 						step={quantityStep(unit ?? "m")}
@@ -74,14 +77,14 @@
 						oninput={(event) => (line.quantity = Number(event.currentTarget.value))}
 					/>
 					<InputGroup.Addon align="inline-end">
-						<InputGroup.Text>{unit ?? ""}</InputGroup.Text>
+						<InputGroup.Text>{unit ? label("materialUnitSymbol", unit) : ""}</InputGroup.Text>
 					</InputGroup.Addon>
 				</InputGroup.Root>
 				<Button
 					type="button"
 					variant="outline"
 					size="icon-lg"
-					aria-label="Remove material"
+					aria-label={m.portal_remove_material()}
 					onclick={() => lines.splice(index, 1)}
 				>
 					<Trash2Icon />
@@ -90,7 +93,7 @@
 			<Field.FieldError errors={lineFields.allIssues()} />
 		</div>
 	{:else}
-		<p class="text-sm text-muted-foreground">No materials used yet.</p>
+		<p class="text-sm text-muted-foreground">{m.portal_no_materials_yet()}</p>
 	{/each}
 	<Field.FieldError errors={saveMaterials.fields.issues()} />
 	<div class="grid grid-cols-2 gap-2">
@@ -101,13 +104,13 @@
 			onclick={() => lines.push({ key: crypto.randomUUID(), materialId: "", quantity: 1 })}
 		>
 			<PlusIcon data-icon="inline-start" />
-			Add material
+			{m.portal_add_material()}
 		</Button>
 		<Button type="submit" size="lg" disabled={!!saveMaterials.pending}>
 			{#if saveMaterials.pending}
 				<Spinner data-icon="inline-start" />
 			{/if}
-			Save materials
+			{m.portal_save_materials()}
 		</Button>
 	</div>
 </form>
