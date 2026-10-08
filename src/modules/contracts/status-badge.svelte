@@ -1,7 +1,7 @@
 <!--
 	@component
 	A contract's status; derive it from the contract's period with `contractStatus` from
-	`./model.js`.
+	`./model.ts`.
 -->
 <script lang="ts">
 	import { statuses } from "./display.ts";

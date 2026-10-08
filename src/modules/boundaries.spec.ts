@@ -77,11 +77,11 @@ export function crossImports(files: SourceFile[]): string[] {
 
 /** What a `module.ts` may import statically (types and `import()` loaders are free). */
 const manifestImports = [
-	/^#lib\/define-module\.(?:js|ts)$/,
+	/^#lib\/define-module\.ts$/,
 	/^#lib\/paraglide\/messages\.js$/,
 	/^@lucide\/svelte\/icons\/[\w-]+$/,
 	// Its own small scripts, e.g. `./activity.ts`, `./labels.ts`; never components or remote functions.
-	/^\.\/[\w.-]+\.(?:js|ts)$/,
+	/^\.\/[\w.-]+\.ts$/,
 ];
 
 /** Static imports in a `module.ts` that would pull more than the manifest into every bundle. */
