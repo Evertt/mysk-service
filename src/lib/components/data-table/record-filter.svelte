@@ -56,7 +56,9 @@
 
 	// The names of ticked ones not seen yet (e.g. from a link), also while closed.
 	$effect(() => {
-		const missing = selected.filter((value) => !asked.has(value));
+		const missing = selected.filter(
+			(value) => !asked.has(value) && !untrack(() => known.has(value)),
+		);
 		if (!missing.length) return;
 		for (const value of missing) asked.add(value);
 		Promise.resolve(load({ search: "", selected: missing }))
