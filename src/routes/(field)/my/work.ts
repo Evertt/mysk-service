@@ -4,6 +4,7 @@
  */
 import * as v from "valibot";
 
+import { startOfDay } from "#lib/dates.js";
 import { dateFormatter, formatTime } from "#lib/format.js";
 import type { OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
@@ -19,8 +20,6 @@ export function fieldActions(status: OrderStatus) {
 		note: status === "scheduled" || status === "in_progress",
 	};
 }
-
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });

@@ -5,6 +5,7 @@
 	import EngineerLink from "#lib/components/engineers/engineer-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
+	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 
 	import { getDashboard } from "./dashboard.remote.js";
@@ -24,61 +25,41 @@
 </div>
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.dashboard_open_orders()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatNumber(data.open.total)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.dashboard_without_engineer({ count: formatNumber(data.open.unassigned ?? 0) })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.dashboard_urgent()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatNumber(data.open.urgent ?? 0)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.dashboard_urgent_description()}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.dashboard_revenue()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatCents(data.revenue.total)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.dashboard_revenue_orders({ count: data.revenue.orders })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.dashboard_attention()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums"
-				>{formatNumber(data.fleet.attention ?? 0)}</Card.Title
-			>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.dashboard_attention_of({ count: data.fleet.total })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.dashboard_low_stock()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums"
-				>{formatNumber(data.stock.low + data.stock.out)}</Card.Title
-			>
-			<Card.Action>
-				<!-- The materials list, filtered to the low and out of stock ones. -->
-				<Button variant="outline" size="sm" href="{resolve('/(app)/materials')}?stock=out,low">
-					{m.common_view()}
-				</Button>
-			</Card.Action>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.dashboard_low_stock_of({ out: formatNumber(data.stock.out), count: data.stock.total })}
-		</Card.Footer>
-	</Card.Root>
+	<StatCard
+		label={m.dashboard_open_orders()}
+		value={formatNumber(data.open.total)}
+		detail={m.dashboard_without_engineer({ count: formatNumber(data.open.unassigned ?? 0) })}
+	/>
+	<StatCard
+		label={m.dashboard_urgent()}
+		value={formatNumber(data.open.urgent ?? 0)}
+		detail={m.dashboard_urgent_description()}
+	/>
+	<StatCard
+		label={m.dashboard_revenue()}
+		value={formatCents(data.revenue.total)}
+		detail={m.dashboard_revenue_orders({ count: data.revenue.orders })}
+	/>
+	<StatCard
+		label={m.dashboard_attention()}
+		value={formatNumber(data.fleet.attention ?? 0)}
+		detail={m.dashboard_attention_of({ count: data.fleet.total })}
+	/>
+	<StatCard
+		label={m.dashboard_low_stock()}
+		value={formatNumber(data.stock.low + data.stock.out)}
+		detail={m.dashboard_low_stock_of({
+			out: formatNumber(data.stock.out),
+			count: data.stock.total,
+		})}
+	>
+		{#snippet action()}
+			<!-- The materials list, filtered to the low and out of stock ones. -->
+			<Button variant="outline" size="sm" href="{resolve('/(app)/materials')}?stock=out,low">
+				{m.common_view()}
+			</Button>
+		{/snippet}
+	</StatCard>
 </div>
 
 <ModuleSlots name="dashboard" props={{}} class="grid items-start gap-6 lg:grid-cols-2" />

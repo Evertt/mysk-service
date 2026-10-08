@@ -19,8 +19,8 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import { toDateInput } from "#lib/dates.js";
 	import { label } from "#lib/i18n/labels.js";
-	import { toDateInput } from "#lib/schema.js";
 
 	import type {
 		createContract,

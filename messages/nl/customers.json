@@ -135,5 +135,10 @@
 	"customers_recent_empty_description": "Er is nog niets geoffreerd of gedaan voor deze klant.",
 	"customers_bulk_delete_title": "Geselecteerde klanten verwijderen?",
 	"customers_bulk_delete_description": "De klanten worden definitief verwijderd. Klanten met apparatuur of opdrachten kun je niet verwijderen.",
+	"customers_card_company": "Bedrijf",
+	"customers_card_contact": "Contactpersoon",
+	"customers_card_email": "E-mailadres",
+	"customers_card_phone": "Telefoon",
+	"customers_card_location": "Locatie",
 	"customers_bulk_has_equipment": "{name} heeft apparatuur"
 }
