@@ -68,6 +68,54 @@ helpers are in `src/lib/server/session.ts`:
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
   `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
+## Modules
+
+Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
+self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/define-module.ts`: label,
+description, `route`, icon, `slots`, `subjects`, `actions`, `bulkActions`; it is in every tenant's
+bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
+`server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
+logic; server-only), `routes/` (its pages, mirroring `src/routes`), its components and remote
+functions, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder name is the id
+(`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
+migration committed.
+
+- `scripts/modules.ts` links the folders in; `pnpm generate` runs it before `svelte-kit sync`,
+  `vite.config.ts` runs it when it loads, and in dev it reruns when a module's files come or go. It
+  writes the registries (`src/lib/modules.gen.ts`, `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
+  `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
+  for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
+  `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
+  itself and is deleted with the module, so never edit one), a `+layout.server.ts` at each route root
+  with pages that calls `guardModule(id)` (a 404 for tenants without the module) before the
+  module's own `+layout.server.ts` load, and the module entries of `pathPattern` in
+  `project.inlang/settings.json`. It fails, listing everything wrong, when a module's route folder
+  collides with a core route or another module's, a route file is outside a folder of the module's
+  own, or message sections are missing in a language or not unique.
+- A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
+  files to a core route. To add something to a core page, use a slot. Its pages type their params
+  with `RouteParams<"/(app)/contracts/[number]">` from `$app/types`, since `./$types` only resolves
+  for files physically in `src/routes`; the stub is typed with the route's `PageProps`, so
+  svelte-check verifies that the page accepts what SvelteKit passes it. Page options
+  (`export const ssr = false`) go in the module's `+page.ts` as literals: the stub repeats them
+  because SvelteKit reads them without running the file. Don't `export * from` in a route file.
+- Every remote function and endpoint of a module starts with `requireModule("<id>")`: the guard on
+  the pages is for the experience, this is what keeps the data safe (a layout's load doesn't cover
+  `+server.ts` endpoints).
+- Core declares every extension point (`#lib/modules.ts`, `#lib/server/modules.ts`); core never
+  imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
+  checks (`#modules/…` is for the generated registries only). Module tables reference core tables
+  (composite tenant keys, columns from `#lib/server/db/columns.ts`), never the reverse; one migration
+  stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts` checks that no core table has a
+  foreign key to a module table. A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
+  its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
+
+Not built yet: contracts and invoicing are still in the static list in `src/lib/modules.ts`, in
+`src/lib/server/{contracts,invoicing}.ts` and in `src/routes/(app)` (the generated modules are added
+after them), and their messages are core files. Also missing, to be added with the first module that
+needs them: several `nav` entries per module, module columns, filters and row actions in tables,
+`order.actions`-style slots, `settings.cards`, and the server `refuseChange`/`saved` hooks.
+
 ## Server-side lists
 
 Orders, equipment and materials page, filter and sort in the database. A list is three layers (the
