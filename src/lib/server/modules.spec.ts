@@ -1,11 +1,13 @@
+import { createClient } from "@libsql/client";
 import { expect, test, vi } from "vite-plus/test";
 
 import { contracts } from "./contracts.ts";
+import { drizzleQueued } from "./db/serialize.ts";
 import {
 	billableItems,
 	enabledServerModules,
 	type OrderFacts,
-	orderSaved,
+	orderCommitted,
 	type ServerModule,
 	tagOrders,
 } from "./modules.ts";
@@ -30,6 +32,9 @@ vi.mock("#lib/components/invoicing/invoicing.remote.js", () => ({
 	}),
 }));
 
+/** Lets the promises that hooks run in settle. */
+const flush = () => new Promise((resolve) => setTimeout(resolve));
+
 const order = (id: number): OrderFacts => ({
 	id,
 	type: "repair",
@@ -52,20 +57,24 @@ test("tags come from each module, in the modules' order, for the orders they nam
 	const now = new Date(2026, 9, 7, 12);
 	const asked: unknown[] = [];
 	const first: ServerModule = {
-		async tagOrders(orders, at) {
-			asked.push(at);
-			return new Map([[2, [{ label: "Late", tone: "danger" }]]]);
+		orders: {
+			async tag(orders, at) {
+				asked.push(at);
+				return new Map([[2, [{ label: "Late", tone: "danger" }]]]);
+			},
 		},
 	};
 	const second: ServerModule = {
-		async tagOrders() {
-			return new Map([
-				[1, [{ label: "Soon", tone: "warning" }]],
-				[2, [{ label: "VIP", tone: "warning", detail: "Gold customer" }]],
-			]);
+		orders: {
+			async tag() {
+				return new Map([
+					[1, [{ label: "Soon", tone: "warning" }]],
+					[2, [{ label: "VIP", tone: "warning", detail: "Gold customer" }]],
+				]);
+			},
 		},
 	};
-	const pricesOnly: ServerModule = { adjustPrices: async () => new Map() };
+	const pricesOnly: ServerModule = { orders: { adjustPrices: async () => new Map() } };
 
 	expect(await tagOrders([order(1), order(2), order(3)], now, [first, pricesOnly, second])).toEqual(
 		[
@@ -82,24 +91,76 @@ test("tags come from each module, in the modules' order, for the orders they nam
 
 test("no orders, no questions", async () => {
 	const module: ServerModule = {
-		tagOrders: () => Promise.reject(new Error("Shouldn't be asked")),
+		orders: { tag: () => Promise.reject(new Error("Shouldn't be asked")) },
 	};
 	expect(await tagOrders([], new Date(), [module])).toEqual([]);
 });
 
-test("a saved order lets the modules refresh what they show about it", () => {
+test("a saved order lets the modules refresh what they show about it, in the modules' order", async () => {
 	const saved: string[] = [];
-	orderSaved("ORD-2026-00001", [{ orderSaved: (number) => void saved.push(number) }, {}]);
+	orderCommitted({ number: "ORD-2026-00001" }, [
+		{ orders: { committed: ({ number }) => void saved.push(`first ${number}`) } },
+		{},
+		{ orders: { committed: async ({ number }) => void saved.push(`second ${number}`) } },
+	]);
+	await flush();
+	expect(saved).toEqual(["first ORD-2026-00001", "second ORD-2026-00001"]);
+});
+
+test("a module that fails to refresh is logged, and doesn't stop the others", async () => {
+	const log = vi.spyOn(console, "error").mockImplementation(() => {});
+	try {
+		const saved: string[] = [];
+		orderCommitted({ number: "ORD-2026-00001" }, [
+			{
+				orders: {
+					committed: () => {
+						throw new Error("Broken");
+					},
+				},
+			},
+			{ orders: { committed: ({ number }) => void saved.push(number) } },
+		]);
+		await flush();
+		expect(saved).toEqual(["ORD-2026-00001"]);
+		expect(log).toHaveBeenCalledOnce();
+	} finally {
+		log.mockRestore();
+	}
+});
+
+test("the modules are told once the transaction has committed, and not when it rolls back", async () => {
+	const base = createClient({ url: ":memory:" });
+	const queued = drizzleQueued(base);
+	const saved: string[] = [];
+	const modules = [
+		{ orders: { committed: ({ number }: { number: string }) => void saved.push(number) } },
+	];
+
+	await queued.transaction(async () => {
+		orderCommitted({ number: "ORD-2026-00001" }, modules);
+		expect(saved).toEqual([]);
+	});
+	expect(saved).toEqual(["ORD-2026-00001"]);
+
+	await queued
+		.transaction(async () => {
+			orderCommitted({ number: "ORD-2026-00002" }, modules);
+			throw new Error("Changed my mind");
+		})
+		.catch(() => {});
 	expect(saved).toEqual(["ORD-2026-00001"]);
 });
 
-test("the contracts module refreshes the order's coverage", () => {
-	orderSaved("ORD-2026-00002", enabledServerModules(["contracts"]));
+test("the contracts module refreshes the order's coverage", async () => {
+	orderCommitted({ number: "ORD-2026-00002" }, enabledServerModules(["contracts"]));
+	await flush();
 	expect(refreshed).toEqual(["ORD-2026-00002"]);
 });
 
-test("the invoicing module refreshes the invoice card of a saved order", () => {
-	orderSaved("ORD-2026-00003", enabledServerModules(["invoicing"]));
+test("the invoicing module refreshes the invoice card of a saved order", async () => {
+	orderCommitted({ number: "ORD-2026-00003" }, enabledServerModules(["invoicing"]));
+	await flush();
 	expect(refreshed).toContain("invoice:ORD-2026-00003");
 });
 
@@ -114,13 +175,15 @@ test("billable items come from each module that has any, by date", async () => {
 		date,
 	});
 	const fees: ServerModule = {
-		async billableItems(customerId, at) {
-			asked.push([customerId, at]);
-			return [item("fees:2", new Date(2026, 8, 1)), item("fees:1", new Date(2026, 7, 1))];
+		billing: {
+			async billableItems(customerId, at) {
+				asked.push([customerId, at]);
+				return [item("fees:2", new Date(2026, 8, 1)), item("fees:1", new Date(2026, 7, 1))];
+			},
 		},
 	};
 	const rentals: ServerModule = {
-		billableItems: async () => [item("rentals:1", new Date(2026, 7, 15))],
+		billing: { billableItems: async () => [item("rentals:1", new Date(2026, 7, 15))] },
 	};
 	const items = await billableItems(7, period, [fees, {}, rentals]);
 	expect(items.map((i) => i.reference)).toEqual(["fees:1", "rentals:1", "fees:2"]);

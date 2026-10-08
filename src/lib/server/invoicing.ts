@@ -28,16 +28,18 @@ import { recordActivity } from "./activity.ts";
 import { db, type Transaction } from "./db/index.ts";
 import { customer, engineer, invoice, invoiceLine, invoicingSettings, order } from "./db/schema.ts";
 import type { Problem } from "./forms.ts";
-import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
+import { type BillableItem, billableItems, defineServerModule } from "./modules.ts";
 import { nextNumber } from "./numbering.ts";
 import { materialsPerOrder, priceOrders } from "./pricing.ts";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "./session.ts";
 
-export const invoicing: ServerModule = {
-	orderSaved(number) {
-		void getOrderInvoice(number).refresh();
+export const invoicing = defineServerModule("invoicing", {
+	orders: {
+		committed({ number }) {
+			void getOrderInvoice(number).refresh();
+		},
 	},
-};
+});
 
 /**
  * The tenant's invoicing settings. Made with the defaults the first time they're needed, billing
