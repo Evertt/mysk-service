@@ -4,10 +4,10 @@
 	after it, and who did it.
 -->
 <script lang="ts">
-	import { formatQuantity } from "#lib/components/materials/display.js";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import { formatDate } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
+	import { formatQuantity } from "#lib/materials/display.js";
 	import type { MaterialUnit } from "#lib/models.js";
 
 	import type { getMaterial } from "../material.remote.js";

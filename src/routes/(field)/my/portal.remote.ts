@@ -10,6 +10,7 @@ import * as v from "valibot";
 
 import { formatNumber } from "#lib/format.js";
 import { label } from "#lib/i18n/labels.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.js";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.js";
@@ -19,7 +20,6 @@ import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
 import { checkLines, saveOrderLines } from "#lib/server/orders.js";
 import { idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/session.js";
-import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { fieldActions, signature } from "./work.js";
 

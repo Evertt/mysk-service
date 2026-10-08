@@ -6,8 +6,8 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { type MaterialUnit, stockLevel } from "#lib/models.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { material } from "#lib/server/db/schema.js";
+import type { Tenant } from "#lib/server/session.ts";
 
-import type { Tenant } from "./session.ts";
 import {
 	heldLines,
 	moveOrderStock,

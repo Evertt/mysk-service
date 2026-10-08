@@ -4,13 +4,13 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { moveOrderStock } from "#lib/materials/server/stock.js";
 import { fitsUnit, type OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { recordOrderLines } from "#lib/server/activity.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { engineer, material, orderLine } from "#lib/server/db/schema.js";
 import { idInTenant, idsInTenant, inTenant, requireTenant } from "#lib/server/session.js";
-import { moveOrderStock } from "#lib/server/stock.js";
 
 /**
  * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another

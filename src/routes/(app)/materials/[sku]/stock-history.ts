@@ -1,4 +1,4 @@
-import { formatQuantity } from "#lib/components/materials/display.js";
+import { formatQuantity } from "#lib/materials/display.js";
 import type { MaterialUnit } from "#lib/models.js";
 
 /** A change in stock with its sign and unit, e.g. `+12 pcs` or `−2.5 kg`. */

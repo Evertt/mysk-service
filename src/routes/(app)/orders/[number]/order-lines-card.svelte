@@ -3,9 +3,9 @@
 	An order's materials, labour and adjustments, and what it adds up to.
 -->
 <script lang="ts">
-	import { formatQuantity } from "#lib/components/materials/display.js";
-	import MaterialLink from "#lib/components/materials/material-link.svelte";
 	import { formatCents } from "#lib/format.js";
+	import { formatQuantity } from "#lib/materials/display.js";
+	import MaterialLink from "#lib/materials/material-link.svelte";
 
 	import type { getOrder } from "../order.remote.js";
 

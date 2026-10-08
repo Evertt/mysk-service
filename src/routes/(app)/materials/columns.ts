@@ -3,9 +3,9 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
-import { stockLevel, stockLevels } from "#lib/components/materials/display.js";
-import MaterialLink from "#lib/components/materials/material-link.svelte";
 import { label } from "#lib/i18n/labels.js";
+import { stockLevel, stockLevels } from "#lib/materials/display.js";
+import MaterialLink from "#lib/materials/material-link.svelte";
 import { materialUnits } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 

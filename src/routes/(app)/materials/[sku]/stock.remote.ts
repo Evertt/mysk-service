@@ -3,15 +3,15 @@ import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
+import { findMaterial } from "#lib/materials/server/materials.js";
+import { moveStock, roundQuantity } from "#lib/materials/server/stock.js";
 import { fitsUnit } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { material } from "#lib/server/db/schema.js";
-import { findMaterial } from "#lib/server/materials.js";
 import { idInTenant, requireMember } from "#lib/server/session.js";
-import { moveStock, roundQuantity } from "#lib/server/stock.js";
 
 import { countFields, receiveFields } from "../material-schema.js";
 import { getMaterial } from "../material.remote.js";

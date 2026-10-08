@@ -1,8 +1,8 @@
 import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
-import { stockLevel } from "#lib/components/materials/display.js";
 import { DAY } from "#lib/dates.js";
+import { stockLevel } from "#lib/materials/display.js";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";

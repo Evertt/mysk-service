@@ -52,7 +52,7 @@ export type StockLevel = (typeof stockLevels)[number];
 
 /**
  * Below how much of each unit a material is running low: 10 pieces, or 50 metres, kilos or
- * litres. The materials list works out stock levels in SQL from these too (`stockLevelSql` in `#lib/server/stock.ts`).
+ * litres. The materials list works out stock levels in SQL from these too (`stockLevelSql` in `#lib/materials/server/stock.ts`).
  */
 export const lowStockThresholds: Readonly<Record<MaterialUnit, number>> = {
 	pcs: 10,

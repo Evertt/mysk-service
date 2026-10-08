@@ -266,7 +266,7 @@ export * from "./auth.schema.ts";
 /**
  * The stock ledger: every change to a material's stock, signed (positive adds, negative takes),
  * in the material's unit. `material.stock` is the cached balance and always equals the sum of the
- * material's movements: change it only through `moveStock` in `#lib/server/stock.ts`, which writes
+ * material's movements: change it only through `moveStock` in `#lib/materials/server/stock.ts`, which writes
  * both in one transaction. Deleting a material deletes its movements.
  */
 export const stockMovement = sqliteTable(

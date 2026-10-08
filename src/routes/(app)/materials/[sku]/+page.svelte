@@ -5,8 +5,6 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatQuantity } from "#lib/components/materials/display.js";
-	import StockBadge from "#lib/components/materials/stock-badge.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -14,6 +12,8 @@
 	import CustomerLink from "#lib/customers/customer-link.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
+	import { formatQuantity } from "#lib/materials/display.js";
+	import StockBadge from "#lib/materials/stock-badge.svelte";
 
 	import { deleteMaterial, getMaterial } from "../material.remote.js";
 	import type { PageProps } from "./$types";
