@@ -49,7 +49,7 @@ export const columns = column.columns([
 		// From basic to premium rather than alphabetically.
 		sortFn: (a, b, id) =>
 			contractLevels.indexOf(a.getValue(id)) - contractLevels.indexOf(b.getValue(id)),
-		meta: { label: m.contracts_level },
+		meta: { label: m.contracts_level, filterValues: contractLevels },
 	}),
 	// Not stored: follows from the period and today's date.
 	column.accessor((row) => contractStatus(row), {
@@ -59,7 +59,7 @@ export const columns = column.columns([
 		filterFn: "oneOf",
 		sortFn: (a, b, id) =>
 			contractStatuses.indexOf(a.getValue(id)) - contractStatuses.indexOf(b.getValue(id)),
-		meta: { label: m.contracts_status },
+		meta: { label: m.contracts_status, filterValues: contractStatuses },
 	}),
 	column.accessor("startsOn", {
 		id: "period",
@@ -82,19 +82,19 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_hours_short }),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_response, align: "end" },
+		meta: { label: m.contracts_response, align: "end", param: "response" },
 	}),
 	column.accessor("monthlyFee", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_monthly_fee, align: "end" },
+		meta: { label: m.contracts_monthly_fee, align: "end", param: "fee" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_created },
+		meta: { label: m.contracts_created, param: "created" },
 	}),
 	column.display({
 		id: "actions",

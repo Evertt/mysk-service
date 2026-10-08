@@ -236,7 +236,7 @@ describe("in North", () => {
 		expect(customers.length).toBeGreaterThan(0);
 		expect(customers.every((cell) => cell.includes("CUST-0001"))).toBe(true);
 
-		await page.getByRole("link", { name: `Customer: ${name}` }).click();
+		await page.getByRole("button", { name: `Customer: ${name}` }).click();
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
 		await page.waitForLoadState("networkidle");
 		await expect.poll(() => app.rowCount()).toBe(await countIn("order", north.id));

@@ -49,7 +49,7 @@ export const columns = column.columns([
 		// In the order an invoice goes through them rather than alphabetically.
 		sortFn: (a, b, id) =>
 			invoiceStates.indexOf(a.getValue(id)) - invoiceStates.indexOf(b.getValue(id)),
-		meta: { label: m.invoices_column_status },
+		meta: { label: m.invoices_column_status, filterValues: invoiceStates },
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {
@@ -58,7 +58,7 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_issued },
+		meta: { label: m.invoices_column_issued, param: "issued" },
 	}),
 	column.accessor((row) => row.dueOn ?? undefined, {
 		id: "dueOn",
@@ -66,7 +66,7 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_due },
+		meta: { label: m.invoices_column_due, param: "due" },
 	}),
 	column.accessor("total", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -78,7 +78,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_created },
+		meta: { label: m.invoices_column_created, param: "created" },
 	}),
 	column.display({
 		id: "actions",

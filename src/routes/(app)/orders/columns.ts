@@ -7,7 +7,7 @@ import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import OrderLink from "#lib/components/orders/order-link.svelte";
 import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 import TypeLabel from "#lib/components/orders/type-label.svelte";
-import { orderPriorities } from "#lib/models.js";
+import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getOrders } from "./orders.remote.js";
@@ -40,7 +40,9 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
-		meta: { label: m.orders_column_customer },
+		// By the customer's code (e.g. `?customer=CUST-0001`, from a customer's page).
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		meta: { label: m.orders_column_customer, filter: "set" },
 	}),
 	column.accessor(
 		// `undefined` rather than `null`, so new installations sort last (`sortUndefined`).
@@ -65,14 +67,14 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: m.orders_column_type },
+		meta: { label: m.orders_column_type, filterValues: orderTypes },
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
 			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
 		filterFn: "oneOf",
-		meta: { label: m.orders_column_status },
+		meta: { label: m.orders_column_status, filterValues: orderStatuses },
 	}),
 	column.accessor("priority", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -81,7 +83,7 @@ export const columns = column.columns([
 		// By urgency rather than alphabetically.
 		sortFn: (a, b, id) =>
 			orderPriorities.indexOf(a.getValue(id)) - orderPriorities.indexOf(b.getValue(id)),
-		meta: { label: m.orders_column_priority },
+		meta: { label: m.orders_column_priority, filterValues: orderPriorities },
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",
@@ -103,13 +105,13 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.orders_column_scheduled },
+		meta: { label: m.orders_column_scheduled, param: "scheduled" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.orders_column_created },
+		meta: { label: m.orders_column_created, param: "created" },
 	}),
 	column.accessor("total", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),

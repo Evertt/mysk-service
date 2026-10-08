@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import XIcon from "@lucide/svelte/icons/x";
 
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
@@ -10,26 +9,12 @@
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
-	let {
-		orders,
-		customer = null,
-	}: {
-		orders: OrderRow[];
-		/** Only this customer's orders (by code), e.g. from the page's `?customer=`. */
-		customer?: string | null;
-	} = $props();
-
-	const shown = $derived(
-		customer ? orders.filter((row) => row.customer.code === customer) : orders,
-	);
-	const customerName = $derived(
-		orders.find((row) => row.customer.code === customer)?.customer.name ?? customer,
-	);
+	let { orders }: { orders: OrderRow[] } = $props();
 
 	const table = createAppTable({
 		columns,
 		get data() {
-			return shown;
+			return orders;
 		},
 		getRowId: (row) => String(row.id),
 		initialState: {
@@ -38,19 +23,27 @@
 			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
+
+	// The customers the list is narrowed to (`?customer=CUST-0001`, from a customer's page), by
+	// name where they have orders.
+	const customers = $derived(
+		((table.getColumn("customer")?.getFilterValue() as string[] | undefined) ?? []).map(
+			(code) => orders.find((row) => row.customer.code === code)?.customer.name ?? code,
+		),
+	);
 </script>
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
 		<table.Toolbar searchLabel={m.orders_search()}>
-			{#if customer}
+			{#if customers.length}
 				<Button
 					variant="secondary"
 					size="sm"
-					href={resolve("/(app)/orders")}
 					title={m.orders_show_all()}
+					onclick={() => table.getColumn("customer")?.setFilterValue(undefined)}
 				>
-					{m.orders_customer_filter({ name: customerName ?? "" })}
+					{m.orders_customer_filter({ name: customers.join(", ") })}
 					<XIcon data-icon="inline-end" />
 				</Button>
 			{/if}

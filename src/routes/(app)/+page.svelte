@@ -70,11 +70,7 @@
 			>
 			<Card.Action>
 				<!-- The materials list, filtered to the low and out of stock ones. -->
-				<Button
-					variant="outline"
-					size="sm"
-					href="{resolve('/(app)/materials')}?stockLevel=out&stockLevel=low"
-				>
+				<Button variant="outline" size="sm" href="{resolve('/(app)/materials')}?stock=out,low">
 					{m.common_view()}
 				</Button>
 			</Card.Action>

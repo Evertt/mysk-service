@@ -43,7 +43,7 @@ export const columns = column.columns([
 				primary: row.original.contactName,
 				secondary: row.original.email,
 			}),
-		meta: { label: m.customers_column_contact },
+		meta: { label: m.customers_column_contact, param: "contact" },
 	}),
 	column.accessor("country", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -69,25 +69,25 @@ export const columns = column.columns([
 		sortFn: (a, b, id) =>
 			customerSegments.indexOf(a.getValue(id)) - customerSegments.indexOf(b.getValue(id)),
 		enableGlobalFilter: false,
-		meta: { label: m.customers_column_segment },
+		meta: { label: m.customers_column_segment, filterValues: customerSegments },
 	}),
 	column.accessor("equipmentCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: m.customers_column_equipment, align: "end" },
+		meta: { label: m.customers_column_equipment, align: "end", param: "equipment" },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: m.customers_column_open_orders, align: "end" },
+		meta: { label: m.customers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.customers_column_since },
+		meta: { label: m.customers_column_since, param: "since" },
 	}),
 	// Hidden, and not in the column menu: lets the search box find customers by details that
 	// are shown in other columns' second lines (code, email, city, the country as shown) or not

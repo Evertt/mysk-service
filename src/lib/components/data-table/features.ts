@@ -29,6 +29,15 @@ export interface DataTableColumnMeta {
 	label?: string | (() => string);
 	/** Right-align numeric columns. */
 	align?: "start" | "end";
+	/**
+	 * The column's name in the URL (its filter's parameter, and in `?sort=`), if not its id: short,
+	 * lower case, e.g. `scheduled` for `scheduledFor`. See `url-state.ts`.
+	 */
+	param?: string;
+	/** Puts the column's filter in the URL as a set of values; implied by `filterFn: "oneOf"`. */
+	filter?: "set";
+	/** The values the column's filter can have; others in the URL are ignored. */
+	filterValues?: readonly string[];
 }
 
 /** A column's name as shown: its translated `meta.label`, or its id. */

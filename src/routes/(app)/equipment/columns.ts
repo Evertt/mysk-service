@@ -7,6 +7,7 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 import StatusBadge from "#lib/components/equipment/status-badge.svelte";
+import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getEquipmentList } from "./equipment.remote.js";
@@ -39,7 +40,7 @@ export const columns = column.columns([
 	// Hidden: makes serial numbers searchable.
 	column.accessor("serialNumber", {
 		enableHiding: false,
-		meta: { label: m.equipment_column_serial_number },
+		meta: { label: m.equipment_column_serial_number, param: "serial" },
 	}),
 	// Hidden: for the manufacturer filter.
 	column.accessor("manufacturer", {
@@ -51,13 +52,13 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: m.equipment_column_category },
+		meta: { label: m.equipment_column_category, filterValues: equipmentCategories },
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: m.equipment_column_status },
+		meta: { label: m.equipment_column_status, filterValues: equipmentStatuses },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
@@ -74,19 +75,19 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.equipment_column_installed },
+		meta: { label: m.equipment_column_installed, param: "installed" },
 	}),
 	column.accessor("warrantyUntil", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(WarrantyCell, { until: getValue() }),
 		enableGlobalFilter: false,
-		meta: { label: m.equipment_column_warranty },
+		meta: { label: m.equipment_column_warranty, param: "warranty" },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: m.equipment_column_open_orders, align: "end" },
+		meta: { label: m.equipment_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.display({
 		id: "actions",
