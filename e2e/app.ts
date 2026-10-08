@@ -1,7 +1,7 @@
 /**
  * Helpers for the end-to-end tests: a signed-in browser page on the app under test (see
  * `global-setup.ts`). The database (`db.ts`), the mail (`mail.ts`) and remote function requests
- * (`remote.ts`) have their own files, which this one re-exports.
+ * (`remote-functions.ts`) have their own files, which this one re-exports.
  */
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
@@ -12,7 +12,7 @@ import { baseURL } from "./lane.ts";
 export { baseURL } from "./lane.ts";
 export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
 export { linkInMail, type SentMail, sentMail } from "./mail.ts";
-export { isRemote } from "./remote.ts";
+export { isRemote } from "./remote-functions.ts";
 
 // --- Browser ---------------------------------------------------------------------------------
 
