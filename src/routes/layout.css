@@ -8,6 +8,33 @@
 @import "@fontsource-variable/space-grotesk";
 
 @custom-variant dark (&:is(.dark *));
+
+/* Overlays (popovers, menus, selects, tooltips, dialogs, sheets) animate out with tw-animate-css's
+   `animate-out`, and bits-ui unmounts them once the animation has finished. tw-animate-css leaves
+   the fill mode at `none`, so the element snaps back to full opacity and size the moment the
+   animation ends, and the compositor paints that for a frame before the unmount: a flicker at the
+   end of every close. `forwards` holds the faded-out end state until the element is gone. */
+@theme inline {
+	--animate-out: exit var(--tw-animation-duration, var(--tw-duration, 0.15s)) var(--tw-ease, ease)
+		var(--tw-animation-delay, 0s) var(--tw-animation-iteration-count, 1)
+		var(--tw-animation-direction, normal) forwards;
+}
+
+/* With reduced motion, overlays only fade in and out: no zooming, sliding or spinning. (Unlayered,
+   so it wins over the `zoom-*`/`slide-*` utilities, which only set these variables.) */
+@media (prefers-reduced-motion: reduce) {
+	* {
+		--tw-enter-scale: 1;
+		--tw-enter-translate-x: 0;
+		--tw-enter-translate-y: 0;
+		--tw-enter-rotate: 0;
+		--tw-exit-scale: 1;
+		--tw-exit-translate-x: 0;
+		--tw-exit-translate-y: 0;
+		--tw-exit-rotate: 0;
+	}
+}
+
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
