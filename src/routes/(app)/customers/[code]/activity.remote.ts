@@ -4,6 +4,7 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
 import { priceOrders } from "#lib/server/pricing.js";
@@ -19,7 +20,7 @@ export const getCustomerActivity = query(v.string(), async (code) => {
 		.select({ id: customer.id })
 		.from(customer)
 		.where(and(eq(customer.code, code), inTenant(customer)));
-	if (!found) error(404, `Customer ${code} not found`);
+	if (!found) error(404, m.customers_code_not_found({ code }));
 
 	const [[{ total }], orders] = await Promise.all([
 		db

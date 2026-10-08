@@ -19,12 +19,12 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Engineer portal</Card.Title>
+		<Card.Title>{m.engineers_portal_title()}</Card.Title>
 		<Card.Description>
 			{#if account.linked}
-				Signs in as {account.linked.name} ({account.linked.email}) and sees their own orders at /my.
+				{m.engineers_portal_linked({ name: account.linked.name, email: account.linked.email })}
 			{:else}
-				Not linked to a user account: they can't sign in to the engineer portal.
+				{m.engineers_portal_not_linked()}
 			{/if}
 		</Card.Description>
 	</Card.Header>
@@ -32,30 +32,30 @@
 		<Card.Content>
 			<form
 				{...linkEngineerAccount.enhance(async ({ submit }) => {
-					if (await submit()) toast.success("Account saved");
+					if (await submit()) toast.success(m.engineers_account_saved());
 				})}
 				class="flex flex-col gap-4"
 			>
 				<input {...fields.id.as("hidden", String(engineerId))} />
 				<SelectField
 					field={fields.userId}
-					label="User account"
-					placeholder="No account"
+					label={m.engineers_account_field()}
+					placeholder={m.engineers_account_none()}
 					value={account.linked?.userId ?? ""}
-					options={account.members.map((m) => ({
-						value: m.userId,
-						label: `${m.name} (${m.email}) · ${m.role
+					options={account.members.map((member) => ({
+						value: member.userId,
+						label: `${member.name} (${member.email}) · ${member.role
 							.split(",")
 							.map((role) => labelOrValue("memberRole", role))
 							.join(", ")}`,
 					}))}
-					description="Members with the engineer role only use the portal."
+					description={m.engineers_account_description()}
 				/>
 				<Button type="submit" class="self-end" disabled={!!linkEngineerAccount.pending}>
 					{#if linkEngineerAccount.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Save account
+					{m.engineers_account_save()}
 				</Button>
 			</form>
 		</Card.Content>

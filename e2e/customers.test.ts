@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { countryName } from "../src/lib/components/customers/countries.ts";
 import { formatDate } from "../src/lib/format.ts";
 import {
+	baseURL,
 	cents,
 	countIn,
 	nextCode,
@@ -545,5 +547,68 @@ describe("in South", () => {
 		await page.waitForURL((url) => url.pathname === "/customers");
 		expect(await customerId(created, south.id)).toBeUndefined();
 		expect((await app.go(`/customers/${created}`))?.status()).toBe(404);
+	});
+});
+
+describe("in Dutch", () => {
+	/** Sets the language as the language switchers do, in Paraglide's cookie. */
+	const useLanguage = (locale: string) =>
+		app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
+
+	test("the customers list is in Dutch", async () => {
+		const { page } = app;
+		await useLanguage("nl");
+		await app.go("/customers");
+		await page.getByRole("heading", { level: 1, name: "Klanten" }).waitFor();
+		expect(await page.title()).toBe("Klanten");
+		expect(await page.getByPlaceholder("Klanten zoeken…").count()).toBe(1);
+		const headers = (await page.locator("thead").allInnerTexts()).join(" ");
+		for (const name of ["Klant", "Locatie", "Open opdrachten"]) {
+			expect(headers, name).toContain(name);
+		}
+		expect(await page.getByRole("link", { name: "Nieuwe klant" }).count()).toBe(1);
+	});
+
+	test("a customer's page is in Dutch, with the country's Dutch name", async () => {
+		const { page } = app;
+		const [own] = await rows<{ name: string; country: string }>(
+			`select name, country from customer where code = 'CUST-0001' and organization_id = ?`,
+			[south.id],
+		);
+		await app.go("/customers/CUST-0001");
+		await page.getByRole("heading", { level: 1, name: own.name }).waitFor();
+		for (const text of ["Totale omzet", "Klant sinds", "Recente activiteit", "Contactpersoon"]) {
+			expect(await page.getByText(text, { exact: true }).count(), text).toBeGreaterThan(0);
+		}
+		expect(await page.getByRole("link", { name: "Bewerken" }).count()).toBeGreaterThan(0);
+		expect(await page.locator("main").innerText()).toContain(countryName(own.country, "nl"));
+	});
+
+	test("an equipment page is in Dutch", async () => {
+		const { page } = app;
+		const serial = await value<string>(
+			`select serial_number from equipment where organization_id = ? order by id limit 1`,
+			[south.id],
+		);
+		await app.go(`/equipment/${serial}`);
+		for (const text of ["Servicegeschiedenis", "Specificaties", "Eigenaar", "Laatste onderhoud"]) {
+			expect(await page.getByText(text, { exact: true }).count(), text).toBeGreaterThan(0);
+		}
+		// The warranty badge.
+		expect(await page.locator("main").innerText()).toMatch(/\b(Gedekt|Verlopen)\b/);
+	});
+
+	test("validation messages are in Dutch", async () => {
+		const { page } = app;
+		await app.go("/customers/new");
+		await app.submit(page.getByRole("button", { name: "Klant aanmaken" }));
+		expect(await app.issues()).toContain("Vul de bedrijfsnaam in");
+	});
+
+	test("switching back to English", async () => {
+		await useLanguage("en");
+		await app.go("/customers");
+		await app.page.getByRole("heading", { level: 1, name: "Customers" }).waitFor();
+		expect(await app.page.title()).toBe("Customers");
 	});
 });

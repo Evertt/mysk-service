@@ -1,3 +1,136 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"customers_title": "Klanten",
+	"customers_description": "Bedrijven waarvoor we apparatuur installeren en onderhouden.",
+	"customers_new": "Nieuwe klant",
+	"customers_new_description": "Registreer een bedrijf waarvoor we apparatuur installeren of onderhouden.",
+	"customers_breadcrumb_new": "Nieuw",
+	"customers_edit_title": "{name} bewerken",
+	"customers_search": "Klanten zoeken…",
+	"customers_empty": "Geen klanten gevonden",
+	"customers_column_customer": "Klant",
+	"customers_column_contact": "Contactpersoon",
+	"customers_column_location": "Locatie",
+	"customers_column_segment": "Segment",
+	"customers_column_country": "Land",
+	"customers_column_equipment": "Apparatuur",
+	"customers_column_open_orders": "Open opdrachten",
+	"customers_column_since": "Klant sinds",
+	"customers_copy_code": "Klantcode kopiëren",
+	"customers_copy_email": "E-mailadres kopiëren",
+	"customers_name_required": "Vul de bedrijfsnaam in",
+	"customers_segment_required": "Kies een segment",
+	"customers_contact_required": "Vul een contactpersoon in",
+	"customers_city_required": "Vul een plaats in",
+	"customers_country_required": "Kies een land",
+	"customers_country_unknown": "Kies een land uit de lijst",
+	"customers_saved": "Klant opgeslagen",
+	"customers_created": "Klant aangemaakt",
+	"customers_form_company": "Bedrijf",
+	"customers_form_code_kept": "Klantcode {code} blijft hetzelfde.",
+	"customers_form_code_assigned": "De klant krijgt een klantcode zodra je hem aanmaakt.",
+	"customers_form_contact_description": "Met wie we offertes, bezoeken en facturen bespreken.",
+	"customers_field_name": "Naam",
+	"customers_field_city": "Plaats",
+	"customers_field_contact_name": "Contactpersoon",
+	"customers_field_email": "E-mailadres",
+	"customers_field_phone": "Telefoon",
+	"customers_save": "Klant opslaan",
+	"customers_create": "Klant aanmaken",
+	"customers_not_found": "Klant niet gevonden",
+	"customers_code_not_found": "Klant {code} niet gevonden",
+	"customers_count_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} apparaat",
+				"countPlural=*": "{countText} apparaten"
+			}
+		}
+	],
+	"customers_references_both": "{units} en {orders}",
+	"customers_delete_refused": "Deze klant heeft nog {references}. Verwijder die of zet ze over op een andere klant voordat je de klant verwijdert.",
+	"customers_delete_referenced": "Er verwijzen nog andere gegevens naar deze klant, zoals servicecontracten. Verwijder die eerst.",
+	"customers_delete_title": "{name} verwijderen?",
+	"customers_delete_description": "De klant wordt definitief verwijderd. Klanten met apparatuur of opdrachten kun je niet verwijderen.",
+	"customers_stats_orders_total": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Van {countText} opdracht in totaal",
+				"countPlural=*": "Van {countText} opdrachten in totaal"
+			}
+		}
+	],
+	"customers_stats_revenue": "Totale omzet",
+	"customers_stats_revenue_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Uit {countText} afgeronde of gefactureerde opdracht",
+				"countPlural=*": "Uit {countText} afgeronde of gefactureerde opdrachten"
+			}
+		}
+	],
+	"customers_stats_attention": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} heeft aandacht nodig",
+				"countPlural=*": "{countText} hebben aandacht nodig"
+			}
+		}
+	],
+	"customers_stats_all_working": "Alles werkt naar behoren",
+	"customers_stats_last_order": "Laatste opdracht op {date}",
+	"customers_stats_no_orders": "Nog geen opdrachten",
+	"customers_equipment_description": "Apparaten die bij {name} geïnstalleerd zijn.",
+	"customers_equipment_column_model": "Model",
+	"customers_equipment_column_category": "Categorie",
+	"customers_equipment_column_installed": "Geïnstalleerd",
+	"customers_equipment_column_status": "Status",
+	"customers_equipment_empty_title": "Geen apparatuur",
+	"customers_equipment_empty_description": "Er zijn nog geen apparaten geregistreerd voor deze klant.",
+	"customers_recent_title": "Recente activiteit",
+	"customers_recent_description": "De laatste opdrachten voor al hun apparatuur.",
+	"customers_recent_view_all": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Bekijk de opdracht",
+				"countPlural=*": "Bekijk alle {countText} opdrachten"
+			}
+		}
+	],
+	"customers_recent_new_installation": "Nieuwe installatie",
+	"customers_recent_completed": "Afgerond {date}",
+	"customers_recent_scheduled": "Gepland {date}",
+	"customers_recent_created": "Aangemaakt {date}",
+	"customers_recent_empty_title": "Geen opdrachten",
+	"customers_recent_empty_description": "Er is nog niets geoffreerd of gedaan voor deze klant."
 }

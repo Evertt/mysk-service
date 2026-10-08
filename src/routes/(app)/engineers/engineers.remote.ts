@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "dri
 import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
@@ -48,7 +49,8 @@ export const getEngineers = query(async () => {
 /** Parses an id from the URL, or a 404. Ids are global: look them up with `inTenant(engineer)`. */
 function parseId(value: string) {
 	const parsed = Number(value);
-	if (!Number.isSafeInteger(parsed) || parsed < 1) error(404, `Engineer ${value} not found`);
+	if (!Number.isSafeInteger(parsed) || parsed < 1)
+		error(404, m.engineers_id_not_found({ id: value }));
 	return parsed;
 }
 
@@ -59,7 +61,7 @@ export const getEngineer = query(v.string(), async (param) => {
 	const found = await db.query.engineer.findFirst({
 		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
 	});
-	if (!found) error(404, `Engineer ${param} not found`);
+	if (!found) error(404, m.engineers_id_not_found({ id: param }));
 
 	const columns = {
 		id: order.id,
@@ -130,7 +132,7 @@ async function emailTaken(email: string, exceptId?: number) {
 export const createEngineer = form(v.object(engineerFields), async (input, issue) => {
 	const { organizationId } = requireMember();
 	if (await emailTaken(input.email)) {
-		invalid(issue.email("Another engineer already uses this email address"));
+		invalid(issue.email(m.engineers_email_taken()));
 	}
 	const created = await db.transaction(async (tx) => {
 		const [created] = await tx
@@ -153,9 +155,9 @@ export const updateEngineer = form(
 		const found = await db.query.engineer.findFirst({
 			where: and(eq(engineer.id, id), inTenant(engineer)),
 		});
-		if (!found) error(404, "Engineer not found");
+		if (!found) error(404, m.engineers_not_found());
 		if (await emailTaken(input.email, id)) {
-			invalid(issue.email("Another engineer already uses this email address"));
+			invalid(issue.email(m.engineers_email_taken()));
 		}
 		await db.transaction(async (tx) => {
 			await tx
@@ -176,17 +178,14 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 	const found = await db.query.engineer.findFirst({
 		where: and(eq(engineer.id, id), inTenant(engineer)),
 	});
-	if (!found) error(404, "Engineer not found");
+	if (!found) error(404, m.engineers_not_found());
 
 	const [{ assigned }] = await db
 		.select({ assigned: count() })
 		.from(order)
 		.where(and(inTenant(order), eq(order.engineerId, id)));
 	if (assigned > 0) {
-		const orders = assigned === 1 ? "1 order is" : `${assigned} orders are`;
-		invalid(
-			`${found.name} can't be deleted while ${orders} assigned to them. To take them off new work, mark them inactive instead.`,
-		);
+		invalid(m.engineers_delete_refused({ name: found.name, count: assigned }));
 	}
 
 	await refuseIfReferenced(
@@ -196,7 +195,7 @@ export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
 				const subject = { type: "engineer", id, label: found.name };
 				await recordActivity(tx, { action: "deleted", subject });
 			}),
-		"Other records still refer to this engineer. Mark them inactive instead.",
+		m.engineers_delete_referenced(),
 	);
 	void getEngineers().refresh();
 	redirect(303, "/engineers");

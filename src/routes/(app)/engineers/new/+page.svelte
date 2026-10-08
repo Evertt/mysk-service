@@ -8,18 +8,18 @@
 </script>
 
 <svelte:head>
-	<title>New engineer · Engineers</title>
+	<title>{m.engineers_new()} · {m.engineers_title()}</title>
 </svelte:head>
 
-<PageHeader title="New engineer" description="Add a field engineer who can be assigned orders.">
+<PageHeader title={m.engineers_new()} description={m.engineers_new_description()}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/engineers")}>Engineers</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/engineers")}>{m.engineers_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>New</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.engineers_breadcrumb_new()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>

@@ -4,6 +4,7 @@ import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
@@ -12,8 +13,6 @@ import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
-
-const orders = (n: number) => (n === 1 ? "1 order" : `${n} orders`);
 
 /** All of the tenant's units with their owner and number of open orders. */
 export const getEquipmentList = query(async () => {
@@ -55,7 +54,7 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
 		with: { customer: true },
 	});
-	if (!unit) error(404, `Equipment ${serialNumber} not found`);
+	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
 
 	const [{ orderCount }] = await db
 		.select({ orderCount: count() })
@@ -97,7 +96,7 @@ async function checkUnit(
 	if (sameSerial && sameSerial.id !== existing?.id) {
 		problems.push({
 			field: "serialNumber",
-			message: "Another unit already has this serial number",
+			message: m.equipment_serial_taken(),
 		});
 	}
 	const owner = await db.query.customer.findFirst({
@@ -105,7 +104,7 @@ async function checkUnit(
 		where: and(eq(customer.id, input.customerId), inTenant(customer)),
 	});
 	if (!owner) {
-		problems.push({ field: "customerId", message: "Unknown customer" });
+		problems.push({ field: "customerId", message: m.equipment_customer_unknown() });
 	} else if (existing && existing.customerId !== input.customerId) {
 		const [{ total }] = await db
 			.select({ total: count() })
@@ -114,14 +113,14 @@ async function checkUnit(
 		if (total) {
 			problems.push({
 				field: "customerId",
-				message: `Can't move this unit to another customer: ${orders(total)} for its current owner refer to it.`,
+				message: m.equipment_move_refused({ count: total }),
 			});
 		}
 	}
 	if (input.warrantyUntil < input.installedAt) {
 		problems.push({
 			field: "warrantyUntil",
-			message: "The warranty can't end before the unit was installed",
+			message: m.equipment_warranty_before_installed(),
 		});
 	}
 	return problems;
@@ -151,7 +150,7 @@ export const updateEquipment = form(
 		const existing = await db.query.equipment.findFirst({
 			where: and(eq(equipment.id, id), inTenant(equipment)),
 		});
-		if (!existing) error(404, "Equipment not found");
+		if (!existing) error(404, m.equipment_not_found());
 		const problems = await checkUnit(existing, input);
 		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
 		// Records of optional modules (e.g. a service contract covering it) belong to the unit's
@@ -166,9 +165,7 @@ export const updateEquipment = form(
 					const subject = { type: "equipment", id, label: input.serialNumber };
 					await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 				}),
-			issue.customerId(
-				"Can't move this unit to another customer while its current customer's records, such as a service contract, include it. Remove it from those first.",
-			),
+			issue.customerId(m.equipment_move_refused_records()),
 		);
 		void getEquipmentList().refresh();
 		void getEquipment(input.serialNumber).refresh();
@@ -182,15 +179,13 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 		columns: { id: true, serialNumber: true },
 		where: and(eq(equipment.id, id), inTenant(equipment)),
 	});
-	if (!existing) error(404, "Equipment not found");
+	if (!existing) error(404, m.equipment_not_found());
 	const [{ total }] = await db
 		.select({ total: count() })
 		.from(order)
 		.where(and(eq(order.equipmentId, id), inTenant(order)));
 	if (total) {
-		invalid(
-			`This unit can't be deleted: ${orders(total)} refer to it. Set its status to decommissioned instead.`,
-		);
+		invalid(m.equipment_delete_refused({ count: total }));
 	}
 	await refuseIfReferenced(
 		() =>
@@ -199,7 +194,7 @@ export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
 				const subject = { type: "equipment", id, label: existing.serialNumber };
 				await recordActivity(tx, { action: "deleted", subject });
 			}),
-		"Other records still refer to this unit. Remove those first.",
+		m.equipment_delete_referenced(),
 	);
 	void getEquipmentList().refresh();
 	redirect(303, "/equipment");

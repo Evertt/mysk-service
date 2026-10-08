@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import { countryOptions } from "#lib/components/customers/countries.js";
 	import { segmentOptions } from "#lib/components/customers/display.js";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
@@ -39,7 +40,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the customer; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(customer ? "Customer saved" : "Customer created");
+		if (await submit()) toast.success(customer ? m.customers_saved() : m.customers_created());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -50,39 +51,39 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Company</Card.Title>
+			<Card.Title>{m.customers_form_company()}</Card.Title>
 			<Card.Description>
 				{customer
-					? `Customer code ${customer.code} stays the same.`
-					: "A customer code is assigned when the customer is created."}
+					? m.customers_form_code_kept({ code: customer.code })
+					: m.customers_form_code_assigned()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<TextField
 					field={fields.name}
-					label="Name"
+					label={m.customers_field_name()}
 					value={customer?.name}
 					autocomplete="organization"
 				/>
 				<SelectField
 					field={fields.segment}
-					label="Segment"
+					label={m.customers_column_segment()}
 					value={customer?.segment ?? "small_business"}
 					options={segmentOptions.map(({ value, label }) => ({ value, label }))}
 				/>
 				<TextField
 					field={fields.city}
-					label="City"
+					label={m.customers_field_city()}
 					value={customer?.city}
 					autocomplete="address-level2"
 				/>
 				<SelectField
 					field={fields.country}
-					label="Country"
-					placeholder="Choose a country"
+					label={m.customers_column_country()}
+					placeholder={m.customers_country_required()}
 					value={customer?.country}
-					options={options.countries.map((country) => ({ value: country, label: country }))}
+					options={countryOptions(options.countries)}
 				/>
 			</Field.FieldGroup>
 		</Card.Content>
@@ -90,28 +91,28 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Contact</Card.Title>
-			<Card.Description>Who we talk to about quotes, visits and invoices.</Card.Description>
+			<Card.Title>{m.customers_column_contact()}</Card.Title>
+			<Card.Description>{m.customers_form_contact_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<TextField
 					field={fields.contactName}
-					label="Contact person"
+					label={m.customers_field_contact_name()}
 					value={customer?.contactName}
 					autocomplete="name"
 					class="md:col-span-2"
 				/>
 				<TextField
 					field={fields.email}
-					label="Email"
+					label={m.customers_field_email()}
 					type="email"
 					value={customer?.email}
 					autocomplete="email"
 				/>
 				<TextField
 					field={fields.phone}
-					label="Phone"
+					label={m.customers_field_phone()}
 					type="tel"
 					value={customer?.phone}
 					autocomplete="tel"
@@ -122,7 +123,7 @@
 
 	<FormActions
 		pending={form.pending}
-		submitLabel={customer ? "Save customer" : "Create customer"}
+		submitLabel={customer ? m.customers_save() : m.customers_create()}
 		{cancelHref}
 	/>
 </form>

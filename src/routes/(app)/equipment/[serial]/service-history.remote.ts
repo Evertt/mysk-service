@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.js";
 import { priceOrders } from "#lib/server/pricing.js";
@@ -22,7 +23,7 @@ export const getServiceHistory = query(v.string(), async (serialNumber) => {
 		})
 		.from(equipment)
 		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, `Equipment ${serialNumber} not found`);
+	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
 
 	const orders = await db
 		.select({

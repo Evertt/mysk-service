@@ -1,3 +1,164 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"equipment_title": "Equipment",
+	"equipment_description": "Installed units across all customer sites.",
+	"equipment_new": "New unit",
+	"equipment_new_description": "Register a machine installed at a customer site.",
+	"equipment_breadcrumb_new": "New",
+	"equipment_edit_title": "Edit {serial}",
+	"equipment_search": "Search equipment…",
+	"equipment_empty": "No equipment found",
+	"equipment_column_unit": "Unit",
+	"equipment_column_serial_number": "Serial number",
+	"equipment_column_manufacturer": "Manufacturer",
+	"equipment_column_category": "Category",
+	"equipment_column_status": "Status",
+	"equipment_column_customer": "Customer",
+	"equipment_column_installed": "Installed",
+	"equipment_column_warranty": "Warranty",
+	"equipment_column_open_orders": "Open orders",
+	"equipment_copy_serial": "Copy serial number",
+	"equipment_copy_customer_code": "Copy customer code",
+	"equipment_warranty_covered": "Covered",
+	"equipment_warranty_expired": "Expired",
+	"equipment_serial_required": "Enter the serial number",
+	"equipment_serial_format": "Use only letters, digits and dashes",
+	"equipment_serial_max": "At most {max} characters",
+	"equipment_manufacturer_required": "Enter the manufacturer",
+	"equipment_model_required": "Enter the model",
+	"equipment_category_required": "Choose a category",
+	"equipment_status_required": "Choose a status",
+	"equipment_customer_required": "Choose a customer",
+	"equipment_installed_required": "Enter the installation date",
+	"equipment_warranty_required": "Enter the end of the warranty",
+	"equipment_saved": "Equipment saved",
+	"equipment_registered": "Equipment registered",
+	"equipment_form_unit": "Unit",
+	"equipment_form_unit_description": "What the machine is and the state it's in.",
+	"equipment_form_owner": "Owner and warranty",
+	"equipment_form_owner_description": "Its owner, and how long it's covered.",
+	"equipment_field_serial_number": "Serial number",
+	"equipment_field_serial_number_description": "Letters, digits and dashes; stored in upper case.",
+	"equipment_field_status": "Status",
+	"equipment_field_manufacturer": "Manufacturer",
+	"equipment_field_model": "Model",
+	"equipment_field_category": "Category",
+	"equipment_field_customer": "Customer",
+	"equipment_field_installed": "Installed on",
+	"equipment_field_warranty": "Warranty until",
+	"equipment_category_placeholder": "Choose a category",
+	"equipment_customer_placeholder": "Choose a customer",
+	"equipment_customer_locked": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Has an order for this customer, so it stays with them.",
+				"countPlural=*": "Has {countText} orders for this customer, so it stays with them."
+			}
+		}
+	],
+	"equipment_save": "Save equipment",
+	"equipment_register": "Register equipment",
+	"equipment_not_found": "Equipment not found",
+	"equipment_serial_not_found": "Equipment {serial} not found",
+	"equipment_serial_taken": "Another unit already has this serial number",
+	"equipment_customer_unknown": "Unknown customer",
+	"equipment_move_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Can't move this unit to another customer: {countText} order for its current owner refers to it.",
+				"countPlural=*": "Can't move this unit to another customer: {countText} orders for its current owner refer to it."
+			}
+		}
+	],
+	"equipment_move_refused_records": "Can't move this unit to another customer while its current customer's records, such as a service contract, include it. Remove it from those first.",
+	"equipment_warranty_before_installed": "The warranty can't end before the unit was installed",
+	"equipment_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "This unit can't be deleted: {countText} order refers to it. Set its status to decommissioned instead.",
+				"countPlural=*": "This unit can't be deleted: {countText} orders refer to it. Set its status to decommissioned instead."
+			}
+		}
+	],
+	"equipment_delete_referenced": "Other records still refer to this unit. Remove those first.",
+	"equipment_delete_title": "Delete {serial}?",
+	"equipment_delete_description": "The unit is removed permanently. Units with orders can't be deleted; decommission them instead.",
+	"equipment_specifications": "Specifications",
+	"equipment_detail_model": "Model",
+	"equipment_owner": "Owner",
+	"equipment_owner_company": "Company",
+	"equipment_owner_contact": "Contact",
+	"equipment_owner_email": "Email",
+	"equipment_owner_phone": "Phone",
+	"equipment_owner_location": "Location",
+	"equipment_history_title": "Service history",
+	"equipment_history_description": "Everything that happened to this unit, most recent first.",
+	"equipment_history_empty_title": "No orders yet",
+	"equipment_history_empty_description": "This unit hasn't been serviced.",
+	"equipment_history_installed": "Installed",
+	"equipment_history_warranty_ends": "Warranty ends",
+	"equipment_history_warranty_ended": "Warranty ended",
+	"equipment_history_engineer": "Engineer",
+	"equipment_history_scheduled": "Scheduled",
+	"equipment_history_completed": "Completed",
+	"equipment_history_labour": "Labour",
+	"equipment_history_materials": "Materials · {cost}",
+	"equipment_history_adjustments": "Adjustments",
+	"equipment_stats_orders": "Orders",
+	"equipment_stats_open": "{count} open",
+	"equipment_stats_orders_by_type": "Orders by type",
+	"equipment_stats_cost": "Service cost",
+	"equipment_stats_cost_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Materials and labour of {countText} completed order",
+				"countPlural=*": "Materials and labour of {countText} completed orders"
+			}
+		}
+	],
+	"equipment_stats_last_service": "Last service",
+	"equipment_stats_never": "Never",
+	"equipment_stats_last_service_description": "Latest completed order",
+	"equipment_stats_since_repair": "Since last repair",
+	"equipment_stats_between_repairs": "Mean time between repairs: {days}",
+	"equipment_stats_one_repair": "1 repair so far",
+	"equipment_stats_no_repairs": "No repairs so far",
+	"equipment_count_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day",
+				"countPlural=*": "{countText} days"
+			}
+		}
+	]
 }

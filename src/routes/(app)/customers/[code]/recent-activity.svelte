@@ -22,12 +22,12 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Recent activity</Card.Title>
-		<Card.Description>The latest orders across all their equipment.</Card.Description>
+		<Card.Title>{m.customers_recent_title()}</Card.Title>
+		<Card.Description>{m.customers_recent_description()}</Card.Description>
 		{#if activity.total}
 			<Card.Action>
 				<Button variant="outline" size="sm" href={allOrders}>
-					{activity.total === 1 ? "View the order" : `View all ${activity.total} orders`}
+					{m.customers_recent_view_all({ count: activity.total })}
 					<ArrowRightIcon data-icon="inline-end" />
 				</Button>
 			</Card.Action>
@@ -35,7 +35,7 @@
 	</Card.Header>
 	<Card.Content>
 		{#if activity.orders.length}
-			<ul aria-label="Recent activity" class="flex flex-col divide-y">
+			<ul aria-label={m.customers_recent_title()} class="flex flex-col divide-y">
 				{#each activity.orders as order (order.id)}
 					<li class="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
 						<div class="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -54,7 +54,9 @@
 									{order.equipment.model} · {order.equipment.serialNumber}
 								</a>
 							{:else}
-								<span class="text-sm text-muted-foreground">New installation</span>
+								<span class="text-sm text-muted-foreground">
+									{m.customers_recent_new_installation()}
+								</span>
 							{/if}
 						</div>
 						<StatusBadge status={order.status} />
@@ -64,11 +66,11 @@
 							</span>
 							<span class="text-xs whitespace-nowrap text-muted-foreground tabular-nums">
 								{#if order.completedAt}
-									Completed {formatDate(order.completedAt)}
+									{m.customers_recent_completed({ date: formatDate(order.completedAt) })}
 								{:else if order.scheduledFor}
-									Scheduled {formatDate(order.scheduledFor)}
+									{m.customers_recent_scheduled({ date: formatDate(order.scheduledFor) })}
 								{:else}
-									Created {formatDate(order.createdAt)}
+									{m.customers_recent_created({ date: formatDate(order.createdAt) })}
 								{/if}
 							</span>
 						</div>
@@ -78,10 +80,8 @@
 		{:else}
 			<Empty.Root class="p-6">
 				<Empty.Header>
-					<Empty.Title>No orders</Empty.Title>
-					<Empty.Description
-						>Nothing has been quoted or done for this customer yet.</Empty.Description
-					>
+					<Empty.Title>{m.customers_recent_empty_title()}</Empty.Title>
+					<Empty.Description>{m.customers_recent_empty_description()}</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}

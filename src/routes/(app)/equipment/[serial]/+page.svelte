@@ -3,6 +3,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
+	import { countryName } from "#lib/components/customers/countries.js";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 	import { categories } from "#lib/components/equipment/display.js";
@@ -29,14 +30,14 @@
 </script>
 
 <svelte:head>
-	<title>{unit.serialNumber} · Equipment</title>
+	<title>{unit.serialNumber} · {m.equipment_title()}</title>
 </svelte:head>
 
 <PageHeader title={name} description="{categories[unit.category].label} · {unit.serialNumber}">
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/equipment")}>Equipment</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/equipment")}>{m.equipment_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -54,13 +55,13 @@
 			href={resolve("/(app)/equipment/[serial]/edit", { serial: unit.serialNumber })}
 		>
 			<PencilIcon data-icon="inline-start" />
-			Edit
+			{m.common_edit()}
 		</Button>
 		<DeleteDialog
 			form={deleteEquipment}
 			id={String(unit.id)}
-			title="Delete {unit.serialNumber}?"
-			description="The unit is removed permanently. Units with orders can't be deleted; decommission them instead."
+			title={m.equipment_delete_title({ serial: unit.serialNumber })}
+			description={m.equipment_delete_description()}
 		/>
 	{/snippet}
 </PageHeader>
@@ -75,18 +76,18 @@
 	<div class="flex min-w-0 flex-col gap-6">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Specifications</Card.Title>
+				<Card.Title>{m.equipment_specifications()}</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label="Manufacturer" value={unit.manufacturer} />
-					<DetailItem label="Model" value={unit.model} />
-					<DetailItem label="Serial number" value={unit.serialNumber} />
-					<DetailItem label="Category">
+					<DetailItem label={m.equipment_field_manufacturer()} value={unit.manufacturer} />
+					<DetailItem label={m.equipment_detail_model()} value={unit.model} />
+					<DetailItem label={m.equipment_field_serial_number()} value={unit.serialNumber} />
+					<DetailItem label={m.equipment_field_category()}>
 						<CategoryLabel category={unit.category} />
 					</DetailItem>
-					<DetailItem label="Installed" value={formatDate(unit.installedAt)} />
-					<DetailItem label="Warranty until">
+					<DetailItem label={m.equipment_column_installed()} value={formatDate(unit.installedAt)} />
+					<DetailItem label={m.equipment_field_warranty()}>
 						<span class="flex flex-wrap items-center gap-2">
 							{formatDate(unit.warrantyUntil)}
 							<WarrantyBadge until={unit.warrantyUntil} />
@@ -98,7 +99,7 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Owner</Card.Title>
+				<Card.Title>{m.equipment_owner()}</Card.Title>
 				<Card.Description>{owner.code}</Card.Description>
 				<Card.Action>
 					<Badge variant="outline">{label("customerSegment", owner.segment)}</Badge>
@@ -107,14 +108,25 @@
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
 					<DetailItem
-						label="Company"
+						label={m.equipment_owner_company()}
 						value={owner.name}
 						href={resolve("/(app)/customers/[code]", { code: owner.code })}
 					/>
-					<DetailItem label="Contact" value={owner.contactName} />
-					<DetailItem label="Email" value={owner.email} href={`mailto:${owner.email}`} />
-					<DetailItem label="Phone" value={owner.phone} href={`tel:${owner.phone}`} />
-					<DetailItem label="Location" value={`${owner.city}, ${owner.country}`} />
+					<DetailItem label={m.equipment_owner_contact()} value={owner.contactName} />
+					<DetailItem
+						label={m.equipment_owner_email()}
+						value={owner.email}
+						href={`mailto:${owner.email}`}
+					/>
+					<DetailItem
+						label={m.equipment_owner_phone()}
+						value={owner.phone}
+						href={`tel:${owner.phone}`}
+					/>
+					<DetailItem
+						label={m.equipment_owner_location()}
+						value={`${owner.city}, ${countryName(owner.country)}`}
+					/>
 				</dl>
 			</Card.Content>
 		</Card.Root>

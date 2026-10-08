@@ -1,3 +1,164 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"equipment_title": "Apparatuur",
+	"equipment_description": "Geïnstalleerde apparaten op alle klantlocaties.",
+	"equipment_new": "Nieuw apparaat",
+	"equipment_new_description": "Registreer een machine die bij een klant geïnstalleerd is.",
+	"equipment_breadcrumb_new": "Nieuw",
+	"equipment_edit_title": "{serial} bewerken",
+	"equipment_search": "Apparatuur zoeken…",
+	"equipment_empty": "Geen apparatuur gevonden",
+	"equipment_column_unit": "Apparaat",
+	"equipment_column_serial_number": "Serienummer",
+	"equipment_column_manufacturer": "Fabrikant",
+	"equipment_column_category": "Categorie",
+	"equipment_column_status": "Status",
+	"equipment_column_customer": "Klant",
+	"equipment_column_installed": "Geïnstalleerd",
+	"equipment_column_warranty": "Garantie",
+	"equipment_column_open_orders": "Open opdrachten",
+	"equipment_copy_serial": "Serienummer kopiëren",
+	"equipment_copy_customer_code": "Klantcode kopiëren",
+	"equipment_warranty_covered": "Gedekt",
+	"equipment_warranty_expired": "Verlopen",
+	"equipment_serial_required": "Vul het serienummer in",
+	"equipment_serial_format": "Gebruik alleen letters, cijfers en streepjes",
+	"equipment_serial_max": "Maximaal {max} tekens",
+	"equipment_manufacturer_required": "Vul de fabrikant in",
+	"equipment_model_required": "Vul het model in",
+	"equipment_category_required": "Kies een categorie",
+	"equipment_status_required": "Kies een status",
+	"equipment_customer_required": "Kies een klant",
+	"equipment_installed_required": "Vul de installatiedatum in",
+	"equipment_warranty_required": "Vul het einde van de garantie in",
+	"equipment_saved": "Apparaat opgeslagen",
+	"equipment_registered": "Apparaat geregistreerd",
+	"equipment_form_unit": "Apparaat",
+	"equipment_form_unit_description": "Wat voor machine het is en in welke staat.",
+	"equipment_form_owner": "Eigenaar en garantie",
+	"equipment_form_owner_description": "Van wie het is, en hoelang de garantie loopt.",
+	"equipment_field_serial_number": "Serienummer",
+	"equipment_field_serial_number_description": "Letters, cijfers en streepjes; opgeslagen in hoofdletters.",
+	"equipment_field_status": "Status",
+	"equipment_field_manufacturer": "Fabrikant",
+	"equipment_field_model": "Model",
+	"equipment_field_category": "Categorie",
+	"equipment_field_customer": "Klant",
+	"equipment_field_installed": "Geïnstalleerd op",
+	"equipment_field_warranty": "Garantie tot en met",
+	"equipment_category_placeholder": "Kies een categorie",
+	"equipment_customer_placeholder": "Kies een klant",
+	"equipment_customer_locked": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Heeft een opdracht voor deze klant, dus het blijft bij hen.",
+				"countPlural=*": "Heeft {countText} opdrachten voor deze klant, dus het blijft bij hen."
+			}
+		}
+	],
+	"equipment_save": "Apparaat opslaan",
+	"equipment_register": "Apparaat registreren",
+	"equipment_not_found": "Apparaat niet gevonden",
+	"equipment_serial_not_found": "Apparaat {serial} niet gevonden",
+	"equipment_serial_taken": "Een ander apparaat heeft dit serienummer al",
+	"equipment_customer_unknown": "Onbekende klant",
+	"equipment_move_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Je kunt dit apparaat niet naar een andere klant verplaatsen: {countText} opdracht van de huidige eigenaar verwijst ernaar.",
+				"countPlural=*": "Je kunt dit apparaat niet naar een andere klant verplaatsen: {countText} opdrachten van de huidige eigenaar verwijzen ernaar."
+			}
+		}
+	],
+	"equipment_move_refused_records": "Je kunt dit apparaat niet naar een andere klant verplaatsen zolang gegevens van de huidige klant, zoals een servicecontract, het bevatten. Haal het daar eerst uit.",
+	"equipment_warranty_before_installed": "De garantie kan niet eindigen voordat het apparaat geïnstalleerd is",
+	"equipment_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Je kunt dit apparaat niet verwijderen: {countText} opdracht verwijst ernaar. Zet de status in plaats daarvan op afgevoerd.",
+				"countPlural=*": "Je kunt dit apparaat niet verwijderen: {countText} opdrachten verwijzen ernaar. Zet de status in plaats daarvan op afgevoerd."
+			}
+		}
+	],
+	"equipment_delete_referenced": "Er verwijzen nog andere gegevens naar dit apparaat. Verwijder die eerst.",
+	"equipment_delete_title": "{serial} verwijderen?",
+	"equipment_delete_description": "Het apparaat wordt definitief verwijderd. Apparaten met opdrachten kun je niet verwijderen; voer ze in plaats daarvan af.",
+	"equipment_specifications": "Specificaties",
+	"equipment_detail_model": "Model",
+	"equipment_owner": "Eigenaar",
+	"equipment_owner_company": "Bedrijf",
+	"equipment_owner_contact": "Contactpersoon",
+	"equipment_owner_email": "E-mailadres",
+	"equipment_owner_phone": "Telefoon",
+	"equipment_owner_location": "Locatie",
+	"equipment_history_title": "Servicegeschiedenis",
+	"equipment_history_description": "Alles wat er met dit apparaat gebeurd is, het meest recente eerst.",
+	"equipment_history_empty_title": "Nog geen opdrachten",
+	"equipment_history_empty_description": "Er is nog geen onderhoud aan dit apparaat gedaan.",
+	"equipment_history_installed": "Geïnstalleerd",
+	"equipment_history_warranty_ends": "Garantie loopt af",
+	"equipment_history_warranty_ended": "Garantie afgelopen",
+	"equipment_history_engineer": "Monteur",
+	"equipment_history_scheduled": "Gepland",
+	"equipment_history_completed": "Afgerond",
+	"equipment_history_labour": "Arbeid",
+	"equipment_history_materials": "Materialen · {cost}",
+	"equipment_history_adjustments": "Aanpassingen",
+	"equipment_stats_orders": "Opdrachten",
+	"equipment_stats_open": "{count} open",
+	"equipment_stats_orders_by_type": "Opdrachten per type",
+	"equipment_stats_cost": "Onderhoudskosten",
+	"equipment_stats_cost_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Materiaal en arbeid van {countText} afgeronde opdracht",
+				"countPlural=*": "Materiaal en arbeid van {countText} afgeronde opdrachten"
+			}
+		}
+	],
+	"equipment_stats_last_service": "Laatste onderhoud",
+	"equipment_stats_never": "Nooit",
+	"equipment_stats_last_service_description": "Laatst afgeronde opdracht",
+	"equipment_stats_since_repair": "Sinds laatste reparatie",
+	"equipment_stats_between_repairs": "Gemiddelde tijd tussen reparaties: {days}",
+	"equipment_stats_one_repair": "Tot nu toe 1 reparatie",
+	"equipment_stats_no_repairs": "Tot nu toe geen reparaties",
+	"equipment_count_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag",
+				"countPlural=*": "{countText} dagen"
+			}
+		}
+	]
 }

@@ -3,6 +3,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
@@ -23,7 +24,7 @@ export const getEngineerAccount = query(v.number(), async (engineerId) => {
 		columns: { id: true, userId: true },
 		where: and(eq(engineer.id, engineerId), inTenant(engineer)),
 	});
-	if (!found) error(404, "Engineer not found");
+	if (!found) error(404, m.engineers_not_found());
 
 	const canManage = tenant.roles.some((role) => managers.includes(role));
 	const [members, taken] = await Promise.all([
@@ -55,7 +56,7 @@ export const linkEngineerAccount = form(
 			columns: { id: true, name: true, userId: true },
 			where: and(eq(engineer.id, input.id), inTenant(engineer)),
 		});
-		if (!found) error(404, "Engineer not found");
+		if (!found) error(404, m.engineers_not_found());
 
 		const userId = input.userId || null;
 		if (userId) {
@@ -63,12 +64,12 @@ export const linkEngineerAccount = form(
 				.select({ id: member.id })
 				.from(member)
 				.where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)));
-			if (!membership) invalid(issue.userId("Choose a member of this organization"));
+			if (!membership) invalid(issue.userId(m.engineers_account_not_member()));
 			const other = await db.query.engineer.findFirst({
 				columns: { name: true },
 				where: and(inTenant(engineer), eq(engineer.userId, userId), ne(engineer.id, found.id)),
 			});
-			if (other) invalid(issue.userId(`This account is already linked to ${other.name}`));
+			if (other) invalid(issue.userId(m.engineers_account_taken({ name: other.name })));
 		}
 		await db.transaction(async (tx) => {
 			await tx

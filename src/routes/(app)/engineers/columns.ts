@@ -5,7 +5,9 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
+import { regionLabel } from "#lib/components/engineers/display.js";
 import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getEngineers } from "./engineers.remote.js";
 
@@ -23,31 +25,32 @@ export const columns = column.columns([
 				href: resolve("/(app)/engineers/[id]", { id: String(row.original.id) }),
 			}),
 		enableHiding: false,
-		meta: { label: "Engineer" },
+		meta: { label: m.engineers_column_engineer },
 	}),
 	// Hidden; it lets the search find engineers by email address.
 	column.accessor("email", {
 		enableSorting: false,
 		enableHiding: false,
-		meta: { label: "Email" },
+		meta: { label: m.engineers_column_email },
 	}),
 	column.accessor("specialty", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(SpecialtyBadge, { specialty: getValue() }),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: "Specialty" },
+		meta: { label: m.engineers_column_specialty },
 	}),
 	column.accessor("region", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
+		cell: ({ getValue }) => regionLabel(getValue()),
 		filterFn: "oneOf",
-		meta: { label: "Region" },
+		meta: { label: m.engineers_column_region },
 	}),
 	column.accessor("hourlyRate", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: "Hourly rate", align: "end" },
+		meta: { label: m.engineers_column_hourly_rate, align: "end" },
 	}),
 	column.accessor((row) => (row.active ? "active" : "inactive"), {
 		id: "status",
@@ -55,19 +58,19 @@ export const columns = column.columns([
 		cell: ({ row }) => renderComponent(ActiveBadge, { active: row.original.active }),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: "Status" },
+		meta: { label: m.engineers_column_status },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: "Open orders", align: "end" },
+		meta: { label: m.engineers_column_open_orders, align: "end" },
 	}),
 	column.accessor("hiredAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Hired" },
+		meta: { label: m.engineers_column_hired },
 	}),
 	column.display({
 		id: "actions",
@@ -77,8 +80,8 @@ export const columns = column.columns([
 				href: resolve("/(app)/engineers/[id]", { id: String(row.original.id) }),
 				editHref: resolve("/(app)/engineers/[id]/edit", { id: String(row.original.id) }),
 				copy: [
-					{ label: "Copy email", value: row.original.email },
-					{ label: "Copy phone", value: row.original.phone },
+					{ label: m.engineers_copy_email(), value: row.original.email },
+					{ label: m.engineers_copy_phone(), value: row.original.phone },
 				],
 			}),
 	}),

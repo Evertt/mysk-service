@@ -9,14 +9,14 @@
 </script>
 
 <svelte:head>
-	<title>Equipment</title>
+	<title>{m.equipment_title()}</title>
 </svelte:head>
 
-<PageHeader title="Equipment" description="Installed units across all customer sites.">
+<PageHeader title={m.equipment_title()} description={m.equipment_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/equipment/new")}>
 			<PlusIcon data-icon="inline-start" />
-			New unit
+			{m.equipment_new()}
 		</Button>
 	{/snippet}
 </PageHeader>
