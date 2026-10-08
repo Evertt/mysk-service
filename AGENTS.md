@@ -195,9 +195,12 @@ Chromium, one server and fresh, seeded database per test worker (see the Testing
 README.md).
 
 - A change to a section's behaviour gets an e2e test in that section's file
-  (`e2e/<section>.test.ts`), written like the existing ones: tests are sequential steps sharing
+  (`e2e/<section>.test.ts`, or `e2e/<section>.<aspect>.test.ts` where a long section is split by
+  aspect, e.g. `orders.bulk.test.ts`, `orders.tenancy.test.ts`; shared helpers go in
+  `e2e/<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
   one signed-in page from `useApp()`, changes go through the UI, checks read the database with
-  `rows()`/`value()`.
+  `rows()`/`value()`. Split a file by its independent `describe` blocks when it passes a few
+  hundred lines: the longest file sets the e2e wall-clock time.
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
   including by tampering with hidden ids (`app.expectingErrors`).
 - Pure helpers (validation, formatting, domain rules, form schemas, table columns) get unit tests
@@ -207,7 +210,9 @@ README.md).
   `*.test-harness.svelte`; form fields take fakes of remote form fields from
   `src/lib/components/form/fake-form.ts`; remote functions are replaced with `vi.mock`.
 - Test files run in parallel, each worker against its own database; within a file, tests run in
-  order. A file may change data (through the UI), but must not rely on another file's changes.
+  order. A file may change data (through the UI), but must not rely on another file's changes, nor
+  break when another file ran before it on the same worker (so a test that needs the seeded state
+  stays in a file before the tests that change it, or reads what it needs from the database).
 - Only run one e2e run at a time: each run builds into `.svelte-kit/output`.
 
 ---
