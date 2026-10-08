@@ -9,12 +9,11 @@ import {
 	hydrated,
 	nextCode,
 	organizations,
-	priceOf,
-	pricedOrders,
 	rows,
 	useApp,
 	value,
 } from "./app.ts";
+import { priceOf, pricedOrders } from "./contracts-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
