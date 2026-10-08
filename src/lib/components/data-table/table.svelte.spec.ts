@@ -1,9 +1,19 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
-import { type Locator, page, userEvent } from "vite-plus/test/browser";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { lastSearch, visit, visits } from "./fake-navigation.svelte.ts";
-import Harness, { type Item } from "./table.test-harness.svelte";
+import { visit } from "./fake-navigation.svelte.ts";
+import Harness from "./table.test-harness.svelte";
+import {
+	addToSort,
+	byName,
+	columnHeader,
+	facet,
+	items,
+	names,
+	statusFilter,
+	textOf,
+} from "./table.test-support.ts";
 
 // The table keeps its state in the URL: a fake one, which `goto` changes.
 vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
@@ -15,44 +25,9 @@ vi.mock("./views.remote.js", () => import("./fake-views.svelte.ts"));
 
 beforeEach(() => visit("/items"));
 
-const items: Item[] = [
-	{
-		id: 1,
-		name: "Boiler service",
-		status: "open",
-		amount: 123456,
-		quantity: 1,
-		dueOn: new Date(2026, 2, 1),
-	},
-	{ id: 2, name: "Chiller repair", status: "closed", amount: 0, quantity: 0, dueOn: null },
-	{ id: 3, name: "Air handler check", status: "open", amount: 5000, quantity: 3, dueOn: null },
-	{ id: 4, name: "Elevator inspection", status: "draft", amount: 100, quantity: 2, dueOn: null },
-	{ id: 5, name: "Generator install", status: "open", amount: 100, quantity: 2, dueOn: null },
-	{ id: 6, name: "Pump replacement", status: "closed", amount: 100, quantity: 2, dueOn: null },
-	{ id: 7, name: "Compressor overhaul", status: "draft", amount: 100, quantity: 2, dueOn: null },
-];
-
-const byName = [...items].map((item) => item.name).sort((a, b) => a.localeCompare(b));
-
-/** The names in the rows on the current page, in order. */
-const names = () =>
-	[...document.querySelectorAll<HTMLTableRowElement>("tbody tr")].map(
-		(row) => row.cells[1]?.textContent?.trim() ?? "",
-	);
-
 /** The cell of a row (by its name) in the column at `index`. */
 const cell = (name: string, index: number) =>
 	page.getByRole("row").filter({ hasText: name }).getByRole("cell").nth(index);
-
-/** A column's header button, which sorts by it (its name goes on to say how it's sorted). */
-const columnHeader = (name: string) =>
-	page
-		.getByRole("row")
-		.first()
-		.getByRole("button", { name: new RegExp(`^${name}( sorted|$)`) });
-
-/** Shift-clicks a column's header, which adds it to the sort or turns it around there. */
-const addToSort = (name: string) => columnHeader(name).click({ modifiers: ["Shift"] });
 
 /** The place a column's header shows in the sort order, if it shows one. */
 const precedence = (name: string) => () =>
@@ -75,16 +50,6 @@ const byAmount = (names: string[]) =>
 		(a, b) =>
 			items.find((item) => item.name === a)!.amount - items.find((item) => item.name === b)!.amount,
 	);
-
-/** An option of the faceted filter, named by its label (its accessible name ends in its count). */
-const facet = (label: string) => page.getByRole("option", { name: new RegExp(`^${label}`) });
-
-/** The faceted filter's button, whose name grows with the selection. */
-const statusFilter = () => page.getByRole("button", { name: /^Status/ });
-
-/** Reads a locator's text with its whitespace collapsed, for `expect.poll`. */
-const textOf = (locator: Locator) => () =>
-	locator.element().textContent?.replace(/\s+/g, " ").trim();
 
 const headers = () =>
 	[...document.querySelectorAll("thead th")].map((th) => th.textContent?.trim() ?? "");
@@ -262,115 +227,6 @@ describe("sorting by more than one column", () => {
 	});
 });
 
-describe("the URL", () => {
-	test("an untouched table leaves the URL alone", async () => {
-		render(Harness, { items });
-
-		await expect.poll(names).toEqual(byName.slice(0, 5));
-		expect(visits).toEqual([]);
-	});
-
-	test("filtering, sorting and paging go into the URL, each as a history entry", async () => {
-		render(Harness, { items });
-
-		await statusFilter().click();
-		await facet("Open").click();
-		await facet("Draft").click();
-		await expect.poll(lastSearch).toBe("?status=open,draft");
-		await facet("Closed").click();
-		await expect.poll(lastSearch).toBe("?status=open,draft,closed");
-		await userEvent.keyboard("{Escape}");
-
-		const filtered = "?status=open,draft,closed";
-		await columnHeader("Amount").click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=amount`);
-		await columnHeader("Amount").click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount`);
-		await addToSort("Name");
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name`);
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&page=2`);
-		await page.getByRole("button", { name: "Rows per page" }).click();
-		await page.getByRole("option", { name: "10" }).click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&size=10`);
-
-		expect(visits.every((visit) => !visit.replace)).toBe(true);
-	});
-
-	test("searching replaces its history entry once typing pauses, and goes to the first page", async () => {
-		visit("/items?page=2");
-		render(Harness, { items });
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-
-		const search = page.getByRole("textbox", { name: "Search items…" });
-		await search.fill("p");
-		await expect.poll(lastSearch).toBe("?q=p");
-		await search.fill("pump");
-		await expect.poll(lastSearch).toBe("?q=pump");
-		await expect.poll(names).toEqual(["Pump replacement"]);
-		expect(visits.map((visit) => visit.replace)).toEqual([false, true]);
-	});
-
-	test("a page from the URL shows, sorted and filtered as the URL says", async () => {
-		visit("/items?status=draft,open,closed&sort=-amount,name&page=2&tab=notes");
-		render(Harness, { items });
-
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
-		await expect.poll(textOf(statusFilter())).toBe("Status 3 selected");
-		await expect.element(columnHeader("Amount")).toHaveAccessibleName(/sorted descending/);
-		expect(visits).toEqual([]);
-	});
-
-	test("invalid parameters are ignored", async () => {
-		visit("/items?status=bogus&sort=nothing&page=-3&size=7");
-		render(Harness, { items });
-
-		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
-		await expect.poll(textOf(statusFilter())).toBe("Status");
-	});
-
-	test("a page past the last becomes the last, replacing the history entry", async () => {
-		visit("/items?page=9");
-		render(Harness, { items });
-
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-		await expect.poll(lastSearch).toBe("?page=2");
-		expect(visits.at(-1)?.replace).toBe(true);
-	});
-
-	test("going back to an earlier URL takes the table back", async () => {
-		render(Harness, { items });
-
-		await statusFilter().click();
-		await facet("Closed").click();
-		await expect.poll(lastSearch).toBe("?status=closed");
-		await userEvent.keyboard("{Escape}");
-		await expect.poll(names).toEqual(["Chiller repair", "Pump replacement"]);
-
-		visit("/items", { clear: false });
-		await expect.poll(names).toEqual(byName.slice(0, 5));
-		await expect.poll(textOf(statusFilter())).toBe("Status");
-
-		visit("/items?status=closed&sort=-name", { clear: false });
-		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
-		// Following the URL doesn't change it again.
-		expect(visits).toHaveLength(1);
-	});
-
-	test("Reset goes back to an unfiltered URL", async () => {
-		visit("/items?q=pump&status=closed");
-		render(Harness, { items });
-		await expect.poll(names).toEqual(["Pump replacement"]);
-
-		await page.getByRole("button", { name: "Reset" }).click();
-		await expect.poll(lastSearch).toBe("");
-		await expect.poll(names).toEqual(byName.slice(0, 5));
-	});
-});
-
 describe("column visibility", () => {
 	test("the view menu lists the hideable columns and toggles them", async () => {
 		render(Harness, { items });
@@ -525,114 +381,5 @@ describe("row selection", () => {
 
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
 		await expect.element(page.getByText("7 rows")).toBeInTheDocument();
-	});
-});
-
-describe("pinned columns", () => {
-	// The tests that need columns pinned use a viewport wider than a phone's, but no wider than the
-	// test browser's window, in which clicks would miss.
-	afterEach(() => page.viewport(414, 896));
-
-	/** Which side each cell of the header row, or of the first body row, is pinned to. */
-	const pinning = (row: "thead" | "tbody") =>
-		[...document.querySelectorAll<HTMLElement>(`${row} tr:first-child > *`)].map(
-			(cell) => cell.dataset.pinned ?? "",
-		);
-	const headerCell = (index: number) => document.querySelectorAll<HTMLElement>("thead th")[index];
-	const bodyCell = (index: number) =>
-		document.querySelector("tbody tr")!.querySelectorAll<HTMLElement>("td")[index];
-	const style = (element: Element, pseudo?: string) => getComputedStyle(element, pseudo);
-
-	test("the selection and identifying columns stick to the start, the actions to the end", async () => {
-		await page.viewport(800, 600);
-		render(Harness, { items });
-
-		const pinned = ["start", "start", "", "", "", "", "end"];
-		await expect.poll(() => pinning("thead")).toEqual(pinned);
-		expect(pinning("tbody")).toEqual(pinned);
-
-		for (const cell of [headerCell(1), bodyCell(1), bodyCell(6)]) {
-			expect(style(cell).position).toBe("sticky");
-		}
-		expect(style(bodyCell(2)).position).not.toBe("sticky");
-		// The name column sits right after the selection column, the actions at the very end.
-		await expect
-			.poll(() => style(bodyCell(1)).insetInlineStart)
-			.toBe(`${headerCell(0).getBoundingClientRect().width}px`);
-		expect(style(bodyCell(0)).insetInlineStart).toBe("0px");
-		expect(style(bodyCell(6)).insetInlineEnd).toBe("0px");
-		// Pinned header cells stay above the other header cells, which stay above the rows.
-		expect(Number(style(headerCell(1)).zIndex)).toBeGreaterThan(
-			Number(style(headerCell(2)).zIndex),
-		);
-		expect(Number(style(headerCell(2)).zIndex)).toBeGreaterThan(Number(style(bodyCell(1)).zIndex));
-	});
-
-	test("the header row sticks to the top", async () => {
-		render(Harness, { items });
-
-		await expect.element(page.getByText("Boiler service")).toBeInTheDocument();
-		for (const cell of document.querySelectorAll("thead th")) {
-			expect(style(cell).position).toBe("sticky");
-			expect(style(cell).top).toBe("0px");
-		}
-	});
-
-	test("pinned cells are opaque, in the colour of their row", async () => {
-		await page.viewport(800, 600);
-		render(Harness, { items });
-
-		await page.getByRole("checkbox", { name: "Select row" }).first().click();
-		const row = page.getByRole("row").filter({ hasText: "Air handler check" });
-		await expect.element(row).toHaveAttribute("data-state", "selected");
-		const cell = row.getByRole("cell").nth(1).element();
-		const rowColour = style(row.element()).backgroundColor;
-		expect(rowColour).not.toBe("rgba(0, 0, 0, 0)");
-		// The row's colour, over an opaque layer of the table's background.
-		expect(style(cell).backgroundColor).toBe(rowColour);
-		expect(style(cell, "::before").backgroundColor).toBe(rowColour);
-		expect(style(cell).backgroundImage).toMatch(/^linear-gradient/);
-	});
-
-	test("an edge shadow shows while there's more to scroll to that side", async () => {
-		await page.viewport(800, 600);
-		render(Harness, { items });
-		const root = document.querySelector<HTMLElement>('[data-slot="data-table"]')!;
-		const area = root.querySelector<HTMLElement>('[data-slot="table-container"]')!;
-		await expect.poll(() => headerCell(1).dataset.pinned).toBe("start");
-		const shadow = (cell: () => HTMLElement) => () => style(cell(), "::after").opacity;
-
-		expect(root.dataset.overflowEnd).toBeUndefined();
-		expect(shadow(() => headerCell(6))()).toBe("0");
-
-		area.style.width = "320px";
-		await expect.poll(() => root.dataset.overflowEnd).toBe("true");
-		expect(root.dataset.overflowStart).toBeUndefined();
-		await expect.poll(shadow(() => headerCell(6))).toBe("1");
-		expect(shadow(() => bodyCell(1))()).toBe("0");
-
-		area.scrollLeft = area.scrollWidth;
-		await expect.poll(() => root.dataset.overflowStart).toBe("true");
-		expect(root.dataset.overflowEnd).toBeUndefined();
-		await expect.poll(shadow(() => bodyCell(1))).toBe("1");
-		await expect.poll(shadow(() => headerCell(6))).toBe("0");
-	});
-
-	test("a table can start without pinned columns", async () => {
-		await page.viewport(800, 600);
-		render(Harness, { items, columnPinning: { start: [], end: [] } });
-
-		await expect.element(page.getByText("Boiler service")).toBeInTheDocument();
-		expect(pinning("tbody")).toEqual(["", "", "", "", "", "", ""]);
-		expect(style(bodyCell(1)).position).not.toBe("sticky");
-	});
-
-	test("on a phone nothing sticks sideways", async () => {
-		await page.viewport(390, 844);
-		render(Harness, { items });
-
-		await expect.poll(() => pinning("tbody")).toEqual(["start", "start", "", "", "", "", "end"]);
-		expect(style(bodyCell(1)).position).not.toBe("sticky");
-		expect(style(bodyCell(6)).position).not.toBe("sticky");
 	});
 });
