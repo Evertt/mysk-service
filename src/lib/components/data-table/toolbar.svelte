@@ -1,7 +1,7 @@
 <!--
 	@component
 	Search, filters (`children`, e.g. `FacetedFilter`s), a reset button when anything is filtered,
-	extra `actions` and the column visibility menu.
+	extra `actions`, the saved views and the column visibility menu.
 -->
 <script lang="ts">
 	import SearchIcon from "@lucide/svelte/icons/search";
@@ -9,6 +9,7 @@
 	import type { Snippet } from "svelte";
 
 	import { useTableContext } from "./table.svelte.js";
+	import ViewsMenu from "./views-menu.svelte";
 
 	let {
 		searchLabel = m.common_table_search(),
@@ -49,6 +50,7 @@
 	{/if}
 	<div class="ml-auto flex items-center gap-2">
 		{@render actions?.()}
+		<ViewsMenu />
 		<table.ViewOptions />
 	</div>
 </div>

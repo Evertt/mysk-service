@@ -181,7 +181,7 @@ describe("in North", () => {
 
 	test("the column menu can show 'Customer since' but not the search column", async () => {
 		const { page } = app;
-		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("button", { name: "View", exact: true }).click();
 		const columns = await page.getByRole("menuitemcheckbox").allInnerTexts();
 		expect(columns).toContainEqual(expect.stringContaining("Customer since"));
 		expect(columns.some((column) => /search/i.test(column))).toBe(false);

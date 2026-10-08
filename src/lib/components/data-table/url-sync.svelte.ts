@@ -12,6 +12,7 @@ import {
 	type TableUrlState,
 	writeTableUrl,
 } from "./url-state.js";
+import { tableViewsKey } from "./views.js";
 
 /** How a table keeps its state in the URL (see `url-state.ts` for the grammar). */
 export interface UrlStateOptions {
@@ -76,6 +77,22 @@ function apply<TData extends RowData>(table: Table<TData>, state: TableUrlState)
 	table.setPagination(state.pagination);
 }
 
+/** A table's link with the URL, for what works on its URL state, e.g. its saved views. */
+export interface TableUrlSync {
+	spec: TableUrlSpec;
+	/** Which table it is, for its saved views (see `tableViewsKey`). */
+	viewsKey: string;
+	/** The table's state, as far as the URL holds it. */
+	state(): TableUrlState;
+	/** Shows a state, e.g. a saved view's: in the table and the URL, as a new history entry. */
+	show(state: TableUrlState): void;
+}
+
+const syncs = new WeakMap<object, TableUrlSync>();
+
+/** How a table keeps its state in the URL, if it does (see `syncTableWithUrl`). */
+export const tableUrlSync = (table: object) => syncs.get(table);
+
 /**
  * Keeps a table's search, filters, sorting and page in the page's URL, both ways: the table starts
  * from the URL (also when rendered on the server), its changes go into the URL, and the URL's
@@ -112,6 +129,17 @@ export function syncTableWithUrl<TData extends RowData>(
 			.catch(() => {})
 			.finally(() => writing--);
 	}
+
+	syncs.set(table, {
+		spec,
+		viewsKey: tableViewsKey(page.route.id ?? pathname, options.prefix),
+		state: () => currentState(table),
+		show(state) {
+			const key = tableUrlKey(state, spec);
+			if (key !== synced) commit(state, key, false);
+			apply(table, state);
+		},
+	});
 
 	// The table's changes into the URL.
 	$effect(() => {

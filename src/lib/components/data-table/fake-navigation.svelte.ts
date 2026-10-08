@@ -8,7 +8,10 @@
  * ```
  */
 
-export const page = $state({ url: new URL("http://localhost/items") });
+export const page = $state({
+	url: new URL("http://localhost/items"),
+	route: { id: "/items" as string | null },
+});
 
 /** The navigations `goto` made, oldest first. */
 export const visits: { url: string; replace: boolean }[] = [];

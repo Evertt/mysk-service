@@ -581,6 +581,49 @@ export const invoiceLineRelations = relations(invoiceLine, ({ one }) => ({
 	}),
 }));
 
+// --- Saved views ----------------------------------------------------------------------------------
+
+/**
+ * A data table's search, filters, sorting and page size saved under a name (see
+ * `#lib/components/data-table/views.ts`), to get back to in one click. Personal to the user who
+ * saved it, unless an owner or admin shares it with the whole organization. It references no
+ * business records: only the tenant and its creator (deleted with either), so a member who leaves
+ * keeps their personal views out of sight and their shared ones stay with the organization.
+ */
+export const savedView = sqliteTable(
+	"saved_view",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		/** Who saved it, and who may change it (besides owners and admins, if it's shared). */
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		/** The table, e.g. `/(app)/orders`: its route, plus its URL prefix if it has one. */
+		tableKey: text("table_key").notNull(),
+		name: text("name").notNull(),
+		/** The table's parameters as its URL has them, e.g. `?status=quote&sort=-priority`. */
+		query: text("query").notNull(),
+		/** Whether every member of the organization sees it. */
+		shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+		createdAt: createdAt(),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.default(sql`(unixepoch())`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		// A user's views of a table have different names.
+		uniqueIndex("saved_view_user_table_name").on(
+			table.organizationId,
+			table.userId,
+			table.tableKey,
+			table.name,
+		),
+		index("saved_view_table").on(table.organizationId, table.tableKey),
+	],
+);
+
 // --- Activity log ---------------------------------------------------------------------------------
 
 /** An update's changed fields with their values before and after, e.g. `{ status: ["quote", "scheduled"] }`. */
