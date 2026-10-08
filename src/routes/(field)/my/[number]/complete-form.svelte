@@ -19,17 +19,17 @@
 
 <form
 	{...completeWork.enhance(async ({ submit }) => {
-		if (await submit()) toast.success("Job completed");
+		if (await submit()) toast.success(m.portal_job_completed());
 	})}
 	class="flex flex-col gap-4"
 >
 	<input {...fields.id.as("hidden", String(orderId))} />
 	<TextField
 		field={fields.signerName}
-		label="Signed by"
+		label={m.portal_signed_by()}
 		value={contactName}
 		autocomplete="off"
-		description="The customer's name, as they sign."
+		description={m.portal_signed_by_description()}
 	/>
 	<SignaturePad bind:value={signature} invalid={!!fields.signature.issues()?.length} />
 	<input {...fields.signature.as("hidden", signature)} />
@@ -41,6 +41,6 @@
 		{:else}
 			<CircleCheckIcon data-icon="inline-start" />
 		{/if}
-		Complete job
+		{m.portal_complete_job()}
 	</Button>
 </form>

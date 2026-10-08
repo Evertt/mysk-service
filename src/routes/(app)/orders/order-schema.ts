@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import {
 	id,
 	laborHours,
@@ -13,14 +14,14 @@ import {
 
 /** The fields of the order form, shared by creating and editing an order. */
 export const orderFields = {
-	customerId: id("Choose a customer"),
+	customerId: id(m.orders_choose_customer),
 	equipmentId: optionalId(),
 	engineerId: optionalId(),
 	type: v.picklist(orderTypes),
 	// Not `invoiced`: only issuing an invoice makes an order invoiced.
 	status: v.picklist(manualOrderStatuses),
 	priority: v.picklist(orderPriorities),
-	description: text("Describe the work"),
+	description: text(m.orders_description_required),
 	/** The day it's planned for, at `scheduledTime` (or the start of the day). */
 	scheduledFor: optionalDate(),
 	scheduledTime: optionalTime(),

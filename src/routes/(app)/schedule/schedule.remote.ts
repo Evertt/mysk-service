@@ -4,6 +4,7 @@ import { and, asc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { atTime, date, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
@@ -32,7 +33,7 @@ const cardColumns = {
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
-export const getSchedule = query(date("Choose a week"), async (day) => {
+export const getSchedule = query(date(m.schedule_week_required), async (day) => {
 	requireMember();
 	const start = startOfWeek(day);
 	const end = addDays(start, 7);
@@ -99,18 +100,21 @@ function planInTransaction(input: Plan) {
 			where: and(eq(order.id, input.id), inTenant(order)),
 			with: { lines: true },
 		});
-		if (!found) error(404, "Order not found");
+		if (!found) error(404, m.schedule_not_found());
 		if (!isOpenOrder(found.status)) {
-			return { message: "Only open orders can be scheduled" };
+			return { message: m.schedule_only_open() };
 		}
 		if (input.engineerId !== null) {
 			const assignee = await tx.query.engineer.findFirst({
 				columns: { name: true, active: true },
 				where: and(eq(engineer.id, input.engineerId), inTenant(engineer)),
 			});
-			if (!assignee) return { field: "engineerId", message: "Unknown engineer" };
+			if (!assignee) return { field: "engineerId", message: m.schedule_unknown_engineer() };
 			if (!assignee.active) {
-				return { field: "engineerId", message: `${assignee.name} is no longer active` };
+				return {
+					field: "engineerId",
+					message: m.schedule_engineer_inactive({ name: assignee.name }),
+				};
 			}
 		}
 		const planned = {

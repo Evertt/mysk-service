@@ -42,23 +42,27 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search orders…">
+		<table.Toolbar searchLabel={m.orders_search()}>
 			{#if customer}
 				<Button
 					variant="secondary"
 					size="sm"
 					href={resolve("/(app)/orders")}
-					title="Show all orders"
+					title={m.orders_show_all()}
 				>
-					Customer: {customerName}
+					{m.orders_customer_filter({ name: customerName ?? "" })}
 					<XIcon data-icon="inline-end" />
 				</Button>
 			{/if}
-			<FacetedFilter columnId="status" title="Status" options={statusOptions} />
-			<FacetedFilter columnId="type" title="Type" options={typeOptions} />
-			<FacetedFilter columnId="priority" title="Priority" options={priorityOptions} />
+			<FacetedFilter columnId="status" title={m.orders_column_status()} options={statusOptions} />
+			<FacetedFilter columnId="type" title={m.orders_column_type()} options={typeOptions} />
+			<FacetedFilter
+				columnId="priority"
+				title={m.orders_column_priority()}
+				options={priorityOptions}
+			/>
 		</table.Toolbar>
-		<table.Table emptyTitle="No orders found" />
+		<table.Table emptyTitle={m.orders_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

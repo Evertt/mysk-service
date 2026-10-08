@@ -66,14 +66,16 @@
 >
 	<div class="flex items-center gap-1">
 		<span class="text-muted-foreground tabular-nums">
-			{order.scheduledFor ? timeOfDay(order.scheduledFor) : `Since ${formatDate(order.createdAt)}`}
+			{order.scheduledFor
+				? timeOfDay(order.scheduledFor)
+				: m.schedule_since({ date: formatDate(order.createdAt) })}
 		</span>
-		<span title="{priority.label} priority">
+		<span title={m.schedule_priority({ priority: priority.label })}>
 			<priority.icon
 				class={cn("size-3", order.priority === "urgent" && "text-destructive")}
 				aria-hidden="true"
 			/>
-			<span class="sr-only">{priority.label} priority</span>
+			<span class="sr-only">{m.schedule_priority({ priority: priority.label })}</span>
 		</span>
 		{#if !open}
 			<span class="text-muted-foreground">{statuses[order.status].label}</span>
@@ -83,8 +85,8 @@
 				variant="ghost"
 				size="icon-xs"
 				class="-my-1 ms-auto"
-				aria-label="Schedule {order.number}"
-				title="Schedule…"
+				aria-label={m.schedule_order({ number: order.number })}
+				title={m.schedule_order_ellipsis()}
 				onclick={onschedule}
 			>
 				<CalendarClockIcon />

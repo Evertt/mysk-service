@@ -16,14 +16,14 @@
 </script>
 
 <svelte:head>
-	<title>Edit {order.number} · Orders</title>
+	<title>{m.orders_edit_page_title({ number: order.number })}</title>
 </svelte:head>
 
-<PageHeader title="Edit {order.number}" description={order.customer.name}>
+<PageHeader title={m.orders_edit_title({ number: order.number })} description={order.customer.name}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/orders")}>Orders</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/orders")}>{m.orders_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -31,7 +31,7 @@
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>Edit</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>
@@ -50,14 +50,11 @@
 			<Empty.Media variant="icon">
 				<LockIcon />
 			</Empty.Media>
-			<Empty.Title>{order.number} is invoiced</Empty.Title>
-			<Empty.Description>
-				It's on an invoice that has been sent, with its amounts, so it can't be changed. If that
-				invoice is voided, the order is completed again and can be changed.
-			</Empty.Description>
+			<Empty.Title>{m.orders_invoiced_title({ number: order.number })}</Empty.Title>
+			<Empty.Description>{m.orders_invoiced_description()}</Empty.Description>
 		</Empty.Header>
 		<Empty.Content>
-			<Button href={orderHref}>Back to the order</Button>
+			<Button href={orderHref}>{m.orders_back_to_order()}</Button>
 		</Empty.Content>
 	</Empty.Root>
 {/if}

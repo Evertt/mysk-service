@@ -8,6 +8,7 @@ import OrderLink from "#lib/components/orders/order-link.svelte";
 import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getOrders } from "./orders.remote.js";
 import StatusCell from "./status-cell.svelte";
@@ -28,7 +29,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(OrderLink, { number: getValue() }),
 		enableHiding: false,
-		meta: { label: "Order" },
+		meta: { label: m.orders_column_order },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
@@ -39,7 +40,7 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
-		meta: { label: "Customer" },
+		meta: { label: m.orders_column_customer },
 	}),
 	column.accessor(
 		// `undefined` rather than `null`, so new installations sort last (`sortUndefined`).
@@ -54,24 +55,24 @@ export const columns = column.columns([
 					href:
 						row.original.equipment &&
 						resolve("/(app)/equipment/[serial]", { serial: row.original.equipment.serialNumber }),
-					fallback: "New installation",
+					fallback: m.orders_new_installation(),
 				}),
 			sortUndefined: "last",
-			meta: { label: "Equipment" },
+			meta: { label: m.orders_column_equipment },
 		},
 	),
 	column.accessor("type", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: "Type" },
+		meta: { label: m.orders_column_type },
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
 			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
 		filterFn: "oneOf",
-		meta: { label: "Status" },
+		meta: { label: m.orders_column_status },
 	}),
 	column.accessor("priority", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -80,7 +81,7 @@ export const columns = column.columns([
 		// By urgency rather than alphabetically.
 		sortFn: (a, b, id) =>
 			orderPriorities.indexOf(a.getValue(id)) - orderPriorities.indexOf(b.getValue(id)),
-		meta: { label: "Priority" },
+		meta: { label: m.orders_column_priority },
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",
@@ -91,10 +92,10 @@ export const columns = column.columns([
 				href:
 					row.original.engineer &&
 					resolve("/(app)/engineers/[id]", { id: String(row.original.engineer.id) }),
-				fallback: "Unassigned",
+				fallback: m.common_unassigned(),
 			}),
 		sortUndefined: "last",
-		meta: { label: "Engineer" },
+		meta: { label: m.orders_column_engineer },
 	}),
 	column.accessor((row) => row.scheduledFor ?? undefined, {
 		id: "scheduledFor",
@@ -102,19 +103,19 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: "Scheduled" },
+		meta: { label: m.orders_column_scheduled },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Created" },
+		meta: { label: m.orders_column_created },
 	}),
 	column.accessor("total", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: "Total", align: "end" },
+		meta: { label: m.orders_column_total, align: "end" },
 	}),
 	column.display({
 		id: "actions",
@@ -124,8 +125,8 @@ export const columns = column.columns([
 				href: resolve("/(app)/orders/[number]", { number: row.original.number }),
 				editHref: resolve("/(app)/orders/[number]/edit", { number: row.original.number }),
 				copy: [
-					{ label: "Copy order number", value: row.original.number },
-					{ label: "Copy customer code", value: row.original.customer.code },
+					{ label: m.orders_copy_number(), value: row.original.number },
+					{ label: m.orders_copy_customer_code(), value: row.original.customer.code },
 				],
 			}),
 	}),

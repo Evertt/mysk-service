@@ -5,6 +5,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import { fitsUnit, type OrderStatus } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { recordOrderLines } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
@@ -44,9 +45,9 @@ export async function checkLines(lines: LineInput[]): Promise<LineProblem[]> {
 	lines.forEach((line, index) => {
 		const unit = units.get(line.materialId);
 		if (!unit) {
-			problems.push({ line: index, field: "materialId", message: "Unknown material" });
+			problems.push({ line: index, field: "materialId", message: m.orders_unknown_material() });
 		} else if (!fitsUnit(line.quantity, unit)) {
-			problems.push({ line: index, field: "quantity", message: "Whole pieces only" });
+			problems.push({ line: index, field: "quantity", message: m.orders_whole_pieces() });
 		}
 	});
 	return problems;

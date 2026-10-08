@@ -51,7 +51,7 @@
 <Dialog.Root bind:open>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title>Schedule {order.number}</Dialog.Title>
+			<Dialog.Title>{m.schedule_order({ number: order.number })}</Dialog.Title>
 			<Dialog.Description>{order.customer.name}: {order.description}</Dialog.Description>
 		</Dialog.Header>
 		<form
@@ -59,7 +59,11 @@
 				if (!(await submit().updates(getSchedule(week)))) return;
 				const day = parseDay(form.fields.day.value());
 				open = false;
-				toast.success(`${order.number} scheduled${day ? ` for ${formatDate(day)}` : ""}`);
+				toast.success(
+					day
+						? m.schedule_scheduled_for({ number: order.number, date: formatDate(day) })
+						: m.schedule_scheduled({ number: order.number }),
+				);
 				if (day) onscheduled?.(day);
 			})}
 			class="flex flex-col gap-6"
@@ -68,21 +72,21 @@
 			<Field.FieldGroup>
 				<SelectField
 					field={form.fields.engineerId}
-					label="Engineer"
-					placeholder="Unassigned"
+					label={m.schedule_field_engineer()}
+					placeholder={m.common_unassigned()}
 					value={order.engineerId ? String(order.engineerId) : ""}
 					options={engineerOptions}
 				/>
 				<div class="grid grid-cols-2 gap-4">
 					<TextField
 						field={form.fields.day}
-						label="Date"
+						label={m.schedule_field_date()}
 						type="date"
 						value={dayKey(order.scheduledFor ?? defaultDay)}
 					/>
 					<TextField
 						field={form.fields.time}
-						label="Time"
+						label={m.schedule_field_time()}
 						type="time"
 						value={order.scheduledFor ? timeOfDay(order.scheduledFor) : DEFAULT_TIME}
 					/>
@@ -93,14 +97,14 @@
 			<Dialog.Footer>
 				<Dialog.Close type="button">
 					{#snippet child({ props })}
-						<Button {...props} variant="ghost">Cancel</Button>
+						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
 					{/snippet}
 				</Dialog.Close>
 				<Button type="submit" disabled={!!form.pending}>
 					{#if form.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Schedule
+					{m.schedule_submit()}
 				</Button>
 			</Dialog.Footer>
 		</form>

@@ -6,12 +6,14 @@ import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { formatNumber } from "#lib/format.js";
+import { label } from "#lib/i18n/labels.js";
 import {
 	holdsStock,
 	type MaterialUnit,
 	type OrderStatus,
 	type StockMovementKind,
 } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import type { db } from "#lib/server/db/index.js";
 import { material, stockMovement } from "#lib/server/db/schema.js";
 import { inTenant, requireTenant } from "#lib/server/session.js";
@@ -113,7 +115,13 @@ export class OrderStockShortage extends Error {
 		readonly available: number,
 		material: { name: string; unit: MaterialUnit },
 	) {
-		super(`Only ${formatNumber(available)} ${material.unit} of ${material.name} in stock`);
+		super(
+			m.orders_stock_shortage({
+				quantity: formatNumber(available),
+				unit: label("materialUnitSymbol", material.unit),
+				material: material.name,
+			}),
+		);
 	}
 }
 

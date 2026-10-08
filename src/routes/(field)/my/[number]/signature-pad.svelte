@@ -8,7 +8,7 @@
 
 	let {
 		value = $bindable(""),
-		label = "Signature",
+		label = m.portal_signature(),
 		invalid = false,
 	}: { value?: string; label?: string; invalid?: boolean } = $props();
 
@@ -73,7 +73,7 @@
 		<span class="text-sm font-medium">{label}</span>
 		<Button type="button" variant="ghost" size="sm" onclick={clear} disabled={!value}>
 			<EraserIcon data-icon="inline-start" />
-			Clear
+			{m.portal_signature_clear()}
 		</Button>
 	</div>
 	<canvas
@@ -89,5 +89,5 @@
 		onpointerup={end}
 		onpointercancel={end}
 	></canvas>
-	<p class="text-xs text-muted-foreground">Sign in the box above.</p>
+	<p class="text-xs text-muted-foreground">{m.portal_signature_hint()}</p>
 </div>

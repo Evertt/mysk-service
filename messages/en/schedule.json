@@ -1,3 +1,49 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"schedule_title": "Schedule",
+	"schedule_description": "Week {week}, {range}: who does what, and when.",
+	"schedule_previous_week": "Previous week",
+	"schedule_this_week": "This week",
+	"schedule_next_week": "Next week",
+	"schedule_week": "Week",
+	"schedule_no_engineer_yet": "No engineer yet",
+	"schedule_inactive": "Inactive",
+	"schedule_cell": "{name} on {day}",
+	"schedule_over_booked": "Over-booked",
+	"schedule_today": "Today",
+	"schedule_nothing_scheduled": "Nothing scheduled.",
+	"schedule_backlog": "Backlog",
+	"schedule_backlog_description": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} open order without a date. Drag one onto the week.",
+				"countPlural=*": "{countText} open orders without a date. Drag one onto the week."
+			}
+		}
+	],
+	"schedule_backlog_empty": "Everything is scheduled.",
+	"schedule_moved": "{number}: {who}, {day} {time}",
+	"schedule_nobody": "nobody",
+	"schedule_move_failed": "Couldn't move {number}",
+	"schedule_since": "Since {date}",
+	"schedule_priority": "{priority} priority",
+	"schedule_order": "Schedule {number}",
+	"schedule_order_ellipsis": "Schedule…",
+	"schedule_submit": "Schedule",
+	"schedule_field_engineer": "Engineer",
+	"schedule_field_date": "Date",
+	"schedule_field_time": "Time",
+	"schedule_scheduled": "{number} scheduled",
+	"schedule_scheduled_for": "{number} scheduled for {date}",
+	"schedule_week_required": "Choose a week",
+	"schedule_not_found": "Order not found",
+	"schedule_only_open": "Only open orders can be scheduled",
+	"schedule_unknown_engineer": "Unknown engineer",
+	"schedule_engineer_inactive": "{name} is no longer active"
 }

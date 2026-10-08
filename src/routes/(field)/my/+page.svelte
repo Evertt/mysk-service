@@ -1,6 +1,8 @@
 <script lang="ts">
 	import CalendarCheckIcon from "@lucide/svelte/icons/calendar-check";
 
+	import { formatNumber } from "#lib/format.js";
+
 	import { getMyWork } from "./portal.remote.js";
 	import WorkCard from "./work-card.svelte";
 	import { groupByDay } from "./work.js";
@@ -10,16 +12,16 @@
 </script>
 
 <svelte:head>
-	<title>My work</title>
+	<title>{m.portal_title()}</title>
 </svelte:head>
 
-<h1 class="text-2xl font-semibold tracking-tight">My work</h1>
+<h1 class="text-2xl font-semibold tracking-tight">{m.portal_title()}</h1>
 
 {#each days as group (group.label)}
 	<section class="flex flex-col gap-3" aria-label={group.label}>
 		<h2 class="text-sm font-medium text-muted-foreground">
 			{group.label}
-			<span class="tabular-nums">· {group.orders.length}</span>
+			<span class="tabular-nums">· {formatNumber(group.orders.length)}</span>
 		</h2>
 		{#each group.orders as order (order.id)}
 			<WorkCard {order} when={{ date: order.scheduledFor, show: "time" }} />
@@ -29,15 +31,15 @@
 	<Empty.Root class="border">
 		<Empty.Header>
 			<Empty.Media variant="icon"><CalendarCheckIcon /></Empty.Media>
-			<Empty.Title>Nothing planned</Empty.Title>
-			<Empty.Description>The office hasn't planned any work for you yet.</Empty.Description>
+			<Empty.Title>{m.portal_nothing_planned()}</Empty.Title>
+			<Empty.Description>{m.portal_nothing_planned_description()}</Empty.Description>
 		</Empty.Header>
 	</Empty.Root>
 {/each}
 
 {#if work.recent.length}
-	<section class="flex flex-col gap-3" aria-label="Recently completed">
-		<h2 class="text-sm font-medium text-muted-foreground">Recently completed</h2>
+	<section class="flex flex-col gap-3" aria-label={m.portal_recent()}>
+		<h2 class="text-sm font-medium text-muted-foreground">{m.portal_recent()}</h2>
 		{#each work.recent as order (order.id)}
 			<WorkCard {order} when={{ date: order.completedAt, show: "date" }} />
 		{/each}

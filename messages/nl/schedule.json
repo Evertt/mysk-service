@@ -1,3 +1,49 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"schedule_title": "Planning",
+	"schedule_description": "Week {week}, {range}: wie doet wat, en wanneer.",
+	"schedule_previous_week": "Vorige week",
+	"schedule_this_week": "Deze week",
+	"schedule_next_week": "Volgende week",
+	"schedule_week": "Week",
+	"schedule_no_engineer_yet": "Nog geen monteur",
+	"schedule_inactive": "Inactief",
+	"schedule_cell": "{name} op {day}",
+	"schedule_over_booked": "Overboekt",
+	"schedule_today": "Vandaag",
+	"schedule_nothing_scheduled": "Niets gepland.",
+	"schedule_backlog": "Nog in te plannen",
+	"schedule_backlog_description": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} open opdracht zonder datum. Sleep er een naar de week.",
+				"countPlural=*": "{countText} open opdrachten zonder datum. Sleep er een naar de week."
+			}
+		}
+	],
+	"schedule_backlog_empty": "Alles is ingepland.",
+	"schedule_moved": "{number}: {who}, {day} {time}",
+	"schedule_nobody": "niemand",
+	"schedule_move_failed": "Kon {number} niet verplaatsen",
+	"schedule_since": "Sinds {date}",
+	"schedule_priority": "Prioriteit: {priority}",
+	"schedule_order": "{number} inplannen",
+	"schedule_order_ellipsis": "Inplannen…",
+	"schedule_submit": "Inplannen",
+	"schedule_field_engineer": "Monteur",
+	"schedule_field_date": "Datum",
+	"schedule_field_time": "Tijd",
+	"schedule_scheduled": "{number} ingepland",
+	"schedule_scheduled_for": "{number} ingepland op {date}",
+	"schedule_week_required": "Kies een week",
+	"schedule_not_found": "Opdracht niet gevonden",
+	"schedule_only_open": "Je kunt alleen open opdrachten inplannen",
+	"schedule_unknown_engineer": "Onbekende monteur",
+	"schedule_engineer_inactive": "{name} is niet meer actief"
 }

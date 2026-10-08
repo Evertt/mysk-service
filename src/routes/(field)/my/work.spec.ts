@@ -1,7 +1,8 @@
 import * as v from "valibot";
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { orderStatuses } from "#lib/models.js";
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import {
 	dayLabel,
@@ -68,6 +69,28 @@ test("days are labelled relative to today, across midnight", () => {
 	expect(dayLabel(new Date(2026, 9, 7, 0, 1), today)).toBe("Today");
 	expect(dayLabel(new Date(2026, 9, 8, 0, 1), today)).toBe("Tomorrow");
 	expect(dayLabel(new Date(2026, 9, 12), today)).toBe("Monday 12 October");
+});
+
+describe("in Dutch", () => {
+	const englishByDefault = getLocale;
+	afterEach(() => overwriteGetLocale(englishByDefault));
+
+	test("days and groups are labelled in Dutch", () => {
+		overwriteGetLocale(() => "nl");
+		const today = new Date(2026, 9, 7, 7, 30);
+		expect(dayLabel(new Date(2026, 9, 7, 13), today)).toBe("Vandaag");
+		expect(dayLabel(new Date(2026, 9, 8, 9), today)).toBe("Morgen");
+		expect(dayLabel(new Date(2026, 9, 12), today)).toBe("maandag 12 oktober");
+		expect(plannedTime(new Date(2026, 9, 6, 2, 23), today)).toBe("6 okt, 02:23");
+		const groups = groupByDay([{ id: "none", scheduledFor: null }], today);
+		expect(groups.map((g) => g.label)).toEqual(["Nog niet ingepland"]);
+	});
+
+	test("the signature's messages are in Dutch", () => {
+		overwriteGetLocale(() => "nl");
+		const result = v.safeParse(signature(), "");
+		expect(result.issues?.[0].message).toBe("Vraag de klant te tekenen");
+	});
 });
 
 test("a card shows the time, and the day too for work left over from an earlier day", () => {

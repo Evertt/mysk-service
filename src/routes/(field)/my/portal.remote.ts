@@ -8,7 +8,10 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
+import { formatNumber } from "#lib/format.js";
+import { label } from "#lib/i18n/labels.js";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
@@ -80,7 +83,7 @@ export const getMyOrder = query(v.string(), async (number) => {
 			},
 		},
 	});
-	if (!found) error(404, `Order ${number} not found`);
+	if (!found) error(404, m.portal_not_found({ number }));
 
 	const [notes, signoff] = await Promise.all([
 		db
@@ -127,12 +130,12 @@ async function findMyOrder(
 		where: and(eq(order.id, orderId), inTenant(order), eq(order.engineerId, engineerId)),
 		with: { lines: true },
 	});
-	if (!found) error(404, "Order not found");
+	if (!found) error(404, m.portal_not_found_plain());
 	if (!fieldActions(found.status)[action]) {
 		invalid(
 			found.status === "scheduled"
-				? "Start the job first"
-				: `This order is ${found.status.replaceAll("_", " ")}; it can't be changed here`,
+				? m.portal_start_first()
+				: m.portal_cant_change({ status: label("orderStatus", found.status).toLowerCase() }),
 		);
 	}
 	return found;
@@ -190,7 +193,7 @@ export const logHours = form(
 	v.object({ id: id(), laborHours: laborHours() }),
 	async (input, issue) => {
 		const { engineer } = await requireEngineer();
-		if (input.laborHours > 24 * 14) invalid(issue.laborHours("That's more than two weeks"));
+		if (input.laborHours > 24 * 14) invalid(issue.laborHours(m.portal_hours_too_many()));
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
 			const after = { laborHours: input.laborHours };
@@ -237,12 +240,17 @@ export const saveMaterials = form(
 	},
 );
 
+/** The longest note an engineer can write. */
+const MAX_NOTE_LENGTH = 2000;
+
 /** Adds a note to a job. */
 export const addNote = form(
-	v.object({ id: id(), text: text("Write a note") }),
+	v.object({ id: id(), text: text(m.portal_note_required) }),
 	async (input, issue) => {
 		const { organizationId, user: author, engineer } = await requireEngineer();
-		if (input.text.length > 2000) invalid(issue.text("Keep it under 2,000 characters"));
+		if (input.text.length > MAX_NOTE_LENGTH) {
+			invalid(issue.text(m.portal_note_too_long({ max: formatNumber(MAX_NOTE_LENGTH) })));
+		}
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "note");
 			await tx.insert(orderNote).values({
@@ -266,7 +274,7 @@ export const addNote = form(
 export const completeWork = form(
 	v.object({
 		id: id(),
-		signerName: text("Enter the name of who signs"),
+		signerName: text(m.portal_signer_required),
 		signature: signature(),
 	}),
 	async (input) => {
@@ -276,7 +284,8 @@ export const completeWork = form(
 			const now = new Date();
 			await setStatus(tx, found, "completed", "completed", {
 				completedAt: now,
-				note: `Signed off by ${input.signerName}`,
+				// Stored, in the language of whoever completes it.
+				note: m.portal_signed_off_note({ name: input.signerName }),
 			});
 			const signoff = {
 				signerName: input.signerName,

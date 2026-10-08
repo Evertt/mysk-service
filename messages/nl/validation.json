@@ -14,5 +14,7 @@
 	"validation_material_required": "Kies een materiaal",
 	"validation_quantity_required": "Vul een aantal in",
 	"validation_more_than_zero": "Meer dan 0",
-	"validation_two_decimals": "Maximaal twee decimalen"
+	"validation_two_decimals": "Maximaal twee decimalen",
+	"validation_time_required": "Kies een tijd",
+	"validation_time_invalid": "Vul een geldige tijd in"
 }

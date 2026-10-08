@@ -14,5 +14,7 @@
 	"validation_material_required": "Choose a material",
 	"validation_quantity_required": "Enter a quantity",
 	"validation_more_than_zero": "More than 0",
-	"validation_two_decimals": "At most two decimals"
+	"validation_two_decimals": "At most two decimals",
+	"validation_time_required": "Choose a time",
+	"validation_time_invalid": "Enter a valid time"
 }
