@@ -201,7 +201,7 @@ describe("in North", () => {
 		expect(await density()).toBe("comfortable");
 		expect(await cellPadding()).toBe("8px");
 
-		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("button", { name: "View", exact: true }).click();
 		await page.getByRole("menuitemradio", { name: "Compact" }).click();
 		await page.keyboard.press("Escape");
 		expect(await density()).toBe("compact");
@@ -212,7 +212,7 @@ describe("in North", () => {
 		expect(await density()).toBe("compact");
 		expect(await cellPadding()).toBe("4px");
 
-		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("button", { name: "View", exact: true }).click();
 		await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
 		await page.keyboard.press("Escape");
 		expect(await cellPadding()).toBe("8px");

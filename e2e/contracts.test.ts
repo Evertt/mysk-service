@@ -744,8 +744,14 @@ describe("in South, which doesn't have the module", () => {
 		const { page } = app;
 		// Navigate client-side, so the pages load their data through remote queries.
 		const record = (request: { url(): string; method(): string }) => {
-			if (request.url().includes("/_app/remote/") && request.method() === "GET") {
-				queries.push(request.url());
+			// Not the toolbar's saved views: a core query, which answers with South's own views.
+			const url = request.url();
+			if (
+				url.includes("/_app/remote/") &&
+				!url.includes("/getTableViews") &&
+				request.method() === "GET"
+			) {
+				queries.push(url);
 			}
 		};
 		page.on("request", record);

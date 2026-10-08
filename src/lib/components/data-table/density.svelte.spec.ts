@@ -10,6 +10,8 @@ vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svel
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
+// The toolbar's saved views (see `saved-views.svelte.spec.ts`): none.
+vi.mock("./views.remote.js", () => import("./fake-views.svelte.ts"));
 
 beforeEach(() => visit("/items"));
 

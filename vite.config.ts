@@ -131,8 +131,12 @@ export default defineConfig({
 				// the deps cache was cleared (e.g. by a change to the lockfile): Vite then pre-bundles
 				// them again and reloads the browser, which fails the test files that were loading
 				// ("Failed to fetch dynamically imported module", an iframe that isn't ready, or a second
-				// copy of Svelte's runtime). Scanning the components as well finds them up front.
-				optimizeDeps: { entries: ["src/lib/components/ui/**/*.svelte"] },
+				// copy of Svelte's runtime). Scanning the components as well finds them up front. These
+				// entries replace the default ones, so they name the test files too, and every component
+				// in `src/lib` (not only `ui/`: e.g. the data table's own icons).
+				optimizeDeps: {
+					entries: ["src/**/*.svelte.{test,spec}.{js,ts}", "src/lib/**/*.svelte"],
+				},
 				test: {
 					name: "client",
 					browser: {
