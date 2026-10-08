@@ -3,7 +3,6 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
-	import CustomerCard from "#lib/components/customers/customer-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
 	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
@@ -15,6 +14,7 @@
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import CustomerCard from "#lib/customers/customer-card.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
 	import { isEditableOrder } from "#lib/models.js";
 

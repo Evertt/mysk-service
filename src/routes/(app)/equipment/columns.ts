@@ -1,12 +1,12 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
-import CustomerLink from "#lib/components/customers/customer-link.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 import StatusBadge from "#lib/components/equipment/status-badge.svelte";
+import CustomerLink from "#lib/customers/customer-link.svelte";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 

@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { europeanCountries } from "#lib/components/customers/countries.js";
+import { europeanCountries } from "#lib/customers/countries.js";
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";

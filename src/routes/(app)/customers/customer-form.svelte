@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { countryOptions } from "#lib/components/customers/countries.js";
-	import { segmentOptions } from "#lib/components/customers/display.js";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import { countryOptions } from "#lib/customers/countries.js";
+	import { segmentOptions } from "#lib/customers/display.js";
 
 	import type {
 		createCustomer,

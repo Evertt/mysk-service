@@ -3,7 +3,6 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
-	import { countryName } from "#lib/components/customers/countries.js";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 	import { categories } from "#lib/components/equipment/display.js";
@@ -11,6 +10,7 @@
 	import WarrantyBadge from "#lib/components/equipment/warranty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { countryName } from "#lib/customers/countries.js";
 	import { formatDate } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
