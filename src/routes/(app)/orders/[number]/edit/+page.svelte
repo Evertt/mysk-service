@@ -6,7 +6,7 @@
 	import { isEditableOrder } from "#lib/models.js";
 
 	import OrderForm from "../../order-form.svelte";
-	import { getOrder, getOrderFormOptions, updateOrder } from "../../orders.remote.js";
+	import { getOrder, getOrderFormOptions, updateOrder } from "../../order.remote.js";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

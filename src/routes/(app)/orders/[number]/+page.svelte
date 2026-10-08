@@ -23,7 +23,7 @@
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import OrderTags from "../order-tags.svelte";
-	import { deleteOrder, getOrder } from "../orders.remote.js";
+	import { deleteOrder, getOrder } from "../order.remote.js";
 	import type { PageProps } from "./$types";
 	import WorkReport from "./work-report.svelte";
 

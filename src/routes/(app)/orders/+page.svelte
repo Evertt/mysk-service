@@ -6,9 +6,9 @@
 	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
+	import { getOrderFacets, getOrders } from "./order-list.remote.js";
 	import OrdersTable from "./orders-table.svelte";
 	import { ordersUrl } from "./orders-url.js";
-	import { getOrderFacets, getOrders } from "./orders.remote.js";
 
 	// The server pages, filters and sorts the orders, as the URL says: a change to the URL (which
 	// the table keeps in sync with itself) fetches the rows again, and the counts in the filters if

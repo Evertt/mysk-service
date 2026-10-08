@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import OrderForm from "../order-form.svelte";
-	import { createOrder, getOrderFormOptions } from "../orders.remote.js";
+	import { createOrder, getOrderFormOptions } from "../order.remote.js";
 </script>
 
 <svelte:head>

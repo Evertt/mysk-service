@@ -23,7 +23,7 @@
 		quantityStep,
 	} from "#lib/models.js";
 
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./orders.remote.js";
+	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.js";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];

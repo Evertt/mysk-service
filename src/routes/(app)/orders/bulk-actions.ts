@@ -18,9 +18,8 @@ import {
 	bulkDeleteOrders,
 	bulkSetOrderStatus,
 	getAssignableEngineers,
-	getOrderFacets,
-	getOrders,
-} from "./orders.remote.js";
+} from "./order-bulk.remote.js";
+import { getOrderFacets, getOrders } from "./order-list.remote.js";
 
 /** An invoiced order stays as it is (see `isEditableOrder`). */
 const invoiced = (row: OrderBulkRow) =>
