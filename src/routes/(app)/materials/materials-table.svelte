@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import type { PageGroups } from "#lib/components/data-table/grouping.js";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { stockLevelOptions, unitOptions } from "#lib/components/materials/display.js";
@@ -13,8 +14,13 @@
 		materials,
 		facets,
 	}: {
-		/** A page of materials, as the URL says, and how many match in all. */
-		materials: { rows: MaterialRow[]; rowCount: number; key: string };
+		/** A page of materials, as the URL says, how many match in all, and its groups if grouped. */
+		materials: {
+			rows: MaterialRow[];
+			rowCount: number;
+			key: string;
+			groups?: PageGroups<MaterialRow>;
+		};
 		/** How many materials have each value of the filters'. */
 		facets: Record<"unit" | "stockLevel", Record<string, number>>;
 	} = $props();
@@ -52,7 +58,12 @@
 				counts={facets.stockLevel}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.materials_empty()} fillViewport loading={loading.current} />
+		<table.Table
+			emptyTitle={m.materials_empty()}
+			fillViewport
+			loading={loading.current}
+			groups={materials.groups}
+		/>
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -77,6 +77,18 @@ const shownSerials = () =>
 		),
 	);
 
+/** The shown page's rows: a group's row as `group:<category>`, a unit's as its serial number. */
+const shownRows = () =>
+	bodyRows().evaluateAll((trs: HTMLElement[]) =>
+		trs.map((tr) =>
+			tr.dataset.group === undefined
+				? decodeURIComponent(
+						tr.querySelector('a[href^="/equipment/"]')!.getAttribute("href")!.split("/")[2],
+					)
+				: `group:${tr.dataset.group}`,
+		),
+	);
+
 /** The serial numbers on every page of the list, 100 per page, sorted. */
 async function listedSerials() {
 	const { page } = app;
@@ -389,6 +401,78 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 	});
 
+	test("grouped by category, each category is counted whole and kept together across pages", async () => {
+		const { page } = app;
+		await app.go("/equipment");
+		await filter("Status", "Operational");
+		await app.tableSettled();
+		await app.groupBy("Category");
+		const params = () => new URL(page.url()).searchParams;
+		expect(params().get("group")).toBe("category");
+		expect(params().get("status")).toBe("operational");
+
+		// The order the server sorts in: by category first, then by unit, as the list is sorted.
+		const expected = await rows<{ serial: string; category: string }>(
+			`select serial_number as serial, category from equipment
+			 where organization_id = ? and status = 'operational'
+			 order by category, manufacturer collate nocase, model collate nocase, id`,
+			[north.id],
+		);
+		const categoryOf = new Map(expected.map((unit) => [unit.serial, unit.category]));
+		const counts: Record<string, number> = {};
+		for (const unit of expected) counts[unit.category] = (counts[unit.category] ?? 0) + 1;
+		// Some category goes on from one page of 20 onto the next.
+		expect(
+			expected.some(
+				(unit, i) => i % 20 === 0 && i > 0 && expected[i - 1].category === unit.category,
+			),
+		).toBe(true);
+
+		const listed: string[] = [];
+		for (;;) {
+			const shown = await shownRows();
+			const groups = await app.groups();
+			expect(shown[0]).toMatch(/^group:/);
+			// Each group counts its units on every page, under the filter.
+			for (const group of groups) expect(group.count, group.key).toBe(counts[group.key]);
+			// Each unit is under its category, and a category's units are together.
+			let current = "";
+			for (const row of shown) {
+				if (row.startsWith("group:")) current = row.slice("group:".length);
+				else expect(categoryOf.get(row), row).toBe(current);
+			}
+			const units = shown.filter((row) => !row.startsWith("group:"));
+			expect(groups.map((group) => group.key)).toEqual([
+				...new Set(units.map((serial) => categoryOf.get(serial))),
+			]);
+			// A category cut off by the page says so.
+			const start = listed.length;
+			const end = start + units.length;
+			expect(groups[0].continued).toBe(start > 0 && expected[start - 1].category === groups[0].key);
+			expect(groups.at(-1)!.continues).toBe(
+				end < expected.length && expected[end].category === groups.at(-1)!.key,
+			);
+			listed.push(...units);
+
+			const next = page.getByRole("button", { name: "Go to next page" });
+			if (await next.isDisabled()) break;
+			await next.click();
+			await app.tableSettled();
+		}
+		expect(listed).toEqual(expected.map((unit) => unit.serial));
+
+		// A reload keeps it grouped.
+		await app.go(`/equipment${new URL(page.url()).search}`);
+		expect(params().get("group")).toBe("category");
+		expect((await app.groups()).length).toBeGreaterThan(0);
+
+		await app.groupBy("None");
+		expect(params().has("group")).toBe(false);
+		expect(await page.locator("tbody tr[data-group]").count()).toBe(0);
+		await page.getByRole("button", { name: "Reset" }).click();
+		await app.tableSettled();
+	});
+
 	test("the detail page shows the unit's service history, newest first", async () => {
 		const { page } = app;
 		const busy = await busiest(north.id);
@@ -640,6 +724,28 @@ describe("in South", () => {
 		);
 		expect(counts.reduce((sum, n) => sum + n, 0)).toBe(await countIn("equipment", south.id));
 		await page.keyboard.press("Escape");
+	});
+
+	test("grouped, the categories count South's units only", async () => {
+		const { page } = app;
+		const expected = Object.fromEntries(
+			(
+				await rows<{ category: string; n: number }>(
+					`select category, count(*) as n from equipment where organization_id = ? group by category`,
+					[south.id],
+				)
+			).map((row) => [row.category, row.n]),
+		);
+		await app.go("/equipment?group=category&size=100");
+		const counts: Record<string, number> = {};
+		for (;;) {
+			for (const group of await app.groups()) counts[group.key] = group.count;
+			const next = page.getByRole("button", { name: "Go to next page" });
+			if (await next.isDisabled()) break;
+			await next.click();
+			await app.tableSettled();
+		}
+		expect(counts).toEqual(expected);
 	});
 
 	test("North's units are a 404", async () => {

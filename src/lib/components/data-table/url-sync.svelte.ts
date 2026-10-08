@@ -29,8 +29,8 @@ const searchDelay = 300;
 
 /**
  * The URL spec of a table, from its columns: their `meta.param` names them, sortable columns can
- * be sorted by, and those with a `oneOf` filter (or `meta.filter`) filtered by. The table's
- * initial state is the default, left out of the URL.
+ * be sorted by, groupable ones (`enableGrouping`) grouped by, and those with a `oneOf` filter (or
+ * `meta.filter`) filtered by. The table's initial state is the default, left out of the URL.
  */
 export function tableUrlSpec<TData extends RowData>(
 	table: Table<TData>,
@@ -46,6 +46,7 @@ export function tableUrlSpec<TData extends RowData>(
 				id: column.id,
 				param: meta?.param,
 				sortable: column.getCanSort(),
+				groupable: column.getCanGroup(),
 				filter: meta?.filter ?? (column.columnDef.filterFn === "oneOf" ? "set" : undefined),
 				values: meta?.filterValues,
 			};
@@ -55,6 +56,7 @@ export function tableUrlSpec<TData extends RowData>(
 			sorting: initial.sorting,
 			columnFilters: initial.columnFilters,
 			pagination: initial.pagination,
+			grouping: initial.grouping ?? [],
 		},
 	};
 }
@@ -66,6 +68,7 @@ function currentState<TData extends RowData>(table: Table<TData>): TableUrlState
 		sorting: table.atoms.sorting.get(),
 		columnFilters: table.atoms.columnFilters.get(),
 		pagination: table.atoms.pagination.get(),
+		grouping: table.atoms.grouping.get(),
 	};
 }
 
@@ -74,6 +77,7 @@ function apply<TData extends RowData>(table: Table<TData>, state: TableUrlState)
 	table.setSorting(state.sorting);
 	table.setColumnFilters(state.columnFilters);
 	table.setGlobalFilter(state.globalFilter);
+	table.setGrouping(state.grouping);
 	table.setPagination(state.pagination);
 }
 

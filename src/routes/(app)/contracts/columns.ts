@@ -8,7 +8,7 @@ import StatusBadge from "#lib/components/contracts/status-badge.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { formatDate } from "#lib/format.js";
+import { formatCents, formatDate } from "#lib/format.js";
 import { contractLevels, contractStatus, contractStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
@@ -42,12 +42,15 @@ export const columns = column.columns([
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.contracts_customer, filter: "set" },
 	}),
 	column.accessor("level", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(LevelBadge, { level: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// From basic to premium rather than alphabetically.
 		sortFn: (a, b, id) =>
 			contractLevels.indexOf(a.getValue(id)) - contractLevels.indexOf(b.getValue(id)),
@@ -59,6 +62,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		sortFn: (a, b, id) =>
 			contractStatuses.indexOf(a.getValue(id)) - contractStatuses.indexOf(b.getValue(id)),
 		meta: { label: m.contracts_status, filterValues: contractStatuses },
@@ -90,7 +94,12 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_monthly_fee, align: "end", param: "fee" },
+		meta: {
+			label: m.contracts_monthly_fee,
+			align: "end",
+			param: "fee",
+			groupSum: (sum) => formatCents(sum),
+		},
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),

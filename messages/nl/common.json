@@ -112,6 +112,29 @@
 	"common_table_row_actions": "Acties voor {label}",
 	"common_table_select_all": "Alle rijen op deze pagina selecteren",
 	"common_table_select_row": "Rij selecteren",
+	"common_table_group_by": "Groeperen op",
+	"common_table_group_none": "Geen",
+	"common_table_group_expand_all": "Alle groepen uitklappen",
+	"common_table_group_collapse_all": "Alle groepen inklappen",
+	"common_table_group_rows": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} rij in deze groep",
+				"countPlural=*": "{countText} rijen in deze groep"
+			}
+		}
+	],
+	"common_table_group_continued": "vervolg van de vorige pagina",
+	"common_table_group_continues": "gaat verder op de volgende pagina",
+	"common_table_group_sum": "{label}: {sum}",
+	"common_table_select_group": "Rijen van deze groep selecteren",
+	"common_table_keyboard_hint_groups": "Op de rij van een groep toon of verberg je de rijen met Enter of spatie.",
 	"common_views_menu": "Opgeslagen weergaven",
 	"common_views_menu_active": "Opgeslagen weergaven: {name}",
 	"common_views_mine": "Mijn weergaven",

@@ -1,6 +1,7 @@
 import {
 	columnFacetingFeature,
 	columnFilteringFeature,
+	columnGroupingFeature,
 	columnPinningFeature,
 	columnVisibilityFeature,
 	constructFilterFn,
@@ -23,6 +24,7 @@ import {
 } from "@tanstack/svelte-table";
 
 import { defaultColumnPinningFeature } from "./default-pinning.js";
+import { sortGroupsFirst } from "./grouping.js";
 
 export interface DataTableColumnMeta {
 	/**
@@ -41,6 +43,17 @@ export interface DataTableColumnMeta {
 	filter?: "set";
 	/** The values the column's filter can have; others in the URL are ignored. */
 	filterValues?: readonly string[];
+	/**
+	 * When the rows are grouped by another column, each group's header shows the sum of this
+	 * column over the group's rows, formatted with this (e.g. `formatCents`). Only where the table
+	 * has all the rows (not server-side tables, whose groups go on beyond the page).
+	 */
+	groupSum?: (sum: number) => string;
+	/**
+	 * A group's name when the rows are grouped by this column, from its grouping value, if its cell
+	 * (of the group's first row, which the group's header shows otherwise) wouldn't do.
+	 */
+	groupLabel?: (value: unknown) => string;
 }
 
 /** A column's name as shown: its translated `meta.label`, or its id. */
@@ -68,8 +81,10 @@ const tableFeatureSet = tableFeatures({
 	columnVisibilityFeature,
 	globalFilteringFeature,
 	columnPinningFeature,
+	// Only the grouping's state and column APIs: `sortGroupsFirst` keeps a group's rows together.
+	columnGroupingFeature,
 	columnMeta: metaHelper<DataTableColumnMeta>(),
-	sortedRowModel: createSortedRowModel(),
+	sortedRowModel: sortGroupsFirst(createSortedRowModel()),
 	filteredRowModel: createFilteredRowModel(),
 	paginatedRowModel: createPaginatedRowModel(),
 	facetedRowModel: createFacetedRowModel(),

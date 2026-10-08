@@ -13,10 +13,16 @@
  * 	.limit(plan.limit).offset(plan.offset);
  * const [{ rowCount }] = await fromOrders({ rowCount: count() }).where(plan.where());
  * ```
+ *
+ * Grouped (`?group=status`, see `#lib/components/data-table/grouping.ts`), the rows are sorted by
+ * the group first, and the plan fetches one row more on either side of the page: `plan.page()`
+ * splits them off, for the table to tell whether the page's first and last groups go on beyond it,
+ * and `groupCounts()` counts each group's rows on every page.
  */
 import { and, inArray, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
+import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.js";
 import {
 	filterValues,
 	parseTableUrl,
@@ -40,6 +46,12 @@ export interface ServerColumn {
 	nullsLast?: boolean;
 	/** Its `set` filter: keeps the rows with any of the values (from the URL, so check them). */
 	filter?: (values: string[]) => SQL | undefined;
+	/**
+	 * What its rows are grouped by, if it's groupable: the value the table groups the rows by (its
+	 * `getGroupingValue`, else its value), e.g. a customer's code where the column shows its name.
+	 * Rows are sorted by `sort` first (if any), then by this, so a group's rows come together.
+	 */
+	group?: SQLWrapper;
 }
 
 /** How a list's URL state maps onto SQL. */
@@ -70,8 +82,16 @@ export interface TablePlan {
 	 */
 	where(except?: string): SQL | undefined;
 	orderBy: SQL[];
+	/** The rows to fetch: the page's, plus the row before and after it when grouped. */
 	limit: number;
 	offset: number;
+	/** The column the rows are grouped by, and its value in SQL (`ServerColumn.group`). */
+	group?: { id: string; value: SQLWrapper };
+	/**
+	 * The fetched rows (`limit` from `offset`, in order) split into the page's and, when grouped,
+	 * the rows just before and after it, if there are any.
+	 */
+	page<Row>(fetched: Row[]): { rows: Row[]; previous?: Row; next?: Row };
 }
 
 /** `like` with `%` and `_` in the text taken literally. */
@@ -127,25 +147,54 @@ export function planTable(table: ServerTable, params: string | SearchParams): Ta
 		return and(table.scope(), ...filters, searchMatch(table.search, state.globalFilter));
 	};
 
-	const orderBy = state.sorting.flatMap(({ id, desc }) => {
-		const column = table.columns[id];
-		if (!column?.sort) return [];
-		const expressions = Array.isArray(column.sort) ? column.sort : [column.sort as SQLWrapper];
+	const order = (column: ServerColumn, desc: boolean, expressions = sortOf(column)) => {
 		const direction = sql.raw(desc ? "desc" : "asc");
 		const nulls = sql.raw(column.nullsLast ? " nulls last" : "");
 		return expressions.map((expression) => sql`${expression} ${direction}${nulls}`);
-	});
+	};
+	const groupId = state.grouping.find((id) => table.columns[id]?.group);
+	const groupColumn = groupId === undefined ? undefined : table.columns[groupId];
+	// By the group first (descending if sorted so), as the table's `sortGroupsFirst` does.
+	const groupDesc = state.sorting.find((sort) => sort.id === groupId)?.desc ?? false;
+	const orderBy = groupColumn
+		? order(groupColumn, groupDesc, [...sortOf(groupColumn), groupColumn.group!])
+		: [];
+	for (const { id, desc } of state.sorting) {
+		const column = table.columns[id];
+		if (id !== groupId && column?.sort) orderBy.push(...order(column, desc));
+	}
 	orderBy.push(sql`${table.tieBreaker} asc`);
 
+	const offset = pageIndex * pageSize;
+	// When grouped, one more on either side.
+	const before = groupColumn && offset > 0 ? 1 : 0;
+	const after = groupColumn ? 1 : 0;
 	return {
 		state,
 		key: tableUrlKey(state, table.spec).replace(/^\?/, ""),
 		where,
 		orderBy,
-		limit: pageSize,
-		offset: pageIndex * pageSize,
+		limit: pageSize + before + after,
+		offset: offset - before,
+		group: groupColumn && { id: groupId!, value: groupColumn.group! },
+		page<Row>(fetched: Row[]) {
+			if (!groupColumn) return { rows: fetched };
+			return {
+				rows: fetched.slice(before, before + pageSize),
+				previous: before ? fetched[0] : undefined,
+				next: fetched[before + pageSize],
+			};
+		},
 	};
 }
+
+/** What a column sorts by, ascending. */
+const sortOf = (column: ServerColumn): readonly SQLWrapper[] =>
+	column.sort === undefined
+		? []
+		: Array.isArray(column.sort)
+			? column.sort
+			: [column.sort as SQLWrapper];
 
 /**
  * How many rows have each value of some columns, for the counts in their filters: the rows that
@@ -169,4 +218,37 @@ export async function facetCounts<Id extends string>(
 			Object.fromEntries(counted[index].map((row) => [String(row.value), row.count])),
 		]),
 	) as Record<Id, Record<string, number>>;
+}
+
+/**
+ * When the plan is grouped, how many rows each group has (by `groupKey`), among those matching
+ * the search and the filters: for the group rows' counts. `count` is as for `facetCounts`.
+ */
+export async function groupCounts(
+	plan: TablePlan,
+	count: (
+		where: SQL | undefined,
+		by: SQLWrapper,
+	) => PromiseLike<{ value: unknown; count: number }[]>,
+): Promise<Record<string, number> | undefined> {
+	if (!plan.group) return undefined;
+	const counted = await count(plan.where(), plan.group.value);
+	const counts: Record<string, number> = {};
+	for (const row of counted) {
+		const key = groupKey(row.value);
+		counts[key] = (counts[key] ?? 0) + row.count;
+	}
+	return counts;
+}
+
+/**
+ * What a grouped list's query tells about its page's groups (`PageGroups`, for
+ * `<table.Table groups>`): `counts` from `groupCounts()`, the rows around the page from
+ * `plan.page()`; nothing when it isn't grouped.
+ */
+export function pageGroupsOf<Row>(
+	counts: Record<string, number> | undefined,
+	page: { previous?: Row; next?: Row },
+): PageGroups<Row> | undefined {
+	return counts && { counts, previous: page.previous, next: page.next };
 }

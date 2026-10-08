@@ -112,6 +112,29 @@
 	"common_table_row_actions": "Actions for {label}",
 	"common_table_select_all": "Select all rows on this page",
 	"common_table_select_row": "Select row",
+	"common_table_group_by": "Group by",
+	"common_table_group_none": "None",
+	"common_table_group_expand_all": "Expand all groups",
+	"common_table_group_collapse_all": "Collapse all groups",
+	"common_table_group_rows": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} row in this group",
+				"countPlural=*": "{countText} rows in this group"
+			}
+		}
+	],
+	"common_table_group_continued": "continued from the previous page",
+	"common_table_group_continues": "continues on the next page",
+	"common_table_group_sum": "{label}: {sum}",
+	"common_table_select_group": "Select this group's rows",
+	"common_table_keyboard_hint_groups": "On a group's row, Enter or Space shows or hides its rows.",
 	"common_views_menu": "Saved views",
 	"common_views_menu_active": "Saved views: {name}",
 	"common_views_mine": "My views",

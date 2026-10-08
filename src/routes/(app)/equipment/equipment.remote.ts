@@ -13,8 +13,10 @@ import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import {
 	facetCounts,
+	groupCounts,
 	nocase,
 	oneOf,
+	pageGroupsOf,
 	planTable,
 	type ServerTable,
 	tableParams,
@@ -29,10 +31,18 @@ const equipmentTable = (): ServerTable => ({
 	columns: {
 		unit: { sort: [nocase(equipment.manufacturer), nocase(equipment.model)] },
 		serialNumber: { sort: equipment.serialNumber },
-		manufacturer: { sort: nocase(equipment.manufacturer), filter: oneOf(equipment.manufacturer) },
-		category: { sort: equipment.category, filter: oneOf(equipment.category) },
-		status: { sort: equipment.status, filter: oneOf(equipment.status) },
-		customer: { sort: nocase(customer.name), filter: oneOf(customer.code) },
+		manufacturer: {
+			sort: nocase(equipment.manufacturer),
+			filter: oneOf(equipment.manufacturer),
+			group: equipment.manufacturer,
+		},
+		category: {
+			sort: equipment.category,
+			filter: oneOf(equipment.category),
+			group: equipment.category,
+		},
+		status: { sort: equipment.status, filter: oneOf(equipment.status), group: equipment.status },
+		customer: { sort: nocase(customer.name), filter: oneOf(customer.code), group: customer.code },
 		installedAt: { sort: equipment.installedAt },
 		warrantyUntil: { sort: equipment.warrantyUntil },
 		// Counted for every unit only to sort by them (the page's own are counted apart).
@@ -66,13 +76,14 @@ function countEquipment(where: SQL | undefined, by?: SQLWrapper) {
 }
 
 /**
- * A page of the tenant's units with their owner and number of open orders, searched, filtered
- * and sorted as the URL's parameters say (`equipmentUrl`), and how many match in all.
+ * A page of the tenant's units with their owner and number of open orders, searched, filtered,
+ * sorted and grouped as the URL's parameters say (`equipmentUrl`), how many match in all, and,
+ * when grouped, what the table needs to know of the page's groups.
  */
 export const getEquipmentList = query(tableParams, async (params) => {
 	requireMember();
 	const plan = planTable(equipmentTable(), params);
-	const [rows, [{ count: rowCount }]] = await Promise.all([
+	const [fetched, [{ count: rowCount }], counts] = await Promise.all([
 		db
 			.select({
 				id: equipment.id,
@@ -92,10 +103,11 @@ export const getEquipmentList = query(tableParams, async (params) => {
 			.limit(plan.limit)
 			.offset(plan.offset),
 		countEquipment(plan.where()),
+		groupCounts(plan, countEquipment),
 	]);
 
 	// The page's open orders (only).
-	const ids = rows.map((row) => row.id);
+	const ids = fetched.map((row) => row.id);
 	const open = ids.length
 		? await db
 				.select({ equipmentId: order.equipmentId, count: count() })
@@ -111,11 +123,13 @@ export const getEquipmentList = query(tableParams, async (params) => {
 		: [];
 	const openOf = new Map(open.map((row) => [row.equipmentId, row.count]));
 
+	const page = plan.page(fetched.map((row) => ({ ...row, openOrders: openOf.get(row.id) ?? 0 })));
 	return {
-		rows: rows.map((row) => ({ ...row, openOrders: openOf.get(row.id) ?? 0 })),
+		rows: page.rows,
 		rowCount,
 		/** The state the rows are for (see `isStale`). */
 		key: plan.key,
+		groups: pageGroupsOf(counts, page),
 	};
 });
 

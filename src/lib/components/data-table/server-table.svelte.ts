@@ -12,8 +12,8 @@ import { parseTableUrl, type SearchParams, tableUrlKey, type TableUrlSpec } from
 
 /**
  * The arguments for a server-side table's queries, from the URL: `rows` for the page of rows,
- * `facets` for the counts in its filters, which stays the same while only the page or the
- * sorting changes (so those don't count again). Both are the table's own parameters, in a fixed
+ * `facets` for the counts in its filters, which stays the same while only the page, the
+ * sorting or the grouping changes (so those don't count again). Both are the table's own parameters, in a fixed
  * order without the defaults (e.g. `status=quote&sort=number`), so the same state is the same
  * query, whatever else is in the URL.
  */
@@ -24,24 +24,33 @@ export function serverTableQuery(params: SearchParams, spec: TableUrlSpec) {
 	return {
 		rows: key(tableUrlKey(state, spec)),
 		facets: key(
-			tableUrlKey({ ...state, sorting: defaults.sorting, pagination: defaults.pagination }, spec),
+			tableUrlKey(
+				{
+					...state,
+					sorting: defaults.sorting,
+					pagination: defaults.pagination,
+					grouping: defaults.grouping,
+				},
+				spec,
+			),
 		),
 	};
 }
 
 /**
- * What a URL spec makes of URLs: its sortable and filtered columns, with their names in the URL,
+ * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names in the URL,
  * and its defaults. A server-side table's spec (from its columns, see `tableUrlSpec`) and the
  * server's (plain data) must agree on it, which its `columns.spec.ts` checks.
  */
 export function urlGrammar(spec: TableUrlSpec) {
 	return {
 		columns: spec.columns
-			.filter((column) => column.sortable || column.filter)
+			.filter((column) => column.sortable || column.groupable || column.filter)
 			.map((column) => ({
 				id: column.id,
 				param: column.param ?? column.id,
 				sortable: Boolean(column.sortable),
+				groupable: Boolean(column.groupable),
 				filter: column.filter,
 				values: column.values && [...column.values],
 			})),
@@ -65,6 +74,7 @@ export function isStale<TData extends RowData>(
 		sorting: table.atoms.sorting.get(),
 		columnFilters: table.atoms.columnFilters.get(),
 		pagination: table.atoms.pagination.get(),
+		grouping: table.atoms.grouping.get(),
 	};
 	return tableUrlKey(state, spec).replace(/^\?/, "") !== key.replace(/^\?/, "");
 }

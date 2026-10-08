@@ -6,7 +6,13 @@ import { canShareViews, matchingViews, tableViewsKey, viewQuery, viewState } fro
 const spec: TableUrlSpec = {
 	columns: [
 		{ id: "number", sortable: true },
-		{ id: "status", sortable: true, filter: "set", values: ["quote", "scheduled", "completed"] },
+		{
+			id: "status",
+			sortable: true,
+			groupable: true,
+			filter: "set",
+			values: ["quote", "scheduled", "completed"],
+		},
 		{ id: "priority", sortable: true, filter: "set", values: ["low", "high"] },
 	],
 	defaults: {
@@ -18,10 +24,10 @@ const spec: TableUrlSpec = {
 const state = (search: string, using = spec) => parseTableUrl(new URLSearchParams(search), using);
 
 describe("viewQuery", () => {
-	test("saves the search, filters, sorting and page size, but not the page", () => {
-		expect(viewQuery(state("?q=boiler&status=quote&sort=priority&page=3&size=50"), spec)).toBe(
-			"?q=boiler&status=quote&sort=priority&size=50",
-		);
+	test("saves the search, filters, sorting, grouping and page size, but not the page", () => {
+		expect(
+			viewQuery(state("?q=boiler&status=quote&sort=priority&group=status&page=3&size=50"), spec),
+		).toBe("?q=boiler&status=quote&sort=priority&group=status&size=50");
 	});
 
 	test("leaves out the defaults, so an untouched table saves nothing", () => {
@@ -48,6 +54,7 @@ describe("viewState", () => {
 			sorting: [{ id: "priority", desc: true }],
 			columnFilters: [{ id: "status", value: ["quote"] }],
 			pagination: { pageIndex: 0, pageSize: 50 },
+			grouping: [],
 		});
 	});
 

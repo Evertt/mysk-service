@@ -44,6 +44,8 @@ export const columns = column.columns([
 		// By the customer's code (e.g. `?customer=CUST-0001`, from a customer's page). The server
 		// filters, but the table needs a filter function all the same.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.orders_column_customer, filter: "set" },
 	}),
 	column.accessor(
@@ -72,6 +74,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		meta: { label: m.orders_column_type, filterValues: orderTypes },
 	}),
 	column.accessor("status", {
@@ -79,12 +82,14 @@ export const columns = column.columns([
 		cell: ({ getValue, row }) =>
 			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		meta: { label: m.orders_column_status, filterValues: orderStatuses },
 	}),
 	column.accessor("priority", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(PriorityBadge, { priority: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// By urgency rather than alphabetically.
 		sortFn: (a, b, id) =>
 			orderPriorities.indexOf(a.getValue(id)) - orderPriorities.indexOf(b.getValue(id)),
@@ -104,6 +109,8 @@ export const columns = column.columns([
 		sortUndefined: "last",
 		// By id.
 		filterFn: (row, _id, ids: string[]) => ids.includes(String(row.original.engineer?.id)),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.engineer?.id,
 		meta: { label: m.orders_column_engineer, filter: "set" },
 	}),
 	column.accessor((row) => row.scheduledFor ?? undefined, {

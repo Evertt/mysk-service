@@ -13,14 +13,27 @@
 
 	While `loading` (a server-side table fetching another page, filter, sort or search), the rows
 	shown so far stay, dimmed, under a thin progress bar, and the table is `aria-busy`.
+
+	When grouped (see `grouping.ts`), each group of the page's rows follows a header row with the
+	group's value (its first row's cell of the grouped column, which the rows then leave out), how
+	many rows it has in all, the sums of `meta.groupSum` columns, and whether it goes on from or
+	onto another page. A server-side table passes what its server knows of the groups as `groups`.
+	Groups collapse and expand (see `group-expansion.svelte.ts`), and their header rows take part in
+	the keyboard navigation.
 -->
 <script lang="ts">
+	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import type { Attachment } from "svelte/attachments";
 	import { SvelteMap } from "svelte/reactivity";
 
+	import { formatNumber } from "#lib/format.js";
 	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
+	import { SELECT_COLUMN } from "./default-pinning.js";
+	import { columnLabel } from "./features.js";
+	import { groupExpansion } from "./group-expansion.svelte.js";
+	import { groupKey, type PageGroup, pageGroups, type PageGroups, sumOf } from "./grouping.js";
 	import { createRowNavigation } from "./row-navigation.svelte.js";
 	import { useTableContext } from "./table.svelte.js";
 
@@ -29,6 +42,7 @@
 		emptyDescription = m.common_table_empty_description(),
 		fillViewport = false,
 		loading = false,
+		groups,
 	}: {
 		emptyTitle?: string;
 		emptyDescription?: string;
@@ -39,12 +53,104 @@
 		fillViewport?: boolean;
 		/** Rows for another state are on their way: dims the ones shown. */
 		loading?: boolean;
+		/**
+		 * What the server knows of the page's groups, for a server-side table when grouped (else
+		 * the groups are what the table's own rows say).
+		 */
+		groups?: PageGroups;
 	} = $props();
 
 	const table = useTableContext();
 	const theme = useTheme();
-	const navigation = createRowNavigation(table);
 	const hintId = $props.id();
+
+	type Row = ReturnType<typeof table.getRowModel>["rows"][number];
+
+	/** The visible columns, but the one the rows are grouped by, which the group rows show. */
+	const columns = $derived(
+		table.getVisibleLeafColumns().filter((column) => !column.getIsGrouped()),
+	);
+
+	const expansion = groupExpansion(table);
+
+	/** When grouped: the column, and the page's rows in their groups (see `grouping.ts`). */
+	const grouped = $derived.by(() => {
+		const id = table.atoms.grouping.get()[0];
+		const column = id === undefined ? undefined : table.getColumn(id);
+		if (!column) return undefined;
+		const rows = table.getRowModel().rows;
+		const keyOf = (row: Row) => groupKey(row.getGroupingValue(column.id));
+		if (groups) {
+			// The rows around the page are plain data, which only the column can tell the value of.
+			const { getGroupingValue } = column.columnDef;
+			const keyOfData = (data: unknown) =>
+				groupKey(
+					getGroupingValue
+						? getGroupingValue(data as never, -1, undefined as never)
+						: column.accessorFn?.(data as never, -1),
+				);
+			return {
+				column,
+				groups: pageGroups(rows, keyOf, {
+					counts: groups.counts,
+					previous: groups.previous === undefined ? undefined : keyOfData(groups.previous),
+					next: groups.next === undefined ? undefined : keyOfData(groups.next),
+				}),
+				sums: () => [],
+			};
+		}
+		// All the rows (filtered and sorted, before paging) are here.
+		const all = table.getPrePaginatedRowModel().rows;
+		const byKey = new Map<string, Row[]>();
+		for (const row of all) {
+			const key = keyOf(row);
+			const group = byKey.get(key);
+			if (group) group.push(row);
+			else byKey.set(key, [row]);
+		}
+		const { pageIndex, pageSize } = table.atoms.pagination.get();
+		const start = pageIndex * pageSize;
+		const before = all[start - 1];
+		const after = all[start + rows.length];
+		const summed = columns.filter((other) => other.columnDef.meta?.groupSum);
+		return {
+			column,
+			groups: pageGroups(rows, keyOf, {
+				counts: Object.fromEntries([...byKey].map(([key, rows]) => [key, rows.length])),
+				previous: before && keyOf(before),
+				next: after && keyOf(after),
+			}),
+			/** The sums of the `groupSum` columns over a group's rows. */
+			sums: (key: string) =>
+				summed.map((other) => ({
+					id: other.id,
+					text: m.common_table_group_sum({
+						label: columnLabel(other),
+						sum: other.columnDef.meta!.groupSum!(
+							sumOf(byKey.get(key) ?? [], (row) => row.getValue(other.id)),
+						),
+					}),
+				})),
+		};
+	});
+
+	/** A group's header row's id, for the keyboard navigation. */
+	const groupRowId = (key: string) => `group:${key}`;
+
+	const navigation = createRowNavigation(table, {
+		rowIds: () =>
+			grouped
+				? grouped.groups.flatMap((group) => [
+						groupRowId(group.key),
+						...(expansion.isCollapsed(grouped.column.id, group.key)
+							? []
+							: group.rows.map((row) => row.id)),
+					])
+				: table.getRowModel().rows.map((row) => row.id),
+	});
+
+	/** The selection column, when shown first (group rows have a checkbox in it). */
+	const selectColumn = $derived(columns[0]?.id === SELECT_COLUMN ? columns[0] : undefined);
 
 	/** Whether there's more to scroll to sideways, under the pinned columns. */
 	let overflow = $state({ start: false, end: false });
@@ -119,8 +225,9 @@
 				offset += widths.get(column.id) ?? 0;
 			});
 		};
-		place("start", table.getStartVisibleLeafColumns());
-		place("end", table.getEndVisibleLeafColumns().toReversed());
+		const shown = (column: { getIsGrouped(): boolean }) => !column.getIsGrouped();
+		place("start", table.getStartVisibleLeafColumns().filter(shown));
+		place("end", table.getEndVisibleLeafColumns().filter(shown).toReversed());
 		return result;
 	});
 
@@ -208,13 +315,16 @@
 			class="absolute inset-x-0 top-0 z-40 h-0.5 animate-pulse bg-primary/60"
 		></div>
 	{/if}
-	<span id={hintId} class="sr-only">{m.common_table_keyboard_hint()}</span>
+	<span id={hintId} class="sr-only">
+		{m.common_table_keyboard_hint()}
+		{#if grouped}{m.common_table_keyboard_hint_groups()}{/if}
+	</span>
 	<Table.Root aria-describedby={hintId}>
 		<Table.Header>
 			{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 				<!-- The header cells inherit the header's background (see `opaque`) through the row. -->
 				<Table.Row class="bg-inherit hover:bg-inherit">
-					{#each headerGroup.headers as header (header.id)}
+					{#each headerGroup.headers.filter((header) => !header.column.getIsGrouped()) as header (header.id)}
 						{@const pin = pinned(header.column.id)}
 						<table.AppHeader {header}>
 							{#snippet children(h)}
@@ -246,44 +356,160 @@
 			{...navigation.body}
 			class={cn("transition-opacity", loading && "opacity-50 delay-150")}
 		>
-			{#each table.getRowModel().rows as row (row.id)}
-				<Table.Row
-					data-state={row.getIsSelected() ? "selected" : undefined}
-					data-row-id={row.id}
-					tabindex={navigation.tabIndex(row.id)}
-					class={focusRing}
-				>
-					{#each row.getVisibleCells() as cell (cell.id)}
-						{@const pin = pinned(cell.column.id)}
-						<table.AppCell {cell}>
-							{#snippet children(c)}
-								<Table.Cell
-									data-pinned={pin["data-pinned"]}
-									style={pin.style}
-									class={cn(
-										compact.cell,
-										pin["data-pinned"] && ["relative z-10", opaque],
-										pin.class,
-									)}
-								>
-									<c.FlexRender cell={c} />
-								</Table.Cell>
-							{/snippet}
-						</table.AppCell>
-					{/each}
-				</Table.Row>
+			{#if grouped}
+				{#each grouped.groups as group, index (group.key)}
+					{@render groupRow(grouped.column.id, group, index, grouped.sums(group.key))}
+					{#if !expansion.isCollapsed(grouped.column.id, group.key)}
+						{#each group.rows as row (row.id)}
+							{@render dataRow(row)}
+						{/each}
+					{/if}
+				{:else}
+					{@render empty()}
+				{/each}
 			{:else}
-				<Table.Row>
-					<Table.Cell colspan={table.getVisibleLeafColumns().length}>
-						<Empty.Root>
-							<Empty.Header>
-								<Empty.Title>{emptyTitle}</Empty.Title>
-								<Empty.Description>{emptyDescription}</Empty.Description>
-							</Empty.Header>
-						</Empty.Root>
-					</Table.Cell>
-				</Table.Row>
-			{/each}
+				{#each table.getRowModel().rows as row (row.id)}
+					{@render dataRow(row)}
+				{:else}
+					{@render empty()}
+				{/each}
+			{/if}
 		</Table.Body>
 	</Table.Root>
 </div>
+
+{#snippet dataRow(row: Row)}
+	<Table.Row
+		data-state={row.getIsSelected() ? "selected" : undefined}
+		data-row-id={row.id}
+		tabindex={navigation.tabIndex(row.id)}
+		class={focusRing}
+	>
+		{#each row.getVisibleCells().filter((cell) => !cell.column.getIsGrouped()) as cell (cell.id)}
+			{@const pin = pinned(cell.column.id)}
+			<table.AppCell {cell}>
+				{#snippet children(c)}
+					<Table.Cell
+						data-pinned={pin["data-pinned"]}
+						style={pin.style}
+						class={cn(compact.cell, pin["data-pinned"] && ["relative z-10", opaque], pin.class)}
+					>
+						<c.FlexRender cell={c} />
+					</Table.Cell>
+				{/snippet}
+			</table.AppCell>
+		{/each}
+	</Table.Row>
+{/snippet}
+
+<!--
+	A group's header row: a checkbox for its rows in the selection column, and across the others
+	its toggle, value, count and sums, which stay in view while the row scrolls sideways.
+-->
+{#snippet groupRow(
+	columnId: string,
+	group: PageGroup<Row>,
+	index: number,
+	sums: { id: string; text: string }[],
+)}
+	{@const id = groupRowId(group.key)}
+	{@const labelId = `${hintId}-group-${index}`}
+	{@const collapsed = expansion.isCollapsed(columnId, group.key)}
+	{@const valueCell = group.rows[0].getAllCells().find((cell) => cell.column.id === columnId)}
+	{@const groupLabel = valueCell?.column.columnDef.meta?.groupLabel}
+	<Table.Row
+		data-row-id={id}
+		data-group={group.key}
+		data-collapsed={collapsed || undefined}
+		tabindex={navigation.tabIndex(id)}
+		class={cn(focusRing, "bg-muted/50 hover:bg-muted/70")}
+	>
+		{#if selectColumn}
+			{@const pin = pinned(selectColumn.id)}
+			{@const selectable = group.rows.filter((row) => row.getCanSelect())}
+			{@const selected = selectable.filter((row) => row.getIsSelected()).length}
+			<Table.Cell
+				data-pinned={pin["data-pinned"]}
+				style={pin.style}
+				class={cn(compact.cell, pin["data-pinned"] && ["relative z-10", opaque], pin.class)}
+			>
+				<Checkbox
+					checked={selectable.length > 0 && selected === selectable.length}
+					indeterminate={selected > 0 && selected < selectable.length}
+					disabled={!selectable.length}
+					onCheckedChange={(value) => selectable.forEach((row) => row.toggleSelected(value))}
+					aria-label={m.common_table_select_group()}
+				/>
+			</Table.Cell>
+		{/if}
+		<Table.Cell
+			colspan={columns.length - (selectColumn ? 1 : 0)}
+			class={cn(compact.cell, "py-1.5")}
+			style={`--group-offset: ${selectColumn && pins.has(selectColumn.id) ? (widths.get(selectColumn.id) ?? 0) : 0}px`}
+		>
+			<div
+				class="flex w-fit flex-wrap items-center gap-x-2 gap-y-1 sm:sticky sm:start-(--group-offset)"
+			>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class="-my-1"
+					data-group-toggle
+					aria-expanded={!collapsed}
+					aria-labelledby={labelId}
+					onclick={() => expansion.toggle(columnId, group.key)}
+				>
+					<ChevronRightIcon
+						class={cn(
+							"transition-transform rtl:rotate-180",
+							!collapsed && "rotate-90 rtl:rotate-90",
+						)}
+					/>
+				</Button>
+				<span id={labelId} class="font-medium">
+					{#if groupLabel}
+						{groupLabel(group.rows[0].getGroupingValue(columnId))}
+					{:else if valueCell}
+						<table.AppCell cell={valueCell}>
+							{#snippet children(c)}
+								<!-- Not `cell={c}`, which renders nothing for a grouped column's cell. -->
+								<!-- (`content` takes a header's template too, which TypeScript can't match.) -->
+								<c.FlexRender content={c.column.columnDef.cell as never} context={c.getContext()} />
+							{/snippet}
+						</table.AppCell>
+					{/if}
+				</span>
+				<Badge data-group-count variant="secondary" class="tabular-nums" aria-hidden="true">
+					{formatNumber(group.count)}
+				</Badge>
+				<span class="sr-only">{m.common_table_group_rows({ count: group.count })}</span>
+				{#each sums as sum (sum.id)}
+					<span class="text-sm text-muted-foreground tabular-nums">{sum.text}</span>
+				{/each}
+				{#if group.continued}
+					<span data-group-note class="text-xs text-muted-foreground">
+						{m.common_table_group_continued()}
+					</span>
+				{/if}
+				{#if group.continues}
+					<span data-group-note class="text-xs text-muted-foreground">
+						{m.common_table_group_continues()}
+					</span>
+				{/if}
+			</div>
+		</Table.Cell>
+	</Table.Row>
+{/snippet}
+
+{#snippet empty()}
+	<Table.Row>
+		<Table.Cell colspan={columns.length}>
+			<Empty.Root>
+				<Empty.Header>
+					<Empty.Title>{emptyTitle}</Empty.Title>
+					<Empty.Description>{emptyDescription}</Empty.Description>
+				</Empty.Header>
+			</Empty.Root>
+		</Table.Cell>
+	</Table.Row>
+{/snippet}
