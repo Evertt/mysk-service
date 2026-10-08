@@ -1,6 +1,5 @@
 import { form } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
@@ -11,7 +10,7 @@ import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { material } from "#lib/server/db/schema.js";
 import { findMaterial } from "#lib/server/materials.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { idInTenant, requireMember } from "#lib/server/session.js";
 import { moveStock, roundQuantity } from "#lib/server/stock.js";
 
 import { countFields, receiveFields } from "../material-schema.js";
@@ -58,7 +57,7 @@ export const countStock = form(
 			const [current] = await tx
 				.select({ stock: material.stock })
 				.from(material)
-				.where(and(eq(material.id, id), inTenant(material)));
+				.where(idInTenant(material, id));
 			const difference = roundQuantity(counted - current.stock);
 			if (!difference) invalid(issue.counted(m.materials_count_unchanged()));
 			await moveStock(tx, { materialId: id, quantity: difference, kind: "adjustment", note });

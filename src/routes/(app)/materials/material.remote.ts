@@ -1,5 +1,5 @@
 import { form, query } from "$app/server";
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -17,8 +17,11 @@ import {
 	stockMovement,
 	user,
 } from "#lib/server/db/schema.js";
+import { type Problem, refuse } from "#lib/server/forms.js";
 import { findMaterial, ordersUsing, removeMaterial } from "#lib/server/materials.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { nextNumber } from "#lib/server/numbering.js";
+import { lineTotalSql } from "#lib/server/pricing.js";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 import { moveStock, withBalances } from "#lib/server/stock.js";
 
 import { materialFields, newMaterialFields } from "./material-schema.js";
@@ -54,14 +57,12 @@ export const getMaterial = query(v.string(), async (sku) => {
 			quantity: sql<number>`sum(${orderLine.quantity})`.mapWith(Number),
 			// Every line of a material on one order is quoted at the same price.
 			unitPrice: sql<number>`max(${orderLine.unitPrice})`.mapWith(Number),
-			amount: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.mapWith(
-				Number,
-			),
+			amount: sql<number>`sum(${lineTotalSql()})`.mapWith(Number),
 		})
 		.from(orderLine)
-		.innerJoin(order, eq(orderLine.orderId, order.id))
-		.innerJoin(customer, eq(order.customerId, customer.id))
-		.where(and(eq(orderLine.materialId, found.id), inTenant(order), inTenant(customer)))
+		.innerJoin(...tenantJoin(order, orderLine.orderId))
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.where(eq(orderLine.materialId, found.id))
 		.groupBy(order.id)
 		.orderBy(desc(order.createdAt), desc(order.id));
 
@@ -78,7 +79,7 @@ export const getMaterial = query(v.string(), async (sku) => {
 			user: { name: user.name },
 		})
 		.from(stockMovement)
-		.leftJoin(order, and(eq(stockMovement.orderId, order.id), inTenant(order)))
+		.leftJoin(...tenantJoin(order, stockMovement.orderId))
 		.leftJoin(user, eq(stockMovement.userId, user.id))
 		.where(and(eq(stockMovement.materialId, found.id), inTenant(stockMovement)))
 		.orderBy(desc(stockMovement.createdAt), desc(stockMovement.id));
@@ -114,20 +115,19 @@ const sameName = (name: string, exceptId?: number) =>
 
 export const createMaterial = form(v.object(newMaterialFields), async (input, issue) => {
 	const { organizationId } = requireMember();
-	const problems = [];
+	const problems: Problem<"name" | "stock">[] = [];
 	const duplicate = await sameName(input.name);
-	if (duplicate) problems.push(issue.name(m.materials_name_taken({ sku: duplicate.sku })));
-	if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock(m.materials_whole_pieces()));
-	if (problems.length) invalid(...problems);
+	if (duplicate) {
+		problems.push({ field: "name", message: m.materials_name_taken({ sku: duplicate.sku }) });
+	}
+	if (!fitsUnit(input.stock, input.unit)) {
+		problems.push({ field: "stock", message: m.materials_whole_pieces() });
+	}
+	refuse(issue, problems);
 
 	const { stock, ...fields } = input;
 	const sku = await db.transaction(async (tx) => {
-		// SKUs are sequential per tenant: one more than the tenant's highest (MAT-0001 for the first).
-		const [{ last }] = await tx
-			.select({ last: sql<number | null>`max(cast(substr(${material.sku}, 5) as integer))` })
-			.from(material)
-			.where(inTenant(material));
-		const sku = `MAT-${String((last ?? 0) + 1).padStart(4, "0")}`;
+		const sku = await nextNumber(tx, "material");
 		const [created] = await tx
 			.insert(material)
 			.values({ ...fields, organizationId, sku, stock: 0 })
@@ -151,33 +151,31 @@ export const updateMaterial = form(
 		const existing = await findMaterial(id);
 		if (!existing) error(404, m.materials_not_found());
 
-		const problems = [];
+		const problems: Problem<"name" | "unit">[] = [];
 		const duplicate = await sameName(input.name, id);
-		if (duplicate) problems.push(issue.name(m.materials_name_taken({ sku: duplicate.sku })));
+		if (duplicate) {
+			problems.push({ field: "name", message: m.materials_name_taken({ sku: duplicate.sku }) });
+		}
 		// Order lines are counted in the material's unit, so changing it would change them too.
 		if (input.unit !== existing.unit) {
 			const orders = await ordersUsing(id);
 			if (orders) {
-				problems.push(
-					issue.unit(
-						m.materials_unit_in_use({
-							count: orders,
-							unit: label("materialUnitSymbol", existing.unit),
-						}),
-					),
-				);
+				problems.push({
+					field: "unit",
+					message: m.materials_unit_in_use({
+						count: orders,
+						unit: label("materialUnitSymbol", existing.unit),
+					}),
+				});
 			} else if (!(await historyFits(id, input.unit))) {
 				// Its stock movements are counted in the new unit from now on.
-				problems.push(issue.unit(m.materials_unit_history_parts()));
+				problems.push({ field: "unit", message: m.materials_unit_history_parts() });
 			}
 		}
-		if (problems.length) invalid(...problems);
+		refuse(issue, problems);
 
 		await db.transaction(async (tx) => {
-			await tx
-				.update(material)
-				.set(input)
-				.where(and(eq(material.id, id), inTenant(material)));
+			await tx.update(material).set(input).where(idInTenant(material, id));
 			const subject = { type: "material", id, label: existing.sku };
 			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 		});

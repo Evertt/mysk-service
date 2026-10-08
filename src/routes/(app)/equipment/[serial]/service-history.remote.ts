@@ -8,7 +8,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.js";
 import { priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.js";
 
@@ -39,7 +39,7 @@ export const getServiceHistory = query(v.string(), async (serialNumber) => {
 			engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
 		})
 		.from(order)
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(and(eq(order.equipmentId, unit.id), inTenant(order)))
 		.orderBy(desc(order.createdAt), desc(order.id));
 
@@ -55,7 +55,7 @@ export const getServiceHistory = query(v.string(), async (serialNumber) => {
 					unit: material.unit,
 				})
 				.from(orderLine)
-				.innerJoin(material, and(eq(orderLine.materialId, material.id), inTenant(material)))
+				.innerJoin(...tenantJoin(material, orderLine.materialId))
 				.where(
 					and(
 						inArray(

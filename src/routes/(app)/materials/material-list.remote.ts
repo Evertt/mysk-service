@@ -1,4 +1,4 @@
-import { command, query, requested } from "$app/server";
+import { command, query } from "$app/server";
 import {
 	and,
 	count,
@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm";
 
 import { stockLevels } from "#lib/models.js";
-import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
+import { bulkChange, bulkTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
 import { removeMaterial } from "#lib/server/materials.js";
@@ -145,19 +145,12 @@ async function matchingMaterialIds(params: string, limit: number) {
 /** Deletes the selected materials, with the same refusals as deleting one. */
 export const bulkDeleteMaterials = command(bulkTarget, async (target) => {
 	requireMember();
-	const ids = await targetIds(target, matchingMaterialIds);
-	const found = await db
-		.select({ id: material.id, sku: material.sku })
-		.from(material)
-		.where(and(inArray(material.id, ids), inTenant(material)))
-		.orderBy(material.sku);
-	const result = await forEachRecord(
-		found,
-		ids.length,
-		(each) => each.sku,
-		(each) => removeMaterial(each.id),
-	);
-	await requested(getMaterials, 4).refreshAll();
-	await requested(getMaterialFacets, 4).refreshAll();
+	const result = await bulkChange(target, {
+		table: material,
+		label: material.sku,
+		matching: matchingMaterialIds,
+		change: (each) => removeMaterial(each.id),
+	});
+	await refreshRequested(getMaterials, getMaterialFacets);
 	return result;
 });

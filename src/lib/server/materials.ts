@@ -2,11 +2,10 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, countDistinct, eq } from "drizzle-orm";
 
 import { m } from "#lib/paraglide/messages.js";
-import { recordActivity } from "#lib/server/activity.js";
-import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
-import { inTenant } from "#lib/server/session.js";
+import { deleteAndLog } from "#lib/server/records.js";
+import { idInTenant, inTenant } from "#lib/server/session.js";
 
 /** How many different orders of the current tenant use a material. */
 export const ordersUsing = async (materialId: number) => {
@@ -19,7 +18,7 @@ export const ordersUsing = async (materialId: number) => {
 
 /** A material of the current tenant, by id (ids come from the client, so check the tenant). */
 export const findMaterial = (id: number) =>
-	db.query.material.findFirst({ where: and(eq(material.id, id), inTenant(material)) });
+	db.query.material.findFirst({ where: idInTenant(material, id) });
 
 /**
  * Deletes one of the tenant's materials with its stock history; refuses one that orders use (or
@@ -33,13 +32,9 @@ export async function removeMaterial(id: number) {
 	if (orders) {
 		invalid(m.materials_delete_in_use({ count: orders }));
 	}
-	await refuseIfReferenced(
-		() =>
-			db.transaction(async (tx) => {
-				await tx.delete(material).where(and(eq(material.id, id), inTenant(material)));
-				const subject = { type: "material", id, label: existing.sku };
-				await recordActivity(tx, { action: "deleted", subject });
-			}),
+	await deleteAndLog(
+		material,
+		{ type: "material", id, label: existing.sku },
 		m.materials_delete_referenced(),
 	);
 }

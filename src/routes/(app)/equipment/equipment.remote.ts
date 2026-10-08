@@ -1,5 +1,5 @@
 import { form, query } from "$app/server";
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,7 +10,8 @@ import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { removeEquipment } from "#lib/server/equipment.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { type Problem, refuse } from "#lib/server/forms.js";
+import { idInTenant, inTenant, requireMember } from "#lib/server/session.js";
 
 import { equipmentFields } from "./equipment-schema.js";
 
@@ -45,10 +46,7 @@ export const getEquipmentFormOptions = query(async () => {
 });
 
 type EquipmentInput = v.InferOutput<v.ObjectSchema<typeof equipmentFields, undefined>>;
-type Problem = {
-	field: "serialNumber" | "customerId" | "warrantyUntil";
-	message: string;
-};
+type UnitProblem = Problem<"serialNumber" | "customerId" | "warrantyUntil">;
 
 /**
  * Checks what the schema can't: a serial number unique within the tenant, a customer of the
@@ -57,21 +55,18 @@ type Problem = {
 async function checkUnit(
 	existing: typeof equipment.$inferSelect | undefined,
 	input: EquipmentInput,
-): Promise<Problem[]> {
-	const problems: Problem[] = [];
+): Promise<UnitProblem[]> {
+	const problems: UnitProblem[] = [];
 	const sameSerial = await db.query.equipment.findFirst({
 		columns: { id: true },
 		where: and(eq(equipment.serialNumber, input.serialNumber), inTenant(equipment)),
 	});
 	if (sameSerial && sameSerial.id !== existing?.id) {
-		problems.push({
-			field: "serialNumber",
-			message: m.equipment_serial_taken(),
-		});
+		problems.push({ field: "serialNumber", message: m.equipment_serial_taken() });
 	}
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
-		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+		where: idInTenant(customer, input.customerId),
 	});
 	if (!owner) {
 		problems.push({ field: "customerId", message: m.equipment_customer_unknown() });
@@ -81,25 +76,18 @@ async function checkUnit(
 			.from(order)
 			.where(and(eq(order.equipmentId, existing.id), inTenant(order)));
 		if (total) {
-			problems.push({
-				field: "customerId",
-				message: m.equipment_move_refused({ count: total }),
-			});
+			problems.push({ field: "customerId", message: m.equipment_move_refused({ count: total }) });
 		}
 	}
 	if (input.warrantyUntil < input.installedAt) {
-		problems.push({
-			field: "warrantyUntil",
-			message: m.equipment_warranty_before_installed(),
-		});
+		problems.push({ field: "warrantyUntil", message: m.equipment_warranty_before_installed() });
 	}
 	return problems;
 }
 
 export const createEquipment = form(v.object(equipmentFields), async (input, issue) => {
 	const { organizationId } = requireMember();
-	const problems = await checkUnit(undefined, input);
-	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	refuse(issue, await checkUnit(undefined, input));
 	await db.transaction(async (tx) => {
 		const [created] = await tx
 			.insert(equipment)
@@ -116,21 +104,15 @@ export const updateEquipment = form(
 	async (data, issue) => {
 		requireMember();
 		const { id, ...input } = data;
-		const existing = await db.query.equipment.findFirst({
-			where: and(eq(equipment.id, id), inTenant(equipment)),
-		});
+		const existing = await db.query.equipment.findFirst({ where: idInTenant(equipment, id) });
 		if (!existing) error(404, m.equipment_not_found());
-		const problems = await checkUnit(existing, input);
-		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+		refuse(issue, await checkUnit(existing, input));
 		// Records of optional modules (e.g. a service contract covering it) belong to the unit's
 		// current customer too; the database refuses the move while they exist.
 		await refuseIfReferenced(
 			() =>
 				db.transaction(async (tx) => {
-					await tx
-						.update(equipment)
-						.set(input)
-						.where(and(eq(equipment.id, id), inTenant(equipment)));
+					await tx.update(equipment).set(input).where(idInTenant(equipment, id));
 					const subject = { type: "equipment", id, label: input.serialNumber };
 					await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 				}),

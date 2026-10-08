@@ -1,14 +1,14 @@
-import { command, query, requested } from "$app/server";
+import { command, query } from "$app/server";
 import { and, count, eq, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkTarget, type BulkTargetInput, forEachRecord, targetIds } from "#lib/server/bulk.js";
+import { bulkChange, bulkTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, equipment, order } from "#lib/server/db/schema.js";
 import { removeEquipment } from "#lib/server/equipment.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 import {
 	facetCounts,
 	groupCounts,
@@ -67,7 +67,7 @@ function countEquipment(where: SQL | undefined, by?: SQLWrapper) {
 	const counted = db
 		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
 		.from(equipment)
-		.innerJoin(customer, and(eq(equipment.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.where(where);
 	return by ? counted.groupBy(sql`${by}`) : counted;
 }
@@ -94,7 +94,7 @@ export const getEquipmentList = query(tableParams, async (params) => {
 				customer: { id: customer.id, code: customer.code, name: customer.name },
 			})
 			.from(equipment)
-			.innerJoin(customer, and(eq(equipment.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, equipment.customerId))
 			.where(plan.where())
 			.orderBy(...plan.orderBy)
 			.limit(plan.limit)
@@ -154,28 +154,11 @@ async function matchingEquipmentIds(params: string, limit: number) {
 	const rows = await db
 		.select({ id: equipment.id })
 		.from(equipment)
-		.innerJoin(customer, and(eq(equipment.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.where(planTable(equipmentTable(), params).where())
 		.orderBy(equipment.id)
 		.limit(limit);
 	return rows.map((row) => row.id);
-}
-
-/** The tenant's units a bulk action acts on (another tenant's ids aren't found). */
-async function targetEquipment(target: BulkTargetInput) {
-	const ids = await targetIds(target, matchingEquipmentIds);
-	const found = await db
-		.select({ id: equipment.id, serialNumber: equipment.serialNumber, status: equipment.status })
-		.from(equipment)
-		.where(and(inArray(equipment.id, ids), inTenant(equipment)))
-		.orderBy(equipment.serialNumber);
-	return { found, asked: ids.length };
-}
-
-/** Refreshes the pages of the list and its filters' counts that the client asked for. */
-async function refreshList() {
-	await requested(getEquipmentList, 4).refreshAll();
-	await requested(getEquipmentFacets, 4).refreshAll();
 }
 
 /** Gives the selected units another status, e.g. decommissioned. */
@@ -183,23 +166,20 @@ export const bulkSetEquipmentStatus = command(
 	v.object({ target: bulkTarget, status: v.picklist(equipmentStatuses) }),
 	async ({ target, status }) => {
 		requireMember();
-		const { found, asked } = await targetEquipment(target);
-		const result = await forEachRecord(
-			found,
-			asked,
-			(unit) => unit.serialNumber,
-			(unit) =>
+		const result = await bulkChange(target, {
+			table: equipment,
+			label: equipment.serialNumber,
+			columns: { status: equipment.status },
+			matching: matchingEquipmentIds,
+			change: (unit) =>
 				db.transaction(async (tx) => {
 					if (unit.status === status) return;
-					await tx
-						.update(equipment)
-						.set({ status })
-						.where(and(eq(equipment.id, unit.id), inTenant(equipment)));
-					const subject = { type: "equipment", id: unit.id, label: unit.serialNumber };
+					await tx.update(equipment).set({ status }).where(idInTenant(equipment, unit.id));
+					const subject = { type: "equipment", id: unit.id, label: unit.label };
 					await recordActivity(tx, { action: "updated", subject, before: unit, after: { status } });
 				}),
-		);
-		await refreshList();
+		});
+		await refreshRequested(getEquipmentList, getEquipmentFacets);
 		return result;
 	},
 );
@@ -207,13 +187,12 @@ export const bulkSetEquipmentStatus = command(
 /** Deletes the selected units, with the same refusals as deleting one. */
 export const bulkDeleteEquipment = command(bulkTarget, async (target) => {
 	requireMember();
-	const { found, asked } = await targetEquipment(target);
-	const result = await forEachRecord(
-		found,
-		asked,
-		(unit) => unit.serialNumber,
-		(unit) => removeEquipment(unit.id),
-	);
-	await refreshList();
+	const result = await bulkChange(target, {
+		table: equipment,
+		label: equipment.serialNumber,
+		matching: matchingEquipmentIds,
+		change: (unit) => removeEquipment(unit.id),
+	});
+	await refreshRequested(getEquipmentList, getEquipmentFacets);
 	return result;
 });
