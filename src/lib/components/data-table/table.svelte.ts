@@ -59,6 +59,12 @@ export type AppTableOptions<TData extends RowData> = HookTableOptions<TData> & {
 	 * `prefix` for its parameters if the page has more than one table; `false` doesn't.
 	 */
 	urlState?: false | UrlStateOptions;
+	/**
+	 * The rows are one page that the server searched, filtered, sorted and paged (see
+	 * `server-table.ts`): the table only shows them, and `rowCount` says how many match in all. The
+	 * selection is cleared when the rows change, as it can only be of rows the table shows.
+	 */
+	serverSide?: boolean;
 };
 
 /** Whether a component is initializing (a table made outside one, e.g. in a test, isn't synced). */
@@ -104,8 +110,25 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 		};
 	}
 
+	if (options.serverSide) {
+		Object.assign(tableOptions, {
+			manualPagination: true,
+			manualSorting: true,
+			manualFiltering: true,
+		});
+	}
+
 	table = hook.createAppTable(tableOptions);
 	if (!inComponent()) return table;
+
+	if (options.serverSide) {
+		$effect(() => {
+			void options.data;
+			untrack(() => {
+				if (Object.keys(table.atoms.rowSelection.get()).length) table.resetRowSelection(true);
+			});
+		});
+	}
 
 	const replaceNext =
 		options.urlState === false ? undefined : syncTableWithUrl(table, options.urlState);

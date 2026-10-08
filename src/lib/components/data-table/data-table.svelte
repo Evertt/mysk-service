@@ -7,6 +7,9 @@
 	`fillViewport` (list pages), the page fits the viewport on larger screens and the rows scroll
 	inside the table, so the toolbar and pagination stay in view; on small or low screens the page
 	scrolls as usual.
+
+	While `loading` (a server-side table fetching another page, filter, sort or search), the rows
+	shown so far stay, dimmed, under a thin progress bar, and the table is `aria-busy`.
 -->
 <script lang="ts">
 	import type { Attachment } from "svelte/attachments";
@@ -21,6 +24,7 @@
 		emptyTitle = m.common_table_empty_title(),
 		emptyDescription = m.common_table_empty_description(),
 		fillViewport = false,
+		loading = false,
 	}: {
 		emptyTitle?: string;
 		emptyDescription?: string;
@@ -29,6 +33,8 @@
 		 * table: for a list page whose table is the last thing on it.
 		 */
 		fillViewport?: boolean;
+		/** Rows for another state are on their way: dims the ones shown. */
+		loading?: boolean;
 	} = $props();
 
 	const table = useTableContext();
@@ -149,14 +155,23 @@
 	data-fill-viewport={fillViewport || undefined}
 	data-overflow-start={overflow.start || undefined}
 	data-overflow-end={overflow.end || undefined}
+	data-loading={loading || undefined}
+	aria-busy={loading || undefined}
 	class={cn(
-		"group/data-table flex min-h-0 flex-col overflow-hidden rounded-lg border [--data-table-surface:var(--background)]",
+		"group/data-table relative flex min-h-0 flex-col overflow-hidden rounded-lg border [--data-table-surface:var(--background)]",
 		"*:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:overflow-auto",
 		fillViewport && "desktop:min-h-48",
 		theme.classes("data-table"),
 	)}
 	{@attach trackOverflow}
 >
+	{#if loading}
+		<div
+			role="progressbar"
+			aria-label={m.common_table_loading()}
+			class="absolute inset-x-0 top-0 z-40 h-0.5 animate-pulse bg-primary/60"
+		></div>
+	{/if}
 	<Table.Root>
 		<Table.Header>
 			{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
@@ -188,7 +203,8 @@
 				</Table.Row>
 			{/each}
 		</Table.Header>
-		<Table.Body>
+		<!-- Dimmed while loading, after a moment (so a quick answer doesn't flicker); back at once. -->
+		<Table.Body class={cn("transition-opacity", loading && "opacity-50 delay-150")}>
 			{#each table.getRowModel().rows as row (row.id)}
 				<Table.Row data-state={row.getIsSelected() ? "selected" : undefined}>
 					{#each row.getVisibleCells() as cell (cell.id)}

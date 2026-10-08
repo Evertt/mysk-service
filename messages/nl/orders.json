@@ -10,8 +10,6 @@
 	"orders_edit_page_title": "{number} bewerken · Opdrachten",
 	"orders_breadcrumb_new": "Nieuw",
 	"orders_search": "Opdrachten zoeken…",
-	"orders_show_all": "Alle opdrachten tonen",
-	"orders_customer_filter": "Klant: {name}",
 	"orders_empty": "Geen opdrachten gevonden",
 	"orders_column_order": "Opdracht",
 	"orders_column_customer": "Klant",

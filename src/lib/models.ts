@@ -46,6 +46,27 @@ export const fitsUnit = (quantity: number, unit: MaterialUnit) => {
 	return Math.abs(steps - Math.round(steps)) < 1e-9;
 };
 
+export const stockLevels = ["out", "low", "in_stock"] as const;
+export type StockLevel = (typeof stockLevels)[number];
+
+/**
+ * Below how much of each unit a material is running low: 10 pieces, or 50 metres, kilos or
+ * litres. The materials list works out stock levels in SQL from these too (`stockLevelSql` in `#lib/server/stock.ts`).
+ */
+export const lowStockThresholds: Readonly<Record<MaterialUnit, number>> = {
+	pcs: 10,
+	m: 50,
+	kg: 50,
+	l: 50,
+};
+
+/** Below this much a material is running low. */
+export const lowStockThreshold = (unit: MaterialUnit) => lowStockThresholds[unit];
+
+/** Out of stock at nothing (or less), low below the unit's threshold, else in stock. */
+export const stockLevel = (stock: number, unit: MaterialUnit): StockLevel =>
+	stock <= 0 ? "out" : stock < lowStockThreshold(unit) ? "low" : "in_stock";
+
 /** The amount of an order line in cents: quantity × unit price, rounded to the cent. */
 export const lineTotal = (quantity: number, unitPrice: number) => Math.round(quantity * unitPrice);
 

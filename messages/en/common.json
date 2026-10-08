@@ -69,6 +69,12 @@
 	"common_table_filter_selected": "{count} selected",
 	"common_table_filter_no_results": "No results found.",
 	"common_table_filter_clear": "Clear filters",
+	"common_table_filter_searching": "Searching…",
+	"common_table_filter_more": "More match: type to narrow them down.",
+	"common_table_loading": "Loading…",
+	"common_table_search_customers": "Search customers…",
+	"common_table_search_engineers": "Search engineers…",
+	"common_table_search_equipment": "Search equipment…",
 	"common_table_rows": [
 		{
 			"declarations": [

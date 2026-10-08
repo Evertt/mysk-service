@@ -13,7 +13,8 @@ import { m } from "#lib/paraglide/messages.js";
 import type { getEquipmentList } from "./equipment.remote.js";
 import WarrantyCell from "./warranty-cell.svelte";
 
-export type EquipmentRow = Awaited<ReturnType<typeof getEquipmentList>>[number];
+/** A row of the equipment list, a page of which comes from the server (see `equipmentUrl`). */
+export type EquipmentRow = Awaited<ReturnType<typeof getEquipmentList>>["rows"][number];
 
 const column = createAppColumnHelper<EquipmentRow>();
 
@@ -69,7 +70,9 @@ export const columns = column.columns([
 				code: row.original.customer.code,
 				withCode: true,
 			}),
-		meta: { label: m.equipment_column_customer },
+		// By the customer's code, e.g. `?customer=CUST-0001`.
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		meta: { label: m.equipment_column_customer, filter: "set" },
 	}),
 	column.accessor("installedAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),

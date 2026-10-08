@@ -1,7 +1,8 @@
 <!--
 	@component
 	Multi-select filter for a column with a fixed set of values (status, type, …), showing how
-	many rows have each value. The column needs `filterFn: "oneOf"`.
+	many rows have each value. The column needs `filterFn: "oneOf"` (or a filter function and
+	`meta.filter` of its own). A server-side table passes the `counts`, which it can't count itself.
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
@@ -16,14 +17,30 @@
 		value: string;
 		label: string;
 		icon?: Component;
+		/** Other words the search box finds it by, e.g. a customer's code. */
+		keywords?: string[];
 	}
 
-	let { columnId, title, options }: { columnId: string; title: string; options: Option[] } =
-		$props();
+	let {
+		columnId,
+		title,
+		options,
+		counts: given,
+	}: {
+		columnId: string;
+		title: string;
+		options: Option[];
+		/** How many rows have each value; counted from the table's rows if not given. */
+		counts?: Readonly<Record<string, number>> | ReadonlyMap<string, number>;
+	} = $props();
 
 	const table = useTableContext();
 	const column = $derived(table.getColumn(columnId));
-	const counts = $derived(column?.getFacetedUniqueValues() ?? new Map<unknown, number>());
+	const counts = $derived.by((): ReadonlyMap<unknown, number> => {
+		if (given instanceof Map) return given;
+		if (given) return new Map(Object.entries(given));
+		return column?.getFacetedUniqueValues() ?? new Map();
+	});
 	const selected = $derived(new Set((column?.getFilterValue() as string[] | undefined) ?? []));
 
 	function toggle(value: string) {
@@ -62,7 +79,11 @@
 				<Command.Empty>{m.common_table_filter_no_results()}</Command.Empty>
 				<Command.Group>
 					{#each options as option (option.value)}
-						<Command.Item value={option.label} onSelect={() => toggle(option.value)}>
+						<Command.Item
+							value={option.label}
+							keywords={option.keywords}
+							onSelect={() => toggle(option.value)}
+						>
 							<div
 								class={cn(
 									"flex size-4 items-center justify-center rounded-[4px] border",

@@ -13,7 +13,8 @@ import { m } from "#lib/paraglide/messages.js";
 import type { getOrders } from "./orders.remote.js";
 import StatusCell from "./status-cell.svelte";
 
-export type OrderRow = Awaited<ReturnType<typeof getOrders>>[number];
+/** A row of the orders list, a page of which comes from the server (see `ordersUrl`). */
+export type OrderRow = Awaited<ReturnType<typeof getOrders>>["rows"][number];
 
 const column = createAppColumnHelper<OrderRow>();
 
@@ -40,7 +41,8 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
 			}),
-		// By the customer's code (e.g. `?customer=CUST-0001`, from a customer's page).
+		// By the customer's code (e.g. `?customer=CUST-0001`, from a customer's page). The server
+		// filters, but the table needs a filter function all the same.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
 		meta: { label: m.orders_column_customer, filter: "set" },
 	}),
@@ -60,7 +62,10 @@ export const columns = column.columns([
 					fallback: m.orders_new_installation(),
 				}),
 			sortUndefined: "last",
-			meta: { label: m.orders_column_equipment },
+			// By serial number.
+			filterFn: (row, _id, serials: string[]) =>
+				serials.includes(row.original.equipment?.serialNumber ?? ""),
+			meta: { label: m.orders_column_equipment, filter: "set" },
 		},
 	),
 	column.accessor("type", {
@@ -97,7 +102,9 @@ export const columns = column.columns([
 				fallback: m.common_unassigned(),
 			}),
 		sortUndefined: "last",
-		meta: { label: m.orders_column_engineer },
+		// By id.
+		filterFn: (row, _id, ids: string[]) => ids.includes(String(row.original.engineer?.id)),
+		meta: { label: m.orders_column_engineer, filter: "set" },
 	}),
 	column.accessor((row) => row.scheduledFor ?? undefined, {
 		id: "scheduledFor",
@@ -117,6 +124,8 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
+		// Modules adjust it (e.g. what a contract includes), which the database can't sort by.
+		enableSorting: false,
 		meta: { label: m.orders_column_total, align: "end" },
 	}),
 	column.display({
