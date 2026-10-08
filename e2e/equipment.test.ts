@@ -301,10 +301,6 @@ describe("in North", () => {
 
 	test("sorting by warranty, paging, and sorting by open orders", async () => {
 		const { page } = app;
-		const sort = async (column: string, direction: "Ascending" | "Descending") => {
-			await page.locator("thead").getByRole("button", { name: column }).click();
-			await page.getByRole("menuitem", { name: direction }).click();
-		};
 		// The warranty cell's date is followed by its covered/expired badge.
 		const warranties = () =>
 			bodyRows()
@@ -315,11 +311,11 @@ describe("in North", () => {
 						.map((time) => time.getAttribute("datetime")!),
 				);
 
-		await sort("Warranty", "Ascending");
+		await app.sortBy("Warranty", "ascending");
 		const ascending = await warranties();
 		expect(ascending).toHaveLength(20);
 		expect(ascending).toEqual([...ascending].sort());
-		await sort("Warranty", "Descending");
+		await app.sortBy("Warranty", "descending");
 		const descending = await warranties();
 		expect(descending).toEqual([...descending].sort().reverse());
 		const first = await bodyRows().first().innerText();
@@ -339,7 +335,7 @@ describe("in North", () => {
 			select serial from open where n = (select max(n) from open)`,
 			[north.id],
 		);
-		await sort("Open orders", "Descending");
+		await app.sortBy("Open orders", "descending");
 		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 1 of/);
 		const [top] = await shownSerials();
 		expect(busiest.map((row) => row.serial)).toContain(top);

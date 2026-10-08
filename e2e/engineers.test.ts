@@ -67,13 +67,6 @@ async function filter(title: string, option: RegExp) {
 	await page.keyboard.press("Escape");
 }
 
-/** Sorts the table by a column through its header menu. */
-async function sortBy(column: string, direction: "Ascending" | "Descending") {
-	const { page } = app;
-	await page.locator("thead").getByRole("button", { name: column }).click();
-	await page.getByRole("menuitem", { name: direction }).click();
-}
-
 /** Fills in the engineer form. */
 async function fill(fields: { name: string; email: string; region?: string }) {
 	const { page } = app;
@@ -162,7 +155,7 @@ describe("in North", () => {
 	});
 
 	test("sorting by rate or open orders puts the highest first", async () => {
-		await sortBy("Hourly rate", "Descending");
+		await app.sortBy("Hourly rate", "descending");
 		const [best] = await rows<{ hourly_rate: number }>(
 			`select hourly_rate from engineer where organization_id = ? order by hourly_rate desc limit 1`,
 			[north.id],
@@ -175,7 +168,7 @@ describe("in North", () => {
 		expect(top.hourly_rate).toBe(best.hourly_rate);
 
 		busy = await busiest(north.id);
-		await sortBy("Open orders", "Descending");
+		await app.sortBy("Open orders", "descending");
 		const [mostOpen] = await names();
 		const [{ open }] = await rows<{ open: number }>(
 			`select count(*) as open from "order" o join engineer e on e.id = o.engineer_id

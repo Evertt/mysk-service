@@ -225,6 +225,11 @@ export interface App {
 	issues(): Promise<string[]>;
 	/** The data table's "1,234 rows" count. */
 	rowCount(): Promise<number>;
+	/**
+	 * Sorts the data table by a column alone, clicking its header (ascending, descending, then
+	 * unsorted) until it's sorted that way.
+	 */
+	sortBy(column: string, direction: "ascending" | "descending"): Promise<void>;
 	/** Waits for a toast with this text. */
 	toast(text: string): Promise<void>;
 	/**
@@ -298,6 +303,18 @@ export function useApp({
 		async rowCount() {
 			const text = await page.getByText(/^[\d,]+ rows?$/).innerText();
 			return Number(text.replace(/\D/g, ""));
+		},
+		async sortBy(column, direction) {
+			const header = page.locator("thead").getByRole("button", { name: column });
+			// Its text ends in how it's sorted, and its place in the sort if others are too.
+			const state = async () => (await header.textContent())?.replace(/\s+/g, " ").trim();
+			for (let clicks = 0; clicks < 3; clicks++) {
+				const before = await state();
+				if (before?.endsWith(`sorted ${direction}`)) return;
+				await header.click();
+				await expect.poll(state).not.toBe(before);
+			}
+			expect(await state()).toMatch(new RegExp(`sorted ${direction}$`));
 		},
 		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
 		async anotherTab() {

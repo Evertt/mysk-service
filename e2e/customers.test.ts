@@ -164,7 +164,6 @@ describe("in North", () => {
 	});
 
 	test("sorting by open orders puts the busiest customer first", async () => {
-		const { page } = app;
 		const busiest = await rows<{ name: string }>(
 			`with open as (
 				select c.name, count(*) as n from customer c join "order" o on o.customer_id = c.id
@@ -174,8 +173,7 @@ describe("in North", () => {
 			select name from open where n = (select max(n) from open)`,
 			[north.id],
 		);
-		await page.locator("th [data-slot=dropdown-menu-trigger]", { hasText: "Open orders" }).click();
-		await page.getByRole("menuitem", { name: "Descending" }).click();
+		await app.sortBy("Open orders", "descending");
 		const top = await bodyRows().first().locator("td:nth-child(2) a").innerText();
 		expect(busiest.map((row) => row.name)).toContain(top);
 	});
