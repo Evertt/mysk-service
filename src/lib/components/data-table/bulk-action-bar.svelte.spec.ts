@@ -122,7 +122,7 @@ describe("the action bar", () => {
 
 	test("asks first when the action wants confirming, then runs it", async () => {
 		const run = vi.fn(async () => done({ done: 2 }));
-		const remove: BulkAction<Job> = {
+		const remove: BulkAction<Job, any> = {
 			id: "delete",
 			label: () => "Delete",
 			destructive: true,
@@ -151,7 +151,7 @@ describe("the action bar", () => {
 
 	test("asks for an action's parameter, from options it loads", async () => {
 		const run = vi.fn(async () => done());
-		const assign: BulkAction<Job> = {
+		const assign: BulkAction<Job, any> = {
 			id: "assign",
 			label: () => "Assign",
 			parameter: {
@@ -178,7 +178,7 @@ describe("the action bar", () => {
 	});
 
 	test("puts actions beyond the first few in a menu", async () => {
-		const actions = ["One", "Two", "Three", "Four"].map((name): BulkAction<Job> => ({
+		const actions = ["One", "Two", "Three", "Four"].map((name): BulkAction<Job, any> => ({
 			id: name,
 			label: () => name,
 			run: async () => done(),
