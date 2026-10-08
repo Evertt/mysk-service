@@ -6,7 +6,7 @@ import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.js";
 
 import { columns, type OrderRow } from "./columns.ts";
-import { ordersUrl } from "./orders-url.ts";
+import { ordersList } from "./orders-list.ts";
 
 const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	id: Number(number.slice(-3)),
@@ -117,7 +117,11 @@ test("the type and status filters keep the chosen values", () => {
 	expect(shown(rows, { columnFilters: filters })).toEqual(["ORD-003"]);
 });
 
-test("the table reads and writes the URL as the server does (`ordersUrl`)", () => {
-	const table = createAppTable({ columns, data: [], initialState: { ...ordersUrl.defaults } });
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(ordersUrl));
+test("the table reads and writes the URL as the orders list says", () => {
+	const table = createAppTable({
+		columns,
+		data: [],
+		initialState: { ...ordersList.urlSpec.defaults },
+	});
+	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(ordersList.urlSpec));
 });

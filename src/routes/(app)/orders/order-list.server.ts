@@ -11,11 +11,11 @@ import { customer, engineer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, tenantJoin } from "#lib/server/session.js";
 import { nocase, oneOf, planTable, rank, type ServerTable } from "#lib/server/table-query.js";
 
-import { ordersUrl } from "./orders-url.js";
+import { ordersList } from "./orders-list.js";
 
-/** The orders list's columns in SQL, for its URL state (`ordersUrl`). */
+/** The orders list's columns in SQL, for its URL state (`ordersList`). */
 export const ordersTable: ServerTable = {
-	spec: ordersUrl,
+	spec: ordersList.urlSpec,
 	columns: {
 		number: { sort: order.number },
 		customer: { sort: nocase(customer.name), filter: oneOf(customer.code), group: customer.code },
@@ -69,7 +69,7 @@ export function countOrders(where: SQL | undefined, by?: SQLWrapper) {
 	return by ? counted.groupBy(sql`${by}`) : counted;
 }
 
-/** The ids of the tenant's orders matching the list's search and filters (`ordersUrl`). */
+/** The ids of the tenant's orders matching the list's search and filters (`ordersList`). */
 export async function matchingOrderIds(params: string, limit: number) {
 	const rows = await db
 		.select({ id: order.id })

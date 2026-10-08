@@ -15,7 +15,7 @@
 	import { moduleBulkActions } from "../module-bulk-actions.svelte.js";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.js";
 	import { columns, type OrderRow } from "./columns.js";
-	import { ordersUrl } from "./orders-url.js";
+	import { ordersList } from "./orders-list.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
@@ -40,11 +40,11 @@
 		},
 		getRowId: (row) => String(row.id),
 		// Newest first, 20 per page: the defaults the server has too.
-		initialState: { ...ordersUrl.defaults, columnVisibility: { createdAt: false } },
+		initialState: { ...ordersList.urlSpec.defaults, columnVisibility: { createdAt: false } },
 	});
 
 	// Until the rows for a new search, filter, sort or page are in.
-	const loading = serverTableLoading(table, ordersUrl, () => orders.key);
+	const loading = serverTableLoading(table, ordersList.urlSpec, () => orders.key);
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
 	const moduleActions = moduleBulkActions("orders");

@@ -13,7 +13,7 @@ import { m } from "#lib/paraglide/messages.js";
 import type { getOrders } from "./order-list.remote.js";
 import StatusCell from "./status-cell.svelte";
 
-/** A row of the orders list, a page of which comes from the server (see `ordersUrl`). */
+/** A row of the orders list, a page of which comes from the server (see `ordersList`). */
 export type OrderRow = Awaited<ReturnType<typeof getOrders>>["rows"][number];
 
 const column = createAppColumnHelper<OrderRow>();

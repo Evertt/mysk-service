@@ -18,7 +18,7 @@ import { countOrders, ordersTable } from "./order-list.server.js";
 
 /**
  * A page of the orders list with their customer, equipment, engineer and totals, searched,
- * filtered, sorted and grouped as the URL's parameters say (`ordersUrl`, e.g.
+ * filtered, sorted and grouped as the URL's parameters say (`ordersList`, e.g.
  * `status=quote&page=2`), how many orders match in all, and, when grouped, what the table needs to
  * know of the page's groups.
  */

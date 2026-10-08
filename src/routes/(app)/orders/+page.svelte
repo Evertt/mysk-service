@@ -7,13 +7,13 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import { getOrderFacets, getOrders } from "./order-list.remote.js";
+	import { ordersList } from "./orders-list.js";
 	import OrdersTable from "./orders-table.svelte";
-	import { ordersUrl } from "./orders-url.js";
 
 	// The server pages, filters and sorts the orders, as the URL says: a change to the URL (which
 	// the table keeps in sync with itself) fetches the rows again, and the counts in the filters if
 	// it isn't just the page or the sorting.
-	const query = $derived(serverTableQuery(page.url.searchParams, ordersUrl));
+	const query = $derived(serverTableQuery(page.url.searchParams, ordersList.urlSpec));
 	// Both start at once.
 	const orders = $derived(getOrders(query.rows));
 	const facets = $derived(getOrderFacets(query.facets));
