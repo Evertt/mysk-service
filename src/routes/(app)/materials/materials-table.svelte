@@ -1,14 +1,15 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import type { PageGroups } from "#lib/components/data-table/grouping.js";
+	import { whereOf } from "#lib/components/data-table/list-definition.js";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { stockLevelOptions, unitOptions } from "#lib/components/materials/display.js";
 
 	import { deleteMaterials } from "./bulk-actions.js";
-	import { columns, type MaterialRow } from "./columns.js";
-	import { materialsUrl } from "./materials-url.js";
+	import { columns } from "./columns.js";
+	import type { getMaterialFacets, getMaterials } from "./material-list.remote.js";
+	import { materialsList } from "./materials-list.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
@@ -17,14 +18,9 @@
 		facets,
 	}: {
 		/** A page of materials, as the URL says, how many match in all, and its groups if grouped. */
-		materials: {
-			rows: MaterialRow[];
-			rowCount: number;
-			key: string;
-			groups?: PageGroups<MaterialRow>;
-		};
+		materials: Awaited<ReturnType<typeof getMaterials>>;
 		/** How many materials have each value of the filters'. */
-		facets: Record<"unit" | "stockLevel", Record<string, number>>;
+		facets: Awaited<ReturnType<typeof getMaterialFacets>>;
 	} = $props();
 
 	const table = createAppTable({
@@ -38,10 +34,13 @@
 		},
 		getRowId: (row) => String(row.id),
 		// By name, 20 per page: the defaults the server has too.
-		initialState: { ...materialsUrl.defaults, columnVisibility: { sku: false, stockLevel: false } },
+		initialState: {
+			...materialsList.urlSpec.defaults,
+			columnVisibility: { sku: false, stockLevel: false },
+		},
 	});
 
-	const loading = serverTableLoading(table, materialsUrl, () => materials.key);
+	const loading = serverTableLoading(table, materialsList, () => materials.key);
 </script>
 
 <table.AppTable>
@@ -68,7 +67,7 @@
 		/>
 		<BulkActionBar
 			actions={[deleteMaterials]}
-			matching={{ key: materials.key, count: materials.rowCount }}
+			matching={{ where: whereOf(materials.query), key: materials.key, count: materials.rowCount }}
 		/>
 		<table.Pagination />
 	</div>

@@ -6,7 +6,7 @@ import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.js";
 
 import { columns, type MaterialRow } from "./columns.ts";
-import { materialsUrl } from "./materials-url.ts";
+import { materialsList } from "./materials-list.ts";
 
 const material = (sku: string, fields: Partial<MaterialRow> = {}): MaterialRow => ({
 	id: 1,
@@ -55,7 +55,11 @@ test("the search finds materials by name and SKU", () => {
 	expect(shown(named, { globalFilter: "mat-777" })).toEqual(["MAT-777"]);
 });
 
-test("the table reads and writes the URL as the server does (`materialsUrl`)", () => {
-	const table = createAppTable({ columns, data: [], initialState: { ...materialsUrl.defaults } });
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(materialsUrl));
+test("the table reads and writes the URL as the materials list says", () => {
+	const table = createAppTable({
+		columns,
+		data: [],
+		initialState: { ...materialsList.urlSpec.defaults },
+	});
+	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(materialsList.urlSpec));
 });

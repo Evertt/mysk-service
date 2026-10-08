@@ -1,13 +1,13 @@
 /** The materials list's bulk actions (see `#lib/components/data-table/bulk-actions.ts`). */
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { MaterialRow } from "./columns.js";
 import { bulkDeleteMaterials, getMaterialFacets, getMaterials } from "./material-list.remote.js";
 
-export const deleteMaterials: BulkAction<MaterialRow> = {
+export const deleteMaterials: BulkAction<MaterialRow, AnyListWhere> = {
 	id: "delete",
 	label: m.common_delete,
 	icon: Trash2Icon,
