@@ -11,18 +11,13 @@
 	<title>{m.materials_head_title({ title: m.materials_new() })}</title>
 </svelte:head>
 
-<PageHeader title={m.materials_new()} description={m.materials_new_description()}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/materials")}>{m.materials_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.materials_breadcrumb_new()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.materials_new()}
+	description={m.materials_new_description()}
+	breadcrumbs={[
+		{ label: m.materials_title(), href: resolve("/(app)/materials") },
+		{ label: m.materials_breadcrumb_new() },
+	]}
+/>
 
 <MaterialForm form={createMaterial} cancelHref={resolve("/(app)/materials")} />

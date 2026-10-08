@@ -8,6 +8,7 @@
 	import { toast } from "svelte-sonner";
 
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatQuantity } from "#lib/components/materials/display.js";
 	import { label } from "#lib/i18n/labels.js";
@@ -70,12 +71,7 @@
 						<Button {...props} variant="outline">{m.common_cancel()}</Button>
 					{/snippet}
 				</Dialog.Close>
-				<Button type="submit" disabled={!!receiveStock.pending}>
-					{#if receiveStock.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{m.materials_receive_submit()}
-				</Button>
+				<SubmitButton pending={receiveStock.pending}>{m.materials_receive_submit()}</SubmitButton>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

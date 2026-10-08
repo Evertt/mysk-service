@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import { types } from "#lib/components/orders/display.js";
+	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { orderTypes } from "#lib/models.js";
 
@@ -13,6 +14,15 @@
 	let { serial }: { serial: string } = $props();
 
 	const { stats } = $derived(await getServiceHistory(serial));
+	const betweenRepairs = $derived(
+		stats.daysBetweenRepairs !== null
+			? m.equipment_stats_between_repairs({
+					days: m.equipment_count_days({ count: stats.daysBetweenRepairs }),
+				})
+			: stats.repairs
+				? m.equipment_stats_one_repair()
+				: m.equipment_stats_no_repairs(),
+	);
 </script>
 
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -44,45 +54,21 @@
 			</ul>
 		</Card.Footer>
 	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.equipment_stats_cost()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatCents(stats.cost)}</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.equipment_stats_cost_orders({ count: stats.doneOrders })}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.equipment_stats_last_service()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">
-				{stats.lastService ? formatDate(stats.lastService) : m.equipment_stats_never()}
-			</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{m.equipment_stats_last_service_description()}
-		</Card.Footer>
-	</Card.Root>
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.equipment_stats_since_repair()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">
-				{stats.daysSinceLastRepair === null
-					? "—"
-					: m.equipment_count_days({ count: stats.daysSinceLastRepair })}
-			</Card.Title>
-		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">
-			{#if stats.daysBetweenRepairs !== null}
-				{m.equipment_stats_between_repairs({
-					days: m.equipment_count_days({ count: stats.daysBetweenRepairs }),
-				})}
-			{:else if stats.repairs}
-				{m.equipment_stats_one_repair()}
-			{:else}
-				{m.equipment_stats_no_repairs()}
-			{/if}
-		</Card.Footer>
-	</Card.Root>
+	<StatCard
+		label={m.equipment_stats_cost()}
+		value={formatCents(stats.cost)}
+		detail={m.equipment_stats_cost_orders({ count: stats.doneOrders })}
+	/>
+	<StatCard
+		label={m.equipment_stats_last_service()}
+		value={stats.lastService ? formatDate(stats.lastService) : m.equipment_stats_never()}
+		detail={m.equipment_stats_last_service_description()}
+	/>
+	<StatCard
+		label={m.equipment_stats_since_repair()}
+		value={stats.daysSinceLastRepair === null
+			? "—"
+			: m.equipment_count_days({ count: stats.daysSinceLastRepair })}
+		detail={betweenRepairs}
+	/>
 </div>

@@ -24,23 +24,12 @@
 <PageHeader
 	title={m.equipment_edit_title({ serial: unit.serialNumber })}
 	description="{unit.manufacturer} {unit.model}"
->
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/equipment")}>{m.equipment_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={unitHref}>{unit.serialNumber}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+	breadcrumbs={[
+		{ label: m.equipment_title(), href: resolve("/(app)/equipment") },
+		{ label: unit.serialNumber, href: unitHref },
+		{ label: m.common_edit() },
+	]}
+/>
 
 <EquipmentForm
 	form={updateEquipment}
