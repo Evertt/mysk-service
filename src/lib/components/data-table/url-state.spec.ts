@@ -15,9 +15,16 @@ import {
 const spec: TableUrlSpec = {
 	columns: [
 		{ id: "number", sortable: true },
-		{ id: "status", sortable: true, filter: "set", values: ["quote", "scheduled", "completed"] },
+		{
+			id: "status",
+			sortable: true,
+			groupable: true,
+			filter: "set",
+			values: ["quote", "scheduled", "completed"],
+		},
 		{ id: "priority", sortable: true, filter: "set", values: ["low", "high"] },
-		{ id: "region", filter: "set" },
+		{ id: "region", filter: "set", groupable: true },
+		{ id: "engineerId", param: "engineer", groupable: true },
 		{ id: "scheduledFor", param: "scheduled", sortable: true },
 		{ id: "notes" },
 	],
@@ -32,6 +39,7 @@ const defaults: TableUrlState = {
 	sorting: [{ id: "number", desc: true }],
 	columnFilters: [],
 	pagination: { pageIndex: 0, pageSize: 20 },
+	grouping: [],
 };
 
 const parse = (search: string, using = spec) => parseTableUrl(new URLSearchParams(search), using);
@@ -43,9 +51,9 @@ describe("parsing", () => {
 		expect(parse("")).toEqual(defaults);
 	});
 
-	test("reads the search, filters, sorting and page", () => {
+	test("reads the search, filters, sorting, grouping and page", () => {
 		expect(
-			parse("q=boiler&status=quote,scheduled&sort=-priority,scheduled&page=3&size=50"),
+			parse("q=boiler&status=quote,scheduled&sort=-priority,scheduled&group=region&page=3&size=50"),
 		).toEqual({
 			globalFilter: "boiler",
 			sorting: [
@@ -54,7 +62,18 @@ describe("parsing", () => {
 			],
 			columnFilters: [{ id: "status", value: ["quote", "scheduled"] }],
 			pagination: { pageIndex: 2, pageSize: 50 },
+			grouping: ["region"],
 		});
+	});
+
+	test("groups by one groupable column, named by its parameter", () => {
+		expect(parse("group=status").grouping).toEqual(["status"]);
+		expect(parse("group=engineer").grouping).toEqual(["engineerId"]);
+		// Not by its id, nor by a column that isn't groupable, nor by several.
+		expect(parse("group=engineerId").grouping).toEqual([]);
+		expect(parse("group=priority").grouping).toEqual([]);
+		expect(parse("group=status,region").grouping).toEqual([]);
+		expect(parse("group=").grouping).toEqual([]);
 	});
 
 	test("a repeated filter adds its values", () => {
@@ -123,10 +142,15 @@ describe("writing", () => {
 			],
 			columnFilters: [{ id: "status", value: ["quote", "scheduled"] }],
 			pagination: { pageIndex: 1, pageSize: 50 },
+			grouping: ["engineerId"],
 		};
 		expect(write(state)).toBe(
-			"?q=boiler+room&status=quote,scheduled&sort=-priority,scheduled&page=2&size=50",
+			"?q=boiler+room&status=quote,scheduled&sort=-priority,scheduled&group=engineer&page=2&size=50",
 		);
+	});
+
+	test("grouping by a column that isn't groupable stays out", () => {
+		expect(write({ ...defaults, grouping: ["priority"] })).toBe("");
 	});
 
 	test("unsorted, against a default sort, is an empty sort", () => {
@@ -180,6 +204,7 @@ describe("round trips", () => {
 			],
 			pagination: { pageIndex: 4, pageSize: 10 },
 		},
+		{ ...defaults, grouping: ["region"], sorting: [{ id: "status", desc: true }] },
 	];
 
 	test.each(states)("parsing what was written gives the state back (%#)", (state) => {
@@ -210,6 +235,15 @@ describe("defaults", () => {
 		const state = parse("status=scheduled,quote", both);
 		expect(write(state, "", both)).toBe("");
 	});
+
+	test("a default grouping is left out, and an empty parameter ungroups", () => {
+		const grouped: TableUrlSpec = { ...spec, defaults: { ...spec.defaults, grouping: ["status"] } };
+		expect(parse("", grouped).grouping).toEqual(["status"]);
+		expect(parse("group=", grouped).grouping).toEqual([]);
+		expect(parse("group=region", grouped).grouping).toEqual(["region"]);
+		expect(write({ ...defaults, grouping: [] }, "", grouped)).toBe("?group=");
+		expect(write(parse("", grouped), "", grouped)).toBe("");
+	});
 });
 
 describe("prefixes", () => {
@@ -219,6 +253,7 @@ describe("prefixes", () => {
 		expect(tableUrlParams(prefixed)).toEqual([
 			"history.q",
 			"history.sort",
+			"history.group",
 			"history.page",
 			"history.size",
 			"history.status",
@@ -254,6 +289,12 @@ describe("specs", () => {
 		expect(refused([{ id: "q", filter: "set" }])).toThrow();
 		expect(refused([{ id: "a", param: "-a", sortable: true }])).toThrow();
 		expect(refused([{ id: "a", param: "a,b", filter: "set" }])).toThrow();
+		expect(
+			refused([
+				{ id: "a", param: "x", groupable: true },
+				{ id: "x", groupable: true },
+			]),
+		).toThrow();
 		// A filter and a sortable column can share a name.
 		expect(
 			refused([

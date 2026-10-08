@@ -11,6 +11,10 @@ import { type Attachment, createAttachmentKey } from "svelte/attachments";
  * - Enter opens the row's page: it follows the row's first link (that of its identifying column),
  * - Space selects or deselects the row, if the table has a selection column.
  *
+ * When the rows are grouped (see `grouping.ts`), each group's header row (`data-group`) takes
+ * part too, and Enter or Space on it clicks its toggle (`data-group-toggle`), showing or hiding
+ * the group's rows.
+ *
  * The cells' own controls (links, checkboxes, the actions menu) stay in the tab order and keep
  * their keys: only keys pressed on a row itself are handled here, so nothing traps focus.
  *
@@ -42,16 +46,21 @@ const SELECT_COLUMN = "select";
 
 /**
  * Sets up keyboard navigation of a table's rows. Spread `body` on the table body and give each
- * row `tabindex={navigation.tabIndex(row.id)}` and `data-row-id={row.id}`.
+ * row `tabindex={navigation.tabIndex(row.id)}` and `data-row-id={row.id}`. `rowIds` are those of
+ * the rows shown, in order, if not the page's rows (e.g. with group rows, and without collapsed
+ * groups' rows).
  */
-export function createRowNavigation(table: NavigableTable) {
+export function createRowNavigation(
+	table: NavigableTable,
+	{ rowIds }: { rowIds?: () => string[] } = {},
+) {
 	let body: HTMLElement | undefined;
 	/** The id of the last row that had focus (or focus inside it). */
 	let active = $state<string>();
 	/** After paging with the keyboard: the row to focus (by position) once the page's rows change. */
 	let pending: { index: number; before: string } | undefined;
 
-	const ids = () => table.getRowModel().rows.map((row) => row.id);
+	const ids = () => rowIds?.() ?? table.getRowModel().rows.map((row) => row.id);
 
 	/** The row in the tab order: the active one if it's on this page, else the first. */
 	const tabbable = $derived.by(() => {
@@ -107,6 +116,11 @@ export function createRowNavigation(table: NavigableTable) {
 		if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 		const rows = rowElements();
 		const index = rows.indexOf(element);
+		if ((event.key === "Enter" || event.key === " ") && element.hasAttribute("data-group")) {
+			element.querySelector<HTMLElement>("[data-group-toggle]")?.click();
+			event.preventDefault();
+			return;
+		}
 		switch (event.key) {
 			case "ArrowDown":
 				focusRow(index + 1);

@@ -38,6 +38,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(SpecialtyBadge, { specialty: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_specialty, filterValues: engineerSpecialties },
 	}),
@@ -45,6 +46,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => regionLabel(getValue()),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		meta: { label: m.engineers_column_region },
 	}),
 	column.accessor("hourlyRate", {
@@ -58,6 +60,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) => renderComponent(ActiveBadge, { active: row.original.active }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_status, filterValues: ["active", "inactive"] },
 	}),

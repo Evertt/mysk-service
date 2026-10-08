@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import type { PageGroups } from "#lib/components/data-table/grouping.js";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
@@ -15,8 +16,13 @@
 		equipment,
 		facets,
 	}: {
-		/** A page of units, as the URL says, and how many match in all. */
-		equipment: { rows: EquipmentRow[]; rowCount: number; key: string };
+		/** A page of units, as the URL says, how many match in all, and its groups when grouped. */
+		equipment: {
+			rows: EquipmentRow[];
+			rowCount: number;
+			key: string;
+			groups?: PageGroups<EquipmentRow>;
+		};
 		/** How many units have each value of the filters'. */
 		facets: Record<"category" | "status" | "manufacturer", Record<string, number>>;
 	} = $props();
@@ -79,7 +85,12 @@
 				load={getCustomerOptions}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.equipment_empty()} fillViewport loading={loading.current} />
+		<table.Table
+			emptyTitle={m.equipment_empty()}
+			fillViewport
+			loading={loading.current}
+			groups={equipment.groups}
+		/>
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -44,6 +44,9 @@ const hook = createTableHook({
 	// `createAppTable` goes back to the first page itself: TanStack's reset would also undo a page
 	// restored from the URL, and jump to the first page whenever the data is reloaded.
 	autoResetPageIndex: false,
+	// Columns opt into grouping (see `grouping.ts`), which leaves the columns where they are.
+	defaultColumn: { enableGrouping: false },
+	groupedColumnMode: false,
 	tableComponents: { Table: DataTable, Toolbar, Pagination, ViewOptions },
 	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
@@ -62,7 +65,9 @@ export type AppTableOptions<TData extends RowData> = HookTableOptions<TData> & {
 	/**
 	 * The rows are one page that the server searched, filtered, sorted and paged (see
 	 * `server-table.ts`): the table only shows them, and `rowCount` says how many match in all. The
-	 * selection is cleared when the rows change, as it can only be of rows the table shows.
+	 * selection is cleared when the rows change, as it can only be of rows the table shows. When
+	 * grouped, the server sorts by the group first, and `<table.Table groups>` says what it knows
+	 * of the page's groups (see `grouping.ts`).
 	 */
 	serverSide?: boolean;
 };
@@ -98,6 +103,7 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 		sorting: "onSortingChange",
 		columnFilters: "onColumnFiltersChange",
 		globalFilter: "onGlobalFilterChange",
+		grouping: "onGroupingChange",
 	} as const;
 	for (const [slice, handler] of Object.entries(handlers) as [keyof typeof handlers, string][]) {
 		const settable = tableOptions as unknown as Record<string, OnChangeFn<unknown> | undefined>;

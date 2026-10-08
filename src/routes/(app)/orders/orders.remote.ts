@@ -36,8 +36,10 @@ import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 import {
 	facetCounts,
+	groupCounts,
 	nocase,
 	oneOf,
+	pageGroupsOf,
 	planTable,
 	rank,
 	type ServerTable,
@@ -52,20 +54,25 @@ const ordersTable: ServerTable = {
 	spec: ordersUrl,
 	columns: {
 		number: { sort: order.number },
-		customer: { sort: nocase(customer.name), filter: oneOf(customer.code) },
+		customer: { sort: nocase(customer.name), filter: oneOf(customer.code), group: customer.code },
 		equipment: {
 			sort: [nocase(equipment.manufacturer), nocase(equipment.model)],
 			nullsLast: true,
 			filter: oneOf(equipment.serialNumber),
 		},
-		type: { sort: order.type, filter: oneOf(order.type) },
-		status: { sort: order.status, filter: oneOf(order.status) },
+		type: { sort: order.type, filter: oneOf(order.type), group: order.type },
+		status: { sort: order.status, filter: oneOf(order.status), group: order.status },
 		// By urgency rather than alphabetically.
-		priority: { sort: rank(order.priority, orderPriorities), filter: oneOf(order.priority) },
+		priority: {
+			sort: rank(order.priority, orderPriorities),
+			filter: oneOf(order.priority),
+			group: order.priority,
+		},
 		engineer: {
 			sort: nocase(engineer.name),
 			nullsLast: true,
 			filter: (ids) => inArray(order.engineerId, ids.map(Number).filter(Number.isSafeInteger)),
+			group: order.engineerId,
 		},
 		scheduledFor: { sort: order.scheduledFor, nullsLast: true },
 		createdAt: { sort: order.createdAt },
@@ -100,13 +107,14 @@ function countOrders(where: SQL | undefined, by?: SQLWrapper) {
 
 /**
  * A page of the orders list with their customer, equipment, engineer and totals, searched,
- * filtered and sorted as the URL's parameters say (`ordersUrl`, e.g. `status=quote&page=2`), and
- * how many orders match in all.
+ * filtered, sorted and grouped as the URL's parameters say (`ordersUrl`, e.g.
+ * `status=quote&page=2`), how many orders match in all, and, when grouped, what the table needs to
+ * know of the page's groups.
  */
 export const getOrders = query(tableParams, async (params) => {
 	requireMember();
 	const plan = planTable(ordersTable, params);
-	const [rows, [{ count: rowCount }]] = await Promise.all([
+	const [rows, [{ count: rowCount }], counts] = await Promise.all([
 		db
 			.select({
 				id: order.id,
@@ -137,9 +145,10 @@ export const getOrders = query(tableParams, async (params) => {
 			.limit(plan.limit)
 			.offset(plan.offset),
 		countOrders(plan.where()),
+		groupCounts(plan, countOrders),
 	]);
 
-	// The page's lines (only), to price it.
+	// The page's lines (only, with the rows around it when grouped), to price it.
 	const ids = rows.map((row) => row.id);
 	const lines = ids.length
 		? await db
@@ -166,17 +175,21 @@ export const getOrders = query(tableParams, async (params) => {
 		hourlyRate: row.engineer?.hourlyRate,
 	}));
 	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
-	return {
-		rows: page.map((row, i) => ({
+	const priced = plan.page(
+		page.map((row, i) => ({
 			...row,
 			laborTotal: prices[i].labor,
 			total: prices[i].total,
 			/** From the tenant's modules, e.g. a response time about to be missed. */
 			tags: tags[i],
 		})),
+	);
+	return {
+		rows: priced.rows,
 		rowCount,
 		/** The state the rows are for (see `isStale`). */
 		key: plan.key,
+		groups: pageGroupsOf(counts, priced),
 	};
 });
 

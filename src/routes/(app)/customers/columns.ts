@@ -53,18 +53,24 @@ export const columns = column.columns([
 				secondary: countryName(row.original.country),
 			}),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// By country (by its name as shown), then city.
 		sortFn: (a, b) =>
 			countryName(a.original.country).localeCompare(
 				countryName(b.original.country),
 				intlLocale(),
 			) || a.original.city.localeCompare(b.original.city, intlLocale()),
-		meta: { label: m.customers_column_location },
+		// Grouped by country: the cell's city would be one customer's.
+		meta: {
+			label: m.customers_column_location,
+			groupLabel: (country) => countryName(String(country)),
+		},
 	}),
 	column.accessor("segment", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(SegmentBadge, { segment: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// By size rather than alphabetically.
 		sortFn: (a, b, id) =>
 			customerSegments.indexOf(a.getValue(id)) - customerSegments.indexOf(b.getValue(id)),

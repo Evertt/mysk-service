@@ -7,6 +7,7 @@ import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import InvoiceLink from "#lib/components/invoicing/invoice-link.svelte";
 import { invoiceStates } from "#lib/components/invoicing/invoice.js";
 import StatusBadge from "#lib/components/invoicing/status-badge.svelte";
+import { formatCents } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getInvoices } from "./invoices.remote.js";
@@ -40,6 +41,8 @@ export const columns = column.columns([
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.invoices_column_customer, filter: "set" },
 	}),
 	// The status, with sent invoices past their due date as overdue.
@@ -48,6 +51,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { state: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// In the order an invoice goes through them rather than alphabetically.
 		sortFn: (a, b, id) =>
 			invoiceStates.indexOf(a.getValue(id)) - invoiceStates.indexOf(b.getValue(id)),
@@ -74,7 +78,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_total, align: "end" },
+		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),

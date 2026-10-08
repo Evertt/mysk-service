@@ -12,6 +12,7 @@ import type { TableUrlSpec } from "#lib/components/data-table/url-state.js";
 
 import {
 	facetCounts,
+	groupCounts,
 	nocase,
 	oneOf,
 	planTable,
@@ -98,9 +99,16 @@ const spec: TableUrlSpec = {
 	columns: [
 		{ id: "name", sortable: true },
 		{ id: "code", sortable: true, filter: "set" },
-		{ id: "kind", sortable: true, filter: "set", values: ["heating", "cooling", "plumbing"] },
-		{ id: "priority", sortable: true, filter: "set", values: priorities },
+		{
+			id: "kind",
+			sortable: true,
+			groupable: true,
+			filter: "set",
+			values: ["heating", "cooling", "plumbing"],
+		},
+		{ id: "priority", sortable: true, groupable: true, filter: "set", values: priorities },
 		{ id: "due", sortable: true },
+		{ id: "tenant", groupable: true },
 	],
 	defaults: { sorting: [{ id: "name", desc: false }], pagination: { pageIndex: 0, pageSize: 2 } },
 	pageSizes: [2, 5],
@@ -111,8 +119,12 @@ const table: ServerTable = {
 	columns: {
 		name: { sort: nocase(item.name) },
 		code: { sort: item.code, filter: oneOf(item.code) },
-		kind: { sort: item.kind, filter: oneOf(item.kind) },
-		priority: { sort: rank(item.priority, priorities), filter: oneOf(item.priority) },
+		kind: { sort: item.kind, filter: oneOf(item.kind), group: item.kind },
+		priority: {
+			sort: rank(item.priority, priorities),
+			filter: oneOf(item.priority),
+			group: item.priority,
+		},
 		due: { sort: item.due, nullsLast: true },
 	},
 	search: [item.name, item.code],
@@ -122,8 +134,13 @@ const table: ServerTable = {
 
 /** The ids of the page the URL's parameters ask for, and how many match in all. */
 async function page(params: string) {
+	return (await grouped(params)).page;
+}
+
+/** The page, and when grouped, the ids of the rows just before and after it. */
+async function grouped(params: string) {
 	const plan = planTable(table, params);
-	const rows = await db
+	const fetched = await db
 		.select({ id: item.id })
 		.from(item)
 		.where(plan.where())
@@ -131,7 +148,12 @@ async function page(params: string) {
 		.limit(plan.limit)
 		.offset(plan.offset);
 	const [{ total }] = await db.select({ total: count() }).from(item).where(plan.where());
-	return { ids: rows.map((row) => row.id), total };
+	const { rows, previous, next } = plan.page(fetched);
+	return {
+		page: { ids: rows.map((row) => row.id), total },
+		previous: previous?.id,
+		next: next?.id,
+	};
 }
 
 /** All the ids, on one page. */
@@ -236,6 +258,53 @@ describe("counting for the filters", () => {
 		expect(counts.kind).toEqual({ heating: 1 });
 		// Without its own filter: every priority of heating with a "b".
 		expect(counts.priority).toEqual({ low: 1, normal: 1, urgent: 1 });
+	});
+});
+
+describe("grouping", () => {
+	test("sorts by the group first, then as the table is sorted", async () => {
+		// Cooling: air handler, Chiller; heating: boiler (1), boiler (6), Boiler room; plumbing.
+		expect(await all("group=kind")).toEqual([3, 2, 1, 6, 4]);
+		expect((await page("group=kind&size=5&page=2")).ids).toEqual([5]);
+		expect(await all("group=kind&sort=-name")).toEqual([2, 3, 4, 1, 6]);
+	});
+
+	test("the groups go the way the table sorts their column, wherever it is in the sort", async () => {
+		expect(await all("group=kind&sort=name,-kind")).toEqual([5, 1, 6, 4, 3]);
+		// By urgency, as the priority sorts.
+		expect(await all("group=priority&sort=name")).toEqual([5, 1, 3, 6, 4]);
+	});
+
+	test("fetches the rows around the page, and splits them off", async () => {
+		expect(await grouped("group=kind")).toEqual({
+			page: { ids: [3, 2], total: 6 },
+			previous: undefined,
+			next: 1,
+		});
+		expect(await grouped("group=kind&page=2")).toEqual({
+			page: { ids: [1, 6], total: 6 },
+			previous: 2,
+			next: 4,
+		});
+		expect(await grouped("group=kind&page=3")).toEqual({
+			page: { ids: [4, 5], total: 6 },
+			previous: 6,
+			next: undefined,
+		});
+	});
+
+	test("counts each group's rows among those the search and filters leave", async () => {
+		const counts = (params: string) => groupCounts(planTable(table, params), countBy);
+		expect(await counts("group=kind")).toEqual({ heating: 3, cooling: 2, plumbing: 1 });
+		expect(await counts("group=kind&priority=urgent")).toEqual({ heating: 1, cooling: 1 });
+		expect(await counts("group=kind&q=b")).toEqual({ heating: 3 });
+		expect(await counts("")).toBeUndefined();
+	});
+
+	test("only by columns the server can group by", async () => {
+		expect(planTable(table, "group=tenant").group).toBeUndefined();
+		expect(await all("group=tenant")).toEqual(await all(""));
+		expect(await grouped("group=tenant")).toMatchObject({ previous: undefined, next: undefined });
 	});
 });
 

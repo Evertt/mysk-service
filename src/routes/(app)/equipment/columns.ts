@@ -43,22 +43,25 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.equipment_column_serial_number, param: "serial" },
 	}),
-	// Hidden: for the manufacturer filter.
+	// Hidden: for the manufacturer filter, and to group by.
 	column.accessor("manufacturer", {
 		filterFn: "oneOf",
 		enableHiding: false,
+		enableGrouping: true,
 		meta: { label: m.equipment_column_manufacturer },
 	}),
 	column.accessor("category", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		meta: { label: m.equipment_column_category, filterValues: equipmentCategories },
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		meta: { label: m.equipment_column_status, filterValues: equipmentStatuses },
 	}),
 	column.accessor((row) => row.customer.name, {
@@ -72,6 +75,8 @@ export const columns = column.columns([
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.equipment_column_customer, filter: "set" },
 	}),
 	column.accessor("installedAt", {

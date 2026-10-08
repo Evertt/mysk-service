@@ -1,6 +1,8 @@
 <!--
 	@component
-	A data table over a few work items, wired up like the app's tables, for `table.svelte.spec.ts`.
+	A data table over a few work items, wired up like the app's tables, for `table.svelte.spec.ts`
+	(and the other data table specs). Its rows can be grouped by status, and a group shows the sum
+	of its amounts.
 -->
 <script lang="ts" module>
 	export interface Item {
@@ -16,6 +18,8 @@
 
 <script lang="ts">
 	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
+
+	import { formatCents } from "#lib/format.js";
 
 	import FacetedFilter from "./faceted-filter.svelte";
 	import RowActions from "./row-actions.svelte";
@@ -65,13 +69,14 @@
 			header: ({ header }) => renderComponent(header.ColumnHeader),
 			filterFn: "oneOf",
 			enableSorting: false,
+			enableGrouping: true,
 			meta: { label: "Status", filterValues: ["draft", "open", "closed"] },
 		}),
 		column.accessor("amount", {
 			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 			enableGlobalFilter: false,
-			meta: { label: "Amount", align: "end" },
+			meta: { label: "Amount", align: "end", groupSum: (sum) => formatCents(sum) },
 		}),
 		column.accessor("quantity", {
 			header: ({ header }) => renderComponent(header.ColumnHeader),

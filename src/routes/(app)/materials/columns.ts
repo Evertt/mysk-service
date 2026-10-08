@@ -34,6 +34,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => label("materialUnit", getValue()),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		enableGlobalFilter: false,
 		meta: { label: m.materials_unit, filterValues: materialUnits },
 	}),
@@ -50,10 +51,12 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		meta: { label: m.materials_stock, align: "end", param: "quantity" },
 	}),
-	// Not shown; the stock level filter filters on it.
+	// Not shown; the stock level filter filters on it, and the rows can be grouped by it.
 	column.accessor((row) => stockLevel(row.stock, row.unit), {
 		id: "stockLevel",
+		cell: ({ getValue }) => label("stockLevel", getValue()),
 		filterFn: "oneOf",
+		enableGrouping: true,
 		// From out of stock to in stock rather than alphabetically.
 		sortFn: (a, b, id) => stockLevels.indexOf(a.getValue(id)) - stockLevels.indexOf(b.getValue(id)),
 		enableHiding: false,

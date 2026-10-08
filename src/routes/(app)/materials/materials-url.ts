@@ -10,10 +10,17 @@ export const materialsUrl: TableUrlSpec = {
 	columns: [
 		{ id: "name", sortable: true },
 		{ id: "sku", sortable: true },
-		{ id: "unit", sortable: true, filter: "set", values: materialUnits },
+		{ id: "unit", sortable: true, groupable: true, filter: "set", values: materialUnits },
 		{ id: "unitPrice", param: "price", sortable: true },
 		{ id: "stock", param: "quantity", sortable: true },
-		{ id: "stockLevel", param: "stock", sortable: true, filter: "set", values: stockLevels },
+		{
+			id: "stockLevel",
+			param: "stock",
+			sortable: true,
+			groupable: true,
+			filter: "set",
+			values: stockLevels,
+		},
 		{ id: "orderCount", param: "used", sortable: true },
 	],
 	defaults: {

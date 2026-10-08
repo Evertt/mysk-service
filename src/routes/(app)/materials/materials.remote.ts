@@ -34,8 +34,10 @@ import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveStock, roundQuantity, stockLevelSql, withBalances } from "#lib/server/stock.js";
 import {
 	facetCounts,
+	groupCounts,
 	nocase,
 	oneOf,
+	pageGroupsOf,
 	planTable,
 	rank,
 	type ServerTable,
@@ -80,13 +82,14 @@ const materialsTable = (): ServerTable => {
 		columns: {
 			name: { sort: nocase(material.name) },
 			sku: { sort: material.sku },
-			unit: { sort: material.unit, filter: oneOf(material.unit) },
+			unit: { sort: material.unit, filter: oneOf(material.unit), group: material.unit },
 			unitPrice: { sort: material.unitPrice },
 			stock: { sort: material.stock },
 			// From out of stock to in stock rather than alphabetically.
 			stockLevel: {
 				sort: rank(level, stockLevels),
 				filter: (levels) => inArray(level, levels),
+				group: level,
 			},
 			// Counted for every material only to sort by them (the page's own are counted apart).
 			orderCount: {
@@ -118,7 +121,7 @@ function countMaterials(where: SQL | undefined, by?: SQLWrapper) {
 export const getMaterials = query(tableParams, async (params) => {
 	requireMember();
 	const plan = planTable(materialsTable(), params);
-	const [rows, [{ count: rowCount }]] = await Promise.all([
+	const [rows, [{ count: rowCount }], counts] = await Promise.all([
 		db
 			.select({
 				id: material.id,
@@ -134,6 +137,7 @@ export const getMaterials = query(tableParams, async (params) => {
 			.limit(plan.limit)
 			.offset(plan.offset),
 		countMaterials(plan.where()),
+		groupCounts(plan, countMaterials),
 	]);
 
 	// The page's usage (only).
@@ -147,11 +151,13 @@ export const getMaterials = query(tableParams, async (params) => {
 		: [];
 	const usageOf = new Map(usage.map((row) => [row.materialId, row.orders]));
 
+	const page = plan.page(rows.map((row) => ({ ...row, orderCount: usageOf.get(row.id) ?? 0 })));
 	return {
-		rows: rows.map((row) => ({ ...row, orderCount: usageOf.get(row.id) ?? 0 })),
+		rows: page.rows,
 		rowCount,
 		/** The state the rows are for (see `isStale`). */
 		key: plan.key,
+		groups: pageGroupsOf(counts, page),
 	};
 });
 

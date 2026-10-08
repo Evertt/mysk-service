@@ -14,6 +14,8 @@
  * | `?status=`                  | no filter on the column, when the table has one by default   |
  * | `?sort=-priority,scheduled` | sorted by priority descending (`-`), then scheduled ascending |
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
+ * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
+ * | `?group=`                   | not grouped, when the table is grouped by default             |
  * | `?page=2`                   | the second page (1-based)                                     |
  * | `?size=50`                  | 50 rows per page                                              |
  *
@@ -36,6 +38,8 @@ export interface TableUrlState {
 	columnFilters: { id: string; value: unknown }[];
 	/** `pageIndex` is 0-based. */
 	pagination: { pageIndex: number; pageSize: number };
+	/** The column the rows are grouped by, if any: at most one id. */
+	grouping: string[];
 }
 
 /** A column that can be filtered or sorted by through the URL. */
@@ -49,6 +53,8 @@ export interface TableUrlColumn {
 	param?: string;
 	/** Whether `?sort=` can name it. */
 	sortable?: boolean;
+	/** Whether `?group=` can name it. */
+	groupable?: boolean;
 	/** Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values. */
 	filter?: "set";
 	/** The values its filter accepts (others in the URL are ignored); any if not given. */
@@ -76,13 +82,14 @@ export interface SearchParams extends Iterable<[string, string]> {
 export const defaultPageSizes: readonly number[] = [10, 20, 50, 100];
 
 /** The parameters that aren't columns. */
-const reserved = ["q", "sort", "page", "size"];
+const reserved = ["q", "sort", "group", "page", "size"];
 
 const emptyState: TableUrlState = {
 	globalFilter: "",
 	sorting: [],
 	columnFilters: [],
 	pagination: { pageIndex: 0, pageSize: 20 },
+	grouping: [],
 };
 
 interface Compiled {
@@ -92,6 +99,9 @@ interface Compiled {
 	/** Sortable columns by their name in the URL, and their names by id. */
 	sortByParam: Map<string, TableUrlColumn>;
 	sortParamById: Map<string, string>;
+	/** Groupable columns by their name in the URL, and their names by id. */
+	groupByParam: Map<string, TableUrlColumn>;
+	groupParamById: Map<string, string>;
 	/** Filtered columns, with their parameter (prefixed). */
 	filters: { column: TableUrlColumn; key: string }[];
 }
@@ -108,6 +118,8 @@ function compile(spec: TableUrlSpec): Compiled {
 	const key = (name: string) => (spec.prefix ? `${spec.prefix}.${name}` : name);
 	const sortByParam = new Map<string, TableUrlColumn>();
 	const sortParamById = new Map<string, string>();
+	const groupByParam = new Map<string, TableUrlColumn>();
+	const groupParamById = new Map<string, string>();
 	const filters: Compiled["filters"] = [];
 	const filterParams = new Set(reserved);
 	for (const column of spec.columns) {
@@ -119,6 +131,11 @@ function compile(spec: TableUrlSpec): Compiled {
 			if (sortByParam.has(param)) throw new Error(`Two sortable columns are called "${param}"`);
 			sortByParam.set(param, column);
 			sortParamById.set(column.id, param);
+		}
+		if (column.groupable) {
+			if (groupByParam.has(param)) throw new Error(`Two groupable columns are called "${param}"`);
+			groupByParam.set(param, column);
+			groupParamById.set(column.id, param);
 		}
 		if (column.filter) {
 			if (filterParams.has(param)) throw new Error(`The filter "${param}" is taken`);
@@ -138,6 +155,8 @@ function compile(spec: TableUrlSpec): Compiled {
 		pageSizes: spec.pageSizes ?? defaultPageSizes,
 		sortByParam,
 		sortParamById,
+		groupByParam,
+		groupParamById,
 		filters,
 	};
 	compiled.set(spec, result);
@@ -180,7 +199,7 @@ function positive(raw: string | null) {
 
 /** Reads a table's state from the URL's parameters; what's absent or invalid is the default. */
 export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUrlState {
-	const { key, defaults, pageSizes, sortByParam, filters } = compile(spec);
+	const { key, defaults, pageSizes, sortByParam, groupByParam, filters } = compile(spec);
 
 	const q = params.get(key("q"));
 	const globalFilter = q ?? defaults.globalFilter;
@@ -216,6 +235,14 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 		if (values) columnFilters.push({ id: column.id, value: values });
 	}
 
+	let grouping = defaults.grouping;
+	const group = params.get(key("group"));
+	if (group !== null && group.trim() === "") grouping = [];
+	else if (group !== null) {
+		const column = groupByParam.get(group.trim());
+		if (column) grouping = [column.id];
+	}
+
 	const size = positive(params.get(key("size")));
 	const pageSize =
 		size && (size === defaults.pagination.pageSize || pageSizes.includes(size))
@@ -224,7 +251,7 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 	const page = positive(params.get(key("page")));
 	const pageIndex = page ? page - 1 : defaults.pagination.pageIndex;
 
-	return { globalFilter, sorting, columnFilters, pagination: { pageIndex, pageSize } };
+	return { globalFilter, sorting, columnFilters, pagination: { pageIndex, pageSize }, grouping };
 }
 
 const sameSorting = (a: TableUrlState["sorting"], b: TableUrlState["sorting"]) =>
@@ -235,7 +262,7 @@ const sameValues = (a: readonly string[] = [], b: readonly string[] = []) =>
 
 /** The table's own parameters for a state, in a fixed order, without the defaults. */
 function ownParams(state: TableUrlState, spec: TableUrlSpec): [string, string][] {
-	const { key, defaults, sortParamById, filters } = compile(spec);
+	const { key, defaults, sortParamById, groupParamById, filters } = compile(spec);
 	const own: [string, string][] = [];
 
 	if (state.globalFilter !== defaults.globalFilter) own.push([key("q"), state.globalFilter]);
@@ -249,6 +276,10 @@ function ownParams(state: TableUrlState, spec: TableUrlSpec): [string, string][]
 	if (!sameSorting(sorting, defaults.sorting)) {
 		const tokens = sorting.map((sort) => `${sort.desc ? "-" : ""}${sortParamById.get(sort.id)}`);
 		own.push([key("sort"), tokens.join(",")]);
+	}
+	const group = state.grouping.find((id) => groupParamById.has(id));
+	if (group !== defaults.grouping.find((id) => groupParamById.has(id))) {
+		own.push([key("group"), group ? groupParamById.get(group)! : ""]);
 	}
 	if (state.pagination.pageIndex !== defaults.pagination.pageIndex) {
 		own.push([key("page"), String(state.pagination.pageIndex + 1)]);
