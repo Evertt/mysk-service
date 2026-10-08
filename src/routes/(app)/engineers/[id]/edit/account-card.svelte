@@ -7,7 +7,9 @@
 	import { toast } from "svelte-sonner";
 
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { labelOrValue } from "#lib/i18n/labels.js";
+	import { parseRoles } from "#lib/roles.js";
 
 	import { getEngineerAccount, linkEngineerAccount } from "./account.remote.js";
 
@@ -44,19 +46,15 @@
 					value={account.linked?.userId ?? ""}
 					options={account.members.map((member) => ({
 						value: member.userId,
-						label: `${member.name} (${member.email}) · ${member.role
-							.split(",")
+						label: `${member.name} (${member.email}) · ${parseRoles(member.role)
 							.map((role) => labelOrValue("memberRole", role))
 							.join(", ")}`,
 					}))}
 					description={m.engineers_account_description()}
 				/>
-				<Button type="submit" class="self-end" disabled={!!linkEngineerAccount.pending}>
-					{#if linkEngineerAccount.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
+				<SubmitButton class="self-end" pending={linkEngineerAccount.pending}>
 					{m.engineers_account_save()}
-				</Button>
+				</SubmitButton>
 			</form>
 		</Card.Content>
 	{/if}

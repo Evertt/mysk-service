@@ -18,23 +18,15 @@
 	<title>{m.engineers_edit_title({ name: engineer.name })} · {m.engineers_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.engineers_edit_title({ name: engineer.name })} description={engineer.email}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/engineers")}>{m.engineers_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={engineerHref}>{engineer.name}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.engineers_edit_title({ name: engineer.name })}
+	description={engineer.email}
+	breadcrumbs={[
+		{ label: m.engineers_title(), href: resolve("/(app)/engineers") },
+		{ label: engineer.name, href: engineerHref },
+		{ label: m.common_edit() },
+	]}
+/>
 
 <EngineerForm form={updateEngineer} {engineer} cancelHref={engineerHref} />
 

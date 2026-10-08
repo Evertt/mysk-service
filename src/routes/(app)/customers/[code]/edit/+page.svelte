@@ -17,23 +17,15 @@
 	<title>{m.customers_edit_title({ name: customer.name })} · {m.customers_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.customers_edit_title({ name: customer.name })} description={customer.code}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/customers")}>{m.customers_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={customerHref}>{customer.name}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.customers_edit_title({ name: customer.name })}
+	description={customer.code}
+	breadcrumbs={[
+		{ label: m.customers_title(), href: resolve("/(app)/customers") },
+		{ label: customer.name, href: customerHref },
+		{ label: m.common_edit() },
+	]}
+/>
 
 <CustomerForm
 	form={updateCustomer}

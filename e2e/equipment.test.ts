@@ -560,12 +560,12 @@ describe("in North", () => {
 		const busy = await busiest(north.id);
 		const [before] = await unit(busy.id);
 		await app.go(`/equipment/${busy.serial}/edit`);
-		const options = await customerOptions();
-		expect(options).toEqual(await customersIn(north.id));
+		const inNorth = await customersIn(north.id);
+		await expect.poll(customerOptions).toEqual(inNorth);
 
 		await page
 			.getByLabel("Customer")
-			.selectOption(options.find((id) => id !== String(before.customer_id))!);
+			.selectOption(inNorth.find((id) => id !== String(before.customer_id))!);
 		await app.submit(page.getByRole("button", { name: "Save equipment" }));
 		expect(await app.issues()).toContainEqual(expect.stringContaining("Can't move this unit"));
 		expect(app.path()).toBe(`/equipment/${busy.serial}/edit`);
@@ -857,7 +857,8 @@ describe("in South", () => {
 		);
 
 		await app.go("/equipment/new");
-		expect(await customerOptions()).toEqual(await customersIn(south.id));
+		const inSouth = await customersIn(south.id);
+		await expect.poll(customerOptions).toEqual(inSouth);
 		const customer = page.getByLabel("Customer");
 		await customer.evaluate(
 			(select: HTMLSelectElement, id) => select.add(new Option("North customer", id)),

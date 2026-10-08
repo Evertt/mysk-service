@@ -18,15 +18,8 @@ export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
 const column = createAppColumnHelper<CustomerRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor("name", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
 				code: row.original.code,
@@ -37,7 +30,6 @@ export const columns = column.columns([
 		meta: { label: m.customers_column_customer },
 	}),
 	column.accessor("contactName", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.contactName,
@@ -46,7 +38,6 @@ export const columns = column.columns([
 		meta: { label: m.customers_column_contact, param: "contact" },
 	}),
 	column.accessor("country", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.city,
@@ -67,7 +58,6 @@ export const columns = column.columns([
 		},
 	}),
 	column.accessor("segment", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(SegmentBadge, { segment: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -78,19 +68,16 @@ export const columns = column.columns([
 		meta: { label: m.customers_column_segment, filterValues: customerSegments },
 	}),
 	column.accessor("equipmentCount", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: m.customers_column_equipment, align: "end", param: "equipment" },
 	}),
 	column.accessor("openOrders", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: m.customers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("createdAt", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.customers_column_since, param: "since" },

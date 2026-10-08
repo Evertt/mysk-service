@@ -17,15 +17,8 @@ export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 const column = createAppColumnHelper<EngineerRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor("name", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.name,
@@ -42,7 +35,6 @@ export const columns = column.columns([
 		meta: { label: m.engineers_column_email },
 	}),
 	column.accessor("specialty", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(SpecialtyBadge, { specialty: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -50,21 +42,18 @@ export const columns = column.columns([
 		meta: { label: m.engineers_column_specialty, filterValues: engineerSpecialties },
 	}),
 	column.accessor("region", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => regionLabel(getValue()),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		meta: { label: m.engineers_column_region },
 	}),
 	column.accessor("hourlyRate", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_hourly_rate, align: "end", param: "rate" },
 	}),
 	column.accessor((row) => (row.active ? "active" : "inactive"), {
 		id: "status",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) => renderComponent(ActiveBadge, { active: row.original.active }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -72,13 +61,11 @@ export const columns = column.columns([
 		meta: { label: m.engineers_column_status, filterValues: ["active", "inactive"] },
 	}),
 	column.accessor("openOrders", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("hiredAt", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_hired, param: "hired" },
