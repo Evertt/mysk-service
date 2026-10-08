@@ -3,6 +3,8 @@
 	The submit and cancel buttons at the bottom of a form.
 -->
 <script lang="ts">
+	import SubmitButton from "./submit-button.svelte";
+
 	let {
 		pending = false,
 		submitLabel = m.common_save(),
@@ -19,10 +21,5 @@
 	{#if cancelHref}
 		<Button variant="ghost" href={cancelHref}>{m.common_cancel()}</Button>
 	{/if}
-	<Button type="submit" disabled={!!pending}>
-		{#if pending}
-			<Spinner data-icon="inline-start" />
-		{/if}
-		{submitLabel}
-	</Button>
+	<SubmitButton {pending}>{submitLabel}</SubmitButton>
 </div>
