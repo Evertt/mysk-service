@@ -15,16 +15,22 @@
 	let { number }: { number: string } = $props();
 
 	const coverage = $derived(await getOrderCoverage(number));
+
+	// The message around the link to the contract, e.g. ["Covered by ", " (Premium)"].
+	const marker = "\u0000";
+	const coveredBy = (level: string) =>
+		m.contracts_covered_by({ number: marker, level }).split(marker);
 </script>
 
 {#if coverage}
 	{@const { contract, response } = coverage}
+	{@const [before, after] = coveredBy(levels[contract.level].label)}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Service contract</Card.Title>
+			<Card.Title>{m.contracts_coverage_title()}</Card.Title>
 			<Card.Description>
-				Covered by <ContractLink number={contract.number} /> ({levels[contract.level].label})
-				{#if response}· respond by {formatDateTime(response.due)}{/if}
+				{before}<ContractLink number={contract.number} />{after}
+				{#if response}· {m.contracts_respond_by({ due: formatDateTime(response.due) })}{/if}
 			</Card.Description>
 			{#if response}
 				<Card.Action>
@@ -34,8 +40,11 @@
 		</Card.Header>
 		<Card.Content>
 			<dl class="grid grid-cols-2 gap-4">
-				<DetailItem label="Response time" value="Within {contract.responseHours} hours" />
-				<DetailItem label="Included" value={coverage.included} />
+				<DetailItem
+					label={m.contracts_response_time()}
+					value={m.contracts_within_hours({ count: contract.responseHours })}
+				/>
+				<DetailItem label={m.contracts_included()} value={coverage.included} />
 			</dl>
 		</Card.Content>
 	</Card.Root>

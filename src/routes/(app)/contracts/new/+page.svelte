@@ -8,21 +8,18 @@
 </script>
 
 <svelte:head>
-	<title>New contract · Service contracts</title>
+	<title>{m.contracts_head_title({ title: m.contracts_new() })}</title>
 </svelte:head>
 
-<PageHeader
-	title="New contract"
-	description="Agree on maintenance cover for a customer's equipment."
->
+<PageHeader title={m.contracts_new()} description={m.contracts_new_description()}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/contracts")}>Service contracts</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/contracts")}>{m.contracts_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>New</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.contracts_breadcrumb_new()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>

@@ -43,17 +43,25 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export const monthReference = (contractId: number, month: Pick<ContractMonth, "startsOn">) =>
 	`contracts:${contractId}:${month.startsOn.getFullYear()}-${pad(month.startsOn.getMonth() + 1)}-${pad(month.startsOn.getDate())}`;
 
-// Like `formatDate` in `#lib/format.ts`, which the seed script can't import.
-const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+/**
+ * How a month's fee reads on the invoice, e.g. "Service contract CTR-2026-0012 (Premium)" and
+ * "Monthly fee, 1 Oct 2026 – 31 Oct 2026". Stored with the invoice line, so the caller words it
+ * in the language of whoever bills it (the seed script, which can't import messages, in English).
+ */
+export interface MonthlyFeeText {
+	description: string;
+	detail: string;
+}
 
 /** What a month of a contract bills, as a billable item (see `#lib/server/modules.ts`). */
 export const monthlyFee = (
-	contract: { id: number; number: string; level: string; monthlyFee: number },
+	contract: { id: number; monthlyFee: number },
 	month: ContractMonth,
+	{ description, detail }: MonthlyFeeText,
 ) => ({
 	reference: monthReference(contract.id, month),
-	description: `Service contract ${contract.number} (${contract.level.charAt(0).toUpperCase()}${contract.level.slice(1)})`,
-	detail: `Monthly fee, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
+	description,
+	detail,
 	quantity: 1,
 	unitPrice: contract.monthlyFee,
 	date: month.startsOn,

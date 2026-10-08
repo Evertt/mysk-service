@@ -1,3 +1,182 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"contracts_title": "Servicecontracten",
+	"contracts_description": "Onderhoudsafspraken die de apparatuur van klanten dekken, met een gegarandeerde reactietijd.",
+	"contracts_head_title": "{title} · Servicecontracten",
+	"contracts_new": "Nieuw contract",
+	"contracts_new_description": "Spreek onderhoudsdekking af voor de apparatuur van een klant.",
+	"contracts_breadcrumb_new": "Nieuw",
+	"contracts_edit_title": "{number} bewerken",
+	"contracts_search": "Contracten zoeken…",
+	"contracts_empty": "Geen contracten gevonden",
+	"contracts_contract": "Contract",
+	"contracts_customer": "Klant",
+	"contracts_level": "Niveau",
+	"contracts_status": "Status",
+	"contracts_period": "Looptijd",
+	"contracts_covers": "Dekt",
+	"contracts_response": "Reactie",
+	"contracts_monthly_fee": "Maandbedrag",
+	"contracts_yearly_fee": "Jaarbedrag",
+	"contracts_created": "Aangemaakt",
+	"contracts_starts_on": "Begint op",
+	"contracts_ends_on": "Eindigt op",
+	"contracts_response_time": "Reactietijd",
+	"contracts_notes": "Notities",
+	"contracts_order": "Opdracht",
+	"contracts_equipment": "Apparatuur",
+	"contracts_serial_number": "Serienummer",
+	"contracts_category": "Categorie",
+	"contracts_type": "Type",
+	"contracts_copy_number": "Contractnummer kopiëren",
+	"contracts_copy_customer_code": "Klantcode kopiëren",
+	"contracts_customer_required": "Kies een klant",
+	"contracts_starts_required": "Kies de eerste dag",
+	"contracts_ends_required": "Kies de laatste dag",
+	"contracts_fee_required": "Vul het maandbedrag in",
+	"contracts_hours_required": "Vul een aantal uren in",
+	"contracts_hours_whole": "Alleen hele uren",
+	"contracts_hours_min": "Minstens 1 uur",
+	"contracts_units_invalid": "Kies apparaten uit de lijst",
+	"contracts_units_required": "Kies minstens één apparaat",
+	"contracts_form_agreement": "Afspraak",
+	"contracts_form_agreement_description": "Voor wie het is, het serviceniveau en wat het kost.",
+	"contracts_form_ends_description": "De laatste dag die het contract dekt.",
+	"contracts_form_response_hours": "Reactietijd (uren)",
+	"contracts_form_response_description": "Hoe snel een monteur op een storing reageert.",
+	"contracts_form_covered": "Gedekte apparatuur",
+	"contracts_form_covered_description": "De apparaten van de klant die dit contract dekt.",
+	"contracts_form_choose_customer": "Kies een klant om de apparatuur te zien.",
+	"contracts_form_no_equipment": "Deze klant heeft nog geen apparatuur.",
+	"contracts_form_no_customer": "Nog geen klant gekozen.",
+	"contracts_form_save": "Contract opslaan",
+	"contracts_form_create": "Contract aanmaken",
+	"contracts_saved": "Contract opgeslagen",
+	"contracts_created_toast": "Contract aangemaakt",
+	"contracts_detail_description": "Servicecontract {level} voor {customer}",
+	"contracts_delete_title": "{number} verwijderen?",
+	"contracts_delete_description": "Het contract wordt definitief verwijderd. De apparatuur en de opdrachten blijven.",
+	"contracts_covered_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} apparaat van {customer}.",
+				"countPlural=*": "{countText} apparaten van {customer}."
+			}
+		}
+	],
+	"contracts_no_equipment_title": "Geen apparatuur gedekt",
+	"contracts_no_equipment_description": "De apparaten die dit contract dekte zijn verwijderd.",
+	"contracts_orders": "Opdrachten onder dit contract",
+	"contracts_orders_description": "Werk aan de gedekte apparatuur tussen {from} en {until}.",
+	"contracts_no_orders_title": "Geen opdrachten",
+	"contracts_no_orders_upcoming": "Het contract is nog niet begonnen.",
+	"contracts_no_orders_description": "Geen werk aan de gedekte apparatuur tijdens het contract.",
+	"contracts_terms": "Voorwaarden",
+	"contracts_within_hours": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Binnen {countText} uur",
+				"countPlural=*": "Binnen {countText} uur"
+			}
+		}
+	],
+	"contracts_company": "Bedrijf",
+	"contracts_contact": "Contactpersoon",
+	"contracts_email": "E-mail",
+	"contracts_phone": "Telefoon",
+	"contracts_location": "Plaats",
+	"contracts_term_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag",
+				"countPlural=*": "{countText} dagen"
+			}
+		}
+	],
+	"contracts_term_months": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} maand",
+				"countPlural=*": "{countText} maanden"
+			}
+		}
+	],
+	"contracts_term_years": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} jaar",
+				"countPlural=*": "{countText} jaar"
+			}
+		}
+	],
+	"contracts_term_months_days": "{months}, {days}",
+	"contracts_covered_by": "Gedekt door {number} ({level})",
+	"contracts_included_basic": "Alleen reactietijd",
+	"contracts_included_standard": "Arbeid",
+	"contracts_included_premium": "Arbeid en materialen",
+	"contracts_included_detail": "{included} inbegrepen",
+	"contracts_included": "Inbegrepen",
+	"contracts_respond_by": "reageren vóór {due}",
+	"contracts_respond_by_detail": "Reageren vóór {due} ({number})",
+	"contracts_sla_overdue": "SLA te laat",
+	"contracts_sla_at_risk": "SLA in gevaar",
+	"contracts_coverage_title": "Servicecontract",
+	"contracts_unit_coverage_description": "De contracten die dit apparaat dekken, nieuwste eerst.",
+	"contracts_unit_not_covered_title": "Niet gedekt",
+	"contracts_unit_not_covered_description": "Geen servicecontract dekt dit apparaat.",
+	"contracts_dashboard_responses": "Reactietijden in gevaar",
+	"contracts_dashboard_responses_description": "Gedekte storingen die nog niet zijn ingepland, meest dringende eerst.",
+	"contracts_dashboard_respond_by": "Reageren vóór",
+	"contracts_dashboard_on_track_title": "Alles op schema",
+	"contracts_dashboard_on_track_description": "Geen gedekte storing dreigt de deadline te missen.",
+	"contracts_dashboard_expiring": "Contracten die binnenkort aflopen",
+	"contracts_dashboard_expiring_description": "Lopen af in de komende {days} dagen, nog niet verlengd.",
+	"contracts_dashboard_all": "Alle contracten",
+	"contracts_dashboard_none_expiring_title": "Niets loopt binnenkort af",
+	"contracts_dashboard_none_expiring_description": "Geen actief contract loopt af in de komende {days} dagen.",
+	"contracts_fee_description": "Servicecontract {number} ({level})",
+	"contracts_fee_detail": "Maandbedrag, {from} – {until}",
+	"contracts_activity_noun": "contract",
+	"contracts_activity_starts": "begint",
+	"contracts_activity_ends": "eindigt",
+	"contracts_activity_response_time": "reactietijd",
+	"contracts_activity_covered_equipment": "gedekte apparatuur",
+	"contracts_not_found": "Contract niet gevonden",
+	"contracts_not_found_number": "Contract {number} niet gevonden",
+	"contracts_order_not_found": "Opdracht {number} niet gevonden",
+	"contracts_equipment_not_found": "Apparaat {serial} niet gevonden",
+	"contracts_unknown_customer": "Onbekende klant",
+	"contracts_ends_before_start": "Moet na de begindatum liggen",
+	"contracts_units_of_customer": "Een contract kan alleen apparatuur van de eigen klant dekken",
+	"contracts_unit_already_covered": "{serial} wordt al gedekt door {number} tot {date}"
 }

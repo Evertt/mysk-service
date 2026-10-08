@@ -10,6 +10,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatQuantity } from "#lib/components/materials/display.js";
+	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, quantityStep } from "#lib/models.js";
 
 	import { countStock } from "../materials.remote.js";
@@ -31,16 +32,17 @@
 		{#snippet child({ props })}
 			<Button {...props} variant="outline">
 				<ClipboardCheckIcon data-icon="inline-start" />
-				Count / adjust
+				{m.materials_count_button()}
 			</Button>
 		{/snippet}
 	</Dialog.Trigger>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Count {material.name}</Dialog.Title>
+			<Dialog.Title>{m.materials_count_title({ name: material.name })}</Dialog.Title>
 			<Dialog.Description>
-				{formatQuantity(material.stock, material.unit)} is recorded as in stock. Enter what you counted;
-				the difference is recorded as an adjustment.
+				{m.materials_count_description({
+					quantity: formatQuantity(material.stock, material.unit),
+				})}
 			</Dialog.Description>
 		</Dialog.Header>
 		<form
@@ -49,7 +51,7 @@
 				if (await submit()) {
 					element.reset();
 					open = false;
-					toast.success("Stock adjusted");
+					toast.success(m.materials_count_done());
 				}
 			})}
 			class="flex flex-col gap-6"
@@ -58,31 +60,31 @@
 			<Field.FieldGroup>
 				<NumberField
 					field={countStock.fields.counted}
-					label="Counted ({material.unit})"
+					label={m.materials_count_counted({ unit: label("materialUnitSymbol", material.unit) })}
 					value={material.stock}
 					min={0}
 					step={quantityStep(material.unit)}
 					description={difference
-						? `Records ${formatChange(difference, material.unit)}.`
-						: "The same as recorded."}
+						? m.materials_count_records({ change: formatChange(difference, material.unit) })
+						: m.materials_count_same()}
 				/>
 				<TextField
 					field={countStock.fields.note}
-					label="Reason"
-					placeholder="E.g. yearly count, damaged in storage"
+					label={m.materials_count_reason()}
+					placeholder={m.materials_count_reason_placeholder()}
 				/>
 			</Field.FieldGroup>
 			<Dialog.Footer>
 				<Dialog.Close type="button">
 					{#snippet child({ props })}
-						<Button {...props} variant="outline">Cancel</Button>
+						<Button {...props} variant="outline">{m.common_cancel()}</Button>
 					{/snippet}
 				</Dialog.Close>
 				<Button type="submit" disabled={!!countStock.pending}>
 					{#if countStock.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Adjust stock
+					{m.materials_count_submit()}
 				</Button>
 			</Dialog.Footer>
 		</form>

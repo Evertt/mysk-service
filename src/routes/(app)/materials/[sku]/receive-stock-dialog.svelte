@@ -10,6 +10,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatQuantity } from "#lib/components/materials/display.js";
+	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, quantityStep } from "#lib/models.js";
 
 	import { receiveStock } from "../materials.remote.js";
@@ -25,15 +26,17 @@
 		{#snippet child({ props })}
 			<Button {...props} variant="outline">
 				<PackagePlusIcon data-icon="inline-start" />
-				Receive stock
+				{m.materials_receive_button()}
 			</Button>
 		{/snippet}
 	</Dialog.Trigger>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Receive {material.name}</Dialog.Title>
+			<Dialog.Title>{m.materials_receive_title({ name: material.name })}</Dialog.Title>
 			<Dialog.Description>
-				Adds to the {formatQuantity(material.stock, material.unit)} in stock.
+				{m.materials_receive_description({
+					quantity: formatQuantity(material.stock, material.unit),
+				})}
 			</Dialog.Description>
 		</Dialog.Header>
 		<form
@@ -42,7 +45,7 @@
 				if (await submit()) {
 					element.reset();
 					open = false;
-					toast.success("Stock received");
+					toast.success(m.materials_receive_done());
 				}
 			})}
 			class="flex flex-col gap-6"
@@ -51,27 +54,27 @@
 			<Field.FieldGroup>
 				<NumberField
 					field={receiveStock.fields.quantity}
-					label="Quantity ({material.unit})"
+					label={m.materials_receive_quantity({ unit: label("materialUnitSymbol", material.unit) })}
 					min={quantityStep(material.unit)}
 					step={quantityStep(material.unit)}
 				/>
 				<TextField
 					field={receiveStock.fields.note}
-					label="Note"
-					placeholder="E.g. the delivery note's number"
+					label={m.materials_receive_note()}
+					placeholder={m.materials_receive_note_placeholder()}
 				/>
 			</Field.FieldGroup>
 			<Dialog.Footer>
 				<Dialog.Close type="button">
 					{#snippet child({ props })}
-						<Button {...props} variant="outline">Cancel</Button>
+						<Button {...props} variant="outline">{m.common_cancel()}</Button>
 					{/snippet}
 				</Dialog.Close>
 				<Button type="submit" disabled={!!receiveStock.pending}>
 					{#if receiveStock.pending}
 						<Spinner data-icon="inline-start" />
 					{/if}
-					Receive
+					{m.materials_receive_submit()}
 				</Button>
 			</Dialog.Footer>
 		</form>

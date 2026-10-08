@@ -9,17 +9,14 @@
 </script>
 
 <svelte:head>
-	<title>Service contracts</title>
+	<title>{m.contracts_title()}</title>
 </svelte:head>
 
-<PageHeader
-	title="Service contracts"
-	description="Maintenance agreements covering customers' equipment with a guaranteed response time."
->
+<PageHeader title={m.contracts_title()} description={m.contracts_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/contracts/new")}>
 			<PlusIcon data-icon="inline-start" />
-			New contract
+			{m.contracts_new()}
 		</Button>
 	{/snippet}
 </PageHeader>

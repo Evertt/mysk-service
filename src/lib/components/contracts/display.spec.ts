@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
+
 import { formatTerm } from "./display.ts";
 
 const day = (value: string) => new Date(`${value}T00:00`);
@@ -42,5 +44,18 @@ describe("formatTerm", () => {
 	test("periods across a daylight saving change still count whole days", () => {
 		expect(formatTerm(day("2026-03-01"), day("2026-04-10"))).toBe("1 month, 10 days");
 		expect(formatTerm(day("2026-10-01"), day("2026-11-10"))).toBe("1 month, 10 days");
+	});
+
+	test("in Dutch", () => {
+		const englishByDefault = getLocale;
+		overwriteGetLocale(() => "nl");
+		try {
+			expect(formatTerm(day("2026-01-01"), day("2027-12-31"))).toBe("2 jaar");
+			expect(formatTerm(day("2026-01-01"), day("2027-06-30"))).toBe("18 maanden");
+			expect(formatTerm(day("2026-03-01"), day("2026-04-10"))).toBe("1 maand, 10 dagen");
+			expect(formatTerm(day("2026-01-01"), day("2026-01-01"))).toBe("1 dag");
+		} finally {
+			overwriteGetLocale(englishByDefault);
+		}
 	});
 });

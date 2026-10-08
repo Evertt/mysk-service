@@ -30,7 +30,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(ContractLink, { number: getValue() }),
 		enableHiding: false,
-		meta: { label: "Contract" },
+		meta: { label: m.contracts_contract },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
@@ -40,7 +40,7 @@ export const columns = column.columns([
 				primary: row.original.customer.name,
 				secondary: row.original.customer.code,
 			}),
-		meta: { label: "Customer" },
+		meta: { label: m.contracts_customer },
 	}),
 	column.accessor("level", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -49,7 +49,7 @@ export const columns = column.columns([
 		// From basic to premium rather than alphabetically.
 		sortFn: (a, b, id) =>
 			contractLevels.indexOf(a.getValue(id)) - contractLevels.indexOf(b.getValue(id)),
-		meta: { label: "Level" },
+		meta: { label: m.contracts_level },
 	}),
 	// Not stored: follows from the period and today's date.
 	column.accessor((row) => contractStatus(row), {
@@ -59,7 +59,7 @@ export const columns = column.columns([
 		filterFn: "oneOf",
 		sortFn: (a, b, id) =>
 			contractStatuses.indexOf(a.getValue(id)) - contractStatuses.indexOf(b.getValue(id)),
-		meta: { label: "Status" },
+		meta: { label: m.contracts_status },
 	}),
 	column.accessor("startsOn", {
 		id: "period",
@@ -70,31 +70,31 @@ export const columns = column.columns([
 				secondary: formatTerm(row.original.startsOn, row.original.endsOn),
 			}),
 		enableGlobalFilter: false,
-		meta: { label: "Period" },
+		meta: { label: m.contracts_period },
 	}),
 	column.accessor("units", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
 		enableGlobalFilter: false,
-		meta: { label: "Covers", align: "end" },
+		meta: { label: m.contracts_covers, align: "end" },
 	}),
 	column.accessor("responseHours", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_hours_short }),
 		enableGlobalFilter: false,
-		meta: { label: "Response", align: "end" },
+		meta: { label: m.contracts_response, align: "end" },
 	}),
 	column.accessor("monthlyFee", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: "Monthly fee", align: "end" },
+		meta: { label: m.contracts_monthly_fee, align: "end" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Created" },
+		meta: { label: m.contracts_created },
 	}),
 	column.display({
 		id: "actions",
@@ -104,8 +104,8 @@ export const columns = column.columns([
 				href: resolve("/(app)/contracts/[number]", { number: row.original.number }),
 				editHref: resolve("/(app)/contracts/[number]/edit", { number: row.original.number }),
 				copy: [
-					{ label: "Copy contract number", value: row.original.number },
-					{ label: "Copy customer code", value: row.original.customer.code },
+					{ label: m.contracts_copy_number(), value: row.original.number },
+					{ label: m.contracts_copy_customer_code(), value: row.original.customer.code },
 				],
 			}),
 	}),

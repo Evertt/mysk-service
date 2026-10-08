@@ -17,8 +17,10 @@ import {
 } from "#lib/components/contracts/coverage.js";
 // The module's queries, to refresh; they use `coverageOf` below in turn.
 import { getOrderCoverage } from "#lib/components/contracts/coverage.remote.js";
-import { formatDateTime } from "#lib/format.js";
+import { formatDate, formatDateTime } from "#lib/format.js";
+import { label } from "#lib/i18n/labels.js";
 import type { OrderTag } from "#lib/modules.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
 import { contract, contractEquipment } from "./db/schema.ts";
@@ -69,9 +71,14 @@ export async function coverageOf(
 function responseTag(order: OrderFacts, coverage: Coverage, now: Date): OrderTag | undefined {
 	const deadline = responseDeadline(order, coverage.responseHours, now);
 	if (!deadline) return undefined;
-	const detail = `Respond by ${formatDateTime(deadline.due)} (${coverage.number})`;
-	if (deadline.state === "overdue") return { label: "SLA overdue", tone: "danger", detail };
-	if (deadline.state === "at_risk") return { label: "SLA at risk", tone: "warning", detail };
+	const detail = m.contracts_respond_by_detail({
+		due: formatDateTime(deadline.due),
+		number: coverage.number,
+	});
+	if (deadline.state === "overdue")
+		return { label: m.contracts_sla_overdue(), tone: "danger", detail };
+	if (deadline.state === "at_risk")
+		return { label: m.contracts_sla_at_risk(), tone: "warning", detail };
 	return undefined;
 }
 
@@ -85,7 +92,7 @@ export const contracts: ServerModule = {
 				if (!covering || !amount) return [];
 				const adjustment = {
 					label: coveredBy(covering),
-					detail: `${includedLabel[covering.level]} included`,
+					detail: m.contracts_included_detail({ included: includedLabel(covering.level) }),
 					amount: -amount,
 				};
 				return [[order.id, [adjustment]]];
@@ -118,7 +125,19 @@ export const contracts: ServerModule = {
 				),
 			);
 		return found.flatMap((term) =>
-			contractMonths(term, from, until).map((month) => monthlyFee(term, month)),
+			contractMonths(term, from, until).map((month) =>
+				// Stored on the invoice line, in the language of whoever bills it.
+				monthlyFee(term, month, {
+					description: m.contracts_fee_description({
+						number: term.number,
+						level: label("contractLevel", term.level),
+					}),
+					detail: m.contracts_fee_detail({
+						from: formatDate(month.startsOn),
+						until: formatDate(month.endsOn),
+					}),
+				}),
+			),
 		);
 	},
 

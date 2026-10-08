@@ -12,6 +12,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { lowStockThreshold } from "#lib/components/materials/display.js";
+	import { formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.js";
 
@@ -33,17 +34,23 @@
 
 	const unitOptions = materialUnits.map((value) => ({
 		value,
-		label: `${label("materialUnit", value)} (${label("materialUnitSymbol", value)})`,
+		label: m.materials_unit_option({
+			name: label("materialUnit", value),
+			symbol: label("materialUnitSymbol", value),
+		}),
 	}));
 	// Pieces are counted whole; other units to two decimals.
 	const unit = $derived((fields.unit.value() || material?.unit || "pcs") as MaterialUnit);
-	const stockDescription = `What's in stock now, recorded as the opening balance. Shown as low below ${lowStockThreshold("pcs")} pieces, or ${lowStockThreshold("m")} of other units.`;
+	const stockDescription = m.materials_form_opening_stock_description({
+		pieces: formatNumber(lowStockThreshold("pcs")),
+		other: formatNumber(lowStockThreshold("m")),
+	});
 </script>
 
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the material; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(material ? "Material saved" : "Material created");
+		if (await submit()) toast.success(material ? m.materials_saved() : m.materials_created());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -54,34 +61,39 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Material</Card.Title>
+			<Card.Title>{m.materials_material()}</Card.Title>
 			<Card.Description>
 				{material
-					? `SKU ${material.sku}; the SKU can't be changed.`
-					: "The SKU is assigned when you create the material."}
+					? m.materials_form_sku_fixed({ sku: material.sku })
+					: m.materials_form_sku_assigned()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<TextField field={fields.name} label="Name" value={material?.name} class="md:col-span-2" />
+				<TextField
+					field={fields.name}
+					label={m.materials_name()}
+					value={material?.name}
+					class="md:col-span-2"
+				/>
 				<SelectField
 					field={fields.unit}
-					label="Unit"
+					label={m.materials_unit()}
 					value={material?.unit ?? "pcs"}
 					options={unitOptions}
-					description="Order quantities and stock are counted in this unit."
+					description={m.materials_form_unit_description()}
 				/>
 				<MoneyField
 					field={fields.unitPrice}
-					label="Unit price"
+					label={m.materials_unit_price()}
 					cents={material?.unitPrice}
-					description="List price per unit. Existing orders keep the price they were quoted."
+					description={m.materials_form_price_description()}
 				/>
 				{#if !material}
 					<!-- Only a new material takes its stock; after that it changes through movements. -->
 					<NumberField
 						field={(form as typeof createMaterial).fields.stock}
-						label="Opening stock"
+						label={m.materials_form_opening_stock()}
 						value={0}
 						min={0}
 						step={quantityStep(unit)}
@@ -94,7 +106,7 @@
 
 	<FormActions
 		pending={form.pending}
-		submitLabel={material ? "Save material" : "Create material"}
+		submitLabel={material ? m.materials_form_save() : m.materials_form_create()}
 		{cancelHref}
 	/>
 </form>

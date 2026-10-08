@@ -4,7 +4,9 @@ import { and, asc, countDistinct, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
+import { label } from "#lib/i18n/labels.js";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
@@ -87,7 +89,7 @@ export const getMaterial = query(v.string(), async (sku) => {
 	const found = await db.query.material.findFirst({
 		where: and(eq(material.sku, sku), inTenant(material)),
 	});
-	if (!found) error(404, `Material ${sku} not found`);
+	if (!found) error(404, m.materials_not_found_sku({ sku }));
 
 	// One row per order, in case an order has several lines for the material.
 	const usage = await db
@@ -162,8 +164,8 @@ export const createMaterial = form(v.object(newMaterialFields), async (input, is
 	const { organizationId } = requireMember();
 	const problems = [];
 	const duplicate = await sameName(input.name);
-	if (duplicate) problems.push(issue.name(`${duplicate.sku} already has this name`));
-	if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock("Whole pieces only"));
+	if (duplicate) problems.push(issue.name(m.materials_name_taken({ sku: duplicate.sku })));
+	if (!fitsUnit(input.stock, input.unit)) problems.push(issue.stock(m.materials_whole_pieces()));
 	if (problems.length) invalid(...problems);
 
 	const { stock, ...fields } = input;
@@ -196,23 +198,26 @@ export const updateMaterial = form(
 		requireMember();
 		const { id, ...input } = data;
 		const existing = await findMaterial(id);
-		if (!existing) error(404, "Material not found");
+		if (!existing) error(404, m.materials_not_found());
 
 		const problems = [];
 		const duplicate = await sameName(input.name, id);
-		if (duplicate) problems.push(issue.name(`${duplicate.sku} already has this name`));
+		if (duplicate) problems.push(issue.name(m.materials_name_taken({ sku: duplicate.sku })));
 		// Order lines are counted in the material's unit, so changing it would change them too.
 		if (input.unit !== existing.unit) {
 			const orders = await ordersUsing(id);
 			if (orders) {
 				problems.push(
 					issue.unit(
-						`Can't change the unit: ${orders === 1 ? "1 order counts" : `${orders} orders count`} this material in ${existing.unit}`,
+						m.materials_unit_in_use({
+							count: orders,
+							unit: label("materialUnitSymbol", existing.unit),
+						}),
 					),
 				);
 			} else if (!(await historyFits(id, input.unit))) {
 				// Its stock movements are counted in the new unit from now on.
-				problems.push(issue.unit("Whole pieces only: the stock history has part pieces"));
+				problems.push(issue.unit(m.materials_unit_history_parts()));
 			}
 		}
 		if (problems.length) invalid(...problems);
@@ -235,12 +240,10 @@ export const updateMaterial = form(
 export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
 	const existing = await findMaterial(id);
-	if (!existing) error(404, "Material not found");
+	if (!existing) error(404, m.materials_not_found());
 	const orders = await ordersUsing(id);
 	if (orders) {
-		invalid(
-			`This material is used on ${orders === 1 ? "1 order" : `${orders} orders`}, so it can't be deleted. Remove it from ${orders === 1 ? "that order" : "those orders"} first.`,
-		);
+		invalid(m.materials_delete_in_use({ count: orders }));
 	}
 	await refuseIfReferenced(
 		() =>
@@ -249,7 +252,7 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 				const subject = { type: "material", id, label: existing.sku };
 				await recordActivity(tx, { action: "deleted", subject });
 			}),
-		"Other records still refer to this material. Remove those first.",
+		m.materials_delete_referenced(),
 	);
 	void getMaterials().refresh();
 	redirect(303, "/materials");
@@ -261,8 +264,8 @@ export const receiveStock = form(
 	async ({ id, quantity, note }, issue) => {
 		requireMember();
 		const existing = await findMaterial(id);
-		if (!existing) error(404, "Material not found");
-		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity("Whole pieces only"));
+		if (!existing) error(404, m.materials_not_found());
+		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity(m.materials_whole_pieces()));
 
 		await db.transaction(async (tx) => {
 			const { stock } = await moveStock(tx, { materialId: id, quantity, kind: "receipt", note });
@@ -288,8 +291,8 @@ export const countStock = form(
 	async ({ id, counted, note }, issue) => {
 		requireMember();
 		const existing = await findMaterial(id);
-		if (!existing) error(404, "Material not found");
-		if (!fitsUnit(counted, existing.unit)) invalid(issue.counted("Whole pieces only"));
+		if (!existing) error(404, m.materials_not_found());
+		if (!fitsUnit(counted, existing.unit)) invalid(issue.counted(m.materials_whole_pieces()));
 
 		await db.transaction(async (tx) => {
 			// The difference with the stock as it is now, inside the transaction, so that the stock
@@ -299,7 +302,7 @@ export const countStock = form(
 				.from(material)
 				.where(and(eq(material.id, id), inTenant(material)));
 			const difference = roundQuantity(counted - current.stock);
-			if (!difference) invalid(issue.counted("That's the stock already"));
+			if (!difference) invalid(issue.counted(m.materials_count_unchanged()));
 			await moveStock(tx, { materialId: id, quantity: difference, kind: "adjustment", note });
 			const subject = { type: "material", id, label: existing.sku };
 			const [before, after] = [{ stock: current.stock }, { stock: counted }];

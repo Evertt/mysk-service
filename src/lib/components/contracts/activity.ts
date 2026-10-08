@@ -3,21 +3,45 @@ import { resolve } from "$app/paths";
 
 import type { SubjectType } from "#lib/activity.js";
 import { formatCents, formatDate } from "#lib/format.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import { levels } from "./display.js";
 
 export const contractSubjects: Record<string, SubjectType> = {
 	contract: {
-		noun: "contract",
+		// Getters, so they're translated when read.
+		get noun() {
+			return m.contracts_activity_noun();
+		},
 		href: ({ label }) => resolve("/(app)/contracts/[number]", { number: label }),
 		fields: {
 			customerId: { ref: "customer" },
 			level: { format: (value) => levels[value as keyof typeof levels]?.label ?? String(value) },
-			startsOn: { label: "starts", format: (value) => formatDate(new Date(String(value))) },
-			endsOn: { label: "ends", format: (value) => formatDate(new Date(String(value))) },
+			startsOn: {
+				get label() {
+					return m.contracts_activity_starts();
+				},
+				format: (value) => formatDate(new Date(String(value))),
+			},
+			endsOn: {
+				get label() {
+					return m.contracts_activity_ends();
+				},
+				format: (value) => formatDate(new Date(String(value))),
+			},
 			monthlyFee: { format: (value) => formatCents(Number(value)) },
-			responseHours: { label: "response time", format: (value) => `${String(value)} h` },
-			equipmentIds: { label: "covered equipment", ref: "equipment" },
+			responseHours: {
+				get label() {
+					return m.contracts_activity_response_time();
+				},
+				format: (value) => m.common_count_hours_short({ count: Number(value) }),
+			},
+			equipmentIds: {
+				get label() {
+					return m.contracts_activity_covered_equipment();
+				},
+				ref: "equipment",
+			},
 		},
 	},
 };

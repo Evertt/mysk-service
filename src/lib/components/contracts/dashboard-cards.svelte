@@ -8,7 +8,7 @@
 
 	import CustomerLink from "#lib/components/customers/customer-link.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
-	import { formatDate, formatDateTime } from "#lib/format.js";
+	import { formatDate, formatDateTime, formatNumber } from "#lib/format.js";
 
 	import ContractLink from "./contract-link.svelte";
 	import { getContractsOverview } from "./coverage.remote.js";
@@ -16,21 +16,22 @@
 	import SlaBadge from "./sla-badge.svelte";
 
 	const data = $derived(await getContractsOverview());
+	const days = $derived(formatNumber(data.days));
 </script>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Response times at risk</Card.Title>
-		<Card.Description>Covered call-outs not yet scheduled, most urgent first.</Card.Description>
+		<Card.Title>{m.contracts_dashboard_responses()}</Card.Title>
+		<Card.Description>{m.contracts_dashboard_responses_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		{#if data.responses.length}
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Order</Table.Head>
-						<Table.Head>Respond by</Table.Head>
-						<Table.Head class="text-right">Status</Table.Head>
+						<Table.Head>{m.contracts_order()}</Table.Head>
+						<Table.Head>{m.contracts_dashboard_respond_by()}</Table.Head>
+						<Table.Head class="text-right">{m.contracts_status()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -53,8 +54,8 @@
 		{:else}
 			<Empty.Root class="p-6">
 				<Empty.Header>
-					<Empty.Title>All on track</Empty.Title>
-					<Empty.Description>No covered call-out is about to miss its deadline.</Empty.Description>
+					<Empty.Title>{m.contracts_dashboard_on_track_title()}</Empty.Title>
+					<Empty.Description>{m.contracts_dashboard_on_track_description()}</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}
@@ -63,10 +64,12 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Contracts ending soon</Card.Title>
-		<Card.Description>Ending in the next 60 days, not yet renewed.</Card.Description>
+		<Card.Title>{m.contracts_dashboard_expiring()}</Card.Title>
+		<Card.Description>{m.contracts_dashboard_expiring_description({ days })}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/contracts")}>All contracts</Button>
+			<Button variant="outline" size="sm" href={resolve("/(app)/contracts")}>
+				{m.contracts_dashboard_all()}
+			</Button>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
@@ -74,10 +77,10 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Contract</Table.Head>
-						<Table.Head>Customer</Table.Head>
-						<Table.Head>Level</Table.Head>
-						<Table.Head class="text-right">Ends on</Table.Head>
+						<Table.Head>{m.contracts_contract()}</Table.Head>
+						<Table.Head>{m.contracts_customer()}</Table.Head>
+						<Table.Head>{m.contracts_level()}</Table.Head>
+						<Table.Head class="text-right">{m.contracts_ends_on()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -96,8 +99,10 @@
 		{:else}
 			<Empty.Root class="p-6">
 				<Empty.Header>
-					<Empty.Title>Nothing ending soon</Empty.Title>
-					<Empty.Description>No active contract ends in the next 60 days.</Empty.Description>
+					<Empty.Title>{m.contracts_dashboard_none_expiring_title()}</Empty.Title>
+					<Empty.Description
+						>{m.contracts_dashboard_none_expiring_description({ days })}</Empty.Description
+					>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}

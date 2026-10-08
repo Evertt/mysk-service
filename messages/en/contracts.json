@@ -1,3 +1,182 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"contracts_title": "Service contracts",
+	"contracts_description": "Maintenance agreements covering customers' equipment with a guaranteed response time.",
+	"contracts_head_title": "{title} · Service contracts",
+	"contracts_new": "New contract",
+	"contracts_new_description": "Agree on maintenance cover for a customer's equipment.",
+	"contracts_breadcrumb_new": "New",
+	"contracts_edit_title": "Edit {number}",
+	"contracts_search": "Search contracts…",
+	"contracts_empty": "No contracts found",
+	"contracts_contract": "Contract",
+	"contracts_customer": "Customer",
+	"contracts_level": "Level",
+	"contracts_status": "Status",
+	"contracts_period": "Period",
+	"contracts_covers": "Covers",
+	"contracts_response": "Response",
+	"contracts_monthly_fee": "Monthly fee",
+	"contracts_yearly_fee": "Yearly fee",
+	"contracts_created": "Created",
+	"contracts_starts_on": "Starts on",
+	"contracts_ends_on": "Ends on",
+	"contracts_response_time": "Response time",
+	"contracts_notes": "Notes",
+	"contracts_order": "Order",
+	"contracts_equipment": "Equipment",
+	"contracts_serial_number": "Serial number",
+	"contracts_category": "Category",
+	"contracts_type": "Type",
+	"contracts_copy_number": "Copy contract number",
+	"contracts_copy_customer_code": "Copy customer code",
+	"contracts_customer_required": "Choose a customer",
+	"contracts_starts_required": "Choose the first day",
+	"contracts_ends_required": "Choose the last day",
+	"contracts_fee_required": "Enter the monthly fee",
+	"contracts_hours_required": "Enter a number of hours",
+	"contracts_hours_whole": "Whole hours only",
+	"contracts_hours_min": "At least 1 hour",
+	"contracts_units_invalid": "Choose units from the list",
+	"contracts_units_required": "Choose at least one unit",
+	"contracts_form_agreement": "Agreement",
+	"contracts_form_agreement_description": "Who it's for, the level of service, and what it costs.",
+	"contracts_form_ends_description": "The last day the contract covers.",
+	"contracts_form_response_hours": "Response time (hours)",
+	"contracts_form_response_description": "How soon an engineer responds to a call-out.",
+	"contracts_form_covered": "Covered equipment",
+	"contracts_form_covered_description": "The customer's units that this contract covers.",
+	"contracts_form_choose_customer": "Choose a customer to see their equipment.",
+	"contracts_form_no_equipment": "This customer has no equipment yet.",
+	"contracts_form_no_customer": "No customer chosen yet.",
+	"contracts_form_save": "Save contract",
+	"contracts_form_create": "Create contract",
+	"contracts_saved": "Contract saved",
+	"contracts_created_toast": "Contract created",
+	"contracts_detail_description": "{level} service contract for {customer}",
+	"contracts_delete_title": "Delete {number}?",
+	"contracts_delete_description": "The contract is removed permanently. The equipment and its orders stay.",
+	"contracts_covered_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} unit of {customer}.",
+				"countPlural=*": "{countText} units of {customer}."
+			}
+		}
+	],
+	"contracts_no_equipment_title": "No equipment covered",
+	"contracts_no_equipment_description": "The units this contract covered have been removed.",
+	"contracts_orders": "Orders under this contract",
+	"contracts_orders_description": "Work on the covered equipment between {from} and {until}.",
+	"contracts_no_orders_title": "No orders",
+	"contracts_no_orders_upcoming": "The contract hasn't started yet.",
+	"contracts_no_orders_description": "No work on the covered equipment during the contract.",
+	"contracts_terms": "Terms",
+	"contracts_within_hours": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Within {countText} hour",
+				"countPlural=*": "Within {countText} hours"
+			}
+		}
+	],
+	"contracts_company": "Company",
+	"contracts_contact": "Contact",
+	"contracts_email": "Email",
+	"contracts_phone": "Phone",
+	"contracts_location": "Location",
+	"contracts_term_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day",
+				"countPlural=*": "{countText} days"
+			}
+		}
+	],
+	"contracts_term_months": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} month",
+				"countPlural=*": "{countText} months"
+			}
+		}
+	],
+	"contracts_term_years": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} year",
+				"countPlural=*": "{countText} years"
+			}
+		}
+	],
+	"contracts_term_months_days": "{months}, {days}",
+	"contracts_covered_by": "Covered by {number} ({level})",
+	"contracts_included_basic": "Response time only",
+	"contracts_included_standard": "Labour",
+	"contracts_included_premium": "Labour and materials",
+	"contracts_included_detail": "{included} included",
+	"contracts_included": "Included",
+	"contracts_respond_by": "respond by {due}",
+	"contracts_respond_by_detail": "Respond by {due} ({number})",
+	"contracts_sla_overdue": "SLA overdue",
+	"contracts_sla_at_risk": "SLA at risk",
+	"contracts_coverage_title": "Service contract",
+	"contracts_unit_coverage_description": "The contracts covering this unit, latest first.",
+	"contracts_unit_not_covered_title": "Not covered",
+	"contracts_unit_not_covered_description": "No service contract covers this unit.",
+	"contracts_dashboard_responses": "Response times at risk",
+	"contracts_dashboard_responses_description": "Covered call-outs not yet scheduled, most urgent first.",
+	"contracts_dashboard_respond_by": "Respond by",
+	"contracts_dashboard_on_track_title": "All on track",
+	"contracts_dashboard_on_track_description": "No covered call-out is about to miss its deadline.",
+	"contracts_dashboard_expiring": "Contracts ending soon",
+	"contracts_dashboard_expiring_description": "Ending in the next {days} days, not yet renewed.",
+	"contracts_dashboard_all": "All contracts",
+	"contracts_dashboard_none_expiring_title": "Nothing ending soon",
+	"contracts_dashboard_none_expiring_description": "No active contract ends in the next {days} days.",
+	"contracts_fee_description": "Service contract {number} ({level})",
+	"contracts_fee_detail": "Monthly fee, {from} – {until}",
+	"contracts_activity_noun": "contract",
+	"contracts_activity_starts": "starts",
+	"contracts_activity_ends": "ends",
+	"contracts_activity_response_time": "response time",
+	"contracts_activity_covered_equipment": "covered equipment",
+	"contracts_not_found": "Contract not found",
+	"contracts_not_found_number": "Contract {number} not found",
+	"contracts_order_not_found": "Order {number} not found",
+	"contracts_equipment_not_found": "Equipment {serial} not found",
+	"contracts_unknown_customer": "Unknown customer",
+	"contracts_ends_before_start": "Must be after the start date",
+	"contracts_units_of_customer": "A contract can only cover equipment of its own customer",
+	"contracts_unit_already_covered": "{serial} is already covered by {number} until {date}"
 }

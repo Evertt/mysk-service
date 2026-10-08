@@ -14,14 +14,16 @@
 </script>
 
 <svelte:head>
-	<title>Edit {material.name} · Materials</title>
+	<title>
+		{m.materials_head_title({ title: m.materials_edit_title({ name: material.name }) })}
+	</title>
 </svelte:head>
 
-<PageHeader title="Edit {material.name}" description={material.sku}>
+<PageHeader title={m.materials_edit_title({ name: material.name })} description={material.sku}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/materials")}>Materials</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/materials")}>{m.materials_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -29,7 +31,7 @@
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>Edit</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>

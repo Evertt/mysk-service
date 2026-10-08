@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, gte, inArray, lt, lte, ne, sql } from "drizz
 import * as v from "valibot";
 
 import { formatDate } from "#lib/format.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
@@ -52,7 +53,7 @@ export const getContract = query(v.string(), async (number) => {
 		where: and(eq(contract.number, number), inTenant(contract)),
 		with: { customer: true, coverage: { with: { equipment: true } } },
 	});
-	if (!found) error(404, `Contract ${number} not found`);
+	if (!found) error(404, m.contracts_not_found_number({ number }));
 
 	const { coverage, ...rest } = found;
 	const units = coverage
@@ -137,10 +138,10 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 		where: and(eq(customer.id, input.customerId), inTenant(customer)),
 	});
 	if (!owner) {
-		problems.push({ field: "customerId", message: "Unknown customer" });
+		problems.push({ field: "customerId", message: m.contracts_unknown_customer() });
 	}
 	if (input.endsOn <= input.startsOn) {
-		problems.push({ field: "endsOn", message: "Must be after the start date" });
+		problems.push({ field: "endsOn", message: m.contracts_ends_before_start() });
 	}
 
 	const units = await db
@@ -153,7 +154,7 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 	) {
 		problems.push({
 			field: "equipmentIds",
-			message: "A contract can only cover equipment of its own customer",
+			message: m.contracts_units_of_customer(),
 		});
 	} else {
 		const covered = await db
@@ -180,7 +181,11 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 		for (const row of covered) {
 			problems.push({
 				field: "equipmentIds",
-				message: `${row.serialNumber} is already covered by ${row.number} until ${formatDate(row.endsOn)}`,
+				message: m.contracts_unit_already_covered({
+					serial: row.serialNumber,
+					number: row.number,
+					date: formatDate(row.endsOn),
+				}),
 			});
 		}
 	}
@@ -202,7 +207,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 					with: { coverage: { columns: { equipmentId: true } } },
 				})
 			: null;
-		if (id && !existing) error(404, "Contract not found");
+		if (id && !existing) error(404, m.contracts_not_found());
 
 		let contractId: number;
 		let number: string;
@@ -284,7 +289,7 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 			columns: { id: true, number: true },
 			where: and(eq(contract.id, id), inTenant(contract)),
 		});
-		if (!found) error(404, "Contract not found");
+		if (!found) error(404, m.contracts_not_found());
 		await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, id));
 		await tx.delete(contract).where(and(eq(contract.id, id), inTenant(contract)));
 		const subject = { type: "contract", id, label: found.number };
