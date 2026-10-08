@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import LockIcon from "@lucide/svelte/icons/lock";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { isEditableOrder } from "#lib/models.js";
 
 	import OrderForm from "../../order-form.svelte";
 	import { getOrder, getOrderFormOptions, updateOrder } from "../../orders.remote.js";
@@ -35,9 +37,27 @@
 	</Breadcrumb.Root>
 </PageHeader>
 
-<OrderForm
-	form={updateOrder}
-	{order}
-	options={await getOrderFormOptions()}
-	cancelHref={orderHref}
-/>
+{#if isEditableOrder(order.status)}
+	<OrderForm
+		form={updateOrder}
+		{order}
+		options={await getOrderFormOptions()}
+		cancelHref={orderHref}
+	/>
+{:else}
+	<Empty.Root class="border">
+		<Empty.Header>
+			<Empty.Media variant="icon">
+				<LockIcon />
+			</Empty.Media>
+			<Empty.Title>{order.number} is invoiced</Empty.Title>
+			<Empty.Description>
+				It's on an invoice that has been sent, with its amounts, so it can't be changed. If that
+				invoice is voided, the order is completed again and can be changed.
+			</Empty.Description>
+		</Empty.Header>
+		<Empty.Content>
+			<Button href={orderHref}>Back to the order</Button>
+		</Empty.Content>
+	</Empty.Root>
+{/if}

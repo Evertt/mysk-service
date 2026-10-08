@@ -63,19 +63,6 @@ export const formatLongDay = (day: Date) => longDay(day);
 /** The week starting at `start`, e.g. `5–11 Oct 2026`. */
 export const formatWeek = (start: Date) => formatDate.range(start, addDays(start, 6));
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/** The time of day as `HH:MM`, as in `<input type="time">`. */
-export const timeOfDay = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-
-/** `day` at `time` (`HH:MM`). */
-export function atTime(day: Date, time: string) {
-	const [hours, minutes] = time.split(":").map(Number);
-	const result = new Date(day);
-	result.setHours(hours, minutes, 0, 0);
-	return result;
-}
-
 /** An engineer's row on the board, or the unassigned orders' row. */
 export type RowId = number | "unassigned";
 

@@ -19,6 +19,7 @@
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate } from "#lib/format.js";
+	import { isEditableOrder } from "#lib/models.js";
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import OrderTags from "../order-tags.svelte";
@@ -57,19 +58,22 @@
 		<TypeLabel type={order.type} />
 	{/snippet}
 	{#snippet actions()}
-		<Button
-			variant="outline"
-			href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
-		>
-			<PencilIcon data-icon="inline-start" />
-			Edit
-		</Button>
-		<DeleteDialog
-			form={deleteOrder}
-			id={String(order.id)}
-			title="Delete {order.number}?"
-			description="The order and its material lines are removed permanently; the materials go back into stock."
-		/>
+		<!-- An invoiced order stays as it was invoiced. -->
+		{#if isEditableOrder(order.status)}
+			<Button
+				variant="outline"
+				href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
+			>
+				<PencilIcon data-icon="inline-start" />
+				Edit
+			</Button>
+			<DeleteDialog
+				form={deleteOrder}
+				id={String(order.id)}
+				title="Delete {order.number}?"
+				description="The order and its material lines are removed permanently; the materials go back into stock."
+			/>
+		{/if}
 	{/snippet}
 </PageHeader>
 

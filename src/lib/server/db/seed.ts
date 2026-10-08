@@ -1,7 +1,7 @@
 /**
  * Fills the database with fake, internally consistent data: orders only reference equipment
- * owned by the same customer, get an engineer whose specialty fits the equipment, and have a
- * status that matches their dates. Equipment status reflects the open repair orders on it.
+ * owned by the same customer, get an engineer whose specialty fits the equipment, have a status
+ * that matches their dates, and come after the customer joined and the unit was installed. Equipment status reflects the open repair orders on it.
  *
  * Also (re)creates the demo users you can sign in with, see "Demo login" in README.md.
  *
@@ -290,9 +290,16 @@ function generateTenant(size: TenantSize) {
 			type === "installation" && faker.datatype.boolean(0.3)
 				? undefined
 				: faker.helpers.arrayElement(owned);
-		// Weighted towards recent weeks so there's a healthy amount of open work.
+		// Weighted towards recent weeks so there's a healthy amount of open work. Not before the
+		// customer joined, nor before the unit was installed (which is at least 60 days ago), so its
+		// service history starts with its installation; the dates that follow come after it.
+		const window = addDays(now, faker.datatype.boolean(0.25) ? -40 : -540);
 		const createdAt = faker.date.between({
-			from: addDays(now, faker.datatype.boolean(0.25) ? -40 : -540),
+			from: Math.max(
+				window.getTime(),
+				owner.createdAt.getTime(),
+				target?.installedAt.getTime() ?? 0,
+			),
 			to: now,
 		});
 		const { status, scheduledFor, completedAt } = lifecycle(createdAt);
@@ -465,6 +472,18 @@ function generateTenant(size: TenantSize) {
 			number: `CTR-${c.createdAt.getFullYear()}-${String(i + 1).padStart(4, "0")}`,
 			...c,
 		}));
+
+	// A running contract that ends soon and isn't renewed, for the module's "Contracts ending soon"
+	// on the dashboard: if no customer's latest term ends in the next 60 days, the one that ends
+	// first after that ends in 30 days instead. Fixed rather than random, like the call-outs below.
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const latestTerms = [...Map.groupBy(contractTerms, (c) => c.customerId).values()]
+		.map((terms) => terms.reduce((a, b) => (b.startsOn > a.startsOn ? b : a)))
+		.filter((c) => c.startsOn <= now && c.endsOn >= today)
+		.sort((a, b) => a.endsOn.getTime() - b.endsOn.getTime() || a.id - b.id);
+	if (latestTerms.length && latestTerms[0].endsOn >= addDays(today, 60)) {
+		latestTerms[0].endsOn = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
+	}
 
 	const contracts = contractTerms.map(({ equipmentIds: _equipmentIds, ...c }) => c);
 	const contractCoverage = contractTerms.flatMap((c) =>

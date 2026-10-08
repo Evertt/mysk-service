@@ -29,7 +29,8 @@ export const auth = betterAuth({
 	baseURL: ORIGIN,
 	secret: BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: "sqlite" }),
-	// Accounts are created by the seed and by accepting an invitation (`/invite/[id]`), not by sign-up.
+	// Accounts are created by the seed, `pnpm run org:create` and accepting an invitation
+	// (`/invite/[id]`), not by sign-up.
 	emailAndPassword: { enabled: true, disableSignUp: true },
 	databaseHooks: {
 		session: {
@@ -41,7 +42,7 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
-		// Tenants. Organizations are created by the seed (and later by an operator), not by users.
+		// Tenants. Organizations are created by the seed and `pnpm run org:create`, not by users.
 		// Owners and admins invite people by email; see `settings/members` and `/invite/[id]`.
 		organization({
 			allowUserToCreateOrganization: false,

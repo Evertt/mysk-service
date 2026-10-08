@@ -25,6 +25,7 @@
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"db:seed": "node --env-file=.env src/lib/server/db/seed.ts",
+		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
 		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit push --force && pnpm run db:seed",
 		"themes:sync": "node scripts/theme-components.ts && vp check --fix"
 	},

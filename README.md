@@ -141,7 +141,20 @@ the `Host` header (form submissions from any other origin are refused). If the p
 `X-Forwarded-Host` instead, also set `HOST_HEADER=x-forwarded-host` and
 `PROTOCOL_HEADER=x-forwarded-proto`; see the adapter's docs for these and the other options.
 
+Then create the first organization and its owner, from the same checkout and with the same
+`DATABASE_URL`:
+
+```sh
+pnpm run org:create -- --org "Acme Service" --slug acme \
+  --owner-email ada@acme.example --owner-name "Ada Lovelace" --modules contracts,invoicing
+```
+
+It prints the owner's email address and a generated password, once: pass them on safely. `--slug`
+is lower-case letters, digits and dashes; `--modules` is optional (`contracts`, `invoicing`; owners
+can switch modules on and off later); `--help` lists the options. It refuses a slug or an email
+address that's taken, so it can also add more organizations later, each with a new owner. After
+that, the owner invites everyone else (see "Members and invitations").
+
 Back up the database file (and its `-wal` file, if any) like any other data. Don't run
 `pnpm db:seed` or `db:reset` against it: the seed deletes every organization and its data, and puts
-demo data and demo users in their place. The first organization and its owner are created by hand
-for now; after that, the owner invites everyone else.
+demo data and demo users in their place.

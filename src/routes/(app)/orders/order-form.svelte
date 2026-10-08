@@ -16,12 +16,12 @@
 	import { labelOptions } from "#lib/i18n/labels.js";
 	import {
 		lineTotal,
+		manualOrderStatuses,
 		orderPriorities,
-		orderStatuses,
 		orderTypes,
 		quantityStep,
 	} from "#lib/models.js";
-	import { toDateInput } from "#lib/schema.js";
+	import { timeOfDay, toDateInput } from "#lib/schema.js";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./orders.remote.js";
 
@@ -170,7 +170,7 @@
 					field={fields.status}
 					label="Status"
 					value={order?.status ?? "quote"}
-					options={labelOptions("orderStatus", orderStatuses)}
+					options={labelOptions("orderStatus", manualOrderStatuses)}
 				/>
 				<SelectField
 					field={fields.engineerId}
@@ -179,12 +179,20 @@
 					value={order?.engineerId ? String(order.engineerId) : ""}
 					options={engineerOptions}
 				/>
-				<TextField
-					field={fields.scheduledFor}
-					label="Scheduled for"
-					type="date"
-					value={toDateInput(order?.scheduledFor)}
-				/>
+				<div class="grid grid-cols-2 gap-4">
+					<TextField
+						field={fields.scheduledFor}
+						label="Scheduled for"
+						type="date"
+						value={toDateInput(order?.scheduledFor)}
+					/>
+					<TextField
+						field={fields.scheduledTime}
+						label="Time"
+						type="time"
+						value={order?.scheduledFor ? timeOfDay(order.scheduledFor) : ""}
+					/>
+				</div>
 				<NumberField
 					field={fields.laborHours}
 					label="Labour (hours)"
@@ -292,6 +300,8 @@
 		</Card.Content>
 	</Card.Root>
 
+	<!-- E.g. when the order was invoiced meanwhile, and can't be changed any more. -->
+	<Field.FieldError errors={fields.issues()} />
 	<FormActions
 		pending={form.pending}
 		submitLabel={order ? "Save order" : "Create order"}

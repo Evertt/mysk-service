@@ -20,6 +20,7 @@ const form = {
 	priority: "high",
 	description: "  Replace the pump seal ",
 	scheduledFor: "2026-10-20",
+	scheduledTime: "13:30",
 	laborHours: 1.5,
 	lines: [{ materialId: "9", quantity: 2 }],
 };
@@ -39,10 +40,14 @@ test("a filled-in form becomes an order", () => {
 });
 
 test("an order for a new installation, not yet assigned or scheduled", () => {
-	const order = { ...form, equipmentId: "", engineerId: "", scheduledFor: "" };
+	const order = { ...form, equipmentId: "", engineerId: "", scheduledFor: "", scheduledTime: "" };
 	expect(parse(order)).toMatchObject({
-		value: { equipmentId: null, engineerId: null, scheduledFor: null },
+		value: { equipmentId: null, engineerId: null, scheduledFor: null, scheduledTime: null },
 	});
+});
+
+test("the time it's scheduled for must be a valid time", () => {
+	expect(parse({ ...form, scheduledTime: "25:00" })).toEqual({ issues: ["Enter a valid time"] });
 });
 
 test("the customer and a description are required", () => {
@@ -55,6 +60,11 @@ test("the type, status and priority are chosen from the lists", () => {
 	const result = parse({ ...form, type: "demolition", status: "lost", priority: "asap" });
 	expect(result).toHaveProperty("issues");
 	expect(result.issues).toHaveLength(3);
+});
+
+test("an order can't be made invoiced by hand", () => {
+	expect(parse({ ...form, status: "invoiced" })).toHaveProperty("issues");
+	expect(parse({ ...form, status: "completed" })).toHaveProperty("value.status", "completed");
 });
 
 describe("laborHours", () => {
