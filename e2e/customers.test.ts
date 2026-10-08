@@ -6,6 +6,7 @@ import {
 	baseURL,
 	cents,
 	countIn,
+	hydrated,
 	nextCode,
 	organizations,
 	priceOf,
@@ -188,6 +189,51 @@ describe("in North", () => {
 		await page.getByRole("menuitemcheckbox", { name: "Customer since" }).click();
 		await page.keyboard.press("Escape");
 		expect(await page.getByRole("columnheader", { name: "Customer since" }).count()).toBe(1);
+	});
+
+	test("compact rows are remembered after a reload", async () => {
+		const { page } = app;
+		const density = () => page.locator("html").getAttribute("data-table-density");
+		const cellPadding = () =>
+			bodyRows()
+				.first()
+				.locator("td")
+				.nth(2)
+				.evaluate((cell) => getComputedStyle(cell).paddingTop);
+		expect(await density()).toBe("comfortable");
+		expect(await cellPadding()).toBe("8px");
+
+		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("menuitemradio", { name: "Compact" }).click();
+		await page.keyboard.press("Escape");
+		expect(await density()).toBe("compact");
+		expect(await cellPadding()).toBe("4px");
+
+		await page.reload();
+		await hydrated(page);
+		expect(await density()).toBe("compact");
+		expect(await cellPadding()).toBe("4px");
+
+		await page.getByRole("button", { name: "View" }).click();
+		await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
+		await page.keyboard.press("Escape");
+		expect(await cellPadding()).toBe("8px");
+	});
+
+	test("the keyboard moves between rows and Enter opens one", async () => {
+		const { page } = app;
+		await bodyRows().first().focus();
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowDown");
+		const third = bodyRows().nth(2);
+		expect(await third.evaluate((row) => row === document.activeElement)).toBe(true);
+		const href = await third.locator("td:nth-child(2) a").getAttribute("href");
+		expect(href).toMatch(/^\/customers\/[^/]+$/);
+
+		await page.keyboard.press("Enter");
+		await page.waitForURL((url) => url.pathname === href);
+		await page.goBack();
+		await hydrated(page);
 	});
 
 	test("the detail page shows the customer's equipment and orders", async () => {

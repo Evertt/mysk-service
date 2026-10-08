@@ -20,14 +20,18 @@
 	import FacetedFilter from "./faceted-filter.svelte";
 	import RowActions from "./row-actions.svelte";
 	import { createAppColumnHelper, createAppTable } from "./table.svelte.js";
+	import TwoLineCell from "./two-line-cell.svelte";
 
 	let {
 		items,
 		columnPinning,
+		links = false,
 	}: {
 		items: Item[];
 		/** Instead of the default pinning (the selection and name columns, and the actions). */
 		columnPinning?: ColumnPinningState;
+		/** Links each item's name to its page, `/items/<id>`, as the app's tables do. */
+		links?: boolean;
 	} = $props();
 
 	const statusOptions = [
@@ -47,6 +51,13 @@
 		}),
 		column.accessor("name", {
 			header: ({ header }) => renderComponent(header.ColumnHeader),
+			cell: ({ row }) =>
+				links
+					? renderComponent(TwoLineCell, {
+							primary: row.original.name,
+							href: `/items/${row.original.id}`,
+						})
+					: row.original.name,
 			enableHiding: false,
 			meta: { label: "Name" },
 		}),

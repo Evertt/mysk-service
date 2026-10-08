@@ -3,6 +3,7 @@ import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
+import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { isFieldEngineer } from "#lib/roles.ts";
@@ -24,18 +25,21 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 	});
 
 /**
- * Renders the chosen theme and mode into the page, so they're right on first paint. The server
- * can't know the system preference: for `system`, a script in `app.html` resolves it before paint.
+ * Renders the chosen theme and mode, and the data tables' density, into the page, so they're right
+ * on first paint. The server can't know the system preference: for `system`, a script in
+ * `app.html` resolves it before paint.
  */
 const handleTheme: Handle = ({ event, resolve }) => {
 	const theme = parseTheme(event.cookies.get(THEME_COOKIE));
 	const mode = parseMode(event.cookies.get(MODE_COOKIE));
+	const density = parseDensity(event.cookies.get(DENSITY_COOKIE));
 	return resolve(event, {
 		transformPageChunk: ({ html }) =>
 			html
 				.replace("%theme%", theme)
 				.replace("%mode%", mode)
-				.replace("%mode-class%", mode === "dark" ? "dark" : ""),
+				.replace("%mode-class%", mode === "dark" ? "dark" : "")
+				.replace("%table-density%", density),
 	});
 };
 

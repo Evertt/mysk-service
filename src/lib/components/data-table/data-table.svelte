@@ -7,6 +7,9 @@
 	`fillViewport` (list pages), the page fits the viewport on larger screens and the rows scroll
 	inside the table, so the toolbar and pagination stay in view; on small or low screens the page
 	scrolls as usual.
+
+	The rows can be navigated with the keyboard (see `row-navigation.svelte.ts`), and are spaced as
+	the chosen density says (see `density.svelte.ts`).
 -->
 <script lang="ts">
 	import type { Attachment } from "svelte/attachments";
@@ -15,6 +18,7 @@
 	import { useTheme } from "#lib/themes/context.js";
 	import { cn } from "#lib/utils.js";
 
+	import { createRowNavigation } from "./row-navigation.svelte.js";
 	import { useTableContext } from "./table.svelte.js";
 
 	let {
@@ -33,6 +37,8 @@
 
 	const table = useTableContext();
 	const theme = useTheme();
+	const navigation = createRowNavigation(table);
+	const hintId = $props.id();
 
 	/** Whether there's more to scroll to sideways, under the pinned columns. */
 	let overflow = $state({ start: false, end: false });
@@ -89,6 +95,8 @@
 		offset: number;
 		/** The innermost pinned column on its side, which casts the shadow. */
 		edge: boolean;
+		/** The outermost pinned column on its side, at the edge of the scroll area. */
+		outer: boolean;
 	}
 
 	const pins = $derived.by(() => {
@@ -96,7 +104,12 @@
 		const place = (side: Pin["side"], columns: { id: string }[]) => {
 			let offset = 0;
 			columns.forEach((column, index) => {
-				result.set(column.id, { side, offset, edge: index === columns.length - 1 });
+				result.set(column.id, {
+					side,
+					offset,
+					edge: index === columns.length - 1,
+					outer: index === 0,
+				});
 				offset += widths.get(column.id) ?? 0;
 			});
 		};
@@ -126,6 +139,27 @@
 		end: "after:end-full after:border-e after:bg-linear-to-l sm:group-data-[overflow-end]/data-table:after:opacity-100",
 	};
 
+	// Compact rows (see `density.svelte.ts`): less padding in the cells and a lower header. The scroll
+	// area keeps a header's height clear at the top for rows scrolled into view (see
+	// `row-navigation.svelte.ts`).
+	const compact = {
+		head: "in-data-[table-density=compact]:h-8",
+		cell: "in-data-[table-density=compact]:py-1",
+		area: "*:data-[slot=table-container]:scroll-pt-10 in-data-[table-density=compact]:*:data-[slot=table-container]:scroll-pt-8",
+	};
+
+	// A focused row (see `row-navigation.svelte.ts`) has a ring drawn over its cells, pinned ones
+	// included, and under the sticky header (the row itself would paint its outline under them).
+	// While the row is scrolled sideways, its ends are out of view: the outermost pinned cells, at
+	// the scroll area's edges, draw the ring's sides there.
+	const focusRing =
+		"group/row relative outline-none after:pointer-events-none after:absolute after:inset-0 after:z-15 after:hidden after:ring-2 after:ring-ring after:ring-inset focus-visible:after:block";
+	const focusEdge = {
+		start:
+			"group-focus-visible/row:before:shadow-[inset_2px_0_var(--color-ring)] rtl:group-focus-visible/row:before:shadow-[inset_-2px_0_var(--color-ring)]",
+		end: "group-focus-visible/row:before:shadow-[inset_-2px_0_var(--color-ring)] rtl:group-focus-visible/row:before:shadow-[inset_2px_0_var(--color-ring)]",
+	};
+
 	/** Attributes and classes for a pinned column's cells (none for other columns). */
 	function pinned(id: string): { "data-pinned"?: Pin["side"]; style?: string; class?: string } {
 		const pin = pins.get(id);
@@ -135,6 +169,7 @@
 			style: `--pin-offset: ${pin.offset}px`,
 			class: cn(
 				side[pin.side],
+				pin.outer && focusEdge[pin.side],
 				pin.edge && [
 					"after:pointer-events-none after:absolute after:inset-y-0 after:w-3 after:border-border after:from-black/8 after:to-transparent after:opacity-0 after:transition-opacity dark:after:from-black/40",
 					shadow[pin.side],
@@ -152,12 +187,14 @@
 	class={cn(
 		"group/data-table flex min-h-0 flex-col overflow-hidden rounded-lg border [--data-table-surface:var(--background)]",
 		"*:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:overflow-auto",
+		compact.area,
 		fillViewport && "desktop:min-h-48",
 		theme.classes("data-table"),
 	)}
 	{@attach trackOverflow}
 >
-	<Table.Root>
+	<span id={hintId} class="sr-only">{m.common_table_keyboard_hint()}</span>
+	<Table.Root aria-describedby={hintId}>
 		<Table.Header>
 			{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 				<!-- The header cells inherit the header's background (see `opaque`) through the row. -->
@@ -171,6 +208,7 @@
 									style={pin.style}
 									class={cn(
 										"sticky top-0 z-20",
+										compact.head,
 										opaque,
 										pin.class,
 										pin["data-pinned"] && "z-30",
@@ -188,9 +226,14 @@
 				</Table.Row>
 			{/each}
 		</Table.Header>
-		<Table.Body>
+		<Table.Body {...navigation.body}>
 			{#each table.getRowModel().rows as row (row.id)}
-				<Table.Row data-state={row.getIsSelected() ? "selected" : undefined}>
+				<Table.Row
+					data-state={row.getIsSelected() ? "selected" : undefined}
+					data-row-id={row.id}
+					tabindex={navigation.tabIndex(row.id)}
+					class={focusRing}
+				>
 					{#each row.getVisibleCells() as cell (cell.id)}
 						{@const pin = pinned(cell.column.id)}
 						<table.AppCell {cell}>
@@ -198,7 +241,11 @@
 								<Table.Cell
 									data-pinned={pin["data-pinned"]}
 									style={pin.style}
-									class={cn(pin["data-pinned"] && ["relative z-10", opaque], pin.class)}
+									class={cn(
+										compact.cell,
+										pin["data-pinned"] && ["relative z-10", opaque],
+										pin.class,
+									)}
 								>
 									<c.FlexRender cell={c} />
 								</Table.Cell>
