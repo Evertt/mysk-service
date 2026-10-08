@@ -64,7 +64,7 @@ parallel agents in their own worktrees.
    string path), then cleanup batch 2 (the data-table split).
 4. **Modules** ✅ done: plugins steps 2–6 (server hooks and `afterCommit()`, the generator with
    zero modules, move contracts, move invoicing, remove the transition code).
-5. **Optional**: domain folders in `src/lib`, splitting the three largest e2e files, `knip`, one
+5. **Optional**: domain folders in `src/lib` ✅ done, splitting the three largest e2e files, `knip`, one
    rule for import extensions.
 
 ## Worth weighing before phase 4

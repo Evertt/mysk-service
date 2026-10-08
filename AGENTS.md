@@ -15,14 +15,14 @@
 Put a module next to the code that uses it, in the nearest folder that contains all of its users.
 
 - **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
-- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.js`).
-- **Used across unrelated parts of the app**, or generic and route-independent (shared UI such as `#lib/components/data-table`, themes, formatting, domain enums): in `src/lib`, imported via `#lib/...`.
-- **Server-only code** (database, secrets, auth): always in `src/lib/server/`, whoever uses it, so SvelteKit keeps it out of client bundles. One exception: plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles too.
+- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.js`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
+- **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.js`.
+- **Generic, domain-free code** (UI kit, data table, forms, formatting, themes, `models.ts`, `schema.ts`): `src/lib/components/` and `src/lib/*.ts`. Infrastructure on the server (database, auth, session, activity log, bulk and table-query helpers, mail, the modules' extension points): `src/lib/server/`.
 - **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
 
-Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser. Never put secrets or database code anywhere else.
+Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 
-When a file gains a user outside its folder, move it up to the nearest common folder (or `src/lib`); when it loses users, move it down.
+When a module gains a user outside its folder, move it up to the nearest common folder; when it loses users, move it down.
 
 ## Tenants and modules
 
