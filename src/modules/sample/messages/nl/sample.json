@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"sample_module_name": "Voorbeeld",
+	"sample_module_description": "Een wegwerpmodule die de modulegenerator bewijst.",
+	"sample_title": "Voorbeeldnotities",
+	"sample_layout_marker": "Voorbeeldlayout, module {id}",
+	"sample_empty": "Nog geen notities",
+	"sample_note_for": "{text} (voor {customer})",
+	"sample_detail_title": "Voorbeeld {id}",
+	"sample_download": "Downloaden",
+	"sample_error": "De voorbeeldmodule kan dit niet tonen.",
+	"sample_dashboard_title": "Voorbeeldnotities",
+	"sample_dashboard_count": "{count} notities in deze organisatie"
+}

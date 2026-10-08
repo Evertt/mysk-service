@@ -21,7 +21,8 @@
 			"./messages/{locale}/invoices.json",
 			"./messages/{locale}/settings.json",
 			"./messages/{locale}/portal.json",
-			"./messages/{locale}/activity.json"
+			"./messages/{locale}/activity.json",
+			"./src/modules/sample/messages/{locale}/sample.json"
 		]
 	},
 	"baseLocale": "en",

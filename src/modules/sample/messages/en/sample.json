@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"sample_module_name": "Sample",
+	"sample_module_description": "A throwaway module that proves the module generator.",
+	"sample_title": "Sample notes",
+	"sample_layout_marker": "Sample layout, module {id}",
+	"sample_empty": "No notes yet",
+	"sample_note_for": "{text} (for {customer})",
+	"sample_detail_title": "Sample {id}",
+	"sample_download": "Download",
+	"sample_error": "The sample module could not show this.",
+	"sample_dashboard_title": "Sample notes",
+	"sample_dashboard_count": "{count} notes in this organization"
+}
