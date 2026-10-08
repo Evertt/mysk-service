@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { levelOptions, statusOptions } from "#lib/components/contracts/display.js";
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { recordFacets } from "#lib/components/data-table/record-facets.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 
+	import { deleteContracts } from "./bulk-actions.js";
 	import { columns, type ContractRow } from "./columns.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -45,6 +47,7 @@
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
+		<BulkActionBar actions={[deleteContracts]} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

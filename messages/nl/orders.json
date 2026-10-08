@@ -111,5 +111,13 @@
 	"orders_stock_note_deleted": "Opdracht verwijderd",
 	"orders_unknown_material": "Onbekend materiaal",
 	"orders_whole_pieces": "Alleen hele stuks",
-	"orders_stock_shortage": "Nog maar {quantity} {unit} {material} op voorraad"
+	"orders_stock_shortage": "Nog maar {quantity} {unit} {material} op voorraad",
+	"orders_bulk_assign": "Monteur toewijzen",
+	"orders_bulk_assign_title": "{orders} toewijzen",
+	"orders_bulk_assign_description": "Gefactureerde opdrachten houden hun monteur. Je kunt alleen actieve monteurs kiezen.",
+	"orders_bulk_status": "Status wijzigen",
+	"orders_bulk_status_title": "Status van {orders} wijzigen",
+	"orders_bulk_status_description": "Hun materialen gaan uit of terug naar de voorraad, zoals de nieuwe status zegt. Gefactureerde opdrachten blijven zoals ze zijn.",
+	"orders_bulk_delete_title": "{orders} verwijderen?",
+	"orders_bulk_delete_description": "De opdrachten en hun materiaalregels worden definitief verwijderd; de materialen gaan terug naar de voorraad. Gefactureerde opdrachten kun je niet verwijderen."
 }

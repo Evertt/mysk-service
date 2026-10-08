@@ -17,6 +17,13 @@ export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 const column = createAppColumnHelper<EngineerRow>();
 
 export const columns = column.columns([
+	column.display({
+		id: "select",
+		header: ({ header }) => renderComponent(header.SelectAllHeader),
+		cell: ({ cell }) => renderComponent(cell.SelectCell),
+		enableSorting: false,
+		enableHiding: false,
+	}),
 	column.accessor("name", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>

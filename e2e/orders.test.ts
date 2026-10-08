@@ -80,6 +80,53 @@ const materialById = async (id: number) =>
 		)
 	)[0];
 
+/** Rebuilds a value from devalue's flat JSON, as remote commands send it (plain data only). */
+function unflatten(flat: unknown[]): unknown {
+	const hydrate = (index: number): unknown => {
+		if (index === -1) return undefined;
+		const entry = flat[index];
+		if (Array.isArray(entry)) return entry.map((i: number) => hydrate(i));
+		if (entry && typeof entry === "object") {
+			return Object.fromEntries(Object.entries(entry).map(([k, i]) => [k, hydrate(i as number)]));
+		}
+		return entry;
+	};
+	return hydrate(0);
+}
+
+/** Devalue's flat JSON of plain data, which a remote command reads. */
+function flatten(value: unknown): string {
+	const flat: unknown[] = [];
+	const add = (item: unknown): number => {
+		const index = flat.push(null) - 1;
+		if (Array.isArray(item)) flat[index] = item.map(add);
+		else if (item && typeof item === "object") {
+			flat[index] = Object.fromEntries(Object.entries(item).map(([k, v]) => [k, add(v)]));
+		} else flat[index] = item;
+		return index;
+	};
+	add(value);
+	return JSON.stringify(flat);
+}
+
+/**
+ * Changes the argument of the next call of the remote command `name` on its way to the server,
+ * like someone tampering with the request.
+ */
+async function tamperWithCommand<T>(name: string, change: (arg: T) => unknown) {
+	await app.page.route(
+		(url) => isRemote(url.href, name),
+		async (route) => {
+			const body = JSON.parse(route.request().postData()!) as { payload: string };
+			const flat = JSON.parse(Buffer.from(body.payload, "base64url").toString()) as unknown[];
+			const payload = flatten(change(unflatten(flat) as T));
+			body.payload = Buffer.from(payload).toString("base64url");
+			await route.continue({ postData: JSON.stringify(body) });
+		},
+		{ times: 1 },
+	);
+}
+
 /** Numbers that exist only in North (it has 750 orders, South 320), and in both. */
 const northOnly = "ORD-2026-00750";
 const shared = "ORD-2026-00320";
@@ -825,6 +872,212 @@ describe("in North", () => {
 	});
 });
 
+describe("bulk actions on selected orders, in North", () => {
+	/** Ticks the row of an order on the shown page. */
+	const select = (number: string) =>
+		app.page
+			.locator('[data-slot="data-table"] tbody tr', { hasText: number })
+			.getByRole("checkbox", { name: "Select row" })
+			.click();
+	const bar = () => app.page.getByRole("region", { name: "Actions on the selected rows" });
+
+	/** A customer of North's (the last such) with at least `count` orders in `statuses`. */
+	const customerWith = async (statuses: string[], count: number) => {
+		const [{ code }] = await rows<{ code: string }>(
+			`select c.code from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and o.status in (${statuses.map(() => "?").join(", ")})
+			 group by c.id having count(*) >= ? order by c.id desc limit 1`,
+			[north.id, ...statuses, count],
+		);
+		return code;
+	};
+	const ordersOf = (code: string, status: string) =>
+		rows<{ id: number; number: string; engineer_id: number | null }>(
+			`select o.id, o.number, o.engineer_id from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and c.code = ? and o.status = ? order by o.number`,
+			[north.id, code, status],
+		);
+	/** The activity logged for an order, newest first. */
+	const activityOf = (id: number) =>
+		rows<{ action: string; changes: string | null; user_name: string }>(
+			`select action, changes, user_name from activity where organization_id = ?
+			 and subject_type = 'order' and subject_id = ? order by id desc`,
+			[north.id, String(id)],
+		);
+
+	test("assigning the selected orders an engineer updates them and logs it", async () => {
+		const { page } = app;
+		const code = await customerWith(["quote", "scheduled"], 2);
+		const picked = [...(await ordersOf(code, "quote")), ...(await ordersOf(code, "scheduled"))]
+			.toSorted((a, b) => a.number.localeCompare(b.number))
+			.slice(0, 2);
+		const [engineer] = await rows<{ id: number; name: string }>(
+			`select id, name from engineer where organization_id = ? and active = 1
+			 and id not in (${picked.map((o) => o.engineer_id ?? 0).join(", ")}) order by id desc limit 1`,
+			[north.id],
+		);
+
+		await app.go(`/orders?customer=${code}&status=quote,scheduled&sort=number&size=50`);
+		await expect.poll(() => bar().count()).toBe(0);
+		for (const order of picked) await select(order.number);
+		await bar().getByText("2 selected").waitFor();
+
+		await bar().getByRole("button", { name: "Assign engineer" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText("Assign 2 orders").waitFor();
+		// Only active engineers, and nobody.
+		const options = await dialog.getByLabel("Engineer").locator("option").allInnerTexts();
+		expect(options).toContain("Unassigned");
+		const inactive = await rows<{ name: string }>(
+			`select name from engineer where organization_id = ? and active = 0`,
+			[north.id],
+		);
+		for (const { name } of inactive) expect(options).not.toContain(name);
+		await dialog.getByLabel("Engineer").selectOption({ label: engineer.name });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+		await app.toast("2 updated");
+
+		for (const order of picked) {
+			expect(
+				await value(`select engineer_id from "order" where id = ?`, [order.id]),
+				order.number,
+			).toBe(engineer.id);
+			const [latest] = await activityOf(order.id);
+			expect(latest.action).toBe("updated");
+			expect(JSON.parse(latest.changes!)).toEqual({ engineerId: [order.engineer_id, engineer.id] });
+			// The list shows it, and the selection is gone.
+			await expect
+				.poll(() => page.locator("tbody tr", { hasText: order.number }).innerText())
+				.toContain(engineer.name);
+		}
+		expect(await bar().count()).toBe(0);
+	});
+
+	test("changing the status skips an invoiced order, and says why", async () => {
+		const { page } = app;
+		const [{ code }] = await rows<{ code: string }>(
+			`select c.code from customer c where c.organization_id = ?
+			 and exists (select 1 from "order" o where o.customer_id = c.id and o.status = 'invoiced')
+			 and exists (select 1 from "order" o where o.customer_id = c.id and o.status = 'quote')
+			 order by c.id desc limit 1`,
+			[north.id],
+		);
+		const [invoiced] = await ordersOf(code, "invoiced");
+		const [quote] = await ordersOf(code, "quote");
+		const before = await snapshot(invoiced.id);
+
+		await app.go(`/orders?customer=${code}&status=quote,invoiced&sort=number&size=50`);
+		await select(invoiced.number);
+		await select(quote.number);
+		await bar().getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText("Applies to 1 of the 2 selected; the others are skipped.").waitFor();
+		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+
+		await app.toast("1 updated, 1 skipped");
+		await page
+			.locator("[data-sonner-toast]", { hasText: `${invoiced.number} is invoiced` })
+			.waitFor();
+		expect(await value(`select status from "order" where id = ?`, [quote.id])).toBe("cancelled");
+		expect(await snapshot(invoiced.id)).toEqual(before);
+		expect((await activityOf(quote.id))[0].action).toBe("updated");
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
+	test("deleting the selected orders asks first, then deletes them and logs it", async () => {
+		const { page } = app;
+		const code = await customerWith(["quote"], 2);
+		const picked = (await ordersOf(code, "quote")).slice(0, 2);
+
+		await app.go(`/orders?customer=${code}&status=quote&sort=number&size=50`);
+		for (const order of picked) await select(order.number);
+		// Assign and status as buttons, the rest (with the modules' actions) in a menu.
+		await bar().getByRole("button", { name: "More actions" }).click();
+		await page.getByRole("menuitem", { name: "Delete" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText("Delete 2 orders?").waitFor();
+		// Nothing's deleted until it's confirmed.
+		expect(await orderId(picked[0].number, north.id)).toBe(picked[0].id);
+		await dialog.getByRole("button", { name: "Delete" }).click();
+
+		await app.toast("2 deleted");
+		for (const order of picked) {
+			expect(await orderId(order.number, north.id), order.number).toBeUndefined();
+			expect((await activityOf(order.id))[0].action).toBe("deleted");
+			await expect.poll(() => page.locator("tbody tr", { hasText: order.number }).count()).toBe(0);
+		}
+		expect(await unbalancedStock(north.id)).toEqual([]);
+	});
+
+	test("creating an invoice from two completed orders of one customer opens the draft", async () => {
+		const { page } = app;
+		const billable = `o.status = 'completed' and not exists (select 1 from invoice_line l
+			join invoice i on i.id = l.invoice_id where l.order_id = o.id and i.status != 'void')`;
+		const [{ code, customerId }] = await rows<{ code: string; customerId: number }>(
+			`select c.code, c.id as customerId from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and ${billable}
+			 group by c.id having count(*) >= 2 order by c.id desc limit 1`,
+			[north.id],
+		);
+		const picked = await rows<{ id: number; number: string }>(
+			`select o.id, o.number from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and c.code = ? and ${billable} order by o.number limit 2`,
+			[north.id, code],
+		);
+		const invoicesBefore = await countIn("invoice", north.id);
+
+		await app.go(`/orders?customer=${code}&status=completed&sort=number&size=50`);
+		for (const order of picked) await select(order.number);
+		await bar().getByRole("button", { name: "More actions" }).click();
+		await page.getByRole("menuitem", { name: "Create invoice" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText("Create an invoice for 2 orders?").waitFor();
+		await dialog.getByRole("button", { name: "Create invoice" }).click();
+
+		await page.waitForURL((url) => /^\/invoices\/[^/]+$/.test(url.pathname));
+		await app.toast("2 on a new draft");
+		const number = decodeURIComponent(app.path().split("/").at(-1)!);
+		expect(await countIn("invoice", north.id)).toBe(invoicesBefore + 1);
+		const [invoice] = await rows<{ id: number; status: string; customer_id: number }>(
+			`select id, status, customer_id from invoice where number = ? and organization_id = ?`,
+			[number, north.id],
+		);
+		expect(invoice).toMatchObject({ status: "draft", customer_id: customerId });
+		const billed = await rows<{ order_id: number }>(
+			`select distinct order_id from invoice_line where invoice_id = ? order by order_id`,
+			[invoice.id],
+		);
+		expect(billed.map((line) => line.order_id)).toEqual(
+			picked.map((o) => o.id).toSorted((a, b) => a - b),
+		);
+		expect(
+			await value(
+				`select action from activity where organization_id = ? and subject_type = 'invoice'
+				 and subject_id = ? order by id desc limit 1`,
+				[north.id, String(invoice.id)],
+			),
+		).toBe("created");
+	});
+
+	test("orders of several customers can't be invoiced together", async () => {
+		const { page } = app;
+		await app.go(`/orders?status=completed&sort=number&size=50`);
+		const rowsShown = page.locator('[data-slot="data-table"] tbody tr');
+		const customers = await rowsShown.locator("td:nth-child(3)").allInnerTexts();
+		const other = customers.findIndex((name) => name !== customers[0]);
+		expect(other).toBeGreaterThan(0);
+		await rowsShown.nth(0).getByRole("checkbox", { name: "Select row" }).click();
+		await rowsShown.nth(other).getByRole("checkbox", { name: "Select row" }).click();
+		await bar().getByRole("button", { name: "More actions" }).click();
+		const item = page.getByRole("menuitem", { name: /Create invoice/ });
+		expect(await item.getAttribute("aria-disabled")).toBe("true");
+		expect(await item.innerText()).toContain("Select orders of one customer");
+		await page.keyboard.press("Escape");
+		await bar().getByRole("button", { name: "Clear selection" }).click();
+	});
+});
+
 describe("in South", () => {
 	test("switching organization shows South's orders", async () => {
 		await app.switchOrganization(south.name);
@@ -1083,6 +1336,41 @@ describe("in South", () => {
 		await expect.poll(() => app.rowCount()).toBe(1);
 		const row = page.locator('[data-slot="data-table"] tbody tr').first();
 		expect(cents(await row.locator("td:nth-last-child(2)").innerText())).toBe(total);
+	});
+
+	test("a bulk action with the ids of North's orders leaves them alone", async () => {
+		const { page } = app;
+		const victims = await rows<{ id: number }>(
+			`select id from "order" where organization_id = ? and status = 'quote' order by id limit 2`,
+			[north.id],
+		);
+		const before = await Promise.all(victims.map((victim) => snapshot(victim.id)));
+		await app.go("/orders?status=quote&sort=number");
+		const own = await orderId((await shownNumbers())[0], south.id);
+		const ownBefore = await snapshot(own);
+
+		await page
+			.locator('[data-slot="data-table"] tbody tr')
+			.first()
+			.getByRole("checkbox", { name: "Select row" })
+			.click();
+		await page.getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
+		// The command goes out with North's ids instead of the selected order's.
+		await tamperWithCommand<{ status: string }>("bulkSetOrderStatus", (arg) => ({
+			...arg,
+			target: { ids: victims.map((victim) => victim.id) },
+		}));
+		await app.expectingErrors(async () => {
+			await dialog.getByRole("button", { name: "Apply" }).click();
+			await app.toast("2 not found");
+		});
+
+		for (const [i, victim] of victims.entries()) {
+			expect(await snapshot(victim.id)).toEqual(before[i]);
+		}
+		expect(await snapshot(own)).toEqual(ownBefore);
 	});
 });
 

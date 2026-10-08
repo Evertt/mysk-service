@@ -1,8 +1,10 @@
 <script lang="ts">
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { regionOptions, specialtyOptions } from "#lib/components/engineers/display.js";
 
+	import { activate, deactivate } from "./bulk-actions.js";
 	import { columns, type EngineerRow } from "./columns.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -46,6 +48,7 @@
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.engineers_empty()} fillViewport />
+		<BulkActionBar actions={[activate, deactivate]} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

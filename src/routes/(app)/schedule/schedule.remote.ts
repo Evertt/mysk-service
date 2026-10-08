@@ -9,6 +9,7 @@ import { atTime, date, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
+import { assigneeProblem } from "#lib/server/orders.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
@@ -105,17 +106,8 @@ function planInTransaction(input: Plan) {
 			return { message: m.schedule_only_open() };
 		}
 		if (input.engineerId !== null) {
-			const assignee = await tx.query.engineer.findFirst({
-				columns: { name: true, active: true },
-				where: and(eq(engineer.id, input.engineerId), inTenant(engineer)),
-			});
-			if (!assignee) return { field: "engineerId", message: m.schedule_unknown_engineer() };
-			if (!assignee.active) {
-				return {
-					field: "engineerId",
-					message: m.schedule_engineer_inactive({ name: assignee.name }),
-				};
-			}
+			const problem = await assigneeProblem(input.engineerId, tx);
+			if (problem) return { field: "engineerId", message: problem };
 		}
 		const planned = {
 			engineerId: input.engineerId,

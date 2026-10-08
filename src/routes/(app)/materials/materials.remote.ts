@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { command, form, query, requested } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import {
 	and,
@@ -20,6 +20,7 @@ import { fitsUnit, isOpenOrder, type MaterialUnit, stockLevels } from "#lib/mode
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import {
@@ -329,8 +330,12 @@ export const updateMaterial = form(
 	},
 );
 
-export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+/**
+ * Deletes one of the tenant's materials with its stock history; refuses one that orders use (or
+ * other records refer to). A 404 if there's no such material. The material's page and the list's
+ * bulk delete share it.
+ */
+async function removeMaterial(id: number) {
 	const existing = await findMaterial(id);
 	if (!existing) error(404, m.materials_not_found());
 	const orders = await ordersUsing(id);
@@ -346,7 +351,43 @@ export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 			}),
 		m.materials_delete_referenced(),
 	);
+}
+
+export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
+	requireMember();
+	await removeMaterial(id);
 	redirect(303, "/materials");
+});
+
+/** The ids of the tenant's materials matching the list's search and filters (`materialsUrl`). */
+async function matchingMaterialIds(params: string, limit: number) {
+	const rows = await db
+		.select({ id: material.id })
+		.from(material)
+		.where(planTable(materialsTable(), params).where())
+		.orderBy(material.id)
+		.limit(limit);
+	return rows.map((row) => row.id);
+}
+
+/** Deletes the selected materials, with the same refusals as deleting one. */
+export const bulkDeleteMaterials = command(bulkTarget, async (target) => {
+	requireMember();
+	const ids = await targetIds(target, matchingMaterialIds);
+	const found = await db
+		.select({ id: material.id, sku: material.sku })
+		.from(material)
+		.where(and(inArray(material.id, ids), inTenant(material)))
+		.orderBy(material.sku);
+	const result = await forEachRecord(
+		found,
+		ids.length,
+		(each) => each.sku,
+		(each) => removeMaterial(each.id),
+	);
+	await requested(getMaterials, 4).refreshAll();
+	await requested(getMaterialFacets, 4).refreshAll();
+	return result;
 });
 
 /** Adds received stock (e.g. a delivery) to a material. */

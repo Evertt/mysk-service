@@ -98,5 +98,9 @@
 	"engineers_account_save": "Account opslaan",
 	"engineers_account_saved": "Account opgeslagen",
 	"engineers_account_not_member": "Kies een lid van deze organisatie",
-	"engineers_account_taken": "Dit account is al gekoppeld aan {name}"
+	"engineers_account_taken": "Dit account is al gekoppeld aan {name}",
+	"engineers_bulk_activate": "Activeren",
+	"engineers_bulk_deactivate": "Deactiveren",
+	"engineers_bulk_already_active": "{name} is al actief",
+	"engineers_bulk_already_inactive": "{name} is al inactief"
 }

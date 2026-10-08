@@ -130,5 +130,8 @@
 		}
 	],
 	"materials_delete_referenced": "Other records still refer to this material. Remove those first.",
-	"materials_count_unchanged": "That's the stock already"
+	"materials_count_unchanged": "That's the stock already",
+	"materials_bulk_delete_title": "Delete the selected materials?",
+	"materials_bulk_delete_description": "The materials are removed from the catalogue permanently, with their stock history. Materials used on orders can't be deleted.",
+	"materials_bulk_in_use": "{name} is used on orders"
 }

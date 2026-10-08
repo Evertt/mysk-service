@@ -111,5 +111,13 @@
 	"orders_stock_note_deleted": "Order deleted",
 	"orders_unknown_material": "Unknown material",
 	"orders_whole_pieces": "Whole pieces only",
-	"orders_stock_shortage": "Only {quantity} {unit} of {material} in stock"
+	"orders_stock_shortage": "Only {quantity} {unit} of {material} in stock",
+	"orders_bulk_assign": "Assign engineer",
+	"orders_bulk_assign_title": "Assign {orders}",
+	"orders_bulk_assign_description": "Invoiced orders keep their engineer. Only active engineers can be chosen.",
+	"orders_bulk_status": "Change status",
+	"orders_bulk_status_title": "Change the status of {orders}",
+	"orders_bulk_status_description": "Their materials are taken from or returned to stock, as the new status says. Invoiced orders stay as they are.",
+	"orders_bulk_delete_title": "Delete {orders}?",
+	"orders_bulk_delete_description": "The orders and their material lines are removed permanently; the materials go back into stock. Invoiced orders can't be deleted."
 }

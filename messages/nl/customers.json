@@ -132,5 +132,8 @@
 	"customers_recent_scheduled": "Gepland {date}",
 	"customers_recent_created": "Aangemaakt {date}",
 	"customers_recent_empty_title": "Geen opdrachten",
-	"customers_recent_empty_description": "Er is nog niets geoffreerd of gedaan voor deze klant."
+	"customers_recent_empty_description": "Er is nog niets geoffreerd of gedaan voor deze klant.",
+	"customers_bulk_delete_title": "Geselecteerde klanten verwijderen?",
+	"customers_bulk_delete_description": "De klanten worden definitief verwijderd. Klanten met apparatuur of opdrachten kun je niet verwijderen.",
+	"customers_bulk_has_equipment": "{name} heeft apparatuur"
 }

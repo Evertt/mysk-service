@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -7,6 +7,7 @@ import { openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
@@ -170,6 +171,40 @@ export const updateEngineer = form(
 		void getEngineers().refresh();
 		void getEngineer(String(id)).refresh();
 		redirect(303, `/engineers/${id}`);
+	},
+);
+
+/**
+ * Marks the selected engineers active or inactive, as their form's "Active" box does: only active
+ * engineers can be assigned new orders; what's assigned to them stays.
+ */
+export const bulkSetEngineersActive = command(
+	v.object({ target: bulkTarget, active: v.boolean() }),
+	async ({ target, active }) => {
+		requireMember();
+		const ids = await targetIds(target);
+		const found = await db
+			.select({ id: engineer.id, name: engineer.name, active: engineer.active })
+			.from(engineer)
+			.where(and(inArray(engineer.id, ids), inTenant(engineer)))
+			.orderBy(asc(engineer.name));
+		const result = await forEachRecord(
+			found,
+			ids.length,
+			(each) => each.name,
+			(each) =>
+				db.transaction(async (tx) => {
+					if (each.active === active) return;
+					await tx
+						.update(engineer)
+						.set({ active })
+						.where(and(eq(engineer.id, each.id), inTenant(engineer)));
+					const subject = { type: "engineer", id: each.id, label: each.name };
+					await recordActivity(tx, { action: "updated", subject, before: each, after: { active } });
+				}),
+		);
+		void getEngineers().refresh();
+		return result;
 	},
 );
 

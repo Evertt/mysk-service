@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -8,6 +8,7 @@ import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.js";
@@ -172,8 +173,12 @@ export const updateCustomer = form(
 	},
 );
 
-export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+/**
+ * Deletes one of the tenant's customers; refuses one with equipment or orders (or other records
+ * referring to it). A 404 if there's no such customer. The customer's page and the list's bulk
+ * delete share it.
+ */
+async function removeCustomer(id: number) {
 	const existing = await db.query.customer.findFirst({
 		columns: { id: true, code: true },
 		where: and(eq(customer.id, id), inTenant(customer)),
@@ -211,6 +216,30 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 			}),
 		m.customers_delete_referenced(),
 	);
+}
+
+export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
+	requireMember();
+	await removeCustomer(id);
 	void getCustomers().refresh();
 	redirect(303, "/customers");
+});
+
+/** Deletes the selected customers, with the same refusals as deleting one. */
+export const bulkDeleteCustomers = command(bulkTarget, async (target) => {
+	requireMember();
+	const ids = await targetIds(target);
+	const found = await db
+		.select({ id: customer.id, code: customer.code })
+		.from(customer)
+		.where(and(inArray(customer.id, ids), inTenant(customer)))
+		.orderBy(customer.code);
+	const result = await forEachRecord(
+		found,
+		ids.length,
+		(each) => each.code,
+		(each) => removeCustomer(each.id),
+	);
+	void getCustomers().refresh();
+	return result;
 });

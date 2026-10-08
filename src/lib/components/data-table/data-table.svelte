@@ -356,11 +356,14 @@
 			{...navigation.body}
 			class={cn("transition-opacity", loading && "opacity-50 delay-150")}
 		>
+			<!-- Rows are keyed by the row itself, not its id: Svelte doesn't update a kept item, and when
+			     the data changes (e.g. a bulk action's refresh) a row with the same id is a new row object
+			     with the new values. Sorting, filtering and paging keep the row objects. -->
 			{#if grouped}
 				{#each grouped.groups as group, index (group.key)}
 					{@render groupRow(grouped.column.id, group, index, grouped.sums(group.key))}
 					{#if !expansion.isCollapsed(grouped.column.id, group.key)}
-						{#each group.rows as row (row.id)}
+						{#each group.rows as row (row)}
 							{@render dataRow(row)}
 						{/each}
 					{/if}
@@ -368,7 +371,7 @@
 					{@render empty()}
 				{/each}
 			{:else}
-				{#each table.getRowModel().rows as row (row.id)}
+				{#each table.getRowModel().rows as row (row)}
 					{@render dataRow(row)}
 				{:else}
 					{@render empty()}

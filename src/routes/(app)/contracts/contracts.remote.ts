@@ -1,4 +1,4 @@
-import { form, query } from "$app/server";
+import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, lt, lte, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -7,6 +7,7 @@ import { formatDate } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
 import { inTenant, requireModule } from "#lib/server/session.js";
@@ -281,8 +282,11 @@ export const updateContract = form(
 	},
 );
 
-export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("contracts");
+/**
+ * Deletes one of the tenant's contracts, with its coverage; a 404 if there's no such contract. The
+ * contract's page and the list's bulk delete share it.
+ */
+async function removeContract(id: number) {
 	// Nothing references a contract; its coverage goes with it.
 	await db.transaction(async (tx) => {
 		const found = await tx.query.contract.findFirst({
@@ -295,6 +299,30 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 		const subject = { type: "contract", id, label: found.number };
 		await recordActivity(tx, { action: "deleted", subject });
 	});
+}
+
+export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
+	requireModule("contracts");
+	await removeContract(id);
 	void getContracts().refresh();
 	redirect(303, "/contracts");
+});
+
+/** Deletes the selected contracts, with their coverage. */
+export const bulkDeleteContracts = command(bulkTarget, async (target) => {
+	requireModule("contracts");
+	const ids = await targetIds(target);
+	const found = await db
+		.select({ id: contract.id, number: contract.number })
+		.from(contract)
+		.where(and(inArray(contract.id, ids), inTenant(contract)))
+		.orderBy(contract.number);
+	const result = await forEachRecord(
+		found,
+		ids.length,
+		(each) => each.number,
+		(each) => removeContract(each.id),
+	);
+	void getContracts().refresh();
+	return result;
 });

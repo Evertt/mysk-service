@@ -132,5 +132,8 @@
 	"customers_recent_scheduled": "Scheduled {date}",
 	"customers_recent_created": "Created {date}",
 	"customers_recent_empty_title": "No orders",
-	"customers_recent_empty_description": "Nothing has been quoted or done for this customer yet."
+	"customers_recent_empty_description": "Nothing has been quoted or done for this customer yet.",
+	"customers_bulk_delete_title": "Delete the selected customers?",
+	"customers_bulk_delete_description": "The customers are removed permanently. Customers with equipment or orders can't be deleted.",
+	"customers_bulk_has_equipment": "{name} has equipment"
 }

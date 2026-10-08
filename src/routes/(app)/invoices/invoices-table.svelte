@@ -1,9 +1,11 @@
 <script lang="ts">
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { recordFacets } from "#lib/components/data-table/record-facets.js";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 	import { stateOptions } from "#lib/components/invoicing/display.js";
 
+	import { markPaid } from "./bulk-actions.js";
 	import { columns, type InvoiceRow } from "./columns.js";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -44,6 +46,7 @@
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
+		<BulkActionBar actions={[markPaid]} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

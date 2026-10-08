@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import type { PageGroups } from "#lib/components/data-table/grouping.js";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
@@ -11,6 +12,8 @@
 		getEngineerOptions,
 		getEquipmentOptions,
 	} from "../filter-options.remote.js";
+	import { moduleBulkActions } from "../module-bulk-actions.svelte.js";
+	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.js";
 	import { columns, type OrderRow } from "./columns.js";
 	import { ordersUrl } from "./orders-url.js";
 
@@ -42,6 +45,10 @@
 
 	// Until the rows for a new search, filter, sort or page are in.
 	const loading = serverTableLoading(table, ordersUrl, () => orders.key);
+
+	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
+	const moduleActions = moduleBulkActions("orders");
+	const actions = $derived([assignEngineer, changeStatus, ...moduleActions.current, deleteOrders]);
 </script>
 
 <table.AppTable>
@@ -90,6 +97,7 @@
 			loading={loading.current}
 			groups={orders.groups}
 		/>
+		<BulkActionBar {actions} matching={{ key: orders.key, count: orders.rowCount }} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

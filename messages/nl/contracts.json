@@ -173,5 +173,7 @@
 	"contracts_unknown_customer": "Onbekende klant",
 	"contracts_ends_before_start": "Moet na de begindatum liggen",
 	"contracts_units_of_customer": "Een contract kan alleen apparatuur van de eigen klant dekken",
-	"contracts_unit_already_covered": "{serial} wordt al gedekt door {number} tot {date}"
+	"contracts_unit_already_covered": "{serial} wordt al gedekt door {number} tot {date}",
+	"contracts_bulk_delete_title": "Geselecteerde contracten verwijderen?",
+	"contracts_bulk_delete_description": "De contracten worden definitief verwijderd. De apparatuur en de opdrachten blijven."
 }
