@@ -7,19 +7,19 @@ import type { ContractLevel, ContractStatus } from "./model.js";
 
 export const contractLabels = defineLabels({
 	contractLevel: {
-		basic: m.enum_contract_level_basic,
-		standard: m.enum_contract_level_standard,
-		premium: m.enum_contract_level_premium,
+		basic: m.contracts_level_basic,
+		standard: m.contracts_level_standard,
+		premium: m.contracts_level_premium,
 	} satisfies Labels<ContractLevel>,
 	contractStatus: {
-		upcoming: m.enum_contract_status_upcoming,
-		active: m.enum_contract_status_active,
-		expired: m.enum_contract_status_expired,
+		upcoming: m.contracts_status_upcoming,
+		active: m.contracts_status_active,
+		expired: m.contracts_status_expired,
 	} satisfies Labels<ContractStatus>,
 	slaState: {
-		on_track: m.enum_sla_state_on_track,
-		at_risk: m.enum_sla_state_at_risk,
-		overdue: m.enum_sla_state_overdue,
-		responded: m.enum_sla_state_responded,
+		on_track: m.contracts_sla_state_on_track,
+		at_risk: m.contracts_sla_state_at_risk,
+		overdue: m.contracts_sla_state_overdue,
+		responded: m.contracts_sla_state_responded,
 	} satisfies Labels<SlaState>,
 });

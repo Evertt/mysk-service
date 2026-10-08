@@ -229,5 +229,38 @@
 	"invoices_bulk_mark_paid_title": "Mark the selected invoices paid?",
 	"invoices_bulk_mark_paid_description": "Records that they were paid today. Only sent invoices can be marked paid.",
 	"invoices_bulk_marked_paid": "{count} marked paid",
-	"invoices_bulk_not_sent": "{number} isn't a sent invoice"
+	"invoices_bulk_not_sent": "{number} isn't a sent invoice",
+	"invoices_module_name": "Invoicing",
+	"invoices_module_description": "Invoices for completed orders and other modules' fees, with VAT, PDF download and receivables on the dashboard.",
+	"invoices_state_draft": "Draft",
+	"invoices_state_sent": "Sent",
+	"invoices_state_overdue": "Overdue",
+	"invoices_state_paid": "Paid",
+	"invoices_state_void": "Void",
+	"invoices_action_issued": "{user} issued {subject}",
+	"invoices_action_paid": "{user} recorded the payment of {subject}",
+	"invoices_action_voided": "{user} voided {subject}",
+	"invoices_activity_subject": "invoice",
+	"invoices_activity_subject_line": "invoice line",
+	"invoices_activity_subject_settings": "invoicing settings",
+	"invoices_activity_field_payment_term_days": "payment term",
+	"invoices_activity_field_vat_rate": "VAT rate",
+	"invoices_activity_field_issued_on": "issued",
+	"invoices_activity_field_due_on": "due",
+	"invoices_activity_field_paid_on": "paid",
+	"invoices_activity_field_bill_from": "bill fees from",
+	"invoices_activity_value_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day",
+				"countPlural=*": "{countText} days"
+			}
+		}
+	]
 }

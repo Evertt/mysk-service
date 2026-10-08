@@ -12,18 +12,25 @@ const day = (value: unknown) => formatDate(new Date(String(value)));
 
 export const contractSubjects: Record<string, SubjectType> = {
 	contract: {
-		noun: m.activity_subject_contract,
+		noun: m.contracts_activity_subject,
 		href: ({ label }) => resolve("/(app)/contracts/[number]", { number: label }),
 		fields: {
 			customerId: { ref: "customer" },
-			level: { format: (value) => contractLabels.labelOrValue("contractLevel", String(value)) },
-			startsOn: { format: day },
-			endsOn: { format: day },
-			monthlyFee: { format: (value) => formatCents(Number(value)) },
+			level: {
+				label: m.contracts_activity_field_level,
+				format: (value) => contractLabels.labelOrValue("contractLevel", String(value)),
+			},
+			startsOn: { label: m.contracts_activity_field_starts_on, format: day },
+			endsOn: { label: m.contracts_activity_field_ends_on, format: day },
+			monthlyFee: {
+				label: m.contracts_activity_field_monthly_fee,
+				format: (value) => formatCents(Number(value)),
+			},
 			responseHours: {
+				label: m.contracts_activity_field_response_hours,
 				format: (value) => m.common_count_hours_short({ count: Number(value) }),
 			},
-			equipmentIds: { label: m.activity_field_covered_equipment, ref: "equipment" },
+			equipmentIds: { label: m.contracts_activity_field_covered_equipment, ref: "equipment" },
 		},
 	},
 };

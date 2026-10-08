@@ -6,10 +6,10 @@ import type { InvoiceState } from "./invoice.js";
 
 export const invoicingLabels = defineLabels({
 	invoiceState: {
-		draft: m.enum_invoice_state_draft,
-		sent: m.enum_invoice_state_sent,
-		overdue: m.enum_invoice_state_overdue,
-		paid: m.enum_invoice_state_paid,
-		void: m.enum_invoice_state_void,
+		draft: m.invoices_state_draft,
+		sent: m.invoices_state_sent,
+		overdue: m.invoices_state_overdue,
+		paid: m.invoices_state_paid,
+		void: m.invoices_state_void,
 	} satisfies Labels<InvoiceState>,
 });

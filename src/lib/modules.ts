@@ -94,10 +94,10 @@ export const modules = [
 	{
 		id: "contracts",
 		get label() {
-			return m.common_module_contracts();
+			return m.contracts_module_name();
 		},
 		get description() {
-			return m.common_module_contracts_description();
+			return m.contracts_module_description();
 		},
 		route: "/(app)/contracts",
 		icon: FileCheckIcon,
@@ -111,10 +111,10 @@ export const modules = [
 	{
 		id: "invoicing",
 		get label() {
-			return m.common_module_invoicing();
+			return m.invoices_module_name();
 		},
 		get description() {
-			return m.common_module_invoicing_description();
+			return m.invoices_module_description();
 		},
 		route: "/(app)/invoices",
 		icon: ReceiptTextIcon,
