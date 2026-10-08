@@ -14,11 +14,8 @@ import {
 	type Names,
 	referencedIds,
 	type ReferenceType,
-	subjectNoun,
-	subjectTypeLabel,
-	subjectTypes,
-	type SubjectType,
-} from "#lib/activity.js";
+} from "#lib/activity-format.js";
+import { subjectNoun, subjectTypeLabel, subjectTypes, type SubjectType } from "#lib/activity.js";
 import { intlLocale } from "#lib/format.js";
 import { modules as appModules } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
