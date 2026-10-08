@@ -26,7 +26,8 @@ import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.js";
 import { contracts } from "./contracts.ts";
 import { afterCommit } from "./db/serialize.ts";
 import { invoicing } from "./invoicing.ts";
-import { requireTenant } from "./session.ts";
+import { generatedServerModules } from "./modules.gen.ts";
+import { requireModule, requireTenant } from "./session.ts";
 
 /** What a module gets to know about an order. All of the current tenant's. */
 export interface OrderFacts {
@@ -97,9 +98,29 @@ export interface BillableItem {
 	date: Date;
 }
 
-/** Each module's server hooks, in registry order; a module without any isn't listed. */
+/**
+ * Each module's server hooks, in registry order: the static ones, then the folders in
+ * `src/modules` by id (their `server/index.ts`, via `modules.gen.ts`). A module without any isn't
+ * listed. A function, so that a module can import `defineServerModule()` from here.
+ */
 function serverModules(): { [Id in ModuleId]?: ServerModule } {
-	return { contracts, invoicing };
+	const generated: readonly ({ id: ModuleId } & ServerModule)[] = generatedServerModules();
+	return {
+		contracts,
+		invoicing,
+		...Object.fromEntries(generated.map((module) => [module.id, module])),
+	};
+}
+
+/**
+ * Refuses the current tenant a module's pages unless it has the module: a 404, as if they didn't
+ * exist. The `+layout.server.ts` that `scripts/modules.ts` writes at each module's route root
+ * calls it, so a tenant without the module gets the app's own 404 page inside the app layout. The
+ * module's remote functions and endpoints still start with `requireModule()` themselves: that is
+ * what keeps their data safe.
+ */
+export function guardModule(id: ModuleId) {
+	requireModule(id);
 }
 
 /** The server hooks of the `enabled` modules (by default the current tenant's). */

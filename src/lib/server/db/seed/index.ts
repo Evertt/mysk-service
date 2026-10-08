@@ -18,10 +18,15 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
+import { moduleIds } from "#lib/module-ids.ts";
+
 import { demoOrganizations, demoUsers } from "../demo.ts";
+import { moduleSeeds } from "../module-seeds.gen.ts";
+import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
 import { billFrom, generateInvoices } from "./invoices.ts";
+import { orderSeeds, type SeedTenant } from "./module-seed.ts";
 import { generateStockMovements } from "./stock.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
@@ -31,7 +36,7 @@ const { customer, engineer, equipment, material, order, orderLine } = schema;
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
-const db = drizzle(createClient({ url: DATABASE_URL }), { schema });
+const db = drizzle(createClient({ url: DATABASE_URL }), { schema: { ...schema, ...moduleSchema } });
 
 /** The generator's randomness, in Dutch; seeded per tenant, so the data is the same every time. */
 const faker = new Faker({ locale: [nl, en] });
@@ -44,21 +49,21 @@ async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>)
 // --- Tenants ---------------------------------------------------------------------------------
 
 /**
- * The demo organizations. North has the service contracts and invoicing modules; South only
- * invoicing.
+ * The demo organizations. North has all the modules (also the ones added later in
+ * `src/modules`); South only invoicing.
  */
 const tenants = [
 	{
 		...demoOrganizations.north,
 		slug: "north",
-		modules: ["contracts", "invoicing"],
+		modules: [...moduleIds] as string[],
 		seed: 20261005,
 		size: { customers: 60, engineers: 18, orders: 750, contracts: true },
 	},
 	{
 		...demoOrganizations.south,
 		slug: "south",
-		modules: ["invoicing"],
+		modules: ["invoicing"] as string[],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320, contracts: false },
 	},
@@ -71,7 +76,12 @@ const totals: Record<string, number> = {};
 const count = (table: string, rows: unknown[]) =>
 	(totals[table] = (totals[table] ?? 0) + rows.length);
 
+/** The modules' seeds, each after the ones it builds on. */
+const seeds = orderSeeds(moduleSeeds);
+
 await db.transaction(async (tx) => {
+	// The modules' tables first: they reference the core's.
+	for (const { seed } of seeds.toReversed()) await seed.clear?.(tx);
 	for (const table of [
 		schema.activity,
 		schema.savedView,
@@ -107,6 +117,7 @@ await db.transaction(async (tx) => {
 		contract: 0,
 		invoice: 0,
 	};
+	const seeded: SeedTenant[] = [];
 	for (const tenant of tenants) {
 		await tx.insert(schema.organization).values({
 			id: tenant.id,
@@ -223,6 +234,15 @@ await db.transaction(async (tx) => {
 		await tx.insert(schema.activity).values(created);
 		count("activity", created);
 
+		seeded.push({
+			id: tenant.id,
+			slug: tenant.slug,
+			modules: tenant.modules,
+			seed: tenant.seed,
+			customerIds: rows.customers.map((row) => row.id),
+			equipmentIds: rows.equipments.map((row) => row.id),
+			orderIds: rows.orders.map((row) => row.id),
+		});
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
@@ -231,6 +251,11 @@ await db.transaction(async (tx) => {
 		offset.contract += rows.contracts.length;
 		offset.invoice += invoicing.invoices.length;
 		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
+	}
+
+	for (const { id, seed } of seeds) {
+		const having = seeded.filter((tenant) => tenant.modules.includes(id));
+		await seed.run({ tx, faker, tenants: having, insertAll, count });
 	}
 });
 
