@@ -6,6 +6,7 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import { stockLevel, stockLevels } from "#lib/components/materials/display.js";
 import MaterialLink from "#lib/components/materials/material-link.svelte";
 import { label } from "#lib/i18n/labels.js";
+import { materialUnits } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getMaterials } from "./materials.remote.js";
@@ -33,20 +34,20 @@ export const columns = column.columns([
 		cell: ({ getValue }) => label("materialUnit", getValue()),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: m.materials_unit },
+		meta: { label: m.materials_unit, filterValues: materialUnits },
 	}),
 	column.accessor("unitPrice", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: m.materials_unit_price, align: "end" },
+		meta: { label: m.materials_unit_price, align: "end", param: "price" },
 	}),
 	column.accessor("stock", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(StockCell, { stock: row.original.stock, unit: row.original.unit }),
 		enableGlobalFilter: false,
-		meta: { label: m.materials_stock, align: "end" },
+		meta: { label: m.materials_stock, align: "end", param: "quantity" },
 	}),
 	// Not shown; the stock level filter filters on it.
 	column.accessor((row) => stockLevel(row.stock, row.unit), {
@@ -56,13 +57,14 @@ export const columns = column.columns([
 		sortFn: (a, b, id) => stockLevels.indexOf(a.getValue(id)) - stockLevels.indexOf(b.getValue(id)),
 		enableHiding: false,
 		enableGlobalFilter: false,
-		meta: { label: m.materials_stock_level },
+		// `?stock=out,low`, e.g. from the dashboard.
+		meta: { label: m.materials_stock_level, param: "stock", filterValues: stockLevels },
 	}),
 	column.accessor("orderCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
-		meta: { label: m.materials_used_on, align: "end" },
+		meta: { label: m.materials_used_on, align: "end", param: "used" },
 	}),
 	column.display({
 		id: "actions",

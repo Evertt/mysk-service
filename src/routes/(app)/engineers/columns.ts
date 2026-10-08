@@ -7,6 +7,7 @@ import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
 import { regionLabel } from "#lib/components/engineers/display.js";
 import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
+import { engineerSpecialties } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { getEngineers } from "./engineers.remote.js";
@@ -38,7 +39,7 @@ export const columns = column.columns([
 		cell: ({ getValue }) => renderComponent(SpecialtyBadge, { specialty: getValue() }),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_specialty },
+		meta: { label: m.engineers_column_specialty, filterValues: engineerSpecialties },
 	}),
 	column.accessor("region", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -50,7 +51,7 @@ export const columns = column.columns([
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_hourly_rate, align: "end" },
+		meta: { label: m.engineers_column_hourly_rate, align: "end", param: "rate" },
 	}),
 	column.accessor((row) => (row.active ? "active" : "inactive"), {
 		id: "status",
@@ -58,19 +59,19 @@ export const columns = column.columns([
 		cell: ({ row }) => renderComponent(ActiveBadge, { active: row.original.active }),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_status },
+		meta: { label: m.engineers_column_status, filterValues: ["active", "inactive"] },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_open_orders, align: "end" },
+		meta: { label: m.engineers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("hiredAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_hired },
+		meta: { label: m.engineers_column_hired, param: "hired" },
 	}),
 	column.display({
 		id: "actions",

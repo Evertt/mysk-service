@@ -1,8 +1,17 @@
-import { afterEach, describe, expect, test } from "vite-plus/test";
-import { type Locator, page } from "vite-plus/test/browser";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { type Locator, page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import { lastSearch, visit, visits } from "./fake-navigation.svelte.ts";
 import Harness, { type Item } from "./table.test-harness.svelte";
+
+// The table keeps its state in the URL: a fake one, which `goto` changes.
+vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
+vi.mock("$app/navigation", async () => ({
+	goto: (await import("./fake-navigation.svelte.ts")).goto,
+}));
+
+beforeEach(() => visit("/items"));
 
 const items: Item[] = [
 	{
@@ -33,8 +42,32 @@ const names = () =>
 const cell = (name: string, index: number) =>
 	page.getByRole("row").filter({ hasText: name }).getByRole("cell").nth(index);
 
-/** A column's header button, which opens its menu. */
-const columnMenu = (name: string) => page.getByRole("row").first().getByRole("button", { name });
+/** A column's header button, which opens its menu (its name goes on to say how it's sorted). */
+const columnMenu = (name: string) =>
+	page
+		.getByRole("row")
+		.first()
+		.getByRole("button", { name: new RegExp(`^${name}( sorted|$)`) });
+
+/** Shift-clicks a column's header, which adds it to the sort or turns it around there. */
+const addToSort = (name: string) => columnMenu(name).click({ modifiers: ["Shift"] });
+
+/** The place a column's header shows in the sort order, if it shows one. */
+const precedence = (name: string) => () =>
+	columnMenu(name).element().querySelector("span[aria-hidden=true]")?.textContent?.trim();
+
+/** Sorts by a column alone through its header menu. */
+async function sortBy(name: string, direction: "Ascending" | "Descending") {
+	await columnMenu(name).click();
+	await page.getByRole("menuitem", { name: direction }).click();
+}
+
+/** The names in the rows, in order, sorted by amount (then as given). */
+const byAmount = (names: string[]) =>
+	names.toSorted(
+		(a, b) =>
+			items.find((item) => item.name === a)!.amount - items.find((item) => item.name === b)!.amount,
+	);
 
 /** An option of the faceted filter, named by its label (its accessible name ends in its count). */
 const facet = (label: string) => page.getByRole("option", { name: new RegExp(`^${label}`) });
@@ -124,6 +157,180 @@ describe("sorting", () => {
 
 		await expect.element(page.getByRole("row").first().getByText("Due")).toBeInTheDocument();
 		expect(columnMenu("Due").elements()).toHaveLength(0);
+	});
+});
+
+describe("sorting by more than one column", () => {
+	test("shift-clicking a header goes ascending, descending, then unsorted", async () => {
+		render(Harness, { items });
+
+		// Sorted by name ascending to start with.
+		await addToSort("Name");
+		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await expect.element(columnMenu("Name")).toHaveAccessibleName(/sorted descending/);
+
+		await addToSort("Name");
+		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
+		expect(columnMenu("Name").element().textContent).not.toMatch(/sorted/);
+		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+
+		await addToSort("Name");
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+	});
+
+	test("the menu clears a column's sorting", async () => {
+		render(Harness, { items });
+
+		await columnMenu("Name").click();
+		await page.getByRole("menuitem", { name: "Clear sorting" }).click();
+		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
+
+		await columnMenu("Name").click();
+		await expect.element(page.getByRole("menuitem", { name: "Ascending" })).toBeVisible();
+		expect(page.getByRole("menuitem", { name: "Clear sorting" }).elements()).toHaveLength(0);
+	});
+
+	test("shift-clicking adds a column to the sort, numbered by precedence", async () => {
+		render(Harness, { items });
+
+		await sortBy("Amount", "Ascending");
+		await addToSort("Name");
+		// The four at €1.00 by name, after the one at €0.00.
+		await expect.poll(names).toEqual(byAmount(byName).slice(0, 5));
+		await expect.poll(precedence("Amount")).toBe("1");
+		await expect.poll(precedence("Name")).toBe("2");
+		await expect
+			.element(columnMenu("Name"))
+			.toHaveAccessibleName("Name sorted ascending, sort 2 of 2");
+
+		// Turned around within the sort, keeping its place.
+		await addToSort("Name");
+		await expect.poll(names).toEqual(byAmount(byName.toReversed()).slice(0, 5));
+		await expect.poll(precedence("Name")).toBe("2");
+
+		// A plain choice from the menu sorts by that column alone.
+		await sortBy("Name", "Ascending");
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.element(columnMenu("Amount")).toHaveAccessibleName("Amount");
+		await expect.element(columnMenu("Name")).toHaveAccessibleName("Name sorted ascending");
+		expect(precedence("Name")()).toBeUndefined();
+	});
+
+	test("shift+Enter on a header adds it to the sort from the keyboard", async () => {
+		render(Harness, { items });
+
+		await sortBy("Amount", "Descending");
+		columnMenu("Name").element().focus();
+		await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
+		await expect.poll(precedence("Name")).toBe("2");
+		await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+	});
+});
+
+describe("the URL", () => {
+	test("an untouched table leaves the URL alone", async () => {
+		render(Harness, { items });
+
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+		expect(visits).toEqual([]);
+	});
+
+	test("filtering, sorting and paging go into the URL, each as a history entry", async () => {
+		render(Harness, { items });
+
+		await statusFilter().click();
+		await facet("Open").click();
+		await facet("Draft").click();
+		await expect.poll(lastSearch).toBe("?status=open,draft");
+		await facet("Closed").click();
+		await expect.poll(lastSearch).toBe("?status=open,draft,closed");
+		await userEvent.keyboard("{Escape}");
+
+		await sortBy("Amount", "Descending");
+		const filtered = "?status=open,draft,closed";
+		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount`);
+		await addToSort("Name");
+		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name`);
+
+		await page.getByRole("button", { name: "Go to next page" }).click();
+		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&page=2`);
+		await page.getByRole("button", { name: "Rows per page" }).click();
+		await page.getByRole("option", { name: "10" }).click();
+		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&size=10`);
+
+		expect(visits.every((visit) => !visit.replace)).toBe(true);
+	});
+
+	test("searching replaces its history entry once typing pauses, and goes to the first page", async () => {
+		visit("/items?page=2");
+		render(Harness, { items });
+		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
+
+		const search = page.getByRole("textbox", { name: "Search items…" });
+		await search.fill("p");
+		await expect.poll(lastSearch).toBe("?q=p");
+		await search.fill("pump");
+		await expect.poll(lastSearch).toBe("?q=pump");
+		await expect.poll(names).toEqual(["Pump replacement"]);
+		expect(visits.map((visit) => visit.replace)).toEqual([false, true]);
+	});
+
+	test("a page from the URL shows, sorted and filtered as the URL says", async () => {
+		visit("/items?status=draft,open,closed&sort=-amount,name&page=2&tab=notes");
+		render(Harness, { items });
+
+		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
+		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
+		await expect.poll(textOf(statusFilter())).toBe("Status 3 selected");
+		await expect.element(columnMenu("Amount")).toHaveAccessibleName(/sorted descending/);
+		expect(visits).toEqual([]);
+	});
+
+	test("invalid parameters are ignored", async () => {
+		visit("/items?status=bogus&sort=nothing&page=-3&size=7");
+		render(Harness, { items });
+
+		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(textOf(statusFilter())).toBe("Status");
+	});
+
+	test("a page past the last becomes the last, replacing the history entry", async () => {
+		visit("/items?page=9");
+		render(Harness, { items });
+
+		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
+		await expect.poll(lastSearch).toBe("?page=2");
+		expect(visits.at(-1)?.replace).toBe(true);
+	});
+
+	test("going back to an earlier URL takes the table back", async () => {
+		render(Harness, { items });
+
+		await statusFilter().click();
+		await facet("Closed").click();
+		await expect.poll(lastSearch).toBe("?status=closed");
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(names).toEqual(["Chiller repair", "Pump replacement"]);
+
+		visit("/items", { clear: false });
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(textOf(statusFilter())).toBe("Status");
+
+		visit("/items?status=closed&sort=-name", { clear: false });
+		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
+		// Following the URL doesn't change it again.
+		expect(visits).toHaveLength(1);
+	});
+
+	test("Reset goes back to an unfiltered URL", async () => {
+		visit("/items?q=pump&status=closed");
+		render(Harness, { items });
+		await expect.poll(names).toEqual(["Pump replacement"]);
+
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect.poll(lastSearch).toBe("");
+		await expect.poll(names).toEqual(byName.slice(0, 5));
 	});
 });
 

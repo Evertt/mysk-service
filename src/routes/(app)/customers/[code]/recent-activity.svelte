@@ -7,6 +7,7 @@
 	import { resolve } from "$app/paths";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
+	import { joinValues } from "#lib/components/data-table/url-state.js";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
@@ -17,7 +18,10 @@
 	let { code }: { code: string } = $props();
 
 	const activity = $derived(await getCustomerActivity(code));
-	const allOrders = $derived(`${resolve("/(app)/orders")}?customer=${encodeURIComponent(code)}`);
+	// The orders list, filtered on the customer (see `url-state.ts`).
+	const allOrders = $derived(
+		`${resolve("/(app)/orders")}?customer=${encodeURIComponent(joinValues([code]))}`,
+	);
 </script>
 
 <Card.Root>

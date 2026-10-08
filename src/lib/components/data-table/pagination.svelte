@@ -7,8 +7,10 @@
 	import { formatNumber } from "#lib/format.js";
 
 	import { useTableContext } from "./table.svelte.js";
+	import { defaultPageSizes } from "./url-state.js";
 
-	let { pageSizes = [10, 20, 50, 100] }: { pageSizes?: number[] } = $props();
+	/** The sizes to choose from; a table with other ones also passes them to `urlState`. */
+	let { pageSizes = defaultPageSizes }: { pageSizes?: readonly number[] } = $props();
 
 	const table = useTableContext();
 	const pagination = $derived(table.atoms.pagination.get());

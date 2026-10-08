@@ -244,7 +244,7 @@ describe("in North", () => {
 					({ x, y }) => document.elementFromPoint(x, y)?.closest("th")?.textContent?.trim(),
 					{ x: box.x + 8, y: box.y + box.height / 2 },
 				),
-			).toBe("Unit");
+			).toMatch(/^Unit\b/);
 			// And the pagination is still in view.
 			expect(await page.getByRole("button", { name: "Go to next page" }).boundingBox()).toEqual(
 				pagination,

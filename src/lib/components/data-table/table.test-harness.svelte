@@ -54,7 +54,7 @@
 			header: ({ header }) => renderComponent(header.ColumnHeader),
 			filterFn: "oneOf",
 			enableSorting: false,
-			meta: { label: "Status" },
+			meta: { label: "Status", filterValues: ["draft", "open", "closed"] },
 		}),
 		column.accessor("amount", {
 			header: ({ header }) => renderComponent(header.ColumnHeader),

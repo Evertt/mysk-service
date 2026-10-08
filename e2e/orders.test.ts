@@ -110,6 +110,52 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(await countIn("order", north.id));
 	});
 
+	test("a link with filters and sorting opens the list that way", async () => {
+		const { page } = app;
+		// The customer with the most open orders.
+		const [{ code }] = await rows<{ code: string }>(
+			`select c.code from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
+			 group by c.id order by count(*) desc, c.code limit 1`,
+			[north.id],
+		);
+		const open = await rows<{ number: string; priority: string; name: string }>(
+			`select o.number, o.priority, c.name from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? and c.code = ?
+			 and o.status in ('quote', 'scheduled', 'in_progress')`,
+			[north.id, code],
+		);
+		expect(open.length).toBeGreaterThan(0);
+		const urgency = ["low", "normal", "high", "urgent"];
+		const expected = open
+			.toSorted(
+				(a, b) =>
+					urgency.indexOf(b.priority) - urgency.indexOf(a.priority) ||
+					a.number.localeCompare(b.number),
+			)
+			.map((row) => row.number);
+
+		const filtered = "status=quote,scheduled,in_progress&sort=-priority,number";
+		await app.go(`/orders?customer=${code}&${filtered}`);
+		expect(await app.rowCount()).toBe(open.length);
+		expect(await page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(
+			expected.slice(0, 20),
+		);
+		const headers = await page.locator("thead").innerText();
+		expect(headers).toMatch(/Priority\s*1/);
+		expect(headers).toMatch(/Order\s*2/);
+
+		// The customer chip clears that filter only.
+		await page.getByRole("button", { name: `Customer: ${open[0].name}` }).click();
+		await page.waitForURL((url) => url.search === `?${filtered}`);
+		const all = await rows(
+			`select 1 from "order" where organization_id = ? and status in ('quote', 'scheduled', 'in_progress')`,
+			[north.id],
+		);
+		expect(await app.rowCount()).toBe(all.length);
+		await app.go("/orders");
+	});
+
 	test("creating an order validates it first", async () => {
 		const { page } = app;
 		await app.go("/orders/new");

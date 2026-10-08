@@ -219,7 +219,9 @@ describe("in North", () => {
 		const card = page.locator('[data-slot="card"]', { hasText: "Low stock" });
 		expect(await card.locator('[data-slot="card-title"]').innerText()).toBe(String(low));
 		await card.getByRole("link", { name: "View" }).click();
-		await page.waitForURL((url) => url.pathname === "/materials");
+		await page.waitForURL(
+			(url) => url.pathname === "/materials" && url.search === "?stock=out,low",
+		);
 		await page.waitForLoadState("networkidle");
 		expect(await app.rowCount()).toBe(low);
 		for (const row of await tableRows().allInnerTexts()) {
@@ -227,6 +229,87 @@ describe("in North", () => {
 		}
 		await page.getByRole("button", { name: "Reset" }).click();
 		expect(await app.rowCount()).toBe(await countIn("material", north.id));
+	});
+
+	test("the list keeps its sorting, page and filters in the URL, through reloads and back", async () => {
+		const { page } = app;
+		const total = await countIn("material", north.id);
+		const priced = await rows<{ name: string; unit: string }>(
+			`select name, unit from material where organization_id = ? order by unit_price desc, name`,
+			[north.id],
+		);
+		expect(total).toBeGreaterThan(20);
+		const search = () => new URL(page.url()).search;
+		const pageOf = (pages: number) => page.getByText(new RegExp(`^Page \\d+ of ${pages}$`));
+
+		await app.go("/materials");
+		await sortBy("Unit price", "Descending");
+		await page.waitForURL(() => search() === "?sort=-price");
+		const first = await names();
+		await page.getByRole("button", { name: "Go to next page" }).click();
+		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		const second = await names();
+		expect(second).toHaveLength(Math.min(20, total - 20));
+
+		// A reload shows the same page, already when rendered on the server.
+		const html = await (await page.request.get(page.url())).text();
+		expect(html).toContain(`Page 2 of ${Math.ceil(total / 20)}`);
+		await page.reload();
+		await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+		expect(await names()).toEqual(second);
+		expect(await pageOf(Math.ceil(total / 20)).innerText()).toBe(
+			`Page 2 of ${Math.ceil(total / 20)}`,
+		);
+
+		// Filtering goes back to the first page.
+		await filter("Unit", /Litres/);
+		await page.waitForURL(() => search() === "?unit=l&sort=-price");
+		// Each choice is a step back.
+		await filter("Unit", /Kilograms/);
+		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price");
+		const litresAndKilos = priced.filter((row) => ["l", "kg"].includes(row.unit));
+		expect(await app.rowCount()).toBe(litresAndKilos.length);
+		expect((await names()).toSorted()).toEqual(litresAndKilos.map((row) => row.name).toSorted());
+
+		// Shift-click adds a column to the sort.
+		await page
+			.locator("thead")
+			.getByRole("button", { name: /^Material/ })
+			.click({ modifiers: ["Shift"] });
+		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price,name");
+		await expect.poll(() => page.locator("thead").innerText()).toMatch(/Unit price\s*1/);
+
+		// Back and forward retrace the steps.
+		await page.goBack();
+		await page.waitForURL(() => search() === "?unit=l,kg&sort=-price");
+		await page.goBack();
+		await page.waitForURL(() => search() === "?unit=l&sort=-price");
+		await page.goBack();
+		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await expect.poll(names).toEqual(second);
+		expect(
+			await page.locator('[data-slot="popover-trigger"]', { hasText: "Unit" }).innerText(),
+		).toBe("Unit");
+		await page.goBack();
+		await page.waitForURL(() => search() === "?sort=-price");
+		await expect.poll(names).toEqual(first);
+		await page.goForward();
+		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await expect.poll(names).toEqual(second);
+
+		// A link with the state in it opens the list that way; unknown values are ignored.
+		await app.go("/materials?unit=pcs,bogus&sort=name&size=50&q=filter");
+		const filters = priced
+			.filter((row) => row.unit === "pcs" && /filter/i.test(row.name))
+			.map((row) => row.name)
+			.toSorted((a, b) => a.localeCompare(b));
+		expect(filters.length).toBeGreaterThan(0);
+		expect(await names()).toEqual(filters);
+		expect(search()).toBe("?unit=pcs,bogus&sort=name&size=50&q=filter");
+		expect(await page.getByLabel("Search materials…").inputValue()).toBe("filter");
+		expect(await page.getByRole("button", { name: "Rows per page" }).innerText()).toBe("50");
+
+		await app.go("/materials");
 	});
 
 	test("sorting by unit price puts the most expensive first", async () => {
