@@ -36,9 +36,9 @@ export interface SeedContext {
 	/** Only the tenants that have the module. */
 	tenants: SeedTenant[];
 	/** Inserts in chunks to stay below SQLite's bound-parameter limit. */
-	insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>): Promise<void>;
+	insertAll: <T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) => Promise<void>;
 	/** Adds to the summary the seed prints at the end. */
-	count(table: string, rows: unknown[]): void;
+	count: (table: string, rows: unknown[]) => void;
 }
 
 export interface ModuleSeed {

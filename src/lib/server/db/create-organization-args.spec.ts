@@ -92,7 +92,7 @@ describe("modules", () => {
 
 	test("must exist", () => {
 		expect(problem([...args, "--modules", "contracts,payroll"])).toBe(
-			"Unknown modules: payroll (there are contracts, invoicing)",
+			`Unknown modules: payroll (there are ${moduleIds.join(", ")})`,
 		);
 	});
 

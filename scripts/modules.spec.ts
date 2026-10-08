@@ -18,10 +18,12 @@ import {
 	topFolder,
 } from "./modules.ts";
 
-const repoSettings = readFileSync(
-	join(import.meta.dirname, "../project.inlang/settings.json"),
-	"utf8",
-);
+/** The project's settings without the modules' entries, which come and go with `src/modules`. */
+const repoSettings = (() => {
+	const text = readFileSync(join(import.meta.dirname, "../project.inlang/settings.json"), "utf8");
+	const patterns: string[] = JSON.parse(text)["plugin.inlang.messageFormat"].pathPattern;
+	return replacePathPattern(text, renderPathPattern(patterns, []));
+})();
 
 describe("routeFileKind", () => {
 	test.each([
@@ -136,7 +138,7 @@ export const config = moduleConfig;
 		});
 		expect(stub).toContain(`import { guardModule } from "#lib/server/modules.ts";`);
 		expect(stub).toContain(`import { load as moduleLoad } from "${importPath}";`);
-		expect(stub).toContain(`guardModule("sample");\n\treturn moduleLoad(event);`);
+		expect(stub).toMatch(/guardModule\("sample"\);\n[\s\S]*= moduleLoad;\n\treturn run\(event\);/);
 		// Kit reads that there is a `load`, and no more.
 		expect(stub).toContain("export const load = async (event: LayoutServerLoadEvent) => {");
 	});
@@ -394,7 +396,7 @@ describe("generateModules", () => {
 		generateModules(root);
 		const stub = read("src/routes/(app)/sample/+layout.server.ts");
 		expect(stub).toContain(`guardModule("sample");`);
-		expect(stub).toContain("return moduleLoad(event);");
+		expect(stub).toContain("return run(event);");
 	});
 
 	test("writes nothing the second time, and nothing but the registries without modules", () => {

@@ -265,7 +265,7 @@ export function renderScriptStub(options: {
 		const call = `guardModule(${JSON.stringify(guard)});`;
 		body.push(
 			hasLoad
-				? `export const load = async (event: LayoutServerLoadEvent) => {\n\t${call}\n\treturn moduleLoad(event);\n};`
+				? `export const load = async (event: LayoutServerLoadEvent) => {\n\t${call}\n\t// Whatever the module's load takes of the event is checked here; one that takes none is fine.\n\tconst run: (event: LayoutServerLoadEvent) => ReturnType<typeof moduleLoad> = moduleLoad;\n\treturn run(event);\n};`
 				: `export const load = () => {\n\t${call}\n};`,
 		);
 	}
@@ -274,7 +274,11 @@ export function renderScriptStub(options: {
 	);
 }
 
-/** A stub for a `+page.svelte`, `+layout.svelte` or `+error.svelte`: it passes its props on. */
+/**
+ * A stub for a `+page.svelte`, `+layout.svelte` or `+error.svelte`: it passes its props on. A layout
+ * renders its `children` inside the module's layout itself, because Kit warns about a layout that
+ * doesn't (it looks for the `{@render}` in the source).
+ */
 export function renderComponentStub(options: {
 	from: string;
 	importPath: string;
@@ -287,10 +291,15 @@ export function renderComponentStub(options: {
 		`<script lang="ts">`,
 		...(props ? [`\timport type { ${props} } from "./$types";`, ""] : []),
 		`\timport Route from "${importPath}";`,
-		...(props ? ["", `\tlet props: ${props} = $props();`] : []),
+		...(kind === "layout" ? ["", `\tlet { children, ...props }: LayoutProps = $props();`] : []),
+		...(kind === "page" ? ["", `\tlet props: PageProps = $props();`] : []),
 		`</script>`,
 		"",
-		props ? `<Route {...props} />` : `<Route />`,
+		kind === "layout"
+			? `<Route {...props}>{@render children()}</Route>`
+			: props
+				? `<Route {...props} />`
+				: `<Route />`,
 		"",
 	].join("\n");
 }
