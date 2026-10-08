@@ -32,10 +32,10 @@
 		},
 		getRowId: (row) => String(row.id),
 		initialState: {
-			sorting: [{ id: "unit", desc: false }],
+			// By unit, 20 per page: the defaults the server has too.
+			...equipmentUrl.defaults,
 			// Only there to search and filter by; the unit column shows them.
 			columnVisibility: { serialNumber: false, manufacturer: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
 

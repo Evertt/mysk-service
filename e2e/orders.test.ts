@@ -4,6 +4,7 @@ import { formatNumber } from "../src/lib/format.ts";
 import {
 	baseURL,
 	countIn,
+	isRemote,
 	nextCode,
 	organizations,
 	rows,
@@ -18,10 +19,6 @@ const app = useApp();
 /** The order numbers on the shown page of the list. */
 const shownNumbers = () =>
 	app.page.locator('[data-slot="data-table"] tbody td:nth-child(2)').allInnerTexts();
-
-/** Whether a request is for the remote function `name`. */
-const isRemote = (url: string, name: string) =>
-	url.includes("/_app/remote/") && new URL(url).pathname.endsWith(`/${name}`);
 
 /** An order and its lines as stored, to check that a refused request changed nothing. */
 const snapshot = (id: number) =>

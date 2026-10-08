@@ -29,11 +29,8 @@
 			return materials.rowCount;
 		},
 		getRowId: (row) => String(row.id),
-		initialState: {
-			sorting: [{ id: "name", desc: false }],
-			columnVisibility: { sku: false, stockLevel: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
-		},
+		// By name, 20 per page: the defaults the server has too.
+		initialState: { ...materialsUrl.defaults, columnVisibility: { sku: false, stockLevel: false } },
 	});
 
 	const loading = serverTableLoading(table, materialsUrl, () => materials.key);

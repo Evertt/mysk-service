@@ -35,11 +35,8 @@
 			return orders.rowCount;
 		},
 		getRowId: (row) => String(row.id),
-		initialState: {
-			sorting: [{ id: "createdAt", desc: true }],
-			columnVisibility: { createdAt: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
-		},
+		// Newest first, 20 per page: the defaults the server has too.
+		initialState: { ...ordersUrl.defaults, columnVisibility: { createdAt: false } },
 	});
 
 	// Until the rows for a new search, filter, sort or page are in.

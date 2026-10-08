@@ -225,6 +225,29 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(await countIn("invoice", north.id));
 	});
 
+	test("the customer filter lists the customers with invoices, found by name or code", async () => {
+		const { page } = app;
+		const customers = await rows<{ code: string; name: string; n: number }>(
+			`select c.code, c.name, count(*) as n from invoice i join customer c on c.id = i.customer_id
+			 where i.organization_id = ? group by c.id order by n desc, c.code`,
+			[north.id],
+		);
+		const [busiest] = customers;
+		await app.go("/invoices");
+		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		expect(await page.getByRole("option").count()).toBe(customers.length);
+		await page.getByPlaceholder("Customer").fill(busiest.code);
+		const option = page.getByRole("option", { name: new RegExp(busiest.code) });
+		expect(await option.innerText()).toMatch(new RegExp(`${busiest.n}$`));
+		await option.click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("customer") === busiest.code);
+		expect(await app.rowCount()).toBe(busiest.n);
+		await app.go(`/invoices?customer=${busiest.code}`);
+		expect(await app.rowCount()).toBe(busiest.n);
+		await app.go("/invoices");
+	});
+
 	test("the dashboard's link lists the overdue invoices", async () => {
 		const overdue = Number(
 			await value(

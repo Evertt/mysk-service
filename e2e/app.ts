@@ -169,6 +169,10 @@ export function linkInMail(to: string) {
 
 // --- Browser ---------------------------------------------------------------------------------
 
+/** Whether a request (its URL) calls the remote function `name`, e.g. `getOrders`. */
+export const isRemote = (url: string, name: string) =>
+	url.includes("/_app/remote/") && new URL(url).pathname.endsWith(`/${name}`);
+
 /** Waits until a page is interactive (see the root layout), or settled if it errored. */
 export const hydrated = (page: Page) =>
 	Promise.race([

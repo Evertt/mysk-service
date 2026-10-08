@@ -30,6 +30,27 @@ export function serverTableQuery(params: SearchParams, spec: TableUrlSpec) {
 }
 
 /**
+ * What a URL spec makes of URLs: its sortable and filtered columns, with their names in the URL,
+ * and its defaults. A server-side table's spec (from its columns, see `tableUrlSpec`) and the
+ * server's (plain data) must agree on it, which its `columns.spec.ts` checks.
+ */
+export function urlGrammar(spec: TableUrlSpec) {
+	return {
+		columns: spec.columns
+			.filter((column) => column.sortable || column.filter)
+			.map((column) => ({
+				id: column.id,
+				param: column.param ?? column.id,
+				sortable: Boolean(column.sortable),
+				filter: column.filter,
+				values: column.values && [...column.values],
+			})),
+		defaults: parseTableUrl(new URLSearchParams(), spec),
+		pageSizes: spec.pageSizes,
+	};
+}
+
+/**
  * Whether the rows a server-side table shows are for another state than the table's: its search,
  * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
  * rows' query answered with (`TablePlan.key`).

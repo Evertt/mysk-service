@@ -3,6 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { formatCents, formatNumber } from "../src/lib/format.ts";
 import {
 	countIn,
+	isRemote,
 	nextCode,
 	organizations,
 	rows,
@@ -335,6 +336,29 @@ describe("in North", () => {
 		await app.go("/materials");
 	});
 
+	test("the server sorts by stock level and sends one page at a time", async () => {
+		const { page } = app;
+		const total = await countIn("material", north.id);
+		// Out of stock, then low, then in stock (as `stockLevel()` has it), each by name.
+		const expected = await rows<{ name: string }>(
+			`select name from material where organization_id = ?
+			 order by case when stock <= 0 then 0 when stock < case unit when 'pcs' then 10 else 50 end
+			 then 1 else 2 end, name collate nocase, id`,
+			[north.id],
+		);
+		await app.go("/materials?sort=stock,name");
+		expect(await names()).toEqual(expected.slice(0, 20).map((row) => row.name));
+		const [response] = await Promise.all([
+			page.waitForResponse((r) => isRemote(r.url(), "getMaterials")),
+			page.getByRole("button", { name: "Go to next page" }).click(),
+		]);
+		// That page's materials came, not all of them.
+		expect((await response.text()).split("unitPrice").length - 1).toBe(Math.min(20, total - 20));
+		await app.tableSettled();
+		expect(await names()).toEqual(expected.slice(20, 40).map((row) => row.name));
+		await app.go("/materials");
+	});
+
 	test("sorting by unit price puts the most expensive first", async () => {
 		await sortBy("Unit price", "Descending");
 		const prices = (await tableRows().allInnerTexts()).map((row) =>
@@ -655,6 +679,17 @@ describe("in South", () => {
 		await app.go("/materials");
 		expect(await app.rowCount()).toBe(await countIn("material", south.id));
 		await expectFirstMaterial(south.id);
+	});
+
+	test("the filters count South's materials only", async () => {
+		const { page } = app;
+		await app.go("/materials");
+		await page.locator('[data-slot="popover-trigger"]', { hasText: "Stock level" }).click();
+		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
+			Number(/(\d+)$/.exec(text.trim())![1]),
+		);
+		expect(counts.reduce((sum, n) => sum + n, 0)).toBe(await countIn("material", south.id));
+		await page.keyboard.press("Escape");
 	});
 
 	test("North's own SKU is a 404", async () => {
