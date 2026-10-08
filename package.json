@@ -4,7 +4,6 @@
 	"private": true,
 	"type": "module",
 	"imports": {
-		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*",
 		"#modules/*": "./src/modules/*",
 		"#e2e/*": "./e2e/*",
@@ -28,7 +27,8 @@
 		"db:seed": "node --env-file=.env src/lib/server/db/seed/index.ts",
 		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
 		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit migrate && pnpm run db:seed",
-		"themes:sync": "node scripts/theme-components.ts && vp check --fix"
+		"themes:sync": "node scripts/theme-components.ts && vp check --fix",
+		"knip": "knip"
 	},
 	"dependencies": {
 		"@libsql/client": "^0.17.4"
@@ -60,6 +60,7 @@
 		"cn": "^0.4.0",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
+		"knip": "^6.40.0",
 		"nodemailer": "^10.0.15",
 		"pdf-lib": "^1.17.1",
 		"playwright": "^1.60.0",
