@@ -12,13 +12,11 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
 import {
-	invoiceNumber,
 	invoiceState,
 	invoiceTotals,
 	itemLine,
 	type LineDraft,
 	orderLines,
-	SEQUENCE_START,
 	today,
 } from "#lib/components/invoicing/invoice.js";
 // The module's queries, to refresh; they use this file in turn.
@@ -38,6 +36,7 @@ import {
 	orderLine,
 } from "./db/schema.ts";
 import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
+import { nextNumber } from "./numbering.ts";
 import { priceOrders } from "./pricing.ts";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "./session.ts";
 
@@ -223,7 +222,7 @@ export interface DraftProblem {
 /**
  * Makes a draft invoice for one of the tenant's customers with the chosen completed orders and
  * other modules' items, all of which must be billable (see `linesFor`). It gets the tenant's next
- * number (see `invoiceNumber`), payment term and VAT rate. Returns its number, or what's wrong;
+ * number (see `nextNumber`), payment term and VAT rate. Returns its number, or what's wrong;
  * refuses with `invalid()` if another request billed some of it meanwhile. The new invoice form
  * and the orders list's "Create invoice" share it.
  */
@@ -255,15 +254,7 @@ export async function createDraft(input: {
 	const settings = await settingsOf(organizationId);
 	return db.transaction(async (tx) => {
 		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
-		const [last] = await tx
-			.select({
-				sequence: sql<
-					number | null
-				>`max(cast(substr(${invoice.number}, ${SEQUENCE_START}) as integer))`,
-			})
-			.from(invoice)
-			.where(inTenant(invoice));
-		const number = invoiceNumber(new Date().getFullYear(), (last?.sequence ?? 0) + 1);
+		const number = await nextNumber(tx, "invoice");
 		const [created] = await tx
 			.insert(invoice)
 			.values({

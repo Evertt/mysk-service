@@ -40,8 +40,10 @@ helpers are in `src/lib/server/session.ts`:
   in review. `contract_equipment` has no `organization_id`: reach it through a tenant-checked
   contract or equipment.
 - Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
-  per organization: pick the next one and insert it in one `db.transaction` (transactions take
-  turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick the same one).
+  per organization: pick the next one with `nextNumber(tx, "order")` (`src/lib/server/numbering.ts`;
+  the formats are in `src/lib/numbering.ts`) and insert it in the same `db.transaction`
+  (transactions take turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick
+  the same one).
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the

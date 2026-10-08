@@ -24,7 +24,6 @@ import {
 } from "#lib/components/contracts/billing.ts";
 import {
 	dueDate,
-	invoiceNumber,
 	itemLine,
 	type LineDraft,
 	orderLines,
@@ -44,6 +43,7 @@ import {
 	type OrderType,
 	specialtyForCategory,
 } from "#lib/models.ts";
+import { formatCode } from "#lib/numbering.ts";
 
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "./demo.ts";
 import type { Transaction } from "./index.ts";
@@ -302,7 +302,7 @@ function generateTenant(size: TenantSize) {
 		]);
 		return {
 			id: i + 1,
-			code: `CUST-${String(i + 1).padStart(4, "0")}`,
+			code: formatCode("customer", i + 1),
 			name,
 			contactName: `${firstName} ${lastName}`,
 			email: `${mailbox}@${domain}`,
@@ -419,7 +419,7 @@ function generateTenant(size: TenantSize) {
 
 	const materials = catalog.map(([name, unit, min, max], i) => ({
 		id: i + 1,
-		sku: `MAT-${String(i + 1).padStart(4, "0")}`,
+		sku: formatCode("material", i + 1),
 		name,
 		unit,
 		unitPrice: faker.number.int({ min: min * 100, max: max * 100, multipleOf: 5 }),
@@ -589,7 +589,7 @@ function generateTenant(size: TenantSize) {
 		.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 		.map((o, i) => ({
 			id: i + 1,
-			number: `ORD-${o.createdAt.getFullYear()}-${String(i + 1).padStart(5, "0")}`,
+			number: formatCode("order", i + 1, o.createdAt.getFullYear()),
 			...o,
 		}));
 
@@ -730,7 +730,7 @@ function generateTenant(size: TenantSize) {
 		.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 		.map((c, i) => ({
 			id: i + 1,
-			number: `CTR-${c.createdAt.getFullYear()}-${String(i + 1).padStart(4, "0")}`,
+			number: formatCode("contract", i + 1, c.createdAt.getFullYear()),
 			...c,
 		}));
 
@@ -791,7 +791,7 @@ function generateTenant(size: TenantSize) {
 		unit.status = "needs_service";
 		return {
 			id,
-			number: `ORD-${createdAt.getFullYear()}-${String(id).padStart(5, "0")}`,
+			number: formatCode("order", id, createdAt.getFullYear()),
 			customerId: term.customerId,
 			equipmentId: unit.id,
 			engineerId: null,
@@ -1058,7 +1058,7 @@ function generateInvoices(
 	return [...issued, ...drafts].map((invoice, i) => ({
 		...invoice,
 		id: i + 1,
-		number: invoiceNumber((invoice.issuedOn ?? invoice.createdAt).getFullYear(), i + 1),
+		number: formatCode("invoice", i + 1, (invoice.issuedOn ?? invoice.createdAt).getFullYear()),
 		paymentTermDays: 30,
 		vatRate: 21,
 	}));
