@@ -126,6 +126,9 @@ row actions in tables, `order.actions`-style slots, `settings.cards`, and the se
   orders); `run()` inserts it. What a module does at runtime through hooks it does at seed time
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
   asks without knowing the module: invoicing's seed prices orders and bills fees through them.
+- The page guard is a layout load, so it also answers a form posted from a module's page (the
+  organization switcher's) in an organization without the module: a refused form is a 404 there, not
+  its own status. Tests that tamper with such a form start from a page that exists.
 - A core e2e test of something a module changes (a customer's revenue less what contracts include)
   can't import the module's helpers, so `e2e/contracts-helpers.ts`, which works the contracts' effect
   on prices out in SQL, stays in `e2e/`; the module's own e2e imports it from there.
