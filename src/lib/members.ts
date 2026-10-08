@@ -7,22 +7,9 @@
 
 import { m } from "#lib/paraglide/messages.js";
 
-import { type MemberRole, memberRoles } from "./roles.ts";
+import { isManager, type MemberRole, memberRoles } from "./roles.ts";
 
 export { type MemberRole, memberRoles } from "./roles.ts";
-
-/** A member's roles: better-auth stores them comma-separated, e.g. `owner` or `admin,member`. */
-export const parseRoles = (role: string) =>
-	role
-		.split(",")
-		.map((r) => r.trim())
-		.filter(Boolean);
-
-/** Roles that may manage the organization's members and invitations. */
-export const managerRoles: MemberRole[] = ["owner", "admin"];
-
-export const canManageMembers = (roles: string[]) =>
-	roles.some((role) => (managerRoles as string[]).includes(role));
 
 const isOwner = (roles: string[]) => roles.includes("owner");
 
@@ -40,7 +27,7 @@ export function roleChangeRefusal(
 	{ actor, target, owners }: MemberChange,
 	role: MemberRole,
 ): string | null {
-	if (!canManageMembers(actor.roles)) return m.settings_refusal_change_roles();
+	if (!isManager(actor.roles)) return m.settings_refusal_change_roles();
 	if (isOwner(target.roles) && role !== "owner" && owners <= 1) {
 		return m.settings_refusal_last_owner_role();
 	}
@@ -52,7 +39,7 @@ export function roleChangeRefusal(
 
 /** Why `actor` may not remove `target` from the organization, or `null` if they may. */
 export function removalRefusal({ actor, target, owners }: MemberChange): string | null {
-	if (!canManageMembers(actor.roles)) return m.settings_refusal_remove_members();
+	if (!isManager(actor.roles)) return m.settings_refusal_remove_members();
 	if (isOwner(target.roles) && owners <= 1) return m.settings_refusal_last_owner_removal();
 	if (actor.userId === target.userId) return m.settings_refusal_remove_yourself();
 	if (isOwner(target.roles) && !isOwner(actor.roles)) return m.settings_refusal_remove_owner();
@@ -61,7 +48,7 @@ export function removalRefusal({ actor, target, owners }: MemberChange): string 
 
 /** The roles `actorRoles` may give someone they invite (or promote): owners only by owners. */
 export const assignableRoles = (actorRoles: string[]): MemberRole[] =>
-	canManageMembers(actorRoles)
+	isManager(actorRoles)
 		? memberRoles.filter((role) => role !== "owner" || isOwner(actorRoles))
 		: [];
 

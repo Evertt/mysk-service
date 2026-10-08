@@ -10,18 +10,28 @@
  *    with `invalid()` as it would there,
  * 5. refreshes the queries that show them, and returns what it did.
  *
+ * `bulkChange()` does 2 to 4, and `refreshRequested()` is 5 for a server-side table, which asks
+ * for its pages with `requested()` on the server. A table that loads all its rows in one query
+ * (`getCustomers().refresh()`) refreshes that query instead. A server-side table's command passes
+ * `matching` (its list's query for the ids matching its URL); a client-side table's only takes ids.
+ *
  * Each record changes in a transaction of its own (the single-record path's), not all or nothing:
  * the records of a bulk action don't depend on each other, so one that's refused (an invoiced
  * order, a customer with orders) shouldn't hold up the rest. The result lists every skipped record
  * with the reason, which the action bar shows.
  */
+import { requested, type RemoteQueryFunction } from "$app/server";
 import { error, isHttpError, isValidationError } from "@sveltejs/kit";
+import type { GetColumnData } from "drizzle-orm";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.js";
 import { formatNumber } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
+import { db } from "./db/index.ts";
+import { idsInTenant, type TenantTable } from "./session.ts";
 import { tableParams } from "./table-query.ts";
 
 /** A bulk command's target (`BulkTarget`): ids, or a server-side list's URL parameters. */
@@ -91,4 +101,49 @@ export async function forEachRecord<T>(
 		}
 	}
 	return result;
+}
+
+/** The fields of `columns` as loaded: a record's `status` column is its status. */
+type Loaded<C extends Record<string, SQLiteColumn>> = {
+	[K in keyof C]: GetColumnData<C[K], "query">;
+};
+
+/**
+ * Changes each of the tenant's records in a bulk command's `target`, in order of their `label`,
+ * with `change`. It's `targetIds`, the load and `forEachRecord` in one, and what the three do
+ * (see above) applies. `table` is the records' table, `label` its column that names a record in the
+ * result and orders the work (e.g. `order.number`), `columns` more fields `change` needs (e.g.
+ * `{ status: equipment.status }`), and `matching` the list's query for the ids matching its URL
+ * (see `MatchingIds`). Refresh the queries that show the records afterwards.
+ */
+export async function bulkChange<C extends Record<string, SQLiteColumn> = Record<never, never>>(
+	target: BulkTargetInput,
+	options: {
+		table: SQLiteTable & TenantTable;
+		label: SQLiteColumn;
+		columns?: C;
+		matching?: MatchingIds;
+		change: (record: { id: number; label: string } & Loaded<C>) => Promise<unknown>;
+	},
+): Promise<BulkResult> {
+	const { table, label, columns, matching, change } = options;
+	const ids = await targetIds(target, matching);
+	const found = (await db
+		.select({ ...columns, id: table.id, label })
+		.from(table)
+		.where(idsInTenant(table, ids))
+		.orderBy(label)) as ({ id: number; label: string } & Loaded<C>)[];
+	return forEachRecord(found, ids.length, (record) => record.label, change);
+}
+
+/** How many pages of a server-side list the client may ask a command to refresh. */
+export const REQUESTED_PAGES = 4;
+
+/**
+ * Refreshes the pages of these server-side lists' queries that the client asked for (see
+ * `requested()`), e.g. a list's rows and its filters' counts after a bulk action or a schedule
+ * change. Call it in a command or form.
+ */
+export async function refreshRequested(...queries: RemoteQueryFunction<any, any, any>[]) {
+	for (const query of queries) await requested(query, REQUESTED_PAGES).refreshAll();
 }

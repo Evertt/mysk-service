@@ -25,7 +25,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { db } from "./db/index.ts";
 import { contract, contractEquipment } from "./db/schema.ts";
 import type { OrderFacts, ServerModule } from "./modules.ts";
-import { inTenant } from "./session.ts";
+import { inTenant, tenantJoin } from "./session.ts";
 
 /** The contract that covered an order. */
 export type Coverage = Pick<
@@ -53,7 +53,7 @@ export async function coverageOf(
 			endsOn: contract.endsOn,
 		})
 		.from(contractEquipment)
-		.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
+		.innerJoin(...tenantJoin(contract, contractEquipment.contractId))
 		.where(inArray(contractEquipment.equipmentId, units));
 	const byUnit = Map.groupBy(rows, (row) => row.equipmentId);
 

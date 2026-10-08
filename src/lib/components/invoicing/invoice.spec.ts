@@ -4,8 +4,6 @@ import { formatRate } from "./display.ts";
 import {
 	canChange,
 	dueDate,
-	invoiceNumber,
-	invoiceSequence,
 	invoiceState,
 	invoiceTotals,
 	isEditable,
@@ -14,30 +12,10 @@ import {
 	lineAmount,
 	orderLines,
 	roundCents,
-	SEQUENCE_START,
 	today,
 	vatOf,
 } from "./invoice.ts";
 import { invoiceStatuses } from "./model.js";
-
-describe("numbers", () => {
-	test("are the year and a five-digit sequence", () => {
-		expect(invoiceNumber(2026, 1)).toBe("INV-2026-00001");
-		expect(invoiceNumber(2027, 1234)).toBe("INV-2027-01234");
-	});
-
-	test("keep counting past five digits", () => {
-		expect(invoiceNumber(2030, 123456)).toBe("INV-2030-123456");
-		expect(invoiceSequence("INV-2030-123456")).toBe(123456);
-	});
-
-	test("give back their sequence, where the database reads it", () => {
-		expect(invoiceSequence(invoiceNumber(2026, 42))).toBe(42);
-		expect(invoiceNumber(2026, 42).slice(SEQUENCE_START - 1)).toBe("00042");
-		expect(invoiceSequence("ORD-2026-00042")).toBeUndefined();
-		expect(invoiceSequence("INV-2026-42")).toBeUndefined();
-	});
-});
 
 describe("amounts", () => {
 	test("round to the cent, halves away from zero", () => {

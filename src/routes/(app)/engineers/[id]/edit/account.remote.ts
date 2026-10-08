@@ -6,10 +6,9 @@ import * as v from "valibot";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { db } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
 import { engineer, member, user } from "#lib/server/db/schema.js";
 import { inTenant, requireMember, requireRole } from "#lib/server/session.js";
-import type { Transaction } from "#lib/server/stock.js";
 
 /** Roles that may link engineers to user accounts. */
 const managers = ["owner", "admin"];

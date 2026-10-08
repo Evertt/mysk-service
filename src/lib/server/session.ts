@@ -1,11 +1,11 @@
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { isModuleId, type ModuleId } from "#lib/module-ids.js";
 import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer } from "#lib/roles.js";
+import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.js";
 import { db } from "#lib/server/db/index.js";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.js";
 
@@ -50,7 +50,7 @@ export async function loadTenant(
 		organizationId: current.organizationId,
 		name: current.name,
 		slug: current.slug,
-		roles: current.role.split(",").map((role) => role.trim()),
+		roles: parseRoles(current.role),
 		// A row for a module that's no longer there (removed from the app) does nothing.
 		modules: modules.map((row) => row.id).filter(isModuleId),
 	};
@@ -111,6 +111,30 @@ export function inTenant(table: { organizationId: SQLiteColumn }): SQL {
 	return eq(table.organizationId, requireTenant().organizationId);
 }
 
+/** A table of tenant records: with an `id` and the `organizationId` that `inTenant()` compares. */
+export interface TenantTable {
+	id: SQLiteColumn;
+	organizationId: SQLiteColumn;
+}
+
+/**
+ * `table.id = id` in the current tenant: the way to look a record up by an id from the client
+ * (ids are global). An `eq(table.id, id)` without `inTenant()` stands out in review.
+ */
+export const idInTenant = (table: TenantTable, id: number): SQL =>
+	and(eq(table.id, id), inTenant(table))!;
+
+/** `table.id in ids` in the current tenant: the way to load the records of ids from the client. */
+export const idsInTenant = (table: TenantTable, ids: number[]): SQL =>
+	and(inArray(table.id, ids), inTenant(table))!;
+
+/**
+ * The arguments of a join on `table` through `foreignKey`, kept in the tenant (ids are global):
+ * `.leftJoin(...tenantJoin(engineer, order.engineerId))`.
+ */
+export const tenantJoin = <T extends TenantTable>(table: T, foreignKey: SQLiteColumn) =>
+	[table, and(eq(foreignKey, table.id), inTenant(table))!] as const;
+
 /**
  * The current tenant, if it has `moduleId`; otherwise a 404, as if the module's pages and data
  * didn't exist. Call it first in every remote function of an optional module.
@@ -129,3 +153,6 @@ export function requireRole(...roles: string[]) {
 	}
 	return tenant;
 }
+
+/** The current tenant, if the user is an owner or an admin (`managerRoles`) in it; otherwise a 403. */
+export const requireManager = () => requireRole(...managerRoles);

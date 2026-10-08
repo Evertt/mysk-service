@@ -8,17 +8,15 @@ import * as v from "valibot";
 import { label } from "#lib/i18n/labels.js";
 import {
 	assignableRoles,
-	canManageMembers,
 	invitationState,
-	managerRoles,
 	type MemberChange,
 	type MemberRole,
 	memberRoles,
-	parseRoles,
 	removalRefusal,
 	roleChangeRefusal,
 } from "#lib/members.js";
 import { m } from "#lib/paraglide/messages.js";
+import { isManager, managerRoles, parseRoles } from "#lib/roles.js";
 import { recordActivityAfter } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
 import { db } from "#lib/server/db/index.js";
@@ -31,7 +29,7 @@ import { inTenant, requireMember, requireRole } from "#lib/server/session.js";
  */
 export const getMembers = query(async () => {
 	const tenant = requireMember();
-	const canManage = canManageMembers(tenant.roles);
+	const canManage = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
 	const [members, invitations] = await Promise.all([
 		db

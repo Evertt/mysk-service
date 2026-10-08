@@ -15,11 +15,11 @@ import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { auth } from "#lib/server/auth.js";
-import { db } from "#lib/server/db/index.js";
+import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
 import { checkLines, saveOrderLines } from "#lib/server/orders.js";
 import { inTenant, requireEngineer } from "#lib/server/session.js";
-import { moveOrderStock, OrderStockShortage, type Transaction } from "#lib/server/stock.js";
+import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { fieldActions, signature } from "./work.js";
 

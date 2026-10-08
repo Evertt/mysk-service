@@ -7,8 +7,8 @@ import type { PriceAdjustment } from "#lib/modules.js";
  * script can use it too.
  *
  * - **Numbers** are sequential per organization, across years: `INV-2026-00001`, `INV-2027-00002`,
- *   … A draft gets its number when it's made; a draft that isn't needed is voided rather than
- *   deleted, so there are no gaps.
+ *   … (see `#lib/numbering.ts`). A draft gets its number when it's made; a draft that isn't needed
+ *   is voided rather than deleted, so there are no gaps.
  * - **Status**: a draft is issued (sent), then paid; a draft or a sent invoice can be voided. A
  *   sent invoice past its due date is overdue; that isn't stored.
  * - **Totals** are in cents: the subtotal is the sum of the lines, the VAT is the subtotal times
@@ -18,21 +18,6 @@ import type { PriceAdjustment } from "#lib/modules.js";
  *   lines add up to the order's total from `priceOrders()`.
  */
 import type { InvoiceStatus } from "./model.js";
-
-// --- Numbers ---------------------------------------------------------------------------------
-
-/** Where the sequence starts in a number: `INV-2026-` is 9 characters. */
-export const SEQUENCE_START = 10;
-
-/** `INV-2026-00042` */
-export const invoiceNumber = (year: number, sequence: number) =>
-	`INV-${year}-${String(sequence).padStart(5, "0")}`;
-
-/** The sequence of a number made by `invoiceNumber`, e.g. 42; `undefined` for anything else. */
-export function invoiceSequence(number: string): number | undefined {
-	const match = /^INV-\d{4}-(\d{5,})$/.exec(number);
-	return match ? Number(match[1]) : undefined;
-}
 
 // --- Status ----------------------------------------------------------------------------------
 
@@ -67,9 +52,6 @@ export const canChange = (from: InvoiceStatus, to: InvoiceStatus) =>
 
 /** Only drafts can have their lines and terms changed. */
 export const isEditable = (status: InvoiceStatus) => status === "draft";
-
-/** Outstanding: sent and not yet paid (overdue or not). */
-export const isOutstanding = (status: InvoiceStatus) => status === "sent";
 
 /** Today at midnight. */
 export const today = (now = new Date()) =>
