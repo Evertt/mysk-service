@@ -7,8 +7,7 @@
 	import { actionSentence, subjectHref } from "#lib/activity.js";
 	import { formatDateTime } from "#lib/format.js";
 	import { messageParts } from "#lib/i18n/parts.js";
-
-	import type { ActivityEntry, SubjectLink } from "./activity.remote.js";
+	import type { ActivityEntry, SubjectLink } from "#lib/server/activity-feed.js";
 
 	let {
 		entries,
