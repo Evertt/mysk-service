@@ -57,7 +57,7 @@ parallel agents in their own worktrees.
    - Plugins step 1: untangle core from contracts and invoicing in place (labels, models, messages,
      activity verbs, module ids, e2e helper).
    - Table-query steps 1–2: the list definition module and the typed planner, beside the old ones.
-2. **Sections** (parallel): cleanup batch 1 for orders, materials + equipment, customers +
+2. **Sections** (parallel) ✅ done: cleanup batch 1 for orders, materials + equipment, customers +
    engineers, schedule/members/portal/dashboard, activity, seed and e2e support. Contracts and
    invoicing get only the shared helpers here.
 3. **Typed table queries**: table-query steps 3–6 (orders, equipment, materials, then remove the
