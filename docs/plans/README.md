@@ -50,7 +50,7 @@ Where they overlap:
 Each phase merges before the next. Within a phase, the items touch different files and can go to
 parallel agents in their own worktrees.
 
-1. **Foundations** (parallel)
+1. **Foundations** (parallel) ✅ done
    - Cleanup batch 0: one `Transaction` type, the tenant helpers (`idInTenant`, `tenantJoin`, …),
      numbering, roles, `bulkChange`/`deleteAndLog`/`refuse`, pricing SQL, the shared components
      (breadcrumbs, stat card, submit button), default column header, dead code.
