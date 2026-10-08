@@ -10,7 +10,7 @@
 	import { label } from "#lib/i18n/labels.js";
 	import type { MaterialUnit } from "#lib/models.js";
 
-	import type { getMaterial } from "../materials.remote.js";
+	import type { getMaterial } from "../material.remote.js";
 	import { formatChange } from "./stock-history.js";
 
 	type Movement = Awaited<ReturnType<typeof getMaterial>>["movements"][number];

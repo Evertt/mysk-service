@@ -13,7 +13,7 @@ import {
 	bulkSetEquipmentStatus,
 	getEquipmentFacets,
 	getEquipmentList,
-} from "./equipment.remote.js";
+} from "./equipment-list.remote.js";
 
 export const changeStatus: BulkAction<EquipmentRow> = {
 	id: "status",

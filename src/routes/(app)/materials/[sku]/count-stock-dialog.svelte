@@ -13,8 +13,8 @@
 	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, quantityStep } from "#lib/models.js";
 
-	import { countStock } from "../materials.remote.js";
 	import { formatChange } from "./stock-history.js";
+	import { countStock } from "./stock.remote.js";
 
 	let { material }: { material: { id: number; name: string; unit: MaterialUnit; stock: number } } =
 		$props();

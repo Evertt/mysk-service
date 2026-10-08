@@ -10,7 +10,7 @@ import StatusBadge from "#lib/components/equipment/status-badge.svelte";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getEquipmentList } from "./equipment.remote.js";
+import type { getEquipmentList } from "./equipment-list.remote.js";
 import WarrantyCell from "./warranty-cell.svelte";
 
 /** A row of the equipment list, a page of which comes from the server (see `equipmentUrl`). */

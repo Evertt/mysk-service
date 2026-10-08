@@ -9,7 +9,7 @@ import { label } from "#lib/i18n/labels.js";
 import { materialUnits } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getMaterials } from "./materials.remote.js";
+import type { getMaterials } from "./material-list.remote.js";
 import StockCell from "./stock-cell.svelte";
 
 /** A row of the materials list, a page of which comes from the server (see `materialsUrl`). */

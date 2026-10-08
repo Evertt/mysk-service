@@ -4,7 +4,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import MaterialForm from "../../material-form.svelte";
-	import { getMaterial, updateMaterial } from "../../materials.remote.js";
+	import { getMaterial, updateMaterial } from "../../material.remote.js";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

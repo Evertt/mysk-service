@@ -14,7 +14,7 @@
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
-	import { deleteMaterial, getMaterial } from "../materials.remote.js";
+	import { deleteMaterial, getMaterial } from "../material.remote.js";
 	import type { PageProps } from "./$types";
 	import CountStockDialog from "./count-stock-dialog.svelte";
 	import ReceiveStockDialog from "./receive-stock-dialog.svelte";

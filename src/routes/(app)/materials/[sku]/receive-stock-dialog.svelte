@@ -13,7 +13,7 @@
 	import { label } from "#lib/i18n/labels.js";
 	import { type MaterialUnit, quantityStep } from "#lib/models.js";
 
-	import { receiveStock } from "../materials.remote.js";
+	import { receiveStock } from "./stock.remote.js";
 
 	let { material }: { material: { id: number; name: string; unit: MaterialUnit; stock: number } } =
 		$props();
