@@ -1,21 +1,28 @@
 import { command, form, query } from "$app/server";
-import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, gte, inArray, lt, lte, ne, sql } from "drizzle-orm";
+import { error, redirect } from "@sveltejs/kit";
+import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { nextDay } from "#lib/dates.js";
 import { formatDate } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
+import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
+import { overlappingCoverage } from "#lib/server/contracts.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant, requireModule } from "#lib/server/session.js";
+import { refuse, type Problem } from "#lib/server/forms.js";
+import { nextNumber } from "#lib/server/numbering.js";
+import {
+	idInTenant,
+	idsInTenant,
+	inTenant,
+	requireModule,
+	tenantJoin,
+} from "#lib/server/session.js";
 
 import { contractFields } from "./contract-schema.js";
-
-/** The day after `date`; contracts run up to and including their last day. */
-const nextDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
 export const getContracts = query(async () => {
@@ -23,7 +30,7 @@ export const getContracts = query(async () => {
 	const coverage = db
 		.select({ contractId: contractEquipment.contractId, units: count().as("units") })
 		.from(contractEquipment)
-		.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
+		.innerJoin(...tenantJoin(contract, contractEquipment.contractId))
 		.groupBy(contractEquipment.contractId)
 		.as("coverage");
 
@@ -41,7 +48,7 @@ export const getContracts = query(async () => {
 			units: sql<number>`coalesce(${coverage.units}, 0)`,
 		})
 		.from(contract)
-		.innerJoin(customer, and(eq(contract.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, contract.customerId))
 		.leftJoin(coverage, eq(coverage.contractId, contract.id))
 		.where(inTenant(contract))
 		.orderBy(desc(contract.startsOn));
@@ -125,18 +132,21 @@ export const getContractFormOptions = query(async () => {
 
 type ContractInput = v.InferOutput<v.ObjectSchema<typeof contractFields, undefined>>;
 
-type Problem = { field: "customerId" | "endsOn" | "equipmentIds"; message: string };
+type ContractField = "customerId" | "endsOn" | "equipmentIds";
 
 /**
  * Checks what the schema can't: the customer exists in the tenant, the period runs forwards, the
  * units are the customer's own, and none of them is already covered by another of the tenant's
  * contracts in the same period.
  */
-async function checkContract(id: number | null, input: ContractInput): Promise<Problem[]> {
-	const problems: Problem[] = [];
+async function checkContract(
+	id: number | null,
+	input: ContractInput,
+): Promise<Problem<ContractField>[]> {
+	const problems: Problem<ContractField>[] = [];
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
-		where: and(eq(customer.id, input.customerId), inTenant(customer)),
+		where: idInTenant(customer, input.customerId),
 	});
 	if (!owner) {
 		problems.push({ field: "customerId", message: m.contracts_unknown_customer() });
@@ -148,7 +158,7 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 	const units = await db
 		.select({ id: equipment.id, customerId: equipment.customerId })
 		.from(equipment)
-		.where(and(inArray(equipment.id, input.equipmentIds), inTenant(equipment)));
+		.where(idsInTenant(equipment, input.equipmentIds));
 	if (
 		units.length !== new Set(input.equipmentIds).size ||
 		units.some((unit) => unit.customerId !== input.customerId)
@@ -158,27 +168,7 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 			message: m.contracts_units_of_customer(),
 		});
 	} else {
-		const covered = await db
-			.select({
-				serialNumber: equipment.serialNumber,
-				number: contract.number,
-				endsOn: contract.endsOn,
-			})
-			.from(contractEquipment)
-			.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
-			.innerJoin(
-				equipment,
-				and(eq(contractEquipment.equipmentId, equipment.id), inTenant(equipment)),
-			)
-			.where(
-				and(
-					inArray(contractEquipment.equipmentId, input.equipmentIds),
-					id ? ne(contract.id, id) : undefined,
-					lte(contract.startsOn, input.endsOn),
-					gte(contract.endsOn, input.startsOn),
-				),
-			)
-			.orderBy(asc(equipment.serialNumber));
+		const covered = await overlappingCoverage(input.equipmentIds, input, id);
 		for (const row of covered) {
 			problems.push({
 				field: "equipmentIds",
@@ -195,8 +185,7 @@ async function checkContract(id: number | null, input: ContractInput): Promise<P
 
 /**
  * Creates or updates one of the tenant's contracts and replaces its coverage; returns the contract
- * number. A new contract gets the tenant's next number: `CTR-<year>-<sequence>`, where the
- * sequence runs on across years.
+ * number. A new contract gets the tenant's next number (see `nextNumber()`).
  */
 async function saveContract(organizationId: string, id: number | null, input: ContractInput) {
 	const { equipmentIds, ...fields } = input;
@@ -204,7 +193,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 	return db.transaction(async (tx) => {
 		const existing = id
 			? await tx.query.contract.findFirst({
-					where: and(eq(contract.id, id), inTenant(contract)),
+					where: idInTenant(contract, id),
 					with: { coverage: { columns: { equipmentId: true } } },
 				})
 			: null;
@@ -218,19 +207,9 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 			// The contract was checked to be the tenant's, so its coverage is too. Remove it before the
 			// customer may change: coverage must be of the contract's customer.
 			await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, contractId));
-			await tx
-				.update(contract)
-				.set(fields)
-				.where(and(eq(contract.id, contractId), inTenant(contract)));
+			await tx.update(contract).set(fields).where(idInTenant(contract, contractId));
 		} else {
-			// "CTR-2026-0001": the sequence starts at the 10th character.
-			const [last] = await tx
-				.select({
-					sequence: sql<number | null>`max(cast(substr(${contract.number}, 10) as integer))`,
-				})
-				.from(contract)
-				.where(inTenant(contract));
-			number = `CTR-${new Date().getFullYear()}-${String((last?.sequence ?? 0) + 1).padStart(4, "0")}`;
+			number = await nextNumber(tx, "contract");
 			const [inserted] = await tx
 				.insert(contract)
 				.values({ ...fields, organizationId, number })
@@ -260,7 +239,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 export const createContract = form(v.object(contractFields), async (input, issue) => {
 	const { organizationId } = requireModule("contracts");
 	const problems = await checkContract(null, input);
-	if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+	refuse(issue, problems);
 	const number = await saveContract(organizationId, null, input);
 	// Send fresh data along with the redirect (a single-flight mutation); otherwise the page we go
 	// to first shows what it cached before.
@@ -274,7 +253,7 @@ export const updateContract = form(
 		const { organizationId } = requireModule("contracts");
 		const { id, ...input } = data;
 		const problems = await checkContract(id, input);
-		if (problems.length) invalid(...problems.map((p) => issue[p.field](p.message)));
+		refuse(issue, problems);
 		const number = await saveContract(organizationId, id, input);
 		void getContracts().refresh();
 		void getContract(number).refresh();
@@ -291,11 +270,11 @@ async function removeContract(id: number) {
 	await db.transaction(async (tx) => {
 		const found = await tx.query.contract.findFirst({
 			columns: { id: true, number: true },
-			where: and(eq(contract.id, id), inTenant(contract)),
+			where: idInTenant(contract, id),
 		});
 		if (!found) error(404, m.contracts_not_found());
 		await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, id));
-		await tx.delete(contract).where(and(eq(contract.id, id), inTenant(contract)));
+		await tx.delete(contract).where(idInTenant(contract, id));
 		const subject = { type: "contract", id, label: found.number };
 		await recordActivity(tx, { action: "deleted", subject });
 	});
@@ -311,18 +290,11 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 /** Deletes the selected contracts, with their coverage. */
 export const bulkDeleteContracts = command(bulkTarget, async (target) => {
 	requireModule("contracts");
-	const ids = await targetIds(target);
-	const found = await db
-		.select({ id: contract.id, number: contract.number })
-		.from(contract)
-		.where(and(inArray(contract.id, ids), inTenant(contract)))
-		.orderBy(contract.number);
-	const result = await forEachRecord(
-		found,
-		ids.length,
-		(each) => each.number,
-		(each) => removeContract(each.id),
-	);
+	const result = await bulkChange(target, {
+		table: contract,
+		label: contract.number,
+		change: (each) => removeContract(each.id),
+	});
 	void getContracts().refresh();
 	return result;
 });

@@ -8,11 +8,12 @@ import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "driz
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
+import { addDays, startOfDay } from "#lib/dates.js";
 import { m } from "#lib/paraglide/messages.js";
 import { coverageOf } from "#lib/server/contracts.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
-import { inTenant, requireModule } from "#lib/server/session.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/session.js";
 
 import { includedLabel, needsAttention, responseDeadline } from "./coverage.js";
 
@@ -56,7 +57,7 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
 			responseHours: contract.responseHours,
 		})
 		.from(contractEquipment)
-		.innerJoin(contract, and(eq(contractEquipment.contractId, contract.id), inTenant(contract)))
+		.innerJoin(...tenantJoin(contract, contractEquipment.contractId))
 		.where(eq(contractEquipment.equipmentId, unit.id))
 		.orderBy(desc(contract.startsOn));
 });
@@ -68,8 +69,8 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
 export const getContractsOverview = query(async () => {
 	requireModule("contracts");
 	const now = new Date();
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	const horizon = new Date(today.getFullYear(), today.getMonth(), today.getDate() + EXPIRING_DAYS);
+	const today = startOfDay(now);
+	const horizon = addDays(today, EXPIRING_DAYS);
 
 	// Only repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).
 	const waiting = await db
@@ -84,7 +85,7 @@ export const getContractsOverview = query(async () => {
 			customer: { code: customer.code, name: customer.name },
 		})
 		.from(order)
-		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, order.customerId))
 		.where(
 			and(
 				inTenant(order),
@@ -114,7 +115,7 @@ export const getContractsOverview = query(async () => {
 			customer: { code: customer.code, name: customer.name },
 		})
 		.from(contract)
-		.innerJoin(customer, and(eq(contract.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, contract.customerId))
 		.where(
 			and(
 				inTenant(contract),

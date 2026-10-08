@@ -4,7 +4,7 @@
  * offer the monthly fees for billing. The rules themselves are in
  * `#lib/components/contracts/coverage.ts` and `billing.ts`.
  */
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 
 import { contractMonths, monthlyFee } from "#lib/components/contracts/billing.js";
 import {
@@ -23,7 +23,7 @@ import type { OrderTag } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import { db } from "./db/index.ts";
-import { contract, contractEquipment } from "./db/schema.ts";
+import { contract, contractEquipment, equipment } from "./db/schema.ts";
 import type { OrderFacts, ServerModule } from "./modules.ts";
 import { inTenant, tenantJoin } from "./session.ts";
 
@@ -65,6 +65,36 @@ export async function coverageOf(
 			return [[order.id, coverage]];
 		}),
 	);
+}
+
+/**
+ * The tenant's contracts that cover any of these units during `period` (both days included), as
+ * one row per unit and contract, ordered by serial number. `exceptId` leaves out a contract, e.g.
+ * the one being edited.
+ */
+export function overlappingCoverage(
+	equipmentIds: number[],
+	period: { startsOn: Date; endsOn: Date },
+	exceptId: number | null,
+) {
+	return db
+		.select({
+			serialNumber: equipment.serialNumber,
+			number: contract.number,
+			endsOn: contract.endsOn,
+		})
+		.from(contractEquipment)
+		.innerJoin(...tenantJoin(contract, contractEquipment.contractId))
+		.innerJoin(...tenantJoin(equipment, contractEquipment.equipmentId))
+		.where(
+			and(
+				inArray(contractEquipment.equipmentId, equipmentIds),
+				exceptId ? ne(contract.id, exceptId) : undefined,
+				lte(contract.startsOn, period.endsOn),
+				gte(contract.endsOn, period.startsOn),
+			),
+		)
+		.orderBy(asc(equipment.serialNumber));
 }
 
 /** The badge for a covered order whose response is at risk or overdue. */

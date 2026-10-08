@@ -4,7 +4,6 @@
  */
 import { command } from "$app/server";
 import { error, isValidationError } from "@sveltejs/kit";
-import { and, inArray } from "drizzle-orm";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.js";
 import { m } from "#lib/paraglide/messages.js";
@@ -12,7 +11,7 @@ import { bulkTarget, targetIds } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { order } from "#lib/server/db/schema.js";
 import { billableFor, createDraft } from "#lib/server/invoicing.js";
-import { inTenant, requireModule } from "#lib/server/session.js";
+import { idsInTenant, requireModule } from "#lib/server/session.js";
 
 import { getOrderInvoice } from "./invoicing.remote.js";
 
@@ -34,7 +33,7 @@ export const invoiceOrders = command(bulkTarget, async (target): Promise<BulkRes
 			customerId: order.customerId,
 		})
 		.from(order)
-		.where(and(inArray(order.id, ids), inTenant(order)))
+		.where(idsInTenant(order, ids))
 		.orderBy(order.number);
 	const missing = ids.length - found.length;
 	if (new Set(found.map((o) => o.customerId)).size > 1) error(400, m.invoices_bulk_one_customer());

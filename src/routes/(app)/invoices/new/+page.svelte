@@ -8,9 +8,9 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import BillablePicker from "../billable-picker.svelte";
-	import { createInvoice, getBillable, getCustomers } from "../invoices.remote.js";
+	import { createInvoice, getBillable, getInvoiceCustomers } from "../invoices.remote.js";
 
-	const customers = $derived(await getCustomers());
+	const customers = $derived(await getInvoiceCustomers());
 
 	// `?customer=<code>` (e.g. from an order's page) chooses the customer to start with.
 	const requested = $derived(
@@ -27,19 +27,14 @@
 	<title>{m.invoices_new()} · {m.invoices_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.invoices_new()} description={m.invoices_new_description()}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.invoices_new_breadcrumb()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.invoices_new()}
+	description={m.invoices_new_description()}
+	breadcrumbs={[
+		{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+		{ label: m.invoices_new_breadcrumb() },
+	]}
+/>
 
 <form
 	{...form.enhance(async ({ submit }) => {

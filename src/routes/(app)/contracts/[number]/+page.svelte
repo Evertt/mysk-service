@@ -39,18 +39,11 @@
 		level: levels[contract.level].label,
 		customer: customer.name,
 	})}
+	breadcrumbs={[
+		{ label: m.contracts_title(), href: resolve("/(app)/contracts") },
+		{ label: contract.number },
+	]}
 >
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/contracts")}>{m.contracts_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{contract.number}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
 	{#snippet badges()}
 		<ContractStatusBadge {status} />
 		<LevelBadge level={contract.level} />
