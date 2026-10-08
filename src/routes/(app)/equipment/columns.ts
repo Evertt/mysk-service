@@ -13,7 +13,7 @@ import { m } from "#lib/paraglide/messages.js";
 import type { getEquipmentList } from "./equipment-list.remote.js";
 import WarrantyCell from "./warranty-cell.svelte";
 
-/** A row of the equipment list, a page of which comes from the server (see `equipmentUrl`). */
+/** A row of the equipment list, a page of which comes from the server (see `equipmentList`). */
 export type EquipmentRow = Awaited<ReturnType<typeof getEquipmentList>>["rows"][number];
 
 const column = createAppColumnHelper<EquipmentRow>();

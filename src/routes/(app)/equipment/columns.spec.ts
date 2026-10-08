@@ -6,7 +6,7 @@ import { createAppTable } from "#lib/components/data-table/table.svelte.js";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.js";
 
 import { columns, type EquipmentRow } from "./columns.ts";
-import { equipmentUrl } from "./equipment-url.ts";
+import { equipmentList } from "./equipment-list.ts";
 
 const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): EquipmentRow => ({
 	id: 1,
@@ -69,7 +69,11 @@ test("the manufacturer, category and status filters keep the chosen values", () 
 	expect(shown(rows, { columnFilters: filters })).toEqual(["CHL-2"]);
 });
 
-test("the table reads and writes the URL as the server does (`equipmentUrl`)", () => {
-	const table = createAppTable({ columns, data: [], initialState: { ...equipmentUrl.defaults } });
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(equipmentUrl));
+test("the table reads and writes the URL as the equipment list says", () => {
+	const table = createAppTable({
+		columns,
+		data: [],
+		initialState: { ...equipmentList.urlSpec.defaults },
+	});
+	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(equipmentList.urlSpec));
 });

@@ -1,8 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCents, formatDate } from "../src/lib/format.ts";
+import { formatCents, formatDate, formatNumber } from "../src/lib/format.ts";
 import { cents, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
 import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
+import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -365,6 +366,49 @@ describe("in North", () => {
 		await app.tableSettled();
 		expect(await shownSerials()).toEqual(second.map((row) => row.serial));
 		expect(await app.rowCount()).toBe(total);
+	});
+
+	test("a malformed query for the list is refused with a 400", async () => {
+		const { page } = app;
+		type Query = Record<string, unknown>;
+		/** The error status of the response to the next `name` request, with its argument changed. */
+		const statusOf = async (
+			name: string,
+			change: (arg: Query) => Query,
+			trigger: () => unknown,
+		) => {
+			await app.go("/equipment");
+			await tamperWithQuery<Query>(page, name, change);
+			const [response] = await app.expectingErrors(() =>
+				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
+			);
+			return remoteErrorStatus(response);
+		};
+		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
+		const search = () => page.getByLabel("Search equipment…").fill("A");
+
+		// An unknown category, a filter the list doesn't have, a number for a customer's code, a
+		// page size it doesn't offer.
+		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
+		for (const change of [
+			{ filters: { category: ["bogus"] } },
+			{ filters: { total: [1] } },
+			{ filters: { customer: [1] } },
+			{ pageSize: 5000 },
+		]) {
+			expect(
+				await statusOf("getEquipmentList", rowsWith(change), nextPage),
+				JSON.stringify(change),
+			).toBe(400);
+		}
+		// The counts in the filters take the same care.
+		expect(
+			await statusOf("getEquipmentFacets", rowsWith({ filters: { status: ["bogus"] } }), search),
+		).toBe(400);
+
+		// The list works as before once the request is right.
+		await app.go("/equipment");
+		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 	});
 
 	test("filtering by customer, found by searching the filter", async () => {
@@ -734,6 +778,71 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.pathname === "/equipment");
 		expect(await unitId(serial, north.id)).toBeUndefined();
 		expect((await app.go(`/equipment/${serial}`))?.status()).toBe(404);
+	});
+
+	test("selecting all the matching units acts on exactly the filtered ones", async () => {
+		const { page } = app;
+		// More than fit on a page.
+		const generators = await rows<{ id: number }>(
+			`select id from equipment where organization_id = ? and category = 'generator'`,
+			[north.id],
+		);
+		expect(generators.length).toBeGreaterThan(20);
+		const matching = new Set(generators.map((unit) => unit.id));
+		/** Every unit of every organization with its status. */
+		const statuses = () =>
+			rows<{ id: number; status: string }>(`select id, status from equipment order by id`);
+		const before = await statuses();
+		expect(before.some((unit) => matching.has(unit.id) && unit.status !== "out_of_service")).toBe(
+			true,
+		);
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+
+		await app.go("/equipment?category=generator&sort=serial");
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		const total = formatNumber(generators.length);
+		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
+		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByLabel("Status").selectOption({ label: "Out of service" });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+		await app.toast(`${total} updated`);
+
+		// The generators of North, all of them, and nothing else (not even South's).
+		expect(await statuses()).toEqual(
+			before.map((unit) => (matching.has(unit.id) ? { ...unit, status: "out_of_service" } : unit)),
+		);
+	});
+
+	test("a bulk action with a malformed target is refused with a 400", async () => {
+		const { page } = app;
+		const [first] = await rows<{ id: number }>(
+			`select id from equipment where organization_id = ? and status = 'operational'
+			 order by serial_number limit 1`,
+			[north.id],
+		);
+		const before = await unit(first.id);
+		await app.go("/equipment?status=operational&sort=serial");
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		await bodyRows().first().getByRole("checkbox").click();
+		await bar.getByRole("button", { name: "Change status" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByLabel("Status").selectOption({ label: "Decommissioned" });
+		// The command goes out with a filter that doesn't exist, instead of the selected unit.
+		await tamperWithCommand<{ status: string }>(page, "bulkSetEquipmentStatus", (arg) => ({
+			...arg,
+			target: { matching: { q: "", filters: { category: ["bogus"] } } },
+		}));
+		const [response] = await app.expectingErrors(() =>
+			Promise.all([
+				page.waitForResponse((r) => isRemote(r.url(), "bulkSetEquipmentStatus")),
+				dialog.getByRole("button", { name: "Apply" }).click(),
+			]),
+		);
+		expect(await remoteErrorStatus(response)).toBe(400);
+		expect(await unit(first.id)).toEqual(before);
+		await page.keyboard.press("Escape");
 	});
 });
 

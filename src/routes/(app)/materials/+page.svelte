@@ -3,18 +3,21 @@
 	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { serverTableQuery } from "#lib/components/data-table/server-table.svelte.js";
+	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.js";
+	import { parseTableUrl } from "#lib/components/data-table/url-state.js";
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import { getMaterialFacets, getMaterials } from "./material-list.remote.js";
+	import { materialsList } from "./materials-list.js";
 	import MaterialsTable from "./materials-table.svelte";
-	import { materialsUrl } from "./materials-url.js";
 
 	// The server pages, filters and sorts the materials, as the URL says (see the orders page).
-	const query = $derived(serverTableQuery(page.url.searchParams, materialsUrl));
+	const query = $derived(
+		toListQuery(materialsList, parseTableUrl(page.url.searchParams, materialsList.urlSpec)),
+	);
 	// Both start at once.
-	const materials = $derived(getMaterials(query.rows));
-	const facets = $derived(getMaterialFacets(query.facets));
+	const materials = $derived(getMaterials(query));
+	const facets = $derived(getMaterialFacets(whereOf(query)));
 </script>
 
 <svelte:head>

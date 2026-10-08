@@ -1,100 +1,41 @@
 import { command, query } from "$app/server";
-import {
-	and,
-	count,
-	countDistinct,
-	eq,
-	inArray,
-	type SQL,
-	sql,
-	type SQLWrapper,
-} from "drizzle-orm";
+import { and, countDistinct, inArray } from "drizzle-orm";
 
-import { stockLevels } from "#lib/models.js";
-import { bulkChange, bulkTarget, refreshRequested } from "#lib/server/bulk.js";
+import { queryKey } from "#lib/components/data-table/list-definition.js";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { material, orderLine } from "#lib/server/db/schema.js";
 import { removeMaterial } from "#lib/server/materials.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 import { stockLevelSql } from "#lib/server/stock.js";
-import {
-	facetCounts,
-	groupCounts,
-	nocase,
-	oneOf,
-	pageGroupsOf,
-	planTable,
-	rank,
-	type ServerTable,
-	tableParams,
-} from "#lib/server/table-query.js";
+import { pageGroupsOf, planList } from "#lib/server/table-query.js";
 
-import { materialsUrl } from "./materials-url.js";
-
-/** The materials list's columns in SQL, for its URL state (`materialsUrl`). */
-const materialsTable = (): ServerTable => {
-	const level = stockLevelSql(material.stock, material.unit);
-	return {
-		spec: materialsUrl,
-		columns: {
-			name: { sort: nocase(material.name) },
-			sku: { sort: material.sku },
-			unit: { sort: material.unit, filter: oneOf(material.unit), group: material.unit },
-			unitPrice: { sort: material.unitPrice },
-			stock: { sort: material.stock },
-			// From out of stock to in stock rather than alphabetically.
-			stockLevel: {
-				sort: rank(level, stockLevels),
-				filter: (levels) => inArray(level, levels),
-				group: level,
-			},
-			// Counted for every material only to sort by them (the page's own are counted apart).
-			orderCount: {
-				sort: sql`(select count(distinct ${orderLine.orderId}) from ${orderLine} where ${and(
-					inTenant(orderLine),
-					eq(orderLine.materialId, material.id),
-				)})`,
-			},
-		},
-		search: [material.name, material.sku],
-		tieBreaker: material.id,
-		scope: () => inTenant(material),
-	};
-};
-
-/** How many materials match `where`: in all, or per value of `by`. */
-function countMaterials(where: SQL | undefined, by?: SQLWrapper) {
-	const counted = db
-		.select({ value: sql<unknown>`${by ?? sql`null`}`, count: count() })
-		.from(material)
-		.where(where);
-	return by ? counted.groupBy(sql`${by}`) : counted;
-}
+import { materialsSql } from "./material-list.server.js";
+import { materialsList } from "./materials-list.js";
 
 /**
  * A page of the materials list with the number of orders that use them, searched, filtered and
- * sorted as the URL's parameters say (`materialsUrl`), and how many match in all.
+ * sorted as the query says (see `materialsList`), and how many match in all.
  */
-export const getMaterials = query(tableParams, async (params) => {
+export const getMaterials = query(materialsList.query, async (input) => {
 	requireMember();
-	const plan = planTable(materialsTable(), params);
-	const [rows, [{ count: rowCount }], counts] = await Promise.all([
-		db
-			.select({
-				id: material.id,
-				sku: material.sku,
-				name: material.name,
-				unit: material.unit,
-				unitPrice: material.unitPrice,
-				stock: material.stock,
-			})
-			.from(material)
-			.where(plan.where())
-			.orderBy(...plan.orderBy)
-			.limit(plan.limit)
-			.offset(plan.offset),
-		countMaterials(plan.where()),
-		groupCounts(plan, countMaterials),
+	const plan = planList(materialsSql(), input);
+	const [rows, rowCount, counts] = await Promise.all([
+		plan.paged(
+			db
+				.select({
+					id: material.id,
+					sku: material.sku,
+					name: material.name,
+					unit: material.unit,
+					unitPrice: material.unitPrice,
+					stock: material.stock,
+				})
+				.from(material)
+				.$dynamic(),
+		),
+		plan.count(),
+		plan.groupCounts(),
 	]);
 
 	// The page's usage (only).
@@ -112,43 +53,33 @@ export const getMaterials = query(tableParams, async (params) => {
 	return {
 		rows: page.rows,
 		rowCount,
-		/** The state the rows are for (see `isStale`). */
-		key: plan.key,
+		/** The query the rows are for (its `where` is the target of "select all matching"). */
+		query: input,
+		/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
+		key: queryKey(input),
 		groups: pageGroupsOf(counts, page),
 	};
 });
 
 /**
- * How many materials have each unit and stock level, for the list's filters: of those matching
- * the search and the other filters in the URL's parameters.
+ * How many materials have each unit and stock level, for the counts in the list's filters: of
+ * those matching the search and the other filters.
  */
-export const getMaterialFacets = query(tableParams, async (params) => {
+export const getMaterialFacets = query(materialsList.where, async (where) => {
 	requireMember();
-	return facetCounts(
-		planTable(materialsTable(), params),
-		{ unit: material.unit, stockLevel: stockLevelSql(material.stock, material.unit) },
-		countMaterials,
-	);
+	return planList(materialsSql(), where).facets({
+		unit: material.unit,
+		stockLevel: stockLevelSql(material.stock, material.unit),
+	});
 });
 
-/** The ids of the tenant's materials matching the list's search and filters (`materialsUrl`). */
-async function matchingMaterialIds(params: string, limit: number) {
-	const rows = await db
-		.select({ id: material.id })
-		.from(material)
-		.where(planTable(materialsTable(), params).where())
-		.orderBy(material.id)
-		.limit(limit);
-	return rows.map((row) => row.id);
-}
-
 /** Deletes the selected materials, with the same refusals as deleting one. */
-export const bulkDeleteMaterials = command(bulkTarget, async (target) => {
+export const bulkDeleteMaterials = command(listTarget(materialsList.where), async (target) => {
 	requireMember();
 	const result = await bulkChange(target, {
 		table: material,
 		label: material.sku,
-		matching: matchingMaterialIds,
+		list: materialsSql,
 		change: (each) => removeMaterial(each.id),
 	});
 	await refreshRequested(getMaterials, getMaterialFacets);
