@@ -9,8 +9,8 @@
 	import { specialties } from "#lib/components/engineers/display.js";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import { timeOfDay } from "#lib/dates.js";
 	import { formatDate } from "#lib/format.js";
-	import { timeOfDay } from "#lib/schema.js";
 
 	import { DEFAULT_TIME, dayKey, parseDay } from "./board.js";
 	import { getSchedule, scheduleOrder } from "./schedule.remote.js";

@@ -3,6 +3,7 @@ import {
 	functionalUpdate,
 	makeStateUpdater,
 	type OnChangeFn,
+	renderComponent,
 	type RowData,
 } from "@tanstack/svelte-table";
 import { getAllContexts, untrack } from "svelte";
@@ -44,15 +45,39 @@ const hook = createTableHook({
 	// `createAppTable` goes back to the first page itself: TanStack's reset would also undo a page
 	// restored from the URL, and jump to the first page whenever the data is reloaded.
 	autoResetPageIndex: false,
-	// Columns opt into grouping (see `grouping.ts`), which leaves the columns where they are.
-	defaultColumn: { enableGrouping: false },
+	defaultColumn: {
+		// Columns opt into grouping (see `grouping.ts`), which leaves the columns where they are.
+		enableGrouping: false,
+		// A data column's header sorts it (see `ColumnHeader`); a display column, e.g. the actions,
+		// has none unless it brings its own, like the selection column's.
+		header: ({ header }) => (header.column.accessorFn ? renderComponent(ColumnHeader) : ""),
+	},
 	groupedColumnMode: false,
 	tableComponents: { Table: DataTable, Toolbar, Pagination, ViewOptions },
 	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
 });
 
-export const { createAppColumnHelper, useTableContext, useCellContext, useHeaderContext } = hook;
+export const { useTableContext, useCellContext, useHeaderContext } = hook;
+
+/**
+ * A column helper for a table of `TData` rows, with `select()` for the selection column: a
+ * checkbox to select the row, and one in the header to select all the rows of the page.
+ */
+export function createAppColumnHelper<TData extends RowData>() {
+	const helper = hook.createAppColumnHelper<TData>();
+	return {
+		...helper,
+		select: () =>
+			helper.display({
+				id: "select",
+				header: ({ header }) => renderComponent(header.SelectAllHeader),
+				cell: ({ cell }) => renderComponent(cell.SelectCell),
+				enableSorting: false,
+				enableHiding: false,
+			}),
+	};
+}
 
 type HookTableOptions<TData extends RowData> = Parameters<typeof hook.createAppTable<TData>>[0];
 

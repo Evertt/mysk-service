@@ -89,6 +89,29 @@ const textOf = (locator: Locator) => () =>
 const headers = () =>
 	[...document.querySelectorAll("thead th")].map((th) => th.textContent?.trim() ?? "");
 
+describe("headers", () => {
+	// The harness's columns name no header: the table's defaults make them.
+	test("a data column gets a sortable header, as long as it can be sorted", async () => {
+		render(Harness, { items });
+
+		await expect.element(columnHeader("Amount")).toBeVisible();
+		await expect.element(columnHeader("Quantity")).toBeVisible();
+		// Not sortable: a plain label.
+		expect(headers()).toContain("Status");
+		expect(columnHeader("Status").elements()).toHaveLength(0);
+	});
+
+	test("the selection column has a checkbox to select the page, and the actions column no header", async () => {
+		render(Harness, { items });
+
+		const head = [...document.querySelectorAll("thead th")];
+		await expect.element(page.getByRole("checkbox", { name: /select all/i })).toBeVisible();
+		expect(head.at(0)?.querySelector("[role=checkbox]")).not.toBeNull();
+		expect(head.at(-1)?.textContent?.trim()).toBe("");
+		expect(head.at(-1)?.children).toHaveLength(0);
+	});
+});
+
 describe("cells", () => {
 	test("an amount in cents is shown in euros, right-aligned", async () => {
 		render(Harness, { items });

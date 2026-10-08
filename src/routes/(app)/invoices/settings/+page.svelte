@@ -8,8 +8,8 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatRate } from "#lib/components/invoicing/display.js";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { toDateInput } from "#lib/dates.js";
 	import { formatDate } from "#lib/format.js";
-	import { toDateInput } from "#lib/schema.js";
 
 	import { getSettings, saveSettings } from "../invoices.remote.js";
 

@@ -1,10 +1,10 @@
+import { toDateInput } from "#lib/dates.js";
 /**
  * Week maths and grouping for the dispatch board. Days are local days, like the dates entered in
  * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
 import { dateFormatter, formatDate } from "#lib/format.js";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.js";
-import { toDateInput } from "#lib/schema.js";
 
 /** When an order from the backlog is planned, unless another time is chosen. */
 export const DEFAULT_TIME = "09:00";

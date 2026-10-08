@@ -3,7 +3,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
-	import CustomerSegmentBadge from "#lib/components/customers/segment-badge.svelte";
+	import CustomerCard from "#lib/components/customers/customer-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
 	import CategoryLabel from "#lib/components/equipment/category-label.svelte";
@@ -39,18 +39,14 @@
 	<title>{m.orders_page_title({ number: order.number })}</title>
 </svelte:head>
 
-<PageHeader title={order.number} description={order.description}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/orders")}>{m.orders_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{order.number}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
+<PageHeader
+	title={order.number}
+	description={order.description}
+	breadcrumbs={[
+		{ label: m.orders_title(), href: resolve("/(app)/orders") },
+		{ label: order.number },
+	]}
+>
 	{#snippet badges()}
 		<StatusBadge status={order.status} />
 		<OrderTags tags={data.tags} />
@@ -235,39 +231,7 @@
 
 		<WorkReport number={order.number} />
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.orders_customer()}</Card.Title>
-				<Card.Description>{customer.code}</Card.Description>
-				<Card.Action>
-					<CustomerSegmentBadge segment={customer.segment} />
-				</Card.Action>
-			</Card.Header>
-			<Card.Content>
-				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem
-						label={m.orders_detail_company()}
-						value={customer.name}
-						href={resolve("/(app)/customers/[code]", { code: customer.code })}
-					/>
-					<DetailItem label={m.orders_detail_contact()} value={customer.contactName} />
-					<DetailItem
-						label={m.orders_detail_email()}
-						value={customer.email}
-						href={`mailto:${customer.email}`}
-					/>
-					<DetailItem
-						label={m.orders_detail_phone()}
-						value={customer.phone}
-						href={`tel:${customer.phone}`}
-					/>
-					<DetailItem
-						label={m.orders_detail_location()}
-						value={`${customer.city}, ${customer.country}`}
-					/>
-				</dl>
-			</Card.Content>
-		</Card.Root>
+		<CustomerCard {customer} title={m.orders_customer()} />
 
 		<Card.Root>
 			<Card.Header>
