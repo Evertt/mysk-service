@@ -113,7 +113,7 @@ export default async function setup(project: TestProject) {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	run("node_modules/.bin/drizzle-kit", ["migrate"]);
-	run("node", ["--env-file=.env", "src/lib/server/db/seed.ts"]);
+	run("node", ["--env-file=.env", "src/lib/server/db/seed/index.ts"]);
 	if (!dev) run("node_modules/.bin/vp", ["build"]);
 
 	const count = dev ? 1 : project.config.maxWorkers;

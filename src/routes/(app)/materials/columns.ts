@@ -9,7 +9,7 @@ import { label } from "#lib/i18n/labels.js";
 import { materialUnits } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getMaterials } from "./materials.remote.js";
+import type { getMaterials } from "./material-list.remote.js";
 import StockCell from "./stock-cell.svelte";
 
 /** A row of the materials list, a page of which comes from the server (see `materialsUrl`). */
@@ -18,15 +18,8 @@ export type MaterialRow = Awaited<ReturnType<typeof getMaterials>>["rows"][numbe
 const column = createAppColumnHelper<MaterialRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor("name", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(MaterialLink, { sku: row.original.sku, name: row.original.name }),
 		enableHiding: false,
@@ -38,7 +31,6 @@ export const columns = column.columns([
 		meta: { label: m.materials_sku },
 	}),
 	column.accessor("unit", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => label("materialUnit", getValue()),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -46,13 +38,11 @@ export const columns = column.columns([
 		meta: { label: m.materials_unit, filterValues: materialUnits },
 	}),
 	column.accessor("unitPrice", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		meta: { label: m.materials_unit_price, align: "end", param: "price" },
 	}),
 	column.accessor("stock", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(StockCell, { stock: row.original.stock, unit: row.original.unit }),
 		enableGlobalFilter: false,
@@ -72,7 +62,6 @@ export const columns = column.columns([
 		meta: { label: m.materials_stock_level, param: "stock", filterValues: stockLevels },
 	}),
 	column.accessor("orderCount", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
 		meta: { label: m.materials_used_on, align: "end", param: "used" },

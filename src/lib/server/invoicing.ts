@@ -27,6 +27,7 @@ import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "./activity.ts";
 import { db, type Transaction } from "./db/index.ts";
 import { customer, engineer, invoice, invoiceLine, invoicingSettings, order } from "./db/schema.ts";
+import type { Problem } from "./forms.ts";
 import { type BillableItem, billableItems, type ServerModule } from "./modules.ts";
 import { nextNumber } from "./numbering.ts";
 import { materialsPerOrder, priceOrders } from "./pricing.ts";
@@ -196,10 +197,7 @@ export async function alreadyBilled(
 }
 
 /** Why a draft can't be made, at the field it's about (if any). */
-export interface DraftProblem {
-	field?: "customerId" | "orderIds" | "items";
-	message: string;
-}
+export type DraftProblem = Problem<"customerId" | "orderIds" | "items">;
 
 /**
  * Makes a draft invoice for one of the tenant's customers with the chosen completed orders and

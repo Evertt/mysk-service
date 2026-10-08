@@ -11,10 +11,11 @@
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
-	import { deleteMaterial, getMaterial } from "../materials.remote.js";
+	import { deleteMaterial, getMaterial } from "../material.remote.js";
 	import type { PageProps } from "./$types";
 	import CountStockDialog from "./count-stock-dialog.svelte";
 	import ReceiveStockDialog from "./receive-stock-dialog.svelte";
@@ -32,18 +33,14 @@
 	<title>{m.materials_head_title({ title: material.name })}</title>
 </svelte:head>
 
-<PageHeader title={material.name} description={material.sku}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/materials")}>{m.materials_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{material.sku}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
+<PageHeader
+	title={material.name}
+	description={material.sku}
+	breadcrumbs={[
+		{ label: m.materials_title(), href: resolve("/(app)/materials") },
+		{ label: material.sku },
+	]}
+>
 	{#snippet badges()}
 		<StockBadge stock={material.stock} unit={material.unit} />
 	{/snippet}
@@ -66,32 +63,23 @@
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
 		<div class="grid gap-4 sm:grid-cols-3">
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.materials_used_last_year()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{quantity(stats.usedLastYear)}</Card.Title>
-				</Card.Header>
-			</Card.Root>
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.materials_open_orders()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{formatNumber(stats.openOrders)}</Card.Title>
-				</Card.Header>
-			</Card.Root>
-			<Card.Root>
-				<Card.Header>
-					<Card.Description>{m.materials_needed()}</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">
-						{quantity(stats.neededForOpenOrders)}
-					</Card.Title>
-				</Card.Header>
-				{#if stats.neededForOpenOrders}
-					<Card.Content>
-						<!-- Order lines take their materials from stock when they're added. -->
-						<p class="text-sm text-muted-foreground">{m.materials_needed_taken()}</p>
-					</Card.Content>
-				{/if}
-			</Card.Root>
+			<StatCard
+				size="small"
+				label={m.materials_used_last_year()}
+				value={quantity(stats.usedLastYear)}
+			/>
+			<StatCard
+				size="small"
+				label={m.materials_open_orders()}
+				value={formatNumber(stats.openOrders)}
+			/>
+			<!-- Order lines take their materials from stock when they're added. -->
+			<StatCard
+				size="small"
+				label={m.materials_needed()}
+				value={quantity(stats.neededForOpenOrders)}
+				detail={stats.neededForOpenOrders ? m.materials_needed_taken() : undefined}
+			/>
 		</div>
 
 		<Card.Root>

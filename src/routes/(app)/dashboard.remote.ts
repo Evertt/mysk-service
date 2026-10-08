@@ -2,20 +2,12 @@ import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { stockLevel } from "#lib/components/materials/display.js";
+import { DAY } from "#lib/dates.js";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.js";
 import { db } from "#lib/server/db/index.js";
-import {
-	customer,
-	engineer,
-	equipment,
-	material,
-	order,
-	orderLine,
-} from "#lib/server/db/schema.js";
-import { priceOrders } from "#lib/server/pricing.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
-
-const DAY = 24 * 60 * 60 * 1000;
+import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.js";
+import { materialsPerOrder, priceOrders } from "#lib/server/pricing.js";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {
@@ -33,15 +25,7 @@ export const getDashboard = query(async () => {
 		.from(order)
 		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)));
 
-	const materials = db
-		.select({
-			orderId: orderLine.orderId,
-			total: sql<number>`sum(round(${orderLine.quantity} * ${orderLine.unitPrice}))`.as("total"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("materials");
+	const materials = materialsPerOrder();
 
 	// Work completed in the last 30 days, priced like everywhere else.
 	const done = await db
@@ -57,7 +41,7 @@ export const getDashboard = query(async () => {
 		})
 		.from(order)
 		.leftJoin(materials, eq(materials.orderId, order.id))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
 				inTenant(order),
@@ -89,8 +73,8 @@ export const getDashboard = query(async () => {
 			engineer: { id: engineer.id, name: engineer.name },
 		})
 		.from(order)
-		.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
-		.leftJoin(engineer, and(eq(order.engineerId, engineer.id), inTenant(engineer)))
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(and(inTenant(order), eq(order.status, "scheduled"), gte(order.scheduledFor, now)))
 		.orderBy(asc(order.scheduledFor))
 		.limit(6);

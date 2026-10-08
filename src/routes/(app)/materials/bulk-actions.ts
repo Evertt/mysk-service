@@ -5,7 +5,7 @@ import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { MaterialRow } from "./columns.js";
-import { bulkDeleteMaterials, getMaterialFacets, getMaterials } from "./materials.remote.js";
+import { bulkDeleteMaterials, getMaterialFacets, getMaterials } from "./material-list.remote.js";
 
 export const deleteMaterials: BulkAction<MaterialRow> = {
 	id: "delete",

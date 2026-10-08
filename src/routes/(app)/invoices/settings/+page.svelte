@@ -11,28 +11,23 @@
 	import { toDateInput } from "#lib/dates.js";
 	import { formatDate } from "#lib/format.js";
 
-	import { getSettings, saveSettings } from "../invoices.remote.js";
+	import { getInvoicingSettings, saveSettings } from "../invoices.remote.js";
 
-	const settings = $derived(await getSettings());
+	const settings = $derived(await getInvoicingSettings());
 </script>
 
 <svelte:head>
 	<title>{m.invoices_settings()} · {m.invoices_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.invoices_settings_title()} description={m.invoices_settings_description()}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.invoices_settings()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.invoices_settings_title()}
+	description={m.invoices_settings_description()}
+	breadcrumbs={[
+		{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+		{ label: m.invoices_settings() },
+	]}
+/>
 
 {#if settings.canManage}
 	<form

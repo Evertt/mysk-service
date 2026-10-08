@@ -10,7 +10,7 @@ import TypeLabel from "#lib/components/orders/type-label.svelte";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getOrders } from "./orders.remote.js";
+import type { getOrders } from "./order-list.remote.js";
 import StatusCell from "./status-cell.svelte";
 
 /** A row of the orders list, a page of which comes from the server (see `ordersUrl`). */
@@ -19,22 +19,14 @@ export type OrderRow = Awaited<ReturnType<typeof getOrders>>["rows"][number];
 const column = createAppColumnHelper<OrderRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor("number", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(OrderLink, { number: getValue() }),
 		enableHiding: false,
 		meta: { label: m.orders_column_order },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.customer.name,
@@ -53,7 +45,6 @@ export const columns = column.columns([
 		(row) => (row.equipment ? `${row.equipment.manufacturer} ${row.equipment.model}` : undefined),
 		{
 			id: "equipment",
-			header: ({ header }) => renderComponent(header.ColumnHeader),
 			cell: ({ getValue, row }) =>
 				renderComponent(TwoLineCell, {
 					primary: getValue(),
@@ -71,14 +62,12 @@ export const columns = column.columns([
 		},
 	),
 	column.accessor("type", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		meta: { label: m.orders_column_type, filterValues: orderTypes },
 	}),
 	column.accessor("status", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
 			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
 		filterFn: "oneOf",
@@ -86,7 +75,6 @@ export const columns = column.columns([
 		meta: { label: m.orders_column_status, filterValues: orderStatuses },
 	}),
 	column.accessor("priority", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(PriorityBadge, { priority: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -97,7 +85,6 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
@@ -115,20 +102,17 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.scheduledFor ?? undefined, {
 		id: "scheduledFor",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
 		meta: { label: m.orders_column_scheduled, param: "scheduled" },
 	}),
 	column.accessor("createdAt", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.orders_column_created, param: "created" },
 	}),
 	column.accessor("total", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		// Modules adjust it (e.g. what a contract includes), which the database can't sort by.

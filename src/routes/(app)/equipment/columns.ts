@@ -10,7 +10,7 @@ import StatusBadge from "#lib/components/equipment/status-badge.svelte";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { getEquipmentList } from "./equipment.remote.js";
+import type { getEquipmentList } from "./equipment-list.remote.js";
 import WarrantyCell from "./warranty-cell.svelte";
 
 /** A row of the equipment list, a page of which comes from the server (see `equipmentUrl`). */
@@ -19,16 +19,9 @@ export type EquipmentRow = Awaited<ReturnType<typeof getEquipmentList>>["rows"][
 const column = createAppColumnHelper<EquipmentRow>();
 
 export const columns = column.columns([
-	column.display({
-		id: "select",
-		header: ({ header }) => renderComponent(header.SelectAllHeader),
-		cell: ({ cell }) => renderComponent(cell.SelectCell),
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	column.select(),
 	column.accessor((row) => `${row.manufacturer} ${row.model}`, {
 		id: "unit",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue, row }) =>
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
@@ -51,14 +44,12 @@ export const columns = column.columns([
 		meta: { label: m.equipment_column_manufacturer },
 	}),
 	column.accessor("category", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		meta: { label: m.equipment_column_category, filterValues: equipmentCategories },
 	}),
 	column.accessor("status", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -66,7 +57,6 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
 				name: row.original.customer.name,
@@ -80,19 +70,16 @@ export const columns = column.columns([
 		meta: { label: m.equipment_column_customer, filter: "set" },
 	}),
 	column.accessor("installedAt", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.equipment_column_installed, param: "installed" },
 	}),
 	column.accessor("warrantyUntil", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(WarrantyCell, { until: getValue() }),
 		enableGlobalFilter: false,
 		meta: { label: m.equipment_column_warranty, param: "warranty" },
 	}),
 	column.accessor("openOrders", {
-		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
 		meta: { label: m.equipment_column_open_orders, align: "end", param: "open-orders" },

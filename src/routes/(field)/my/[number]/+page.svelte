@@ -7,19 +7,20 @@
 	import { toast } from "svelte-sonner";
 
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import NumberField from "#lib/components/form/number-field.svelte";
-	import TextField from "#lib/components/form/text-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatQuantity } from "#lib/components/materials/display.js";
 	import PriorityBadge from "#lib/components/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import TypeLabel from "#lib/components/orders/type-label.svelte";
 	import { formatDateTime, formatTime } from "#lib/format.js";
 
-	import { addNote, getMyOrder, logHours, startWork } from "../portal.remote.js";
+	import { getMyOrder, startWork } from "../portal.remote.js";
 	import { dayLabel, fieldActions } from "../work.js";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
+	import HoursForm from "./hours-form.svelte";
 	import MaterialsForm from "./materials-form.svelte";
+	import NotesCard from "./notes-card.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -63,14 +64,14 @@
 		})}
 	>
 		<input {...startWork.fields.id.as("hidden", String(order.id))} />
-		<Button type="submit" size="lg" class="h-12 w-full text-base" disabled={!!startWork.pending}>
-			{#if startWork.pending}
-				<Spinner data-icon="inline-start" />
-			{:else}
-				<PlayIcon data-icon="inline-start" />
-			{/if}
+		<SubmitButton
+			size="lg"
+			class="h-12 w-full text-base"
+			icon={PlayIcon}
+			pending={startWork.pending}
+		>
 			{m.portal_start_job()}
-		</Button>
+		</SubmitButton>
 		<Field.FieldError errors={startWork.fields.allIssues()} class="mt-2" />
 	</form>
 {/if}
@@ -126,28 +127,7 @@
 	</Card.Header>
 	<Card.Content>
 		{#if actions.work}
-			<form
-				{...logHours.enhance(async ({ submit }) => {
-					if (await submit()) toast.success(m.portal_hours_saved());
-				})}
-				class="flex items-end gap-2"
-			>
-				<input {...logHours.fields.id.as("hidden", String(order.id))} />
-				<NumberField
-					field={logHours.fields.laborHours}
-					label={m.portal_hours()}
-					value={order.laborHours}
-					min={0}
-					step={0.25}
-					class="flex-1"
-				/>
-				<Button type="submit" size="lg" class="h-12" disabled={!!logHours.pending}>
-					{#if logHours.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{m.portal_save_hours()}
-				</Button>
-			</form>
+			<HoursForm orderId={order.id} hours={order.laborHours} />
 		{:else}
 			<p class="text-lg tabular-nums">{m.common_count_hours_short({ count: order.laborHours })}</p>
 		{/if}
@@ -181,48 +161,7 @@
 	</Card.Content>
 </Card.Root>
 
-<Card.Root>
-	<Card.Header>
-		<Card.Title>{m.portal_notes()}</Card.Title>
-	</Card.Header>
-	<Card.Content class="flex flex-col gap-4">
-		{#each data.notes as note (note.id)}
-			<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
-				<p class="text-sm whitespace-pre-line">{note.text}</p>
-				<span class="text-xs text-muted-foreground">
-					{note.author ?? m.portal_someone()} · {formatDateTime(note.createdAt)}
-				</span>
-			</div>
-		{:else}
-			<p class="text-sm text-muted-foreground">{m.portal_no_notes()}</p>
-		{/each}
-		{#if actions.note}
-			<form
-				{...addNote.enhance(async ({ element, submit }) => {
-					if (await submit()) {
-						element.reset();
-						toast.success(m.portal_note_added());
-					}
-				})}
-				class="flex flex-col gap-2"
-			>
-				<input {...addNote.fields.id.as("hidden", String(order.id))} />
-				<TextField
-					field={addNote.fields.text}
-					label={m.portal_note_label()}
-					multiline
-					placeholder={m.portal_note_placeholder()}
-				/>
-				<Button type="submit" variant="outline" size="lg" class="h-12" disabled={!!addNote.pending}>
-					{#if addNote.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{m.portal_add_note()}
-				</Button>
-			</form>
-		{/if}
-	</Card.Content>
-</Card.Root>
+<NotesCard orderId={order.id} notes={data.notes} canAdd={actions.note} />
 
 {#if actions.work}
 	<Card.Root>

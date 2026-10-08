@@ -10,7 +10,7 @@ import * as v from "valibot";
 import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, order } from "#lib/server/db/schema.js";
-import { inTenant, requireModule } from "#lib/server/session.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/session.js";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.js";
 
@@ -39,7 +39,7 @@ export const getOrderInvoice = query(v.string(), async (number) => {
 			dueOn: invoice.dueOn,
 		})
 		.from(invoiceLine)
-		.innerJoin(invoice, and(eq(invoiceLine.invoiceId, invoice.id), inTenant(invoice)))
+		.innerJoin(...tenantJoin(invoice, invoiceLine.invoiceId))
 		.where(and(inTenant(invoiceLine), eq(invoiceLine.orderId, found.id)))
 		.orderBy(desc(invoice.id));
 	const current = invoices.find((row) => row.status !== "void");
@@ -81,7 +81,7 @@ export const getReceivables = query(async () => {
 			customer: { code: customer.code, name: customer.name },
 		})
 		.from(invoice)
-		.innerJoin(customer, and(eq(invoice.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, invoice.customerId))
 		.leftJoin(subtotals, eq(subtotals.invoiceId, invoice.id))
 		.where(and(inTenant(invoice), eq(invoice.status, "sent")));
 	const priced = sent.map(({ subtotal, ...row }) => ({

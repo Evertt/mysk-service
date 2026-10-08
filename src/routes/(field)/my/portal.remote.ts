@@ -18,7 +18,7 @@ import { auth } from "#lib/server/auth.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.js";
 import { checkLines, saveOrderLines } from "#lib/server/orders.js";
-import { inTenant, requireEngineer } from "#lib/server/session.js";
+import { idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
 import { fieldActions, signature } from "./work.js";
@@ -50,13 +50,13 @@ export const getMyWork = query(async () => {
 		db
 			.select(listColumns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(and(mine, inArray(order.status, ["scheduled", "in_progress"])))
 			.orderBy(asc(order.scheduledFor)),
 		db
 			.select(listColumns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(and(mine, inArray(order.status, doneOrderStatuses), isNotNull(order.completedAt)))
 			.orderBy(desc(order.completedAt))
 			.limit(10),
@@ -106,7 +106,7 @@ export const getMyOrder = query(v.string(), async (number) => {
 });
 
 /** The materials an engineer can use on a job, by name. */
-export const getMaterials = query(async () => {
+export const getUsableMaterials = query(async () => {
 	await requireEngineer();
 	return db
 		.select({ id: material.id, sku: material.sku, name: material.name, unit: material.unit })
@@ -127,7 +127,7 @@ async function findMyOrder(
 ) {
 	const found = await tx.query.order.findFirst({
 		columns: { id: true, number: true, status: true, laborHours: true },
-		where: and(eq(order.id, orderId), inTenant(order), eq(order.engineerId, engineerId)),
+		where: and(idInTenant(order, orderId), eq(order.engineerId, engineerId)),
 		with: { lines: true },
 	});
 	if (!found) error(404, m.portal_not_found_plain());
@@ -157,10 +157,7 @@ async function setStatus(
 	action: "work_started" | "completed",
 	{ completedAt, note }: { completedAt?: Date; note?: string } = {},
 ) {
-	await tx
-		.update(order)
-		.set({ status, completedAt })
-		.where(and(eq(order.id, found.id), inTenant(order)));
+	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
 	await moveOrderStock(tx, found, found, { status, lines: found.lines });
 	await recordActivity(tx, {
 		action,
@@ -172,7 +169,7 @@ async function setStatus(
 }
 
 /** Refreshes what the portal shows of an order after a change. */
-function refresh(number: string) {
+function refreshMyOrder(number: string) {
 	void getMyOrder(number).refresh();
 	void getMyWork().refresh();
 }
@@ -185,7 +182,7 @@ export const startWork = form(v.object({ id: id() }), async (input) => {
 		await setStatus(tx, found, "in_progress", "work_started");
 		return found.number;
 	});
-	refresh(number);
+	refreshMyOrder(number);
 });
 
 /** Sets the hours of labour on a job under way. */
@@ -197,10 +194,7 @@ export const logHours = form(
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
 			const after = { laborHours: input.laborHours };
-			await tx
-				.update(order)
-				.set(after)
-				.where(and(eq(order.id, found.id), inTenant(order)));
+			await tx.update(order).set(after).where(idInTenant(order, found.id));
 			await recordActivity(tx, {
 				action: "updated",
 				subject: subjectOf(found),
@@ -209,7 +203,7 @@ export const logHours = form(
 			});
 			return found.number;
 		});
-		refresh(number);
+		refreshMyOrder(number);
 	},
 );
 
@@ -236,7 +230,7 @@ export const saveMaterials = form(
 				const line = input.lines.findLastIndex((line) => line.materialId === error.materialId);
 				invalid(issue.lines[line].quantity(error.message));
 			});
-		refresh(number);
+		refreshMyOrder(number);
 	},
 );
 
@@ -266,7 +260,7 @@ export const addNote = form(
 			});
 			return found.number;
 		});
-		refresh(number);
+		refreshMyOrder(number);
 	},
 );
 
@@ -299,7 +293,7 @@ export const completeWork = form(
 				.onConflictDoUpdate({ target: orderSignoff.orderId, set: signoff });
 			return found.number;
 		});
-		refresh(number);
+		refreshMyOrder(number);
 	},
 );
 

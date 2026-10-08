@@ -6,6 +6,7 @@
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 	import { toast } from "svelte-sonner";
 
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { completeWork } from "../portal.remote.js";
@@ -35,12 +36,12 @@
 	<input {...fields.signature.as("hidden", signature)} />
 	<Field.FieldError errors={fields.signature.issues()} />
 	<Field.FieldError errors={fields.issues()} />
-	<Button type="submit" size="lg" class="h-12 text-base" disabled={!!completeWork.pending}>
-		{#if completeWork.pending}
-			<Spinner data-icon="inline-start" />
-		{:else}
-			<CircleCheckIcon data-icon="inline-start" />
-		{/if}
+	<SubmitButton
+		size="lg"
+		class="h-12 text-base"
+		icon={CircleCheckIcon}
+		pending={completeWork.pending}
+	>
 		{m.portal_complete_job()}
-	</Button>
+	</SubmitButton>
 </form>

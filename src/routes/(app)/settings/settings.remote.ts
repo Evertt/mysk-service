@@ -3,35 +3,33 @@ import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { modules } from "#lib/modules.js";
+import { isManager, parseRoles } from "#lib/roles.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { db } from "#lib/server/db/index.js";
 import { member, organizationModule, user } from "#lib/server/db/schema.js";
-import { requireMember, requireRole } from "#lib/server/session.js";
+import { inTenant, requireManager, requireMember } from "#lib/server/session.js";
 
 import { getCurrentTenant } from "../session.remote.js";
 
-/** Roles that may manage the organization's settings. */
-const managers = ["owner", "admin"];
-
-export const getSettings = query(async () => {
+export const getOrganizationSettings = query(async () => {
 	const tenant = requireMember();
 	const [members, enabled] = await Promise.all([
 		db
 			.select({ id: member.id, name: user.name, email: user.email, role: member.role })
 			.from(member)
 			.innerJoin(user, eq(member.userId, user.id))
-			.where(eq(member.organizationId, tenant.organizationId))
+			.where(inTenant(member))
 			.orderBy(asc(user.name)),
 		db
 			.select({ moduleId: organizationModule.moduleId, enabledAt: organizationModule.enabledAt })
 			.from(organizationModule)
-			.where(eq(organizationModule.organizationId, tenant.organizationId)),
+			.where(inTenant(organizationModule)),
 	]);
 	const enabledAt = new Map(enabled.map((row) => [row.moduleId, row.enabledAt]));
 	return {
 		name: tenant.name,
-		canManage: tenant.roles.some((role) => managers.includes(role)),
-		members: members.map((m) => ({ ...m, roles: m.role.split(",").map((r) => r.trim()) })),
+		canManage: isManager(tenant.roles),
+		members: members.map((m) => ({ ...m, roles: parseRoles(m.role) })),
 		modules: modules.map(({ id, label, description }) => ({
 			id,
 			label,
@@ -47,7 +45,7 @@ export const setModule = form(
 		enabled: v.picklist(["on", "off"]),
 	}),
 	async ({ moduleId, enabled }) => {
-		const { organizationId } = requireRole(...managers);
+		const { organizationId } = requireManager();
 		await db.transaction(async (tx) => {
 			const changed =
 				enabled === "on"
@@ -58,12 +56,7 @@ export const setModule = form(
 							.returning()
 					: await tx
 							.delete(organizationModule)
-							.where(
-								and(
-									eq(organizationModule.organizationId, organizationId),
-									eq(organizationModule.moduleId, moduleId),
-								),
-							)
+							.where(and(inTenant(organizationModule), eq(organizationModule.moduleId, moduleId)))
 							.returning();
 			// Only a change of state: enabling an enabled module changes nothing.
 			if (!changed.length) return;
@@ -80,7 +73,7 @@ export const setModule = form(
 					? [...new Set([...tenant.modules, moduleId])]
 					: tenant.modules.filter((id) => id !== moduleId);
 		}
-		void getSettings().refresh();
+		void getOrganizationSettings().refresh();
 		void getCurrentTenant().refresh();
 	},
 );

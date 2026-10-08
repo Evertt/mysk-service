@@ -11,19 +11,14 @@
 	<title>{m.equipment_new()} · {m.equipment_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.equipment_new()} description={m.equipment_new_description()}>
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/equipment")}>{m.equipment_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{m.equipment_breadcrumb_new()}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
-</PageHeader>
+<PageHeader
+	title={m.equipment_new()}
+	description={m.equipment_new_description()}
+	breadcrumbs={[
+		{ label: m.equipment_title(), href: resolve("/(app)/equipment") },
+		{ label: m.equipment_breadcrumb_new() },
+	]}
+/>
 
 <EquipmentForm
 	form={createEquipment}

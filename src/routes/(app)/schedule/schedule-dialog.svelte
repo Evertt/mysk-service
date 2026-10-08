@@ -8,6 +8,7 @@
 
 	import { specialties } from "#lib/components/engineers/display.js";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay } from "#lib/dates.js";
 	import { formatDate } from "#lib/format.js";
@@ -100,12 +101,7 @@
 						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
 					{/snippet}
 				</Dialog.Close>
-				<Button type="submit" disabled={!!form.pending}>
-					{#if form.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{m.schedule_submit()}
-				</Button>
+				<SubmitButton pending={form.pending}>{m.schedule_submit()}</SubmitButton>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

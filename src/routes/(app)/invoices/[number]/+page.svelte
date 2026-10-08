@@ -43,18 +43,11 @@
 	<PageHeader
 		title={invoice.number}
 		description={m.invoices_for({ customer: invoice.customer.name })}
+		breadcrumbs={[
+			{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+			{ label: invoice.number },
+		]}
 	>
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href={resolve("/(app)/invoices")}>{m.invoices_title()}</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator />
-				<Breadcrumb.Item>
-					<Breadcrumb.Page>{invoice.number}</Breadcrumb.Page>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
 		{#snippet badges()}
 			<StatusBadge state={invoice.state} />
 		{/snippet}

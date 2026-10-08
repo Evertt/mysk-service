@@ -33,18 +33,14 @@
 	<title>{unit.serialNumber} · {m.equipment_title()}</title>
 </svelte:head>
 
-<PageHeader title={name} description="{categories[unit.category].label} · {unit.serialNumber}">
-	<Breadcrumb.Root>
-		<Breadcrumb.List>
-			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/equipment")}>{m.equipment_title()}</Breadcrumb.Link>
-			</Breadcrumb.Item>
-			<Breadcrumb.Separator />
-			<Breadcrumb.Item>
-				<Breadcrumb.Page>{unit.serialNumber}</Breadcrumb.Page>
-			</Breadcrumb.Item>
-		</Breadcrumb.List>
-	</Breadcrumb.Root>
+<PageHeader
+	title={name}
+	description="{categories[unit.category].label} · {unit.serialNumber}"
+	breadcrumbs={[
+		{ label: m.equipment_title(), href: resolve("/(app)/equipment") },
+		{ label: unit.serialNumber },
+	]}
+>
 	{#snippet badges()}
 		<EquipmentStatusBadge status={unit.status} />
 		<WarrantyBadge until={unit.warrantyUntil} />

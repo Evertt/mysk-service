@@ -1,6 +1,6 @@
 import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
@@ -17,11 +17,13 @@ import {
 import type { InvoiceStatus } from "#lib/components/invoicing/model.js";
 import type { OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
+import { isManager } from "#lib/roles.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
-import { bulkTarget, forEachRecord, targetIds } from "#lib/server/bulk.js";
+import { bulkChange, bulkTarget } from "#lib/server/bulk.js";
 import { db, type Transaction } from "#lib/server/db/index.js";
 import { customer, invoice, invoiceLine, invoicingSettings, order } from "#lib/server/db/schema.js";
+import { refuse } from "#lib/server/forms.js";
 import {
 	alreadyBilled,
 	billableFor,
@@ -31,7 +33,14 @@ import {
 	loadInvoice,
 	settingsOf,
 } from "#lib/server/invoicing.js";
-import { inTenant, requireModule, requireRole } from "#lib/server/session.js";
+import {
+	idInTenant,
+	idsInTenant,
+	inTenant,
+	requireManager,
+	requireModule,
+	tenantJoin,
+} from "#lib/server/session.js";
 
 import {
 	billingFields,
@@ -40,9 +49,6 @@ import {
 	settingsFields,
 	termsFields,
 } from "./invoice-schema.js";
-
-/** Who may change the organization's invoicing settings. */
-const managers = ["owner", "admin"];
 
 /** The tenant's invoices with their customer and totals, latest first. */
 export const getInvoices = query(async () => {
@@ -73,7 +79,7 @@ export const getInvoices = query(async () => {
 			subtotal: sql<number>`coalesce(${lines.subtotal}, 0)`,
 		})
 		.from(invoice)
-		.innerJoin(customer, and(eq(invoice.customerId, customer.id), inTenant(customer)))
+		.innerJoin(...tenantJoin(customer, invoice.customerId))
 		.leftJoin(lines, eq(lines.invoiceId, invoice.id))
 		.where(inTenant(invoice))
 		.orderBy(desc(invoice.id));
@@ -93,7 +99,7 @@ export const getInvoice = query(v.string(), async (number) => {
 });
 
 /** The customers to choose from for a new invoice. */
-export const getCustomers = query(async () => {
+export const getInvoiceCustomers = query(async () => {
 	requireModule("invoicing");
 	return db
 		.select({ id: customer.id, code: customer.code, name: customer.name })
@@ -110,7 +116,7 @@ export const getBillable = query(v.number(), async (customerId) => {
 	requireModule("invoicing");
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
-		where: and(eq(customer.id, customerId), inTenant(customer)),
+		where: idInTenant(customer, customerId),
 	});
 	if (!owner) error(404, m.invoices_customer_not_found());
 
@@ -171,10 +177,7 @@ const loggedLine = {
 export const createInvoice = form(v.object(newInvoiceFields), async (input, issue) => {
 	requireModule("invoicing");
 	const created = await createDraft(input);
-	if ("problem" in created) {
-		const { field, message } = created.problem;
-		invalid(field ? issue[field](message) : message);
-	}
+	if ("problem" in created) return refuse(issue, [created.problem]);
 	void getInvoices().refresh();
 	// The draft's page offers what's left to bill.
 	void getBillable(input.customerId).refresh();
@@ -189,7 +192,7 @@ async function draftById(tx: Transaction, id: number) {
 }
 
 /** Refreshes what shows a changed invoice. */
-function changed(found: { id: number; number: string; customerId: number }) {
+function refreshInvoice(found: { id: number; number: string; customerId: number }) {
 	void getInvoices().refresh();
 	void getInvoice(found.number).refresh();
 	void getBillable(found.customerId).refresh();
@@ -203,7 +206,7 @@ export const addToInvoice = form(
 		const { organizationId } = requireModule("invoicing");
 		const found = await db.query.invoice.findFirst({
 			columns: { customerId: true },
-			where: and(eq(invoice.id, id), inTenant(invoice)),
+			where: idInTenant(invoice, id),
 		});
 		if (!found) error(404, m.invoices_not_found());
 
@@ -226,7 +229,7 @@ export const addToInvoice = form(
 			await recordLines(tx, draft, added);
 			return draft;
 		});
-		changed(draft);
+		refreshInvoice(draft);
 	},
 );
 
@@ -249,7 +252,7 @@ export const addLine = form(v.object({ id: id(), ...lineFields }), async (input)
 		await recordLines(tx, draft, added);
 		return draft;
 	});
-	changed(draft);
+	refreshInvoice(draft);
 });
 
 /** Removes a line from a draft; an order's lines (its price and adjustments) go together. */
@@ -258,7 +261,7 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 	const draft = await db.transaction(async (tx) => {
 		const line = await tx.query.invoiceLine.findFirst({
 			columns: { id: true, invoiceId: true, orderId: true },
-			where: and(eq(invoiceLine.id, id), inTenant(invoiceLine)),
+			where: idInTenant(invoiceLine, id),
 		});
 		if (!line) error(404, m.invoices_line_not_found());
 		const draft = await draftById(tx, line.invoiceId);
@@ -282,7 +285,7 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 		}
 		return draft;
 	});
-	changed(draft);
+	refreshInvoice(draft);
 });
 
 /** Changes a draft's payment term and notes. */
@@ -291,15 +294,12 @@ export const updateTerms = form(v.object({ id: id(), ...termsFields }), async (i
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
 		const terms = { paymentTermDays: input.paymentTermDays, notes: input.notes };
-		await tx
-			.update(invoice)
-			.set(terms)
-			.where(and(eq(invoice.id, draft.id), inTenant(invoice)));
+		await tx.update(invoice).set(terms).where(idInTenant(invoice, draft.id));
 		const subject = subjectOf(draft);
 		await recordActivity(tx, { action: "updated", subject, before: draft, after: terms });
 		return draft;
 	});
-	changed(draft);
+	refreshInvoice(draft);
 });
 
 // --- Issuing, payment and voiding --------------------------------------------------------------
@@ -373,17 +373,14 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 			const orders = await tx
 				.select({ id: order.id, number: order.number, status: order.status })
 				.from(order)
-				.where(and(inArray(order.id, orderIds), inTenant(order)));
+				.where(idsInTenant(order, orderIds));
 			const undone = orders.filter((o) => o.status !== "completed").map((o) => o.number);
 			if (undone.length) {
 				invalid(
 					m.invoices_orders_not_completed({ count: undone.length, orders: undone.join(", ") }),
 				);
 			}
-			await tx
-				.update(order)
-				.set({ status: "invoiced" })
-				.where(and(inArray(order.id, orderIds), inTenant(order)));
+			await tx.update(order).set({ status: "invoiced" }).where(idsInTenant(order, orderIds));
 			await recordOrderStatuses(tx, orders, "invoiced", found);
 		}
 
@@ -394,17 +391,14 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 			dueOn: dueDate(issuedOn, found.paymentTermDays),
 			vatRate: settings.vatRate,
 		};
-		await tx
-			.update(invoice)
-			.set(issued)
-			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+		await tx.update(invoice).set(issued).where(idInTenant(invoice, found.id));
 		// The status follows from the verb.
 		const subject = subjectOf(found);
 		const ignore = ["status", "issuedOn"];
 		await recordActivity(tx, { action: "issued", subject, before: found, after: issued, ignore });
 		return found;
 	});
-	changed(found);
+	refreshInvoice(found);
 });
 
 /**
@@ -417,7 +411,7 @@ function payInvoice(id: number) {
 		await tx
 			.update(invoice)
 			.set({ status: "paid", paidOn: today() })
-			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+			.where(idInTenant(invoice, found.id));
 		await recordActivity(tx, { action: "paid", subject: subjectOf(found) });
 		return found;
 	});
@@ -426,24 +420,17 @@ function payInvoice(id: number) {
 /** Records that a sent invoice was paid, today. */
 export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
 	requireModule("invoicing");
-	changed(await payInvoice(id));
+	refreshInvoice(await payInvoice(id));
 });
 
 /** Marks the selected invoices paid, today: the sent ones (see `canChange`). */
 export const bulkMarkPaid = command(bulkTarget, async (target) => {
 	requireModule("invoicing");
-	const ids = await targetIds(target);
-	const found = await db
-		.select({ id: invoice.id, number: invoice.number })
-		.from(invoice)
-		.where(and(inArray(invoice.id, ids), inTenant(invoice)))
-		.orderBy(invoice.number);
-	const result = await forEachRecord(
-		found,
-		ids.length,
-		(each) => each.number,
-		(each) => payInvoice(each.id),
-	);
+	const result = await bulkChange(target, {
+		table: invoice,
+		label: invoice.number,
+		change: (each) => payInvoice(each.id),
+	});
 	void getInvoices().refresh();
 	return result;
 });
@@ -461,7 +448,7 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 			const orders = await tx
 				.update(order)
 				.set({ status: "completed" })
-				.where(and(inArray(order.id, orderIds), eq(order.status, "invoiced"), inTenant(order)))
+				.where(and(idsInTenant(order, orderIds), eq(order.status, "invoiced")))
 				.returning({ id: order.id, number: order.number });
 			const before = orders.map((o) => ({ ...o, status: "invoiced" as const }));
 			await recordOrderStatuses(tx, before, "completed", found);
@@ -469,24 +456,24 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		await tx
 			.update(invoice)
 			.set({ status: "void", voidedAt: new Date() })
-			.where(and(eq(invoice.id, found.id), inTenant(invoice)));
+			.where(idInTenant(invoice, found.id));
 		await recordActivity(tx, { action: "voided", subject: subjectOf(found) });
 		return found;
 	});
-	changed(found);
+	refreshInvoice(found);
 });
 
 // --- Settings ----------------------------------------------------------------------------------
 
-export const getSettings = query(async () => {
+export const getInvoicingSettings = query(async () => {
 	const tenant = requireModule("invoicing");
 	const settings = await settingsOf(tenant.organizationId);
-	return { ...settings, canManage: tenant.roles.some((role) => managers.includes(role)) };
+	return { ...settings, canManage: isManager(tenant.roles) };
 });
 
 export const saveSettings = form(v.object(settingsFields), async (input) => {
 	requireModule("invoicing");
-	const { organizationId } = requireRole(...managers);
+	const { organizationId } = requireManager();
 	const before = await settingsOf(organizationId);
 	await db.transaction(async (tx) => {
 		await tx
@@ -497,6 +484,6 @@ export const saveSettings = form(v.object(settingsFields), async (input) => {
 		const subject = { type: "invoicing_settings", id: organizationId, label: "" };
 		await recordActivity(tx, { action: "updated", subject, before, after: input });
 	});
-	void getSettings().refresh();
+	void getInvoicingSettings().refresh();
 	redirect(303, "/invoices");
 });

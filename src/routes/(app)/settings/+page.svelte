@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate } from "#lib/format.js";
 	import { labelOrValue } from "#lib/i18n/labels.js";
 	import { modules as moduleRegistry } from "#lib/modules.js";
 
-	import { getSettings, setModule } from "./settings.remote.js";
+	import { getOrganizationSettings, setModule } from "./settings.remote.js";
 
-	const settings = $derived(await getSettings());
+	const settings = $derived(await getOrganizationSettings());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
 </script>
 
@@ -53,17 +54,14 @@
 					{#if settings.canManage}
 						<form {...toggle}>
 							<input {...toggle.fields.moduleId.as("hidden", module.id)} />
-							<Button
+							<SubmitButton
 								{...toggle.fields.enabled.as("submit", module.enabledAt ? "off" : "on")}
 								variant={module.enabledAt ? "outline" : "default"}
 								size="sm"
-								disabled={!!toggle.pending}
+								pending={toggle.pending}
 							>
-								{#if toggle.pending}
-									<Spinner data-icon="inline-start" />
-								{/if}
 								{module.enabledAt ? m.settings_disable() : m.settings_enable()}
-							</Button>
+							</SubmitButton>
 						</form>
 					{/if}
 				</div>

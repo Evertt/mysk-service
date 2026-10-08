@@ -1,118 +1,20 @@
 /**
  * Helpers for the end-to-end tests: a signed-in browser page on the app under test (see
- * `global-setup.ts`), and read access to its database to check what the app stored.
+ * `global-setup.ts`). The database (`db.ts`), the mail (`mail.ts`) and remote function requests
+ * (`remote-functions.ts`) have their own files, which this one re-exports.
  */
-import { existsSync, readFileSync } from "node:fs";
-
-import { createClient, type InValue } from "@libsql/client";
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
-import { afterAll, afterEach, beforeAll, expect, inject } from "vite-plus/test";
+import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "../src/lib/server/db/demo.ts";
+import { baseURL } from "./lane.ts";
 
-/**
- * This worker's app and database (see `global-setup.ts`): files on other workers run at the same
- * time against their own.
- */
-const lanes = inject("lanes");
-const lane = lanes[(Number(process.env.VITEST_POOL_ID ?? 1) - 1) % lanes.length];
-
-export const baseURL = lane.baseURL;
-
-// --- Database --------------------------------------------------------------------------------
-
-// The busy timeout: the app may be writing.
-const client = createClient({ url: lane.databaseURL, timeout: 5000 });
-
-/**
- * Runs a query against the app's database and returns its rows. Only for reading: tests change
- * data through the app, like a user would.
- */
-export async function rows<T = Record<string, unknown>>(sql: string, args: InValue[] = []) {
-	const result = await client.execute({ sql, args });
-	return result.rows as unknown as T[];
-}
-
-/** The first column of the first row, e.g. of a `select count(*)`. */
-export async function value<T = unknown>(sql: string, args: InValue[] = []) {
-	const [row] = (await client.execute({ sql, args })).rows;
-	return row?.[0] as T;
-}
-
-/** The number of rows in an organization's table. */
-export async function countIn(table: string, organizationId: string) {
-	return Number(
-		await value(`select count(*) from "${table}" where organization_id = ?`, [organizationId]),
-	);
-}
-
-/**
- * An organization's materials whose stock isn't the sum of their stock movements (to two
- * decimals), which should be none.
- */
-export function unbalancedStock(organizationId: string) {
-	return rows<{ sku: string; stock: number; movements: number }>(
-		`select sku, stock, movements from (
-			select m.sku, m.stock, round(coalesce(sum(s.quantity), 0), 2) as movements
-			from material m left join stock_movement s on s.material_id = m.id
-			where m.organization_id = ? group by m.id
-		) where round(stock, 2) <> movements`,
-		[organizationId],
-	);
-}
-
-/** The next code in a sequence like `CUS-00061`: the highest number in use, plus one. */
-export async function nextCode(table: string, column: string, organizationId: string) {
-	const last = String(
-		await value(
-			`select "${column}" from "${table}" where organization_id = ?
-			 order by cast(substr("${column}", length(rtrim("${column}", '0123456789')) + 1) as integer) desc
-			 limit 1`,
-			[organizationId],
-		),
-	);
-	const [, prefix, digits] = /^(.*?)(\d+)$/.exec(last)!;
-	return `${prefix}${String(Number(digits) + 1).padStart(digits.length, "0")}`;
-}
-
-// --- Amounts ---------------------------------------------------------------------------------
-
-/** An amount as shown, e.g. `-€1,234.50`, in cents. */
-export const cents = (text: string) => Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100);
-
-// --- Mail ------------------------------------------------------------------------------------
-
-export interface SentMail {
-	from: string;
-	to: string;
-	subject: string;
-	text: string;
-	html?: string;
-}
-
-/** The mail the app sent to `to` (instead of sending it, see `MAIL_OUTBOX`), oldest first. */
-export function sentMail(to: string): SentMail[] {
-	if (!existsSync(lane.outbox)) return [];
-	return readFileSync(lane.outbox, "utf8")
-		.split("\n")
-		.filter(Boolean)
-		.map((line) => JSON.parse(line) as SentMail)
-		.filter((mail) => mail.to === to);
-}
-
-/** The first link to the app in the latest mail to `to`, e.g. an invitation's. */
-export function linkInMail(to: string) {
-	const mail = sentMail(to).at(-1);
-	const link = mail?.text.match(/https?:\/\/\S+/)?.[0];
-	if (!link) throw new Error(`No mail with a link was sent to ${to}`);
-	return link;
-}
+export { baseURL } from "./lane.ts";
+export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
+export { linkInMail, type SentMail, sentMail } from "./mail.ts";
+export { isRemote } from "./remote-functions.ts";
 
 // --- Browser ---------------------------------------------------------------------------------
-
-/** Whether a request (its URL) calls the remote function `name`, e.g. `getOrders`. */
-export const isRemote = (url: string, name: string) =>
-	url.includes("/_app/remote/") && new URL(url).pathname.endsWith(`/${name}`);
 
 /** Waits until a page is interactive (see the root layout), or settled if it errored. */
 export const hydrated = (page: Page) =>

@@ -8,6 +8,7 @@
 	import type { Component } from "svelte";
 	import { toast } from "svelte-sonner";
 
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import type { ButtonVariant } from "#lib/components/ui/button/index.js";
 
 	let {
@@ -60,12 +61,7 @@
 			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
 			<AlertDialog.Footer>
 				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-				<Button type="submit" {variant} disabled={!!form.pending}>
-					{#if form.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{label}
-				</Button>
+				<SubmitButton {variant} pending={form.pending}>{label}</SubmitButton>
 			</AlertDialog.Footer>
 		</form>
 	</AlertDialog.Content>
