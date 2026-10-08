@@ -71,6 +71,9 @@ export const stockLevel = (stock: number, unit: MaterialUnit): StockLevel =>
 /** The amount of an order line in cents: quantity × unit price, rounded to the cent. */
 export const lineTotal = (quantity: number, unitPrice: number) => Math.round(quantity * unitPrice);
 
+/** A quantity to two decimals (the finest any unit is counted in), without floating-point noise. */
+export const roundQuantity = (quantity: number) => Math.round(quantity * 100) / 100 || 0;
+
 export const orderTypes = ["installation", "maintenance", "repair", "inspection"] as const;
 export type OrderType = (typeof orderTypes)[number];
 

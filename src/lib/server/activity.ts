@@ -1,4 +1,4 @@
-import { roundQuantity } from "#lib/materials/server/stock.js";
+import { roundQuantity } from "#lib/models.js";
 /**
  * The activity log (`activity`): who changed which record, and how. Every mutation records itself
  * with `recordActivity()`, inside the `db.transaction` that makes the change, so a change that is

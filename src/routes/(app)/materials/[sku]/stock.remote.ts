@@ -4,7 +4,8 @@ import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.js";
 import { findMaterial } from "#lib/materials/server/materials.js";
-import { moveStock, roundQuantity } from "#lib/materials/server/stock.js";
+import { moveStock } from "#lib/materials/server/stock.js";
+import { roundQuantity } from "#lib/models.js";
 import { fitsUnit } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
