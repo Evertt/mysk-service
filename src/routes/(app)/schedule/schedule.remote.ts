@@ -1,20 +1,22 @@
-import { command, form, query, requested } from "$app/server";
-import { error, invalid } from "@sveltejs/kit";
-import { and, asc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { command, form, query } from "$app/server";
+import { error } from "@sveltejs/kit";
+import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { atTime } from "#lib/dates.js";
+import { addDays, atTime } from "#lib/dates.js";
 import { isOpenOrder, openOrderStatuses } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 import { date, id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
+import { refreshRequested } from "#lib/server/bulk.js";
 import { db } from "#lib/server/db/index.js";
 import { customer, engineer, order } from "#lib/server/db/schema.js";
+import { type Problem, refuse } from "#lib/server/forms.js";
 import { assigneeProblem } from "#lib/server/orders.js";
-import { inTenant, requireMember } from "#lib/server/session.js";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.js";
 import { moveOrderStock, OrderStockShortage } from "#lib/server/stock.js";
 
-import { addDays, byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
+import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.js";
 import { moveFields, scheduleFields } from "./schedule-schema.js";
 
 /** What a card on the board shows of an order. */
@@ -54,7 +56,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 		db
 			.select(cardColumns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(
 				and(
 					inTenant(order),
@@ -67,7 +69,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 		db
 			.select(cardColumns)
 			.from(order)
-			.innerJoin(customer, and(eq(order.customerId, customer.id), inTenant(customer)))
+			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(
 				and(inTenant(order), isNull(order.scheduledFor), inArray(order.status, openOrderStatuses)),
 			),
@@ -82,7 +84,7 @@ type Plan = { id: number; engineerId: number | null; day: Date; time: string };
  * at `time`. A quote that gets scheduled takes its materials from stock. Returns what's wrong if it
  * can't be planned; a 404 if there's no such order.
  */
-async function plan(input: Plan): Promise<Problem | undefined> {
+async function plan(input: Plan): Promise<Problem<"engineerId"> | undefined> {
 	requireMember();
 	try {
 		return await planInTransaction(input);
@@ -93,13 +95,11 @@ async function plan(input: Plan): Promise<Problem | undefined> {
 	}
 }
 
-type Problem = { field?: "engineerId"; message: string };
-
 function planInTransaction(input: Plan) {
-	return db.transaction(async (tx): Promise<Problem | undefined> => {
+	return db.transaction(async (tx): Promise<Problem<"engineerId"> | undefined> => {
 		const found = await tx.query.order.findFirst({
 			columns: { id: true, number: true, status: true, engineerId: true, scheduledFor: true },
-			where: and(eq(order.id, input.id), inTenant(order)),
+			where: idInTenant(order, input.id),
 			with: { lines: true },
 		});
 		if (!found) error(404, m.schedule_not_found());
@@ -115,10 +115,7 @@ function planInTransaction(input: Plan) {
 			scheduledFor: atTime(input.day, input.time),
 			status: plannedStatus(found.status, input.engineerId),
 		};
-		await tx
-			.update(order)
-			.set(planned)
-			.where(and(eq(order.id, input.id), inTenant(order)));
+		await tx.update(order).set(planned).where(idInTenant(order, input.id));
 		await moveOrderStock(tx, found, found, { status: planned.status, lines: found.lines });
 		const subject = { type: "order", id: input.id, label: found.number };
 		await recordActivity(tx, { action: "scheduled", subject, before: found, after: planned });
@@ -132,10 +129,8 @@ export const scheduleOrder = form(
 	async (input, issue) => {
 		requireMember();
 		const problem = await plan(input);
-		if (problem) {
-			invalid(problem.field ? issue[problem.field](problem.message) : problem.message);
-		}
-		await requested(getSchedule, 4).refreshAll();
+		refuse(issue, problem ? [problem] : []);
+		await refreshRequested(getSchedule);
 	},
 );
 
@@ -144,5 +139,5 @@ export const moveOrder = command(v.object(moveFields), async (input) => {
 	requireMember();
 	const problem = await plan(input);
 	if (problem) error(400, problem.message);
-	await requested(getSchedule, 4).refreshAll();
+	await refreshRequested(getSchedule);
 });

@@ -3,7 +3,6 @@ import { describe, expect, test } from "vite-plus/test";
 import type { OrderStatus } from "#lib/models.ts";
 
 import {
-	addDays,
 	applyMove,
 	boardEngineers,
 	byPriorityThenAge,
@@ -65,11 +64,6 @@ describe("days and weeks", () => {
 			"2026-11-01",
 		]);
 		expect(days.every((day) => day.getHours() === 0)).toBe(true);
-	});
-
-	test("adding days keeps the time of day", () => {
-		expect(addDays(new Date(2026, 9, 24, 9, 30), 2)).toEqual(new Date(2026, 9, 26, 9, 30));
-		expect(addDays(new Date(2026, 0, 1), -7)).toEqual(new Date(2025, 11, 25));
 	});
 
 	test("week numbers follow ISO 8601", () => {
