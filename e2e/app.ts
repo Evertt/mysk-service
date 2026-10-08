@@ -8,7 +8,7 @@ import { createClient, type InValue } from "@libsql/client";
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
 import { afterAll, afterEach, beforeAll, expect, inject } from "vite-plus/test";
 
-import { DEMO_PASSWORD, demoUsers } from "../src/lib/server/db/demo.ts";
+import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "../src/lib/server/db/demo.ts";
 
 /**
  * This worker's app and database (see `global-setup.ts`): files on other workers run at the same
@@ -176,16 +176,22 @@ export const hydrated = (page: Page) =>
 		page.waitForLoadState("networkidle"),
 	]);
 
-export const organizations = {
-	north: { id: "org-north", name: "Fieldworks North" },
-	south: { id: "org-south", name: "Fieldworks South" },
-} as const;
+/** The demo organizations: North (Fieldworks Noord) and South (Fieldworks Zuid). */
+export const organizations = demoOrganizations;
 
+/** The demo users' emails, to sign in with. */
 export const users = {
 	admin: demoUsers[0].email,
 	planner: demoUsers[1].email,
 	/** A field engineer in North, who only uses the engineer portal. */
 	engineer: demoUsers[2].email,
+};
+
+/** The demo users' names, as the app shows them (e.g. in the activity log). */
+export const userNames = {
+	admin: demoUsers[0].name,
+	planner: demoUsers[1].name,
+	engineer: demoUsers[2].name,
 };
 
 /**
@@ -230,7 +236,7 @@ export interface App {
 
 /**
  * Gives the tests in a file one browser page, signed in as `user` (the admin by default, who
- * starts in Fieldworks North; `null` for signed out), on a desktop screen unless `viewport` says
+ * starts in North; `null` for signed out), on a desktop screen unless `viewport` says
  * otherwise. After each test, checks that the app logged no errors or hydration warnings.
  */
 export function useApp({

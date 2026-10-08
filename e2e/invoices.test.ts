@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { formatCents, formatNumber } from "../src/lib/format.ts";
-import { baseURL, countIn, organizations, rows, useApp, value } from "./app.ts";
+import { baseURL, countIn, organizations, rows, useApp, value, userNames } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -453,7 +453,7 @@ describe("in North", () => {
 		const { id } = await invoiceOf(number, north.id);
 		paidInvoice = id;
 		const entries = await activityAbout("invoice", id, north.id);
-		expect(new Set(entries.map((e) => e.user_name))).toEqual(new Set(["Avery Admin"]));
+		expect(new Set(entries.map((e) => e.user_name))).toEqual(new Set([userNames.admin]));
 		expect(entries.filter((e) => e.subject_type === "invoice").map((e) => e.action)).toEqual([
 			"created",
 			"issued",
@@ -482,8 +482,12 @@ describe("in North", () => {
 		const log = card("Activity").getByRole("list", { name: "Activity log", exact: true });
 		await log.waitFor();
 		const shown = await log.locator(":scope > li").allInnerTexts();
-		expect(shown[0]).toMatch(new RegExp(`^Avery Admin recorded the payment of invoice ${number}`));
-		expect(shown[1]).toMatch(new RegExp(`^Avery Admin issued invoice ${number}\\s+due: — →`));
+		expect(shown[0]).toMatch(
+			new RegExp(`^${userNames.admin} recorded the payment of invoice ${number}`),
+		);
+		expect(shown[1]).toMatch(
+			new RegExp(`^${userNames.admin} issued invoice ${number}\\s+due: — →`),
+		);
 	});
 
 	test("voiding a sent invoice puts its orders back to completed, to bill again", async () => {
@@ -602,7 +606,9 @@ describe("in South, which has invoicing but no contracts", () => {
 		const feed = page.getByRole("list", { name: "Activity log", exact: true });
 		await feed.waitFor();
 		expect((await feed.locator(":scope > li").first().innerText()).replace(/\s+/g, " ")).toMatch(
-			new RegExp(`^Avery Admin updated invoicing settings payment term: ${before} days → 14 days`),
+			new RegExp(
+				`^${userNames.admin} updated invoicing settings payment term: ${before} days → 14 days`,
+			),
 		);
 		expect(
 			await feed.getByRole("link", { name: "invoicing settings" }).first().getAttribute("href"),

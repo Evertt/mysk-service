@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "../src/lib/server/db/demo.ts";
-import { BROWSER_LOCALE, baseURL, hydrated, useApp, users } from "./app.ts";
+import { BROWSER_LOCALE, baseURL, hydrated, useApp, userNames, users } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -70,7 +70,9 @@ describe("signing in", () => {
 		await page.getByRole("button", { name: "Sign in" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
 		await page.waitForLoadState("networkidle");
-		expect(await page.locator('[data-slot="sidebar-footer"]').innerText()).toContain("Avery Admin");
+		expect(await page.locator('[data-slot="sidebar-footer"]').innerText()).toContain(
+			userNames.admin,
+		);
 	});
 
 	test("the login page sends signed-in users to the dashboard", async () => {

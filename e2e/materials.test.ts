@@ -9,6 +9,7 @@ import {
 	unbalancedStock,
 	useApp,
 	users,
+	userNames,
 	value,
 } from "./app.ts";
 
@@ -165,9 +166,9 @@ describe("in North", () => {
 		await search().fill("MAT-0003");
 		expect(await names()).toEqual([third.name]);
 
-		await search().fill("refrigerant");
+		await search().fill("koudemiddel");
 		const refrigerants = await rows<{ name: string }>(
-			`select name from material where organization_id = ? and name like '%refrigerant%' order by name`,
+			`select name from material where organization_id = ? and name like '%koudemiddel%' order by name`,
 			[north.id],
 		);
 		expect(refrigerants.length).toBeGreaterThan(0);
@@ -371,7 +372,9 @@ describe("in North", () => {
 		expect(await movements(id)).toEqual([
 			{ kind: "opening_balance", quantity: 4, note: null, order_number: null, user: users.admin },
 		]);
-		expect(await history()).toEqual([expect.stringMatching(/Opening balance \+4 pcs 4 pcs Avery/)]);
+		expect(await history()).toEqual([
+			expect.stringMatching(new RegExp(`Opening balance \\+4 pcs 4 pcs ${userNames.admin}`)),
+		]);
 	});
 
 	test("editing it saves the changes, including the unit while it's unused, but not the stock", async () => {
@@ -415,7 +418,9 @@ describe("in North", () => {
 			user: users.admin,
 		});
 		await page.getByText("12.75 m").first().waitFor();
-		expect((await history())[0]).toMatch(/Received Delivery 1234 \+8\.75 m 12\.75 m Avery Admin/);
+		expect((await history())[0]).toMatch(
+			new RegExp(`Received Delivery 1234 \\+8\\.75 m 12\\.75 m ${userNames.admin}`),
+		);
 	});
 
 	test("receiving needs a quantity", async () => {
@@ -467,7 +472,9 @@ describe("in North", () => {
 		});
 		await page.getByText("−2.75 m").first().waitFor();
 		expect(await history()).toEqual([
-			expect.stringMatching(/Count adjustment Yearly count −2\.75 m 10 m Avery Admin/),
+			expect.stringMatching(
+				new RegExp(`Count adjustment Yearly count −2\\.75 m 10 m ${userNames.admin}`),
+			),
 			expect.stringMatching(/Received .* \+8\.75 m 12\.75 m/),
 			expect.stringMatching(/Opening balance \+4 m 4 m/),
 		]);

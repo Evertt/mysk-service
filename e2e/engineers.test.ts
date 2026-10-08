@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, users, value } from "./app.ts";
+import { countIn, organizations, rows, useApp, userNames, users, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -334,14 +334,14 @@ describe("in North", () => {
 		expect(await account().inputValue()).toBe("");
 		// Eli is already another engineer's account.
 		const options = await account().locator("option").allInnerTexts();
-		expect(options.some((option) => option.includes("Pat Planner"))).toBe(true);
-		expect(options.some((option) => option.includes("Eli Engineer"))).toBe(false);
+		expect(options.some((option) => option.includes(userNames.planner))).toBe(true);
+		expect(options.some((option) => option.includes(userNames.engineer))).toBe(false);
 
 		await account().selectOption(await userId(users.planner));
 		await page.getByRole("button", { name: "Save account" }).click();
 		await app.toast("Account saved");
 		expect((await engineer(created)).user_id).toBe(await userId(users.planner));
-		await page.getByText("Signs in as Pat Planner").waitFor();
+		await page.getByText(`Signs in as ${userNames.planner}`).waitFor();
 
 		// Eli's engineer can't take Pat's account too.
 		const eli = await value<number>(
@@ -350,7 +350,9 @@ describe("in North", () => {
 		);
 		await app.go(`/engineers/${eli}/edit`);
 		expect(
-			(await account().locator("option").allInnerTexts()).some((o) => o.includes("Pat Planner")),
+			(await account().locator("option").allInnerTexts()).some((o) =>
+				o.includes(userNames.planner),
+			),
 		).toBe(false);
 
 		await app.go(`/engineers/${created}/edit`);
@@ -455,7 +457,7 @@ describe("in South", () => {
 		// Only South's members to choose from: the admin, not North's planner or engineer.
 		const options = await page.getByLabel("User account").locator("option").allInnerTexts();
 		expect(options.filter((option) => option !== "No account")).toEqual([
-			expect.stringContaining("Avery Admin"),
+			expect.stringContaining(userNames.admin),
 		]);
 		await page.getByLabel("User account").selectOption({ index: 1 });
 		const result = await app.expectingErrors(async () => {

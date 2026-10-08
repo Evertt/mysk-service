@@ -49,24 +49,27 @@ Everything except the login page needs a signed-in user. `pnpm run db:seed` crea
 organizations (tenants) and three demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
-| Name         | Email                         | Organizations                                  |
-| ------------ | ----------------------------- | ---------------------------------------------- |
-| Avery Admin  | `admin@fieldworks.example`    | owner of Fieldworks North and Fieldworks South |
-| Pat Planner  | `planner@fieldworks.example`  | member of Fieldworks North                     |
-| Eli Engineer | `engineer@fieldworks.example` | engineer in Fieldworks North                   |
+| Name           | Email                         | Organizations                                 |
+| -------------- | ----------------------------- | --------------------------------------------- |
+| Anouk de Vries | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid |
+| Pieter Jansen  | `planner@fieldworks.example`  | member of Fieldworks Noord                    |
+| Erik Visser    | `engineer@fieldworks.example` | engineer in Fieldworks Noord                  |
 
-Fieldworks North has the optional Service contracts and Invoicing modules; Fieldworks South has
+The demo data is a Dutch field-service company's, so its names, descriptions and notes are in
+Dutch whatever language you use the app in (stored text stays in the language it was written in).
+
+Fieldworks Noord has the optional Service contracts and Invoicing modules; Fieldworks Zuid has
 Invoicing only (owners and admins can switch modules on and off under Organization settings).
-Switch organizations from the menu at the top of the sidebar. North's data includes call-outs on
+Switch organizations from the menu at the top of the sidebar. Noord's data includes call-outs on
 covered equipment that are overdue, at risk and on track for their contract's response time, as of
-when you seeded. Both have invoices for their invoiced orders (North's with the contracts' monthly
+when you seeded. Both have invoices for their invoiced orders (Noord's with the contracts' monthly
 fees from six months back), paid, sent, overdue and a few voided, plus two drafts each; this month's
 contract fees and the completed orders that aren't invoiced yet are left to bill.
 
-Eli is a field engineer: members whose only role is `engineer` (roles are listed in
+Erik is a field engineer: members whose only role is `engineer` (roles are listed in
 `src/lib/roles.ts`) use the mobile engineer portal at `/my` instead of the office app, and see only
 the orders of the engineer their account is linked to (owners and admins link accounts on an
-engineer's edit page). Eli is linked to North's first engineer, with work planned today and in the
+engineer's edit page). Erik is linked to Noord's first engineer, with work planned today and in the
 next days. There they start jobs, log hours, materials and notes, and complete a job with the
 customer's signature, which the office sees on the order.
 

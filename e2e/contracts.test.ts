@@ -420,10 +420,17 @@ describe("in North, contracts count on orders", () => {
 			);
 		}
 		await page.getByLabel("Search orders…").fill("");
-		const tagged = await page
-			.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ })
-			.count();
-		expect(tagged).toBeGreaterThanOrEqual(2);
+		await expect.poll(() => tableRows().count()).toBeGreaterThan(1);
+		// The first page shows the latest orders: the call-outs among them that are overdue or at
+		// risk have their badge (the at-risk one may be older than the first page's orders).
+		const shown = await tableRows().locator('a[href^="/orders/"]').allInnerTexts();
+		const urgent = (await callOuts()).filter(
+			(callOut) => shown.includes(callOut.number) && slaOf(callOut) !== "on_track",
+		);
+		expect(urgent.length).toBeGreaterThan(0);
+		await expect
+			.poll(() => page.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ }).count())
+			.toBeGreaterThanOrEqual(urgent.length);
 	});
 
 	test("the dashboard lists the call-outs at risk or overdue, most urgent first", async () => {

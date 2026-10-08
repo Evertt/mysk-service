@@ -3,11 +3,15 @@
  * owned by the same customer, get an engineer whose specialty fits the equipment, have a status
  * that matches their dates, and come after the customer joined and the unit was installed. Equipment status reflects the open repair orders on it.
  *
+ * The demo is a Dutch field-service company's, so its texts are in Dutch: names, descriptions,
+ * notes and the invoice lines' texts (stored text is in the language of whoever wrote it). Stored
+ * enum values (statuses, units, regions, countries' English names, …) are translated when shown.
+ *
  * Also (re)creates the demo users you can sign in with, see "Demo login" in README.md.
  *
  * Run with `pnpm db:seed` (after `pnpm db:push`). Replaces all existing business data.
  */
-import { en, Faker, faker } from "@faker-js/faker";
+import { de, en, Faker, type LocaleDefinition, nl, nl_BE } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { hashPassword } from "better-auth/crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -41,7 +45,7 @@ import {
 	specialtyForCategory,
 } from "#lib/models.ts";
 
-import { DEMO_PASSWORD, demoUsers } from "./demo.ts";
+import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "./demo.ts";
 import * as schema from "./schema.ts";
 
 const { account, customer, engineer, equipment, material, order, orderLine, session, user } =
@@ -51,6 +55,9 @@ const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
 const db = drizzle(createClient({ url: DATABASE_URL }), { schema });
+
+/** The generator's randomness, in Dutch; seeded per tenant, so the data is the same every time. */
+const faker = new Faker({ locale: [nl, en] });
 
 const now = new Date();
 const DAY = 24 * 60 * 60 * 1000;
@@ -69,29 +76,239 @@ interface TenantSize {
 	contracts: boolean;
 }
 
+/**
+ * Real towns where the demo's customers are, by country (stored by its English name), with their
+ * phone area code.
+ */
+const towns: Record<string, Record<string, string>> = {
+	Netherlands: {
+		Amsterdam: "020",
+		Rotterdam: "010",
+		"Den Haag": "070",
+		Utrecht: "030",
+		Eindhoven: "040",
+		Groningen: "050",
+		Tilburg: "013",
+		Almere: "036",
+		Breda: "076",
+		Nijmegen: "024",
+		Apeldoorn: "055",
+		Arnhem: "026",
+		Haarlem: "023",
+		Enschede: "053",
+		Amersfoort: "033",
+		Zaandam: "075",
+		"Den Bosch": "073",
+		Zwolle: "038",
+		Leeuwarden: "058",
+		Leiden: "071",
+		Maastricht: "043",
+		Dordrecht: "078",
+		Zoetermeer: "079",
+		Deventer: "0570",
+		Delft: "015",
+		Venlo: "077",
+		Alkmaar: "072",
+		Hengelo: "074",
+		Roosendaal: "0165",
+		Helmond: "0492",
+		Oss: "0412",
+		Gouda: "0182",
+		Hilversum: "035",
+		Emmen: "0591",
+		Assen: "0592",
+		Veenendaal: "0318",
+		Harderwijk: "0341",
+		"Bergen op Zoom": "0164",
+		Middelburg: "0118",
+		Heerlen: "045",
+		Sittard: "046",
+		Weert: "0495",
+		Doetinchem: "0314",
+		Lelystad: "0320",
+	},
+	Belgium: {
+		Antwerpen: "3",
+		Gent: "9",
+		Brugge: "50",
+		Hasselt: "11",
+		Leuven: "16",
+		Mechelen: "15",
+		Genk: "89",
+		Turnhout: "14",
+	},
+	Germany: {
+		Aachen: "241",
+		Kleve: "2821",
+		Düsseldorf: "211",
+		Duisburg: "203",
+		Münster: "251",
+		Krefeld: "2151",
+		Nordhorn: "5921",
+	},
+};
+
+/** A landline number in a town, e.g. `030 123 4567`, `+32 9 123 45 67` or `+49 241 1234567`. */
+function landline(country: string, town: string) {
+	const area = towns[country][town];
+	const digits = (count: number) =>
+		faker.string.numeric({ length: count, allowLeadingZeros: false });
+	if (country === "Netherlands")
+		return area.length === 3
+			? `${area} ${digits(3)} ${faker.string.numeric(4)}`
+			: `${area} ${digits(3)} ${faker.string.numeric(3)}`;
+	if (country === "Belgium")
+		return `+32 ${area} ${digits(area.length === 1 ? 3 : 2)} ${faker.string.numeric(2)} ${faker.string.numeric(2)}`;
+	return `+49 ${area} ${digits(10 - area.length)}`;
+}
+
+/** A mobile number, e.g. `06 12345678`, `+32 470 12 34 56` or `+49 151 12345678`. */
+function mobile(country: string) {
+	if (country === "Netherlands") return `06 ${faker.string.numeric(8)}`;
+	if (country === "Belgium")
+		return `+32 4${faker.helpers.arrayElement(["7", "8", "9"])}${faker.string.numeric(1)} ${faker.string.numeric(2)} ${faker.string.numeric(2)} ${faker.string.numeric(2)}`;
+	return `+49 1${faker.helpers.arrayElement(["51", "52", "60", "70", "76"])} ${faker.string.numeric(8)}`;
+}
+
+/** Name parts for the customers' company names: trades by segment, in Dutch and in German. */
+const trades = {
+	enterprise: [
+		"Groep",
+		"Logistiek",
+		"Foods",
+		"Vastgoed",
+		"Industrie",
+		"Distributie",
+		"Zuivel",
+		"Chemie",
+	],
+	mid_market: [
+		"Installatietechniek",
+		"Metaalbewerking",
+		"Kunststoffen",
+		"Transport",
+		"Bouw",
+		"Verpakkingen",
+		"Drukkerij",
+		"Koeltechniek",
+		"Bloemen",
+		"Bakkerijen",
+	],
+	small_business: [
+		"Bakkerij",
+		"Autobedrijf",
+		"Slagerij",
+		"Tandartspraktijk",
+		"Hoveniersbedrijf",
+		"Wasserette",
+		"Café",
+		"Fysiotherapie",
+		"Drukkerij",
+		"Garage",
+	],
+};
+const germanTrades = {
+	enterprise: ["Gruppe", "Logistik", "Lebensmittel", "Chemie"],
+	mid_market: ["Metallbau", "Kunststofftechnik", "Spedition", "Haustechnik"],
+	small_business: ["Bäckerei", "Autohaus", "Metzgerei", "Gärtnerei"],
+};
+/** Dutch institutions, named after their town. */
+const institutions = {
+	enterprise: ["Ziekenhuis", "Woonstichting", "Hogeschool", "Zorggroep"],
+	mid_market: ["Hotel", "Zorgcentrum", "Sportcentrum", "Scholengemeenschap", "Zwembad"],
+};
+
+/** A slug for a domain or email address, e.g. `van der Meer` → `vandermeer`. */
+const slug = (text: string, separator = "") =>
+	text
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase()
+		.replace(/&/g, " en ")
+		.replace(/[^a-z0-9]+/g, " ")
+		.trim()
+		.replaceAll(" ", separator);
+
 /** Generates one tenant's data, with ids from 1 (they're shifted when inserted). */
 function generateTenant(size: TenantSize) {
 	// --- Customers -------------------------------------------------------------------------------
 
+	// Names of Belgian and German people, from fakers of their own.
+	const fakerIn = (locale: LocaleDefinition[]) => {
+		const local = new Faker({ locale });
+		local.seed(faker.number.int());
+		return local;
+	};
+	const abroad: Record<string, Faker> = {
+		Belgium: fakerIn([nl_BE, nl, en]),
+		Germany: fakerIn([de, en]),
+	};
+	const legalForm: Record<string, { large: string; small: string }> = {
+		Netherlands: { large: "B.V.", small: "V.O.F." },
+		Belgium: { large: "NV", small: "BV" },
+		Germany: { large: "GmbH", small: "GmbH" },
+	};
+	const topLevelDomain: Record<string, string> = {
+		Netherlands: "nl",
+		Belgium: "be",
+		Germany: "de",
+	};
+
+	/** A company name fitting the segment, e.g. `Bakkerij Jansen` or `Hotel Zwolle`. */
+	function companyName(segment: (typeof customerSegments)[number], country: string, town: string) {
+		const people = abroad[country] ?? faker;
+		const family = people.person.lastName();
+		// Family names with a prefix are capitalized in a company name, e.g. `Van der Meer B.V.`.
+		const surname = family.charAt(0).toUpperCase() + family.slice(1);
+		const { large, small } = legalForm[country];
+		const trade = faker.helpers.arrayElement(
+			(country === "Germany" ? germanTrades : trades)[segment],
+		);
+		if (segment === "small_business") {
+			return faker.helpers.arrayElement([
+				`${trade} ${surname}`,
+				`${surname} ${small}`,
+				`${surname} & ${people.person.lastName()} ${small}`,
+			]);
+		}
+		if (country === "Netherlands" && faker.datatype.boolean(0.25))
+			return `${faker.helpers.arrayElement(institutions[segment])} ${town}`;
+		return `${surname} ${trade} ${segment === "enterprise" && country === "Netherlands" ? "N.V." : large}`;
+	}
+
 	const customers = Array.from({ length: size.customers }, (_, i) => {
-		const name = faker.company.name();
-		const firstName = faker.person.firstName();
-		const lastName = faker.person.lastName();
-		const domain = `${faker.helpers.slugify(name.split(/[ ,]/)[0]).toLowerCase()}.example`;
+		const segment = faker.helpers.weightedArrayElement([
+			{ value: customerSegments[0], weight: 2 },
+			{ value: customerSegments[1], weight: 5 },
+			{ value: customerSegments[2], weight: 8 },
+		]);
+		const country = faker.helpers.weightedArrayElement([
+			{ value: "Netherlands", weight: 16 },
+			{ value: "Belgium", weight: 3 },
+			{ value: "Germany", weight: 1 },
+		]);
+		const people = abroad[country] ?? faker;
+		const city = faker.helpers.arrayElement(Object.keys(towns[country]));
+		const name = companyName(segment, country, city);
+		const firstName = people.person.firstName();
+		const lastName = people.person.lastName();
+		const domain = `${slug(name.replace(/ (B\.V\.|N\.V\.|V\.O\.F\.|NV|BV|GmbH)$/, ""), "-")}.${topLevelDomain[country]}`;
+		const mailbox = faker.helpers.arrayElement([
+			`${slug(firstName)}.${slug(lastName)}`,
+			`${slug(firstName).charAt(0)}.${slug(lastName)}`,
+			"info",
+			"service",
+		]);
 		return {
 			id: i + 1,
 			code: `CUST-${String(i + 1).padStart(4, "0")}`,
 			name,
 			contactName: `${firstName} ${lastName}`,
-			email: faker.internet.email({ firstName, lastName, provider: domain }).toLowerCase(),
-			phone: faker.phone.number({ style: "international" }),
-			city: faker.location.city(),
-			country: faker.helpers.arrayElement(["Netherlands", "Belgium", "Germany", "Luxembourg"]),
-			segment: faker.helpers.weightedArrayElement([
-				{ value: customerSegments[0], weight: 2 },
-				{ value: customerSegments[1], weight: 5 },
-				{ value: customerSegments[2], weight: 8 },
-			]),
+			email: `${mailbox}@${domain}`,
+			phone: faker.datatype.boolean(0.6) ? landline(country, city) : mobile(country),
+			city,
+			country,
+			segment,
 			createdAt: faker.date.past({ years: 5, refDate: addDays(now, -400) }),
 		};
 	});
@@ -99,16 +316,19 @@ function generateTenant(size: TenantSize) {
 	// --- Engineers -------------------------------------------------------------------------------
 
 	const regions = ["North", "East", "South", "West", "Central"];
+	const engineerEmails = new Set<string>();
 	const engineers = Array.from({ length: size.engineers }, (_, i) => {
 		const firstName = faker.person.firstName();
 		const lastName = faker.person.lastName();
+		let email = `${slug(firstName)}.${slug(lastName)}@fieldworks.example`;
+		for (let n = 2; engineerEmails.has(email); n++)
+			email = `${slug(firstName)}.${slug(lastName)}${n}@fieldworks.example`;
+		engineerEmails.add(email);
 		return {
 			id: i + 1,
 			name: `${firstName} ${lastName}`,
-			email: faker.internet
-				.email({ firstName, lastName, provider: "fieldservice.example" })
-				.toLowerCase(),
-			phone: faker.phone.number({ style: "international" }),
+			email,
+			phone: mobile("Netherlands"),
 			// Every specialty is covered at least three times.
 			specialty: engineerSpecialties[i % engineerSpecialties.length],
 			region: faker.helpers.arrayElement(regions),
@@ -121,14 +341,15 @@ function generateTenant(size: TenantSize) {
 
 	// --- Equipment -------------------------------------------------------------------------------
 
+	// Brands common in Dutch installations.
 	const manufacturers: Record<EquipmentCategory, string[]> = {
-		generator: ["Voltaris", "Genmark", "Powerline Industries"],
-		chiller: ["Kryotec", "Arctica", "Coolflow"],
-		boiler: ["Thermagen", "Heatwell", "Calora"],
-		compressor: ["Pneumax", "Airvantage", "Kompressa"],
-		pump: ["Hydrona", "Flowmaster", "Aquadyne"],
-		elevator: ["Liftwerk", "Verticor", "Ascenda"],
-		air_handler: ["Ventura", "Airmasters", "Climatech"],
+		generator: ["Bredenoord", "Kohler SDMO", "Cummins"],
+		chiller: ["Daikin", "Carrier", "Trane"],
+		boiler: ["Remeha", "Intergas", "Nefit Bosch", "Vaillant"],
+		compressor: ["Atlas Copco", "Kaeser", "Ingersoll Rand"],
+		pump: ["Grundfos", "Wilo", "KSB"],
+		elevator: ["Kone", "Otis", "Schindler"],
+		air_handler: ["Systemair", "Swegon", "Hoval"],
 	};
 
 	const equipments = customers
@@ -153,46 +374,46 @@ function generateTenant(size: TenantSize) {
 	// --- Materials -------------------------------------------------------------------------------
 
 	const catalog: [name: string, unit: MaterialUnit, minPrice: number, maxPrice: number][] = [
-		["Copper pipe 15mm", "m", 6, 12],
-		["Copper pipe 22mm", "m", 9, 18],
-		["Pipe insulation 22mm", "m", 2, 5],
-		["Ball valve DN25", "pcs", 18, 45],
-		["Check valve DN40", "pcs", 40, 95],
-		["Pressure gauge 0–10 bar", "pcs", 15, 35],
-		["Expansion vessel 25 l", "pcs", 60, 140],
-		["Circulation pump cartridge", "pcs", 180, 420],
-		["Mechanical seal kit", "pcs", 70, 160],
-		["Deep groove bearing 6204", "pcs", 8, 22],
-		["Deep groove bearing 6308", "pcs", 25, 60],
-		["V-belt SPZ 1250", "pcs", 12, 28],
-		["Coupling insert", "pcs", 15, 40],
-		["Hydraulic oil ISO 46", "l", 4, 9],
-		["Compressor oil", "l", 9, 22],
-		["Grease cartridge", "pcs", 6, 14],
-		["Refrigerant R32", "kg", 25, 60],
-		["Refrigerant R410A", "kg", 30, 75],
-		["Filter drier", "pcs", 20, 55],
-		["Panel filter G4 592×592", "pcs", 8, 18],
-		["Bag filter F7 592×592", "pcs", 25, 55],
-		["Contactor 3P 40A", "pcs", 35, 90],
-		["Thermal overload relay", "pcs", 30, 70],
-		["Circuit breaker C16", "pcs", 9, 25],
-		["Power cable 5×2.5mm²", "m", 3, 7],
-		["Control cable 12×0.75mm²", "m", 2, 6],
-		["Temperature sensor PT1000", "pcs", 25, 65],
-		["Pressure transmitter", "pcs", 120, 280],
-		["PLC I/O module", "pcs", 220, 520],
-		["Frequency drive 7.5 kW", "pcs", 650, 1400],
-		["Door operator belt", "pcs", 45, 110],
-		["Elevator guide shoe", "pcs", 30, 75],
-		["Fuel filter", "pcs", 15, 40],
-		["Starter battery 12V 100Ah", "pcs", 140, 260],
-		["Coolant concentrate", "l", 5, 12],
-		["Burner nozzle", "pcs", 12, 30],
-		["Ignition electrode", "pcs", 18, 45],
-		["Gasket set", "pcs", 20, 60],
-		["Stainless fasteners kit", "pcs", 10, 25],
-		["Cable ties (100)", "pcs", 3, 8],
+		["Koperbuis 15 mm", "m", 6, 12],
+		["Koperbuis 22 mm", "m", 9, 18],
+		["Buisisolatie 22 mm", "m", 2, 5],
+		["Kogelkraan DN25", "pcs", 18, 45],
+		["Terugslagklep DN40", "pcs", 40, 95],
+		["Manometer 0–10 bar", "pcs", 15, 35],
+		["Expansievat 25 l", "pcs", 60, 140],
+		["Motorblok circulatiepomp", "pcs", 180, 420],
+		["Mechanische asafdichting", "pcs", 70, 160],
+		["Groefkogellager 6204", "pcs", 8, 22],
+		["Groefkogellager 6308", "pcs", 25, 60],
+		["V-snaar SPZ 1250", "pcs", 12, 28],
+		["Koppelingsrubber", "pcs", 15, 40],
+		["Hydraulische olie ISO 46", "l", 4, 9],
+		["Compressorolie", "l", 9, 22],
+		["Vetpatroon", "pcs", 6, 14],
+		["Koudemiddel R32", "kg", 25, 60],
+		["Koudemiddel R410A", "kg", 30, 75],
+		["Filterdroger", "pcs", 20, 55],
+		["Paneelfilter G4 592×592", "pcs", 8, 18],
+		["Zakkenfilter F7 592×592", "pcs", 25, 55],
+		["Magneetschakelaar 3P 40 A", "pcs", 35, 90],
+		["Thermisch overstroomrelais", "pcs", 30, 70],
+		["Installatieautomaat C16", "pcs", 9, 25],
+		["Voedingskabel 5×2,5 mm²", "m", 3, 7],
+		["Stuurstroomkabel 12×0,75 mm²", "m", 2, 6],
+		["Temperatuurvoeler PT1000", "pcs", 25, 65],
+		["Druktransmitter", "pcs", 120, 280],
+		["PLC-I/O-module", "pcs", 220, 520],
+		["Frequentieregelaar 7,5 kW", "pcs", 650, 1400],
+		["Aandrijfriem liftdeur", "pcs", 45, 110],
+		["Geleideschoen lift", "pcs", 30, 75],
+		["Brandstoffilter", "pcs", 15, 40],
+		["Startaccu 12 V 100 Ah", "pcs", 140, 260],
+		["Koelvloeistof concentraat", "l", 5, 12],
+		["Brandersproeier", "pcs", 12, 30],
+		["Ontstekingselektrode", "pcs", 18, 45],
+		["Pakkingset", "pcs", 20, 60],
+		["Bevestigingsset rvs", "pcs", 10, 25],
+		["Tiewraps (100 st.)", "pcs", 3, 8],
 	];
 
 	const materials = catalog.map(([name, unit, min, max], i) => ({
@@ -209,30 +430,65 @@ function generateTenant(size: TenantSize) {
 
 	// --- Orders ----------------------------------------------------------------------------------
 
-	const describe: Record<OrderType, () => string> = {
+	const repairs: Record<EquipmentCategory, string[]> = {
+		generator: [
+			"Aggregaat start niet bij proefdraaien",
+			"Aggregaat neemt niet over bij stroomuitval",
+			"Olielekkage aan de motor",
+		],
+		chiller: [
+			"Koelmachine valt uit op hoge druk",
+			"Te weinig koelvermogen bij warm weer",
+			"Vermoedelijk lek in het koudemiddelcircuit",
+		],
+		boiler: [
+			"Storing cv-ketel, geen warm water",
+			"Ketel gaat in storing, ontsteking faalt",
+			"Waterdruk loopt steeds terug",
+		],
+		compressor: [
+			"Compressor slaat af op temperatuur",
+			"Luchtlek, druk loopt terug",
+			"Veel condensaat in de perslucht",
+		],
+		pump: [
+			"Pomp maakt herrie en trilt",
+			"Lekkage bij de asafdichting",
+			"Pomp draait maar bouwt geen druk op",
+		],
+		elevator: [
+			"Lift staat stil tussen twee verdiepingen",
+			"Liftdeur sluit niet goed",
+			"Lift stopt niet gelijk met de vloer",
+		],
+		air_handler: [
+			"Luchtbehandelingskast in storing",
+			"Ventilator maakt afwijkend geluid",
+			"Te weinig luchtopbrengst",
+		],
+	};
+
+	const describe: Record<OrderType, (category?: EquipmentCategory) => string> = {
 		installation: () =>
-			`Install and commission new unit${faker.helpers.maybe(() => " incl. control wiring") ?? ""}`,
+			`Nieuwe installatie plaatsen en in bedrijf stellen${faker.helpers.maybe(() => ", incl. regeling aansluiten") ?? ""}`,
 		maintenance: () =>
 			faker.helpers.arrayElement([
-				"Scheduled preventive maintenance",
-				"Annual service and safety check",
-				"Replace filters and wear parts",
-				"Lubrication and belt tensioning",
+				"Periodiek preventief onderhoud",
+				"Jaarlijkse onderhoudsbeurt en veiligheidscontrole",
+				"Filters en slijtdelen vervangen",
+				"Smeren en V-snaren spannen",
 			]),
-		repair: () =>
-			faker.helpers.arrayElement([
-				"Unit trips on high pressure",
-				"Abnormal noise and vibration",
-				"Leak detected at main seal",
-				"Fails to start after power outage",
-				"Error code on controller, unit offline",
-				"Insufficient output under load",
-			]),
+		repair: (category) =>
+			faker.helpers.arrayElement(
+				category
+					? repairs[category]
+					: ["Storing, installatie buiten bedrijf", "Storingscode op de regeling"],
+			),
 		inspection: () =>
 			faker.helpers.arrayElement([
-				"Statutory periodic inspection",
-				"Insurance inspection",
-				"Pre-warranty-expiry inspection",
+				"Wettelijke periodieke keuring",
+				"Keuring voor de verzekeraar",
+				"Inspectie voor het einde van de garantie",
 			]),
 	};
 
@@ -322,7 +578,7 @@ function generateTenant(size: TenantSize) {
 			type,
 			status,
 			priority,
-			description: describe[type](),
+			description: describe[type](target?.category),
 			scheduledFor,
 			completedAt,
 			laborHours: faker.number.float({ min: minHours, max: maxHours, multipleOf: 0.25 }),
@@ -382,12 +638,12 @@ function generateTenant(size: TenantSize) {
 	};
 
 	const contractNotes = [
-		"Includes the annual statutory inspection.",
-		"Parts included up to €2,000 per year.",
-		"Out-of-hours call-outs are billed separately.",
-		"Site access via the security desk; announce visits 24 hours ahead.",
-		"Fee indexed yearly (CPI + 1%).",
-		"Covers the main site only; satellite locations on request.",
+		"Inclusief de jaarlijkse wettelijke keuring.",
+		"Onderdelen inbegrepen tot € 2.000 per jaar.",
+		"Storingen buiten kantooruren worden apart gefactureerd.",
+		"Toegang via de receptie; bezoek 24 uur van tevoren aanmelden.",
+		"Tarief wordt jaarlijks geïndexeerd (CBS-index + 1%).",
+		"Alleen de hoofdlocatie; nevenlocaties op aanvraag.",
 	];
 
 	const levelsBySegment: Record<(typeof customerSegments)[number], ContractLevel[]> = {
@@ -513,17 +769,17 @@ function generateTenant(size: TenantSize) {
 					{
 						term: running[0],
 						hoursAgo: running[0].responseHours + 2,
-						description: "Unit down after a power cut; customer called twice",
+						description: "Installatie uitgevallen na stroomstoring; klant heeft twee keer gebeld",
 					},
 					{
 						term: running[running.length - 1],
 						hoursAgo: running[running.length - 1].responseHours * 0.85,
-						description: "Intermittent fault, alarm on the controller",
+						description: "Storing komt en gaat, alarm op de regeling",
 					},
 					{
 						term: running[Math.floor(running.length / 2)],
 						hoursAgo: 0.5,
-						description: "Abnormal noise since this morning",
+						description: "Sinds vanochtend afwijkend geluid",
 					},
 				]
 			: [];
@@ -577,7 +833,7 @@ function generateTenant(size: TenantSize) {
  * data is the same with or without it.
  */
 function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: number) {
-	const random = new Faker({ locale: [en] });
+	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
 	const round = (quantity: number) => Math.round(quantity * 100) / 100;
 	const orders = new Map(data.orders.map((o) => [o.id, o]));
@@ -609,7 +865,7 @@ function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: n
 			kind: "receipt" as const,
 			orderId: null,
 			orderNumber: null,
-			note: `Delivery note ${random.string.numeric(6)}`,
+			note: `Pakbon ${random.string.numeric(6)}`,
 			createdAt: random.date.between({ from: addDays(now, -120), to: addDays(now, -1) }),
 		}));
 
@@ -640,18 +896,20 @@ function generateStockMovements(data: ReturnType<typeof generateTenant>, seed: n
 /** From when the demo tenants bill contract fees through the app (see the invoicing settings). */
 const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
-const levelLabel = (level: ContractLevel) => level.charAt(0).toUpperCase() + level.slice(1);
+/** A contract level's name in Dutch, as `label("contractLevel", level)` shows it. */
+const levelLabel = (level: ContractLevel) =>
+	({ basic: "Basis", standard: "Standaard", premium: "Premium" })[level];
 
-// Like `formatDate` in `#lib/format.ts` in English, which the seed script can't import.
-const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+// Like `formatDate` in `#lib/format.ts` in Dutch, which the seed script can't import.
+const day = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" });
 
-/** A contract's month on an invoice, worded like the app does in English (the demo's language). */
+/** A contract's month on an invoice, worded like the app does in Dutch (the demo's language). */
 const monthlyFeeText = (
 	contract: { number: string; level: ContractLevel },
 	month: ContractMonth,
 ) => ({
-	description: `Service contract ${contract.number} (${levelLabel(contract.level)})`,
-	detail: `Monthly fee, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
+	description: `Servicecontract ${contract.number} (${levelLabel(contract.level)})`,
+	detail: `Maandbedrag, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
 });
 
 /**
@@ -668,7 +926,7 @@ function generateInvoices(
 	seed: number,
 	contractOffset: number,
 ) {
-	const random = new Faker({ locale: [en] });
+	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const engineers = new Map(data.engineers.map((e) => [e.id, e]));
@@ -708,8 +966,8 @@ function generateInvoices(
 			contract && included
 				? [
 						{
-							label: `Covered by ${contract.number} (${levelLabel(contract.level)})`,
-							detail: `${level === "premium" ? "Labour and materials" : "Labour"} included`,
+							label: `Gedekt door ${contract.number} (${levelLabel(contract.level)})`,
+							detail: `${level === "premium" ? "Arbeid en materialen" : "Arbeid"} inbegrepen`,
 							amount: -included,
 						},
 					]
@@ -717,8 +975,8 @@ function generateInvoices(
 		return { materials, labor, adjustments, total: materials + labor - included };
 	}
 
-	// The seed's texts are in English.
-	const billedDetail = "Materials and labour";
+	// The seed's texts are in Dutch.
+	const billedDetail = "Materialen en arbeid";
 	// One invoice per customer and month of work (or of fees).
 	const groups = new Map<string, { customerId: number; month: Date; lines: LineDraft[] }>();
 	const groupOf = (customerId: number, date: Date) => {
@@ -813,16 +1071,14 @@ function generateInvoices(
  */
 const tenants = [
 	{
-		id: "org-north",
-		name: "Fieldworks North",
+		...demoOrganizations.north,
 		slug: "north",
 		modules: ["contracts", "invoicing"],
 		seed: 20261005,
 		size: { customers: 60, engineers: 18, orders: 750, contracts: true },
 	},
 	{
-		id: "org-south",
-		name: "Fieldworks South",
+		...demoOrganizations.south,
 		slug: "south",
 		modules: ["invoicing"],
 		seed: 20261006,
