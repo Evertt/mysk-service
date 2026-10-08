@@ -12,7 +12,7 @@ import {
 	useApp,
 	value,
 } from "./app.ts";
-import { tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
+import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -195,7 +195,7 @@ describe("in North", () => {
 	test("a malformed query for the list is refused with a 400", async () => {
 		const { page } = app;
 		type Query = Record<string, unknown>;
-		/** The status of the response to the next `name` request, with its argument changed. */
+		/** The error status of the response to the next `name` request, with its argument changed. */
 		const statusOf = async (
 			name: string,
 			change: (arg: Query) => Query,
@@ -206,7 +206,7 @@ describe("in North", () => {
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
 			);
-			return response.status();
+			return remoteErrorStatus(response);
 		};
 		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
 		const search = () => page.getByLabel("Search orders…").fill("ORD");
@@ -1072,7 +1072,7 @@ describe("bulk actions on selected orders, in North", () => {
 				dialog.getByRole("button", { name: "Apply" }).click(),
 			]),
 		);
-		expect(response.status()).toBe(400);
+		expect(await remoteErrorStatus(response)).toBe(400);
 		expect(await snapshot(quote.id)).toEqual(before);
 	});
 

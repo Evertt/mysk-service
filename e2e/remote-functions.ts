@@ -1,9 +1,18 @@
 /** Helpers for the app's remote functions: spotting their requests and tampering with them. */
-import type { Page } from "playwright";
+import type { Page, Response } from "playwright";
 
 /** Whether a request (its URL) calls the remote function `name`, e.g. `getOrders`. */
 export const isRemote = (url: string, name: string) =>
 	url.includes("/_app/remote/") && new URL(url).pathname.endsWith(`/${name}`);
+
+/**
+ * The status a remote function's response carries if it failed, e.g. 400 for an argument it
+ * refuses (the response itself is a 200), else `undefined`.
+ */
+export async function remoteErrorStatus(response: Response) {
+	const body = (await response.json()) as { type: string; error?: { status?: number } };
+	return body.type === "error" ? body.error?.status : undefined;
+}
 
 /** Rebuilds a value from devalue's flat JSON, as remote commands send it (plain data only). */
 function unflatten(flat: unknown[]): unknown {
