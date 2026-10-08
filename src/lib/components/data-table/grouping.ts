@@ -14,6 +14,8 @@
  */
 import { createSortedRowModel } from "@tanstack/svelte-table";
 
+import type { DataTableColumnMeta } from "./features.js";
+
 /** A group's key: its value as text, `""` for none. Server and client key groups the same way. */
 export function groupKey(value: unknown): string {
 	if (value === null || value === undefined) return "";
@@ -78,6 +80,118 @@ export function pageGroups<Row>(
 		last.continues = around.next !== undefined && around.next === last.key;
 	}
 	return groups;
+}
+
+/** What `groupedPage` needs of a row (TanStack Table's `Row`). */
+interface GroupableRow {
+	getValue(columnId: string): unknown;
+	getGroupingValue(columnId: string): unknown;
+}
+
+/** What `groupedPage` needs of a column (TanStack Table's `Column`). */
+interface GroupableColumn {
+	id: string;
+	getIsGrouped(): boolean;
+	accessorFn?: (data: never, index: number) => unknown;
+	columnDef: {
+		getGroupingValue?: (data: never, index: number, parent: never) => unknown;
+		meta?: DataTableColumnMeta;
+	};
+}
+
+/** What `groupedPage` needs of the table. */
+interface GroupableTable<Row, Column> {
+	atoms: {
+		grouping: { get(): string[] };
+		pagination: { get(): { pageIndex: number; pageSize: number } };
+	};
+	getColumn(id: string): unknown;
+	getVisibleLeafColumns(): Column[];
+	getRowModel(): { rows: Row[] };
+	getPrePaginatedRowModel(): { rows: Row[] };
+}
+
+/** A grouped table's page: see `groupedPage`. */
+export interface GroupedPage<Row, Column> {
+	/** The column the rows are grouped by. */
+	column: GroupableColumn;
+	groups: PageGroup<Row>[];
+	/**
+	 * The sums of the `meta.groupSum` columns (the visible ones) over a group's rows, for the group's
+	 * header to show. Only where the table has all the rows: none for a server-side table.
+	 */
+	sums(key: string): { column: Column; sum: number }[];
+}
+
+/**
+ * The page's rows in their groups, when the table is grouped (else `undefined`). A client-side
+ * table has all the rows (filtered and sorted, before paging), so it knows each group's whole
+ * count and the sums of its `groupSum` columns, and whether its first and last groups go on from or
+ * onto another page. A server-side table passes what its server knows of the groups as `groups`.
+ */
+export function groupedPage<Row extends GroupableRow, Column extends GroupableColumn>(
+	table: GroupableTable<Row, Column>,
+	groups?: PageGroups,
+): GroupedPage<Row, Column> | undefined {
+	const id = table.atoms.grouping.get()[0];
+	const column =
+		id === undefined ? undefined : (table.getColumn(id) as GroupableColumn | undefined);
+	if (!column) return undefined;
+	const rows = table.getRowModel().rows;
+	const keyOf = (row: Row) => groupKey(row.getGroupingValue(column.id));
+	if (groups) {
+		// The rows around the page are plain data, which only the column can tell the value of.
+		const { getGroupingValue } = column.columnDef;
+		const keyOfData = (data: unknown) =>
+			groupKey(
+				getGroupingValue
+					? getGroupingValue(data as never, -1, undefined as never)
+					: column.accessorFn?.(data as never, -1),
+			);
+		return {
+			column,
+			groups: pageGroups(rows, keyOf, {
+				counts: groups.counts,
+				previous: groups.previous === undefined ? undefined : keyOfData(groups.previous),
+				next: groups.next === undefined ? undefined : keyOfData(groups.next),
+			}),
+			sums: () => [],
+		};
+	}
+	// All the rows (filtered and sorted, before paging) are here.
+	const all = table.getPrePaginatedRowModel().rows;
+	const byKey = new Map<string, Row[]>();
+	for (const row of all) {
+		const key = keyOf(row);
+		const group = byKey.get(key);
+		if (group) group.push(row);
+		else byKey.set(key, [row]);
+	}
+	const { pageIndex, pageSize } = table.atoms.pagination.get();
+	const start = pageIndex * pageSize;
+	const before = all[start - 1];
+	const after = all[start + rows.length];
+	const summed = table
+		.getVisibleLeafColumns()
+		.filter((other) => !other.getIsGrouped() && other.columnDef.meta?.groupSum);
+	return {
+		column,
+		groups: pageGroups(rows, keyOf, {
+			counts: Object.fromEntries([...byKey].map(([key, rows]) => [key, rows.length])),
+			previous: before && keyOf(before),
+			next: after && keyOf(after),
+		}),
+		sums: (key) =>
+			summed.map((other) => ({
+				column: other,
+				sum: sumOf(byKey.get(key) ?? [], (row) => row.getValue(other.id)),
+			})),
+	};
+}
+
+/** A group's header row's id, for the keyboard navigation. */
+export function groupRowId(key: string) {
+	return `group:${key}`;
 }
 
 /** The sum of a column's numbers over rows, ignoring what isn't a number. */
