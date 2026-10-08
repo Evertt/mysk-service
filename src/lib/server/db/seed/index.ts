@@ -1,0 +1,245 @@
+/**
+ * Fills the database with fake, internally consistent data (see `generateTenant`): orders only
+ * reference equipment owned by the same customer, get an engineer whose specialty fits the
+ * equipment, have a status that matches their dates, and come after the customer joined and the
+ * unit was installed. Equipment status reflects the open repair orders on it.
+ *
+ * The demo is a Dutch field-service company's, so its texts are in Dutch: names, descriptions,
+ * notes and the invoice lines' texts (stored text is in the language of whoever wrote it). Stored
+ * enum values (statuses, units, regions, countries' English names, …) are translated when shown.
+ *
+ * Also (re)creates the demo users you can sign in with, see "Demo login" in README.md.
+ *
+ * Run with `pnpm db:seed` (after `pnpm db:migrate`). Replaces all existing business data. It runs
+ * in plain Node (not through Vite), so the files in this folder import each other with `.ts`
+ * extensions, and from `#lib` only modules that don't need SvelteKit.
+ */
+import { en, Faker, nl } from "@faker-js/faker";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+
+import { demoOrganizations, demoUsers } from "../demo.ts";
+import * as schema from "../schema.ts";
+import { addDays, now } from "./clock.ts";
+import { billFrom, generateInvoices } from "./invoices.ts";
+import { generateStockMovements } from "./stock.ts";
+import { generateTenant } from "./tenant.ts";
+import { createDemoUsers } from "./users.ts";
+
+const { customer, engineer, equipment, material, order, orderLine } = schema;
+
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
+
+const db = drizzle(createClient({ url: DATABASE_URL }), { schema });
+
+/** The generator's randomness, in Dutch; seeded per tenant, so the data is the same every time. */
+const faker = new Faker({ locale: [nl, en] });
+
+/** Inserts in chunks to stay below SQLite's bound-parameter limit. */
+async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) {
+	for (let i = 0; i < rows.length; i += 100) await insert(rows.slice(i, i + 100));
+}
+
+// --- Tenants ---------------------------------------------------------------------------------
+
+/**
+ * The demo organizations. North has the service contracts and invoicing modules; South only
+ * invoicing.
+ */
+const tenants = [
+	{
+		...demoOrganizations.north,
+		slug: "north",
+		modules: ["contracts", "invoicing"],
+		seed: 20261005,
+		size: { customers: 60, engineers: 18, orders: 750, contracts: true },
+	},
+	{
+		...demoOrganizations.south,
+		slug: "south",
+		modules: ["invoicing"],
+		seed: 20261006,
+		size: { customers: 30, engineers: 10, orders: 320, contracts: false },
+	},
+];
+
+// --- Write -----------------------------------------------------------------------------------
+
+/** Rows per table, for the summary. */
+const totals: Record<string, number> = {};
+const count = (table: string, rows: unknown[]) =>
+	(totals[table] = (totals[table] ?? 0) + rows.length);
+
+await db.transaction(async (tx) => {
+	for (const table of [
+		schema.activity,
+		schema.savedView,
+		schema.invoiceLine,
+		schema.invoice,
+		schema.invoicingSettings,
+		schema.contractEquipment,
+		schema.contract,
+		schema.orderSignoff,
+		schema.orderNote,
+		schema.stockMovement,
+		orderLine,
+		order,
+		equipment,
+		material,
+		engineer,
+		customer,
+		schema.organizationModule,
+		schema.invitation,
+		schema.member,
+		schema.organization,
+	]) {
+		await tx.delete(table);
+	}
+
+	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
+	const offset = {
+		customer: 0,
+		engineer: 0,
+		equipment: 0,
+		material: 0,
+		order: 0,
+		contract: 0,
+		invoice: 0,
+	};
+	for (const tenant of tenants) {
+		await tx.insert(schema.organization).values({
+			id: tenant.id,
+			name: tenant.name,
+			slug: tenant.slug,
+			createdAt: addDays(now, -800),
+		});
+		if (tenant.modules.length) {
+			await tx
+				.insert(schema.organizationModule)
+				.values(tenant.modules.map((moduleId) => ({ organizationId: tenant.id, moduleId })));
+		}
+
+		faker.seed(tenant.seed);
+		const data = generateTenant(faker, tenant.size);
+		const organizationId = tenant.id;
+		const o = { ...offset };
+		const rows = {
+			customers: data.customers.map((c) => ({ ...c, organizationId, id: c.id + o.customer })),
+			engineers: data.engineers.map((e) => ({ ...e, organizationId, id: e.id + o.engineer })),
+			equipments: data.equipments.map((e) => ({
+				...e,
+				organizationId,
+				id: e.id + o.equipment,
+				customerId: e.customerId + o.customer,
+			})),
+			materials: data.materials.map((m) => ({ ...m, organizationId, id: m.id + o.material })),
+			orders: data.orders.map((r) => ({
+				...r,
+				organizationId,
+				id: r.id + o.order,
+				customerId: r.customerId + o.customer,
+				equipmentId: r.equipmentId && r.equipmentId + o.equipment,
+				engineerId: r.engineerId && r.engineerId + o.engineer,
+			})),
+			orderLines: data.orderLines.map((l) => ({
+				...l,
+				organizationId,
+				orderId: l.orderId + o.order,
+				materialId: l.materialId + o.material,
+			})),
+			contracts: data.contracts.map((c) => ({
+				...c,
+				organizationId,
+				id: c.id + o.contract,
+				customerId: c.customerId + o.customer,
+			})),
+			coverage: data.contractCoverage.map((c) => ({
+				customerId: c.customerId + o.customer,
+				contractId: c.contractId + o.contract,
+				equipmentId: c.equipmentId + o.equipment,
+			})),
+			stockMovements: generateStockMovements(data, tenant.seed).map((m) => ({
+				...m,
+				organizationId,
+				materialId: m.materialId + o.material,
+				orderId: m.orderId && m.orderId + o.order,
+			})),
+		};
+		const invoices = tenant.modules.includes("invoicing")
+			? generateInvoices(data, tenant.seed, o.contract)
+			: [];
+		const invoicing = {
+			invoices: invoices.map(({ lines: _lines, ...i }) => ({
+				...i,
+				organizationId,
+				id: i.id + o.invoice,
+				customerId: i.customerId + o.customer,
+			})),
+			invoiceLines: invoices.flatMap((i) =>
+				i.lines.map((line) => ({
+					...line,
+					organizationId,
+					invoiceId: i.id + o.invoice,
+					orderId: line.orderId && line.orderId + o.order,
+				})),
+			),
+			invoicingSettings: tenant.modules.includes("invoicing")
+				? [{ organizationId, vatRate: 21, paymentTermDays: 30, billFrom }]
+				: [],
+		};
+
+		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
+		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
+		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
+		await insertAll(rows.materials, (chunk) => tx.insert(material).values(chunk));
+		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
+		await insertAll(rows.orderLines, (chunk) => tx.insert(orderLine).values(chunk));
+		await insertAll(rows.contracts, (chunk) => tx.insert(schema.contract).values(chunk));
+		await insertAll(rows.coverage, (chunk) => tx.insert(schema.contractEquipment).values(chunk));
+		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
+		await insertAll(invoicing.invoices, (chunk) => tx.insert(schema.invoice).values(chunk));
+		await insertAll(invoicing.invoiceLines, (chunk) => tx.insert(schema.invoiceLine).values(chunk));
+		await insertAll(invoicing.invoicingSettings, (chunk) =>
+			tx.insert(schema.invoicingSettings).values(chunk),
+		);
+		// Who created the latest orders, so the activity log starts with some history: the office
+		// staff, not the field engineers.
+		const members = demoUsers.filter((u) =>
+			u.memberships.some((m) => m.organizationId === tenant.id && m.role !== "engineer"),
+		);
+		const created = rows.orders
+			.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+			.slice(-8)
+			.map((row, i) => ({
+				organizationId,
+				userName: members[i % members.length].name,
+				action: "created" as const,
+				subjectType: "order",
+				subjectId: String(row.id),
+				subjectLabel: row.number,
+				createdAt: row.createdAt,
+			}));
+		await tx.insert(schema.activity).values(created);
+		count("activity", created);
+
+		offset.customer += rows.customers.length;
+		offset.engineer += rows.engineers.length;
+		offset.equipment += rows.equipments.length;
+		offset.material += rows.materials.length;
+		offset.order += rows.orders.length;
+		offset.contract += rows.contracts.length;
+		offset.invoice += invoicing.invoices.length;
+		for (const [table, list] of Object.entries({ ...rows, ...invoicing })) count(table, list);
+	}
+});
+
+await db.transaction(createDemoUsers);
+
+console.log(
+	`Seeded ${tenants.length} organizations (${tenants.map((t) => t.name).join(", ")}) with ` +
+		Object.entries(totals)
+			.map(([table, n]) => `${n} ${table}`)
+			.join(", ") +
+		`, and ${demoUsers.length} demo users.`,
+);
