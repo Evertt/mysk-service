@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { specialtyOptions } from "#lib/components/engineers/display.js";
+	import { regionOptions, specialtyOptions } from "#lib/components/engineers/display.js";
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
@@ -14,7 +14,6 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/schema.js";
 
-	import { engineerRegions } from "./engineer-schema.js";
 	import type { createEngineer, getEngineer, updateEngineer } from "./engineers.remote.js";
 
 	type Engineer = Awaited<ReturnType<typeof getEngineer>>["engineer"];
@@ -35,7 +34,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the engineer; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(engineer ? "Engineer saved" : "Engineer added");
+		if (await submit()) toast.success(engineer ? m.engineers_saved() : m.engineers_added());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -46,28 +45,28 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Contact</Card.Title>
-			<Card.Description>How planners and customers reach them.</Card.Description>
+			<Card.Title>{m.engineers_form_contact()}</Card.Title>
+			<Card.Description>{m.engineers_form_contact_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<TextField
 					field={fields.name}
-					label="Name"
+					label={m.engineers_field_name()}
 					value={engineer?.name}
 					autocomplete="off"
 					class="md:col-span-2"
 				/>
 				<TextField
 					field={fields.email}
-					label="Email"
+					label={m.engineers_field_email()}
 					type="email"
 					value={engineer?.email}
 					autocomplete="off"
 				/>
 				<TextField
 					field={fields.phone}
-					label="Phone"
+					label={m.engineers_field_phone()}
 					type="tel"
 					value={engineer?.phone}
 					autocomplete="off"
@@ -78,42 +77,42 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Work</Card.Title>
-			<Card.Description>What they work on, where, and at what rate.</Card.Description>
+			<Card.Title>{m.engineers_form_work()}</Card.Title>
+			<Card.Description>{m.engineers_form_work_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<SelectField
 					field={fields.specialty}
-					label="Specialty"
-					placeholder={engineer ? undefined : "Choose a specialty"}
+					label={m.engineers_field_specialty()}
+					placeholder={engineer ? undefined : m.engineers_specialty_placeholder()}
 					value={engineer?.specialty}
 					options={specialtyOptions.map(({ value, label }) => ({ value, label }))}
 				/>
 				<SelectField
 					field={fields.region}
-					label="Region"
-					placeholder={engineer ? undefined : "Choose a region"}
+					label={m.engineers_field_region()}
+					placeholder={engineer ? undefined : m.engineers_region_placeholder()}
 					value={engineer?.region}
-					options={engineerRegions.map((region) => ({ value: region, label: region }))}
+					options={regionOptions()}
 				/>
 				<MoneyField
 					field={fields.hourlyRate}
-					label="Hourly rate"
+					label={m.engineers_field_hourly_rate()}
 					cents={engineer?.hourlyRate}
-					description="Charged for their labour on orders."
+					description={m.engineers_field_hourly_rate_description()}
 				/>
 				<TextField
 					field={fields.hiredAt}
-					label="Hired"
+					label={m.engineers_field_hired()}
 					type="date"
 					value={toDateInput(engineer?.hiredAt)}
 				/>
 				<CheckboxField
 					field={fields.active}
-					label="Active"
+					label={m.engineers_field_active()}
 					checked={engineer?.active ?? true}
-					description="Only active engineers can be assigned to new orders."
+					description={m.engineers_field_active_description()}
 				/>
 			</Field.FieldGroup>
 		</Card.Content>
@@ -121,7 +120,7 @@
 
 	<FormActions
 		pending={form.pending}
-		submitLabel={engineer ? "Save engineer" : "Add engineer"}
+		submitLabel={engineer ? m.engineers_save() : m.engineers_add()}
 		{cancelHref}
 	/>
 </form>

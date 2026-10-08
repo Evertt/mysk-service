@@ -1,12 +1,15 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { countryName } from "#lib/components/customers/countries.js";
 import CustomerLink from "#lib/components/customers/customer-link.svelte";
 import SegmentBadge from "#lib/components/customers/segment-badge.svelte";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.js";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { intlLocale } from "#lib/format.js";
 import { customerSegments } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getCustomers } from "./customers.remote.js";
 
@@ -31,7 +34,7 @@ export const columns = column.columns([
 				withCode: true,
 			}),
 		enableHiding: false,
-		meta: { label: "Customer" },
+		meta: { label: m.customers_column_customer },
 	}),
 	column.accessor("contactName", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -40,21 +43,23 @@ export const columns = column.columns([
 				primary: row.original.contactName,
 				secondary: row.original.email,
 			}),
-		meta: { label: "Contact" },
+		meta: { label: m.customers_column_contact },
 	}),
 	column.accessor("country", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
 				primary: row.original.city,
-				secondary: row.original.country,
+				secondary: countryName(row.original.country),
 			}),
 		filterFn: "oneOf",
-		// By country, then city.
+		// By country (by its name as shown), then city.
 		sortFn: (a, b) =>
-			a.original.country.localeCompare(b.original.country) ||
-			a.original.city.localeCompare(b.original.city),
-		meta: { label: "Location" },
+			countryName(a.original.country).localeCompare(
+				countryName(b.original.country),
+				intlLocale(),
+			) || a.original.city.localeCompare(b.original.city, intlLocale()),
+		meta: { label: m.customers_column_location },
 	}),
 	column.accessor("segment", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
@@ -64,33 +69,33 @@ export const columns = column.columns([
 		sortFn: (a, b, id) =>
 			customerSegments.indexOf(a.getValue(id)) - customerSegments.indexOf(b.getValue(id)),
 		enableGlobalFilter: false,
-		meta: { label: "Segment" },
+		meta: { label: m.customers_column_segment },
 	}),
 	column.accessor("equipmentCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: "Equipment", align: "end" },
+		meta: { label: m.customers_column_equipment, align: "end" },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: "Open orders", align: "end" },
+		meta: { label: m.customers_column_open_orders, align: "end" },
 	}),
 	column.accessor("createdAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Customer since" },
+		meta: { label: m.customers_column_since },
 	}),
 	// Hidden, and not in the column menu: lets the search box find customers by details that
-	// are shown in other columns' second lines (code, email, city) or not at all (phone).
-	column.accessor((row) => [row.code, row.email, row.city, row.phone].join(" "), {
-		id: "search",
-		enableSorting: false,
-		enableHiding: false,
-	}),
+	// are shown in other columns' second lines (code, email, city, the country as shown) or not
+	// at all (phone).
+	column.accessor(
+		(row) => [row.code, row.email, row.city, row.phone, countryName(row.country)].join(" "),
+		{ id: "search", enableSorting: false, enableHiding: false },
+	),
 	column.display({
 		id: "actions",
 		cell: ({ row }) =>
@@ -99,8 +104,8 @@ export const columns = column.columns([
 				href: resolve("/(app)/customers/[code]", { code: row.original.code }),
 				editHref: resolve("/(app)/customers/[code]/edit", { code: row.original.code }),
 				copy: [
-					{ label: "Copy customer code", value: row.original.code },
-					{ label: "Copy email", value: row.original.email },
+					{ label: m.customers_copy_code(), value: row.original.code },
+					{ label: m.customers_copy_email(), value: row.original.email },
 				],
 			}),
 	}),

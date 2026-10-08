@@ -9,14 +9,14 @@
 </script>
 
 <svelte:head>
-	<title>Customers</title>
+	<title>{m.customers_title()}</title>
 </svelte:head>
 
-<PageHeader title="Customers" description="Companies whose equipment we install and service.">
+<PageHeader title={m.customers_title()} description={m.customers_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/customers/new")}>
 			<PlusIcon data-icon="inline-start" />
-			New customer
+			{m.customers_new()}
 		</Button>
 	{/snippet}
 </PageHeader>

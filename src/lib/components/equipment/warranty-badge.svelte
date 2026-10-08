@@ -16,9 +16,9 @@
 <Badge variant={covered ? "secondary" : "outline"}>
 	{#if covered}
 		<ShieldCheckIcon data-icon="inline-start" />
-		Covered
+		{m.equipment_warranty_covered()}
 	{:else}
 		<ShieldOffIcon data-icon="inline-start" />
-		Expired
+		{m.equipment_warranty_expired()}
 	{/if}
 </Badge>

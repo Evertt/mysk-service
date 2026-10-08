@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
-import { customerFields, europeanCountries } from "./customer-schema.ts";
+import { customerFields } from "./customer-schema.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (input: Record<string, unknown>) => {
@@ -48,8 +48,4 @@ test("the segment is one of the customer segments", () => {
 
 test("a country outside the list is accepted, as existing customers may have one", () => {
 	expect(parse({ ...form, country: "Japan" })).toHaveProperty("value.country", "Japan");
-});
-
-test("the offered countries are sorted and listed once", () => {
-	expect(europeanCountries).toEqual([...new Set(europeanCountries)].sort());
 });

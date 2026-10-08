@@ -7,6 +7,7 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.j
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import CategoryLabel from "#lib/components/equipment/category-label.svelte";
 import StatusBadge from "#lib/components/equipment/status-badge.svelte";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { getEquipmentList } from "./equipment.remote.js";
 import WarrantyCell from "./warranty-cell.svelte";
@@ -33,30 +34,30 @@ export const columns = column.columns([
 				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
-		meta: { label: "Unit" },
+		meta: { label: m.equipment_column_unit },
 	}),
 	// Hidden: makes serial numbers searchable.
 	column.accessor("serialNumber", {
 		enableHiding: false,
-		meta: { label: "Serial number" },
+		meta: { label: m.equipment_column_serial_number },
 	}),
 	// Hidden: for the manufacturer filter.
 	column.accessor("manufacturer", {
 		filterFn: "oneOf",
 		enableHiding: false,
-		meta: { label: "Manufacturer" },
+		meta: { label: m.equipment_column_manufacturer },
 	}),
 	column.accessor("category", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: "Category" },
+		meta: { label: m.equipment_column_category },
 	}),
 	column.accessor("status", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
-		meta: { label: "Status" },
+		meta: { label: m.equipment_column_status },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
@@ -67,25 +68,25 @@ export const columns = column.columns([
 				code: row.original.customer.code,
 				withCode: true,
 			}),
-		meta: { label: "Customer" },
+		meta: { label: m.equipment_column_customer },
 	}),
 	column.accessor("installedAt", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: "Installed" },
+		meta: { label: m.equipment_column_installed },
 	}),
 	column.accessor("warrantyUntil", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => renderComponent(WarrantyCell, { until: getValue() }),
 		enableGlobalFilter: false,
-		meta: { label: "Warranty" },
+		meta: { label: m.equipment_column_warranty },
 	}),
 	column.accessor("openOrders", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		meta: { label: "Open orders", align: "end" },
+		meta: { label: m.equipment_column_open_orders, align: "end" },
 	}),
 	column.display({
 		id: "actions",
@@ -97,8 +98,8 @@ export const columns = column.columns([
 					serial: row.original.serialNumber,
 				}),
 				copy: [
-					{ label: "Copy serial number", value: row.original.serialNumber },
-					{ label: "Copy customer code", value: row.original.customer.code },
+					{ label: m.equipment_copy_serial(), value: row.original.serialNumber },
+					{ label: m.equipment_copy_customer_code(), value: row.original.customer.code },
 				],
 			}),
 	}),

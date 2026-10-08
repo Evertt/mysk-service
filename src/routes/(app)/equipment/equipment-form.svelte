@@ -45,7 +45,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the unit; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(unit ? "Equipment saved" : "Equipment registered");
+		if (await submit()) toast.success(unit ? m.equipment_saved() : m.equipment_registered());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -56,30 +56,34 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Unit</Card.Title>
-			<Card.Description>What the machine is and the state it's in.</Card.Description>
+			<Card.Title>{m.equipment_form_unit()}</Card.Title>
+			<Card.Description>{m.equipment_form_unit_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<TextField
 					field={fields.serialNumber}
-					label="Serial number"
+					label={m.equipment_field_serial_number()}
 					value={unit?.serialNumber}
 					autocomplete="off"
-					description="Letters, digits and dashes; stored in upper case."
+					description={m.equipment_field_serial_number_description()}
 				/>
 				<SelectField
 					field={fields.status}
-					label="Status"
+					label={m.equipment_field_status()}
 					value={unit?.status ?? "operational"}
 					options={labelOptions("equipmentStatus", equipmentStatuses)}
 				/>
-				<TextField field={fields.manufacturer} label="Manufacturer" value={unit?.manufacturer} />
-				<TextField field={fields.model} label="Model" value={unit?.model} />
+				<TextField
+					field={fields.manufacturer}
+					label={m.equipment_field_manufacturer()}
+					value={unit?.manufacturer}
+				/>
+				<TextField field={fields.model} label={m.equipment_field_model()} value={unit?.model} />
 				<SelectField
 					field={fields.category}
-					label="Category"
-					placeholder="Choose a category"
+					label={m.equipment_field_category()}
+					placeholder={m.equipment_category_placeholder()}
 					value={unit?.category}
 					options={equipmentCategories.map((value) => ({
 						value,
@@ -92,34 +96,32 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Owner and warranty</Card.Title>
-			<Card.Description>Its owner, and how long it's covered.</Card.Description>
+			<Card.Title>{m.equipment_form_owner()}</Card.Title>
+			<Card.Description>{m.equipment_form_owner_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<SelectField
 					field={fields.customerId}
-					label="Customer"
-					placeholder="Choose a customer"
+					label={m.equipment_field_customer()}
+					placeholder={m.equipment_customer_placeholder()}
 					value={unit ? String(unit.customerId) : ""}
 					options={options.customers.map((c) => ({
 						value: String(c.id),
 						label: `${c.name} (${c.code})`,
 					}))}
-					description={orderCount
-						? `Has ${orderCount === 1 ? "an order" : `${orderCount} orders`} for this customer, so it stays with them.`
-						: undefined}
+					description={orderCount ? m.equipment_customer_locked({ count: orderCount }) : undefined}
 					class="md:col-span-2"
 				/>
 				<TextField
 					field={fields.installedAt}
-					label="Installed on"
+					label={m.equipment_field_installed()}
 					type="date"
 					value={toDateInput(unit?.installedAt)}
 				/>
 				<TextField
 					field={fields.warrantyUntil}
-					label="Warranty until"
+					label={m.equipment_field_warranty()}
 					type="date"
 					value={toDateInput(unit?.warrantyUntil)}
 				/>
@@ -129,7 +131,7 @@
 
 	<FormActions
 		pending={form.pending}
-		submitLabel={unit ? "Save equipment" : "Register equipment"}
+		submitLabel={unit ? m.equipment_save() : m.equipment_register()}
 		{cancelHref}
 	/>
 </form>

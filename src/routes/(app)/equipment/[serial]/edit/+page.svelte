@@ -18,14 +18,17 @@
 </script>
 
 <svelte:head>
-	<title>Edit {unit.serialNumber} · Equipment</title>
+	<title>{m.equipment_edit_title({ serial: unit.serialNumber })} · {m.equipment_title()}</title>
 </svelte:head>
 
-<PageHeader title="Edit {unit.serialNumber}" description="{unit.manufacturer} {unit.model}">
+<PageHeader
+	title={m.equipment_edit_title({ serial: unit.serialNumber })}
+	description="{unit.manufacturer} {unit.model}"
+>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/equipment")}>Equipment</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/equipment")}>{m.equipment_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -33,7 +36,7 @@
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
-				<Breadcrumb.Page>Edit</Breadcrumb.Page>
+				<Breadcrumb.Page>{m.common_edit()}</Breadcrumb.Page>
 			</Breadcrumb.Item>
 		</Breadcrumb.List>
 	</Breadcrumb.Root>

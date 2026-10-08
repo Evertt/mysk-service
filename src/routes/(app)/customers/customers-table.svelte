@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { countryOptions } from "#lib/components/customers/countries.js";
 	import { segmentOptions } from "#lib/components/customers/display.js";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.js";
@@ -9,11 +10,7 @@
 	// which Svelte doesn't allow after the page's `await`.
 	let { customers }: { customers: CustomerRow[] } = $props();
 
-	const countryOptions = $derived(
-		[...new Set(customers.map((c) => c.country))]
-			.sort((a, b) => a.localeCompare(b))
-			.map((country) => ({ value: country, label: country })),
-	);
+	const countries = $derived(countryOptions(customers.map((c) => c.country)));
 
 	const table = createAppTable({
 		columns,
@@ -31,11 +28,15 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search customers…">
-			<FacetedFilter columnId="segment" title="Segment" options={segmentOptions} />
-			<FacetedFilter columnId="country" title="Country" options={countryOptions} />
+		<table.Toolbar searchLabel={m.customers_search()}>
+			<FacetedFilter
+				columnId="segment"
+				title={m.customers_column_segment()}
+				options={segmentOptions}
+			/>
+			<FacetedFilter columnId="country" title={m.customers_column_country()} options={countries} />
 		</table.Toolbar>
-		<table.Table emptyTitle="No customers found" />
+		<table.Table emptyTitle={m.customers_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

@@ -16,7 +16,7 @@
 	import { types } from "#lib/components/orders/display.js";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import OrderStatusBadge from "#lib/components/orders/status-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
+	import { formatCents, formatDate } from "#lib/format.js";
 
 	import type { ServiceEvent } from "./service-history.js";
 	import { getServiceHistory } from "./service-history.remote.js";
@@ -39,20 +39,20 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Service history</Card.Title>
-		<Card.Description>Everything that happened to this unit, most recent first.</Card.Description>
+		<Card.Title>{m.equipment_history_title()}</Card.Title>
+		<Card.Description>{m.equipment_history_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
 		{#if !stats.orders}
 			<Empty.Root class="border p-6">
 				<Empty.Header>
-					<Empty.Title>No orders yet</Empty.Title>
-					<Empty.Description>This unit hasn't been serviced.</Empty.Description>
+					<Empty.Title>{m.equipment_history_empty_title()}</Empty.Title>
+					<Empty.Description>{m.equipment_history_empty_description()}</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}
 
-		<ol aria-label="Service history" class="flex flex-col">
+		<ol aria-label={m.equipment_history_title()} class="flex flex-col">
 			{#each events as event (key(event))}
 				{@const Icon = icon(event)}
 				<li data-event={event.kind} class="group relative flex gap-4 pb-6 last:pb-0">
@@ -74,11 +74,16 @@
 							{formatDate(event.date)}
 						</time>
 						{#if event.kind === "installation"}
-							<p class="font-medium">Installed</p>
+							<p class="font-medium">{m.equipment_history_installed()}</p>
 						{:else if event.kind === "warranty"}
-							<p class="font-medium">{event.upcoming ? "Warranty ends" : "Warranty ended"}</p>
+							<p class="font-medium">
+								{event.upcoming
+									? m.equipment_history_warranty_ends()
+									: m.equipment_history_warranty_ended()}
+							</p>
 						{:else}
 							{@const order = event.order}
+							{@const hours = m.common_count_hours_short({ count: order.laborHours })}
 							<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
 								<span class="font-medium">{types[order.type].label}</span>
 								<OrderLink number={order.number} />
@@ -89,30 +94,30 @@
 							</div>
 							<p class="text-sm text-muted-foreground">{order.description}</p>
 							<dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-								<DetailItem label="Engineer">
+								<DetailItem label={m.equipment_history_engineer()}>
 									{#if order.engineer}
 										<EngineerLink id={order.engineer.id} name={order.engineer.name} />
 									{:else}
-										<span class="text-muted-foreground">Unassigned</span>
+										<span class="text-muted-foreground">{m.common_unassigned()}</span>
 									{/if}
 								</DetailItem>
 								<DetailItem
-									label="Scheduled"
+									label={m.equipment_history_scheduled()}
 									value={order.scheduledFor && formatDate(order.scheduledFor)}
 								/>
 								<DetailItem
-									label="Completed"
+									label={m.equipment_history_completed()}
 									value={order.completedAt && formatDate(order.completedAt)}
 								/>
 								<DetailItem
-									label="Labour"
-									value="{formatNumber(order.laborHours)} h · {formatCents(order.cost.labor)}"
+									label={m.equipment_history_labour()}
+									value="{hours} · {formatCents(order.cost.labor)}"
 								/>
 							</dl>
 							{#if order.materials.length}
 								<div class="flex flex-col gap-2">
 									<p class="text-xs text-muted-foreground">
-										Materials · {formatCents(order.cost.materials)}
+										{m.equipment_history_materials({ cost: formatCents(order.cost.materials) })}
 									</p>
 									<ul class="flex flex-col gap-2 text-sm">
 										{#each order.materials as line (line.id)}
@@ -127,7 +132,10 @@
 								</div>
 							{/if}
 							{#if order.cost.adjustments.length}
-								<ul aria-label="Adjustments" class="flex flex-col gap-2 text-sm">
+								<ul
+									aria-label={m.equipment_history_adjustments()}
+									class="flex flex-col gap-2 text-sm"
+								>
 									{#each order.cost.adjustments as adjustment, i (i)}
 										<li class="flex items-start gap-3">
 											<div class="flex min-w-0 flex-1 flex-col">

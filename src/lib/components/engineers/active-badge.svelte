@@ -6,4 +6,6 @@
 	let { active }: { active: boolean } = $props();
 </script>
 
-<Badge variant={active ? "secondary" : "ghost"}>{active ? "Active" : "Inactive"}</Badge>
+<Badge variant={active ? "secondary" : "ghost"}
+	>{active ? m.engineers_active() : m.engineers_inactive()}</Badge
+>

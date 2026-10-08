@@ -1,19 +1,18 @@
 import * as v from "valibot";
 
+import { engineerRegions } from "#lib/components/engineers/display.js";
 import { engineerSpecialties } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { cents, date, email, phone, text } from "#lib/schema.js";
-
-/** The regions engineers work in. Stored as text, so older records may hold other values. */
-export const engineerRegions = ["North", "East", "South", "West", "Central"] as const;
 
 /** The fields of the engineer form, shared by creating and editing an engineer. */
 export const engineerFields = {
-	name: text("Enter a name"),
+	name: text(m.engineers_name_required),
 	email: email(),
 	phone: phone(),
-	specialty: v.picklist(engineerSpecialties, "Choose a specialty"),
-	region: v.picklist(engineerRegions, "Choose a region"),
-	hourlyRate: cents("Enter an hourly rate"),
-	hiredAt: date("Enter the hire date"),
+	specialty: v.picklist(engineerSpecialties, m.engineers_specialty_required),
+	region: v.picklist(engineerRegions, m.engineers_region_required),
+	hourlyRate: cents(m.engineers_hourly_rate_required),
+	hiredAt: date(m.engineers_hired_required),
 	active: v.optional(v.boolean(), false),
 };

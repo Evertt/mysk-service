@@ -6,6 +6,7 @@
 	import CustomerLink from "#lib/components/customers/customer-link.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import ActiveBadge from "#lib/components/engineers/active-badge.svelte";
+	import { regionLabel } from "#lib/components/engineers/display.js";
 	import SpecialtyBadge from "#lib/components/engineers/specialty-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
@@ -25,16 +26,16 @@
 </script>
 
 <svelte:head>
-	<title>{engineer.name} · Engineers</title>
+	<title>{engineer.name} · {m.engineers_title()}</title>
 </svelte:head>
 
 {#snippet orders(rows: OrderRow[], dateLabel: string, date: (row: OrderRow) => Date | null)}
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
-				<Table.Head>Order</Table.Head>
-				<Table.Head>Customer</Table.Head>
-				<Table.Head>Status</Table.Head>
+				<Table.Head>{m.engineers_orders_column_order()}</Table.Head>
+				<Table.Head>{m.engineers_orders_column_customer()}</Table.Head>
+				<Table.Head>{m.engineers_orders_column_status()}</Table.Head>
 				<Table.Head class="text-right">{dateLabel}</Table.Head>
 			</Table.Row>
 		</Table.Header>
@@ -56,7 +57,7 @@
 						{#if value}
 							{formatDate(value)}
 						{:else}
-							<span class="text-muted-foreground">Not scheduled</span>
+							<span class="text-muted-foreground">{m.engineers_orders_not_scheduled()}</span>
 						{/if}
 					</Table.Cell>
 				</Table.Row>
@@ -65,11 +66,14 @@
 	</Table.Root>
 {/snippet}
 
-<PageHeader title={engineer.name} description="{engineer.region} region">
+<PageHeader
+	title={engineer.name}
+	description={m.engineers_region_description({ region: regionLabel(engineer.region) })}
+>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/engineers")}>Engineers</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/engineers")}>{m.engineers_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -87,13 +91,13 @@
 			href={resolve("/(app)/engineers/[id]/edit", { id: String(engineer.id) })}
 		>
 			<PencilIcon data-icon="inline-start" />
-			Edit
+			{m.common_edit()}
 		</Button>
 		<DeleteDialog
 			form={deleteEngineer}
 			id={String(engineer.id)}
-			title="Delete {engineer.name}?"
-			description="The engineer is removed permanently."
+			title={m.engineers_delete_title({ name: engineer.name })}
+			description={m.engineers_delete_description()}
 		/>
 	{/snippet}
 </PageHeader>
@@ -103,19 +107,23 @@
 		<div class="grid gap-4 sm:grid-cols-3">
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Open orders</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{data.stats.openOrders}</Card.Title>
+					<Card.Description>{m.engineers_stats_open_orders()}</Card.Description>
+					<Card.Title class="text-2xl tabular-nums"
+						>{formatNumber(data.stats.openOrders)}</Card.Title
+					>
 				</Card.Header>
 			</Card.Root>
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Hours booked, last 30 days</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{formatNumber(data.stats.hours)} h</Card.Title>
+					<Card.Description>{m.engineers_stats_hours()}</Card.Description>
+					<Card.Title class="text-2xl tabular-nums">
+						{m.common_count_hours_short({ count: data.stats.hours })}
+					</Card.Title>
 				</Card.Header>
 			</Card.Root>
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Labour revenue, last 30 days</Card.Description>
+					<Card.Description>{m.engineers_stats_revenue()}</Card.Description>
 					<Card.Title class="text-2xl tabular-nums">{formatCents(data.stats.revenue)}</Card.Title>
 				</Card.Header>
 			</Card.Root>
@@ -123,17 +131,23 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Open orders</Card.Title>
-				<Card.Description>Quoted, scheduled and in progress, soonest first.</Card.Description>
+				<Card.Title>{m.engineers_open_title()}</Card.Title>
+				<Card.Description>{m.engineers_open_description()}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				{#if data.openOrders.length}
-					{@render orders(data.openOrders, "Scheduled", (row) => row.scheduledFor)}
+					{@render orders(
+						data.openOrders,
+						m.engineers_orders_column_scheduled(),
+						(row) => row.scheduledFor,
+					)}
 				{:else}
 					<Empty.Root class="p-6">
 						<Empty.Header>
-							<Empty.Title>No open orders</Empty.Title>
-							<Empty.Description>{engineer.name} has nothing planned.</Empty.Description>
+							<Empty.Title>{m.engineers_open_empty_title()}</Empty.Title>
+							<Empty.Description>
+								{m.engineers_open_empty_description({ name: engineer.name })}
+							</Empty.Description>
 						</Empty.Header>
 					</Empty.Root>
 				{/if}
@@ -142,17 +156,23 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Recent work</Card.Title>
-				<Card.Description>The last 10 orders they completed.</Card.Description>
+				<Card.Title>{m.engineers_recent_title()}</Card.Title>
+				<Card.Description>
+					{m.engineers_recent_description({ count: formatNumber(10) })}
+				</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				{#if data.completedOrders.length}
-					{@render orders(data.completedOrders, "Completed", (row) => row.completedAt)}
+					{@render orders(
+						data.completedOrders,
+						m.engineers_orders_column_completed(),
+						(row) => row.completedAt,
+					)}
 				{:else}
 					<Empty.Root class="p-6">
 						<Empty.Header>
-							<Empty.Title>No completed work</Empty.Title>
-							<Empty.Description>Orders show up here once they're completed.</Empty.Description>
+							<Empty.Title>{m.engineers_recent_empty_title()}</Empty.Title>
+							<Empty.Description>{m.engineers_recent_empty_description()}</Empty.Description>
 						</Empty.Header>
 					</Empty.Root>
 				{/if}
@@ -163,22 +183,33 @@
 	<div class="flex min-w-0 flex-col gap-6">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Profile</Card.Title>
+				<Card.Title>{m.engineers_profile()}</Card.Title>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-4">
 				<!-- Full width, so email addresses don't wrap. -->
 				<dl class="grid gap-4">
-					<DetailItem label="Email" value={engineer.email} href={`mailto:${engineer.email}`} />
+					<DetailItem
+						label={m.engineers_field_email()}
+						value={engineer.email}
+						href={`mailto:${engineer.email}`}
+					/>
 				</dl>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label="Phone" value={engineer.phone} href={`tel:${engineer.phone}`} />
-					<DetailItem label="Specialty">
+					<DetailItem
+						label={m.engineers_field_phone()}
+						value={engineer.phone}
+						href={`tel:${engineer.phone}`}
+					/>
+					<DetailItem label={m.engineers_field_specialty()}>
 						<SpecialtyBadge specialty={engineer.specialty} />
 					</DetailItem>
-					<DetailItem label="Region" value={engineer.region} />
-					<DetailItem label="Hourly rate" value={formatCents(engineer.hourlyRate)} />
-					<DetailItem label="Hired" value={formatDate(engineer.hiredAt)} />
-					<DetailItem label="Status">
+					<DetailItem label={m.engineers_field_region()} value={regionLabel(engineer.region)} />
+					<DetailItem
+						label={m.engineers_field_hourly_rate()}
+						value={formatCents(engineer.hourlyRate)}
+					/>
+					<DetailItem label={m.engineers_column_hired()} value={formatDate(engineer.hiredAt)} />
+					<DetailItem label={m.engineers_column_status()}>
 						<ActiveBadge active={engineer.active} />
 					</DetailItem>
 				</dl>

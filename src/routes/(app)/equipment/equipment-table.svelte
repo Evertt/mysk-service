@@ -32,12 +32,24 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search equipment…">
-			<FacetedFilter columnId="category" title="Category" options={categoryOptions} />
-			<FacetedFilter columnId="status" title="Status" options={statusOptions} />
-			<FacetedFilter columnId="manufacturer" title="Manufacturer" options={manufacturerOptions} />
+		<table.Toolbar searchLabel={m.equipment_search()}>
+			<FacetedFilter
+				columnId="category"
+				title={m.equipment_column_category()}
+				options={categoryOptions}
+			/>
+			<FacetedFilter
+				columnId="status"
+				title={m.equipment_column_status()}
+				options={statusOptions}
+			/>
+			<FacetedFilter
+				columnId="manufacturer"
+				title={m.equipment_column_manufacturer()}
+				options={manufacturerOptions}
+			/>
 		</table.Toolbar>
-		<table.Table emptyTitle="No equipment found" />
+		<table.Table emptyTitle={m.equipment_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

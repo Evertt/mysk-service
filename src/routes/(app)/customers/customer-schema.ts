@@ -1,51 +1,16 @@
 import * as v from "valibot";
 
 import { customerSegments } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { email, phone, text } from "#lib/schema.js";
-
-/** Countries offered in the customer form, besides those already in use. */
-export const europeanCountries = [
-	"Austria",
-	"Belgium",
-	"Bulgaria",
-	"Croatia",
-	"Cyprus",
-	"Czechia",
-	"Denmark",
-	"Estonia",
-	"Finland",
-	"France",
-	"Germany",
-	"Greece",
-	"Hungary",
-	"Iceland",
-	"Ireland",
-	"Italy",
-	"Latvia",
-	"Liechtenstein",
-	"Lithuania",
-	"Luxembourg",
-	"Malta",
-	"Netherlands",
-	"Norway",
-	"Poland",
-	"Portugal",
-	"Romania",
-	"Slovakia",
-	"Slovenia",
-	"Spain",
-	"Sweden",
-	"Switzerland",
-	"United Kingdom",
-];
 
 /** The fields of the customer form, shared by creating and editing a customer. */
 export const customerFields = {
-	name: text("Enter the company name"),
-	segment: v.picklist(customerSegments, "Choose a segment"),
-	contactName: text("Enter a contact person"),
+	name: text(m.customers_name_required),
+	segment: v.picklist(customerSegments, m.customers_segment_required),
+	contactName: text(m.customers_contact_required),
 	email: email(),
 	phone: phone(),
-	city: text("Enter a city"),
-	country: text("Choose a country"),
+	city: text(m.customers_city_required),
+	country: text(m.customers_country_required),
 };

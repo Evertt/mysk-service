@@ -3,7 +3,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { europeanCountries } from "#lib/components/customers/countries.js";
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.js";
 import { recordActivity } from "#lib/server/activity.js";
 import { refuseIfReferenced } from "#lib/server/db/errors.js";
@@ -12,7 +14,7 @@ import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/
 import { priceOrders } from "#lib/server/pricing.js";
 import { inTenant, requireMember } from "#lib/server/session.js";
 
-import { customerFields, europeanCountries } from "./customer-schema.js";
+import { customerFields } from "./customer-schema.js";
 
 /** All customers with how many equipment units and open orders they have, by name. */
 export const getCustomers = query(async () => {
@@ -57,7 +59,7 @@ export const getCustomer = query(v.string(), async (code) => {
 			},
 		},
 	});
-	if (!found) error(404, `Customer ${code} not found`);
+	if (!found) error(404, m.customers_code_not_found({ code }));
 
 	const materials = db
 		.select({
@@ -120,7 +122,7 @@ export const getCustomerFormOptions = query(async () => {
 export const createCustomer = form(v.object(customerFields), async (input, issue) => {
 	const { organizationId } = requireMember();
 	if (!(await knownCountries()).includes(input.country)) {
-		invalid(issue.country("Choose a country from the list"));
+		invalid(issue.country(m.customers_country_unknown()));
 	}
 
 	const code = await db.transaction(async (tx) => {
@@ -151,9 +153,9 @@ export const updateCustomer = form(
 		const existing = await db.query.customer.findFirst({
 			where: and(eq(customer.id, id), inTenant(customer)),
 		});
-		if (!existing) error(404, "Customer not found");
+		if (!existing) error(404, m.customers_not_found());
 		if (!(await knownCountries()).includes(input.country)) {
-			invalid(issue.country("Choose a country from the list"));
+			invalid(issue.country(m.customers_country_unknown()));
 		}
 
 		await db.transaction(async (tx) => {
@@ -170,15 +172,13 @@ export const updateCustomer = form(
 	},
 );
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 	requireMember();
 	const existing = await db.query.customer.findFirst({
 		columns: { id: true, code: true },
 		where: and(eq(customer.id, id), inTenant(customer)),
 	});
-	if (!existing) error(404, "Customer not found");
+	if (!existing) error(404, m.customers_not_found());
 
 	const [[units], [orders]] = await Promise.all([
 		db
@@ -190,14 +190,16 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 			.from(order)
 			.where(and(eq(order.customerId, id), inTenant(order))),
 	]);
-	const references = [
-		units.n && plural(units.n, "equipment unit", "equipment units"),
-		orders.n && plural(orders.n, "order", "orders"),
-	].filter(Boolean);
-	if (references.length) {
-		invalid(
-			`This customer still has ${references.join(" and ")}. Delete or reassign them before deleting the customer.`,
-		);
+	if (units.n || orders.n) {
+		const unitCount = m.customers_count_units({ count: units.n });
+		const orderCount = m.common_count_orders({ count: orders.n });
+		const references =
+			units.n && orders.n
+				? m.customers_references_both({ units: unitCount, orders: orderCount })
+				: units.n
+					? unitCount
+					: orderCount;
+		invalid(m.customers_delete_refused({ references }));
 	}
 
 	await refuseIfReferenced(
@@ -207,7 +209,7 @@ export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
 				const subject = { type: "customer", id, label: existing.code };
 				await recordActivity(tx, { action: "deleted", subject });
 			}),
-		"Other records still refer to this customer, such as service contracts. Remove those first.",
+		m.customers_delete_referenced(),
 	);
 	void getCustomers().refresh();
 	redirect(303, "/customers");

@@ -13,28 +13,32 @@
 	let { serial }: { serial: string } = $props();
 
 	const { stats } = $derived(await getServiceHistory(serial));
-
-	const plural = (n: number, one: string, many: string) =>
-		`${formatNumber(n)} ${n === 1 ? one : many}`;
 </script>
 
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Orders</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{stats.orders}</Card.Title>
+			<Card.Description>{m.equipment_stats_orders()}</Card.Description>
+			<Card.Title class="text-3xl tabular-nums">{formatNumber(stats.orders)}</Card.Title>
 			<Card.Action>
-				<Badge variant="outline">{stats.openOrders} open</Badge>
+				<Badge variant="outline">
+					{m.equipment_stats_open({ count: formatNumber(stats.openOrders) })}
+				</Badge>
 			</Card.Action>
 		</Card.Header>
 		<Card.Footer>
-			<ul aria-label="Orders by type" class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+			<ul
+				aria-label={m.equipment_stats_orders_by_type()}
+				class="flex flex-wrap gap-x-3 gap-y-1 text-sm"
+			>
 				{#each orderTypes as type (type)}
 					{@const display = types[type]}
 					<li class="inline-flex items-center gap-1 text-muted-foreground">
 						<display.icon class="size-3.5" />
 						{display.label}
-						<span class="font-medium text-foreground tabular-nums">{stats.ordersByType[type]}</span>
+						<span class="font-medium text-foreground tabular-nums">
+							{formatNumber(stats.ordersByType[type])}
+						</span>
 					</li>
 				{/each}
 			</ul>
@@ -42,38 +46,42 @@
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Service cost</Card.Description>
+			<Card.Description>{m.equipment_stats_cost()}</Card.Description>
 			<Card.Title class="text-3xl tabular-nums">{formatCents(stats.cost)}</Card.Title>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
-			Materials and labour of {plural(stats.doneOrders, "completed order", "completed orders")}
+			{m.equipment_stats_cost_orders({ count: stats.doneOrders })}
 		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Last service</Card.Description>
+			<Card.Description>{m.equipment_stats_last_service()}</Card.Description>
 			<Card.Title class="text-3xl tabular-nums">
-				{stats.lastService ? formatDate(stats.lastService) : "Never"}
+				{stats.lastService ? formatDate(stats.lastService) : m.equipment_stats_never()}
 			</Card.Title>
 		</Card.Header>
-		<Card.Footer class="text-sm text-muted-foreground">Latest completed order</Card.Footer>
+		<Card.Footer class="text-sm text-muted-foreground">
+			{m.equipment_stats_last_service_description()}
+		</Card.Footer>
 	</Card.Root>
 	<Card.Root>
 		<Card.Header>
-			<Card.Description>Since last repair</Card.Description>
+			<Card.Description>{m.equipment_stats_since_repair()}</Card.Description>
 			<Card.Title class="text-3xl tabular-nums">
 				{stats.daysSinceLastRepair === null
 					? "—"
-					: plural(stats.daysSinceLastRepair, "day", "days")}
+					: m.equipment_count_days({ count: stats.daysSinceLastRepair })}
 			</Card.Title>
 		</Card.Header>
 		<Card.Footer class="text-sm text-muted-foreground">
 			{#if stats.daysBetweenRepairs !== null}
-				Mean time between repairs: {plural(stats.daysBetweenRepairs, "day", "days")}
+				{m.equipment_stats_between_repairs({
+					days: m.equipment_count_days({ count: stats.daysBetweenRepairs }),
+				})}
 			{:else if stats.repairs}
-				1 repair so far
+				{m.equipment_stats_one_repair()}
 			{:else}
-				No repairs so far
+				{m.equipment_stats_no_repairs()}
 			{/if}
 		</Card.Footer>
 	</Card.Root>

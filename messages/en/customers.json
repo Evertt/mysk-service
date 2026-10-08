@@ -1,3 +1,136 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format"
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"customers_title": "Customers",
+	"customers_description": "Companies whose equipment we install and service.",
+	"customers_new": "New customer",
+	"customers_new_description": "Register a company we install or service equipment for.",
+	"customers_breadcrumb_new": "New",
+	"customers_edit_title": "Edit {name}",
+	"customers_search": "Search customers…",
+	"customers_empty": "No customers found",
+	"customers_column_customer": "Customer",
+	"customers_column_contact": "Contact",
+	"customers_column_location": "Location",
+	"customers_column_segment": "Segment",
+	"customers_column_country": "Country",
+	"customers_column_equipment": "Equipment",
+	"customers_column_open_orders": "Open orders",
+	"customers_column_since": "Customer since",
+	"customers_copy_code": "Copy customer code",
+	"customers_copy_email": "Copy email",
+	"customers_name_required": "Enter the company name",
+	"customers_segment_required": "Choose a segment",
+	"customers_contact_required": "Enter a contact person",
+	"customers_city_required": "Enter a city",
+	"customers_country_required": "Choose a country",
+	"customers_country_unknown": "Choose a country from the list",
+	"customers_saved": "Customer saved",
+	"customers_created": "Customer created",
+	"customers_form_company": "Company",
+	"customers_form_code_kept": "Customer code {code} stays the same.",
+	"customers_form_code_assigned": "A customer code is assigned when the customer is created.",
+	"customers_form_contact_description": "Who we talk to about quotes, visits and invoices.",
+	"customers_field_name": "Name",
+	"customers_field_city": "City",
+	"customers_field_contact_name": "Contact person",
+	"customers_field_email": "Email",
+	"customers_field_phone": "Phone",
+	"customers_save": "Save customer",
+	"customers_create": "Create customer",
+	"customers_not_found": "Customer not found",
+	"customers_code_not_found": "Customer {code} not found",
+	"customers_count_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} equipment unit",
+				"countPlural=*": "{countText} equipment units"
+			}
+		}
+	],
+	"customers_references_both": "{units} and {orders}",
+	"customers_delete_refused": "This customer still has {references}. Delete or reassign them before deleting the customer.",
+	"customers_delete_referenced": "Other records still refer to this customer, such as service contracts. Remove those first.",
+	"customers_delete_title": "Delete {name}?",
+	"customers_delete_description": "The customer is removed permanently. Customers with equipment or orders can't be deleted.",
+	"customers_stats_orders_total": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Of {countText} order in total",
+				"countPlural=*": "Of {countText} orders in total"
+			}
+		}
+	],
+	"customers_stats_revenue": "Lifetime revenue",
+	"customers_stats_revenue_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "From {countText} completed or invoiced order",
+				"countPlural=*": "From {countText} completed or invoiced orders"
+			}
+		}
+	],
+	"customers_stats_attention": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} needing attention",
+				"countPlural=*": "{countText} needing attention"
+			}
+		}
+	],
+	"customers_stats_all_working": "All in working order",
+	"customers_stats_last_order": "Last order on {date}",
+	"customers_stats_no_orders": "No orders yet",
+	"customers_equipment_description": "Units installed at {name}.",
+	"customers_equipment_column_model": "Model",
+	"customers_equipment_column_category": "Category",
+	"customers_equipment_column_installed": "Installed",
+	"customers_equipment_column_status": "Status",
+	"customers_equipment_empty_title": "No equipment",
+	"customers_equipment_empty_description": "No units are registered for this customer yet.",
+	"customers_recent_title": "Recent activity",
+	"customers_recent_description": "The latest orders across all their equipment.",
+	"customers_recent_view_all": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "View the order",
+				"countPlural=*": "View all {countText} orders"
+			}
+		}
+	],
+	"customers_recent_new_installation": "New installation",
+	"customers_recent_completed": "Completed {date}",
+	"customers_recent_scheduled": "Scheduled {date}",
+	"customers_recent_created": "Created {date}",
+	"customers_recent_empty_title": "No orders",
+	"customers_recent_empty_description": "Nothing has been quoted or done for this customer yet."
 }
