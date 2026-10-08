@@ -13,7 +13,7 @@ import {
 import { contractLevels } from "#lib/components/contracts/model.ts";
 import { invoiceStatuses } from "#lib/components/invoicing/model.ts";
 import {
-	activityActions,
+	type ActivityAction,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
@@ -661,7 +661,7 @@ export const activity = sqliteTable(
 		/** Cleared when the user is deleted; `userName` keeps who it was. */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 		userName: text("user_name").notNull(),
-		action: text("action", { enum: activityActions }).notNull(),
+		action: text("action").$type<ActivityAction>().notNull(),
 		/** E.g. `order`, see `subjectTypes` in `#lib/activity.ts`. */
 		subjectType: text("subject_type").notNull(),
 		/** The record's id, as text (the auth tables' ids are text). */

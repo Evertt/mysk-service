@@ -15,6 +15,7 @@ import {
 } from "./activity.ts";
 import { formatCents, formatDate, formatDateTime } from "./format.ts";
 import { activityActions } from "./models.ts";
+import { type AppModule, modules } from "./modules.ts";
 
 const { order, equipment, engineer, customer, material, module } = coreSubjectTypes;
 
@@ -29,6 +30,27 @@ describe("actionVerbs", () => {
 		}
 		expect(actionSentence("updated")(inputs)).toBe("Avery updated order ORD-1");
 		expect(actionSentence("archived")(inputs)).toBe("Avery: archived order ORD-1");
+	});
+
+	test("has the core's verbs only", () => {
+		expect(activityActions).not.toContain("issued");
+		expect(Object.keys(actionVerbs).toSorted()).toEqual([...activityActions].toSorted());
+	});
+
+	test("reads a module's verbs from the module, whichever modules a tenant has", () => {
+		const inputs = { user: "Avery", subject: "invoice INV-1" };
+		const moduleActions = (modules as readonly AppModule[]).flatMap((entry) =>
+			Object.keys(entry.actions ?? {}),
+		);
+		expect(moduleActions.toSorted()).toEqual(["issued", "paid", "voided"]);
+		for (const action of moduleActions) {
+			expect(actionSentence(action)(inputs)).toMatch(/^Avery .+invoice INV-1/);
+		}
+		expect(actionSentence("issued")(inputs)).toBe("Avery issued invoice INV-1");
+		overwriteGetLocale(() => "nl");
+		expect(actionSentence("voided")({ user: "Avery", subject: "factuur INV-1" })).toBe(
+			"Avery heeft factuur INV-1 geannuleerd",
+		);
 	});
 
 	test("puts the words where Dutch wants them", () => {

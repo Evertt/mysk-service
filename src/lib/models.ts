@@ -2,6 +2,7 @@
  * Domain enums shared by the database schema, the seed script and the UI. Kept out of
  * `$lib/server` so client code (filters, badges) can import the option lists.
  */
+import type { ModuleAction } from "#lib/modules.js";
 
 export const customerSegments = ["enterprise", "mid_market", "small_business"] as const;
 export type CustomerSegment = (typeof customerSegments)[number];
@@ -165,7 +166,8 @@ export type StockMovementKind = (typeof stockMovementKinds)[number];
 /**
  * What someone did to a record in the activity log (`activity`): created, updated or deleted it,
  * or a domain verb that says more, e.g. scheduled an order or received stock for a material. A new
- * verb also gets a phrase in `actionVerbs` in `#lib/activity.ts`.
+ * verb also gets a phrase in `actionVerbs` in `#lib/activity.ts`. These are the core's; an optional
+ * module's verbs (e.g. invoicing's `issued`) are its `actions` in `#lib/modules.ts`.
  */
 export const activityActions = [
 	"created",
@@ -186,12 +188,9 @@ export const activityActions = [
 	"resent",
 	"cancelled",
 	"accepted",
-	// Invoicing.
-	"issued",
-	"paid",
-	"voided",
 	// Saved views shared with the organization.
 	"shared",
 	"unshared",
 ] as const;
-export type ActivityAction = (typeof activityActions)[number];
+export type CoreActivityAction = (typeof activityActions)[number];
+export type ActivityAction = CoreActivityAction | ModuleAction;

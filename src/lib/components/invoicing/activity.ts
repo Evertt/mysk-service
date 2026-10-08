@@ -2,7 +2,7 @@
 import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
-import type { FieldFormat, SubjectType } from "#lib/activity.js";
+import type { FieldFormat, Sentence, SubjectType } from "#lib/activity.js";
 import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 import { m } from "#lib/paraglide/messages.js";
 
@@ -19,6 +19,13 @@ const paymentTermDays: FieldFormat = {
 	format: days,
 };
 const vatRate: FieldFormat = { label: m.invoices_activity_field_vat_rate, format: rate };
+
+/** What the user did to an invoice, as a sentence per verb (see `actionVerbs` in `#lib/activity.ts`). */
+export const invoicingActions = {
+	issued: m.invoices_action_issued,
+	paid: m.invoices_action_paid,
+	voided: m.invoices_action_voided,
+} satisfies Record<string, Sentence>;
 
 export const invoicingSubjects: Record<string, SubjectType> = {
 	invoice: {

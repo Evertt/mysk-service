@@ -23,10 +23,10 @@ import FileCheckIcon from "@lucide/svelte/icons/file-check";
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 import type { Component } from "svelte";
 
-import type { SubjectType } from "#lib/activity.js";
+import type { Sentence, SubjectType } from "#lib/activity.js";
 import { contractSubjects } from "#lib/components/contracts/activity.js";
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
-import { invoicingSubjects } from "#lib/components/invoicing/activity.js";
+import { invoicingActions, invoicingSubjects } from "#lib/components/invoicing/activity.js";
 import type { OrderStatus } from "#lib/models.js";
 import { m } from "#lib/paraglide/messages.js";
 
@@ -63,6 +63,11 @@ export interface AppModule {
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity.ts`). */
 	subjects?: Record<string, SubjectType>;
+	/**
+	 * The verbs the module adds to the activity log (`ActivityAction`), as a sentence each. They
+	 * read for every tenant, also after the module is switched off.
+	 */
+	actions?: Record<string, Sentence>;
 	/**
 	 * Bulk actions the module adds to core tables' selections (see `BulkActionRows`), after the
 	 * table's own. Their commands start with `requireModule()`.
@@ -123,6 +128,7 @@ export const modules = [
 			order: () => import("#lib/components/invoicing/order-invoice.svelte"),
 		},
 		subjects: invoicingSubjects,
+		actions: invoicingActions,
 		bulkActions: {
 			orders: () => import("#lib/components/invoicing/order-bulk-actions.js"),
 		},
@@ -130,6 +136,10 @@ export const modules = [
 ] as const satisfies readonly AppModule[];
 
 export type ModuleId = (typeof modules)[number]["id"];
+
+/** The activity verbs of all modules, e.g. `issued`. */
+export type ModuleAction = ActionsOf<(typeof modules)[number]>;
+type ActionsOf<Module> = Module extends { actions: infer Actions } ? keyof Actions & string : never;
 
 /** The loaders of the components that the `enabled` modules add at `name`, in registry order. */
 export function slotLoaders<Name extends SlotName>(

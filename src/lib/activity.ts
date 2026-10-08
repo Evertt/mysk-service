@@ -9,26 +9,26 @@
  * they're read in the current language when shown, never at module scope.
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
- * records, in its `subjects` in `#lib/modules.ts`. Fields without an entry still show, with a
- * label from `fieldLabels` (or made from their name) and their value as stored (dates and numbers
- * formatted).
+ * records, in its `subjects` in `#lib/modules.ts`; likewise its verbs go in its `actions`. Fields
+ * without an entry still show, with a label from `fieldLabels` (or made from their name) and their
+ * value as stored (dates and numbers formatted).
  */
 import { resolve } from "$app/paths";
 
 import { formatCents, formatDate, formatDateTime, formatNumber } from "#lib/format.js";
 import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.js";
-import type { ActivityAction } from "#lib/models.js";
-import { modules } from "#lib/modules.js";
+import type { CoreActivityAction } from "#lib/models.js";
+import { type AppModule, modules } from "#lib/modules.js";
 import { m } from "#lib/paraglide/messages.js";
 
 /** A text in the current language, read when it's shown. */
 export type Text = () => string;
 
 /** An entry's sentence, with who did it and the subject (its noun and label) as variables. */
-type Sentence = (inputs: { user: string; subject: string }) => string;
+export type Sentence = (inputs: { user: string; subject: string }) => string;
 
 /** What the user did, as in "Anouk de Vries updated order …": a sentence per action. */
-export const actionVerbs: Record<ActivityAction, Sentence> = {
+export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	created: m.activity_action_created,
 	updated: m.activity_action_updated,
 	deleted: m.activity_action_deleted,
@@ -45,18 +45,22 @@ export const actionVerbs: Record<ActivityAction, Sentence> = {
 	resent: m.activity_action_resent,
 	cancelled: m.activity_action_cancelled,
 	accepted: m.activity_action_accepted,
-	issued: m.invoices_action_issued,
-	paid: m.invoices_action_paid,
-	voided: m.invoices_action_voided,
 	shared: m.activity_action_shared,
 	unshared: m.activity_action_unshared,
 };
 
-/** The sentence of an action as logged; one this version doesn't know reads as its value. */
-export const actionSentence = (action: string): Sentence =>
-	Object.hasOwn(actionVerbs, action)
-		? actionVerbs[action as ActivityAction]
-		: (inputs) => m.activity_action_other({ ...inputs, action });
+/**
+ * The sentence of an action as logged: the core's, or one of an optional module's `actions` (of
+ * all modules, not only the tenant's, so the log keeps reading the same after a module is switched
+ * off); one this version doesn't know reads as its value.
+ */
+export const actionSentence = (action: string): Sentence => {
+	if (Object.hasOwn(actionVerbs, action)) return actionVerbs[action as CoreActivityAction];
+	const actions = (modules as readonly AppModule[]).find((module) =>
+		Object.hasOwn(module.actions ?? {}, action),
+	)?.actions;
+	return actions?.[action] ?? ((inputs) => m.activity_action_other({ ...inputs, action }));
+};
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
 export const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;
