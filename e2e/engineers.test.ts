@@ -549,11 +549,20 @@ describe("in South", () => {
 		const [victimBefore, ownBefore] = [await snapshot(busy.id), await snapshot(own.id)];
 		await app.go(`/engineers/${own.id}/edit`);
 		const save = page.getByRole("button", { name: "Save account" });
-		// Only South's members to choose from: the admin, not North's planner or engineer.
+		// Only South's members to choose from (not linked to another of its engineers): the admin,
+		// not North's engineer. Another file on this worker may have made North's planner one.
+		const southMembers = await rows<{ name: string }>(
+			`select user.name from member join user on user.id = member.user_id
+			 where member.organization_id = ? and user.id not in
+			   (select user_id from engineer where organization_id = ? and id <> ? and user_id is not null)
+			 order by user.name`,
+			[south.id, south.id, own.id],
+		);
+		expect(southMembers.map((member) => member.name)).toContain(userNames.admin);
 		const options = await page.getByLabel("User account").locator("option").allInnerTexts();
-		expect(options.filter((option) => option !== "No account")).toEqual([
-			expect.stringContaining(userNames.admin),
-		]);
+		expect(options.filter((option) => option !== "No account")).toEqual(
+			southMembers.map((member) => expect.stringContaining(member.name)),
+		);
 		await page.getByLabel("User account").selectOption({ index: 1 });
 		const result = await app.expectingErrors(async () => {
 			await save.evaluate((button, id) => {
