@@ -5,10 +5,10 @@
 - **Add-ons**: vitest, tailwindcss, sveltekit-adapter, drizzle, better-auth, paraglide, ai-tools, experimental
 - **Before committing**: `pnpm run check` (code generation, format, lint and svelte-check; plain
   `vp check` skips the type check), then `pnpm test`.
-- **Parallel agents** that edit code each get their own worktree, named after the task, under
-  `.claude/worktrees/` (copy in the files listed in `.worktreeinclude`, i.e. `.env`), enter it with
-  `EnterWorktree` and run `pnpm install` first: in a shared checkout they type-check each other's
-  half-written files and reload each other's dev servers.
+- **Parallel agents** that edit code each get their own worktree (`isolation: "worktree"`), rename
+  its branch after the task, copy in `.env` (`git worktreeinclude apply`) and run `pnpm install`
+  first: in a shared checkout they type-check each other's half-written files and reload each
+  other's dev servers.
 
 ## Where files go
 
