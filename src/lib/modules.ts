@@ -28,6 +28,7 @@ import { contractSubjects } from "#lib/components/contracts/activity.js";
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.js";
 import { invoicingActions, invoicingSubjects } from "#lib/components/invoicing/activity.js";
 import type { OrderStatus } from "#lib/models.js";
+import type { ModuleId } from "#lib/module-ids.js";
 import { m } from "#lib/paraglide/messages.js";
 
 /** The places on core pages where modules can add components, with the props each passes. */
@@ -48,7 +49,8 @@ export type SlotLoader<Name extends SlotName> = () => Promise<{
 }>;
 
 export interface AppModule {
-	id: string;
+	/** Also in `moduleIds` (`#lib/module-ids.ts`), for code that can't import the registry. */
+	id: ModuleId;
 	/** Translated when read (a getter), so read it when showing it, not at module scope. */
 	readonly label: string;
 	readonly description: string;
@@ -135,7 +137,7 @@ export const modules = [
 	},
 ] as const satisfies readonly AppModule[];
 
-export type ModuleId = (typeof modules)[number]["id"];
+export type { ModuleId };
 
 /** The activity verbs of all modules, e.g. `issued`. */
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;

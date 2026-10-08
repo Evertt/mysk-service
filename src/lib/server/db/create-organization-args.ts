@@ -6,11 +6,8 @@ import { parseArgs } from "node:util";
 
 import * as v from "valibot";
 
-/**
- * The ids of the optional modules (see `#lib/modules.ts`, which the script can't import: it
- * registers Svelte components). A test checks that they're the same.
- */
-export const moduleIds = ["contracts", "invoicing"] as const;
+// Not `#lib/modules.ts`, the registry: it registers Svelte components, which plain Node can't load.
+import { type ModuleId, moduleIds } from "#lib/module-ids.ts";
 
 export const usage = `Creates an organization and its owner, e.g. on a new deployment.
 
@@ -30,7 +27,7 @@ export interface CreateOptions {
 	slug: string;
 	ownerEmail: string;
 	ownerName: string;
-	modules: (typeof moduleIds)[number][];
+	modules: ModuleId[];
 }
 
 /** A command line that can't be used, with what's wrong. */

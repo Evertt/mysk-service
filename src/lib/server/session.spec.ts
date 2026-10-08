@@ -202,6 +202,7 @@ describe("loadTenant", () => {
 			('m3', 'east', 'sam', 'owner', 1000)`);
 		await db.run(sql`insert into organization_module (organization_id, module_id) values
 			('south', 'contracts'),
+			('south', 'retired'),
 			('east', 'contracts')`);
 	});
 
@@ -213,6 +214,11 @@ describe("loadTenant", () => {
 			roles: ["member"],
 			modules: ["contracts"],
 		});
+	});
+
+	test("ignores a module the app no longer has", async () => {
+		const found = await loadTenant("jo", "south");
+		expect(found?.modules).toEqual(["contracts"]);
 	});
 
 	test("falls back to the first organization joined", async () => {

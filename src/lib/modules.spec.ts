@@ -2,7 +2,12 @@ import { existsSync } from "node:fs";
 
 import { describe, expect, test } from "vite-plus/test";
 
+import { moduleIds } from "./module-ids.ts";
 import { modules, type SlotName, slotLoaders } from "./modules.ts";
+
+test("the registry has the modules of the plain list of ids, in order", () => {
+	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
+});
 
 test("module ids are unique", () => {
 	const ids = modules.map((module) => module.id);
