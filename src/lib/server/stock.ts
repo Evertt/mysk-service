@@ -57,7 +57,7 @@ export async function moveStock(tx: Transaction, movement: Movement) {
 		columns: { id: true, sku: true, name: true, unit: true, stock: true },
 		where: and(eq(material.id, movement.materialId), inTenant(material)),
 	});
-	if (!found) error(404, "Material not found");
+	if (!found) error(404, m.materials_not_found());
 
 	const quantity = roundQuantity(movement.quantity);
 	if (quantity === 0) return found;
