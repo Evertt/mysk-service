@@ -685,6 +685,50 @@ describe("in North, contracts count on orders", () => {
 		await app.go(`/orders/${overdue.number}`);
 		expect(await badges()).toContain("SLA overdue");
 	});
+
+	test("in Dutch, the contracts and materials pages are translated", async () => {
+		const { page } = app;
+		const locale = (value: string) =>
+			page
+				.context()
+				.addCookies([{ name: "PARAGLIDE_LOCALE", value, url: new URL(page.url()).origin }]);
+		await locale("nl");
+		try {
+			await app.go("/contracts");
+			await page.getByRole("heading", { name: "Servicecontracten" }).waitFor();
+			expect(await page.getByLabel("Contracten zoeken…").count()).toBe(1);
+			expect(await page.getByRole("link", { name: "Nieuw contract" }).count()).toBe(1);
+
+			await app.go(`/contracts/${busy.number}`);
+			expect(await page.title()).toBe(`${busy.number} · Servicecontracten`);
+			expect(await card("Gedekte apparatuur").count()).toBe(1);
+			const terms = await card("Voorwaarden").innerText();
+			expect(terms).toMatch(/\d+ (dag|dagen|maand|maanden|jaar)\b/);
+			expect(terms).toMatch(/Binnen \d+ uur/);
+
+			await app.go("/contracts/new");
+			await app.submit(page.getByRole("button", { name: "Contract aanmaken" }));
+			expect(await app.issues()).toEqual(
+				expect.arrayContaining(["Kies een klant", "Kies minstens één apparaat"]),
+			);
+
+			const sku = await value<string>(
+				`select sku from material m where organization_id = ? and exists (select 1
+				 from stock_movement s where s.material_id = m.id and s.kind = 'opening_balance')
+				 order by id limit 1`,
+				[north.id],
+			);
+			await app.go(`/materials/${sku}`);
+			await card("Voorraadhistorie").waitFor();
+			expect(await page.getByRole("button", { name: "Voorraad ontvangen" }).count()).toBe(1);
+			expect(await page.getByRole("columnheader", { name: "Mutatie" }).count()).toBe(1);
+			expect(await card("Voorraadhistorie").innerText()).toContain("Beginvoorraad");
+		} finally {
+			await locale("en");
+		}
+		await app.go("/contracts");
+		await page.getByRole("heading", { name: "Service contracts" }).waitFor();
+	});
 });
 
 describe("in South, which doesn't have the module", () => {

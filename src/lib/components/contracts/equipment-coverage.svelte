@@ -19,8 +19,8 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Service contracts</Card.Title>
-		<Card.Description>The contracts covering this unit, latest first.</Card.Description>
+		<Card.Title>{m.contracts_title()}</Card.Title>
+		<Card.Description>{m.contracts_unit_coverage_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		{#if contracts.length}
@@ -35,7 +35,7 @@
 							</div>
 						</div>
 						<dl class="flex flex-col items-end gap-0.5 text-right">
-							<dt class="text-xs text-muted-foreground">Ends on</dt>
+							<dt class="text-xs text-muted-foreground">{m.contracts_ends_on()}</dt>
 							<dd class="text-sm tabular-nums">{formatDate(contract.endsOn)}</dd>
 						</dl>
 					</li>
@@ -44,8 +44,8 @@
 		{:else}
 			<Empty.Root class="p-6">
 				<Empty.Header>
-					<Empty.Title>Not covered</Empty.Title>
-					<Empty.Description>No service contract covers this unit.</Empty.Description>
+					<Empty.Title>{m.contracts_unit_not_covered_title()}</Empty.Title>
+					<Empty.Description>{m.contracts_unit_not_covered_description()}</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}

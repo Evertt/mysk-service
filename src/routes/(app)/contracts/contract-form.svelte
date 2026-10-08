@@ -79,7 +79,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the contract; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(contract ? "Contract saved" : "Contract created");
+		if (await submit()) toast.success(contract ? m.contracts_saved() : m.contracts_created_toast());
 	})}
 	class="flex flex-col gap-6"
 >
@@ -90,15 +90,15 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Agreement</Card.Title>
-			<Card.Description>Who it's for, the level of service, and what it costs.</Card.Description>
+			<Card.Title>{m.contracts_form_agreement()}</Card.Title>
+			<Card.Description>{m.contracts_form_agreement_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
 				<SelectField
 					field={fields.customerId}
-					label="Customer"
-					placeholder="Choose a customer"
+					label={m.contracts_customer()}
+					placeholder={m.contracts_customer_required()}
 					value={customerId}
 					options={options.customers.map((c) => ({
 						value: String(c.id),
@@ -108,36 +108,40 @@
 				/>
 				<SelectField
 					field={fields.level}
-					label="Level"
+					label={m.contracts_level()}
 					value={level}
 					options={contractLevels.map((value) => ({ value, label: levels[value].label }))}
 					onchange={changeLevel}
 				/>
 				<TextField
 					field={fields.startsOn}
-					label="Starts on"
+					label={m.contracts_starts_on()}
 					type="date"
 					value={toDateInput(startsOn)}
 				/>
 				<TextField
 					field={fields.endsOn}
-					label="Ends on"
+					label={m.contracts_ends_on()}
 					type="date"
 					value={toDateInput(endsOn)}
-					description="The last day the contract covers."
+					description={m.contracts_form_ends_description()}
 				/>
-				<MoneyField field={fields.monthlyFee} label="Monthly fee" cents={contract?.monthlyFee} />
+				<MoneyField
+					field={fields.monthlyFee}
+					label={m.contracts_monthly_fee()}
+					cents={contract?.monthlyFee}
+				/>
 				<NumberField
 					field={fields.responseHours}
-					label="Response time (hours)"
+					label={m.contracts_form_response_hours()}
 					value={contract?.responseHours ?? defaultResponseHours.standard}
 					min={1}
 					step={1}
-					description="How soon an engineer responds to a call-out."
+					description={m.contracts_form_response_description()}
 				/>
 				<TextField
 					field={fields.notes}
-					label="Notes"
+					label={m.contracts_notes()}
 					value={contract?.notes}
 					multiline
 					class="md:col-span-2"
@@ -148,16 +152,14 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Covered equipment</Card.Title>
+			<Card.Title>{m.contracts_form_covered()}</Card.Title>
 			<Card.Description>
-				{customerId
-					? "The customer's units that this contract covers."
-					: "Choose a customer to see their equipment."}
+				{customerId ? m.contracts_form_covered_description() : m.contracts_form_choose_customer()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Field.FieldSet data-invalid={fields.equipmentIds.issues()?.length ? true : undefined}>
-				<Field.FieldLegend class="sr-only">Covered equipment</Field.FieldLegend>
+				<Field.FieldLegend class="sr-only">{m.contracts_form_covered()}</Field.FieldLegend>
 				{#if units.length}
 					<Field.FieldGroup class="gap-0 divide-y rounded-lg border">
 						{#each units as unit (unit.id)}
@@ -185,7 +187,7 @@
 					</Field.FieldGroup>
 				{:else}
 					<p class="text-sm text-muted-foreground">
-						{customerId ? "This customer has no equipment yet." : "No customer chosen yet."}
+						{customerId ? m.contracts_form_no_equipment() : m.contracts_form_no_customer()}
 					</p>
 				{/if}
 				<Field.FieldError errors={fields.equipmentIds.issues()} />
@@ -195,7 +197,7 @@
 
 	<FormActions
 		pending={form.pending}
-		submitLabel={contract ? "Save contract" : "Create contract"}
+		submitLabel={contract ? m.contracts_form_save() : m.contracts_form_create()}
 		{cancelHref}
 	/>
 </form>

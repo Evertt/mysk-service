@@ -21,32 +21,32 @@ export const columns = column.columns([
 		cell: ({ row }) =>
 			renderComponent(MaterialLink, { sku: row.original.sku, name: row.original.name }),
 		enableHiding: false,
-		meta: { label: "Material" },
+		meta: { label: m.materials_material },
 	}),
 	// Hidden, so the search finds materials by SKU too.
 	column.accessor("sku", {
 		enableHiding: false,
-		meta: { label: "SKU" },
+		meta: { label: m.materials_sku },
 	}),
 	column.accessor("unit", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ getValue }) => label("materialUnit", getValue()),
 		filterFn: "oneOf",
 		enableGlobalFilter: false,
-		meta: { label: "Unit" },
+		meta: { label: m.materials_unit },
 	}),
 	column.accessor("unitPrice", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		meta: { label: "Unit price", align: "end" },
+		meta: { label: m.materials_unit_price, align: "end" },
 	}),
 	column.accessor("stock", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ row }) =>
 			renderComponent(StockCell, { stock: row.original.stock, unit: row.original.unit }),
 		enableGlobalFilter: false,
-		meta: { label: "Stock", align: "end" },
+		meta: { label: m.materials_stock, align: "end" },
 	}),
 	// Not shown; the stock level filter filters on it.
 	column.accessor((row) => stockLevel(row.stock, row.unit), {
@@ -56,13 +56,13 @@ export const columns = column.columns([
 		sortFn: (a, b, id) => stockLevels.indexOf(a.getValue(id)) - stockLevels.indexOf(b.getValue(id)),
 		enableHiding: false,
 		enableGlobalFilter: false,
-		meta: { label: "Stock level" },
+		meta: { label: m.materials_stock_level },
 	}),
 	column.accessor("orderCount", {
 		header: ({ header }) => renderComponent(header.ColumnHeader),
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
-		meta: { label: "Used on", align: "end" },
+		meta: { label: m.materials_used_on, align: "end" },
 	}),
 	column.display({
 		id: "actions",
@@ -72,8 +72,8 @@ export const columns = column.columns([
 				href: resolve("/(app)/materials/[sku]", { sku: row.original.sku }),
 				editHref: resolve("/(app)/materials/[sku]/edit", { sku: row.original.sku }),
 				copy: [
-					{ label: "Copy SKU", value: row.original.sku },
-					{ label: "Copy name", value: row.original.name },
+					{ label: m.materials_copy_sku(), value: row.original.sku },
+					{ label: m.materials_copy_name(), value: row.original.name },
 				],
 			}),
 	}),

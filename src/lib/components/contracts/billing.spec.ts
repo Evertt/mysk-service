@@ -48,7 +48,10 @@ test("each month's fee is an item with a reference of its own", () => {
 	const [october] = contractMonths(year, new Date(2026, 9, 1), new Date(2026, 9, 1));
 	expect(monthReference(12, october)).toBe("contracts:12:2026-10-01");
 	expect(
-		monthlyFee({ id: 12, number: "CTR-2026-0012", level: "premium", monthlyFee: 45_000 }, october),
+		monthlyFee({ id: 12, monthlyFee: 45_000 }, october, {
+			description: "Service contract CTR-2026-0012 (Premium)",
+			detail: "Monthly fee, 1 Oct 2026 – 31 Oct 2026",
+		}),
 	).toEqual({
 		reference: "contracts:12:2026-10-01",
 		description: "Service contract CTR-2026-0012 (Premium)",

@@ -30,17 +30,20 @@
 </script>
 
 <svelte:head>
-	<title>{contract.number} · Service contracts</title>
+	<title>{m.contracts_head_title({ title: contract.number })}</title>
 </svelte:head>
 
 <PageHeader
 	title={contract.number}
-	description="{levels[contract.level].label} service contract for {customer.name}"
+	description={m.contracts_detail_description({
+		level: levels[contract.level].label,
+		customer: customer.name,
+	})}
 >
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/contracts")}>Service contracts</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/contracts")}>{m.contracts_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -58,13 +61,13 @@
 			href={resolve("/(app)/contracts/[number]/edit", { number: contract.number })}
 		>
 			<PencilIcon data-icon="inline-start" />
-			Edit
+			{m.common_edit()}
 		</Button>
 		<DeleteDialog
 			form={deleteContract}
 			id={String(contract.id)}
-			title="Delete {contract.number}?"
-			description="The contract is removed permanently. The equipment and its orders stay."
+			title={m.contracts_delete_title({ number: contract.number })}
+			description={m.contracts_delete_description()}
 		/>
 	{/snippet}
 </PageHeader>
@@ -73,10 +76,9 @@
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Covered equipment</Card.Title>
+				<Card.Title>{m.contracts_form_covered()}</Card.Title>
 				<Card.Description>
-					{equipment.length}
-					{equipment.length === 1 ? "unit" : "units"} of {customer.name}.
+					{m.contracts_covered_units({ count: equipment.length, customer: customer.name })}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -84,10 +86,10 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Serial number</Table.Head>
-								<Table.Head>Equipment</Table.Head>
-								<Table.Head>Category</Table.Head>
-								<Table.Head>Status</Table.Head>
+								<Table.Head>{m.contracts_serial_number()}</Table.Head>
+								<Table.Head>{m.contracts_equipment()}</Table.Head>
+								<Table.Head>{m.contracts_category()}</Table.Head>
+								<Table.Head>{m.contracts_status()}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -111,10 +113,8 @@
 				{:else}
 					<Empty.Root class="p-6">
 						<Empty.Header>
-							<Empty.Title>No equipment covered</Empty.Title>
-							<Empty.Description
-								>The units this contract covered have been removed.</Empty.Description
-							>
+							<Empty.Title>{m.contracts_no_equipment_title()}</Empty.Title>
+							<Empty.Description>{m.contracts_no_equipment_description()}</Empty.Description>
 						</Empty.Header>
 					</Empty.Root>
 				{/if}
@@ -123,10 +123,12 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Orders under this contract</Card.Title>
+				<Card.Title>{m.contracts_orders()}</Card.Title>
 				<Card.Description>
-					Work on the covered equipment between {formatDate(contract.startsOn)} and
-					{formatDate(contract.endsOn)}.
+					{m.contracts_orders_description({
+						from: formatDate(contract.startsOn),
+						until: formatDate(contract.endsOn),
+					})}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -134,11 +136,11 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Order</Table.Head>
-								<Table.Head>Equipment</Table.Head>
-								<Table.Head>Type</Table.Head>
-								<Table.Head>Status</Table.Head>
-								<Table.Head class="text-right">Created</Table.Head>
+								<Table.Head>{m.contracts_order()}</Table.Head>
+								<Table.Head>{m.contracts_equipment()}</Table.Head>
+								<Table.Head>{m.contracts_type()}</Table.Head>
+								<Table.Head>{m.contracts_status()}</Table.Head>
+								<Table.Head class="text-right">{m.contracts_created()}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -158,11 +160,11 @@
 				{:else}
 					<Empty.Root class="p-6">
 						<Empty.Header>
-							<Empty.Title>No orders</Empty.Title>
+							<Empty.Title>{m.contracts_no_orders_title()}</Empty.Title>
 							<Empty.Description>
 								{status === "upcoming"
-									? "The contract hasn't started yet."
-									: "No work on the covered equipment during the contract."}
+									? m.contracts_no_orders_upcoming()
+									: m.contracts_no_orders_description()}
 							</Empty.Description>
 						</Empty.Header>
 					</Empty.Root>
@@ -174,19 +176,25 @@
 	<div class="flex min-w-0 flex-col gap-6">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Terms</Card.Title>
+				<Card.Title>{m.contracts_terms()}</Card.Title>
 				<Card.Description>{formatTerm(contract.startsOn, contract.endsOn)}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label="Starts on" value={formatDate(contract.startsOn)} />
-					<DetailItem label="Ends on" value={formatDate(contract.endsOn)} />
-					<DetailItem label="Monthly fee" value={formatCents(contract.monthlyFee)} />
-					<DetailItem label="Yearly fee" value={formatCents(contract.monthlyFee * 12)} />
-					<DetailItem label="Response time" value="Within {contract.responseHours} hours" />
-					<DetailItem label="Created" value={formatDate(contract.createdAt)} />
+					<DetailItem label={m.contracts_starts_on()} value={formatDate(contract.startsOn)} />
+					<DetailItem label={m.contracts_ends_on()} value={formatDate(contract.endsOn)} />
+					<DetailItem label={m.contracts_monthly_fee()} value={formatCents(contract.monthlyFee)} />
+					<DetailItem
+						label={m.contracts_yearly_fee()}
+						value={formatCents(contract.monthlyFee * 12)}
+					/>
+					<DetailItem
+						label={m.contracts_response_time()}
+						value={m.contracts_within_hours({ count: contract.responseHours })}
+					/>
+					<DetailItem label={m.contracts_created()} value={formatDate(contract.createdAt)} />
 					<div class="col-span-2">
-						<DetailItem label="Notes" value={contract.notes} />
+						<DetailItem label={m.contracts_notes()} value={contract.notes} />
 					</div>
 				</dl>
 			</Card.Content>
@@ -194,7 +202,7 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Customer</Card.Title>
+				<Card.Title>{m.contracts_customer()}</Card.Title>
 				<Card.Description>{customer.code}</Card.Description>
 				<Card.Action>
 					<Badge variant="outline">{label("customerSegment", customer.segment)}</Badge>
@@ -203,14 +211,25 @@
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
 					<DetailItem
-						label="Company"
+						label={m.contracts_company()}
 						value={customer.name}
 						href={resolve("/(app)/customers/[code]", { code: customer.code })}
 					/>
-					<DetailItem label="Contact" value={customer.contactName} />
-					<DetailItem label="Email" value={customer.email} href={`mailto:${customer.email}`} />
-					<DetailItem label="Phone" value={customer.phone} href={`tel:${customer.phone}`} />
-					<DetailItem label="Location" value={`${customer.city}, ${customer.country}`} />
+					<DetailItem label={m.contracts_contact()} value={customer.contactName} />
+					<DetailItem
+						label={m.contracts_email()}
+						value={customer.email}
+						href={`mailto:${customer.email}`}
+					/>
+					<DetailItem
+						label={m.contracts_phone()}
+						value={customer.phone}
+						href={`tel:${customer.phone}`}
+					/>
+					<DetailItem
+						label={m.contracts_location()}
+						value={`${customer.city}, ${customer.country}`}
+					/>
 				</dl>
 			</Card.Content>
 		</Card.Root>

@@ -18,6 +18,7 @@ import {
 	type ContractStatus,
 	contractStatuses,
 } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 import type { SlaState } from "./coverage.js";
 
@@ -55,8 +56,6 @@ export const slaStates = withLabels("slaState", slaStateDetails);
 export const levelOptions = labelOptions("contractLevel", contractLevels, levelDetails);
 export const statusOptions = labelOptions("contractStatus", contractStatuses, statusDetails);
 
-const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
-
 /** A contract's length, e.g. "2 years", "18 months" or "3 months, 10 days"; both days count. */
 export function formatTerm(startsOn: Date, endsOn: Date) {
 	const end = new Date(endsOn.getFullYear(), endsOn.getMonth(), endsOn.getDate() + 1);
@@ -73,7 +72,16 @@ export function formatTerm(startsOn: Date, endsOn: Date) {
 	while (months > 0 && after(months) > end) months--;
 	const days = Math.round((end.getTime() - after(months).getTime()) / (24 * 60 * 60 * 1000));
 
-	if (days)
-		return months ? `${plural(months, "month")}, ${plural(days, "day")}` : plural(days, "day");
-	return months % 12 ? plural(months, "month") : plural(months / 12, "year");
+	if (days) {
+		const daysText = m.contracts_term_days({ count: days });
+		return months
+			? m.contracts_term_months_days({
+					months: m.contracts_term_months({ count: months }),
+					days: daysText,
+				})
+			: daysText;
+	}
+	return months % 12
+		? m.contracts_term_months({ count: months })
+		: m.contracts_term_years({ count: months / 12 });
 }

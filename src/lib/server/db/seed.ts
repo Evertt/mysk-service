@@ -13,7 +13,11 @@ import { hashPassword } from "better-auth/crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
-import { contractMonths, monthlyFee } from "#lib/components/contracts/billing.ts";
+import {
+	type ContractMonth,
+	contractMonths,
+	monthlyFee,
+} from "#lib/components/contracts/billing.ts";
 import {
 	dueDate,
 	invoiceNumber,
@@ -638,6 +642,18 @@ const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
 const levelLabel = (level: ContractLevel) => level.charAt(0).toUpperCase() + level.slice(1);
 
+// Like `formatDate` in `#lib/format.ts` in English, which the seed script can't import.
+const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+/** A contract's month on an invoice, worded like the app does in English (the demo's language). */
+const monthlyFeeText = (
+	contract: { number: string; level: ContractLevel },
+	month: ContractMonth,
+) => ({
+	description: `Service contract ${contract.number} (${levelLabel(contract.level)})`,
+	detail: `Monthly fee, ${day.format(month.startsOn)} – ${day.format(month.endsOn)}`,
+});
+
 /**
  * Invoices for the orders the generator marked invoiced: one per customer for each month's work,
  * issued early the next month, with that month's contract fees from `billFrom` on (so only this
@@ -718,7 +734,7 @@ function generateInvoices(
 	for (const c of data.contracts) {
 		for (const month of contractMonths(c, billFrom, lastMonthEnd)) {
 			groupOf(c.customerId, month.startsOn).lines.push(
-				itemLine(monthlyFee({ ...c, id: c.id + contractOffset }, month)),
+				itemLine(monthlyFee({ ...c, id: c.id + contractOffset }, month, monthlyFeeText(c, month))),
 			);
 		}
 	}

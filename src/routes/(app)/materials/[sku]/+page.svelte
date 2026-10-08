@@ -11,7 +11,7 @@
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import StatusBadge from "#lib/components/orders/status-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatCents, formatDate } from "#lib/format.js";
+	import { formatCents, formatDate, formatNumber } from "#lib/format.js";
 	import { label } from "#lib/i18n/labels.js";
 
 	import { deleteMaterial, getMaterial } from "../materials.remote.js";
@@ -26,18 +26,17 @@
 	const material = $derived(data.material);
 	const stats = $derived(data.stats);
 	const quantity = (value: number) => formatQuantity(value, material.unit);
-	const orders = (count: number) => (count === 1 ? "1 order" : `${count} orders`);
 </script>
 
 <svelte:head>
-	<title>{material.name} · Materials</title>
+	<title>{m.materials_head_title({ title: material.name })}</title>
 </svelte:head>
 
 <PageHeader title={material.name} description={material.sku}>
 	<Breadcrumb.Root>
 		<Breadcrumb.List>
 			<Breadcrumb.Item>
-				<Breadcrumb.Link href={resolve("/(app)/materials")}>Materials</Breadcrumb.Link>
+				<Breadcrumb.Link href={resolve("/(app)/materials")}>{m.materials_title()}</Breadcrumb.Link>
 			</Breadcrumb.Item>
 			<Breadcrumb.Separator />
 			<Breadcrumb.Item>
@@ -53,13 +52,13 @@
 		<CountStockDialog {material} />
 		<Button variant="outline" href={resolve("/(app)/materials/[sku]/edit", { sku: material.sku })}>
 			<PencilIcon data-icon="inline-start" />
-			Edit
+			{m.common_edit()}
 		</Button>
 		<DeleteDialog
 			form={deleteMaterial}
 			id={String(material.id)}
-			title="Delete {material.name}?"
-			description="The material is removed from the catalogue permanently, with its stock history."
+			title={m.materials_delete_title({ name: material.name })}
+			description={m.materials_delete_description()}
 		/>
 	{/snippet}
 </PageHeader>
@@ -69,19 +68,19 @@
 		<div class="grid gap-4 sm:grid-cols-3">
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Used in the last 12 months</Card.Description>
+					<Card.Description>{m.materials_used_last_year()}</Card.Description>
 					<Card.Title class="text-2xl tabular-nums">{quantity(stats.usedLastYear)}</Card.Title>
 				</Card.Header>
 			</Card.Root>
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Open orders needing it</Card.Description>
-					<Card.Title class="text-2xl tabular-nums">{stats.openOrders}</Card.Title>
+					<Card.Description>{m.materials_open_orders()}</Card.Description>
+					<Card.Title class="text-2xl tabular-nums">{formatNumber(stats.openOrders)}</Card.Title>
 				</Card.Header>
 			</Card.Root>
 			<Card.Root>
 				<Card.Header>
-					<Card.Description>Needed for open orders</Card.Description>
+					<Card.Description>{m.materials_needed()}</Card.Description>
 					<Card.Title class="text-2xl tabular-nums">
 						{quantity(stats.neededForOpenOrders)}
 					</Card.Title>
@@ -89,7 +88,7 @@
 				{#if stats.neededForOpenOrders}
 					<Card.Content>
 						<!-- Order lines take their materials from stock when they're added. -->
-						<p class="text-sm text-muted-foreground">Already taken from stock</p>
+						<p class="text-sm text-muted-foreground">{m.materials_needed_taken()}</p>
 					</Card.Content>
 				{/if}
 			</Card.Root>
@@ -97,11 +96,11 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Usage</Card.Title>
+				<Card.Title>{m.materials_usage()}</Card.Title>
 				<Card.Description>
 					{data.usage.length
-						? `Used on ${orders(data.usage.length)}, most recent first, at the price quoted on each.`
-						: "Orders that use this material."}
+						? m.materials_usage_description({ count: data.usage.length })
+						: m.materials_usage_none()}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -109,12 +108,12 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Order</Table.Head>
-								<Table.Head>Customer</Table.Head>
-								<Table.Head>Status</Table.Head>
-								<Table.Head class="text-right">Quantity</Table.Head>
-								<Table.Head class="text-right">Unit price</Table.Head>
-								<Table.Head class="text-right">Amount</Table.Head>
+								<Table.Head>{m.materials_order()}</Table.Head>
+								<Table.Head>{m.materials_customer()}</Table.Head>
+								<Table.Head>{m.materials_status()}</Table.Head>
+								<Table.Head class="text-right">{m.materials_quantity()}</Table.Head>
+								<Table.Head class="text-right">{m.materials_unit_price()}</Table.Head>
+								<Table.Head class="text-right">{m.materials_amount()}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -144,8 +143,8 @@
 				{:else}
 					<Empty.Root class="p-6">
 						<Empty.Header>
-							<Empty.Title>Not used yet</Empty.Title>
-							<Empty.Description>No order uses this material.</Empty.Description>
+							<Empty.Title>{m.materials_usage_empty_title()}</Empty.Title>
+							<Empty.Description>{m.materials_usage_empty_description()}</Empty.Description>
 						</Empty.Header>
 					</Empty.Root>
 				{/if}
@@ -154,9 +153,9 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Stock history</Card.Title>
+				<Card.Title>{m.materials_history()}</Card.Title>
 				<Card.Description>
-					Every change to the stock, newest first: deliveries, counts and orders.
+					{m.materials_history_description()}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -168,21 +167,27 @@
 	<div class="flex min-w-0 flex-col gap-6">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Material</Card.Title>
-				<Card.Description>Catalogue details and current stock.</Card.Description>
+				<Card.Title>{m.materials_material()}</Card.Title>
+				<Card.Description>{m.materials_details_description()}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label="SKU" value={material.sku} />
+					<DetailItem label={m.materials_sku()} value={material.sku} />
 					<DetailItem
-						label="Unit"
-						value={`${label("materialUnit", material.unit)} (${label("materialUnitSymbol", material.unit)})`}
+						label={m.materials_unit()}
+						value={m.materials_unit_option({
+							name: label("materialUnit", material.unit),
+							symbol: label("materialUnitSymbol", material.unit),
+						})}
 					/>
 					<DetailItem
-						label="List price"
-						value={`${formatCents(material.unitPrice)} / ${material.unit}`}
+						label={m.materials_list_price()}
+						value={m.materials_list_price_value({
+							price: formatCents(material.unitPrice),
+							unit: label("materialUnitSymbol", material.unit),
+						})}
 					/>
-					<DetailItem label="Stock">
+					<DetailItem label={m.materials_stock()}>
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="tabular-nums">{quantity(material.stock)}</span>
 							<StockBadge stock={material.stock} unit={material.unit} />

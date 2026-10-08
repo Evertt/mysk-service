@@ -25,11 +25,11 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search contracts…">
-			<FacetedFilter columnId="status" title="Status" options={statusOptions} />
-			<FacetedFilter columnId="level" title="Level" options={levelOptions} />
+		<table.Toolbar searchLabel={m.contracts_search()}>
+			<FacetedFilter columnId="status" title={m.contracts_status()} options={statusOptions} />
+			<FacetedFilter columnId="level" title={m.contracts_level()} options={levelOptions} />
 		</table.Toolbar>
-		<table.Table emptyTitle="No contracts found" />
+		<table.Table emptyTitle={m.contracts_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

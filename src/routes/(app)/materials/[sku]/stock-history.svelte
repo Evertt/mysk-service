@@ -7,10 +7,11 @@
 	import { formatQuantity } from "#lib/components/materials/display.js";
 	import OrderLink from "#lib/components/orders/order-link.svelte";
 	import { formatDate } from "#lib/format.js";
+	import { label } from "#lib/i18n/labels.js";
 	import type { MaterialUnit } from "#lib/models.js";
 
 	import type { getMaterial } from "../materials.remote.js";
-	import { formatChange, movementKindLabels } from "./stock-history.js";
+	import { formatChange } from "./stock-history.js";
 
 	type Movement = Awaited<ReturnType<typeof getMaterial>>["movements"][number];
 
@@ -21,11 +22,11 @@
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
-				<Table.Head>Date</Table.Head>
-				<Table.Head>Movement</Table.Head>
-				<Table.Head class="text-right">Change</Table.Head>
-				<Table.Head class="text-right">Stock</Table.Head>
-				<Table.Head>By</Table.Head>
+				<Table.Head>{m.materials_history_date()}</Table.Head>
+				<Table.Head>{m.materials_history_movement()}</Table.Head>
+				<Table.Head class="text-right">{m.materials_history_change()}</Table.Head>
+				<Table.Head class="text-right">{m.materials_stock()}</Table.Head>
+				<Table.Head>{m.materials_history_by()}</Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
@@ -37,11 +38,13 @@
 					<Table.Cell>
 						<div class="flex flex-col">
 							<span class="flex flex-wrap items-center gap-x-1.5">
-								{movementKindLabels[movement.kind]}
+								{label("stockMovementKind", movement.kind)}
 								{#if movement.order}
 									<OrderLink number={movement.order.number} />
 								{:else if movement.orderNumber}
-									<span class="text-muted-foreground">{movement.orderNumber} (deleted)</span>
+									<span class="text-muted-foreground">
+										{m.materials_history_order_deleted({ number: movement.orderNumber })}
+									</span>
 								{/if}
 							</span>
 							{#if movement.note}
@@ -67,8 +70,8 @@
 {:else}
 	<Empty.Root class="p-6">
 		<Empty.Header>
-			<Empty.Title>No movements yet</Empty.Title>
-			<Empty.Description>Receipts, counts and orders change the stock.</Empty.Description>
+			<Empty.Title>{m.materials_history_empty_title()}</Empty.Title>
+			<Empty.Description>{m.materials_history_empty_description()}</Empty.Description>
 		</Empty.Header>
 	</Empty.Root>
 {/if}

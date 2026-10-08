@@ -39,11 +39,15 @@
 
 <table.AppTable>
 	<div class="flex flex-col gap-4">
-		<table.Toolbar searchLabel="Search materials…">
-			<FacetedFilter columnId="unit" title="Unit" options={unitOptions} />
-			<FacetedFilter columnId="stockLevel" title="Stock level" options={stockLevelOptions} />
+		<table.Toolbar searchLabel={m.materials_search()}>
+			<FacetedFilter columnId="unit" title={m.materials_unit()} options={unitOptions} />
+			<FacetedFilter
+				columnId="stockLevel"
+				title={m.materials_stock_level()}
+				options={stockLevelOptions}
+			/>
 		</table.Toolbar>
-		<table.Table emptyTitle="No materials found" />
+		<table.Table emptyTitle={m.materials_empty()} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

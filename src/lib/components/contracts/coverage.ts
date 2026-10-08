@@ -22,6 +22,7 @@ import {
 	type OrderStatus,
 	type OrderType,
 } from "#lib/models.js";
+import { m } from "#lib/paraglide/messages.js";
 
 /** What each level includes. */
 export const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {
@@ -30,12 +31,14 @@ export const included: Record<ContractLevel, { labor: boolean; materials: boolea
 	premium: { labor: true, materials: true },
 };
 
-/** What each level includes, in words. */
-export const includedLabel: Record<ContractLevel, string> = {
-	basic: "Response time only",
-	standard: "Labour",
-	premium: "Labour and materials",
+const includedLabels: Record<ContractLevel, () => string> = {
+	basic: m.contracts_included_basic,
+	standard: m.contracts_included_standard,
+	premium: m.contracts_included_premium,
 };
+
+/** What a level includes, in words, e.g. "Labour and materials". */
+export const includedLabel = (level: ContractLevel) => includedLabels[level]();
 
 /** Whether a contract covers this type of work on a covered unit. */
 export const isCoveredWork = (type: OrderType) => type !== "installation";
@@ -62,7 +65,10 @@ export function coveredAmount(level: ContractLevel, price: { materials: number; 
 
 /** "Covered by CTR-2026-0004 (Premium)" */
 export const coveredBy = (contract: { number: string; level: ContractLevel }) =>
-	`Covered by ${contract.number} (${label("contractLevel", contract.level)})`;
+	m.contracts_covered_by({
+		number: contract.number,
+		level: label("contractLevel", contract.level),
+	});
 
 // --- Response time ---------------------------------------------------------------------------
 

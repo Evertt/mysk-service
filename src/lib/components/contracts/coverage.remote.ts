@@ -8,6 +8,7 @@ import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "driz
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
+import { m } from "#lib/paraglide/messages.js";
 import { coverageOf } from "#lib/server/contracts.js";
 import { db } from "#lib/server/db/index.js";
 import { contract, contractEquipment, customer, equipment, order } from "#lib/server/db/schema.js";
@@ -25,13 +26,13 @@ export const getOrderCoverage = query(v.string(), async (number) => {
 		columns: { id: true, type: true, status: true, equipmentId: true, createdAt: true },
 		where: and(eq(order.number, number), inTenant(order)),
 	});
-	if (!found) error(404, `Order ${number} not found`);
+	if (!found) error(404, m.contracts_order_not_found({ number }));
 
 	const coverage = (await coverageOf([found])).get(found.id);
 	if (!coverage) return null;
 	return {
 		contract: coverage,
-		included: includedLabel[coverage.level],
+		included: includedLabel(coverage.level),
 		response: responseDeadline(found, coverage.responseHours),
 	};
 });
@@ -43,7 +44,7 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
 		columns: { id: true },
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
 	});
-	if (!unit) error(404, `Equipment ${serialNumber} not found`);
+	if (!unit) error(404, m.contracts_equipment_not_found({ serial: serialNumber }));
 
 	return db
 		.select({
@@ -62,7 +63,7 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
 
 /**
  * For the dashboard: covered call-outs whose response is at risk or overdue (most urgent first),
- * and active contracts that end in the coming weeks without a later contract for the customer.
+ * and active contracts that end in the coming `days` without a later contract for the customer.
  */
 export const getContractsOverview = query(async () => {
 	requireModule("contracts");
@@ -136,5 +137,5 @@ export const getContractsOverview = query(async () => {
 		)
 		.orderBy(asc(contract.endsOn), asc(contract.number));
 
-	return { responses, expiring };
+	return { responses, expiring, days: EXPIRING_DAYS };
 });
