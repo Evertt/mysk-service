@@ -29,8 +29,8 @@ stands. Status: ⬜ to do · 🔄 in progress (branch) · ✅ done (merged into 
 
 ## Other
 
-| #   | Item                                                                                                                                                                                                       | Status             |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch.                                       | ✅                 |
-| 16  | **Sorting on a plain click.** A header click cycles ascending → descending → unsorted (no menu; hiding columns stays in the View menu); shift/cmd/ctrl-click still adds the column to a multi-column sort. | 🔄 `sort-on-click` |
-| 17  | **Sticky dates on the planning page.** The schedule's row of day headers stays at the top while scrolling down.                                                                                            | ✅                 |
+| #   | Item                                                                                                                                                                                                       | Status |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 15  | **Dutch seed data.** The demo seed uses Dutch names and words (companies, people, cities, materials, descriptions, …), since the app's tenants will mainly be Dutch.                                       | ✅     |
+| 16  | **Sorting on a plain click.** A header click cycles ascending → descending → unsorted (no menu; hiding columns stays in the View menu); shift/cmd/ctrl-click still adds the column to a multi-column sort. | ✅     |
+| 17  | **Sticky dates on the planning page.** The schedule's row of day headers stays at the top while scrolling down.                                                                                            | ✅     |
