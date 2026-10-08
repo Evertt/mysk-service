@@ -43,7 +43,9 @@ helpers are in `src/lib/server/session.ts`:
   per organization: pick the next one with `nextNumber(tx, "order")` (`src/lib/server/numbering.ts`;
   the formats are in `src/lib/numbering.ts`) and insert it in the same `db.transaction`
   (transactions take turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick
-  the same one).
+  the same one). A module numbers its own records with a format and table of its own:
+  `nextNumber(tx, { format, table, column })`, e.g. `contractNumbers` in
+  `src/modules/contracts/server/contracts.ts`.
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
@@ -110,11 +112,23 @@ migration committed.
   foreign key to a module table. A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
   its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
 
-Not built yet: contracts and invoicing are still in the static list in `src/lib/modules.ts`, in
-`src/lib/server/{contracts,invoicing}.ts` and in `src/routes/(app)` (the generated modules are added
-after them), and their messages are core files. Also missing, to be added with the first module that
-needs them: several `nav` entries per module, module columns, filters and row actions in tables,
-`order.actions`-style slots, `settings.cards`, and the server `refuseChange`/`saved` hooks.
+Contracts is a module in this folder structure (`src/modules/contracts/`: look there for an
+example of each part). Invoicing is not built yet: it is still in the static list in
+`src/lib/modules.ts`, in `src/lib/server/invoicing.ts` and in `src/routes/(app)` (the generated
+modules come before it in the registries), and its messages are core files. Also missing, to be added
+with the first module that needs them: several `nav` entries per module, module columns, filters and
+row actions in tables, `order.actions`-style slots, `settings.cards`, and the server
+`refuseChange`/`saved` hooks.
+
+- A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`): `generate()` makes its
+  data for a tenant right after the core's, with the same faker (so the demo data doesn't change
+  with where the module's code lives), and may add to the core's draft (contracts adds call-out
+  orders); `run()` inserts it. What a module does at runtime through hooks it does at seed time
+  through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
+  asks without knowing the module: invoicing's seed prices orders and bills fees through them.
+- A core e2e test of something a module changes (a customer's revenue less what contracts include)
+  can't import the module's helpers, so `e2e/contracts-helpers.ts`, which works the contracts' effect
+  on prices out in SQL, stays in `e2e/`; the module's own e2e imports it from there.
 
 ## Server-side lists
 
@@ -194,8 +208,9 @@ remote functions. Every user-facing text goes through a message; nothing English
 
 - **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
   `auth`, `dashboard`, `orders`, `schedule`, `customers`, `equipment`, `engineers`, `materials`,
-  `contracts`, `invoices`, `settings`, `portal`, `activity`), each listed in
-  `project.inlang/settings.json`. A new file goes in every locale folder and in that list.
+  `invoices`, `settings`, `portal`, `activity`), each listed in `project.inlang/settings.json`. A new
+  file goes in every locale folder and in that list. A module's sections are in its own folder
+  (`src/modules/contracts/messages/<locale>/contracts.json`), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
   `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or
