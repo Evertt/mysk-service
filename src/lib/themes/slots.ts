@@ -27,6 +27,8 @@ export type GeneratedSlot =
 	| "breadcrumb-list"
 	| "breadcrumb-page"
 	| "breadcrumb-separator"
+	| "bulk-action-bar"
+	| "bulk-action-count"
 	| "button"
 	| "card"
 	| "card-action"
@@ -35,6 +37,7 @@ export type GeneratedSlot =
 	| "card-footer"
 	| "card-header"
 	| "card-title"
+	| "chart"
 	| "checkbox"
 	| "checkbox-indicator"
 	| "command"
@@ -162,4 +165,5 @@ export type GeneratedSlot =
 	| "textarea"
 	| "tooltip-arrow"
 	| "tooltip-content"
-	| "tooltip-trigger";
+	| "tooltip-trigger"
+	| "work-report";
