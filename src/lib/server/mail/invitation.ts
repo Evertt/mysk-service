@@ -2,7 +2,7 @@ import { invitedAsText } from "#lib/auth/members.ts";
 import { dateFormatter } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { Mail } from "./mail.ts";
+import type { Mail } from "./send.ts";
 
 const escape = (text: string) =>
 	text.replace(

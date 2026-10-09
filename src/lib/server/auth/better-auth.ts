@@ -10,8 +10,8 @@ import { sql } from "drizzle-orm";
 import { INVITATION_EXPIRES_IN } from "#lib/auth/members.ts";
 import type { MemberRole } from "#lib/auth/roles.ts";
 import { db } from "#lib/server/db/index.ts";
-import { invitationMail } from "#lib/server/invitation-mail.ts";
-import { sendMail } from "#lib/server/mail.ts";
+import { invitationMail } from "#lib/server/mail/invitation.ts";
+import { sendMail } from "#lib/server/mail/send.ts";
 
 /**
  * The organization a user works in when they sign in: the first one they joined, or none yet (e.g.

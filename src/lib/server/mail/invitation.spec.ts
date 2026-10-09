@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
-import { invitationMail } from "./invitation-mail.ts";
+import { invitationMail } from "./invitation.ts";
 
 const invitation = {
 	to: "new@example.com",
