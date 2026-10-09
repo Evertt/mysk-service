@@ -169,7 +169,7 @@ export type StockMovementKind = (typeof stockMovementKinds)[number];
 /**
  * What someone did to a record in the activity log (`activity`): created, updated or deleted it,
  * or a domain verb that says more, e.g. scheduled an order or received stock for a material. A new
- * verb also gets a phrase in `actionVerbs` in `#lib/activity.ts`. These are the core's; an optional
+ * verb also gets a phrase in `actionVerbs` in `#lib/activity/subjects.ts`. These are the core's; an optional
  * module's verbs (e.g. invoicing's `issued`) are its `actions` in `#lib/modules/manifests.ts`.
  */
 export const activityActions = [

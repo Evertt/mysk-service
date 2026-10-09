@@ -7,7 +7,7 @@ import * as v from "valibot";
 import type { OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";

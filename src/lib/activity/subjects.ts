@@ -1,5 +1,5 @@
 /**
- * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity.ts`)
+ * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity/log.ts`)
  * reads: a sentence per action, and per subject type its noun, its page and how its fields show,
  * e.g. "Anouk de Vries updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
  * "Anouk de Vries heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
@@ -10,7 +10,7 @@
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
  * records, in its `subjects` in `#lib/modules/manifests.ts`; likewise its verbs go in its `actions`. How
- * their fields and values read is in `#lib/activity-format.ts`.
+ * their fields and values read is in `#lib/activity/format.ts`.
  */
 import { resolve } from "$app/paths";
 
@@ -21,7 +21,7 @@ import { type AppModule, modules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { parseRoles } from "#lib/roles.ts";
 
-import type { ReferenceType } from "./activity-format.ts";
+import type { ReferenceType } from "./format.ts";
 
 /** A text in the current language, read when it's shown. */
 export type Text = () => string;

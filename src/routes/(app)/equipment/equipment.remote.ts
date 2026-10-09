@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";

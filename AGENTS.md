@@ -191,7 +191,7 @@ schema has changes no migration makes. Never edit a migration that's been commit
 
 ## Activity log
 
-Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity.ts`), inside the
+Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity/log.ts`), inside the
 `db.transaction` that makes the change and after making it, so a refused or rolled-back change logs
 nothing (wrap a single write in a transaction for this). Tenant and user come from the request
 (`requireTenant()`, so the engineer portal logs too):
@@ -213,7 +213,7 @@ await db.transaction(async (tx) => {
   `after`'s fields are compared, and an update that changes nothing logs nothing. `ignore` leaves
   out fields that follow from others.
 - A new subject type gets a noun, page and field formats in `coreSubjectTypes`
-  (`src/lib/activity.ts`), or, for a module's records, in the `subjects` of its manifest
+  (`src/lib/activity/subjects.ts`), or, for a module's records, in the `subjects` of its manifest
   (`src/modules/<id>/module.ts`; its verbs are its `actions`).
   Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
 - Log deletions too: a subject links to its page until its deletion (or removal) is logged.

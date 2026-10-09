@@ -1,6 +1,6 @@
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
-import { recordActivity, type Subject } from "./activity.ts";
+import { recordActivity, type Subject } from "./activity/log.ts";
 import { refuseIfReferenced } from "./db/errors.ts";
 import { db } from "./db/index.ts";
 import { idInTenant, type TenantTable } from "./session.ts";

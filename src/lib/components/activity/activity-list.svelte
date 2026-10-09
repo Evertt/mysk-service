@@ -4,10 +4,10 @@
 	changed fields and when. Subjects link to their page while they exist.
 -->
 <script lang="ts">
-	import { actionSentence, subjectHref } from "#lib/activity.ts";
+	import { actionSentence, subjectHref } from "#lib/activity/subjects.ts";
 	import { formatDateTime } from "#lib/format.ts";
 	import { messageParts } from "#lib/i18n/parts.ts";
-	import type { ActivityEntry, SubjectLink } from "#lib/server/activity-feed.ts";
+	import type { ActivityEntry, SubjectLink } from "#lib/server/activity/feed.ts";
 
 	let {
 		entries,
@@ -21,7 +21,7 @@
 		empty?: string;
 	} = $props();
 
-	/** An entry's sentence, with slots for the user and the subject (see `#lib/activity.ts`). */
+	/** An entry's sentence, with slots for the user and the subject (see `#lib/activity/subjects.ts`). */
 	const sentence = (entry: ActivityEntry) =>
 		messageParts<"user" | "subject">((slot) =>
 			actionSentence(entry.action)({ user: slot("user"), subject: slot("subject") }),

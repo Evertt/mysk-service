@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 import { modules } from "#lib/modules/manifests.ts";
 import { isManager, parseRoles } from "#lib/roles.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
 import { inTenant, requireManager, requireMember } from "#lib/server/session.ts";

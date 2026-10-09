@@ -24,7 +24,7 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity.ts";
+import type { Sentence, SubjectType } from "#lib/activity/subjects.ts";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import type { OrderStatus } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
@@ -59,7 +59,7 @@ interface ModuleParts {
 	 * nothing to say.
 	 */
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
-	/** How the activity log reads for the module's records, by subject type (`#lib/activity.ts`). */
+	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;
 	/**
 	 * The verbs the module adds to the activity log (`ActivityAction`), as a sentence each. They

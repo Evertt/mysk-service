@@ -17,7 +17,7 @@ import {
 } from "#lib/members.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { isManager, parseRoles } from "#lib/roles.ts";
-import { recordActivityAfter } from "#lib/server/activity.ts";
+import { recordActivityAfter } from "#lib/server/activity/log.ts";
 import { auth } from "#lib/server/auth.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";

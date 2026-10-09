@@ -15,7 +15,7 @@
 		id,
 		description = m.activity_card_description(),
 	}: {
-		/** The subject type, e.g. `order` (see `#lib/activity.ts`). */
+		/** The subject type, e.g. `order` (see `#lib/activity/subjects.ts`). */
 		type: string;
 		id: string | number;
 		description?: string;

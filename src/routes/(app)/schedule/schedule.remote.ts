@@ -9,7 +9,7 @@ import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { assigneeProblem } from "#lib/orders/server/order-changes.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { date, id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { refreshRequested } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";

@@ -4,9 +4,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import type { Tenant } from "#lib/server/session.ts";
 
-import { lookUpNames, present, subjectStates } from "./activity-feed.ts";
-import type { Tenant } from "./session.ts";
+import { lookUpNames, present, subjectStates } from "./feed.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

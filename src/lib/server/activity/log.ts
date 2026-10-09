@@ -18,7 +18,7 @@
  * The tenant and the user come from the request (`requireTenant()`, so the engineer portal's
  * changes are logged too), unless given as `by` (e.g. accepting an invitation, which is done in
  * the invitation's organization rather than the current one). How entries read (the
- * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity.ts`.
+ * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
 import { type ActivityAction, roundQuantity } from "#lib/models.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";

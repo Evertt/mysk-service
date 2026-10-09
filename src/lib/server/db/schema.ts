@@ -429,7 +429,7 @@ export type ActivityChanges = Record<string, [unknown, unknown]>;
 
 /**
  * Who did what to which record, and when: one row per change, written by `recordActivity()` in
- * `#lib/server/activity.ts` in the same transaction as the change. The subject (and the optional
+ * `#lib/server/activity/log.ts` in the same transaction as the change. The subject (and the optional
  * parent, e.g. the order of an order line) is a type and id without a foreign key, so it can be
  * any table's, a module's included, and outlives the record: its label and the user's name are
  * kept as they were. Rows are never changed afterwards.
@@ -443,7 +443,7 @@ export const activity = sqliteTable(
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 		userName: text("user_name").notNull(),
 		action: text("action").$type<ActivityAction>().notNull(),
-		/** E.g. `order`, see `subjectTypes` in `#lib/activity.ts`. */
+		/** E.g. `order`, see `subjectTypes` in `#lib/activity/subjects.ts`. */
 		subjectType: text("subject_type").notNull(),
 		/** The record's id, as text (the auth tables' ids are text). */
 		subjectId: text("subject_id").notNull(),

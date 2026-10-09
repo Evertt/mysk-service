@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { m } from "#lib/paraglide/messages.js";
 import { isManager } from "#lib/roles.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, member, user } from "#lib/server/db/schema.ts";
 import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/session.ts";

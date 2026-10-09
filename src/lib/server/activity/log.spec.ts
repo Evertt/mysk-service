@@ -3,6 +3,7 @@ import { rmSync } from "node:fs";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import type { Tenant } from "#lib/server/session.ts";
 
 import {
 	type ActivityRecord,
@@ -10,8 +11,7 @@ import {
 	ignoredFields,
 	recordActivity,
 	recordOrderLines,
-} from "./activity.ts";
-import type { Tenant } from "./session.ts";
+} from "./log.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

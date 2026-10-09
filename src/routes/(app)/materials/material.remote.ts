@@ -10,7 +10,7 @@ import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
 import { lineTotalSql } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,

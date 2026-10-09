@@ -7,7 +7,7 @@
  */
 import type { Component } from "svelte";
 
-import type { Sentence } from "#lib/activity.ts";
+import type { Sentence } from "#lib/activity/subjects.ts";
 import type { AppModule, ModuleId } from "#lib/modules/manifests.ts";
 
 const loader = () => Promise.resolve({ default: {} as Component });

@@ -15,7 +15,7 @@ import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { checkLines, saveOrderLines } from "#lib/orders/server/lines.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity/log.ts";
 import { auth } from "#lib/server/auth.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
