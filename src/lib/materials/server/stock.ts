@@ -5,7 +5,7 @@
 import { error } from "@sveltejs/kit";
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import { formatNumber } from "#lib/format.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
 import { label } from "#lib/i18n/labels.ts";
 import {
 	holdsStock,

@@ -221,7 +221,7 @@ export function generateCallOuts(
 const levelLabel = (level: ContractLevel) =>
 	({ basic: "Basis", standard: "Standaard", premium: "Premium" })[level];
 
-// Like `formatDate` in `#lib/format.ts` in Dutch, which the seed script can't import.
+// Like `formatDate` in `#lib/i18n/format.ts` in Dutch, which the seed script can't import.
 const day = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric" });
 
 /** A contract's month on an invoice, worded like the app does in Dutch (the demo's language). */

@@ -8,7 +8,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatNumber } from "#lib/format.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
 import { label } from "#lib/i18n/labels.ts";
 import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";

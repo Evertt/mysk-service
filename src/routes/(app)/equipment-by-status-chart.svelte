@@ -8,7 +8,7 @@
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
 	import { statuses } from "#lib/equipment/display.ts";
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 
 	import ChartTable from "./chart-table.svelte";

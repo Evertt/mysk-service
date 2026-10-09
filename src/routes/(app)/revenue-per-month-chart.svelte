@@ -7,7 +7,7 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { dateFormatter, formatCents, formatNumber, numberFormatter } from "#lib/format.ts";
+	import { dateFormatter, formatCents, formatNumber, numberFormatter } from "#lib/i18n/format.ts";
 
 	import ChartTable from "./chart-table.svelte";
 	import type { RevenueInMonth } from "./dashboard-charts.ts";

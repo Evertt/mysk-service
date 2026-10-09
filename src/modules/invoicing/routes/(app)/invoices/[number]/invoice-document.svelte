@@ -6,7 +6,7 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/format.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import { formatRate } from "../../../../display.ts";

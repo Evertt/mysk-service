@@ -22,7 +22,7 @@
 	import type { RowData } from "@tanstack/svelte-table";
 	import { toast } from "svelte-sonner";
 
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
 	import BulkActionDialog from "./bulk-action-dialog.svelte";

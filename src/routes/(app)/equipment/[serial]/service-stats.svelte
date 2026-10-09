@@ -5,7 +5,7 @@
 -->
 <script lang="ts">
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/format.ts";
 	import { orderTypes } from "#lib/models.ts";
 	import { types } from "#lib/orders/display.ts";
 

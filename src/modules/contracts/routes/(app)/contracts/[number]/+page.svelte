@@ -8,7 +8,7 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { formatCents, formatDate } from "#lib/format.ts";
+	import { formatCents, formatDate } from "#lib/i18n/format.ts";
 	import { label } from "#lib/i18n/labels.ts";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import OrderStatusBadge from "#lib/orders/status-badge.svelte";

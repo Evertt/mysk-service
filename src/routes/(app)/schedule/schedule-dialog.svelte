@@ -11,7 +11,7 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/display.ts";
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n/format.ts";
 
 	import { DEFAULT_TIME, dayKey, parseDay } from "./board.ts";
 	import { getSchedule, scheduleOrder } from "./schedule.remote.ts";

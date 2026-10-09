@@ -4,7 +4,7 @@
 	after it, and who did it.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n/format.ts";
 	import { label } from "#lib/i18n/labels.ts";
 	import { formatQuantity } from "#lib/materials/display.ts";
 	import type { MaterialUnit } from "#lib/models.ts";

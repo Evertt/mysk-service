@@ -1,7 +1,7 @@
 <script lang="ts">
 	import CalendarCheckIcon from "@lucide/svelte/icons/calendar-check";
 
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 
 	import { getMyWork } from "./portal.remote.ts";
 	import WorkCard from "./work-card.svelte";

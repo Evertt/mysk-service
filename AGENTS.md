@@ -262,7 +262,7 @@ remote functions. Every user-facing text goes through a message; nothing English
 - **Server refusals**: `error(404, m.orders_not_found())`, `invalid(m.orders_delete_refused())` in
   the remote function's body, so they're in the request's language. Shared ones are
   `common_error_*` (`requireMember()` and friends use them).
-- **Formatting**: money, dates, times and numbers only through `#lib/format.ts` (`formatCents`,
+- **Formatting**: money, dates, times and numbers only through `#lib/i18n/format.ts` (`formatCents`,
   `formatDate`, `formatDateTime`, `formatTime`, `formatNumber`; `dateFormatter(options)` and
   `numberFormatter(options)` for other formats, safe at module scope), never `new Intl.*("en-GB")`
   or `toLocaleString()`. Number and date inputs stay `type="number"`/`"date"`: the browser shows

@@ -5,7 +5,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { formatCents } from "#lib/format.ts";
+import { formatCents } from "#lib/i18n/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "#lib/server/activity/log.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth/session.ts";

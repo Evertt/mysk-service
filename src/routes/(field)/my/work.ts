@@ -5,7 +5,7 @@
 import * as v from "valibot";
 
 import { startOfDay } from "#lib/dates.ts";
-import { dateFormatter, formatTime } from "#lib/format.ts";
+import { dateFormatter, formatTime } from "#lib/i18n/format.ts";
 import type { OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 

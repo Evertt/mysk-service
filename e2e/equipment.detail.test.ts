@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCents, formatDate } from "../src/lib/format.ts";
+import { formatCents, formatDate } from "../src/lib/i18n/format.ts";
 import { cents, organizations, rows, useApp, value } from "./app.ts";
 import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
 import { busiest, customersIn, equipmentPage, unit, unitId } from "./equipment-helpers.ts";

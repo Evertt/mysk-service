@@ -8,7 +8,7 @@
 
 	import type { MemberRole } from "#lib/auth/members.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n/format.ts";
 	import { labelOrValue } from "#lib/i18n/labels.ts";
 
 	import { changeRole, getMembers, removeMember } from "./members.remote.ts";

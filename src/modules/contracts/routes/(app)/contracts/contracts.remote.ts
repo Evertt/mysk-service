@@ -4,7 +4,7 @@ import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { nextDay } from "#lib/dates.ts";
-import { formatDate } from "#lib/format.ts";
+import { formatDate } from "#lib/i18n/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";

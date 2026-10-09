@@ -11,7 +11,7 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EngineerLink from "#lib/engineers/engineer-link.svelte";
-	import { formatCents, formatDate } from "#lib/format.ts";
+	import { formatCents, formatDate } from "#lib/i18n/format.ts";
 	import { formatQuantity } from "#lib/materials/display.ts";
 	import MaterialLink from "#lib/materials/material-link.svelte";
 	import { types } from "#lib/orders/display.ts";

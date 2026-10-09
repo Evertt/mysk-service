@@ -10,7 +10,7 @@ import * as v from "valibot";
 
 import { subjectTypeLabel, subjectTypes } from "#lib/activity/subjects.ts";
 import { nextDay } from "#lib/dates.ts";
-import { intlLocale } from "#lib/format.ts";
+import { intlLocale } from "#lib/i18n/format.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { present } from "#lib/server/activity/feed.ts";

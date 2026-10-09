@@ -8,7 +8,7 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatDateTime, formatTime } from "#lib/format.ts";
+	import { formatDateTime, formatTime } from "#lib/i18n/format.ts";
 	import { formatQuantity } from "#lib/materials/display.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";

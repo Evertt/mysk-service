@@ -5,7 +5,7 @@
 -->
 <script lang="ts">
 	import { actionSentence, subjectHref } from "#lib/activity/subjects.ts";
-	import { formatDateTime } from "#lib/format.ts";
+	import { formatDateTime } from "#lib/i18n/format.ts";
 	import { messageParts } from "#lib/i18n/parts.ts";
 	import type { ActivityEntry, SubjectLink } from "#lib/server/activity/feed.ts";
 

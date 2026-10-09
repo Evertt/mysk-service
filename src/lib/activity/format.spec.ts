@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { formatCents, formatDate, formatDateTime } from "#lib/format.ts";
+import { formatCents, formatDate, formatDateTime } from "#lib/i18n/format.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import { describeChanges, fieldLabel, formatValue, referencedIds } from "./format.ts";

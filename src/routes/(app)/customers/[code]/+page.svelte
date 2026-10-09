@@ -10,7 +10,7 @@
 	import { countryName } from "#lib/customers/countries.ts";
 	import SegmentBadge from "#lib/customers/segment-badge.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/format.ts";
 	import { label } from "#lib/i18n/labels.ts";
 
 	import { deleteCustomer, getCustomer } from "../customers.remote.ts";

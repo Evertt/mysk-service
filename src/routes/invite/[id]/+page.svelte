@@ -7,7 +7,7 @@
 	import { resolve } from "$app/paths";
 
 	import { invitedAsText } from "#lib/auth/members.ts";
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n/format.ts";
 	import { messageParts } from "#lib/i18n/parts.ts";
 
 	import PublicShell from "../../public-shell.svelte";

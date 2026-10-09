@@ -1,5 +1,5 @@
 import { invitedAsText } from "#lib/auth/members.ts";
-import { dateFormatter } from "#lib/format.ts";
+import { dateFormatter } from "#lib/i18n/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import type { Mail } from "./send.ts";

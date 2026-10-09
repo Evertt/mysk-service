@@ -6,7 +6,7 @@
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 
-import { formatDate, formatDateTime } from "#lib/format.ts";
+import { formatDate, formatDateTime } from "#lib/i18n/format.ts";
 import type { OrderTag } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { inTenant } from "#lib/server/auth/session.ts";

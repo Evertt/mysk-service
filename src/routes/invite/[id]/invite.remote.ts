@@ -6,7 +6,7 @@ import * as v from "valibot";
 
 import { invitationState } from "#lib/auth/members.ts";
 import { parseRoles } from "#lib/auth/roles.ts";
-import { formatNumber } from "#lib/format.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { recordActivityAfter } from "#lib/server/activity/log.ts";
 import { auth } from "#lib/server/auth/better-auth.ts";

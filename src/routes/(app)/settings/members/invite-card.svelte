@@ -11,7 +11,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { label as roleLabel } from "#lib/i18n/labels.ts";
 
 	import { invite } from "./members.remote.ts";

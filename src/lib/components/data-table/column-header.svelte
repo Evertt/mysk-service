@@ -12,7 +12,7 @@
 	import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { columnLabel } from "./features.ts";

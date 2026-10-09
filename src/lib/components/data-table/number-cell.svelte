@@ -5,7 +5,7 @@
 	→ "1 order", "3 orders" (in Dutch "1 opdracht", "3 opdrachten").
 -->
 <script lang="ts">
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { useCellContext } from "./table.svelte.ts";

@@ -7,7 +7,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-	import { formatCents } from "#lib/format.ts";
+	import { formatCents } from "#lib/i18n/format.ts";
 	import { label } from "#lib/i18n/labels.ts";
 	import { lineTotal, quantityStep } from "#lib/models.ts";
 
