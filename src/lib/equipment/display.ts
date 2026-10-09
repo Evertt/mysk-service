@@ -38,14 +38,19 @@ export const categoryOptions = labelOptions(
 );
 export const statusOptions = labelOptions("equipmentStatus", equipmentStatuses);
 
-const statusDetails: Record<EquipmentStatus, { variant: BadgeVariant }> = {
-	operational: { variant: "secondary" },
-	needs_service: { variant: "outline" },
-	out_of_service: { variant: "destructive" },
-	decommissioned: { variant: "ghost" },
+/**
+ * A status's badge variant and, for the charts, its colour: a CSS variable of the theme. The
+ * primary colour for units in service, destructive for those out of it (like its badge), and the
+ * muted one for decommissioned units, which are out of the picture.
+ */
+const statusDetails: Record<EquipmentStatus, { variant: BadgeVariant; color: string }> = {
+	operational: { variant: "secondary", color: "var(--primary)" },
+	needs_service: { variant: "outline", color: "var(--chart-3)" },
+	out_of_service: { variant: "destructive", color: "var(--destructive)" },
+	decommissioned: { variant: "ghost", color: "var(--muted-foreground)" },
 };
 
-/** Each status's translated `label` and badge variant. */
+/** Each status's translated `label`, badge variant and chart colour. */
 export const statuses = withLabels("equipmentStatus", statusDetails);
 
 /** Whether the unit's warranty still covers work done at `at` (now by default); its last day counts. */
