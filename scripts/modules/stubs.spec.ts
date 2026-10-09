@@ -4,7 +4,7 @@ import { routeExports } from "./routes.ts";
 import { renderComponentStub, renderScriptStub } from "./stubs.ts";
 
 describe("renderScriptStub", () => {
-	const importPath = "../../modules/sample/routes/sample/+page.ts";
+	const importPath = "#modules/sample/routes/sample/+page.ts";
 
 	test("repeats literal page options and names the other exports", () => {
 		const exports = routeExports(
@@ -65,7 +65,7 @@ describe("renderComponentStub", () => {
 	test("passes the props of a page or layout on, typed by the route", () => {
 		const stub = renderComponentStub({
 			from: "x/+page.svelte",
-			importPath: "../x/+page.svelte",
+			importPath: "#modules/x/+page.svelte",
 			kind: "page",
 		});
 		expect(stub).toContain(`import type { PageProps } from "./$types";`);

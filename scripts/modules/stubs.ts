@@ -122,7 +122,9 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 		for (const { file, name, folder, rest } of files) {
 			const kind = routeFileKind(name)!;
 			const from = `src/modules/${module.id}/routes/${file}`;
-			const importPath = posix.relative(posix.dirname(`src/routes/${file}`), from);
+			// By alias, not relatively: the same specifier whatever the stub's depth, and it names the
+			// module (`#modules/…` is for what the generator writes, see `src/modules/boundaries.spec.ts`).
+			const importPath = `#modules/${module.id}/routes/${file}`;
 			const stub =
 				kind === "script"
 					? renderScriptStub({
