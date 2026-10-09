@@ -6,7 +6,6 @@ import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts"
 import { findMaterial } from "#lib/materials/server/materials.ts";
 import { moveStock } from "#lib/materials/server/stock.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, requireMember } from "#lib/server/auth";

@@ -5,7 +5,6 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth";
 import { isModuleId, type ModuleId } from "#lib/modules/ids.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 

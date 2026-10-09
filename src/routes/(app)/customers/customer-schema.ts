@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import { customerSegments } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { email, phone, text } from "#lib/schema.ts";
 
 /** The fields of the customer form, shared by creating and editing a customer. */

@@ -8,7 +8,6 @@ import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server
 import { moveStock, withBalances } from "#lib/materials/server/stock.ts";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
 import { lineTotalSql } from "#lib/orders/server/pricing.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";

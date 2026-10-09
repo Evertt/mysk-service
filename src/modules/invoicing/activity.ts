@@ -4,7 +4,6 @@ import { resolve } from "$app/paths";
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { FieldFormat, Sentence, SubjectType } from "#lib/activity";
 import { formatCents, formatDate, formatNumber } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 
 import { formatRate } from "./display.ts";
 import { invoicingLabels } from "./labels.ts";

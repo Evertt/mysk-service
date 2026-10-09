@@ -12,7 +12,6 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
 import { id, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { inTenant, requireMember } from "#lib/server/auth";

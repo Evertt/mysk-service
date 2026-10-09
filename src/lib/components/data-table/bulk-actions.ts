@@ -12,7 +12,6 @@
 import type { Component } from "svelte";
 
 import { formatNumber } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { ListColumns, ListWhere } from "./list-definition.ts";
 

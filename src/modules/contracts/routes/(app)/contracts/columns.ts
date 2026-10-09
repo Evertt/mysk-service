@@ -5,7 +5,6 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatCents, formatDate } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 
 import ContractLink from "../../../contract-link.svelte";
 import { formatTerm } from "../../../display.ts";

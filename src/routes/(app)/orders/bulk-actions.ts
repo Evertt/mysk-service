@@ -11,7 +11,6 @@ import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-a
 import { labelOptions } from "#lib/i18n";
 import { isEditableOrder, manualOrderStatuses } from "#lib/models.ts";
 import type { OrderBulkRow } from "#lib/modules/manifests.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import {
 	bulkAssignOrders,

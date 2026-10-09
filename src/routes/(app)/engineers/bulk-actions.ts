@@ -3,7 +3,6 @@ import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 import UserRoundXIcon from "@lucide/svelte/icons/user-round-x";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { EngineerRow } from "./columns.ts";
 import { bulkSetEngineersActive } from "./engineers.remote.ts";

@@ -1,6 +1,5 @@
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
 import { cents, date, id } from "#lib/schema.ts";
 
 import { contractLevels } from "../../../model.ts";

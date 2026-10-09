@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import { formatNumber } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 import { cents, date, id, text } from "#lib/schema.ts";
 
 import { formatRate } from "../../../display.ts";

@@ -9,7 +9,6 @@ import CustomerLink from "#lib/customers/customer-link.svelte";
 import SegmentBadge from "#lib/customers/segment-badge.svelte";
 import { intlLocale } from "#lib/i18n";
 import { customerSegments } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { getCustomers } from "./customers.remote.ts";
 

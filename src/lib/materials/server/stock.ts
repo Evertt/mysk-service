@@ -16,7 +16,6 @@ import {
 	type StockLevel,
 	type StockMovementKind,
 } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { idInTenant, requireTenant } from "#lib/server/auth";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { material, stockMovement } from "#lib/server/db/schema.ts";

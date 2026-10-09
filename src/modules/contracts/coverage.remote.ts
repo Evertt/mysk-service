@@ -9,7 +9,6 @@ import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { addDays, startOfDay } from "#lib/dates.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { inTenant, requireModule, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";

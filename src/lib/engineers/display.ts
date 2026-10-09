@@ -7,7 +7,6 @@ import type { Component } from "svelte";
 
 import { labelOptions, withLabels } from "#lib/i18n";
 import { type EngineerSpecialty, engineerSpecialties } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 interface Display {
 	icon: Component;

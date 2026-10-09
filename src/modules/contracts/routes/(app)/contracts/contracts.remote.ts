@@ -5,7 +5,6 @@ import * as v from "valibot";
 
 import { nextDay } from "#lib/dates.ts";
 import { formatDate } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, idsInTenant, inTenant, requireModule, tenantJoin } from "#lib/server/auth";

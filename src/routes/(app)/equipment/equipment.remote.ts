@@ -4,7 +4,6 @@ import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth";

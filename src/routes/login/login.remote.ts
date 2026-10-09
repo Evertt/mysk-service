@@ -4,7 +4,6 @@ import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
 import { isFieldEngineer } from "#lib/auth";
-import { m } from "#lib/paraglide/messages.js";
 import { auth, loadTenant } from "#lib/server/auth";
 
 /** Only local paths, so the login can't be used to send people to another site. */

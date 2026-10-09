@@ -26,7 +26,6 @@ import {
 } from "#lib/i18n";
 import type { CoreActivityAction } from "#lib/models.ts";
 import { type AppModule, modules } from "#lib/modules/manifests.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { ReferenceType } from "./format.ts";
 

@@ -5,7 +5,6 @@
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
 import type { TableBulkAction } from "#lib/modules/manifests.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import { invoiceOrders } from "./bulk.remote.ts";
 

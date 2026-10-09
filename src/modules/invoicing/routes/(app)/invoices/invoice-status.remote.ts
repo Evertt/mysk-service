@@ -5,7 +5,6 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { OrderStatus } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, idsInTenant, requireModule } from "#lib/server/auth";

@@ -16,7 +16,6 @@
  *   on. Cancelled orders and other types of work (maintenance, inspections) have no deadline.
  */
 import type { OrderStatus, OrderType } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import { contractLabels } from "./labels.ts";
 import { type ContractLevel, contractStatus } from "./model.ts";

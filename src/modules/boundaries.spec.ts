@@ -122,8 +122,7 @@ describe("the checks", () => {
 			path: "src/modules/a/module.ts",
 			source: `
 			import { defineModule } from "#lib/modules/define.ts";
-			import { m } from "#lib/paraglide/messages.js";
-			import Icon from "@lucide/svelte/icons/file-check";
+						import Icon from "@lucide/svelte/icons/file-check";
 			import type { Heavy } from "./heavy.svelte";
 			import { subjects } from "./activity.ts";
 			import Card from "./card.svelte";

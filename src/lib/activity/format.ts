@@ -10,7 +10,6 @@
 import type { FieldFormat, SubjectType, Text } from "#lib/activity";
 import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
 import { modules } from "#lib/modules/manifests.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
 const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;

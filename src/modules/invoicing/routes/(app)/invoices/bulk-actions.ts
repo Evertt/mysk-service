@@ -2,7 +2,6 @@
 import BadgeCheckIcon from "@lucide/svelte/icons/badge-check";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import { canChange } from "../../../invoice.ts";
 import type { InvoiceRow } from "./columns.ts";

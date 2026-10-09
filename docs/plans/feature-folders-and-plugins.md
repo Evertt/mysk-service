@@ -312,7 +312,6 @@ in:
 import FileCheckIcon from "@lucide/svelte/icons/file-check";
 
 import { defineModule } from "#lib/modules.js";
-import { m } from "#lib/paraglide/messages.js";
 
 import { contractSubjects } from "./activity.ts";
 

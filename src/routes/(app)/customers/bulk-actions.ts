@@ -2,7 +2,6 @@
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { CustomerRow } from "./columns.ts";
 import { bulkDeleteCustomers } from "./customers.remote.ts";

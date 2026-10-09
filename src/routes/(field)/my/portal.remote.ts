@@ -12,7 +12,6 @@ import { formatNumber, label } from "#lib/i18n";
 import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { checkLines, saveOrderLines } from "#lib/orders/server/lines.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { auth, idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/auth";

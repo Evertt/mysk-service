@@ -28,8 +28,6 @@
  */
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
-
 import {
 	defaultPageSizes,
 	filterValues,

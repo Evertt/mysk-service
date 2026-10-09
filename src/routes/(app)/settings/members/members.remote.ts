@@ -17,7 +17,6 @@ import {
 	roleChangeRefusal,
 } from "#lib/auth";
 import { label } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 import { recordActivityAfter } from "#lib/server/activity";
 import { auth, inTenant, requireManager, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";

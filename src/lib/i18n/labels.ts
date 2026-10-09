@@ -20,7 +20,6 @@ import type {
 	OrderType,
 	StockMovementKind,
 } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 export type Labels<T extends string> = Record<T, () => string>;
 

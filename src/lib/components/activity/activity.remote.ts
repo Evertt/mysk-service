@@ -12,7 +12,6 @@ import { subjectTypeLabel, subjectTypes } from "#lib/activity";
 import { nextDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n";
 import { modules as appModules } from "#lib/modules/manifests.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { present } from "#lib/server/activity";
 import { inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";

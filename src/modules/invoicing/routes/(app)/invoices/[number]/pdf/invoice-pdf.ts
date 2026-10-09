@@ -6,7 +6,6 @@
 import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
 import { formatCents, formatDate, formatNumber } from "#lib/i18n";
-import { m } from "#lib/paraglide/messages.js";
 
 import { formatRate } from "../../../../../display.ts";
 import type { InvoiceState } from "../../../../../invoice.ts";

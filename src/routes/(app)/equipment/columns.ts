@@ -8,7 +8,6 @@ import CustomerLink from "#lib/customers/customer-link.svelte";
 import CategoryLabel from "#lib/equipment/category-label.svelte";
 import StatusBadge from "#lib/equipment/status-badge.svelte";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";

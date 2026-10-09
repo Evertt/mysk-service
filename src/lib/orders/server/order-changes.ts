@@ -7,7 +7,6 @@ import { and, eq } from "drizzle-orm";
 
 import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, inTenant } from "#lib/server/auth";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
