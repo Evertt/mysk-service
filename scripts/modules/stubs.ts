@@ -42,7 +42,7 @@ export function renderScriptStub(options: {
 	const body: string[] = [];
 	if (guard) {
 		head.push(`import type { LayoutServerLoadEvent } from "./$types";`, "");
-		head.push(`import { guardModule } from "#lib/server/modules.ts";`);
+		head.push(`import { guardModule } from "#lib/server/modules/hooks.ts";`);
 	}
 	const imported = [...viaConst, ...(guard && hasLoad ? ["load"] : [])];
 	if (imported.length) {

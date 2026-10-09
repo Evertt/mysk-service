@@ -42,7 +42,7 @@ export const config = moduleConfig;
 			exports,
 			guard: "sample",
 		});
-		expect(stub).toContain(`import { guardModule } from "#lib/server/modules.ts";`);
+		expect(stub).toContain(`import { guardModule } from "#lib/server/modules/hooks.ts";`);
 		expect(stub).toContain(`import { load as moduleLoad } from "${importPath}";`);
 		expect(stub).toMatch(/guardModule\("sample"\);\n[\s\S]*= moduleLoad;\n\treturn run\(event\);/);
 		// Kit reads that there is a `load`, and no more.

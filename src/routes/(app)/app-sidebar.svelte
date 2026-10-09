@@ -10,7 +10,7 @@
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 	import PackageIcon from "@lucide/svelte/icons/package";
 
-	import { modules } from "#lib/modules.ts";
+	import { modules } from "#lib/modules/manifests.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
 	import { getCurrentTenant } from "./session.remote.ts";

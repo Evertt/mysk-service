@@ -12,8 +12,8 @@ import {
 import { activityActions } from "./models.ts";
 
 // Made-up modules instead of the ones in `src/modules`.
-vi.mock("./modules.gen.ts", async () => ({
-	manifests: (await import("./fake-modules.ts")).fakeModules,
+vi.mock("./modules/manifests.gen.ts", async () => ({
+	manifests: (await import("./modules/fakes.ts")).fakeModules,
 }));
 
 const { order, equipment, engineer, module } = coreSubjectTypes;

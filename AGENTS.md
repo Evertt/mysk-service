@@ -67,9 +67,9 @@ helpers are in `src/lib/server/session.ts`:
   table. Where a reference must belong to the same customer (an order's equipment, a contract's
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
-  about modules. A module adds to core pages through `slots` in `src/lib/modules.ts` (components
+  about modules. A module adds to core pages through `slots` in `src/lib/modules/manifests.ts` (components
   that load their own data with `requireModule()`), and to core server logic through hooks in
-  `src/lib/server/modules.ts`; both only take part for tenants that have the module. A module
+  `src/lib/server/modules/hooks.ts`; both only take part for tenants that have the module. A module
   declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
   `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
   `tag`, `billableItems`: asked in parallel about a batch, answers merged in registry order, an
@@ -87,7 +87,7 @@ helpers are in `src/lib/server/session.ts`:
 ## Modules
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
-self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/define-module.ts`: label,
+self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
 description, `route`, icon, `slots`, `subjects`, `actions`, `bulkActions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
@@ -98,8 +98,8 @@ migration committed.
 
 - `scripts/modules.ts` (its parts, each with a spec, are in `scripts/modules/`) links the folders in;
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
-  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules.gen.ts`,
-  `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
+  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
+  `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
   `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
   for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
   `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
@@ -119,7 +119,7 @@ migration committed.
 - Every remote function and endpoint of a module starts with `requireModule("<id>")`: the guard on
   the pages is for the experience, this is what keeps the data safe (a layout's load doesn't cover
   `+server.ts` endpoints).
-- Core declares every extension point (`#lib/modules.ts`, `#lib/server/modules.ts`); core never
+- Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
   imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
   checks (`#modules/…` is for the generated registries only). Module tables reference core tables
   (composite tenant keys, columns from `#lib/server/db/columns.ts`), never the reverse; one migration
@@ -149,7 +149,7 @@ server `refuseChange`/`saved` hooks.
   (which contract covers an order, the fees due), stays in `e2e/`; the e2e of contracts and
   invoicing import it from there. A core test of what a module adds (invoicing's bulk action on the
   orders list) is that module's e2e test, not the core's.
-- Core specs test core with made-up modules (`src/lib/fake-modules.ts`, mocked in as `modules.gen.ts`
+- Core specs test core with made-up modules (`src/lib/modules/fakes.ts`, mocked in as `manifests.gen.ts`
   or passed to the function as the registry); what a module does is tested in its own folder.
 
 ## Server-side lists

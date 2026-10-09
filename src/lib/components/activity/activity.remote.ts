@@ -11,7 +11,7 @@ import * as v from "valibot";
 import { subjectTypeLabel, subjectTypes } from "#lib/activity.ts";
 import { nextDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/format.ts";
-import { modules as appModules } from "#lib/modules.ts";
+import { modules as appModules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { present } from "#lib/server/activity-feed.ts";
 import { db } from "#lib/server/db/index.ts";

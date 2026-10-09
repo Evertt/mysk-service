@@ -18,7 +18,7 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
-import { moduleIds } from "#lib/module-ids.ts";
+import { moduleIds } from "#lib/modules/ids.ts";
 
 import { demoOrganizations, demoUsers } from "../demo.ts";
 import { moduleSeeds } from "../module-seeds.gen.ts";

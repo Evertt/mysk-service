@@ -5,7 +5,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate } from "#lib/format.ts";
 	import { labelOrValue } from "#lib/i18n/labels.ts";
-	import { modules as moduleRegistry } from "#lib/modules.ts";
+	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
 
 	import { getOrganizationSettings, setModule } from "./settings.remote.ts";
 

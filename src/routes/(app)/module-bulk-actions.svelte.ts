@@ -1,9 +1,13 @@
 /**
  * The bulk actions the current tenant's modules add to a core table's selection (see
- * `bulkActions` in `#lib/modules.ts`), e.g. invoicing's "Create invoice" on the orders list. They
+ * `bulkActions` in `#lib/modules/manifests.ts`), e.g. invoicing's "Create invoice" on the orders list. They
  * load after the table, so `current` is empty at first (and for a tenant without such modules).
  */
-import { bulkActionLoaders, type BulkTableName, type TableBulkAction } from "#lib/modules.ts";
+import {
+	bulkActionLoaders,
+	type BulkTableName,
+	type TableBulkAction,
+} from "#lib/modules/manifests.ts";
 
 import { getCurrentTenant } from "./session.remote.ts";
 

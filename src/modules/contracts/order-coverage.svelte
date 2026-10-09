@@ -1,6 +1,6 @@
 <!--
 	@component
-	The contracts module's card on an order's page (the `order` slot in `#lib/modules.ts`): the
+	The contracts module's card on an order's page (the `order` slot in `#lib/modules/manifests.ts`): the
 	contract that covered the order and its response deadline. Nothing if no contract did.
 -->
 <script lang="ts">

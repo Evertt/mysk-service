@@ -1,6 +1,6 @@
 /**
  * What the invoicing module adds to the orders list's selection (see `bulkActions` in
- * `#lib/modules.ts` and `order-bulk-actions.ts`).
+ * `#lib/modules/manifests.ts` and `order-bulk-actions.ts`).
  */
 import { command } from "$app/server";
 import { error, isValidationError } from "@sveltejs/kit";

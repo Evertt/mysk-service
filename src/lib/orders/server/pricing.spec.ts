@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { lineTotal } from "#lib/models.ts";
 import { db } from "#lib/server/db/index.ts";
-import type { ServerModule } from "#lib/server/modules.ts";
+import type { ServerModule } from "#lib/server/modules/hooks.ts";
 
 import {
 	laborCost,
@@ -27,7 +27,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 });
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 // The core, without the modules in `src/modules`.
-vi.mock("#lib/server/modules.gen.ts", () => ({ generatedServerModules: () => [] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
 
 test("labour is charged at the engineer's hourly rate", () => {
 	expect(laborCost(2.5, 6000)).toBe(15_000);

@@ -9,7 +9,7 @@
  * they're read in the current language when shown, never at module scope.
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
- * records, in its `subjects` in `#lib/modules.ts`; likewise its verbs go in its `actions`. How
+ * records, in its `subjects` in `#lib/modules/manifests.ts`; likewise its verbs go in its `actions`. How
  * their fields and values read is in `#lib/activity-format.ts`.
  */
 import { resolve } from "$app/paths";
@@ -17,7 +17,7 @@ import { resolve } from "$app/paths";
 import { formatCents, formatDate, formatDateTime } from "#lib/format.ts";
 import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.ts";
 import type { CoreActivityAction } from "#lib/models.ts";
-import { type AppModule, modules } from "#lib/modules.ts";
+import { type AppModule, modules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { parseRoles } from "#lib/roles.ts";
 
@@ -161,7 +161,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	},
 	/** An order's materials, told apart by material: the subject's id is the material's. */
 	order_line: { noun: m.activity_subject_order_line },
-	/** An optional module (`#lib/modules.ts`), by its id; shown by its name. */
+	/** An optional module (`#lib/modules/manifests.ts`), by its id; shown by its name. */
 	module: {
 		noun: m.activity_subject_module,
 		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,

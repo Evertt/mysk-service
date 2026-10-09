@@ -5,7 +5,7 @@ import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { lineTotalSql, priceOrders } from "#lib/orders/server/pricing.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
-import { tagOrders } from "#lib/server/modules.ts";
+import { tagOrders } from "#lib/server/modules/hooks.ts";
 import { inTenant, requireMember } from "#lib/server/session.ts";
 import { pageGroupsOf, planList } from "#lib/server/table-query.ts";
 

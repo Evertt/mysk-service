@@ -1,6 +1,6 @@
 <!--
 	@component
-	The contracts module's cards on the dashboard (the `dashboard` slot in `#lib/modules.ts`): call-outs
+	The contracts module's cards on the dashboard (the `dashboard` slot in `#lib/modules/manifests.ts`): call-outs
 	whose response time is at risk or overdue, and contracts about to end.
 -->
 <script lang="ts">

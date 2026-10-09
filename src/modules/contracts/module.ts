@@ -1,6 +1,6 @@
 import FileCheckIcon from "@lucide/svelte/icons/file-check";
 
-import { defineModule } from "#lib/define-module.ts";
+import { defineModule } from "#lib/modules/define.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import { contractSubjects } from "./activity.ts";

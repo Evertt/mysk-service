@@ -9,7 +9,7 @@
 	import ActivityList from "#lib/components/activity/activity-list.svelte";
 	import { getActivity, getActivityFilters } from "#lib/components/activity/activity.remote.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { modules } from "#lib/modules.ts";
+	import { modules } from "#lib/modules/manifests.ts";
 
 	const allModules = modules.map((module) => module.id);
 

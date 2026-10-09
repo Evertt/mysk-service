@@ -12,8 +12,8 @@ const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 // Made-up modules instead of the ones in `src/modules`.
-vi.mock("#lib/modules.gen.ts", async () => ({
-	manifests: (await import("#lib/fake-modules.ts")).fakeModules,
+vi.mock("#lib/modules/manifests.gen.ts", async () => ({
+	manifests: (await import("#lib/modules/fakes.ts")).fakeModules,
 }));
 
 // An in-memory database with just the tables the feed reads, instead of the app's, which needs

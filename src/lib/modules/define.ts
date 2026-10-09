@@ -1,9 +1,9 @@
-import type { ModuleManifest } from "#lib/modules.ts";
+import type { ModuleManifest } from "#lib/modules/manifests.ts";
 
 /**
  * Declares a module in its `module.ts` (`src/modules/<id>/module.ts`, default export), checked
- * against core's extension points (`ModuleManifest`). The registry in `#lib/modules.ts` gets the
- * manifests from `modules.gen.ts` and reads `label` and `description` as plain texts, so they
+ * against core's extension points (`ModuleManifest`). The registry in `#lib/modules/manifests.ts` gets the
+ * manifests from `manifests.gen.ts` and reads `label` and `description` as plain texts, so they
  * are getters here, translated when read.
  *
  * Kept apart from the registry so a `module.ts` can import it without the registry (which imports

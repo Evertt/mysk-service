@@ -51,7 +51,7 @@ describe("generateModules", () => {
 		expect(modules).toEqual(["sample"]);
 		expect(changed.length).toBeGreaterThan(10);
 
-		expect(read("src/lib/modules.gen.ts")).toContain(
+		expect(read("src/lib/modules/manifests.gen.ts")).toContain(
 			`import sampleModule from "#modules/sample/module.ts";`,
 		);
 		expect(read("src/lib/server/db/modules.gen.ts")).toContain("sample/server/schema.ts");
@@ -98,7 +98,7 @@ describe("generateModules", () => {
 		rmSync(join(root, "src/modules"), { recursive: true });
 		const { modules, changed } = generateModules(root);
 		expect(modules).toEqual([]);
-		expect(changed).toContain("src/lib/modules.gen.ts");
+		expect(changed).toContain("src/lib/modules/manifests.gen.ts");
 		expect(changed).toContain("project.inlang/settings.json");
 	});
 
@@ -111,7 +111,7 @@ describe("generateModules", () => {
 		expect(has("src/routes/(app)/orders/+page.svelte")).toBe(true);
 		expect(has("src/routes/login/+page.svelte")).toBe(true);
 		expect(read("project.inlang/settings.json")).toBe(repoSettings);
-		expect(read("src/lib/modules.gen.ts")).toContain("[] as const");
+		expect(read("src/lib/modules/manifests.gen.ts")).toContain("[] as const");
 	});
 
 	test("removes the stubs of a route file that is gone", () => {

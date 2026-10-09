@@ -1,6 +1,6 @@
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
-import { defineModule } from "#lib/define-module.ts";
+import { defineModule } from "#lib/modules/define.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import { invoicingActions, invoicingSubjects } from "./activity.ts";

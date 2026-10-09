@@ -313,7 +313,7 @@ export const stockMovementRelations = relations(stockMovement, ({ one }) => ({
 
 // --- Tenants and modules --------------------------------------------------------------------------
 
-/** The optional modules (see `#lib/modules.ts`) a tenant has, e.g. through their subscription. */
+/** The optional modules (see `#lib/modules/manifests.ts`) a tenant has, e.g. through their subscription. */
 export const organizationModule = sqliteTable(
 	"organization_module",
 	{

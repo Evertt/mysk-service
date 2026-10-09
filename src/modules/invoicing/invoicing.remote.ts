@@ -1,5 +1,5 @@
 /**
- * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules.ts`): the
+ * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): the
  * invoice an order is on, and the receivables on the dashboard.
  */
 import { query } from "$app/server";

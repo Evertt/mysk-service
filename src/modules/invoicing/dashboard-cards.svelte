@@ -1,6 +1,6 @@
 <!--
 	@component
-	The invoicing module's cards on the dashboard (the `dashboard` slot in `#lib/modules.ts`): what
+	The invoicing module's cards on the dashboard (the `dashboard` slot in `#lib/modules/manifests.ts`): what
 	customers owe and how much of it is overdue, and the most overdue invoices.
 -->
 <script lang="ts">

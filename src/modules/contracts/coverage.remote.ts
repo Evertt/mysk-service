@@ -1,5 +1,5 @@
 /**
- * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules.ts`): an
+ * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): an
  * order's coverage and response time, the contracts covering a unit, and the dashboard's cards.
  */
 import { query } from "$app/server";

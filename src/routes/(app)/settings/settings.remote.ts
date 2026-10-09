@@ -2,7 +2,7 @@ import { form, getRequestEvent, query } from "$app/server";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { modules } from "#lib/modules.ts";
+import { modules } from "#lib/modules/manifests.ts";
 import { isManager, parseRoles } from "#lib/roles.ts";
 import { recordActivity } from "#lib/server/activity.ts";
 import { db } from "#lib/server/db/index.ts";

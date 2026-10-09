@@ -6,8 +6,8 @@ import { parseArgs } from "node:util";
 
 import * as v from "valibot";
 
-// Not `#lib/modules.ts`, the registry: it registers Svelte components, which plain Node can't load.
-import { type ModuleId, moduleIds } from "#lib/module-ids.ts";
+// Not `#lib/modules/manifests.ts`, the registry: it registers Svelte components, which plain Node can't load.
+import { type ModuleId, moduleIds } from "#lib/modules/ids.ts";
 
 export const usage = `Creates an organization and its owner, e.g. on a new deployment.
 

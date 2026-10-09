@@ -1,10 +1,10 @@
 /**
- * The invoicing module's bulk actions on the orders list (see `bulkActions` in `#lib/modules.ts`):
+ * The invoicing module's bulk actions on the orders list (see `bulkActions` in `#lib/modules/manifests.ts`):
  * a draft invoice for the selected completed orders of one customer, which then opens.
  */
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
-import type { TableBulkAction } from "#lib/modules.ts";
+import type { TableBulkAction } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 import { invoiceOrders } from "./bulk.remote.ts";

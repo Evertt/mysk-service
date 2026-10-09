@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { moduleIds } from "#lib/module-ids.ts";
+import { moduleIds } from "#lib/modules/ids.ts";
 
 import { parseCreateArgs, UsageError } from "./create-organization-args.ts";
 

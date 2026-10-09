@@ -10,7 +10,7 @@
  *   to this order keeps the demo data the same as it was before the module had a folder of its own.
  * - `run()`, once all the tenants and their core data are in, inserts what `generate()` made.
  *
- * What the module does at runtime through hooks (`#lib/server/modules.ts`), it does at seed time
+ * What the module does at runtime through hooks (`#lib/server/modules/hooks.ts`), it does at seed time
  * through collectors, which the seed of whoever consumes it asks without knowing the module:
  * `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for `billing.billableItems`. They
  * answer from what the modules made in `generate()`, so a consumer asks in `run()` (a tenant's
@@ -22,9 +22,9 @@
 import type { Faker } from "@faker-js/faker";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
-import type { ModuleId } from "#lib/module-ids.ts";
-import type { PriceAdjustment } from "#lib/modules.ts";
-import type { BillableItem, BillingPeriod } from "#lib/server/modules.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
+import type { PriceAdjustment } from "#lib/modules/manifests.ts";
+import type { BillableItem, BillingPeriod } from "#lib/server/modules/hooks.ts";
 
 import type * as moduleSchema from "../modules.gen.ts";
 import type * as schema from "../schema.ts";

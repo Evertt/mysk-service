@@ -2,18 +2,18 @@ import { existsSync, readdirSync } from "node:fs";
 
 import { describe, expect, test } from "vite-plus/test";
 
-import { gadgets, widgets } from "./fake-modules.ts";
-import { generatedModuleIds } from "./module-ids.gen.ts";
-import { moduleIds } from "./module-ids.ts";
-import { manifests } from "./modules.gen.ts";
-import { bulkActionLoaders, modules, type SlotName, slotLoaders } from "./modules.ts";
+import { gadgets, widgets } from "./fakes.ts";
+import { generatedModuleIds } from "./ids.gen.ts";
+import { moduleIds } from "./ids.ts";
+import { manifests } from "./manifests.gen.ts";
+import { bulkActionLoaders, modules, type SlotName, slotLoaders } from "./manifests.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
 });
 
 test("the folders in src/modules with a module.ts have their manifest in the registry, by id", () => {
-	const dir = new URL("../modules/", import.meta.url);
+	const dir = new URL("../../modules/", import.meta.url);
 	const folders = existsSync(dir)
 		? readdirSync(dir, { withFileTypes: true })
 				.filter(
@@ -33,7 +33,7 @@ test("module ids are unique", () => {
 });
 
 test.each(modules)("the $id module's route is a page", ({ route }) => {
-	expect(existsSync(new URL(`../routes${route}/+page.svelte`, import.meta.url))).toBe(true);
+	expect(existsSync(new URL(`../../routes${route}/+page.svelte`, import.meta.url))).toBe(true);
 });
 
 describe("slotLoaders", () => {
