@@ -182,7 +182,7 @@ overrides:
   vitest@*: 5.0.1
 
 patchedDependencies:
-  '@tanstack/svelte-table@9.2.5': b1790d993077839f392ff3c42edf18353cc13f244d10008db448ae407ee1c593
+  '@tanstack/svelte-table@9.2.5': 6bc4620aec7b25efbf66cfdbe3692bcadc065ec94afe1b2a205dd17eabadff4d
 
 importers:
 
@@ -239,7 +239,7 @@ importers:
         version: 4.3.3(@voidzero-dev/vite-plus-core@1.0.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))
       '@tanstack/svelte-table':
         specifier: ^9.2.5
-        version: 9.2.5(patch_hash=b1790d993077839f392ff3c42edf18353cc13f244d10008db448ae407ee1c593)(svelte@5.57.1)
+        version: 9.2.5(patch_hash=6bc4620aec7b25efbf66cfdbe3692bcadc065ec94afe1b2a205dd17eabadff4d)(svelte@5.57.1)
       '@types/node':
         specifier: ^24
         version: 24.19.1
@@ -5410,7 +5410,7 @@ snapshots:
       '@tanstack/store': 0.11.2
       svelte: 5.57.1
 
-  '@tanstack/svelte-table@9.2.5(patch_hash=b1790d993077839f392ff3c42edf18353cc13f244d10008db448ae407ee1c593)(svelte@5.57.1)':
+  '@tanstack/svelte-table@9.2.5(patch_hash=6bc4620aec7b25efbf66cfdbe3692bcadc065ec94afe1b2a205dd17eabadff4d)(svelte@5.57.1)':
     dependencies:
       '@tanstack/svelte-store': 0.12.2(svelte@5.57.1)
       '@tanstack/table-core': 9.2.5

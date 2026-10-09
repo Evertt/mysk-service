@@ -162,9 +162,10 @@
 			{...navigation.body}
 			class={cn("transition-opacity", loading && "opacity-50 delay-150")}
 		>
-			<!-- Rows are keyed by the row itself, not its id: Svelte doesn't update a kept item, and when
-			     the data changes (e.g. a bulk action's refresh) a row with the same id is a new row object
-			     with the new values. Sorting, filtering and paging keep the row objects. -->
+			<!-- A page's rows aren't keyed: each <tr> (and its cells, keyed by column) is updated with
+			     whichever row is in its place now, which is much cheaper than making new rows when
+			     paging, sorting or filtering changes them all. Grouped rows are keyed by the row itself:
+			     a group's rows come and go when it's collapsed. -->
 			{#if grouped}
 				{#each grouped.groups as group, index (group.key)}
 					<GroupRow
@@ -186,7 +187,7 @@
 					{@render empty()}
 				{/each}
 			{:else}
-				{#each table.getRowModel().rows as row (row)}
+				{#each table.getRowModel().rows as row}
 					{@render dataRow(row)}
 				{:else}
 					{@render empty()}
@@ -203,7 +204,9 @@
 		tabindex={navigation.tabIndex(row.id)}
 		class={focusRing}
 	>
-		{#each row.getVisibleCells().filter((cell) => !cell.column.getIsGrouped()) as cell (cell.id)}
+		{#each row
+			.getVisibleCells()
+			.filter((cell) => !cell.column.getIsGrouped()) as cell (cell.column.id)}
 			{@const pin = pinned(cell.column.id)}
 			<table.AppCell {cell}>
 				{#snippet children(c)}
