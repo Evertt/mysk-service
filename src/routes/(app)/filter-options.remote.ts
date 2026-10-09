@@ -11,7 +11,7 @@ import type { RecordOptions } from "#lib/components/data-table/server-table.svel
 import { inTenant, requireMember } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
-import { nocase, searchMatch } from "#lib/server/table-query.ts";
+import { nocase, searchMatch } from "#lib/server/lists/plan.ts";
 
 /** A unit as the lists show it: manufacturer and model. */
 const unitName = sql<string>`${equipment.manufacturer} || ' ' || ${equipment.model}`;

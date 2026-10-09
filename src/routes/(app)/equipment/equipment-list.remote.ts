@@ -7,10 +7,10 @@ import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth/session.ts";
-import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { pageGroupsOf, planList } from "#lib/server/table-query.ts";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/bulk.ts";
+import { pageGroupsOf, planList } from "#lib/server/lists/plan.ts";
 
 import { equipmentSql, withEquipmentJoins } from "./equipment-list.server.ts";
 import { equipmentList } from "./equipment-list.ts";

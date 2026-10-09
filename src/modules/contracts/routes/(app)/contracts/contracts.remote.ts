@@ -15,10 +15,10 @@ import {
 	requireModule,
 	tenantJoin,
 } from "#lib/server/auth/session.ts";
-import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
+import { bulkChange, idsTarget } from "#lib/server/lists/bulk.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 
 import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";

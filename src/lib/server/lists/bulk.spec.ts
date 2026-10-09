@@ -4,12 +4,12 @@ import * as v from "valibot";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { code, defineList } from "#lib/components/data-table/list-definition.ts";
+import { inTenant, type Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
-import { inTenant, type Tenant } from "./auth/session.ts";
 import { bulkChange, idsTarget, listTarget, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
-import type { ListSql } from "./table-query.ts";
+import type { ListSql } from "./plan.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const refreshAll = vi.fn();

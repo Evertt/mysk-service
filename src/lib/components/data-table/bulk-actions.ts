@@ -4,7 +4,7 @@
  * (`bulk-action-bar.svelte`) follows: which selected rows an action applies to, and how a result
  * reads.
  *
- * Each action's command runs on the server (see `#lib/server/bulk.ts`): it checks every record
+ * Each action's command runs on the server (see `#lib/server/lists/bulk.ts`): it checks every record
  * again, with the same rules as the single-record path, and changes each one in a transaction of
  * its own, so one that's refused doesn't hold up the others. The result says what was done and
  * what was skipped, and why.

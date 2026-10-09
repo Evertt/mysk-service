@@ -80,7 +80,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`), which applies the modules' adjustments.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
-  `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
+  `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
   `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
@@ -170,7 +170,7 @@ orders list in `src/routes/(app)/orders/` is the example):
    the joins once in a helper generic over the query (`withOrderJoins`, drizzle's `$dynamic()`
    pattern) and use it for the rows and in `ListSql.from`, so rows, counts, facets and bulk ids can't
    drift apart. Never build a `ListSql` at module scope: `inTenant()` reads the request.
-3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/table-query.ts`): `paged()` for the
+3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/lists/plan.ts`): `paged()` for the
    rows, and `count()`, `facets()`, `groupCounts()` and `ids()`, each written once.
 
 Remote queries take `list.query` (the rows) or `list.where` (the filters' counts) as their argument

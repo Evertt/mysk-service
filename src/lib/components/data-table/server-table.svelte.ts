@@ -1,5 +1,5 @@
 /**
- * The client side of a server-side table (see `#lib/server/table-query.ts`): the page reads the
+ * The client side of a server-side table (see `#lib/server/lists/plan.ts`): the page reads the
  * table's state from the URL into the list's query (`toListQuery()` in `list-definition.ts`) and
  * asks its remote queries for that page of rows (the query) and its filters' counts (its
  * `whereOf()`), so the URL (which the table keeps in sync, debouncing the search) decides what's

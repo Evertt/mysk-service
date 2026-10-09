@@ -5,10 +5,10 @@ import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { removeMaterial } from "#lib/materials/server/materials.ts";
 import { stockLevelSql } from "#lib/materials/server/stock.ts";
 import { inTenant, requireMember } from "#lib/server/auth/session.ts";
-import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
-import { pageGroupsOf, planList } from "#lib/server/table-query.ts";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/bulk.ts";
+import { pageGroupsOf, planList } from "#lib/server/lists/plan.ts";
 
 import { materialsSql } from "./material-list.server.ts";
 import { materialsList } from "./materials-list.ts";

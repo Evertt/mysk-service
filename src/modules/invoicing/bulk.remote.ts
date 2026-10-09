@@ -8,9 +8,9 @@ import { error, isValidationError } from "@sveltejs/kit";
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { idsInTenant, requireModule } from "#lib/server/auth/session.ts";
-import { idsTarget, targetIds } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { idsTarget, targetIds } from "#lib/server/lists/bulk.ts";
 
 import { getOrderInvoice } from "./invoicing.remote.ts";
 import { billableFor } from "./server/billable.ts";

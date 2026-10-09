@@ -10,7 +10,7 @@ import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { type ListSql, nocase } from "#lib/server/table-query.ts";
+import { type ListSql, nocase } from "#lib/server/lists/plan.ts";
 
 import { equipmentList } from "./equipment-list.ts";
 

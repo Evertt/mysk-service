@@ -10,7 +10,7 @@ import { stockLevels } from "#lib/models.ts";
 import { inTenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
-import { type ListSql, nocase, rank } from "#lib/server/table-query.ts";
+import { type ListSql, nocase, rank } from "#lib/server/lists/plan.ts";
 
 import { materialsList } from "./materials-list.ts";
 

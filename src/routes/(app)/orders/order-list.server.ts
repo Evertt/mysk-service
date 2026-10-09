@@ -10,7 +10,7 @@ import { orderPriorities } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { anyOf, type ListSql, nocase, rank } from "#lib/server/table-query.ts";
+import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists/plan.ts";
 
 import { ordersList } from "./orders-list.ts";
 

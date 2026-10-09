@@ -31,10 +31,10 @@ import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bu
 import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
 import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
+import { idsInTenant, type TenantTable } from "#lib/server/auth/session.ts";
+import { db } from "#lib/server/db/index.ts";
 
-import { idsInTenant, type TenantTable } from "./auth/session.ts";
-import { db } from "./db/index.ts";
-import { type ListSql, planList } from "./table-query.ts";
+import { type ListSql, planList } from "./plan.ts";
 
 /** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */
 export const idsTarget = v.object({
