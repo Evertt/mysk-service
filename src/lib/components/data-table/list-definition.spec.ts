@@ -14,6 +14,7 @@ import {
 	type ListWhere,
 	listLimits,
 	oneOf,
+	orNone,
 	queryKey,
 	toListQuery,
 	toUrlSpec,
@@ -26,11 +27,11 @@ const ordersList = defineList({
 	columns: {
 		number: { sort: true },
 		customer: { sort: true, group: true, filter: code },
-		equipment: { sort: true, filter: code },
+		equipment: { sort: true, filter: orNone(code) },
 		type: { sort: true, group: true, filter: oneOf(orderTypes) },
 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
 		priority: { sort: true, group: true, filter: oneOf(orderPriorities) },
-		engineer: { sort: true, group: true, filter: id },
+		engineer: { sort: true, group: true, filter: orNone(id) },
 		scheduledFor: { param: "scheduled", sort: true },
 		createdAt: { param: "created", sort: true },
 	},
@@ -99,6 +100,24 @@ describe("toUrlSpec", () => {
 		});
 	});
 
+	test("lists `none` among the values of a filter on a fixed set that can be empty", () => {
+		const spec = toUrlSpec({
+			columns: {
+				status: { filter: orNone(oneOf(orderStatuses)) },
+				engineer: { filter: orNone(id) },
+			},
+			defaults: { filters: { status: [null, "quote"], engineer: [null] } },
+		});
+		expect(spec.columns).toEqual([
+			{ id: "status", filter: "set", values: [...orderStatuses, "none"] },
+			{ id: "engineer", filter: "set" },
+		]);
+		expect(spec.defaults?.columnFilters).toEqual([
+			{ id: "status", value: ["none", "quote"] },
+			{ id: "engineer", value: ["none"] },
+		]);
+	});
+
 	test("refuses columns that share a name in the URL", () => {
 		expect(() =>
 			defineList({
@@ -134,6 +153,15 @@ describe("toListQuery", () => {
 			{},
 		);
 		expect(fromUrl("engineer=abc").filters).toStrictEqual({});
+	});
+
+	test("has null, first, for `none` in a filter that can be empty", () => {
+		expect(fromUrl("engineer=12,none,3").filters).toStrictEqual({ engineer: [null, 3, 12] });
+		expect(fromUrl("equipment=X-2,none,none").filters).toStrictEqual({ equipment: [null, "X-2"] });
+		expect(fromUrl("engineer=none").filters).toStrictEqual({ engineer: [null] });
+		// In the others, `none` is a value like any other: a code that matches nothing, not a status.
+		expect(fromUrl("customer=none").filters).toStrictEqual({ customer: ["none"] });
+		expect(fromUrl("status=none").filters).toStrictEqual({});
 	});
 
 	test("leaves out values a filter doesn't have, and the filters left with none", () => {
@@ -256,6 +284,7 @@ describe("toListQuery", () => {
 			"\\",
 			`"`,
 			"C-1",
+			"none",
 			"x".repeat(100),
 		];
 		const tokens = () =>
@@ -320,6 +349,14 @@ describe("the query schema", () => {
 		expect(accepts({ ...canonical, filters: { number: [1] } })).toBe(false);
 		expect(accepts({ ...canonical, filters: { status: [] } })).toBe(false);
 		expect(accepts({ ...canonical, filters: { status: undefined } })).toBe(false);
+	});
+
+	test("accepts null only in a filter that can be empty", () => {
+		expect(accepts({ ...canonical, filters: { engineer: [null, 3] } })).toBe(true);
+		expect(accepts({ ...canonical, filters: { equipment: [null] } })).toBe(true);
+		expect(accepts({ ...canonical, filters: { engineer: ["none"] } })).toBe(false);
+		expect(accepts({ ...canonical, filters: { customer: [null] } })).toBe(false);
+		expect(accepts({ ...canonical, filters: { status: [null, "quote"] } })).toBe(false);
 	});
 
 	test("rejects values of the wrong type or not in the set", () => {
@@ -471,11 +508,11 @@ describe("types", () => {
 	test("the query is typed by the definition", () => {
 		expectTypeOf<ListQuery<OrdersColumns>["filters"]>().toEqualTypeOf<{
 			customer?: string[];
-			equipment?: string[];
+			equipment?: (string | null)[];
 			type?: (typeof orderTypes)[number][];
 			status?: (typeof orderStatuses)[number][];
 			priority?: (typeof orderPriorities)[number][];
-			engineer?: number[];
+			engineer?: (number | null)[];
 		}>();
 		expectTypeOf<ListQuery<OrdersColumns>["sort"][number]["id"]>().toEqualTypeOf<
 			| "number"
@@ -512,6 +549,8 @@ describe("types", () => {
 		query({ filters: { engineer: ["3"] } });
 		// @ts-expect-error a status the list doesn't have
 		query({ filters: { status: ["bogus"] } });
+		// @ts-expect-error a filter that can't be empty
+		query({ filters: { customer: [null] } });
 		// @ts-expect-error a column the list can't filter by
 		query({ filters: { number: [1] } });
 		// @ts-expect-error a column the list doesn't have

@@ -10,7 +10,7 @@ import { orderPriorities } from "#lib/models.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { inTenant, tenantJoin } from "#lib/server/session.ts";
-import { type ListSql, nocase, rank } from "#lib/server/table-query.ts";
+import { anyOf, type ListSql, nocase, rank } from "#lib/server/table-query.ts";
 
 import { ordersList } from "./orders-list.ts";
 
@@ -42,7 +42,8 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 		equipment: {
 			sort: [nocase(equipment.manufacturer), nocase(equipment.model)],
 			nullsLast: true,
-			filter: (serials) => inArray(equipment.serialNumber, serials),
+			// `null` among the serial numbers: the new installations.
+			filter: (serials) => anyOf(equipment.serialNumber, serials),
 		},
 		type: {
 			sort: order.type,
@@ -63,7 +64,8 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 		engineer: {
 			sort: nocase(engineer.name),
 			nullsLast: true,
-			filter: (ids) => inArray(order.engineerId, ids),
+			// `null` among the ids: the unassigned orders.
+			filter: (ids) => anyOf(order.engineerId, ids),
 			group: order.engineerId,
 		},
 		scheduledFor: { sort: order.scheduledFor, nullsLast: true },

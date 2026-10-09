@@ -26,7 +26,10 @@
 	}: {
 		/** A page of orders, as the URL says, how many match in all, and its groups when grouped. */
 		orders: Awaited<ReturnType<typeof getOrders>>;
-		/** How many orders have each value of the filters'. */
+		/**
+		 * How many orders have each value of the filters' (the unassigned orders and the new
+		 * installations under `none`).
+		 */
 		facets: Awaited<ReturnType<typeof getOrderFacets>>;
 	} = $props();
 
@@ -84,12 +87,16 @@
 				title={m.orders_column_engineer()}
 				searchLabel={m.common_table_search_engineers()}
 				load={getEngineerOptions}
+				none={m.common_unassigned()}
+				counts={facets.engineer}
 			/>
 			<RecordFilter
 				columnId="equipment"
 				title={m.orders_column_equipment()}
 				searchLabel={m.common_table_search_equipment()}
 				load={getEquipmentOptions}
+				none={m.orders_new_installation()}
+				counts={facets.equipment}
 			/>
 		</table.Toolbar>
 		<table.Table

@@ -247,6 +247,56 @@ describe("in North", () => {
 		await app.go("/orders");
 	});
 
+	test("filtering on the unassigned orders and the new installations, by the filter and the URL", async () => {
+		const { page } = app;
+		const engineerFilter = page.locator('[data-slot="popover-trigger"]', { hasText: "Engineer" });
+		const unassigned = await value<number>(
+			`select count(*) from "order" where organization_id = ? and engineer_id is null`,
+			[north.id],
+		);
+		expect(unassigned).toBeGreaterThan(0);
+		await app.go("/orders");
+
+		// The engineer filter offers "Unassigned" first, with how many there are.
+		await engineerFilter.click();
+		const option = page.getByRole("option", { name: /^Unassigned/ });
+		await expect
+			.poll(() => option.innerText())
+			.toMatch(new RegExp(`^Unassigned\\s+${unassigned}$`));
+		expect(await page.getByRole("option").first().innerText()).toMatch(/^Unassigned/);
+		await option.click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("engineer") === "none");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(unassigned);
+		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
+		expect(new Set(engineers)).toEqual(new Set(["Unassigned"]));
+		expect(await engineerFilter.innerText()).toContain("Unassigned");
+
+		// From a link, with an engineer: theirs and the unassigned ones.
+		const [busy] = await rows<{ id: number; name: string; n: number }>(
+			`select e.id, e.name, count(*) as n from "order" o join engineer e on e.id = o.engineer_id
+			 where o.organization_id = ? group by e.id order by n desc, e.id limit 1`,
+			[north.id],
+		);
+		await app.go(`/orders?engineer=none,${busy.id}`);
+		expect(await app.rowCount()).toBe(unassigned + busy.n);
+		await expect.poll(() => engineerFilter.innerText()).toContain(busy.name);
+		expect(await engineerFilter.innerText()).toContain("Unassigned");
+
+		// The equipment filter likewise keeps the orders without a unit: the new installations.
+		const installations = await value<number>(
+			`select count(*) from "order" where organization_id = ? and equipment_id is null`,
+			[north.id],
+		);
+		expect(installations).toBeGreaterThan(0);
+		await app.go("/orders?equipment=none");
+		expect(await app.rowCount()).toBe(installations);
+		const units = await page.locator("tbody td:nth-child(4)").allInnerTexts();
+		expect(new Set(units)).toEqual(new Set(["New installation"]));
+		await app.go("/orders");
+	});
+
 	test("while the next page loads, the rows shown stay, dimmed", async () => {
 		const { page } = app;
 		await app.go("/orders");

@@ -1,14 +1,15 @@
 <!--
 	@component
 	A data table over a few work items, wired up like the app's tables, for `table.svelte.spec.ts`
-	(and the other data table specs). Its rows can be grouped by status, and a group shows the sum
-	of its amounts.
+	(and the other data table specs). Its rows can be grouped by status (which an item may not have
+	yet), and a group shows the sum of its amounts.
 -->
 <script lang="ts" module>
 	export interface Item {
 		id: number;
 		name: string;
-		status: "draft" | "open" | "closed";
+		/** `null` while not started: the status filter's "(None)" option. */
+		status: "draft" | "open" | "closed" | null;
 		/** In cents. */
 		amount: number;
 		quantity: number;
@@ -25,6 +26,7 @@
 	import RowActions from "./row-actions.svelte";
 	import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
 	import TwoLineCell from "./two-line-cell.svelte";
+	import { noneToken } from "./url-state.ts";
 
 	let {
 		items,
@@ -62,7 +64,7 @@
 			filterFn: "oneOf",
 			enableSorting: false,
 			enableGrouping: true,
-			meta: { label: "Status", filterValues: ["draft", "open", "closed"] },
+			meta: { label: "Status", filterValues: ["draft", "open", "closed", noneToken] },
 		}),
 		column.accessor("amount", {
 			cell: ({ cell }) => renderComponent(cell.CurrencyCell),
@@ -105,7 +107,7 @@
 
 <table.AppTable>
 	<table.Toolbar searchLabel="Search items…">
-		<FacetedFilter columnId="status" title="Status" options={statusOptions} />
+		<FacetedFilter columnId="status" title="Status" options={statusOptions} none />
 	</table.Toolbar>
 	<table.Table emptyTitle="No items found" />
 	<table.Pagination pageSizes={[5, 10]} />
