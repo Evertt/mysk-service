@@ -35,7 +35,10 @@ for rune modules, `.svelte` for components, and `.js` only for real JavaScript, 
 generated output (`#lib/paraglide/messages.js`, `runtime.js`). So `../order.remote.ts`, never
 `../order.remote.js` or `../order.remote`; the same goes for `vi.mock(...)` paths and `import()`.
 `src/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
-`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`.
+`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`. Seven folders also have
+a barrel `index.ts` re-exporting their files, imported as the folder (`#lib/i18n`,
+`#lib/server/lists`): `activity/`, `auth/`, `i18n/` and `server/activity/`, `server/auth/`,
+`server/lists/`, `server/mail/`.
 
 Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 
