@@ -24,11 +24,9 @@
  * ```
  *
  * Pure, with no server imports: the page, the table and the server's SQL mapping
- * (`ListSql` in `#lib/server/table-query.ts`) all read the same definition.
+ * (`ListSql` in `#lib/server/lists/plan.ts`) all read the same definition.
  */
 import * as v from "valibot";
-
-import { m } from "#lib/paraglide/messages.js";
 
 import {
 	defaultPageSizes,
@@ -90,7 +88,7 @@ export const oneOf = <const T extends readonly [string, ...string[]]>(
 /**
  * A filter on a column that can be empty: `kind`'s values, or `null` for the rows without one,
  * `none` in the URL (`?engineer=none,12`: unassigned orders and engineer 12's). The SQL keeps them
- * with `anyOf()` (`#lib/server/table-query.ts`), and the facets count them under `none`.
+ * with `anyOf()` (`#lib/server/lists/plan.ts`), and the facets count them under `none`.
  */
 export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
 	value: v.nullable(kind.value),

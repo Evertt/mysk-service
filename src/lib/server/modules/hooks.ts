@@ -1,5 +1,5 @@
 /**
- * The server side of the optional modules (see `#lib/modules.ts`): hooks through which a module
+ * The server side of the optional modules (see `#lib/modules/manifests.ts`): hooks through which a module
  * takes part in core server logic without core importing the module. A module implements them with
  * `defineServerModule()`, grouped by the core domain they belong to (`orders`, `billing`). Core
  * calls each from one function of its own, for the modules the current tenant has: `priceOrders()`
@@ -21,11 +21,11 @@
  * change, an event inside the transaction) when a module needs one, not before.
  */
 import type { OrderStatus, OrderType } from "#lib/models.ts";
-import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules.ts";
+import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules/manifests.ts";
+import { requireModule, requireTenant } from "#lib/server/auth";
+import { afterCommit } from "#lib/server/db/serialize.ts";
 
-import { afterCommit } from "./db/serialize.ts";
-import { generatedServerModules } from "./modules.gen.ts";
-import { requireModule, requireTenant } from "./session.ts";
+import { generatedServerModules } from "./hooks.gen.ts";
 
 /** What a module gets to know about an order. All of the current tenant's. */
 export interface OrderFacts {
@@ -98,7 +98,7 @@ export interface BillableItem {
 
 /**
  * Each module's server hooks, in registry order: the folders in `src/modules` by id (their
- * `server/index.ts`, via `modules.gen.ts`), like `modules` in `#lib/modules.ts`. A module without
+ * `server/index.ts`, via `hooks.gen.ts`), like `modules` in `#lib/modules/manifests.ts`. A module without
  * any isn't listed. A function, so that a module can import `defineServerModule()` from here.
  */
 function serverModules(): { [Id in ModuleId]?: ServerModule } {

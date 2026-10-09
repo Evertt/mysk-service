@@ -6,8 +6,8 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
 
+import type { Tenant } from "./auth/session.ts";
 import { deleteAndLog } from "./records.ts";
-import type { Tenant } from "./session.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

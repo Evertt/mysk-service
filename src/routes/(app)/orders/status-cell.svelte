@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
 	import type { OrderStatus } from "#lib/models.ts";
-	import type { OrderTag } from "#lib/modules.ts";
+	import type { OrderTag } from "#lib/modules/manifests.ts";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 
 	import OrderTags from "./order-tags.svelte";

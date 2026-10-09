@@ -25,6 +25,13 @@ interface SourceFile {
 }
 
 const aliases: Record<string, string> = {
+	"#lib/activity": "src/lib/activity/index.ts",
+	"#lib/auth": "src/lib/auth/index.ts",
+	"#lib/i18n": "src/lib/i18n/index.ts",
+	"#lib/server/activity": "src/lib/server/activity/index.ts",
+	"#lib/server/auth": "src/lib/server/auth/index.ts",
+	"#lib/server/lists": "src/lib/server/lists/index.ts",
+	"#lib/server/mail": "src/lib/server/mail/index.ts",
 	"#lib/": "src/lib/",
 	"#modules/": "src/modules/",
 	"#e2e/": "e2e/",

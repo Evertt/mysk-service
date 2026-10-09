@@ -1,5 +1,5 @@
 /**
- * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity.ts`)
+ * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity/log.ts`)
  * reads: a sentence per action, and per subject type its noun, its page and how its fields show,
  * e.g. "Anouk de Vries updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
  * "Anouk de Vries heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
@@ -9,19 +9,25 @@
  * they're read in the current language when shown, never at module scope.
  *
  * A new subject type gets an entry in `coreSubjectTypes` here, or, for an optional module's
- * records, in its `subjects` in `#lib/modules.ts`; likewise its verbs go in its `actions`. How
- * their fields and values read is in `#lib/activity-format.ts`.
+ * records, in its `subjects` in `#lib/modules/manifests.ts`; likewise its verbs go in its `actions`. How
+ * their fields and values read is in `#lib/activity/format.ts`.
  */
 import { resolve } from "$app/paths";
 
-import { formatCents, formatDate, formatDateTime } from "#lib/format.ts";
-import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.ts";
+import { parseRoles } from "#lib/auth";
+import {
+	formatCents,
+	formatDate,
+	formatDateTime,
+	hasLabel,
+	label,
+	type LabelKind,
+	labelOrValue,
+} from "#lib/i18n";
 import type { CoreActivityAction } from "#lib/models.ts";
-import { type AppModule, modules } from "#lib/modules.ts";
-import { m } from "#lib/paraglide/messages.js";
-import { parseRoles } from "#lib/roles.ts";
+import { type AppModule, modules } from "#lib/modules/manifests.ts";
 
-import type { ReferenceType } from "./activity-format.ts";
+import type { ReferenceType } from "./format.ts";
 
 /** A text in the current language, read when it's shown. */
 export type Text = () => string;
@@ -161,7 +167,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	},
 	/** An order's materials, told apart by material: the subject's id is the material's. */
 	order_line: { noun: m.activity_subject_order_line },
-	/** An optional module (`#lib/modules.ts`), by its id; shown by its name. */
+	/** An optional module (`#lib/modules/manifests.ts`), by its id; shown by its name. */
 	module: {
 		noun: m.activity_subject_module,
 		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,

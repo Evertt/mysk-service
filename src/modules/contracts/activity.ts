@@ -1,10 +1,9 @@
-/** How the activity log reads for the contracts module's records (see `#lib/activity.ts`). */
+/** How the activity log reads for the contracts module's records (see `#lib/activity/subjects.ts`). */
 import { resolve } from "$app/paths";
 
-// Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
-import type { SubjectType } from "#lib/activity.ts";
-import { formatCents, formatDate } from "#lib/format.ts";
-import { m } from "#lib/paraglide/messages.js";
+// Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
+import type { SubjectType } from "#lib/activity";
+import { formatCents, formatDate } from "#lib/i18n";
 
 import { contractLabels } from "./labels.ts";
 

@@ -5,6 +5,13 @@
 	"type": "module",
 	"imports": {
 		"#lib/*": "./src/lib/*",
+		"#lib/activity": "./src/lib/activity/index.ts",
+		"#lib/auth": "./src/lib/auth/index.ts",
+		"#lib/i18n": "./src/lib/i18n/index.ts",
+		"#lib/server/activity": "./src/lib/server/activity/index.ts",
+		"#lib/server/auth": "./src/lib/server/auth/index.ts",
+		"#lib/server/lists": "./src/lib/server/lists/index.ts",
+		"#lib/server/mail": "./src/lib/server/mail/index.ts",
 		"#modules/*": "./src/modules/*",
 		"#e2e/*": "./e2e/*",
 		"#ui/*": "./src/lib/components/ui/*/index.ts"
@@ -23,7 +30,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
-		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
+		"auth:schema": "auth generate --config src/lib/server/auth/better-auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"db:seed": "node --env-file=.env src/lib/server/db/seed/index.ts",
 		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
 		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit migrate && pnpm run db:seed",

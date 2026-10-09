@@ -11,11 +11,13 @@ import {
 	type Names,
 	referencedIds,
 	type ReferenceType,
-} from "#lib/activity-format.ts";
-import { subjectNoun, type SubjectType, subjectTypes } from "#lib/activity.ts";
+	subjectNoun,
+	type SubjectType,
+	subjectTypes,
+} from "#lib/activity";
+import { inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
 
 export interface SubjectLink {
 	/** E.g. `order`. */
@@ -35,7 +37,7 @@ export interface ActivityEntry {
 	id: number;
 	at: Date;
 	user: string;
-	/** What they did, e.g. `updated` (see `actionVerbs` in `#lib/activity.ts`). */
+	/** What they did, e.g. `updated` (see `actionVerbs` in `#lib/activity/subjects.ts`). */
 	action: string;
 	subject: SubjectLink;
 	parent: SubjectLink | null;

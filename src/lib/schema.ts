@@ -9,7 +9,6 @@
 import * as v from "valibot";
 
 import { fitsUnit } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 /**
  * A validation message: a message function (`m.…`) or one that builds the text, e.g.

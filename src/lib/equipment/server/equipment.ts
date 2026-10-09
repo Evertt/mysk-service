@@ -1,11 +1,10 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
-import { m } from "#lib/paraglide/messages.js";
+import { idInTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
-import { idInTenant, inTenant } from "#lib/server/session.ts";
 
 /**
  * Deletes one of the tenant's units; refuses one that orders (or an optional module's records)

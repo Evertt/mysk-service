@@ -5,8 +5,6 @@
  * language), and covers the ones it doesn't (e.g. changing your own role).
  */
 
-import { m } from "#lib/paraglide/messages.js";
-
 import { isManager, type MemberRole, memberRoles } from "./roles.ts";
 
 export { type MemberRole, memberRoles } from "./roles.ts";

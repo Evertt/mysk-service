@@ -1,11 +1,11 @@
 <!--
 	@component
 	What the current tenant's modules add to a core page at `name` (see `slots` in
-	`#lib/modules.ts`), with `props` passed on. Wrapped in a `div` with `class` (by default
+	`#lib/modules/manifests.ts`), with `props` passed on. Wrapped in a `div` with `class` (by default
 	`contents`, so the components lay out as the page's own), or nothing if no module adds anything.
 -->
 <script lang="ts" generics="Name extends SlotName">
-	import { type SlotName, type SlotProps, slotLoaders } from "#lib/modules.ts";
+	import { type SlotName, type SlotProps, slotLoaders } from "#lib/modules/manifests.ts";
 
 	import { getCurrentTenant } from "./session.remote.ts";
 

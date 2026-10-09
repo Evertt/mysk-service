@@ -1,5 +1,5 @@
 /**
- * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules.ts`): the
+ * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): the
  * invoice an order is on, and the receivables on the dashboard.
  */
 import { query } from "$app/server";
@@ -7,10 +7,9 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";

@@ -1,6 +1,5 @@
 /** The translated names of the invoicing module's enum values, see `#lib/i18n/labels.ts`. */
-import { defineLabels, type Labels } from "#lib/i18n/labels.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { defineLabels, type Labels } from "#lib/i18n";
 
 import type { InvoiceState } from "./invoice.ts";
 

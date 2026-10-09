@@ -1,10 +1,10 @@
 <!--
 	@component
 	The contracts module's card on a unit of equipment's page (the `equipment` slot in
-	`#lib/modules.ts`): the contracts covering the unit, with their level and end date.
+	`#lib/modules/manifests.ts`): the contracts covering the unit, with their level and end date.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n";
 
 	import ContractLink from "./contract-link.svelte";
 	import { getUnitCoverage } from "./coverage.remote.ts";

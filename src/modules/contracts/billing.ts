@@ -53,7 +53,7 @@ export interface MonthlyFeeText {
 	detail: string;
 }
 
-/** What a month of a contract bills, as a billable item (see `#lib/server/modules.ts`). */
+/** What a month of a contract bills, as a billable item (see `#lib/server/modules/hooks.ts`). */
 export const monthlyFee = (
 	contract: { id: number; monthlyFee: number },
 	month: ContractMonth,

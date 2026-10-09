@@ -3,7 +3,7 @@
 	Other orders for the same unit as an order, for context.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";

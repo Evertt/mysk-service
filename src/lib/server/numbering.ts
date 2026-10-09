@@ -9,9 +9,9 @@ import {
 	sequenceStart,
 } from "#lib/numbering.ts";
 
+import { inTenant, type TenantTable } from "./auth/session.ts";
 import type { Transaction } from "./db/index.ts";
 import { customer, material, order } from "./db/schema.ts";
-import { inTenant, type TenantTable } from "./session.ts";
 
 /** What numbers a kind of record: its format, and the tenant table and column that hold them. */
 export interface NumberTarget {

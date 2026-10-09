@@ -3,11 +3,10 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
-import { label } from "#lib/i18n/labels.ts";
+import { label } from "#lib/i18n";
 import { stockLevel, stockLevels } from "#lib/materials/display.ts";
 import MaterialLink from "#lib/materials/material-link.svelte";
 import { materialUnits } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { getMaterials } from "./material-list.remote.ts";
 import StockCell from "./stock-cell.svelte";

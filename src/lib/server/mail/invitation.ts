@@ -1,8 +1,7 @@
-import { dateFormatter } from "#lib/format.ts";
-import { invitedAsText } from "#lib/members.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { invitedAsText } from "#lib/auth";
+import { dateFormatter } from "#lib/i18n";
 
-import type { Mail } from "./mail.ts";
+import type { Mail } from "./send.ts";
 
 const escape = (text: string) =>
 	text.replace(

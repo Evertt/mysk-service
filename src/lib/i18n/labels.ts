@@ -1,3 +1,4 @@
+import type { MemberRole } from "#lib/auth";
 /**
  * The translated names of the domain's enum values (statuses, types, units, roles, …): the one
  * place that maps a stored value to what users read. Show one with `label("orderStatus", status)`;
@@ -19,8 +20,6 @@ import type {
 	OrderType,
 	StockMovementKind,
 } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
-import type { MemberRole } from "#lib/roles.ts";
 
 export type Labels<T extends string> = Record<T, () => string>;
 

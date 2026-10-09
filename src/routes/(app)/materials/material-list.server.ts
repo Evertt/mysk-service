@@ -7,10 +7,10 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { stockLevelSql } from "#lib/materials/server/stock.ts";
 import { stockLevels } from "#lib/models.ts";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
-import { inTenant } from "#lib/server/session.ts";
-import { type ListSql, nocase, rank } from "#lib/server/table-query.ts";
+import { type ListSql, nocase, rank } from "#lib/server/lists";
 
 import { materialsList } from "./materials-list.ts";
 

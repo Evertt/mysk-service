@@ -1,17 +1,16 @@
 /**
  * The orders list's bulk actions (see `#lib/components/data-table/bulk-actions.ts`): assign an
  * engineer, change the status, delete. The tenant's modules add theirs (`bulkActions` in
- * `#lib/modules.ts`), e.g. invoicing's "Create invoice".
+ * `#lib/modules/manifests.ts`), e.g. invoicing's "Create invoice".
  */
 import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { labelOptions } from "#lib/i18n/labels.ts";
+import { labelOptions } from "#lib/i18n";
 import { isEditableOrder, manualOrderStatuses } from "#lib/models.ts";
-import type { OrderBulkRow } from "#lib/modules.ts";
-import { m } from "#lib/paraglide/messages.js";
+import type { OrderBulkRow } from "#lib/modules/manifests.ts";
 
 import {
 	bulkAssignOrders,

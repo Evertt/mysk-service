@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vite-plus/test";
 
-import { orderCommitted } from "#lib/server/modules.ts";
+import { orderCommitted } from "#lib/server/modules/hooks.ts";
 
 import invoicing from "./index.ts";
 
@@ -8,7 +8,7 @@ import invoicing from "./index.ts";
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
 // The core, without the modules in `src/modules`.
-vi.mock("#lib/server/modules.gen.ts", () => ({ generatedServerModules: () => [] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
 const refreshed = vi.hoisted(() => [] as string[]);
 vi.mock("../invoicing.remote.ts", () => ({
 	getOrderInvoice: (number: string) => ({ refresh: async () => void refreshed.push(number) }),

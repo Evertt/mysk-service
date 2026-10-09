@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 import {
 	id,
 	laborHours,

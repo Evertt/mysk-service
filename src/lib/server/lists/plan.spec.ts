@@ -28,7 +28,7 @@ import {
 	rank,
 	searchMatch,
 	type SqlColumns,
-} from "./table-query.ts";
+} from "./plan.ts";
 
 // Tables of their own in a temporary database, rather than the app's.
 const item = sqliteTable("item", {

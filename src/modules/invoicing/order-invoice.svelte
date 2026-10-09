@@ -1,6 +1,6 @@
 <!--
 	@component
-	The invoicing module's card on an order's page (the `order` slot in `#lib/modules.ts`): the
+	The invoicing module's card on an order's page (the `order` slot in `#lib/modules/manifests.ts`): the
 	invoice the order is on, or, once it's completed, a way to bill it. Nothing for a cancelled
 	order that was never invoiced.
 -->
@@ -8,8 +8,7 @@
 	import { resolve } from "$app/paths";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { formatDate } from "#lib/format.ts";
-	import { messageParts } from "#lib/i18n/parts.ts";
+	import { formatDate, messageParts } from "#lib/i18n";
 
 	import InvoiceLink from "./invoice-link.svelte";
 	import { getOrderInvoice } from "./invoicing.remote.ts";

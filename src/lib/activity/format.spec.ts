@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
+import { formatCents, formatDate, formatDateTime } from "#lib/i18n";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
-import { describeChanges, fieldLabel, formatValue, referencedIds } from "./activity-format.ts";
-import { coreSubjectTypes, subjectTypes } from "./activity.ts";
-import { formatCents, formatDate, formatDateTime } from "./format.ts";
+import { describeChanges, fieldLabel, formatValue, referencedIds } from "./format.ts";
+import { coreSubjectTypes, subjectTypes } from "./subjects.ts";
 
 // Made-up modules instead of the ones in `src/modules`.
-vi.mock("./modules.gen.ts", async () => ({
-	manifests: (await import("./fake-modules.ts")).fakeModules,
+vi.mock("#lib/modules/manifests.gen.ts", async () => ({
+	manifests: (await import("#lib/modules/fakes.ts")).fakeModules,
 }));
 
 const { order, equipment, engineer, customer, material } = coreSubjectTypes;

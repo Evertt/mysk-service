@@ -8,7 +8,6 @@ import ActiveBadge from "#lib/engineers/active-badge.svelte";
 import { regionLabel } from "#lib/engineers/display.ts";
 import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
 import { engineerSpecialties } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { getEngineers } from "./engineers.remote.ts";
 

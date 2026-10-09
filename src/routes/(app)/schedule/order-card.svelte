@@ -9,7 +9,7 @@
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
 	import { timeOfDay } from "#lib/dates.ts";
-	import { formatDate } from "#lib/format.ts";
+	import { formatDate } from "#lib/i18n";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
 	import { priorities, statuses, types } from "#lib/orders/display.ts";
 	import { cn } from "#lib/utils.ts";

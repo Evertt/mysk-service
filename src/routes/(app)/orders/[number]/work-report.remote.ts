@@ -3,10 +3,9 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
 
 /** What was recorded on an order in the field: notes and the customer's sign-off. */
 export const getWorkReport = query(v.string(), async (number) => {

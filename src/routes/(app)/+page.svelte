@@ -4,7 +4,7 @@
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
 	import EngineerLink from "#lib/engineers/engineer-link.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 

@@ -9,9 +9,9 @@
  * For each folder with a `module.ts` it:
  *
  * - writes the registries that core reads, next to the code that reads them (`*.gen.ts`): the
- *   manifests (`src/lib/modules.gen.ts`), the plain list of ids for code that runs in plain Node
- *   (`src/lib/module-ids.gen.ts`), the server halves (`server/index.ts`, in
- *   `src/lib/server/modules.gen.ts`), the tables (`server/schema.ts`, in
+ *   manifests (`src/lib/modules/manifests.gen.ts`), the plain list of ids for code that runs in plain Node
+ *   (`src/lib/modules/ids.gen.ts`), the server halves (`server/index.ts`, in
+ *   `src/lib/server/modules/hooks.gen.ts`), the tables (`server/schema.ts`, in
  *   `src/lib/server/db/modules.gen.ts`) and the seeders (`server/seed.ts`, in
  *   `src/lib/server/db/module-seeds.gen.ts`);
  * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, at the same

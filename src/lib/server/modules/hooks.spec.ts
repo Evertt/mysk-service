@@ -1,7 +1,8 @@
 import { createClient } from "@libsql/client";
 import { expect, test, vi } from "vite-plus/test";
 
-import { drizzleQueued } from "./db/serialize.ts";
+import { drizzleQueued } from "#lib/server/db/serialize.ts";
+
 import {
 	billableItems,
 	enabledServerModules,
@@ -9,7 +10,7 @@ import {
 	orderCommitted,
 	type ServerModule,
 	tagOrders,
-} from "./modules.ts";
+} from "./hooks.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
@@ -24,7 +25,7 @@ vi.mock("$app/server", () => ({
 // Made-up modules instead of the ones in `src/modules`.
 const widgets = vi.hoisted(() => ({ id: "widgets", orders: {} }));
 const gadgets = vi.hoisted(() => ({ id: "gadgets", orders: {} }));
-vi.mock("./modules.gen.ts", () => ({ generatedServerModules: () => [gadgets, widgets] }));
+vi.mock("./hooks.gen.ts", () => ({ generatedServerModules: () => [gadgets, widgets] }));
 
 /** Lets the promises that hooks run in settle. */
 const flush = () => new Promise((resolve) => setTimeout(resolve));

@@ -3,7 +3,7 @@
  * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
 import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.ts";
-import { dateFormatter, formatDate } from "#lib/format.ts";
+import { dateFormatter, formatDate } from "#lib/i18n";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 
 import type { getSchedule } from "./schedule.remote.ts";

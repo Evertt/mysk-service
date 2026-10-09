@@ -5,10 +5,9 @@ import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/pricing.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
 /** How many orders the customer page lists; the orders list has them all. */
 const RECENT = 10;

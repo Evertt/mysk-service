@@ -1,10 +1,9 @@
-/** How the activity log reads for the invoicing module's records (see `#lib/activity.ts`). */
+/** How the activity log reads for the invoicing module's records (see `#lib/activity/subjects.ts`). */
 import { resolve } from "$app/paths";
 
-// Only types from `#lib/activity.ts`: it imports the modules, and so this file, in turn.
-import type { FieldFormat, Sentence, SubjectType } from "#lib/activity.ts";
-import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
-import { m } from "#lib/paraglide/messages.js";
+// Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
+import type { FieldFormat, Sentence, SubjectType } from "#lib/activity";
+import { formatCents, formatDate, formatNumber } from "#lib/i18n";
 
 import { formatRate } from "./display.ts";
 import { invoicingLabels } from "./labels.ts";
@@ -20,7 +19,7 @@ const paymentTermDays: FieldFormat = {
 };
 const vatRate: FieldFormat = { label: m.invoices_activity_field_vat_rate, format: rate };
 
-/** What the user did to an invoice, as a sentence per verb (see `actionVerbs` in `#lib/activity.ts`). */
+/** What the user did to an invoice, as a sentence per verb (see `actionVerbs` in `#lib/activity/subjects.ts`). */
 export const invoicingActions = {
 	issued: m.invoices_action_issued,
 	paid: m.invoices_action_paid,

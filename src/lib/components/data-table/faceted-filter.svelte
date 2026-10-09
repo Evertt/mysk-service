@@ -127,16 +127,19 @@
 						{#if option.detail}
 							<span class="shrink-0 font-mono text-xs text-muted-foreground">{option.detail}</span>
 						{/if}
-						<span class="ml-auto font-mono text-xs text-muted-foreground">
+						<Command.Shortcut class="font-mono">
 							{counts.get(option.value) ?? 0}
-						</span>
+						</Command.Shortcut>
 					</Command.Item>
 				{/each}
 			</Command.Group>
 			{#if selected.size}
 				<Command.Separator />
 				<Command.Group>
-					<Command.Item class="justify-center" onSelect={() => column?.setFilterValue(undefined)}>
+					<Command.Item
+						class="justify-center [&>svg]:hidden"
+						onSelect={() => column?.setFilterValue(undefined)}
+					>
 						{m.common_table_filter_clear()}
 					</Command.Item>
 				</Command.Group>

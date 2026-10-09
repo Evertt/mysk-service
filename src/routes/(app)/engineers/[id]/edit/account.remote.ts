@@ -3,13 +3,12 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
-import { isManager } from "#lib/roles.ts";
+import { isManager } from "#lib/auth";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, member, user } from "#lib/server/db/schema.ts";
-import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/session.ts";
 
 /**
  * The user account an engineer signs in to the engineer portal with, and (for owners and admins)

@@ -8,10 +8,10 @@ import { and, asc, inArray, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
+import { inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
-import { nocase, searchMatch } from "#lib/server/table-query.ts";
+import { nocase, searchMatch } from "#lib/server/lists";
 
 /** A unit as the lists show it: manufacturer and model. */
 const unitName = sql<string>`${equipment.manufacturer} || ' ' || ${equipment.model}`;

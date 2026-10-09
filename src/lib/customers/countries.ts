@@ -2,7 +2,7 @@
  * Customers' countries. A customer's country is stored as its English name (e.g. `Netherlands`),
  * and shown in the current language with `countryName()` (`Nederland` in Dutch).
  */
-import { intlLocale } from "#lib/format.ts";
+import { intlLocale } from "#lib/i18n";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 /** The countries offered in the customer form (besides those already in use), by ISO 3166 code. */

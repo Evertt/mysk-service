@@ -15,7 +15,7 @@ import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-import { labelOptions, withLabels } from "#lib/i18n/labels.ts";
+import { labelOptions, withLabels } from "#lib/i18n";
 import {
 	type OrderPriority,
 	orderPriorities,

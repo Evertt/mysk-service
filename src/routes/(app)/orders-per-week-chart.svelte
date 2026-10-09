@@ -8,7 +8,7 @@
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
 	import { addDays } from "#lib/dates.ts";
-	import { dateFormatter, formatNumber } from "#lib/format.ts";
+	import { dateFormatter, formatNumber } from "#lib/i18n";
 	import { orderStatuses } from "#lib/models.ts";
 	import { statuses } from "#lib/orders/display.ts";
 

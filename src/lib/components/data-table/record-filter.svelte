@@ -192,19 +192,20 @@
 							</div>
 							<span class="truncate">{option.label}</span>
 							{#if option.detail}
-								<span class="ml-auto shrink-0 font-mono text-xs text-muted-foreground">
-									{option.detail}
-								</span>
+								{#if counts}
+									<span class="shrink-0 font-mono text-xs text-muted-foreground">
+										{option.detail}
+									</span>
+								{:else}
+									<Command.Shortcut class="shrink-0 font-mono tracking-wide">
+										{option.detail}
+									</Command.Shortcut>
+								{/if}
 							{/if}
 							{#if counts}
-								<span
-									class={cn(
-										"shrink-0 font-mono text-xs text-muted-foreground",
-										!option.detail && "ml-auto",
-									)}
-								>
+								<Command.Shortcut class="shrink-0 font-mono">
 									{counts[option.value] ?? 0}
-								</span>
+								</Command.Shortcut>
 							{/if}
 						</Command.Item>
 					{/each}
@@ -220,7 +221,7 @@
 				<Command.Group>
 					<Command.Item
 						value="__clear"
-						class="justify-center"
+						class="justify-center [&>svg]:hidden"
 						onSelect={() => column?.setFilterValue(undefined)}
 					>
 						{m.common_table_filter_clear()}

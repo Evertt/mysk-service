@@ -7,8 +7,8 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { formatCode, type NumberKind } from "#lib/numbering.ts";
 import { db } from "#lib/server/db/index.ts";
 
+import type { Tenant } from "./auth/session.ts";
 import { nextNumber, type NumberTarget } from "./numbering.ts";
-import type { Tenant } from "./session.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

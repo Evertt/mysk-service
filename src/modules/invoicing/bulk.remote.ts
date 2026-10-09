@@ -1,16 +1,15 @@
 /**
  * What the invoicing module adds to the orders list's selection (see `bulkActions` in
- * `#lib/modules.ts` and `order-bulk-actions.ts`).
+ * `#lib/modules/manifests.ts` and `order-bulk-actions.ts`).
  */
 import { command } from "$app/server";
 import { error, isValidationError } from "@sveltejs/kit";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
-import { m } from "#lib/paraglide/messages.js";
-import { idsTarget, targetIds } from "#lib/server/bulk.ts";
+import { idsInTenant, requireModule } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
-import { idsInTenant, requireModule } from "#lib/server/session.ts";
+import { idsTarget, targetIds } from "#lib/server/lists";
 
 import { getOrderInvoice } from "./invoicing.remote.ts";
 import { billableFor } from "./server/billable.ts";

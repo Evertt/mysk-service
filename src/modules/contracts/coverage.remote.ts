@@ -1,5 +1,5 @@
 /**
- * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules.ts`): an
+ * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): an
  * order's coverage and response time, the contracts covering a unit, and the dashboard's cards.
  */
 import { query } from "$app/server";
@@ -9,10 +9,9 @@ import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { addDays, startOfDay } from "#lib/dates.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
 import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
 import { coverageOf } from "./server/contracts.ts";

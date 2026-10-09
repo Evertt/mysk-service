@@ -9,7 +9,6 @@ import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 import OrderLink from "#lib/orders/order-link.svelte";
 import PriorityBadge from "#lib/orders/priority-badge.svelte";
 import TypeLabel from "#lib/orders/type-label.svelte";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";

@@ -3,7 +3,7 @@
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 
-	import { formatNumber } from "#lib/format.ts";
+	import { formatNumber } from "#lib/i18n";
 	import { cn, type WithElementRef, type WithoutChildren } from "#lib/utils.ts";
 
 	import { getPayloadConfigFromPayload, useChart, type TooltipPayload } from "./chart-utils.ts";

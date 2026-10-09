@@ -1,13 +1,13 @@
 <!--
 	@component
-	The badges the tenant's modules put on an order (see `OrderTag` in `#lib/modules.ts`), e.g. a
+	The badges the tenant's modules put on an order (see `OrderTag` in `#lib/modules/manifests.ts`), e.g. a
 	response time about to be missed.
 -->
 <script lang="ts">
 	import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
-	import type { OrderTag } from "#lib/modules.ts";
+	import type { OrderTag } from "#lib/modules/manifests.ts";
 
 	let { tags }: { tags: OrderTag[] } = $props();
 

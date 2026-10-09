@@ -2,18 +2,18 @@ import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
+import type { Tenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 
-import { lookUpNames, present, subjectStates } from "./activity-feed.ts";
-import type { Tenant } from "./session.ts";
+import { lookUpNames, present, subjectStates } from "./feed.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 // Made-up modules instead of the ones in `src/modules`.
-vi.mock("#lib/modules.gen.ts", async () => ({
-	manifests: (await import("#lib/fake-modules.ts")).fakeModules,
+vi.mock("#lib/modules/manifests.gen.ts", async () => ({
+	manifests: (await import("#lib/modules/fakes.ts")).fakeModules,
 }));
 
 // An in-memory database with just the tables the feed reads, instead of the app's, which needs

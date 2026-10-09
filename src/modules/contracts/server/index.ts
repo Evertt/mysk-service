@@ -1,17 +1,16 @@
 /**
- * The service contracts module's hooks into core (see `#lib/server/modules.ts`): contracts make
+ * The service contracts module's hooks into core (see `#lib/server/modules/hooks.ts`): contracts make
  * the work they include free of charge in an order's price, flag orders whose response is at risk,
  * refresh the coverage an order's page shows once it's saved, and offer their monthly fees for
  * billing. The rules themselves are in `../coverage.ts` and `../billing.ts`.
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 
-import { formatDate, formatDateTime } from "#lib/format.ts";
-import type { OrderTag } from "#lib/modules.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { formatDate, formatDateTime } from "#lib/i18n/format.ts";
+import type { OrderTag } from "#lib/modules/manifests.ts";
+import { inTenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
-import { defineServerModule, type OrderFacts } from "#lib/server/modules.ts";
-import { inTenant } from "#lib/server/session.ts";
+import { defineServerModule, type OrderFacts } from "#lib/server/modules/hooks.ts";
 
 import { contractMonths, monthlyFee } from "../billing.ts";
 import { getOrderCoverage } from "../coverage.remote.ts";

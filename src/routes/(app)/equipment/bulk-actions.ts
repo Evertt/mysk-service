@@ -5,7 +5,6 @@ import Trash2Icon from "@lucide/svelte/icons/trash-2";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import { statusOptions } from "#lib/equipment/display.ts";
 import type { EquipmentStatus } from "#lib/models.ts";
-import { m } from "#lib/paraglide/messages.js";
 
 import type { EquipmentRow } from "./columns.ts";
 import {

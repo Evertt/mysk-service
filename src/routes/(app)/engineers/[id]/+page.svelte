@@ -11,7 +11,7 @@
 	import ActiveBadge from "#lib/engineers/active-badge.svelte";
 	import { regionLabel } from "#lib/engineers/display.ts";
 	import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/format.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 

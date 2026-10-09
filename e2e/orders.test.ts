@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatNumber } from "../src/lib/format.ts";
+import { formatNumber } from "../src/lib/i18n/format.ts";
 import { countIn, nextCode, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
 import { orderId, orderLines, orderMovements, snapshot } from "./orders-helpers.ts";
 

@@ -7,7 +7,7 @@
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDateTime } from "#lib/format.ts";
+	import { formatDateTime } from "#lib/i18n";
 
 	import { addNote, type getMyOrder } from "../portal.remote.ts";
 

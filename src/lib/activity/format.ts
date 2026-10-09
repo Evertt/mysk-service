@@ -1,16 +1,15 @@
 /**
  * How the values in the activity log's entries read: the labels of fields, and their old and new
  * values as text (`describeChanges()`), with the names of the records they refer to. The sentences
- * and the subject types (nouns, pages and per-field formats) are in `#lib/activity.ts`.
+ * and the subject types (nouns, pages and per-field formats) are in `#lib/activity/subjects.ts`.
  *
  * Fields without a format of their own still show, with a label from `fieldLabels` (or made from
  * their name) and their value as stored (dates and numbers formatted).
  */
-// Only types from `#lib/activity.ts`, which uses this file's types in turn.
-import type { FieldFormat, SubjectType, Text } from "#lib/activity.ts";
-import { formatDate, formatDateTime, formatNumber } from "#lib/format.ts";
-import { modules } from "#lib/modules.ts";
-import { m } from "#lib/paraglide/messages.js";
+// Only types from `#lib/activity/subjects.ts`, which uses this file's types in turn.
+import type { FieldFormat, SubjectType, Text } from "#lib/activity";
+import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
+import { modules } from "#lib/modules/manifests.ts";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
 const referenceTypes = ["customer", "engineer", "equipment", "material"] as const;

@@ -1,14 +1,14 @@
 /**
  * Made-up modules for the specs of the core, which test its extension points (slots, bulk actions,
  * activity subjects and verbs) without the real modules in `src/modules`: a spec mocks the
- * registry with them, `vi.mock("#lib/modules.gen.ts", async () => ({ manifests: fakeModules }))`,
+ * registry with them, `vi.mock("#lib/modules/manifests.gen.ts", async () => ({ manifests: fakeModules }))`,
  * or passes them where a function takes a registry. What a real module does is tested in its own
  * folder.
  */
 import type { Component } from "svelte";
 
-import type { Sentence } from "#lib/activity.ts";
-import type { AppModule, ModuleId } from "#lib/modules.ts";
+import type { Sentence } from "#lib/activity";
+import type { AppModule, ModuleId } from "#lib/modules/manifests.ts";
 
 const loader = () => Promise.resolve({ default: {} as Component });
 const sentence =

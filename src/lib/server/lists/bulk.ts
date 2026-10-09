@@ -29,12 +29,11 @@ import * as v from "valibot";
 
 import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.ts";
 import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
-import { formatNumber } from "#lib/format.ts";
-import { m } from "#lib/paraglide/messages.js";
+import { formatNumber } from "#lib/i18n";
+import { idsInTenant, type TenantTable } from "#lib/server/auth";
+import { db } from "#lib/server/db/index.ts";
 
-import { db } from "./db/index.ts";
-import { idsInTenant, type TenantTable } from "./session.ts";
-import { type ListSql, planList } from "./table-query.ts";
+import { type ListSql, planList } from "./plan.ts";
 
 /** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */
 export const idsTarget = v.object({

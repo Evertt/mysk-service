@@ -1,11 +1,11 @@
 <!--
 	@component
-	The contracts module's card on an order's page (the `order` slot in `#lib/modules.ts`): the
+	The contracts module's card on an order's page (the `order` slot in `#lib/modules/manifests.ts`): the
 	contract that covered the order and its response deadline. Nothing if no contract did.
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { formatDateTime } from "#lib/format.ts";
+	import { formatDateTime } from "#lib/i18n";
 
 	import ContractLink from "./contract-link.svelte";
 	import { getOrderCoverage } from "./coverage.remote.ts";

@@ -4,11 +4,10 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireModule } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { idInTenant, inTenant, requireModule } from "#lib/server/session.ts";
 
 import { lineNote } from "../../../../activity.ts";
 import { isEditable, lineAmount } from "../../../../invoice.ts";

@@ -12,14 +12,14 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 	const list = (names: string[]) => `[${names.join(", ")}]`;
 
 	return {
-		"src/lib/module-ids.gen.ts": [
+		"src/lib/modules/ids.gen.ts": [
 			registryHeader("src/modules/*/module.ts"),
 			`/** The ids of the modules in \`src/modules\`, for code that can't import their manifests. */`,
 			`export const generatedModuleIds = ${list(modules.map((m) => JSON.stringify(m.id)))} as const;`,
 			"",
 		].join("\n"),
 
-		"src/lib/modules.gen.ts": [
+		"src/lib/modules/manifests.gen.ts": [
 			registryHeader("src/modules/*/module.ts"),
 			...modules.map((m) => `import ${camel(m.id)}Module from "#modules/${m.id}/module.ts";`),
 			...(modules.length ? [""] : []),
@@ -27,7 +27,7 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			"",
 		].join("\n"),
 
-		"src/lib/server/modules.gen.ts": [
+		"src/lib/server/modules/hooks.gen.ts": [
 			registryHeader("src/modules/*/server/index.ts"),
 			...withServer.map(
 				(m) => `import ${camel(m.id)}Server from "#modules/${m.id}/server/index.ts";`,
@@ -35,7 +35,7 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			...(withServer.length ? [""] : []),
 			`/**`,
 			` * A function, not a constant: the modules import \`defineServerModule()\` from`,
-			` * \`#lib/server/modules.ts\`, which imports this, so one of them is always evaluated first.`,
+			` * \`#lib/server/modules/hooks.ts\`, which imports this, so one of them is always evaluated first.`,
 			` */`,
 			`export function generatedServerModules() {`,
 			`\treturn ${list(withServer.map((m) => `${camel(m.id)}Server`))} as const;`,

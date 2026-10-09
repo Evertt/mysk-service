@@ -19,7 +19,14 @@ Put a module next to the code that uses it, in the nearest folder that contains 
 - **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
 - **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.ts`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
 - **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.ts`.
-- **Generic, domain-free code** (UI kit, data table, forms, formatting, themes, `models.ts`, `schema.ts`): `src/lib/components/` and `src/lib/*.ts`. Infrastructure on the server (database, auth, session, activity log, bulk and table-query helpers, mail, the modules' extension points): `src/lib/server/`.
+- **Generic, domain-free code** (UI kit, data table, forms, themes, activity subjects, auth,
+  i18n, module manifests): `src/lib/components/`, `src/lib/activity/`, `src/lib/auth/`,
+  `src/lib/i18n/`, `src/lib/modules/`, `src/lib/themes/`; the loose `src/lib/*.ts` that remain are
+  domain enums (`models.ts`), valibot blocks (`schema.ts`), date maths (`dates.ts`), code shapes
+  (`numbering.ts`) and shadcn's `cn` (`utils.ts`). Infrastructure on the server (database, auth,
+  activity log, list plans and bulk helpers, mail, the modules' extension points): `src/lib/server/db/`,
+  `server/auth/`, `server/activity/`, `server/lists/`, `server/mail/`, `server/modules/`; the loose
+  `src/lib/server/*.ts` that remain are `forms.ts`, `records.ts` and `numbering.ts`.
 - **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
 
 **Imports name a file by its real extension**: `.ts` for TypeScript (`allowImportingTsExtensions` is
@@ -28,7 +35,10 @@ for rune modules, `.svelte` for components, and `.js` only for real JavaScript, 
 generated output (`#lib/paraglide/messages.js`, `runtime.js`). So `../order.remote.ts`, never
 `../order.remote.js` or `../order.remote`; the same goes for `vi.mock(...)` paths and `import()`.
 `src/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
-`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`.
+`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`. Seven folders also have
+a barrel `index.ts` re-exporting their files, imported as the folder (`#lib/i18n`,
+`#lib/server/lists`): `activity/`, `auth/`, `i18n/` and `server/activity/`, `server/auth/`,
+`server/lists/`, `server/mail/`.
 
 Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 
@@ -38,7 +48,7 @@ When a module gains a user outside its folder, move it up to the nearest common 
 
 The app is multi-tenant: organizations (better-auth's organization plugin) own all business data, and
 optional modules (`src/modules/<id>/`, see "Modules") are enabled per organization (`organization_module`). The
-helpers are in `src/lib/server/session.ts`:
+helpers are in `src/lib/server/auth/session.ts`:
 
 - Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
   tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization
@@ -67,9 +77,9 @@ helpers are in `src/lib/server/session.ts`:
   table. Where a reference must belong to the same customer (an order's equipment, a contract's
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
-  about modules. A module adds to core pages through `slots` in `src/lib/modules.ts` (components
+  about modules. A module adds to core pages through `slots` in `src/lib/modules/manifests.ts` (components
   that load their own data with `requireModule()`), and to core server logic through hooks in
-  `src/lib/server/modules.ts`; both only take part for tenants that have the module. A module
+  `src/lib/server/modules/hooks.ts`; both only take part for tenants that have the module. A module
   declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
   `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
   `tag`, `billableItems`: asked in parallel about a batch, answers merged in registry order, an
@@ -80,14 +90,14 @@ helpers are in `src/lib/server/session.ts`:
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`), which applies the modules' adjustments.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
-  `refreshRequested()` for bulk commands (`bulk.ts`), `deleteAndLog()` for deleting a record
+  `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
   (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
   `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
 
 ## Modules
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
-self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/define-module.ts`: label,
+self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
 description, `route`, icon, `slots`, `subjects`, `actions`, `bulkActions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
@@ -98,8 +108,8 @@ migration committed.
 
 - `scripts/modules.ts` (its parts, each with a spec, are in `scripts/modules/`) links the folders in;
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
-  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules.gen.ts`,
-  `module-ids.gen.ts`, `src/lib/server/modules.gen.ts`,
+  dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
+  `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
   `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
   for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
   `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
@@ -119,7 +129,7 @@ migration committed.
 - Every remote function and endpoint of a module starts with `requireModule("<id>")`: the guard on
   the pages is for the experience, this is what keeps the data safe (a layout's load doesn't cover
   `+server.ts` endpoints).
-- Core declares every extension point (`#lib/modules.ts`, `#lib/server/modules.ts`); core never
+- Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
   imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
   checks (`#modules/…` is for the generated registries only). Module tables reference core tables
   (composite tenant keys, columns from `#lib/server/db/columns.ts`), never the reverse; one migration
@@ -149,7 +159,7 @@ server `refuseChange`/`saved` hooks.
   (which contract covers an order, the fees due), stays in `e2e/`; the e2e of contracts and
   invoicing import it from there. A core test of what a module adds (invoicing's bulk action on the
   orders list) is that module's e2e test, not the core's.
-- Core specs test core with made-up modules (`src/lib/fake-modules.ts`, mocked in as `modules.gen.ts`
+- Core specs test core with made-up modules (`src/lib/modules/fakes.ts`, mocked in as `manifests.gen.ts`
   or passed to the function as the registry); what a module does is tested in its own folder.
 
 ## Server-side lists
@@ -170,7 +180,7 @@ orders list in `src/routes/(app)/orders/` is the example):
    the joins once in a helper generic over the query (`withOrderJoins`, drizzle's `$dynamic()`
    pattern) and use it for the rows and in `ListSql.from`, so rows, counts, facets and bulk ids can't
    drift apart. Never build a `ListSql` at module scope: `inTenant()` reads the request.
-3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/table-query.ts`): `paged()` for the
+3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/lists/plan.ts`): `paged()` for the
    rows, and `count()`, `facets()`, `groupCounts()` and `ids()`, each written once.
 
 Remote queries take `list.query` (the rows) or `list.where` (the filters' counts) as their argument
@@ -191,7 +201,7 @@ schema has changes no migration makes. Never edit a migration that's been commit
 
 ## Activity log
 
-Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity.ts`), inside the
+Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity/log.ts`), inside the
 `db.transaction` that makes the change and after making it, so a refused or rolled-back change logs
 nothing (wrap a single write in a transaction for this). Tenant and user come from the request
 (`requireTenant()`, so the engineer portal logs too):
@@ -213,7 +223,7 @@ await db.transaction(async (tx) => {
   `after`'s fields are compared, and an update that changes nothing logs nothing. `ignore` leaves
   out fields that follow from others.
 - A new subject type gets a noun, page and field formats in `coreSubjectTypes`
-  (`src/lib/activity.ts`), or, for a module's records, in the `subjects` of its manifest
+  (`src/lib/activity/subjects.ts`), or, for a module's records, in the `subjects` of its manifest
   (`src/modules/<id>/module.ts`; its verbs are its `actions`).
   Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
 - Log deletions too: a subject links to its page until its deletion (or removal) is logged.
@@ -262,7 +272,7 @@ remote functions. Every user-facing text goes through a message; nothing English
 - **Server refusals**: `error(404, m.orders_not_found())`, `invalid(m.orders_delete_refused())` in
   the remote function's body, so they're in the request's language. Shared ones are
   `common_error_*` (`requireMember()` and friends use them).
-- **Formatting**: money, dates, times and numbers only through `#lib/format.ts` (`formatCents`,
+- **Formatting**: money, dates, times and numbers only through `#lib/i18n/format.ts` (`formatCents`,
   `formatDate`, `formatDateTime`, `formatTime`, `formatNumber`; `dateFormatter(options)` and
   `numberFormatter(options)` for other formats, safe at module scope), never `new Intl.*("en-GB")`
   or `toLocaleString()`. Number and date inputs stay `type="number"`/`"date"`: the browser shows

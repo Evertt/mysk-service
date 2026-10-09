@@ -3,9 +3,8 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { isModuleId, type ModuleId } from "#lib/module-ids.ts";
-import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer, managerRoles, parseRoles } from "#lib/roles.ts";
+import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth";
+import { isModuleId, type ModuleId } from "#lib/modules/ids.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 
@@ -14,7 +13,7 @@ export interface Tenant {
 	organizationId: string;
 	name: string;
 	slug: string;
-	/** The member's roles, see `memberRoles` in `#lib/roles.ts` (a member may have several). */
+	/** The member's roles, see `memberRoles` in `#lib/auth/roles.ts` (a member may have several). */
 	roles: string[];
 	modules: string[];
 }

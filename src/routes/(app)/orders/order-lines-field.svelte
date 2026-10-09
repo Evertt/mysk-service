@@ -7,8 +7,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-	import { formatCents } from "#lib/format.ts";
-	import { label } from "#lib/i18n/labels.ts";
+	import { formatCents, label } from "#lib/i18n";
 	import { lineTotal, quantityStep } from "#lib/models.ts";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.ts";

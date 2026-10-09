@@ -5,14 +5,13 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { formatCents } from "#lib/format.ts";
-import { m } from "#lib/paraglide/messages.js";
-import { recordActivity } from "#lib/server/activity.ts";
+import { formatCents } from "#lib/i18n";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import type { Problem } from "#lib/server/forms.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
-import { idInTenant, inTenant, requireMember } from "#lib/server/session.ts";
 
 import { invoiceState, invoiceTotals } from "../invoice.ts";
 import { invoiceNumberFormat } from "../model.ts";

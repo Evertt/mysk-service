@@ -1,14 +1,14 @@
 /**
  * The app's optional modules: feature sets on top of the core (customers, equipment, orders, …)
  * that some tenants buy and others don't. Which tenant has which is stored per organization
- * (`organization_module`); `requireModule()` in `#lib/server/session.ts` refuses a module's remote
+ * (`organization_module`); `requireModule()` in `#lib/server/auth/session.ts` refuses a module's remote
  * functions to the others.
  *
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its
  * tables reference the core tables, never the other way round. Core pages and core server code
  * don't import a module's code; they take what the tenant's modules contribute through these
  * registries. A module is a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
- * `#lib/define-module.ts`), which `scripts/modules.ts` collects in `modules.gen.ts`:
+ * `#lib/modules/define.ts`), which `scripts/modules.ts` collects in `manifests.gen.ts`:
  *
  * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
  *   of equipment's page), rendered by `module-slots.svelte` in `src/routes/(app)/` only for the
@@ -16,7 +16,7 @@
  * - here too, `bulkActions`: actions a module adds to a core table's selection (e.g. invoicing's
  *   "Create invoice" on the orders list), loaded by `module-bulk-actions.svelte.ts` in
  *   `src/routes/(app)/` only for the modules the tenant has;
- * - `#lib/server/modules.ts`: server hooks, grouped by the core domain they belong to and named
+ * - `#lib/server/modules/hooks.ts`: server hooks, grouped by the core domain they belong to and named
  *   for their kind (a collector, an event after commit), e.g. `orders.adjustPrices` (applied by
  *   `priceOrders()` in `#lib/orders/server/pricing.ts`), `orders.tag` (`tagOrders()`) and
  *   `orders.committed` (`orderCommitted()`).
@@ -24,12 +24,12 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity.ts";
+import type { Sentence, SubjectType } from "#lib/activity";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import type { OrderStatus } from "#lib/models.ts";
-import type { ModuleId } from "#lib/module-ids.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
 
-import { manifests } from "./modules.gen.ts";
+import { manifests } from "./manifests.gen.ts";
 
 /** The places on core pages where modules can add components, with the props each passes. */
 export interface SlotProps {
@@ -59,7 +59,7 @@ interface ModuleParts {
 	 * nothing to say.
 	 */
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
-	/** How the activity log reads for the module's records, by subject type (`#lib/activity.ts`). */
+	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;
 	/**
 	 * The verbs the module adds to the activity log (`ActivityAction`), as a sentence each. They
@@ -75,7 +75,7 @@ interface ModuleParts {
 
 /** A module as the registry has it. */
 export interface AppModule extends ModuleParts {
-	/** Also in `moduleIds` (`#lib/module-ids.ts`), for code that can't import the registry. */
+	/** Also in `moduleIds` (`#lib/modules/ids.ts`), for code that can't import the registry. */
 	id: ModuleId;
 	/** Translated when read (a getter), so read it when showing it, not at module scope. */
 	readonly label: string;
@@ -154,7 +154,7 @@ export function bulkActionLoaders<Table extends BulkTableName>(
 	});
 }
 
-// --- What modules add to orders (see `#lib/server/modules.ts`) -------------------------------
+// --- What modules add to orders (see `#lib/server/modules/hooks.ts`) -------------------------------
 
 /**
  * A badge a module puts next to an order's status, on the order's page and in the orders table,

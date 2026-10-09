@@ -4,15 +4,12 @@ import { isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatNumber } from "#lib/format.ts";
-import { invitationState } from "#lib/members.ts";
-import { m } from "#lib/paraglide/messages.js";
-import { parseRoles } from "#lib/roles.ts";
-import { recordActivityAfter } from "#lib/server/activity.ts";
-import { auth } from "#lib/server/auth.ts";
+import { invitationState, parseRoles } from "#lib/auth";
+import { formatNumber } from "#lib/i18n";
+import { recordActivityAfter } from "#lib/server/activity";
+import { auth, requireUser } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, organization, user } from "#lib/server/db/schema.ts";
-import { requireUser } from "#lib/server/session.ts";
 
 /**
  * An invitation, looked up by its id from the emailed link. Anyone with the link may open it, so

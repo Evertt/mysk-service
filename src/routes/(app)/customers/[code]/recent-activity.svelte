@@ -8,7 +8,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import { joinValues } from "#lib/components/data-table/url-state.ts";
-	import { formatCents, formatDate } from "#lib/format.ts";
+	import { formatCents, formatDate } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";

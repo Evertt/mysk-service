@@ -3,10 +3,8 @@ import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
-import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer } from "#lib/roles.ts";
-import { auth } from "#lib/server/auth.ts";
-import { loadTenant } from "#lib/server/session.ts";
+import { isFieldEngineer } from "#lib/auth";
+import { auth, loadTenant } from "#lib/server/auth";
 
 /** Only local paths, so the login can't be used to send people to another site. */
 const safeRedirect = (path: string | undefined) =>
