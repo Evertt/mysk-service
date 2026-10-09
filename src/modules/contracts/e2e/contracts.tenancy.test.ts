@@ -155,7 +155,7 @@ describe("in South, which doesn't have the module", () => {
 		expect(result).toMatch(/"status":404/);
 		expect(await countIn("contract", north.id)).toBe(northBefore);
 		expect(await countIn("contract", south.id)).toBe(southBefore);
-	});
+	}, 60_000); // several page loads, each waiting for the network to settle
 
 	test("the sidebar lacks the module and the contracts pages are 404s", async () => {
 		await app.go("/");
