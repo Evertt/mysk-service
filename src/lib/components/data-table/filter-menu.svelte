@@ -52,7 +52,7 @@
 		{/snippet}
 	</Popover.Trigger>
 	<Popover.Content
-		class="w-72 p-0"
+		class="w-72 gap-0 p-0"
 		align="start"
 		onOpenAutoFocus={(event) => {
 			event.preventDefault();
@@ -86,12 +86,12 @@
 					{#each filters.all as filter (filter.columnId)}
 						<Command.Item value={filter.columnId} onSelect={() => (picked = filter)}>
 							<span class="truncate">{filter.title}</span>
-							{#if filter.chosen.length}
-								<span class="ml-auto max-w-32 truncate text-xs text-muted-foreground">
+							<Command.Shortcut class="max-w-32 truncate tracking-wide">
+								{#if filter.chosen.length}
 									{summary(filter)}
-								</span>
-							{/if}
-							<ChevronRightIcon class={filter.chosen.length ? "" : "ml-auto"} />
+								{/if}
+							</Command.Shortcut>
+							<ChevronRightIcon />
 						</Command.Item>
 					{/each}
 				</Command.Group>

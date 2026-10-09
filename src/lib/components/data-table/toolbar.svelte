@@ -30,7 +30,7 @@
 </script>
 
 <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-	<InputGroup.Root class="w-full shrink-0 sm:w-64">
+	<InputGroup.Root class="w-full shrink-0 sm:w-48">
 		<InputGroup.Addon>
 			<SearchIcon />
 		</InputGroup.Addon>
