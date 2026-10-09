@@ -9,6 +9,14 @@ import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
 import { inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
+import {
+	equipmentByStatus,
+	lastMonths,
+	lastWeeks,
+	ordersPerWeek,
+	revenuePerMonth,
+} from "./dashboard-charts.ts";
+
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = query(async () => {
 	requireMember();
@@ -93,4 +101,67 @@ export const getDashboard = query(async () => {
 	};
 
 	return { open, revenue, fleet, upcoming, stock };
+});
+
+/**
+ * The dashboard's charts (see `dashboard-charts.ts`): the orders made per week by status, the
+ * revenue per month, and the equipment by status. Aggregated in the database per local week or
+ * status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
+ */
+export const getCharts = query(async () => {
+	requireMember();
+
+	const now = new Date();
+	const weeks = lastWeeks(now);
+	const months = lastMonths(now);
+
+	// The Monday of the order's week, in local time (`-6 days` then on to the next Monday, which is
+	// the day itself for a Monday), as `yyyy-mm-dd`: what `toDateInput(startOfWeek())` gives.
+	const week = sql<string>`date(${order.createdAt}, 'unixepoch', 'localtime', '-6 days', 'weekday 1')`;
+	const perWeek = await db
+		.select({ week, status: order.status, count: count() })
+		.from(order)
+		.where(and(inTenant(order), gte(order.createdAt, weeks[0])))
+		.groupBy(week, order.status);
+
+	const materials = materialsPerOrder();
+	const done = await db
+		.select({
+			id: order.id,
+			type: order.type,
+			status: order.status,
+			equipmentId: order.equipmentId,
+			createdAt: order.createdAt,
+			completedAt: order.completedAt,
+			laborHours: order.laborHours,
+			hourlyRate: engineer.hourlyRate,
+			materials: sql<number>`coalesce(${materials.total}, 0)`,
+		})
+		.from(order)
+		.leftJoin(materials, eq(materials.orderId, order.id))
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
+		.where(
+			and(
+				inTenant(order),
+				inArray(order.status, doneOrderStatuses),
+				gte(order.completedAt, months[0]),
+			),
+		);
+	const prices = await priceOrders(done);
+	const completed = done.map((row, i) => ({
+		completedAt: row.completedAt!,
+		total: prices[i].total,
+	}));
+
+	const fleet = await db
+		.select({ status: equipment.status, count: count() })
+		.from(equipment)
+		.where(inTenant(equipment))
+		.groupBy(equipment.status);
+
+	return {
+		ordersPerWeek: ordersPerWeek(perWeek, weeks),
+		revenuePerMonth: revenuePerMonth(completed, months),
+		equipmentByStatus: equipmentByStatus(fleet),
+	};
 });

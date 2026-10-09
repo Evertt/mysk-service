@@ -1,6 +1,16 @@
 import { expect, test } from "vite-plus/test";
 
-import { addDays, atTime, DAY, nextDay, startOfDay, timeOfDay, toDateInput } from "./dates.ts";
+import {
+	addDays,
+	atTime,
+	DAY,
+	nextDay,
+	startOfDay,
+	startOfMonth,
+	startOfWeek,
+	timeOfDay,
+	toDateInput,
+} from "./dates.ts";
 
 test("a day is 24 hours in milliseconds", () => {
 	expect(DAY).toBe(86_400_000);
@@ -38,6 +48,21 @@ test("nextDay is midnight of the following day, also across a month or year", ()
 	expect(nextDay(new Date(2026, 9, 7, 15))).toEqual(new Date(2026, 9, 8));
 	expect(nextDay(new Date(2026, 9, 31, 23, 59))).toEqual(new Date(2026, 10, 1));
 	expect(nextDay(new Date(2026, 11, 31))).toEqual(new Date(2027, 0, 1));
+});
+
+test("startOfWeek is midnight of the week's Monday, also across a month or year", () => {
+	// 2026-10-07 is a Wednesday.
+	expect(startOfWeek(new Date(2026, 9, 7, 15))).toEqual(new Date(2026, 9, 5));
+	expect(startOfWeek(new Date(2026, 9, 5))).toEqual(new Date(2026, 9, 5));
+	// A Sunday belongs to the week that started the Monday before.
+	expect(startOfWeek(new Date(2026, 9, 11, 23, 59))).toEqual(new Date(2026, 9, 5));
+	expect(startOfWeek(new Date(2026, 10, 1))).toEqual(new Date(2026, 9, 26));
+	expect(startOfWeek(new Date(2027, 0, 1))).toEqual(new Date(2026, 11, 28));
+});
+
+test("startOfMonth is midnight of the month's first day", () => {
+	expect(startOfMonth(new Date(2026, 9, 7, 15))).toEqual(new Date(2026, 9, 1));
+	expect(startOfMonth(new Date(2026, 9, 1))).toEqual(new Date(2026, 9, 1));
 });
 
 test("toDateInput is the local day as yyyy-mm-dd, or empty", () => {

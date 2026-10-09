@@ -30,13 +30,22 @@ interface Display {
 	variant: BadgeVariant;
 }
 
-const statusDetails: Record<OrderStatus, Display> = {
-	quote: { icon: FileTextIcon, variant: "outline" },
-	scheduled: { icon: CalendarClockIcon, variant: "secondary" },
-	in_progress: { icon: TimerIcon, variant: "default" },
-	completed: { icon: CircleCheckIcon, variant: "secondary" },
-	invoiced: { icon: ReceiptIcon, variant: "outline" },
-	cancelled: { icon: CircleXIcon, variant: "destructive" },
+/**
+ * A status also has a colour for the charts, a CSS variable of the theme: the chart tokens in
+ * workflow order (so a theme with a single-hue ramp reads as progress), destructive for cancelled,
+ * like its badge.
+ */
+interface StatusDisplay extends Display {
+	color: string;
+}
+
+const statusDetails: Record<OrderStatus, StatusDisplay> = {
+	quote: { icon: FileTextIcon, variant: "outline", color: "var(--chart-1)" },
+	scheduled: { icon: CalendarClockIcon, variant: "secondary", color: "var(--chart-2)" },
+	in_progress: { icon: TimerIcon, variant: "default", color: "var(--chart-3)" },
+	completed: { icon: CircleCheckIcon, variant: "secondary", color: "var(--chart-4)" },
+	invoiced: { icon: ReceiptIcon, variant: "outline", color: "var(--chart-5)" },
+	cancelled: { icon: CircleXIcon, variant: "destructive", color: "var(--destructive)" },
 };
 
 const priorityDetails: Record<OrderPriority, Display> = {
@@ -53,7 +62,7 @@ const typeDetails: Record<OrderType, Omit<Display, "variant">> = {
 	inspection: { icon: ClipboardCheckIcon },
 };
 
-/** Each value's translated `label`, icon and badge variant. */
+/** Each value's translated `label`, icon and badge variant (and a status's chart colour). */
 export const statuses = withLabels("orderStatus", statusDetails);
 export const priorities = withLabels("orderPriority", priorityDetails);
 export const types = withLabels("orderType", typeDetails);

@@ -22,6 +22,13 @@ export const startOfDay = (date: Date) =>
 export const nextDay = (date: Date) =>
 	new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
+/** Midnight at the start of the Monday of `date`'s week. */
+export const startOfWeek = (date: Date) =>
+	new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7));
+
+/** Midnight at the start of the first day of `date`'s month. */
+export const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
 /** A date for `<input type="date">`, e.g. as the initial value of an edit form. */
 export const toDateInput = (date: Date | null | undefined) =>
 	date
