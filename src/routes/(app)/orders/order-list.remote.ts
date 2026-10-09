@@ -100,8 +100,9 @@ export const getOrders = query(ordersList.query, async (input) => {
 });
 
 /**
- * How many orders have each type, status and priority, for the counts in the list's filters: of
- * those matching the search and the other filters.
+ * How many orders have each type, status, priority, engineer (by id) and unit (by serial number),
+ * for the counts in the list's filters: of those matching the search and the other filters. The
+ * unassigned orders and the new installations count under `none`.
  */
 export const getOrderFacets = query(ordersList.where, async (where) => {
 	requireMember();
@@ -109,5 +110,7 @@ export const getOrderFacets = query(ordersList.where, async (where) => {
 		type: order.type,
 		status: order.status,
 		priority: order.priority,
+		engineer: order.engineerId,
+		equipment: equipment.serialNumber,
 	});
 });

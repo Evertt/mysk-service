@@ -11,14 +11,17 @@ import { afterAll, beforeAll, describe, expect, expectTypeOf, test } from "vite-
 import {
 	code,
 	defineList,
+	id,
 	type ListQuery,
 	oneOf as oneOfKind,
+	orNone,
 	toListQuery,
 	whereOf,
 } from "#lib/components/data-table/list-definition.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 
 import {
+	anyOf,
 	type ListSql,
 	nocase,
 	planList,
@@ -120,7 +123,8 @@ const itemList = defineList({
 		code: { sort: true, filter: code },
 		kind: { sort: true, group: true, filter: oneOfKind(kinds) },
 		priority: { sort: true, group: true, filter: oneOfKind(priorities) },
-		due: { sort: true },
+		// Some have no due date: `due=none` keeps those.
+		due: { sort: true, filter: orNone(id) },
 	},
 	defaults: { sort: [{ id: "name", desc: false }], pageSize: 2 },
 	pageSizes: [2, 5],
@@ -149,7 +153,7 @@ const itemSql = (): ListSql<ItemColumns> => ({
 			filter: (values) => inArray(item.priority, values),
 			group: item.priority,
 		},
-		due: { sort: item.due, nullsLast: true },
+		due: { sort: item.due, nullsLast: true, filter: (values) => anyOf(item.due, values) },
 	},
 	search: [item.name, item.code, label.text],
 	id: item.id,
@@ -179,6 +183,7 @@ const planner = {
 		planList(itemSql(), whereOf(fromUrl(params))).facets({
 			kind: item.kind,
 			priority: item.priority,
+			due: item.due,
 		}),
 	groupCounts: (params: string) => planList(itemSql(), fromUrl(params)).groupCounts(),
 	groupId: (params: string) => planList(itemSql(), fromUrl(params)).group?.id,
@@ -255,6 +260,15 @@ describe("planList on a URL's parameters", () => {
 		test("takes any value of a filter without a list, e.g. codes", async () => {
 			expect((await page("code=B-1,B-2,X-9")).total).toBe(2);
 		});
+
+		test("keeps the rows without a value by `none`, alone or with values", async () => {
+			expect(await all("due=none")).toEqual([5, 2]);
+			expect(await all("due=none,3")).toEqual([5, 1, 6, 2]);
+			expect(await all("due=3")).toEqual([1, 6]);
+			// Not the other tenant's row that is due at 1.
+			expect(await all("due=none,1")).toEqual([5, 3, 2]);
+			expect(await all("due=none&kind=cooling")).toEqual([2]);
+		});
 	});
 
 	describe("searching", () => {
@@ -278,6 +292,11 @@ describe("planList on a URL's parameters", () => {
 			expect(counts.kind).toEqual({ heating: 1 });
 			// Without its own filter: every priority of heating with a "b".
 			expect(counts.priority).toEqual({ low: 1, normal: 1, urgent: 1 });
+		});
+
+		test("counts the rows without a value under `none`", async () => {
+			expect((await planner.facets("")).due).toEqual({ "1": 1, "2": 1, "3": 2, none: 2 });
+			expect((await planner.facets("due=none&kind=cooling")).due).toEqual({ "1": 1, none: 1 });
 		});
 	});
 
@@ -328,6 +347,10 @@ describe("planList on a URL's parameters", () => {
 			expect(await grouped("group=tenant")).toMatchObject({ previous: undefined, next: undefined });
 		});
 	});
+});
+
+test("anyOf is nothing for no values", () => {
+	expect(anyOf(item.due, [])).toBeUndefined();
 });
 
 test("searchMatch is nothing for an empty search", () => {
@@ -431,9 +454,9 @@ describe("planList on typed queries", () => {
 		expectTypeOf(await plan.facets({ kind: item.kind })).toEqualTypeOf<
 			Record<"kind", Record<string, number>>
 		>();
-		// @ts-expect-error `due` isn't a column the list filters by
-		const untyped = await plan.facets({ due: item.due });
-		expect(Object.keys(untyped)).toEqual(["due"]);
+		// @ts-expect-error `name` isn't a column the list filters by
+		const untyped = await plan.facets({ name: item.name });
+		expect(Object.keys(untyped)).toEqual(["name"]);
 	});
 
 	test("the SQL has to cover the definition's columns, and no others", () => {
@@ -441,7 +464,7 @@ describe("planList on typed queries", () => {
 		const withColumns = (columns: SqlColumns<ItemColumns>) => ({ ...itemSql(), columns });
 		// @ts-expect-error `kind` has no filter or group
 		withColumns({ ...columns, kind: { sort: item.kind } });
-		// @ts-expect-error `due` has no sort
+		// @ts-expect-error `due` has no sort or filter
 		withColumns({ ...columns, due: {} });
 		// @ts-expect-error `total` isn't a column of the list
 		withColumns({ ...columns, total: { sort: item.id } });

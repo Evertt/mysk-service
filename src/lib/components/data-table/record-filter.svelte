@@ -4,7 +4,9 @@
 	them than fit in a list: the options come from the server as you type (`load`, a remote query,
 	which answers with a limited number of matches), and the ones ticked are always shown, by name.
 	The column's filter values are the records' codes (or ids), as in the URL, e.g.
-	`?customer=CUST-0001,CUST-0007`. For a column with a few fixed values, see `FacetedFilter`.
+	`?customer=CUST-0001,CUST-0007`. A column that can be empty gives `none` a label, and the rows
+	without a value are an option too (`?engineer=none`). For a column with a few fixed values, see
+	`FacetedFilter`.
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
@@ -16,12 +18,15 @@
 
 	import type { RecordOption, RecordOptions } from "./server-table.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
+	import { noneToken } from "./url-state.ts";
 
 	let {
 		columnId,
 		title,
 		searchLabel,
 		load,
+		none,
+		counts,
 	}: {
 		columnId: string;
 		title: string;
@@ -29,6 +34,13 @@
 		searchLabel: string;
 		/** The options for a search, and the names of the ticked ones. */
 		load: (input: { search: string; selected: string[] }) => PromiseLike<RecordOptions>;
+		/**
+		 * For a column that can be empty: offers the rows without a value as the first option, with
+		 * this label, e.g. "Unassigned". Its value is `none` in the URL (`noneToken`).
+		 */
+		none?: string;
+		/** How many rows have each value (the rows without one under `none`), shown with the options. */
+		counts?: Readonly<Record<string, number>>;
 	} = $props();
 
 	/** How long typing waits before searching. */
@@ -57,7 +69,7 @@
 	// The names of ticked ones not seen yet (e.g. from a link), also while closed.
 	$effect(() => {
 		const missing = selected.filter(
-			(value) => !asked.has(value) && !untrack(() => known.has(value)),
+			(value) => value !== noneToken && !asked.has(value) && !untrack(() => known.has(value)),
 		);
 		if (!missing.length) return;
 		for (const value of missing) asked.add(value);
@@ -94,16 +106,30 @@
 		};
 	});
 
-	/** The ticked ones that the search didn't find first, then what it found, in its order. */
+	/** The option for rows without a value, unless the search rules it out. */
+	const noneOption = $derived.by((): RecordOption[] => {
+		if (!none) return [];
+		const term = search.trim().toLowerCase();
+		return term && !none.toLowerCase().includes(term) ? [] : [{ value: noneToken, label: none }];
+	});
+
+	/**
+	 * The option for rows without a value, the ticked ones that the search didn't find, then what
+	 * it found, in its order.
+	 */
 	const shown = $derived.by(() => {
 		const options = found?.options ?? [];
 		const ticked = selected
-			.filter((value) => !options.some((option) => option.value === value))
+			.filter((value) => value !== noneToken && !options.some((option) => option.value === value))
 			.map((value) => known.get(value) ?? { value, label: value });
-		return [...ticked, ...options];
+		return [...noneOption, ...ticked, ...options];
 	});
 
 	const isSelected = (value: string) => selected.includes(value);
+
+	/** What a ticked value is called on the button. */
+	const labelOf = (value: string) =>
+		(value === noneToken ? none : known.get(value)?.label) ?? value;
 
 	function toggle(value: string) {
 		const next = isSelected(value)
@@ -132,7 +158,7 @@
 						</Badge>
 					{:else}
 						{#each selected as value (value)}
-							<Badge variant="secondary">{known.get(value)?.label ?? value}</Badge>
+							<Badge variant="secondary">{labelOf(value)}</Badge>
 						{/each}
 					{/if}
 				{/if}
@@ -167,6 +193,16 @@
 								{#if option.detail}
 									<span class="ml-auto shrink-0 font-mono text-xs text-muted-foreground">
 										{option.detail}
+									</span>
+								{/if}
+								{#if counts}
+									<span
+										class={cn(
+											"shrink-0 font-mono text-xs text-muted-foreground",
+											!option.detail && "ml-auto",
+										)}
+									>
+										{counts[option.value] ?? 0}
 									</span>
 								{/if}
 							</Command.Item>

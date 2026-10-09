@@ -12,6 +12,7 @@
  * | `?status=quote,scheduled`   | a column filter: keeps rows with any of these values          |
  * | `?status=quote&status=paid` | the same, repeated (read, never written)                      |
  * | `?status=`                  | no filter on the column, when the table has one by default   |
+ * | `?engineer=none,12`         | rows without a value (`none`, see `noneToken`) or with one    |
  * | `?sort=-priority,scheduled` | sorted by priority descending (`-`), then scheduled ascending |
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
  * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
@@ -83,6 +84,13 @@ export const defaultPageSizes: readonly number[] = [10, 20, 50, 100];
 
 /** The parameters that aren't columns. */
 const reserved = ["q", "sort", "group", "page", "size"];
+
+/**
+ * A filter's value for rows without one (`?engineer=none`): a column that can be empty offers it
+ * as an option (`FacetedFilter`'s and `RecordFilter`'s `none`, `orNone()` in a server-side list's
+ * definition). It can't be a real value: ids are digits, codes and serial numbers upper case.
+ */
+export const noneToken = "none";
 
 const emptyState: TableUrlState = {
 	globalFilter: "",

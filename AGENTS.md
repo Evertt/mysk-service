@@ -159,8 +159,9 @@ orders list in `src/routes/(app)/orders/` is the example):
 
 1. **The definition**, `defineList()` in `<section>-list.ts` (`orders-list.ts`; isomorphic, no
    server imports): the columns, what each sorts, groups and filters by, and the filter's value
-   type (`code`, `id`, `oneOf(values)`). It makes the valibot schemas `list.query` and `list.where`,
-   the typed `ListQuery`/`ListWhere`, and the URL spec. The table's URL state is read into a query
+   type (`code`, `id`, `oneOf(values)`; `orNone(kind)` for a column that can be empty, `none` in the
+   URL). It makes the valibot schemas `list.query` and `list.where`, the typed
+   `ListQuery`/`ListWhere`, and the URL spec. The table's URL state is read into a query
    with `toListQuery()`; the URL stays lenient (bad values are dropped), the remote query strict
    (a malformed argument is a 400).
 2. **The SQL**, `ListSql` from a per-request factory (`ordersSql()`) in a route-local

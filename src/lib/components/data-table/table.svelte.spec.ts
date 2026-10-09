@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { visit } from "./fake-navigation.svelte.ts";
+import { lastSearch, visit } from "./fake-navigation.svelte.ts";
 import Harness from "./table.test-harness.svelte";
 import {
 	addToSort,
@@ -299,6 +299,29 @@ describe("filtering", () => {
 				"Elevator inspection",
 				"Pump replacement",
 			]);
+	});
+
+	test("the faceted filter offers the rows without a value first, and keeps them by `none`", async () => {
+		const unstarted = {
+			id: 8,
+			name: "Valve check",
+			status: null,
+			amount: 0,
+			quantity: 1,
+			dueOn: null,
+		};
+		render(Harness, { items: [...items, unstarted] });
+
+		await statusFilter().click();
+		await expect.poll(textOf(page.getByRole("option").first())).toBe("(None) 1");
+
+		await facet("\\(None\\)").click();
+		await expect.poll(lastSearch).toBe("?status=none");
+		await expect.poll(names).toEqual(["Valve check"]);
+		await expect.poll(textOf(statusFilter())).toBe("Status (None)");
+
+		await facet("Draft").click();
+		await expect.poll(names).toEqual(["Compressor overhaul", "Elevator inspection", "Valve check"]);
 	});
 
 	test("the faceted filter's button shows the selection, and Clear filters resets it", async () => {

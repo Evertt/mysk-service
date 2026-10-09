@@ -22,7 +22,16 @@
  * the table to tell whether the page's first and last groups go on beyond it, and `groupCounts()`
  * counts each group's rows on every page.
  */
-import { and, count as countRows, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import {
+	and,
+	count as countRows,
+	inArray,
+	isNull,
+	or,
+	sql,
+	type SQL,
+	type SQLWrapper,
+} from "drizzle-orm";
 import type { SelectedFields, SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.ts";
@@ -35,6 +44,7 @@ import type {
 	ListWhere,
 	SortId,
 } from "#lib/components/data-table/list-definition.ts";
+import { noneToken } from "#lib/components/data-table/url-state.ts";
 
 /**
  * The SQL for every column a list's definition sorts, groups or filters by, and nothing else: a
@@ -101,7 +111,7 @@ export interface ListWherePlan<C> {
 	/**
 	 * How many rows have each value of some columns, for the counts in their filters: those that
 	 * match the search and the other filters, as in TanStack's faceting. Returns the counts by
-	 * column id and value.
+	 * column id and value; the rows without a value count under `none` (`noneToken`).
 	 */
 	facets<Id extends FilterId<C>>(
 		columns: Readonly<Record<Id, SQLWrapper>>,
@@ -152,6 +162,18 @@ export const nocase = (expression: SQLWrapper) => sql`${expression} collate noca
 export function rank(expression: SQLWrapper, values: readonly string[]) {
 	const cases = values.map((value, index) => sql`when ${value} then ${index}`);
 	return sql`(case ${expression} ${sql.join(cases, sql` `)} else ${values.length} end)`;
+}
+
+/**
+ * A filter's condition: the rows whose `expression` is one of `values`, where `null` (a filter
+ * made with `orNone()`) is the rows without a value, e.g. `filter: (ids) => anyOf(order.engineerId, ids)`.
+ */
+export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
+	const some = values.filter((value) => value !== null);
+	return or(
+		...(some.length ? [inArray(expression, some)] : []),
+		...(some.length < values.length ? [isNull(expression)] : []),
+	);
 }
 
 /**
@@ -294,7 +316,8 @@ export function planList<C>(listSql: ListSql<C>, query: ListWhere<C> | ListQuery
  * How many rows have each value of some columns, for the counts in their filters: the rows that
  * match the search and the other filters, as in TanStack's faceting. `count` counts the list's
  * rows that match `where` by the value of `by`, as `{ value, count }` (e.g. a `select` from the
- * list's tables `where(where).groupBy(by)`). Returns the counts by column id and value.
+ * list's tables `where(where).groupBy(by)`). Returns the counts by column id and value, the rows
+ * without a value under `none`.
  */
 async function facetCounts<Id extends string>(
 	plan: { where(except?: string): SQL | undefined },
@@ -309,7 +332,13 @@ async function facetCounts<Id extends string>(
 	return Object.fromEntries(
 		ids.map((id, index) => [
 			id,
-			Object.fromEntries(counted[index].map((row) => [String(row.value), row.count])),
+			Object.fromEntries(
+				counted[index].map((row) => {
+					// Facet values are text or numbers (e.g. ids), or null for rows without one.
+					const value = row.value as string | number | null;
+					return [value === null ? noneToken : String(value), row.count];
+				}),
+			),
 		]),
 	) as Record<Id, Record<string, number>>;
 }

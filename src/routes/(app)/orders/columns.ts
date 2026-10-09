@@ -4,6 +4,7 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 import OrderLink from "#lib/orders/order-link.svelte";
 import PriorityBadge from "#lib/orders/priority-badge.svelte";
@@ -55,9 +56,9 @@ export const columns = column.columns([
 					fallback: m.orders_new_installation(),
 				}),
 			sortUndefined: "last",
-			// By serial number.
+			// By serial number; `none` keeps the new installations.
 			filterFn: (row, _id, serials: string[]) =>
-				serials.includes(row.original.equipment?.serialNumber ?? ""),
+				serials.includes(row.original.equipment?.serialNumber ?? noneToken),
 			meta: { label: m.orders_column_equipment, filter: "set" },
 		},
 	),
@@ -94,8 +95,9 @@ export const columns = column.columns([
 				fallback: m.common_unassigned(),
 			}),
 		sortUndefined: "last",
-		// By id.
-		filterFn: (row, _id, ids: string[]) => ids.includes(String(row.original.engineer?.id)),
+		// By id; `none` keeps the unassigned orders.
+		filterFn: (row, _id, ids: string[]) =>
+			ids.includes(row.original.engineer ? String(row.original.engineer.id) : noneToken),
 		enableGrouping: true,
 		getGroupingValue: (row) => row.engineer?.id,
 		meta: { label: m.orders_column_engineer, filter: "set" },
