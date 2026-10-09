@@ -24,7 +24,7 @@ const shownRows = () =>
 /** Opens a faceted filter of the toolbar and picks one of its options. */
 async function filter(title: string, option: string) {
 	const { page } = app;
-	await page.getByRole("button", { name: title, exact: true }).first().click();
+	await app.openFilter(title);
 	await page.getByRole("option", { name: new RegExp(`^${option}\\s*\\d+$`) }).click();
 	await page.keyboard.press("Escape");
 }
@@ -235,7 +235,7 @@ describe("in North", () => {
 			[north.id],
 		);
 		await app.go("/equipment");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await app.openFilter("Customer");
 		await page.getByPlaceholder("Search customers…").fill(owner.code.toLowerCase());
 		await page.getByRole("option", { name: new RegExp(owner.code) }).click();
 		await page.keyboard.press("Escape");
@@ -243,9 +243,7 @@ describe("in North", () => {
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(owner.units);
 		for (const row of await bodyRows().allInnerTexts()) expect(row).toContain(owner.code);
-		expect(
-			await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).innerText(),
-		).toContain(owner.name);
+		expect(await app.filterPill("Customer").innerText()).toContain(owner.name);
 		await page.getByRole("button", { name: "Reset" }).click();
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));

@@ -51,6 +51,18 @@
 			}
 		}
 	],
+	"dashboard_orders_per_week": "Opdrachten per week",
+	"dashboard_orders_per_week_description": "Nieuwe opdrachten in de laatste 12 weken, naar hun huidige status.",
+	"dashboard_revenue_per_month": "Omzet per maand",
+	"dashboard_revenue_per_month_description": "Afgerond werk in de laatste 12 maanden, geprijsd zoals de omzettegel.",
+	"dashboard_equipment_by_status": "Apparatuur naar status",
+	"dashboard_equipment_by_status_description": "De geïnstalleerde apparaten en hoe ze ervoor staan.",
+	"dashboard_column_week": "Week",
+	"dashboard_column_month": "Maand",
+	"dashboard_column_status": "Status",
+	"dashboard_column_units": "Apparaten",
+	"dashboard_column_revenue": "Omzet",
+	"dashboard_column_completed_orders": "Afgeronde opdrachten",
 	"dashboard_upcoming": "Komend werk",
 	"dashboard_upcoming_description": "De eerstvolgende ingeplande opdrachten.",
 	"dashboard_all_orders": "Alle opdrachten",

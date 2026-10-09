@@ -61,6 +61,7 @@
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"knip": "^6.40.0",
+		"layerchart": "^2.5.2",
 		"nodemailer": "^10.0.15",
 		"pdf-lib": "^1.17.1",
 		"playwright": "^1.60.0",

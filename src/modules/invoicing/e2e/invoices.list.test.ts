@@ -24,7 +24,7 @@ describe("in North", () => {
 		);
 		const [busiest] = customers;
 		await app.go("/invoices");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await app.openFilter("Customer");
 		expect(await page.getByRole("option").count()).toBe(customers.length);
 		await page.getByPlaceholder("Customer").fill(busiest.code);
 		const option = page.getByRole("option", { name: new RegExp(busiest.code) });

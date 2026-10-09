@@ -42,8 +42,17 @@ export const addToSort = (name: string) => columnHeader(name).click({ modifiers:
 /** An option of the faceted filter, named by its label (its accessible name ends in its count). */
 export const facet = (label: string) => page.getByRole("option", { name: new RegExp(`^${label}`) });
 
-/** The faceted filter's button, whose name grows with the selection. */
-export const statusFilter = () => page.getByRole("button", { name: /^Status/ });
+/** The toolbar's Filter button, whose menu lists the filters. */
+export const filterButton = () => page.getByRole("button", { name: "Filter" });
+
+/** Opens the Filter menu and picks the Status filter, which shows its values. */
+export async function openStatusFilter() {
+	await filterButton().click();
+	await page.getByRole("option", { name: /^Status/ }).click();
+}
+
+/** The Status filter's pill in the toolbar (there while it has values), which names them. */
+export const statusPill = () => page.getByRole("button", { name: /^Status/ });
 
 /** Reads a locator's text with its whitespace collapsed, for `expect.poll`. */
 export const textOf = (locator: Locator) => () =>

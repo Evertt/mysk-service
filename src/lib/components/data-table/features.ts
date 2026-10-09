@@ -25,6 +25,7 @@ import {
 
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
+import { noneToken } from "./url-state.ts";
 
 export interface DataTableColumnMeta {
 	/**
@@ -41,7 +42,10 @@ export interface DataTableColumnMeta {
 	param?: string;
 	/** Puts the column's filter in the URL as a set of values; implied by `filterFn: "oneOf"`. */
 	filter?: "set";
-	/** The values the column's filter can have; others in the URL are ignored. */
+	/**
+	 * The values the column's filter can have; others in the URL are ignored. For a column that can
+	 * be empty, `noneToken` among them (the filter's `none` option, `?status=none`).
+	 */
 	filterValues?: readonly string[];
 	/**
 	 * When the rows are grouped by another column, each group's header shows the sum of this
@@ -62,9 +66,13 @@ export function columnLabel(column: { id: string; columnDef: { meta?: DataTableC
 	return (typeof label === "function" ? label() : label) ?? column.id;
 }
 
-/** Keeps rows whose value is one of the selected values (used by the faceted filters). */
+/**
+ * Keeps rows whose value is one of the selected values (used by the faceted filters); rows without
+ * a value (`null` or `undefined`) are kept by `none` (`noneToken`, the filter's `none` option).
+ */
 const filterFn_oneOf = constructFilterFn({
-	filter: (dataValue: unknown, filterValue: unknown[]) => filterValue.includes(dataValue),
+	filter: (dataValue: unknown, filterValue: unknown[]) =>
+		filterValue.includes(dataValue ?? noneToken),
 	autoRemove: (value: unknown[] | undefined) => !value?.length,
 });
 

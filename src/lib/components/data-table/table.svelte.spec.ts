@@ -2,16 +2,18 @@ import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { visit } from "./fake-navigation.svelte.ts";
+import { lastSearch, visit } from "./fake-navigation.svelte.ts";
 import Harness from "./table.test-harness.svelte";
 import {
 	addToSort,
 	byName,
 	columnHeader,
 	facet,
+	filterButton,
 	items,
 	names,
-	statusFilter,
+	openStatusFilter,
+	statusPill,
 	textOf,
 } from "./table.test-support.ts";
 
@@ -273,20 +275,28 @@ describe("filtering", () => {
 		await expect.element(page.getByText("0 rows")).toBeInTheDocument();
 	});
 
-	test("the faceted filter shows how many rows have each value", async () => {
+	test("the Filter menu lists the filters, and a picked one shows how many rows have each value", async () => {
 		render(Harness, { items });
 
-		await statusFilter().click();
+		await filterButton().click();
+		await expect.element(page.getByRole("option", { name: "Status" })).toBeVisible();
+		await page.getByRole("option", { name: "Status" }).click();
 
 		await expect.poll(textOf(facet("Draft"))).toBe("Draft 2");
 		await expect.poll(textOf(facet("Open"))).toBe("Open 3");
 		await expect.poll(textOf(facet("Closed"))).toBe("Closed 2");
+		await expect.element(page.getByPlaceholder("Status")).toHaveFocus();
+
+		// Back to the list, where the filter now shows its selection.
+		await facet("Draft").click();
+		await page.getByRole("button", { name: "Back to all filters" }).click();
+		await expect.poll(textOf(page.getByRole("option", { name: /^Status/ }))).toBe("Status Draft");
 	});
 
 	test("the faceted filter keeps rows with any of the selected values", async () => {
 		render(Harness, { items });
 
-		await statusFilter().click();
+		await openStatusFilter();
 		await facet("Draft").click();
 		await expect.poll(names).toEqual(["Compressor overhaul", "Elevator inspection"]);
 
@@ -301,20 +311,63 @@ describe("filtering", () => {
 			]);
 	});
 
-	test("the faceted filter's button shows the selection, and Clear filters resets it", async () => {
+	test("the faceted filter offers the rows without a value first, and keeps them by `none`", async () => {
+		const unstarted = {
+			id: 8,
+			name: "Valve check",
+			status: null,
+			amount: 0,
+			quantity: 1,
+			dueOn: null,
+		};
+		render(Harness, { items: [...items, unstarted] });
+
+		await openStatusFilter();
+		await expect.poll(textOf(page.getByRole("option").first())).toBe("(None) 1");
+
+		await facet("\\(None\\)").click();
+		await expect.poll(lastSearch).toBe("?status=none");
+		await expect.poll(names).toEqual(["Valve check"]);
+		await expect.poll(textOf(statusPill())).toBe("Status (None)");
+
+		await facet("Draft").click();
+		await expect.poll(names).toEqual(["Compressor overhaul", "Elevator inspection", "Valve check"]);
+	});
+
+	test("an active filter is a pill naming the selection, and Clear filters takes it away", async () => {
 		render(Harness, { items });
 
-		const trigger = statusFilter();
-		await trigger.click();
+		expect(statusPill().elements()).toHaveLength(0);
+		await openStatusFilter();
 		await facet("Draft").click();
-		await expect.poll(textOf(trigger)).toBe("Status Draft");
+		await expect.poll(textOf(statusPill())).toBe("Status Draft");
 
 		await facet("Open").click();
+		await expect.poll(textOf(statusPill())).toBe("Status Draft, Open");
 		await facet("Closed").click();
-		await expect.poll(textOf(trigger)).toBe("Status 3 selected");
+		await expect.poll(textOf(statusPill())).toBe("Status 3 selected");
 
 		await page.getByRole("option", { name: "Clear filters" }).click();
-		await expect.poll(textOf(trigger)).toBe("Status");
+		await expect.element(statusPill()).not.toBeInTheDocument();
+		await expect.poll(names).toEqual(byName.slice(0, 5));
+	});
+
+	test("the pill reopens the filter's values, and its remove button clears it", async () => {
+		render(Harness, { items });
+
+		await openStatusFilter();
+		await facet("Closed").click();
+		await userEvent.keyboard("{Escape}");
+		await expect.poll(names).toEqual(["Chiller repair", "Pump replacement"]);
+
+		await statusPill().click();
+		await facet("Draft").click();
+		await expect.poll(textOf(statusPill())).toBe("Status Draft, Closed");
+		await userEvent.keyboard("{Escape}");
+
+		await page.getByRole("button", { name: "Remove the Status filter" }).click();
+		await expect.element(statusPill()).not.toBeInTheDocument();
+		await expect.element(page.getByRole("button", { name: "Reset" })).not.toBeInTheDocument();
 		await expect.poll(names).toEqual(byName.slice(0, 5));
 	});
 });

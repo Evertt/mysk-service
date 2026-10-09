@@ -82,6 +82,10 @@ export interface App {
 	 * (it's `aria-busy` until they're in), e.g. after clicking a header or typing a search.
 	 */
 	tableSettled(): Promise<void>;
+	/** Opens the data table's Filter menu and picks a filter by its title, showing its values. */
+	openFilter(title: string): Promise<void>;
+	/** The pill of an active filter in the data table's toolbar, by title; it names the values. */
+	filterPill(title: string): Locator;
 	/** Groups the data table's rows by a column (or `None`) through its View menu. */
 	groupBy(column: string): Promise<void>;
 	/** The data table's group rows on the page, in order. */
@@ -195,6 +199,11 @@ export function useApp({
 			await settled();
 		},
 		tableSettled: () => settled(),
+		async openFilter(title) {
+			await page.getByRole("button", { name: "Filter", exact: true }).click();
+			await page.getByRole("option", { name: new RegExp(`^${title}( |$)`) }).click();
+		},
+		filterPill: (title) => page.locator('[data-slot="filter-pill"]', { hasText: title }),
 		async groupBy(column) {
 			await page.getByRole("button", { name: "View", exact: true }).click();
 			await page.getByRole("menuitem", { name: "Group by" }).click();

@@ -8,11 +8,15 @@
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 
-	import { getDashboard } from "./dashboard.remote.ts";
+	import { getCharts, getDashboard } from "./dashboard.remote.ts";
+	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
 	import ModuleSlots from "./module-slots.svelte";
+	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
 	import RecentActivity from "./recent-activity.svelte";
+	import RevenuePerMonthChart from "./revenue-per-month-chart.svelte";
 
 	const data = $derived(await getDashboard());
+	const charts = $derived(await getCharts());
 </script>
 
 <svelte:head>
@@ -60,6 +64,12 @@
 			</Button>
 		{/snippet}
 	</StatCard>
+</div>
+
+<div class="grid items-start gap-6 lg:grid-cols-2">
+	<OrdersPerWeekChart data={charts.ordersPerWeek} />
+	<RevenuePerMonthChart data={charts.revenuePerMonth} />
+	<EquipmentByStatusChart data={charts.equipmentByStatus} />
 </div>
 
 <ModuleSlots name="dashboard" props={{}} class="grid items-start gap-6 lg:grid-cols-2" />

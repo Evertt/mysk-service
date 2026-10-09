@@ -16,7 +16,7 @@
  * 	columns: {
  * 		customer: { sort: true, group: true, filter: code }, // by customer code
  * 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
- * 		engineer: { sort: true, group: true, filter: id }, // by engineer id: number[]
+ * 		engineer: { sort: true, group: true, filter: orNone(id) }, // by engineer id: (number | null)[]
  * 		createdAt: { param: "created", sort: true },
  * 	},
  * 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
@@ -33,6 +33,7 @@ import { m } from "#lib/paraglide/messages.js";
 import {
 	defaultPageSizes,
 	filterValues,
+	noneToken,
 	parseTableUrl,
 	type TableUrlSpec,
 	type TableUrlState,
@@ -85,8 +86,19 @@ export const oneOf = <const T extends readonly [string, ...string[]]>(
 	toUrl: (value) => value,
 	values,
 });
-// Later: `range(kind)` → { from?, to? } with `a..b` in the URL, and `orNone(kind)` → T | null with
-// `none`. A kind is all a new filter needs.
+
+/**
+ * A filter on a column that can be empty: `kind`'s values, or `null` for the rows without one,
+ * `none` in the URL (`?engineer=none,12`: unassigned orders and engineer 12's). The SQL keeps them
+ * with `anyOf()` (`#lib/server/table-query.ts`), and the facets count them under `none`.
+ */
+export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
+	value: v.nullable(kind.value),
+	fromUrl: (token) => (token === noneToken ? null : kind.fromUrl(token)),
+	toUrl: (value) => (value === null ? noneToken : kind.toUrl(value)),
+	...(kind.values ? { values: [...kind.values, noneToken] } : {}),
+});
+// Later: `range(kind)` → { from?, to? } with `a..b` in the URL. A kind is all a new filter needs.
 
 /** What a column of a list can do. */
 interface ListColumn {
@@ -273,7 +285,9 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 	};
 }
 
-const compare = (a: unknown, b: unknown) => ((a as any) < (b as any) ? -1 : a === b ? 0 : 1);
+/** Sorts values; `null` (rows without one, see `orNone`) first. */
+const compare = (a: unknown, b: unknown) =>
+	a === b ? 0 : a === null ? -1 : b === null ? 1 : (a as any) < (b as any) ? -1 : 1;
 
 /**
  * The canonical query for a table's state (read from the URL, or the table's own): a query that

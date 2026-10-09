@@ -74,6 +74,14 @@ describe("orders still to be assigned or scheduled", () => {
 	test.each([false, true])("come last when sorting by date (descending: %s)", (desc) => {
 		expect(shown(rows, { sorting: [{ id: "scheduledFor", desc }] }).at(-1)).toBe("ORD-001");
 	});
+
+	test("are kept by `none` in the engineer filter, with or without engineers", () => {
+		const byEngineer = (value: string[]) =>
+			shown(rows, { columnFilters: [{ id: "engineer", value }] });
+		expect(byEngineer(["none"])).toEqual(["ORD-001"]);
+		expect(byEngineer(["none", "3"])).toEqual(["ORD-001", "ORD-003"]);
+		expect(byEngineer(["2"])).toEqual(["ORD-002"]);
+	});
 });
 
 test.each([false, true])(
@@ -89,6 +97,14 @@ test.each([false, true])(
 		expect(shown(rows, { sorting: [{ id: "equipment", desc }] }).at(-1)).toBe("ORD-001");
 	},
 );
+
+test("new installations are kept by `none` in the equipment filter", () => {
+	const rows = [order("ORD-001", { equipment: null }), order("ORD-002")];
+	const byUnit = (value: string[]) => shown(rows, { columnFilters: [{ id: "equipment", value }] });
+	expect(byUnit(["none"])).toEqual(["ORD-001"]);
+	expect(byUnit(["GEN-1"])).toEqual(["ORD-002"]);
+	expect(byUnit(["none", "GEN-1"])).toEqual(["ORD-001", "ORD-002"]);
+});
 
 test("the search finds orders by number, customer, equipment and engineer", () => {
 	const rows = [

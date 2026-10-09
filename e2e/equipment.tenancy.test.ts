@@ -36,7 +36,7 @@ describe("in South", () => {
 
 		// The filters count South's units only.
 		await app.go("/equipment");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Category" }).click();
+		await app.openFilter("Category");
 		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
 			Number(/(\d+)$/.exec(text.trim())![1]),
 		);

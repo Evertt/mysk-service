@@ -51,6 +51,18 @@
 			}
 		}
 	],
+	"dashboard_orders_per_week": "Orders per week",
+	"dashboard_orders_per_week_description": "New orders in the last 12 weeks, by their status now.",
+	"dashboard_revenue_per_month": "Revenue per month",
+	"dashboard_revenue_per_month_description": "Work completed in the last 12 months, priced like the revenue tile.",
+	"dashboard_equipment_by_status": "Equipment by status",
+	"dashboard_equipment_by_status_description": "The installed units and how they are doing.",
+	"dashboard_column_week": "Week",
+	"dashboard_column_month": "Month",
+	"dashboard_column_status": "Status",
+	"dashboard_column_units": "Units",
+	"dashboard_column_revenue": "Revenue",
+	"dashboard_column_completed_orders": "Completed orders",
 	"dashboard_upcoming": "Upcoming work",
 	"dashboard_upcoming_description": "The next scheduled orders.",
 	"dashboard_all_orders": "All orders",

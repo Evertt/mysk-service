@@ -98,7 +98,7 @@ const main = async () => (await app.page.locator("main").innerText()).replace(/\
 /** Opens a faceted filter and ticks options. */
 async function filter(title: string, ...options: RegExp[]) {
 	const { page } = app;
-	await page.locator('[data-slot="popover-trigger"]', { hasText: title }).click();
+	await app.openFilter(title);
 	for (const option of options) await page.getByRole("option", { name: option }).click();
 	await page.keyboard.press("Escape");
 	await app.tableSettled();
@@ -345,9 +345,7 @@ describe("in North", () => {
 		await page.waitForURL(() => search() === "?sort=-price&page=2");
 		await app.tableSettled();
 		await expect.poll(names).toEqual(second);
-		expect(
-			await page.locator('[data-slot="popover-trigger"]', { hasText: "Unit" }).innerText(),
-		).toBe("Unit");
+		expect(await app.filterPill("Unit").count()).toBe(0);
 		await page.goBack();
 		await page.waitForURL(() => search() === "?sort=-price");
 		await app.tableSettled();
@@ -784,7 +782,7 @@ describe("in South", () => {
 	test("the filters count South's materials only", async () => {
 		const { page } = app;
 		await app.go("/materials");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Stock level" }).click();
+		await app.openFilter("Stock level");
 		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
 			Number(/(\d+)$/.exec(text.trim())![1]),
 		);

@@ -14,6 +14,7 @@ declare global {
   const Breadcrumb: typeof import('#ui/breadcrumb')
   const Button: typeof import('#ui/button').Button
   const Card: typeof import('#ui/card')
+  const Chart: typeof import('#ui/chart')
   const Checkbox: typeof import('#ui/checkbox').Checkbox
   const Command: typeof import('#ui/command')
   const Dialog: typeof import('#ui/dialog')
