@@ -23,6 +23,17 @@
 	const weekLabel = (week: Date) => days.range(week, addDays(week, 6));
 	/** Whole numbers only on the count axis. */
 	const countTick = (value: number) => (Number.isInteger(value) ? formatNumber(value) : "");
+	/**
+	 * Every n-th week's label, counting back from the latest, with n such that labels (`28 Sept`
+	 * is about 45px) sit at least 56px apart: every week on a wide card, every other or third
+	 * on a narrow one.
+	 */
+	const weekTicks = (scale: unknown) => {
+		const band = scale as { domain(): Date[]; step(): number };
+		const weeks = band.domain();
+		const every = Math.max(1, Math.ceil(56 / band.step()));
+		return weeks.filter((_, i) => (weeks.length - 1 - i) % every === 0);
+	};
 
 	const config = $derived(
 		Object.fromEntries(
@@ -56,8 +67,13 @@
 					seriesLayout="stack"
 					stackPadding={2}
 					props={{
-						// On a narrow screen, only the week labels that fit, the latest for sure.
-						xAxis: { format: (week: Date) => tick(week), tickOcclusion: { padding: 8 } },
+						// Only as many week labels as fit, evenly spaced, the latest for sure; the occlusion
+						// check is the backstop for a label that still turns out wider.
+						xAxis: {
+							format: (week: Date) => tick(week),
+							ticks: weekTicks,
+							tickOcclusion: { padding: 8 },
+						},
 						yAxis: { format: countTick },
 					}}
 				>
