@@ -88,10 +88,11 @@ async function startServer(databaseURL: string, outbox: string) {
 
 async function waitUntilUp(url: string, server: ChildProcess, output: () => string) {
 	const deadline = Date.now() + 60_000;
+	const [domain, port] = url.split(":");
 	while (Date.now() < deadline) {
 		if (server.exitCode !== null) throw new Error(`The server exited:\n${output()}`);
 		// Only once our own server says it listens there: another one may have taken the port.
-		if (output().includes(url)) {
+		if (output().includes(domain) && output().includes(port)) {
 			try {
 				await fetch(url, { redirect: "manual" });
 				return;
