@@ -49,9 +49,9 @@ describe("in North", () => {
 		expect(headers).toMatch(/Order\s*2/);
 
 		// The customer filter shows the customer by name, and clears that filter only.
-		const customerFilter = page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" });
+		const customerFilter = app.filterPill("Customer");
 		await expect.poll(() => customerFilter.innerText()).toContain(open[0].name);
-		await customerFilter.click();
+		await customerFilter.locator('[data-slot="popover-trigger"]').click();
 		await page.getByRole("option", { name: "Clear filters" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.search === `?${filtered}`);
@@ -171,7 +171,7 @@ describe("in North", () => {
 			 group by o.status`,
 			[north.id, like, like, like, like, like, like, like],
 		);
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Status" }).click();
+		await app.openFilter("Status");
 		for (const { status, n } of counts) {
 			const label =
 				{ in_progress: "In progress" }[status] ?? status[0].toUpperCase() + status.slice(1);
@@ -200,7 +200,7 @@ describe("in North", () => {
 		await app.go("/orders");
 
 		// Searching the customers finds them by name or code, North's only, at most 20.
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await app.openFilter("Customer");
 		const box = page.getByPlaceholder("Search customers…");
 		const fragment = busy.name.slice(1, 4).toLowerCase();
 		await box.fill(fragment);
@@ -225,11 +225,9 @@ describe("in North", () => {
 				[north.id, busy.code],
 			),
 		);
-		expect(
-			await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).innerText(),
-		).toContain(busy.name);
+		expect(await app.filterPill("Customer").innerText()).toContain(busy.name);
 
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Engineer" }).click();
+		await app.openFilter("Engineer");
 		await page.getByPlaceholder("Search engineers…").fill(busy.engineer_name);
 		await page.getByRole("option", { name: busy.engineer_name }).first().click();
 		await page.keyboard.press("Escape");

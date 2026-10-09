@@ -62,7 +62,7 @@ async function allNames() {
 /** Opens a faceted filter and ticks an option. */
 async function filter(title: string, option: RegExp) {
 	const { page } = app;
-	await page.locator('[data-slot="popover-trigger"]', { hasText: title }).click();
+	await app.openFilter(title);
 	await page.getByRole("option", { name: option }).click();
 	await page.keyboard.press("Escape");
 }

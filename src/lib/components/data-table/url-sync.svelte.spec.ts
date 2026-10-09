@@ -11,7 +11,8 @@ import {
 	facet,
 	items,
 	names,
-	statusFilter,
+	openStatusFilter,
+	statusPill,
 	textOf,
 } from "./table.test-support.ts";
 
@@ -36,7 +37,7 @@ describe("the URL", () => {
 	test("filtering, sorting and paging go into the URL, each as a history entry", async () => {
 		render(Harness, { items });
 
-		await statusFilter().click();
+		await openStatusFilter();
 		await facet("Open").click();
 		await facet("Draft").click();
 		await expect.poll(lastSearch).toBe("?status=open,draft");
@@ -81,7 +82,7 @@ describe("the URL", () => {
 
 		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
 		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
-		await expect.poll(textOf(statusFilter())).toBe("Status 3 selected");
+		await expect.poll(textOf(statusPill())).toBe("Status 3 selected");
 		await expect.element(columnHeader("Amount")).toHaveAccessibleName(/sorted descending/);
 		expect(visits).toEqual([]);
 	});
@@ -92,7 +93,7 @@ describe("the URL", () => {
 
 		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
 		await expect.poll(names).toEqual(byName.slice(0, 5));
-		await expect.poll(textOf(statusFilter())).toBe("Status");
+		expect(statusPill().elements()).toHaveLength(0);
 	});
 
 	test("a page past the last becomes the last, replacing the history entry", async () => {
@@ -107,7 +108,7 @@ describe("the URL", () => {
 	test("going back to an earlier URL takes the table back", async () => {
 		render(Harness, { items });
 
-		await statusFilter().click();
+		await openStatusFilter();
 		await facet("Closed").click();
 		await expect.poll(lastSearch).toBe("?status=closed");
 		await userEvent.keyboard("{Escape}");
@@ -115,7 +116,7 @@ describe("the URL", () => {
 
 		visit("/items", { clear: false });
 		await expect.poll(names).toEqual(byName.slice(0, 5));
-		await expect.poll(textOf(statusFilter())).toBe("Status");
+		await expect.element(statusPill()).not.toBeInTheDocument();
 
 		visit("/items?status=closed&sort=-name", { clear: false });
 		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
