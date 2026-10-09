@@ -16,8 +16,8 @@ import { completedAt, notEditable, removeOrder } from "#lib/orders/server/order-
 import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { idInTenant, inTenant, requireMember } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
 import { orderCommitted, tagOrders } from "#lib/server/modules/hooks.ts";

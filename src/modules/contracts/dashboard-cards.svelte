@@ -7,7 +7,7 @@
 	import { resolve } from "$app/paths";
 
 	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/format.ts";
+	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
 	import ContractLink from "./contract-link.svelte";

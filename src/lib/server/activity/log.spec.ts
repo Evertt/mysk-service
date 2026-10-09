@@ -2,7 +2,7 @@ import { rmSync } from "node:fs";
 
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import type { Tenant } from "#lib/server/auth/session.ts";
+import type { Tenant } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
 import {

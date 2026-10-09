@@ -2,7 +2,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, countDistinct, eq } from "drizzle-orm";
 
 import { m } from "#lib/paraglide/messages.js";
-import { idInTenant, inTenant } from "#lib/server/auth/session.ts";
+import { idInTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
 import { deleteAndLog } from "#lib/server/records.ts";

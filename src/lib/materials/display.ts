@@ -4,8 +4,7 @@ import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-import { formatNumber } from "#lib/i18n/format.ts";
-import { label, labelOptions, withLabels } from "#lib/i18n/labels.ts";
+import { formatNumber, label, labelOptions, withLabels } from "#lib/i18n";
 import { type MaterialUnit, materialUnits, type StockLevel, stockLevels } from "#lib/models.ts";
 
 /** Options for a unit select or faceted filter, e.g. `Pieces`. */

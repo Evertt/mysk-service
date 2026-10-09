@@ -5,7 +5,7 @@
  */
 import { and, asc, inArray, lte, gte, ne } from "drizzle-orm";
 
-import { tenantJoin } from "#lib/server/auth/session.ts";
+import { tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { OrderFacts } from "#lib/server/modules/hooks.ts";

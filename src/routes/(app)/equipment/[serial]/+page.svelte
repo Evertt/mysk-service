@@ -11,8 +11,7 @@
 	import { categories } from "#lib/equipment/display.ts";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
-	import { formatDate } from "#lib/i18n/format.ts";
-	import { label } from "#lib/i18n/labels.ts";
+	import { formatDate, label } from "#lib/i18n";
 
 	import ModuleSlots from "../../module-slots.svelte";
 	import { deleteEquipment, getEquipment } from "../equipment.remote.ts";

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { memberRoles } from "#lib/auth/roles.ts";
+import { memberRoles } from "#lib/auth";
 import {
 	customerSegments,
 	engineerSpecialties,

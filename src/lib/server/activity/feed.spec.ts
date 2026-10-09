@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import type { Tenant } from "#lib/server/auth/session.ts";
+import type { Tenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 

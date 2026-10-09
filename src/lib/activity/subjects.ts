@@ -14,9 +14,16 @@
  */
 import { resolve } from "$app/paths";
 
-import { parseRoles } from "#lib/auth/roles.ts";
-import { formatCents, formatDate, formatDateTime } from "#lib/i18n/format.ts";
-import { hasLabel, label, type LabelKind, labelOrValue } from "#lib/i18n/labels.ts";
+import { parseRoles } from "#lib/auth";
+import {
+	formatCents,
+	formatDate,
+	formatDateTime,
+	hasLabel,
+	label,
+	type LabelKind,
+	labelOrValue,
+} from "#lib/i18n";
 import type { CoreActivityAction } from "#lib/models.ts";
 import { type AppModule, modules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";

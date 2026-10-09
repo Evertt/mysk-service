@@ -7,7 +7,7 @@ import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { countryName } from "#lib/customers/countries.ts";
 import CustomerLink from "#lib/customers/customer-link.svelte";
 import SegmentBadge from "#lib/customers/segment-badge.svelte";
-import { intlLocale } from "#lib/i18n/format.ts";
+import { intlLocale } from "#lib/i18n";
 import { customerSegments } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 

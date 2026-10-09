@@ -14,7 +14,7 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.ts";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
-	import { label } from "#lib/i18n/labels.ts";
+	import { label } from "#lib/i18n";
 
 	import { levels } from "../../../display.ts";
 	import { type ContractLevel, contractLevels, defaultResponseHours } from "../../../model.ts";

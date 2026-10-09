@@ -22,7 +22,7 @@
  */
 import type { OrderStatus, OrderType } from "#lib/models.ts";
 import type { ModuleId, OrderTag, PriceAdjustment } from "#lib/modules/manifests.ts";
-import { requireModule, requireTenant } from "#lib/server/auth/session.ts";
+import { requireModule, requireTenant } from "#lib/server/auth";
 import { afterCommit } from "#lib/server/db/serialize.ts";
 
 import { generatedServerModules } from "./hooks.gen.ts";

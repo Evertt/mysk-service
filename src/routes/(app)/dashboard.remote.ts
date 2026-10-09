@@ -5,7 +5,7 @@ import { DAY } from "#lib/dates.ts";
 import { stockLevel } from "#lib/materials/display.ts";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
+import { inTenant, requireMember, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
 

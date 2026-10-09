@@ -6,9 +6,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { invitedAsText } from "#lib/auth/members.ts";
-	import { formatDate } from "#lib/i18n/format.ts";
-	import { messageParts } from "#lib/i18n/parts.ts";
+	import { invitedAsText } from "#lib/auth";
+	import { formatDate, messageParts } from "#lib/i18n";
 
 	import PublicShell from "../../public-shell.svelte";
 	import type { PageProps } from "./$types";

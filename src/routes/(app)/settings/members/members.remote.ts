@@ -8,18 +8,18 @@ import * as v from "valibot";
 import {
 	assignableRoles,
 	invitationState,
+	isManager,
 	type MemberChange,
 	type MemberRole,
 	memberRoles,
+	parseRoles,
 	removalRefusal,
 	roleChangeRefusal,
-} from "#lib/auth/members.ts";
-import { isManager, parseRoles } from "#lib/auth/roles.ts";
-import { label } from "#lib/i18n/labels.ts";
+} from "#lib/auth";
+import { label } from "#lib/i18n";
 import { m } from "#lib/paraglide/messages.js";
-import { recordActivityAfter } from "#lib/server/activity/log.ts";
-import { auth } from "#lib/server/auth/better-auth.ts";
-import { inTenant, requireManager, requireMember } from "#lib/server/auth/session.ts";
+import { recordActivityAfter } from "#lib/server/activity";
+import { auth, inTenant, requireManager, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
 

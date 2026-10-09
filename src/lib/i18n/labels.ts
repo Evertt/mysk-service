@@ -1,4 +1,4 @@
-import type { MemberRole } from "#lib/auth/roles.ts";
+import type { MemberRole } from "#lib/auth";
 /**
  * The translated names of the domain's enum values (statuses, types, units, roles, …): the one
  * place that maps a stored value to what users read. Show one with `label("orderStatus", status)`;

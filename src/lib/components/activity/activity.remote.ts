@@ -8,13 +8,13 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
-import { subjectTypeLabel, subjectTypes } from "#lib/activity/subjects.ts";
+import { subjectTypeLabel, subjectTypes } from "#lib/activity";
 import { nextDay } from "#lib/dates.ts";
-import { intlLocale } from "#lib/i18n/format.ts";
+import { intlLocale } from "#lib/i18n";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { present } from "#lib/server/activity/feed.ts";
-import { inTenant, requireMember } from "#lib/server/auth/session.ts";
+import { present } from "#lib/server/activity";
+import { inTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 

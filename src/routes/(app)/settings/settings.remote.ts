@@ -2,10 +2,10 @@ import { form, getRequestEvent, query } from "$app/server";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager, parseRoles } from "#lib/auth/roles.ts";
+import { isManager, parseRoles } from "#lib/auth";
 import { modules } from "#lib/modules/manifests.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { inTenant, requireManager, requireMember } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { inTenant, requireManager, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
 

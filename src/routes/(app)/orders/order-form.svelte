@@ -11,7 +11,7 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay, toDateInput } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/display.ts";
-	import { labelOptions } from "#lib/i18n/labels.ts";
+	import { labelOptions } from "#lib/i18n";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
 	import OrderLinesField from "./order-lines-field.svelte";

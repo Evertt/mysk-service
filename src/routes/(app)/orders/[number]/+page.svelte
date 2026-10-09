@@ -12,7 +12,7 @@
 	import EquipmentLink from "#lib/equipment/equipment-link.svelte";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
-	import { formatCents, formatDate } from "#lib/i18n/format.ts";
+	import { formatCents, formatDate } from "#lib/i18n";
 	import { isEditableOrder } from "#lib/models.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";

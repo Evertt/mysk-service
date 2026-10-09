@@ -5,7 +5,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { subjectNoun, subjectTypes } from "#lib/activity/subjects.ts";
+	import { subjectNoun, subjectTypes } from "#lib/activity";
 	import ActivityList from "#lib/components/activity/activity-list.svelte";
 	import { getActivity, getActivityFilters } from "#lib/components/activity/activity.remote.ts";
 	import PageHeader from "#lib/components/page-header.svelte";

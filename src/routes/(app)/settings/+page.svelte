@@ -3,8 +3,7 @@
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate } from "#lib/i18n/format.ts";
-	import { labelOrValue } from "#lib/i18n/labels.ts";
+	import { formatDate, labelOrValue } from "#lib/i18n";
 	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
 
 	import { getOrganizationSettings, setModule } from "./settings.remote.ts";

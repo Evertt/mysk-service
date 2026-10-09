@@ -8,7 +8,7 @@ import Trash2Icon from "@lucide/svelte/icons/trash-2";
 import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { labelOptions } from "#lib/i18n/labels.ts";
+import { labelOptions } from "#lib/i18n";
 import { isEditableOrder, manualOrderStatuses } from "#lib/models.ts";
 import type { OrderBulkRow } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";

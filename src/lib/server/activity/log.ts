@@ -21,7 +21,7 @@
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
 import { type ActivityAction, roundQuantity } from "#lib/models.ts";
-import { idsInTenant, requireTenant } from "#lib/server/auth/session.ts";
+import { idsInTenant, requireTenant } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.ts";
 

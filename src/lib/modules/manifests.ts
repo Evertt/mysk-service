@@ -24,7 +24,7 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity/subjects.ts";
+import type { Sentence, SubjectType } from "#lib/activity";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import type { OrderStatus } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";

@@ -9,12 +9,12 @@ import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { assigneeProblem } from "#lib/orders/server/order-changes.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { date, id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { refreshRequested } from "#lib/server/lists/bulk.ts";
+import { refreshRequested } from "#lib/server/lists";
 
 import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.ts";
 import { moveFields, scheduleFields } from "./schedule-schema.ts";

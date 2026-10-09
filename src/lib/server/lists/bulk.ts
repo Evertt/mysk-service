@@ -29,9 +29,9 @@ import * as v from "valibot";
 
 import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.ts";
 import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
-import { formatNumber } from "#lib/i18n/format.ts";
+import { formatNumber } from "#lib/i18n";
 import { m } from "#lib/paraglide/messages.js";
-import { idsInTenant, type TenantTable } from "#lib/server/auth/session.ts";
+import { idsInTenant, type TenantTable } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 
 import { type ListSql, planList } from "./plan.ts";

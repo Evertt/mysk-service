@@ -1,7 +1,7 @@
 import { sql, type SQLWrapper } from "drizzle-orm";
 
 import type { PriceAdjustment } from "#lib/modules/manifests.ts";
-import { inTenant } from "#lib/server/auth/session.ts";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { orderLine } from "#lib/server/db/schema.ts";
 import {

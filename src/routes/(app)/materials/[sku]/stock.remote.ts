@@ -8,8 +8,8 @@ import { moveStock } from "#lib/materials/server/stock.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { idInTenant, requireMember } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, requireMember } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
 

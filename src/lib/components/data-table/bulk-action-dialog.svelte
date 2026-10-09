@@ -6,7 +6,7 @@
 	each time it asks (e.g. in a `{#key}`), so it starts without a choice.
 -->
 <script lang="ts" generics="TData, Where = never">
-	import { formatNumber } from "#lib/i18n/format.ts";
+	import { formatNumber } from "#lib/i18n";
 
 	import type { BulkAction } from "./bulk-actions.ts";
 

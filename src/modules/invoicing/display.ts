@@ -6,7 +6,7 @@ import SendIcon from "@lucide/svelte/icons/send";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-import { numberFormatter } from "#lib/i18n/format.ts";
+import { numberFormatter } from "#lib/i18n";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { type InvoiceState, invoiceStates } from "./invoice.ts";

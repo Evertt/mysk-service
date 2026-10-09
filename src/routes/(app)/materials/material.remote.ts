@@ -3,15 +3,15 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { label } from "#lib/i18n/labels.ts";
+import { label } from "#lib/i18n";
 import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.ts";
 import { moveStock, withBalances } from "#lib/materials/server/stock.ts";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
 import { lineTotalSql } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,

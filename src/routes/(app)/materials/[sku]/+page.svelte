@@ -8,8 +8,7 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/i18n/format.ts";
-	import { label } from "#lib/i18n/labels.ts";
+	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n";
 	import { formatQuantity } from "#lib/materials/display.ts";
 	import StockBadge from "#lib/materials/stock-badge.svelte";
 	import OrderLink from "#lib/orders/order-link.svelte";

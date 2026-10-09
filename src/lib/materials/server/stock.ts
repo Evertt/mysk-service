@@ -5,8 +5,7 @@
 import { error } from "@sveltejs/kit";
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import { formatNumber } from "#lib/i18n/format.ts";
-import { label } from "#lib/i18n/labels.ts";
+import { formatNumber, label } from "#lib/i18n";
 import {
 	holdsStock,
 	lowStockThresholds,
@@ -18,7 +17,7 @@ import {
 	type StockMovementKind,
 } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { idInTenant, requireTenant } from "#lib/server/auth/session.ts";
+import { idInTenant, requireTenant } from "#lib/server/auth";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { material, stockMovement } from "#lib/server/db/schema.ts";
 

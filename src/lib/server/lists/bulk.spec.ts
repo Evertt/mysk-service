@@ -4,7 +4,7 @@ import * as v from "valibot";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { code, defineList } from "#lib/components/data-table/list-definition.ts";
-import { inTenant, type Tenant } from "#lib/server/auth/session.ts";
+import { inTenant, type Tenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 

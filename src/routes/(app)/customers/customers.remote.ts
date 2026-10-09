@@ -8,12 +8,12 @@ import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/log.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
+import { recordActivity } from "#lib/server/activity";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { bulkChange, idsTarget } from "#lib/server/lists/bulk.ts";
+import { bulkChange, idsTarget } from "#lib/server/lists";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
 

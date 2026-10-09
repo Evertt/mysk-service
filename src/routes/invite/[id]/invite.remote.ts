@@ -4,13 +4,11 @@ import { isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { invitationState } from "#lib/auth/members.ts";
-import { parseRoles } from "#lib/auth/roles.ts";
-import { formatNumber } from "#lib/i18n/format.ts";
+import { invitationState, parseRoles } from "#lib/auth";
+import { formatNumber } from "#lib/i18n";
 import { m } from "#lib/paraglide/messages.js";
-import { recordActivityAfter } from "#lib/server/activity/log.ts";
-import { auth } from "#lib/server/auth/better-auth.ts";
-import { requireUser } from "#lib/server/auth/session.ts";
+import { recordActivityAfter } from "#lib/server/activity";
+import { auth, requireUser } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, organization, user } from "#lib/server/db/schema.ts";
 

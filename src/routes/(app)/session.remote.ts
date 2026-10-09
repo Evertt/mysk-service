@@ -3,10 +3,9 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isFieldEngineer } from "#lib/auth/roles.ts";
+import { isFieldEngineer } from "#lib/auth";
 import { m } from "#lib/paraglide/messages.js";
-import { auth } from "#lib/server/auth/better-auth.ts";
-import { requireMember, requireTenant, requireUser } from "#lib/server/auth/session.ts";
+import { auth, requireMember, requireTenant, requireUser } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
 

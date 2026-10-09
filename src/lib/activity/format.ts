@@ -7,8 +7,8 @@
  * their name) and their value as stored (dates and numbers formatted).
  */
 // Only types from `#lib/activity/subjects.ts`, which uses this file's types in turn.
-import type { FieldFormat, SubjectType, Text } from "#lib/activity/subjects.ts";
-import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/format.ts";
+import type { FieldFormat, SubjectType, Text } from "#lib/activity";
+import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
 import { modules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 

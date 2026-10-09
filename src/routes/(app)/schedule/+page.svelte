@@ -6,7 +6,7 @@
 
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { addDays } from "#lib/dates.ts";
-	import { formatNumber } from "#lib/i18n/format.ts";
+	import { formatNumber } from "#lib/i18n";
 
 	import { dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.ts";
 	import ScheduleBoard from "./schedule-board.svelte";
