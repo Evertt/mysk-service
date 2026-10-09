@@ -73,7 +73,7 @@ describe("in South", () => {
 			[north.id, south.id],
 		);
 		await app.go("/orders");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await app.openFilter("Customer");
 		const box = page.getByPlaceholder("Search customers…");
 		await box.fill("CUST");
 		await expect.poll(() => page.getByRole("option").count()).toBe(Math.min(own.size, 20));

@@ -49,9 +49,9 @@ describe("in North", () => {
 		expect(headers).toMatch(/Order\s*2/);
 
 		// The customer filter shows the customer by name, and clears that filter only.
-		const customerFilter = page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" });
+		const customerFilter = app.filterPill("Customer");
 		await expect.poll(() => customerFilter.innerText()).toContain(open[0].name);
-		await customerFilter.click();
+		await customerFilter.locator('[data-slot="popover-trigger"]').click();
 		await page.getByRole("option", { name: "Clear filters" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.search === `?${filtered}`);
@@ -171,7 +171,7 @@ describe("in North", () => {
 			 group by o.status`,
 			[north.id, like, like, like, like, like, like, like],
 		);
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Status" }).click();
+		await app.openFilter("Status");
 		for (const { status, n } of counts) {
 			const label =
 				{ in_progress: "In progress" }[status] ?? status[0].toUpperCase() + status.slice(1);
@@ -200,7 +200,7 @@ describe("in North", () => {
 		await app.go("/orders");
 
 		// Searching the customers finds them by name or code, North's only, at most 20.
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).click();
+		await app.openFilter("Customer");
 		const box = page.getByPlaceholder("Search customers…");
 		const fragment = busy.name.slice(1, 4).toLowerCase();
 		await box.fill(fragment);
@@ -225,11 +225,9 @@ describe("in North", () => {
 				[north.id, busy.code],
 			),
 		);
-		expect(
-			await page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" }).innerText(),
-		).toContain(busy.name);
+		expect(await app.filterPill("Customer").innerText()).toContain(busy.name);
 
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Engineer" }).click();
+		await app.openFilter("Engineer");
 		await page.getByPlaceholder("Search engineers…").fill(busy.engineer_name);
 		await page.getByRole("option", { name: busy.engineer_name }).first().click();
 		await page.keyboard.press("Escape");
@@ -249,7 +247,7 @@ describe("in North", () => {
 
 	test("filtering on the unassigned orders and the new installations, by the filter and the URL", async () => {
 		const { page } = app;
-		const engineerFilter = page.locator('[data-slot="popover-trigger"]', { hasText: "Engineer" });
+		const engineerPill = app.filterPill("Engineer");
 		const unassigned = await value<number>(
 			`select count(*) from "order" where organization_id = ? and engineer_id is null`,
 			[north.id],
@@ -258,7 +256,7 @@ describe("in North", () => {
 		await app.go("/orders");
 
 		// The engineer filter offers "Unassigned" first, with how many there are.
-		await engineerFilter.click();
+		await app.openFilter("Engineer");
 		const option = page.getByRole("option", { name: /^Unassigned/ });
 		await expect
 			.poll(() => option.innerText())
@@ -271,7 +269,7 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(unassigned);
 		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
 		expect(new Set(engineers)).toEqual(new Set(["Unassigned"]));
-		expect(await engineerFilter.innerText()).toContain("Unassigned");
+		expect(await engineerPill.innerText()).toContain("Unassigned");
 
 		// From a link, with an engineer: theirs and the unassigned ones.
 		const [busy] = await rows<{ id: number; name: string; n: number }>(
@@ -281,8 +279,8 @@ describe("in North", () => {
 		);
 		await app.go(`/orders?engineer=none,${busy.id}`);
 		expect(await app.rowCount()).toBe(unassigned + busy.n);
-		await expect.poll(() => engineerFilter.innerText()).toContain(busy.name);
-		expect(await engineerFilter.innerText()).toContain("Unassigned");
+		await expect.poll(() => engineerPill.innerText()).toContain(busy.name);
+		expect(await engineerPill.innerText()).toContain("Unassigned");
 
 		// The equipment filter likewise keeps the orders without a unit: the new installations.
 		const installations = await value<number>(

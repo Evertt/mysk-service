@@ -123,10 +123,7 @@ describe("in North", () => {
 		await viewItem(page, "Big accounts").click();
 		await page.waitForURL((url) => url.search === filtered);
 
-		await page
-			.getByRole("button", { name: /^Segment/ })
-			.first()
-			.click();
+		await admin.openFilter("Segment");
 		await page.getByRole("option", { name: /^Small business/ }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("segment")?.split(",").length === 3);
@@ -292,10 +289,7 @@ describe("in South", () => {
 		await menu(page).click();
 		await viewItem(page, "Zuid groot").click();
 		await page.waitForURL((url) => url.search === "?segment=enterprise");
-		await page
-			.getByRole("button", { name: /^Segment/ })
-			.first()
-			.click();
+		await admin.openFilter("Segment");
 		await page.getByRole("option", { name: /^Mid-market/ }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.search === "?segment=enterprise,mid_market");

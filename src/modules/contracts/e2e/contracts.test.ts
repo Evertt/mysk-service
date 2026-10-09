@@ -49,10 +49,10 @@ describe("in North", () => {
 		await expect.poll(() => app.rowCount()).toBe(1);
 		await page.getByLabel("Search contracts…").fill("");
 
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Status" }).click();
+		await app.openFilter("Status");
 		await page.getByRole("option", { name: /Active/ }).click();
 		await page.keyboard.press("Escape");
-		await page.locator('[data-slot="popover-trigger"]', { hasText: "Level" }).click();
+		await app.openFilter("Level");
 		await page.getByRole("option", { name: /Premium/ }).click();
 		await page.keyboard.press("Escape");
 		const activePremium = Number(

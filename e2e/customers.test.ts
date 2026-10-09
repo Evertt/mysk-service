@@ -78,7 +78,7 @@ async function listedNames() {
 /** Opens a faceted filter of the toolbar and picks one of its options. */
 async function filter(title: string, option: string) {
 	const { page } = app;
-	await page.locator("[data-slot=popover-trigger]", { hasText: title }).click();
+	await app.openFilter(title);
 	await page.getByRole("option", { name: new RegExp(`^${option}`) }).click();
 	await page.keyboard.press("Escape");
 }
@@ -292,9 +292,9 @@ describe("in North", () => {
 		expect(customers.every((cell) => cell.includes(code))).toBe(true);
 
 		// The customer filter names the customer, and clears.
-		const filter = page.locator('[data-slot="popover-trigger"]', { hasText: "Customer" });
+		const filter = app.filterPill("Customer");
 		await expect.poll(() => filter.innerText()).toContain(name);
-		await filter.click();
+		await filter.locator('[data-slot="popover-trigger"]').click();
 		await page.getByRole("option", { name: "Clear filters" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
