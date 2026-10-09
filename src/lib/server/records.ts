@@ -1,9 +1,9 @@
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { recordActivity, type Subject } from "./activity/log.ts";
+import { idInTenant, type TenantTable } from "./auth/session.ts";
 import { refuseIfReferenced } from "./db/errors.ts";
 import { db } from "./db/index.ts";
-import { idInTenant, type TenantTable } from "./session.ts";
 
 /**
  * Deletes one of the tenant's records and logs it (`"deleted"`), in one transaction. Refuses with

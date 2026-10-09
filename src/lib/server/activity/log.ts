@@ -21,9 +21,9 @@
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
 import { type ActivityAction, roundQuantity } from "#lib/models.ts";
+import { idsInTenant, requireTenant } from "#lib/server/auth/session.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity, type ActivityChanges, material } from "#lib/server/db/schema.ts";
-import { idsInTenant, requireTenant } from "#lib/server/session.ts";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {

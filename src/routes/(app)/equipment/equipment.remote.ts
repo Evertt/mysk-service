@@ -7,11 +7,11 @@ import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant, requireMember } from "#lib/server/auth/session.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { idInTenant, inTenant, requireMember } from "#lib/server/session.ts";
 
 import { equipmentFields } from "./equipment-schema.ts";
 

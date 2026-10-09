@@ -11,6 +11,7 @@ import { lineTotalSql } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
@@ -22,7 +23,6 @@ import {
 } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
 import { materialFields, newMaterialFields } from "./material-schema.ts";
 

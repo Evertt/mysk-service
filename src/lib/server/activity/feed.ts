@@ -13,9 +13,9 @@ import {
 	type ReferenceType,
 } from "#lib/activity/format.ts";
 import { subjectNoun, type SubjectType, subjectTypes } from "#lib/activity/subjects.ts";
+import { inTenant, requireMember } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
 
 export interface SubjectLink {
 	/** E.g. `order`. */

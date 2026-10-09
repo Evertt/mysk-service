@@ -4,10 +4,10 @@ import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
+import { idInTenant, inTenant, requireModule, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { refuse } from "#lib/server/forms.ts";
-import { idInTenant, inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
 import { invoiceState, invoiceTotals, lineAmount } from "../../../invoice.ts";
 import { billableFor } from "../../../server/billable.ts";

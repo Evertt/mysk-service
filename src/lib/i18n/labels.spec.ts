@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
+import { memberRoles } from "#lib/auth/roles.ts";
 import {
 	customerSegments,
 	engineerSpecialties,
@@ -12,7 +13,6 @@ import {
 	stockMovementKinds,
 } from "#lib/models.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { memberRoles } from "#lib/roles.ts";
 
 import {
 	defineLabels,

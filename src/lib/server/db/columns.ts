@@ -10,7 +10,7 @@ import { organization } from "./auth.schema.ts";
 /**
  * The tenant a row belongs to. Every business table has one, except contract coverage, whose
  * customer pins it to a tenant. Queries scope by it with `inTenant()` from
- * `#lib/server/session.ts`.
+ * `#lib/server/auth/session.ts`.
  *
  * References between tenant tables are composite foreign keys that include the tenant (e.g.
  * `(organization_id, customer_id)` → `customer (organization_id, id)`), so the database refuses a

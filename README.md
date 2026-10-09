@@ -67,7 +67,7 @@ fees from six months back), paid, sent, overdue and a few voided, plus two draft
 contract fees and the completed orders that aren't invoiced yet are left to bill.
 
 Erik is a field engineer: members whose only role is `engineer` (roles are listed in
-`src/lib/roles.ts`) use the mobile engineer portal at `/my` instead of the office app, and see only
+`src/lib/auth/roles.ts`) use the mobile engineer portal at `/my` instead of the office app, and see only
 the orders of the engineer their account is linked to (owners and admins link accounts on an
 engineer's edit page). Erik is linked to Noord's first engineer, with work planned today and in the
 next days. There they start jobs, log hours, materials and notes, and complete a job with the

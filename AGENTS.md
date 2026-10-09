@@ -38,7 +38,7 @@ When a module gains a user outside its folder, move it up to the nearest common 
 
 The app is multi-tenant: organizations (better-auth's organization plugin) own all business data, and
 optional modules (`src/modules/<id>/`, see "Modules") are enabled per organization (`organization_module`). The
-helpers are in `src/lib/server/session.ts`:
+helpers are in `src/lib/server/auth/session.ts`:
 
 - Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
   tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization

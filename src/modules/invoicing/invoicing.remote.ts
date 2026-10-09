@@ -8,9 +8,9 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";

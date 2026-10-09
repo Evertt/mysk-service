@@ -9,13 +9,13 @@ import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
 import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
 import { customerFields } from "./customer-schema.ts";
 

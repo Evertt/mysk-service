@@ -7,8 +7,8 @@ import * as v from "valibot";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant, requireModule } from "#lib/server/auth/session.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { idInTenant, inTenant, requireModule } from "#lib/server/session.ts";
 
 import { lineNote } from "../../../../activity.ts";
 import { isEditable, lineAmount } from "../../../../invoice.ts";

@@ -11,10 +11,10 @@ import {
 	changeOrderStatus,
 	removeOrder,
 } from "#lib/orders/server/order-changes.ts";
+import { inTenant, requireMember } from "#lib/server/auth/session.ts";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
 
 import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 import { ordersSql } from "./order-list.server.ts";

@@ -9,9 +9,9 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { formatDate, formatDateTime } from "#lib/format.ts";
 import type { OrderTag } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
+import { inTenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { defineServerModule, type OrderFacts } from "#lib/server/modules/hooks.ts";
-import { inTenant } from "#lib/server/session.ts";
 
 import { contractMonths, monthlyFee } from "../billing.ts";
 import { getOrderCoverage } from "../coverage.remote.ts";

@@ -7,9 +7,9 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { openOrderStatuses } from "#lib/models.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { inTenant, tenantJoin } from "#lib/server/session.ts";
 import { type ListSql, nocase } from "#lib/server/table-query.ts";
 
 import { equipmentList } from "./equipment-list.ts";

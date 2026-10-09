@@ -4,10 +4,10 @@ import { redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager } from "#lib/roles.ts";
+import { isManager } from "#lib/auth/roles.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { requireManager, requireModule } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
-import { requireManager, requireModule } from "#lib/server/session.ts";
 
 import { invoicingSettings } from "../../../../server/schema.ts";
 import { settingsOf } from "../../../../server/settings.ts";

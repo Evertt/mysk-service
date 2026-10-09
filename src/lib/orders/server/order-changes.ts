@@ -9,10 +9,10 @@ import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant } from "#lib/server/auth/session.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order, stockMovement } from "#lib/server/db/schema.ts";
-import { idInTenant, inTenant } from "#lib/server/session.ts";
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 export const notEditable = (number: string, change: "changed" | "deleted") =>

@@ -10,9 +10,9 @@ import * as v from "valibot";
 
 import { addDays, startOfDay } from "#lib/dates.ts";
 import { m } from "#lib/paraglide/messages.js";
+import { inTenant, requireModule, tenantJoin } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/session.ts";
 
 import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
 import { coverageOf } from "./server/contracts.ts";

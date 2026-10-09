@@ -3,12 +3,12 @@ import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
+import { isFieldEngineer } from "#lib/auth/roles.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
-import { isFieldEngineer } from "#lib/roles.ts";
-import { auth } from "#lib/server/auth.ts";
-import { loadTenant } from "#lib/server/session.ts";
+import { auth } from "#lib/server/auth/better-auth.ts";
+import { loadTenant } from "#lib/server/auth/session.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 const handleParaglide: Handle = ({ event, resolve }) =>
@@ -88,7 +88,7 @@ const isPortal = (pathname: string) => pathname === "/my" || pathname.startsWith
  * from the office app to their portal. This only guards page requests. Remote function calls pass
  * through (their `event.url` is the calling page's, so a redirect here would be wrong): they check
  * for themselves with `requireUser()`, `requireMember()` or `requireEngineer()` from
- * `#lib/server/session.ts`.
+ * `#lib/server/auth/session.ts`.
  */
 const handleGuard: Handle = ({ event, resolve }) => {
 	if (event.isRemoteRequest) return resolve(event);

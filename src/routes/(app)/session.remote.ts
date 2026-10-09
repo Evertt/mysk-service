@@ -3,12 +3,12 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { isFieldEngineer } from "#lib/auth/roles.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { isFieldEngineer } from "#lib/roles.ts";
-import { auth } from "#lib/server/auth.ts";
+import { auth } from "#lib/server/auth/better-auth.ts";
+import { requireMember, requireTenant, requireUser } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
-import { requireMember, requireTenant, requireUser } from "#lib/server/session.ts";
 
 /** Who is signed in, for the user menu. */
 export const getCurrentUser = query(async () => {

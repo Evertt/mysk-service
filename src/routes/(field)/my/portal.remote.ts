@@ -16,10 +16,10 @@ import { checkLines, saveOrderLines } from "#lib/orders/server/lines.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
-import { auth } from "#lib/server/auth.ts";
+import { auth } from "#lib/server/auth/better-auth.ts";
+import { idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/auth/session.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
-import { idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/session.ts";
 
 import { fieldActions, signature } from "./work.ts";
 

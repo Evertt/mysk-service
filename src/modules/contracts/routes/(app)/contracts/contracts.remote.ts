@@ -8,18 +8,18 @@ import { formatDate } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
-import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
-import { db } from "#lib/server/db/index.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { refuse, type Problem } from "#lib/server/forms.ts";
-import { nextNumber } from "#lib/server/numbering.ts";
 import {
 	idInTenant,
 	idsInTenant,
 	inTenant,
 	requireModule,
 	tenantJoin,
-} from "#lib/server/session.ts";
+} from "#lib/server/auth/session.ts";
+import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { refuse, type Problem } from "#lib/server/forms.ts";
+import { nextNumber } from "#lib/server/numbering.ts";
 
 import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";
 import { contract, contractEquipment } from "../../../server/schema.ts";

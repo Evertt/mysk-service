@@ -14,9 +14,9 @@ import { intlLocale } from "#lib/format.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { present } from "#lib/server/activity/feed.ts";
+import { inTenant, requireMember } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
-import { inTenant, requireMember } from "#lib/server/session.ts";
 
 const allModules = appModules.map((module) => module.id);
 

@@ -1,6 +1,6 @@
 import type { Session, User } from "better-auth";
 
-import type { Tenant } from "#lib/server/session.ts";
+import type { Tenant } from "#lib/server/auth/session.ts";
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces

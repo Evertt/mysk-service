@@ -7,8 +7,8 @@ import { adminAc, memberAc, ownerAc } from "better-auth/plugins/organization/acc
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { sql } from "drizzle-orm";
 
-import { INVITATION_EXPIRES_IN } from "#lib/members.ts";
-import type { MemberRole } from "#lib/roles.ts";
+import { INVITATION_EXPIRES_IN } from "#lib/auth/members.ts";
+import type { MemberRole } from "#lib/auth/roles.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitationMail } from "#lib/server/invitation-mail.ts";
 import { sendMail } from "#lib/server/mail.ts";
@@ -47,7 +47,7 @@ export const auth = betterAuth({
 		organization({
 			allowUserToCreateOrganization: false,
 			disableOrganizationDeletion: true,
-			// better-auth's roles plus field engineers, who may manage nothing (see `#lib/roles.ts`).
+			// better-auth's roles plus field engineers, who may manage nothing (see `#lib/auth/roles.ts`).
 			roles: {
 				owner: ownerAc,
 				admin: adminAc,

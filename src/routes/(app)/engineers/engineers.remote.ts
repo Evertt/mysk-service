@@ -9,12 +9,12 @@ import { laborCost } from "#lib/orders/server/pricing.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth/session.ts";
 import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/session.ts";
 
 import { engineerFields } from "./engineer-schema.ts";
 

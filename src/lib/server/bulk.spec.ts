@@ -7,8 +7,8 @@ import { code, defineList } from "#lib/components/data-table/list-definition.ts"
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
+import { inTenant, type Tenant } from "./auth/session.ts";
 import { bulkChange, idsTarget, listTarget, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
-import { inTenant, type Tenant } from "./session.ts";
 import type { ListSql } from "./table-query.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};

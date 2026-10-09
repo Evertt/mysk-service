@@ -7,12 +7,12 @@
 	import MailIcon from "@lucide/svelte/icons/mail";
 	import { toast } from "svelte-sonner";
 
+	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/auth/members.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatNumber } from "#lib/format.ts";
 	import { label as roleLabel } from "#lib/i18n/labels.ts";
-	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/members.ts";
 
 	import { invite } from "./members.remote.ts";
 

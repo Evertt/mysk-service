@@ -18,9 +18,9 @@ import {
 	type StockMovementKind,
 } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
+import { idInTenant, requireTenant } from "#lib/server/auth/session.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { material, stockMovement } from "#lib/server/db/schema.ts";
-import { idInTenant, requireTenant } from "#lib/server/session.ts";
 
 /**
  * A material's stock level in SQL, as `stockLevel()` works it out (with the same thresholds), to

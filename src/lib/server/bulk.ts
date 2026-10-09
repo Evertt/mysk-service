@@ -32,8 +32,8 @@ import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
 import { formatNumber } from "#lib/format.ts";
 import { m } from "#lib/paraglide/messages.js";
 
+import { idsInTenant, type TenantTable } from "./auth/session.ts";
 import { db } from "./db/index.ts";
-import { idsInTenant, type TenantTable } from "./session.ts";
 import { type ListSql, planList } from "./table-query.ts";
 
 /** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */

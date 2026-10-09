@@ -5,7 +5,6 @@ import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { label } from "#lib/i18n/labels.ts";
 import {
 	assignableRoles,
 	invitationState,
@@ -14,14 +13,15 @@ import {
 	memberRoles,
 	removalRefusal,
 	roleChangeRefusal,
-} from "#lib/members.ts";
+} from "#lib/auth/members.ts";
+import { isManager, parseRoles } from "#lib/auth/roles.ts";
+import { label } from "#lib/i18n/labels.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { isManager, parseRoles } from "#lib/roles.ts";
 import { recordActivityAfter } from "#lib/server/activity/log.ts";
-import { auth } from "#lib/server/auth.ts";
+import { auth } from "#lib/server/auth/better-auth.ts";
+import { inTenant, requireManager, requireMember } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
-import { inTenant, requireManager, requireMember } from "#lib/server/session.ts";
 
 /**
  * The organization's members, and for owners and admins its pending invitations, with what the
@@ -92,7 +92,7 @@ export const getMembers = query(async () => {
 	};
 });
 
-/** What the rules in `#lib/members.ts` need to know about changing one of the tenant's members. */
+/** What the rules in `#lib/auth/members.ts` need to know about changing one of the tenant's members. */
 async function memberChange(memberId: string): Promise<MemberChange> {
 	const tenant = requireMember();
 	const members = await db

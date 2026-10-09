@@ -1,7 +1,7 @@
 /**
  * The app's optional modules: feature sets on top of the core (customers, equipment, orders, …)
  * that some tenants buy and others don't. Which tenant has which is stored per organization
- * (`organization_module`); `requireModule()` in `#lib/server/session.ts` refuses a module's remote
+ * (`organization_module`); `requireModule()` in `#lib/server/auth/session.ts` refuses a module's remote
  * functions to the others.
  *
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its

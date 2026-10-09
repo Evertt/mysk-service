@@ -8,10 +8,10 @@ import type { OrderStatus } from "#lib/models.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/log.ts";
+import { idInTenant, idsInTenant, requireModule } from "#lib/server/auth/session.ts";
 import { bulkChange, idsTarget } from "#lib/server/bulk.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
-import { idInTenant, idsInTenant, requireModule } from "#lib/server/session.ts";
 
 import { canChange, dueDate, today } from "../../../invoice.ts";
 import type { InvoiceStatus } from "../../../model.ts";
