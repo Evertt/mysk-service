@@ -325,4 +325,38 @@ describe("in North", () => {
 		expect(await shownNumbers(app)).not.toEqual(before);
 		await app.go("/orders");
 	});
+
+	test("a link to another page of the list shows the table loading until its rows are in", async () => {
+		const { page } = app;
+		await app.go("/orders?size=50");
+		const first = await shownNumbers(app);
+		const table = page.locator('[data-slot="data-table"]');
+		// A link elsewhere in the app to this list, on a page whose rows aren't loaded yet. (In a
+		// corner on top: the page fills the viewport, so the end of the body is out of view.)
+		await page.evaluate(() => {
+			const link = Object.assign(document.createElement("a"), { href: "/orders?page=3&size=50" });
+			link.textContent = "Third page";
+			link.style.cssText = "position: fixed; top: 0; left: 0; z-index: 100";
+			document.body.append(link);
+		});
+		let release = () => {};
+		const held = new Promise<void>((resolve) => (release = resolve));
+		await page.route("**/_app/remote/**", async (route) => {
+			await held;
+			await route.continue();
+		});
+		try {
+			await page.getByRole("link", { name: "Third page" }).click();
+			// The URL asks for the third page, the rows are still the first's: the table says so.
+			await expect.poll(() => table.getAttribute("aria-busy")).toBe("true");
+			expect(await shownNumbers(app)).toEqual(first);
+		} finally {
+			release();
+			await page.unrouteAll({ behavior: "wait" });
+		}
+		await app.tableSettled();
+		expect(await table.getAttribute("aria-busy")).toBeNull();
+		expect(await shownNumbers(app)).not.toEqual(first);
+		await app.go("/orders");
+	});
 });
