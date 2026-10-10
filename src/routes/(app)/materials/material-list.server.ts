@@ -5,7 +5,7 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { stockLevelSql } from "#lib/materials/server/stock.ts";
+import { stockLevelSql } from "#lib/materials/server";
 import { stockLevels } from "#lib/models.ts";
 import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";

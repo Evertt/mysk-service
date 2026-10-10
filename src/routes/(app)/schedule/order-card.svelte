@@ -11,7 +11,7 @@
 	import { timeOfDay } from "#lib/dates.ts";
 	import { formatDate } from "#lib/i18n";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
-	import { priorities, statuses, types } from "#lib/orders/display.ts";
+	import { priorities, statuses, types } from "#lib/orders";
 	import { cn } from "#lib/utils.ts";
 
 	import type { getSchedule } from "./schedule.remote.ts";

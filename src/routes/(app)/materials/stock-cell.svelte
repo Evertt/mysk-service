@@ -3,8 +3,8 @@
 	A material's stock, right-aligned, with a badge when it's low or out.
 -->
 <script lang="ts">
-	import { formatQuantity, stockLevel } from "#lib/materials/display.ts";
-	import StockBadge from "#lib/materials/stock-badge.svelte";
+	import { formatQuantity, stockLevel } from "#lib/materials";
+	import { StockBadge } from "#lib/materials/components";
 	import type { MaterialUnit } from "#lib/models.ts";
 
 	let { stock, unit }: { stock: number; unit: MaterialUnit } = $props();

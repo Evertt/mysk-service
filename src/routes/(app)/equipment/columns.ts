@@ -4,9 +4,8 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import CustomerLink from "#lib/customers/customer-link.svelte";
-import CategoryLabel from "#lib/equipment/category-label.svelte";
-import StatusBadge from "#lib/equipment/status-badge.svelte";
+import { CustomerLink } from "#lib/customers/components";
+import { CategoryLabel, StatusBadge } from "#lib/equipment/components";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
 import type { getEquipmentList } from "./equipment-list.remote.ts";

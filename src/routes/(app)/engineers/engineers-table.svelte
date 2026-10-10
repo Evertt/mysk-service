@@ -2,7 +2,7 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-	import { regionOptions, specialtyOptions } from "#lib/engineers/display.ts";
+	import { regionOptions, specialtyOptions } from "#lib/engineers";
 
 	import { activate, deactivate } from "./bulk-actions.ts";
 	import { columns, type EngineerRow } from "./columns.ts";

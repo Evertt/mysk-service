@@ -10,7 +10,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers/display.ts";
+	import { specialties } from "#lib/engineers";
 	import { formatDate } from "#lib/i18n";
 
 	import { DEFAULT_TIME, dayKey, parseDay } from "./board.ts";

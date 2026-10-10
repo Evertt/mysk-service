@@ -3,7 +3,7 @@ import { DAY, startOfDay } from "#lib/dates.ts";
  * A unit's service history: what happened to it in order (`buildTimeline`) and the figures that
  * sum it up (`serviceStats`).
  */
-import { isUnderWarranty } from "#lib/equipment/display.ts";
+import { isUnderWarranty } from "#lib/equipment";
 import {
 	isDoneOrder,
 	isOpenOrder,

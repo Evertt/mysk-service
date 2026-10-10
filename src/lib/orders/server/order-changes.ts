@@ -5,7 +5,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { OrderStockShortage, moveOrderStock } from "#lib/materials/server";
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity";
 import { idInTenant, idsInTenant, inTenant } from "#lib/server/auth";

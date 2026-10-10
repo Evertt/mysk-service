@@ -9,8 +9,7 @@
 
 	import { formatDate } from "#lib/i18n";
 	import type { OrderPriority, OrderStatus } from "#lib/models.ts";
-	import PriorityBadge from "#lib/orders/priority-badge.svelte";
-	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import { PriorityBadge, StatusBadge } from "#lib/orders/components";
 
 	import { plannedTime } from "./work.ts";
 

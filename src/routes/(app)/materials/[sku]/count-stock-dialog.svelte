@@ -11,7 +11,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { label } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials/display.ts";
+	import { formatQuantity } from "#lib/materials";
 	import { type MaterialUnit, quantityStep } from "#lib/models.ts";
 
 	import { formatChange } from "./stock-history.ts";

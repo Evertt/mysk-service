@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { engineerRegions } from "#lib/engineers/display.ts";
+import { engineerRegions } from "#lib/engineers";
 import { engineerSpecialties } from "#lib/models.ts";
 import { cents, date, email, phone, text } from "#lib/schema.ts";
 

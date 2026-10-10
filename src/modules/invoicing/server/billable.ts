@@ -9,7 +9,7 @@
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server";
 import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";

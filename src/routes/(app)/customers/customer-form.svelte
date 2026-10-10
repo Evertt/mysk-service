@@ -9,7 +9,7 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { countryOptions } from "#lib/customers/countries.ts";
+	import { countryOptions } from "#lib/customers";
 	import { segmentOptions } from "#lib/customers/display.ts";
 
 	import type {

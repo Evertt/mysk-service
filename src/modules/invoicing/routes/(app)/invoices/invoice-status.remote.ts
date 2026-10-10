@@ -3,7 +3,7 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { setOrdersStatus } from "#lib/orders/server/order-changes.ts";
+import { setOrdersStatus } from "#lib/orders/server";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth";

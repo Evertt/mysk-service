@@ -5,7 +5,7 @@
 <script lang="ts">
 	import type { MaterialUnit } from "#lib/models.ts";
 
-	import { stockLevel, stockLevelDisplay } from "./display.ts";
+	import { stockLevel, stockLevelDisplay } from "../display.ts";
 
 	let { stock, unit }: { stock: number; unit: MaterialUnit } = $props();
 

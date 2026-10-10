@@ -7,9 +7,9 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { countryName } from "#lib/customers/countries.ts";
-	import SegmentBadge from "#lib/customers/segment-badge.svelte";
-	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
+	import { countryName } from "#lib/customers";
+	import { SegmentBadge } from "#lib/customers/components";
+	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n";
 
 	import { deleteCustomer, getCustomer } from "../customers.remote.ts";

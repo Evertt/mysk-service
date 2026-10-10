@@ -5,9 +5,9 @@
 -->
 <script lang="ts">
 	import { formatDate, label } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials/display.ts";
+	import { formatQuantity } from "#lib/materials";
 	import type { MaterialUnit } from "#lib/models.ts";
-	import OrderLink from "#lib/orders/order-link.svelte";
+	import { OrderLink } from "#lib/orders/components";
 
 	import type { getMaterial } from "../material.remote.ts";
 	import { formatChange } from "./stock-history.ts";

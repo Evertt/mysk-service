@@ -12,7 +12,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatNumber, label } from "#lib/i18n";
-	import { lowStockThreshold } from "#lib/materials/display.ts";
+	import { lowStockThreshold } from "#lib/materials";
 	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.ts";
 
 	import type { createMaterial, getMaterial, updateMaterial } from "./material.remote.ts";

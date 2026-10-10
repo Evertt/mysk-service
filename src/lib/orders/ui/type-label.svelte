@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { OrderType } from "#lib/models.ts";
 
-	import { types } from "./display.ts";
+	import { types } from "../display.ts";
 
 	let { type }: { type: OrderType } = $props();
 

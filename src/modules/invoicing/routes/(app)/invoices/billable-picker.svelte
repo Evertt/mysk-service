@@ -9,7 +9,7 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 
 	import { formatCents, formatDate } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
+	import { OrderLink } from "#lib/orders/components";
 
 	import type { getBillable } from "./invoices.remote.ts";
 

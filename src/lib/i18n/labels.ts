@@ -8,7 +8,7 @@ import type { MemberRole } from "#lib/auth";
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { StockLevel } from "#lib/materials/display.ts";
+import type { StockLevel } from "#lib/materials";
 import type {
 	CustomerSegment,
 	EngineerSpecialty,

@@ -4,7 +4,7 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { moveOrderStock } from "#lib/materials/server/stock.ts";
+import { moveOrderStock } from "#lib/materials/server";
 import { fitsUnit, type OrderStatus } from "#lib/models.ts";
 import { recordOrderLines } from "#lib/server/activity";
 import { idsInTenant, inTenant, requireTenant } from "#lib/server/auth";

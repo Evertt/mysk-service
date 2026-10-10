@@ -10,7 +10,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.ts";
-	import { categories } from "#lib/equipment/display.ts";
+	import { categories } from "#lib/equipment";
 	import { labelOptions } from "#lib/i18n";
 	import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 

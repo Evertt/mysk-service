@@ -2,7 +2,7 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-	import { countryOptions } from "#lib/customers/countries.ts";
+	import { countryOptions } from "#lib/customers";
 	import { segmentOptions } from "#lib/customers/display.ts";
 
 	import { deleteCustomers } from "./bulk-actions.ts";

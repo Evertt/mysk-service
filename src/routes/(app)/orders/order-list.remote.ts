@@ -1,8 +1,8 @@
 import { and, count, inArray, sql } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
+import { lineTotalSql, priceOrders } from "#lib/orders/server";
 import { tagOrders } from "#lib/orders/server/hooks.ts";
-import { lineTotalSql, priceOrders } from "#lib/orders/server/pricing.ts";
 import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";

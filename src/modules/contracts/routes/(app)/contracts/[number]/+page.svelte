@@ -7,11 +7,9 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
+	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components";
 	import { formatCents, formatDate, label } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
-	import OrderStatusBadge from "#lib/orders/status-badge.svelte";
-	import TypeLabel from "#lib/orders/type-label.svelte";
+	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components";
 
 	import { formatTerm, levels } from "../../../../display.ts";
 	import LevelBadge from "../../../../level-badge.svelte";

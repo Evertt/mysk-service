@@ -12,7 +12,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.ts";
-	import { regionOptions, specialtyOptions } from "#lib/engineers/display.ts";
+	import { regionOptions, specialtyOptions } from "#lib/engineers";
 
 	import type { createEngineer, getEngineer, updateEngineer } from "./engineers.remote.ts";
 

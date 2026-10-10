@@ -9,9 +9,9 @@ import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatNumber, label } from "#lib/i18n";
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { OrderStockShortage, moveOrderStock } from "#lib/materials/server";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { checkLines, saveOrderLines } from "#lib/orders/server/lines.ts";
+import { checkLines, saveOrderLines } from "#lib/orders/server";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import {

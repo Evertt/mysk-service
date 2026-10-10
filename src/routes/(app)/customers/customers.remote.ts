@@ -2,9 +2,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { europeanCountries } from "#lib/customers/countries.ts";
+import { europeanCountries } from "#lib/customers";
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";

@@ -9,10 +9,8 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatDateTime, formatTime } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials/display.ts";
-	import PriorityBadge from "#lib/orders/priority-badge.svelte";
-	import StatusBadge from "#lib/orders/status-badge.svelte";
-	import TypeLabel from "#lib/orders/type-label.svelte";
+	import { formatQuantity } from "#lib/materials";
+	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components";
 
 	import { getMyOrder, startWork } from "../portal.remote.ts";
 	import { dayLabel, fieldActions } from "../work.ts";

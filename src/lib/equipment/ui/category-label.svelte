@@ -5,7 +5,7 @@
 <script lang="ts">
 	import type { EquipmentCategory } from "#lib/models.ts";
 
-	import { categories } from "./display.ts";
+	import { categories } from "../display.ts";
 
 	let { category }: { category: EquipmentCategory } = $props();
 

@@ -3,7 +3,7 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.ts";
-import { priceOrders } from "#lib/orders/server/pricing.ts";
+import { priceOrders } from "#lib/orders/server";
 import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";

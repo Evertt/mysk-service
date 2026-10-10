@@ -4,8 +4,8 @@
 -->
 <script lang="ts">
 	import { formatCents } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials/display.ts";
-	import MaterialLink from "#lib/materials/material-link.svelte";
+	import { formatQuantity } from "#lib/materials";
+	import { MaterialLink } from "#lib/materials/components";
 
 	import type { getOrder } from "../order.remote.ts";
 

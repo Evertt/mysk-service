@@ -6,7 +6,7 @@
 	import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
 	import ShieldOffIcon from "@lucide/svelte/icons/shield-off";
 
-	import { isUnderWarranty } from "./display.ts";
+	import { isUnderWarranty } from "../display.ts";
 
 	let { until, at }: { until: Date; at?: Date } = $props();
 

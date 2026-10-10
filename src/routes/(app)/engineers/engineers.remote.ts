@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 import { DAY } from "#lib/dates.ts";
 import { openOrderStatuses } from "#lib/models.ts";
-import { laborCost } from "#lib/orders/server/pricing.ts";
+import { laborCost } from "#lib/orders/server";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";

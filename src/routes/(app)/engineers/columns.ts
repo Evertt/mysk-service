@@ -4,9 +4,8 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import ActiveBadge from "#lib/engineers/active-badge.svelte";
-import { regionLabel } from "#lib/engineers/display.ts";
-import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
+import { regionLabel } from "#lib/engineers";
+import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components";
 import { engineerSpecialties } from "#lib/models.ts";
 
 import type { getEngineers } from "./engineers.remote.ts";

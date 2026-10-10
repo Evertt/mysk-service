@@ -7,7 +7,7 @@
 	import XIcon from "@lucide/svelte/icons/x";
 
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
+	import { OrderLink } from "#lib/orders/components";
 
 	import { formatRate } from "../../../../display.ts";
 	import type { getInvoice } from "../invoices.remote.ts";

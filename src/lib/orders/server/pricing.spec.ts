@@ -3,10 +3,10 @@ import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { lineTotal } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { adjustPrices, tag } from "#lib/orders/extensions.ts";
 import { db } from "#lib/server/db/index.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
+import { adjustPrices, tag } from "../extensions.ts";
 import {
 	laborCost,
 	lineTotalSql,

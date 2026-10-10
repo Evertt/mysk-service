@@ -2,8 +2,8 @@ import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
+import { moveStock } from "#lib/materials/server";
 import { findMaterial } from "#lib/materials/server/materials.ts";
-import { moveStock } from "#lib/materials/server/stock.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";

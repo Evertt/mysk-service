@@ -9,7 +9,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import type { CustomerSegment } from "#lib/models.ts";
 
-	import { countryName } from "./countries.ts";
+	import { countryName } from "../countries.ts";
 	import SegmentBadge from "./segment-badge.svelte";
 
 	let {

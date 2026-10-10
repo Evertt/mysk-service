@@ -4,7 +4,7 @@
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-	import { stockLevelOptions, unitOptions } from "#lib/materials/display.ts";
+	import { stockLevelOptions, unitOptions } from "#lib/materials";
 
 	import { deleteMaterials } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";

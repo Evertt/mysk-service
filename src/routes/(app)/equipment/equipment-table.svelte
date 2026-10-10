@@ -6,7 +6,7 @@
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-	import { categoryOptions, statusOptions } from "#lib/equipment/display.ts";
+	import { categoryOptions, statusOptions } from "#lib/equipment";
 
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";

@@ -1,9 +1,9 @@
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { DAY } from "#lib/dates.ts";
-import { stockLevel } from "#lib/materials/display.ts";
+import { stockLevel } from "#lib/materials";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server";
 import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";

@@ -7,7 +7,7 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { statuses } from "#lib/equipment/display.ts";
+	import { statuses } from "#lib/equipment";
 	import { formatNumber } from "#lib/i18n";
 	import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 

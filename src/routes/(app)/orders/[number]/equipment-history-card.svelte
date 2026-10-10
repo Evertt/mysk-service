@@ -4,9 +4,7 @@
 -->
 <script lang="ts">
 	import { formatDate } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
-	import StatusBadge from "#lib/orders/status-badge.svelte";
-	import TypeLabel from "#lib/orders/type-label.svelte";
+	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components";
 
 	import type { getOrder } from "../order.remote.ts";
 

@@ -1,9 +1,9 @@
 import { expect, test, vi } from "vite-plus/test";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { committed, type OrderFacts, tag } from "#lib/orders/extensions.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
+import { committed, type OrderFacts, tag } from "../extensions.ts";
 import { orderCommitted, tagOrders } from "./hooks.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.

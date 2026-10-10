@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { OrderStatus } from "#lib/models.ts";
 
-	import { statuses } from "./display.ts";
+	import { statuses } from "../display.ts";
 
 	let { status }: { status: OrderStatus } = $props();
 

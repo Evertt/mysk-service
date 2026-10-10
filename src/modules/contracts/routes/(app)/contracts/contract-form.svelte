@@ -13,7 +13,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.ts";
-	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
+	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components";
 	import { label } from "#lib/i18n";
 
 	import { levels } from "../../../display.ts";
