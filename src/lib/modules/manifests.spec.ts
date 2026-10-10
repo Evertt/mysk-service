@@ -6,7 +6,13 @@ import { gadgets, widgets } from "./fakes.ts";
 import { generatedModuleIds } from "./ids.gen.ts";
 import { moduleGraph, moduleIds } from "./ids.ts";
 import { manifests } from "./manifests.gen.ts";
-import { bulkActionLoaders, modules, type SlotName, slotLoaders } from "./manifests.ts";
+import {
+	type AppModule,
+	bulkActionLoaders,
+	modules,
+	type SlotName,
+	slotLoaders,
+} from "./manifests.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
@@ -41,7 +47,8 @@ test("every module comes after the modules it requires", () => {
 });
 
 test("the graph of ids is what the manifests declare", () => {
-	for (const manifest of modules) {
+	// Through the wide type: the real manifests' narrow types lack the keys they don't declare.
+	for (const manifest of modules as readonly AppModule[]) {
 		expect(moduleGraph[manifest.id]).toEqual({
 			requires: manifest.requires ?? [],
 			enhances: manifest.enhances ?? [],
