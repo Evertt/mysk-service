@@ -178,8 +178,9 @@ migration committed.
   values. A module whose requirement is off is off everywhere (`effectiveModules()` in
   `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
   The settings page switches a module on together with its requirements and off together with its
-  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a set that
-  would leave a module without its requirements.
+  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a change
+  that would turn off a module that's on (or being switched on) for want of a requirement; a stored
+  module that's off already (a stale row) blocks nothing.
 - **The sidebar**: a module's entry is in the sidebar's Modules group, unless its manifest says
   `nav: { after: "orders" }` (a core entry's id from `coreNavIds` in `#lib/modules/nav.ts`, or
   another module's id; a literal, read by the generator like `requires`): then it goes right after

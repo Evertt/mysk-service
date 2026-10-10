@@ -88,12 +88,13 @@ interface RefusedChange {
 
 /**
  * The stored modules after switching `enable` on and `disable` off (a module in both ends up off),
- * or why that's refused: it would switch off an always-on module, or leave a module without
- * something it requires. Always-on modules are never stored (they're on anyway).
+ * or why that's refused: it would switch off an always-on module, or leave a module that's on, or
+ * that's being switched on, off for want of something it requires. An always-on module isn't
+ * stored by switching it on (it's on anyway); a row stored for one stays.
  *
- * Only what the change breaks is refused: a stored module that already missed a requirement (a
- * stale row, e.g. after a hand edit; it's off, see `effectiveModules()`) doesn't block a change to
- * other modules, and stays stored until it's switched on with what it requires, or off.
+ * It judges by what's on (`effectiveModules()`), not by the rows: a stored module that is off
+ * already for want of a requirement (a stale row, e.g. after a hand edit) blocks nothing, whatever
+ * else it requires, and stays stored until it's switched on with what it requires, or off.
  */
 export function changeModules(
 	stored: readonly string[],
@@ -103,19 +104,13 @@ export function changeModules(
 	const next = inGraphOrder(
 		graph,
 		(id) =>
-			!graph[id].alwaysOn &&
-			(stored.includes(id) || change.enable.includes(id)) &&
+			(stored.includes(id) || (change.enable.includes(id) && !graph[id].alwaysOn)) &&
 			!change.disable.includes(id),
 	);
-	const missingBefore = new Map(
-		moduleSetProblems(stored, graph).map(({ module, missing }) => [module, missing]),
-	);
+	const onBefore = new Set<string>(effectiveModules(stored, graph));
+	const onAfter = new Set<string>(effectiveModules(next, graph));
 	const unmet = new Set(
-		moduleSetProblems(next, graph)
-			.filter(({ module, missing }) =>
-				missing.some((id) => !(missingBefore.get(module) ?? []).includes(id)),
-			)
-			.map(({ module }) => module),
+		next.filter((id) => !onAfter.has(id) && (onBefore.has(id) || change.enable.includes(id))),
 	);
 	const alwaysOn = new Set(change.disable.filter((id) => graph[id]?.alwaysOn));
 	return unmet.size || alwaysOn.size
