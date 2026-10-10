@@ -14,11 +14,48 @@
 
 ## Where files go
 
-Put a module next to the code that uses it, in the nearest folder that contains all of its users.
+Put a module next to the code that uses it, in the nearest folder that contains all of its users,
+with one exception: **`src/routes` holds route files only** (names starting with `+`), plus the files
+of the app shell, the dashboard, the auth pages, the schedule and the engineer portal, which belong to
+no core domain. Whatever belongs to a core domain lives in that domain's folder.
 
-- **Used by one route** (components, `*.remote.ts`, helpers, their tests): in that route's folder, e.g. `src/routes/(app)/orders/orders-table.svelte`. Only `+`-prefixed files are routes, so these are ignored by the router.
-- **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.ts`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
-- **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.ts`.
+- **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`, `materials`): in
+  `src/lib/<domain>/`, in a folder by feature. Specs and test harnesses sit next to their subject.
+  - `ui/`: the small pieces other sections reuse: links, badges, labels, cards, tags
+    (`#lib/orders/ui/order-link.svelte`).
+  - `list/`: the list definition (`orders-list.ts`), columns, table, cells, bulk actions, and the
+    list's remote functions (`order-list.remote.ts`, `order-bulk.remote.ts`).
+  - `form/`: the new/edit form, its fields and valibot schema.
+  - `detail/`: what only the detail page shows: cards, history, dialogs, their helpers and remote
+    functions.
+  - `server/`: server-only code: services (`pricing.ts`, `stock.ts`), hooks, and the list's `ListSql`
+    in `list-sql.ts`.
+  - at the root: `display.ts` (display maps, options, domain rules), `extensions.ts` (the domain's
+    extension points), `countries.ts`-like data, and the record's own remote functions
+    (`order.remote.ts`: get, form options, create, update, delete).
+
+  A page is a `+page.svelte` in `src/routes/(app)/<domain>/` that composes these.
+
+- **Barrels**: code outside a domain imports it through its barrels, by file: `#lib/<domain>/index.ts`
+  (plain TS: display maps, list definitions, data; safe to load anywhere Vite's Svelte plugin runs),
+  `components.ts` (Svelte components), `remotes.ts` (re-exports the `*.remote.ts` files; not named
+  `remote.ts`, which SvelteKit would treat as a remote module) and `server/index.ts` (server-only;
+  only orders and materials have one: add one when something outside needs it).
+  E.g. `import { OrderLink } from "#lib/orders/components.ts"`. A barrel exports what something
+  outside the domain imports, no more. Exceptions: `#lib/<domain>/extensions.ts` is imported as itself
+  (the module generator reads it and the modules contribute to it at module scope), and `e2e/` and
+  `scripts/`, which have no Vite plugins and import plain `.ts` files by path. Inside a domain, import
+  siblings relatively and never the domain's own barrels (a barrel imports its files: the other way
+  round is a cycle). Code that runs when a module is evaluated (list definitions, `withLabels()`,
+  constants) never reads an import from another domain: a cycle between two barrels is harmless only
+  if nothing is read while they evaluate. `src/lib/domain-boundaries.spec.ts` checks all of this, and
+  that a domain's route folder and a module's `routes/` hold `+` files only.
+- **Used by one route outside the domains** (the shell, dashboard, auth pages, schedule, portal):
+  in that route's folder, e.g. `src/routes/(app)/(dashboard)/dashboard-charts.ts`. **Used by several
+  routes under one folder**: in that folder, e.g. `src/routes/(app)/app-sidebar.svelte` serves every
+  route behind the login. Import it relatively. Plain helpers that a route's remote files share (a
+  `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, which SvelteKit
+  keeps out of client bundles.
 - **Generic, domain-free code** (UI kit, data table, forms, themes, activity subjects, auth,
   i18n, module manifests, extension point declarations): `src/lib/components/`, `src/lib/activity/`,
   `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`, `src/lib/extensions/`, `src/lib/themes/`;
@@ -37,11 +74,13 @@ for rune modules, `.svelte` for components, and `.js` only for real JavaScript, 
 generated output (`#lib/paraglide/messages.js`, `runtime.js`). So `../order.remote.ts`, never
 `../order.remote.js` or `../order.remote`; the same goes for `vi.mock(...)` paths and `import()`.
 `src/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
-`#ui/<name>` imports have no extension: `package.json` adds `/index.ts`. Seven folders also have
+`#ui/<name>` imports have no extension: `package.json` adds `/index.ts` (it maps shadcn's component
+folders, which the shadcn CLI and the auto-imports rely on). Seven generic folders also have
 a barrel `index.ts` re-exporting their files (`activity/`, `auth/`, `i18n/` and `server/activity/`,
-`server/auth/`, `server/lists/`, `server/mail/`), imported by that file, `#lib/i18n/index.ts`: no
-`package.json` `imports` entry or `tsconfig` path maps a folder to its `index.ts`, so a folder is never
-imported as `#lib/i18n` (`src/import-extensions.spec.ts` fails with the line).
+`server/auth/`, `server/lists/`, `server/mail/`), and so does each core domain (above); a barrel is
+imported by that file, `#lib/i18n/index.ts`: no `package.json` `imports` entry or `tsconfig` path maps
+a folder to its `index.ts`, so a folder is never imported as `#lib/i18n`
+(`src/import-extensions.spec.ts` fails with the line).
 
 Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 
@@ -118,8 +157,9 @@ self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/d
 description, `route`, icon, `subjects`, `actions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
-logic; server-only), `routes/` (its pages, mirroring `src/routes`), its components and remote
-functions, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder name is the id
+logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
+and remote functions in `list/`, `form/`, `detail/` (the same folders as a core domain's) or at the
+root, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder name is the id
 (`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 
@@ -171,7 +211,9 @@ migration committed.
   `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
   id (`<module>/<point id>/<name>`).
-- A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
+- A module's `routes/` holds route files (`+` files) only; everything they use is in the module's own
+  folders (`list/`, `form/`, `detail/`, `server/`, the root) and imported as `#modules/<id>/…`.
+  A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
   files to a core route. To add something to a core page, use a slot. Its pages type their params
   with `RouteParams<"/(app)/(modules)/contracts/[number]">` from `$app/types`, since `./$types`
   only resolves for files physically in `src/routes`; the stub is typed with the route's `PageProps`, so
@@ -186,7 +228,7 @@ migration committed.
   route stubs guard its server loads, form actions and endpoints (see above); its remote functions
   are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares its extension points (`#lib/<domain>/extensions.ts`); core never
-  imports a module (`#modules/…` is for the generated registries only), which
+  imports a module (`#modules/…` is for the generated registries, and for a module's own route files), which
   `src/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
   `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
   never the reverse; one migration stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts`
@@ -236,17 +278,17 @@ roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
 ## Server-side lists
 
 Orders, equipment and materials page, filter and sort in the database. A list is three layers (the
-orders list in `src/routes/(app)/orders/` is the example):
+orders list in `src/lib/orders/` is the example):
 
-1. **The definition**, `defineList()` in `<section>-list.ts` (`orders-list.ts`; isomorphic, no
+1. **The definition**, `defineList()` in `list/<section>-list.ts` (`orders-list.ts`; isomorphic, no
    server imports): the columns, what each sorts, groups and filters by, and the filter's value
    type (`code`, `id`, `oneOf(values)`; `orNone(kind)` for a column that can be empty, `none` in the
    URL). It makes the valibot schemas `list.query` and `list.where`, the typed
    `ListQuery`/`ListWhere`, and the URL spec. The table's URL state is read into a query
    with `toListQuery()`; the URL stays lenient (bad values are dropped), the remote query strict
    (a malformed argument is a 400).
-2. **The SQL**, `ListSql` from a per-request factory (`ordersSql()`) in a route-local
-   `<section>-list.server.ts`: the SQL of every column the definition sorts, groups or filters by
+2. **The SQL**, `ListSql` from a per-request factory (`ordersSql()`) in the domain's
+   `server/list-sql.ts`: the SQL of every column the definition sorts, groups or filters by
    (a missing or extra one is a type error), the search columns, the id and the tenant scope. Write
    the joins once in a helper generic over the query (`withOrderJoins`, drizzle's `$dynamic()`
    pattern) and use it for the rows and in `ListSql.from`, so rows, counts, facets and bulk ids can't

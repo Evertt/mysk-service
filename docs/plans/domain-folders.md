@@ -1,6 +1,6 @@
 # Domain folders: the domains' files leave `src/routes`
 
-The proposal (phase 1) and, from the next section, the decisions the user took on it. Numbers come
+**Done** (see the commits of the `domain-folders` branch; AGENTS.md "Where files go" has the rules). The proposal (phase 1) and, from the next section, the decisions the user took on it. Numbers come
 from a script over the import graph of the checked-in files (2,714 import specifiers in `src`,
 `e2e` and `scripts`). Where the text below still says "recommended" or "baseline" or lists
 questions, the decisions here win.
