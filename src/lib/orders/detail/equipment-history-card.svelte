@@ -4,9 +4,11 @@
 -->
 <script lang="ts">
 	import { formatDate } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 
 	import type { getOrder } from "../order.remote.ts";
+	import OrderLink from "../ui/order-link.svelte";
+	import StatusBadge from "../ui/status-badge.svelte";
+	import TypeLabel from "../ui/type-label.svelte";
 
 	let {
 		serialNumber,

@@ -1,15 +1,15 @@
 import { and, count, inArray, sql } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
-import { tagOrders } from "#lib/orders/server/hooks.ts";
-import { lineTotalSql, priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
 import { pageGroupsOf, planList } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { ordersSql, withOrderJoins } from "./order-list.server.ts";
+import { tagOrders } from "../server/hooks.ts";
+import { ordersSql, withOrderJoins } from "../server/list-sql.ts";
+import { lineTotalSql, priceOrders } from "../server/pricing.ts";
 import { ordersList } from "./orders-list.ts";
 
 /**

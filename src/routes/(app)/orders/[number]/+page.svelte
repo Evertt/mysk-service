@@ -17,15 +17,17 @@
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { isEditableOrder } from "#lib/models.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import {
+		EquipmentHistoryCard,
+		OrderLinesCard,
+		OrderTags,
+		WorkReport,
+	} from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
+	import { deleteOrder, getOrder } from "#lib/orders/remotes.ts";
 
 	import ExtensionSlot from "../../extension-slot.svelte";
-	import OrderTags from "../order-tags.svelte";
-	import { deleteOrder, getOrder } from "../order.remote.ts";
 	import type { PageProps } from "./$types";
-	import EquipmentHistoryCard from "./equipment-history-card.svelte";
-	import OrderLinesCard from "./order-lines-card.svelte";
-	import WorkReport from "./work-report.svelte";
 
 	let { params }: PageProps = $props();
 

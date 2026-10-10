@@ -10,7 +10,7 @@
 	import { formatCents, label } from "#lib/i18n/index.ts";
 	import { lineTotal, quantityStep } from "#lib/models.ts";
 
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.ts";
+	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
 
 	let {
 		field,

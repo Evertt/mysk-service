@@ -14,8 +14,8 @@
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
+	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
 	import OrderLinesField from "./order-lines-field.svelte";
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "./order.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];

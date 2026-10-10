@@ -4,10 +4,10 @@
 -->
 <script lang="ts">
 	import type { OrderStatus } from "#lib/models.ts";
-	import { StatusBadge } from "#lib/orders/components.ts";
-	import type { OrderTag } from "#lib/orders/extensions.ts";
 
-	import OrderTags from "./order-tags.svelte";
+	import type { OrderTag } from "../extensions.ts";
+	import OrderTags from "../ui/order-tags.svelte";
+	import StatusBadge from "../ui/status-badge.svelte";
 
 	let { status, tags }: { status: OrderStatus; tags: OrderTag[] } = $props();
 </script>

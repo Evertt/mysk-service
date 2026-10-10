@@ -6,8 +6,10 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
-import { OrderLink, PriorityBadge, TypeLabel } from "#lib/orders/components.ts";
 
+import OrderLink from "../ui/order-link.svelte";
+import PriorityBadge from "../ui/priority-badge.svelte";
+import TypeLabel from "../ui/type-label.svelte";
 import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";
 

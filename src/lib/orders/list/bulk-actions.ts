@@ -10,8 +10,8 @@ import UserRoundCheckIcon from "@lucide/svelte/icons/user-round-check";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import { labelOptions } from "#lib/i18n/index.ts";
 import { isEditableOrder, manualOrderStatuses } from "#lib/models.ts";
-import type { OrderBulkRow } from "#lib/orders/extensions.ts";
 
+import type { OrderBulkRow } from "../extensions.ts";
 import {
 	bulkAssignOrders,
 	bulkDeleteOrders,

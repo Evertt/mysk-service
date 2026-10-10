@@ -12,7 +12,7 @@ import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
-import { ordersList } from "./orders-list.ts";
+import { ordersList } from "../list/orders-list.ts";
 
 /**
  * The orders list's joins: the order's customer, unit and engineer, each scoped to the tenant.

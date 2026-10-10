@@ -6,18 +6,6 @@ import * as v from "valibot";
 import { atTime } from "#lib/dates.ts";
 import { OrderStockShortage } from "#lib/materials/server/index.ts";
 import { isEditableOrder, lineTotal } from "#lib/models.ts";
-import { orderCommitted, tagOrders } from "#lib/orders/server/hooks.ts";
-import {
-	STANDARD_HOURLY_RATE,
-	checkLines,
-	completedAt,
-	notEditable,
-	priceOrders,
-	removeOrder,
-	saveOrderLines,
-	type LineInput,
-	type LineProblem,
-} from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -26,7 +14,11 @@ import { customer, engineer, equipment, material, order } from "#lib/server/db/s
 import { nextNumber } from "#lib/server/numbering.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { orderFields } from "./order-schema.ts";
+import { orderFields } from "./form/order-schema.ts";
+import { orderCommitted, tagOrders } from "./server/hooks.ts";
+import { checkLines, saveOrderLines, type LineInput, type LineProblem } from "./server/lines.ts";
+import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
+import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 
 /** One order with everything on it, plus other orders for the same equipment. */
 export const getOrder = forMembers.query(v.string(), async (number) => {
