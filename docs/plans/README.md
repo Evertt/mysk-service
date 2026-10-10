@@ -78,6 +78,12 @@ each other, extension points declared by their owners, roles that come with a mo
 schedule and engineer portal as the first core features turned into switchable modules. Not built
 yet.
 
+Implementation plans, one per step of its order of work:
+
+1. [module-dependencies-1-machinery.md](module-dependencies-1-machinery.md): the dependency graph,
+   switching on and off, `api/` boundaries and extension points declared by their owners.
+2. Roles, 3. the schedule pilot, 4. the portal pilot, 5. the inspector: written once step 1 is merged.
+
 ## Worth weighing before phase 4 (decided: built)
 
 The generator (route stubs, `*.gen.ts` registries, the 404 guard per module) is the largest new
