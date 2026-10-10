@@ -1,5 +1,4 @@
 /** Issuing, paying and voiding invoices. */
-import { command, form } from "$app/server";
 import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
@@ -7,13 +6,14 @@ import * as v from "valibot";
 import type { OrderStatus } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, idsInTenant, requireModule } from "#lib/server/auth";
+import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists";
 
 import { canChange, dueDate, today } from "../../../invoice.ts";
 import type { InvoiceStatus } from "../../../model.ts";
+import { command, form } from "../../../remote-functions.ts";
 import { invoiceById, invoiceSubject } from "../../../server/invoices.ts";
 import { invoice } from "../../../server/schema.ts";
 import { settingsOf } from "../../../server/settings.ts";
@@ -78,7 +78,7 @@ async function recordOrderStatuses(
  * and its orders become invoiced. Its lines keep the amounts they have.
  */
 export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
-	const { organizationId } = requireModule("invoicing");
+	const { organizationId } = currentTenant();
 	const settings = await settingsOf(organizationId);
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "sent");
@@ -135,13 +135,11 @@ function payInvoice(id: number) {
 
 /** Records that a sent invoice was paid, today. */
 export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("invoicing");
 	refreshInvoice(await payInvoice(id));
 });
 
 /** Marks the selected invoices paid, today: the sent ones (see `canChange`). */
 export const bulkMarkPaid = command(idsTarget, async (target) => {
-	requireModule("invoicing");
 	const result = await bulkChange(target, {
 		table: invoice,
 		label: invoice.number,
@@ -156,7 +154,6 @@ export const bulkMarkPaid = command(idsTarget, async (target) => {
  * orders go back to completed and its items can be billed again.
  */
 export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("invoicing");
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "void");
 		const orderIds = orderIdsOf(found);

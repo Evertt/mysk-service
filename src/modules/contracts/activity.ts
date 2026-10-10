@@ -12,7 +12,7 @@ const day = (value: unknown) => formatDate(new Date(String(value)));
 export const contractSubjects: Record<string, SubjectType> = {
 	contract: {
 		noun: m.contracts_activity_subject,
-		href: ({ label }) => resolve("/(app)/contracts/[number]", { number: label }),
+		href: ({ label }) => resolve("/(app)/(modules)/contracts/[number]", { number: label }),
 		fields: {
 			customerId: { ref: "customer" },
 			level: {

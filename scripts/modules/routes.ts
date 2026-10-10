@@ -10,20 +10,52 @@ export function routeFileKind(name: string): RouteFileKind | undefined {
 }
 
 /**
- * Splits a route file's path (relative to `routes/`) into its top-level route folder, which
- * includes the groups in front of it (`(app)/contracts`), and the rest (`[number]/+page.svelte`).
- * Files that sit in a group or at the root have none.
+ * Which server file `name` is: a page's or a layout's `+….server.ts`, or an endpoint's `+server.ts`.
+ * Their stubs guard themselves, because SvelteKit runs them without waiting for the layouts above
+ * (form actions and endpoints don't run those at all).
  */
-export function topFolder(file: string): { folder: string; rest: string } | undefined {
+export function serverFileKind(name: string): "page" | "layout" | "endpoint" | undefined {
+	const match = /^\+(?:(page|layout)\.server|server)\.[jt]s$/.exec(name);
+	if (match) return (match[1] as "page" | "layout" | undefined) ?? "endpoint";
+}
+
+/** The route group in `src/routes` that holds the modules' stubs: the generator's, never the core's. */
+export const MODULES_GROUP = "(modules)";
+
+export const isGroup = (segment: string) => /^\(.*\)$/.test(segment);
+
+/** Where a module's route file sits: behind which groups, in which route folder of its own. */
+export interface RoutePlace {
+	/** The groups in front of the route folder (`(app)`), whose layouts it gets; maybe none. */
+	groups: string[];
+	/** The first folder that's not a group (`contracts`): the module's own. */
+	folder: string;
+	/** The path below that folder (`[number]/+page.svelte`). */
+	rest: string;
+}
+
+/**
+ * Splits a route file's path (relative to `routes/`) into its leading groups, its route folder and
+ * the rest: `(app)/contracts/[number]/+page.svelte` → `(app)`, `contracts`, `[number]/+page.svelte`.
+ * A file that sits in a group or at the root has no route folder, and no place.
+ */
+export function routePlace(file: string): RoutePlace | undefined {
 	const parts = file.split("/");
-	const groups = parts.findIndex((part) => !/^\(.*\)$/.test(part));
+	const index = parts.findIndex((part) => !isGroup(part));
 	// The file itself is the first part that's not a group: it has no folder.
-	if (groups === -1 || groups === parts.length - 1) return undefined;
+	if (index === -1 || index === parts.length - 1) return undefined;
 	return {
-		folder: parts.slice(0, groups + 1).join("/"),
-		rest: parts.slice(groups + 1).join("/"),
+		groups: parts.slice(0, index),
+		folder: parts[index],
+		rest: parts.slice(index + 1).join("/"),
 	};
 }
+
+/**
+ * The `(modules)` group, relative to `src/routes`, that a module's route file is linked into: the
+ * one inside its groups (`(app)/(modules)`), so the route keeps their layouts.
+ */
+export const modulesGroupOf = (place: RoutePlace) => [...place.groups, MODULES_GROUP].join("/");
 
 /** The page options SvelteKit reads from a route file (and `load`), see `statically_analyse_page_options`. */
 export const pageOptions = new Set([

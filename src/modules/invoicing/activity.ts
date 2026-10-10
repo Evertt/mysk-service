@@ -29,7 +29,7 @@ export const invoicingActions = {
 export const invoicingSubjects: Record<string, SubjectType> = {
 	invoice: {
 		noun: m.invoices_activity_subject,
-		href: ({ label }) => resolve("/(app)/invoices/[number]", { number: label }),
+		href: ({ label }) => resolve("/(app)/(modules)/invoices/[number]", { number: label }),
 		fields: {
 			status: { format: (value) => invoicingLabels.labelOrValue("invoiceState", String(value)) },
 			customerId: { ref: "customer" },
@@ -45,7 +45,7 @@ export const invoicingSubjects: Record<string, SubjectType> = {
 	/** The organization's invoicing settings; they have no label, so they read as their noun. */
 	invoicing_settings: {
 		noun: m.invoices_activity_subject_settings,
-		href: () => resolve("/(app)/invoices/settings"),
+		href: () => resolve("/(app)/(modules)/invoices/settings"),
 		fields: {
 			vatRate,
 			paymentTermDays,

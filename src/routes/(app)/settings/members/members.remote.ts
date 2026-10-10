@@ -1,4 +1,4 @@
-import { form, getRequestEvent, query } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import { and, asc, eq } from "drizzle-orm";
@@ -18,16 +18,17 @@ import {
 } from "#lib/auth";
 import { label } from "#lib/i18n";
 import { recordActivityAfter } from "#lib/server/activity";
-import { auth, inTenant, requireManager, requireMember } from "#lib/server/auth";
+import { auth, currentTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
+import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 /**
  * The organization's members, and for owners and admins its pending invitations, with what the
  * signed-in user may do to each. Members see the list read-only, as on the settings page.
  */
-export const getMembers = query(async () => {
-	const tenant = requireMember();
+export const getMembers = forMembers.query(async () => {
+	const tenant = currentTenant();
 	const canManage = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
 	const [members, invitations] = await Promise.all([
@@ -93,7 +94,7 @@ export const getMembers = query(async () => {
 
 /** What the rules in `#lib/auth/members.ts` need to know about changing one of the tenant's members. */
 async function memberChange(memberId: string): Promise<MemberChange> {
-	const tenant = requireMember();
+	const tenant = currentTenant();
 	const members = await db
 		.select({ id: member.id, userId: member.userId, role: member.role })
 		.from(member)
@@ -155,10 +156,10 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 	}
 }
 
-export const changeRole = form(
+export const changeRole = forManagers.form(
 	v.object({ memberId: v.string(), role: v.picklist(memberRoles) }),
 	async ({ memberId, role }) => {
-		const { organizationId } = requireManager();
+		const { organizationId } = currentTenant();
 		const refusal = roleChangeRefusal(await memberChange(memberId), role);
 		if (refusal) invalid(refusal);
 		const { subject, role: before } = await memberSubject(memberId);
@@ -175,8 +176,8 @@ export const changeRole = form(
 	},
 );
 
-export const removeMember = form(v.object({ id: v.string() }), async ({ id }) => {
-	const { organizationId } = requireManager();
+export const removeMember = forManagers.form(v.object({ id: v.string() }), async ({ id }) => {
+	const { organizationId } = currentTenant();
 	const refusal = removalRefusal(await memberChange(id));
 	if (refusal) invalid(refusal);
 	const { subject } = await memberSubject(id);
@@ -189,7 +190,7 @@ export const removeMember = form(v.object({ id: v.string() }), async ({ id }) =>
 	void getMembers().refresh();
 });
 
-export const invite = form(
+export const invite = forManagers.form(
 	v.object({
 		email: v.config(
 			v.pipe(
@@ -204,7 +205,7 @@ export const invite = form(
 		role: v.picklist(memberRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {
-		const tenant = requireManager();
+		const tenant = currentTenant();
 		if (!assignableRoles(tenant.roles).includes(role)) {
 			invalid(issue.role(m.settings_only_owners_invite_owners()));
 		}
@@ -238,8 +239,8 @@ export const invite = form(
 );
 
 /** Sends an invitation again, with a new expiry date. */
-export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
-	const tenant = requireManager();
+export const resendInvitation = forManagers.form(v.object({ id: v.string() }), async ({ id }) => {
+	const tenant = currentTenant();
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
 	if (role.includes("owner") && !tenant.roles.includes("owner")) {
@@ -264,8 +265,7 @@ export const resendInvitation = form(v.object({ id: v.string() }), async ({ id }
 	return { email: found.email };
 });
 
-export const cancelInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
-	requireManager();
+export const cancelInvitation = forManagers.form(v.object({ id: v.string() }), async ({ id }) => {
 	const found = await findInvitation(id);
 	await asUser((headers) => auth.api.cancelInvitation({ body: { invitationId: id }, headers }));
 	await recordActivityAfter({ action: "cancelled", subject: invitationSubject(found) });

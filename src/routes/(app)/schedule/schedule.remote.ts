@@ -1,4 +1,3 @@
-import { command, form, query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
@@ -9,11 +8,12 @@ import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { assigneeProblem } from "#lib/orders/server/order-changes.ts";
 import { date, id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.ts";
 import { moveFields, scheduleFields } from "./schedule-schema.ts";
@@ -36,8 +36,7 @@ const cardColumns = {
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
-export const getSchedule = query(date(m.schedule_week_required), async (day) => {
-	requireMember();
+export const getSchedule = forMembers.query(date(m.schedule_week_required), async (day) => {
 	const start = startOfWeek(day);
 	const end = addDays(start, 7);
 
@@ -84,7 +83,6 @@ type Plan = { id: number; engineerId: number | null; day: Date; time: string };
  * can't be planned; a 404 if there's no such order.
  */
 async function plan(input: Plan): Promise<Problem<"engineerId"> | undefined> {
-	requireMember();
 	try {
 		return await planInTransaction(input);
 	} catch (error) {
@@ -123,10 +121,9 @@ function planInTransaction(input: Plan) {
 }
 
 /** The schedule dialog: plans an order, with the problems shown at its fields. */
-export const scheduleOrder = form(
+export const scheduleOrder = forMembers.form(
 	v.object({ id: id(), ...scheduleFields }),
 	async (input, issue) => {
-		requireMember();
 		const problem = await plan(input);
 		refuse(issue, problem ? [problem] : []);
 		await refreshRequested(getSchedule);
@@ -134,8 +131,7 @@ export const scheduleOrder = form(
 );
 
 /** A drag and drop move on the board; the client shows it right away and undoes it on an error. */
-export const moveOrder = command(v.object(moveFields), async (input) => {
-	requireMember();
+export const moveOrder = forMembers.command(v.object(moveFields), async (input) => {
 	const problem = await plan(input);
 	if (problem) error(400, problem.message);
 	await refreshRequested(getSchedule);

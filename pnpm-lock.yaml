@@ -183,6 +183,7 @@ overrides:
 
 patchedDependencies:
   '@tanstack/svelte-table@9.2.5': 6bc4620aec7b25efbf66cfdbe3692bcadc065ec94afe1b2a205dd17eabadff4d
+  svelte-sonner@1.2.1: 293339ffd7cf9b13ed2bf89edf49ed9cbe996b5d7867bd66818f40964b823465
   svelte@5.57.1: c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4
 
 importers:
@@ -297,7 +298,7 @@ importers:
         version: 4.7.6(picomatch@4.0.7)(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4))(typescript@6.0.3)
       svelte-sonner:
         specifier: ^1.2.1
-        version: 1.2.1(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4))
+        version: 1.2.1(patch_hash=293339ffd7cf9b13ed2bf89edf49ed9cbe996b5d7867bd66818f40964b823465)(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4))
       tailwind-variants:
         specifier: ^3.3.1
         version: 3.3.1(tailwind-merge@3.7.0)(tailwindcss@4.3.3)
@@ -6833,7 +6834,7 @@ snapshots:
     transitivePeerDependencies:
       - picomatch
 
-  svelte-sonner@1.2.1(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4)):
+  svelte-sonner@1.2.1(patch_hash=293339ffd7cf9b13ed2bf89edf49ed9cbe996b5d7867bd66818f40964b823465)(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4)):
     dependencies:
       runed: 0.28.0(svelte@5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4))
       svelte: 5.57.1(patch_hash=c8906afb362cf1dfbb72293f0498825957df6b766ef1f4a4916547d1e03611c4)

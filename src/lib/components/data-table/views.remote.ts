@@ -7,17 +7,17 @@
  * would show in the organization's log), much like a column setting. Creating a shared view,
  * sharing and unsharing one, changing and deleting one are logged.
  */
-import { command, form, query } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { currentTenant, inTenant } from "#lib/server/auth";
 import { user } from "#lib/server/db/auth.schema.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { savedView } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { canShareViews, viewNameMax, viewQueryMax } from "./views.ts";
 
@@ -50,8 +50,8 @@ export interface TableView {
 }
 
 /** The views of a table the signed-in user sees: their own, and shared ones, by name. */
-export const getTableViews = query(tableKey, async (key) => {
-	const tenant = requireMember();
+export const getTableViews = forMembers.query(tableKey, async (key) => {
+	const tenant = currentTenant();
 	const rows = await db
 		.select({
 			id: savedView.id,
@@ -89,7 +89,7 @@ export const getTableViews = query(tableKey, async (key) => {
  * change, or a 403.
  */
 async function findView(viewId: number, { edit = false } = {}) {
-	const tenant = requireMember();
+	const tenant = currentTenant();
 	const [found] = await db
 		.select()
 		.from(savedView)
@@ -135,7 +135,7 @@ const subjectOf = (view: { id: number; name: string }) => ({
 });
 
 /** Saves a table's current parameters as a view of the signed-in user's, shared if asked. */
-export const createView = form(
+export const createView = forMembers.form(
 	v.object({
 		tableKey,
 		name: viewName,
@@ -143,7 +143,7 @@ export const createView = form(
 		shared: v.optional(v.boolean(), false),
 	}),
 	async (input, issue) => {
-		const tenant = requireMember();
+		const tenant = currentTenant();
 		if (input.shared && !canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
 		const created = await db.transaction(async (tx) => {
 			const view = { ...input, userId: tenant.user.id };
@@ -163,30 +163,33 @@ export const createView = form(
 );
 
 /** Renames a view. */
-export const renameView = form(v.object({ id: id(), name: viewName }), async (input, issue) => {
-	const existing = await findView(input.id, { edit: true });
-	await db.transaction(async (tx) => {
-		if (await nameTaken(tx, { ...existing, name: input.name }, existing.id)) {
-			invalid(issue.name(m.common_views_name_taken({ name: input.name })));
-		}
-		await tx
-			.update(savedView)
-			.set({ name: input.name })
-			.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
-		if (existing.shared) {
-			await recordActivity(tx, {
-				action: "updated",
-				subject: subjectOf({ ...existing, name: input.name }),
-				before: existing,
-				after: { name: input.name },
-			});
-		}
-	});
-	void getTableViews(existing.tableKey).refresh();
-});
+export const renameView = forMembers.form(
+	v.object({ id: id(), name: viewName }),
+	async (input, issue) => {
+		const existing = await findView(input.id, { edit: true });
+		await db.transaction(async (tx) => {
+			if (await nameTaken(tx, { ...existing, name: input.name }, existing.id)) {
+				invalid(issue.name(m.common_views_name_taken({ name: input.name })));
+			}
+			await tx
+				.update(savedView)
+				.set({ name: input.name })
+				.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
+			if (existing.shared) {
+				await recordActivity(tx, {
+					action: "updated",
+					subject: subjectOf({ ...existing, name: input.name }),
+					before: existing,
+					after: { name: input.name },
+				});
+			}
+		});
+		void getTableViews(existing.tableKey).refresh();
+	},
+);
 
 /** Saves a table's current parameters in an existing view. */
-export const updateView = command(
+export const updateView = forMembers.command(
 	v.object({ id: v.pipe(v.number(), v.integer()), query: viewQuery }),
 	async (input) => {
 		const existing = await findView(input.id, { edit: true });
@@ -209,10 +212,10 @@ export const updateView = command(
 );
 
 /** Shares a view with the organization, or stops sharing it: for owners and admins. */
-export const shareView = command(
+export const shareView = forMembers.command(
 	v.object({ id: v.pipe(v.number(), v.integer()), shared: v.boolean() }),
 	async (input) => {
-		const tenant = requireMember();
+		const tenant = currentTenant();
 		if (!canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
 		const existing = await findView(input.id, { edit: true });
 		if (existing.shared === input.shared) return;
@@ -231,7 +234,7 @@ export const shareView = command(
 );
 
 /** Deletes a view. */
-export const deleteView = command(v.pipe(v.number(), v.integer()), async (viewId) => {
+export const deleteView = forMembers.command(v.pipe(v.number(), v.integer()), async (viewId) => {
 	const existing = await findView(viewId, { edit: true });
 	await db.transaction(async (tx) => {
 		await tx.delete(savedView).where(and(eq(savedView.id, existing.id), inTenant(savedView)));

@@ -65,7 +65,8 @@
 			<Card.Description>{description}</Card.Description>
 		</Card.Header>
 		<Card.Footer>
-			<Button href={resolve("/(app)")} variant="outline" class="w-full">{m.auth_invite_go()}</Button
+			<Button href={resolve("/(app)/(dashboard)")} variant="outline" class="w-full"
+				>{m.auth_invite_go()}</Button
 			>
 		</Card.Footer>
 	</Card.Root>

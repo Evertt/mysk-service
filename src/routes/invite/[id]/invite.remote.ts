@@ -1,4 +1,4 @@
-import { form, getRequestEvent, query } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
@@ -7,9 +7,10 @@ import * as v from "valibot";
 import { invitationState, parseRoles } from "#lib/auth";
 import { formatNumber } from "#lib/i18n";
 import { recordActivityAfter } from "#lib/server/activity";
-import { auth, requireUser } from "#lib/server/auth";
+import { auth, currentUser } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, organization, user } from "#lib/server/db/schema.ts";
+import { forAnyone, forUsers } from "#lib/server/remote-functions.ts";
 
 /**
  * An invitation, looked up by its id from the emailed link. Anyone with the link may open it, so
@@ -35,7 +36,7 @@ async function findInvitation(id: string) {
 }
 
 /** What the invitation page shows: who is invited where, and whether it can still be accepted. */
-export const getInvitation = query(v.string(), async (id) => {
+export const getInvitation = forAnyone.query(v.string(), async (id) => {
 	const found = await findInvitation(id);
 	if (!found) return null;
 	const { organization, inviter, state } = found;
@@ -89,8 +90,8 @@ async function accept(
 }
 
 /** Accepts the invitation as the signed-in user, who then works in its organization. */
-export const acceptInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
-	const signedIn = requireUser();
+export const acceptInvitation = forUsers.form(v.object({ id: v.string() }), async ({ id }) => {
+	const signedIn = currentUser();
 	const found = await pendingInvitation(id);
 	if (found.email !== signedIn.email.toLowerCase()) {
 		invalid(m.auth_invite_wrong_email({ email: found.email, current: signedIn.email }));
@@ -106,7 +107,7 @@ const MIN_PASSWORD = 8;
  * Creates an account for exactly the invited email address (sign-up is otherwise disabled), signs
  * in with it and accepts the invitation. Opening the emailed link proves the address.
  */
-export const createAccount = form(
+export const createAccount = forAnyone.form(
 	v.object({
 		id: v.string(),
 		name: v.pipe(v.string(), v.trim(), v.nonEmpty(m.auth_invite_name_required)),
@@ -161,7 +162,7 @@ export const createAccount = form(
 );
 
 /** Signs out someone who opened an invitation for another address, so the right person can. */
-export const signOutForInvitation = form(v.object({ id: v.string() }), async ({ id }) => {
+export const signOutForInvitation = forAnyone.form(v.object({ id: v.string() }), async ({ id }) => {
 	await auth.api.signOut({ headers: getRequestEvent().request.headers });
 	redirect(303, `/invite/${encodeURIComponent(id)}`);
 });

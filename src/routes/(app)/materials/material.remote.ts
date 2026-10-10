@@ -1,4 +1,3 @@
-import { form, query } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -10,7 +9,7 @@ import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
 import { lineTotalSql } from "#lib/orders/server/pricing.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
@@ -22,6 +21,7 @@ import {
 } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { materialFields, newMaterialFields } from "./material-schema.ts";
 
@@ -38,8 +38,7 @@ const historyFits = async (materialId: number, unit: MaterialUnit) => {
  * One material with the orders that use it (most recent first), its stock movements (newest first,
  * with the stock after each) and headline numbers.
  */
-export const getMaterial = query(v.string(), async (sku) => {
-	requireMember();
+export const getMaterial = forMembers.query(v.string(), async (sku) => {
 	const found = await db.query.material.findFirst({
 		where: and(eq(material.sku, sku), inTenant(material)),
 	});
@@ -112,8 +111,8 @@ const sameName = (name: string, exceptId?: number) =>
 		),
 	});
 
-export const createMaterial = form(v.object(newMaterialFields), async (input, issue) => {
-	const { organizationId } = requireMember();
+export const createMaterial = forMembers.form(v.object(newMaterialFields), async (input, issue) => {
+	const { organizationId } = currentTenant();
 	const problems: Problem<"name" | "stock">[] = [];
 	const duplicate = await sameName(input.name);
 	if (duplicate) {
@@ -142,10 +141,9 @@ export const createMaterial = form(v.object(newMaterialFields), async (input, is
 	redirect(303, `/materials/${sku}`);
 });
 
-export const updateMaterial = form(
+export const updateMaterial = forMembers.form(
 	v.object({ id: id(), ...materialFields }),
 	async (data, issue) => {
-		requireMember();
 		const { id, ...input } = data;
 		const existing = await findMaterial(id);
 		if (!existing) error(404, m.materials_not_found());
@@ -184,8 +182,7 @@ export const updateMaterial = form(
 	},
 );
 
-export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+export const deleteMaterial = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeMaterial(id);
 	redirect(303, "/materials");
 });

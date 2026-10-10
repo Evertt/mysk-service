@@ -23,7 +23,11 @@
 			{
 				label: m.common_nav_operations(),
 				items: [
-					{ title: m.common_nav_dashboard(), href: resolve("/(app)"), icon: LayoutDashboardIcon },
+					{
+						title: m.common_nav_dashboard(),
+						href: resolve("/(app)/(dashboard)"),
+						icon: LayoutDashboardIcon,
+					},
 					{ title: m.common_nav_orders(), href: resolve("/(app)/orders"), icon: ClipboardListIcon },
 					{
 						title: m.common_nav_schedule(),
@@ -62,7 +66,7 @@
 
 	// Sections stay highlighted on their sub-pages, e.g. Orders on an order's detail page.
 	const isActive = (href: string) =>
-		href === resolve("/(app)")
+		href === resolve("/(app)/(dashboard)")
 			? page.url.pathname === href
 			: page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 </script>

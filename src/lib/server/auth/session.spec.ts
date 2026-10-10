@@ -7,6 +7,9 @@ import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 
 import {
+	currentEngineer,
+	currentTenant,
+	currentUser,
 	idInTenant,
 	idsInTenant,
 	inTenant,
@@ -24,7 +27,12 @@ import {
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
-vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+/** The request in progress: a new one for each test (the engineer is looked up once per request). */
+let event = { locals };
+vi.mock("$app/server", () => ({ getRequestEvent: () => event }));
+const nextRequest = () => {
+	event = { locals };
+};
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`.
 vi.mock("#lib/server/db/index.ts", async () => {
@@ -55,6 +63,7 @@ function statusOf(fn: () => unknown) {
 }
 
 beforeEach(() => {
+	nextRequest();
 	delete locals.user;
 	delete locals.tenant;
 });
@@ -133,15 +142,47 @@ describe("field engineers", () => {
 		// u2 is linked in South only.
 		Object.assign(locals, { user: { id: "u2", name: "Sam" }, tenant: fieldEngineer });
 		expect(await rejection(requireEngineer())).toBe(403);
+		nextRequest();
 		locals.user = { id: "u3", name: "Lou" };
 		expect(await rejection(requireEngineer())).toBe(403);
+		nextRequest();
 		delete locals.user;
 		expect(await rejection(requireEngineer())).toBe(401);
+	});
+
+	test("are looked up once per request, so the gate and the handler share the lookup", async () => {
+		Object.assign(locals, { user, tenant: fieldEngineer });
+		const lookup = vi.spyOn(db.query.engineer, "findFirst");
+		expect(await currentEngineer()).toMatchObject({ id: 1, name: "Eli" });
+		await requireEngineer();
+		expect(lookup).toHaveBeenCalledTimes(1);
+		nextRequest();
+		await currentEngineer();
+		expect(lookup).toHaveBeenCalledTimes(2);
+		lookup.mockRestore();
 	});
 
 	test("may also work in the office when they have an office role", () => {
 		Object.assign(locals, { user, tenant: { ...tenant, roles: ["engineer", "member"] } });
 		expect(requireMember()).toMatchObject({ organizationId: "north" });
+	});
+});
+
+describe("in a gated remote function", () => {
+	test("currentTenant reads the tenant without checking the role again", () => {
+		Object.assign(locals, { user, tenant: { ...tenant, roles: ["engineer"] } });
+		expect(currentTenant()).toMatchObject({ user, organizationId: "north" });
+	});
+
+	test("currentUser reads the signed-in user", () => {
+		locals.user = user;
+		expect(currentUser()).toBe(user);
+	});
+
+	test("still refuses where no gate let anyone in", () => {
+		expect(statusOf(currentUser)).toBe(401);
+		locals.user = user;
+		expect(statusOf(currentTenant)).toBe(403);
 	});
 });
 

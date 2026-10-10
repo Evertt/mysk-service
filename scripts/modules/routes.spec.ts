@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { routeExports, routeFileKind, topFolder } from "./routes.ts";
+import {
+	modulesGroupOf,
+	routeExports,
+	routeFileKind,
+	routePlace,
+	serverFileKind,
+} from "./routes.ts";
 
 describe("routeFileKind", () => {
 	test.each([
@@ -26,22 +32,51 @@ describe("routeFileKind", () => {
 	);
 });
 
-describe("topFolder", () => {
-	test("is the first folder that isn't a group, with the groups before it", () => {
-		expect(topFolder("(app)/contracts/[number]/+page.svelte")).toEqual({
-			folder: "(app)/contracts",
+describe("serverFileKind", () => {
+	test.each([
+		["+page.server.ts", "page"],
+		["+layout.server.js", "layout"],
+		["+server.ts", "endpoint"],
+		["+page.ts", undefined],
+		["+layout.ts", undefined],
+		["+page.svelte", undefined],
+	])("%s is %s", (name, kind) => {
+		expect(serverFileKind(name)).toBe(kind);
+	});
+});
+
+describe("routePlace", () => {
+	test("is the first folder that isn't a group, the groups before it and the rest", () => {
+		expect(routePlace("(app)/contracts/[number]/+page.svelte")).toEqual({
+			groups: ["(app)"],
+			folder: "contracts",
 			rest: "[number]/+page.svelte",
 		});
-		expect(topFolder("(app)/(inner)/contracts/+layout.svelte")).toEqual({
-			folder: "(app)/(inner)/contracts",
+		expect(routePlace("(app)/(inner)/contracts/+layout.svelte")).toEqual({
+			groups: ["(app)", "(inner)"],
+			folder: "contracts",
 			rest: "+layout.svelte",
 		});
-		expect(topFolder("reports/+page.ts")).toEqual({ folder: "reports", rest: "+page.ts" });
+		expect(routePlace("reports/+page.ts")).toEqual({
+			groups: [],
+			folder: "reports",
+			rest: "+page.ts",
+		});
 	});
 
 	test("is nothing for a file that sits in a group or at the root", () => {
-		expect(topFolder("(app)/+page.svelte")).toBeUndefined();
-		expect(topFolder("+layout.svelte")).toBeUndefined();
+		expect(routePlace("(app)/+page.svelte")).toBeUndefined();
+		expect(routePlace("+layout.svelte")).toBeUndefined();
+	});
+});
+
+describe("modulesGroupOf", () => {
+	test("is the (modules) group inside the route's groups, so it keeps their layouts", () => {
+		expect(modulesGroupOf(routePlace("(app)/contracts/+page.svelte")!)).toBe("(app)/(modules)");
+		expect(modulesGroupOf(routePlace("(app)/(inner)/x/+page.svelte")!)).toBe(
+			"(app)/(inner)/(modules)",
+		);
+		expect(modulesGroupOf(routePlace("reports/+page.svelte")!)).toBe("(modules)");
 	});
 });
 

@@ -1,14 +1,14 @@
-import { form, query } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { idInTenant, inTenant, requireModule, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { refuse } from "#lib/server/forms.ts";
 
 import { invoiceState, invoiceTotals, lineAmount } from "../../../invoice.ts";
+import { form, query } from "../../../remote-functions.ts";
 import { billableFor } from "../../../server/billable.ts";
 import { createDraft, loadInvoice } from "../../../server/invoices.ts";
 import { invoice, invoiceLine } from "../../../server/schema.ts";
@@ -16,7 +16,6 @@ import { newInvoiceFields } from "./invoice-schema.ts";
 
 /** The tenant's invoices with their customer and totals, latest first. */
 export const getInvoices = query(async () => {
-	requireModule("invoicing");
 	const lines = db
 		.select({
 			invoiceId: invoiceLine.invoiceId,
@@ -58,13 +57,12 @@ export const getInvoices = query(async () => {
 
 /** One invoice with its customer, lines and totals, and the organization that sends it. */
 export const getInvoice = query(v.string(), async (number) => {
-	const tenant = requireModule("invoicing");
+	const tenant = currentTenant();
 	return { ...(await loadInvoice(number)), organization: tenant.name };
 });
 
 /** The customers to choose from for a new invoice. */
 export const getInvoiceCustomers = query(async () => {
-	requireModule("invoicing");
 	return db
 		.select({ id: customer.id, code: customer.code, name: customer.name })
 		.from(customer)
@@ -77,7 +75,6 @@ export const getInvoiceCustomers = query(async () => {
  * the lines they become, and other modules' items (e.g. contract fees).
  */
 export const getBillable = query(v.number(), async (customerId) => {
-	requireModule("invoicing");
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
 		where: idInTenant(customer, customerId),
@@ -105,7 +102,6 @@ export const getBillable = query(v.number(), async (customerId) => {
  * tenant's next number (see `invoiceNumbers`), and the tenant's payment term and VAT rate.
  */
 export const createInvoice = form(v.object(newInvoiceFields), async (input, issue) => {
-	requireModule("invoicing");
 	const created = await createDraft(input);
 	if ("problem" in created) return refuse(issue, [created.problem]);
 	void getInvoices().refresh();

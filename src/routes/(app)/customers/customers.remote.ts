@@ -1,4 +1,3 @@
-import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -8,19 +7,19 @@ import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { customerFields } from "./customer-schema.ts";
 
 /** All customers with how many equipment units and open orders they have, by name. */
-export const getCustomers = query(async () => {
-	requireMember();
+export const getCustomers = forMembers.query(async () => {
 	const units = db
 		.select({ customerId: equipment.customerId, count: count().as("unit_count") })
 		.from(equipment)
@@ -51,8 +50,7 @@ export const getCustomers = query(async () => {
  * One customer with their equipment and key figures. Their latest orders are
  * `getCustomerActivity` (`[code]/activity.remote.ts`).
  */
-export const getCustomer = query(v.string(), async (code) => {
-	requireMember();
+export const getCustomer = forMembers.query(v.string(), async (code) => {
 	const found = await db.query.customer.findFirst({
 		where: and(eq(customer.code, code), inTenant(customer)),
 		with: {
@@ -114,13 +112,12 @@ async function countryProblems(country: string): Promise<Problem<"country">[]> {
 }
 
 /** Everything the customer form needs to choose from. */
-export const getCustomerFormOptions = query(async () => {
-	requireMember();
+export const getCustomerFormOptions = forMembers.query(async () => {
 	return { countries: await knownCountries() };
 });
 
-export const createCustomer = form(v.object(customerFields), async (input, issue) => {
-	const { organizationId } = requireMember();
+export const createCustomer = forMembers.form(v.object(customerFields), async (input, issue) => {
+	const { organizationId } = currentTenant();
 	refuse(issue, await countryProblems(input.country));
 
 	const code = await db.transaction(async (tx) => {
@@ -139,10 +136,9 @@ export const createCustomer = form(v.object(customerFields), async (input, issue
 	redirect(303, `/customers/${code}`);
 });
 
-export const updateCustomer = form(
+export const updateCustomer = forMembers.form(
 	v.object({ id: id(), ...customerFields }),
 	async ({ id, ...input }, issue) => {
-		requireMember();
 		const existing = await db.query.customer.findFirst({ where: idInTenant(customer, id) });
 		if (!existing) error(404, m.customers_not_found());
 		refuse(issue, await countryProblems(input.country));
@@ -199,16 +195,14 @@ async function removeCustomer(id: number) {
 	);
 }
 
-export const deleteCustomer = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+export const deleteCustomer = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeCustomer(id);
 	void getCustomers().refresh();
 	redirect(303, "/customers");
 });
 
 /** Deletes the selected customers, with the same refusals as deleting one. */
-export const bulkDeleteCustomers = command(idsTarget, async (target) => {
-	requireMember();
+export const bulkDeleteCustomers = forMembers.command(idsTarget, async (target) => {
 	const result = await bulkChange(target, {
 		table: customer,
 		label: customer.code,

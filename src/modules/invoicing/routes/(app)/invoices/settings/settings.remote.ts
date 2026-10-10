@@ -1,27 +1,26 @@
 /** The organization's invoicing settings: the defaults for the invoices it makes. */
-import { form, query } from "$app/server";
 import { redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth";
 import { recordActivity } from "#lib/server/activity";
-import { requireManager, requireModule } from "#lib/server/auth";
+import { currentTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 
+import { forManagers, query } from "../../../../remote-functions.ts";
 import { invoicingSettings } from "../../../../server/schema.ts";
 import { settingsOf } from "../../../../server/settings.ts";
 import { settingsFields } from "../invoice-schema.ts";
 
 export const getInvoicingSettings = query(async () => {
-	const tenant = requireModule("invoicing");
+	const tenant = currentTenant();
 	const settings = await settingsOf(tenant.organizationId);
 	return { ...settings, canManage: isManager(tenant.roles) };
 });
 
-export const saveSettings = form(v.object(settingsFields), async (input) => {
-	requireModule("invoicing");
-	const { organizationId } = requireManager();
+export const saveSettings = forManagers.form(v.object(settingsFields), async (input) => {
+	const { organizationId } = currentTenant();
 	const before = await settingsOf(organizationId);
 	await db.transaction(async (tx) => {
 		await tx

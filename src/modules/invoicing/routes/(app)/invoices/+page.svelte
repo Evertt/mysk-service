@@ -10,7 +10,7 @@
 	import { getInvoices } from "./invoices.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/invoices"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/invoices"> } = $props();
 </script>
 
 <svelte:head>
@@ -19,11 +19,11 @@
 
 <PageHeader title={m.invoices_title()} description={m.invoices_description()}>
 	{#snippet actions()}
-		<Button variant="outline" href={resolve("/(app)/invoices/settings")}>
+		<Button variant="outline" href={resolve("/(app)/(modules)/invoices/settings")}>
 			<SettingsIcon data-icon="inline-start" />
 			{m.invoices_settings()}
 		</Button>
-		<Button href={resolve("/(app)/invoices/new")}>
+		<Button href={resolve("/(app)/(modules)/invoices/new")}>
 			<PlusIcon data-icon="inline-start" />
 			{m.invoices_new()}
 		</Button>

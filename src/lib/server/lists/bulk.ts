@@ -2,7 +2,7 @@
  * The server side of bulk actions on a table's selected rows (see
  * `#lib/components/data-table/bulk-actions.ts`). A bulk command:
  *
- * 1. starts with `requireMember()` (or `requireModule()`),
+ * 1. is gated like any remote function (`forMembers.command()`, or a module's `command()`),
  * 2. reads its target into ids (`targetIds`): the selected ones, or those matching the list's
  *    search and filters, with the list's own tenant-scoped query,
  * 3. loads those records with `inTenant()`, so another tenant's ids are simply not found,

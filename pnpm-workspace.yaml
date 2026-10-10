@@ -10,6 +10,7 @@ overrides:
   vitest@*: "catalog:"
 patchedDependencies:
   "@tanstack/svelte-table@9.2.5": patches/@tanstack__svelte-table@9.2.5.patch
+  "svelte-sonner@1.2.1": patches/svelte-sonner@1.2.1.patch
   # Hydration skipped past the end of an async block that holds a `<svelte:boundary>` that failed
   # on the server (`skip_nodes` didn't count its `<!--[?…-->` marker as an opening), so the page
   # failed to hydrate; see `module-slots.svelte`. Still in 5.57.2: drop it once Svelte fixes it.
