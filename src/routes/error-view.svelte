@@ -27,6 +27,6 @@
 		</Empty.Description>
 	</Empty.Header>
 	<Empty.Content>
-		<Button href={resolve("/(app)")}>{m.common_error_back_to_dashboard()}</Button>
+		<Button href={resolve("/(app)/(dashboard)")}>{m.common_error_back_to_dashboard()}</Button>
 	</Empty.Content>
 </Empty.Root>

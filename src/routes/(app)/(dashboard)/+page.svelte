@@ -8,9 +8,9 @@
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 
+	import ModuleSlots from "../module-slots.svelte";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
 	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
-	import ModuleSlots from "./module-slots.svelte";
 	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
 	import RecentActivity from "./recent-activity.svelte";
 	import RevenuePerMonthChart from "./revenue-per-month-chart.svelte";
