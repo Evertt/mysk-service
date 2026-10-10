@@ -8,6 +8,7 @@
 import type { Component } from "svelte";
 
 import type { Sentence } from "#lib/activity";
+import type { ModuleGraph } from "#lib/modules/graph.ts";
 import type { AppModule, ModuleId } from "#lib/modules/manifests.ts";
 
 const loader = () => Promise.resolve({ default: {} as Component });
@@ -64,3 +65,16 @@ export const gizmos = {
 
 /** The fake registry, in registry order. */
 export const fakeModules = [gadgets, widgets] as const;
+
+/**
+ * A fake graph of modules for the specs of `graph.ts` and of whatever reads it, in dependency
+ * order: `base`; `addon`, which requires it; `core-ish`, which is always on; `extra`, which requires
+ * `addon` and only adds to `side`; and `side`. Its ids are not `ModuleId`s (see `ModuleGraph`).
+ */
+export const fakeGraph = {
+	base: { requires: [], enhances: [], alwaysOn: false },
+	addon: { requires: ["base"], enhances: [], alwaysOn: false },
+	"core-ish": { requires: [], enhances: [], alwaysOn: true },
+	extra: { requires: ["addon"], enhances: ["side"], alwaysOn: false },
+	side: { requires: [], enhances: [], alwaysOn: false },
+} satisfies ModuleGraph;

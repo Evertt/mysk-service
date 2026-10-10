@@ -4,7 +4,8 @@ import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth";
-import { isModuleId, type ModuleId } from "#lib/modules/ids.ts";
+import { effectiveModules } from "#lib/modules/graph.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 
@@ -50,8 +51,9 @@ export async function loadTenant(
 		name: current.name,
 		slug: current.slug,
 		roles: parseRoles(current.role),
-		// A row for a module that's no longer there (removed from the app) does nothing.
-		modules: modules.map((row) => row.id).filter(isModuleId),
+		// A row for a module that's no longer there (removed from the app) does nothing, and neither
+		// does one whose requirements are off; the always-on modules need no row.
+		modules: effectiveModules(modules.map((row) => row.id)),
 	};
 }
 
