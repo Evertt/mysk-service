@@ -9,7 +9,7 @@ import type { OrderBulkRow } from "#lib/orders/extensions.ts";
 
 import { invoiceOrders } from "../bulk.remote.ts";
 
-export const createInvoice: BulkAction<OrderBulkRow, AnyListWhere> = {
+const createInvoice: BulkAction<OrderBulkRow, AnyListWhere> = {
 	id: "invoicing:create-invoice",
 	label: m.invoices_bulk_create,
 	icon: ReceiptTextIcon,

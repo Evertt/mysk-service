@@ -258,7 +258,7 @@ describe("generateModules", () => {
 			`import { detailSide as ordersDetailSide } from "#lib/orders/extensions.ts";`,
 		);
 		expect(file).toContain(
-			`slotContribution(ordersDetailSide, "sample", "card", () => import("#modules/sample/slots/orders.detail.side/card.svelte"))`,
+			`slotContribution(ordersDetailSide, "sample", "card", () => import("../../modules/sample/slots/orders.detail.side/card.svelte"))`,
 		);
 
 		put("src/modules/sample/bulk-actions/orders.detail.side.ts");

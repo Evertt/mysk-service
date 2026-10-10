@@ -235,7 +235,7 @@ describe("renderContributions", () => {
 	test("renders typed contributions in registry order", () => {
 		const file = renderContributions(points, modules);
 		expect(file).toContain(
-			`slotContribution(ordersDetailSide, "contracts", "coverage", () => import("#modules/contracts/slots/orders.detail.side/coverage.svelte"))`,
+			`slotContribution(ordersDetailSide, "contracts", "coverage", () => import("../../modules/contracts/slots/orders.detail.side/coverage.svelte"))`,
 		);
 		const calls = [...file.matchAll(/^\t(\w+Contribution\(\w+, "[\w-]+"(?:, "[\w-]+")?)/gm)].map(
 			(match) => match[1],
@@ -248,7 +248,7 @@ describe("renderContributions", () => {
 			`bulkContribution(ordersList, "invoicing"`,
 		]);
 		expect(file).toContain(
-			`bulkContribution(ordersList, "invoicing", () => import("#modules/invoicing/bulk-actions/orders.list.ts"))`,
+			`bulkContribution(ordersList, "invoicing", () => import("../../modules/invoicing/bulk-actions/orders.list.ts"))`,
 		);
 	});
 

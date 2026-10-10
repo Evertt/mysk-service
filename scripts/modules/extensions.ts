@@ -230,8 +230,11 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
 					.join(", ")} } from "${specifier(file)}";`,
 		);
 
+	// Relative, not `#modules/…`: svelte-check (with `--tsgo`) types a component through the
+	// declaration it writes beside a copy of the folders, which only a relative import finds; through
+	// `#modules/…` the component would be an untyped `*.svelte`, and the props unchecked.
 	const load = (module: ModuleFolder, file: string) =>
-		`() => import("#modules/${module.id}/${file}")`;
+		`() => import("../../modules/${module.id}/${file}")`;
 	const list = (entries: string[]) =>
 		entries.length ? `[\n${entries.map((entry) => `\t${entry},`).join("\n")}\n]` : "[]";
 
