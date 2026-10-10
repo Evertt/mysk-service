@@ -1,6 +1,6 @@
 <!--
 	@component
-	A made-up module's card in the `order` slot, for `module-slots.svelte.spec.ts`: it awaits its
+	A made-up module's card in the `orders.detail.side` slot, for `extension-slot.svelte.spec.ts`: it awaits its
 	data like a real one awaits its remote query.
 -->
 <script lang="ts">

@@ -9,11 +9,12 @@
 	import { countryName } from "#lib/customers/countries.ts";
 	import CategoryLabel from "#lib/equipment/category-label.svelte";
 	import { categories } from "#lib/equipment/display.ts";
+	import { detailSide } from "#lib/equipment/extensions.ts";
 	import EquipmentStatusBadge from "#lib/equipment/status-badge.svelte";
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
 	import { formatDate, label } from "#lib/i18n";
 
-	import ModuleSlots from "../../module-slots.svelte";
+	import ExtensionSlot from "../../extension-slot.svelte";
 	import { deleteEquipment, getEquipment } from "../equipment.remote.ts";
 	import type { PageProps } from "./$types";
 	import ServiceStats from "./service-stats.svelte";
@@ -126,7 +127,7 @@
 			</Card.Content>
 		</Card.Root>
 
-		<ModuleSlots name="equipment" props={{ serialNumber: unit.serialNumber }} />
+		<ExtensionSlot point={detailSide} props={{ serialNumber: unit.serialNumber }} />
 
 		<ActivityCard type="equipment" id={unit.id} />
 	</div>

@@ -44,9 +44,10 @@
  *
  * It uses no packages besides the parser of Vite+, and imports no app code, so it runs in plain Node.
  * The work is split by what it does, in `scripts/modules/`: `find.ts` (the folders), `routes.ts`
- * and `stubs.ts` (the route stubs), `registries.ts`, `messages.ts`, `check.ts` (the rules),
- * `generate.ts` (writing it all) and `watch.ts` (the dev server). This file is the entry, and the
- * name the generated files' headers give.
+ * and `stubs.ts` (the route stubs), `registries.ts`, `extensions.ts` (the extension points and
+ * the contributions to them), `messages.ts`, `check.ts` (the rules), `generate.ts` (writing it all)
+ * and `watch.ts` (the dev server). This file is the entry, and the name the generated files'
+ * headers give.
  */
 import { generateModules } from "./modules/generate.ts";
 

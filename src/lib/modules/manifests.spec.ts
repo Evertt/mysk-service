@@ -1,20 +1,13 @@
 import { existsSync, readdirSync } from "node:fs";
 
-import { describe, expect, test } from "vite-plus/test";
+import { expect, test } from "vite-plus/test";
 
 import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 
-import { fakeBulkContributions, fakeSlotContributions } from "./fakes.ts";
 import { generatedModuleIds } from "./ids.gen.ts";
 import { moduleGraph, moduleIds } from "./ids.ts";
 import { manifests } from "./manifests.gen.ts";
-import {
-	type AppModule,
-	bulkActionLoaders,
-	modules,
-	type SlotName,
-	slotLoaders,
-} from "./manifests.ts";
+import { type AppModule, modules } from "./manifests.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
@@ -73,49 +66,4 @@ test("the modules' contributions are in registry order", () => {
 	const order = slotContributions.map(({ module }) => ids.indexOf(module));
 	expect(order).toEqual(order.toSorted((a, b) => a - b));
 	expect(order).not.toContain(-1);
-});
-
-// Temporary, removed with ExtensionSlot.
-describe("slotLoaders", () => {
-	const registry = fakeSlotContributions;
-	const [gadgetsDashboard, gadgetsEquipment, widgetsDashboard, widgetsOrder] = registry;
-	const slots: SlotName[] = ["dashboard", "order", "equipment"];
-
-	test.each(slots)("leaves the %s slot empty without modules", (name) => {
-		expect(slotLoaders(name, [], registry)).toEqual([]);
-	});
-
-	test("gives a module's component only when it's enabled", () => {
-		expect(slotLoaders("order", ["widgets"], registry)).toEqual([
-			{ id: "widgets", load: widgetsOrder.load },
-		]);
-		expect(slotLoaders("equipment", ["gadgets"], registry)).toEqual([
-			{ id: "gadgets", load: gadgetsEquipment.load },
-		]);
-		expect(slotLoaders("equipment", ["widgets"], registry)).toEqual([]);
-	});
-
-	test("gives the components of several modules in registry order", () => {
-		expect(slotLoaders("dashboard", ["widgets", "gadgets"], registry)).toEqual([
-			{ id: "gadgets", load: gadgetsDashboard.load },
-			{ id: "widgets", load: widgetsDashboard.load },
-		]);
-	});
-
-	test("ignores modules that don't exist", () => {
-		expect(slotLoaders("order", ["no-such-module"], registry)).toEqual([]);
-	});
-});
-
-// Temporary, removed with ExtensionSlot.
-describe("bulkActionLoaders", () => {
-	const registry = fakeBulkContributions;
-
-	test("gives the bulk actions of the enabled modules that have any", () => {
-		expect(bulkActionLoaders("orders", ["gadgets", "widgets"], registry)).toEqual([
-			registry[0].load,
-		]);
-		expect(bulkActionLoaders("orders", ["gadgets"], registry)).toEqual([]);
-		expect(bulkActionLoaders("orders", [], registry)).toEqual([]);
-	});
 });

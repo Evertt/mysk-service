@@ -1,7 +1,7 @@
 /**
- * Made-up modules for the specs of the core, which test its extension points (slots, bulk actions,
- * activity subjects and verbs) without the real modules in `src/modules`: a spec mocks the
- * registry with them, `vi.mock("#lib/modules/manifests.gen.ts", async () => ({ manifests: fakeModules }))`
+ * Made-up modules for the specs of the core, which test its extension points (slots, activity
+ * subjects and verbs) without the real modules in `src/modules`: a spec mocks the registry with
+ * them, `vi.mock("#lib/modules/manifests.gen.ts", async () => ({ manifests: fakeModules }))`
  * (and `#lib/extensions/contributions.gen.ts` with their contributions), or passes them where a
  * function takes a registry. What a real module does is tested in its own folder.
  */
@@ -10,10 +10,10 @@ import type { Component } from "svelte";
 import type { Sentence } from "#lib/activity";
 import { cards } from "#lib/dashboard/extensions.ts";
 import { detailSide as equipmentDetailSide } from "#lib/equipment/extensions.ts";
-import { bulkContribution, slotContribution } from "#lib/extensions/define.ts";
+import { slotContribution } from "#lib/extensions/define.ts";
 import type { ModuleGraph } from "#lib/modules/graph.ts";
 import type { AppModule, ModuleId } from "#lib/modules/manifests.ts";
-import { detailSide as orderDetailSide, list as ordersList } from "#lib/orders/extensions.ts";
+import { detailSide as orderDetailSide } from "#lib/orders/extensions.ts";
 
 const loader = () => Promise.resolve({ default: {} as Component });
 const sentence =
@@ -21,7 +21,7 @@ const sentence =
 	(inputs) =>
 		`${inputs.user} ${verb} ${inputs.subject}`;
 
-/** A module with slots and bulk actions (see `fakeSlotContributions`), activity subjects and a verb. */
+/** A module with slots (see `fakeSlotContributions`), activity subjects and a verb. */
 export const widgets = {
 	id: "widgets" as ModuleId,
 	label: "Widgets",
@@ -64,6 +64,18 @@ export const gizmos = {
 	icon: {} as Component,
 } satisfies AppModule;
 
+/**
+ * A module with a component on an order's page that a spec's tenant doesn't have, to see that a
+ * slot leaves it out. Not in `fakeModules`.
+ */
+export const dormant = {
+	id: "dormant" as ModuleId,
+	label: "Dormant",
+	description: "Makes nothing",
+	route: "/(app)/orders",
+	icon: {} as Component,
+} satisfies AppModule;
+
 /** The fake registry, in registry order. */
 export const fakeModules = [gadgets, widgets] as const;
 
@@ -82,11 +94,6 @@ export const fakeSlotContributions = [
 export const gizmosOrderCard = slotContribution(orderDetailSide, gizmos.id, "card", () =>
 	Promise.reject(new Error("Failed to fetch dynamically imported module")),
 );
-
-/** The fake modules' bulk actions: widgets' on the orders list. */
-export const fakeBulkContributions = [
-	bulkContribution(ordersList, widgets.id, () => Promise.resolve({ default: [] })),
-];
 
 /**
  * A fake graph of modules for the specs of `graph.ts` and of whatever reads it, in dependency

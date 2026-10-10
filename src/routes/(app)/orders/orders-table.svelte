@@ -6,13 +6,14 @@
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders/display.ts";
+	import { list as bulkTable } from "#lib/orders/extensions.ts";
 
+	import { extensionBulkActions } from "../extension-bulk-actions.svelte.ts";
 	import {
 		getCustomerOptions,
 		getEngineerOptions,
 		getEquipmentOptions,
 	} from "../filter-options.remote.ts";
-	import { moduleBulkActions } from "../module-bulk-actions.svelte.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
 	import type { getOrderFacets, getOrders } from "./order-list.remote.ts";
@@ -51,7 +52,7 @@
 	const loading = serverTableLoading(table, ordersList, () => orders.key);
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
-	const moduleActions = moduleBulkActions("orders");
+	const moduleActions = extensionBulkActions(bulkTable);
 	const actions = $derived([assignEngineer, changeStatus, ...moduleActions.current, deleteOrders]);
 </script>
 
