@@ -67,7 +67,7 @@
 		<Card.Title>{m.contracts_dashboard_expiring()}</Card.Title>
 		<Card.Description>{m.contracts_dashboard_expiring_description({ days })}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/contracts")}>
+			<Button variant="outline" size="sm" href={resolve("/(app)/(modules)/contracts")}>
 				{m.contracts_dashboard_all()}
 			</Button>
 		</Card.Action>

@@ -116,19 +116,31 @@ migration committed.
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
   dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
   `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
-  `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), a stub in `src/routes`
-  for every `+` file of the module's `routes/` (at the same path; real routes, so `RouteId`,
-  `resolve()`, layouts, endpoints and SvelteKit's server-only guard work; each stub folder ignores
-  itself and is deleted with the module, so never edit one), a `+layout.server.ts` at each route root
-  with pages that calls `guardModule(id)` (a 404 for tenants without the module) before the
-  module's own `+layout.server.ts` load, and the module entries of `pathPattern` in
-  `project.inlang/settings.json`. It fails, listing everything wrong, when a module's route folder
-  collides with a core route or another module's, a route file is outside a folder of the module's
-  own, or message sections are missing in a language or not unique.
+  `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
+  and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
+  everything wrong, when a module's route folder collides with a core route or another module's, a
+  route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
+  write, or message sections are missing in a language or not unique.
+- **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in a
+  `(modules)` group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte`
+  → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`. They are real routes (`RouteId`,
+  `resolve()`, the `(app)` layout, endpoints, SvelteKit's server-only guard), the URL is unchanged
+  (`/contracts/…`), and the core's route folders hold only core files. Every `(modules)` folder
+  is the generator's (gitignored; it deletes and rewrites them), so never edit one, and core never
+  uses the name.
+- **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
+  everywhere a route id goes: `resolve()`, `RouteParams<…>`, the manifest's `route`, its activity
+  subjects' `href`s.
+- **The guard**: each `(modules)` group's generated `+layout.server.ts` 404s the tenants without
+  the module that owns the route (`guardModuleRoute()` in `#lib/server/modules/hooks.ts`), so they
+  get the app's own 404 page inside the app layout. Kit runs server loads in parallel, and form
+  actions and endpoints without the layouts, so the stub of each server file (`+page.server.ts`,
+  `+layout.server.ts`, `+server.ts`) also guards its `load`, `actions` and request handlers
+  (`GET`, `POST`, …) before running the module's (`guarded()`, `guardedActions()`).
 - A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
   files to a core route. To add something to a core page, use a slot. Its pages type their params
-  with `RouteParams<"/(app)/contracts/[number]">` from `$app/types`, since `./$types` only resolves
-  for files physically in `src/routes`; the stub is typed with the route's `PageProps`, so
+  with `RouteParams<"/(app)/(modules)/contracts/[number]">` from `$app/types`, since `./$types`
+  only resolves for files physically in `src/routes`; the stub is typed with the route's `PageProps`, so
   svelte-check verifies that the page accepts what SvelteKit passes it. Page options
   (`export const ssr = false`) go in the module's `+page.ts` as literals: the stub repeats them
   because SvelteKit reads them without running the file. Don't `export * from` in a route file.

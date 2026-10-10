@@ -8,7 +8,7 @@ export default defineModule({
 	id: "contracts",
 	label: m.contracts_module_name,
 	description: m.contracts_module_description,
-	route: "/(app)/contracts",
+	route: "/(app)/(modules)/contracts",
 	icon: FileCheckIcon,
 	slots: {
 		dashboard: () => import("./dashboard-cards.svelte"),

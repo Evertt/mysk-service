@@ -96,8 +96,10 @@ export const columns = column.columns([
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
 				label: row.original.number,
-				href: resolve("/(app)/contracts/[number]", { number: row.original.number }),
-				editHref: resolve("/(app)/contracts/[number]/edit", { number: row.original.number }),
+				href: resolve("/(app)/(modules)/contracts/[number]", { number: row.original.number }),
+				editHref: resolve("/(app)/(modules)/contracts/[number]/edit", {
+					number: row.original.number,
+				}),
 				copy: [
 					{ label: m.contracts_copy_number(), value: row.original.number },
 					{ label: m.contracts_copy_customer_code(), value: row.original.customer.code },
