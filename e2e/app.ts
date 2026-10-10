@@ -240,7 +240,18 @@ export function useApp({
 		},
 	};
 
+	// A worker whose run was interrupted (its Vitest process gone, so its IPC channel closed) would
+	// carry on with its test until that fails or times out, against a server that's gone, and hold
+	// up the shell meanwhile. Vitest stubs `process.exit` in tests, so this closes the browser
+	// (which runs in a process group of its own) and kills the worker. It stays registered until
+	// the worker ends, through the `afterAll` hooks (a test file runs in a process of its own).
+	const exitOrphaned = async () => {
+		await Promise.race([browser?.close(), new Promise((resolve) => setTimeout(resolve, 2_000))]);
+		process.kill(process.pid, "SIGKILL");
+	};
+
 	beforeAll(async () => {
+		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
 		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE });
 		page.on("pageerror", (error) => expecting || errors.push(`pageerror: ${error.message}`));
