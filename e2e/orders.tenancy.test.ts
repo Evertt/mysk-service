@@ -5,6 +5,7 @@ import {
 	northOnly,
 	orderId,
 	orderLines,
+	movementMark,
 	orderMovements,
 	shared,
 	shownNumbers,
@@ -224,6 +225,8 @@ describe("in South", () => {
 		await page.getByLabel("Status").selectOption("scheduled");
 
 		const expected = await nextCode("order", "number", south.id);
+		// Its number may be a deleted order's, whose movements keep it.
+		const mark = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
@@ -237,7 +240,7 @@ describe("in South", () => {
 		expect(line.unit_price).toBe(line.price);
 
 		// From South's stock.
-		const [movement] = await orderMovements(expected, south.id);
+		const [movement] = await orderMovements(expected, south.id, mark);
 		expect(movement).toMatchObject({ quantity: -1, kind: "consumption" });
 		expect(
 			await value(`select organization_id from material where id = ?`, [movement.material_id]),

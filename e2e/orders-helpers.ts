@@ -29,12 +29,23 @@ export interface Movement {
 	note: string | null;
 }
 
-/** The stock movements of an order (by its number, which they keep), oldest first. */
-export const orderMovements = (number: string, organizationId: string) =>
+/**
+ * The newest stock movement so far. Take it before creating an order, and pass it to
+ * `orderMovements()`: order numbers are reused once the highest order is deleted (and its
+ * movements keep the number), so by number alone a new order would also get the deleted one's
+ * movements, e.g. from another file on this worker.
+ */
+export const movementMark = () => value<number>(`select coalesce(max(id), 0) from stock_movement`);
+
+/**
+ * The stock movements of an order (by its number, which they keep), oldest first. For an order
+ * made by the test, only those after `since` (a `movementMark()` from before it was created).
+ */
+export const orderMovements = (number: string, organizationId: string, since = 0) =>
 	rows<Movement>(
 		`select material_id, quantity, kind, order_number, note from stock_movement
-		 where order_number = ? and organization_id = ? order by id`,
-		[number, organizationId],
+		 where order_number = ? and organization_id = ? and id > ? order by id`,
+		[number, organizationId, since],
 	);
 
 /** An order's lines as stored, in order. */
