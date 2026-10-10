@@ -10,12 +10,11 @@
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
 	import { formatCents, formatDate, label } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components.ts";
-
-	import { formatTerm, levels } from "../../../../display.ts";
-	import LevelBadge from "../../../../level-badge.svelte";
-	import { contractStatus } from "../../../../model.ts";
-	import ContractStatusBadge from "../../../../status-badge.svelte";
-	import { deleteContract, getContract } from "../contracts.remote.ts";
+	import { deleteContract, getContract } from "#modules/contracts/contracts.remote.ts";
+	import { formatTerm, levels } from "#modules/contracts/display.ts";
+	import LevelBadge from "#modules/contracts/level-badge.svelte";
+	import { contractStatus } from "#modules/contracts/model.ts";
+	import ContractStatusBadge from "#modules/contracts/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]"> } = $props();
 

@@ -5,9 +5,8 @@
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import InvoicesTable from "./invoices-table.svelte";
-	import { getInvoices } from "./invoices.remote.ts";
+	import { getInvoices } from "#modules/invoicing/invoices.remote.ts";
+	import InvoicesTable from "#modules/invoicing/list/invoices-table.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/invoices"> } = $props();

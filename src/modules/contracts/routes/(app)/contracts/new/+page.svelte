@@ -3,9 +3,8 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import ContractForm from "../contract-form.svelte";
-	import { createContract, getContractFormOptions } from "../contracts.remote.ts";
+	import { createContract, getContractFormOptions } from "#modules/contracts/contracts.remote.ts";
+	import ContractForm from "#modules/contracts/form/contract-form.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/contracts/new"> } = $props();

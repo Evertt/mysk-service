@@ -9,7 +9,7 @@
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
-	import { formatRate } from "../../../../display.ts";
+	import { formatRate } from "../display.ts";
 	import type { getInvoice } from "../invoices.remote.ts";
 	import { removeLine } from "./draft.remote.ts";
 

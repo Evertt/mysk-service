@@ -7,9 +7,9 @@ import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf
 
 import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 
-import { formatRate } from "../../../../../display.ts";
-import type { InvoiceState } from "../../../../../invoice.ts";
-import { invoicingLabels } from "../../../../../labels.ts";
+import { formatRate } from "../display.ts";
+import type { InvoiceState } from "../invoice.ts";
+import { invoicingLabels } from "../labels.ts";
 
 export interface PdfInvoice {
 	organization: string;

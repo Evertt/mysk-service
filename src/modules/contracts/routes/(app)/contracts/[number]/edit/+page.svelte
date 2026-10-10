@@ -3,9 +3,12 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import ContractForm from "../../contract-form.svelte";
-	import { getContract, getContractFormOptions, updateContract } from "../../contracts.remote.ts";
+	import {
+		getContract,
+		getContractFormOptions,
+		updateContract,
+	} from "#modules/contracts/contracts.remote.ts";
+	import ContractForm from "#modules/contracts/form/contract-form.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]/edit"> } = $props();
 

@@ -4,9 +4,8 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import ContractsTable from "./contracts-table.svelte";
-	import { getContracts } from "./contracts.remote.ts";
+	import { getContracts } from "#modules/contracts/contracts.remote.ts";
+	import ContractsTable from "#modules/contracts/list/contracts-table.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/contracts"> } = $props();

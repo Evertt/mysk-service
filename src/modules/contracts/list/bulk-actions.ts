@@ -3,8 +3,8 @@ import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 
+import { bulkDeleteContracts } from "../contracts.remote.ts";
 import type { ContractRow } from "./columns.ts";
-import { bulkDeleteContracts } from "./contracts.remote.ts";
 
 export const deleteContracts: BulkAction<ContractRow> = {
 	id: "delete",

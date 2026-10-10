@@ -10,9 +10,8 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { toDateInput } from "#lib/dates.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
-
-	import { formatRate } from "../../../../display.ts";
-	import { getInvoicingSettings, saveSettings } from "./settings.remote.ts";
+	import { formatRate } from "#modules/invoicing/display.ts";
+	import { getInvoicingSettings, saveSettings } from "#modules/invoicing/settings.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/invoices/settings"> } = $props();

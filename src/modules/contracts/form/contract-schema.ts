@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 import { cents, date, id } from "#lib/schema.ts";
 
-import { contractLevels } from "../../../model.ts";
+import { contractLevels } from "../model.ts";
 
 /** The fields of the contract form, shared by creating and editing a contract. */
 export const contractFields = {

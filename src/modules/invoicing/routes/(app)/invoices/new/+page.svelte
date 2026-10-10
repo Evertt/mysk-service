@@ -7,9 +7,12 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import BillablePicker from "../billable-picker.svelte";
-	import { createInvoice, getBillable, getInvoiceCustomers } from "../invoices.remote.ts";
+	import BillablePicker from "#modules/invoicing/form/billable-picker.svelte";
+	import {
+		createInvoice,
+		getBillable,
+		getInvoiceCustomers,
+	} from "#modules/invoicing/invoices.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/invoices/new"> } = $props();

@@ -4,22 +4,22 @@
 	import { recordFacets } from "#lib/components/data-table/record-facets.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
-	import { levelOptions, statusOptions } from "../../../display.ts";
-	import { deleteContracts } from "./bulk-actions.ts";
-	import { columns, type ContractRow } from "./columns.ts";
+	import { stateOptions } from "../display.ts";
+	import { markPaid } from "./bulk-actions.ts";
+	import { columns, type InvoiceRow } from "./columns.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
-	let { contracts }: { contracts: ContractRow[] } = $props();
+	let { invoices }: { invoices: InvoiceRow[] } = $props();
 
 	const table = createAppTable({
 		columns,
 		get data() {
-			return contracts;
+			return invoices;
 		},
 		getRowId: (row) => String(row.id),
 		initialState: {
-			sorting: [{ id: "period", desc: true }],
+			sorting: [{ id: "number", desc: true }],
 			columnVisibility: { createdAt: false },
 			pagination: { pageIndex: 0, pageSize: 20 },
 		},
@@ -36,18 +36,17 @@
 
 <table.AppTable>
 	<div class="flex min-h-0 flex-col gap-4">
-		<table.Toolbar searchLabel={m.contracts_search()}>
-			<FacetedFilter columnId="status" title={m.contracts_status()} options={statusOptions} />
-			<FacetedFilter columnId="level" title={m.contracts_level()} options={levelOptions} />
+		<table.Toolbar searchLabel={m.invoices_search()}>
+			<FacetedFilter columnId="status" title={m.invoices_column_status()} options={stateOptions} />
 			<FacetedFilter
 				columnId="customer"
-				title={m.contracts_customer()}
+				title={m.invoices_column_customer()}
 				options={customers.options}
 				counts={customers.counts}
 			/>
 		</table.Toolbar>
-		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
-		<BulkActionBar actions={[deleteContracts]} />
+		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
+		<BulkActionBar actions={[markPaid]} />
 		<table.Pagination />
 	</div>
 </table.AppTable>

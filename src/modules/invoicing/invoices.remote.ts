@@ -7,12 +7,12 @@ import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { refuse } from "#lib/server/forms.ts";
 
-import { invoiceState, invoiceTotals, lineAmount } from "../../../invoice.ts";
-import { form, query } from "../../../remote-functions.ts";
-import { billableFor } from "../../../server/billable.ts";
-import { createDraft, loadInvoice } from "../../../server/invoices.ts";
-import { invoice, invoiceLine } from "../../../server/schema.ts";
-import { newInvoiceFields } from "./invoice-schema.ts";
+import { newInvoiceFields } from "./form/invoice-schema.ts";
+import { invoiceState, invoiceTotals, lineAmount } from "./invoice.ts";
+import { form, query } from "./remote-functions.ts";
+import { billableFor } from "./server/billable.ts";
+import { createDraft, loadInvoice } from "./server/invoices.ts";
+import { invoice, invoiceLine } from "./server/schema.ts";
 
 /** The tenant's invoices with their customer and totals, latest first. */
 export const getInvoices = query(async () => {

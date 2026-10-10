@@ -8,10 +8,10 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
-import { forManagers, query } from "../../../../remote-functions.ts";
-import { invoicingSettings } from "../../../../server/schema.ts";
-import { settingsOf } from "../../../../server/settings.ts";
-import { settingsFields } from "../invoice-schema.ts";
+import { settingsFields } from "./form/invoice-schema.ts";
+import { forManagers, query } from "./remote-functions.ts";
+import { invoicingSettings } from "./server/schema.ts";
+import { settingsOf } from "./server/settings.ts";
 
 export const getInvoicingSettings = query(async () => {
 	const tenant = currentTenant();

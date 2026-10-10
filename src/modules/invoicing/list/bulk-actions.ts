@@ -3,9 +3,9 @@ import BadgeCheckIcon from "@lucide/svelte/icons/badge-check";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 
-import { canChange } from "../../../invoice.ts";
+import { bulkMarkPaid } from "../invoice-status.remote.ts";
+import { canChange } from "../invoice.ts";
 import type { InvoiceRow } from "./columns.ts";
-import { bulkMarkPaid } from "./invoice-status.remote.ts";
 
 export const markPaid: BulkAction<InvoiceRow> = {
 	id: "mark-paid",

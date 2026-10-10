@@ -11,14 +11,14 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 
-import { canChange, dueDate, today } from "../../../invoice.ts";
-import type { InvoiceStatus } from "../../../model.ts";
-import { command, form } from "../../../remote-functions.ts";
-import { invoiceById, invoiceSubject } from "../../../server/invoices.ts";
-import { invoice } from "../../../server/schema.ts";
-import { settingsOf } from "../../../server/settings.ts";
-import { refreshInvoice } from "./invoice-refresh.server.ts";
+import { canChange, dueDate, today } from "./invoice.ts";
 import { getInvoices } from "./invoices.remote.ts";
+import type { InvoiceStatus } from "./model.ts";
+import { command, form } from "./remote-functions.ts";
+import { refreshInvoice } from "./server/invoice-refresh.ts";
+import { invoiceById, invoiceSubject } from "./server/invoices.ts";
+import { invoice } from "./server/schema.ts";
+import { settingsOf } from "./server/settings.ts";
 
 /** What an invoice is, as in "… is a draft". */
 const statusLabel: Record<InvoiceStatus, () => string> = {

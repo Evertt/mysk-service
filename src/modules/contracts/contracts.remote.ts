@@ -19,10 +19,10 @@ import { refuse, type Problem } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 
-import { command, form, query } from "../../../remote-functions.ts";
-import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";
-import { contract, contractEquipment } from "../../../server/schema.ts";
-import { contractFields } from "./contract-schema.ts";
+import { contractFields } from "./form/contract-schema.ts";
+import { command, form, query } from "./remote-functions.ts";
+import { contractNumbers, overlappingCoverage } from "./server/contracts.ts";
+import { contract, contractEquipment } from "./server/schema.ts";
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
 export const getContracts = query(async () => {

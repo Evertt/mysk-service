@@ -16,14 +16,14 @@
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
 	import { label } from "#lib/i18n/index.ts";
 
-	import { levels } from "../../../display.ts";
-	import { type ContractLevel, contractLevels, defaultResponseHours } from "../../../model.ts";
 	import type {
 		createContract,
 		getContract,
 		getContractFormOptions,
 		updateContract,
-	} from "./contracts.remote.ts";
+	} from "../contracts.remote.ts";
+	import { levels } from "../display.ts";
+	import { type ContractLevel, contractLevels, defaultResponseHours } from "../model.ts";
 
 	type Options = Awaited<ReturnType<typeof getContractFormOptions>>;
 	type Contract = Awaited<ReturnType<typeof getContract>>["contract"];

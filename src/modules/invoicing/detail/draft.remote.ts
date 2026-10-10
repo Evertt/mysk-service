@@ -8,14 +8,14 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
-import { lineNote } from "../../../../activity.ts";
-import { isEditable, lineAmount } from "../../../../invoice.ts";
-import { form } from "../../../../remote-functions.ts";
-import { alreadyBilled, linesFor } from "../../../../server/billable.ts";
-import { invoiceById, invoiceSubject } from "../../../../server/invoices.ts";
-import { invoice, invoiceLine } from "../../../../server/schema.ts";
-import { refreshInvoice } from "../invoice-refresh.server.ts";
-import { billingFields, lineFields, termsFields } from "../invoice-schema.ts";
+import { lineNote } from "../activity.ts";
+import { billingFields, lineFields, termsFields } from "../form/invoice-schema.ts";
+import { isEditable, lineAmount } from "../invoice.ts";
+import { form } from "../remote-functions.ts";
+import { alreadyBilled, linesFor } from "../server/billable.ts";
+import { refreshInvoice } from "../server/invoice-refresh.ts";
+import { invoiceById, invoiceSubject } from "../server/invoices.ts";
+import { invoice, invoiceLine } from "../server/schema.ts";
 
 /** Logs lines added to an invoice, against it. */
 async function recordLines(

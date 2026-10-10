@@ -43,7 +43,7 @@ export const migratedDomains: string[] = [
 	"materials",
 	"orders",
 ];
-export const migratedModules: string[] = [];
+export const migratedModules: string[] = ["contracts", "invoicing"];
 
 const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];
 const isBarrel = (path: string) =>

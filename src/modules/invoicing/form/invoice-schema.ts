@@ -3,7 +3,7 @@ import * as v from "valibot";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { cents, date, id, text } from "#lib/schema.ts";
 
-import { formatRate } from "../../../display.ts";
+import { formatRate } from "../display.ts";
 
 /** Days to pay: whole days, up to a year. */
 const days = () =>

@@ -11,7 +11,7 @@
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
-	import type { getBillable } from "./invoices.remote.ts";
+	import type { getBillable } from "../invoices.remote.ts";
 
 	type Billable = Awaited<ReturnType<typeof getBillable>>;
 
