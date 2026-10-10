@@ -44,7 +44,7 @@ export interface SlotProps {
 export type SlotName = keyof SlotProps;
 
 /** Loads a slot's component, so a tenant without the module doesn't download it. */
-export type SlotLoader<Name extends SlotName> = () => Promise<{
+type SlotLoader<Name extends SlotName> = () => Promise<{
 	default: Component<SlotProps[Name]>;
 }>;
 
