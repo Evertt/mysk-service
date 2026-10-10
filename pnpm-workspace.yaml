@@ -10,6 +10,7 @@ overrides:
   vitest@*: "catalog:"
 patchedDependencies:
   "@tanstack/svelte-table@9.2.5": patches/@tanstack__svelte-table@9.2.5.patch
+  "svelte-sonner@1.2.1": patches/svelte-sonner@1.2.1.patch
 peerDependencyRules:
   allowAny:
     - vite

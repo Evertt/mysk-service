@@ -1,0 +1,20 @@
+diff --git a/dist/Toast.svelte b/dist/Toast.svelte
+index a15126a2550dcbd6bd14df6ed4c8a25e328ff9f6..ecc375cfd078781c7d4b9cc8f77ae5010d127391 100644
+--- a/dist/Toast.svelte
++++ b/dist/Toast.svelte
+@@ -168,8 +168,13 @@
+ 	const toastTitle = $derived(toast.title);
+ 	const toastDescription = $derived(toast.description);
+ 
+-	let closeTimerStartTime = $state(0);
+-	let lastCloseTimerStartTime = $state(0);
++	// Plain variables, not $state (patched): nothing renders them, and the timer effect below
++	// reads `lastCloseTimerStartTime` in `pauseTimer()` and then sets it to the current time, so
++	// as state it invalidated its own effect, which ran again until two runs fell in the same
++	// millisecond. On a slow or busy machine they didn't, and while the toaster was hovered
++	// (`expanded`) that ended in Svelte's effect_update_depth_exceeded loop.
++	let closeTimerStartTime = 0;
++	let lastCloseTimerStartTime = 0;
+ 
+ 	const offset = $derived(Math.round(heightIndex * gap + toastsHeightBefore));
+ 
