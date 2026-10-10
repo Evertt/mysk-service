@@ -25,6 +25,7 @@ export function module(
 		requires: [],
 		enhances: [],
 		alwaysOn: false,
+		navAfter: null,
 		routeFiles: [],
 		slotFiles: [],
 		bulkFiles: [],

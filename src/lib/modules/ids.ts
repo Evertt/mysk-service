@@ -19,6 +19,8 @@ export interface ModuleNode {
 	enhances: readonly ModuleId[];
 	/** Always on for every tenant: it has no switch. */
 	alwaysOn: boolean;
+	/** The sidebar entry its own goes after (`nav: { after }` in its manifest), if it says. */
+	navAfter: string | null;
 }
 
 /**

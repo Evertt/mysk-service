@@ -48,6 +48,10 @@ export function graphProblems(modules: ModuleFolder[]): string[] {
 		}
 	}
 
+	for (const module of modules) {
+		if (module.navAfter === module.id) problems.push(`src/modules/${module.id} nav.after itself.`);
+	}
+
 	if (stuck.length) {
 		// Follow requires from the first module left over until an id repeats.
 		const left = new Map(stuck.map((module) => [module.id, module]));

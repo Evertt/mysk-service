@@ -46,3 +46,9 @@ test("keeps every module when there is a cycle", () => {
 	const modules = [module("a", { requires: ["b"] }), module("b", { requires: ["a"] }), module("c")];
 	expect(byDependency(modules).map((m) => m.id)).toEqual(["c", "a", "b"]);
 });
+
+test("finds a module whose sidebar entry goes after itself", () => {
+	expect(graphProblems([module("a", { navAfter: "a" }), module("b", { navAfter: "a" })])).toEqual([
+		"src/modules/a nav.after itself.",
+	]);
+});

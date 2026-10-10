@@ -23,13 +23,13 @@ describe("renderRegistries", () => {
 	test("describe the graph of the modules", () => {
 		const files = renderRegistries([
 			module("a"),
-			module("b", { requires: ["a"], enhances: ["c"], alwaysOn: true }),
+			module("b", { requires: ["a"], enhances: ["c"], alwaysOn: true, navAfter: "orders" }),
 		]);
 		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
-			`"b": { requires: ["a"], enhances: ["c"], alwaysOn: true },`,
+			`"b": { requires: ["a"], enhances: ["c"], alwaysOn: true, navAfter: "orders" },`,
 		);
 		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
-			`"a": { requires: [], enhances: [], alwaysOn: false },`,
+			`"a": { requires: [], enhances: [], alwaysOn: false, navAfter: null },`,
 		);
 		expect(renderRegistries([])["src/lib/modules/ids.gen.ts"]).toContain("> = {};");
 	});
