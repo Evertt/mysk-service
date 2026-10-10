@@ -115,8 +115,9 @@ function serverModules(): { [Id in ModuleId]?: ServerModule } {
  * `+layout.server.ts` of each `(modules)` group (`guardModuleRoute()`), so a tenant without the
  * module gets the app's own 404 page inside the app layout, and each server `load`, form action
  * and request handler of a module's route (`guarded()`, `guardedActions()`), which Kit runs
- * without waiting for that layout. The module's remote functions still start with
- * `requireModule()` themselves: no route guards them.
+ * without waiting for that layout. No route guards the module's remote functions: they refuse
+ * tenants without the module through the set they're made with (`moduleRemote()` in
+ * `#lib/server/remote-functions.ts`).
  */
 function guardModule(id: ModuleId) {
 	requireModule(id);

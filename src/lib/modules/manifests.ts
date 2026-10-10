@@ -1,8 +1,8 @@
 /**
  * The app's optional modules: feature sets on top of the core (customers, equipment, orders, …)
  * that some tenants buy and others don't. Which tenant has which is stored per organization
- * (`organization_module`); `requireModule()` in `#lib/server/auth/session.ts` refuses a module's remote
- * functions to the others.
+ * (`organization_module`); the set a module makes its remote functions with (`moduleRemote()` in
+ * `#lib/server/remote-functions.ts`) refuses them to the others.
  *
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its
  * tables reference the core tables, never the other way round. Core pages and core server code
@@ -55,7 +55,7 @@ interface ModuleParts {
 	icon: Component;
 	/**
 	 * What the module adds to core pages. The components load their own data through the module's
-	 * remote functions (which start with `requireModule()`), and render nothing when they have
+	 * remote functions (made with `moduleRemote()`), and render nothing when they have
 	 * nothing to say.
 	 */
 	slots?: { [Name in SlotName]?: SlotLoader<Name> };
@@ -68,7 +68,7 @@ interface ModuleParts {
 	actions?: Record<string, Sentence>;
 	/**
 	 * Bulk actions the module adds to core tables' selections (see `BulkActionRows`), after the
-	 * table's own. Their commands start with `requireModule()`.
+	 * table's own. Their commands are made with `moduleRemote()`.
 	 */
 	bulkActions?: { [Table in BulkTableName]?: BulkActionLoader<Table> };
 }

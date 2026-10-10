@@ -148,9 +148,9 @@ migration committed.
   `export const { query, form, command } = moduleRemote("<id>")` (plus
   `moduleRemote("<id>", "manager")` for what only managers may do), which refuses tenants without
   the module with a 404 (`requireModule("<id>")`); its remote files import `query` and friends from
-  there (not `remote.ts`: SvelteKit takes any `remote.*` file for a remote file). Every endpoint
-  of a module starts with `requireModule("<id>")`. The guard on the pages is for the experience,
-  these are what keep the data safe (a layout's load doesn't cover `+server.ts` endpoints).
+  there (not `remote.ts`: SvelteKit takes any `remote.*` file for a remote file). The module's
+  route stubs guard its server loads, form actions and endpoints (see above); its remote functions
+  are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
   imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
   checks (`#modules/…` is for the generated registries only). Module tables reference core tables
