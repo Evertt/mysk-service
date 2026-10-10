@@ -37,6 +37,8 @@
 	/** What switching this one on also switches on, and switching it off also switches off. */
 	const needed = $derived(requirementsOf(module.id).filter((id) => !isOn(id)));
 	const needing = $derived(dependentsOf(module.id).filter(isOn));
+	/** Switching this one off asks first, in a dialog, which shows a refusal itself. */
+	const asksFirst = $derived(canManage && !module.alwaysOn && module.on && needing.length > 0);
 </script>
 
 <div class="flex items-start gap-4 rounded-lg border p-4">
@@ -64,12 +66,14 @@
 				{m.settings_modules_also_enables({ modules: names(needed) })}
 			</p>
 		{/if}
-		<Field.FieldError errors={form.fields.allIssues()} />
+		{#if !asksFirst}
+			<Field.FieldError errors={form.fields.allIssues()} />
+		{/if}
 	</div>
 	{#if canManage}
 		{#if module.alwaysOn}
 			<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
-		{:else if module.on && needing.length}
+		{:else if asksFirst}
 			<AlertDialog.Root>
 				<AlertDialog.Trigger>
 					{#snippet child({ props })}
@@ -85,6 +89,7 @@
 							{m.settings_modules_also_disables({ modules: names(needing) })}
 						</AlertDialog.Description>
 					</AlertDialog.Header>
+					<Field.FieldError errors={form.fields.allIssues()} />
 					<form {...form}>
 						{#each [module.id, ...needing] as id (id)}
 							<input hidden {...form.fields.disable.as("checkbox", id, true)} />

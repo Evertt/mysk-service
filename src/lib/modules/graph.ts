@@ -78,25 +78,52 @@ export function moduleSetProblems(
 	});
 }
 
+/** Why `changeModules()` refuses a change: the modules at fault, in graph order. */
+export interface RefusedChange {
+	/** Always-on modules the change would switch off. */
+	alwaysOn: ModuleId[];
+	/** Modules the change would leave without something they require. */
+	unmet: ModuleId[];
+}
+
 /**
  * The stored modules after switching `enable` on and `disable` off (a module in both ends up off),
- * or, when that would switch off an always-on module or leave a module without what it requires,
- * the modules at fault (`refused`, in graph order).
+ * or why that's refused: it would switch off an always-on module, or leave a module without
+ * something it requires. Always-on modules are never stored (they're on anyway).
+ *
+ * Only what the change breaks is refused: a stored module that already missed a requirement (a
+ * stale row, e.g. after a hand edit; it's off, see `effectiveModules()`) doesn't block a change to
+ * other modules, and stays stored until it's switched on with what it requires, or off.
  */
 export function changeModules(
 	stored: readonly string[],
 	change: { enable: readonly string[]; disable: readonly string[] },
 	graph: ModuleGraph = moduleGraph,
-): { stored: ModuleId[] } | { refused: ModuleId[] } {
+): { stored: ModuleId[] } | { refused: RefusedChange } {
 	const next = inGraphOrder(
 		graph,
-		(id) => (stored.includes(id) || change.enable.includes(id)) && !change.disable.includes(id),
+		(id) =>
+			!graph[id].alwaysOn &&
+			(stored.includes(id) || change.enable.includes(id)) &&
+			!change.disable.includes(id),
 	);
-	const refused = new Set<string>([
-		...change.disable.filter((id) => graph[id]?.alwaysOn),
-		...moduleSetProblems(next, graph).map(({ module }) => module),
-	]);
-	return refused.size
-		? { refused: inGraphOrder(graph, (id) => refused.has(id)) }
+	const missingBefore = new Map(
+		moduleSetProblems(stored, graph).map(({ module, missing }) => [module, missing]),
+	);
+	const unmet = new Set(
+		moduleSetProblems(next, graph)
+			.filter(({ module, missing }) =>
+				missing.some((id) => !(missingBefore.get(module) ?? []).includes(id)),
+			)
+			.map(({ module }) => module),
+	);
+	const alwaysOn = new Set(change.disable.filter((id) => graph[id]?.alwaysOn));
+	return unmet.size || alwaysOn.size
+		? {
+				refused: {
+					alwaysOn: inGraphOrder(graph, (id) => alwaysOn.has(id)),
+					unmet: inGraphOrder(graph, (id) => unmet.has(id as ModuleId)),
+				},
+			}
 		: { stored: next };
 }

@@ -129,6 +129,31 @@ describe("modules", () => {
 		expect(await moduleEntries("invoicing", south.id, since)).toEqual([]);
 	});
 
+	test("a submission that switches nothing is refused, saying so", async () => {
+		await app.go("/settings");
+		const card = moduleCard(contracts);
+		const rowsBefore = await rows(
+			`select module_id from organization_module where organization_id = ? order by module_id`,
+			[south.id],
+		);
+		const lastEntry = await value<number>("select coalesce(max(id), 0) from activity");
+		// The form as a tampered page would send it: without the module it switches.
+		await card
+			.locator("form input[hidden]")
+			.evaluateAll((inputs) => inputs.forEach((input) => input.remove()));
+		await app.submit(card.getByRole("button", { name: "Enable" }));
+		expect(await card.locator('[data-slot="field-error"]').innerText()).toContain(
+			"Choose a module to switch on or off.",
+		);
+		expect(
+			await rows(
+				`select module_id from organization_module where organization_id = ? order by module_id`,
+				[south.id],
+			),
+		).toEqual(rowsBefore);
+		expect(await value<number>("select coalesce(max(id), 0) from activity")).toBe(lastEntry);
+	});
+
 	test("a member can't change modules", async () => {
 		const { page } = app;
 		// The toggle form as an owner sees it, to submit it as a member.

@@ -85,18 +85,48 @@ test("changing the set enables and disables, keeping the graph's order", () => {
 	).toEqual({ stored: ["base"] });
 });
 
-test("a change that leaves a module without a requirement is refused, naming that module", () => {
+test("a change that leaves a module without a requirement is refused, saying which", () => {
 	expect(changeModules(["base"], { enable: ["extra"], disable: [] }, fakeGraph)).toEqual({
-		refused: ["extra"],
+		refused: { alwaysOn: [], unmet: ["extra"] },
 	});
 	expect(
 		changeModules(["base", "addon", "extra"], { enable: [], disable: ["base"] }, fakeGraph),
-	).toEqual({ refused: ["addon"] });
+	).toEqual({ refused: { alwaysOn: [], unmet: ["addon"] } });
 });
 
-test("an always-on module can't be switched off", () => {
+test("switching off an always-on module is refused as such, and one is never stored", () => {
 	expect(changeModules([], { enable: [], disable: ["core-ish"] }, fakeGraph)).toEqual({
-		refused: ["core-ish"],
+		refused: { alwaysOn: ["core-ish"], unmet: [] },
+	});
+	expect(changeModules([], { enable: ["core-ish"], disable: [] }, fakeGraph)).toEqual({
+		stored: [],
+	});
+	expect(changeModules(["core-ish", "base"], { enable: [], disable: [] }, fakeGraph)).toEqual({
+		stored: ["base"],
+	});
+});
+
+test("a stale row doesn't block an unrelated change, and stays", () => {
+	// addon is stored without base, so it's off; switching side on is fine all the same.
+	expect(changeModules(["addon"], { enable: ["side"], disable: [] }, fakeGraph)).toEqual({
+		stored: ["addon", "side"],
+	});
+	// So is switching the stale module off.
+	expect(changeModules(["addon"], { enable: [], disable: ["addon"] }, fakeGraph)).toEqual({
+		stored: [],
+	});
+});
+
+test("switching a stale module on with what it requires mends it", () => {
+	expect(changeModules(["addon"], { enable: ["addon", "base"], disable: [] }, fakeGraph)).toEqual({
+		stored: ["base", "addon"],
+	});
+});
+
+test("a stale module that a change leaves missing more is refused", () => {
+	// extra was stored without addon; switching addon on without base leaves addon short.
+	expect(changeModules(["extra"], { enable: ["addon"], disable: [] }, fakeGraph)).toEqual({
+		refused: { alwaysOn: [], unmet: ["addon"] },
 	});
 });
 
