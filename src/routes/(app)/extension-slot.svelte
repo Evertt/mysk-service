@@ -24,11 +24,10 @@
 <script lang="ts" generics="Props extends Record<string, unknown>">
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
+	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 	import type { SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
 	import { type ModuleId, modules } from "#lib/modules/manifests.ts";
-
-	import { getCurrentTenant } from "./session.remote.ts";
 
 	let {
 		point,

@@ -3,17 +3,16 @@ import { invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager, parseRoles } from "#lib/auth";
+import { isManager, parseRoles } from "#lib/auth/index.ts";
+import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 import { changeModules, effectiveModules } from "#lib/modules/graph.ts";
 import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, inTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
-
-import { getCurrentTenant } from "../session.remote.ts";
 
 export const getOrganizationSettings = forMembers.query(async () => {
 	const tenant = currentTenant();

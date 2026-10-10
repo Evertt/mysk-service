@@ -1,4 +1,4 @@
-import type { MemberRole } from "#lib/auth";
+import type { MemberRole } from "#lib/auth/index.ts";
 /**
  * The translated names of the domain's enum values (statuses, types, units, roles, …): the one
  * place that maps a stored value to what users read. Show one with `label("orderStatus", status)`;
@@ -8,7 +8,7 @@ import type { MemberRole } from "#lib/auth";
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { StockLevel } from "#lib/materials/display.ts";
+import type { StockLevel } from "#lib/materials/index.ts";
 import type {
 	CustomerSegment,
 	EngineerSpecialty,

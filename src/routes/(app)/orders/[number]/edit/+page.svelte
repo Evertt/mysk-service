@@ -4,9 +4,9 @@
 
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { isEditableOrder } from "#lib/models.ts";
+	import { OrderForm } from "#lib/orders/components.ts";
+	import { getOrder, getOrderFormOptions, updateOrder } from "#lib/orders/remotes.ts";
 
-	import OrderForm from "../../order-form.svelte";
-	import { getOrder, getOrderFormOptions, updateOrder } from "../../order.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

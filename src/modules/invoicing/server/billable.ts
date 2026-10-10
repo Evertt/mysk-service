@@ -9,8 +9,8 @@
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth";
+import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";

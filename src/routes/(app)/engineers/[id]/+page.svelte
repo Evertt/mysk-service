@@ -7,15 +7,13 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import ActiveBadge from "#lib/engineers/active-badge.svelte";
-	import { regionLabel } from "#lib/engineers/display.ts";
-	import SpecialtyBadge from "#lib/engineers/specialty-badge.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
-	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
+	import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components.ts";
+	import { regionLabel } from "#lib/engineers/index.ts";
+	import { deleteEngineer, getEngineer } from "#lib/engineers/remotes.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
 
-	import { deleteEngineer, getEngineer } from "../engineers.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

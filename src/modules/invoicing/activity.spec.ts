@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { describeChanges } from "#lib/activity";
+import { describeChanges } from "#lib/activity/index.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 import { invoicingActions, invoicingSubjects, lineNote } from "./activity.ts";

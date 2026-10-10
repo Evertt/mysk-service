@@ -7,8 +7,8 @@
  * their name) and their value as stored (dates and numbers formatted).
  */
 // Only types from `#lib/activity/subjects.ts`, which uses this file's types in turn.
-import type { FieldFormat, SubjectType, Text } from "#lib/activity";
-import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
+import type { FieldFormat, SubjectType, Text } from "#lib/activity/index.ts";
+import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */

@@ -5,10 +5,10 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
-import { recordActivity } from "#lib/server/activity";
-import { idInTenant, idsInTenant, inTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { idInTenant, idsInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order, stockMovement } from "#lib/server/db/schema.ts";

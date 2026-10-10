@@ -6,9 +6,9 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import type { MemberRole } from "#lib/auth";
+	import type { MemberRole } from "#lib/auth/index.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import { formatDate, labelOrValue } from "#lib/i18n";
+	import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
 
 	import { changeRole, getMembers, removeMember } from "./members.remote.ts";
 

@@ -15,7 +15,7 @@ import { join, posix, relative } from "node:path";
 import { error, isHttpError } from "@sveltejs/kit";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { requireManager, requireModule } from "#lib/server/auth";
+import { requireManager, requireModule } from "#lib/server/auth/index.ts";
 
 import { forAnyone, moduleRemote, remoteSet } from "./remote-functions.ts";
 
@@ -31,7 +31,7 @@ vi.mock("$app/server", () => {
 	};
 });
 
-vi.mock("#lib/server/auth", () => ({
+vi.mock("#lib/server/auth/index.ts", () => ({
 	requireMember: vi.fn(),
 	requireManager: vi.fn(),
 	requireEngineer: vi.fn(),

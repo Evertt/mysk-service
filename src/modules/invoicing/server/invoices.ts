@@ -5,9 +5,9 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { formatCents } from "#lib/i18n";
-import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
+import { formatCents } from "#lib/i18n/index.ts";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { idInTenant, inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import type { Problem } from "#lib/server/forms.ts";

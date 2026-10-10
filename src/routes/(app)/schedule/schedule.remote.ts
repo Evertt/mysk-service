@@ -3,16 +3,16 @@ import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { addDays, atTime } from "#lib/dates.ts";
-import { moveOrderStock, OrderStockShortage } from "#lib/materials/server/stock.ts";
+import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
 import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
-import { assigneeProblem } from "#lib/orders/server/order-changes.ts";
+import { assigneeProblem } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { refreshRequested } from "#lib/server/lists";
+import { refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.ts";

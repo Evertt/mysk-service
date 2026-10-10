@@ -8,9 +8,9 @@
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
 	import { addDays } from "#lib/dates.ts";
-	import { dateFormatter, formatNumber } from "#lib/i18n";
+	import { dateFormatter, formatNumber } from "#lib/i18n/index.ts";
 	import { orderStatuses } from "#lib/models.ts";
-	import { statuses } from "#lib/orders/display.ts";
+	import { statuses } from "#lib/orders/index.ts";
 
 	import ChartTable from "./chart-table.svelte";
 	import type { OrdersInWeek } from "./dashboard-charts.ts";

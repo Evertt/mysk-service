@@ -4,7 +4,7 @@ import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { type MaterialUnit, roundQuantity, stockLevel } from "#lib/models.ts";
-import type { Tenant } from "#lib/server/auth";
+import type { Tenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
 

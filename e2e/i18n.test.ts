@@ -14,7 +14,8 @@ const language = async () => ({
 /** Picks a language from a language menu, and waits for the page to reload in it. */
 async function choose(name: string, locale: string) {
 	await app.page.getByRole("menuitemradio", { name }).click();
-	await app.page.waitForFunction((lang) => document.documentElement.lang === lang, locale);
+	// The switch reloads the page: while the document is replaced there is no root element yet.
+	await app.page.waitForFunction((lang) => document.documentElement?.lang === lang, locale);
 	await hydrated(app.page);
 }
 

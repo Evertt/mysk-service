@@ -6,7 +6,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { inTenant, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
 

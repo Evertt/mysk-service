@@ -9,9 +9,9 @@
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
 	import { timeOfDay } from "#lib/dates.ts";
-	import { formatDate } from "#lib/i18n";
+	import { formatDate } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
-	import { priorities, statuses, types } from "#lib/orders/display.ts";
+	import { priorities, statuses, types } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import type { getSchedule } from "./schedule.remote.ts";

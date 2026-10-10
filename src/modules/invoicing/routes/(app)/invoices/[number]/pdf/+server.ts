@@ -1,10 +1,9 @@
 import type { RouteParams } from "$app/types";
 import type { RequestHandler } from "@sveltejs/kit";
 
-import { requireModule } from "#lib/server/auth";
-
-import { loadInvoice } from "../../../../../server/invoices.ts";
-import { invoicePdf } from "./invoice-pdf.ts";
+import { requireModule } from "#lib/server/auth/index.ts";
+import { invoicePdf } from "#modules/invoicing/server/invoice-pdf.ts";
+import { loadInvoice } from "#modules/invoicing/server/invoices.ts";
 
 /** The invoice as a PDF download; like its page, only for the tenant's own and with the module. */
 export const GET: RequestHandler<RouteParams<"/(app)/(modules)/invoices/[number]/pdf">> = async ({

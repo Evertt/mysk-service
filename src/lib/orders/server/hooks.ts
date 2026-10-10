@@ -1,16 +1,11 @@
+import { collect, emit } from "#lib/server/extensions.ts";
+
 /**
  * Where core asks the modules about orders, besides their prices (`priceOrders()` in
  * `./pricing.ts`): each of the orders' extension points (`#lib/orders/extensions.ts`) has its one
  * caller here, for the modules that are on (by default the current tenant's).
  */
-import {
-	committed,
-	type OrderChange,
-	type OrderFacts,
-	type OrderTag,
-	tag,
-} from "#lib/orders/extensions.ts";
-import { collect, emit } from "#lib/server/extensions.ts";
+import { committed, type OrderChange, type OrderFacts, type OrderTag, tag } from "../extensions.ts";
 
 /** The modules' badges for each order, in the same order as `orders`. */
 export async function tagOrders(

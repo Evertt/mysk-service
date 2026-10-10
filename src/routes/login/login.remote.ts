@@ -3,8 +3,8 @@ import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
-import { isFieldEngineer } from "#lib/auth";
-import { auth, loadTenant } from "#lib/server/auth";
+import { isFieldEngineer } from "#lib/auth/index.ts";
+import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
 
 /** Only local paths, so the login can't be used to send people to another site. */

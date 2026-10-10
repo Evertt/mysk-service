@@ -4,7 +4,7 @@
 	import ChevronsLeftIcon from "@lucide/svelte/icons/chevrons-left";
 	import ChevronsRightIcon from "@lucide/svelte/icons/chevrons-right";
 
-	import { formatNumber } from "#lib/i18n";
+	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { useTableContext } from "./table.svelte.ts";
 	import { defaultPageSizes } from "./url-state.ts";

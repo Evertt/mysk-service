@@ -7,6 +7,7 @@ Three plans from a clean-up and planning pass (October 2026). Nothing in them is
 | [feature-folders-and-plugins.md](feature-folders-and-plugins.md) | Whether to group code by feature (`src/features/`), and a plugin system for the optional modules |
 | [table-query.md](table-query.md)                                 | The server-side tables: `tableParams` as a typed object, one list definition per table           |
 | [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement                                |
+| [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)          |
 
 ## The decisions in short
 

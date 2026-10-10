@@ -7,7 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatDate, labelOrValue } from "#lib/i18n";
+	import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
 
 	import { cancelInvitation, getMembers, resendInvitation } from "./members.remote.ts";
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "../src/lib/i18n/format.ts";
 import { countIn, nextCode, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
-import { orderId, orderLines, orderMovements, snapshot } from "./orders-helpers.ts";
+import { movementMark, orderId, orderLines, orderMovements, snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -33,6 +33,8 @@ const materialById = async (id: number) =>
 
 describe("in North", () => {
 	let number: string;
+	/** The newest movement before the test order was made, so its number's earlier history isn't its own. */
+	let since = 0;
 
 	test("the order lines took their materials from stock, except quotes' and cancelled ones'", async () => {
 		// Per order and material, not by counting movements: other files on this worker may have
@@ -105,6 +107,7 @@ describe("in North", () => {
 
 		const expected = await nextCode("order", "number", north.id);
 		const before = await stocks(north.id);
+		since = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
@@ -124,7 +127,7 @@ describe("in North", () => {
 
 		// The lines took their materials from stock, recorded with the order.
 		const stored = await orderLines(id);
-		expect(await orderMovements(number, north.id)).toEqual(
+		expect(await orderMovements(number, north.id, since)).toEqual(
 			stored.map((line) => ({
 				material_id: line.material_id,
 				quantity: -line.quantity,
@@ -163,7 +166,7 @@ describe("in North", () => {
 		expect(order).toMatchObject({ status: "completed", labor_hours: 4 });
 		expect(order.completed_at).not.toBeNull();
 		// The same lines take no more stock.
-		expect(await orderMovements(number, north.id)).toHaveLength(2);
+		expect(await orderMovements(number, north.id, since)).toHaveLength(2);
 		// It's still planned at the time of day it had.
 		expect(await scheduledFor(await orderId(number, north.id))).toEqual(
 			new Date(2026, 9, 20, 13, 30),
@@ -216,7 +219,7 @@ describe("in North", () => {
 		await app.submit(page.getByRole("button", { name: "Save order" }));
 		expect(await app.issues()).toEqual(["Whole pieces only"]);
 		expect(await snapshot(id)).toEqual(before);
-		expect(await orderMovements(number, north.id)).toHaveLength(2);
+		expect(await orderMovements(number, north.id, since)).toHaveLength(2);
 
 		await piecesLine.getByLabel("Quantity").fill("2");
 		await page.getByRole("button", { name: "Save order" }).click();
@@ -227,7 +230,7 @@ describe("in North", () => {
 		);
 		expect(line.quantity).toBe(2.5);
 		await page.getByText("2.5 kg").waitFor();
-		expect((await orderMovements(number, north.id)).slice(2)).toMatchObject([
+		expect((await orderMovements(number, north.id, since)).slice(2)).toMatchObject([
 			{ material_id: kilos, quantity: -2.5, kind: "consumption" },
 			{ material_id: pieces, quantity: -2, kind: "consumption" },
 		]);
@@ -249,7 +252,7 @@ describe("in North", () => {
 		await app.toast("Order saved");
 
 		const returned = lines[0].quantity - 1;
-		expect((await orderMovements(number, north.id)).slice(4)).toEqual([
+		expect((await orderMovements(number, north.id, since)).slice(4)).toEqual([
 			{
 				material_id: lines[0].material_id,
 				quantity: returned,
@@ -278,7 +281,7 @@ describe("in North", () => {
 		const before = [
 			await snapshot(id),
 			await stocks(north.id),
-			await orderMovements(number, north.id),
+			await orderMovements(number, north.id, since),
 		];
 
 		// A line already on the order can have the stock plus what it took already.
@@ -320,7 +323,7 @@ describe("in North", () => {
 		expect([
 			await snapshot(id),
 			await stocks(north.id),
-			await orderMovements(number, north.id),
+			await orderMovements(number, north.id, since),
 		]).toEqual(before);
 	});
 
@@ -337,7 +340,7 @@ describe("in North", () => {
 		await app.toast("Order saved");
 
 		expect(await orderLines(id)).toHaveLength(3);
-		expect((await orderMovements(number, north.id)).at(-1)).toEqual({
+		expect((await orderMovements(number, north.id, since)).at(-1)).toEqual({
 			material_id: lines[2].material_id,
 			quantity: lines[2].quantity,
 			kind: "return",
@@ -356,7 +359,7 @@ describe("in North", () => {
 		const id = await orderId(number, north.id);
 		const lines = await orderLines(id);
 		const before = await stocks(north.id);
-		const history = await orderMovements(number, north.id);
+		const history = await orderMovements(number, north.id, since);
 		const setStatus = async (status: string) => {
 			await app.go(`/orders/${number}/edit`);
 			await page.getByLabel("Status").selectOption(status);
@@ -374,7 +377,7 @@ describe("in North", () => {
 			}));
 
 		await setStatus("cancelled");
-		expect((await orderMovements(number, north.id)).slice(history.length)).toEqual(
+		expect((await orderMovements(number, north.id, since)).slice(history.length)).toEqual(
 			moved("return", 1),
 		);
 		const cancelled = await stocks(north.id);
@@ -386,7 +389,7 @@ describe("in North", () => {
 		}
 
 		await setStatus("scheduled");
-		expect((await orderMovements(number, north.id)).slice(history.length)).toEqual([
+		expect((await orderMovements(number, north.id, since)).slice(history.length)).toEqual([
 			...moved("return", 1),
 			...moved("consumption", -1),
 		]);
@@ -402,7 +405,7 @@ describe("in North", () => {
 		const id = await orderId(number, north.id);
 		const lines = await orderLines(id);
 		const before = await stocks(north.id);
-		const history = await orderMovements(number, north.id);
+		const history = await orderMovements(number, north.id, since);
 
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
@@ -411,7 +414,7 @@ describe("in North", () => {
 		expect((await app.go(`/orders/${number}`))?.status()).toBe(404);
 
 		// The history keeps the order's number, without referring to the deleted order.
-		const after = await orderMovements(number, north.id);
+		const after = await orderMovements(number, north.id, since);
 		expect(after.slice(0, history.length)).toEqual(history);
 		expect(after.slice(history.length)).toEqual(
 			lines.map((line) => ({
@@ -448,20 +451,24 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Add material" }).click();
 		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
 		expect(await page.getByLabel("Status").inputValue()).toBe("quote");
-		// It may get the number of the order deleted above, whose history keeps that number.
-		const before = [await stocks(north.id), await countIn("stock_movement", north.id)];
+		const mark = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
 		const quote = app.path().split("/").pop()!;
-		expect(await orderLines(await orderId(quote, north.id))).toHaveLength(1);
-		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
+		const id = await orderId(quote, north.id);
+		expect(await orderLines(id)).toHaveLength(1);
+		// Only this order's movements say whether it took stock: North's stock as a whole is also
+		// changed by other files on this worker (and, under load, late), so it isn't compared. Its
+		// number may be a deleted order's, whose history keeps it, hence the mark.
+		expect(await orderMovements(quote, north.id, mark)).toEqual([]);
 
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
 		expect(await orderId(quote, north.id)).toBeUndefined();
-		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
+		expect(await orderMovements(quote, north.id, mark)).toEqual([]);
+		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
 	describe("an invoiced order", () => {

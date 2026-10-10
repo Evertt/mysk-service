@@ -2,12 +2,11 @@
 	import { resolve } from "$app/paths";
 
 	import StatCard from "#lib/components/stat-card.svelte";
-	import CustomerLink from "#lib/customers/customer-link.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
 	import { cards } from "#lib/dashboard/extensions.ts";
-	import EngineerLink from "#lib/engineers/engineer-link.svelte";
-	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
-	import OrderLink from "#lib/orders/order-link.svelte";
-	import PriorityBadge from "#lib/orders/priority-badge.svelte";
+	import { EngineerLink } from "#lib/engineers/components.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
 
 	import ExtensionSlot from "../extension-slot.svelte";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";

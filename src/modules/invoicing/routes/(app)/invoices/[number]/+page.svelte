@@ -10,16 +10,15 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatDate, formatDateTime } from "#lib/i18n";
-
-	import { canChange, isEditable } from "../../../../invoice.ts";
-	import StatusBadge from "../../../../status-badge.svelte";
-	import { issueInvoice, markPaid, voidInvoice } from "../invoice-status.remote.ts";
-	import { getInvoice } from "../invoices.remote.ts";
-	import ConfirmDialog from "./confirm-dialog.svelte";
-	import DraftEditor from "./draft-editor.svelte";
-	import { removeLine } from "./draft.remote.ts";
-	import InvoiceDocument from "./invoice-document.svelte";
+	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
+	import ConfirmDialog from "#modules/invoicing/detail/confirm-dialog.svelte";
+	import DraftEditor from "#modules/invoicing/detail/draft-editor.svelte";
+	import { removeLine } from "#modules/invoicing/detail/draft.remote.ts";
+	import InvoiceDocument from "#modules/invoicing/detail/invoice-document.svelte";
+	import { issueInvoice, markPaid, voidInvoice } from "#modules/invoicing/invoice-status.remote.ts";
+	import { canChange, isEditable } from "#modules/invoicing/invoice.ts";
+	import { getInvoice } from "#modules/invoicing/invoices.remote.ts";
+	import StatusBadge from "#modules/invoicing/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/invoices/[number]"> } = $props();
 

@@ -2,9 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import OrderForm from "../order-form.svelte";
-	import { createOrder, getOrderFormOptions } from "../order.remote.ts";
+	import { OrderForm } from "#lib/orders/components.ts";
+	import { createOrder, getOrderFormOptions } from "#lib/orders/remotes.ts";
 </script>
 
 <svelte:head>

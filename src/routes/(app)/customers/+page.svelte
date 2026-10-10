@@ -3,9 +3,8 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import CustomersTable from "./customers-table.svelte";
-	import { getCustomers } from "./customers.remote.ts";
+	import { CustomersTable } from "#lib/customers/components.ts";
+	import { getCustomers } from "#lib/customers/remotes.ts";
 </script>
 
 <svelte:head>

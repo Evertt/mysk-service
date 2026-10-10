@@ -9,9 +9,8 @@
 	import FactoryIcon from "@lucide/svelte/icons/factory";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
+	import { getCurrentTenant, switchOrganization } from "#lib/auth/session.remote.ts";
 	import { useSidebar } from "#ui/sidebar";
-
-	import { getCurrentTenant, switchOrganization } from "./session.remote.ts";
 
 	const sidebar = useSidebar();
 	const tenant = $derived(await getCurrentTenant());

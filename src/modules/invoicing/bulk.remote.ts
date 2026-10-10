@@ -5,10 +5,10 @@
 import { error, isValidationError } from "@sveltejs/kit";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
-import { idsInTenant } from "#lib/server/auth";
+import { idsInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
-import { idsTarget, targetIds } from "#lib/server/lists";
+import { idsTarget, targetIds } from "#lib/server/lists/index.ts";
 
 import { getOrderInvoice } from "./invoicing.remote.ts";
 import { command } from "./remote-functions.ts";

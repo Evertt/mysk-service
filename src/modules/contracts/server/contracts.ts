@@ -6,7 +6,7 @@
 import { and, asc, inArray, lte, gte, ne } from "drizzle-orm";
 
 import type { OrderFacts } from "#lib/orders/extensions.ts";
-import { tenantJoin } from "#lib/server/auth";
+import { tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { NumberTarget } from "#lib/server/numbering.ts";

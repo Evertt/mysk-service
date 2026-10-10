@@ -17,7 +17,7 @@
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
-import type { Sentence, SubjectType } from "#lib/activity";
+import type { Sentence, SubjectType } from "#lib/activity/index.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 
 import { manifests } from "./manifests.gen.ts";

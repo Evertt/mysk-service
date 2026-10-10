@@ -6,10 +6,9 @@
 	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import { getOrderFacets, getOrders } from "./order-list.remote.ts";
-	import { ordersList } from "./orders-list.ts";
-	import OrdersTable from "./orders-table.svelte";
+	import { OrdersTable } from "#lib/orders/components.ts";
+	import { ordersList } from "#lib/orders/index.ts";
+	import { getOrderFacets, getOrders } from "#lib/orders/remotes.ts";
 
 	// The server pages, filters and sorts the orders, as the URL says: a change to the URL (which
 	// the table keeps in sync with itself) fetches the rows again, and the counts in the filters if

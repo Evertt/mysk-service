@@ -7,10 +7,9 @@
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
+	import { getCurrentUser, signOut } from "#lib/auth/session.remote.ts";
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { useSidebar } from "#ui/sidebar";
-
-	import { getCurrentUser, signOut } from "./session.remote.ts";
 
 	const sidebar = useSidebar();
 	const user = $derived(await getCurrentUser());

@@ -1,7 +1,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
-import { idInTenant, inTenant } from "#lib/server/auth";
+import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { deleteAndLog } from "#lib/server/records.ts";

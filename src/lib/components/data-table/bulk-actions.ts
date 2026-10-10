@@ -11,7 +11,7 @@
  */
 import type { Component } from "svelte";
 
-import { formatNumber } from "#lib/i18n";
+import { formatNumber } from "#lib/i18n/index.ts";
 
 import type { ListColumns, ListWhere } from "./list-definition.ts";
 

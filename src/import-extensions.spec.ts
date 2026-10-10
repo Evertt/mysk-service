@@ -3,7 +3,8 @@
  * TypeScript (`allowImportingTsExtensions` is on, and plain Node, which runs the seed, `org:create`
  * and `scripts/modules.ts`, needs it), `.svelte.ts` for rune modules, `.svelte` for components, and
  * `.js` only for real JavaScript (paraglide's generated files). Never `./x.js` for an `x.ts`, and
- * never `./x` without an extension.
+ * never `./x` without an extension, and no folder imported as `#lib/x` (a barrel is named
+ * `#lib/x/index.ts`: no `imports` entry maps a folder).
  *
  * Oxlint's `import/extensions` only checks that an extension is there, not that it's the file's
  * own, so this reads the specifiers (`from "…"`, `import("…")`, `vi.mock("…")`, …) of relative and
@@ -11,7 +12,7 @@
  * left to the type check. The `#ui/<name>` imports are a package.json `imports` pattern that adds
  * `/index.ts` itself, and `./$types` is Kit's.
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix, relative } from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
@@ -25,13 +26,6 @@ interface SourceFile {
 }
 
 const aliases: Record<string, string> = {
-	"#lib/activity": "src/lib/activity/index.ts",
-	"#lib/auth": "src/lib/auth/index.ts",
-	"#lib/i18n": "src/lib/i18n/index.ts",
-	"#lib/server/activity": "src/lib/server/activity/index.ts",
-	"#lib/server/auth": "src/lib/server/auth/index.ts",
-	"#lib/server/lists": "src/lib/server/lists/index.ts",
-	"#lib/server/mail": "src/lib/server/mail/index.ts",
 	"#lib/": "src/lib/",
 	"#modules/": "src/modules/",
 	"#e2e/": "e2e/",
@@ -60,7 +54,7 @@ export function realSpecifier(
 		? [specifier.slice(0, -".js".length) + ".ts"]
 		: /\.(?:ts|svelte)$/.test(specifier)
 			? []
-			: [".ts", ".svelte.ts", ".svelte", ".js"].map((extension) => specifier + extension);
+			: [".ts", ".svelte.ts", ".svelte", ".js", "/index.ts"].map((ending) => specifier + ending);
 	return guesses.find((guess) => exists(target(guess, path)!));
 }
 
@@ -87,6 +81,7 @@ describe("the check", () => {
 		"src/lib/card.svelte",
 		"src/lib/paraglide/runtime.js",
 		"src/lib/server/db/schema.ts",
+		"src/lib/folder/index.ts",
 	]);
 	const exists = (file: string) => present.has(file);
 	const files: SourceFile[] = [
@@ -105,6 +100,7 @@ describe("the check", () => {
 				`import { gone } from "./gone.js";`,
 				`import type { PageProps } from "./$types";`,
 				`import "./x";`,
+				`import { f } from "#lib/folder";`,
 			].join("\n"),
 		},
 		{ path: "src/routes/b.ts", source: `import { schema } from "../lib/server/db/schema";` },
@@ -118,6 +114,7 @@ describe("the check", () => {
 			`src/lib/a.ts:8 imports "./card", the file is "./card.svelte"`,
 			`src/lib/a.ts:9 imports "./x.js", the file is "./x.ts"`,
 			`src/lib/a.ts:12 imports "./x", the file is "./x.ts"`,
+			`src/lib/a.ts:13 imports "#lib/folder", the file is "#lib/folder/index.ts"`,
 			`src/routes/b.ts:1 imports "../lib/server/db/schema", the file is "../lib/server/db/schema.ts"`,
 		]);
 	});
@@ -144,7 +141,8 @@ function sourceFiles(): SourceFile[] {
 
 describe("the project", () => {
 	test("imports every file by its real extension", () => {
-		const exists = (file: string) => existsSync(join(root, file));
+		const exists = (file: string) =>
+			existsSync(join(root, file)) && statSync(join(root, file)).isFile();
 		expect(wrongExtensions(sourceFiles(), exists)).toEqual([]);
 	});
 });

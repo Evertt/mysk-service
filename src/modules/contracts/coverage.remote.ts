@@ -8,7 +8,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { addDays, startOfDay } from "#lib/dates.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 

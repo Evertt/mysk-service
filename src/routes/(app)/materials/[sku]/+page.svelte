@@ -7,18 +7,15 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import CustomerLink from "#lib/customers/customer-link.svelte";
-	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials/display.ts";
-	import StockBadge from "#lib/materials/stock-badge.svelte";
-	import OrderLink from "#lib/orders/order-link.svelte";
-	import StatusBadge from "#lib/orders/status-badge.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
+	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
+	import { StockBadge } from "#lib/materials/components.ts";
+	import { CountStockDialog, ReceiveStockDialog, StockHistory } from "#lib/materials/components.ts";
+	import { formatQuantity } from "#lib/materials/index.ts";
+	import { deleteMaterial, getMaterial } from "#lib/materials/remotes.ts";
+	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
 
-	import { deleteMaterial, getMaterial } from "../material.remote.ts";
 	import type { PageProps } from "./$types";
-	import CountStockDialog from "./count-stock-dialog.svelte";
-	import ReceiveStockDialog from "./receive-stock-dialog.svelte";
-	import StockHistory from "./stock-history.svelte";
 
 	let { params }: PageProps = $props();
 

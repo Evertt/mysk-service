@@ -15,10 +15,10 @@ import {
 	parseRoles,
 	removalRefusal,
 	roleChangeRefusal,
-} from "#lib/auth";
-import { label } from "#lib/i18n";
-import { recordActivityAfter } from "#lib/server/activity";
-import { auth, currentTenant, inTenant } from "#lib/server/auth";
+} from "#lib/auth/index.ts";
+import { label } from "#lib/i18n/index.ts";
+import { recordActivityAfter } from "#lib/server/activity/index.ts";
+import { auth, currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";

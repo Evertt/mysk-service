@@ -7,7 +7,7 @@
 <script lang="ts">
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
-	import { formatNumber } from "#lib/i18n";
+	import { formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { columnLabel, type DataTableColumnMeta } from "./features.ts";

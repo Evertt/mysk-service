@@ -2,9 +2,9 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { MaterialForm } from "#lib/materials/components.ts";
+	import { getMaterial, updateMaterial } from "#lib/materials/remotes.ts";
 
-	import MaterialForm from "../../material-form.svelte";
-	import { getMaterial, updateMaterial } from "../../material.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
