@@ -136,7 +136,14 @@ describe("modules", () => {
 			`select module_id from organization_module where organization_id = ? order by module_id`,
 			[south.id],
 		);
-		const lastEntry = await value<number>("select coalesce(max(id), 0) from activity");
+		// Other files on this lane may log entries meanwhile: count only module switches of South's.
+		const switches = (since: number) =>
+			rows(
+				`select subject_id, action from activity where organization_id = ? and subject_type = 'module'
+				 and action in ('module_enabled', 'module_disabled') and id > ?`,
+				[south.id, since],
+			);
+		const baseline = await value<number>("select coalesce(max(id), 0) from activity");
 		// The form as a tampered page would send it: without the module it switches.
 		await card
 			.locator("form input[hidden]")
@@ -151,7 +158,7 @@ describe("modules", () => {
 				[south.id],
 			),
 		).toEqual(rowsBefore);
-		expect(await value<number>("select coalesce(max(id), 0) from activity")).toBe(lastEntry);
+		expect(await switches(baseline)).toEqual([]);
 	});
 
 	test("a member can't change modules", async () => {

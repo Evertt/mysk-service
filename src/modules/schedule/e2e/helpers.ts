@@ -97,11 +97,8 @@ export function pageLocators(app: App) {
 			.first()
 			.getByRole("link")
 			.evaluateAll((links) => links.map((link) => link.textContent!.trim()));
-	/** The schedule's card on the settings page (by its name: other cards may mention schedules). */
-	const settingsCard = () =>
-		app.page
-			.locator("div.rounded-lg.border")
-			.filter({ has: app.page.getByText("Schedule", { exact: true }) });
+	/** The schedule's card on the settings page. */
+	const settingsCard = () => app.page.locator('[data-module="schedule"]');
 
 	/** Drags `source` onto `target` and waits for the server's answer to the move. */
 	async function drag(source: Locator, target: Locator) {

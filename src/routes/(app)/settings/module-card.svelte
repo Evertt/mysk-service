@@ -41,7 +41,7 @@
 	const asksFirst = $derived(canManage && !module.alwaysOn && module.on && needing.length > 0);
 </script>
 
-<div class="flex items-start gap-4 rounded-lg border p-4">
+<div class="flex items-start gap-4 rounded-lg border p-4" data-module={module.id}>
 	{#if Icon}
 		<Icon class="mt-0.5 size-5 text-muted-foreground" />
 	{/if}
