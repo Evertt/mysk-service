@@ -46,6 +46,38 @@ describe("generateModules", () => {
 	});
 	afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+	test("lists the modules in dependency order in every registry", () => {
+		for (const id of ["a", "z"]) {
+			put(
+				`src/modules/${id}/module.ts`,
+				`export default { id: "${id}"${id === "a" ? `, requires: ["z"]` : ""} };`,
+			);
+			put(`src/modules/${id}/server/seed.ts`);
+		}
+		generateModules(root);
+
+		const order = (file: string, pattern: RegExp) =>
+			[...read(file).matchAll(pattern)].map((match) => match[1]);
+		expect(order("src/lib/modules/manifests.gen.ts", /^import (\w+)Module /gm)).toEqual([
+			"sample",
+			"z",
+			"a",
+		]);
+		expect(read("src/lib/modules/ids.gen.ts")).toContain(`["sample", "z", "a"] as const`);
+		expect(order("src/lib/server/db/module-seeds.gen.ts", /^\t\{ id: "([\w-]+)"/gm)).toEqual([
+			"z",
+			"a",
+		]);
+		expect(read("src/lib/modules/ids.gen.ts")).toContain(
+			`"a": { requires: ["z"], enhances: [], alwaysOn: false },`,
+		);
+	});
+
+	test("refuses a module that requires one that isn't there", () => {
+		put("src/modules/sample/module.ts", `export default { id: "sample", requires: ["ghost"] };`);
+		expect(() => generateModules(root)).toThrow(/sample requires ghost, which isn't a module/);
+	});
+
 	test("writes the registries, the stubs, the guard and the message list", () => {
 		const { modules, changed } = generateModules(root);
 		expect(modules).toEqual(["sample"]);
