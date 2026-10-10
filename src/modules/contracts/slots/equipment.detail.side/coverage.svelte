@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { formatDate } from "#lib/i18n/index.ts";
 
-	import ContractLink from "../../contract-link.svelte";
 	import { getUnitCoverage } from "../../coverage.remote.ts";
-	import LevelBadge from "../../level-badge.svelte";
 	import { contractStatus } from "../../model.ts";
-	import ContractStatusBadge from "../../status-badge.svelte";
+	import ContractLink from "../../ui/contract-link.svelte";
+	import LevelBadge from "../../ui/level-badge.svelte";
+	import ContractStatusBadge from "../../ui/status-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
 

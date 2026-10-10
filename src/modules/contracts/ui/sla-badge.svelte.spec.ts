@@ -5,7 +5,7 @@ import { render } from "vitest-browser-svelte";
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 
-import type { SlaState } from "./coverage.ts";
+import type { SlaState } from "../coverage.ts";
 import SlaBadge from "./sla-badge.svelte";
 
 test.each<[SlaState, string, BadgeVariant]>([

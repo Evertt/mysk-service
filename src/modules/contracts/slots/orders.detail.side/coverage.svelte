@@ -7,10 +7,10 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
-	import ContractLink from "../../contract-link.svelte";
 	import { getOrderCoverage } from "../../coverage.remote.ts";
 	import { levels } from "../../display.ts";
-	import SlaBadge from "../../sla-badge.svelte";
+	import ContractLink from "../../ui/contract-link.svelte";
+	import SlaBadge from "../../ui/sla-badge.svelte";
 
 	let { number }: { number: string } = $props();
 

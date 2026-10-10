@@ -10,10 +10,10 @@
 	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
-	import ContractLink from "../../contract-link.svelte";
 	import { getContractsOverview } from "../../coverage.remote.ts";
-	import LevelBadge from "../../level-badge.svelte";
-	import SlaBadge from "../../sla-badge.svelte";
+	import ContractLink from "../../ui/contract-link.svelte";
+	import LevelBadge from "../../ui/level-badge.svelte";
+	import SlaBadge from "../../ui/sla-badge.svelte";
 
 	const data = $derived(await getContractsOverview());
 	const days = $derived(formatNumber(data.days));

@@ -4,8 +4,8 @@
 	`./model.ts`.
 -->
 <script lang="ts">
-	import { statuses } from "./display.ts";
-	import type { ContractStatus } from "./model.ts";
+	import { statuses } from "../display.ts";
+	import type { ContractStatus } from "../model.ts";
 
 	let { status }: { status: ContractStatus } = $props();
 
