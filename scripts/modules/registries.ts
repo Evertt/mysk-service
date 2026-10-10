@@ -66,6 +66,21 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			"",
 		].join("\n"),
 
+		"src/lib/server/db/module-schemas.gen.ts": [
+			registryHeader("src/modules/*/server/schema.ts"),
+			...withSchema.map(
+				(m) => `import * as ${camel(m.id)}Schema from "#modules/${m.id}/server/schema.ts";`,
+			),
+			...(withSchema.length ? [""] : []),
+			`/** Each module's tables by module id, for the check that they reference only what they may. */`,
+			`export const moduleSchemas = ${
+				withSchema.length
+					? `{\n${withSchema.map((m) => `\t${JSON.stringify(m.id)}: ${camel(m.id)}Schema,`).join("\n")}\n}`
+					: "{}"
+			};`,
+			"",
+		].join("\n"),
+
 		"src/lib/server/db/module-seeds.gen.ts": [
 			registryHeader("src/modules/*/server/seed.ts"),
 			`import type { ModuleSeed } from "./seed/module-seed.ts";`,

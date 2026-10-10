@@ -27,7 +27,7 @@ Put a module next to the code that uses it, in the nearest folder that contains 
   activity log, list plans and bulk helpers, mail, the modules' extension points): `src/lib/server/db/`,
   `server/auth/`, `server/activity/`, `server/lists/`, `server/mail/`, `server/modules/`; the loose
   `src/lib/server/*.ts` that remain are `forms.ts`, `records.ts` and `numbering.ts`.
-- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
+- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder (see "Modules"). Core code never imports from `src/modules/`.
 
 **Imports name a file by its real extension**: `.ts` for TypeScript (`allowImportingTsExtensions` is
 on, and plain Node, which runs the seed, `org:create` and `scripts/modules.ts`, needs it), `.svelte.ts`
@@ -118,7 +118,7 @@ migration committed.
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
   dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
   `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
-  `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
+  `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
   and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
   everything wrong, when a module's route folder collides with a core route or another module's, a
   route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
@@ -154,12 +154,27 @@ migration committed.
   route stubs guard its server loads, form actions and endpoints (see above); its remote functions
   are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
-  imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
-  checks (`#modules/…` is for the generated registries only). Module tables reference core tables
-  (composite tenant keys, columns from `#lib/server/db/columns.ts`), never the reverse; one migration
-  stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts` checks that no core table has a
-  foreign key to a module table. A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
+  imports a module (`#modules/…` is for the generated registries only), which
+  `src/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
+  `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
+  never the reverse; one migration stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts`
+  checks that no core table has a foreign key to a module table, and that a module's tables
+  reference only core tables and those of modules it requires (`module-schemas.gen.ts` lists each
+  module's schema for it). A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
   its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
+- **The `api/` folder**: what a module offers the modules that depend on it (its types, queries and
+  services; none has one yet) is in `src/modules/<id>/api/`, and nothing else of
+  it is public. A module imports another's files only as `#modules/<other>/api/…`, and only if it
+  lists `<other>` in `requires`; for a module it only `enhances` it may import `api/extensions.ts`
+  (the points its enhancements plug into) and types. `boundaries.spec.ts` checks it (`apiImports`)
+  with the graph from the manifests, so a module that needs another says so first.
+- **Read tables, write through services**: a module may read any table it can import (a join to
+  `order`), but changes only its own: `.insert()`, `.update()` and `.delete()` take its own
+  tables (`foreignWrites` in `boundaries.spec.ts`). A change to the core's records goes through the
+  service the core offers, which holds the rules and the activity log entry, e.g.
+  `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
+  invoice's orders invoiced and completed again. A module's own `api/` offers such services to the
+  modules that require it.
 
 Contracts and invoicing are the modules (`src/modules/contracts/`, `src/modules/invoicing/`: look
 there for an example of each part; the registries list them by id). Extension points are added with
