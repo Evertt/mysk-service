@@ -6,9 +6,25 @@ import { generateModules } from "./generate.ts";
 
 /** The files whose coming and going changes what the generator writes. */
 const inputs =
-	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|server(?:\/(?:index|schema|seed)\.ts)?|messages(?:\/.*)?))?)?$/;
+	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|slots(?:\/.*)?|bulk-actions(?:\/.*)?|api(?:\/extensions\.ts)?|server(?:\/(?:index|schema|seed)\.ts)?|messages(?:\/.*)?))?)?$/;
 
-/** Reruns the generator in dev when a module's files come, go or (for route scripts) change. */
+/** The files that declare extension points, whose ids and names the generator reads. */
+const pointFiles = /^src\/(?:lib\/[^/]+|modules\/[^/]+\/api)\/extensions\.ts$/;
+
+/**
+ * Whether a watcher event on `path` (relative to the root, with `/`) makes the generator rerun:
+ * every event on its inputs, but `change` only on a module's `module.ts` (its `requires`,
+ * `enhances` and `alwaysOn` are read from it), on route scripts (a change may add or drop a page
+ * option or an export) and on the files that declare extension points.
+ */
+export function rerunsOn(event: string, path: string) {
+	if (pointFiles.test(path)) return true;
+	if (!inputs.test(path)) return false;
+	if (event !== "change") return true;
+	return /^src\/modules\/[^/]+\/module\.ts$/.test(path) || /\/routes\/.*\+[^/]*\.[jt]s$/.test(path);
+}
+
+/** Reruns the generator in dev when a module's files come, go or (for some) change. */
 export function modulesPlugin(root: string): Plugin {
 	return {
 		name: "modules",
@@ -26,10 +42,7 @@ export function modulesPlugin(root: string): Plugin {
 			};
 			const watch = (event: string) => (file: string) => {
 				const path = relative(root, file).replaceAll("\\", "/");
-				if (!inputs.test(path)) return;
-				// A change in a route script may add or drop a page option or an export.
-				if (event === "change" && !/\/routes\/.*\+[^/]*\.[jt]s$/.test(path)) return;
-				regenerate();
+				if (rerunsOn(event, path)) regenerate();
 			};
 			for (const event of ["add", "addDir", "unlink", "unlinkDir", "change"]) {
 				watcher.on(event, watch(event));

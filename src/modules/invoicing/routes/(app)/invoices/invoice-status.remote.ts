@@ -3,7 +3,7 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import type { OrderStatus } from "#lib/models.ts";
+import { setOrdersStatus } from "#lib/orders/server/order-changes.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
 import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth";
@@ -51,27 +51,13 @@ async function changing(tx: Transaction, id: number, to: InvoiceStatus) {
 	return found;
 }
 
+/** What an invoice's orders say about their change of status. */
+const invoiceNote = (found: { number: string }) =>
+	m.invoices_invoice_number({ number: found.number });
+
 const orderIdsOf = (found: { lines: { orderId: number | null }[] }) => [
 	...new Set(found.lines.flatMap((line) => (line.orderId ? [line.orderId] : []))),
 ];
-
-/** Logs the change of status of an invoice's orders, which issuing or voiding it makes. */
-async function recordOrderStatuses(
-	tx: Transaction,
-	orders: { id: number; number: string; status: OrderStatus }[],
-	status: OrderStatus,
-	found: { number: string },
-) {
-	for (const changed of orders) {
-		await recordActivity(tx, {
-			action: "updated",
-			subject: { type: "order", id: changed.id, label: changed.number },
-			before: changed,
-			after: { status },
-			note: m.invoices_invoice_number({ number: found.number }),
-		});
-	}
-}
 
 /**
  * Issues (sends) a draft: it gets today's date, its due date and the tenant's current VAT rate,
@@ -96,8 +82,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 					m.invoices_orders_not_completed({ count: undone.length, orders: undone.join(", ") }),
 				);
 			}
-			await tx.update(order).set({ status: "invoiced" }).where(idsInTenant(order, orderIds));
-			await recordOrderStatuses(tx, orders, "invoiced", found);
+			await setOrdersStatus(tx, orders, "invoiced", invoiceNote(found));
 		}
 
 		const issuedOn = today();
@@ -158,13 +143,12 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		const found = await changing(tx, id, "void");
 		const orderIds = orderIdsOf(found);
 		if (found.status === "sent" && orderIds.length) {
-			const orders = await tx
-				.update(order)
-				.set({ status: "completed" })
-				.where(and(idsInTenant(order, orderIds), eq(order.status, "invoiced")))
-				.returning({ id: order.id, number: order.number });
-			const before = orders.map((o) => ({ ...o, status: "invoiced" as const }));
-			await recordOrderStatuses(tx, before, "completed", found);
+			// Only those still invoiced go back.
+			const invoiced = await tx
+				.select({ id: order.id, number: order.number, status: order.status })
+				.from(order)
+				.where(and(idsInTenant(order, orderIds), eq(order.status, "invoiced")));
+			await setOrdersStatus(tx, invoiced, "completed", invoiceNote(found));
 		}
 		await tx
 			.update(invoice)

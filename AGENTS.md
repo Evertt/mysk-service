@@ -20,14 +20,16 @@ Put a module next to the code that uses it, in the nearest folder that contains 
 - **Used by several routes under one folder**: in that folder, e.g. `src/routes/(app)/orders/order.remote.ts` serves `/orders/new`, `/orders/[number]` and its edit page, and `src/routes/(app)/app-sidebar.svelte` serves every route behind the login. Import it relatively (`../order.remote.ts`). Plain helpers that a route's remote files share (a `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, e.g. `orders/order-list.server.ts`, which SvelteKit keeps out of client bundles.
 - **A core domain's shared code** (links, badges, display maps, domain rules used across sections): in `src/lib/<domain>/` (`customers`, `engineers`, `equipment`, `materials`, `orders`), its server-only logic in `src/lib/<domain>/server/`, imported via `#lib/<domain>/...`, e.g. `#lib/orders/order-link.svelte`, `#lib/materials/server/stock.ts`.
 - **Generic, domain-free code** (UI kit, data table, forms, themes, activity subjects, auth,
-  i18n, module manifests): `src/lib/components/`, `src/lib/activity/`, `src/lib/auth/`,
-  `src/lib/i18n/`, `src/lib/modules/`, `src/lib/themes/`; the loose `src/lib/*.ts` that remain are
-  domain enums (`models.ts`), valibot blocks (`schema.ts`), date maths (`dates.ts`), code shapes
-  (`numbering.ts`) and shadcn's `cn` (`utils.ts`). Infrastructure on the server (database, auth,
-  activity log, list plans and bulk helpers, mail, the modules' extension points): `src/lib/server/db/`,
-  `server/auth/`, `server/activity/`, `server/lists/`, `server/mail/`, `server/modules/`; the loose
-  `src/lib/server/*.ts` that remain are `forms.ts`, `records.ts` and `numbering.ts`.
-- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder. Core code never imports from `src/modules/`.
+  i18n, module manifests, extension point declarations): `src/lib/components/`, `src/lib/activity/`,
+  `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`, `src/lib/extensions/`, `src/lib/themes/`;
+  the loose `src/lib/*.ts` that remain are domain enums (`models.ts`), valibot blocks
+  (`schema.ts`), date maths (`dates.ts`), code shapes (`numbering.ts`), what's billed besides
+  orders (`billing.ts`, types the seed shares with invoicing) and shadcn's `cn` (`utils.ts`).
+  Infrastructure on the server (database, auth, activity log, list plans and bulk helpers, mail,
+  the modules' route guards): `src/lib/server/db/`, `server/auth/`, `server/activity/`,
+  `server/lists/`, `server/mail/`, `server/modules/`; the loose `src/lib/server/*.ts` that remain
+  are `extensions.ts` (the hooks' dispatch), `forms.ts`, `records.ts` and `numbering.ts`.
+- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder (see "Modules"). Core code never imports from `src/modules/`.
 
 **Imports name a file by its real extension**: `.ts` for TypeScript (`allowImportingTsExtensions` is
 on, and plain Node, which runs the seed, `org:create` and `scripts/modules.ts`, needs it), `.svelte.ts`
@@ -83,18 +85,24 @@ helpers are in `src/lib/server/auth/session.ts`:
   table. Where a reference must belong to the same customer (an order's equipment, a contract's
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
-  about modules. A module adds to core pages through `slots` in `src/lib/modules/manifests.ts` (components
-  that load their own data with the module's remote functions; `module-slots.svelte` renders each
-  in a boundary of its own, so one that fails shows a notice instead of breaking the page), and to
-  core server logic through hooks in `src/lib/server/modules/hooks.ts`; both only take part for
-  tenants that have the module. A module
-  declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
-  `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
-  `tag`, `billableItems`: asked in parallel about a batch, answers merged in registry order, an
-  error fails the request) or an event after commit (`committed`: in registry order once the
-  transaction has committed, via `afterCommit()` in `src/lib/server/db/serialize.ts`; errors are
-  logged, not thrown). Core calls each hook from one function (`priceOrders()`, `tagOrders()`,
-  `orderCommitted()`, `billableItems()`); a new extension point is added when a module needs it.
+  about modules. A module adds to core pages through slots (components that load their own data
+  with the module's remote functions; `<ExtensionSlot>`, `src/routes/(app)/extension-slot.svelte`,
+  renders each in a boundary of its own, so one that fails shows a notice instead of breaking the
+  page) and bulk actions on tables' selections, and to its owners' server logic through hooks; all
+  only take part for tenants that have the module.
+  A hook is an extension point its owner declares (`#lib/extensions/define.ts`): core's in
+  `src/lib/<domain>/extensions.ts` (`orders.adjustPrices`, `orders.tag`, `orders.committed` in
+  `src/lib/orders/extensions.ts`), a module's in its `api/extensions.ts`
+  (`invoicing.billableItems`). A module contributes in its `server/index.ts`:
+  `defineServerModule(id, [contribute(adjustPrices, …), …])`, with the point imported from its
+  owner. The owner calls it through the kernel (`src/lib/server/extensions.ts`), for the modules
+  that are on, in registry order: `collect()` for a collector (asked in parallel about a batch;
+  the point's `onError` says whether an error fails the request, `fail`, or is logged and left
+  out, `skip`), `emit()` for an event after commit (via `afterCommit()` in
+  `src/lib/server/db/serialize.ts`; errors are logged, not thrown) and `vote()` for a vote (any
+  refusal wins). Each point has one caller in its owner's domain (`priceOrders()`, `tagOrders()`
+  and `orderCommitted()` in `src/lib/orders/server/`, `offeredItems()` in invoicing's
+  `server/billable.ts`); a new extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`), which applies the modules' adjustments.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
@@ -106,7 +114,7 @@ helpers are in `src/lib/server/auth/session.ts`:
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
 self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
-description, `route`, icon, `slots`, `subjects`, `actions`, `bulkActions`; it is in every tenant's
+description, `route`, icon, `subjects`, `actions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 logic; server-only), `routes/` (its pages, mirroring `src/routes`), its components and remote
@@ -118,11 +126,19 @@ migration committed.
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
   dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
   `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
-  `src/lib/server/db/modules.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
+  `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
   and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
   everything wrong, when a module's route folder collides with a core route or another module's, a
   route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
   write, or message sections are missing in a language or not unique.
+- **Dependencies**: `module.ts` may list `requires` (modules it can't work without) and `enhances`
+  (modules it only adds to when they're on) as string-literal arrays, and `alwaysOn: true`; the
+  generator reads them with a pattern, and `manifests.spec.ts` compares them with the runtime
+  values. A module whose requirement is off is off everywhere (`effectiveModules()` in
+  `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
+  The settings page switches a module on together with its requirements and off together with its
+  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a set that
+  would leave a module without its requirements.
 - **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in a
   `(modules)` group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte`
   → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`. They are real routes (`RouteId`,
@@ -139,6 +155,21 @@ migration committed.
   actions and endpoints without the layouts, so the stub of each server file (`+page.server.ts`,
   `+layout.server.ts`, `+server.ts`) also guards its `load`, `actions` and request handlers
   (`GET`, `POST`, …) before running the module's (`guarded()`, `guardedActions()`).
+- **Slots and bulk actions are contributed by file**: a component at a slot is
+  `src/modules/<id>/slots/<point id>/<name>.svelte` (e.g. `slots/orders.detail.side/coverage.svelte`),
+  and a table's bulk actions are the default export of `src/modules/<id>/bulk-actions/<point id>.ts`
+  (an array of `BulkAction`s). The generator lists them in `src/lib/extensions/contributions.gen.ts`
+  with `slotContribution()` and `bulkContribution()`, which hold each to its point's types, and
+  checks that the point exists and that its owner is core, the module itself, or a module it
+  `requires` or `enhances`. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
+  contribution's helper components live outside `slots/` (next to the module's other components). A
+  slot's component must declare the slot's props (optional is fine): a component without them is
+  refused by the type check at a slot that passes props. The owner's page renders a slot with
+  `<ExtensionSlot point={detailSide} props={{ number }} />` (`detailSide` from the owner's
+  `extensions.ts`), and a table gets its contributed actions with
+  `extensionBulkActions(list)` (`src/routes/(app)/extension-bulk-actions.svelte.ts`); both show only
+  the contributions of the modules the tenant has, in registry order, and key a contribution by its
+  id (`<module>/<point id>/<name>`).
 - A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
   files to a core route. To add something to a core page, use a slot. Its pages type their params
   with `RouteParams<"/(app)/(modules)/contracts/[number]">` from `$app/types`, since `./$types`
@@ -153,19 +184,34 @@ migration committed.
   there (not `remote.ts`: SvelteKit takes any `remote.*` file for a remote file). The module's
   route stubs guard its server loads, form actions and endpoints (see above); its remote functions
   are guarded only by the set they're made with, which is what keeps their data safe.
-- Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
-  imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
-  checks (`#modules/…` is for the generated registries only). Module tables reference core tables
-  (composite tenant keys, columns from `#lib/server/db/columns.ts`), never the reverse; one migration
-  stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts` checks that no core table has a
-  foreign key to a module table. A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
+- Core declares its extension points (`#lib/<domain>/extensions.ts`); core never
+  imports a module (`#modules/…` is for the generated registries only), which
+  `src/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
+  `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
+  never the reverse; one migration stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts`
+  checks that no core table has a foreign key to a module table, and that a module's tables
+  reference only core tables and those of modules it requires (`module-schemas.gen.ts` lists each
+  module's schema for it). A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
   its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
+- **The `api/` folder**: what a module offers the modules that depend on it (its types, queries and
+  services, and its extension points in `api/extensions.ts`, like invoicing's) is in `src/modules/<id>/api/`, and nothing else of
+  it is public. A module imports another's files only as `#modules/<other>/api/…`, and only if it
+  lists `<other>` in `requires`; for a module it only `enhances` it may import `api/extensions.ts`
+  (the points its enhancements plug into) and types. `boundaries.spec.ts` checks it (`apiImports`)
+  with the graph from the manifests, so a module that needs another says so first.
+- **Read tables, write through services**: a module may read any table it can import (a join to
+  `order`), but changes only its own: `.insert()`, `.update()` and `.delete()` take its own
+  tables (`foreignWrites` in `boundaries.spec.ts`). A change to the core's records goes through the
+  service the core offers, which holds the rules and the activity log entry, e.g.
+  `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
+  invoice's orders invoiced and completed again. A module's own `api/` offers such services to the
+  modules that require it.
 
 Contracts and invoicing are the modules (`src/modules/contracts/`, `src/modules/invoicing/`: look
 there for an example of each part; the registries list them by id). Extension points are added with
 the first module that needs them. Not there yet: several `nav` entries per module, module
-columns, filters and row actions in tables, `order.actions`-style slots, `settings.cards`, and the
-server `refuseChange`/`saved` hooks.
+columns, filters and row actions in tables, `order.actions`-style slots, slot options (order,
+roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
 
 - A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`): `generate()` makes its
   data for a tenant right after the core's, with the same faker (so the demo data doesn't change

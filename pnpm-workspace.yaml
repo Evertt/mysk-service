@@ -13,7 +13,7 @@ patchedDependencies:
   "svelte-sonner@1.2.1": patches/svelte-sonner@1.2.1.patch
   # Hydration skipped past the end of an async block that holds a `<svelte:boundary>` that failed
   # on the server (`skip_nodes` didn't count its `<!--[?…-->` marker as an opening), so the page
-  # failed to hydrate; see `module-slots.svelte`. Still in 5.57.2: drop it once Svelte fixes it.
+  # failed to hydrate; see `extension-slot.svelte`. Still in 5.57.2: drop it once Svelte fixes it.
   svelte@5.57.1: patches/svelte@5.57.1.patch
 peerDependencyRules:
   allowAny:

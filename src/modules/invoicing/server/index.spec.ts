@@ -1,21 +1,26 @@
 import { expect, test, vi } from "vite-plus/test";
 
-import { orderCommitted } from "#lib/server/modules/hooks.ts";
+import { committed } from "#lib/orders/extensions.ts";
+import { emit, type ServerModule } from "#lib/server/extensions.ts";
 
 import invoicing from "./index.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
-// The core, without the modules in `src/modules`.
-vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
+// The registry has only this module.
+const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => registry.modules,
+}));
 const refreshed = vi.hoisted(() => [] as string[]);
 vi.mock("../invoicing.remote.ts", () => ({
 	getOrderInvoice: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
 }));
 
 test("the invoicing module refreshes the invoice card of a saved order", async () => {
-	orderCommitted({ number: "ORD-2026-00003" }, [invoicing]);
+	registry.modules = [invoicing];
+	emit(committed, { number: "ORD-2026-00003" }, ["invoicing"]);
 	await new Promise((resolve) => setTimeout(resolve));
 	expect(refreshed).toEqual(["ORD-2026-00003"]);
 });

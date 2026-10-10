@@ -12,7 +12,7 @@ import {
 	type OrderType,
 	orderTypes,
 } from "#lib/models.ts";
-import type { PriceAdjustment } from "#lib/modules/manifests.ts";
+import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 /** An order on the unit, with what it took and cost. */
 export interface HistoryOrder {

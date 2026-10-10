@@ -10,10 +10,6 @@ export default defineModule({
 	description: m.contracts_module_description,
 	route: "/(app)/(modules)/contracts",
 	icon: FileCheckIcon,
-	slots: {
-		dashboard: () => import("./dashboard-cards.svelte"),
-		order: () => import("./order-coverage.svelte"),
-		equipment: () => import("./equipment-coverage.svelte"),
-	},
 	subjects: contractSubjects,
+	enhances: ["invoicing"],
 });

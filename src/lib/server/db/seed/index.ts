@@ -25,7 +25,7 @@ import { moduleSeeds } from "../module-seeds.gen.ts";
 import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
-import { orderSeeds, type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateStockMovements } from "./stock.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
@@ -75,12 +75,9 @@ const totals: Record<string, number> = {};
 const count = (table: string, rows: unknown[]) =>
 	(totals[table] = (totals[table] ?? 0) + rows.length);
 
-/** The modules' seeds, each after the ones it builds on. */
-const seeds = orderSeeds(moduleSeeds);
-
 await db.transaction(async (tx) => {
 	// The modules' tables first: they reference the core's.
-	for (const { seed } of seeds.toReversed()) await seed.clear?.(tx);
+	for (const { seed } of moduleSeeds.toReversed()) await seed.clear?.(tx);
 	for (const table of [
 		schema.activity,
 		schema.savedView,
@@ -130,7 +127,7 @@ await db.transaction(async (tx) => {
 		const data = generateTenant(faker, tenant.size);
 		// The modules' data follows from the core's, with the same faker, and may add to it.
 		const generated: Record<string, unknown> = {};
-		for (const { id, seed } of seeds) {
+		for (const { id, seed } of moduleSeeds) {
 			if (!tenant.modules.includes(id) || !seed.generate) continue;
 			const before = (generatedBefore[id] ??= []);
 			generated[id] = seed.generate({ ...data, faker }, before);
@@ -206,7 +203,7 @@ await db.transaction(async (tx) => {
 			equipmentIds: rows.equipments.map((row) => row.id),
 			orderIds: rows.orders.map((row) => row.id),
 			data: generated,
-			collect: seedCollectors(seeds, tenant, generated),
+			collect: seedCollectors(moduleSeeds, tenant, generated),
 		});
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
@@ -216,7 +213,7 @@ await db.transaction(async (tx) => {
 		for (const [table, list] of Object.entries(rows)) count(table, list);
 	}
 
-	for (const { id, seed } of seeds) {
+	for (const { id, seed } of moduleSeeds) {
 		const having = seeded
 			.filter((tenant) => tenant.modules.includes(id))
 			.map((tenant) => ({ ...tenant, data: tenant.data[id] }));

@@ -14,11 +14,12 @@
 	import WarrantyBadge from "#lib/equipment/warranty-badge.svelte";
 	import { formatCents, formatDate } from "#lib/i18n";
 	import { isEditableOrder } from "#lib/models.ts";
+	import { detailSide } from "#lib/orders/extensions.ts";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 	import StatusBadge from "#lib/orders/status-badge.svelte";
 	import TypeLabel from "#lib/orders/type-label.svelte";
 
-	import ModuleSlots from "../../module-slots.svelte";
+	import ExtensionSlot from "../../extension-slot.svelte";
 	import OrderTags from "../order-tags.svelte";
 	import { deleteOrder, getOrder } from "../order.remote.ts";
 	import type { PageProps } from "./$types";
@@ -82,7 +83,7 @@
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">
-		<ModuleSlots name="order" props={{ number: order.number }} />
+		<ExtensionSlot point={detailSide} props={{ number: order.number }} />
 
 		<Card.Root>
 			<Card.Header>

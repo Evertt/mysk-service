@@ -34,6 +34,12 @@ const nextRequest = () => {
 	event = { locals };
 };
 
+// The made-up graph of modules, in which `core-ish` is always on and `addon` requires `base`.
+vi.mock("#lib/modules/ids.ts", async (importOriginal) => ({
+	...(await importOriginal<typeof import("#lib/modules/ids.ts")>()),
+	moduleGraph: (await import("#lib/modules/fakes.ts")).fakeGraph,
+}));
+
 // An in-memory database instead of the app's, which needs `DATABASE_URL`.
 vi.mock("#lib/server/db/index.ts", async () => {
 	const { createClient } = await import("@libsql/client");
@@ -297,9 +303,9 @@ describe("loadTenant", () => {
 			('m2', 'north', 'jo', 'admin, member', 1000),
 			('m3', 'east', 'sam', 'owner', 1000)`);
 		await db.run(sql`insert into organization_module (organization_id, module_id) values
-			('south', 'contracts'),
+			('south', 'base'),
 			('south', 'retired'),
-			('east', 'contracts')`);
+			('east', 'addon')`);
 	});
 
 	test("uses the active organization", async () => {
@@ -308,13 +314,19 @@ describe("loadTenant", () => {
 			name: "South Services",
 			slug: "south",
 			roles: ["member"],
-			modules: ["contracts"],
+			modules: ["base", "core-ish"],
 		});
 	});
 
 	test("ignores a module the app no longer has", async () => {
 		const found = await loadTenant("jo", "south");
-		expect(found?.modules).toEqual(["contracts"]);
+		expect(found?.modules).toEqual(["base", "core-ish"]);
+	});
+
+	test("leaves out a module whose requirement is off, and adds the always-on ones", async () => {
+		// East has a row for `addon` only, which requires `base`.
+		const found = await loadTenant("sam", "east");
+		expect(found?.modules).toEqual(["core-ish"]);
 	});
 
 	test("falls back to the first organization joined", async () => {
@@ -329,7 +341,7 @@ describe("loadTenant", () => {
 	test("splits several roles and only lists the tenant's own modules", async () => {
 		expect(await loadTenant("jo", "north")).toMatchObject({
 			roles: ["admin", "member"],
-			modules: [],
+			modules: ["core-ish"],
 		});
 	});
 

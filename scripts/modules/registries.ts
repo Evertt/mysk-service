@@ -14,8 +14,23 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 	return {
 		"src/lib/modules/ids.gen.ts": [
 			registryHeader("src/modules/*/module.ts"),
-			`/** The ids of the modules in \`src/modules\`, for code that can't import their manifests. */`,
+			`/** The ids of the modules in \`src/modules\`, in dependency order, for code that can't import their manifests. */`,
 			`export const generatedModuleIds = ${list(modules.map((m) => JSON.stringify(m.id)))} as const;`,
+			"",
+			`/** What each module's \`module.ts\` says about the others: \`requires\`, \`enhances\` and \`alwaysOn\`. */`,
+			`export const generatedModuleGraph: Record<`,
+			`\t(typeof generatedModuleIds)[number],`,
+			`\t{ requires: readonly string[]; enhances: readonly string[]; alwaysOn: boolean }`,
+			`> = ${
+				modules.length
+					? `{\n${modules
+							.map(
+								(m) =>
+									`\t${JSON.stringify(m.id)}: { requires: ${list(m.requires.map((id) => JSON.stringify(id)))}, enhances: ${list(m.enhances.map((id) => JSON.stringify(id)))}, alwaysOn: ${m.alwaysOn} },`,
+							)
+							.join("\n")}\n} as const`
+					: "{}"
+			};`,
 			"",
 		].join("\n"),
 
@@ -35,7 +50,7 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			...(withServer.length ? [""] : []),
 			`/**`,
 			` * A function, not a constant: the modules import \`defineServerModule()\` from`,
-			` * \`#lib/server/modules/hooks.ts\`, which imports this, so one of them is always evaluated first.`,
+			` * \`#lib/server/extensions.ts\`, which imports this, so one of them is always evaluated first.`,
 			` */`,
 			`export function generatedServerModules() {`,
 			`\treturn ${list(withServer.map((m) => `${camel(m.id)}Server`))} as const;`,
@@ -48,6 +63,21 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			...(withSchema.length
 				? withSchema.map((m) => `export * from "#modules/${m.id}/server/schema.ts";`)
 				: ["export {};"]),
+			"",
+		].join("\n"),
+
+		"src/lib/server/db/module-schemas.gen.ts": [
+			registryHeader("src/modules/*/server/schema.ts"),
+			...withSchema.map(
+				(m) => `import * as ${camel(m.id)}Schema from "#modules/${m.id}/server/schema.ts";`,
+			),
+			...(withSchema.length ? [""] : []),
+			`/** Each module's tables by module id, for the check that they reference only what they may. */`,
+			`export const moduleSchemas = ${
+				withSchema.length
+					? `{\n${withSchema.map((m) => `\t${JSON.stringify(m.id)}: ${camel(m.id)}Schema,`).join("\n")}\n}`
+					: "{}"
+			};`,
 			"",
 		].join("\n"),
 

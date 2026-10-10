@@ -1,7 +1,8 @@
 <!--
 	@component
-	A made-up module's card in the `order` slot that fails, for `module-slots.svelte.spec.ts`: it
-	awaits its data like a real one awaits its remote query, which throws while `data.fails` is set.
+	A made-up module's card in the `orders.detail.side` slot that fails, for
+	`extension-slot.svelte.spec.ts`: it awaits its data like a real one awaits its remote query,
+	which throws while `data.fails` is set.
 -->
 <script lang="ts" module>
 	export const data = { fails: true };

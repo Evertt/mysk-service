@@ -17,10 +17,15 @@ const config: KnipConfig = {
 		// Run by drizzle-kit (`drizzle.config.ts` reads `DATABASE_URL`, so knip's plugin can't).
 		"drizzle.config.ts",
 		// The modules' files that `scripts/modules.ts` links into the app: the registries import the
-		// manifests and server halves, and the route stubs import the routes (all generated).
+		// manifests, server halves and contributions to extension points, and the route stubs import
+		// the routes (all generated).
 		"src/modules/*/module.ts",
 		"src/modules/*/server/{index,schema,seed}.ts",
+		"src/modules/*/slots/*/*.svelte",
+		"src/modules/*/bulk-actions/*.ts",
 		"src/modules/*/routes/**/+*.{ts,svelte}",
+		// (`AnySlotContribution` and `AnyBulkContribution` in `src/lib/extensions/define.ts` are tagged
+		// `@public` for the same reason: only the generated `contributions.gen.ts` imports them.)
 		// The tests of every Vitest project, including the modules' end-to-end tests.
 		"src/**/*.{test,spec}.{ts,js}",
 		"e2e/**/*.test.ts",

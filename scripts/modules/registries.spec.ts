@@ -15,6 +15,23 @@ describe("renderRegistries", () => {
 		expect(files["src/lib/server/modules/hooks.gen.ts"]).toContain("return [] as const;");
 		expect(files["src/lib/server/db/modules.gen.ts"]).toContain("export {};");
 		expect(files["src/lib/server/db/module-seeds.gen.ts"]).toContain("= [];");
+		expect(files["src/lib/server/db/module-schemas.gen.ts"]).toContain(
+			"export const moduleSchemas = {};",
+		);
+	});
+
+	test("describe the graph of the modules", () => {
+		const files = renderRegistries([
+			module("a"),
+			module("b", { requires: ["a"], enhances: ["c"], alwaysOn: true }),
+		]);
+		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
+			`"b": { requires: ["a"], enhances: ["c"], alwaysOn: true },`,
+		);
+		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
+			`"a": { requires: [], enhances: [], alwaysOn: false },`,
+		);
+		expect(renderRegistries([])["src/lib/modules/ids.gen.ts"]).toContain("> = {};");
 	});
 
 	test("name each module's files that exist", () => {
@@ -37,5 +54,22 @@ describe("renderRegistries", () => {
 			`export * from "#modules/alpha-beta/server/schema.ts";`,
 		);
 		expect(files["src/lib/server/db/module-seeds.gen.ts"]).not.toContain("alpha");
+	});
+
+	test("collect each module's schema by namespace, in dependency order", () => {
+		const files = renderRegistries([
+			module("alpha-beta", { server: { index: false, schema: true, seed: false } }),
+			module("gamma", { server: { index: true, schema: false, seed: true } }),
+			module("delta", { server: { index: false, schema: true, seed: false } }),
+		]);
+		const schemas = files["src/lib/server/db/module-schemas.gen.ts"];
+		expect(schemas).toContain(
+			`import * as alphaBetaSchema from "#modules/alpha-beta/server/schema.ts";`,
+		);
+		expect(schemas).toContain(`import * as deltaSchema from "#modules/delta/server/schema.ts";`);
+		expect(schemas).toContain(
+			`export const moduleSchemas = {\n\t"alpha-beta": alphaBetaSchema,\n\t"delta": deltaSchema,\n};`,
+		);
+		expect(schemas).not.toContain("gamma");
 	});
 });

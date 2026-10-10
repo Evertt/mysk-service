@@ -3,12 +3,13 @@
 
 	import StatCard from "#lib/components/stat-card.svelte";
 	import CustomerLink from "#lib/customers/customer-link.svelte";
+	import { cards } from "#lib/dashboard/extensions.ts";
 	import EngineerLink from "#lib/engineers/engineer-link.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 	import PriorityBadge from "#lib/orders/priority-badge.svelte";
 
-	import ModuleSlots from "../module-slots.svelte";
+	import ExtensionSlot from "../extension-slot.svelte";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
 	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
 	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
@@ -72,7 +73,7 @@
 	<EquipmentByStatusChart data={charts.equipmentByStatus} />
 </div>
 
-<ModuleSlots name="dashboard" props={{}} class="grid items-start gap-6 lg:grid-cols-2" />
+<ExtensionSlot point={cards} props={{}} class="grid items-start gap-6 lg:grid-cols-2" />
 
 <Card.Root>
 	<Card.Header>

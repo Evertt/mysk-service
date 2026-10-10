@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { lineTotal } from "#lib/models.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
+import { adjustPrices, tag } from "#lib/orders/extensions.ts";
 import { db } from "#lib/server/db/index.ts";
-import type { ServerModule } from "#lib/server/modules/hooks.ts";
+import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
 import {
 	laborCost,
@@ -18,7 +20,7 @@ import {
 const locals = { user: { id: "u1", name: "Jo" }, tenant: { organizationId: "north" } };
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`. The priceOrders tests
-// pass their own modules.
+// pass the modules that are on.
 vi.mock("#lib/server/db/index.ts", async () => {
 	const { createClient } = await import("@libsql/client");
 	const { drizzle } = await import("drizzle-orm/libsql");
@@ -26,8 +28,11 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
 });
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
-// The core, without the modules in `src/modules`.
-vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
+// Made-up modules instead of the ones in `src/modules`, set by the priceOrders tests.
+const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => registry.modules,
+}));
 
 test("labour is charged at the engineer's hourly rate", () => {
 	expect(laborCost(2.5, 6000)).toBe(15_000);
@@ -127,36 +132,48 @@ describe("priceOrders", () => {
 
 	test("applies each module's adjustments, in the modules' order, to the orders they name", async () => {
 		const seen: unknown[] = [];
-		const halfLabour: ServerModule = {
-			orders: {
-				async adjustPrices(orders) {
+		registry.modules = [
+			defineServerModule("half-labour" as ModuleId, [
+				contribute(adjustPrices, async (orders) => {
 					seen.push(...orders);
 					return new Map([[2, [{ label: "Half labour", amount: -orders[1].labor / 2 }]]]);
-				},
-			},
-		};
-		const fee: ServerModule = {
-			orders: {
-				async adjustPrices() {
-					return new Map([[2, [{ label: "Fee", amount: 500 }]]]);
-				},
-			},
-		};
-		const tagsOnly: ServerModule = { orders: { tag: async () => new Map() } };
+				}),
+			]),
+			defineServerModule("tags-only" as ModuleId, [contribute(tag, async () => new Map())]),
+			defineServerModule("fee" as ModuleId, [
+				contribute(adjustPrices, async () => new Map([[2, [{ label: "Fee", amount: 500 }]]])),
+			]),
+		];
 
-		const [first, second] = await priceOrders([order(1), order(2)], [halfLabour, tagsOnly, fee]);
+		const enabled = ["fee", "tags-only", "half-labour"];
+		const [first, second] = await priceOrders([order(1), order(2)], enabled);
 		expect(first).toEqual({ materials: 10_000, labor: 12_000, adjustments: [], total: 22_000 });
 		expect(second.adjustments.map((a) => a.label)).toEqual(["Half labour", "Fee"]);
 		expect(second.total).toBe(10_000 + 12_000 - 6_000 + 500);
 		// Modules get the labour's cost, not its hours and rate.
 		expect(seen[0]).toMatchObject({ id: 1, materials: 10_000, labor: 12_000 });
 		expect(seen[0]).not.toHaveProperty("laborHours");
+		// Only the modules that are on.
+		expect((await priceOrders([order(2)], ["fee"]))[0].adjustments).toEqual([
+			{ label: "Fee", amount: 500 },
+		]);
+	});
+
+	test("a module that fails fails the pricing", async () => {
+		registry.modules = [
+			defineServerModule("broken" as ModuleId, [
+				contribute(adjustPrices, () => Promise.reject(new Error("Broken"))),
+			]),
+		];
+		await expect(priceOrders([order(1)], ["broken"])).rejects.toThrow("Broken");
 	});
 
 	test("doesn't ask the modules about no orders", async () => {
-		const module: ServerModule = {
-			orders: { adjustPrices: () => Promise.reject(new Error("Shouldn't be asked")) },
-		};
-		expect(await priceOrders([], [module])).toEqual([]);
+		registry.modules = [
+			defineServerModule("broken" as ModuleId, [
+				contribute(adjustPrices, () => Promise.reject(new Error("Shouldn't be asked"))),
+			]),
+		];
+		expect(await priceOrders([], ["broken"])).toEqual([]);
 	});
 });

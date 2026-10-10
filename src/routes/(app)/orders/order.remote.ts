@@ -6,6 +6,7 @@ import * as v from "valibot";
 import { atTime } from "#lib/dates.ts";
 import { OrderStockShortage } from "#lib/materials/server/stock.ts";
 import { isEditableOrder, lineTotal } from "#lib/models.ts";
+import { orderCommitted, tagOrders } from "#lib/orders/server/hooks.ts";
 import {
 	checkLines,
 	type LineInput,
@@ -19,7 +20,6 @@ import { recordActivity } from "#lib/server/activity";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
-import { orderCommitted, tagOrders } from "#lib/server/modules/hooks.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 

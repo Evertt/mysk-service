@@ -46,6 +46,38 @@ describe("generateModules", () => {
 	});
 	afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+	test("lists the modules in dependency order in every registry", () => {
+		for (const id of ["a", "z"]) {
+			put(
+				`src/modules/${id}/module.ts`,
+				`export default { id: "${id}"${id === "a" ? `, requires: ["z"]` : ""} };`,
+			);
+			put(`src/modules/${id}/server/seed.ts`);
+		}
+		generateModules(root);
+
+		const order = (file: string, pattern: RegExp) =>
+			[...read(file).matchAll(pattern)].map((match) => match[1]);
+		expect(order("src/lib/modules/manifests.gen.ts", /^import (\w+)Module /gm)).toEqual([
+			"sample",
+			"z",
+			"a",
+		]);
+		expect(read("src/lib/modules/ids.gen.ts")).toContain(`["sample", "z", "a"] as const`);
+		expect(order("src/lib/server/db/module-seeds.gen.ts", /^\t\{ id: "([\w-]+)"/gm)).toEqual([
+			"z",
+			"a",
+		]);
+		expect(read("src/lib/modules/ids.gen.ts")).toContain(
+			`"a": { requires: ["z"], enhances: [], alwaysOn: false },`,
+		);
+	});
+
+	test("refuses a module that requires one that isn't there", () => {
+		put("src/modules/sample/module.ts", `export default { id: "sample", requires: ["ghost"] };`);
+		expect(() => generateModules(root)).toThrow(/sample requires ghost, which isn't a module/);
+	});
+
 	test("writes the registries, the stubs, the guard and the message list", () => {
 		const { modules, changed } = generateModules(root);
 		expect(modules).toEqual(["sample"]);
@@ -210,6 +242,28 @@ describe("generateModules", () => {
 		put("src/modules/sample/messages/nl/extra.json", "{}");
 		expect(() => generateModules(root)).toThrow(
 			/Bad-Name[\s\S]*stray has no module\.ts[\s\S]*extra\.json is missing/,
+		);
+	});
+
+	test("lists the modules' contributions to extension points, and refuses a wrong one", () => {
+		put(
+			"src/lib/orders/extensions.ts",
+			`export const detailSide = defineSlot<{ number: string }>("orders.detail.side");`,
+		);
+		put("src/modules/sample/slots/orders.detail.side/card.svelte");
+		put("src/modules/sample/slots/orders.detail.side/card.svelte.spec.ts");
+		generateModules(root);
+		const file = read("src/lib/extensions/contributions.gen.ts");
+		expect(file).toContain(
+			`import { detailSide as ordersDetailSide } from "#lib/orders/extensions.ts";`,
+		);
+		expect(file).toContain(
+			`slotContribution(ordersDetailSide, "sample", "card", () => import("../../modules/sample/slots/orders.detail.side/card.svelte"))`,
+		);
+
+		put("src/modules/sample/bulk-actions/orders.detail.side.ts");
+		expect(() => generateModules(root)).toThrow(
+			/bulk-actions\/orders\.detail\.side\.ts: orders\.detail\.side is a slot, not a bulk table/,
 		);
 	});
 

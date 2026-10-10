@@ -1,15 +1,15 @@
 <!--
 	@component
-	The invoicing module's cards on the dashboard (the `dashboard` slot in `#lib/modules/manifests.ts`): what
-	customers owe and how much of it is overdue, and the most overdue invoices.
+	The invoicing module's cards on the dashboard (`dashboard.cards`, `#lib/dashboard/extensions.ts`):
+	what customers owe and how much of it is overdue, and the most overdue invoices.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
 	import { formatCents, formatDate } from "#lib/i18n";
 
-	import InvoiceLink from "./invoice-link.svelte";
-	import { getReceivables } from "./invoicing.remote.ts";
+	import InvoiceLink from "../../invoice-link.svelte";
+	import { getReceivables } from "../../invoicing.remote.ts";
 
 	const data = $derived(await getReceivables());
 </script>

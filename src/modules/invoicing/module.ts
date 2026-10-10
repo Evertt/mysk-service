@@ -10,13 +10,6 @@ export default defineModule({
 	description: m.invoices_module_description,
 	route: "/(app)/(modules)/invoices",
 	icon: ReceiptTextIcon,
-	slots: {
-		dashboard: () => import("./dashboard-cards.svelte"),
-		order: () => import("./order-invoice.svelte"),
-	},
 	subjects: invoicingSubjects,
 	actions: invoicingActions,
-	bulkActions: {
-		orders: () => import("./order-bulk-actions.ts"),
-	},
 });
