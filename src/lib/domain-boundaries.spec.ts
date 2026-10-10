@@ -36,7 +36,7 @@ export const domains = ["customers", "engineers", "equipment", "materials", "ord
  * `routes/`. Until then their route folders still hold the files that are about to move, and those
  * may use the old imports.
  */
-export const migratedDomains: string[] = ["engineers"];
+export const migratedDomains: string[] = ["engineers", "customers"];
 export const migratedModules: string[] = [];
 
 const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];
@@ -133,14 +133,18 @@ export function barrelContents(files: SourceFile[]): string[] {
 }
 
 /** Route folders that still hold a file that isn't a route, for the domains and modules that moved. */
-export function routeFolders(paths: string[]): string[] {
+export function routeFolders(
+	paths: string[],
+	movedDomains = migratedDomains,
+	movedModules = migratedModules,
+): string[] {
 	return paths.flatMap((path) => {
 		const domain = /^src\/routes\/\(app\)\/([^/]+)\/(.*)$/.exec(path);
-		if (domain && migratedDomains.includes(domain[1]) && !/(^|\/)\+[^/]*$/.test(domain[2])) {
+		if (domain && movedDomains.includes(domain[1]) && !/(^|\/)\+[^/]*$/.test(domain[2])) {
 			return [`${path} is not a route file: it belongs in src/lib/${domain[1]}/`];
 		}
 		const module = /^src\/modules\/([^/]+)\/routes\/(.*)$/.exec(path);
-		if (module && migratedModules.includes(module[1]) && !/(^|\/)\+[^/]*$/.test(module[2])) {
+		if (module && movedModules.includes(module[1]) && !/(^|\/)\+[^/]*$/.test(module[2])) {
 			return [`${path} is not a route file: it belongs in src/modules/${module[1]}/`];
 		}
 		return [];
@@ -321,20 +325,19 @@ describe("the checks", () => {
 	});
 
 	test("find a route file's neighbours that aren't route files, once the domain has moved", () => {
-		migratedDomains.push("orders");
-		try {
-			expect(
-				routeFolders([
+		expect(
+			routeFolders(
+				[
 					"src/routes/(app)/orders/+page.svelte",
 					"src/routes/(app)/orders/[number]/columns.ts",
 					"src/routes/(app)/customers/columns.ts",
-				]),
-			).toEqual([
-				"src/routes/(app)/orders/[number]/columns.ts is not a route file: it belongs in src/lib/orders/",
-			]);
-		} finally {
-			migratedDomains.pop();
-		}
+				],
+				["orders"],
+				["a"],
+			),
+		).toEqual([
+			"src/routes/(app)/orders/[number]/columns.ts is not a route file: it belongs in src/lib/orders/",
+		]);
 	});
 });
 

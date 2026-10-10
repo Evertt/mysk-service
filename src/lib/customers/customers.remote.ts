@@ -2,7 +2,6 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { europeanCountries } from "#lib/customers/index.ts";
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
@@ -16,7 +15,8 @@ import { nextNumber } from "#lib/server/numbering.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { customerFields } from "./customer-schema.ts";
+import { europeanCountries } from "./countries.ts";
+import { customerFields } from "./form/customer-schema.ts";
 
 /** All customers with how many equipment units and open orders they have, by name. */
 export const getCustomers = forMembers.query(async () => {

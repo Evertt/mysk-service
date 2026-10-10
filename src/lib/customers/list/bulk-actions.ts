@@ -3,8 +3,8 @@ import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 
+import { bulkDeleteCustomers } from "../customers.remote.ts";
 import type { CustomerRow } from "./columns.ts";
-import { bulkDeleteCustomers } from "./customers.remote.ts";
 
 // Whether a customer has orders (closed ones too), only the server knows.
 export const deleteCustomers: BulkAction<CustomerRow> = {

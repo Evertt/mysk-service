@@ -2,9 +2,9 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { CustomerForm } from "#lib/customers/components.ts";
+	import { getCustomer, getCustomerFormOptions, updateCustomer } from "#lib/customers/remotes.ts";
 
-	import CustomerForm from "../../customer-form.svelte";
-	import { getCustomer, getCustomerFormOptions, updateCustomer } from "../../customers.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

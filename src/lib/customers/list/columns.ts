@@ -4,12 +4,13 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { CustomerLink, SegmentBadge } from "#lib/customers/components.ts";
-import { countryName } from "#lib/customers/index.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { customerSegments } from "#lib/models.ts";
 
-import type { getCustomers } from "./customers.remote.ts";
+import { countryName } from "../countries.ts";
+import type { getCustomers } from "../customers.remote.ts";
+import CustomerLink from "../ui/customer-link.svelte";
+import SegmentBadge from "../ui/segment-badge.svelte";
 
 export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
 
