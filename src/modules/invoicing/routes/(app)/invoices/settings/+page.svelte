@@ -15,7 +15,7 @@
 	import { getInvoicingSettings, saveSettings } from "./settings.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/invoices/settings"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/invoices/settings"> } = $props();
 
 	const settings = $derived(await getInvoicingSettings());
 </script>
@@ -28,7 +28,7 @@
 	title={m.invoices_settings_title()}
 	description={m.invoices_settings_description()}
 	breadcrumbs={[
-		{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+		{ label: m.invoices_title(), href: resolve("/(app)/(modules)/invoices") },
 		{ label: m.invoices_settings() },
 	]}
 />
@@ -73,7 +73,7 @@
 		<FormActions
 			pending={saveSettings.pending}
 			submitLabel={m.invoices_save_settings()}
-			cancelHref={resolve("/(app)/invoices")}
+			cancelHref={resolve("/(app)/(modules)/invoices")}
 		/>
 	</form>
 {:else}

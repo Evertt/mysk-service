@@ -48,8 +48,15 @@ describe("checkModules", () => {
 		]);
 		expect(problems).toHaveLength(4);
 		expect(problems.join("\n")).toMatch(/outside a route folder of its own/);
+		expect(problems.join("\n")).not.toMatch(/\(modules\)/);
 		expect(problems.join("\n")).toMatch(/isn't a route file/);
 		expect(problems.join("\n")).toMatch(/plain name/);
+	});
+
+	test("refuses routes in a (modules) group, which is the generator's", () => {
+		expect(
+			check([module("a", { routeFiles: ["(app)/(modules)/a/+page.svelte"] })]).join("\n"),
+		).toMatch(/a\/routes\/\(app\)\/\(modules\)\/a\/\+page\.svelte: \(modules\) is the group/);
 	});
 
 	test("refuses message sections that are missing in a language or not unique", () => {

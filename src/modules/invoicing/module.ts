@@ -8,7 +8,7 @@ export default defineModule({
 	id: "invoicing",
 	label: m.invoices_module_name,
 	description: m.invoices_module_description,
-	route: "/(app)/invoices",
+	route: "/(app)/(modules)/invoices",
 	icon: ReceiptTextIcon,
 	slots: {
 		dashboard: () => import("./dashboard-cards.svelte"),

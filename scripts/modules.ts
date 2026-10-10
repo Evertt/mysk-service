@@ -14,16 +14,23 @@
  *   `src/lib/server/modules/hooks.gen.ts`), the tables (`server/schema.ts`, in
  *   `src/lib/server/db/modules.gen.ts`) and the seeders (`server/seed.ts`, in
  *   `src/lib/server/db/module-seeds.gen.ts`);
- * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, at the same
- *   path, so the routes are real ones (typed `./$types`, `RouteId`, layouts, endpoints, code
- *   splitting, and SvelteKit's server-only guard, which only follows files under `src/routes`).
- *   Components become a wrapper that passes its props on; scripts name their exports again, and
- *   copy the page options that are literals (`export const ssr = false`), because SvelteKit reads
- *   those without running the file, and gives up on `export * from`. Each top-level route folder it
- *   creates gets a `.gitignore` that ignores the whole folder, which is also how it knows the
- *   folder is its own and removes it when the module is gone;
- * - writes a `+layout.server.ts` at each module route root with pages that refuses the tenants
- *   without the module (`guardModule()`), then runs the module's own `+layout.server.ts` load;
+ * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, in a `(modules)`
+ *   group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte` becomes
+ *   `src/routes/(app)/(modules)/contracts/[number]/+page.svelte` (route id
+ *   `/(app)/(modules)/contracts/[number]`, URL `/contracts/…`), so the routes are real ones (typed
+ *   `./$types`, `RouteId`, the groups' layouts, endpoints, code splitting, and SvelteKit's
+ *   server-only guard, which only follows files under `src/routes`) and the core's route folders
+ *   hold only the core's files. Components become a wrapper that passes its props on; scripts name
+ *   their exports again, and copy the page options that are literals (`export const ssr = false`),
+ *   because SvelteKit reads those without running the file, and gives up on `export * from`. Every
+ *   `(modules)` folder in `src/routes` is the generator's (gitignored): it deletes and rewrites it,
+ *   and stops when one holds a file it didn't write. It also removes the stubs its earlier versions
+ *   wrote beside the core's route folders;
+ * - guards the modules' routes: a `+layout.server.ts` in each `(modules)` group refuses the
+ *   tenants without the module that owns the route (`guardModuleRoute()`, with the route folders'
+ *   owners), and since Kit runs server loads in parallel, and form actions and endpoints without
+ *   layouts, the stub of each server file guards its `load`, `actions` and request handlers itself
+ *   (`guarded()`, `guardedActions()`);
  * - lists the module's message files in `pathPattern`: the core's entries first, then each module's,
  *   in id order;
  * - checks the rules and stops with the full list of what's wrong: a module's folder name is its id

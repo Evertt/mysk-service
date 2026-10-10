@@ -77,7 +77,7 @@ export const columns = column.columns([
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
 				label: row.original.number,
-				href: resolve("/(app)/invoices/[number]", { number: row.original.number }),
+				href: resolve("/(app)/(modules)/invoices/[number]", { number: row.original.number }),
 				copy: [
 					{ label: m.invoices_copy_number(), value: row.original.number },
 					{ label: m.invoices_copy_customer_code(), value: row.original.customer.code },

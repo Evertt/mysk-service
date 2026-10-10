@@ -7,10 +7,12 @@
 	import ContractForm from "../../contract-form.svelte";
 	import { getContract, getContractFormOptions, updateContract } from "../../contracts.remote.ts";
 
-	let { params }: { params: RouteParams<"/(app)/contracts/[number]/edit"> } = $props();
+	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]/edit"> } = $props();
 
 	const { contract } = $derived(await getContract(params.number));
-	const contractHref = $derived(resolve("/(app)/contracts/[number]", { number: contract.number }));
+	const contractHref = $derived(
+		resolve("/(app)/(modules)/contracts/[number]", { number: contract.number }),
+	);
 </script>
 
 <svelte:head>
@@ -23,7 +25,7 @@
 	title={m.contracts_edit_title({ number: contract.number })}
 	description={contract.customer.name}
 	breadcrumbs={[
-		{ label: m.contracts_title(), href: resolve("/(app)/contracts") },
+		{ label: m.contracts_title(), href: resolve("/(app)/(modules)/contracts") },
 		{ label: contract.number, href: contractHref },
 		{ label: m.common_edit() },
 	]}

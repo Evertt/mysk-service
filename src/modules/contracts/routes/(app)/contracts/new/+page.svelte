@@ -8,7 +8,7 @@
 	import { createContract, getContractFormOptions } from "../contracts.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/contracts/new"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/contracts/new"> } = $props();
 </script>
 
 <svelte:head>
@@ -19,7 +19,7 @@
 	title={m.contracts_new()}
 	description={m.contracts_new_description()}
 	breadcrumbs={[
-		{ label: m.contracts_title(), href: resolve("/(app)/contracts") },
+		{ label: m.contracts_title(), href: resolve("/(app)/(modules)/contracts") },
 		{ label: m.contracts_breadcrumb_new() },
 	]}
 />
@@ -27,5 +27,5 @@
 <ContractForm
 	form={createContract}
 	options={await getContractFormOptions()}
-	cancelHref={resolve("/(app)/contracts")}
+	cancelHref={resolve("/(app)/(modules)/contracts")}
 />
