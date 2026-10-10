@@ -34,26 +34,31 @@ const materialById = async (id: number) =>
 describe("in North", () => {
 	let number: string;
 
-	test("the seeded order lines took their materials from stock, except quotes' and cancelled ones'", async () => {
+	test("the order lines took their materials from stock, except quotes' and cancelled ones'", async () => {
+		// Per order and material, not by counting movements: other files on this worker may have
+		// changed orders first, e.g. raised a line's quantity (a movement more, no line more) or
+		// cancelled an order (its movements stay, with returns that even them out).
+		expect(
+			await rows(
+				`select o.number, entry.material_id, round(sum(entry.quantity), 2) as difference from (
+					select l.order_id, l.material_id, l.quantity from order_line l
+					join "order" o on o.id = l.order_id
+					where l.organization_id = ? and o.status not in ('quote', 'cancelled')
+					union all
+					select order_id, material_id, quantity from stock_movement
+					where organization_id = ? and order_id is not null
+				) entry join "order" o on o.id = entry.order_id
+				group by entry.order_id, entry.material_id having round(sum(entry.quantity), 2) <> 0`,
+				[north.id, north.id],
+			),
+			"orders whose movements don't add up to their lines",
+		).toEqual([]);
 		expect(
 			await value(
 				`select count(*) from stock_movement where kind = 'consumption' and organization_id = ?`,
 				[north.id],
 			),
-		).toBe(
-			await value(
-				`select count(*) from order_line l join "order" o on o.id = l.order_id
-				 where l.organization_id = ? and o.status not in ('quote', 'cancelled')`,
-				[north.id],
-			),
-		);
-		expect(
-			await value(
-				`select count(*) from stock_movement s join "order" o on o.id = s.order_id
-				 where s.organization_id = ? and o.status in ('quote', 'cancelled')`,
-				[north.id],
-			),
-		).toBe(0);
+		).toBeGreaterThan(1000);
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
