@@ -1,8 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { equipmentStatuses } from "#lib/models.ts";
+import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
-import { isUnderWarranty, statusOptions } from "./display.ts";
+import { describeOptions } from "../display.test-support.ts";
+import { categoryOptions, isUnderWarranty, statusOptions } from "./display.ts";
+
+describeOptions("equipment categories", categoryOptions, equipmentCategories);
+// Equipment statuses are shown as plain text.
+describeOptions("equipment statuses", statusOptions, equipmentStatuses, { icons: false });
 
 describe("isUnderWarranty", () => {
 	const until = new Date(2026, 9, 20);

@@ -1,3 +1,4 @@
+import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 /**
  * The bulk actions the current tenant's modules add to a core table's selection (the table is a
  * `defineBulkTable()` of `#lib/extensions/define.ts`, listed in
@@ -7,8 +8,6 @@
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import { bulkContributions } from "#lib/extensions/contributions.gen.ts";
 import type { BulkContribution, BulkTable } from "#lib/extensions/define.ts";
-
-import { getCurrentTenant } from "./session.remote.ts";
 
 /** Call it while the table's component initializes. */
 export function extensionBulkActions<Row>(table: BulkTable<Row>) {

@@ -1,6 +1,19 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatQuantity, stockLevel } from "./display.ts";
+import { materialUnits } from "#lib/models.ts";
+
+import { describeOptions } from "../display.test-support.ts";
+import {
+	formatQuantity,
+	stockLevel,
+	stockLevelOptions,
+	stockLevels,
+	unitOptions,
+} from "./display.ts";
+
+// Material units are shown as plain text.
+describeOptions("material units", unitOptions, materialUnits, { icons: false });
+describeOptions("stock levels", stockLevelOptions, stockLevels);
 
 describe("stockLevel", () => {
 	test("nothing, or less than nothing, is out of stock", () => {

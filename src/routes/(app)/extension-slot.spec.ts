@@ -37,7 +37,7 @@ vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 	};
 });
 
-vi.mock("./session.remote.ts", () => ({
+vi.mock("#lib/auth/session.remote.ts", () => ({
 	getCurrentTenant: vi.fn(() => Promise.resolve({ modules: ["gadgets", "gizmos", "widgets"] })),
 }));
 

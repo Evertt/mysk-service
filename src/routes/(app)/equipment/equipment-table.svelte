@@ -1,13 +1,13 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 	import { categoryOptions, statusOptions } from "#lib/equipment/display.ts";
 
-	import { getCustomerOptions } from "../filter-options.remote.ts";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
 	import type { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";

@@ -3,10 +3,11 @@
 	The app shell (sidebar and header) for everything behind the login.
 -->
 <script lang="ts">
+	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+
 	import type { LayoutProps } from "./$types";
 	import AppHeader from "./app-header.svelte";
 	import AppSidebar from "./app-sidebar.svelte";
-	import { getCurrentTenant } from "./session.remote.ts";
 
 	let { children }: LayoutProps = $props();
 

@@ -167,7 +167,7 @@ migration committed.
   refused by the type check at a slot that passes props. The owner's page renders a slot with
   `<ExtensionSlot point={detailSide} props={{ number }} />` (`detailSide` from the owner's
   `extensions.ts`), and a table gets its contributed actions with
-  `extensionBulkActions(list)` (`src/routes/(app)/extension-bulk-actions.svelte.ts`); both show only
+  `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
   id (`<module>/<point id>/<name>`).
 - A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
