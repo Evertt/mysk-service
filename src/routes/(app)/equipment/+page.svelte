@@ -6,10 +6,9 @@
 	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
-	import { equipmentList } from "./equipment-list.ts";
-	import EquipmentTable from "./equipment-table.svelte";
+	import { EquipmentTable } from "#lib/equipment/components.ts";
+	import { equipmentList } from "#lib/equipment/index.ts";
+	import { getEquipmentFacets, getEquipmentList } from "#lib/equipment/remotes.ts";
 
 	// The server pages, filters and sorts the units, as the URL says (see the orders page).
 	const query = $derived(

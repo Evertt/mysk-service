@@ -2,7 +2,6 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -12,7 +11,8 @@ import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { equipmentFields } from "./equipment-schema.ts";
+import { equipmentFields } from "./form/equipment-schema.ts";
+import { removeEquipment } from "./server/equipment.ts";
 
 /**
  * One of the tenant's units with its owner, and how many orders it has (which keep it from being

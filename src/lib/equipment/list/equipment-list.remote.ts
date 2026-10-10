@@ -2,7 +2,6 @@ import { and, count, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
-import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -17,7 +16,8 @@ import {
 } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { equipmentSql, withEquipmentJoins } from "./equipment-list.server.ts";
+import { removeEquipment } from "../server/equipment.ts";
+import { equipmentSql, withEquipmentJoins } from "../server/list-sql.ts";
 import { equipmentList } from "./equipment-list.ts";
 
 /**

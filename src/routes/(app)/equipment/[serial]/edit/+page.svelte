@@ -2,13 +2,13 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import EquipmentForm from "../../equipment-form.svelte";
+	import { EquipmentForm } from "#lib/equipment/components.ts";
 	import {
 		getEquipment,
 		getEquipmentFormOptions,
 		updateEquipment,
-	} from "../../equipment.remote.ts";
+	} from "#lib/equipment/remotes.ts";
+
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

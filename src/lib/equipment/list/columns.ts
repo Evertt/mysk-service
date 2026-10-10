@@ -5,9 +5,10 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
-import { CategoryLabel, StatusBadge } from "#lib/equipment/components.ts";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
+import CategoryLabel from "../ui/category-label.svelte";
+import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
 

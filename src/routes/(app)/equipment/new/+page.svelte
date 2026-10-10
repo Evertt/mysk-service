@@ -2,9 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import EquipmentForm from "../equipment-form.svelte";
-	import { createEquipment, getEquipmentFormOptions } from "../equipment.remote.ts";
+	import { EquipmentForm } from "#lib/equipment/components.ts";
+	import { createEquipment, getEquipmentFormOptions } from "#lib/equipment/remotes.ts";
 </script>
 
 <svelte:head>

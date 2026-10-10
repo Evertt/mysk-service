@@ -12,7 +12,7 @@ import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { type ListSql, nocase } from "#lib/server/lists/index.ts";
 
-import { equipmentList } from "./equipment-list.ts";
+import { equipmentList } from "../list/equipment-list.ts";
 
 /**
  * The equipment list's joins: the unit's owner, scoped to the tenant. Written once, for the rows,

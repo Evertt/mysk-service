@@ -3,9 +3,9 @@ import CircleDotIcon from "@lucide/svelte/icons/circle-dot";
 import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import { statusOptions } from "#lib/equipment/index.ts";
 import type { EquipmentStatus } from "#lib/models.ts";
 
+import { statusOptions } from "../display.ts";
 import type { EquipmentRow } from "./columns.ts";
 import {
 	bulkDeleteEquipment,

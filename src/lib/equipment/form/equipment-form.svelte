@@ -10,16 +10,16 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { toDateInput } from "#lib/dates.ts";
-	import { categories } from "#lib/equipment/index.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
+	import { categories } from "../display.ts";
 	import type {
 		createEquipment,
 		getEquipment,
 		getEquipmentFormOptions,
 		updateEquipment,
-	} from "./equipment.remote.ts";
+	} from "../equipment.remote.ts";
 
 	type Options = Awaited<ReturnType<typeof getEquipmentFormOptions>>;
 	type Unit = Awaited<ReturnType<typeof getEquipment>>["unit"];

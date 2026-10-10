@@ -12,15 +12,14 @@
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
 	} from "#lib/equipment/components.ts";
+	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
 	import { categories } from "#lib/equipment/index.ts";
+	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
 	import { formatDate, label } from "#lib/i18n/index.ts";
 
 	import ExtensionSlot from "../../extension-slot.svelte";
-	import { deleteEquipment, getEquipment } from "../equipment.remote.ts";
 	import type { PageProps } from "./$types";
-	import ServiceStats from "./service-stats.svelte";
-	import ServiceTimeline from "./service-timeline.svelte";
 
 	let { params }: PageProps = $props();
 
