@@ -50,7 +50,7 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			...(withServer.length ? [""] : []),
 			`/**`,
 			` * A function, not a constant: the modules import \`defineServerModule()\` from`,
-			` * \`#lib/server/modules/hooks.ts\`, which imports this, so one of them is always evaluated first.`,
+			` * \`#lib/server/extensions.ts\`, which imports this, so one of them is always evaluated first.`,
 			` */`,
 			`export function generatedServerModules() {`,
 			`\treturn ${list(withServer.map((m) => `${camel(m.id)}Server`))} as const;`,

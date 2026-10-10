@@ -1,18 +1,20 @@
 /**
  * What a customer can be billed for: their completed orders, priced by `priceOrders()` like
- * everywhere else, and what the tenant's other modules offer through `billableItems()` (e.g. a
- * contract's monthly fees). Either is billed while it's on an invoice that isn't void: on a draft,
- * or sent or paid. Issuing an invoice marks its orders invoiced; voiding a sent one puts them
- * back. Making the invoice is in `./invoices.ts`, the rules in `../invoice.ts`.
+ * everywhere else, and what the tenant's other modules offer through `invoicing.billableItems`
+ * (`../api/extensions.ts`, e.g. a contract's monthly fees). Either is billed while it's on an
+ * invoice that isn't void: on a draft, or sent or paid. Issuing an invoice marks its orders
+ * invoiced; voiding a sent one puts them back. Making the invoice is in `./invoices.ts`, the rules in `../invoice.ts`.
  */
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
+import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
-import { type BillableItem, billableItems } from "#lib/server/modules/hooks.ts";
+import { collect } from "#lib/server/extensions.ts";
 
+import { billableItems } from "../api/extensions.ts";
 import { itemLine, type LineDraft, orderLines, today } from "../invoice.ts";
 import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
@@ -98,10 +100,23 @@ async function billedReferences(references: string[]) {
 	return new Set(rows.map((row) => row.source));
 }
 
+/**
+ * What the tenant's modules offer the customer for in `period`, by date: the one place
+ * `invoicing.billableItems` is asked.
+ */
+export async function offeredItems(
+	customerId: number,
+	period: BillingPeriod,
+	enabled?: readonly string[],
+): Promise<BillableItem[]> {
+	const answers = await collect(billableItems, { customerId, period }, enabled);
+	return answers.flat().sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 /** The modules' items for the customer that are due by `at` and not billed yet. */
 async function unbilledItems(customerId: number, at: Date): Promise<BillableItem[]> {
 	const settings = await settingsOf();
-	const items = await billableItems(customerId, { from: settings.billFrom, until: today(at) });
+	const items = await offeredItems(customerId, { from: settings.billFrom, until: today(at) });
 	const done = await billedReferences(items.map((item) => item.reference));
 	return items.filter((item) => !done.has(item.reference));
 }

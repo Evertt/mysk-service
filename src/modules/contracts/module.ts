@@ -16,4 +16,5 @@ export default defineModule({
 		equipment: () => import("./equipment-coverage.svelte"),
 	},
 	subjects: contractSubjects,
+	enhances: ["invoicing"],
 });

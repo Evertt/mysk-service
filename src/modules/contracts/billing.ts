@@ -2,8 +2,8 @@
  * What a service contract bills: its monthly fee, for each month of the contract. Months run from
  * the contract's first day, e.g. the 15th to the 14th of the next month (from the 31st, to the end
  * of shorter months); the last one ends with the contract. A month is billed in advance, from its
- * first day, and in full. The server offers them to invoicing (`billing.billableItems` in
- * `server/index.ts`). Without imports at runtime, so the seed script can use it too.
+ * first day, and in full. The server offers them to invoicing (`invoicing.billableItems`
+ * in `server/index.ts`). Without imports at runtime, so the seed script can use it too.
  */
 
 /** One month of a contract, as days at midnight (both inclusive). */
@@ -53,7 +53,7 @@ export interface MonthlyFeeText {
 	detail: string;
 }
 
-/** What a month of a contract bills, as a billable item (see `#lib/server/modules/hooks.ts`). */
+/** What a month of a contract bills, as a billable item (see `#lib/billing.ts`). */
 export const monthlyFee = (
 	contract: { id: number; monthlyFee: number },
 	month: ContractMonth,

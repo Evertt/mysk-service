@@ -26,7 +26,3 @@ export interface ModuleNode {
  * ids and cycles in `requires`), so `moduleIds` lists every module after the ones it requires.
  */
 export const moduleGraph = generatedModuleGraph as Readonly<Record<ModuleId, ModuleNode>>;
-
-/** Whether `id` is one of the modules, e.g. one read from the database. */
-export const isModuleId = (id: string): id is ModuleId =>
-	(moduleIds as readonly string[]).includes(id);

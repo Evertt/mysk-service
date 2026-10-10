@@ -1,4 +1,4 @@
-import type { PriceAdjustment } from "#lib/modules/manifests.ts";
+import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 /**
  * What an invoice is, as rules: its number, its totals, where it stands, and the lines an order

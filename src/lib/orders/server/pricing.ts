@@ -1,14 +1,10 @@
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import type { PriceAdjustment } from "#lib/modules/manifests.ts";
+import { adjustPrices, type OrderFacts, type PriceAdjustment } from "#lib/orders/extensions.ts";
 import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { orderLine } from "#lib/server/db/schema.ts";
-import {
-	enabledServerModules,
-	type OrderFacts,
-	type ServerModule,
-} from "#lib/server/modules/hooks.ts";
+import { collect } from "#lib/server/extensions.ts";
 
 /** Used to estimate labour cost while no engineer is assigned yet. In cents. */
 export const STANDARD_HOURLY_RATE = 8500;
@@ -70,24 +66,21 @@ export const orderTotal = (materials: number, labor: number, adjustments: PriceA
  * shows or adds up order totals (the order's page, the orders table, the dashboard's revenue, an
  * invoice) prices them here, so they agree. Returns the prices in the same order as `orders`.
  *
- * The one place the modules' `orders.adjustPrices` is called. It's a collector (see
- * `#lib/server/modules/hooks.ts`): asked in parallel about all the orders at once, the adjustments
- * merged in registry order; a module that throws fails the pricing.
+ * The one place the modules' `orders.adjustPrices` is called (for the `enabled` modules, by
+ * default the current tenant's). It's a collector (see `#lib/server/extensions.ts`): asked in
+ * parallel about all the orders at once, the adjustments merged in registry order; a module that
+ * throws fails the pricing.
  */
 export async function priceOrders(
 	orders: OrderToPrice[],
-	modules: ServerModule[] = enabledServerModules(),
+	enabled?: readonly string[],
 ): Promise<OrderPrice[]> {
 	const priced = orders.map(({ laborHours, hourlyRate, ...order }) => ({
 		...order,
 		labor: laborCost(laborHours, hourlyRate),
 	}));
 	if (!priced.length) return [];
-	const answers = await Promise.all(
-		modules.flatMap((module) =>
-			module.orders?.adjustPrices ? [module.orders.adjustPrices(priced)] : [],
-		),
-	);
+	const answers = await collect(adjustPrices, priced, enabled);
 	return priced.map(({ id, materials, labor }) => {
 		const adjustments = answers.flatMap((adjusted) => adjusted.get(id) ?? []);
 		return { materials, labor, adjustments, total: orderTotal(materials, labor, adjustments) };

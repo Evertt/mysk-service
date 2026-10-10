@@ -16,10 +16,9 @@
  * - here too, `bulkActions`: actions a module adds to a core table's selection (e.g. invoicing's
  *   "Create invoice" on the orders list), loaded by `module-bulk-actions.svelte.ts` in
  *   `src/routes/(app)/` only for the modules the tenant has;
- * - `#lib/server/modules/hooks.ts`: server hooks, grouped by the core domain they belong to and named
- *   for their kind (a collector, an event after commit), e.g. `orders.adjustPrices` (applied by
- *   `priceOrders()` in `#lib/orders/server/pricing.ts`), `orders.tag` (`tagOrders()`) and
- *   `orders.committed` (`orderCommitted()`).
+ * - elsewhere, in the module's `server/index.ts`: what it contributes to its owners' hooks, e.g.
+ *   `orders.adjustPrices` (applied by `priceOrders()` in `#lib/orders/server/pricing.ts`), see
+ *   `#lib/server/extensions.ts`.
  */
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
@@ -170,29 +169,4 @@ export function bulkActionLoaders<Table extends BulkTableName>(
 		const load = module.bulkActions?.[table];
 		return load && enabled.includes(module.id) ? [load] : [];
 	});
-}
-
-// --- What modules add to orders (see `#lib/server/modules/hooks.ts`) -------------------------------
-
-/**
- * A badge a module puts next to an order's status, on the order's page and in the orders table,
- * e.g. a response time about to be missed.
- */
-export interface OrderTag {
-	label: string;
-	/** `warning` needs attention soon, `danger` now. */
-	tone: "warning" | "danger";
-	/** Shown on hover, e.g. the deadline. */
-	detail?: string;
-}
-
-/**
- * A change a module makes to an order's price, shown as a line of its own on the order: e.g. work
- * a service contract includes. In cents; negative for a discount.
- */
-export interface PriceAdjustment {
-	label: string;
-	/** A second line under the label, e.g. what's included. */
-	detail?: string;
-	amount: number;
 }
