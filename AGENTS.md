@@ -84,8 +84,10 @@ helpers are in `src/lib/server/auth/session.ts`:
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
   about modules. A module adds to core pages through `slots` in `src/lib/modules/manifests.ts` (components
-  that load their own data with the module's remote functions), and to core server logic through hooks in
-  `src/lib/server/modules/hooks.ts`; both only take part for tenants that have the module. A module
+  that load their own data with the module's remote functions; `module-slots.svelte` renders each
+  in a boundary of its own, so one that fails shows a notice instead of breaking the page), and to
+  core server logic through hooks in `src/lib/server/modules/hooks.ts`; both only take part for
+  tenants that have the module. A module
   declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
   `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
   `tag`, `billableItems`: asked in parallel about a batch, answers merged in registry order, an

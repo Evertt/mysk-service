@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { countIn, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
 
 import {
 	activeContract,
@@ -13,7 +13,7 @@ import {
 
 const { north } = organizations;
 const app = useApp();
-const { sidebar, units, tableRows } = pageLocators(app);
+const { sidebar, units, tableRows, card } = pageLocators(app);
 
 /** An organization's next contract number: `CTR-<this year>-<highest sequence + 1>`. */
 async function nextNumber(organizationId: string) {
@@ -261,5 +261,35 @@ describe("in North", () => {
 			0,
 		);
 		expect((await app.go(`/contracts/${number}`))?.status()).toBe(404);
+	});
+});
+
+describe("when its part of the dashboard fails", () => {
+	const notice = () => app.page.getByText("Couldn't load what Service contracts adds here.");
+	const failing = (url: URL) => isRemote(url.href, "getContractsOverview");
+
+	test("the rest of the dashboard shows, with a notice in its place", async () => {
+		const { page } = app;
+		await app.go("/orders");
+		// Its query fails on the way, as when the server can't answer it.
+		await page.route(failing, (route) => route.fulfill({ status: 500, body: "" }));
+		await app.expectingErrors(async () => {
+			await page
+				.locator('[data-sidebar="content"]')
+				.getByRole("link", { name: "Dashboard" })
+				.click();
+			await page.waitForURL((url) => url.pathname === "/");
+			await notice().waitFor();
+		});
+		expect(await card("Response times at risk").count()).toBe(0);
+		expect(await page.getByText("Revenue, last 30 days", { exact: true }).count()).toBe(1);
+	});
+
+	test("trying again shows its cards once its query answers", async () => {
+		const { page } = app;
+		await page.unroute(failing);
+		await page.getByRole("button", { name: "Try again" }).click();
+		await card("Response times at risk").waitFor();
+		expect(await notice().count()).toBe(0);
 	});
 });

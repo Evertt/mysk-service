@@ -45,15 +45,19 @@ describe("slotLoaders", () => {
 	});
 
 	test("gives a module's component only when it's enabled", () => {
-		expect(slotLoaders("order", ["widgets"], registry)).toEqual([widgets.slots.order]);
-		expect(slotLoaders("equipment", ["gadgets"], registry)).toEqual([gadgets.slots.equipment]);
+		expect(slotLoaders("order", ["widgets"], registry)).toEqual([
+			{ id: "widgets", load: widgets.slots.order },
+		]);
+		expect(slotLoaders("equipment", ["gadgets"], registry)).toEqual([
+			{ id: "gadgets", load: gadgets.slots.equipment },
+		]);
 		expect(slotLoaders("equipment", ["widgets"], registry)).toEqual([]);
 	});
 
 	test("gives the components of several modules in registry order", () => {
 		expect(slotLoaders("dashboard", ["widgets", "gadgets"], registry)).toEqual([
-			gadgets.slots.dashboard,
-			widgets.slots.dashboard,
+			{ id: "gadgets", load: gadgets.slots.dashboard },
+			{ id: "widgets", load: widgets.slots.dashboard },
 		]);
 	});
 

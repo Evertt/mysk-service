@@ -44,7 +44,7 @@ export interface SlotProps {
 export type SlotName = keyof SlotProps;
 
 /** Loads a slot's component, so a tenant without the module doesn't download it. */
-export type SlotLoader<Name extends SlotName> = () => Promise<{
+type SlotLoader<Name extends SlotName> = () => Promise<{
 	default: Component<SlotProps[Name]>;
 }>;
 
@@ -130,15 +130,24 @@ export type { ModuleId };
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;
 type ActionsOf<Module> = Module extends { actions: infer Actions } ? keyof Actions & string : never;
 
-/** The loaders of the components that the `enabled` modules add at `name`, in registry order. */
+/** What a module adds at a slot: its component's loader, with the module's id. */
+export interface SlotContribution<Name extends SlotName> {
+	id: ModuleId;
+	load: SlotLoader<Name>;
+}
+
+/**
+ * The components that the `enabled` modules add at `name`, by module, in registry order. Each is
+ * rendered on its own (see `module-slots.svelte`), so one that fails doesn't take the page down.
+ */
 export function slotLoaders<Name extends SlotName>(
 	name: Name,
 	enabled: readonly string[],
 	registry: readonly AppModule[] = modules,
-): SlotLoader<Name>[] {
-	return registry.flatMap((module) => {
-		const load = module.slots?.[name];
-		return load && enabled.includes(module.id) ? [load] : [];
+): SlotContribution<Name>[] {
+	return registry.flatMap(({ id, slots }) => {
+		const load = slots?.[name];
+		return load && enabled.includes(id) ? [{ id, load }] : [];
 	});
 }
 

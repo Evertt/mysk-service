@@ -1,0 +1,23 @@
+diff --git a/src/internal/client/dom/hydration.js b/src/internal/client/dom/hydration.js
+index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e198756b27 100644
+--- a/src/internal/client/dom/hydration.js
++++ b/src/internal/client/dom/hydration.js
+@@ -5,7 +5,8 @@ import {
+ 	HYDRATION_END,
+ 	HYDRATION_ERROR,
+ 	HYDRATION_START,
+-	HYDRATION_START_ELSE
++	HYDRATION_START_ELSE,
++	HYDRATION_START_FAILED
+ } from '../../../constants.js';
+ import * as w from '../warnings.js';
+ import { get_next_sibling } from './operations.js';
+@@ -98,6 +99,8 @@ export function skip_nodes(remove = true) {
+ 			} else if (
+ 				data === HYDRATION_START ||
+ 				data === HYDRATION_START_ELSE ||
++				// "[?{...}" for a boundary that failed on the server (its error in JSON)
++				data.startsWith(HYDRATION_START_FAILED) ||
+ 				// "[1", "[2", etc. for if blocks
+ 				(data[0] === '[' && !isNaN(Number(data.slice(1))))
+ 			) {
