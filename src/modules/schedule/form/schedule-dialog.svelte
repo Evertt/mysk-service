@@ -13,8 +13,8 @@
 	import { specialties } from "#lib/engineers/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
-	import { DEFAULT_TIME, dayKey, parseDay } from "./board.ts";
-	import { getSchedule, scheduleOrder } from "./schedule.remote.ts";
+	import { DEFAULT_TIME, dayKey, parseDay } from "../board/board.ts";
+	import { getSchedule, scheduleOrder } from "../schedule.remote.ts";
 
 	type Schedule = Awaited<ReturnType<typeof getSchedule>>;
 

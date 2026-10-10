@@ -70,7 +70,7 @@ export function priceOf(order: PricedOrder) {
 /**
  * This month's fee of each of a customer's active contracts (they start on the 1st), with the
  * reference that whoever bills it remembers it by (see `monthlyFee` in
- * `src/modules/contracts/billing.ts`): `contracts:<id>:<month>`.
+ * `src/modules/contracts/server/billing.ts`): `contracts:<id>:<month>`.
  */
 export async function feesDue(customerId: number) {
 	const now = new Date();

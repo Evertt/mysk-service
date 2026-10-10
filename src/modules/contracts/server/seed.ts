@@ -10,8 +10,8 @@ import {
 	type TenantDraft,
 } from "#lib/server/db/seed/module-seed.ts";
 
-import { type ContractMonth, contractMonths, monthlyFee } from "../billing.ts";
 import { type ContractLevel, contractNumberFormat, defaultResponseHours } from "../model.ts";
+import { type ContractMonth, contractMonths, monthlyFee } from "./billing.ts";
 import { contract, contractEquipment } from "./schema.ts";
 
 /** Monthly fee per covered unit in euros, by level. */

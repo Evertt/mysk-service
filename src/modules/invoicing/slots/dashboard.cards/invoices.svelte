@@ -8,8 +8,8 @@
 
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
-	import InvoiceLink from "../../invoice-link.svelte";
 	import { getReceivables } from "../../invoicing.remote.ts";
+	import InvoiceLink from "../../ui/invoice-link.svelte";
 
 	const data = $derived(await getReceivables());
 </script>

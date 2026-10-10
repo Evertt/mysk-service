@@ -6,12 +6,12 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
-import ContractLink from "../contract-link.svelte";
 import type { getContracts } from "../contracts.remote.ts";
 import { formatTerm } from "../display.ts";
-import LevelBadge from "../level-badge.svelte";
 import { contractLevels, contractStatus, contractStatuses } from "../model.ts";
-import StatusBadge from "../status-badge.svelte";
+import ContractLink from "../ui/contract-link.svelte";
+import LevelBadge from "../ui/level-badge.svelte";
+import StatusBadge from "../ui/status-badge.svelte";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];
 

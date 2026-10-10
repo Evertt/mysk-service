@@ -14,8 +14,8 @@
 		startOfWeek,
 		weekFromParam,
 		weekNumber,
-	} from "#modules/schedule/board.ts";
-	import ScheduleBoard from "#modules/schedule/schedule-board.svelte";
+	} from "#modules/schedule/board/board.ts";
+	import ScheduleBoard from "#modules/schedule/board/schedule-board.svelte";
 	import { getSchedule } from "#modules/schedule/schedule.remote.ts";
 
 	// The props the route passes; this page needs none of them.

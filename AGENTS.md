@@ -158,8 +158,14 @@ description, `route`, icon, `nav`, `subjects`, `actions`; it is in every tenant'
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
-and remote functions in `list/`, `form/`, `detail/` (the same folders as a core domain's) or at the
-root, `messages/<locale>/<section>.json` and `e2e/*.test.ts`. The folder name is the id
+in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
+or a feature's own, e.g. the schedule's `board/`), `messages/<locale>/<section>.json` and
+`e2e/*.test.ts`. Its model, labels, display maps, domain rules and activity subjects stay at the
+root: `module.ts` may only import its own files from the root (`./activity.ts`), and they need
+each other. A remote file sits in a feature's folder when only that feature and its page use it
+(invoicing's `detail/draft.remote.ts`), else at the root next to `remote-functions.ts` (the
+record's own, and those that several folders, slots, bulk actions or server hooks share; `slots/`
+and `bulk-actions/` hold only their contributions). The folder name is the id
 (`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 

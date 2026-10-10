@@ -20,10 +20,10 @@ import { db } from "#lib/server/db/index.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 import { billableItems } from "#modules/invoicing/api/extensions.ts";
 
-import { contractMonths, monthlyFee } from "../billing.ts";
 import { getOrderCoverage } from "../coverage.remote.ts";
 import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.ts";
 import { contractLabels } from "../labels.ts";
+import { contractMonths, monthlyFee } from "./billing.ts";
 import { type Coverage, coverageOf } from "./contracts.ts";
 import { contract } from "./schema.ts";
 

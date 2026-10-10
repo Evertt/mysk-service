@@ -14,7 +14,7 @@
 	import { priorities, statuses, types } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
-	import type { getSchedule } from "./schedule.remote.ts";
+	import type { getSchedule } from "../schedule.remote.ts";
 
 	type Order = Awaited<ReturnType<typeof getSchedule>>["orders"][number];
 

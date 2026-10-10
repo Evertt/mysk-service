@@ -4,8 +4,8 @@
 	`responseDeadline` in `coverage.ts`.
 -->
 <script lang="ts">
-	import type { SlaState } from "./coverage.ts";
-	import { slaStates } from "./display.ts";
+	import type { SlaState } from "../coverage.ts";
+	import { slaStates } from "../display.ts";
 
 	let { state }: { state: SlaState } = $props();
 

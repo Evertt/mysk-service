@@ -15,6 +15,7 @@
 
 	import { specialties } from "#lib/engineers/index.ts";
 
+	import ScheduleDialog from "../form/schedule-dialog.svelte";
 	import BacklogCard from "./backlog-card.svelte";
 	import { createBoardDrag } from "./board-drag.svelte.ts";
 	import {
@@ -29,7 +30,6 @@
 		weekDays,
 	} from "./board.ts";
 	import DayList from "./day-list.svelte";
-	import ScheduleDialog from "./schedule-dialog.svelte";
 	import WeekGrid from "./week-grid.svelte";
 
 	let { schedule, week }: { schedule: Schedule; week: string } = $props();

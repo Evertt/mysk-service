@@ -12,9 +12,9 @@
 	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { deleteContract, getContract } from "#modules/contracts/contracts.remote.ts";
 	import { formatTerm, levels } from "#modules/contracts/display.ts";
-	import LevelBadge from "#modules/contracts/level-badge.svelte";
 	import { contractStatus } from "#modules/contracts/model.ts";
-	import ContractStatusBadge from "#modules/contracts/status-badge.svelte";
+	import LevelBadge from "#modules/contracts/ui/level-badge.svelte";
+	import ContractStatusBadge from "#modules/contracts/ui/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]"> } = $props();
 
