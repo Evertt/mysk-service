@@ -24,6 +24,8 @@ const config: KnipConfig = {
 		"src/modules/*/slots/*/*.svelte",
 		"src/modules/*/bulk-actions/*.ts",
 		"src/modules/*/routes/**/+*.{ts,svelte}",
+		// (`AnySlotContribution` and `AnyBulkContribution` in `src/lib/extensions/define.ts` are tagged
+		// `@public` for the same reason: only the generated `contributions.gen.ts` imports them.)
 		// The tests of every Vitest project, including the modules' end-to-end tests.
 		"src/**/*.{test,spec}.{ts,js}",
 		"e2e/**/*.test.ts",

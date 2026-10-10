@@ -15,12 +15,15 @@ const sidebarLink = (name: string) =>
 	app.page.locator('[data-sidebar="content"]').getByRole("link", { name });
 /** The card on the settings page for a module. */
 const moduleCard = (label: string) => app.page.locator("div.rounded-lg.border", { hasText: label });
-/** The log entries about switching a module on or off in an organization, oldest first. */
-const moduleEntries = (moduleId: string, organizationId: string) =>
+/**
+ * The log entries about switching a module on or off in an organization after the activity entry
+ * `since`, oldest first (other files switch South's modules on the same worker too).
+ */
+const moduleEntries = (moduleId: string, organizationId: string, since: number) =>
 	rows<{ action: string }>(
 		`select action from activity where organization_id = ? and subject_type = 'module'
-		 and subject_id = ? order by id`,
-		[organizationId, moduleId],
+		 and subject_id = ? and id > ? order by id`,
+		[organizationId, moduleId, since],
 	);
 
 describe("organizations", () => {
@@ -83,12 +86,14 @@ describe("organizations", () => {
 
 describe("modules", () => {
 	const contracts = "Service contracts";
+	let since = 0;
 
 	test("an owner can enable a module for their organization", async () => {
 		const { page } = app;
 		await app.go("/settings");
 		const card = moduleCard(contracts);
 		expect(await card.innerText()).toContain("Disabled");
+		since = await value<number>("select coalesce(max(id), 0) from activity");
 		await app.submit(card.getByRole("button", { name: "Enable" }));
 		await card.getByText(/Enabled since/).waitFor();
 		expect(
@@ -96,7 +101,9 @@ describe("modules", () => {
 				south.id,
 			]),
 		).toMatchObject([{ module_id: "contracts" }, { module_id: "invoicing" }]);
-		expect(await moduleEntries("contracts", south.id)).toEqual([{ action: "module_enabled" }]);
+		expect(await moduleEntries("contracts", south.id, since)).toEqual([
+			{ action: "module_enabled" },
+		]);
 		// The sidebar follows without a reload.
 		await sidebarLink(contracts).waitFor();
 		await app.go("/contracts");
@@ -115,11 +122,11 @@ describe("modules", () => {
 		expect(await sidebarLink(contracts).count()).toBe(0);
 		expect((await app.go("/contracts"))?.status()).toBe(404);
 		// One entry for each change, none for invoicing, which stayed.
-		expect(await moduleEntries("contracts", south.id)).toEqual([
+		expect(await moduleEntries("contracts", south.id, since)).toEqual([
 			{ action: "module_enabled" },
 			{ action: "module_disabled" },
 		]);
-		expect(await moduleEntries("invoicing", south.id)).toEqual([]);
+		expect(await moduleEntries("invoicing", south.id, since)).toEqual([]);
 	});
 
 	test("a member can't change modules", async () => {

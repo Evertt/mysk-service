@@ -29,12 +29,12 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   `APP=AppAsyncIf.svelte` etc. pick the variants; `AppSync*.svelte` (no async block) hydrate fine,
   which narrows it to the async case.
 - **In the app:** a module's part of a core page that fails during SSR
-  (`src/routes/(app)/module-slots.svelte`).
+  (`src/routes/(app)/extension-slot.svelte`).
 
 ## 2. Svelte: the tab freezes when a component in an `{#each}` awaits its own loader
 
 - **Versions:** svelte 5.57.1 and 5.57.2, with `experimental.async`.
-- **What happens:** `module-slots.svelte` first rendered one child component per module, each
+- **What happens:** `extension-slot.svelte` (then `module-slots.svelte`) first rendered one child component per module, each
   awaiting its own `load()` (`const Part = $derived((await load()).default)`) inside its own
   boundary. After deleting an order from its page (which navigates away while the slot's queries
   refresh), the browser tab froze in an endless loop; five tests in `e2e/orders.test.ts` and two

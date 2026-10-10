@@ -131,6 +131,14 @@ migration committed.
   everything wrong, when a module's route folder collides with a core route or another module's, a
   route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
   write, or message sections are missing in a language or not unique.
+- **Dependencies**: `module.ts` may list `requires` (modules it can't work without) and `enhances`
+  (modules it only adds to when they're on) as string-literal arrays, and `alwaysOn: true`; the
+  generator reads them with a pattern, and `manifests.spec.ts` compares them with the runtime
+  values. A module whose requirement is off is off everywhere (`effectiveModules()` in
+  `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
+  The settings page switches a module on together with its requirements and off together with its
+  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a set that
+  would leave a module without its requirements.
 - **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in a
   `(modules)` group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte`
   → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`. They are real routes (`RouteId`,

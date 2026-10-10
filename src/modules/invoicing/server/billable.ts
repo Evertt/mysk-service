@@ -3,7 +3,8 @@
  * everywhere else, and what the tenant's other modules offer through `invoicing.billableItems`
  * (`../api/extensions.ts`, e.g. a contract's monthly fees). Either is billed while it's on an
  * invoice that isn't void: on a draft, or sent or paid. Issuing an invoice marks its orders
- * invoiced; voiding a sent one puts them back. Making the invoice is in `./invoices.ts`, the rules in `../invoice.ts`.
+ * invoiced; voiding a sent one puts them back. Making the invoice is in `./invoices.ts`, the rules
+ * in `../invoice.ts`.
  */
 import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
 
