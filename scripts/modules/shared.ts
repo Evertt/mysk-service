@@ -39,6 +39,13 @@ export interface ModuleFolder {
 	alwaysOn: boolean;
 	/** Its `+` route files, relative to `routes/`, with `/`, sorted. */
 	routeFiles: string[];
+	/**
+	 * Its components at extension points' slots, relative to its folder, with `/`, sorted:
+	 * `slots/<point id>/<name>.svelte`.
+	 */
+	slotFiles: string[];
+	/** Its bulk actions for tables, likewise: `bulk-actions/<point id>.ts`. */
+	bulkFiles: string[];
 	/** Which of the server files it has. */
 	server: { index: boolean; schema: boolean; seed: boolean };
 	/** Its message sections (`messages/<locale>/<section>.json`) per language, sorted. */

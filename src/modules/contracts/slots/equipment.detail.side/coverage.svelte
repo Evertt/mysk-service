@@ -1,16 +1,16 @@
 <!--
 	@component
-	The contracts module's card on a unit of equipment's page (the `equipment` slot in
-	`#lib/modules/manifests.ts`): the contracts covering the unit, with their level and end date.
+	The contracts module's card on a unit of equipment's page (`equipment.detail.side`,
+	`#lib/equipment/extensions.ts`): the contracts covering the unit, with their level and end date.
 -->
 <script lang="ts">
 	import { formatDate } from "#lib/i18n";
 
-	import ContractLink from "./contract-link.svelte";
-	import { getUnitCoverage } from "./coverage.remote.ts";
-	import LevelBadge from "./level-badge.svelte";
-	import { contractStatus } from "./model.ts";
-	import ContractStatusBadge from "./status-badge.svelte";
+	import ContractLink from "../../contract-link.svelte";
+	import { getUnitCoverage } from "../../coverage.remote.ts";
+	import LevelBadge from "../../level-badge.svelte";
+	import { contractStatus } from "../../model.ts";
+	import ContractStatusBadge from "../../status-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
 

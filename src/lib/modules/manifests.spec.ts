@@ -2,7 +2,9 @@ import { existsSync, readdirSync } from "node:fs";
 
 import { describe, expect, test } from "vite-plus/test";
 
-import { gadgets, widgets } from "./fakes.ts";
+import { slotContributions } from "#lib/extensions/contributions.gen.ts";
+
+import { fakeBulkContributions, fakeSlotContributions } from "./fakes.ts";
 import { generatedModuleIds } from "./ids.gen.ts";
 import { moduleGraph, moduleIds } from "./ids.ts";
 import { manifests } from "./manifests.gen.ts";
@@ -66,8 +68,17 @@ test.each(modules)("the $id module's route is a page", ({ route }) => {
 	expect(existsSync(new URL(`../../routes${route}/+page.svelte`, import.meta.url))).toBe(true);
 });
 
+test("the modules' contributions are in registry order", () => {
+	const ids: readonly string[] = moduleIds;
+	const order = slotContributions.map(({ module }) => ids.indexOf(module));
+	expect(order).toEqual(order.toSorted((a, b) => a - b));
+	expect(order).not.toContain(-1);
+});
+
+// Temporary, removed with ExtensionSlot.
 describe("slotLoaders", () => {
-	const registry = [gadgets, widgets];
+	const registry = fakeSlotContributions;
+	const [gadgetsDashboard, gadgetsEquipment, widgetsDashboard, widgetsOrder] = registry;
 	const slots: SlotName[] = ["dashboard", "order", "equipment"];
 
 	test.each(slots)("leaves the %s slot empty without modules", (name) => {
@@ -76,18 +87,18 @@ describe("slotLoaders", () => {
 
 	test("gives a module's component only when it's enabled", () => {
 		expect(slotLoaders("order", ["widgets"], registry)).toEqual([
-			{ id: "widgets", load: widgets.slots.order },
+			{ id: "widgets", load: widgetsOrder.load },
 		]);
 		expect(slotLoaders("equipment", ["gadgets"], registry)).toEqual([
-			{ id: "gadgets", load: gadgets.slots.equipment },
+			{ id: "gadgets", load: gadgetsEquipment.load },
 		]);
 		expect(slotLoaders("equipment", ["widgets"], registry)).toEqual([]);
 	});
 
 	test("gives the components of several modules in registry order", () => {
 		expect(slotLoaders("dashboard", ["widgets", "gadgets"], registry)).toEqual([
-			{ id: "gadgets", load: gadgets.slots.dashboard },
-			{ id: "widgets", load: widgets.slots.dashboard },
+			{ id: "gadgets", load: gadgetsDashboard.load },
+			{ id: "widgets", load: widgetsDashboard.load },
 		]);
 	});
 
@@ -96,12 +107,13 @@ describe("slotLoaders", () => {
 	});
 });
 
+// Temporary, removed with ExtensionSlot.
 describe("bulkActionLoaders", () => {
-	const registry = [gadgets, widgets];
+	const registry = fakeBulkContributions;
 
 	test("gives the bulk actions of the enabled modules that have any", () => {
 		expect(bulkActionLoaders("orders", ["gadgets", "widgets"], registry)).toEqual([
-			widgets.bulkActions.orders,
+			registry[0].load,
 		]);
 		expect(bulkActionLoaders("orders", ["gadgets"], registry)).toEqual([]);
 		expect(bulkActionLoaders("orders", [], registry)).toEqual([]);

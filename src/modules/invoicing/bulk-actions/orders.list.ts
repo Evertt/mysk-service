@@ -1,14 +1,15 @@
 /**
- * The invoicing module's bulk actions on the orders list (see `bulkActions` in `#lib/modules/manifests.ts`):
+ * The invoicing module's bulk actions on the orders list (`orders.list`, `#lib/orders/extensions.ts`):
  * a draft invoice for the selected completed orders of one customer, which then opens.
  */
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
-import type { TableBulkAction } from "#lib/modules/manifests.ts";
+import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import type { OrderBulkRow } from "#lib/orders/extensions.ts";
 
-import { invoiceOrders } from "./bulk.remote.ts";
+import { invoiceOrders } from "../bulk.remote.ts";
 
-export const createInvoice: TableBulkAction<"orders"> = {
+export const createInvoice: BulkAction<OrderBulkRow, AnyListWhere> = {
 	id: "invoicing:create-invoice",
 	label: m.invoices_bulk_create,
 	icon: ReceiptTextIcon,

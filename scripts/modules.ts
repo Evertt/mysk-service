@@ -12,8 +12,10 @@
  *   manifests (`src/lib/modules/manifests.gen.ts`), the plain list of ids for code that runs in plain Node
  *   (`src/lib/modules/ids.gen.ts`), the server halves (`server/index.ts`, in
  *   `src/lib/server/modules/hooks.gen.ts`), the tables (`server/schema.ts`, in
- *   `src/lib/server/db/modules.gen.ts`) and the seeders (`server/seed.ts`, in
- *   `src/lib/server/db/module-seeds.gen.ts`);
+ *   `src/lib/server/db/modules.gen.ts`), the seeders (`server/seed.ts`, in
+ *   `src/lib/server/db/module-seeds.gen.ts`) and what it contributes to extension points by file
+ *   (`slots/<point id>/<name>.svelte`, `bulk-actions/<point id>.ts`, in
+ *   `src/lib/extensions/contributions.gen.ts`, each held to its point's types);
  * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, in a `(modules)`
  *   group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte` becomes
  *   `src/routes/(app)/(modules)/contracts/[number]/+page.svelte` (route id
@@ -36,7 +38,9 @@
  * - checks the rules and stops with the full list of what's wrong: a module's folder name is its id
  *   (`^[a-z][a-z0-9-]*$`); its route folders are plain names of their own (not a core route's, nor
  *   another module's); its message sections (`messages/<locale>/<section>.json`) are in every
- *   language and unique across the app.
+ *   language and unique across the app; an extension point's id starts with its owner's and is
+ *   unique, and a contribution names an existing point of its kind whose owner is core, the module
+ *   itself, or a module it requires or enhances.
  *
  * It uses no packages besides the parser of Vite+, and imports no app code, so it runs in plain Node.
  * The work is split by what it does, in `scripts/modules/`: `find.ts` (the folders), `routes.ts`

@@ -1,6 +1,6 @@
 /**
  * The bulk actions the current tenant's modules add to a core table's selection (see
- * `bulkActions` in `#lib/modules/manifests.ts`), e.g. invoicing's "Create invoice" on the orders list. They
+ * `bulkActionLoaders()` in `#lib/modules/manifests.ts`), e.g. invoicing's "Create invoice" on the orders list. They
  * load after the table, so `current` is empty at first (and for a tenant without such modules).
  */
 import {

@@ -10,6 +10,7 @@ import {
 import { dirname, join, relative } from "node:path";
 
 import { checkModules, foreignProblems, scanRoutes } from "./check.ts";
+import { extensionProblems, findPoints, renderContributions } from "./extensions.ts";
 import { discoverModules } from "./find.ts";
 import { byDependency } from "./graph.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
@@ -70,6 +71,8 @@ export function generateModules(root: string) {
 	const routes = scanRoutes(root);
 	problems.push(...foreignProblems(routes.foreign));
 	problems.push(...checkModules(modules, { coreRouteFolders: routes.core, patterns, locales }));
+	const points = findPoints(root);
+	problems.push(...extensionProblems(points, modules));
 	if (problems.length) {
 		throw new Error(`The modules in src/modules break the rules:\n- ${problems.join("\n- ")}`);
 	}
@@ -78,8 +81,9 @@ export function generateModules(root: string) {
 	const write = (path: string, content: string) => {
 		if (writeIfChanged(join(root, path), content)) changed.push(path);
 	};
-	for (const [path, content] of Object.entries(renderRegistries(byDependency(modules))))
-		write(path, content);
+	const ordered = byDependency(modules);
+	for (const [path, content] of Object.entries(renderRegistries(ordered))) write(path, content);
+	write("src/lib/extensions/contributions.gen.ts", renderContributions(points, ordered));
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

@@ -6,15 +6,19 @@ import { generateModules } from "./generate.ts";
 
 /** The files whose coming and going changes what the generator writes. */
 const inputs =
-	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|server(?:\/(?:index|schema|seed)\.ts)?|messages(?:\/.*)?))?)?$/;
+	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|slots(?:\/.*)?|bulk-actions(?:\/.*)?|api(?:\/extensions\.ts)?|server(?:\/(?:index|schema|seed)\.ts)?|messages(?:\/.*)?))?)?$/;
+
+/** The files that declare extension points, whose ids and names the generator reads. */
+const pointFiles = /^src\/(?:lib\/[^/]+|modules\/[^/]+\/api)\/extensions\.ts$/;
 
 /**
  * Whether a watcher event on `path` (relative to the root, with `/`) makes the generator rerun:
  * every event on its inputs, but `change` only on a module's `module.ts` (its `requires`,
- * `enhances` and `alwaysOn` are read from it) and on route scripts (a change may add or drop a
- * page option or an export).
+ * `enhances` and `alwaysOn` are read from it), on route scripts (a change may add or drop a page
+ * option or an export) and on the files that declare extension points.
  */
 export function rerunsOn(event: string, path: string) {
+	if (pointFiles.test(path)) return true;
 	if (!inputs.test(path)) return false;
 	if (event !== "change") return true;
 	return /^src\/modules\/[^/]+\/module\.ts$/.test(path) || /\/routes\/.*\+[^/]*\.[jt]s$/.test(path);

@@ -1,6 +1,6 @@
 <!--
 	@component
-	What the current tenant's modules add to a core page at `name` (see `slots` in
+	What the current tenant's modules add to a core page at `name` (see `slotLoaders()` in
 	`#lib/modules/manifests.ts`), with `props` passed on. Wrapped in a `div` with `class` (by default
 	`contents`, so the components lay out as the page's own), or nothing if no module adds anything.
 

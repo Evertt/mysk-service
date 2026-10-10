@@ -18,6 +18,18 @@ describe("rerunsOn", () => {
 		expect(rerunsOn("unlink", "src/modules/sample/server/seed.ts")).toBe(true);
 	});
 
+	test("reruns when contribution files come or go, and when extension points change", () => {
+		expect(rerunsOn("add", "src/modules/sample/slots/orders.detail.side/card.svelte")).toBe(true);
+		expect(rerunsOn("unlink", "src/modules/sample/bulk-actions/orders.list.ts")).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/slots/orders.detail.side/card.svelte")).toBe(
+			false,
+		);
+		expect(rerunsOn("change", "src/lib/orders/extensions.ts")).toBe(true);
+		expect(rerunsOn("add", "src/modules/sample/api/extensions.ts")).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/api/extensions.ts")).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/api/other.ts")).toBe(false);
+	});
+
 	test("ignores files that aren't inputs", () => {
 		expect(rerunsOn("change", "src/lib/modules/ids.gen.ts")).toBe(false);
 		expect(rerunsOn("add", "src/modules/sample/other.ts")).toBe(false);

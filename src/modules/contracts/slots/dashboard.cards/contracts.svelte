@@ -1,7 +1,7 @@
 <!--
 	@component
-	The contracts module's cards on the dashboard (the `dashboard` slot in `#lib/modules/manifests.ts`): call-outs
-	whose response time is at risk or overdue, and contracts about to end.
+	The contracts module's cards on the dashboard (`dashboard.cards`, `#lib/dashboard/extensions.ts`):
+	call-outs whose response time is at risk or overdue, and contracts about to end.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -10,10 +10,10 @@
 	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n";
 	import OrderLink from "#lib/orders/order-link.svelte";
 
-	import ContractLink from "./contract-link.svelte";
-	import { getContractsOverview } from "./coverage.remote.ts";
-	import LevelBadge from "./level-badge.svelte";
-	import SlaBadge from "./sla-badge.svelte";
+	import ContractLink from "../../contract-link.svelte";
+	import { getContractsOverview } from "../../coverage.remote.ts";
+	import LevelBadge from "../../level-badge.svelte";
+	import SlaBadge from "../../sla-badge.svelte";
 
 	const data = $derived(await getContractsOverview());
 	const days = $derived(formatNumber(data.days));

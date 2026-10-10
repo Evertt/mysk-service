@@ -26,6 +26,8 @@ export function module(
 		enhances: [],
 		alwaysOn: false,
 		routeFiles: [],
+		slotFiles: [],
+		bulkFiles: [],
 		server: { index: false, schema: false, seed: false },
 		messages: { en: sections, nl: sections },
 		...rest,

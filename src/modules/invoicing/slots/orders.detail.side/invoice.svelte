@@ -1,7 +1,7 @@
 <!--
 	@component
-	The invoicing module's card on an order's page (the `order` slot in `#lib/modules/manifests.ts`): the
-	invoice the order is on, or, once it's completed, a way to bill it. Nothing for a cancelled
+	The invoicing module's card on an order's page (`orders.detail.side`, `#lib/orders/extensions.ts`):
+	the invoice the order is on, or, once it's completed, a way to bill it. Nothing for a cancelled
 	order that was never invoiced.
 -->
 <script lang="ts">
@@ -10,9 +10,9 @@
 
 	import { formatDate, messageParts } from "#lib/i18n";
 
-	import InvoiceLink from "./invoice-link.svelte";
-	import { getOrderInvoice } from "./invoicing.remote.ts";
-	import StatusBadge from "./status-badge.svelte";
+	import InvoiceLink from "../../invoice-link.svelte";
+	import { getOrderInvoice } from "../../invoicing.remote.ts";
+	import StatusBadge from "../../status-badge.svelte";
 
 	let { number }: { number: string } = $props();
 

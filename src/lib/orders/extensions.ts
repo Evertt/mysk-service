@@ -1,11 +1,25 @@
 /**
  * The orders' extension points: where modules take part in pricing, badging and saving orders
- * (see `#lib/server/extensions.ts`). Each has one caller in `#lib/orders/server/`: `priceOrders()`
+ * (see `#lib/server/extensions.ts`), on an order's page and in the orders list's selection (see
+ * `#lib/extensions/define.ts`). Each hook has one caller in `#lib/orders/server/`: `priceOrders()`
  * (`pricing.ts`), `tagOrders()` and `orderCommitted()` (`hooks.ts`). Isomorphic, so the types are
  * also there for the pages that show tags and adjustments.
  */
-import { defineCollector, defineEvent } from "#lib/extensions/define.ts";
+import {
+	defineBulkTable,
+	defineCollector,
+	defineEvent,
+	defineSlot,
+} from "#lib/extensions/define.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
+
+/** An order as a module's bulk action sees a selected row of the orders list. */
+export interface OrderBulkRow {
+	id: number;
+	number: string;
+	status: OrderStatus;
+	customer: { id: number; code: string; name: string };
+}
 
 /** What a module gets to know about an order. All of the current tenant's. */
 export interface OrderFacts {
@@ -73,3 +87,15 @@ export const tag = defineCollector<{ orders: OrderFacts[]; now: Date }, Map<numb
  * order's page shows), so they come back with the save, like core's.
  */
 export const committed = defineEvent<OrderChange>("orders.committed");
+
+/**
+ * Cards in the side column of an order's page. The components load their own data through their
+ * module's remote functions, and render nothing when they have nothing to say.
+ */
+export const detailSide = defineSlot<{ number: string }>("orders.detail.side");
+
+/**
+ * Bulk actions on the orders list's selection, after the list's own (e.g. invoicing's "Create
+ * invoice"). Their commands are made with `moduleRemote()`.
+ */
+export const list = defineBulkTable<OrderBulkRow>("orders.list");

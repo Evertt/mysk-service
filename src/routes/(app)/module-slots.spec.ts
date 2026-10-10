@@ -9,12 +9,29 @@ import ModuleSlots from "./module-slots.svelte";
 // doesn't load and widgets' card fails on its data.
 vi.mock("#lib/modules/manifests.gen.ts", async () => {
 	const { gadgets, gizmos, widgets } = await import("#lib/modules/fakes.ts");
+	return { manifests: [gadgets, gizmos, widgets] };
+});
+vi.mock("#lib/extensions/contributions.gen.ts", async () => {
+	const { slotContribution } = await import("#lib/extensions/define.ts");
+	const { detailSide } = await import("#lib/orders/extensions.ts");
+	const { gadgets, gizmosOrderCard, widgets } = await import("#lib/modules/fakes.ts");
 	return {
-		manifests: [
-			{ ...gadgets, slots: { order: () => import("./module-slots.test-harness.svelte") } },
-			gizmos,
-			{ ...widgets, slots: { order: () => import("./module-slots.failing.test-harness.svelte") } },
+		slotContributions: [
+			slotContribution(
+				detailSide,
+				gadgets.id,
+				"card",
+				() => import("./module-slots.test-harness.svelte"),
+			),
+			gizmosOrderCard,
+			slotContribution(
+				detailSide,
+				widgets.id,
+				"card",
+				() => import("./module-slots.failing.test-harness.svelte"),
+			),
 		],
+		bulkContributions: [],
 	};
 });
 

@@ -245,6 +245,28 @@ describe("generateModules", () => {
 		);
 	});
 
+	test("lists the modules' contributions to extension points, and refuses a wrong one", () => {
+		put(
+			"src/lib/orders/extensions.ts",
+			`export const detailSide = defineSlot<{ number: string }>("orders.detail.side");`,
+		);
+		put("src/modules/sample/slots/orders.detail.side/card.svelte");
+		put("src/modules/sample/slots/orders.detail.side/card.svelte.spec.ts");
+		generateModules(root);
+		const file = read("src/lib/extensions/contributions.gen.ts");
+		expect(file).toContain(
+			`import { detailSide as ordersDetailSide } from "#lib/orders/extensions.ts";`,
+		);
+		expect(file).toContain(
+			`slotContribution(ordersDetailSide, "sample", "card", () => import("#modules/sample/slots/orders.detail.side/card.svelte"))`,
+		);
+
+		put("src/modules/sample/bulk-actions/orders.detail.side.ts");
+		expect(() => generateModules(root)).toThrow(
+			/bulk-actions\/orders\.detail\.side\.ts: orders\.detail\.side is a slot, not a bulk table/,
+		);
+	});
+
 	test("ignores an empty folder", () => {
 		mkdirSync(join(root, "src/modules/empty"), { recursive: true });
 		expect(generateModules(root).modules).toEqual(["sample"]);

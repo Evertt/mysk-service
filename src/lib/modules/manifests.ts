@@ -6,58 +6,39 @@
  *
  * A module keeps to itself so it can be switched off: its routes live under `route`, and its
  * tables reference the core tables, never the other way round. Core pages and core server code
- * don't import a module's code; they take what the tenant's modules contribute through these
- * registries. A module is a folder `src/modules/<id>/` whose `module.ts` is a `defineModule()` (see
- * `#lib/modules/define.ts`), which `scripts/modules.ts` collects in `manifests.gen.ts`:
- *
- * - here, `slots`: components a module adds to core pages (the dashboard, an order's page, a unit
- *   of equipment's page), rendered by `module-slots.svelte` in `src/routes/(app)/` only for the
- *   modules the tenant has;
- * - here too, `bulkActions`: actions a module adds to a core table's selection (e.g. invoicing's
- *   "Create invoice" on the orders list), loaded by `module-bulk-actions.svelte.ts` in
- *   `src/routes/(app)/` only for the modules the tenant has;
- * - elsewhere, in the module's `server/index.ts`: what it contributes to its owners' hooks, e.g.
- *   `orders.adjustPrices` (applied by `priceOrders()` in `#lib/orders/server/pricing.ts`), see
- *   `#lib/server/extensions.ts`.
+ * don't import a module's code; they take what the tenant's modules contribute through the
+ * registries `scripts/modules.ts` generates. A module is a folder `src/modules/<id>/` whose
+ * `module.ts` is a `defineModule()` (see `#lib/modules/define.ts`), which the generator collects in
+ * `manifests.gen.ts`. What a module adds to its owners' extension points (see
+ * `#lib/extensions/define.ts`) isn't in its manifest: components at slots and bulk actions are
+ * files (`slots/`, `bulk-actions/`, listed in `#lib/extensions/contributions.gen.ts`), and hooks
+ * are in its `server/index.ts` (see `#lib/server/extensions.ts`).
  */
 import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity";
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
-import type { OrderStatus } from "#lib/models.ts";
+import type { cards } from "#lib/dashboard/extensions.ts";
+import type { detailSide as equipmentDetailSide } from "#lib/equipment/extensions.ts";
+import { bulkContributions, slotContributions } from "#lib/extensions/contributions.gen.ts";
+import type {
+	AnyBulkContribution,
+	AnySlotContribution,
+	BulkContribution,
+	SlotContribution,
+	SlotPoint,
+} from "#lib/extensions/define.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
+import type { OrderBulkRow, detailSide as orderDetailSide } from "#lib/orders/extensions.ts";
 
 import { manifests } from "./manifests.gen.ts";
-
-/** The places on core pages where modules can add components, with the props each passes. */
-export interface SlotProps {
-	/** Cards on the dashboard, below the headline numbers (laid out in two columns). */
-	dashboard: Record<string, never>;
-	/** Cards in the side column of an order's page. */
-	order: { number: string };
-	/** Cards in the side column of a unit of equipment's page. */
-	equipment: { serialNumber: string };
-}
-
-export type SlotName = keyof SlotProps;
-
-/** Loads a slot's component, so a tenant without the module doesn't download it. */
-type SlotLoader<Name extends SlotName> = () => Promise<{
-	default: Component<SlotProps[Name]>;
-}>;
 
 /** What a module contributes besides its name; both its manifest and its registry entry have it. */
 interface ModuleParts {
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
 	icon: Component;
-	/**
-	 * What the module adds to core pages. The components load their own data through the module's
-	 * remote functions (made with `moduleRemote()`), and render nothing when they have
-	 * nothing to say.
-	 */
-	slots?: { [Name in SlotName]?: SlotLoader<Name> };
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;
 	/**
@@ -65,11 +46,6 @@ interface ModuleParts {
 	 * read for every tenant, also after the module is switched off.
 	 */
 	actions?: Record<string, Sentence>;
-	/**
-	 * Bulk actions the module adds to core tables' selections (see `BulkActionRows`), after the
-	 * table's own. Their commands are made with `moduleRemote()`.
-	 */
-	bulkActions?: { [Table in BulkTableName]?: BulkActionLoader<Table> };
 	/**
 	 * Modules that must be on for this one to be on. Literal ids: the generator reads them from
 	 * `module.ts` with a pattern, and orders the registries by them.
@@ -101,34 +77,6 @@ export interface ModuleManifest<Id extends string = string> extends ModuleParts 
 	description: () => string;
 }
 
-/** An order as a module's bulk action sees a selected row of the orders list. */
-export interface OrderBulkRow {
-	id: number;
-	number: string;
-	status: OrderStatus;
-	customer: { id: number; code: string; name: string };
-}
-
-/** The core tables where modules can add bulk actions, with the rows each passes. */
-interface BulkActionRows {
-	orders: OrderBulkRow;
-}
-
-export type BulkTableName = keyof BulkActionRows;
-
-/**
- * A module's bulk actions for a table, as the table runs them: on a server-side list's `where`.
- */
-export type TableBulkAction<Table extends BulkTableName> = BulkAction<
-	BulkActionRows[Table],
-	AnyListWhere
->;
-
-/** Loads a module's bulk actions for a table, so a tenant without the module doesn't download them. */
-export type BulkActionLoader<Table extends BulkTableName> = () => Promise<{
-	default: TableBulkAction<Table>[];
-}>;
-
 /** All the modules in registry order: the folders in `src/modules` by id (`scripts/modules.ts`). */
 export const modules = manifests satisfies readonly AppModule[];
 
@@ -138,11 +86,29 @@ export type { ModuleId };
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;
 type ActionsOf<Module> = Module extends { actions: infer Actions } ? keyof Actions & string : never;
 
-/** What a module adds at a slot: its component's loader, with the module's id. */
-export interface SlotContribution<Name extends SlotName> {
-	id: ModuleId;
-	load: SlotLoader<Name>;
+// Temporary, removed with ExtensionSlot: the old slot and table names, read through the
+// generated contributions, for `module-slots.svelte` and `module-bulk-actions.svelte.ts`.
+
+type PropsOf<Point> = Point extends SlotPoint<infer Props> ? Props : never;
+
+/** The points that the old slot names stand for. */
+const slotPoints = {
+	dashboard: "dashboard.cards",
+	order: "orders.detail.side",
+	equipment: "equipment.detail.side",
+} as const;
+
+/** The places on core pages where modules can add components, with the props each passes. */
+export interface SlotProps {
+	dashboard: PropsOf<typeof cards>;
+	order: PropsOf<typeof orderDetailSide>;
+	equipment: PropsOf<typeof equipmentDetailSide>;
 }
+
+export type SlotName = keyof SlotProps;
+
+/** Loads a slot's component, so a tenant without the module doesn't download it. */
+type SlotLoader<Name extends SlotName> = SlotContribution<SlotProps[Name]>["load"];
 
 /**
  * The components that the `enabled` modules add at `name`, by module, in registry order. Each is
@@ -151,22 +117,36 @@ export interface SlotContribution<Name extends SlotName> {
 export function slotLoaders<Name extends SlotName>(
 	name: Name,
 	enabled: readonly string[],
-	registry: readonly AppModule[] = modules,
-): SlotContribution<Name>[] {
-	return registry.flatMap(({ id, slots }) => {
-		const load = slots?.[name];
-		return load && enabled.includes(id) ? [{ id, load }] : [];
-	});
+	registry: readonly AnySlotContribution[] = slotContributions,
+): { id: ModuleId; load: SlotLoader<Name> }[] {
+	return registry
+		.filter(({ point, module }) => point === slotPoints[name] && enabled.includes(module))
+		.map(({ module, load }) => ({ id: module, load: load as SlotLoader<Name> }));
 }
+
+/** The tables that the old table names stand for. */
+const bulkTables = { orders: "orders.list" } as const;
+
+/** The rows each table passes its bulk actions. */
+interface BulkActionRows {
+	orders: OrderBulkRow;
+}
+
+export type BulkTableName = keyof BulkActionRows;
+
+/** A module's bulk action for a table, as the table runs it: on a server-side list's `where`. */
+export type TableBulkAction<Table extends BulkTableName> = BulkAction<
+	BulkActionRows[Table],
+	AnyListWhere
+>;
 
 /** The loaders of the bulk actions that the `enabled` modules add to `table`, in registry order. */
 export function bulkActionLoaders<Table extends BulkTableName>(
 	table: Table,
 	enabled: readonly string[],
-	registry: readonly AppModule[] = modules,
-): BulkActionLoader<Table>[] {
-	return registry.flatMap((module) => {
-		const load = module.bulkActions?.[table];
-		return load && enabled.includes(module.id) ? [load] : [];
-	});
+	registry: readonly AnyBulkContribution[] = bulkContributions,
+): BulkContribution<BulkActionRows[Table]>["load"][] {
+	return registry
+		.filter(({ point, module }) => point === bulkTables[table] && enabled.includes(module))
+		.map(({ load }) => load as BulkContribution<BulkActionRows[Table]>["load"]);
 }
