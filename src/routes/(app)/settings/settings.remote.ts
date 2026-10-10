@@ -1,8 +1,11 @@
 import { getRequestEvent } from "$app/server";
-import { and, asc, eq } from "drizzle-orm";
+import { invalid } from "@sveltejs/kit";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager, parseRoles } from "#lib/auth";
+import { changeModules, effectiveModules } from "#lib/modules/graph.ts";
+import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
 import { recordActivity } from "#lib/server/activity";
 import { currentTenant, inTenant } from "#lib/server/auth";
@@ -27,6 +30,7 @@ export const getOrganizationSettings = forMembers.query(async () => {
 			.where(inTenant(organizationModule)),
 	]);
 	const enabledAt = new Map(enabled.map((row) => [row.moduleId, row.enabledAt]));
+	const on = new Set(effectiveModules(enabled.map((row) => row.moduleId)));
 	return {
 		name: tenant.name,
 		canManage: isManager(tenant.roles),
@@ -36,44 +40,69 @@ export const getOrganizationSettings = forMembers.query(async () => {
 			label,
 			description,
 			enabledAt: enabledAt.get(id) ?? null,
+			alwaysOn: moduleGraph[id].alwaysOn,
+			on: on.has(id),
 		})),
 	};
 });
 
-export const setModule = forManagers.form(
-	v.object({
-		moduleId: v.picklist(modules.map((m) => m.id)),
-		enabled: v.picklist(["on", "off"]),
-	}),
-	async ({ moduleId, enabled }) => {
+/** A module's name, for the activity log and messages. */
+const moduleLabel = (id: string) => modules.find((m) => m.id === id)?.label ?? id;
+
+const moduleList = v.optional(v.array(v.picklist(moduleIds)), []);
+
+/**
+ * Switches modules on and off together: the page sends a module with what it requires (to switch
+ * on) or with what requires it (to switch off), and this refuses a set that would leave a module
+ * without what it requires, or switch off an always-on one (`changeModules()`).
+ */
+export const setModules = forManagers.form(
+	v.pipe(
+		v.object({ enable: moduleList, disable: moduleList }),
+		v.check(({ enable, disable }) => enable.length + disable.length > 0, m.common_error_generic),
+	),
+	async ({ enable, disable }) => {
 		const { organizationId } = currentTenant();
-		await db.transaction(async (tx) => {
-			const changed =
-				enabled === "on"
-					? await tx
-							.insert(organizationModule)
-							.values({ organizationId, moduleId })
-							.onConflictDoNothing()
-							.returning()
-					: await tx
-							.delete(organizationModule)
-							.where(and(inTenant(organizationModule), eq(organizationModule.moduleId, moduleId)))
-							.returning();
-			// Only a change of state: enabling an enabled module changes nothing.
-			if (!changed.length) return;
-			const label = modules.find((m) => m.id === moduleId)?.label ?? moduleId;
-			const action = enabled === "on" ? "module_enabled" : "module_disabled";
-			await recordActivity(tx, { action, subject: { type: "module", id: moduleId, label } });
+		const outcome = await db.transaction(async (tx) => {
+			const rows = await tx
+				.select({ moduleId: organizationModule.moduleId })
+				.from(organizationModule)
+				.where(inTenant(organizationModule));
+			const before = new Set(rows.map((row) => row.moduleId));
+			const outcome = changeModules([...before], { enable, disable });
+			if ("refused" in outcome) return outcome;
+			const after = new Set<string>(outcome.stored);
+			const added = outcome.stored.filter((id) => !before.has(id));
+			const removed = moduleIds.filter((id) => before.has(id) && !after.has(id));
+			if (added.length) {
+				await tx
+					.insert(organizationModule)
+					.values(added.map((moduleId) => ({ organizationId, moduleId })));
+			}
+			if (removed.length) {
+				await tx
+					.delete(organizationModule)
+					.where(and(inTenant(organizationModule), inArray(organizationModule.moduleId, removed)));
+			}
+			const changes = [
+				...added.map((id) => ({ id, action: "module_enabled" as const })),
+				...removed.map((id) => ({ id, action: "module_disabled" as const })),
+			];
+			for (const { id, action } of changes) {
+				await recordActivity(tx, {
+					action,
+					subject: { type: "module", id, label: moduleLabel(id) },
+				});
+			}
+			return outcome;
 		});
+		if ("refused" in outcome) {
+			invalid(m.settings_modules_refused({ modules: outcome.refused.map(moduleLabel).join(", ") }));
+		}
 		// The tenant was loaded at the start of this request; bring it up to date before the
 		// sidebar's query is refreshed with it.
 		const { tenant } = getRequestEvent().locals;
-		if (tenant) {
-			tenant.modules =
-				enabled === "on"
-					? [...new Set([...tenant.modules, moduleId])]
-					: tenant.modules.filter((id) => id !== moduleId);
-		}
+		if (tenant) tenant.modules = effectiveModules(outcome.stored);
 		void getOrganizationSettings().refresh();
 		void getCurrentTenant().refresh();
 	},

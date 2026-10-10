@@ -60,3 +60,43 @@ export function requirementsOf(id: ModuleId, graph: ModuleGraph = moduleGraph): 
 export function dependentsOf(id: ModuleId, graph: ModuleGraph = moduleGraph): ModuleId[] {
 	return inGraphOrder(graph, (other) => requirementsOf(other as ModuleId, graph).includes(id));
 }
+
+/**
+ * The stored modules whose direct `requires` aren't all stored or always on, each with the ones
+ * missing, in graph order: what a set of rows must not contain. Ids the graph doesn't have are
+ * ignored.
+ */
+export function moduleSetProblems(
+	stored: readonly string[],
+	graph: ModuleGraph = moduleGraph,
+): { module: ModuleId; missing: ModuleId[] }[] {
+	return inGraphOrder(graph, (id) => stored.includes(id)).flatMap((module) => {
+		const missing = graph[module].requires.filter(
+			(required) => !stored.includes(required) && !graph[required].alwaysOn,
+		) as ModuleId[];
+		return missing.length ? [{ module, missing }] : [];
+	});
+}
+
+/**
+ * The stored modules after switching `enable` on and `disable` off (a module in both ends up off),
+ * or, when that would switch off an always-on module or leave a module without what it requires,
+ * the modules at fault (`refused`, in graph order).
+ */
+export function changeModules(
+	stored: readonly string[],
+	change: { enable: readonly string[]; disable: readonly string[] },
+	graph: ModuleGraph = moduleGraph,
+): { stored: ModuleId[] } | { refused: ModuleId[] } {
+	const next = inGraphOrder(
+		graph,
+		(id) => (stored.includes(id) || change.enable.includes(id)) && !change.disable.includes(id),
+	);
+	const refused = new Set<string>([
+		...change.disable.filter((id) => graph[id]?.alwaysOn),
+		...moduleSetProblems(next, graph).map(({ module }) => module),
+	]);
+	return refused.size
+		? { refused: inGraphOrder(graph, (id) => refused.has(id)) }
+		: { stored: next };
+}
