@@ -111,10 +111,16 @@ export interface BulkContribution<Row> {
 /**
  * A contribution to some slot, as the registry lists them. A component takes at least its slot's
  * props, so this is the widest: narrow it by its `point` before rendering it.
+ *
+ * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
  */
 export type AnySlotContribution = SlotContribution<never>;
 
-/** A contribution to some table, as the registry lists them; narrow it by its `point`. */
+/**
+ * A contribution to some table, as the registry lists them; narrow it by its `point`.
+ *
+ * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
+ */
 export type AnyBulkContribution = BulkContribution<never>;
 
 /**
