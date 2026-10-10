@@ -13,9 +13,9 @@ import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
 
-import { byPriorityThenAge, startOfWeek } from "./board.ts";
+import { byPriorityThenAge, startOfWeek } from "./board/board.ts";
+import { moveFields, scheduleFields } from "./form/schedule-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
-import { moveFields, scheduleFields } from "./schedule-schema.ts";
 
 /** What a card on the board shows of an order. */
 const cardColumns = {

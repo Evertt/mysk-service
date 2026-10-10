@@ -7,7 +7,7 @@ import { dateFormatter, formatDate } from "#lib/i18n/index.ts";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 import { plannedStatus } from "#lib/orders/index.ts";
 
-import type { getSchedule } from "./schedule.remote.ts";
+import type { getSchedule } from "../schedule.remote.ts";
 
 /** What the schedule query returns for a week, and one of its orders. */
 export type Schedule = Awaited<ReturnType<typeof getSchedule>>;
