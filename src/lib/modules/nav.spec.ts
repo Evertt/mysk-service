@@ -46,6 +46,13 @@ test("a module may go after a module that comes later in registry order", () => 
 	]);
 });
 
+test("a chain after an entry stays together", () => {
+	// c goes after a, which goes after Orders; b after Orders comes behind both.
+	expect(
+		ids(placeNav(core, [mod("a", "orders"), mod("c", "a"), mod("b", "orders")], "Modules"))[0],
+	).toEqual(["dashboard", "orders", "a", "c", "b", "activity"]);
+});
+
 test("a module whose entry isn't shown goes in the modules group", () => {
 	const groups = placeNav(core, [mod("b", "a"), mod("c", "nowhere")], "Modules");
 	expect(groups.at(-1)).toMatchObject({ label: "Modules" });
