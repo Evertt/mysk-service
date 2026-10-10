@@ -18,7 +18,7 @@
 	import { issueInvoice, markPaid, voidInvoice } from "#modules/invoicing/invoice-status.remote.ts";
 	import { canChange, isEditable } from "#modules/invoicing/invoice.ts";
 	import { getInvoice } from "#modules/invoicing/invoices.remote.ts";
-	import StatusBadge from "#modules/invoicing/status-badge.svelte";
+	import StatusBadge from "#modules/invoicing/ui/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/invoices/[number]"> } = $props();
 

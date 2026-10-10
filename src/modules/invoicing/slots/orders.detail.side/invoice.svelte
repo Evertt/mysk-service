@@ -10,9 +10,9 @@
 
 	import { formatDate, messageParts } from "#lib/i18n/index.ts";
 
-	import InvoiceLink from "../../invoice-link.svelte";
 	import { getOrderInvoice } from "../../invoicing.remote.ts";
-	import StatusBadge from "../../status-badge.svelte";
+	import InvoiceLink from "../../ui/invoice-link.svelte";
+	import StatusBadge from "../../ui/status-badge.svelte";
 
 	let { number }: { number: string } = $props();
 

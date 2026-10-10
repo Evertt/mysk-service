@@ -6,10 +6,10 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatCents } from "#lib/i18n/index.ts";
 
-import InvoiceLink from "../invoice-link.svelte";
 import { invoiceStates } from "../invoice.ts";
 import type { getInvoices } from "../invoices.remote.ts";
-import StatusBadge from "../status-badge.svelte";
+import InvoiceLink from "../ui/invoice-link.svelte";
+import StatusBadge from "../ui/status-badge.svelte";
 
 export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
 
