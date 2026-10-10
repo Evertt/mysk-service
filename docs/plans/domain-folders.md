@@ -29,6 +29,15 @@ questions, the decisions here win.
 5. `settings`, `settings/members` and `activity` stay in routes; module roots aren't tidied beyond
    moving files out of `routes/`.
 
+6. **No `imports`/`paths` entry maps a folder to its barrel** (changed after the pilot). The
+   barrels are imported by their file through the `#lib/*` wildcard: `#lib/orders/index.ts`,
+   `#lib/orders/components.ts`, `#lib/orders/remotes.ts`, `#lib/orders/server/index.ts`, and the
+   existing ones (`#lib/i18n/index.ts`, `#lib/server/lists/index.ts`, ...). `tsconfig.json` has no
+   `paths`. `#ui/*` stays: it maps shadcn's component folders and the shadcn CLI and the
+   auto-imports use it. Everywhere below, read `#lib/<d>` as `#lib/<d>/index.ts`, `#lib/<d>/remote`
+   as `#lib/<d>/remotes.ts` and `/components`, `/server` likewise; the alias sections (5.2) no longer
+   apply, and `import-extensions.spec.ts` flags a folder imported as `#lib/x`.
+
 Findings of the engineers pilot (they change the text below where they differ):
 
 - **The remote barrel's file is `remotes.ts`, not `remote.ts`**: SvelteKit treats every file matching

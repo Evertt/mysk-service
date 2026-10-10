@@ -20,7 +20,7 @@
 <script lang="ts">
 	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
 
-	import { formatCents } from "#lib/i18n";
+	import { formatCents } from "#lib/i18n/index.ts";
 
 	import FacetedFilter from "./faceted-filter.svelte";
 	import RowActions from "./row-actions.svelte";

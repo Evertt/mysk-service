@@ -2,7 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { refuse } from "#lib/server/forms.ts";

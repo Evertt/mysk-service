@@ -14,7 +14,7 @@
  */
 import { resolve } from "$app/paths";
 
-import { parseRoles } from "#lib/auth";
+import { parseRoles } from "#lib/auth/index.ts";
 import {
 	formatCents,
 	formatDate,
@@ -23,7 +23,7 @@ import {
 	label,
 	type LabelKind,
 	labelOrValue,
-} from "#lib/i18n";
+} from "#lib/i18n/index.ts";
 import type { CoreActivityAction } from "#lib/models.ts";
 import { type AppModule, modules } from "#lib/modules/manifests.ts";
 

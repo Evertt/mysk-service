@@ -39,7 +39,7 @@ import {
 	requireModule,
 	requireTenant,
 	requireUser,
-} from "#lib/server/auth";
+} from "#lib/server/auth/index.ts";
 
 /** A remote function set, typed as SvelteKit's own so every overload and field type carries over. */
 interface RemoteSet {

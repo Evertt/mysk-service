@@ -2,8 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { EngineerForm } from "#lib/engineers/components";
-	import { createEngineer } from "#lib/engineers/remote";
+	import { EngineerForm } from "#lib/engineers/components.ts";
+	import { createEngineer } from "#lib/engineers/remotes.ts";
 </script>
 
 <svelte:head>

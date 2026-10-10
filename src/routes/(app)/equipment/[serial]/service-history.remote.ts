@@ -3,8 +3,8 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.ts";
-import { priceOrders } from "#lib/orders/server";
-import { inTenant, tenantJoin } from "#lib/server/auth";
+import { priceOrders } from "#lib/orders/server/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";

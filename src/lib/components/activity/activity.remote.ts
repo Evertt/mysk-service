@@ -7,12 +7,12 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
-import { subjectTypeLabel, subjectTypes } from "#lib/activity";
+import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { nextDay } from "#lib/dates.ts";
-import { intlLocale } from "#lib/i18n";
+import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
-import { present } from "#lib/server/activity";
-import { currentTenant, inTenant } from "#lib/server/auth";
+import { present } from "#lib/server/activity/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";

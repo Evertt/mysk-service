@@ -10,8 +10,8 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay, toDateInput } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers";
-	import { labelOptions } from "#lib/i18n";
+	import { specialties } from "#lib/engineers/index.ts";
+	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
 	import OrderLinesField from "./order-lines-field.svelte";

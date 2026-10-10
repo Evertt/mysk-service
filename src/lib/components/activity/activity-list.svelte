@@ -4,9 +4,9 @@
 	changed fields and when. Subjects link to their page while they exist.
 -->
 <script lang="ts">
-	import { actionSentence, subjectHref } from "#lib/activity";
-	import { formatDateTime, messageParts } from "#lib/i18n";
-	import type { ActivityEntry, SubjectLink } from "#lib/server/activity";
+	import { actionSentence, subjectHref } from "#lib/activity/index.ts";
+	import { formatDateTime, messageParts } from "#lib/i18n/index.ts";
+	import type { ActivityEntry, SubjectLink } from "#lib/server/activity/index.ts";
 
 	let {
 		entries,

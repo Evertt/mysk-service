@@ -3,8 +3,8 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { EngineersTable } from "#lib/engineers/components";
-	import { getEngineers } from "#lib/engineers/remote";
+	import { EngineersTable } from "#lib/engineers/components.ts";
+	import { getEngineers } from "#lib/engineers/remotes.ts";
 </script>
 
 <svelte:head>

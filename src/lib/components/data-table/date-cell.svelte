@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDate } from "#lib/i18n";
+	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { useCellContext } from "./table.svelte.ts";
 

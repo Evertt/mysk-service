@@ -8,7 +8,7 @@
 	import type { Component } from "svelte";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { formatDate } from "#lib/i18n";
+	import { formatDate } from "#lib/i18n/index.ts";
 	import { dependentsOf, requirementsOf } from "#lib/modules/graph.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 

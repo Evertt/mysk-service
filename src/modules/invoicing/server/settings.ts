@@ -1,7 +1,7 @@
 /** The tenant's invoicing settings: the defaults for the invoices it makes. */
 import { eq } from "drizzle-orm";
 
-import { requireMember } from "#lib/server/auth";
+import { requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { invoicingSettings } from "./schema.ts";

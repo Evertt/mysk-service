@@ -7,8 +7,8 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { statuses } from "#lib/equipment";
-	import { formatNumber } from "#lib/i18n";
+	import { statuses } from "#lib/equipment/index.ts";
+	import { formatNumber } from "#lib/i18n/index.ts";
 	import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 
 	import ChartTable from "./chart-table.svelte";

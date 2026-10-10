@@ -2,8 +2,8 @@
 import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
-import type { SubjectType } from "#lib/activity";
-import { formatCents, formatDate } from "#lib/i18n";
+import type { SubjectType } from "#lib/activity/index.ts";
+import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 import { contractLabels } from "./labels.ts";
 

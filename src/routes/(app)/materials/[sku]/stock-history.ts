@@ -1,4 +1,4 @@
-import { formatQuantity } from "#lib/materials";
+import { formatQuantity } from "#lib/materials/index.ts";
 import type { MaterialUnit } from "#lib/models.ts";
 
 /** A change in stock with its sign and unit, e.g. `+12 pcs` or `−2.5 kg`. */

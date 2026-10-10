@@ -4,8 +4,8 @@ import * as v from "valibot";
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
-import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import {
@@ -14,7 +14,7 @@ import {
 	refreshRequested,
 	pageGroupsOf,
 	planList,
-} from "#lib/server/lists";
+} from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { equipmentSql, withEquipmentJoins } from "./equipment-list.server.ts";

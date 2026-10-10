@@ -4,7 +4,7 @@
 	`#lib/equipment/extensions.ts`): the contracts covering the unit, with their level and end date.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/i18n";
+	import { formatDate } from "#lib/i18n/index.ts";
 
 	import ContractLink from "../../contract-link.svelte";
 	import { getUnitCoverage } from "../../coverage.remote.ts";

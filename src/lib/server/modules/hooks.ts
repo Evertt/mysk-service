@@ -6,7 +6,7 @@ import { error } from "@sveltejs/kit";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { requireModule } from "#lib/server/auth";
+import { requireModule } from "#lib/server/auth/index.ts";
 
 /**
  * Refuses the current tenant a module's routes unless it has the module: a 404, as if they didn't

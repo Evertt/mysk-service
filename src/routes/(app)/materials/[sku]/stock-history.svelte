@@ -4,10 +4,10 @@
 	after it, and who did it.
 -->
 <script lang="ts">
-	import { formatDate, label } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials";
+	import { formatDate, label } from "#lib/i18n/index.ts";
+	import { formatQuantity } from "#lib/materials/index.ts";
 	import type { MaterialUnit } from "#lib/models.ts";
-	import { OrderLink } from "#lib/orders/components";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import type { getMaterial } from "../material.remote.ts";
 	import { formatChange } from "./stock-history.ts";

@@ -1,5 +1,5 @@
-import { invitedAsText } from "#lib/auth";
-import { dateFormatter } from "#lib/i18n";
+import { invitedAsText } from "#lib/auth/index.ts";
+import { dateFormatter } from "#lib/i18n/index.ts";
 
 import type { Mail } from "./send.ts";
 

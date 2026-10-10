@@ -1,5 +1,5 @@
 /** The translated names of the contracts module's enum values, see `#lib/i18n/labels.ts`. */
-import { defineLabels, type Labels } from "#lib/i18n";
+import { defineLabels, type Labels } from "#lib/i18n/index.ts";
 
 import type { SlaState } from "./coverage.ts";
 import type { ContractLevel, ContractStatus } from "./model.ts";

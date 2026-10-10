@@ -3,9 +3,9 @@ import { redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant } from "#lib/server/auth";
+import { isManager } from "#lib/auth/index.ts";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { forManagers, query } from "../../../../remote-functions.ts";

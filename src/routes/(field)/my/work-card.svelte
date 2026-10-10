@@ -7,9 +7,9 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import MapPinIcon from "@lucide/svelte/icons/map-pin";
 
-	import { formatDate } from "#lib/i18n";
+	import { formatDate } from "#lib/i18n/index.ts";
 	import type { OrderPriority, OrderStatus } from "#lib/models.ts";
-	import { PriorityBadge, StatusBadge } from "#lib/orders/components";
+	import { PriorityBadge, StatusBadge } from "#lib/orders/components.ts";
 
 	import { plannedTime } from "./work.ts";
 

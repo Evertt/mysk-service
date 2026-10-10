@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { inTenant } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";

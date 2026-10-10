@@ -2,33 +2,7 @@
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"strict": true,
-		"types": ["$app/types", "node"],
-		"paths": {
-			"#lib/activity": ["./src/lib/activity/index.ts"],
-			"#lib/auth": ["./src/lib/auth/index.ts"],
-			"#lib/customers": ["./src/lib/customers/index.ts"],
-			"#lib/customers/components": ["./src/lib/customers/components.ts"],
-			"#lib/customers/remote": ["./src/lib/customers/remotes.ts"],
-			"#lib/engineers": ["./src/lib/engineers/index.ts"],
-			"#lib/engineers/components": ["./src/lib/engineers/components.ts"],
-			"#lib/engineers/remote": ["./src/lib/engineers/remotes.ts"],
-			"#lib/equipment": ["./src/lib/equipment/index.ts"],
-			"#lib/equipment/components": ["./src/lib/equipment/components.ts"],
-			"#lib/equipment/remote": ["./src/lib/equipment/remotes.ts"],
-			"#lib/i18n": ["./src/lib/i18n/index.ts"],
-			"#lib/materials": ["./src/lib/materials/index.ts"],
-			"#lib/materials/components": ["./src/lib/materials/components.ts"],
-			"#lib/materials/remote": ["./src/lib/materials/remotes.ts"],
-			"#lib/materials/server": ["./src/lib/materials/server/index.ts"],
-			"#lib/orders": ["./src/lib/orders/index.ts"],
-			"#lib/orders/components": ["./src/lib/orders/components.ts"],
-			"#lib/orders/remote": ["./src/lib/orders/remotes.ts"],
-			"#lib/orders/server": ["./src/lib/orders/server/index.ts"],
-			"#lib/server/activity": ["./src/lib/server/activity/index.ts"],
-			"#lib/server/auth": ["./src/lib/server/auth/index.ts"],
-			"#lib/server/lists": ["./src/lib/server/lists/index.ts"],
-			"#lib/server/mail": ["./src/lib/server/mail/index.ts"]
-		}
+		"types": ["$app/types", "node"]
 	},
 	"include": [
 		"src",

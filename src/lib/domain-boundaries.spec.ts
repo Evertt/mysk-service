@@ -2,8 +2,8 @@
  * Keeps the core domains (`src/lib/{orders,customers,equipment,engineers,materials}`) behind their
  * barrels (see "Where files go" in AGENTS.md):
  *
- * - code outside a domain imports it only through its barrels (`#lib/<d>`, `#lib/<d>/components`,
- *   `#lib/<d>/remote`, `#lib/<d>/server`), except `extensions.ts` (the module generator and the
+ * - code outside a domain imports it only through its barrels (`#lib/<d>/index.ts`, `components.ts`,
+ *   `remotes.ts` and `server/index.ts`), except `extensions.ts` (the module generator and the
  *   modules' module-scope contributions need that file itself) and `e2e/` and `scripts/` (no Vite
  *   plugins: they import plain files by path);
  * - code inside a domain imports its siblings relatively, never its own barrels (a cycle);
@@ -51,11 +51,6 @@ const ownDomain = (path: string) => {
 /** Where a specifier written in the file at `path` points, from the project root. */
 export function target(specifier: string, path: string): string | undefined {
 	if (specifier.startsWith(".")) return posix.join(posix.dirname(path), specifier);
-	const barrel = /^#lib\/([^/]+)(?:\/(components|remote|server))?$/.exec(specifier);
-	if (barrel && domains.includes(barrel[1])) {
-		const kind = barrel[2];
-		return `src/lib/${barrel[1]}/${!kind ? "index.ts" : kind === "server" ? "server/index.ts" : kind === "remote" ? "remotes.ts" : `${kind}.ts`}`;
-	}
 	if (specifier.startsWith("#lib/")) return `src/lib/${specifier.slice("#lib/".length)}`;
 	return undefined;
 }
@@ -96,7 +91,7 @@ export function outsideImports(files: SourceFile[]): string[] {
 			const rest = /^src\/routes\/\(app\)\/([^/]+)\//.exec(file.path)?.[1];
 			if (rest === d && !migratedDomains.includes(d)) return [];
 			return [
-				`${file.path} imports ${specifier}: go through #lib/${d}, /components, /remote or /server`,
+				`${file.path} imports ${specifier}: go through #lib/${d}/index.ts, components.ts, remotes.ts or server/index.ts`,
 			];
 		});
 	});
@@ -248,21 +243,21 @@ describe("the checks", () => {
 				"src/routes/(app)/dashboard/x.ts",
 				[
 					`import { a } from "#lib/orders/display.ts";`,
-					`import { b } from "#lib/orders";`,
+					`import { b } from "#lib/orders/index.ts";`,
 					`import { c } from "#lib/orders/extensions.ts";`,
-					`import { d } from "#lib/orders/server";`,
+					`import { d } from "#lib/orders/server/index.ts";`,
 					`import F from "../../../lib/orders/ui/order-link.svelte";`,
 					`vi.mock("#lib/orders/order.remote.ts");`,
 				].join("\n"),
 			),
-			file("src/lib/customers/x.ts", `import { e } from "#lib/orders/components";`),
+			file("src/lib/customers/x.ts", `import { e } from "#lib/orders/components.ts";`),
 			file("src/lib/customers/y.ts", `import { e } from "#lib/orders/ui/order-link.svelte";`),
 			file("e2e/a.test.ts", `import { f } from "../src/lib/customers/countries.ts";`),
 		];
 		expect(outsideImports(files)).toEqual([
-			`src/routes/(app)/dashboard/x.ts imports #lib/orders/display.ts: go through #lib/orders, /components, /remote or /server`,
-			`src/routes/(app)/dashboard/x.ts imports ../../../lib/orders/ui/order-link.svelte: go through #lib/orders, /components, /remote or /server`,
-			`src/lib/customers/y.ts imports #lib/orders/ui/order-link.svelte: go through #lib/orders, /components, /remote or /server`,
+			`src/routes/(app)/dashboard/x.ts imports #lib/orders/display.ts: go through #lib/orders/index.ts, components.ts, remotes.ts or server/index.ts`,
+			`src/routes/(app)/dashboard/x.ts imports ../../../lib/orders/ui/order-link.svelte: go through #lib/orders/index.ts, components.ts, remotes.ts or server/index.ts`,
+			`src/lib/customers/y.ts imports #lib/orders/ui/order-link.svelte: go through #lib/orders/index.ts, components.ts, remotes.ts or server/index.ts`,
 		]);
 	});
 
@@ -270,13 +265,13 @@ describe("the checks", () => {
 		const files = [
 			file(
 				"src/lib/orders/list/a.ts",
-				`import { x } from "#lib/orders";\nimport { y } from "../display.ts";`,
+				`import { x } from "#lib/orders/index.ts";\nimport { y } from "../display.ts";`,
 			),
 			file("src/lib/orders/list/b.ts", `import { z } from "#lib/orders/display.ts";`),
 			file("src/lib/orders/index.ts", `export * from "./display.ts";`),
 		];
 		expect(insideImports(files)).toEqual([
-			"src/lib/orders/list/a.ts imports its own barrel #lib/orders: import the file",
+			"src/lib/orders/list/a.ts imports its own barrel #lib/orders/index.ts: import the file",
 			"src/lib/orders/list/b.ts imports #lib/orders/display.ts: inside a domain, import relatively",
 		]);
 	});
@@ -305,9 +300,9 @@ describe("the checks", () => {
 		const ts = file(
 			"src/lib/equipment/list/columns.ts",
 			[
-				`import { CustomerLink } from "#lib/customers/components";`,
-				`import { segments } from "#lib/customers";`,
-				`import type { Option } from "#lib/customers";`,
+				`import { CustomerLink } from "#lib/customers/components.ts";`,
+				`import { segments } from "#lib/customers/index.ts";`,
+				`import type { Option } from "#lib/customers/index.ts";`,
 				`import { own } from "../display.ts";`,
 				`export const bad = segments.map((s) => s);`,
 				`export const ok = () => segments.map((s) => s);`,
@@ -317,7 +312,7 @@ describe("the checks", () => {
 		);
 		const svelte = file(
 			"src/lib/equipment/list/t.svelte",
-			`<script module lang="ts">\n\timport { segments } from "#lib/customers";\n\texport const x = segments;\n</script>\n<script lang="ts">\n\timport { segments } from "#lib/customers";\n\tconst y = segments;\n</script>`,
+			`<script module lang="ts">\n\timport { segments } from "#lib/customers/index.ts";\n\texport const x = segments;\n</script>\n<script lang="ts">\n\timport { segments } from "#lib/customers/index.ts";\n\tconst y = segments;\n</script>`,
 		);
 		expect(moduleScopeReads([ts, svelte])).toEqual([
 			"src/lib/equipment/list/columns.ts reads segments, imported from another domain, when it is evaluated",

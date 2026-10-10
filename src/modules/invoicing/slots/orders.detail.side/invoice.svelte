@@ -8,7 +8,7 @@
 	import { resolve } from "$app/paths";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { formatDate, messageParts } from "#lib/i18n";
+	import { formatDate, messageParts } from "#lib/i18n/index.ts";
 
 	import InvoiceLink from "../../invoice-link.svelte";
 	import { getOrderInvoice } from "../../invoicing.remote.ts";

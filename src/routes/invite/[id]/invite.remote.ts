@@ -4,10 +4,10 @@ import { isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { invitationState, parseRoles } from "#lib/auth";
-import { formatNumber } from "#lib/i18n";
-import { recordActivityAfter } from "#lib/server/activity";
-import { auth, currentUser } from "#lib/server/auth";
+import { invitationState, parseRoles } from "#lib/auth/index.ts";
+import { formatNumber } from "#lib/i18n/index.ts";
+import { recordActivityAfter } from "#lib/server/activity/index.ts";
+import { auth, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, organization, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forUsers } from "#lib/server/remote-functions.ts";

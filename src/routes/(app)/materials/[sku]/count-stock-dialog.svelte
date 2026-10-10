@@ -10,8 +10,8 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { label } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials";
+	import { label } from "#lib/i18n/index.ts";
+	import { formatQuantity } from "#lib/materials/index.ts";
 	import { type MaterialUnit, quantityStep } from "#lib/models.ts";
 
 	import { formatChange } from "./stock-history.ts";

@@ -11,8 +11,8 @@
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 	import { extensionBulkActions } from "#lib/extensions/bulk-actions.svelte.ts";
-	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders";
 	import { list as bulkTable } from "#lib/orders/extensions.ts";
+	import { priorityOptions, statusOptions, typeOptions } from "#lib/orders/index.ts";
 
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";

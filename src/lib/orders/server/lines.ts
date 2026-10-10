@@ -4,10 +4,10 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { moveOrderStock } from "#lib/materials/server";
+import { moveOrderStock } from "#lib/materials/server/index.ts";
 import { fitsUnit, type OrderStatus } from "#lib/models.ts";
-import { recordOrderLines } from "#lib/server/activity";
-import { idsInTenant, inTenant, requireTenant } from "#lib/server/auth";
+import { recordOrderLines } from "#lib/server/activity/index.ts";
+import { idsInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
 

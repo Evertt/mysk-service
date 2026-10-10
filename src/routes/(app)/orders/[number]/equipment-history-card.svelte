@@ -3,8 +3,8 @@
 	Other orders for the same unit as an order, for context.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/i18n";
-	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components";
+	import { formatDate } from "#lib/i18n/index.ts";
+	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 
 	import type { getOrder } from "../order.remote.ts";
 

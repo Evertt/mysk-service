@@ -3,7 +3,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth";
+import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth/index.ts";
 import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { db } from "#lib/server/db/index.ts";

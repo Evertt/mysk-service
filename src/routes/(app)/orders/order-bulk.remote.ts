@@ -4,11 +4,16 @@ import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { manualOrderStatuses } from "#lib/models.ts";
-import { assignOrder, assigneeProblem, changeOrderStatus, removeOrder } from "#lib/orders/server";
-import { inTenant } from "#lib/server/auth";
+import {
+	assignOrder,
+	assigneeProblem,
+	changeOrderStatus,
+	removeOrder,
+} from "#lib/orders/server/index.ts";
+import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
-import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists";
+import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { getOrderFacets, getOrders } from "./order-list.remote.ts";

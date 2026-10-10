@@ -7,7 +7,7 @@
  */
 import type { Component } from "svelte";
 
-import type { Sentence } from "#lib/activity";
+import type { Sentence } from "#lib/activity/index.ts";
 import { cards } from "#lib/dashboard/extensions.ts";
 import { detailSide as equipmentDetailSide } from "#lib/equipment/extensions.ts";
 import { slotContribution } from "#lib/extensions/define.ts";

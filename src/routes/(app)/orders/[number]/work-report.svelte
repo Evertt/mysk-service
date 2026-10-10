@@ -4,7 +4,7 @@
 	Nothing while there's neither.
 -->
 <script lang="ts">
-	import { formatDateTime } from "#lib/i18n";
+	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import { getWorkReport } from "./work-report.remote.ts";
 

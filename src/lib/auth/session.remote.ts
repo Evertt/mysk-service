@@ -3,8 +3,8 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isFieldEngineer } from "#lib/auth";
-import { auth, currentTenant, currentUser } from "#lib/server/auth";
+import { isFieldEngineer } from "#lib/auth/index.ts";
+import { auth, currentTenant, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
 import { forAnyone, forAnyRole, forUsers } from "#lib/server/remote-functions.ts";

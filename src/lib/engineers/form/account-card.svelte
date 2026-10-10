@@ -6,10 +6,10 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import { parseRoles } from "#lib/auth";
+	import { parseRoles } from "#lib/auth/index.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { labelOrValue } from "#lib/i18n";
+	import { labelOrValue } from "#lib/i18n/index.ts";
 
 	import { getEngineerAccount, linkEngineerAccount } from "./account.remote.ts";
 

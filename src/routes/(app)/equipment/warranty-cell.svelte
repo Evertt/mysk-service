@@ -3,8 +3,8 @@
 	The end of a unit's warranty, and whether it still covers the unit.
 -->
 <script lang="ts">
-	import { WarrantyBadge } from "#lib/equipment/components";
-	import { formatDate } from "#lib/i18n";
+	import { WarrantyBadge } from "#lib/equipment/components.ts";
+	import { formatDate } from "#lib/i18n/index.ts";
 
 	let { until }: { until: Date } = $props();
 </script>

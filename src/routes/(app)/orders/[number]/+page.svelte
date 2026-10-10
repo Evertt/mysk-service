@@ -6,17 +6,17 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { CustomerCard } from "#lib/customers/components";
-	import { SpecialtyBadge } from "#lib/engineers/components";
+	import { CustomerCard } from "#lib/customers/components.ts";
+	import { SpecialtyBadge } from "#lib/engineers/components.ts";
 	import {
 		CategoryLabel,
 		EquipmentLink,
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
-	} from "#lib/equipment/components";
-	import { formatCents, formatDate } from "#lib/i18n";
+	} from "#lib/equipment/components.ts";
+	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { isEditableOrder } from "#lib/models.ts";
-	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components";
+	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
 
 	import ExtensionSlot from "../../extension-slot.svelte";

@@ -2,7 +2,7 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { labelOrValue } from "#lib/i18n";
+	import { labelOrValue } from "#lib/i18n/index.ts";
 	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
 
 	import ModuleCard from "./module-card.svelte";

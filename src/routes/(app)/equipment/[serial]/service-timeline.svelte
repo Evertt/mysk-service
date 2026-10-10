@@ -10,12 +10,12 @@
 	import ShieldOffIcon from "@lucide/svelte/icons/shield-off";
 
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { EngineerLink } from "#lib/engineers/components";
-	import { formatCents, formatDate } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials";
-	import { MaterialLink } from "#lib/materials/components";
-	import { types } from "#lib/orders";
-	import { OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components";
+	import { EngineerLink } from "#lib/engineers/components.ts";
+	import { formatCents, formatDate } from "#lib/i18n/index.ts";
+	import { MaterialLink } from "#lib/materials/components.ts";
+	import { formatQuantity } from "#lib/materials/index.ts";
+	import { OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
+	import { types } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
 	import type { ServiceEvent } from "./service-history.ts";

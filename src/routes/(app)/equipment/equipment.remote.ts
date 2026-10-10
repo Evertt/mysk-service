@@ -4,8 +4,8 @@ import * as v from "valibot";
 
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";

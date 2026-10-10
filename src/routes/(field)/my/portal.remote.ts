@@ -8,12 +8,12 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatNumber, label } from "#lib/i18n";
-import { OrderStockShortage, moveOrderStock } from "#lib/materials/server";
+import { formatNumber, label } from "#lib/i18n/index.ts";
+import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { checkLines, saveOrderLines } from "#lib/orders/server";
+import { checkLines, saveOrderLines } from "#lib/orders/server/index.ts";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
+import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	auth,
 	currentEngineer,
@@ -21,7 +21,7 @@ import {
 	idInTenant,
 	inTenant,
 	tenantJoin,
-} from "#lib/server/auth";
+} from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";

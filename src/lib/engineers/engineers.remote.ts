@@ -4,14 +4,14 @@ import * as v from "valibot";
 
 import { DAY } from "#lib/dates.ts";
 import { openOrderStatuses } from "#lib/models.ts";
-import { laborCost } from "#lib/orders/server";
+import { laborCost } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { bulkChange, idsTarget } from "#lib/server/lists";
+import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 

@@ -4,8 +4,9 @@ import { and, asc, desc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { atTime } from "#lib/dates.ts";
-import { OrderStockShortage } from "#lib/materials/server";
+import { OrderStockShortage } from "#lib/materials/server/index.ts";
 import { isEditableOrder, lineTotal } from "#lib/models.ts";
+import { orderCommitted, tagOrders } from "#lib/orders/server/hooks.ts";
 import {
 	STANDARD_HOURLY_RATE,
 	checkLines,
@@ -16,11 +17,10 @@ import {
 	saveOrderLines,
 	type LineInput,
 	type LineProblem,
-} from "#lib/orders/server";
-import { orderCommitted, tagOrders } from "#lib/orders/server/hooks.ts";
+} from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
 import { nextNumber } from "#lib/server/numbering.ts";

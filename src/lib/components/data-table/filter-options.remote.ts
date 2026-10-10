@@ -7,10 +7,10 @@ import { and, asc, inArray, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
-import { inTenant } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
-import { nocase, searchMatch } from "#lib/server/lists";
+import { nocase, searchMatch } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 /** A unit as the lists show it: manufacturer and model. */

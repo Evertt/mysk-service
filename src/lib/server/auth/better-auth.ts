@@ -7,10 +7,10 @@ import { adminAc, memberAc, ownerAc } from "better-auth/plugins/organization/acc
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { sql } from "drizzle-orm";
 
-import { INVITATION_EXPIRES_IN } from "#lib/auth";
-import type { MemberRole } from "#lib/auth";
+import { INVITATION_EXPIRES_IN } from "#lib/auth/index.ts";
+import type { MemberRole } from "#lib/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { invitationMail, sendMail } from "#lib/server/mail";
+import { invitationMail, sendMail } from "#lib/server/mail/index.ts";
 
 /**
  * The organization a user works in when they sign in: the first one they joined, or none yet (e.g.

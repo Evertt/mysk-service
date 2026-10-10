@@ -2,14 +2,14 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { label } from "#lib/i18n";
-import { moveStock, withBalances } from "#lib/materials/server";
+import { label } from "#lib/i18n/index.ts";
+import { moveStock, withBalances } from "#lib/materials/server/index.ts";
 import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.ts";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
-import { lineTotalSql } from "#lib/orders/server";
+import { lineTotalSql } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,

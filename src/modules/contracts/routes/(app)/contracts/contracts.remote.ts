@@ -3,14 +3,20 @@ import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { nextDay } from "#lib/dates.ts";
-import { formatDate } from "#lib/i18n";
+import { formatDate } from "#lib/i18n/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	idsInTenant,
+	inTenant,
+	tenantJoin,
+} from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
-import { bulkChange, idsTarget } from "#lib/server/lists";
+import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 
 import { command, form, query } from "../../../remote-functions.ts";

@@ -4,9 +4,9 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { countryName } from "#lib/customers";
-import { CustomerLink, SegmentBadge } from "#lib/customers/components";
-import { intlLocale } from "#lib/i18n";
+import { CustomerLink, SegmentBadge } from "#lib/customers/components.ts";
+import { countryName } from "#lib/customers/index.ts";
+import { intlLocale } from "#lib/i18n/index.ts";
 import { customerSegments } from "#lib/models.ts";
 
 import type { getCustomers } from "./customers.remote.ts";

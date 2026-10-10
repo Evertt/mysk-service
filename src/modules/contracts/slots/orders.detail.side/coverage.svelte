@@ -5,7 +5,7 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { formatDateTime } from "#lib/i18n";
+	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import ContractLink from "../../contract-link.svelte";
 	import { getOrderCoverage } from "../../coverage.remote.ts";

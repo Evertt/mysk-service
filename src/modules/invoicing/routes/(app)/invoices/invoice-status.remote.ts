@@ -3,13 +3,13 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { setOrdersStatus } from "#lib/orders/server";
+import { setOrdersStatus } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
-import { bulkChange, idsTarget } from "#lib/server/lists";
+import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 
 import { canChange, dueDate, today } from "../../../invoice.ts";
 import type { InvoiceStatus } from "../../../model.ts";

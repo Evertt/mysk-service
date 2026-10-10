@@ -7,10 +7,10 @@ import { inArray } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { orderPriorities } from "#lib/models.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists";
+import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
 import { ordersList } from "./orders-list.ts";
 

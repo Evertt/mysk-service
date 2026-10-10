@@ -11,7 +11,7 @@ import {
 	value,
 } from "#e2e/app.ts";
 import { covered, feesDue } from "#e2e/contracts-helpers.ts";
-import { formatCents, formatNumber } from "#lib/i18n";
+import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 
 import { cents, pageLocators, round, today, vatOf } from "./helpers.ts";
 

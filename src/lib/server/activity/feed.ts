@@ -14,8 +14,8 @@ import {
 	subjectNoun,
 	type SubjectType,
 	subjectTypes,
-} from "#lib/activity";
-import { inTenant, requireMember } from "#lib/server/auth";
+} from "#lib/activity/index.ts";
+import { inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, material } from "#lib/server/db/schema.ts";
 

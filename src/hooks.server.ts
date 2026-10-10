@@ -3,11 +3,11 @@ import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
-import { isFieldEngineer } from "#lib/auth";
+import { isFieldEngineer } from "#lib/auth/index.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
-import { auth, loadTenant } from "#lib/server/auth";
+import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 const handleParaglide: Handle = ({ event, resolve }) =>

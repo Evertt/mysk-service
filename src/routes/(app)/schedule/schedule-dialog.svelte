@@ -10,8 +10,8 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers";
-	import { formatDate } from "#lib/i18n";
+	import { specialties } from "#lib/engineers/index.ts";
+	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { DEFAULT_TIME, dayKey, parseDay } from "./board.ts";
 	import { getSchedule, scheduleOrder } from "./schedule.remote.ts";

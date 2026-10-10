@@ -3,9 +3,9 @@
 	An order's materials, labour and adjustments, and what it adds up to.
 -->
 <script lang="ts">
-	import { formatCents } from "#lib/i18n";
-	import { formatQuantity } from "#lib/materials";
-	import { MaterialLink } from "#lib/materials/components";
+	import { formatCents } from "#lib/i18n/index.ts";
+	import { MaterialLink } from "#lib/materials/components.ts";
+	import { formatQuantity } from "#lib/materials/index.ts";
 
 	import type { getOrder } from "../order.remote.ts";
 

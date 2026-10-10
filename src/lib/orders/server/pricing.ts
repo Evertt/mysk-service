@@ -1,6 +1,6 @@
 import { sql, type SQLWrapper } from "drizzle-orm";
 
-import { inTenant } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { orderLine } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";

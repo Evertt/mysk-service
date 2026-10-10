@@ -2,12 +2,12 @@ import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
-import { moveStock } from "#lib/materials/server";
+import { moveStock } from "#lib/materials/server/index.ts";
 import { findMaterial } from "#lib/materials/server/materials.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity";
-import { idInTenant } from "#lib/server/auth";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";

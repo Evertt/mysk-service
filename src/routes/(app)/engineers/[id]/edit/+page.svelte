@@ -2,8 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { AccountCard, EngineerForm } from "#lib/engineers/components";
-	import { getEngineer, updateEngineer } from "#lib/engineers/remote";
+	import { AccountCard, EngineerForm } from "#lib/engineers/components.ts";
+	import { getEngineer, updateEngineer } from "#lib/engineers/remotes.ts";
 
 	import type { PageProps } from "./$types";
 

@@ -6,15 +6,15 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { countryName } from "#lib/customers";
-	import { categories } from "#lib/equipment";
+	import { countryName } from "#lib/customers/index.ts";
 	import {
 		CategoryLabel,
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
-	} from "#lib/equipment/components";
+	} from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
-	import { formatDate, label } from "#lib/i18n";
+	import { categories } from "#lib/equipment/index.ts";
+	import { formatDate, label } from "#lib/i18n/index.ts";
 
 	import ExtensionSlot from "../../extension-slot.svelte";
 	import { deleteEquipment, getEquipment } from "../equipment.remote.ts";

@@ -1,7 +1,7 @@
 import type { RouteParams } from "$app/types";
 import type { RequestHandler } from "@sveltejs/kit";
 
-import { requireModule } from "#lib/server/auth";
+import { requireModule } from "#lib/server/auth/index.ts";
 
 import { loadInvoice } from "../../../../../server/invoices.ts";
 import { invoicePdf } from "./invoice-pdf.ts";

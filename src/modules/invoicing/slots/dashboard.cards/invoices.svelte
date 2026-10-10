@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { formatCents, formatDate } from "#lib/i18n";
+	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import InvoiceLink from "../../invoice-link.svelte";
 	import { getReceivables } from "../../invoicing.remote.ts";
