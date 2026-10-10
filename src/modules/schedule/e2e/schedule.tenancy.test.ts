@@ -5,24 +5,104 @@ import { organizations, rows, useApp, value } from "#e2e/app.ts";
 import {
 	activeEngineers,
 	backlogSize,
+	dayKey,
 	type Order,
 	orderByNumber,
 	pageLocators,
 	scheduleSwitches,
 	snapshot,
 	thisWeeksOrders,
+	weekday,
 } from "./helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
-const { board, backlog, cards, operations, settingsCard, openDialog } = pageLocators(app);
+const { board, backlog, cards, cell, operations, settingsCard, drag, openDialog } =
+	pageLocators(app);
 
 /** The last activity entry before this file switched South's schedule on. */
 let since = 0;
 
+describe("in South, which doesn't have the schedule", () => {
+	/** The URL of the board's query, as loaded in North. */
+	let query: string;
+	/** A North order in the backlog, which the refused requests try to plan. */
+	let victim: Order;
+
+	test("a drag on a board left open in North is refused after switching to South elsewhere", async () => {
+		const { page } = app;
+		// Client-side, so the board loads its week through a remote query.
+		await app.go("/");
+		const record = (request: { url(): string; method(): string }) => {
+			if (/\/_app\/remote\/.*\/getSchedule/.test(request.url())) query = request.url();
+		};
+		page.on("request", record);
+		await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Schedule" }).click();
+		await page.waitForURL((url) => url.pathname === "/schedule");
+		await backlog().waitFor();
+		page.off("request", record);
+		expect(query).toBeDefined();
+		const card = cards(backlog()).first();
+		victim = await orderByNumber((await card.getAttribute("data-order"))!, north.id);
+		const before = await snapshot(victim.id);
+
+		const other = await app.anotherTab();
+		await other.goto(new URL("/", page.url()).href);
+		await other.waitForLoadState("networkidle");
+		await other.locator('[data-sidebar="header"] button').first().click();
+		await other.getByRole("menuitem", { name: south.name }).click();
+		await other.waitForURL((url) => url.pathname === "/");
+		await other.context().close();
+
+		const target = cell("Unassigned", weekday(3));
+		const result = await app.expectingErrors(() => drag(card, target));
+		expect(result).toMatch(/404/);
+		// The toast says what the server said.
+		await app.toast("Not found");
+		// The card goes back to the backlog.
+		await backlog().locator(`[data-order="${victim.number}"]`).waitFor();
+		expect(await snapshot(victim.id)).toEqual(before);
+	});
+
+	test("so is the schedule dialog on that board", async () => {
+		const before = await snapshot(victim.id);
+		const dialog = await openDialog(victim.number);
+		await dialog.getByLabel("Date").fill(dayKey(weekday(2)));
+		const result = await app.expectingErrors(() =>
+			app.submit(dialog.getByRole("button", { name: "Schedule" })),
+		);
+		expect(result).toMatch(/"status":404/);
+		expect(await snapshot(victim.id)).toEqual(before);
+	});
+
+	test("South's sidebar has no Schedule, and its pages are 404s", async () => {
+		await app.go("/");
+		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
+		expect(await operations()).toEqual(["Dashboard", "Orders", "Activity"]);
+		expect(
+			await app.page
+				.locator('[data-sidebar="content"]')
+				.getByRole("link", { name: "Schedule" })
+				.count(),
+		).toBe(0);
+		for (const path of ["/schedule", `/schedule?week=${dayKey(weekday(0))}`]) {
+			const response = await app.go(path);
+			expect(response?.status(), path).toBe(404);
+			// The app's own 404 page, inside its layout.
+			expect(await app.page.locator('[data-sidebar="content"]').count(), path).toBe(1);
+		}
+	});
+
+	test("North's schedule query is refused", async () => {
+		const response = await app.page.context().request.get(query);
+		const body = await response.text();
+		expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+		expect(body).not.toContain(victim.number);
+	});
+});
+
 describe("switching the schedule on in South", () => {
 	test("an owner switches it on in settings, and it comes right after Orders", async () => {
-		await app.switchOrganization(south.name);
 		await app.go("/settings");
 		const card = settingsCard();
 		expect(await card.innerText()).toContain("Disabled");

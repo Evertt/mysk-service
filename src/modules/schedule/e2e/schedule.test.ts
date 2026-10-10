@@ -19,11 +19,22 @@ import {
 
 const { north } = organizations;
 const app = useApp();
-const { board, backlog, cards, cell, drag, openDialog } = pageLocators(app);
+const { board, backlog, cards, cell, operations, drag, openDialog } = pageLocators(app);
 
 describe("in North", () => {
 	let planned: Order;
 	let engineers: { id: number; name: string }[];
+
+	test("North has the schedule, right after Orders in the sidebar", async () => {
+		await app.go("/");
+		expect(await operations()).toEqual(["Dashboard", "Orders", "Schedule", "Activity"]);
+		expect(
+			await rows(
+				`select module_id from organization_module where organization_id = ? and module_id = 'schedule'`,
+				[north.id],
+			),
+		).toEqual([{ module_id: "schedule" }]);
+	});
 
 	test("the week shows North's engineers and this week's orders, with today highlighted", async () => {
 		const { page } = app;
