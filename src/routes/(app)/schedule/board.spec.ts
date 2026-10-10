@@ -14,7 +14,6 @@ import {
 	groupByCell,
 	load,
 	parseDay,
-	plannedStatus,
 	startOfWeek,
 	weekDays,
 	weekFromParam,
@@ -143,13 +142,6 @@ describe("the board", () => {
 });
 
 describe("planning an order", () => {
-	test("a quote with an engineer becomes scheduled; other statuses stay", () => {
-		expect(plannedStatus("quote", 3)).toBe("scheduled");
-		expect(plannedStatus("quote", null)).toBe("quote");
-		expect(plannedStatus("scheduled", null)).toBe("scheduled");
-		expect(plannedStatus("in_progress", 3)).toBe("in_progress");
-	});
-
 	const start = new Date(2026, 9, 5);
 	const order = (id: number, status: OrderStatus, scheduledFor: Date | null) => ({
 		id,

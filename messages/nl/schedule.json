@@ -41,9 +41,5 @@
 	"schedule_field_time": "Tijd",
 	"schedule_scheduled": "{number} ingepland",
 	"schedule_scheduled_for": "{number} ingepland op {date}",
-	"schedule_week_required": "Kies een week",
-	"schedule_not_found": "Opdracht niet gevonden",
-	"schedule_only_open": "Je kunt alleen open opdrachten inplannen",
-	"schedule_unknown_engineer": "Onbekende monteur",
-	"schedule_engineer_inactive": "{name} is niet meer actief"
+	"schedule_week_required": "Kies een week"
 }

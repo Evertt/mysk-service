@@ -41,9 +41,5 @@
 	"schedule_field_time": "Time",
 	"schedule_scheduled": "{number} scheduled",
 	"schedule_scheduled_for": "{number} scheduled for {date}",
-	"schedule_week_required": "Choose a week",
-	"schedule_not_found": "Order not found",
-	"schedule_only_open": "Only open orders can be scheduled",
-	"schedule_unknown_engineer": "Unknown engineer",
-	"schedule_engineer_inactive": "{name} is no longer active"
+	"schedule_week_required": "Choose a week"
 }

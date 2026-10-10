@@ -5,6 +5,7 @@
 import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.ts";
 import { dateFormatter, formatDate } from "#lib/i18n/index.ts";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
+import { plannedStatus } from "#lib/orders/index.ts";
 
 import type { getSchedule } from "./schedule.remote.ts";
 
@@ -131,13 +132,6 @@ export const byPriorityThenAge = (
 ) =>
 	priorityRank(b.priority) - priorityRank(a.priority) ||
 	a.createdAt.getTime() - b.createdAt.getTime();
-
-/**
- * The status an open order gets when it's planned: a quote that gets an engineer and a date is
- * scheduled (as in the seed data, where quotes have neither); other statuses stay as they are.
- */
-export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
-	status === "quote" && engineerId !== null ? "scheduled" : status;
 
 interface Movable extends Placed {
 	id: number;
