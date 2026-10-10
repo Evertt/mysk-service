@@ -150,6 +150,10 @@ describe("modules", () => {
 		expect(await page.getByText("Owners and admins can change these.").count()).toBe(1);
 		expect(await moduleCard(contracts).getByRole("button").count()).toBe(0);
 
+		const modulesBefore = await value(
+			`select count(*) from organization_module where organization_id = ?`,
+			[north.id],
+		);
 		const status = await app.expectingErrors(() =>
 			page.evaluate(async ({ action, fields }) => {
 				// Submitted the way a browser without JavaScript would.
@@ -161,6 +165,6 @@ describe("modules", () => {
 		expect(status).toBe(403);
 		expect(
 			await value(`select count(*) from organization_module where organization_id = ?`, [north.id]),
-		).toBe(2);
+		).toBe(modulesBefore);
 	});
 });

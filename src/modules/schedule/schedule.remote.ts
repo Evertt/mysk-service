@@ -12,9 +12,9 @@ import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
-import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { byPriorityThenAge, startOfWeek } from "./board.ts";
+import { command, form, query } from "./remote-functions.ts";
 import { moveFields, scheduleFields } from "./schedule-schema.ts";
 
 /** What a card on the board shows of an order. */
@@ -35,7 +35,7 @@ const cardColumns = {
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
-export const getSchedule = forMembers.query(date(m.schedule_week_required), async (day) => {
+export const getSchedule = query(date(m.schedule_week_required), async (day) => {
 	const start = startOfWeek(day);
 	const end = addDays(start, 7);
 
@@ -89,7 +89,7 @@ async function plan(input: OrderPlan): Promise<Problem<"engineerId"> | undefined
 }
 
 /** The schedule dialog: plans an order, with the problems shown at its fields. */
-export const scheduleOrder = forMembers.form(
+export const scheduleOrder = form(
 	v.object({ id: id(), ...scheduleFields }),
 	async (input, issue) => {
 		const problem = await plan(input);
@@ -99,7 +99,7 @@ export const scheduleOrder = forMembers.form(
 );
 
 /** A drag and drop move on the board; the client shows it right away and undoes it on an error. */
-export const moveOrder = forMembers.command(v.object(moveFields), async (input) => {
+export const moveOrder = command(v.object(moveFields), async (input) => {
 	const problem = await plan(input);
 	if (problem) error(400, problem.message);
 	await refreshRequested(getSchedule);

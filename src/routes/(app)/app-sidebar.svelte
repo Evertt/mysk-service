@@ -2,7 +2,6 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import Building2Icon from "@lucide/svelte/icons/building-2";
-	import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import CogIcon from "@lucide/svelte/icons/cog";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
@@ -35,12 +34,6 @@
 					title: m.common_nav_orders(),
 					href: resolve("/(app)/orders"),
 					icon: ClipboardListIcon,
-				},
-				{
-					id: "schedule",
-					title: m.common_nav_schedule(),
-					href: resolve("/(app)/schedule"),
-					icon: CalendarDaysIcon,
 				},
 				{
 					id: "activity",
@@ -79,7 +72,7 @@
 				},
 			],
 		},
-	] satisfies { label: string; items: (NavItem & { id: CoreNavId | "schedule" })[] }[]);
+	] satisfies { label: string; items: (NavItem & { id: CoreNavId })[] }[]);
 
 	const groups = $derived(
 		placeNav(

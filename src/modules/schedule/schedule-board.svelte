@@ -86,7 +86,7 @@
 	/** After planning in the dialog, shows the week the order went to. */
 	function showWeekOf(day: Date) {
 		const start = dayKey(startOfWeek(day));
-		if (start !== week) void goto(`${resolve("/(app)/schedule")}?week=${start}`);
+		if (start !== week) void goto(`${resolve("/(app)/(modules)/schedule")}?week=${start}`);
 	}
 </script>
 

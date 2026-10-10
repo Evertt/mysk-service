@@ -1,5 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"schedule_module_name": "Planning",
+	"schedule_module_description": "Plan per week wie welke opdracht doet, en wanneer.",
 	"schedule_title": "Planning",
 	"schedule_description": "Week {week}, {range}: wie doet wat, en wanneer.",
 	"schedule_previous_week": "Vorige week",

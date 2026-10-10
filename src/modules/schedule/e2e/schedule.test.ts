@@ -1,109 +1,25 @@
-import type { Locator } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
+import { organizations, rows, unbalancedStock, useApp, value } from "#e2e/app.ts";
 
-const { north, south } = organizations;
+import {
+	activeEngineers,
+	backlogSize,
+	dayKey,
+	longDay,
+	type Order,
+	orderByNumber,
+	pageLocators,
+	scheduledAt,
+	seconds,
+	snapshot,
+	thisWeeksOrders,
+	weekday,
+} from "./helpers.ts";
+
+const { north } = organizations;
 const app = useApp();
-
-// --- This week, in the local time zone the app and the tests share ---------------------------
-
-const monday = new Date();
-monday.setHours(0, 0, 0, 0);
-monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-
-/** A day of this week (0 is Monday), at a time of day. */
-const weekday = (index: number, hours = 0, minutes = 0) => {
-	const date = new Date(monday);
-	date.setDate(date.getDate() + index);
-	date.setHours(hours, minutes, 0, 0);
-	return date;
-};
-const pad = (n: number) => String(n).padStart(2, "0");
-const dayKey = (date: Date) =>
-	`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const longDay = (date: Date) =>
-	new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(date);
-/** Timestamps are stored in seconds. */
-const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
-
-// --- Database ----------------------------------------------------------------------------------
-
-interface Order {
-	id: number;
-	number: string;
-	status: string;
-	engineer_id: number | null;
-	scheduled_for: number | null;
-}
-
-const orderByNumber = async (number: string, organizationId: string) =>
-	(
-		await rows<Order>(
-			`select id, number, status, engineer_id, scheduled_for from "order"
-			 where number = ? and organization_id = ?`,
-			[number, organizationId],
-		)
-	)[0];
-/** An order as stored, to check that a refused request changed nothing. */
-const snapshot = (id: number) => rows(`select * from "order" where id = ?`, [id]);
-const scheduledAt = (order: Order) =>
-	order.scheduled_for === null ? null : new Date(Number(order.scheduled_for) * 1000);
-
-const thisWeeksOrders = async (organizationId: string) =>
-	Number(
-		await value(
-			`select count(*) from "order" where organization_id = ? and status != 'cancelled'
-			 and scheduled_for >= ? and scheduled_for < ?`,
-			[organizationId, seconds(weekday(0)), seconds(weekday(7))],
-		),
-	);
-const backlogSize = async (organizationId: string) =>
-	Number(
-		await value(
-			`select count(*) from "order" where organization_id = ? and scheduled_for is null
-			 and status in ('quote', 'scheduled', 'in_progress')`,
-			[organizationId],
-		),
-	);
-const activeEngineers = (organizationId: string) =>
-	rows<{ id: number; name: string }>(
-		`select id, name from engineer where organization_id = ? and active = 1 order by name, id`,
-		[organizationId],
-	);
-
-// --- Page --------------------------------------------------------------------------------------
-
-const board = () => app.page.locator('section[aria-label="Week"]');
-const backlog = () => app.page.getByRole("region", { name: "Backlog" });
-/** The cards on the board (in the view the screen size shows). */
-const cards = (within: Locator) => within.locator("[data-order]:visible");
-const cell = (row: string, day: Date) =>
-	app.page.getByRole("group", { name: `${row} on ${longDay(day)}`, exact: true });
-
-/** Drags `source` onto `target` and waits for the server's answer to the move. */
-async function drag(source: Locator, target: Locator) {
-	const { page } = app;
-	const [response] = await Promise.all([
-		page.waitForResponse(
-			(r) => r.url().includes("/_app/remote") && r.request().method() === "POST",
-		),
-		source.dragTo(target),
-	]);
-	await page.waitForLoadState("networkidle");
-	return response.text();
-}
-
-/** Opens the schedule dialog for an order on the page. */
-async function openDialog(number: string) {
-	await app.page
-		.getByRole("button", { name: `Schedule ${number}`, exact: true })
-		.first()
-		.click();
-	const dialog = app.page.getByRole("dialog");
-	await dialog.waitFor();
-	return dialog;
-}
+const { board, backlog, cards, cell, drag, openDialog } = pageLocators(app);
 
 describe("in North", () => {
 	let planned: Order;
@@ -310,94 +226,5 @@ describe("in North", () => {
 		expect(await app.issues()).toContain("Only open orders can be scheduled");
 		expect(await snapshot(done.id)).toEqual(before);
 		await page.keyboard.press("Escape");
-	});
-});
-
-describe("in South", () => {
-	let own: Order;
-
-	test("switching organization shows South's engineers and orders only", async () => {
-		await app.switchOrganization(south.name);
-		await app.go("/schedule");
-		const southEngineers = await activeEngineers(south.id);
-		const rowLinks = await board()
-			.locator('a[href^="/engineers/"]:visible')
-			.evaluateAll((links) =>
-				links.map((link) => Number(link.getAttribute("href")!.split("/").pop())),
-			);
-		const southIds = (
-			await rows<{ id: number }>(`select id from engineer where organization_id = ?`, [south.id])
-		).map((row) => row.id);
-		expect(rowLinks.length).toBeGreaterThanOrEqual(southEngineers.length);
-		expect(rowLinks.every((id) => southIds.includes(id))).toBe(true);
-		expect(await cards(board()).count()).toBe(await thisWeeksOrders(south.id));
-		expect(await cards(backlog()).count()).toBe(await backlogSize(south.id));
-		const numbers = await cards(backlog()).evaluateAll((els) =>
-			els.map((el) => el.getAttribute("data-order")!),
-		);
-		const southNumbers = (
-			await rows<{ number: string }>(
-				`select number from "order" where organization_id = ? and scheduled_for is null`,
-				[south.id],
-			)
-		).map((row) => row.number);
-		expect(numbers.every((number) => southNumbers.includes(number))).toBe(true);
-		own = await orderByNumber(numbers[0], south.id);
-	});
-
-	test("scheduling North's order by its id is refused", async () => {
-		const { page } = app;
-		const victim = (
-			await rows<Order>(
-				`select id, number, status, engineer_id, scheduled_for from "order"
-				 where organization_id = ? and status = 'quote' limit 1`,
-				[north.id],
-			)
-		)[0];
-		const [victimBefore, ownBefore] = [await snapshot(victim.id), await snapshot(own.id)];
-
-		const dialog = await openDialog(own.number);
-		const result = await app.expectingErrors(async () => {
-			await page.evaluate((id) => {
-				document.querySelector<HTMLInputElement>('[role="dialog"] input[name^="id"]')!.value =
-					String(id);
-			}, victim.id);
-			return app.submit(dialog.getByRole("button", { name: "Schedule" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(await snapshot(victim.id)).toEqual(victimBefore);
-		expect(await snapshot(own.id)).toEqual(ownBefore);
-		await page.keyboard.press("Escape");
-	});
-
-	test("North's engineers and inactive engineers can't be assigned", async () => {
-		const { page } = app;
-		const before = await snapshot(own.id);
-		const northEngineer = String(
-			await value(`select min(id) from engineer where organization_id = ?`, [north.id]),
-		);
-		const [inactive] = await rows<{ id: number; name: string }>(
-			`select id, name from engineer where organization_id = ? and active = 0 limit 1`,
-			[south.id],
-		);
-
-		await app.go("/schedule");
-		for (const [id, message] of [
-			[northEngineer, "Unknown engineer"],
-			[String(inactive.id), `${inactive.name} is no longer active`],
-		]) {
-			const dialog = await openDialog(own.number);
-			await page.evaluate((id) => {
-				document
-					.querySelector<HTMLSelectElement>('[role="dialog"] select')!
-					.add(new Option("Someone else", id));
-			}, id);
-			await dialog.getByLabel("Engineer").selectOption(id);
-			await app.submit(dialog.getByRole("button", { name: "Schedule" }));
-			expect(await app.issues()).toContain(message);
-			expect(await snapshot(own.id)).toEqual(before);
-			await page.keyboard.press("Escape");
-			await dialog.waitFor({ state: "hidden" });
-		}
 	});
 });
