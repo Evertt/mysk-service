@@ -64,13 +64,23 @@ test("the schedule's migration switches the schedule on for every organization t
 	const client = createClient({ url: `file:${join(folder, "schedule.db")}` });
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(`
-		insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 0), ('b', 'B', 'b', 0);
+		insert into organization (id, name, slug, created_at)
+		values ('a', 'A', 'a', 1791000000123), ('b', 'B', 'b', 1792000000999);
 		insert into organization_module (organization_id, module_id) values ('b', 'contracts');
 	`);
 	await migrate(drizzle(client), { migrationsFolder });
 	const { rows } = await client.execute(
-		"select organization_id, module_id from organization_module order by 1, 2",
+		"select organization_id, module_id, created_at from organization_module order by 1, 2",
 	);
+	// On since the organization was made: its time in milliseconds, the row's in seconds.
+	expect(
+		rows
+			.filter((row) => row.module_id === "schedule")
+			.map((row) => [row.organization_id, row.created_at]),
+	).toEqual([
+		["a", 1791000000],
+		["b", 1792000000],
+	]);
 	expect(rows.map((row) => [row.organization_id, row.module_id])).toEqual([
 		["a", "schedule"],
 		["b", "contracts"],
