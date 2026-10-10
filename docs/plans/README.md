@@ -80,9 +80,25 @@ yet.
 
 Implementation plans, one per step of its order of work:
 
-1. [module-dependencies-1-machinery.md](module-dependencies-1-machinery.md): the dependency graph,
+1. [module-dependencies-1-machinery.md](module-dependencies-1-machinery.md) ✅ done: the dependency graph,
    switching on and off, `api/` boundaries and extension points declared by their owners.
 2. Roles, 3. the schedule pilot, 4. the portal pilot, 5. the inspector: written once step 1 is merged.
+
+Carried from step 1 into the later plans (from its reviews):
+
+- **Schedule plan** (the first module with `requires`): the e2e for the settings page's dependency
+  prompts and a tampered refusal; decide and test whether a stale `organization_module` row may
+  block unrelated switches (`changeModules()` checks the whole resulting set); the refusal messages
+  for an empty or always-on submission and a refusal shown inside the switch-off dialog; the
+  generator refusing an `alwaysOn` module that requires a switchable one; `org:create --modules`
+  checking requirements (through `changeModules()`).
+- **Merging the held `deferred-dashboard-slots` branch** (dashboard module cards rendered in the
+  browser): port its `deferred` option from `module-slots.svelte` to `<ExtensionSlot>`.
+- **Later, when they bite:** `foreignWrites` missing tables imported through
+  `#lib/server/db/modules.gen.ts`; renaming `src/lib/server/modules/hooks.ts` (now only route
+  guards) to avoid two `hooks.ts`; settling `vote`'s semantics with the first real vote; the
+  generator's manifest and point readers matching inside comments or skipping annotated
+  declarations.
 
 ## Worth weighing before phase 4 (decided: built)
 
