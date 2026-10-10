@@ -15,7 +15,7 @@
 		description,
 		label = m.common_delete(),
 	}: {
-		form: RemoteForm<{ id: string }, unknown>;
+		form: Omit<RemoteForm<{ id: string }, unknown>, "for">;
 		id: string;
 		title: string;
 		description: string;

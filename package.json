@@ -22,7 +22,7 @@
 		"preview": "vp preview",
 		"prepare": "(vp config && vpr generate || echo '') && (playwright install chromium || echo '')",
 		"generate": "node scripts/modules.ts && node -e \"fs.rmSync('.svelte-kit/.svelte-check', { recursive: true, force: true })\" && svelte-kit sync &&paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy cookie preferredLanguage baseLocale --emit-ts-declarations --silent",
-		"check": "vpr generate && vp check && svelte-check --tsgo --tsconfig ./tsconfig.json",
+		"check": "vpr generate && vp check && svelte-check",
 		"check:watch": "vpr check --watch",
 		"test:unit": "vp test --project server --project client",
 		"test:e2e": "vp test run --project e2e",

@@ -50,8 +50,11 @@ export const columns = column.columns([
 					primary: getValue(),
 					secondary: row.original.equipment?.serialNumber,
 					href:
-						row.original.equipment &&
-						resolve("/(app)/equipment/[serial]", { serial: row.original.equipment.serialNumber }),
+						(row.original.equipment &&
+							resolve("/(app)/equipment/[serial]", {
+								serial: row.original.equipment.serialNumber,
+							})) ??
+						undefined,
 					fallback: m.orders_new_installation(),
 				}),
 			sortUndefined: "last",
@@ -89,8 +92,9 @@ export const columns = column.columns([
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
 				href:
-					row.original.engineer &&
-					resolve("/(app)/engineers/[id]", { id: String(row.original.engineer.id) }),
+					(row.original.engineer &&
+						resolve("/(app)/engineers/[id]", { id: String(row.original.engineer.id) })) ??
+					undefined,
 				fallback: m.common_unassigned(),
 			}),
 		sortUndefined: "last",
