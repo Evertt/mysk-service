@@ -7,7 +7,8 @@ import { parseArgs } from "node:util";
 import * as v from "valibot";
 
 // Not `#lib/modules/manifests.ts`, the registry: it registers Svelte components, which plain Node can't load.
-import { type ModuleId, moduleIds } from "#lib/modules/ids.ts";
+import { changeModules, type ModuleGraph, moduleSetProblems } from "#lib/modules/graph.ts";
+import { type ModuleId, moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 
 export const usage = `Creates an organization and its owner, e.g. on a new deployment.
 
@@ -18,7 +19,8 @@ Usage: pnpm run org:create -- --org <name> --slug <slug> --owner-email <email> -
   --slug         Its short name in URLs: lower-case letters, digits and dashes, e.g. acme
   --owner-email  The owner's email address, which they sign in with
   --owner-name   The owner's name
-  --modules      Optional modules to switch on: ${moduleIds.join(", ")} (owners can change them later)
+  --modules      Optional modules to switch on, with what they require: ${moduleIds.join(", ")}
+                 (none by default; owners can change them later)
 
 The owner gets a generated password, printed once. Refuses if the slug or the email is taken.`;
 
@@ -58,9 +60,14 @@ function parse(args: string[]) {
 
 /**
  * The options in `args` (the arguments after the script, as `pnpm run` passes them), or `"help"`
- * for `--help`. Throws a `UsageError` saying what's wrong otherwise.
+ * for `--help`. Throws a `UsageError` saying what's wrong otherwise. The modules are checked
+ * against `graph` as the settings page checks a switch (`changeModules()`): each needs what it
+ * requires, and always-on ones are left out (they're on anyway).
  */
-export function parseCreateArgs(args: string[]): CreateOptions | "help" {
+export function parseCreateArgs(
+	args: string[],
+	graph: ModuleGraph = moduleGraph,
+): CreateOptions | "help" {
 	const { values, positionals } = parse(args);
 	if (values.help) return "help";
 	if (positionals.length) throw new UsageError(`Unexpected argument: ${positionals[0]}`);
@@ -82,7 +89,7 @@ export function parseCreateArgs(args: string[]): CreateOptions | "help" {
 		problems.push("--owner-email isn't an email address");
 	}
 
-	const known: readonly string[] = moduleIds;
+	const known = Object.keys(graph);
 	const modules = [
 		...new Set(
 			(values.modules ?? "")
@@ -93,9 +100,22 @@ export function parseCreateArgs(args: string[]): CreateOptions | "help" {
 	];
 	const unknown = modules.filter((id) => !known.includes(id));
 	if (unknown.length) {
-		problems.push(`Unknown modules: ${unknown.join(", ")} (there are ${moduleIds.join(", ")})`);
+		problems.push(`Unknown modules: ${unknown.join(", ")} (there are ${known.join(", ")})`);
+	}
+	let stored: string[] = [];
+	if (!unknown.length) {
+		const outcome = changeModules([], { enable: modules, disable: [] }, graph);
+		if ("refused" in outcome) {
+			const asked = modules.filter((id) => !graph[id].alwaysOn);
+			for (const { module, missing } of moduleSetProblems(asked, graph)) {
+				const them = missing.length === 1 ? "it" : "them";
+				problems.push(
+					`--modules: ${module} requires ${missing.join(", ")}; add ${them} to --modules`,
+				);
+			}
+		} else stored = outcome.stored;
 	}
 
 	if (problems.length) throw new UsageError(problems.join("\n"));
-	return { org, slug, ownerEmail, ownerName, modules: modules as CreateOptions["modules"] };
+	return { org, slug, ownerEmail, ownerName, modules: stored as CreateOptions["modules"] };
 }

@@ -52,3 +52,15 @@ test("finds a module whose sidebar entry goes after itself", () => {
 		"src/modules/a nav.after itself.",
 	]);
 });
+
+test("an always-on module can't require one that can be switched off", () => {
+	expect(graphProblems([module("a", { alwaysOn: true, requires: ["b"] }), module("b")])).toEqual([
+		"src/modules/a is always on, so it can't require b, which can be switched off.",
+	]);
+	expect(
+		graphProblems([
+			module("a", { alwaysOn: true, requires: ["b"] }),
+			module("b", { alwaysOn: true }),
+		]),
+	).toEqual([]);
+});
