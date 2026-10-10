@@ -29,6 +29,23 @@ questions, the decisions here win.
 5. `settings`, `settings/members` and `activity` stay in routes; module roots aren't tidied beyond
    moving files out of `routes/`.
 
+Findings of the engineers pilot (they change the text below where they differ):
+
+- **The remote barrel's file is `remotes.ts`, not `remote.ts`**: SvelteKit treats every file matching
+  `/[/.]remote\.[^/]+$/` as a remote module, `remote.ts` included. The import path stays
+  `#lib/<d>/remote`.
+- **`"sideEffects": ["*.css"]` in `package.json`.** Without it a barrel keeps every component it
+  exports in the importer's chunk graph (a Svelte component's module-level `$.from_html(...)` can't be
+  proven pure): with the engineers barrel alone, the dashboard's chunks grew from 86 files / 746 kB to
+  129 files / 1109 kB (raw), the equipment detail page's from 78 to 108 files, the order page's from
+  84 to 106, all with the engineers table and form in them. With the field declared, the dashboard
+  builds to 85 files / 649 kB and none of the engineers table, form or portal card is in it; the
+  field portal's chunks were unaffected either way. The only bare imports in the project are CSS.
+- `vi.mock("./x.remote.ts")` of the underlying file intercepts imports through `#lib/<d>/remote`, in
+  the Node and the browser Vitest projects.
+- Files that move into a domain and imported its barrel (route files, after the barrels were
+  introduced) are rewritten to import their siblings relatively.
+
 Consequences for the text below: ignore 5.3 (renames) and the question list (section 9); 4.1's
 "remote functions by path" becomes the `/remote` barrel; rule 1 of 5.1 lists four barrels. A
 `vi.mock("./x.remote.ts")` of the underlying file still intercepts imports through the barrel

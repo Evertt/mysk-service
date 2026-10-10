@@ -1,8 +1,9 @@
 import * as v from "valibot";
 
-import { engineerRegions } from "#lib/engineers";
 import { engineerSpecialties } from "#lib/models.ts";
 import { cents, date, email, phone, text } from "#lib/schema.ts";
+
+import { engineerRegions } from "../display.ts";
 
 /** The fields of the engineer form, shared by creating and editing an engineer. */
 export const engineerFields = {

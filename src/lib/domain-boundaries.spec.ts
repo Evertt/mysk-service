@@ -36,10 +36,10 @@ export const domains = ["customers", "engineers", "equipment", "materials", "ord
  * `routes/`. Until then their route folders still hold the files that are about to move, and those
  * may use the old imports.
  */
-export const migratedDomains: string[] = [];
+export const migratedDomains: string[] = ["engineers"];
 export const migratedModules: string[] = [];
 
-const barrelNames = ["index.ts", "components.ts", "remote.ts", "server/index.ts"];
+const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];
 const isBarrel = (path: string) =>
 	domains.some((d) => barrelNames.some((name) => path === `src/lib/${d}/${name}`));
 const domainOf = (path: string) => /^src\/lib\/([^/]+)\//.exec(path)?.[1];
@@ -54,7 +54,7 @@ export function target(specifier: string, path: string): string | undefined {
 	const barrel = /^#lib\/([^/]+)(?:\/(components|remote|server))?$/.exec(specifier);
 	if (barrel && domains.includes(barrel[1])) {
 		const kind = barrel[2];
-		return `src/lib/${barrel[1]}/${!kind ? "index.ts" : kind === "server" ? "server/index.ts" : `${kind}.ts`}`;
+		return `src/lib/${barrel[1]}/${!kind ? "index.ts" : kind === "server" ? "server/index.ts" : kind === "remote" ? "remotes.ts" : `${kind}.ts`}`;
 	}
 	if (specifier.startsWith("#lib/")) return `src/lib/${specifier.slice("#lib/".length)}`;
 	return undefined;
@@ -124,7 +124,7 @@ export function barrelContents(files: SourceFile[]): string[] {
 	const rules: [string, (specifier: string) => boolean, string][] = [
 		["index.ts", (s) => !/\.svelte$|\.remote\.ts$|(^|\/)server\//.test(s), "plain TS only"],
 		["components.ts", (s) => s.endsWith(".svelte"), "components only"],
-		["remote.ts", (s) => s.endsWith(".remote.ts"), "remote functions only"],
+		["remotes.ts", (s) => s.endsWith(".remote.ts"), "remote functions only"],
 		["server/index.ts", (s) => !/\.svelte$|\.remote\.ts$/.test(s), "server files only"],
 	];
 	return files.flatMap((file) =>
@@ -288,7 +288,7 @@ describe("the checks", () => {
 				`export * from "./display.ts";\nexport { default as A } from "./ui/a.svelte";`,
 			),
 			file("src/lib/orders/components.ts", `export * from "./display.ts";`),
-			file("src/lib/orders/remote.ts", `export * from "./order.remote.ts";`),
+			file("src/lib/orders/remotes.ts", `export * from "./order.remote.ts";`),
 			file(
 				"src/lib/orders/server/index.ts",
 				`export * from "./pricing.ts";\nexport * from "../order.remote.ts";`,

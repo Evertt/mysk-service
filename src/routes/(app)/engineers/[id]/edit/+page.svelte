@@ -2,11 +2,10 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { AccountCard, EngineerForm } from "#lib/engineers/components";
+	import { getEngineer, updateEngineer } from "#lib/engineers/remote";
 
-	import EngineerForm from "../../engineer-form.svelte";
-	import { getEngineer, updateEngineer } from "../../engineers.remote.ts";
 	import type { PageProps } from "./$types";
-	import AccountCard from "./account-card.svelte";
 
 	let { params }: PageProps = $props();
 

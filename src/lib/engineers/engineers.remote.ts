@@ -15,7 +15,7 @@ import { bulkChange, idsTarget } from "#lib/server/lists";
 import { deleteAndLog } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { engineerFields } from "./engineer-schema.ts";
+import { engineerFields } from "./form/engineer-schema.ts";
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = forMembers.query(async () => {

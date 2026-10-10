@@ -4,11 +4,12 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { regionLabel } from "#lib/engineers";
-import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components";
 import { engineerSpecialties } from "#lib/models.ts";
 
-import type { getEngineers } from "./engineers.remote.ts";
+import { regionLabel } from "../display.ts";
+import type { getEngineers } from "../engineers.remote.ts";
+import ActiveBadge from "../ui/active-badge.svelte";
+import SpecialtyBadge from "../ui/specialty-badge.svelte";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 

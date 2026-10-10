@@ -10,10 +10,10 @@
 	import { CustomerLink } from "#lib/customers/components";
 	import { regionLabel } from "#lib/engineers";
 	import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components";
+	import { deleteEngineer, getEngineer } from "#lib/engineers/remote";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n";
 	import { OrderLink, StatusBadge } from "#lib/orders/components";
 
-	import { deleteEngineer, getEngineer } from "../engineers.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
