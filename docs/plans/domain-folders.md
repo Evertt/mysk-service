@@ -1,7 +1,38 @@
 # Domain folders: the domains' files leave `src/routes`
 
-Phase 1 proposal (nothing is moved yet). Numbers come from a script over the import graph of the
-checked-in files (2,714 import specifiers in `src`, `e2e` and `scripts`).
+The proposal (phase 1) and, from the next section, the decisions the user took on it. Numbers come
+from a script over the import graph of the checked-in files (2,714 import specifiers in `src`,
+`e2e` and `scripts`). Where the text below still says "recommended" or "baseline" or lists
+questions, the decisions here win.
+
+## Decisions (final)
+
+1. **Four barrels per domain** (a barrel exists when something outside the domain needs it):
+   `#lib/<d>` (`index.ts`: plain TS, i.e. types, rules, display maps, list definitions, data),
+   `#lib/<d>/components` (`components.ts`: every Svelte component something outside imports),
+   `#lib/<d>/remote` (`remote.ts`: re-exports the domain's `*.remote.ts` files) and
+   `#lib/<d>/server` (`server/index.ts`: server-only; only orders and materials, add one when
+   something needs it). Every import from outside a domain goes through one of them, including the
+   domain's own route files. The `*.remote.ts` files stay outside any `server/` folder.
+2. **Exceptions to "through a barrel"**: `#lib/<d>/extensions.ts` (the generator and the modules'
+   module-scope contributions need it directly, 5.4), and `e2e/` and `scripts/` (no Vite plugins), which
+   import plain `.ts` files by relative path.
+3. **The three shell files move into `src/lib`**: `extension-bulk-actions.svelte.ts` to
+   `src/lib/extensions/bulk-actions.svelte.ts`, `filter-options.remote.ts` to
+   `src/lib/components/data-table/filter-options.remote.ts`, `session.remote.ts` to
+   `src/lib/auth/session.remote.ts` (imported by path, not through `#lib/auth`, to avoid a cycle
+   through the database); the shell imports them from there.
+4. **No renames**: `statuses`, `StatusBadge`, ... keep their names; a file that needs two same-named
+   exports aliases them on import (`import { statuses as orderStatuses } from "#lib/orders"`). The
+   barrels export components under their file's name; where two exports of one barrel would clash,
+   the barrel aliases.
+5. `settings`, `settings/members` and `activity` stay in routes; module roots aren't tidied beyond
+   moving files out of `routes/`.
+
+Consequences for the text below: ignore 5.3 (renames) and the question list (section 9); 4.1's
+"remote functions by path" becomes the `/remote` barrel; rule 1 of 5.1 lists four barrels. A
+`vi.mock("./x.remote.ts")` of the underlying file still intercepts imports through the barrel
+(verified in the engineers commit).
 
 ## Decision and where the evidence disagrees with it
 
