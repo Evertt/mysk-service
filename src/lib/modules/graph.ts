@@ -79,7 +79,7 @@ export function moduleSetProblems(
 }
 
 /** Why `changeModules()` refuses a change: the modules at fault, in graph order. */
-export interface RefusedChange {
+interface RefusedChange {
 	/** Always-on modules the change would switch off. */
 	alwaysOn: ModuleId[];
 	/** Modules the change would leave without something they require. */

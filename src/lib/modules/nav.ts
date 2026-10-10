@@ -6,7 +6,7 @@
 import type { Component } from "svelte";
 
 /** The ids of the sidebar's core entries, which a module's `nav.after` may name. */
-export const coreNavIds = [
+const coreNavIds = [
 	"dashboard",
 	"orders",
 	"activity",
