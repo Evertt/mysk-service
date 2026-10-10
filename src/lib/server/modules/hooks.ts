@@ -118,7 +118,7 @@ function serverModules(): { [Id in ModuleId]?: ServerModule } {
  * without waiting for that layout. The module's remote functions still start with
  * `requireModule()` themselves: no route guards them.
  */
-export function guardModule(id: ModuleId) {
+function guardModule(id: ModuleId) {
 	requireModule(id);
 }
 
