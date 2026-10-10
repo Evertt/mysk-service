@@ -1,5 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"schedule_module_name": "Planning",
+	"schedule_module_description": "Plan per week wie welke opdracht doet, en wanneer.",
 	"schedule_title": "Planning",
 	"schedule_description": "Week {week}, {range}: wie doet wat, en wanneer.",
 	"schedule_previous_week": "Vorige week",
@@ -41,9 +43,5 @@
 	"schedule_field_time": "Tijd",
 	"schedule_scheduled": "{number} ingepland",
 	"schedule_scheduled_for": "{number} ingepland op {date}",
-	"schedule_week_required": "Kies een week",
-	"schedule_not_found": "Opdracht niet gevonden",
-	"schedule_only_open": "Je kunt alleen open opdrachten inplannen",
-	"schedule_unknown_engineer": "Onbekende monteur",
-	"schedule_engineer_inactive": "{name} is niet meer actief"
+	"schedule_week_required": "Kies een week"
 }

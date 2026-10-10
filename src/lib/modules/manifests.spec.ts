@@ -48,6 +48,7 @@ test("the graph of ids is what the manifests declare", () => {
 			requires: manifest.requires ?? [],
 			enhances: manifest.enhances ?? [],
 			alwaysOn: manifest.alwaysOn ?? false,
+			navAfter: manifest.nav?.after ?? null,
 		});
 	}
 });

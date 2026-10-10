@@ -71,3 +71,11 @@ export const types = withLabels("orderType", typeDetails);
 export const statusOptions = labelOptions("orderStatus", orderStatuses, statusDetails);
 export const priorityOptions = labelOptions("orderPriority", orderPriorities, priorityDetails);
 export const typeOptions = labelOptions("orderType", orderTypes, typeDetails);
+
+/**
+ * The status an open order gets when it's planned: a quote that gets an engineer and a date is
+ * scheduled (as in the seed data, where quotes have neither); other statuses stay as they are.
+ * The scheduling service (`scheduleOrder()`) and the planning board's moves share it.
+ */
+export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
+	status === "quote" && engineerId !== null ? "scheduled" : status;

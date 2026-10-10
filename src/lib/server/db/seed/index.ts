@@ -49,7 +49,8 @@ async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>)
 
 /**
  * The demo organizations. North has all the modules (also the ones added later in
- * `src/modules`); South only invoicing.
+ * `src/modules`); South only invoicing, so the other modules' tests (contracts, the schedule) have
+ * a tenant without them.
  */
 const tenants = [
 	{

@@ -37,6 +37,8 @@ export interface ModuleFolder {
 	enhances: string[];
 	/** Whether `module.ts` says `alwaysOn: true`. */
 	alwaysOn: boolean;
+	/** What its sidebar entry goes after (`nav: { after }`): a core entry's id or a module's. */
+	navAfter: string | null;
 	/** Its `+` route files, relative to `routes/`, with `/`, sorted. */
 	routeFiles: string[];
 	/**

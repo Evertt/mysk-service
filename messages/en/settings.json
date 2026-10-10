@@ -6,6 +6,8 @@
 	"settings_modules_also_enables": "Also switches on {modules}.",
 	"settings_modules_also_disables": "Also switches off {modules}, which need it.",
 	"settings_modules_refused": "This would leave {modules} without what they need.",
+	"settings_modules_nothing_to_change": "Choose a module to switch on or off.",
+	"settings_modules_always_on_refused": "{modules} can't be switched off.",
 	"settings_modules_always_on": "Always on",
 	"settings_modules_disable_title": "Switch off {module}?",
 	"settings_managers_change_these": "Owners and admins can change these.",

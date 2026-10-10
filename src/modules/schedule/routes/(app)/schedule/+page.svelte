@@ -1,23 +1,32 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import type { RouteParams } from "$app/types";
 	import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { addDays } from "#lib/dates.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
+	import {
+		dayKey,
+		formatWeek,
+		startOfWeek,
+		weekFromParam,
+		weekNumber,
+	} from "#modules/schedule/board.ts";
+	import ScheduleBoard from "#modules/schedule/schedule-board.svelte";
+	import { getSchedule } from "#modules/schedule/schedule.remote.ts";
 
-	import { dayKey, formatWeek, startOfWeek, weekFromParam, weekNumber } from "./board.ts";
-	import ScheduleBoard from "./schedule-board.svelte";
-	import { getSchedule } from "./schedule.remote.ts";
+	// The props the route passes; this page needs none of them.
+	const _props: { params: RouteParams<"/(app)/(modules)/schedule"> } = $props();
 
 	// The week is in the URL (`?week=` any day of it), so it can be linked to; this week by default.
 	const start = $derived(weekFromParam(page.url.searchParams.get("week")));
 	const week = $derived(dayKey(start));
 	const schedule = $derived(await getSchedule(week));
 
-	const href = (day: Date) => `${resolve("/(app)/schedule")}?week=${dayKey(day)}`;
+	const href = (day: Date) => `${resolve("/(app)/(modules)/schedule")}?week=${dayKey(day)}`;
 	const isThisWeek = $derived(week === dayKey(startOfWeek(new Date())));
 </script>
 
@@ -41,7 +50,7 @@
 		>
 			<ChevronLeftIcon />
 		</Button>
-		<Button href={resolve("/(app)/schedule")} variant="outline" disabled={isThisWeek}>
+		<Button href={resolve("/(app)/(modules)/schedule")} variant="outline" disabled={isThisWeek}>
 			{m.schedule_this_week()}
 		</Button>
 		<Button

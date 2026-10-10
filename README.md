@@ -152,14 +152,15 @@ Then create the first organization and its owner, from the same checkout and wit
 
 ```sh
 pnpm run org:create -- --org "Acme Service" --slug acme \
-  --owner-email ada@acme.example --owner-name "Ada Lovelace" --modules contracts,invoicing
+  --owner-email ada@acme.example --owner-name "Ada Lovelace" --modules contracts,invoicing,schedule
 ```
 
 It prints the owner's email address and a generated password, once: pass them on safely. `--slug`
-is lower-case letters, digits and dashes; `--modules` is optional (`contracts`, `invoicing`; owners
-can switch modules on and off later); `--help` lists the options. It refuses a slug or an email
-address that's taken, so it can also add more organizations later, each with a new owner. After
-that, the owner invites everyone else (see "Members and invitations").
+is lower-case letters, digits and dashes; `--modules` lists the optional modules to switch on
+(`contracts`, `invoicing`, `schedule`, each with what it requires; a new organization has only the
+ones listed, and owners can switch modules on and off later); `--help` lists the options. It
+refuses a slug or an email address that's taken, so it can also add more organizations later, each
+with a new owner. After that, the owner invites everyone else (see "Members and invitations").
 
 Back up the database file (and its `-wal` file, if any) like any other data. Don't run
 `pnpm db:seed` or `db:reset` against it: the seed deletes every organization and its data, and puts

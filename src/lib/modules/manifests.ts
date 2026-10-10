@@ -19,6 +19,7 @@ import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
+import type { CoreNavId } from "#lib/modules/nav.ts";
 
 import { manifests } from "./manifests.gen.ts";
 
@@ -43,6 +44,12 @@ interface ModuleParts {
 	enhances?: readonly ModuleId[];
 	/** Always on for every tenant, with no switch. Literally `true` or left out, like `requires`. */
 	alwaysOn?: true;
+	/**
+	 * Where its sidebar entry goes: right after a core entry or another module's (`placeNav()` in
+	 * `#lib/modules/nav.ts`). Without it, or while that entry isn't shown, it's in the Modules group.
+	 * A literal, like `requires`.
+	 */
+	nav?: { after: CoreNavId | ModuleId };
 }
 
 /** A module as the registry has it. */

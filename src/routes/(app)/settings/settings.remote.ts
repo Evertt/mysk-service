@@ -52,13 +52,16 @@ const moduleList = v.optional(v.array(v.picklist(moduleIds)), []);
 
 /**
  * Switches modules on and off together: the page sends a module with what it requires (to switch
- * on) or with what requires it (to switch off), and this refuses a set that would leave a module
- * without what it requires, or switch off an always-on one (`changeModules()`).
+ * on) or with what requires it (to switch off), and this refuses a change that would leave a
+ * module without what it requires, or switch off an always-on one (`changeModules()`), saying which.
  */
 export const setModules = forManagers.form(
 	v.pipe(
 		v.object({ enable: moduleList, disable: moduleList }),
-		v.check(({ enable, disable }) => enable.length + disable.length > 0, m.common_error_generic),
+		v.check(
+			({ enable, disable }) => enable.length + disable.length > 0,
+			m.settings_modules_nothing_to_change,
+		),
 	),
 	async ({ enable, disable }) => {
 		const { organizationId } = currentTenant();
@@ -96,7 +99,13 @@ export const setModules = forManagers.form(
 			return outcome;
 		});
 		if ("refused" in outcome) {
-			invalid(m.settings_modules_refused({ modules: outcome.refused.map(moduleLabel).join(", ") }));
+			const { alwaysOn, unmet } = outcome.refused;
+			const names = (ids: string[]) => ids.map(moduleLabel).join(", ");
+			invalid(
+				alwaysOn.length
+					? m.settings_modules_always_on_refused({ modules: names(alwaysOn) })
+					: m.settings_modules_refused({ modules: names(unmet) }),
+			);
 		}
 		// The tenant was loaded at the start of this request; bring it up to date before the
 		// sidebar's query is refreshed with it.

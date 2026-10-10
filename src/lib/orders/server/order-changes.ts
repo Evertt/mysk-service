@@ -134,7 +134,8 @@ export async function setOrdersStatus(
 
 /**
  * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another
- * tenant's (or don't exist), or inactive. The planning board and bulk assigning share it.
+ * tenant's (or don't exist), or inactive. Scheduling (`scheduleOrder()`) and bulk assigning
+ * share it.
  */
 export async function assigneeProblem(
 	engineerId: number,
@@ -144,8 +145,8 @@ export async function assigneeProblem(
 		columns: { name: true, active: true },
 		where: idInTenant(engineer, engineerId),
 	});
-	if (!assignee) return m.schedule_unknown_engineer();
-	if (!assignee.active) return m.schedule_engineer_inactive({ name: assignee.name });
+	if (!assignee) return m.orders_unknown_engineer();
+	if (!assignee.active) return m.orders_engineer_inactive({ name: assignee.name });
 	return undefined;
 }
 

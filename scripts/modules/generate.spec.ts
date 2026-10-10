@@ -69,7 +69,7 @@ describe("generateModules", () => {
 			"a",
 		]);
 		expect(read("src/lib/modules/ids.gen.ts")).toContain(
-			`"a": { requires: ["z"], enhances: [], alwaysOn: false },`,
+			`"a": { requires: ["z"], enhances: [], alwaysOn: false, navAfter: null },`,
 		);
 	});
 

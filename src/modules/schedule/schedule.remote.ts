@@ -2,20 +2,19 @@ import { error } from "@sveltejs/kit";
 import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { addDays, atTime } from "#lib/dates.ts";
-import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
-import { isOpenOrder, openOrderStatuses } from "#lib/models.ts";
-import { assigneeProblem } from "#lib/orders/server/index.ts";
+import { addDays } from "#lib/dates.ts";
+import { OrderStockShortage } from "#lib/materials/server/index.ts";
+import { openOrderStatuses } from "#lib/models.ts";
+import { type OrderPlan, scheduleOrder as planOrder } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
-import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { byPriorityThenAge, plannedStatus, startOfWeek } from "./board.ts";
+import { byPriorityThenAge, startOfWeek } from "./board.ts";
+import { command, form, query } from "./remote-functions.ts";
 import { moveFields, scheduleFields } from "./schedule-schema.ts";
 
 /** What a card on the board shows of an order. */
@@ -36,7 +35,7 @@ const cardColumns = {
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
-export const getSchedule = forMembers.query(date(m.schedule_week_required), async (day) => {
+export const getSchedule = query(date(m.schedule_week_required), async (day) => {
 	const start = startOfWeek(day);
 	const end = addDays(start, 7);
 
@@ -75,16 +74,13 @@ export const getSchedule = forMembers.query(date(m.schedule_week_required), asyn
 	return { start, engineers, orders, backlog: backlog.sort(byPriorityThenAge) };
 });
 
-type Plan = { id: number; engineerId: number | null; day: Date; time: string };
-
 /**
- * Plans an order of the current tenant: assigns `engineerId` (or nobody) and schedules it on `day`
- * at `time`. A quote that gets scheduled takes its materials from stock. Returns what's wrong if it
- * can't be planned; a 404 if there's no such order.
+ * Plans an order of the current tenant (see `scheduleOrder()`): returns what's wrong if it can't be
+ * planned, including a shortage of stock; a 404 if there's no such order.
  */
-async function plan(input: Plan): Promise<Problem<"engineerId"> | undefined> {
+async function plan(input: OrderPlan): Promise<Problem<"engineerId"> | undefined> {
 	try {
-		return await planInTransaction(input);
+		return await db.transaction((tx) => planOrder(tx, input));
 	} catch (error) {
 		// Thrown, so the transaction stores nothing of it.
 		if (error instanceof OrderStockShortage) return { message: error.message };
@@ -92,36 +88,8 @@ async function plan(input: Plan): Promise<Problem<"engineerId"> | undefined> {
 	}
 }
 
-function planInTransaction(input: Plan) {
-	return db.transaction(async (tx): Promise<Problem<"engineerId"> | undefined> => {
-		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true, status: true, engineerId: true, scheduledFor: true },
-			where: idInTenant(order, input.id),
-			with: { lines: true },
-		});
-		if (!found) error(404, m.schedule_not_found());
-		if (!isOpenOrder(found.status)) {
-			return { message: m.schedule_only_open() };
-		}
-		if (input.engineerId !== null) {
-			const problem = await assigneeProblem(input.engineerId, tx);
-			if (problem) return { field: "engineerId", message: problem };
-		}
-		const planned = {
-			engineerId: input.engineerId,
-			scheduledFor: atTime(input.day, input.time),
-			status: plannedStatus(found.status, input.engineerId),
-		};
-		await tx.update(order).set(planned).where(idInTenant(order, input.id));
-		await moveOrderStock(tx, found, found, { status: planned.status, lines: found.lines });
-		const subject = { type: "order", id: input.id, label: found.number };
-		await recordActivity(tx, { action: "scheduled", subject, before: found, after: planned });
-		return undefined;
-	});
-}
-
 /** The schedule dialog: plans an order, with the problems shown at its fields. */
-export const scheduleOrder = forMembers.form(
+export const scheduleOrder = form(
 	v.object({ id: id(), ...scheduleFields }),
 	async (input, issue) => {
 		const problem = await plan(input);
@@ -131,7 +99,7 @@ export const scheduleOrder = forMembers.form(
 );
 
 /** A drag and drop move on the board; the client shows it right away and undoes it on an error. */
-export const moveOrder = forMembers.command(v.object(moveFields), async (input) => {
+export const moveOrder = command(v.object(moveFields), async (input) => {
 	const problem = await plan(input);
 	if (problem) error(400, problem.message);
 	await refreshRequested(getSchedule);

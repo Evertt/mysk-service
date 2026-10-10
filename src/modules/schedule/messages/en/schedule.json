@@ -1,5 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"schedule_module_name": "Schedule",
+	"schedule_module_description": "Plan who does which order, and when, on a weekly board.",
 	"schedule_title": "Schedule",
 	"schedule_description": "Week {week}, {range}: who does what, and when.",
 	"schedule_previous_week": "Previous week",
@@ -41,9 +43,5 @@
 	"schedule_field_time": "Time",
 	"schedule_scheduled": "{number} scheduled",
 	"schedule_scheduled_for": "{number} scheduled for {date}",
-	"schedule_week_required": "Choose a week",
-	"schedule_not_found": "Order not found",
-	"schedule_only_open": "Only open orders can be scheduled",
-	"schedule_unknown_engineer": "Unknown engineer",
-	"schedule_engineer_inactive": "{name} is no longer active"
+	"schedule_week_required": "Choose a week"
 }

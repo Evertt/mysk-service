@@ -48,6 +48,25 @@ export function graphProblems(modules: ModuleFolder[]): string[] {
 		}
 	}
 
+	// An always-on module would go off with a requirement that can be switched off.
+	const switchable = new Set(
+		modules.filter((module) => !module.alwaysOn).map((module) => module.id),
+	);
+	for (const module of modules) {
+		if (!module.alwaysOn) continue;
+		for (const id of module.requires) {
+			if (id !== module.id && switchable.has(id)) {
+				problems.push(
+					`src/modules/${module.id} is always on, so it can't require ${id}, which can be switched off.`,
+				);
+			}
+		}
+	}
+
+	for (const module of modules) {
+		if (module.navAfter === module.id) problems.push(`src/modules/${module.id} nav.after itself.`);
+	}
+
 	if (stuck.length) {
 		// Follow requires from the first module left over until an id repeats.
 		const left = new Map(stuck.map((module) => [module.id, module]));

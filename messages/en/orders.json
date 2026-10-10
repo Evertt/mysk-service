@@ -103,6 +103,8 @@
 	"orders_invoiced_cant_delete": "{number} is invoiced: it's on an invoice that has been sent, so it can't be deleted",
 	"orders_unknown_customer": "Unknown customer",
 	"orders_unknown_engineer": "Unknown engineer",
+	"orders_only_open_scheduled": "Only open orders can be scheduled",
+	"orders_engineer_inactive": "{name} is no longer active",
 	"orders_equipment_other_customer": "This equipment belongs to another customer",
 	"orders_delete_referenced": "Other records still refer to this order, such as an invoice, so it can't be deleted.",
 	"orders_stock_note_deleted": "Order deleted",

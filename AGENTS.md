@@ -16,8 +16,8 @@
 
 Put a module next to the code that uses it, in the nearest folder that contains all of its users,
 with one exception: **`src/routes` holds route files only** (names starting with `+`), plus the files
-of the app shell, the dashboard, the auth pages, the schedule and the engineer portal, which belong to
-no core domain. Whatever belongs to a core domain lives in that domain's folder.
+of the app shell, the dashboard, the auth pages and the engineer portal, which belong to no core
+domain. Whatever belongs to a core domain lives in that domain's folder.
 
 - **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`, `materials`): in
   `src/lib/<domain>/`, in a folder by feature. Specs and test harnesses sit next to their subject.
@@ -50,7 +50,7 @@ no core domain. Whatever belongs to a core domain lives in that domain's folder.
   constants) never reads an import from another domain: a cycle between two barrels is harmless only
   if nothing is read while they evaluate. `src/lib/domain-boundaries.spec.ts` checks all of this, and
   that a domain's route folder and a module's `routes/` hold `+` files only.
-- **Used by one route outside the domains** (the shell, dashboard, auth pages, schedule, portal):
+- **Used by one route outside the domains** (the shell, dashboard, auth pages, portal):
   in that route's folder, e.g. `src/routes/(app)/(dashboard)/dashboard-charts.ts`. **Used by several
   routes under one folder**: in that folder, e.g. `src/routes/(app)/app-sidebar.svelte` serves every
   route behind the login. Import it relatively. Plain helpers that a route's remote files share (a
@@ -154,7 +154,7 @@ helpers are in `src/lib/server/auth/session.ts`:
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
 self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
-description, `route`, icon, `subjects`, `actions`; it is in every tenant's
+description, `route`, icon, `nav`, `subjects`, `actions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
@@ -178,8 +178,13 @@ migration committed.
   values. A module whose requirement is off is off everywhere (`effectiveModules()` in
   `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
   The settings page switches a module on together with its requirements and off together with its
-  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a set that
-  would leave a module without its requirements.
+  dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a change
+  that would turn off a module that's on (or being switched on) for want of a requirement; a stored
+  module that's off already (a stale row) blocks nothing.
+- **The sidebar**: a module's entry is in the sidebar's Modules group, unless its manifest says
+  `nav: { after: "orders" }` (a core entry's id from `coreNavIds` in `#lib/modules/nav.ts`, or
+  another module's id; a literal, read by the generator like `requires`): then it goes right after
+  that entry (`placeNav()`), or in the Modules group while that entry isn't shown.
 - **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in a
   `(modules)` group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte`
   → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`. They are real routes (`RouteId`,
@@ -247,11 +252,14 @@ migration committed.
   tables (`foreignWrites` in `boundaries.spec.ts`). A change to the core's records goes through the
   service the core offers, which holds the rules and the activity log entry, e.g.
   `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
-  invoice's orders invoiced and completed again. A module's own `api/` offers such services to the
+  invoice's orders invoiced and completed again, and `scheduleOrder(tx, plan)`
+  (`src/lib/orders/server/scheduling.ts`), through which the schedule plans orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Contracts and invoicing are the modules (`src/modules/contracts/`, `src/modules/invoicing/`: look
-there for an example of each part; the registries list them by id). Extension points are added with
+Contracts, invoicing and the schedule are the modules (`src/modules/contracts/`,
+`src/modules/invoicing/`, `src/modules/schedule/`: look there for an example of each part; the
+registries list them by id). The schedule is the one without tables of its own: a view of the
+orders, which changes them through a core service and owns only its route, components and messages. Extension points are added with
 the first module that needs them. Not there yet: several `nav` entries per module, module
 columns, filters and row actions in tables, `order.actions`-style slots, slot options (order,
 roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
@@ -354,11 +362,12 @@ else English; on the server `paraglideMiddleware` (`hooks.server.ts`) sets it pe
 remote functions. Every user-facing text goes through a message; nothing English is hard-coded.
 
 - **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
-  `auth`, `dashboard`, `orders`, `schedule`, `customers`, `equipment`, `engineers`, `materials`,
+  `auth`, `dashboard`, `orders`, `customers`, `equipment`, `engineers`, `materials`,
   `settings`, `portal`, `activity`), each listed in `project.inlang/settings.json`. A new file goes
   in every locale folder and in that list. A module's sections are in its own folder
-  (`src/modules/contracts/messages/<locale>/contracts.json`, and `invoices.json` of the invoicing
-  module: the section's name is the key prefix, not the module's id), which the generator lists.
+  (`src/modules/contracts/messages/<locale>/contracts.json`, `schedule.json` of the schedule, and
+  `invoices.json` of the invoicing module: the section's name is the key prefix, not the module's
+  id), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
   `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or

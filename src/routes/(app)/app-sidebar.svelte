@@ -2,7 +2,6 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import Building2Icon from "@lucide/svelte/icons/building-2";
-	import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import CogIcon from "@lucide/svelte/icons/cog";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
@@ -11,57 +10,85 @@
 	import PackageIcon from "@lucide/svelte/icons/package";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
-	import { modules } from "#lib/modules/manifests.ts";
+	import { type AppModule, modules } from "#lib/modules/manifests.ts";
+	import { type CoreNavId, type NavItem, placeNav } from "#lib/modules/nav.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
 	import UserMenu from "./user-menu.svelte";
 
 	const tenant = $derived(await getCurrentTenant());
 
+	/** The core's entries; the tenant's modules are placed among them (`placeNav()`). */
+	const coreGroups = $derived([
+		{
+			label: m.common_nav_operations(),
+			items: [
+				{
+					id: "dashboard",
+					title: m.common_nav_dashboard(),
+					href: resolve("/(app)/(dashboard)"),
+					icon: LayoutDashboardIcon,
+				},
+				{
+					id: "orders",
+					title: m.common_nav_orders(),
+					href: resolve("/(app)/orders"),
+					icon: ClipboardListIcon,
+				},
+				{
+					id: "activity",
+					title: m.common_nav_activity(),
+					href: resolve("/(app)/activity"),
+					icon: HistoryIcon,
+				},
+			],
+		},
+		{
+			label: m.common_nav_records(),
+			items: [
+				{
+					id: "customers",
+					title: m.common_nav_customers(),
+					href: resolve("/(app)/customers"),
+					icon: Building2Icon,
+				},
+				{
+					id: "equipment",
+					title: m.common_nav_equipment(),
+					href: resolve("/(app)/equipment"),
+					icon: CogIcon,
+				},
+				{
+					id: "engineers",
+					title: m.common_nav_engineers(),
+					href: resolve("/(app)/engineers"),
+					icon: HardHatIcon,
+				},
+				{
+					id: "materials",
+					title: m.common_nav_materials(),
+					href: resolve("/(app)/materials"),
+					icon: PackageIcon,
+				},
+			],
+		},
+	] satisfies { label: string; items: (NavItem & { id: CoreNavId })[] }[]);
+
 	const groups = $derived(
-		[
-			{
-				label: m.common_nav_operations(),
-				items: [
-					{
-						title: m.common_nav_dashboard(),
-						href: resolve("/(app)/(dashboard)"),
-						icon: LayoutDashboardIcon,
-					},
-					{ title: m.common_nav_orders(), href: resolve("/(app)/orders"), icon: ClipboardListIcon },
-					{
-						title: m.common_nav_schedule(),
-						href: resolve("/(app)/schedule"),
-						icon: CalendarDaysIcon,
-					},
-					{ title: m.common_nav_activity(), href: resolve("/(app)/activity"), icon: HistoryIcon },
-				],
-			},
-			{
-				label: m.common_nav_records(),
-				items: [
-					{
-						title: m.common_nav_customers(),
-						href: resolve("/(app)/customers"),
-						icon: Building2Icon,
-					},
-					{ title: m.common_nav_equipment(), href: resolve("/(app)/equipment"), icon: CogIcon },
-					{ title: m.common_nav_engineers(), href: resolve("/(app)/engineers"), icon: HardHatIcon },
-					{ title: m.common_nav_materials(), href: resolve("/(app)/materials"), icon: PackageIcon },
-				],
-			},
-			{
-				label: m.common_nav_modules(),
-				// Only the modules the current organization has.
-				items: modules
-					.filter((module) => tenant.modules.includes(module.id))
-					.map((module) => ({
-						title: module.label,
-						href: resolve(module.route),
-						icon: module.icon,
-					})),
-			},
-		].filter((group) => group.items.length),
+		placeNav(
+			coreGroups,
+			// Only the modules the current organization has.
+			modules
+				.filter((module) => tenant.modules.includes(module.id))
+				.map((module) => ({
+					id: module.id,
+					title: module.label,
+					href: resolve(module.route),
+					icon: module.icon,
+					after: (module as AppModule).nav?.after,
+				})),
+			m.common_nav_modules(),
+		),
 	);
 
 	// Sections stay highlighted on their sub-pages, e.g. Orders on an order's detail page.

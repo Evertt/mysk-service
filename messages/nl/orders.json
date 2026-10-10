@@ -103,6 +103,8 @@
 	"orders_invoiced_cant_delete": "{number} is gefactureerd: de opdracht staat op een verstuurde factuur, dus je kunt hem niet verwijderen",
 	"orders_unknown_customer": "Onbekende klant",
 	"orders_unknown_engineer": "Onbekende monteur",
+	"orders_only_open_scheduled": "Je kunt alleen open opdrachten inplannen",
+	"orders_engineer_inactive": "{name} is niet meer actief",
 	"orders_equipment_other_customer": "Dit apparaat is van een andere klant",
 	"orders_delete_referenced": "Andere gegevens verwijzen nog naar deze opdracht, zoals een factuur, dus je kunt hem niet verwijderen.",
 	"orders_stock_note_deleted": "Opdracht verwijderd",

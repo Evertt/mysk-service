@@ -8,6 +8,7 @@ test("reads literal lists and the flag", () => {
 		requires: ["a"],
 		enhances: ["c", "d"],
 		alwaysOn: true,
+		navAfter: null,
 		problems: [],
 	});
 });
@@ -17,6 +18,7 @@ test("defaults to no dependencies", () => {
 		requires: [],
 		enhances: [],
 		alwaysOn: false,
+		navAfter: null,
 		problems: [],
 	});
 });
@@ -35,5 +37,25 @@ test("refuses what isn't a literal", () => {
 	]);
 	expect(readManifestGraph(`defineModule({ id: "a", alwaysOn: false })`).problems).toEqual([
 		"alwaysOn must be true or left out",
+	]);
+});
+
+test("reads where the sidebar entry goes", () => {
+	expect(readManifestGraph(`defineModule({ id: "a", nav: { after: "orders" } })`)).toMatchObject({
+		navAfter: "orders",
+		problems: [],
+	});
+	expect(
+		readManifestGraph(`defineModule({\n\tid: "a",\n\tnav: { after: 'b', },\n})`).navAfter,
+	).toBe("b");
+});
+
+test("refuses a nav that isn't a literal", () => {
+	expect(readManifestGraph(`defineModule({ id: "a", nav: placement })`)).toMatchObject({
+		navAfter: null,
+		problems: ['nav must be { after: "<id>" } with a string literal'],
+	});
+	expect(readManifestGraph(`defineModule({ id: "a", nav: { after: where } })`).problems).toEqual([
+		'nav must be { after: "<id>" } with a string literal',
 	]);
 });

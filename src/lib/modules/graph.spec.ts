@@ -85,18 +85,69 @@ test("changing the set enables and disables, keeping the graph's order", () => {
 	).toEqual({ stored: ["base"] });
 });
 
-test("a change that leaves a module without a requirement is refused, naming that module", () => {
+test("a change that leaves a module without a requirement is refused, saying which", () => {
 	expect(changeModules(["base"], { enable: ["extra"], disable: [] }, fakeGraph)).toEqual({
-		refused: ["extra"],
+		refused: { alwaysOn: [], unmet: ["extra"] },
 	});
+	// Switching base off would take addon with it, and extra behind addon.
 	expect(
 		changeModules(["base", "addon", "extra"], { enable: [], disable: ["base"] }, fakeGraph),
-	).toEqual({ refused: ["addon"] });
+	).toEqual({ refused: { alwaysOn: [], unmet: ["addon", "extra"] } });
 });
 
-test("an always-on module can't be switched off", () => {
+test("switching off an always-on module is refused as such; switching one on stores nothing", () => {
 	expect(changeModules([], { enable: [], disable: ["core-ish"] }, fakeGraph)).toEqual({
-		refused: ["core-ish"],
+		refused: { alwaysOn: ["core-ish"], unmet: [] },
+	});
+	expect(changeModules([], { enable: ["core-ish"], disable: [] }, fakeGraph)).toEqual({
+		stored: [],
+	});
+});
+
+test("a row stored for an always-on module stays through other changes", () => {
+	expect(changeModules(["core-ish", "base"], { enable: ["side"], disable: [] }, fakeGraph)).toEqual(
+		{ stored: ["base", "core-ish", "side"] },
+	);
+});
+
+test("a stale row doesn't block an unrelated change, and stays", () => {
+	// addon is stored without base, so it's off; switching side on is fine all the same.
+	expect(changeModules(["addon"], { enable: ["side"], disable: [] }, fakeGraph)).toEqual({
+		stored: ["addon", "side"],
+	});
+	// So is switching the stale module off.
+	expect(changeModules(["addon"], { enable: [], disable: ["addon"] }, fakeGraph)).toEqual({
+		stored: [],
+	});
+});
+
+test("a stale row doesn't block switching off something else it requires", () => {
+	// x requires a and b; it's stored without a, so it's off, and b can go.
+	const graph = {
+		a: { requires: [], enhances: [], alwaysOn: false },
+		b: { requires: [], enhances: [], alwaysOn: false },
+		x: { requires: ["a", "b"], enhances: [], alwaysOn: false },
+	};
+	expect(changeModules(["b", "x"], { enable: [], disable: ["b"] }, graph)).toEqual({
+		stored: ["x"],
+	});
+});
+
+test("switching a stale module on with what it requires mends it", () => {
+	expect(changeModules(["addon"], { enable: ["addon", "base"], disable: [] }, fakeGraph)).toEqual({
+		stored: ["base", "addon"],
+	});
+});
+
+test("switching a module on behind a stale row is refused: it wouldn't be on", () => {
+	// addon is stored without base; extra needs addon to be on.
+	expect(changeModules(["addon"], { enable: ["extra"], disable: [] }, fakeGraph)).toEqual({
+		refused: { alwaysOn: [], unmet: ["extra"] },
+	});
+	// extra is stored without addon; switching addon on without base leaves addon off, and the
+	// stale extra, which was off already, isn't blamed.
+	expect(changeModules(["extra"], { enable: ["addon"], disable: [] }, fakeGraph)).toEqual({
+		refused: { alwaysOn: [], unmet: ["addon"] },
 	});
 });
 

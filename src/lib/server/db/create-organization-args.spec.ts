@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { fakeGraph } from "#lib/modules/fakes.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
 
 import { parseCreateArgs, UsageError } from "./create-organization-args.ts";
@@ -15,10 +16,10 @@ const args = [
 	"Ada Lovelace",
 ];
 
-/** What's wrong with a command line, or `undefined` if nothing is. */
-const problem = (line: string[]) => {
+/** What's wrong with a command line (read with `graph`, if given), or `undefined` if nothing is. */
+const problem = (line: string[], graph?: typeof fakeGraph) => {
 	try {
-		parseCreateArgs(line);
+		parseCreateArgs(line, graph);
 	} catch (error) {
 		if (error instanceof UsageError) return error.message;
 		throw error;
@@ -100,5 +101,31 @@ describe("modules", () => {
 		expect(parseCreateArgs([...args, "--modules", moduleIds.join(",")])).toHaveProperty("modules", [
 			...moduleIds,
 		]);
+	});
+
+	test("come with what they require, or are refused", () => {
+		expect(problem([...args, "--modules", "extra"], fakeGraph)).toBe(
+			"--modules: extra requires addon; add it to --modules",
+		);
+		expect(problem([...args, "--modules", "addon,extra"], fakeGraph)).toBe(
+			"--modules: addon requires base; add it to --modules",
+		);
+		expect(parseCreateArgs([...args, "--modules", "addon,base"], fakeGraph)).toHaveProperty(
+			"modules",
+			["base", "addon"],
+		);
+	});
+
+	test("leave out always-on ones, which are on anyway", () => {
+		expect(parseCreateArgs([...args, "--modules", "core-ish,side"], fakeGraph)).toHaveProperty(
+			"modules",
+			["side"],
+		);
+	});
+
+	test("are checked against the graph's modules", () => {
+		expect(problem([...args, "--modules", "contracts"], fakeGraph)).toBe(
+			"Unknown modules: contracts (there are base, addon, core-ish, extra, side)",
+		);
 	});
 });

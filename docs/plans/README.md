@@ -83,16 +83,18 @@ Implementation plans, one per step of its order of work:
 
 1. [module-dependencies-1-machinery.md](module-dependencies-1-machinery.md) ✅ done: the dependency graph,
    switching on and off, `api/` boundaries and extension points declared by their owners.
-2. Roles, 3. the schedule pilot, 4. the portal pilot, 5. the inspector: written once step 1 is merged.
+2. Roles: not written yet (the portal pilot needs it; the schedule doesn't).
+3. [module-dependencies-3-schedule.md](module-dependencies-3-schedule.md) ✅ done: the planning
+   board as the optional module `src/modules/schedule/`, writing orders through a core scheduling
+   service; `nav: { after }`; and the switching fixes carried from step 1.
+4. The portal pilot (after roles), 5. the inspector: not written yet.
 
 Carried from step 1 into the later plans (from its reviews):
 
-- **Schedule plan** (the first module with `requires`): the e2e for the settings page's dependency
-  prompts and a tampered refusal; decide and test whether a stale `organization_module` row may
-  block unrelated switches (`changeModules()` checks the whole resulting set); the refusal messages
-  for an empty or always-on submission and a refusal shown inside the switch-off dialog; the
-  generator refusing an `alwaysOn` module that requires a switchable one; `org:create --modules`
-  checking requirements (through `changeModules()`).
+- **For the first plan with a real `requires` or `alwaysOn` module** (carried by step 3: the
+  schedule has neither, so its specs use the made-up graph): the e2e of the settings page's
+  dependency prompts (switching on names what it also switches on; switching off asks first), and of
+  a tampered refusal for an unmet requirement or an always-on module.
 - **Merging the held `deferred-dashboard-slots` branch** (dashboard module cards rendered in the
   browser): port its `deferred` option from `module-slots.svelte` to `<ExtensionSlot>`.
 - **Later, when they bite:** `foreignWrites` missing tables imported through
