@@ -2,9 +2,8 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-
-	import MaterialForm from "../material-form.svelte";
-	import { createMaterial } from "../material.remote.ts";
+	import { MaterialForm } from "#lib/materials/components.ts";
+	import { createMaterial } from "#lib/materials/remotes.ts";
 </script>
 
 <svelte:head>

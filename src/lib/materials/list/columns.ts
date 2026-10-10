@@ -4,10 +4,10 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import { label } from "#lib/i18n/index.ts";
-import { MaterialLink } from "#lib/materials/components.ts";
-import { stockLevel, stockLevels } from "#lib/materials/index.ts";
 import { materialUnits } from "#lib/models.ts";
 
+import { stockLevel, stockLevels } from "../display.ts";
+import MaterialLink from "../ui/material-link.svelte";
 import type { getMaterials } from "./material-list.remote.ts";
 import StockCell from "./stock-cell.svelte";
 

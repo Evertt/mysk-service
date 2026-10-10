@@ -1,8 +1,6 @@
 import { and, countDistinct, inArray } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
-import { stockLevelSql } from "#lib/materials/server/index.ts";
-import { removeMaterial } from "#lib/materials/server/materials.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
@@ -15,7 +13,9 @@ import {
 } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { materialsSql } from "./material-list.server.ts";
+import { materialsSql } from "../server/list-sql.ts";
+import { removeMaterial } from "../server/materials.ts";
+import { stockLevelSql } from "../server/stock.ts";
 import { materialsList } from "./materials-list.ts";
 
 /**

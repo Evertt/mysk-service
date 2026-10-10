@@ -5,10 +5,10 @@
 -->
 <script lang="ts">
 	import { formatDate, label } from "#lib/i18n/index.ts";
-	import { formatQuantity } from "#lib/materials/index.ts";
 	import type { MaterialUnit } from "#lib/models.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
+	import { formatQuantity } from "../display.ts";
 	import type { getMaterial } from "../material.remote.ts";
 	import { formatChange } from "./stock-history.ts";
 

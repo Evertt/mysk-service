@@ -5,14 +5,14 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { stockLevelSql } from "#lib/materials/server/index.ts";
 import { stockLevels } from "#lib/models.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
 import { type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
-import { materialsList } from "./materials-list.ts";
+import { materialsList } from "../list/materials-list.ts";
+import { stockLevelSql } from "./stock.ts";
 
 /**
  * The materials list's columns in SQL, checked against its definition (`materialsList`). Call it

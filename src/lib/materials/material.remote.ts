@@ -3,8 +3,6 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { label } from "#lib/i18n/index.ts";
-import { moveStock, withBalances } from "#lib/materials/server/index.ts";
-import { findMaterial, ordersUsing, removeMaterial } from "#lib/materials/server/materials.ts";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
 import { lineTotalSql } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
@@ -23,7 +21,9 @@ import { type Problem, refuse } from "#lib/server/forms.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { materialFields, newMaterialFields } from "./material-schema.ts";
+import { materialFields, newMaterialFields } from "./form/material-schema.ts";
+import { findMaterial, ordersUsing, removeMaterial } from "./server/materials.ts";
+import { moveStock, withBalances } from "./server/stock.ts";
 
 /** Whether every stock movement of a material can be counted in `unit` (e.g. whole pieces). */
 const historyFits = async (materialId: number, unit: MaterialUnit) => {

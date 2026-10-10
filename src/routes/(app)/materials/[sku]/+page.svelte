@@ -10,14 +10,12 @@
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 	import { StockBadge } from "#lib/materials/components.ts";
+	import { CountStockDialog, ReceiveStockDialog, StockHistory } from "#lib/materials/components.ts";
 	import { formatQuantity } from "#lib/materials/index.ts";
+	import { deleteMaterial, getMaterial } from "#lib/materials/remotes.ts";
 	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
 
-	import { deleteMaterial, getMaterial } from "../material.remote.ts";
 	import type { PageProps } from "./$types";
-	import CountStockDialog from "./count-stock-dialog.svelte";
-	import ReceiveStockDialog from "./receive-stock-dialog.svelte";
-	import StockHistory from "./stock-history.svelte";
 
 	let { params }: PageProps = $props();
 

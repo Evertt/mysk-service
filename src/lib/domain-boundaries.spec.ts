@@ -36,7 +36,7 @@ export const domains = ["customers", "engineers", "equipment", "materials", "ord
  * `routes/`. Until then their route folders still hold the files that are about to move, and those
  * may use the old imports.
  */
-export const migratedDomains: string[] = ["engineers", "customers", "equipment"];
+export const migratedDomains: string[] = ["engineers", "customers", "equipment", "materials"];
 export const migratedModules: string[] = [];
 
 const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];

@@ -12,10 +12,10 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatNumber, label } from "#lib/i18n/index.ts";
-	import { lowStockThreshold } from "#lib/materials/index.ts";
 	import { type MaterialUnit, materialUnits, quantityStep } from "#lib/models.ts";
 
-	import type { createMaterial, getMaterial, updateMaterial } from "./material.remote.ts";
+	import { lowStockThreshold } from "../display.ts";
+	import type { createMaterial, getMaterial, updateMaterial } from "../material.remote.ts";
 
 	type Material = Awaited<ReturnType<typeof getMaterial>>["material"];
 

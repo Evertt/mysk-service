@@ -1,5 +1,6 @@
-import { formatQuantity } from "#lib/materials/index.ts";
 import type { MaterialUnit } from "#lib/models.ts";
+
+import { formatQuantity } from "../display.ts";
 
 /** A change in stock with its sign and unit, e.g. `+12 pcs` or `−2.5 kg`. */
 export const formatChange = (quantity: number, unit: MaterialUnit) =>

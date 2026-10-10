@@ -2,8 +2,6 @@ import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
-import { moveStock } from "#lib/materials/server/index.ts";
-import { findMaterial } from "#lib/materials/server/materials.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -12,8 +10,10 @@ import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { countFields, receiveFields } from "../material-schema.ts";
+import { countFields, receiveFields } from "../form/material-schema.ts";
 import { getMaterial } from "../material.remote.ts";
+import { findMaterial } from "../server/materials.ts";
+import { moveStock } from "../server/stock.ts";
 
 /** Adds received stock (e.g. a delivery) to a material. */
 export const receiveStock = forMembers.form(
