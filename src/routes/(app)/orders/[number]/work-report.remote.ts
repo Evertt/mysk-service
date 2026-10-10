@@ -1,15 +1,14 @@
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { inTenant, requireMember } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 /** What was recorded on an order in the field: notes and the customer's sign-off. */
-export const getWorkReport = query(v.string(), async (number) => {
-	requireMember();
+export const getWorkReport = forMembers.query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
 		columns: { id: true },
 		where: and(eq(order.number, number), inTenant(order)),

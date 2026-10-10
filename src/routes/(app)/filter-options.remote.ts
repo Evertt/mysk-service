@@ -3,15 +3,15 @@
  * tenant's customers, engineers or units matching a search, the first so many, plus the names of
  * those ticked. Used by the orders and equipment lists, which filter on the server.
  */
-import { query } from "$app/server";
 import { and, asc, inArray, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
 import { nocase, searchMatch } from "#lib/server/lists";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 /** A unit as the lists show it: manufacturer and model. */
 const unitName = sql<string>`${equipment.manufacturer} || ' ' || ${equipment.model}`;
@@ -50,8 +50,7 @@ async function options(
 }
 
 /** Customers by name or code; their code is the filter's value (`?customer=CUST-0001`). */
-export const getCustomerOptions = query(optionsInput, async ({ search, selected }) => {
-	requireMember();
+export const getCustomerOptions = forMembers.query(optionsInput, async ({ search, selected }) => {
 	return options(
 		(where) =>
 			db
@@ -66,8 +65,7 @@ export const getCustomerOptions = query(optionsInput, async ({ search, selected 
 });
 
 /** Engineers by name; their id is the filter's value (`?engineer=12`). */
-export const getEngineerOptions = query(optionsInput, async ({ search, selected }) => {
-	requireMember();
+export const getEngineerOptions = forMembers.query(optionsInput, async ({ search, selected }) => {
 	const ids = selected.map(Number).filter(Number.isSafeInteger);
 	return options(
 		(where) =>
@@ -83,8 +81,7 @@ export const getEngineerOptions = query(optionsInput, async ({ search, selected 
 });
 
 /** Units by serial number, manufacturer or model; their serial number is the filter's value. */
-export const getEquipmentOptions = query(optionsInput, async ({ search, selected }) => {
-	requireMember();
+export const getEquipmentOptions = forMembers.query(optionsInput, async ({ search, selected }) => {
 	return options(
 		(where) =>
 			db

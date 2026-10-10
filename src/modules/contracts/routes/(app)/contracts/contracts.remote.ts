@@ -1,4 +1,3 @@
-import { command, form, query } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -7,20 +6,20 @@ import { nextDay } from "#lib/dates.ts";
 import { formatDate } from "#lib/i18n";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, idsInTenant, inTenant, requireModule, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists";
 import { nextNumber } from "#lib/server/numbering.ts";
 
+import { command, form, query } from "../../../remote-functions.ts";
 import { contractNumbers, overlappingCoverage } from "../../../server/contracts.ts";
 import { contract, contractEquipment } from "../../../server/schema.ts";
 import { contractFields } from "./contract-schema.ts";
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
 export const getContracts = query(async () => {
-	requireModule("contracts");
 	const coverage = db
 		.select({ contractId: contractEquipment.contractId, units: count().as("units") })
 		.from(contractEquipment)
@@ -50,7 +49,6 @@ export const getContracts = query(async () => {
 
 /** One contract with its customer and covered equipment, plus the work on that equipment during the contract. */
 export const getContract = query(v.string(), async (number) => {
-	requireModule("contracts");
 	const found = await db.query.contract.findFirst({
 		where: and(eq(contract.number, number), inTenant(contract)),
 		with: { customer: true, coverage: { with: { equipment: true } } },
@@ -100,7 +98,6 @@ export const getContract = query(v.string(), async (number) => {
 
 /** Everything the contract form needs to choose from. */
 export const getContractFormOptions = query(async () => {
-	requireModule("contracts");
 	const [customers, equipments] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
@@ -231,7 +228,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 }
 
 export const createContract = form(v.object(contractFields), async (input, issue) => {
-	const { organizationId } = requireModule("contracts");
+	const { organizationId } = currentTenant();
 	const problems = await checkContract(null, input);
 	refuse(issue, problems);
 	const number = await saveContract(organizationId, null, input);
@@ -244,7 +241,7 @@ export const createContract = form(v.object(contractFields), async (input, issue
 export const updateContract = form(
 	v.object({ id: id(), ...contractFields }),
 	async (data, issue) => {
-		const { organizationId } = requireModule("contracts");
+		const { organizationId } = currentTenant();
 		const { id, ...input } = data;
 		const problems = await checkContract(id, input);
 		refuse(issue, problems);
@@ -275,7 +272,6 @@ async function removeContract(id: number) {
 }
 
 export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("contracts");
 	await removeContract(id);
 	void getContracts().refresh();
 	redirect(303, "/contracts");
@@ -283,7 +279,6 @@ export const deleteContract = form(v.object({ id: id() }), async ({ id }) => {
 
 /** Deletes the selected contracts, with their coverage. */
 export const bulkDeleteContracts = command(idsTarget, async (target) => {
-	requireModule("contracts");
 	const result = await bulkChange(target, {
 		table: contract,
 		label: contract.number,

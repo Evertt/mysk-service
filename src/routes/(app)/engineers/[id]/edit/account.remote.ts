@@ -1,4 +1,3 @@
-import { form, query } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import * as v from "valibot";
@@ -6,16 +5,17 @@ import * as v from "valibot";
 import { isManager } from "#lib/auth";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireManager, requireMember } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, member, user } from "#lib/server/db/schema.ts";
+import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 /**
  * The user account an engineer signs in to the engineer portal with, and (for owners and admins)
  * the organization's members it can be linked to: those not linked to another engineer.
  */
-export const getEngineerAccount = query(v.number(), async (engineerId) => {
-	const tenant = requireMember();
+export const getEngineerAccount = forMembers.query(v.number(), async (engineerId) => {
+	const tenant = currentTenant();
 	const found = await db.query.engineer.findFirst({
 		columns: { id: true, userId: true },
 		where: idInTenant(engineer, engineerId),
@@ -44,10 +44,10 @@ export const getEngineerAccount = query(v.number(), async (engineerId) => {
 });
 
 /** Links an engineer to a member's user account, or unlinks them (an empty `userId`). */
-export const linkEngineerAccount = form(
+export const linkEngineerAccount = forManagers.form(
 	v.object({ id: id(), userId: v.string() }),
 	async (input, issue) => {
-		const { organizationId } = requireManager();
+		const { organizationId } = currentTenant();
 		const found = await db.query.engineer.findFirst({
 			columns: { id: true, name: true, userId: true },
 			where: idInTenant(engineer, input.id),

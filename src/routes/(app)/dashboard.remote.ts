@@ -1,13 +1,13 @@
-import { query } from "$app/server";
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { DAY } from "#lib/dates.ts";
 import { stockLevel } from "#lib/materials/display.ts";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
 import { materialsPerOrder, priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import {
 	equipmentByStatus,
@@ -18,9 +18,7 @@ import {
 } from "./dashboard-charts.ts";
 
 /** Headline numbers and upcoming work for the dashboard. */
-export const getDashboard = query(async () => {
-	requireMember();
-
+export const getDashboard = forMembers.query(async () => {
 	const now = new Date();
 	const monthAgo = new Date(now.getTime() - 30 * DAY);
 
@@ -108,9 +106,7 @@ export const getDashboard = query(async () => {
  * revenue per month, and the equipment by status. Aggregated in the database per local week or
  * status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
  */
-export const getCharts = query(async () => {
-	requireMember();
-
+export const getCharts = forMembers.query(async () => {
 	const now = new Date();
 	const weeks = lastWeeks(now);
 	const months = lastMonths(now);

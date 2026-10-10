@@ -1,4 +1,3 @@
-import { form, query } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
@@ -6,11 +5,12 @@ import * as v from "valibot";
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { equipmentFields } from "./equipment-schema.ts";
 
@@ -18,8 +18,7 @@ import { equipmentFields } from "./equipment-schema.ts";
  * One of the tenant's units with its owner, and how many orders it has (which keep it from being
  * moved). Its service history is `getServiceHistory` (`[serial]/service-history.remote.ts`).
  */
-export const getEquipment = query(v.string(), async (serialNumber) => {
-	requireMember();
+export const getEquipment = forMembers.query(v.string(), async (serialNumber) => {
 	const unit = await db.query.equipment.findFirst({
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
 		with: { customer: true },
@@ -34,8 +33,7 @@ export const getEquipment = query(v.string(), async (serialNumber) => {
 });
 
 /** Everything the equipment form needs to choose from (the tenant's customers). */
-export const getEquipmentFormOptions = query(async () => {
-	requireMember();
+export const getEquipmentFormOptions = forMembers.query(async () => {
 	const customers = await db
 		.select({ id: customer.id, code: customer.code, name: customer.name })
 		.from(customer)
@@ -84,8 +82,8 @@ async function checkUnit(
 	return problems;
 }
 
-export const createEquipment = form(v.object(equipmentFields), async (input, issue) => {
-	const { organizationId } = requireMember();
+export const createEquipment = forMembers.form(v.object(equipmentFields), async (input, issue) => {
+	const { organizationId } = currentTenant();
 	refuse(issue, await checkUnit(undefined, input));
 	await db.transaction(async (tx) => {
 		const [created] = await tx
@@ -98,10 +96,9 @@ export const createEquipment = form(v.object(equipmentFields), async (input, iss
 	redirect(303, `/equipment/${encodeURIComponent(input.serialNumber)}`);
 });
 
-export const updateEquipment = form(
+export const updateEquipment = forMembers.form(
 	v.object({ id: id(), ...equipmentFields }),
 	async (data, issue) => {
-		requireMember();
 		const { id, ...input } = data;
 		const existing = await db.query.equipment.findFirst({ where: idInTenant(equipment, id) });
 		if (!existing) error(404, m.equipment_not_found());
@@ -122,8 +119,7 @@ export const updateEquipment = form(
 	},
 );
 
-export const deleteEquipment = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+export const deleteEquipment = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeEquipment(id);
 	redirect(303, "/equipment");
 });

@@ -1,4 +1,3 @@
-import { command, form, query } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
@@ -8,18 +7,18 @@ import { openOrderStatuses } from "#lib/models.ts";
 import { laborCost } from "#lib/orders/server/pricing.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists";
 import { deleteAndLog } from "#lib/server/records.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { engineerFields } from "./engineer-schema.ts";
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
-export const getEngineers = query(async () => {
-	requireMember();
+export const getEngineers = forMembers.query(async () => {
 	const open = db
 		.select({ engineerId: order.engineerId, count: count().as("open_count") })
 		.from(order)
@@ -55,8 +54,7 @@ function parseId(value: string) {
 }
 
 /** One of the tenant's engineers with their open and recent orders and last month's numbers. */
-export const getEngineer = query(v.string(), async (param) => {
-	requireMember();
+export const getEngineer = forMembers.query(v.string(), async (param) => {
 	const engineerId = parseId(param);
 	const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, engineerId) });
 	if (!found) error(404, m.engineers_id_not_found({ id: param }));
@@ -133,8 +131,8 @@ async function emailProblems(email: string, exceptId?: number): Promise<Problem<
 	return [{ field: "email", message: m.engineers_email_taken() }];
 }
 
-export const createEngineer = form(v.object(engineerFields), async (input, issue) => {
-	const { organizationId } = requireMember();
+export const createEngineer = forMembers.form(v.object(engineerFields), async (input, issue) => {
+	const { organizationId } = currentTenant();
 	refuse(issue, await emailProblems(input.email));
 	const created = await db.transaction(async (tx) => {
 		const [created] = await tx
@@ -149,10 +147,9 @@ export const createEngineer = form(v.object(engineerFields), async (input, issue
 	redirect(303, `/engineers/${created.id}`);
 });
 
-export const updateEngineer = form(
+export const updateEngineer = forMembers.form(
 	v.object({ id: id(), ...engineerFields }),
 	async (data, issue) => {
-		requireMember();
 		const { id, ...input } = data;
 		const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, id) });
 		if (!found) error(404, m.engineers_not_found());
@@ -172,10 +169,9 @@ export const updateEngineer = form(
  * Marks the selected engineers active or inactive, as their form's "Active" box does: only active
  * engineers can be assigned new orders; what's assigned to them stays.
  */
-export const bulkSetEngineersActive = command(
+export const bulkSetEngineersActive = forMembers.command(
 	v.object({ target: idsTarget, active: v.boolean() }),
 	async ({ target, active }) => {
-		requireMember();
 		const result = await bulkChange(target, {
 			table: engineer,
 			label: engineer.name,
@@ -219,8 +215,7 @@ async function removeEngineer(id: number) {
 	);
 }
 
-export const deleteEngineer = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+export const deleteEngineer = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeEngineer(id);
 	void getEngineers().refresh();
 	redirect(303, "/engineers");

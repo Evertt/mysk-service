@@ -1,16 +1,17 @@
-import { form, getRequestEvent, query } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isFieldEngineer } from "#lib/auth";
-import { auth, requireMember, requireTenant, requireUser } from "#lib/server/auth";
+import { auth, currentTenant, currentUser } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
+import { forAnyone, forAnyRole, forUsers } from "#lib/server/remote-functions.ts";
 
 /** Who is signed in, for the user menu. */
-export const getCurrentUser = query(async () => {
-	const { name, email, image } = requireUser();
+export const getCurrentUser = forUsers.query(async () => {
+	const { name, email, image } = currentUser();
 	return { name, email, image: image ?? null };
 });
 
@@ -18,10 +19,10 @@ export const getCurrentUser = query(async () => {
  * The organization the user works in, its modules and their role there, plus the other
  * organizations they can switch to.
  */
-export const getCurrentTenant = query(async () => {
+export const getCurrentTenant = forAnyRole.query(async () => {
+	const tenant = currentTenant();
 	// The app shell awaits this, so field engineers who navigate here go to their portal instead.
-	if (isFieldEngineer(requireTenant().roles)) redirect(303, "/my");
-	const tenant = requireMember();
+	if (isFieldEngineer(tenant.roles)) redirect(303, "/my");
 	const organizations = await db
 		.select({ id: organization.id, name: organization.name })
 		.from(member)
@@ -37,10 +38,10 @@ export const getCurrentTenant = query(async () => {
 	};
 });
 
-export const switchOrganization = form(
+export const switchOrganization = forUsers.form(
 	v.object({ organizationId: v.string() }),
 	async ({ organizationId }) => {
-		const user = requireUser();
+		const user = currentUser();
 		// better-auth checks this too, but then also clears the active organization, which would
 		// move the user to their first one instead of leaving them where they were.
 		const [membership] = await db
@@ -57,7 +58,7 @@ export const switchOrganization = form(
 	},
 );
 
-export const signOut = form(async () => {
+export const signOut = forAnyone.form(async () => {
 	await auth.api.signOut({ headers: getRequestEvent().request.headers });
 	redirect(303, "/login");
 });

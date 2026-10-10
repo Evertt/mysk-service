@@ -1,18 +1,19 @@
-import { form, getRequestEvent, query } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager, parseRoles } from "#lib/auth";
 import { modules } from "#lib/modules/manifests.ts";
 import { recordActivity } from "#lib/server/activity";
-import { inTenant, requireManager, requireMember } from "#lib/server/auth";
+import { currentTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
+import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 import { getCurrentTenant } from "../session.remote.ts";
 
-export const getOrganizationSettings = query(async () => {
-	const tenant = requireMember();
+export const getOrganizationSettings = forMembers.query(async () => {
+	const tenant = currentTenant();
 	const [members, enabled] = await Promise.all([
 		db
 			.select({ id: member.id, name: user.name, email: user.email, role: member.role })
@@ -39,13 +40,13 @@ export const getOrganizationSettings = query(async () => {
 	};
 });
 
-export const setModule = form(
+export const setModule = forManagers.form(
 	v.object({
 		moduleId: v.picklist(modules.map((m) => m.id)),
 		enabled: v.picklist(["on", "off"]),
 	}),
 	async ({ moduleId, enabled }) => {
-		const { organizationId } = requireManager();
+		const { organizationId } = currentTenant();
 		await db.transaction(async (tx) => {
 			const changed =
 				enabled === "on"

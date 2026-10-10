@@ -1,9 +1,9 @@
 /**
- * The engineer portal's data: only the signed-in engineer's own orders. Every function starts with
- * `requireEngineer()`, and every order lookup is scoped to the tenant and to their engineer id, so
+ * The engineer portal's data: only the signed-in engineer's own orders. Every function is gated by
+ * `forEngineers`, and every order lookup is scoped to the tenant and to their engineer id, so
  * another engineer's order (or another tenant's) is a 404, also by a tampered id.
  */
-import { form, getRequestEvent, query } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
@@ -14,16 +14,24 @@ import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { checkLines, saveOrderLines } from "#lib/orders/server/lines.ts";
 import { id, laborHours, orderLines, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { auth, idInTenant, inTenant, requireEngineer, tenantJoin } from "#lib/server/auth";
+import {
+	auth,
+	currentEngineer,
+	currentTenant,
+	idInTenant,
+	inTenant,
+	tenantJoin,
+} from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
+import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
 import { fieldActions, signature } from "./work.ts";
 
 /** Who is signed in, for the portal's header. */
-export const getMe = query(async () => {
-	const { engineer, name } = await requireEngineer();
-	return { name: engineer.name, organization: name };
+export const getMe = forEngineers.query(async () => {
+	const engineer = await currentEngineer();
+	return { name: engineer.name, organization: currentTenant().name };
 });
 
 /** The columns of an order in the lists. */
@@ -40,8 +48,8 @@ const listColumns = {
 };
 
 /** The engineer's open work (scheduled or under way), and what they completed recently. */
-export const getMyWork = query(async () => {
-	const { engineer } = await requireEngineer();
+export const getMyWork = forEngineers.query(async () => {
+	const engineer = await currentEngineer();
 	const mine = and(inTenant(order), eq(order.engineerId, engineer.id));
 	const [open, recent] = await Promise.all([
 		db
@@ -62,8 +70,8 @@ export const getMyWork = query(async () => {
 });
 
 /** One of the engineer's orders, with what they need on site; a 404 for anyone else's. */
-export const getMyOrder = query(v.string(), async (number) => {
-	const { engineer } = await requireEngineer();
+export const getMyOrder = forEngineers.query(v.string(), async (number) => {
+	const engineer = await currentEngineer();
 	const found = await db.query.order.findFirst({
 		where: and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineer.id)),
 		with: {
@@ -103,8 +111,7 @@ export const getMyOrder = query(v.string(), async (number) => {
 });
 
 /** The materials an engineer can use on a job, by name. */
-export const getUsableMaterials = query(async () => {
-	await requireEngineer();
+export const getUsableMaterials = forEngineers.query(async () => {
 	return db
 		.select({ id: material.id, sku: material.sku, name: material.name, unit: material.unit })
 		.from(material)
@@ -172,8 +179,8 @@ function refreshMyOrder(number: string) {
 }
 
 /** Starts a scheduled job: it's then in progress. */
-export const startWork = form(v.object({ id: id() }), async (input) => {
-	const { engineer } = await requireEngineer();
+export const startWork = forEngineers.form(v.object({ id: id() }), async (input) => {
+	const engineer = await currentEngineer();
 	const number = await db.transaction(async (tx) => {
 		const found = await findMyOrder(tx, engineer.id, input.id, "start");
 		await setStatus(tx, found, "in_progress", "work_started");
@@ -183,10 +190,10 @@ export const startWork = form(v.object({ id: id() }), async (input) => {
 });
 
 /** Sets the hours of labour on a job under way. */
-export const logHours = form(
+export const logHours = forEngineers.form(
 	v.object({ id: id(), laborHours: laborHours() }),
 	async (input, issue) => {
-		const { engineer } = await requireEngineer();
+		const engineer = await currentEngineer();
 		if (input.laborHours > 24 * 14) invalid(issue.laborHours(m.portal_hours_too_many()));
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
@@ -208,10 +215,10 @@ export const logHours = form(
  * Replaces the materials used on a job under way, through the same code as the office's order
  * form: they take or return stock, and more than there is in stock is refused on the line.
  */
-export const saveMaterials = form(
+export const saveMaterials = forEngineers.form(
 	v.object({ id: id(), lines: orderLines() }),
 	async (input, issue) => {
-		const { engineer } = await requireEngineer();
+		const engineer = await currentEngineer();
 		const problems = await checkLines(input.lines);
 		if (problems.length) {
 			invalid(...problems.map((p) => issue.lines[p.line][p.field](p.message)));
@@ -235,10 +242,11 @@ export const saveMaterials = form(
 const MAX_NOTE_LENGTH = 2000;
 
 /** Adds a note to a job. */
-export const addNote = form(
+export const addNote = forEngineers.form(
 	v.object({ id: id(), text: text(m.portal_note_required) }),
 	async (input, issue) => {
-		const { organizationId, user: author, engineer } = await requireEngineer();
+		const { organizationId, user: author } = currentTenant();
+		const engineer = await currentEngineer();
 		if (input.text.length > MAX_NOTE_LENGTH) {
 			invalid(issue.text(m.portal_note_too_long({ max: formatNumber(MAX_NOTE_LENGTH) })));
 		}
@@ -262,14 +270,15 @@ export const addNote = form(
 );
 
 /** Completes a job under way with the customer's sign-off: their name and signature. */
-export const completeWork = form(
+export const completeWork = forEngineers.form(
 	v.object({
 		id: id(),
 		signerName: text(m.portal_signer_required),
 		signature: signature(),
 	}),
 	async (input) => {
-		const { organizationId, user: signedInUser, engineer } = await requireEngineer();
+		const { organizationId, user: signedInUser } = currentTenant();
+		const engineer = await currentEngineer();
 		const number = await db.transaction(async (tx) => {
 			const found = await findMyOrder(tx, engineer.id, input.id, "work");
 			const now = new Date();
@@ -295,7 +304,7 @@ export const completeWork = form(
 );
 
 /** Signs out, back to the login page. */
-export const signOut = form(async () => {
+export const signOut = forAnyone.form(async () => {
 	await auth.api.signOut({ headers: getRequestEvent().request.headers });
 	redirect(303, "/login");
 });

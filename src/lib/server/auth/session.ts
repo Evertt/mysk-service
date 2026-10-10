@@ -56,9 +56,8 @@ export async function loadTenant(
 }
 
 /**
- * The signed-in user, or a 401. Call it first in every remote function that needs a login: the
- * redirect to /login in `hooks.server.ts` only guards page requests, not remote function calls.
- * Remote functions that touch tenant data use `requireMember()` instead.
+ * The signed-in user, or a 401. The gate of `forUsers` in `#lib/server/remote-functions.ts`: the redirect to
+ * /login in `hooks.server.ts` only guards page requests, not remote function calls.
  */
 export function requireUser() {
 	const { user } = getRequestEvent().locals;
@@ -69,7 +68,7 @@ export function requireUser() {
 /**
  * The signed-in user and their current tenant, whatever their role there, or a 401/403. For code
  * that both the office and the engineer portal use (`inTenant`, the stock ledger); remote functions
- * start with `requireMember()` or `requireEngineer()` instead.
+ * are gated by `forMembers` or `forEngineers` (`#lib/server/remote-functions.ts`) instead.
  */
 export function requireTenant() {
 	const user = requireUser();
@@ -88,18 +87,29 @@ export function requireMember() {
 	return tenant;
 }
 
-/**
- * The signed-in user, their current tenant and the engineer record linked to their account there
- * (`engineer.userId`), or a 401/403. Call it first in every remote function of the engineer
- * portal, and scope its queries to `engineer.id` as well as the tenant.
- */
-export async function requireEngineer() {
+/** The engineer lookups of the requests in progress, so the gate and the handler share one. */
+const engineers = new WeakMap<object, ReturnType<typeof findEngineer>>();
+
+async function findEngineer() {
 	const tenant = requireTenant();
 	const linked = await db.query.engineer.findFirst({
 		where: and(eq(engineer.userId, tenant.user.id), inTenant(engineer)),
 	});
 	if (!linked) error(403, m.common_error_not_linked());
 	return { ...tenant, engineer: linked };
+}
+
+/**
+ * The signed-in user, their current tenant and the engineer record linked to their account there
+ * (`engineer.userId`), or a 401/403. The gate of `forEngineers` in `#lib/server/remote-functions.ts`, the
+ * engineer portal's remote functions, which scope their queries to `engineer.id` as well as the
+ * tenant. Looked up once per request.
+ */
+export function requireEngineer() {
+	const event = getRequestEvent();
+	let found = engineers.get(event);
+	if (!found) engineers.set(event, (found = findEngineer()));
+	return found;
 }
 
 /**
@@ -136,7 +146,8 @@ export const tenantJoin = <T extends TenantTable>(table: T, foreignKey: SQLiteCo
 
 /**
  * The current tenant, if it has `moduleId`; otherwise a 404, as if the module's pages and data
- * didn't exist. Call it first in every remote function of an optional module.
+ * didn't exist. The gate of a module's remote functions (`moduleRemote()` in
+ * `#lib/server/remote-functions.ts`) and endpoints.
  */
 export function requireModule(moduleId: ModuleId) {
 	const tenant = requireMember();
@@ -155,3 +166,21 @@ export function requireRole(...roles: string[]) {
 
 /** The current tenant, if the user is an owner or an admin (`managerRoles`) in it; otherwise a 403. */
 export const requireManager = () => requireRole(...managerRoles);
+
+// --- Inside a gated remote function ----------------------------------------------------------
+//
+// A remote function's gate (`#lib/server/remote-functions.ts`) has admitted the request before its handler
+// runs; these read what the gate checked, without checking a role again. They still refuse (a
+// 401/403) when there's no user or tenant, so calling one where no gate ran is never unsafe.
+
+/** The signed-in user, in a remote function gated by `forUsers` (or any stricter gate). */
+export const currentUser = () => requireUser();
+
+/**
+ * The signed-in user and their tenant (`organizationId`, `roles`, `modules`, …), in a remote
+ * function gated by `forMembers`, `forManagers`, `forEngineers`, `forAnyRole` or a module's set.
+ */
+export const currentTenant = () => requireTenant();
+
+/** The engineer record of the signed-in user, in a remote function gated by `forEngineers`. */
+export const currentEngineer = async () => (await requireEngineer()).engineer;

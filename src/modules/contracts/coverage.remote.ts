@@ -2,18 +2,18 @@
  * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): an
  * order's coverage and response time, the contracts covering a unit, and the dashboard's cards.
  */
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { addDays, startOfDay } from "#lib/dates.ts";
-import { inTenant, requireModule, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 
 import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
+import { query } from "./remote-functions.ts";
 import { coverageOf } from "./server/contracts.ts";
 import { contract, contractEquipment } from "./server/schema.ts";
 
@@ -22,7 +22,6 @@ const EXPIRING_DAYS = 60;
 
 /** The contract that covered an order and its response deadline, or `null` if none did. */
 export const getOrderCoverage = query(v.string(), async (number) => {
-	requireModule("contracts");
 	const found = await db.query.order.findFirst({
 		columns: { id: true, type: true, status: true, equipmentId: true, createdAt: true },
 		where: and(eq(order.number, number), inTenant(order)),
@@ -40,7 +39,6 @@ export const getOrderCoverage = query(v.string(), async (number) => {
 
 /** The contracts covering a unit, latest first. */
 export const getUnitCoverage = query(v.string(), async (serialNumber) => {
-	requireModule("contracts");
 	const unit = await db.query.equipment.findFirst({
 		columns: { id: true },
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
@@ -67,7 +65,6 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
  * and active contracts that end in the coming `days` without a later contract for the customer.
  */
 export const getContractsOverview = query(async () => {
-	requireModule("contracts");
 	const now = new Date();
 	const today = startOfDay(now);
 	const horizon = addDays(today, EXPIRING_DAYS);

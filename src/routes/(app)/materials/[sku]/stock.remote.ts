@@ -1,4 +1,3 @@
-import { form } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
@@ -8,18 +7,18 @@ import { moveStock } from "#lib/materials/server/stock.ts";
 import { fitsUnit, roundQuantity } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, requireMember } from "#lib/server/auth";
+import { idInTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { countFields, receiveFields } from "../material-schema.ts";
 import { getMaterial } from "../material.remote.ts";
 
 /** Adds received stock (e.g. a delivery) to a material. */
-export const receiveStock = form(
+export const receiveStock = forMembers.form(
 	v.object({ id: id(), ...receiveFields }),
 	async ({ id, quantity, note }, issue) => {
-		requireMember();
 		const existing = await findMaterial(id);
 		if (!existing) error(404, m.materials_not_found());
 		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity(m.materials_whole_pieces()));
@@ -42,10 +41,9 @@ export const receiveStock = form(
 );
 
 /** Sets a material's stock to what was counted, recording the difference as an adjustment. */
-export const countStock = form(
+export const countStock = forMembers.form(
 	v.object({ id: id(), ...countFields }),
 	async ({ id, counted, note }, issue) => {
-		requireMember();
 		const existing = await findMaterial(id);
 		if (!existing) error(404, m.materials_not_found());
 		if (!fitsUnit(counted, existing.unit)) invalid(issue.counted(m.materials_whole_pieces()));

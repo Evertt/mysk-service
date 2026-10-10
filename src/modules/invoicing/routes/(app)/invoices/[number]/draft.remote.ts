@@ -1,16 +1,16 @@
 /** Changing a draft invoice: its lines and its terms. */
-import { form } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireModule } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
 import { lineNote } from "../../../../activity.ts";
 import { isEditable, lineAmount } from "../../../../invoice.ts";
+import { form } from "../../../../remote-functions.ts";
 import { alreadyBilled, linesFor } from "../../../../server/billable.ts";
 import { invoiceById, invoiceSubject } from "../../../../server/invoices.ts";
 import { invoice, invoiceLine } from "../../../../server/schema.ts";
@@ -53,7 +53,7 @@ async function draftById(tx: Transaction, id: number) {
 export const addToInvoice = form(
 	v.object({ id: id(), ...billingFields }),
 	async ({ id, orderIds, items }, issue) => {
-		const { organizationId } = requireModule("invoicing");
+		const { organizationId } = currentTenant();
 		const found = await db.query.invoice.findFirst({
 			columns: { customerId: true },
 			where: idInTenant(invoice, id),
@@ -85,7 +85,7 @@ export const addToInvoice = form(
 
 /** Adds a line typed in by hand to a draft. */
 export const addLine = form(v.object({ id: id(), ...lineFields }), async (input) => {
-	const { organizationId } = requireModule("invoicing");
+	const { organizationId } = currentTenant();
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
 		const added = await tx
@@ -107,7 +107,6 @@ export const addLine = form(v.object({ id: id(), ...lineFields }), async (input)
 
 /** Removes a line from a draft; an order's lines (its price and adjustments) go together. */
 export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
-	requireModule("invoicing");
 	const draft = await db.transaction(async (tx) => {
 		const line = await tx.query.invoiceLine.findFirst({
 			columns: { id: true, invoiceId: true, orderId: true },
@@ -140,7 +139,6 @@ export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 
 /** Changes a draft's payment term and notes. */
 export const updateTerms = form(v.object({ id: id(), ...termsFields }), async (input) => {
-	requireModule("invoicing");
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
 		const terms = { paymentTermDays: input.paymentTermDays, notes: input.notes };

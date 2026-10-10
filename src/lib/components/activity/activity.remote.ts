@@ -3,7 +3,6 @@
  * it: entries newest first, each with its subject's noun, its changes and links ready to show, in
  * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
@@ -13,9 +12,10 @@ import { nextDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { currentTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
 
@@ -40,7 +40,7 @@ const startOf = (value: string) => new Date(`${value}T00:00`);
  * of one subject and its parts), by one `user`, between `from` and `to` (days, inclusive), and
  * `before` an entry (the previous page's `older`).
  */
-export const getActivity = query(
+export const getActivity = forMembers.query(
 	v.object({
 		type: v.optional(v.string()),
 		id: v.optional(v.string()),
@@ -50,7 +50,6 @@ export const getActivity = query(
 		before: v.optional(v.pipe(v.number(), v.integer())),
 	}),
 	async ({ type, id, user, from, to, before }) => {
-		requireMember();
 		const filters: (SQL | undefined)[] = [
 			inTenant(activity),
 			type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
@@ -75,10 +74,10 @@ export const getActivity = query(
 );
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
-export const getSubjectActivity = query(
+export const getSubjectActivity = forMembers.query(
 	v.object({ type: v.string(), id: v.string() }),
 	async ({ type, id }) => {
-		const { modules } = requireMember();
+		const { modules } = currentTenant();
 		// A module's records are a 404 to a tenant without the module, like the rest of it.
 		if (!(type in subjectTypes(modules)) && type in subjectTypes(allModules)) {
 			error(404, m.common_error_not_found());
@@ -94,8 +93,7 @@ export const getSubjectActivity = query(
 );
 
 /** The tenant's latest entries, for the dashboard. */
-export const getRecentActivity = query(async () => {
-	requireMember();
+export const getRecentActivity = forMembers.query(async () => {
 	const rows = await db
 		.select()
 		.from(activity)
@@ -106,8 +104,8 @@ export const getRecentActivity = query(async () => {
 });
 
 /** What the feed can be filtered by: the subject types and users in the tenant's log. */
-export const getActivityFilters = query(async () => {
-	const { modules } = requireMember();
+export const getActivityFilters = forMembers.query(async () => {
+	const { modules } = currentTenant();
 	const types = subjectTypes(modules);
 	const [subjects, users] = await Promise.all([
 		db.selectDistinct({ type: activity.subjectType }).from(activity).where(inTenant(activity)),

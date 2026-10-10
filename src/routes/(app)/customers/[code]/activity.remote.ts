@@ -1,20 +1,19 @@
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 /** How many orders the customer page lists; the orders list has them all. */
 const RECENT = 10;
 
 /** A customer's latest orders across all their equipment, newest first, and how many they have. */
-export const getCustomerActivity = query(v.string(), async (code) => {
-	requireMember();
+export const getCustomerActivity = forMembers.query(v.string(), async (code) => {
 	const [found] = await db
 		.select({ id: customer.id })
 		.from(customer)

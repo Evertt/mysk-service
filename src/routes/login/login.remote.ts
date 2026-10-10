@@ -1,16 +1,17 @@
-import { form, getRequestEvent } from "$app/server";
+import { getRequestEvent } from "$app/server";
 import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
 import { isFieldEngineer } from "#lib/auth";
 import { auth, loadTenant } from "#lib/server/auth";
+import { forAnyone } from "#lib/server/remote-functions.ts";
 
 /** Only local paths, so the login can't be used to send people to another site. */
 const safeRedirect = (path: string | undefined) =>
 	path?.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\") ? path : "/";
 
-export const login = form(
+export const login = forAnyone.form(
 	v.object({
 		// One message at a time: "valid email" means nothing while the field is still empty.
 		email: v.config(

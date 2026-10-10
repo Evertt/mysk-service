@@ -1,4 +1,3 @@
-import { command, query } from "$app/server";
 import { and, count, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -6,7 +5,7 @@ import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { removeEquipment } from "#lib/equipment/server/equipment.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
+import { idInTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import {
@@ -16,6 +15,7 @@ import {
 	pageGroupsOf,
 	planList,
 } from "#lib/server/lists";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { equipmentSql, withEquipmentJoins } from "./equipment-list.server.ts";
 import { equipmentList } from "./equipment-list.ts";
@@ -25,8 +25,7 @@ import { equipmentList } from "./equipment-list.ts";
  * sorted and grouped as the query says (see `equipmentList`), how many match in all, and, when
  * grouped, what the table needs to know of the page's groups.
  */
-export const getEquipmentList = query(equipmentList.query, async (input) => {
-	requireMember();
+export const getEquipmentList = forMembers.query(equipmentList.query, async (input) => {
 	const plan = planList(equipmentSql(), input);
 	const [fetched, rowCount, counts] = await Promise.all([
 		plan.paged(
@@ -84,8 +83,7 @@ export const getEquipmentList = query(equipmentList.query, async (input) => {
  * How many units have each category, status and manufacturer, for the list's filters: of those
  * matching the search and the other filters.
  */
-export const getEquipmentFacets = query(equipmentList.where, async (where) => {
-	requireMember();
+export const getEquipmentFacets = forMembers.query(equipmentList.where, async (where) => {
 	return planList(equipmentSql(), where).facets({
 		category: equipment.category,
 		status: equipment.status,
@@ -99,10 +97,9 @@ export const getEquipmentFacets = query(equipmentList.where, async (where) => {
 const equipmentTarget = listTarget(equipmentList.where);
 
 /** Gives the selected units another status, e.g. decommissioned. */
-export const bulkSetEquipmentStatus = command(
+export const bulkSetEquipmentStatus = forMembers.command(
 	v.object({ target: equipmentTarget, status: v.picklist(equipmentStatuses) }),
 	async ({ target, status }) => {
-		requireMember();
 		const result = await bulkChange(target, {
 			table: equipment,
 			label: equipment.serialNumber,
@@ -122,8 +119,7 @@ export const bulkSetEquipmentStatus = command(
 );
 
 /** Deletes the selected units, with the same refusals as deleting one. */
-export const bulkDeleteEquipment = command(equipmentTarget, async (target) => {
-	requireMember();
+export const bulkDeleteEquipment = forMembers.command(equipmentTarget, async (target) => {
 	const result = await bulkChange(target, {
 		table: equipment,
 		label: equipment.serialNumber,
