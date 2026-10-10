@@ -11,6 +11,7 @@ import { dirname, join, relative } from "node:path";
 
 import { checkModules, foreignProblems, scanRoutes } from "./check.ts";
 import { discoverModules } from "./find.ts";
+import { byDependency } from "./graph.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
 import { renderRegistries } from "./registries.ts";
 import { isGenerated, walk } from "./shared.ts";
@@ -77,7 +78,8 @@ export function generateModules(root: string) {
 	const write = (path: string, content: string) => {
 		if (writeIfChanged(join(root, path), content)) changed.push(path);
 	};
-	for (const [path, content] of Object.entries(renderRegistries(modules))) write(path, content);
+	for (const [path, content] of Object.entries(renderRegistries(byDependency(modules))))
+		write(path, content);
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

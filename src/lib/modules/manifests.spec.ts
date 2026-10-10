@@ -4,7 +4,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { gadgets, widgets } from "./fakes.ts";
 import { generatedModuleIds } from "./ids.gen.ts";
-import { moduleIds } from "./ids.ts";
+import { moduleGraph, moduleIds } from "./ids.ts";
 import { manifests } from "./manifests.gen.ts";
 import { bulkActionLoaders, modules, type SlotName, slotLoaders } from "./manifests.ts";
 
@@ -22,9 +22,32 @@ test("the folders in src/modules with a module.ts have their manifest in the reg
 				.map((entry) => entry.name)
 				.toSorted()
 		: [];
-	// If this fails, run `pnpm generate`.
-	expect((manifests as readonly { id: string }[]).map((manifest) => manifest.id)).toEqual(folders);
-	expect([...generatedModuleIds]).toEqual(folders);
+	// If this fails, run `pnpm generate`. The registries are in dependency order, not the folders'.
+	const sorted = (ids: readonly string[]) => [...ids].toSorted();
+	expect(sorted((manifests as readonly { id: string }[]).map((manifest) => manifest.id))).toEqual(
+		folders,
+	);
+	expect(sorted(generatedModuleIds)).toEqual(folders);
+});
+
+test("every module comes after the modules it requires", () => {
+	const ids: readonly string[] = moduleIds;
+	const misplaced = moduleIds.flatMap((id) =>
+		moduleGraph[id].requires
+			.filter((required) => ids.indexOf(required) > ids.indexOf(id))
+			.map((required) => `${id} comes before ${required}`),
+	);
+	expect(misplaced).toEqual([]);
+});
+
+test("the graph of ids is what the manifests declare", () => {
+	for (const manifest of modules) {
+		expect(moduleGraph[manifest.id]).toEqual({
+			requires: manifest.requires ?? [],
+			enhances: manifest.enhances ?? [],
+			alwaysOn: manifest.alwaysOn ?? false,
+		});
+	}
 });
 
 test("module ids are unique", () => {

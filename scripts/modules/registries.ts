@@ -14,8 +14,23 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 	return {
 		"src/lib/modules/ids.gen.ts": [
 			registryHeader("src/modules/*/module.ts"),
-			`/** The ids of the modules in \`src/modules\`, for code that can't import their manifests. */`,
+			`/** The ids of the modules in \`src/modules\`, in dependency order, for code that can't import their manifests. */`,
 			`export const generatedModuleIds = ${list(modules.map((m) => JSON.stringify(m.id)))} as const;`,
+			"",
+			`/** What each module's \`module.ts\` says about the others: \`requires\`, \`enhances\` and \`alwaysOn\`. */`,
+			`export const generatedModuleGraph: Record<`,
+			`\t(typeof generatedModuleIds)[number],`,
+			`\t{ requires: readonly string[]; enhances: readonly string[]; alwaysOn: boolean }`,
+			`> = ${
+				modules.length
+					? `{\n${modules
+							.map(
+								(m) =>
+									`\t${JSON.stringify(m.id)}: { requires: ${list(m.requires.map((id) => JSON.stringify(id)))}, enhances: ${list(m.enhances.map((id) => JSON.stringify(id)))}, alwaysOn: ${m.alwaysOn} },`,
+							)
+							.join("\n")}\n} as const`
+					: "{}"
+			};`,
 			"",
 		].join("\n"),
 

@@ -71,6 +71,15 @@ interface ModuleParts {
 	 * table's own. Their commands are made with `moduleRemote()`.
 	 */
 	bulkActions?: { [Table in BulkTableName]?: BulkActionLoader<Table> };
+	/**
+	 * Modules that must be on for this one to be on. Literal ids: the generator reads them from
+	 * `module.ts` with a pattern, and orders the registries by them.
+	 */
+	requires?: readonly ModuleId[];
+	/** Modules this one adds to when they're on, but doesn't need. Literal ids, like `requires`. */
+	enhances?: readonly ModuleId[];
+	/** Always on for every tenant, with no switch. Literally `true` or left out, like `requires`. */
+	alwaysOn?: true;
 }
 
 /** A module as the registry has it. */

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join, posix, relative } from "node:path";
 
+import { graphProblems } from "./graph.ts";
 import { sectionsOf } from "./messages.ts";
 import { isGroup, MODULES_GROUP, routeFileKind, routePlace } from "./routes.ts";
 import { byName, isGenerated, isLegacyStubFolder, type ModuleFolder, walk } from "./shared.ts";
@@ -72,7 +73,7 @@ export function checkModules(
 	modules: ModuleFolder[],
 	options: { coreRouteFolders: string[]; patterns: string[]; locales: string[] },
 ): string[] {
-	const problems: string[] = [];
+	const problems: string[] = graphProblems(modules);
 	const coreSegments = new Set(options.coreRouteFolders.map((folder) => posix.basename(folder)));
 	/** The module that has a route segment, to refuse a second one. */
 	const segmentOwner = new Map<string, string>();

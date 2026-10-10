@@ -22,6 +22,9 @@ export function module(
 	const { sections = [], ...rest } = parts;
 	return {
 		id,
+		requires: [],
+		enhances: [],
+		alwaysOn: false,
 		routeFiles: [],
 		server: { index: false, schema: false, seed: false },
 		messages: { en: sections, nl: sections },

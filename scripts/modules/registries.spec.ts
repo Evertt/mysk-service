@@ -17,6 +17,20 @@ describe("renderRegistries", () => {
 		expect(files["src/lib/server/db/module-seeds.gen.ts"]).toContain("= [];");
 	});
 
+	test("describe the graph of the modules", () => {
+		const files = renderRegistries([
+			module("a"),
+			module("b", { requires: ["a"], enhances: ["c"], alwaysOn: true }),
+		]);
+		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
+			`"b": { requires: ["a"], enhances: ["c"], alwaysOn: true },`,
+		);
+		expect(files["src/lib/modules/ids.gen.ts"]).toContain(
+			`"a": { requires: [], enhances: [], alwaysOn: false },`,
+		);
+		expect(renderRegistries([])["src/lib/modules/ids.gen.ts"]).toContain("> = {};");
+	});
+
 	test("name each module's files that exist", () => {
 		const files = renderRegistries([
 			module("alpha-beta", { server: { index: true, schema: true, seed: false } }),
