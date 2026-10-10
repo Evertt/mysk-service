@@ -448,20 +448,24 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Add material" }).click();
 		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
 		expect(await page.getByLabel("Status").inputValue()).toBe("quote");
-		// It may get the number of the order deleted above, whose history keeps that number.
-		const before = [await stocks(north.id), await countIn("stock_movement", north.id)];
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
 		const quote = app.path().split("/").pop()!;
-		expect(await orderLines(await orderId(quote, north.id))).toHaveLength(1);
-		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
+		const id = await orderId(quote, north.id);
+		expect(await orderLines(id)).toHaveLength(1);
+		// Only this order's movements say whether it took stock: North's stock as a whole is also
+		// changed by other files on this worker (and, under load, late), so it isn't compared. The
+		// quote may get the number of the order deleted above, whose history keeps that number.
+		const history = await orderMovements(quote, north.id);
+		expect(await value(`select count(*) from stock_movement where order_id = ?`, [id])).toBe(0);
 
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
 		expect(await orderId(quote, north.id)).toBeUndefined();
-		expect([await stocks(north.id), await countIn("stock_movement", north.id)]).toEqual(before);
+		expect(await orderMovements(quote, north.id)).toEqual(history);
+		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
 	describe("an invoiced order", () => {
