@@ -12,7 +12,7 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { TestProject } from "vite-plus/test/node";
@@ -34,6 +34,24 @@ declare module "vitest" {
 }
 
 const dev = !!process.env.E2E_DEV;
+
+/**
+ * The process groups of the servers that may still be running. Each is a `vp` process and the
+ * Vite process it starts, which outlives `vp` (a SIGTERM ends `vp` at once, while Vite closes).
+ */
+const running = new Set<number>();
+
+/** Sends `signal` to a server's process group; false if the group is gone. */
+function signalGroup(pid: number, signal: NodeJS.Signals | 0) {
+	try {
+		process.kill(-pid, signal);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function freePort() {
 	return new Promise<number>((resolve, reject) => {
@@ -66,15 +84,19 @@ async function startServer(databaseURL: string, outbox: string) {
 			detached: true,
 		},
 	);
+	const pid = server.pid!;
+	running.add(pid);
 	server.stdout?.on("data", (chunk) => (output += chunk));
 	server.stderr?.on("data", (chunk) => (output += chunk));
 
+	// Until the whole group is gone, not just `vp`: SIGKILL if Vite takes more than 5 s to close.
 	const stop = async () => {
-		if (server.exitCode === null) {
-			const exited = new Promise((resolve) => server.once("exit", resolve));
-			process.kill(-server.pid!, "SIGTERM");
-			await exited;
+		if (signalGroup(pid, "SIGTERM")) {
+			const deadline = Date.now() + 5_000;
+			while (signalGroup(pid, 0) && Date.now() < deadline) await sleep(50);
+			signalGroup(pid, "SIGKILL");
 		}
+		running.delete(pid);
 		if (process.env.E2E_SERVER_LOG) console.error(output);
 	};
 	try {
@@ -100,13 +122,37 @@ async function waitUntilUp(url: string, server: ChildProcess, output: () => stri
 				// Not answering yet.
 			}
 		}
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		await sleep(100);
 	}
 	throw new Error(`The server didn't start within a minute:\n${output()}`);
 }
 
 export default async function setup(project: TestProject) {
 	const folder = mkdtempSync(join(tmpdir(), "fieldworks-e2e-"));
+	const removeFolder = () => rmSync(folder, { recursive: true, force: true, maxRetries: 3 });
+
+	// An interrupted run never gets to the teardown: on Ctrl+C (SIGINT) or SIGTERM, Vitest exits
+	// right away. The servers are detached, so the signal doesn't reach them either, and they would
+	// run on. So whatever way this process exits, it kills them (synchronously, as `exit` requires).
+	const killServers = () => {
+		for (const pid of running) signalGroup(pid, "SIGKILL");
+		try {
+			removeFolder();
+		} catch {
+			// Left in the system's temporary folder.
+		}
+	};
+	// A signal without a listener ends Node without an `exit` event: Vitest doesn't listen for
+	// SIGHUP (a closed terminal), and stops listening for SIGINT and SIGTERM once it's closing. A
+	// listener takes the place of Node's default, so this one exits, unless Vitest did already.
+	const exitOnSignal = (signal: NodeJS.Signals) => {
+		process.exitCode ??= 128 + constants.signals[signal];
+		setTimeout(() => process.exit(), 100);
+	};
+	const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+	process.on("exit", killServers);
+	for (const signal of signals) process.on(signal, exitOnSignal);
+
 	const template = join(folder, "seeded.db");
 	const run = (command: string, args: string[]) =>
 		execFileSync(command, args, {
@@ -132,7 +178,9 @@ export default async function setup(project: TestProject) {
 	);
 	const teardown = async () => {
 		await Promise.all(servers.map((server) => server.stop()));
-		rmSync(folder, { recursive: true, force: true });
+		removeFolder();
+		process.off("exit", killServers);
+		for (const signal of signals) process.off(signal, exitOnSignal);
 	};
 	const failed = started.find((result) => result.status === "rejected");
 	if (failed) {
