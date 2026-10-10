@@ -21,11 +21,14 @@
  * - Vote (`vote()`): every contributor is asked whether something may happen, and answers with a
  *   refusal or nothing; any refusal wins. A voter that throws fails the request.
  *
+ * A module's point is dispatched only while its owner is on (the id's prefix, e.g. `invoicing`):
+ * otherwise `collect()` and `vote()` answer `[]` and `emit()` tells no one.
+ *
  * Registry order is dependency order: the modules' `server/index.ts` in `hooks.gen.ts`, each after
  * the modules it requires. Add a point when a module needs one, not before.
  */
 import type { CollectorPoint, EventPoint, VotePoint } from "#lib/extensions/define.ts";
-import type { ModuleId } from "#lib/modules/ids.ts";
+import { type ModuleId, moduleIds } from "#lib/modules/ids.ts";
 import { requireTenant } from "#lib/server/auth/session.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
 
@@ -73,10 +76,22 @@ export function defineServerModule(id: ModuleId, contributions: Contribution[]):
 }
 
 /**
- * The answers to `point` of the `enabled` modules, in registry order, each with its module's id.
- * Reads the registry when called, not when loaded: the modules import `contribute()` from here.
+ * Whether `point` belongs to a module that isn't among the `enabled`: its id starts with its
+ * owner's (`invoicing.billableItems`). A point whose prefix is no module's id is the core's.
+ */
+function ownerIsOff(point: AnyPoint, enabled: readonly string[]) {
+	const owner = point.id.split(".")[0];
+	return (moduleIds as readonly string[]).includes(owner) && !enabled.includes(owner);
+}
+
+/**
+ * The answers to `point` of the `enabled` modules, in registry order, each with its module's id;
+ * none while the point's owner is off, so a module that only enhances the owner isn't asked even
+ * if it calls the owner's point itself. Reads the registry when called, not when loaded: the
+ * modules import `contribute()` from here.
  */
 function contributionsTo<Answer>(point: AnyPoint, enabled: readonly string[]) {
+	if (ownerIsOff(point, enabled)) return [];
 	const modules: readonly ServerModule[] = generatedServerModules();
 	return modules.flatMap(({ id, contributions }) =>
 		enabled.includes(id)

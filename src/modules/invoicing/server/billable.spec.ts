@@ -38,11 +38,13 @@ test("billable items come from each module that is on and has any, by date", asy
 		]),
 	];
 
-	const items = await offeredItems(7, period, ["fees", "nothing", "rentals"]);
+	const items = await offeredItems(7, period, ["invoicing", "fees", "nothing", "rentals"]);
 	expect(items.map((i) => i.reference)).toEqual(["fees:1", "rentals:1", "fees:2"]);
 	expect(asked).toEqual([{ customerId: 7, period }]);
-	expect(await offeredItems(7, period, ["nothing"])).toEqual([]);
-	expect((await offeredItems(7, period, ["rentals"])).map((i) => i.reference)).toEqual([
-		"rentals:1",
-	]);
+	expect(await offeredItems(7, period, ["invoicing", "nothing"])).toEqual([]);
+	expect((await offeredItems(7, period, ["invoicing", "rentals"])).map((i) => i.reference)).toEqual(
+		["rentals:1"],
+	);
+	// Not asked while invoicing, whose point it is, is off.
+	expect(await offeredItems(7, period, ["fees", "rentals"])).toEqual([]);
 });

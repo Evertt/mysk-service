@@ -22,6 +22,16 @@ const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
 vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
 	generatedServerModules: () => registry.modules,
 }));
+// The app's module ids are the made-up ones too, so a point named `a.…` is owned by module `a`
+// (`test.…` is no module's: the core's).
+vi.mock("#lib/modules/ids.gen.ts", () => {
+	const node = { requires: [], enhances: [], alwaysOn: false };
+	const ids = ["a", "b", "c", "faulty"] as const;
+	return {
+		generatedModuleIds: ids,
+		generatedModuleGraph: Object.fromEntries(ids.map((id) => [id, node])),
+	};
+});
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -30,6 +40,10 @@ const skipping = defineCollector<number, string>("test.skipping", { onError: "sk
 const failing = defineCollector<number, string>("test.failing", { onError: "fail" });
 const voting = defineVote<number>("test.voting");
 const happened = defineEvent<string>("test.happened");
+// Points that module `a` owns, which `b` enhances.
+const offered = defineCollector<number, string>("a.offered", { onError: "fail" });
+const announced = defineEvent<string>("a.announced");
+const allowed = defineVote<number>("a.allowed");
 
 const broken = (id: string) => () => Promise.reject(new Error(`${id} is broken`));
 const told: string[] = [];
@@ -50,6 +64,9 @@ registry.modules = [
 		contribute(skipping, broken("b")),
 		contribute(failing, broken("b")),
 		contribute(voting, async (n) => (n > 0 ? "b refuses" : undefined)),
+		contribute(offered, async (n) => `b:${n}`),
+		contribute(announced, (what) => void told.push(`b ${what}`)),
+		contribute(allowed, async () => "b refuses"),
 	]),
 	fake("c", [
 		contribute(point, async (n) => `c:${n}`),
@@ -85,6 +102,21 @@ test("vote returns every refusal", async () => {
 	expect(await vote(voting, 1, ["a", "b", "c"])).toEqual(["b refuses"]);
 	expect(await vote(voting, 0, ["a", "b", "c"])).toEqual([]);
 	expect(await vote(voting, 1, ["a", "c"])).toEqual([]);
+});
+
+test("a module's point isn't dispatched while its owner is off", async () => {
+	expect(await collect(offered, 1, ["b"])).toEqual([]);
+	expect(await vote(allowed, 1, ["b", "c"])).toEqual([]);
+	told.length = 0;
+	emit(announced, "news", ["b"]);
+	await new Promise((resolve) => setTimeout(resolve));
+	expect(told).toEqual([]);
+
+	expect(await collect(offered, 1, ["a", "b"])).toEqual(["b:1"]);
+	expect(await vote(allowed, 1, ["a", "b"])).toEqual(["b refuses"]);
+	emit(announced, "news", ["a", "b"]);
+	await new Promise((resolve) => setTimeout(resolve));
+	expect(told).toEqual(["b news"]);
 });
 
 test("emit runs after commit, in registry order", async () => {
