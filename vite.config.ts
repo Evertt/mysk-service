@@ -91,7 +91,7 @@ export default defineConfig({
 			"typescript/no-deprecated": "error",
 		},
 		ignorePatterns: ["src/lib/paraglide/", "src/auto-imports.d.ts"],
-		// Type errors are reported by svelte-check (--tsgo), which understands .svelte files;
+		// Type errors are reported by svelte-check, which understands .svelte files;
 		// tsgolint's typeCheck doesn't and would flag every .svelte import.
 		options: { typeAware: true, typeCheck: false },
 	},

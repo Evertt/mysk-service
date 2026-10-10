@@ -39,10 +39,6 @@ const config: KnipConfig = {
 		// auto-imports them (`<Card.Root>` without an import), so knip sees no uses of them.
 		"src/lib/components/ui/**",
 	],
-	ignoreDependencies: [
-		// The native TypeScript, which `svelte-check --tsgo` runs (`pnpm check`).
-		"@typescript/native",
-	],
 	// Would load `drizzle.config.ts`, which throws without `DATABASE_URL`.
 	drizzle: false,
 	compilers: {
