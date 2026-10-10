@@ -12,7 +12,7 @@
 	import { createInvoice, getBillable, getInvoiceCustomers } from "../invoices.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/invoices/new"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/invoices/new"> } = $props();
 
 	const customers = $derived(await getInvoiceCustomers());
 
@@ -35,7 +35,7 @@
 	title={m.invoices_new()}
 	description={m.invoices_new_description()}
 	breadcrumbs={[
-		{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+		{ label: m.invoices_title(), href: resolve("/(app)/(modules)/invoices") },
 		{ label: m.invoices_new_breadcrumb() },
 	]}
 />
@@ -83,6 +83,6 @@
 	<FormActions
 		pending={form.pending}
 		submitLabel={m.invoices_create_draft()}
-		cancelHref={resolve("/(app)/invoices")}
+		cancelHref={resolve("/(app)/(modules)/invoices")}
 	/>
 </form>

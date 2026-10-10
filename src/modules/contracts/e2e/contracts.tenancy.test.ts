@@ -78,6 +78,9 @@ describe("in North, the module's cards on core pages", () => {
 		// Client-side, so the pages load their data through remote queries.
 		await app.go("/orders");
 		await page.getByLabel("Search orders…").fill(overdue.number);
+		// The search reaches the URL after a delay; a click before that loses its navigation to it.
+		await page.waitForURL((url) => url.searchParams.get("q") === overdue.number);
+		await app.tableSettled();
 		await page.getByRole("link", { name: overdue.number }).click();
 		await page.waitForURL((url) => url.pathname === `/orders/${overdue.number}`);
 		await card("Service contract").waitFor();
@@ -124,6 +127,9 @@ describe("in South, which doesn't have the module", () => {
 		await page.waitForURL((url) => url.pathname === "/contracts");
 		await page.waitForLoadState("networkidle");
 		await page.getByLabel("Search contracts…").fill(busy.number);
+		// The search reaches the URL after a delay; a click before that loses its navigation to it.
+		await page.waitForURL((url) => url.searchParams.get("q") === busy.number);
+		await app.tableSettled();
 		await page.getByRole("link", { name: busy.number }).first().click();
 		await page.waitForURL((url) => url.pathname === `/contracts/${busy.number}`);
 		await page.waitForLoadState("networkidle");

@@ -9,7 +9,7 @@
 </script>
 
 <a
-	href={resolve("/(app)/invoices/[number]", { number })}
+	href={resolve("/(app)/(modules)/invoices/[number]", { number })}
 	class="font-medium whitespace-nowrap underline-offset-4 hover:underline"
 >
 	{number}

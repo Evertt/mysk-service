@@ -21,7 +21,7 @@
 	import { removeLine } from "./draft.remote.ts";
 	import InvoiceDocument from "./invoice-document.svelte";
 
-	let { params }: { params: RouteParams<"/(app)/invoices/[number]"> } = $props();
+	let { params }: { params: RouteParams<"/(app)/(modules)/invoices/[number]"> } = $props();
 
 	const data = $derived(await getInvoice(params.number));
 	const invoice = $derived(data.invoice);
@@ -40,7 +40,7 @@
 		title={invoice.number}
 		description={m.invoices_for({ customer: invoice.customer.name })}
 		breadcrumbs={[
-			{ label: m.invoices_title(), href: resolve("/(app)/invoices") },
+			{ label: m.invoices_title(), href: resolve("/(app)/(modules)/invoices") },
 			{ label: invoice.number },
 		]}
 	>
@@ -54,7 +54,7 @@
 			</Button>
 			<Button
 				variant="outline"
-				href={resolve("/(app)/invoices/[number]/pdf", { number: invoice.number })}
+				href={resolve("/(app)/(modules)/invoices/[number]/pdf", { number: invoice.number })}
 				download="{invoice.number}.pdf"
 				data-sveltekit-reload
 			>

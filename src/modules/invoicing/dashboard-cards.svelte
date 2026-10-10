@@ -19,7 +19,7 @@
 		<Card.Title>{m.invoices_receivables()}</Card.Title>
 		<Card.Description>{m.invoices_receivables_description()}</Card.Description>
 		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/invoices")}
+			<Button variant="outline" size="sm" href={resolve("/(app)/(modules)/invoices")}
 				>{m.invoices_all()}</Button
 			>
 		</Card.Action>
@@ -62,7 +62,11 @@
 		<Card.Description>{m.invoices_overdue_description()}</Card.Description>
 		{#if data.overdue.count}
 			<Card.Action>
-				<Button variant="outline" size="sm" href="{resolve('/(app)/invoices')}?status=overdue">
+				<Button
+					variant="outline"
+					size="sm"
+					href="{resolve('/(app)/(modules)/invoices')}?status=overdue"
+				>
 					{m.invoices_view_all()}
 				</Button>
 			</Card.Action>

@@ -19,7 +19,7 @@
 	import ContractStatusBadge from "../../../../status-badge.svelte";
 	import { deleteContract, getContract } from "../contracts.remote.ts";
 
-	let { params }: { params: RouteParams<"/(app)/contracts/[number]"> } = $props();
+	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]"> } = $props();
 
 	const data = $derived(await getContract(params.number));
 
@@ -39,7 +39,7 @@
 		customer: customer.name,
 	})}
 	breadcrumbs={[
-		{ label: m.contracts_title(), href: resolve("/(app)/contracts") },
+		{ label: m.contracts_title(), href: resolve("/(app)/(modules)/contracts") },
 		{ label: contract.number },
 	]}
 >
@@ -50,7 +50,7 @@
 	{#snippet actions()}
 		<Button
 			variant="outline"
-			href={resolve("/(app)/contracts/[number]/edit", { number: contract.number })}
+			href={resolve("/(app)/(modules)/contracts/[number]/edit", { number: contract.number })}
 		>
 			<PencilIcon data-icon="inline-start" />
 			{m.common_edit()}

@@ -9,11 +9,11 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
-import { checkModules, scanRoutes } from "./check.ts";
+import { checkModules, foreignProblems, scanRoutes } from "./check.ts";
 import { discoverModules } from "./find.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
 import { renderRegistries } from "./registries.ts";
-import { walk } from "./shared.ts";
+import { isGenerated, walk } from "./shared.ts";
 import { planStubs } from "./stubs.ts";
 
 /** Writes `file` unless it already has this content; through a rename, so readers never see half. */
@@ -37,7 +37,12 @@ function syncFolder(dir: string, wanted: Map<string, string>) {
 	for (const [file, content] of wanted) {
 		if (writeIfChanged(join(dir, file), content)) changed.push(join(dir, file));
 	}
-	// The folders of files that are gone, deepest first.
+	pruneEmptyFolders(dir);
+	return changed;
+}
+
+/** Removes the empty folders under `dir` (those of files that are gone), deepest first. */
+function pruneEmptyFolders(dir: string) {
 	const folders = existsSync(dir)
 		? readdirSync(dir, { recursive: true, withFileTypes: true }).filter((entry) =>
 				entry.isDirectory(),
@@ -47,7 +52,6 @@ function syncFolder(dir: string, wanted: Map<string, string>) {
 		const path = join(folder.parentPath, folder.name);
 		if (existsSync(path) && !readdirSync(path).length) rmSync(path, { recursive: true });
 	}
-	return changed;
 }
 
 /**
@@ -63,6 +67,7 @@ export function generateModules(root: string) {
 
 	const { modules, problems } = discoverModules(root, locales);
 	const routes = scanRoutes(root);
+	problems.push(...foreignProblems(routes.foreign));
 	problems.push(...checkModules(modules, { coreRouteFolders: routes.core, patterns, locales }));
 	if (problems.length) {
 		throw new Error(`The modules in src/modules break the rules:\n- ${problems.join("\n- ")}`);
@@ -78,14 +83,33 @@ export function generateModules(root: string) {
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),
 	);
 
-	const stubs = planStubs(root, modules);
-	for (const folder of routes.stubs.filter((folder) => !stubs.has(folder))) {
-		rmSync(join(root, "src/routes", folder), { recursive: true, force: true });
-		changed.push(`src/routes/${folder}`);
-	}
-	for (const [folder, files] of stubs) {
+	for (const folder of routes.legacy) {
 		const dir = join(root, "src/routes", folder);
+		changed.push(...removeLegacyStubs(dir).map((file) => relative(root, file)));
+	}
+	const stubs = planStubs(root, modules);
+	for (const group of routes.groups.filter((group) => !stubs.has(group))) {
+		rmSync(join(root, "src/routes", group), { recursive: true, force: true });
+		changed.push(`src/routes/${group}`);
+	}
+	for (const [group, files] of stubs) {
+		const dir = join(root, "src/routes", group);
 		changed.push(...syncFolder(dir, files).map((file) => relative(root, file)));
 	}
 	return { modules: modules.map((module) => module.id), changed };
+}
+
+/**
+ * Removes what the generator's earlier versions wrote in a stub folder beside the core's route
+ * folders (`src/routes/(app)/contracts`): its `.gitignore` and the stubs, then the folders that
+ * are left empty. Anything else in it stays. Returns what it removed.
+ */
+function removeLegacyStubs(dir: string) {
+	const removed = walk(dir)
+		.filter((file) => file === ".gitignore" || isGenerated(join(dir, file)))
+		.map((file) => join(dir, file));
+	for (const file of removed) rmSync(file);
+	pruneEmptyFolders(dir);
+	if (existsSync(dir) && !readdirSync(dir).length) rmSync(dir, { recursive: true });
+	return removed;
 }

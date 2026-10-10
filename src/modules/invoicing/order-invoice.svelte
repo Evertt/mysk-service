@@ -55,7 +55,9 @@
 					<Button
 						variant="outline"
 						size="sm"
-						href="{resolve('/(app)/invoices/new')}?customer={encodeURIComponent(data.customerCode)}"
+						href="{resolve('/(app)/(modules)/invoices/new')}?customer={encodeURIComponent(
+							data.customerCode,
+						)}"
 					>
 						<PlusIcon data-icon="inline-start" />
 						{m.invoices_new_for_customer()}

@@ -9,7 +9,7 @@
 	import { getContracts } from "./contracts.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/contracts"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/contracts"> } = $props();
 </script>
 
 <svelte:head>
@@ -18,7 +18,7 @@
 
 <PageHeader title={m.contracts_title()} description={m.contracts_description()}>
 	{#snippet actions()}
-		<Button href={resolve("/(app)/contracts/new")}>
+		<Button href={resolve("/(app)/(modules)/contracts/new")}>
 			<PlusIcon data-icon="inline-start" />
 			{m.contracts_new()}
 		</Button>

@@ -7,7 +7,7 @@ import { loadInvoice } from "../../../../../server/invoices.ts";
 import { invoicePdf } from "./invoice-pdf.ts";
 
 /** The invoice as a PDF download; like its page, only for the tenant's own and with the module. */
-export const GET: RequestHandler<RouteParams<"/(app)/invoices/[number]/pdf">> = async ({
+export const GET: RequestHandler<RouteParams<"/(app)/(modules)/invoices/[number]/pdf">> = async ({
 	params,
 }) => {
 	const tenant = requireModule("invoicing");
