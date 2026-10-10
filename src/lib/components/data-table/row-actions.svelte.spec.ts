@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vite-plus/test";
-import { page } from "vite-plus/test/browser";
+import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import RowActions from "./row-actions.svelte";
@@ -46,4 +46,27 @@ test("a copy action puts its value on the clipboard", async () => {
 
 	expect(writeText).toHaveBeenCalledWith("info@acme.example");
 	writeText.mockRestore();
+});
+
+test("reached with the keyboard, the button keeps the focus and opens the menu", async () => {
+	render(RowActions, { label: "Acme B.V.", href: "/customers/C-0001" });
+	const button = page.getByRole("button", { name: "Actions for Acme B.V." });
+
+	const plain = button.element() as HTMLElement;
+	plain.focus();
+	// The menu's own trigger takes the plain button's place, with the focus.
+	await expect.poll(() => button.element()).not.toBe(plain);
+	await expect.element(button).toHaveFocus();
+
+	await userEvent.keyboard("{Enter}");
+	await expect.element(page.getByRole("menuitem", { name: "Open" })).toBeVisible();
+});
+
+test("a tap on the button before the menu is set up opens it", async () => {
+	render(RowActions, { label: "Acme B.V.", href: "/customers/C-0001" });
+
+	// A click without the pointer coming over it first, as a tap can be.
+	(page.getByRole("button", { name: "Actions for Acme B.V." }).element() as HTMLElement).click();
+
+	await expect.element(page.getByRole("menuitem", { name: "Open" })).toBeVisible();
 });

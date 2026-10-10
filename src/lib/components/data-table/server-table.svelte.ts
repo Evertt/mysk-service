@@ -1,3 +1,4 @@
+import { navigating, page } from "$app/state";
 /**
  * The client side of a server-side table (see `#lib/server/lists/plan.ts`): the page reads the
  * table's state from the URL into the list's query (`toListQuery()` in `list-definition.ts`) and
@@ -7,7 +8,6 @@
  * `isStale()` and `serverTableLoading()` tell whether they are the table's.
  */
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
-import { onMount } from "svelte";
 
 import type { Features } from "./features.ts";
 import { type List, queryKey, toListQuery } from "./list-definition.ts";
@@ -61,18 +61,25 @@ function isStale<TData extends RowData>(
  * its search, filters, sorting or page change until the rows for them are in, and while a change
  * to the URL (e.g. going back) waits for them, which only then reaches the table. `key` is the one
  * the rows came with. Call it while the component initializes.
+ *
+ * It compares the rows' key with what the table and a navigation under way ask for, rather than
+ * counting pending work with `$effect.pending()`: Svelte (5.57) keeps whatever reads that alive
+ * after it's gone, and with it the table, and in development navigating from such a page to the
+ * dashboard's charts hangs the tab.
  */
 export function serverTableLoading<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
 	list: List<any>,
 	key: () => string,
 ) {
-	// Hydrating counts as pending work, which the server didn't render.
-	let hydrated = $state(false);
-	onMount(() => {
-		hydrated = true;
+	const pathname = page.url.pathname;
+	/** A navigation to this page (e.g. going back) under way, for other rows than these. */
+	const arriving = $derived.by(() => {
+		const url = navigating.to?.url;
+		if (!url || url.pathname !== pathname) return false;
+		return queryKey(toListQuery(list, parseTableUrl(url.searchParams, list.urlSpec))) !== key();
 	});
-	const loading = $derived((hydrated && $effect.pending() > 0) || isStale(table, list, key()));
+	const loading = $derived(arriving || isStale(table, list, key()));
 	return {
 		get current() {
 			return loading;

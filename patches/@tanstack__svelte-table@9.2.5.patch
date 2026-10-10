@@ -1,8 +1,8 @@
 diff --git a/dist/AppCell.svelte b/dist/AppCell.svelte
-index 4818989dbe94a8cff33871cf30f960257307d7dc..3cfe86eaaa0e5a446b3d3db45ac8d7b39ec355dc 100644
+index 4818989dbe94a8cff33871cf30f960257307d7dc..0e74bb1eb0c2b7eff82d9fdae088a8991fbcc777 100644
 --- a/dist/AppCell.svelte
 +++ b/dist/AppCell.svelte
-@@ -1,13 +1,18 @@
+@@ -1,13 +1,32 @@
  <script lang="ts">
 -  import type { Snippet } from 'svelte'
 +  import { setContext, type Snippet } from 'svelte'
@@ -19,7 +19,21 @@ index 4818989dbe94a8cff33871cf30f960257307d7dc..3cfe86eaaa0e5a446b3d3db45ac8d7b3
 +
 +  // Set during this component's own initialization (not in a wrapper that runs before it), so it
 +  // also works for cells created after the parent initialized, e.g. when a column is shown.
-+  setContext(contextKey, cell)
++  // What's in context follows the `cell` prop, so a cell that's kept while its row changes (rows
++  // updated in place rather than recreated) shows the new row's values.
++  setContext(
++    contextKey,
++    new Proxy(
++      {},
++      {
++        get(_, key) {
++          const value = Reflect.get(cell, key)
++          return typeof value === 'function' ? value.bind(cell) : value
++        },
++        has: (_, key) => Reflect.has(cell, key),
++      },
++    ),
++  )
  </script>
  
  {@render children?.(Object.assign(cell, cellComponents))}
@@ -71,7 +85,7 @@ index c335d17674bbe49648a2b00c66b6eab8407495b2..a18046cc3cbd2ad36b1a780c614e00c9
  
  {@render children?.()}
 diff --git a/dist/createTableHook.svelte.js b/dist/createTableHook.svelte.js
-index 993c5f2070125cae2de94e48c93810092ce9a3e1..6159b61f30452ec130fdbe03d0a702c46383d14a 100644
+index 993c5f2070125cae2de94e48c93810092ce9a3e1..dc50561858f55d3d012d99a478fcef14f66d966e 100644
 --- a/dist/createTableHook.svelte.js
 +++ b/dist/createTableHook.svelte.js
 @@ -1,4 +1,4 @@
@@ -80,7 +94,7 @@ index 993c5f2070125cae2de94e48c93810092ce9a3e1..6159b61f30452ec130fdbe03d0a702c4
  import { createColumnHelper as coreCreateColumnHelper } from '@tanstack/table-core';
  import { createTable } from './createTable.svelte';
  import { mergeObjects } from './merge-objects';
-@@ -124,39 +124,34 @@ export function createTableHook({ tableComponents, cellComponents, headerCompone
+@@ -124,39 +124,39 @@ export function createTableHook({ tableComponents, cellComponents, headerCompone
              ...(headerComponents ?? {}),
          };
          // Create wrapper components using the svelte-form (internal, props) => pattern.
@@ -117,11 +131,16 @@ index 993c5f2070125cae2de94e48c93810092ce9a3e1..6159b61f30452ec130fdbe03d0a702c4
 +            table,
 +            contextKey: tableContextKey,
 +        }));
-+        const AppCell = ((internal, { children, cell }) => AppCellSvelte(internal, {
-+            cell,
++        // Getters, not the props' values: a kept cell gets the new `cell` when its row changes.
++        const AppCell = ((internal, props) => AppCellSvelte(internal, {
++            get cell() {
++                return props.cell;
++            },
 +            cellComponents: cellComponentsWithFlexRender,
 +            contextKey: cellContextKey,
-+            children,
++            get children() {
++                return props.children;
++            },
 +        }));
 +        const AppHeader = ((internal, { children, header }) => AppHeaderSvelte(internal, {
 +            header,
