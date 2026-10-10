@@ -1,0 +1,461 @@
+note: You are running `vp test` as a Vite+ built-in command. If you meant to run the test npm script, use `vpr test` instead.
+Plugin "vitest:mocks:interceptor" defines Vite-specific hooks (configureServer) in a plugin returned from applyToEnvironment. These hooks will be ignored.
+
+ RUN  v5.0.1 /Users/evert/Sites/svadcn-themed/.claude/worktrees/agent-a161d0778c940daa2
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/
+
+stdout | e2e/zz-debug.test.ts > debug
+committed
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/entry/start.DMQMVPSC.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/entry/payload.DSmR2FwN.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/uBIymjUX.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/UzdpEe2k.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BdaFSZSh.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CfEtTFSp.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/MgHP70oS.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/entry/app.CEmUEdci.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Bzvtjn4f.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/nodes/0.BZ5bcQcv.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/ClTmv75_.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Cp9AtcAv.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BulI-ib5.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BHwXomXm.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/rUy4u3pa.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CRkiAZ78.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/tOqCwWOP.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BuDWRuaM.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BBUD16v5.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/nodes/2.CIq98d9T.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CEfbcoo_.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D6WHEof3.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D0NronGb.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/41U4w0kx.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/FooJuk3b.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BPWmSDCl.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CZwOpqSh.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CMg0nv_7.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BFhSyjmH.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D5CYOrHA.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BuiC6cMe.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DVRo3kP8.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CvnKHwYc.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BTAw4A4b.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D3mCgHi3.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D1DgnqHo.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Bkt2V5PV.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CVVAvH-6.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Rv6Rk963.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B7h_RZQA.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CK_5qAqY.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BeRm2bYm.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BVn6e2lb.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BkzR_7ij.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/AjcDKWXl.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/rbLbeHnY.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CcC-KK6V.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BEH9zi-k.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BI159GNU.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DdbO9_hl.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/C6ffcsvX.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CSjW3QgX.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BCKKTfLm.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BXU8PPOX.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DrezWCJU.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/nodes/7.BMAt-uEU.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/YoXMzuSZ.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CczOKk7n.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CBMd_Yvl.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BTbjo7KB.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BvQrFmq_.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Dr7k8ieK.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Dko7Z4pR.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/WuTCpYC0.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BEOslSrD.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/QMuIuVpO.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DjpXinNk.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DqPab5zw.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/HsbaZWF8.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/oRYoEeBX.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CesMhv__.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/wAwbjK1t.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/1Iygg5c8.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/C41h2yTv.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/tKtFmvjc.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BiDnODAI.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CUd0avVT.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BBym2PcE.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BB4O_2QN.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/C58PZtCD.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BlQnydCW.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/ClifPD4i.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Db0q5_zr.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CCch3uox.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B51_yTdZ.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BID1NNRh.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BqUdISah.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/RobXhXPM.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Dfvzj6n2.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/gSlJpCTH.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BZSvpDu9.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CzvbN5bN.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BlPbBKz1.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BN25L6DQ.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B5KRA4hC.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BR2LaRms.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Bzb-KpRJ.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B0ZCD57G.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CyXyAaVm.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CjN-bAve.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/G3cihmUd.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/ePbwqNL8.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B9fnk4cC.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BQ9efUzr.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/PScy6uNo.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BLyQhKSJ.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/B9gkKhh2.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/7ge87mFl.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/0.CWHCLyXc.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Path.C9X8rLSN.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Text.QFv2t6Ub.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Tooltip.DqbaqvJE.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Line.fkmsECm9.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Circle.C5MKzgk2.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Rect.CtRaGMmQ.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/7.Dc-biTSI.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Voronoi.ce7atosu.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/ChartAnnotations.Bw8CGteN.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Labels.sEaJtb97.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/Legend.TmggIv4r.css
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/DefaultTooltip.BsMegoDr.css
+
+stdout | e2e/zz-debug.test.ts > debug
+DOMCONTENTLOADED
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/assets/inter-latin-wght-normal.Dx4kXJAl.woff2
+
+stdout | e2e/zz-debug.test.ts > debug
+LOAD
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/nodes/1.DNk8urSW.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DXrk7oXB.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DQrzutU2.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DFPcLgVW.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CaiXKWSK.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/nodes/3.CtHm678r.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CPMK-EFm.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/ruZ1Cgf0.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D1nSbWcW.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DwKvq-S-.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/BIbQOx-y.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/9FPky_8A.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/D74mtYhB.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/CoepO0tS.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/DMMpR4g8.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/Dqaxny7d.js
+
+stdout | e2e/zz-debug.test.ts > debug
+req http://localhost:64354/_app/immutable/chunks/3tZUdDXi.js
+
+stdout | e2e/zz-debug.test.ts > debug
+"EVALUATE TIMED OUT (frozen?)"
+
+ ❯ |e2e| e2e/zz-debug.test.ts (1 test | 1 failed) 14952ms
+   × debug 13098ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |e2e| e2e/zz-debug.test.ts > debug
+Error: expected any number of assertion, but got none
+ ❯ e2e/zz-debug.test.ts:7:1
+      5| const app = useApp();
+      6|
+      7| test("debug", async () => {
+       | ^
+      8|  const { page } = app;
+      9|  page.on("console", (m) => console.log(`console ${m.type()}: ${m.text(…
+ ❯ VitestModuleRunner.directRequest node_modules/.pnpm/@voidzero-dev+vite-plus-core@1.0.0_@types+node@24.19.1_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_typescript@6.0.3_yaml@2.9.1/node_modules/@voidzero-dev/vite-plus-core/dist/vite/node/module-runner.js:1272:59
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  17:38:13
+   Duration  28.97s (tests 98%, import 2%)
+

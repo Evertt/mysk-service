@@ -1,0 +1,94 @@
+note: You are running `vp test` as a Vite+ built-in command. If you meant to run the test npm script, use `vpr test` instead.
+Plugin "vitest:mocks:interceptor" defines Vite-specific hooks (configureServer) in a plugin returned from applyToEnvironment. These hooks will be ignored.
+
+ RUN  v5.0.1 /Users/evert/Sites/svadcn-themed/.claude/worktrees/agent-a161d0778c940daa2
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 4 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Error ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Svelte error: invariant_violation
+An invariant violation occurred, meaning Svelte's internal assumptions were flawed. This is a bug in Svelte, not your app — please open an issue at https://github.com/sveltejs/svelte, citing the following message: "Batch has scheduled effects"
+https://svelte.dev/e/invariant_violation
+ ❯ invariant_violation node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:307:33
+ ❯ invariant node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:939:18
+ ❯ #commit node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2305:35
+ ❯ #process node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2116:17
+ ❯ Batch.flush node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2256:17
+ ❯ Array.<anonymous> node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2392:32
+ ❯ run_all node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:40:45
+ ❯ run_micro_tasks node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1171:2
+ ❯ node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1180:31
+
+This error originated in "src/routes/(app)/module-slots.svelte.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "a module's part that fails doesn't keep the others from rendering". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Error ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Svelte error: invariant_violation
+An invariant violation occurred, meaning Svelte's internal assumptions were flawed. This is a bug in Svelte, not your app — please open an issue at https://github.com/sveltejs/svelte, citing the following message: "Batch has scheduled effects"
+https://svelte.dev/e/invariant_violation
+ ❯ invariant_violation node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:307:33
+ ❯ invariant node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:939:18
+ ❯ #commit node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2305:35
+ ❯ #process node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2116:17
+ ❯ Batch.flush node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2256:17
+ ❯ Array.<anonymous> node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2392:32
+ ❯ run_all node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:40:45
+ ❯ run_micro_tasks node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1171:2
+ ❯ node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1180:31
+
+This error originated in "src/routes/(app)/module-slots.svelte.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "a failed part is logged with its module and slot". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Error ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Svelte error: invariant_violation
+An invariant violation occurred, meaning Svelte's internal assumptions were flawed. This is a bug in Svelte, not your app — please open an issue at https://github.com/sveltejs/svelte, citing the following message: "Batch has scheduled effects"
+https://svelte.dev/e/invariant_violation
+ ❯ invariant_violation node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:307:33
+ ❯ invariant node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:939:18
+ ❯ #commit node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2305:35
+ ❯ #process node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2116:17
+ ❯ Batch.flush node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2256:17
+ ❯ Array.<anonymous> node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2392:32
+ ❯ run_all node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:40:45
+ ❯ run_micro_tasks node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1171:2
+ ❯ node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1180:31
+
+This error originated in "src/routes/(app)/module-slots.svelte.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "deferred, the parts replace the skeleton once they've loaded, each on its own". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Error ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Svelte error: invariant_violation
+An invariant violation occurred, meaning Svelte's internal assumptions were flawed. This is a bug in Svelte, not your app — please open an issue at https://github.com/sveltejs/svelte, citing the following message: "Batch has scheduled effects"
+https://svelte.dev/e/invariant_violation
+ ❯ invariant_violation node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:307:33
+ ❯ invariant node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:939:18
+ ❯ #commit node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2305:35
+ ❯ #process node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2116:17
+ ❯ Batch.flush node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2256:17
+ ❯ Array.<anonymous> node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:2392:32
+ ❯ run_all node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:40:45
+ ❯ run_micro_tasks node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1171:2
+ ❯ node_modules/.vite/vitest/d2a04d71301a8915217dd5faf81d12cffd6cd958/deps/runtime-C9DoONCd.js?v=b8c5eaf3:1180:31
+
+This error originated in "src/routes/(app)/module-slots.svelte.spec.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The last test to run before this error was "trying again renders the part once it works". This means either:
+- the error was thrown while Vitest was running this test, or
+- the error was thrown after the test completed, and this was the most recent test at that point.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+     Errors  4 errors
+   Start at  17:29:28
+   Duration  1.74s (import 34%, tests 28%, worker 16%, setup 13%, transform 9%)
+

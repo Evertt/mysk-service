@@ -65,3 +65,56 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   save button so the toast appears under it. Before the patch it failed within 14–19 rounds;
   after it, 80 rounds at 4–6× passed. For the issue, a minimal page with one `toast()` and the
   pointer resting on the toaster, under CPU throttling, should do.
+
+## 4. Svelte: "Batch has scheduled effects" invariant violation with `{#each await …}`
+
+- **Versions:** svelte 5.57.1, with `experimental.async`.
+- **What happens:** a `<svelte:boundary pending={…}>` whose children are
+  `{#each await loadParts() as part}` raised
+  `invariant_violation … "Batch has scheduled effects"` once per browser component test, also in
+  the tests that didn't defer. Svelte's own message calls it a bug in Svelte.
+- **Found while** making the dashboard's module cards client-only (first attempt).
+- **Evidence:** `svelte-batch-scheduled-effects/spec1.log` (vitest-browser-svelte run of
+  `src/routes/(app)/module-slots.svelte.spec.ts`), and the component that triggered it,
+  `svelte-batch-scheduled-effects/module-slots.svelte`. The component from before that change, on
+  the same spec, gave no errors.
+- **Not minimized.** Next step: an `{#each await promise}` inside a boundary with a `pending`
+  snippet, in a component test.
+
+## 5. Svelte (with layerchart): the tab freezes when a `pending` boundary hydrates slow work
+
+- **Versions:** svelte 5.57.1, layerchart 2.5.2, with `experimental.async`.
+- **What happens:** on the dashboard (which renders layerchart charts), any work inside a
+  hydrating `<svelte:boundary>` with a `pending` snippet that takes longer than one task (a loader
+  delayed by just `setTimeout(…, 50)`) froze the browser tab after hydration. Work that settles
+  within the task (`Promise.resolve`) didn't. Paused through the Chrome debugger, the stack was in
+  the charts re-rendering (`get yDomain`, `get yScale`, `get height`, `bind:clientWidth`,
+  `isMeasured`) inside Svelte's batch flush. A `pending` boundary on record pages (no charts,
+  `ActivityCard`) works. Likely the same family as the `$effect.pending()` freeze on the dashboard
+  (see #18970 and the memory on it).
+- **Evidence:** `svelte-pending-boundary-chart-freeze/`: the component (`module-slots.svelte`),
+  the e2e run where 20 dashboard tests timed out (`e2e1.log`), the bisection (`debug3`–`debug9`:
+  literal `pending` snippet froze; trivial `await Promise.resolve` didn't; parts with no
+  components froze; loaders as `Promise.resolve` didn't; loaders delayed 50 ms froze; parts as an
+  awaited prop froze), and the paused stack (`debug11.log`).
+- **Workaround in the app:** the dashboard's module cards render after `onMount` (a `deferred`
+  option on the slot component), with no `pending` boundary.
+- **Not minimized.** Next step: a page with one layerchart chart and a boundary with a `pending`
+  snippet around `await new Promise((r) => setTimeout(r, 50))`, server-rendered and hydrated.
+
+## 6. SvelteKit: a failed remote query stays cached under a `pending` boundary
+
+- **Versions:** @sveltejs/kit 3.0.0, svelte 5.57.1.
+- **What happens:** with the module cards rendered after mount inside a boundary with a `pending`
+  snippet, a card whose query (`getContractsOverview`) had failed showed the failure notice; its
+  "Try again" (which re-renders the part in a fresh boundary) sent no new request and got the
+  cached failure back. The same steps without the `pending` boundary, and with the earlier
+  component, fetched again and got a 200.
+- **Suspected cause (not confirmed):** the client query cache
+  (`kit/src/runtime/client/remote-functions/cache.svelte.js`) drops an entry only when no query
+  object or pin refers to it any more; something under the `pending` boundary seems to keep a
+  reference to the failed query.
+- **Evidence:** `kit-query-cache-after-pending/`: the component and dashboard page of that attempt,
+  the failing run (`debug15.log`) and the two controls (`debug16.log`, `debug17.log`).
+- **Not minimized,** and it may be a Svelte rather than a SvelteKit issue; find what holds the
+  reference first.

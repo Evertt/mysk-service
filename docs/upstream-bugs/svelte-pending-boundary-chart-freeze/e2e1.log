@@ -1,0 +1,306 @@
+note: You are running `vp test` as a Vite+ built-in command. If you meant to run the test npm script, use `vpr test` instead.
+Plugin "vitest:mocks:interceptor" defines Vite-specific hooks (configureServer) in a plugin returned from applyToEnvironment. These hooks will be ignored.
+
+ RUN  v5.0.1 /Users/evert/Sites/svadcn-themed/.claude/worktrees/agent-a161d0778c940daa2
+
+ ❯ |e2e| e2e/dashboard.test.ts (4 tests | 4 failed) 122698ms
+   ❯ the dashboard's charts (4)
+     × show North's orders per week, revenue per month and equipment by status 30003ms
+     × price the revenue like the tile, so the year adds up to at least the last 30 days 30004ms
+     × draw the charts, hidden from assistive technology: a bar per equipment status 30004ms
+     × show South its own numbers only 30002ms
+ ❯ |e2e| src/modules/invoicing/e2e/invoices.list.test.ts (6 tests | 4 failed) 123940ms
+   ❯ in North (5)
+     × the dashboard's link lists the overdue invoices 30003ms
+     × the dashboard adds up what's outstanding and overdue, with VAT 30016ms
+     × selected invoices are marked paid, except those that aren't sent 30004ms
+   ❯ in Dutch (1)
+     × the invoices read in Dutch 30001ms
+ ❯ |e2e| src/modules/contracts/e2e/contracts.test.ts (19 tests | 4 failed) 129632ms
+   ❯ its cards on the dashboard (2)
+     × replace the skeleton after hydration 30003ms
+   ❯ when its part of the dashboard fails (3)
+     × on a full page load, the dashboard is still a 200, with a notice in its place 30005ms
+     × the rest of the dashboard shows, with a notice in its place 30005ms
+     × trying again shows its cards once its query answers 30002ms
+ ❯ |e2e| src/modules/invoicing/e2e/invoices.test.ts (20 tests | 8 failed) 131661ms
+   ❯ in South, which has invoicing but no contracts (8)
+     × South's invoice has no contract fees 30003ms
+     × changing the invoicing settings logs the change 30006ms
+     × a North customer is refused 30003ms
+     × North's invoices are 404s, their PDFs too 30003ms
+     × a North order can't be added to South's draft 4ms
+     × issuing North's draft by its id is refused 1ms
+     × voiding North's draft by its id is refused 2ms
+     × with the module switched off, its pages are 404s and nothing of it shows 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 20 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |e2e| e2e/dashboard.test.ts > the dashboard's charts > show North's orders per week, revenue per month and equipment by status
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ e2e/dashboard.test.ts:76:2
+     74|
+     75| describe("the dashboard's charts", () => {
+     76|  test("show North's orders per week, revenue per month and equipment b…
+       |  ^
+     77|   await app.go("/");
+     78|   expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/20]⎯
+
+ FAIL  |e2e| e2e/dashboard.test.ts > the dashboard's charts > price the revenue like the tile, so the year adds up to at least the last 30 days
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ e2e/dashboard.test.ts:86:2
+     84|  });
+     85|
+     86|  test("price the revenue like the tile, so the year adds up to at leas…
+       |  ^
+     87|   const tile = app.page.locator('[data-slot="card"]', { hasText: "Reve…
+     88|   const last30Days = cents(await tile.locator('[data-slot="card-title"…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/20]⎯
+
+ FAIL  |e2e| e2e/dashboard.test.ts > the dashboard's charts > draw the charts, hidden from assistive technology: a bar per equipment status
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ e2e/dashboard.test.ts:96:2
+     94|  });
+     95|
+     96|  test("draw the charts, hidden from assistive technology: a bar per eq…
+       |  ^
+     97|   const chart = chartCard("Equipment by status").locator('[data-slot="…
+     98|   expect(await chart.getAttribute("aria-hidden")).toBe("true");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/20]⎯
+
+ FAIL  |e2e| e2e/dashboard.test.ts > the dashboard's charts > show South its own numbers only
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ e2e/dashboard.test.ts:102:2
+    100|  });
+    101|
+    102|  test("show South its own numbers only", async () => {
+       |  ^
+    103|   await app.switchOrganization(south.name);
+    104|   await expectChartsOf(south.id);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/20]⎯
+
+ FAIL  |e2e| src/modules/contracts/e2e/contracts.test.ts > its cards on the dashboard > replace the skeleton after hydration
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/contracts/e2e/contracts.test.ts:277:2
+    275|  });
+    276|
+    277|  test("replace the skeleton after hydration", async () => {
+       |  ^
+    278|   await app.go("/");
+    279|   await card("Response times at risk").waitFor();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/20]⎯
+
+ FAIL  |e2e| src/modules/contracts/e2e/contracts.test.ts > when its part of the dashboard fails > on a full page load, the dashboard is still a 200, with a notice in its place
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/contracts/e2e/contracts.test.ts:289:2
+    287|  const failing = (url: URL) => isRemote(url.href, "getContractsOvervie…
+    288|
+    289|  test("on a full page load, the dashboard is still a 200, with a notic…
+       |  ^
+    290|   const { page } = app;
+    291|   await page.route(failing, (route) => route.fulfill({ status: 500, bo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/20]⎯
+
+ FAIL  |e2e| src/modules/contracts/e2e/contracts.test.ts > when its part of the dashboard fails > the rest of the dashboard shows, with a notice in its place
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/contracts/e2e/contracts.test.ts:303:2
+    301|  });
+    302|
+    303|  test("the rest of the dashboard shows, with a notice in its place", a…
+       |  ^
+    304|   const { page } = app;
+    305|   await app.go("/orders");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/20]⎯
+
+ FAIL  |e2e| src/modules/contracts/e2e/contracts.test.ts > when its part of the dashboard fails > trying again shows its cards once its query answers
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/contracts/e2e/contracts.test.ts:320:2
+    318|  });
+    319|
+    320|  test("trying again shows its cards once its query answers", async () …
+       |  ^
+    321|   const { page } = app;
+    322|   await page.unroute(failing);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.list.test.ts > in North > the dashboard's link lists the overdue invoices
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.list.test.ts:41:2
+     39|  });
+     40|
+     41|  test("the dashboard's link lists the overdue invoices", async () => {
+       |  ^
+     42|   const overdue = Number(
+     43|    await value(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.list.test.ts > in North > the dashboard adds up what's outstanding and overdue, with VAT
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.list.test.ts:59:2
+     57|  });
+     58|
+     59|  test("the dashboard adds up what's outstanding and overdue, with VAT"…
+       |  ^
+     60|   const sent = await rows<{ subtotal: number; vat_rate: number; due_on…
+     61|    `select i.vat_rate, i.due_on, coalesce((select sum(amount) from inv…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.list.test.ts > in North > selected invoices are marked paid, except those that aren't sent
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.list.test.ts:76:2
+     74|  });
+     75|
+     76|  test("selected invoices are marked paid, except those that aren't sen…
+       |  ^
+     77|   const { page } = app;
+     78|   const pick = (status: string) =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.list.test.ts > in Dutch > the invoices read in Dutch
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.list.test.ts:114:2
+    112|
+    113| describe("in Dutch", () => {
+    114|  test("the invoices read in Dutch", async () => {
+       |  ^
+    115|   const { page } = app;
+    116|   // As the language menus switch it: Paraglide's cookie, read on ever…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > South's invoice has no contract fees
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:491:2
+    489|  let leftOut: number;
+    490|
+    491|  test("South's invoice has no contract fees", async () => {
+       |  ^
+    492|   const { page } = app;
+    493|   await app.switchOrganization(south.name);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > changing the invoicing settings logs the change
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:516:2
+    514|  });
+    515|
+    516|  test("changing the invoicing settings logs the change", async () => {
+       |  ^
+    517|   const { page } = app;
+    518|   const save = async (days: string) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > a North customer is refused
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:553:2
+    551|  });
+    552|
+    553|  test("a North customer is refused", async () => {
+       |  ^
+    554|   const { page } = app;
+    555|   const before = await countIn("invoice", south.id);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > North's invoices are 404s, their PDFs too
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:577:2
+    575|  });
+    576|
+    577|  test("North's invoices are 404s, their PDFs too", async () => {
+       |  ^
+    578|   const { page } = app;
+    579|   expect(await invoiceOf(northDraft.number, south.id)).toBeUndefined();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > a North order can't be added to South's draft
+TypeError: undefined cannot be passed as argument to the database
+ ❯ valueToSql node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:415:15
+ ❯ node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:45
+ ❯ executeStmt node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:30
+ ❯ Sqlite3Client.execute node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16
+ ❯ rows e2e/db.ts:14:30
+     12|  */
+     13| export async function rows<T = Record<string, unknown>>(sql: string, a…
+     14|  const result = await client.execute({ sql, args });
+       |                              ^
+     15|  return result.rows as unknown as T[];
+     16| }
+ ❯ invoiceOf src/modules/invoicing/e2e/invoices.test.ts:55:2
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:598:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > issuing North's draft by its id is refused
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > voiding North's draft by its id is refused
+TypeError: undefined cannot be passed as argument to the database
+ ❯ valueToSql node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:415:15
+ ❯ node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:45
+ ❯ executeStmt node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:30
+ ❯ Sqlite3Client.execute node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16
+ ❯ rows e2e/db.ts:14:30
+     12|  */
+     13| export async function rows<T = Record<string, unknown>>(sql: string, a…
+     14|  const result = await client.execute({ sql, args });
+       |                              ^
+     15|  return result.rows as unknown as T[];
+     16| }
+ ❯ invoiceOf src/modules/invoicing/e2e/invoices.test.ts:55:2
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:622:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/20]⎯
+
+ FAIL  |e2e| src/modules/invoicing/e2e/invoices.test.ts > in South, which has invoicing but no contracts > with the module switched off, its pages are 404s and nothing of it shows
+TypeError: undefined cannot be passed as argument to the database
+ ❯ valueToSql node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:415:15
+ ❯ node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:45
+ ❯ executeStmt node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:296:30
+ ❯ Sqlite3Client.execute node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16
+ ❯ rows e2e/db.ts:14:30
+     12|  */
+     13| export async function rows<T = Record<string, unknown>>(sql: string, a…
+     14|  const result = await client.execute({ sql, args });
+       |                              ^
+     15|  return result.rows as unknown as T[];
+     16| }
+ ❯ src/modules/invoicing/e2e/invoices.test.ts:645:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/20]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  20 failed | 29 passed (49)
+   Start at  17:31:27
+   Duration  147.97s (tests 100%)
+
