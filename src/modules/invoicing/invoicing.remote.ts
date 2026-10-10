@@ -2,16 +2,16 @@
  * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): the
  * invoice an order is on, and the receivables on the dashboard.
  */
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { inTenant, requireModule, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
+import { query } from "./remote-functions.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";
 
 /** How many overdue invoices the dashboard lists. */
@@ -22,7 +22,6 @@ const OVERDUE_LISTED = 6;
  * it if it isn't on one: whether it's completed, and its customer.
  */
 export const getOrderInvoice = query(v.string(), async (number) => {
-	requireModule("invoicing");
 	const found = await db.query.order.findFirst({
 		columns: { id: true, status: true },
 		where: and(eq(order.number, number), inTenant(order)),
@@ -58,7 +57,6 @@ export const getOrderInvoice = query(v.string(), async (number) => {
  * first), and how many drafts wait to be issued.
  */
 export const getReceivables = query(async () => {
-	requireModule("invoicing");
 	const now = new Date();
 	const subtotals = db
 		.select({

@@ -1,5 +1,4 @@
 // Bulk actions on the list's selected orders (see `bulk-actions.ts`).
-import { command, query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
@@ -11,10 +10,11 @@ import {
 	changeOrderStatus,
 	removeOrder,
 } from "#lib/orders/server/order-changes.ts";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 import { ordersSql } from "./order-list.server.ts";
@@ -24,8 +24,7 @@ import { ordersList } from "./orders-list.ts";
 const ordersTarget = listTarget(ordersList.where);
 
 /** The tenant's active engineers, to assign orders to. */
-export const getAssignableEngineers = query(async () => {
-	requireMember();
+export const getAssignableEngineers = forMembers.query(async () => {
 	return db
 		.select({ id: engineer.id, name: engineer.name })
 		.from(engineer)
@@ -34,10 +33,9 @@ export const getAssignableEngineers = query(async () => {
 });
 
 /** Assigns the selected orders to an active engineer of the tenant, or to nobody (`null`). */
-export const bulkAssignOrders = command(
+export const bulkAssignOrders = forMembers.command(
 	v.object({ target: ordersTarget, engineerId: v.nullable(v.pipe(v.number(), v.integer())) }),
 	async ({ target, engineerId }) => {
-		requireMember();
 		if (engineerId !== null) {
 			const problem = await assigneeProblem(engineerId);
 			if (problem) error(400, problem);
@@ -54,10 +52,9 @@ export const bulkAssignOrders = command(
 );
 
 /** Gives the selected orders a status that can be given by hand (`manualOrderStatuses`). */
-export const bulkSetOrderStatus = command(
+export const bulkSetOrderStatus = forMembers.command(
 	v.object({ target: ordersTarget, status: v.picklist(manualOrderStatuses) }),
 	async ({ target, status }) => {
-		requireMember();
 		const result = await bulkChange(target, {
 			table: order,
 			label: order.number,
@@ -70,8 +67,7 @@ export const bulkSetOrderStatus = command(
 );
 
 /** Deletes the selected orders, with the same refusals as deleting one. */
-export const bulkDeleteOrders = command(ordersTarget, async (target) => {
-	requireMember();
+export const bulkDeleteOrders = forMembers.command(ordersTarget, async (target) => {
 	const result = await bulkChange(target, {
 		table: order,
 		label: order.number,

@@ -2,16 +2,16 @@
  * What the invoicing module adds to the orders list's selection (see `bulkActions` in
  * `#lib/modules/manifests.ts` and `order-bulk-actions.ts`).
  */
-import { command } from "$app/server";
 import { error, isValidationError } from "@sveltejs/kit";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
-import { idsInTenant, requireModule } from "#lib/server/auth";
+import { idsInTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { idsTarget, targetIds } from "#lib/server/lists";
 
 import { getOrderInvoice } from "./invoicing.remote.ts";
+import { command } from "./remote-functions.ts";
 import { billableFor } from "./server/billable.ts";
 import { createDraft } from "./server/invoices.ts";
 
@@ -22,7 +22,6 @@ import { createDraft } from "./server/invoices.ts";
  * (`createDraft`); its page is the result's `href`, to open.
  */
 export const invoiceOrders = command(idsTarget, async (target): Promise<BulkResult> => {
-	requireModule("invoicing");
 	// Only the selected ids (never "all matching"): it checks the selection as a whole.
 	const ids = await targetIds(target);
 	const found = await db

@@ -1,19 +1,18 @@
-import { query } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { lineTotal } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, requireMember, tenantJoin } from "#lib/server/auth";
+import { inTenant, tenantJoin } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.ts";
 
 /** One of the tenant's units' service history: its timeline (newest first) and key figures. */
-export const getServiceHistory = query(v.string(), async (serialNumber) => {
-	requireMember();
+export const getServiceHistory = forMembers.query(v.string(), async (serialNumber) => {
 	const [unit] = await db
 		.select({
 			id: equipment.id,

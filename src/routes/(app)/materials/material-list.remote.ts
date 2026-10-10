@@ -1,10 +1,9 @@
-import { command, query } from "$app/server";
 import { and, countDistinct, inArray } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { removeMaterial } from "#lib/materials/server/materials.ts";
 import { stockLevelSql } from "#lib/materials/server/stock.ts";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { material, orderLine } from "#lib/server/db/schema.ts";
 import {
@@ -14,6 +13,7 @@ import {
 	pageGroupsOf,
 	planList,
 } from "#lib/server/lists";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { materialsSql } from "./material-list.server.ts";
 import { materialsList } from "./materials-list.ts";
@@ -22,8 +22,7 @@ import { materialsList } from "./materials-list.ts";
  * A page of the materials list with the number of orders that use them, searched, filtered and
  * sorted as the query says (see `materialsList`), and how many match in all.
  */
-export const getMaterials = query(materialsList.query, async (input) => {
-	requireMember();
+export const getMaterials = forMembers.query(materialsList.query, async (input) => {
 	const plan = planList(materialsSql(), input);
 	const [rows, rowCount, counts] = await Promise.all([
 		plan.paged(
@@ -70,8 +69,7 @@ export const getMaterials = query(materialsList.query, async (input) => {
  * How many materials have each unit and stock level, for the counts in the list's filters: of
  * those matching the search and the other filters.
  */
-export const getMaterialFacets = query(materialsList.where, async (where) => {
-	requireMember();
+export const getMaterialFacets = forMembers.query(materialsList.where, async (where) => {
 	return planList(materialsSql(), where).facets({
 		unit: material.unit,
 		stockLevel: stockLevelSql(material.stock, material.unit),
@@ -79,14 +77,16 @@ export const getMaterialFacets = query(materialsList.where, async (where) => {
 });
 
 /** Deletes the selected materials, with the same refusals as deleting one. */
-export const bulkDeleteMaterials = command(listTarget(materialsList.where), async (target) => {
-	requireMember();
-	const result = await bulkChange(target, {
-		table: material,
-		label: material.sku,
-		list: materialsSql,
-		change: (each) => removeMaterial(each.id),
-	});
-	await refreshRequested(getMaterials, getMaterialFacets);
-	return result;
-});
+export const bulkDeleteMaterials = forMembers.command(
+	listTarget(materialsList.where),
+	async (target) => {
+		const result = await bulkChange(target, {
+			table: material,
+			label: material.sku,
+			list: materialsSql,
+			change: (each) => removeMaterial(each.id),
+		});
+		await refreshRequested(getMaterials, getMaterialFacets);
+		return result;
+	},
+);

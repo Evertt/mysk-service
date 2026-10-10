@@ -1,4 +1,4 @@
-import { form, query, type RemoteFormInvalidField } from "$app/server";
+import type { RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
@@ -16,17 +16,17 @@ import { completedAt, notEditable, removeOrder } from "#lib/orders/server/order-
 import { priceOrders, STANDARD_HOURLY_RATE } from "#lib/orders/server/pricing.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity";
-import { idInTenant, inTenant, requireMember } from "#lib/server/auth";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
 import { orderCommitted, tagOrders } from "#lib/server/modules/hooks.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./order-schema.ts";
 
 /** One order with everything on it, plus other orders for the same equipment. */
-export const getOrder = query(v.string(), async (number) => {
-	requireMember();
+export const getOrder = forMembers.query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
 		where: and(eq(order.number, number), inTenant(order)),
 		with: {
@@ -73,8 +73,7 @@ export const getOrder = query(v.string(), async (number) => {
 });
 
 /** Everything the order form needs to choose from. */
-export const getOrderFormOptions = query(async () => {
-	requireMember();
+export const getOrderFormOptions = forMembers.query(async () => {
 	const [customers, equipments, engineers, materials] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
@@ -129,7 +128,7 @@ type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
  * there isn't enough, throws an `OrderStockShortage` (see `refuseShortage`).
  */
 async function saveOrder(id: number | null, input: OrderInput) {
-	const { organizationId } = requireMember();
+	const { organizationId } = currentTenant();
 	const { lines, scheduledTime, ...fields } = input;
 
 	return db.transaction(async (tx) => {
@@ -244,8 +243,7 @@ async function refuseProblems(issue: OrderIssue, input: OrderInput) {
 	}
 }
 
-export const createOrder = form(orderSchema, async (input, issue) => {
-	requireMember();
+export const createOrder = forMembers.form(orderSchema, async (input, issue) => {
 	await refuseProblems(issue, input);
 	const number = await saveOrder(null, input).catch((error) => {
 		if (error instanceof OrderStockShortage) refuseShortage(issue, input.lines, error);
@@ -254,21 +252,22 @@ export const createOrder = form(orderSchema, async (input, issue) => {
 	redirect(303, `/orders/${number}`);
 });
 
-export const updateOrder = form(v.object({ id: id(), ...orderFields }), async (data, issue) => {
-	requireMember();
-	const { id, ...input } = data;
-	await refuseProblems(issue, input);
-	const number = await saveOrder(id, input).catch((error) => {
-		if (error instanceof OrderStockShortage) refuseShortage(issue, input.lines, error);
-		throw error;
-	});
-	void getOrder(number).refresh();
-	orderCommitted({ number });
-	redirect(303, `/orders/${number}`);
-});
+export const updateOrder = forMembers.form(
+	v.object({ id: id(), ...orderFields }),
+	async (data, issue) => {
+		const { id, ...input } = data;
+		await refuseProblems(issue, input);
+		const number = await saveOrder(id, input).catch((error) => {
+			if (error instanceof OrderStockShortage) refuseShortage(issue, input.lines, error);
+			throw error;
+		});
+		void getOrder(number).refresh();
+		orderCommitted({ number });
+		redirect(303, `/orders/${number}`);
+	},
+);
 
-export const deleteOrder = form(v.object({ id: id() }), async ({ id }) => {
-	requireMember();
+export const deleteOrder = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeOrder(id);
 	redirect(303, "/orders");
 });

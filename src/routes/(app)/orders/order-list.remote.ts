@@ -1,13 +1,13 @@
-import { query } from "$app/server";
 import { and, count, inArray, sql } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { lineTotalSql, priceOrders } from "#lib/orders/server/pricing.ts";
-import { inTenant, requireMember } from "#lib/server/auth";
+import { inTenant } from "#lib/server/auth";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
 import { pageGroupsOf, planList } from "#lib/server/lists";
 import { tagOrders } from "#lib/server/modules/hooks.ts";
+import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { ordersSql, withOrderJoins } from "./order-list.server.ts";
 import { ordersList } from "./orders-list.ts";
@@ -17,8 +17,7 @@ import { ordersList } from "./orders-list.ts";
  * filtered, sorted and grouped as the query says (see `ordersList`), how many orders match in all,
  * and, when grouped, what the table needs to know of the page's groups.
  */
-export const getOrders = query(ordersList.query, async (input) => {
-	requireMember();
+export const getOrders = forMembers.query(ordersList.query, async (input) => {
 	const plan = planList(ordersSql(), input);
 	const [rows, rowCount, counts] = await Promise.all([
 		plan.paged(
@@ -104,8 +103,7 @@ export const getOrders = query(ordersList.query, async (input) => {
  * for the counts in the list's filters: of those matching the search and the other filters. The
  * unassigned orders and the new installations count under `none`.
  */
-export const getOrderFacets = query(ordersList.where, async (where) => {
-	requireMember();
+export const getOrderFacets = forMembers.query(ordersList.where, async (where) => {
 	return planList(ordersSql(), where).facets({
 		type: order.type,
 		status: order.status,

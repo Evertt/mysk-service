@@ -50,9 +50,15 @@ The app is multi-tenant: organizations (better-auth's organization plugin) own a
 optional modules (`src/modules/<id>/`, see "Modules") are enabled per organization (`organization_module`). The
 helpers are in `src/lib/server/auth/session.ts`:
 
-- Every remote function starts with `requireMember()` (or `requireUser()` if it doesn't touch
-  tenant data, or `requireModule("<id>")` in an optional module, which 404s when the organization
-  doesn't have it, or `requireManager()` (an owner or admin) for organization settings).
+- Every remote function is made with a gated set from `src/lib/server/remote-functions.ts`, the
+  only file that may import `query`, `form` and `command` from `$app/server`
+  (`remote-functions.spec.ts` checks): `forMembers.query(schema, handler)` for the office,
+  `forManagers` (an owner or admin) for organization settings, `forEngineers` for the engineer
+  portal, `forUsers` if it doesn't touch tenant data, `forAnyone` only for what's public on purpose
+  (signing in, the theme, an invitation's link); an optional module uses its own set (see
+  "Modules"). The set runs its gate (`requireMember()` and friends) before the handler on every
+  call, so the handler doesn't check again: it reads what the gate admitted with `currentTenant()`
+  (`organizationId`, `roles`, `modules`, `user`), `currentUser()` or `await currentEngineer()`.
 - Every select, update and delete on a tenant table (one with `organizationId`) includes
   `inTenant(table)` in its `where`, including lookups by id or code: ids are global and come from
   the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
@@ -62,7 +68,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   `.leftJoin(...tenantJoin(engineer, order.engineerId))`: a bare `eq(table.id, id)` then stands out
   in review. `contract_equipment` has no `organization_id`: reach it through a tenant-checked
   contract or equipment.
-- Inserts set `organizationId` from `requireMember()`. Codes and numbers are unique and sequential
+- Inserts set `organizationId` from `currentTenant()`. Codes and numbers are unique and sequential
   per organization: pick the next one with `nextNumber(tx, "order")` (`src/lib/server/numbering.ts`;
   the formats are in `src/lib/numbering.ts`) and insert it in the same `db.transaction`
   (transactions take turns, see `src/lib/server/db/serialize.ts`, so concurrent creates can't pick
@@ -78,7 +84,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
   about modules. A module adds to core pages through `slots` in `src/lib/modules/manifests.ts` (components
-  that load their own data with `requireModule()`), and to core server logic through hooks in
+  that load their own data with the module's remote functions), and to core server logic through hooks in
   `src/lib/server/modules/hooks.ts`; both only take part for tenants that have the module. A module
   declares its hooks with `defineServerModule(id, hooks)`, grouped by core domain (`orders`:
   `adjustPrices`, `tag`, `committed`; `billing`: `billableItems`). A hook is a collector (`adjustPrices`,
@@ -138,9 +144,13 @@ migration committed.
   svelte-check verifies that the page accepts what SvelteKit passes it. Page options
   (`export const ssr = false`) go in the module's `+page.ts` as literals: the stub repeats them
   because SvelteKit reads them without running the file. Don't `export * from` in a route file.
-- Every remote function and endpoint of a module starts with `requireModule("<id>")`: the guard on
-  the pages is for the experience, this is what keeps the data safe (a layout's load doesn't cover
-  `+server.ts` endpoints).
+- A module makes its remote functions with its own set, in `src/modules/<id>/remote-functions.ts`:
+  `export const { query, form, command } = moduleRemote("<id>")` (plus
+  `moduleRemote("<id>", "manager")` for what only managers may do), which refuses tenants without
+  the module with a 404 (`requireModule("<id>")`); its remote files import `query` and friends from
+  there (not `remote.ts`: SvelteKit takes any `remote.*` file for a remote file). The module's
+  route stubs guard its server loads, form actions and endpoints (see above); its remote functions
+  are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares every extension point (`#lib/modules/manifests.ts`, `#lib/server/modules/hooks.ts`); core never
   imports a module and modules never import each other, which `src/modules/boundaries.spec.ts`
   checks (`#modules/…` is for the generated registries only). Module tables reference core tables

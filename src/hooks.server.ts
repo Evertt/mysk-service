@@ -85,9 +85,9 @@ const isPortal = (pathname: string) => pathname === "/my" || pathname.startsWith
 /**
  * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers
  * from the office app to their portal. This only guards page requests. Remote function calls pass
- * through (their `event.url` is the calling page's, so a redirect here would be wrong): they check
- * for themselves with `requireUser()`, `requireMember()` or `requireEngineer()` from
- * `#lib/server/auth/session.ts`.
+ * through (their `event.url` is the calling page's, so a redirect here would be wrong): each is
+ * gated by the set it's made with (`forMembers`, `forEngineers`, … in
+ * `#lib/server/remote-functions.ts`).
  */
 const handleGuard: Handle = ({ event, resolve }) => {
 	if (event.isRemoteRequest) return resolve(event);
