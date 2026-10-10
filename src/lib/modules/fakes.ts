@@ -49,5 +49,18 @@ export const gadgets = {
 	slots: { dashboard: loader, equipment: loader },
 } satisfies AppModule;
 
+/**
+ * A module whose slot on an order's page never loads, like a chunk that fails to download. Not in
+ * `fakeModules`: a spec that renders slots adds it where it needs a failing one.
+ */
+export const gizmos = {
+	id: "gizmos" as ModuleId,
+	label: "Gizmos",
+	description: "Makes gizmos",
+	route: "/(app)/orders",
+	icon: {} as Component,
+	slots: { order: () => Promise.reject(new Error("Failed to fetch dynamically imported module")) },
+} satisfies AppModule;
+
 /** The fake registry, in registry order. */
 export const fakeModules = [gadgets, widgets] as const;
