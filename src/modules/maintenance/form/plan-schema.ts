@@ -16,7 +16,7 @@ const intervalMonths = () =>
 	);
 
 /** What the office says about a plan: the fields of its dialog. */
-export const planFields = {
+const planFields = {
 	orderType: v.picklist(planOrderTypes),
 	description: text(m.maintenance_description_required),
 	intervalMonths: intervalMonths(),
