@@ -109,13 +109,13 @@ version, and write down what's left in the plan under "Not there yet".
 
 ## 5. Tests
 
-- **Unit specs next to the code:**
+- **Unit specs in `src/modules/maintenance/tests/unit/`** (mirroring the module), and core's in `src/tests/unit/`:
   - advancing a due date by months, including the end of the month: 31 January + 1 month = 28/29 February, and the next step comes from the plan's original day
   - the due-range filters
   - the plan schema
   - the column merge
   - `createOrders`' checks
-- **e2e in `src/modules/maintenance/e2e/`**, in the usual shape:
+- **e2e in `src/modules/maintenance/tests/e2e/`**, in the usual shape:
   - North: add a plan on a unit, see it in the due list, create orders in bulk. The orders get the right customer, unit, type and description, and the plans advance with their last order set. Also: activity entries, the dashboard card's counts, sorting and filtering the equipment list's column, and the contract card's bulk add.
   - South: `/maintenance` is a 404, there's no sidebar entry, no card on units, contracts or the dashboard, no column, its URL parameter is ignored, and the remote functions are refused.
   - Tenant isolation: tampering with another tenant's plan or unit ids is refused.
