@@ -1,8 +1,13 @@
 /**
  * The seed of an optional module (`src/modules/<id>/server/seed.ts`, default export).
  * `scripts/modules.ts` collects the seeders in `db/module-seeds.gen.ts`, and `index.ts` runs them
- * for the tenants that have the module, in two steps:
+ * for the tenants that have the module, in two steps (and a module whose data the core's used to
+ * make in the middle of its own, materials, also has steps `during` it):
  *
+ * - `during`, steps the core's generation runs at fixed points (after the equipment, after the
+ *   orders), with the tenant's faker there: so the faker is used in the same order as when the
+ *   core made that data itself, and the demo data stays the same. What they make goes in the
+ *   draft's `modules[<id>]`.
  * - `generate()`, per tenant as soon as the core's data for it is generated, with the tenant's
  *   faker where the core left it. That is the step for data that follows from the core's (a
  *   contract covers the customer's units) or adds to it (the call-outs a contract's response time
@@ -12,7 +17,8 @@
  *
  * What the module does at runtime through hooks (`#lib/server/extensions.ts`), it does at seed time
  * through collectors, which the seed of whoever consumes it asks without knowing the module:
- * `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for `invoicing.billableItems`. They
+ * `costs()` for `orders.costs`, `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for
+ * `invoicing.billableItems`. They
  * answer from what the modules made in `generate()`, so a consumer asks in `run()` (a tenant's
  * `collect`), when every module's data is there, whatever the order the modules are in.
  *
@@ -27,7 +33,7 @@ import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 import type * as moduleSchema from "../modules.gen.ts";
 import type * as schema from "../schema.ts";
-import type { TenantData } from "./tenant.ts";
+import type { TenantData, TenantSteps } from "./tenant.ts";
 
 /** A transaction on the seed's database: the core's tables and the modules'. */
 type SeedTransaction = Parameters<
@@ -42,6 +48,19 @@ export type TenantDraft = TenantData & {
 
 /** An order of a draft. */
 export type SeedOrder = TenantData["orders"][number];
+
+/** What an order costs besides labour, as a module adds it at seed time (like `OrderCost`). */
+interface SeedCost {
+	/** In Dutch, the demo's language. */
+	label: string;
+	amount: number;
+}
+
+/** An order's price before adjustments, at seed time: labour and the costs added up. */
+interface SeedPrice {
+	costs: number;
+	labor: number;
+}
 
 /** What a module bills a customer for besides orders, at seed time. */
 export type SeedBillableItem = BillableItem & { customerId: number };
@@ -78,6 +97,8 @@ interface SeedContext<Data = unknown> {
 // `any`: a seed names the type of the data it generates, the registry holds seeds of all of them.
 // oxlint-disable-next-line typescript/no-explicit-any
 export interface ModuleSeed<Data = any> {
+	/** Steps in the core's generation, for the tenants that have the module (see above). */
+	during?: TenantSteps;
 	/**
 	 * Empties the module's tables (children before parents), before the core's data is replaced.
 	 * Runs for every module, whether or not a tenant has it.
@@ -89,12 +110,10 @@ export interface ModuleSeed<Data = any> {
 	 * tenants before, for the ones that must continue where those ended. May add to the draft.
 	 */
 	generate?(draft: TenantDraft, previous: Data[]): Data;
+	/** Collector, like `orders.costs`: what an order costs besides labour. */
+	costs?(data: Data, order: SeedOrder): SeedCost[];
 	/** Collector, like `orders.adjustPrices`: changes to an order's price. */
-	adjustPrices?(
-		data: Data,
-		order: SeedOrder,
-		price: { materials: number; labor: number },
-	): PriceAdjustment[];
+	adjustPrices?(data: Data, order: SeedOrder, price: SeedPrice): PriceAdjustment[];
 	/**
 	 * Collector, like `invoicing.billableItems`: what the tenant's customers are billed for besides
 	 * orders in `period`. Ids in references are global, as in the database.
@@ -109,7 +128,8 @@ export const defineSeed = <Data = undefined>(seed: ModuleSeed<Data>) => seed;
 
 /** What a tenant's modules say about prices and billing, see `ModuleSeed`. */
 export interface SeedCollectors {
-	adjustPrices(order: SeedOrder, price: { materials: number; labor: number }): PriceAdjustment[];
+	costs(order: SeedOrder): SeedCost[];
+	adjustPrices(order: SeedOrder, price: SeedPrice): PriceAdjustment[];
 	billableItems(period: BillingPeriod): SeedBillableItem[];
 }
 
@@ -124,6 +144,7 @@ export function seedCollectors(
 ): SeedCollectors {
 	const own = seeds.filter(({ id }) => tenant.modules.includes(id));
 	return {
+		costs: (order) => own.flatMap(({ id, seed }) => seed.costs?.(data[id], order) ?? []),
 		adjustPrices: (order, price) =>
 			own.flatMap(({ id, seed }) => seed.adjustPrices?.(data[id], order, price) ?? []),
 		billableItems: (period) =>

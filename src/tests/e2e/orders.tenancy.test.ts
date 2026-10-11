@@ -162,9 +162,12 @@ describe("in South", () => {
 		await page.locator("tbody tr").last().getByLabel("Material").selectOption(materialId);
 		await app.submit(page.getByRole("button", { name: "Save order" }));
 
-		const issues = await app.issues();
-		expect(issues).toContainEqual(expect.stringMatching(/Unknown customer/));
-		expect(issues).toContainEqual(expect.stringMatching(/Unknown material/));
+		expect(await app.issues()).toContainEqual(expect.stringMatching(/Unknown customer/));
+		// The order's own fields are checked first, the modules' parts (its materials) once they're
+		// right: saving them needs the order.
+		await page.getByLabel("Customer").selectOption(String(before[0].customer_id));
+		await app.submit(page.getByRole("button", { name: "Save order" }));
+		expect(await app.issues()).toContainEqual(expect.stringMatching(/Unknown material/));
 		expect(app.path()).toBe(`/orders/${shared}/edit`);
 		expect(await snapshot(own)).toEqual(before);
 		// North's material kept its stock: its order with that number still holds what it held.

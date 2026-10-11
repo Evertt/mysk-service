@@ -48,7 +48,9 @@ export default defineServerModule("contracts", [
 		return new Map(
 			orders.flatMap((order) => {
 				const covering = coverage.get(order.id);
-				const amount = covering ? coveredAmount(covering.level, order) : 0;
+				const costs = order.costs.reduce((sum, cost) => sum + cost.amount, 0);
+				const price = { labor: order.labor, costs };
+				const amount = covering ? coveredAmount(covering.level, price) : 0;
 				if (!covering || !amount) return [];
 				const adjustment = {
 					label: coveredBy(covering),

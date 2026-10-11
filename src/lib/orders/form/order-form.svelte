@@ -1,8 +1,11 @@
 <!--
 	@component
 	The order form, for creating (`createOrder`) and editing (`updateOrder`, with `order`) an order.
+	`parts` renders what the tenant's modules add to it (the `orders.form` slot, which the page
+	renders) with the form's fields for them.
 -->
 <script lang="ts">
+	import type { Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
@@ -14,8 +17,8 @@
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
+	import type { ModuleFormFields } from "../extensions.ts";
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
-	import OrderLinesField from "./order-lines-field.svelte";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];
@@ -25,11 +28,14 @@
 		options,
 		order,
 		cancelHref,
+		parts,
 	}: {
 		form: typeof createOrder | typeof updateOrder;
 		options: Options;
 		order?: Order;
 		cancelHref: string;
+		/** The modules' parts of the form, given the fields to name their inputs under. */
+		parts?: Snippet<[ModuleFormFields]>;
 	} = $props();
 
 	const fields = $derived(form.fields);
@@ -167,7 +173,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<OrderLinesField field={fields.lines} materials={options.materials} {order} />
+	{@render parts?.(fields.modules)}
 
 	<!-- E.g. when the order was invoiced meanwhile, and can't be changed any more. -->
 	<Field.FieldError errors={fields.issues()} />

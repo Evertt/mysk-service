@@ -2,7 +2,9 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { OrderForm } from "#lib/orders/components.ts";
+	import { form as formParts } from "#lib/orders/extensions.ts";
 	import { createOrder, getOrderFormOptions } from "#lib/orders/remotes.ts";
 </script>
 
@@ -23,4 +25,8 @@
 	form={createOrder}
 	options={await getOrderFormOptions()}
 	cancelHref={resolve("/(app)/orders")}
-/>
+>
+	{#snippet parts(fields)}
+		<ExtensionSlot point={formParts} props={{ fields, order: undefined }} />
+	{/snippet}
+</OrderForm>

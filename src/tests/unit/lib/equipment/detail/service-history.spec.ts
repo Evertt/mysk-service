@@ -24,8 +24,7 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		createdAt: new Date(2026, 0, 1),
 		laborHours: 2,
 		engineer: null,
-		materials: [],
-		cost: { materials: 0, labor: 0, adjustments: [], total: 10_000 },
+		cost: { costs: [], labor: 0, adjustments: [], total: 10_000 },
 		...fields,
 	};
 }

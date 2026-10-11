@@ -93,12 +93,13 @@ export const forUsers = remoteSet(requireUser);
 export const forAnyone = remoteSet(() => {});
 
 /** Who may call a module's remote functions, besides the tenant having the module. */
-type ModuleRole = "member" | "manager";
+type ModuleRole = "member" | "manager" | "engineer";
 
 /**
  * The remote function set of an optional module: refused with a 404 for tenants without the
  * module, as if it didn't exist (`requireModule()`), and with a 403 for those who aren't
- * managers when `role` is `"manager"`. A module calls it once, in its `remote-functions.ts`, with
+ * managers when `role` is `"manager"`; with `"engineer"`, for the engineer portal: only users linked
+ * to an engineer (`requireEngineer()`). A module calls it once, in its `remote-functions.ts`, with
  * its own id:
  *
  * ```ts
@@ -108,6 +109,10 @@ type ModuleRole = "member" | "manager";
  */
 export function moduleRemote(id: ModuleId, role: ModuleRole = "member"): RemoteSet {
 	return remoteSet(() => {
+		if (role === "engineer") {
+			requireModule(id, { anyRole: true });
+			return requireEngineer();
+		}
 		requireModule(id);
 		if (role === "manager") requireManager();
 	});

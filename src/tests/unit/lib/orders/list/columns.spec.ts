@@ -21,8 +21,6 @@ const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	equipment: { id: 1, model: "C15", manufacturer: "Caterpillar", serialNumber: "GEN-1" },
 	engineer: { id: 1, name: "Sam", hourlyRate: 6000 },
-	lineCount: 0,
-	materialsTotal: 0,
 	laborTotal: 6000,
 	total: 6000,
 	tags: [],

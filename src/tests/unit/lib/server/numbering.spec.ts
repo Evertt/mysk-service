@@ -31,7 +31,6 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
 	await client.executeMultiple(`
 		create table customer (id integer primary key, organization_id text, code text);
-		create table material (id integer primary key, organization_id text, sku text);
 		create table "order" (id integer primary key, organization_id text, number text);
 		create table widget (id integer primary key, organization_id text, number text);
 	`);
@@ -90,11 +89,9 @@ describe("nextNumber", () => {
 
 	test("reads the sequence after each kind's own prefix", async () => {
 		await db.run(sql`insert into customer (organization_id, code) values ('north', 'CUST-0012')`);
-		await db.run(sql`insert into material (organization_id, sku) values ('north', 'MAT-0003')`);
 		await db.run(sql`insert into widget (organization_id, number)
 			values ('north', 'WID-2026-0020')`);
 		expect(await next("customer")).toBe("CUST-0013");
-		expect(await next("material")).toBe("MAT-0004");
 		expect(await next(widgets)).toBe(formatCode(widgets.format, 21));
 	});
 

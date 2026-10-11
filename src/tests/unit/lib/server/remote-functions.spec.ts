@@ -15,7 +15,7 @@ import { join, posix, relative } from "node:path";
 import { error, isHttpError } from "@sveltejs/kit";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { requireManager, requireModule } from "#lib/server/auth/index.ts";
+import { requireEngineer, requireManager, requireModule } from "#lib/server/auth/index.ts";
 import { forAnyone, moduleRemote, remoteSet } from "#lib/server/remote-functions.ts";
 
 /** SvelteKit's functions, as stand-ins that hand back what they were made with. */
@@ -164,6 +164,19 @@ describe("moduleRemote", () => {
 		const made = moduleRemote("invoicing", "manager").form(handler);
 		expect(await statusOf(() => handlerOf(made)())).toBe(403);
 		expect(requireModule).toHaveBeenCalledTimes(2);
+		expect(handler).toHaveBeenCalledTimes(1);
+	});
+
+	test("the engineer set lets any role through the module's gate, then asks for an engineer", async () => {
+		vi.mocked(requireEngineer).mockReset();
+		const handler = vi.fn(() => "done");
+		vi.mocked(requireEngineer).mockResolvedValue({} as never);
+		expect(await handlerOf(moduleRemote("materials", "engineer").form(handler))()).toBe("done");
+		expect(requireModule).toHaveBeenCalledWith("materials", { anyRole: true });
+
+		vi.mocked(requireEngineer).mockImplementation(() => error(403, "No"));
+		const made = moduleRemote("materials", "engineer").query(handler);
+		expect(await statusOf(() => handlerOf(made)())).toBe(403);
 		expect(handler).toHaveBeenCalledTimes(1);
 	});
 });

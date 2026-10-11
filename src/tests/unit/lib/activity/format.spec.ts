@@ -10,7 +10,7 @@ vi.mock("#lib/modules/manifests.gen.ts", async () => ({
 	manifests: (await import("#unit/lib/modules/fakes.ts")).fakeModules,
 }));
 
-const { order, equipment, engineer, customer, material } = coreSubjectTypes;
+const { order, equipment, engineer, customer } = coreSubjectTypes;
 
 const englishByDefault = getLocale;
 afterEach(() => overwriteGetLocale(englishByDefault));
@@ -40,13 +40,12 @@ describe("formatValue", () => {
 		expect(formatValue("hvac", engineer.fields?.specialty)).toBe("HVAC");
 		expect(formatValue("mid_market", customer.fields?.segment)).toBe("Mid-market");
 		expect(formatValue("out_of_service", equipment.fields?.status)).toBe("Out of service");
-		expect(formatValue("kg", material.fields?.unit)).toBe("Kilograms");
 		// An unknown value still reads.
 		expect(formatValue("on_hold", order.fields?.status)).toBe("On hold");
 	});
 
 	test("shows money (in cents), dates and moments", () => {
-		expect(formatValue(123456, material.fields?.unitPrice)).toBe(formatCents(123456));
+		expect(formatValue(123456, engineer.fields?.hourlyRate)).toBe(formatCents(123456));
 		const day = new Date(2026, 9, 7);
 		expect(formatValue(day.toISOString(), equipment.fields?.warrantyUntil)).toBe(formatDate(day));
 		const moment = new Date(2026, 9, 7, 14, 5);

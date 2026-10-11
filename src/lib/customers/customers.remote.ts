@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzl
 import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -61,7 +61,6 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 	});
 	if (!found) error(404, m.customers_code_not_found({ code }));
 
-	const materials = materialsPerOrder();
 	const orders = await db
 		.select({
 			id: order.id,
@@ -71,10 +70,8 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 			createdAt: order.createdAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(and(eq(order.customerId, found.id), inTenant(order)))
 		.orderBy(desc(order.createdAt), desc(order.id));

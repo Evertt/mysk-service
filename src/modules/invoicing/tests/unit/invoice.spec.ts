@@ -104,11 +104,11 @@ describe("lines", () => {
 	const order = { id: 7, number: "ORD-2026-00007", description: "Leak at main seal" };
 	const detail = "Materials and labour";
 
-	test("an order is its materials and labour, then each adjustment, adding up to its total", () => {
+	test("an order is its costs and labour, then each adjustment, adding up to its total", () => {
 		const lines = orderLines(
 			order,
 			{
-				materials: 12_000,
+				costs: [{ amount: 12_000 }],
 				labor: 8500,
 				adjustments: [
 					{
@@ -144,10 +144,19 @@ describe("lines", () => {
 		expect(lines.reduce((sum, line) => sum + line.amount, 0)).toBe(12_000);
 	});
 
+	test("an order without costs is its labour", () => {
+		const lines = orderLines(
+			order,
+			{ costs: [], labor: 200, adjustments: [], total: 200 },
+			"Labour",
+		);
+		expect(lines).toEqual([expect.objectContaining({ amount: 200, detail: "Labour" })]);
+	});
+
 	test("without adjustments, an order is one line", () => {
 		const lines = orderLines(
 			order,
-			{ materials: 100, labor: 200, adjustments: [], total: 300 },
+			{ costs: [{ amount: 100 }], labor: 200, adjustments: [], total: 300 },
 			detail,
 		);
 		expect(lines).toHaveLength(1);
@@ -158,7 +167,7 @@ describe("lines", () => {
 		const lines = orderLines(
 			order,
 			{
-				materials: 1000,
+				costs: [{ amount: 1000 }],
 				labor: 2000,
 				adjustments: [
 					{ label: "Goodwill", amount: -1500 },

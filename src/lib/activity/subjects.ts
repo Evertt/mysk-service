@@ -41,8 +41,6 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	updated: m.activity_action_updated,
 	deleted: m.activity_action_deleted,
 	scheduled: m.activity_action_scheduled,
-	stock_received: m.activity_action_stock_received,
-	stock_adjusted: m.activity_action_stock_adjusted,
 	module_enabled: m.activity_action_module_enabled,
 	module_disabled: m.activity_action_module_disabled,
 	work_started: m.activity_action_work_started,
@@ -142,14 +140,6 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			warrantyUntil: { format: day },
 		},
 	},
-	material: {
-		noun: m.activity_subject_material,
-		href: ({ label }) => resolve("/(app)/materials/[sku]", { sku: label }),
-		fields: {
-			unit: { format: labelled("materialUnit") },
-			unitPrice: { format: money },
-		},
-	},
 	order: {
 		noun: m.activity_subject_order,
 		href: ({ label }) => resolve("/(app)/orders/[number]", { number: label }),
@@ -165,8 +155,6 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			laborHours: { format: hours },
 		},
 	},
-	/** An order's materials, told apart by material: the subject's id is the material's. */
-	order_line: { noun: m.activity_subject_order_line },
 	/** An optional module (`#lib/modules/manifests.ts`), by its id; shown by its name. */
 	module: {
 		noun: m.activity_subject_module,

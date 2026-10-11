@@ -37,7 +37,7 @@ vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 });
 
 vi.mock("#lib/auth/session.remote.ts", () => ({
-	getCurrentTenant: vi.fn(() => Promise.resolve({ modules: ["gadgets", "gizmos", "widgets"] })),
+	getTenantModules: vi.fn(() => Promise.resolve(["gadgets", "gizmos", "widgets"])),
 }));
 
 const props = { point: detailSide, props: { number: "ORD-0001" } };

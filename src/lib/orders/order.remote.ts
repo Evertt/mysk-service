@@ -4,19 +4,17 @@ import { and, asc, desc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { atTime } from "#lib/dates.ts";
-import { OrderStockShortage } from "#lib/materials/server/index.ts";
-import { isEditableOrder, lineTotal } from "#lib/models.ts";
+import { isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
 import { createOrders } from "./server/creation.ts";
-import { orderCommitted, tagOrders } from "./server/hooks.ts";
-import { checkLines, saveOrderLines, type LineInput, type LineProblem } from "./server/lines.ts";
+import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./server/hooks.ts";
 import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 
@@ -28,7 +26,6 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 			customer: true,
 			equipment: true,
 			engineer: true,
-			lines: { with: { material: true }, orderBy: (line, { asc }) => asc(line.id) },
 		},
 	});
 	if (!found) error(404, m.orders_not_found({ number }));
@@ -47,19 +44,14 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 			})
 		: [];
 
-	const lines = found.lines.map((line) => ({
-		...line,
-		total: lineTotal(line.quantity, line.unitPrice),
-	}));
-	const facts = {
-		...found,
-		materials: lines.reduce((sum, line) => sum + line.total, 0),
-		hourlyRate: found.engineer?.hourlyRate,
-	};
-	const [[price], [tags]] = await Promise.all([priceOrders([facts]), tagOrders([facts])]);
+	const facts = { ...found, hourlyRate: found.engineer?.hourlyRate };
+	const [[price], [tags]] = await Promise.all([
+		priceOrders([facts], { items: true }),
+		tagOrders([facts]),
+	]);
 
 	return {
-		order: { ...found, lines },
+		order: found,
 		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 		/** From the tenant's modules, e.g. a response time about to be missed. */
 		tags,
@@ -69,7 +61,7 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 
 /** Everything the order form needs to choose from. */
 export const getOrderFormOptions = forMembers.query(async () => {
-	const [customers, equipments, engineers, materials] = await Promise.all([
+	const [customers, equipments, engineers] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
 			.from(customer)
@@ -96,19 +88,8 @@ export const getOrderFormOptions = forMembers.query(async () => {
 			.from(engineer)
 			.where(inTenant(engineer))
 			.orderBy(asc(engineer.name)),
-		db
-			.select({
-				id: material.id,
-				sku: material.sku,
-				name: material.name,
-				unit: material.unit,
-				unitPrice: material.unitPrice,
-			})
-			.from(material)
-			.where(inTenant(material))
-			.orderBy(asc(material.name)),
 	]);
-	return { customers, equipments, engineers, materials };
+	return { customers, equipments, engineers };
 });
 
 const orderSchema = v.object(orderFields);
@@ -118,18 +99,17 @@ type OrderInput = v.InferOutput<typeof orderSchema>;
 type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
 
 /**
- * Creates or updates an order in the current tenant and replaces its lines; returns its number.
- * The lines take their materials from stock while the status holds stock (see `holdsStock`); if
- * there isn't enough, throws an `OrderStockShortage` (see `refuseShortage`).
+ * Creates or updates an order in the current tenant, with the parts the tenant's modules add to the
+ * form (`modules`, saved through `orders.saving`); returns its number. Throws an `OrderRefused`
+ * when a module can't save its part (see `refuseParts`).
  */
 async function saveOrder(id: number | null, input: OrderInput) {
-	const { lines, scheduledTime, ...fields } = input;
+	const { modules, scheduledTime, ...fields } = input;
 
 	return db.transaction(async (tx) => {
 		const existing = id
 			? await tx.query.order.findFirst({
 					where: idInTenant(order, id),
-					with: { lines: true },
 				})
 			: undefined;
 		if (id && !existing) error(404, m.orders_not_found_plain());
@@ -155,12 +135,15 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			[{ id: orderId, number }] = await createOrders(tx, [values]);
 		}
 
-		// The lines take their materials from stock, or return them, as the status says.
-		await saveOrderLines(tx, { id: orderId, number }, existing, {
+		// The modules' parts of it, e.g. its materials, and the stock that follows its status.
+		await saveOrderParts({
+			tx,
+			order: { id: orderId, number },
 			status: fields.status,
-			lines,
+			form: modules,
 		});
-		// Its lines are logged by `saveOrderLines`; the completion date follows from the status.
+		// The modules log their parts; a new order is logged by `createOrders()`; the completion
+		// date follows from the status.
 		if (existing) {
 			const subject = { type: "order", id: orderId, label: number };
 			const ignore = ["completedAt"];
@@ -176,14 +159,14 @@ async function saveOrder(id: number | null, input: OrderInput) {
 	});
 }
 
-/** Refuses the form with an issue on the line whose material there isn't enough of in stock. */
-function refuseShortage(
-	issue: OrderIssue,
-	lines: LineInput[],
-	shortage: OrderStockShortage,
-): never {
-	const line = lines.findLastIndex((line) => line.materialId === shortage.materialId);
-	invalid(issue.lines[line].quantity(shortage.message));
+/**
+ * Refuses the form with the problems of a module that couldn't save its part, each on the field of
+ * the form it names (a module's part's fields are under `modules.<its id>`), or for the whole form.
+ */
+function refuseParts(refused: OrderRefused): never {
+	invalid(
+		...refused.problems.map(({ path, message }) => (path?.length ? { message, path } : message)),
+	);
 }
 
 interface ReferenceProblem {
@@ -222,28 +205,16 @@ async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
 	return problems;
 }
 
-/** The form issue for a problem with one of the submitted lines. */
-const lineIssue = (issue: OrderIssue, { line, field, message }: LineProblem) =>
-	issue.lines[line][field](message);
-
-/** Refuses the form if the order's references or lines are wrong, each problem on its field. */
+/** Refuses the form if the order's references are wrong, each problem on its field. */
 async function refuseProblems(issue: OrderIssue, input: OrderInput) {
-	const [problems, lineProblems] = await Promise.all([
-		checkReferences(input),
-		checkLines(input.lines),
-	]);
-	if (problems.length || lineProblems.length) {
-		invalid(
-			...problems.map(({ field, message }) => issue[field](message)),
-			...lineProblems.map((problem) => lineIssue(issue, problem)),
-		);
-	}
+	const problems = await checkReferences(input);
+	if (problems.length) invalid(...problems.map(({ field, message }) => issue[field](message)));
 }
 
 export const createOrder = forMembers.form(orderSchema, async (input, issue) => {
 	await refuseProblems(issue, input);
 	const number = await saveOrder(null, input).catch((error) => {
-		if (error instanceof OrderStockShortage) refuseShortage(issue, input.lines, error);
+		if (error instanceof OrderRefused) refuseParts(error);
 		throw error;
 	});
 	redirect(303, `/orders/${number}`);
@@ -255,7 +226,7 @@ export const updateOrder = forMembers.form(
 		const { id, ...input } = data;
 		await refuseProblems(issue, input);
 		const number = await saveOrder(id, input).catch((error) => {
-			if (error instanceof OrderStockShortage) refuseShortage(issue, input.lines, error);
+			if (error instanceof OrderRefused) refuseParts(error);
 			throw error;
 		});
 		void getOrder(number).refresh();

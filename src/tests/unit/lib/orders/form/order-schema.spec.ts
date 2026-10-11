@@ -22,7 +22,6 @@ const form = {
 	scheduledFor: "2026-10-20",
 	scheduledTime: "13:30",
 	laborHours: 1.5,
-	lines: [{ materialId: "9", quantity: 2 }],
 };
 
 test("a filled-in form becomes an order", () => {
@@ -34,7 +33,7 @@ test("a filled-in form becomes an order", () => {
 			engineerId: 2,
 			description: "Replace the pump seal",
 			scheduledFor: new Date(2026, 9, 20),
-			lines: [{ materialId: 9, quantity: 2 }],
+			modules: {},
 		},
 	});
 });
@@ -79,35 +78,17 @@ describe("laborHours", () => {
 	});
 });
 
-describe("lines", () => {
-	test("an order without lines has none", () => {
-		const { lines: _, ...withoutLines } = form;
-		expect(parse(withoutLines)).toHaveProperty("value.lines", []);
+describe("modules", () => {
+	test("each module's part comes through as submitted, for the module to check", () => {
+		const modules = { materials: { lines: [{ materialId: "9", quantity: 2 }] } };
+		expect(parse({ ...form, modules })).toHaveProperty("value.modules", modules);
 	});
 
-	test("each line needs a material and a quantity above zero, to at most two decimals", () => {
-		const lines = [
-			{ materialId: "", quantity: 1 },
-			{ materialId: "3", quantity: 0 },
-			{ materialId: "3", quantity: 1.005 },
-		];
-		expect(parse({ ...form, lines })).toEqual({
-			issues: ["Choose a material", "More than 0", "At most two decimals"],
-		});
-		expect(parse({ ...form, lines: [{ materialId: "3", quantity: 2.5 }] })).not.toHaveProperty(
-			"issues",
-		);
+	test("without any, there are none", () => {
+		expect(parse(form)).toHaveProperty("value.modules", {});
 	});
 
-	test("the issues point at the line and field they're about", () => {
-		const result = v.safeParse(v.object(orderFields), {
-			...form,
-			lines: [
-				{ materialId: "3", quantity: 1 },
-				{ materialId: "3", quantity: 0 },
-			],
-		});
-		expect(result.success).toBe(false);
-		expect(result.issues?.map((issue) => v.getDotPath(issue))).toEqual(["lines.1.quantity"]);
+	test("a module's part is an object of its inputs", () => {
+		expect(parse({ ...form, modules: { materials: "9" } })).toHaveProperty("issues");
 	});
 });

@@ -1,12 +1,11 @@
 import { error } from "@sveltejs/kit";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { lineTotal } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { engineer, equipment, material, order, orderLine } from "#lib/server/db/schema.ts";
+import { engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.ts";
@@ -41,54 +40,15 @@ export const getServiceHistory = forMembers.query(v.string(), async (serialNumbe
 		.where(and(eq(order.equipmentId, unit.id), inTenant(order)))
 		.orderBy(desc(order.createdAt), desc(order.id));
 
-	const lines = orders.length
-		? await db
-				.select({
-					id: orderLine.id,
-					orderId: orderLine.orderId,
-					quantity: orderLine.quantity,
-					unitPrice: orderLine.unitPrice,
-					sku: material.sku,
-					name: material.name,
-					unit: material.unit,
-				})
-				.from(orderLine)
-				.innerJoin(...tenantJoin(material, orderLine.materialId))
-				.where(
-					and(
-						inArray(
-							orderLine.orderId,
-							orders.map((row) => row.id),
-						),
-						inTenant(orderLine),
-					),
-				)
-				.orderBy(asc(orderLine.id))
-		: [];
-
-	const ownLines = orders.map((row) => lines.filter((line) => line.orderId === row.id));
-	// Priced like everywhere else, so a covered order costs here what it does on its own page.
+	// Priced like everywhere else, so a covered order costs here what it does on its own page, with
+	// what each cost is made of (e.g. the materials used).
 	const prices = await priceOrders(
-		orders.map((row, i) => ({
-			...row,
-			equipmentId: unit.id,
-			materials: ownLines[i].reduce(
-				(sum, line) => sum + lineTotal(line.quantity, line.unitPrice),
-				0,
-			),
-			hourlyRate: row.engineer?.hourlyRate,
-		})),
+		orders.map((row) => ({ ...row, equipmentId: unit.id, hourlyRate: row.engineer?.hourlyRate })),
+		{ items: true },
 	);
 	const history = orders.map(({ engineer, ...row }, i): HistoryOrder => ({
 		...row,
 		engineer: engineer && { id: engineer.id, name: engineer.name },
-		materials: ownLines[i].map(({ id, sku, name, unit, quantity }) => ({
-			id,
-			sku,
-			name,
-			unit,
-			quantity,
-		})),
 		cost: prices[i],
 	}));
 	const now = new Date();

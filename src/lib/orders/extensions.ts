@@ -1,17 +1,23 @@
 /**
- * The orders' extension points: where modules take part in pricing, badging and saving orders
- * (see `#lib/server/extensions.ts`), on an order's page and in the orders list's selection (see
- * `#lib/extensions/define.ts`). Each hook has one caller in `#lib/orders/server/`: `priceOrders()`
- * (`pricing.ts`), `tagOrders()` and `orderCommitted()` (`hooks.ts`). Isomorphic, so the types are
- * also there for the pages that show tags and adjustments.
+ * The orders' extension points: where modules take part in costing, pricing, badging and saving
+ * orders (see `#lib/server/extensions.ts`), on an order's page, in its form and in the orders
+ * list's selection (see `#lib/extensions/define.ts`). Each hook has one caller in
+ * `#lib/orders/server/`: `priceOrders()` (`pricing.ts`, for `costs` and `adjustPrices`),
+ * `tagOrders()`, `orderCommitted()` and `saveOrderParts()` (`hooks.ts`). Isomorphic, so the types
+ * are also there for the pages that show costs, tags and adjustments.
  */
+import type { RemoteFormFields } from "$app/server";
+
 import {
 	defineBulkTable,
 	defineCollector,
 	defineEvent,
+	defineSaveHook,
 	defineSlot,
 } from "#lib/extensions/define.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
+// Only the type: this file is isomorphic.
+import type { Transaction } from "#lib/server/db/index.ts";
 
 /** An order as a module's bulk action sees a selected row of the orders list. */
 export interface OrderBulkRow {
@@ -30,10 +36,46 @@ export interface OrderFacts {
 	createdAt: Date;
 }
 
+/**
+ * Something an order costs besides labour, as one of the tenant's modules adds it: e.g. the
+ * materials used on it. In cents.
+ */
+export interface OrderCost {
+	/** What it is, e.g. "Materials". */
+	label: string;
+	amount: number;
+	/**
+	 * What it's made of, when the caller asks for items (a page that shows an order or a few): e.g.
+	 * a line per material, with links to the materials.
+	 */
+	items?: OrderCostItem[];
+	/** Shown in place of the items when there are none, e.g. "No materials on this order." */
+	empty?: string;
+}
+
+/** One of the things a cost is made of, as an order's page lists it. In cents. */
+export interface OrderCostItem {
+	/** Unique among the cost's items. */
+	key: string;
+	label: string;
+	/** A second line under the label, e.g. a material's SKU. */
+	detail?: string;
+	/**
+	 * The record it is, to link the label to its page the way the activity log links it
+	 * (`subjectHref()` in `#lib/activity/subjects.ts`), e.g. `{ type: "material", … }`.
+	 */
+	subject?: { type: string; id: string; label: string };
+	/** Formatted with its unit, e.g. "2.5 m". */
+	quantity: string;
+	unitPrice: number;
+	amount: number;
+}
+
 /** An order with its price before adjustments, in cents. */
 export interface PricedOrderFacts extends OrderFacts {
-	materials: number;
 	labor: number;
+	/** What the modules add to it besides labour (`costs`). */
+	costs: OrderCost[];
 }
 
 /** What happened to an order that core has saved. */
@@ -65,6 +107,16 @@ export interface PriceAdjustment {
 }
 
 /**
+ * What orders cost besides labour, by order id: a module's one cost per order, e.g. the materials
+ * used on it. With `items`, also what each cost is made of, for a page that shows them. Asked
+ * before `adjustPrices`, which gets the costs. A module that fails fails the pricing.
+ */
+export const costs = defineCollector<
+	{ orders: OrderFacts[]; items: boolean },
+	Map<number, OrderCost>
+>("orders.costs", { onError: "fail" });
+
+/**
  * Changes to orders' prices, by order id, e.g. the work a contract includes, as a discount. A
  * module that fails fails the pricing: a broken price must not quietly become a wrong total.
  */
@@ -87,6 +139,69 @@ export const tag = defineCollector<{ orders: OrderFacts[]; now: Date }, Map<numb
  * order's page shows), so they come back with the save, like core's.
  */
 export const committed = defineEvent<OrderChange>("orders.committed");
+
+/**
+ * Core is changing one of the tenant's orders, in `tx`: creating or updating it from the order form
+ * (with `form`), changing its status (in bulk, on the schedule, in the portal) or deleting it.
+ */
+export interface OrderSaving {
+	/** The transaction core changes the order in: a module saves its part in it too. */
+	tx: Transaction;
+	order: { id: number; number: string };
+	/** Its status once changed; `null` while it's being deleted (before its row goes). */
+	status: OrderStatus | null;
+	/**
+	 * When it's saved from the order form, what the modules' parts of the form (`form`) submitted,
+	 * by module id, as submitted: each module checks its own. Absent for other changes.
+	 */
+	form?: Record<string, unknown>;
+}
+
+/** Why a module can't save its part of an order. */
+export interface OrderProblem {
+	/**
+	 * The order form's field it's about (from the form's root, e.g.
+	 * `["modules", "materials", "lines", 2, "quantity"]`), or none for the whole change.
+	 */
+	path?: (string | number)[];
+	message: string;
+}
+
+/**
+ * A module saves its part of an order that core is changing (`OrderSaving`), in core's transaction,
+ * e.g. the materials the order form submitted and the stock that follows the order's status; or
+ * answers why it can't, and the change is refused (the transaction stores nothing of it).
+ */
+export const saving = defineSaveHook<OrderSaving, OrderProblem>("orders.saving");
+
+/**
+ * The order form's fields for the modules' parts: `fields.<module id>`, under which a module names
+ * its inputs. Each module knows the shape of its own part (see `form`).
+ */
+export type ModuleFormFields = RemoteFormFields<Record<string, ModuleFormPart> | undefined>;
+
+/**
+ * A module's part of the order form, as submitted: its inputs' values by name, nested as their
+ * names say (`lines[0].quantity`), two levels deep at most. Not recursive, and without booleans:
+ * SvelteKit's form types check every boolean of a form is optional, which a recursive type defeats.
+ */
+export interface ModuleFormPart {
+	[name: string]: FormValue | FormValue[] | FormRecord | FormRecord[] | undefined;
+}
+type FormValue = string | number;
+interface FormRecord {
+	[name: string]: FormValue | FormValue[] | undefined;
+}
+
+/**
+ * Parts of the order form, after the order's own card: a module's inputs, named under
+ * `fields.<module id>`, are submitted with the order and saved with it (`saving`, as `form`). The
+ * components load what they offer through their module's remote functions. `order` is the order
+ * being edited, none for a new one.
+ */
+export const form = defineSlot<{ fields: ModuleFormFields; order: { id: number } | undefined }>(
+	"orders.form",
+);
 
 /**
  * Cards in the side column of an order's page. The components load their own data through their

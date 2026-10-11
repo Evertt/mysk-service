@@ -15,13 +15,13 @@
 			"./messages/{locale}/customers.json",
 			"./messages/{locale}/equipment.json",
 			"./messages/{locale}/engineers.json",
-			"./messages/{locale}/materials.json",
 			"./messages/{locale}/settings.json",
 			"./messages/{locale}/portal.json",
 			"./messages/{locale}/activity.json",
 			"./src/modules/contracts/messages/{locale}/contracts.json",
 			"./src/modules/invoicing/messages/{locale}/invoices.json",
 			"./src/modules/maintenance/messages/{locale}/maintenance.json",
+			"./src/modules/materials/messages/{locale}/materials.json",
 			"./src/modules/schedule/messages/{locale}/schedule.json"
 		]
 	},

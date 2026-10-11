@@ -3,7 +3,7 @@
 
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
-	import { cards } from "#lib/dashboard/extensions.ts";
+	import { cards, stats } from "#lib/dashboard/extensions.ts";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
@@ -49,21 +49,7 @@
 		value={formatNumber(data.fleet.attention ?? 0)}
 		detail={m.dashboard_attention_of({ count: data.fleet.total })}
 	/>
-	<StatCard
-		label={m.dashboard_low_stock()}
-		value={formatNumber(data.stock.low + data.stock.out)}
-		detail={m.dashboard_low_stock_of({
-			out: formatNumber(data.stock.out),
-			count: data.stock.total,
-		})}
-	>
-		{#snippet action()}
-			<!-- The materials list, filtered to the low and out of stock ones. -->
-			<Button variant="outline" size="sm" href="{resolve('/(app)/materials')}?stock=out,low">
-				{m.common_view()}
-			</Button>
-		{/snippet}
-	</StatCard>
+	<ExtensionSlot point={stats} props={{}} />
 </div>
 
 <div class="grid items-start gap-6 lg:grid-cols-2">

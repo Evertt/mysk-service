@@ -76,7 +76,8 @@
 		}
 	],
 	"invoices_invoice_number": "Invoice {number}",
-	"invoices_line_materials_labour": "Materials and labour",
+	"invoices_line_costs_labour": "{costs} and labour",
+	"invoices_line_labour": "Labour",
 	"invoices_for": "Invoice for {customer}",
 	"invoices_print": "Print",
 	"invoices_download_pdf": "Download PDF",

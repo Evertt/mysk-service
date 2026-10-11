@@ -93,8 +93,9 @@ async function orderDraftProblems(
  * Creates orders in the current tenant, in `tx`: checks their references (refusing the lot with
  * `invalid()` if any is wrong, so a form shows why and a bulk command skips the record with the
  * reason), gives each the tenant's next number, inserts them and logs each one's `created`.
- * Returns their ids and numbers, in the drafts' order. Material lines aren't part of a draft: save
- * them with `saveOrderLines()` afterwards, in the same transaction.
+ * Returns their ids and numbers, in the drafts' order. What the modules add to an order (e.g. its
+ * materials) isn't part of a draft: the order form saves its modules' parts right after, in the same
+ * transaction (`saveOrderParts()`); an order made without them has none to save.
  *
  * It doesn't emit `orders.committed` (`orderCommitted()`), as core's create never did: that event
  * has the modules refresh their queries about an order on the client's pages, and a new order is on

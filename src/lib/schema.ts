@@ -8,8 +8,6 @@
  */
 import * as v from "valibot";
 
-import { fitsUnit } from "#lib/models.ts";
-
 /**
  * A validation message: a message function (`m.…`) or one that builds the text, e.g.
  * `() => m.orders_quantity_max({ max })`. A plain string isn't translated; avoid it.
@@ -115,22 +113,3 @@ export const phone = (required: Message = m.validation_phone_required) =>
 /** The hours of labour on an order. */
 export const laborHours = () =>
 	v.pipe(v.number(m.validation_hours_required), v.minValue(0, m.validation_not_negative));
-
-/**
- * An order's material lines, for the order form and the engineer portal: a material and a
- * quantity each. Pieces are only counted whole; saving checks that against the material's unit.
- */
-export const orderLines = () =>
-	v.optional(
-		v.array(
-			v.object({
-				materialId: id(m.validation_material_required),
-				quantity: v.pipe(
-					v.number(m.validation_quantity_required),
-					v.gtValue(0, m.validation_more_than_zero),
-					v.check((quantity) => fitsUnit(quantity, "m"), m.validation_two_decimals),
-				),
-			}),
-		),
-		[],
-	);

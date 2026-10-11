@@ -2,12 +2,11 @@ import { DAY, startOfDay } from "#lib/dates.ts";
 import {
 	isDoneOrder,
 	isOpenOrder,
-	type MaterialUnit,
 	type OrderStatus,
 	type OrderType,
 	orderTypes,
 } from "#lib/models.ts";
-import type { PriceAdjustment } from "#lib/orders/extensions.ts";
+import type { OrderCost, PriceAdjustment } from "#lib/orders/extensions.ts";
 
 /**
  * A unit's service history: what happened to it in order (`buildTimeline`) and the figures that
@@ -27,9 +26,11 @@ export interface HistoryOrder {
 	createdAt: Date;
 	laborHours: number;
 	engineer: { id: number; name: string } | null;
-	materials: { id: number; sku: string; name: string; unit: MaterialUnit; quantity: number }[];
-	/** As `priceOrders()` prices it, with the modules' adjustments (e.g. contract coverage). In cents. */
-	cost: { materials: number; labor: number; adjustments: PriceAdjustment[]; total: number };
+	/**
+	 * As `priceOrders()` prices it, with the modules' costs and what they're made of (e.g. the
+	 * materials used) and adjustments (e.g. contract coverage). In cents.
+	 */
+	cost: { costs: OrderCost[]; labor: number; adjustments: PriceAdjustment[]; total: number };
 }
 
 export type ServiceEvent =

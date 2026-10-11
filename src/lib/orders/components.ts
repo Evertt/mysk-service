@@ -3,6 +3,7 @@ export { default as OrderLinesCard } from "./detail/order-lines-card.svelte";
 export { default as WorkReport } from "./detail/work-report.svelte";
 export { default as OrderForm } from "./form/order-form.svelte";
 export { default as OrdersTable } from "./list/orders-table.svelte";
+export { default as CostItem } from "./ui/cost-item.svelte";
 export { default as OrderLink } from "./ui/order-link.svelte";
 export { default as OrderTags } from "./ui/order-tags.svelte";
 export { default as PriorityBadge } from "./ui/priority-badge.svelte";

@@ -6,8 +6,8 @@
  * reads without running the file. Isomorphic: a point is only its id and kind (its types ride along
  * for the compiler).
  *
- * - Hooks (collectors, events, votes): modules contribute with `contribute()` in their
- *   `server/index.ts`, and the owner calls them with `collect()`, `emit()` or `vote()`, all in
+ * - Hooks (collectors, events, votes, save hooks): modules contribute with `contribute()` in their
+ *   `server/index.ts`, and the owner calls them with `collect()`, `emit()`, `vote()` or `save()`, all in
  *   `#lib/server/extensions.ts`, which also says how each kind runs.
  * - Slots and bulk tables: modules contribute by file, a component at
  *   `src/modules/<id>/slots/<point id>/<name>.svelte` and bulk actions as the default export of
@@ -58,6 +58,16 @@ export interface VotePoint<In> extends Typed<{ input: In }> {
 	readonly kind: "vote";
 }
 
+/**
+ * Every contributor saves its part of a change inside the owner's transaction (the input carries
+ * it), one after another, and answers the `Problem`s that keep it from saving, or nothing. The
+ * first problems stop the rest, and the owner refuses the change, which rolls the transaction back.
+ */
+export interface SaveHookPoint<In, Problem> extends Typed<{ input: In; problem: Problem }> {
+	readonly id: string;
+	readonly kind: "save";
+}
+
 /** Declares a collector: contributors answer with `Out` about `In`. */
 export const defineCollector = <In, Out>(
 	id: string,
@@ -69,6 +79,12 @@ export const defineEvent = <Payload>(id: string): EventPoint<Payload> => ({ id, 
 
 /** Declares a vote about `In`. */
 export const defineVote = <In>(id: string): VotePoint<In> => ({ id, kind: "vote" });
+
+/** Declares a save hook: contributors save their part of `In`, or answer `Problem`s. */
+export const defineSaveHook = <In, Problem>(id: string): SaveHookPoint<In, Problem> => ({
+	id,
+	kind: "save",
+});
 
 /** A place on the owner's pages where modules add components, which get `Props`. */
 export interface SlotPoint<Props extends Record<string, unknown>> extends Typed<{ props: Props }> {

@@ -13,7 +13,8 @@ import type { PriceAdjustment } from "#lib/orders/extensions.ts";
  *   sent invoice past its due date is overdue; that isn't stored.
  * - **Totals** are in cents: the subtotal is the sum of the lines, the VAT is the subtotal times
  *   the rate rounded to the cent (half away from zero), the total is both.
- * - **Orders** become a line at their price before adjustments (materials and labour), followed by
+ * - **Orders** become a line at their price before adjustments (labour and the costs the tenant's
+ *   modules add, e.g. materials), followed by
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
@@ -119,17 +120,22 @@ const single = (
 });
 
 /**
- * The lines for an order: its materials and labour, then each adjustment. They add up to the
- * order's `total`, which is never below zero: should the adjustments take off more than the
- * order costs, the last one takes off only what's left. `detail` is the first line's detail,
+ * The lines for an order: its costs (e.g. materials) and labour, then each adjustment. They add up
+ * to the order's `total`, which is never below zero: should the adjustments take off more than the
+ * order costs, the last one takes off only what's left. `detail` is the first line's detail, e.g.
  * "Materials and labour" in the language of whoever bills it (lines are stored as text).
  */
 export function orderLines(
 	order: { id: number; number: string; description: string },
-	price: { materials: number; labor: number; adjustments: PriceAdjustment[]; total: number },
+	price: {
+		costs: readonly { amount: number }[];
+		labor: number;
+		adjustments: PriceAdjustment[];
+		total: number;
+	},
 	detail: string,
 ): LineDraft[] {
-	const gross = price.materials + price.labor;
+	const gross = price.costs.reduce((sum, cost) => sum + cost.amount, price.labor);
 	const lines = [
 		single(`${order.number}: ${order.description}`, detail, gross, {
 			orderId: order.id,

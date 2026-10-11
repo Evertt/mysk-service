@@ -51,17 +51,20 @@ test("the migrations build the schema's tables from an empty database", async ()
 	client.close();
 });
 
-test("the schedule's migration switches the schedule on for every organization there is", async () => {
+test.each([
+	["0003_enable-schedule", "schedule"],
+	["0005_enable-materials", "materials"],
+])("%s switches %s on for every organization there is", async (tag, moduleId) => {
 	// The migrations before it, in a copy of the folder whose journal stops there.
-	const before = join(folder, "before-schedule");
+	const before = join(folder, `before-${moduleId}`);
 	cpSync(migrationsFolder, before, { recursive: true });
-	const index = journal.entries.findIndex((entry) => entry.tag === "0003_enable-schedule");
+	const index = journal.entries.findIndex((entry) => entry.tag === tag);
 	expect(index).toBeGreaterThan(0);
 	writeFileSync(
 		join(before, "meta/_journal.json"),
 		JSON.stringify({ ...journal, entries: journal.entries.slice(0, index) }),
 	);
-	const client = createClient({ url: `file:${join(folder, "schedule.db")}` });
+	const client = createClient({ url: `file:${join(folder, `${moduleId}.db`)}` });
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(`
 		insert into organization (id, name, slug, created_at)
@@ -72,19 +75,17 @@ test("the schedule's migration switches the schedule on for every organization t
 	const { rows } = await client.execute(
 		"select organization_id, module_id, created_at from organization_module order by 1, 2",
 	);
+	const own = rows.filter((row) => row.module_id === moduleId);
 	// On since the organization was made: its time in milliseconds, the row's in seconds.
-	expect(
-		rows
-			.filter((row) => row.module_id === "schedule")
-			.map((row) => [row.organization_id, row.created_at]),
-	).toEqual([
+	expect(own.map((row) => [row.organization_id, row.created_at])).toEqual([
 		["a", 1791000000],
 		["b", 1792000000],
 	]);
-	expect(rows.map((row) => [row.organization_id, row.module_id])).toEqual([
-		["a", "schedule"],
-		["b", "contracts"],
-		["b", "schedule"],
-	]);
+	// The other rows are left as they were.
+	expect(
+		rows
+			.filter((row) => row.organization_id === "b" && row.module_id === "contracts")
+			.map((row) => row.created_at),
+	).toHaveLength(1);
 	client.close();
 });

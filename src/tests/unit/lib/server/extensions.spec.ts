@@ -1,7 +1,12 @@
 import { createClient } from "@libsql/client";
 import { afterEach, expect, test, vi } from "vite-plus/test";
 
-import { defineCollector, defineEvent, defineVote } from "#lib/extensions/define.ts";
+import {
+	defineCollector,
+	defineEvent,
+	defineSaveHook,
+	defineVote,
+} from "#lib/extensions/define.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { drizzleQueued } from "#lib/server/db/serialize.ts";
 import {
@@ -9,6 +14,7 @@ import {
 	contribute,
 	defineServerModule,
 	emit,
+	save,
 	type ServerModule,
 	vote,
 } from "#lib/server/extensions.ts";
@@ -39,6 +45,7 @@ const skipping = defineCollector<number, string>("test.skipping", { onError: "sk
 const failing = defineCollector<number, string>("test.failing", { onError: "fail" });
 const voting = defineVote<number>("test.voting");
 const happened = defineEvent<string>("test.happened");
+const saving = defineSaveHook<{ saved: string[]; refuse: string[] }, string>("test.saving");
 // Points that module `a` owns, which `b` enhances.
 const offered = defineCollector<number, string>("a.offered", { onError: "fail" });
 const announced = defineEvent<string>("a.announced");
@@ -58,6 +65,10 @@ registry.modules = [
 		contribute(failing, async (n) => `a:${n}`),
 		contribute(voting, async () => undefined),
 		contribute(happened, (what) => void told.push(`a ${what}`)),
+		contribute(saving, async ({ saved, refuse }) => {
+			saved.push("a");
+			return refuse.includes("a") ? ["a refuses"] : undefined;
+		}),
 	]),
 	fake("b", [
 		contribute(skipping, broken("b")),
@@ -71,6 +82,10 @@ registry.modules = [
 		contribute(point, async (n) => `c:${n}`),
 		contribute(voting, async () => undefined),
 		contribute(happened, async (what) => void told.push(`c ${what}`)),
+		contribute(saving, async ({ saved, refuse }) => {
+			saved.push("c");
+			return refuse.includes("c") ? ["c refuses", "c refuses again"] : [];
+		}),
 	]),
 ];
 
@@ -101,6 +116,22 @@ test("vote returns every refusal", async () => {
 	expect(await vote(voting, 1, ["a", "b", "c"])).toEqual(["b refuses"]);
 	expect(await vote(voting, 0, ["a", "b", "c"])).toEqual([]);
 	expect(await vote(voting, 1, ["a", "c"])).toEqual([]);
+});
+
+test("save lets the modules that are on save their part, one after another", async () => {
+	const input = { saved: [] as string[], refuse: [] as string[] };
+	expect(await save(saving, input, ["c", "b", "a"])).toEqual([]);
+	expect(input.saved).toEqual(["a", "c"]);
+});
+
+test("save stops at the first module that answers problems", async () => {
+	const first = { saved: [] as string[], refuse: ["a", "c"] };
+	expect(await save(saving, first, ["a", "c"])).toEqual(["a refuses"]);
+	expect(first.saved).toEqual(["a"]);
+	const later = { saved: [] as string[], refuse: ["c"] };
+	expect(await save(saving, later, ["a", "c"])).toEqual(["c refuses", "c refuses again"]);
+	// Not asked while off.
+	expect(await save(saving, { saved: [], refuse: ["c"] }, ["a"])).toEqual([]);
 });
 
 test("a module's point isn't dispatched while its owner is off", async () => {

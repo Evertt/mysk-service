@@ -3,8 +3,10 @@
 	import LockIcon from "@lucide/svelte/icons/lock";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { isEditableOrder } from "#lib/models.ts";
 	import { OrderForm } from "#lib/orders/components.ts";
+	import { form as formParts } from "#lib/orders/extensions.ts";
 	import { getOrder, getOrderFormOptions, updateOrder } from "#lib/orders/remotes.ts";
 
 	import type { PageProps } from "./$types";
@@ -35,7 +37,11 @@
 		{order}
 		options={await getOrderFormOptions()}
 		cancelHref={orderHref}
-	/>
+	>
+		{#snippet parts(fields)}
+			<ExtensionSlot point={formParts} props={{ fields, order: { id: order.id } }} />
+		{/snippet}
+	</OrderForm>
 {:else}
 	<Empty.Root class="border">
 		<Empty.Header>

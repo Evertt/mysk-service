@@ -17,7 +17,7 @@ import { invoice, invoiceLine, invoicingSettings } from "./schema.ts";
 const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
 /** The part of a tenant's core data that the invoices follow from. */
-type InvoicedData = Pick<TenantData, "engineers" | "orders" | "orderLines">;
+type InvoicedData = Pick<TenantData, "engineers" | "orders">;
 
 /**
  * Invoices for the orders the generator marked invoiced: one per customer for each month's work,
@@ -34,26 +34,27 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 	random.seed(seed);
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const engineers = new Map(data.engineers.map((e) => [e.id, e]));
-	const linesOf = Map.groupBy(data.orderLines, (line) => line.orderId);
 
 	/** An order's price, as `priceOrders()` makes it with the tenant's modules. */
 	function price(o: SeedOrder) {
-		const materials = (linesOf.get(o.id) ?? []).reduce(
-			(sum, line) => sum + Math.round(line.quantity * line.unitPrice),
-			0,
-		);
+		const costs = collect.costs(o);
+		const costsTotal = costs.reduce((sum, cost) => sum + cost.amount, 0);
 		const rate = o.engineerId ? engineers.get(o.engineerId)!.hourlyRate : 8500;
 		const labor = Math.round(o.laborHours * rate);
-		const adjustments = collect.adjustPrices(o, { materials, labor });
+		const adjustments = collect.adjustPrices(o, { costs: costsTotal, labor });
 		const total = Math.max(
 			0,
-			adjustments.reduce((sum, adjustment) => sum + adjustment.amount, materials + labor),
+			adjustments.reduce((sum, adjustment) => sum + adjustment.amount, costsTotal + labor),
 		);
-		return { materials, labor, adjustments, total };
+		return { costs, labor, adjustments, total };
 	}
 
-	// The seed's texts are in Dutch.
-	const billedDetail = "Materialen en arbeid";
+	// What an order's line says it is, like `orderLineDetail()` in `billable.ts`, in Dutch (the
+	// seed's texts are): "Materialen en arbeid", or "Arbeid" without costs.
+	const detailOf = (o: SeedOrder) => {
+		const costs = collect.costs(o);
+		return costs.length ? `${costs.map((cost) => cost.label).join(", ")} en arbeid` : "Arbeid";
+	};
 	// One invoice per customer and month of work (or of fees).
 	const groups = new Map<string, { customerId: number; month: Date; lines: LineDraft[] }>();
 	const groupOf = (customerId: number, date: Date) => {
@@ -66,7 +67,7 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 		.filter((o) => o.status === "invoiced")
 		.sort((a, b) => a.completedAt!.getTime() - b.completedAt!.getTime());
 	for (const o of invoiced)
-		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o), billedDetail));
+		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o), detailOf(o)));
 	const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 	for (const item of collect.billableItems({ from: billFrom, until: lastMonthEnd })) {
 		groupOf(item.customerId, item.date).lines.push(itemLine(item));
@@ -124,7 +125,7 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 		createdAt: addDays(now, -1),
 		lines: completed
 			.filter((o) => o.customerId === customerId)
-			.flatMap((o) => orderLines(o, price(o), billedDetail)),
+			.flatMap((o) => orderLines(o, price(o), detailOf(o))),
 	}));
 
 	return [...issued, ...drafts].map((invoice, i) => ({
@@ -149,7 +150,7 @@ export default defineSeed<InvoicedData>({
 
 	// What the invoices follow from; they are made in `run()`, when every module has made its data
 	// and can be asked what it adds to prices and what it bills (the collectors).
-	generate: ({ engineers, orders, orderLines }) => ({ engineers, orders, orderLines }),
+	generate: ({ engineers, orders }) => ({ engineers, orders }),
 
 	async run({ tx, tenants, insertAll, count }) {
 		// Ids are global, so each tenant's invoices follow the ones before.

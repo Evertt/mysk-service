@@ -48,6 +48,7 @@ describe("findPoints", () => {
 				`// export const old = defineEvent("orders.old");`,
 				`export const committed = defineEvent<OrderChange>("orders.committed");`,
 				`export const refuseDelete = defineVote<{ f: (x: number) => void }>("orders.refuseDelete");`,
+				`export const saving = defineSaveHook<OrderSaving, OrderProblem>("orders.saving");`,
 				`export const notAPoint = somethingElse("orders.nope");`,
 			].join("\n"),
 		);
@@ -93,6 +94,13 @@ describe("findPoints", () => {
 				owner: "orders",
 				file: orders,
 				exportName: "refuseDelete",
+			},
+			{
+				id: "orders.saving",
+				kind: "save",
+				owner: "orders",
+				file: orders,
+				exportName: "saving",
 			},
 			{
 				id: "invoicing.billableItems",

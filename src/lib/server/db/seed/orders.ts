@@ -13,7 +13,6 @@ import { addDays, DAY, now } from "./clock.ts";
 import type { generateCustomers } from "./customers.ts";
 import type { generateEngineers } from "./engineers.ts";
 import type { generateEquipment } from "./equipment.ts";
-import type { generateMaterials } from "./materials.ts";
 
 const repairs: Record<EquipmentCategory, string[]> = {
 	generator: [
@@ -84,13 +83,6 @@ const laborRange: Record<OrderType, [number, number]> = {
 	inspection: [1, 3],
 };
 
-const linesRange: Record<OrderType, [number, number]> = {
-	installation: [3, 8],
-	maintenance: [1, 4],
-	repair: [1, 4],
-	inspection: [0, 1],
-};
-
 type Engineer = ReturnType<typeof generateEngineers>[number];
 
 /** Derives a status (and matching dates) from when the order was created. */
@@ -118,8 +110,8 @@ function lifecycle(
 }
 
 /**
- * One tenant's orders (oldest first, ids from 1) and their material lines. An order only
- * references equipment of its customer, and gets an engineer whose specialty fits the equipment.
+ * One tenant's orders (oldest first, ids from 1). An order only references equipment of its
+ * customer, and gets an engineer whose specialty fits the equipment.
  */
 export function generateOrders(
 	faker: Faker,
@@ -128,12 +120,10 @@ export function generateOrders(
 		customers,
 		equipments,
 		engineers,
-		materials,
 	}: {
 		customers: ReturnType<typeof generateCustomers>;
 		equipments: ReturnType<typeof generateEquipment>;
 		engineers: Engineer[];
-		materials: ReturnType<typeof generateMaterials>;
 	},
 ) {
 	const engineersBySpecialty = Object.groupBy(engineers, (e) => e.specialty);
@@ -200,21 +190,5 @@ export function generateOrders(
 			...o,
 		}));
 
-	const orderLines = orders.flatMap((o) => {
-		const [min, max] = linesRange[o.type];
-		const picked = faker.helpers.arrayElements(materials, faker.number.int({ min, max }));
-		// Older orders were priced a little lower than today's list price.
-		const ageInYears = (now.getTime() - o.createdAt.getTime()) / (365 * DAY);
-		return picked.map((m) => ({
-			orderId: o.id,
-			materialId: m.id,
-			quantity:
-				m.unit === "pcs"
-					? faker.number.int({ min: 1, max: 6 })
-					: faker.number.float({ min: 0.5, max: 25, fractionDigits: 2 }),
-			unitPrice: Math.round(m.unitPrice * (1 - 0.04 * ageInYears)),
-		}));
-	});
-
-	return { orders, orderLines };
+	return orders;
 }

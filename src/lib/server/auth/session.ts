@@ -149,10 +149,11 @@ export const tenantJoin = <T extends TenantTable>(table: T, foreignKey: SQLiteCo
 /**
  * The current tenant, if it has `moduleId`; otherwise a 404, as if the module's pages and data
  * didn't exist. The gate of a module's remote functions (`moduleRemote()` in
- * `#lib/server/remote-functions.ts`) and endpoints.
+ * `#lib/server/remote-functions.ts`) and endpoints. Office members only, unless `anyRole` (the
+ * engineer portal's, whose own gate follows).
  */
-export function requireModule(moduleId: ModuleId) {
-	const tenant = requireMember();
+export function requireModule(moduleId: ModuleId, { anyRole = false } = {}) {
+	const tenant = anyRole ? requireTenant() : requireMember();
 	if (!tenant.modules.includes(moduleId)) error(404, m.common_error_not_found());
 	return tenant;
 }

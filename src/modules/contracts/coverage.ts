@@ -8,7 +8,8 @@
  *   response counts.
  * - **Price**: what's included costs the customer nothing; it shows as a discount on the order.
  *   Basic includes no work (only the guaranteed response time), standard includes labour, premium
- *   includes labour and materials.
+ *   includes labour and materials (every cost the tenant's modules add to an order: today, its
+ *   materials).
  * - **Response time (SLA)**: covered repairs are call-outs, to be responded to within the
  *   contract's response time from when the order was created. An order counts as responded to once
  *   it's scheduled (or further along: in progress, completed, invoiced). Until then it's on track,
@@ -20,11 +21,14 @@ import type { OrderStatus, OrderType } from "#lib/models.ts";
 import { contractLabels } from "./labels.ts";
 import { type ContractLevel, contractStatus } from "./model.ts";
 
-/** What each level includes. */
-const included: Record<ContractLevel, { labor: boolean; materials: boolean }> = {
-	basic: { labor: false, materials: false },
-	standard: { labor: true, materials: false },
-	premium: { labor: true, materials: true },
+/**
+ * What each level includes: labour, and the costs the tenant's modules add to an order (its
+ * materials, today the only one).
+ */
+const included: Record<ContractLevel, { labor: boolean; costs: boolean }> = {
+	basic: { labor: false, costs: false },
+	standard: { labor: true, costs: false },
+	premium: { labor: true, costs: true },
 };
 
 const includedLabels: Record<ContractLevel, () => string> = {
@@ -52,11 +56,12 @@ export function coveringContract<T extends { startsOn: Date; endsOn: Date; respo
 		);
 }
 
-/** The part of an order's price (in cents) that a contract of `level` includes. */
-export function coveredAmount(level: ContractLevel, price: { materials: number; labor: number }) {
-	return (
-		(included[level].labor ? price.labor : 0) + (included[level].materials ? price.materials : 0)
-	);
+/**
+ * The part of an order's price (in cents) that a contract of `level` includes, of its labour and
+ * its costs (what the tenant's modules add, added up).
+ */
+export function coveredAmount(level: ContractLevel, price: { costs: number; labor: number }) {
+	return (included[level].labor ? price.labor : 0) + (included[level].costs ? price.costs : 0);
 }
 
 /** "Covered by CTR-2026-0004 (Premium)" */

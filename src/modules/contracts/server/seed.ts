@@ -9,6 +9,7 @@ import {
 	type SeedOrder,
 	type TenantDraft,
 } from "#lib/server/db/seed/module-seed.ts";
+import type { MaterialsDraft } from "#modules/materials/api/seed.ts";
 
 import { type ContractLevel, contractNumberFormat, defaultResponseHours } from "../model.ts";
 import { type ContractMonth, contractMonths, monthlyFee } from "./billing.ts";
@@ -150,7 +151,7 @@ export function generateContractTerms(
 }
 
 /**
- * Repairs on covered units that aren't scheduled yet, with their lines, so the module's response
+ * Repairs on covered units that aren't scheduled yet, so the module's response
  * times (see `../coverage.ts`) have something to show: one overdue, one at
  * risk (on the slowest contract, so it stays at risk for a while), one on track. Fixed rather than
  * random, and made last, so the rest of the data stays the same. The orders get ids after the
@@ -160,7 +161,6 @@ export function generateCallOuts(
 	contractTerms: ContractTerm[],
 	orderCount: number,
 	equipments: TenantDraft["equipments"],
-	materials: TenantDraft["materials"],
 ) {
 	const running = contractTerms
 		.filter((c) => c.startsOn <= now && now < addDays(c.endsOn, 1))
@@ -206,13 +206,23 @@ export function generateCallOuts(
 			createdAt,
 		};
 	});
-	const orderLines = orders.map((o) => ({
-		orderId: o.id,
-		materialId: materials[3].id,
-		quantity: 2,
-		unitPrice: materials[3].unitPrice,
-	}));
-	return { orders, orderLines };
+	return orders;
+}
+
+/**
+ * The call-outs' material lines, for a tenant that has materials (contracts enhance them): two of
+ * the catalog's fourth material each, at its list price.
+ */
+function callOutLines(orders: { id: number }[], materials: MaterialsDraft) {
+	const part = materials.materials[3];
+	materials.orderLines.push(
+		...orders.map((o) => ({
+			orderId: o.id,
+			materialId: part.id,
+			quantity: 2,
+			unitPrice: part.unitPrice,
+		})),
+	);
 }
 
 // --- What invoices need to know (collectors, see `ModuleSeed`) ----------------------------------
@@ -266,14 +276,10 @@ export default defineSeed<ContractsSeed>({
 	// Right after the core's data, with its faker: the terms and the call-outs follow from it.
 	generate(draft, previous) {
 		const terms = generateContractTerms(draft.faker, draft.customers, draft.equipments);
-		const callOuts = generateCallOuts(
-			terms,
-			draft.orders.length,
-			draft.equipments,
-			draft.materials,
-		);
-		draft.orders.push(...callOuts.orders);
-		draft.orderLines.push(...callOuts.orderLines);
+		const callOuts = generateCallOuts(terms, draft.orders.length, draft.equipments);
+		draft.orders.push(...callOuts);
+		const materials = draft.modules.materials as MaterialsDraft | undefined;
+		if (materials) callOutLines(callOuts, materials);
 		const coverage = new Map<number, ContractTerm[]>();
 		for (const term of terms) {
 			for (const id of term.equipmentIds) coverage.set(id, [...(coverage.get(id) ?? []), term]);
@@ -283,10 +289,10 @@ export default defineSeed<ContractsSeed>({
 	},
 
 	// The work a contract includes is free, like `orders.adjustPrices` in `server/index.ts`.
-	adjustPrices({ coverage }, order, { materials, labor }) {
+	adjustPrices({ coverage }, order, { costs, labor }) {
 		const term = coveringTerm(coverage, order);
 		const included =
-			term?.level === "premium" ? labor + materials : term?.level === "standard" ? labor : 0;
+			term?.level === "premium" ? labor + costs : term?.level === "standard" ? labor : 0;
 		if (!term || !included) return [];
 		return [
 			{

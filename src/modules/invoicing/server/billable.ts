@@ -6,10 +6,10 @@
  * invoiced; voiding a sent one puts them back. Making the invoice is in `./invoices.ts`, the rules
  * in `../invoice.ts`.
  */
-import { and, asc, eq, inArray, ne, notExists, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, notExists, or } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
@@ -30,10 +30,18 @@ export interface BillableOrder {
 	total: number;
 }
 
+/**
+ * What an order's line says under it: what its price is made of, "Materials and labour" from the
+ * costs the tenant's modules add, or "Labour" when there are none. Stored, so in the language of
+ * whoever bills it.
+ */
+const orderLineDetail = (costs: readonly { label: string }[]) =>
+	costs.length
+		? m.invoices_line_costs_labour({ costs: costs.map((cost) => cost.label).join(", ") })
+		: m.invoices_line_labour();
+
 /** The customer's completed orders that aren't on an invoice yet, oldest first, priced. */
 async function billableOrders(customerId: number): Promise<BillableOrder[]> {
-	const materials = materialsPerOrder();
-
 	const rows = await db
 		.select({
 			id: order.id,
@@ -46,10 +54,8 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 			completedAt: order.completedAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
@@ -79,7 +85,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 		number: row.number,
 		description: row.description,
 		completedAt: row.completedAt,
-		lines: orderLines(row, prices[i], m.invoices_line_materials_labour()),
+		lines: orderLines(row, prices[i], orderLineDetail(prices[i].costs)),
 		total: prices[i].total,
 	}));
 }

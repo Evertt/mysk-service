@@ -87,12 +87,17 @@ Implementation plans, one per step of its order of work:
 3. [module-dependencies-3-schedule.md](module-dependencies-3-schedule.md) ✅ done: the planning
    board as the optional module `src/modules/schedule/`, writing orders through a core scheduling
    service; `nav: { after }`; and the switching fixes carried from step 1.
-4. The portal pilot (after roles), 5. the inspector: not written yet.
+4. [module-dependencies-4-materials.md](module-dependencies-4-materials.md) ✅ done (on branch
+   `materials-module`, for review): the core materials domain as the optional module
+   `src/modules/materials/`, with the extension points it needed (`orders.costs`, the save hook
+   `orders.saving`, the form slot `orders.form`, `dashboard.stats`, `portal.order`). Its last
+   section weighs what the module system gained against what got more indirect.
+5. The portal pilot (after roles), 6. the inspector: not written yet.
 
 Carried from step 1 into the later plans (from its reviews):
 
-- **For the first plan with a real `requires` or `alwaysOn` module** (carried by step 3: the
-  schedule has neither, so its specs use the made-up graph): the e2e of the settings page's
+- **For the first plan with a real `requires` or `alwaysOn` module** (carried by steps 3 and 4:
+  neither the schedule nor materials has one, so their specs use the made-up graph): the e2e of the settings page's
   dependency prompts (switching on names what it also switches on; switching off asks first), and of
   a tampered refusal for an unmet requirement or an always-on module.
 - **Merging the held `deferred-dashboard-slots` branch** (dashboard module cards rendered in the

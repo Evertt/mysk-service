@@ -1,12 +1,11 @@
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { DAY } from "#lib/dates.ts";
-import { stockLevel } from "#lib/materials/index.ts";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import {
@@ -31,8 +30,6 @@ export const getDashboard = forMembers.query(async () => {
 		.from(order)
 		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)));
 
-	const materials = materialsPerOrder();
-
 	// Work completed in the last 30 days, priced like everywhere else.
 	const done = await db
 		.select({
@@ -43,10 +40,8 @@ export const getDashboard = forMembers.query(async () => {
 			createdAt: order.createdAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
@@ -85,20 +80,7 @@ export const getDashboard = forMembers.query(async () => {
 		.orderBy(asc(order.scheduledFor))
 		.limit(6);
 
-	// Materials running low or out, by the same levels as the materials list.
-	const levels = (
-		await db
-			.select({ stock: material.stock, unit: material.unit })
-			.from(material)
-			.where(inTenant(material))
-	).map((row) => stockLevel(row.stock, row.unit));
-	const stock = {
-		low: levels.filter((level) => level === "low").length,
-		out: levels.filter((level) => level === "out").length,
-		total: levels.length,
-	};
-
-	return { open, revenue, fleet, upcoming, stock };
+	return { open, revenue, fleet, upcoming };
 });
 
 /**
@@ -120,7 +102,6 @@ export const getCharts = forMembers.query(async () => {
 		.where(and(inTenant(order), gte(order.createdAt, weeks[0])))
 		.groupBy(week, order.status);
 
-	const materials = materialsPerOrder();
 	const done = await db
 		.select({
 			id: order.id,
@@ -131,10 +112,8 @@ export const getCharts = forMembers.query(async () => {
 			completedAt: order.completedAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(

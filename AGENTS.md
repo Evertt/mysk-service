@@ -20,7 +20,7 @@ with two exceptions: **tests** are never next to their subject (they are in `tes
 of the app shell, the dashboard, the auth pages and the engineer portal, which belong to no core
 domain. Whatever belongs to a core domain lives in that domain's folder.
 
-- **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`, `materials`): in
+- **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`): in
   `src/lib/<domain>/`, in a folder by feature. Its tests are not in it: see "Tests".
   - `ui/`: the small pieces other sections reuse: links, badges, labels, cards, tags
     (`#lib/orders/ui/order-link.svelte`).
@@ -29,7 +29,7 @@ domain. Whatever belongs to a core domain lives in that domain's folder.
   - `form/`: the new/edit form, its fields and valibot schema.
   - `detail/`: what only the detail page shows: cards, history, dialogs, their helpers and remote
     functions.
-  - `server/`: server-only code: services (`pricing.ts`, `stock.ts`), hooks, and the list's `ListSql`
+  - `server/`: server-only code: services (`pricing.ts`, `scheduling.ts`), hooks, and the list's `ListSql`
     in `list-sql.ts`.
   - at the root: `display.ts` (display maps, options, domain rules), `extensions.ts` (the domain's
     extension points), `countries.ts`-like data, and the record's own remote functions
@@ -41,7 +41,7 @@ domain. Whatever belongs to a core domain lives in that domain's folder.
   (plain TS: display maps, list definitions, data; safe to load anywhere Vite's Svelte plugin runs),
   `components.ts` (Svelte components), `remotes.ts` (re-exports the `*.remote.ts` files; not named
   `remote.ts`, which SvelteKit would treat as a remote module) and `server/index.ts` (server-only;
-  only orders and materials have one: add one when something outside needs it).
+  only orders has one: add one when something outside needs it).
   E.g. `import { OrderLink } from "#lib/orders/components.ts"`. A barrel exports what something
   outside the domain imports, no more. Exceptions: `#lib/<domain>/extensions.ts` is imported as itself
   (the module generator reads it and the modules contribute to it at module scope), and the tests (`src/tests/` and
@@ -122,8 +122,8 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/modules/invoicing/server/invoices.ts`. An order is created only through
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`, in `#lib/orders/server/index.ts`),
   which checks each draft's customer, unit and engineer, numbers, inserts and logs it: core's order
-  form calls it (and saves the lines with `saveOrderLines()` after it), and so do the modules
-  (maintenance's "Create orders"). It doesn't emit `orders.committed`, which is for orders the
+  form calls it (and saves its modules' parts with `saveOrderParts()` after it, see below), and so
+  do the modules (maintenance's "Create orders"). It doesn't emit `orders.committed`, which is for orders the
   client's pages already show.
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
@@ -138,24 +138,33 @@ helpers are in `src/lib/server/auth/session.ts`:
   page), bulk actions on tables' selections and columns in server-side lists, and to its owners'
   server logic through hooks; all only take part for tenants that have the module.
   A hook is an extension point its owner declares (`#lib/extensions/define.ts`): core's in
-  `src/lib/<domain>/extensions.ts` (`orders.adjustPrices`, `orders.tag`, `orders.committed` in
-  `src/lib/orders/extensions.ts`), a module's in its `api/extensions.ts`
+  `src/lib/<domain>/extensions.ts` (`orders.costs`, `orders.adjustPrices`, `orders.tag`,
+  `orders.committed`, `orders.saving` in `src/lib/orders/extensions.ts`), a module's in its
+  `api/extensions.ts`
   (`invoicing.billableItems`). A module contributes in its `server/index.ts`:
   `defineServerModule(id, [contribute(adjustPrices, …), …])`, with the point imported from its
   owner. The owner calls it through the kernel (`src/lib/server/extensions.ts`), for the modules
   that are on, in registry order: `collect()` for a collector (asked in parallel about a batch;
   the point's `onError` says whether an error fails the request, `fail`, or is logged and left
   out, `skip`), `emit()` for an event after commit (via `afterCommit()` in
-  `src/lib/server/db/serialize.ts`; errors are logged, not thrown) and `vote()` for a vote (any
-  refusal wins). Each point has one caller in its owner's domain (`priceOrders()`, `tagOrders()`
-  and `orderCommitted()` in `src/lib/orders/server/`, `offeredItems()` in invoicing's
+  `src/lib/server/db/serialize.ts`; errors are logged, not thrown), `vote()` for a vote (any
+  refusal wins) and `save()` for a save hook (each module saves its part in the owner's
+  transaction, which the input carries, one after another; the first that answers problems stops
+  the rest, and the owner refuses the change, rolling the transaction back). Each point has one
+  caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()` and
+  `saveOrderParts()` in `src/lib/orders/server/`, `offeredItems()` in invoicing's
   `server/billable.ts`); a new extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
-  (`src/lib/orders/server/pricing.ts`), which applies the modules' adjustments.
+  (`src/lib/orders/server/pricing.ts`): labour, the costs the modules add (`orders.costs`, e.g.
+  materials, with what they're made of when asked for `items`) and their adjustments.
+  Every change to an order's status, its form's save and its deletion goes through
+  `saveOrderParts()` (`orders.saving`), which throws an `OrderRefused` with the problems of a module
+  that refuses (e.g. a shortage of stock); the caller shows them on the form's fields or as a
+  message. The order form's slot `orders.form` renders the modules' parts of it, named under
+  `fields.modules.<id>` and handed to the module, as submitted, as the save's `form`.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
   `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
-  (`records.ts`), `refuse()` for refusing a form with its problems (`forms.ts`), and in pricing
-  `lineTotalSql()` and `materialsPerOrder()` for the SQL twins of an order line's total.
+  (`records.ts`) and `refuse()` for refusing a form with its problems (`forms.ts`).
 
 ## Modules
 
@@ -296,20 +305,29 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Contracts, invoicing, maintenance and the schedule are the modules (`src/modules/contracts/`,
-`src/modules/invoicing/`, `src/modules/maintenance/`, `src/modules/schedule/`: look there for an
-example of each part; the registries list them by id). The schedule is the one without tables of its own: a view of the
+Contracts, invoicing, maintenance, materials and the schedule are the modules
+(`src/modules/contracts/`, `src/modules/invoicing/`, `src/modules/maintenance/`,
+`src/modules/materials/`, `src/modules/schedule/`: look there for an example of each part; the
+registries list them by id). The schedule is the one without tables of its own: a view of the
 orders, which changes them through a core service and owns only its route, components and messages.
 Maintenance (plans per unit, turned into orders) was the first built from scratch: look there for a
 module's own server-side list with a bulk action (`list/due-list.ts`, `server/list-sql.ts`), a column
 in a core list (`columns/`, `server/columns/`), a contribution to another module's slot
 (`slots/contracts.detail.side/`) and records created through a core service (`server/orders.ts`).
+Materials was core until it became a module: look there for a module whose tables core used to own
+(order lines and the stock ledger), a cost in orders' prices (`orders.costs`), a part of the order
+form saved in its transaction (`slots/orders.form/`, `orders.saving`), stat cards on the dashboard
+(`dashboard.stats`), a card on the engineer portal's order page (`portal.order`, with
+`moduleRemote(id, "engineer")`), and seed steps in the middle of the core's generation (`during`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,
-slot options (order, roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
+slot options (order, roles), `settings.cards`, and a save hook for other records than orders.
 
-- A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`): `generate()` makes its
+- A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`), and may have steps
+  `during` the core's generation (after the equipment, after the orders), with the tenant's faker
+  there, for data the core used to make in the middle of its own (materials' catalog and lines):
+  that keeps the demo data the same. `generate()` makes its
   data for a tenant right after the core's, with the same faker (so the demo data doesn't change
   with where the module's code lives), and may add to the core's draft (contracts adds call-out
   orders); `run()` inserts it. A module that adds nothing to the draft may draw from a faker of its
@@ -332,7 +350,7 @@ slot options (order, roles), `settings.cards`, and the server `refuseChange`/`sa
 
 ## Server-side lists
 
-Orders, equipment and materials page, filter and sort in the database. A list is three layers (the
+Orders, equipment and the materials module's list page, filter and sort in the database. A list is three layers (the
 orders list in `src/lib/orders/` is the example):
 
 1. **The definition**, `defineList()` in `list/<section>-list.ts` (`orders-list.ts`; isomorphic, no
@@ -410,8 +428,9 @@ await db.transaction(async (tx) => {
 - Changes made outside the app's transactions (better-auth's member and invitation endpoints) log
   with `recordActivityAfter()` once they succeed. Pass `by` (tenant and user) when the change
   belongs to another organization than the current one, e.g. accepting an invitation.
-- An order's lines are logged by `saveOrderLines()` (`src/lib/orders/server/lines.ts`); stock that
-  follows an order's status needs no entry of its own beyond the status change.
+- An order's material lines are logged by the materials module (`saveLines()` in
+  `src/modules/materials/server/lines.ts`), against the order; stock that follows an order's
+  status needs no entry of its own beyond the status change.
 
 ## Translations
 
@@ -421,11 +440,11 @@ else English; on the server `paraglideMiddleware` (`hooks.server.ts`) sets it pe
 remote functions. Every user-facing text goes through a message; nothing English is hard-coded.
 
 - **Files**: `messages/<locale>/<section>.json`, one per section (`common`, `enum`, `validation`,
-  `auth`, `dashboard`, `orders`, `customers`, `equipment`, `engineers`, `materials`,
-  `settings`, `portal`, `activity`), each listed in `project.inlang/settings.json`. A new file goes
+  `auth`, `dashboard`, `orders`, `customers`, `equipment`, `engineers`, `settings`, `portal`,
+  `activity`), each listed in `project.inlang/settings.json`. A new file goes
   in every locale folder and in that list. A module's sections are in its own folder
-  (`src/modules/contracts/messages/<locale>/contracts.json`, `schedule.json` of the schedule, and
-  `invoices.json` of the invoicing module: the section's name is the key prefix, not the module's
+  (`src/modules/contracts/messages/<locale>/contracts.json`, `schedule.json` of the schedule,
+  `materials.json` of materials, and `invoices.json` of the invoicing module: the section's name is the key prefix, not the module's
   id), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:

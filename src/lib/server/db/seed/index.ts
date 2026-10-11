@@ -26,11 +26,10 @@ import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
-import { generateStockMovements } from "./stock.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
 
-const { customer, engineer, equipment, material, order, orderLine } = schema;
+const { customer, engineer, equipment, order } = schema;
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
@@ -49,8 +48,9 @@ async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>)
 
 /**
  * The demo organizations. North has all the modules (also the ones added later in
- * `src/modules`); South only invoicing, so the other modules' tests (contracts, the schedule) have
- * a tenant without them.
+ * `src/modules`); South only invoicing and materials, so the other modules' tests (contracts, the
+ * schedule) have a tenant without them. Materials were core until they became a module, and both
+ * kept them; their tests switch them off for South to see a tenant without them.
  */
 const tenants = [
 	{
@@ -63,7 +63,7 @@ const tenants = [
 	{
 		...demoOrganizations.south,
 		slug: "south",
-		modules: ["invoicing"] as string[],
+		modules: ["invoicing", "materials"] as string[],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320 },
 	},
@@ -84,11 +84,8 @@ await db.transaction(async (tx) => {
 		schema.savedView,
 		schema.orderSignoff,
 		schema.orderNote,
-		schema.stockMovement,
-		orderLine,
 		order,
 		equipment,
-		material,
 		engineer,
 		customer,
 		schema.organizationModule,
@@ -104,7 +101,6 @@ await db.transaction(async (tx) => {
 		customer: 0,
 		engineer: 0,
 		equipment: 0,
-		material: 0,
 		order: 0,
 	};
 	const seeded: SeedTenant<Record<string, unknown>>[] = [];
@@ -125,7 +121,11 @@ await db.transaction(async (tx) => {
 		}
 
 		faker.seed(tenant.seed);
-		const data = generateTenant(faker, tenant.size);
+		// The steps of the tenant's modules in the core's generation (see `ModuleSeed.during`).
+		const steps = moduleSeeds.flatMap(({ id, seed }) =>
+			tenant.modules.includes(id) && seed.during ? [seed.during] : [],
+		);
+		const data = generateTenant(faker, tenant.size, steps);
 		// The modules' data follows from the core's, with the same faker, and may add to it.
 		const generated: Record<string, unknown> = {};
 		for (const { id, seed } of moduleSeeds) {
@@ -145,7 +145,6 @@ await db.transaction(async (tx) => {
 				id: e.id + o.equipment,
 				customerId: e.customerId + o.customer,
 			})),
-			materials: data.materials.map((m) => ({ ...m, organizationId, id: m.id + o.material })),
 			orders: data.orders.map((r) => ({
 				...r,
 				organizationId,
@@ -154,27 +153,12 @@ await db.transaction(async (tx) => {
 				equipmentId: r.equipmentId && r.equipmentId + o.equipment,
 				engineerId: r.engineerId && r.engineerId + o.engineer,
 			})),
-			orderLines: data.orderLines.map((l) => ({
-				...l,
-				organizationId,
-				orderId: l.orderId + o.order,
-				materialId: l.materialId + o.material,
-			})),
-			stockMovements: generateStockMovements(data, tenant.seed).map((m) => ({
-				...m,
-				organizationId,
-				materialId: m.materialId + o.material,
-				orderId: m.orderId && m.orderId + o.order,
-			})),
 		};
 
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
 		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
-		await insertAll(rows.materials, (chunk) => tx.insert(material).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
-		await insertAll(rows.orderLines, (chunk) => tx.insert(orderLine).values(chunk));
-		await insertAll(rows.stockMovements, (chunk) => tx.insert(schema.stockMovement).values(chunk));
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>
@@ -209,7 +193,6 @@ await db.transaction(async (tx) => {
 		offset.customer += rows.customers.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
-		offset.material += rows.materials.length;
 		offset.order += rows.orders.length;
 		for (const [table, list] of Object.entries(rows)) count(table, list);
 	}

@@ -36,21 +36,6 @@
 			}
 		}
 	],
-	"dashboard_low_stock": "Low stock",
-	"dashboard_low_stock_of": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "{out} out of stock, of {countText} material",
-				"countPlural=*": "{out} out of stock, of {countText} materials"
-			}
-		}
-	],
 	"dashboard_orders_per_week": "Orders per week",
 	"dashboard_orders_per_week_description": "New orders in the last 12 weeks, by their status now.",
 	"dashboard_revenue_per_month": "Revenue per month",

@@ -7,7 +7,6 @@
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
-	import PackageIcon from "@lucide/svelte/icons/package";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 	import { type AppModule, modules } from "#lib/modules/manifests.ts";
@@ -63,12 +62,6 @@
 					title: m.common_nav_engineers(),
 					href: resolve("/(app)/engineers"),
 					icon: HardHatIcon,
-				},
-				{
-					id: "materials",
-					title: m.common_nav_materials(),
-					href: resolve("/(app)/materials"),
-					icon: PackageIcon,
 				},
 			],
 		},

@@ -120,7 +120,7 @@
 	"equipment_history_scheduled": "Gepland",
 	"equipment_history_completed": "Afgerond",
 	"equipment_history_labour": "Arbeid",
-	"equipment_history_materials": "Materialen · {cost}",
+	"equipment_history_cost": "{label} · {cost}",
 	"equipment_history_adjustments": "Aanpassingen",
 	"equipment_stats_orders": "Opdrachten",
 	"equipment_stats_open": "{count} open",

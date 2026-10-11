@@ -76,7 +76,8 @@
 		}
 	],
 	"invoices_invoice_number": "Factuur {number}",
-	"invoices_line_materials_labour": "Materialen en arbeid",
+	"invoices_line_costs_labour": "{costs} en arbeid",
+	"invoices_line_labour": "Arbeid",
 	"invoices_for": "Factuur voor {customer}",
 	"invoices_print": "Afdrukken",
 	"invoices_download_pdf": "Pdf downloaden",

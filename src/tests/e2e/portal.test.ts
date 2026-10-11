@@ -10,7 +10,6 @@ import {
 	mobileViewport,
 	organizations,
 	rows,
-	unbalancedStock,
 	useApp,
 	users,
 	value,
@@ -60,8 +59,6 @@ const movements = (number: string) =>
 		 where order_number = ? and organization_id = ? order by id`,
 		[number, north.id],
 	);
-const stockOf = (materialId: number) =>
-	value<number>(`select stock from material where id = ?`, [materialId]);
 
 /** The order numbers on the cards in a section of the list. */
 const cardsIn = (section: string) =>
@@ -157,44 +154,6 @@ describe("the engineer portal", () => {
 		expect((await orderByNumber(job.number)).labor_hours).toBe(2.75);
 	});
 
-	test("a material used comes out of stock, the same way as in the office", async () => {
-		const { page } = app;
-		const [part] = await rows<{ id: number; name: string; stock: number }>(
-			`select id, name, stock from material where organization_id = ? and unit = 'pcs'
-			 and stock >= 3 and id not in (select material_id from order_line where order_id = ?)
-			 order by id limit 1`,
-			[north.id, job.id],
-		);
-		const before = await movements(job.number);
-		await page.getByRole("button", { name: "Add material" }).click();
-		const line = page.locator("[data-line]").last();
-		await line.getByLabel("Material", { exact: true }).selectOption(String(part.id));
-		await line.getByLabel("Quantity").fill("2");
-		await page.getByRole("button", { name: "Save materials" }).click();
-		await app.toast("Materials saved");
-
-		expect(
-			await value(`select quantity from order_line where order_id = ? and material_id = ?`, [
-				job.id,
-				part.id,
-			]),
-		).toBe(2);
-		expect((await movements(job.number)).slice(before.length)).toEqual([
-			{ material_id: part.id, quantity: -2, kind: "consumption" },
-		]);
-		expect(await stockOf(part.id)).toBe(part.stock - 2);
-		expect(await unbalancedStock(north.id)).toEqual([]);
-
-		// More than there is is refused on the line, naming what's available, and changes nothing.
-		const stored = await snapshot(job.id);
-		await line.getByLabel("Quantity").fill(String(part.stock + 5));
-		await app.submit(page.getByRole("button", { name: "Save materials" }));
-		expect(await app.issues()).toEqual([`Only ${part.stock} pcs of ${part.name} in stock`]);
-		expect(await snapshot(job.id)).toEqual(stored);
-		expect(await stockOf(part.id)).toBe(part.stock - 2);
-		await line.getByLabel("Quantity").fill("2");
-	});
-
 	test("a note is kept with the order", async () => {
 		const { page } = app;
 		await page.getByLabel("Add a note").fill("Replaced the gasket; check again in spring.");
@@ -283,7 +242,7 @@ describe("the engineer portal", () => {
 			 or (parent_type = 'order' and parent_id = ?)) order by id`,
 			[north.id, String(job.id), String(job.id)],
 		);
-		const theirs = entries.slice(-5);
+		const theirs = entries.slice(-4);
 		for (const entry of theirs) {
 			expect(entry).toMatchObject({ user_id: engineer.user_id, user_name: name });
 		}
@@ -305,12 +264,6 @@ describe("the engineer portal", () => {
 				action: "updated",
 				subject_type: "order",
 				changes: { laborHours: [job.labor_hours, 2.75] },
-				note: null,
-			},
-			{
-				action: "created",
-				subject_type: "order_line",
-				changes: { quantity: [null, 2] },
 				note: null,
 			},
 			{

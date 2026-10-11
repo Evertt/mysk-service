@@ -100,7 +100,11 @@ describe("modules", () => {
 			await rows(`select * from organization_module where organization_id = ? order by module_id`, [
 				south.id,
 			]),
-		).toMatchObject([{ module_id: "contracts" }, { module_id: "invoicing" }]);
+		).toMatchObject([
+			{ module_id: "contracts" },
+			{ module_id: "invoicing" },
+			{ module_id: "materials" },
+		]);
 		expect(await moduleEntries("contracts", south.id, since)).toEqual([
 			{ action: "module_enabled" },
 		]);
@@ -115,10 +119,13 @@ describe("modules", () => {
 		const card = moduleCard(contracts);
 		await app.submit(card.getByRole("button", { name: "Disable" }));
 		await card.getByText("Disabled").waitFor();
-		// South's own module (invoicing) stays.
+		// South's own modules (invoicing, materials) stay.
 		expect(
-			await rows(`select module_id from organization_module where organization_id = ?`, [south.id]),
-		).toEqual([{ module_id: "invoicing" }]);
+			await rows(
+				`select module_id from organization_module where organization_id = ? order by module_id`,
+				[south.id],
+			),
+		).toEqual([{ module_id: "invoicing" }, { module_id: "materials" }]);
 		expect(await sidebarLink(contracts).count()).toBe(0);
 		expect((await app.go("/contracts"))?.status()).toBe(404);
 		// One entry for each change, none for invoicing, which stayed.

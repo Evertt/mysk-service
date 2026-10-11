@@ -3,9 +3,12 @@ import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { addDays } from "#lib/dates.ts";
-import { OrderStockShortage } from "#lib/materials/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
-import { type OrderPlan, scheduleOrder as planOrder } from "#lib/orders/server/index.ts";
+import {
+	type OrderPlan,
+	OrderRefused,
+	scheduleOrder as planOrder,
+} from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -83,7 +86,7 @@ async function plan(input: OrderPlan): Promise<Problem<"engineerId"> | undefined
 		return await db.transaction((tx) => planOrder(tx, input));
 	} catch (error) {
 		// Thrown, so the transaction stores nothing of it.
-		if (error instanceof OrderStockShortage) return { message: error.message };
+		if (error instanceof OrderRefused) return { message: error.message };
 		throw error;
 	}
 }

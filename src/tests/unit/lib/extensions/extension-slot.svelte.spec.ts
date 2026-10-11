@@ -48,7 +48,7 @@ vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 
 // The tenant has all but the dormant module; the remote query reads it from the session on the server.
 vi.mock("#lib/auth/session.remote.ts", () => ({
-	getCurrentTenant: vi.fn(() => Promise.resolve({ modules: ["gadgets", "gizmos", "widgets"] })),
+	getTenantModules: vi.fn(() => Promise.resolve(["gadgets", "gizmos", "widgets"])),
 }));
 
 const logged = vi.spyOn(console, "error");
