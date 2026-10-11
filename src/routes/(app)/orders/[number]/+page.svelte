@@ -14,6 +14,7 @@
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
 	} from "#lib/equipment/components.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { isEditableOrder } from "#lib/models.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
@@ -26,7 +27,6 @@
 	import { detailSide } from "#lib/orders/extensions.ts";
 	import { deleteOrder, getOrder } from "#lib/orders/remotes.ts";
 
-	import ExtensionSlot from "../../extension-slot.svelte";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

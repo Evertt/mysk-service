@@ -16,9 +16,9 @@
 	import { detailSide } from "#lib/equipment/extensions.ts";
 	import { categories } from "#lib/equipment/index.ts";
 	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDate, label } from "#lib/i18n/index.ts";
 
-	import ExtensionSlot from "../../extension-slot.svelte";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

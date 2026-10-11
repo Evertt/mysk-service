@@ -13,7 +13,12 @@ import { baseURL } from "./lane.ts";
 export { baseURL } from "./lane.ts";
 export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
 export { linkInMail, sentMail } from "./mail.ts";
-export { isRemote } from "./remote-functions.ts";
+export {
+	isRemote,
+	remoteErrorStatus,
+	tamperWithCommand,
+	tamperWithQuery,
+} from "./remote-functions.ts";
 
 // --- Browser ---------------------------------------------------------------------------------
 

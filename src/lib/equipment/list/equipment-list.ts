@@ -1,6 +1,8 @@
 import { code, defineList, oneOf } from "#lib/components/data-table/list-definition.ts";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
+import { listColumns } from "../extensions.ts";
+
 /**
  * The equipment list: what it sorts, groups and filters by, and with which values. The page, the
  * table, the server's SQL (`equipmentSql` in `equipment-list.server.ts`) and the bulk commands read
@@ -21,4 +23,6 @@ export const equipmentList = defineList({
 		openOrders: { param: "open-orders", sort: true },
 	},
 	defaults: { sort: [{ id: "unit", desc: false }], pageSize: 20 },
+	// The tenant's modules may add columns, e.g. maintenance's next due date.
+	moduleColumns: listColumns,
 });

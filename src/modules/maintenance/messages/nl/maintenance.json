@@ -1,0 +1,113 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"maintenance_module_name": "Onderhoudsplannen",
+	"maintenance_module_description": "Onderhoud elk apparaat op een vast interval en maak opdrachten van wat eraan komt.",
+	"maintenance_title": "Onderhoudsplannen",
+	"maintenance_description": "De bezoeken die gepland staan. Selecteer plannen om er opdrachten van te maken.",
+	"maintenance_search": "Zoek plannen…",
+	"maintenance_empty": "Geen bezoeken gepland",
+	"maintenance_column_unit": "Apparaat",
+	"maintenance_column_customer": "Klant",
+	"maintenance_column_plan": "Plan",
+	"maintenance_column_interval": "Interval",
+	"maintenance_column_next_due": "Volgende keer",
+	"maintenance_column_last_order": "Laatste opdracht",
+	"maintenance_column_next_maintenance": "Volgend onderhoud",
+	"maintenance_range": "Gepland",
+	"maintenance_range_overdue": "Te laat",
+	"maintenance_range_30_days": "Te laat en de komende 30 dagen",
+	"maintenance_range_90_days": "Te laat en de komende 90 dagen",
+	"maintenance_range_all": "Alle plannen",
+	"maintenance_bucket_overdue": "Te laat",
+	"maintenance_bucket_soon": "Gepland binnen 30 dagen",
+	"maintenance_bucket_none": "Geen plan",
+	"maintenance_overdue": "Te laat",
+	"maintenance_paused": "Gepauzeerd",
+	"maintenance_active": "Actief",
+	"maintenance_every_months": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Elke maand",
+				"countPlural=*": "Elke {countText} maanden"
+			}
+		}
+	],
+	"maintenance_count_plans": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} plan",
+				"countPlural=*": "{countText} plannen"
+			}
+		}
+	],
+	"maintenance_bulk_create": "Opdrachten maken",
+	"maintenance_bulk_create_title": "Opdrachten maken voor {plans}?",
+	"maintenance_bulk_create_description": "Elk plan krijgt een opdracht voor zijn apparaat, en het volgende bezoek schuift één interval op.",
+	"maintenance_bulk_created": "{count} aangemaakt",
+	"maintenance_plan_paused": "{label} is gepauzeerd",
+	"maintenance_field_order_type": "Soort opdracht",
+	"maintenance_field_description": "Omschrijving",
+	"maintenance_field_interval": "Interval in maanden",
+	"maintenance_field_next_due": "Volgende keer gepland op",
+	"maintenance_field_paused": "Gepauzeerd",
+	"maintenance_field_last_order": "Laatste opdracht",
+	"maintenance_activity_subject": "onderhoudsplan",
+	"maintenance_card_title": "Onderhoud",
+	"maintenance_card_description": "Bezoeken op een vast interval.",
+	"maintenance_card_empty_title": "Geen onderhoudsplannen",
+	"maintenance_card_empty_description": "Voeg een plan toe om dit apparaat op een vast interval te onderhouden.",
+	"maintenance_add": "Plan toevoegen",
+	"maintenance_pause": "Pauzeren",
+	"maintenance_resume": "Hervatten",
+	"maintenance_plan_actions": "Acties voor {plan}",
+	"maintenance_delete_title": "“{plan}” verwijderen?",
+	"maintenance_delete_description": "De opdrachten die het maakte blijven zoals ze zijn.",
+	"maintenance_dialog_new_title": "Nieuw onderhoudsplan",
+	"maintenance_dialog_edit_title": "Onderhoudsplan bewerken",
+	"maintenance_dialog_description": "De opdrachten maak je vanuit de lijst met gepland onderhoud.",
+	"maintenance_save": "Plan opslaan",
+	"maintenance_last_order_none": "Nog geen opdracht",
+	"maintenance_plan_saved": "Plan opgeslagen",
+	"maintenance_plan_deleted": "Plan verwijderd",
+	"maintenance_description_required": "Omschrijf het bezoek",
+	"maintenance_interval_range": "Tussen {min} en {max} maanden",
+	"maintenance_due_required": "Kies de dag waarop het volgende bezoek gepland staat",
+	"maintenance_plan_not_found": "Plan niet gevonden",
+	"maintenance_equipment_not_found": "Apparaat {serial} niet gevonden",
+	"maintenance_unknown_equipment": "Onbekend apparaat",
+	"maintenance_dashboard_description": "De bezoeken die de plannen van je apparaten gepland hebben.",
+	"maintenance_dashboard_overdue": "Te laat",
+	"maintenance_dashboard_soon": "Gepland binnen 30 dagen",
+	"maintenance_contract_title": "Onderhoudsplannen",
+	"maintenance_contract_description": "De plannen van de apparaten die dit contract dekt.",
+	"maintenance_contract_empty": "Nog geen van de gedekte apparaten heeft een plan.",
+	"maintenance_contract_add": "Een plan toevoegen aan elk gedekt apparaat zonder plan",
+	"maintenance_contract_add_description": "Elk gedekt apparaat zonder plan krijgt dit plan; het eerste bezoek staat één interval na vandaag gepland.",
+	"maintenance_contract_added": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} plan toegevoegd",
+				"countPlural=*": "{countText} plannen toegevoegd"
+			}
+		}
+	],
+	"maintenance_contract_all_planned": "Elk gedekt apparaat heeft een plan."
+}

@@ -29,6 +29,13 @@
       "when": 1791672936558,
       "tag": "0003_enable-schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791710224503,
+      "tag": "0004_add-maintenance",
+      "breakpoints": true
     }
   ]
 }

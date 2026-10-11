@@ -10,7 +10,12 @@ import {
 import { dirname, join, relative } from "node:path";
 
 import { checkModules, foreignProblems, scanRoutes } from "./check.ts";
-import { extensionProblems, findPoints, renderContributions } from "./extensions.ts";
+import {
+	extensionProblems,
+	findPoints,
+	renderColumnSql,
+	renderContributions,
+} from "./extensions.ts";
 import { discoverModules } from "./find.ts";
 import { byDependency } from "./graph.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
@@ -84,6 +89,7 @@ export function generateModules(root: string) {
 	const ordered = byDependency(modules);
 	for (const [path, content] of Object.entries(renderRegistries(ordered))) write(path, content);
 	write("src/lib/extensions/contributions.gen.ts", renderContributions(points, ordered));
+	write("src/lib/server/lists/columns.gen.ts", renderColumnSql(points, ordered));
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

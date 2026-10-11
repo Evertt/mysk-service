@@ -2,8 +2,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 import { detailSide } from "#lib/orders/extensions.ts";
-import ExtensionSlot from "#routes/(app)/extension-slot.svelte";
 
 import { data } from "./extension-slot.failing.test-harness.svelte";
 

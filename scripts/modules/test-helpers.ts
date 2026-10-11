@@ -29,6 +29,8 @@ export function module(
 		routeFiles: [],
 		slotFiles: [],
 		bulkFiles: [],
+		columnFiles: [],
+		serverColumnFiles: [],
 		server: { index: false, schema: false, seed: false },
 		messages: { en: sections, nl: sections },
 		...rest,
