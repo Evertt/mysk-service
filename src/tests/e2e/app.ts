@@ -177,9 +177,12 @@ export function useApp({
 			// the previous submission), refreshes or navigates. The form is `pending` until it's done,
 			// which disables its submit button (`SubmitButton`), so that's what's waited for. A wait for
 			// the network to idle wouldn't do: once a page has idled, Playwright doesn't wait again.
+			// Checked every 100 ms rather than every frame (the default), as a page that draws no frames
+			// for a while (it happened in full runs) would hold the wait up.
 			await page.waitForFunction(
 				(element) => !element?.isConnected || !(element as HTMLButtonElement).disabled,
 				button,
+				{ polling: 100 },
 			);
 			await button?.dispose();
 			await page.waitForLoadState("networkidle");
@@ -258,7 +261,7 @@ export function useApp({
 			// the click that brought the toast up. Clicked without the pointer, so as not to rest on it.
 			const toast = await found.elementHandle();
 			await toast?.$eval("[data-close-button]", (button: HTMLElement) => button.click());
-			await page.waitForFunction((element) => !element?.isConnected, toast);
+			await page.waitForFunction((element) => !element?.isConnected, toast, { polling: 100 });
 			await toast?.dispose();
 		},
 		async anotherTab() {
