@@ -15,12 +15,13 @@
 ## Where files go
 
 Put a module next to the code that uses it, in the nearest folder that contains all of its users,
-with one exception: **`src/routes` holds route files only** (names starting with `+`), plus the files
+with two exceptions: **tests** are never next to their subject (they are in `tests/` folders, see
+"Tests"), and **`src/routes` holds route files only** (names starting with `+`), plus the files
 of the app shell, the dashboard, the auth pages and the engineer portal, which belong to no core
 domain. Whatever belongs to a core domain lives in that domain's folder.
 
 - **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`, `materials`): in
-  `src/lib/<domain>/`, in a folder by feature. Specs and test harnesses sit next to their subject.
+  `src/lib/<domain>/`, in a folder by feature. Its tests are not in it: see "Tests".
   - `ui/`: the small pieces other sections reuse: links, badges, labels, cards, tags
     (`#lib/orders/ui/order-link.svelte`).
   - `list/`: the list definition (`orders-list.ts`), columns, table, cells, bulk actions, and the
@@ -43,12 +44,13 @@ domain. Whatever belongs to a core domain lives in that domain's folder.
   only orders and materials have one: add one when something outside needs it).
   E.g. `import { OrderLink } from "#lib/orders/components.ts"`. A barrel exports what something
   outside the domain imports, no more. Exceptions: `#lib/<domain>/extensions.ts` is imported as itself
-  (the module generator reads it and the modules contribute to it at module scope), and `e2e/` and
-  `scripts/`, which have no Vite plugins and import plain `.ts` files by path. Inside a domain, import
+  (the module generator reads it and the modules contribute to it at module scope), and the tests (`src/tests/` and
+  the modules' `tests/` folders, which reach into what they test) and `scripts/`, which have no Vite
+  plugins and import plain `.ts` files by path. Inside a domain, import
   siblings relatively and never the domain's own barrels (a barrel imports its files: the other way
   round is a cycle). Code that runs when a module is evaluated (list definitions, `withLabels()`,
   constants) never reads an import from another domain: a cycle between two barrels is harmless only
-  if nothing is read while they evaluate. `src/lib/domain-boundaries.spec.ts` checks all of this, and
+  if nothing is read while they evaluate. `src/tests/unit/lib/domain-boundaries.spec.ts` checks all of this, and
   that a domain's route folder and a module's `routes/` hold `+` files only.
 - **Used by one route outside the domains** (the shell, dashboard, auth pages, portal):
   in that route's folder, e.g. `src/routes/(app)/(dashboard)/dashboard-charts.ts`. **Used by several
@@ -73,14 +75,14 @@ on, and plain Node, which runs the seed, `org:create` and `scripts/modules.ts`, 
 for rune modules, `.svelte` for components, and `.js` only for real JavaScript, which is paraglide's
 generated output (`#lib/paraglide/messages.js`, `runtime.js`). So `../order.remote.ts`, never
 `../order.remote.js` or `../order.remote`; the same goes for `vi.mock(...)` paths and `import()`.
-`src/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
+`src/tests/unit/import-extensions.spec.ts` fails with the file and line of an import that breaks this. The
 `#ui/<name>` imports have no extension: `package.json` adds `/index.ts` (it maps shadcn's component
 folders, which the shadcn CLI and the auto-imports rely on). Seven generic folders also have
 a barrel `index.ts` re-exporting their files (`activity/`, `auth/`, `i18n/` and `server/activity/`,
 `server/auth/`, `server/lists/`, `server/mail/`), and so does each core domain (above); a barrel is
 imported by that file, `#lib/i18n/index.ts`: no `package.json` `imports` entry or `tsconfig` path maps
 a folder to its `index.ts`, so a folder is never imported as `#lib/i18n`
-(`src/import-extensions.spec.ts` fails with the line).
+(`src/tests/unit/import-extensions.spec.ts` fails with the line).
 
 Any `server/` folder outside `src/routes` (and any `*.server.ts`) is server-only: SvelteKit refuses to bundle it for the browser (`server_only_import`). Never put secrets or database code anywhere else.
 
@@ -160,7 +162,7 @@ bundle, so it imports only messages, icons, types, `import()` loaders and its ow
 logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
 or a feature's own, e.g. the schedule's `board/`), `messages/<locale>/<section>.json` and
-`e2e/*.test.ts`. Its model, labels, display maps, domain rules and activity subjects stay at the
+`tests/` (below). Its model, labels, display maps, domain rules and activity subjects stay at the
 root: `module.ts` may only import its own files from the root (`./activity.ts`), and they need
 each other. A remote file sits in a feature's folder when only that feature and its page use it
 (invoicing's `detail/draft.remote.ts`), else at the root next to `remote-functions.ts` (the
@@ -240,22 +242,22 @@ migration committed.
   are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares its extension points (`#lib/<domain>/extensions.ts`); core never
   imports a module (`#modules/…` is for the generated registries, and for a module's own route files), which
-  `src/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
+  `src/tests/unit/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
   `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
-  never the reverse; one migration stream in `drizzle/`, and `src/lib/server/db/modules.spec.ts`
+  never the reverse; one migration stream in `drizzle/`, and `src/tests/unit/lib/server/db/modules.spec.ts`
   checks that no core table has a foreign key to a module table, and that a module's tables
   reference only core tables and those of modules it requires (`module-schemas.gen.ts` lists each
-  module's schema for it). A module's specs sit next to its code (`*.spec.ts`, `*.svelte.spec.ts`);
-  its end-to-end tests in `e2e/` import helpers from `#e2e/app.ts` and run in the e2e project.
+  module's schema for it). A module's tests are in its `tests/` folder, `tests/unit/` and `tests/e2e/`
+  (see "Tests"); the generator and the boundary specs treat what is in it as tests, not as the module's code.
 - **The `api/` folder**: what a module offers the modules that depend on it (its types, queries and
   services, and its extension points in `api/extensions.ts`, like invoicing's) is in `src/modules/<id>/api/`, and nothing else of
   it is public. A module imports another's files only as `#modules/<other>/api/…`, and only if it
   lists `<other>` in `requires`; for a module it only `enhances` it may import `api/extensions.ts`
-  (the points its enhancements plug into) and types. `boundaries.spec.ts` checks it (`apiImports`)
+  (the points its enhancements plug into) and types. `src/tests/unit/modules/boundaries.spec.ts` checks it (`apiImports`)
   with the graph from the manifests, so a module that needs another says so first.
 - **Read tables, write through services**: a module may read any table it can import (a join to
   `order`), but changes only its own: `.insert()`, `.update()` and `.delete()` take its own
-  tables (`foreignWrites` in `boundaries.spec.ts`). A change to the core's records goes through the
+  tables (`foreignWrites` in `src/tests/unit/modules/boundaries.spec.ts`). A change to the core's records goes through the
   service the core offers, which holds the rules and the activity log entry, e.g.
   `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
   invoice's orders invoiced and completed again, and `scheduleOrder(tx, plan)`
@@ -282,11 +284,11 @@ roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
   its own status. Tests that tamper with such a form start from a page that exists.
 - A core e2e test of something a module changes (a customer's revenue less what contracts include)
   can't import the module's helpers, and a module's e2e can't import another module's, so
-  `e2e/contracts-helpers.ts`, which works the contracts' effect on prices and billing out in SQL
-  (which contract covers an order, the fees due), stays in `e2e/`; the e2e of contracts and
+  `src/tests/e2e/contracts-helpers.ts`, which works the contracts' effect on prices and billing out in SQL
+  (which contract covers an order, the fees due), stays in the core's `src/tests/e2e/`; the e2e of contracts and
   invoicing import it from there. A core test of what a module adds (invoicing's bulk action on the
   orders list) is that module's e2e test, not the core's.
-- Core specs test core with made-up modules (`src/lib/modules/fakes.ts`, mocked in as `manifests.gen.ts`
+- Core specs test core with made-up modules (`src/tests/unit/lib/modules/fakes.ts`, mocked in as `manifests.gen.ts`
   or passed to the function as the registry); what a module does is tested in its own folder.
 
 ## Server-side lists
@@ -323,7 +325,7 @@ The schema is `src/lib/server/db/schema.ts`; the database gets it through the mi
 `drizzle/`, never `drizzle-kit push`. After changing the schema, run
 `pnpm db:generate --name <what-changed>` (e.g. `add-invoice-reference`), check the SQL it wrote,
 and commit it with the change; `pnpm db:migrate` applies it to `local.db` (`pnpm db:reset` starts
-over from the migrations and the seed). `src/lib/server/db/migrations.spec.ts` fails while the
+over from the migrations and the seed). `src/tests/unit/lib/server/db/migrations.spec.ts` fails while the
 schema has changes no migration makes. Never edit a migration that's been committed: add another.
 
 ## Activity log
@@ -376,7 +378,7 @@ remote functions. Every user-facing text goes through a message; nothing English
   id), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:
-  `src/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or
+  `src/tests/unit/lib/i18n/messages.spec.ts` fails on a missing key, a key without its section prefix, or
   variables that differ between languages.
 - **Using them**: `m.orders_title()` (auto-imported in `.svelte`; in `.ts`,
   `import { m } from "#lib/paraglide/messages.js"`). Variables: `"Delete {name}?"` →
@@ -416,36 +418,56 @@ remote functions. Every user-facing text goes through a message; nothing English
   organisatie, member → lid, settings → instellingen, sign in/out → inloggen/afmelden, save →
   opslaan, cancel → annuleren, delete → verwijderen, edit → bewerken.
 - **Tests** run in English: e2e browsers use `BROWSER_LOCALE` (pass it to every new browser
-  context), so e2e and component tests keep asserting English texts; `e2e/i18n.test.ts` covers
+  context), so e2e and component tests keep asserting English texts; `src/tests/e2e/i18n.test.ts` covers
   Dutch. Unit tests check Dutch output with the `locale` argument of the format helpers, or
-  `overwriteGetLocale(() => "nl")` (see `src/lib/i18n/labels.spec.ts`).
+  `overwriteGetLocale(() => "nl")` (see `src/tests/unit/lib/i18n/labels.spec.ts`).
 
 ## Tests
 
-`pnpm test` runs everything: unit tests (`*.spec.ts` next to the code, in Node; `*.svelte.spec.ts`
-in the browser) and the end-to-end tests in `e2e/`, which drive a production build of the app in
-Chromium, one server and fresh, seeded database per test worker (see the Testing section of
-README.md).
+`pnpm test` runs everything: unit tests (`*.spec.ts` in Node; `*.svelte.spec.ts` in the browser)
+and the end-to-end tests, which drive a production build of the app in Chromium, one server and
+fresh, seeded database per test worker (see the Testing section of README.md).
+
+**Where tests go**: all in `tests/` folders, never next to their subject, in the same shape for the
+core and for each module.
+
+- The core's: `src/tests/unit/` (specs, test harnesses, fakes and test support) mirrors `src/`:
+  `src/lib/orders/display.ts` is tested by `src/tests/unit/lib/orders/display.spec.ts`, and a spec of
+  the whole project sits at its root (`src/tests/unit/import-extensions.spec.ts`). `src/tests/e2e/`
+  holds the end-to-end tests, their helpers (`app.ts`, `<section>-helpers.ts`) and the global setup.
+- A module's: `src/modules/<id>/tests/unit/` mirrors the module's own folders
+  (`server/billing.ts` is tested by `tests/unit/server/billing.spec.ts`), and
+  `src/modules/<id>/tests/e2e/` holds its end-to-end tests. Nothing in a module's `tests/` is the
+  module's code: the generator never reads it, and the boundary specs hold its files to the module's
+  rules (its own files by any import, another module only through its `api/`).
+- Tests import what they test through aliases, not relatively: `#lib/orders/display.ts`,
+  `#modules/<id>/server/billing.ts`, `#routes/(app)/extension-slot.svelte`, and the test helpers by
+  `#unit/lib/modules/fakes.ts` (`src/tests/unit/`) and `#e2e/app.ts` (`src/tests/e2e/`). A helper
+  next to the spec that uses it (a harness, `display.test-support.ts`) is imported relatively. A
+  test is exempt from the barrel rule (above): it imports the domain's internals.
+- Vitest runs the `*.spec.ts` of `src/tests/unit/`, of the modules' `tests/unit/` and of `scripts/`,
+  and the `*.test.ts` of `src/tests/e2e/` and the modules' `tests/e2e/` (the `e2e` project). Nothing
+  but tests imports from a `tests/` folder.
 
 - A change to a section's behaviour gets an e2e test in that section's file
-  (`e2e/<section>.test.ts`, or `e2e/<section>.<aspect>.test.ts` where a long section is split by
-  aspect, e.g. `orders.bulk.test.ts`, `orders.tenancy.test.ts`; shared helpers go in
-  `e2e/<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
+  (`src/tests/e2e/<section>.test.ts`, or `<section>.<aspect>.test.ts` where a long section is split
+  by aspect, e.g. `orders.bulk.test.ts`, `orders.tenancy.test.ts`; shared helpers go in
+  `<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
   one signed-in page from `useApp()`, changes go through the UI, checks read the database with
   `rows()`/`value()`. Split a file by its independent `describe` blocks when it passes a few
   hundred lines: the longest file sets the e2e wall-clock time. A module's e2e tests are in its
-  own folder (`src/modules/<id>/e2e/<section>.test.ts` and `<section>.<aspect>.test.ts`, with the
-  helpers they share in `helpers.ts`, importing `#e2e/app.ts`) and cover a tenant that
+  own folder (`src/modules/<id>/tests/e2e/<section>.test.ts` and `<section>.<aspect>.test.ts`, with
+  the helpers they share in `helpers.ts`, importing `#e2e/app.ts`) and cover a tenant that
   has the module, one that hasn't (its pages and endpoints are 404s, the sidebar lacks it, the
   slots are empty, its remote queries are refused) and tenant isolation.
 - Tenant isolation is part of every section's tests: South can't see or change North's records,
   including by tampering with hidden ids (`app.expectingErrors`).
 - Pure helpers (validation, formatting, domain rules, form schemas, table columns) get unit tests
-  next to them (`*.spec.ts`).
-- Shared components get component tests next to them (`*.svelte.spec.ts`, rendered with
+  (`*.spec.ts`) in `tests/unit/`.
+- Shared components get component tests (`*.svelte.spec.ts` in `tests/unit/`, rendered with
   `vitest-browser-svelte`). A component that needs a parent (a table, the theme provider) gets a
-  `*.test-harness.svelte`; form fields take fakes of remote form fields from
-  `src/lib/components/form/fake-form.ts`; remote functions are replaced with `vi.mock`.
+  `*.test-harness.svelte` beside its spec; form fields take fakes of remote form fields from
+  `src/tests/unit/lib/components/form/fake-form.ts`; remote functions are replaced with `vi.mock`.
 - Test files run in parallel, each worker against its own database; within a file, tests run in
   order. A file may change data (through the UI), but must not rely on another file's changes, nor
   break when another file ran before it on the same worker (so a test that needs the seeded state

@@ -1,0 +1,116 @@
+<!--
+	@component
+	A data table over a few work items, wired up like the app's tables, for `table.svelte.spec.ts`
+	(and the other data table specs). Its rows can be grouped by status (which an item may not have
+	yet), and a group shows the sum of its amounts.
+-->
+<script lang="ts" module>
+	export interface Item {
+		id: number;
+		name: string;
+		/** `null` while not started: the status filter's "(None)" option. */
+		status: "draft" | "open" | "closed" | null;
+		/** In cents. */
+		amount: number;
+		quantity: number;
+		dueOn: Date | null;
+	}
+</script>
+
+<script lang="ts">
+	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
+
+	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import RowActions from "#lib/components/data-table/row-actions.svelte";
+	import {
+		createAppColumnHelper,
+		createAppTable,
+	} from "#lib/components/data-table/table.svelte.ts";
+	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+	import { noneToken } from "#lib/components/data-table/url-state.ts";
+	import { formatCents } from "#lib/i18n/index.ts";
+
+	let {
+		items,
+		columnPinning,
+		links = false,
+	}: {
+		items: Item[];
+		/** Instead of the default pinning (the selection and name columns, and the actions). */
+		columnPinning?: ColumnPinningState;
+		/** Links each item's name to its page, `/items/<id>`, as the app's tables do. */
+		links?: boolean;
+	} = $props();
+
+	const statusOptions = [
+		{ value: "draft", label: "Draft" },
+		{ value: "open", label: "Open" },
+		{ value: "closed", label: "Closed" },
+	];
+
+	const column = createAppColumnHelper<Item>();
+	const columns = column.columns([
+		column.select(),
+		column.accessor("name", {
+			cell: ({ row }) =>
+				links
+					? renderComponent(TwoLineCell, {
+							primary: row.original.name,
+							href: `/items/${row.original.id}`,
+						})
+					: row.original.name,
+			enableHiding: false,
+			meta: { label: "Name" },
+		}),
+		column.accessor("status", {
+			filterFn: "oneOf",
+			enableSorting: false,
+			enableGrouping: true,
+			meta: { label: "Status", filterValues: ["draft", "open", "closed", noneToken] },
+		}),
+		column.accessor("amount", {
+			cell: ({ cell }) => renderComponent(cell.CurrencyCell),
+			enableGlobalFilter: false,
+			meta: { label: "Amount", align: "end", groupSum: (sum) => formatCents(sum) },
+		}),
+		column.accessor("quantity", {
+			cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
+			enableGlobalFilter: false,
+			meta: { label: "Quantity", align: "end" },
+		}),
+		column.accessor("dueOn", {
+			cell: ({ cell }) => renderComponent(cell.DateCell),
+			enableGlobalFilter: false,
+			enableSorting: false,
+			enableHiding: false,
+			meta: { label: "Due" },
+		}),
+		column.display({
+			id: "actions",
+			cell: ({ row }) => renderComponent(RowActions, { label: row.original.name }),
+		}),
+	]);
+
+	// The initial pinning, read once.
+	// svelte-ignore state_referenced_locally
+	const table = createAppTable({
+		columns,
+		get data() {
+			return items;
+		},
+		getRowId: (row) => String(row.id),
+		initialState: {
+			sorting: [{ id: "name", desc: false }],
+			pagination: { pageIndex: 0, pageSize: 5 },
+			...(columnPinning && { columnPinning }),
+		},
+	});
+</script>
+
+<table.AppTable>
+	<table.Toolbar searchLabel="Search items…">
+		<FacetedFilter columnId="status" title="Status" options={statusOptions} none />
+	</table.Toolbar>
+	<table.Table emptyTitle="No items found" />
+	<table.Pagination pageSizes={[5, 10]} />
+</table.AppTable>

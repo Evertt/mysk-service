@@ -11,7 +11,7 @@ import type { ModuleManifest } from "#lib/modules/manifests.ts";
  *
  * A `module.ts` is in every tenant's bundle, so it imports nothing but messages, icons, types,
  * `import()` loaders and its own small files (`activity.ts`, `labels.ts`); see
- * `src/modules/boundaries.spec.ts`.
+ * `src/tests/unit/modules/boundaries.spec.ts`.
  */
 export function defineModule<const Manifest extends ModuleManifest>(manifest: Manifest) {
 	return {

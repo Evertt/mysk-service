@@ -149,7 +149,8 @@ export default defineConfig({
 				// in `src/lib` (not only `ui/`: e.g. the data table's own icons).
 				optimizeDeps: {
 					entries: [
-						"src/**/*.svelte.{test,spec}.{js,ts}",
+						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
 						"src/lib/**/*.svelte",
 						"src/modules/**/*.svelte",
 					],
@@ -161,10 +162,13 @@ export default defineConfig({
 						provider: playwright(),
 						instances: [{ browser: "chromium", headless: true }],
 					},
-					include: ["src/**/*.svelte.{test,spec}.{js,ts}"],
+					include: [
+						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+					],
 					// Server code (`server/` folders, also the modules') doesn't run in the browser.
-					exclude: ["src/**/server/**"],
-					setupFiles: ["./src/vitest-setup-client.ts"],
+					exclude: ["src/tests/unit/**/server/**", "src/modules/*/tests/unit/**/server/**"],
+					setupFiles: ["./src/tests/unit/vitest-setup-client.ts"],
 				},
 			},
 
@@ -173,20 +177,27 @@ export default defineConfig({
 				test: {
 					name: "server",
 					environment: "node",
-					include: ["src/**/*.{test,spec}.{js,ts}", "scripts/**/*.spec.ts"],
-					// The modules' end-to-end tests run in the e2e project.
-					exclude: ["src/**/*.svelte.{test,spec}.{js,ts}", "src/modules/*/e2e/**"],
+					include: [
+						"src/tests/unit/**/*.{test,spec}.{js,ts}",
+						"src/modules/*/tests/unit/**/*.{test,spec}.{js,ts}",
+						"scripts/**/*.spec.ts",
+					],
+					// (The end-to-end tests are in `tests/e2e/` folders, which these globs don't reach.)
+					exclude: [
+						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+					],
 				},
 			},
 
 			{
 				// End-to-end: drives the app in a browser, against servers with fresh, seeded databases
-				// (see e2e/global-setup.ts).
+				// (see src/tests/e2e/global-setup.ts).
 				test: {
 					name: "e2e",
 					environment: "node",
-					include: ["e2e/**/*.test.ts", "src/modules/*/e2e/**/*.test.ts"],
-					globalSetup: ["e2e/global-setup.ts"],
+					include: ["src/tests/e2e/**/*.test.ts", "src/modules/*/tests/e2e/**/*.test.ts"],
+					globalSetup: ["src/tests/e2e/global-setup.ts"],
 					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the
 					// files share, so they take turns.
 					maxWorkers: "60%",

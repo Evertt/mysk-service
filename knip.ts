@@ -26,14 +26,13 @@ const config: KnipConfig = {
 		"src/modules/*/routes/**/+*.{ts,svelte}",
 		// (`AnySlotContribution` and `AnyBulkContribution` in `src/lib/extensions/define.ts` are tagged
 		// `@public` for the same reason: only the generated `contributions.gen.ts` imports them.)
-		// The tests of every Vitest project, including the modules' end-to-end tests.
+		// The tests of every Vitest project: `src/tests/{unit,e2e}/` and the modules' `tests/{unit,e2e}/`.
 		"src/**/*.{test,spec}.{ts,js}",
-		"e2e/**/*.test.ts",
 		"scripts/**/*.spec.ts",
 	],
 	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
 	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)
-	project: ["src/**/*.{ts,svelte,css,vue}", "e2e/**/*.ts", "scripts/**/*.ts", "*.ts"],
+	project: ["src/**/*.{ts,svelte,css,vue}", "scripts/**/*.ts", "*.ts"],
 	ignore: [
 		// shadcn-svelte's components are kept whether or not they are used, and `vite.config.ts`
 		// auto-imports them (`<Card.Root>` without an import), so knip sees no uses of them.

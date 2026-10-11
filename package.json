@@ -9,7 +9,9 @@
 	"imports": {
 		"#lib/*": "./src/lib/*",
 		"#modules/*": "./src/modules/*",
-		"#e2e/*": "./e2e/*",
+		"#routes/*": "./src/routes/*",
+		"#e2e/*": "./src/tests/e2e/*",
+		"#unit/*": "./src/tests/unit/*",
 		"#ui/*": "./src/lib/components/ui/*/index.ts"
 	},
 	"scripts": {
