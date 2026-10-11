@@ -1,20 +1,21 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCents, formatNumber } from "#lib/i18n/format.ts";
-
 import {
 	countIn,
 	isRemote,
 	nextCode,
 	organizations,
+	remoteErrorStatus,
 	rows,
+	tamperWithCommand,
+	tamperWithQuery,
 	unbalancedStock,
 	useApp,
 	users,
 	userNames,
 	value,
-} from "./app.ts";
-import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
+} from "#e2e/app.ts";
+import { formatCents, formatNumber } from "#lib/i18n/format.ts";
 
 const { north, south } = organizations;
 const app = useApp();
