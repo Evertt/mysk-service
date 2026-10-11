@@ -78,7 +78,6 @@
 	"maintenance_dialog_edit_title": "Edit maintenance plan",
 	"maintenance_dialog_description": "You create the orders from the list of maintenance that's due.",
 	"maintenance_save": "Save plan",
-	"maintenance_due_on": "Due {date}",
 	"maintenance_last_order_none": "No order yet",
 	"maintenance_plan_saved": "Plan saved",
 	"maintenance_plan_deleted": "Plan deleted",

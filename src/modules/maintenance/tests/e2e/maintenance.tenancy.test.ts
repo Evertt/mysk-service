@@ -1,7 +1,18 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
-import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "#e2e/remote-functions.ts";
+// The remote functions' helpers through `app.ts`: a module may import no other `remote-functions.ts`
+// than its own (`remote-functions.spec.ts`).
+import {
+	countIn,
+	isRemote,
+	organizations,
+	remoteErrorStatus,
+	rows,
+	tamperWithCommand,
+	tamperWithQuery,
+	useApp,
+	value,
+} from "#e2e/app.ts";
 
 import { dayKey, daysFromToday, type Plan, pageLocators, planById, plansOf } from "./helpers.ts";
 

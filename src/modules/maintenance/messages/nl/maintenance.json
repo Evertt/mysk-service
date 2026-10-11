@@ -78,7 +78,6 @@
 	"maintenance_dialog_edit_title": "Onderhoudsplan bewerken",
 	"maintenance_dialog_description": "De opdrachten maak je vanuit de lijst met gepland onderhoud.",
 	"maintenance_save": "Plan opslaan",
-	"maintenance_due_on": "Gepland op {date}",
 	"maintenance_last_order_none": "Nog geen opdracht",
 	"maintenance_plan_saved": "Plan opgeslagen",
 	"maintenance_plan_deleted": "Plan verwijderd",
