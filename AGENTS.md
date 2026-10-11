@@ -119,7 +119,12 @@ helpers are in `src/lib/server/auth/session.ts`:
   the same one). A module numbers its own records with a format and table of its own:
   `nextNumber(tx, { format, table, column })`, e.g. `contractNumbers` in
   `src/modules/contracts/server/contracts.ts` and `invoiceNumbers` in
-  `src/modules/invoicing/server/invoices.ts`.
+  `src/modules/invoicing/server/invoices.ts`. An order is created only through
+  `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`, in `#lib/orders/server/index.ts`),
+  which checks each draft's customer, unit and engineer, numbers, inserts and logs it: core's order
+  form calls it (and saves the lines with `saveOrderLines()` after it), and so do the modules
+  (maintenance's "Create orders"). It doesn't emit `orders.committed`, which is for orders the
+  client's pages already show.
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
@@ -130,8 +135,8 @@ helpers are in `src/lib/server/auth/session.ts`:
   about modules. A module adds to core pages through slots (components that load their own data
   with the module's remote functions; `<ExtensionSlot>`, `src/lib/extensions/extension-slot.svelte`,
   renders each in a boundary of its own, so one that fails shows a notice instead of breaking the
-  page) and bulk actions on tables' selections, and to its owners' server logic through hooks; all
-  only take part for tenants that have the module.
+  page), bulk actions on tables' selections and columns in server-side lists, and to its owners'
+  server logic through hooks; all only take part for tenants that have the module.
   A hook is an extension point its owner declares (`#lib/extensions/define.ts`): core's in
   `src/lib/<domain>/extensions.ts` (`orders.adjustPrices`, `orders.tag`, `orders.committed` in
   `src/lib/orders/extensions.ts`), a module's in its `api/extensions.ts`
@@ -159,15 +164,15 @@ self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/d
 description, `route`, icon, `nav`, `subjects`, `actions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
-logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
+columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
 or a feature's own, e.g. the schedule's `board/`), `messages/<locale>/<section>.json` and
 `tests/` (below). Its model, labels, display maps, domain rules and activity subjects stay at the
 root: `module.ts` may only import its own files from the root (`./activity.ts`), and they need
 each other. A remote file sits in a feature's folder when only that feature and its page use it
 (invoicing's `detail/draft.remote.ts`), else at the root next to `remote-functions.ts` (the
-record's own, and those that several folders, slots, bulk actions or server hooks share; `slots/`
-and `bulk-actions/` hold only their contributions). The folder name is the id
+record's own, and those that several folders, slots, bulk actions or server hooks share; `slots/`,
+`bulk-actions/` and `columns/` hold only their contributions). The folder name is the id
 (`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 
@@ -175,7 +180,8 @@ migration committed.
   `pnpm generate` runs it before `svelte-kit sync`, `vite.config.ts` runs it when it loads, and in
   dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
   `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
-  `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts` and `module-seeds.gen.ts`; gitignored), the route stubs (below)
+  `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts`, `module-seeds.gen.ts`,
+  `src/lib/extensions/contributions.gen.ts` and `src/lib/server/lists/columns.gen.ts`; gitignored), the route stubs (below)
   and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
   everything wrong, when a module's route folder collides with a core route or another module's, a
   route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
@@ -209,7 +215,7 @@ migration committed.
   actions and endpoints without the layouts, so the stub of each server file (`+page.server.ts`,
   `+layout.server.ts`, `+server.ts`) also guards its `load`, `actions` and request handlers
   (`GET`, `POST`, …) before running the module's (`guarded()`, `guardedActions()`).
-- **Slots and bulk actions are contributed by file**: a component at a slot is
+- **Slots, bulk actions and list columns are contributed by file**: a component at a slot is
   `src/modules/<id>/slots/<point id>/<name>.svelte` (e.g. `slots/orders.detail.side/coverage.svelte`),
   and a table's bulk actions are the default export of `src/modules/<id>/bulk-actions/<point id>.ts`
   (an array of `BulkAction`s). The generator lists them in `src/lib/extensions/contributions.gen.ts`
@@ -224,6 +230,30 @@ migration committed.
   `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
   id (`<module>/<point id>/<name>`).
+- **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
+  them like core does: contracts declares `contracts.detail.side` (props
+  `{ number: string; equipmentIds: number[] }`) and its contract page renders
+  `<ExtensionSlot>` (`#lib/extensions/extension-slot.svelte`, which a module's page imports like a
+  core page). Maintenance, which `enhances` contracts, contributes
+  `slots/contracts.detail.side/plans.svelte`: it may import only contracts' `api/extensions.ts`, so
+  it gets the covered units from the props (and checks them in its own queries), never from
+  contracts' tables. A point of a module that's off has no contributions shown (its page is gone).
+- **Columns in a core list** (`#lib/components/data-table/module-columns.ts`): a list that takes
+  them names its point in its definition (see "Server-side lists"), e.g. `listColumns =
+defineListColumns("equipment.list")` in `#lib/equipment/extensions.ts`. A module contributes two
+  files per list, which the generator requires together and checks like the others (point, kind,
+  owner): `columns/<point id>.ts`, default export an array of `listColumn({ id, param, label, sort,
+filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.nextDue`; the cell
+  takes `{ value }`), listed in `contributions.gen.ts` and loaded per tenant
+  (`loadListColumns(point)`, `#lib/extensions/list-columns.ts`); and `server/columns/<point id>.ts`,
+  default export an array of `columnSql(column, () => ({ value, sort, nullsLast, filter, facet }))`
+  (`#lib/server/lists/column-sql.ts`; built per request, typed by the column it imports), listed in
+  the server's `columns.gen.ts`. The merge is per tenant: the page merges the tenant's columns into
+  the list (`extendList()`) before it reads the URL, and the server merges their SQL
+  (`withModuleColumns()`) and checks the query against the merged list, so a tenant without the
+  module gets neither the column nor its URL parameter, and a query naming it is a 400. Core's list
+  types stay exact: the merged list has the list's own type, and a module column is typed where it's
+  contributed. Sorting and set filters only (no grouping); see `docs/plans/maintenance-plans-implementation.md`.
 - A module's `routes/` holds route files (`+` files) only; everything they use is in the module's own
   folders (`list/`, `form/`, `detail/`, `server/`, the root) and imported as `#modules/<id>/…`.
   A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
@@ -260,22 +290,31 @@ migration committed.
   tables (`foreignWrites` in `src/tests/unit/modules/boundaries.spec.ts`). A change to the core's records goes through the
   service the core offers, which holds the rules and the activity log entry, e.g.
   `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
-  invoice's orders invoiced and completed again, and `scheduleOrder(tx, plan)`
-  (`src/lib/orders/server/scheduling.ts`), through which the schedule plans orders. A module's own `api/` offers such services to the
+  invoice's orders invoiced and completed again, `scheduleOrder(tx, plan)`
+  (`src/lib/orders/server/scheduling.ts`), through which the schedule plans orders, and
+  `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`), through which maintenance turns
+  due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Contracts, invoicing and the schedule are the modules (`src/modules/contracts/`,
-`src/modules/invoicing/`, `src/modules/schedule/`: look there for an example of each part; the
-registries list them by id). The schedule is the one without tables of its own: a view of the
-orders, which changes them through a core service and owns only its route, components and messages. Extension points are added with
-the first module that needs them. Not there yet: several `nav` entries per module, module
-columns, filters and row actions in tables, `order.actions`-style slots, slot options (order,
-roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
+Contracts, invoicing, maintenance and the schedule are the modules (`src/modules/contracts/`,
+`src/modules/invoicing/`, `src/modules/maintenance/`, `src/modules/schedule/`: look there for an
+example of each part; the registries list them by id). The schedule is the one without tables of its own: a view of the
+orders, which changes them through a core service and owns only its route, components and messages.
+Maintenance (plans per unit, turned into orders) was the first built from scratch: look there for a
+module's own server-side list with a bulk action (`list/due-list.ts`, `server/list-sql.ts`), a column
+in a core list (`columns/`, `server/columns/`), a contribution to another module's slot
+(`slots/contracts.detail.side/`) and records created through a core service (`server/orders.ts`).
+Extension points are added with the first module that needs them. Not there yet: several `nav`
+entries per module, grouping by a module's column, module columns in other lists than equipment's,
+module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,
+slot options (order, roles), `settings.cards`, and the server `refuseChange`/`saved` hooks.
 
 - A module's seed has two steps (`src/lib/server/db/seed/module-seed.ts`): `generate()` makes its
   data for a tenant right after the core's, with the same faker (so the demo data doesn't change
   with where the module's code lives), and may add to the core's draft (contracts adds call-out
-  orders); `run()` inserts it. What a module does at runtime through hooks it does at seed time
+  orders); `run()` inserts it. A module that adds nothing to the draft may draw from a faker of its
+  own instead, seeded per tenant (`tenant.seed`), so the others' data can't change with it
+  (invoicing, maintenance). What a module does at runtime through hooks it does at seed time
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
   asks without knowing the module, from `run()` (a tenant's `collect`), when every module has made
   its data: invoicing's seed prices orders and bills fees through them.
@@ -318,6 +357,18 @@ and answer with the `query` and `queryKey()` they ran, which the table compares 
 `listTarget(list.where)` for a list (and `list: ordersSql` to `bulkChange()`), `idsTarget` for a
 client-side table. A new column is one edit in the definition, one in `ListSql` and one in the
 table's columns (`columns.spec.ts` checks the table against `list.urlSpec`).
+
+**Modules' columns** (see "Modules"): a list that takes them names its point,
+`defineList({ …, moduleColumns: listColumns })`; its `ListSql` factory returns
+`withModuleColumns({ … })` (`#lib/server/lists/module-columns.ts`, imported by its path: it imports
+the registry, which imports the modules' files, which import the lists barrel); its rows query adds
+`moduleValues(listSql, ids)` to each row as `moduleValues`, and its facets query
+`moduleFacets(listSql)`; its page merges the tenant's columns before reading the URL,
+`extendList(list, await loadListColumns(listColumns))`, and gives the merged list to the table,
+which adds their columns with `withModuleTableColumns()` and a `FacetedFilter` for each that
+filters. Such a list's `list.query` and `list.where` let any namespaced column (`<module>.<name>`)
+through, and `planList()` checks the query against the tenant's list (`listSql.list.strict`). The
+equipment list is the example.
 
 ## Database schema
 

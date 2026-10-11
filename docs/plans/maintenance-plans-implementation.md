@@ -43,18 +43,25 @@ SET NULL` nulls every column of the foreign key, and `organization_id` is `NOT N
    `status` defaults to `quote` and `priority` to `normal`, as the order form starts. It checks the
    references (customer, unit of that customer, engineer) with `invalid(message)`, so a form shows
    it and a bulk command skips the record with the reason; numbers each with `nextNumber()`; inserts
-   it; logs `created` with the draft as `after`; and calls `orderCommitted()` (an event after
-   commit) for each. Lines stay out of it: core's form saves them with `saveOrderLines()` right
-   after, as before. Core's create path in `order.remote.ts` swaps its `nextNumber` + insert for
-   `createOrders()` and no longer logs `created` itself (the update path is untouched). One visible
-   change: a new order's `created` entry now comes before its lines' entries instead of after.
-   Core's form now emits `orders.committed` on create too, which it didn't before (the spec asks
-   for it; no module shows a created order's card before it exists, so nothing changes on screen).
+   it; and logs `created`. Lines stay out of it: core's form saves them with `saveOrderLines()`
+   right after, as before. Core's create path in `order.remote.ts` swaps its `nextNumber` + insert
+   for `createOrders()` and no longer logs `created` itself (the update path is untouched). One
+   visible change: a new order's `created` entry now comes before its lines' entries instead of
+   after.
+   **Deviation: it doesn't call `orderCommitted()`.** The spec says to do "whatever core does after
+   an order is created (`orderCommitted()` after commit)", but core's create never emitted it (only
+   the update path does). Built as written, it broke the orders e2e: `orders.committed` has the
+   modules refresh their queries about the order (contracts' coverage, invoicing's card), which for
+   a new order are on no page yet; the refreshed queries stayed in the client and failed with a 404
+   once the test deleted the order. So `createOrders()` does what core's create did, and a module that
+   needs to hear about new orders gets an `orders.created` event (not built: none does yet).
 7. **Module columns** (the design is below, under "Module columns"): a contribution is two files,
    `columns/<point id>.ts` (the column's definition and cell, isomorphic, loaded per tenant like a
    slot's component) and `server/columns/<point id>.ts` (its SQL, server-only, in a static server
    registry). The generator requires both. The column's id is namespaced (`maintenance.nextDue`)
-   and the merge refuses one that doesn't start with its module's id.
+   and the merge refuses one that doesn't start with its module's id. A column may also say what a
+   row counts under in its filter (`facet`), so its `FacetedFilter` shows counts like the list's own
+   (without it every option would read 0).
 8. **`ExtensionSlot` moves to `src/lib/extensions/extension-slot.svelte`.** The contracts page (a
    module's route file) now renders a slot too, and a module doesn't import from `src/routes`; the
    component is the extension machinery's, not the app shell's.
@@ -68,9 +75,18 @@ SET NULL` nulls every column of the foreign key, and `organization_id` is `NOT N
     every business table (`organization_module` differs by North's `maintenance` row only).
 11. **Activity**: a plan's `parent` is its unit, so plan entries also show on the unit's activity
     card. Pausing and resuming are `updated` (field `paused`), as the spec says. "Create orders"
-    logs, per plan, the order's `created` (by `createOrders()`) and the plan's `updated`
-    (`nextDueOn`, `lastOrderId`).
+    logs, per plan, the order's `created` (by `createOrders()`) and the plan's `updated` with
+    `nextDueOn` and `lastOrder`, the order's number rather than its id (the log has no reference
+    type for orders, and an id would read as a bare number).
 12. **Permissions**: everything is `moduleRemote("maintenance")` (any office member), as the spec says.
+13. **The contract card's bulk add** takes a description, a type and an interval, as the spec says;
+    the first visit is due one interval from today (on today's day of the month). Units that already
+    have a plan (of any kind) are left as they are.
+14. **"Create orders" runs per plan** (`bulkChange()`, a transaction each), like the other bulk
+    actions: a plan that's paused meanwhile (or picked by a tampered id) is skipped with its reason,
+    the others go ahead. A plan that isn't the tenant's counts as missing.
+15. **The due list's range** is a select in the toolbar, not a faceted filter (it's one choice). As
+    the list has a default filter, the toolbar's Reset is always offered; it brings back the default.
 
 ## Module columns
 
@@ -84,16 +100,24 @@ The design the spec's §3.2 asks for, kept to sort and a `oneOf` filter.
 filter: oneOf([...]), optionLabel, cell })` (`#lib/components/data-table/module-columns.ts`).
   `cell` is a component that takes `{ value }`.
 - **The SQL part**, `src/modules/<id>/server/columns/equipment.list.ts`, default export an array of
-  `columnSql(column, { value, sort, filter })` (`#lib/server/lists/module-columns.ts`), typed by the
-  column it imports: `filter` gets that column's filter values, `value` is what the cell shows. The
-  SQL is a correlated subquery or anything else over the list's joined tables, tenant-scoped.
+  `columnSql(column, () => ({ value, sort, nullsLast, filter, facet }))`
+  (`#lib/server/lists/column-sql.ts`), typed by the column it imports: `filter` gets that column's
+  filter values, `value` is what the cell shows. The parts are built per request (a function), as
+  `inTenant()` reads the request: the first version built them when the file loaded, which the
+  unit spec caught. The SQL is a correlated subquery or anything else over the list's joined tables,
+  tenant-scoped.
 - **Merging**, per tenant: `extendList(list, columns)` (`list-definition.ts`) makes a list with the
   module columns added, cached per set of columns, so its URL spec and schemas include them. On the
   client the page loads the tenant's contributions (`loadListColumns(point)`,
   `#lib/extensions/list-columns.ts`, from `contributions.gen.ts` and `getCurrentTenant()`), merges
-  them before reading the URL, and the table adds their TanStack columns (`moduleTableColumns()`)
-  and filters. On the server `withModuleColumns(listSql)` (in the core's `equipmentSql()`) adds the
-  tenant's columns' SQL and swaps in the merged list. A tenant without the module gets the list as
+  them before reading the URL, and the table adds their TanStack columns
+  (`withModuleTableColumns()`, before the row actions) and filters. On the server
+  `withModuleColumns(listSql)` (`#lib/server/lists/module-columns.ts`, in the core's
+  `equipmentSql()`) adds the tenant's columns' SQL and swaps in the merged list. It's imported by
+  its path, not through the lists barrel: it imports the registry, which imports the modules'
+  column files, which import `columnSql()` from the barrel. In one file with `columnSql()` that was
+  a cycle, which the production build resolved but Vitest's module runner (and so the dev server)
+  didn't. A tenant without the module gets the list as
   it was: no column, and `?next-maintenance=` is a parameter the table doesn't read.
 - **Types**: the merged list and SQL keep the core's types (`List<C>`, `ListSql<C>`); module columns
   are runtime additions the core's code never names. A column is typed at its contribution.
@@ -102,12 +126,14 @@ filter: oneOf([...]), optionLabel, cell })` (`#lib/components/data-table/module-
   strictly against the tenant's merged list (`list.strict`), a 400 when it names a column the tenant
   doesn't have or a value the column doesn't take. Everything that plans the list (rows, facets,
   bulk targets matching a filter) goes through `planList()`.
-- **Values**: the rows query adds each row's module values with `moduleValues(listSql, ids)` (one
-  query for the page's ids, only when the tenant has module columns), as `row.moduleValues`.
+- **Values and counts**: the rows query adds each row's module values with
+  `moduleValues(listSql, ids)` (one query for the page's ids, only when the tenant has module
+  columns), as `row.moduleValues`; the facets query adds `moduleFacets(listSql)`.
 - **Not there yet** (left out on purpose, see "What's still missing" at the end): grouping by a
-  module column, facet counts for its filter, a module column in another list (a second list only
-  needs `defineListColumns()` + `moduleColumns:` + `withModuleColumns()` + the table's helper), and
-  default visibility or position (they go before the row actions, in registry order).
+  module column, a module column in another list (a second list only needs
+  `defineListColumns()` + `moduleColumns:` + `withModuleColumns()` + `moduleValues()` + the page's
+  `extendList()` + the table's `withModuleTableColumns()`), and default visibility or position (they
+  go before the row actions, in registry order).
 
 ## Global constraints
 
@@ -173,7 +199,7 @@ equipmentIds: number[] }>("contracts.detail.side")`; the contract page renders i
 
 ### 5. Plans on a unit's page
 
-- `plan.remote.ts` (unit's plans, create, update, pause, delete), `form/plan-schema.ts`,
+- `plans.remote.ts` (unit's plans, create, update, pause, delete), `form/plan-schema.ts`,
   `form/plan-dialog.svelte`, `slots/equipment.detail.side/plans.svelte`.
 - Tests: `tests/unit/form/plan-schema.spec.ts`; e2e (`tests/e2e/maintenance.test.ts`).
 
@@ -187,7 +213,7 @@ equipmentIds: number[] }>("contracts.detail.side")`; the contract page renders i
 
 ### 7. The equipment column, the dashboard card, the contract card
 
-- `columns/equipment.list.ts`, `server/columns/equipment.list.ts`, `list/next-due-cell.svelte`;
+- `columns/equipment.list.ts`, `server/columns/equipment.list.ts`, `ui/next-due.svelte`;
   `slots/dashboard.cards/maintenance.svelte`; `slots/contracts.detail.side/plans.svelte` with the
   bulk add.
 - Tests: e2e (North: sort and filter the column, the dashboard counts, the contract card's bulk
@@ -201,4 +227,82 @@ maintenance as an example module, the "Not there yet" list. This plan's closing 
 
 ## Progress
 
-(Updated as the tasks land.)
+All eight tasks are done. Where the build differs from the task list above:
+
+- Task 1 (`7d92a3e`), corrected in `b7c0876`: `createOrders()` doesn't emit `orders.committed`
+  (decision 6). Its spec is `src/tests/unit/lib/orders/server/creation.spec.ts`.
+- Task 2 (`41e236f`, `b7c0876`): the server half is two files, `column-sql.ts` (`columnSql()`,
+  `moduleValues()`, `moduleFacets()`, in the barrel) and `module-columns.ts` (`withModuleColumns()`,
+  by path); the table helper is `module-table-columns.ts`; the generator's server registry is
+  rendered by `renderColumnSql()` in `scripts/modules/extensions.ts`. Specs:
+  `src/tests/unit/lib/components/data-table/module-columns.spec.ts`,
+  `src/tests/unit/lib/server/lists/module-columns.spec.ts`, the equipment `columns.spec.ts`, and the
+  generator's `extensions.spec.ts`. Made-up columns are in `#unit/lib/modules/fakes.ts`.
+- Task 3 (`8c14c13`): the generator's owner check for a module-owned point was already covered by
+  `extensions.spec.ts` ("a module contributes to … those of the modules it requires or enhances").
+- Task 4 (`4a73dd6`): `labels.ts` holds the ranges' and buckets' names; no `server/index.ts` (the
+  module contributes no hooks). Migration `drizzle/0004_add-maintenance.sql`.
+- Tasks 5–7 (`418fbb1`): the record's remote file is `plans.remote.ts` (the unit card, the contract
+  card and their forms), the dashboard's `overview.remote.ts`; the shared cell is `ui/next-due.svelte`;
+  a plan's row on the unit card is `detail/plan-row.svelte`; the bulk add's dialog is
+  `form/covered-plans-dialog.svelte`.
+- e2e (`a628b17`): `tests/e2e/maintenance.test.ts` (North) and `maintenance.tenancy.test.ts`
+  (South, switching, isolation). The contracts e2e now polls for the contract page's badges after
+  saving: the page waits for the modules' cards, maintenance's among them.
+- Task 8: AGENTS.md ("Tenants and modules", "Modules", "Server-side lists").
+
+Seed check: main and the branch seeded with a fixed clock (`Date` replaced by a preload) and every
+business table dumped the same way: the only differences are North's `maintenance` row in
+`organization_module` and a demo user's random id; 42 plans (6 overdue, 3 paused) for North.
+
+## Looking back
+
+**What the module system gained.**
+
+- A core service for creating records that modules call: `createOrders()`. Core's own form goes
+  through it, so the rules (references, numbering, the log) are in one place.
+- A new kind of extension point, columns in a server-side list, contributed by file in two halves
+  and checked by the generator like slots and bulk actions. A tenant's list is merged from the
+  modules it has, on both sides, without loosening the core's types: the merged list keeps the
+  list's own type, and the remote query's strictness moved from the boundary schema to
+  `planList()`, against the tenant's list.
+- A slot owned by a module, with the generator's owner check and the `enhances` import rule doing
+  real work for the first time (maintenance may import only contracts' `api/extensions.ts`, and
+  gets its data through props).
+- A module's own server-side list with a bulk action: `defineList()`, `ListSql`, `planList()` and
+  `bulkChange()` worked from a module without changes.
+- `nav: { after: "equipment" }`, a module after a core entry other than Orders.
+
+**What was awkward.**
+
+- Module columns touch many layers for one column: definition, URL spec, table columns, toolbar
+  filter, SQL, values, facets, two generated registries, and a page that must merge before it
+  reads the URL. Each piece is small, but a second list will need the same five edits (point,
+  `moduleColumns:`, `withModuleColumns()`, `moduleValues()`/`moduleFacets()`, page and table).
+- The server's registry of column SQL is imported statically, so its files load with the core's
+  list SQL; that made an import cycle through the lists barrel, which only Vitest's module runner
+  tripped over. The fix (import `withModuleColumns()` by path) is a rule to remember.
+- SQL that reads the tenant can't be built when a file loads, so a column's SQL is a factory; easy
+  to get wrong, and only a spec shows it.
+- Composite tenant keys and `on delete set null` don't mix in SQLite: the plan's last order needed a
+  tenant column of its own and a check.
+- `orders.committed` turned out to mean "refresh what the client shows of this order", not "an
+  order was saved": announcing new orders through it broke the orders e2e.
+- A page that renders the modules' cards waits for them (async SSR and navigation), so e2e tests
+  that read the page right after a navigation need to poll; the contracts test did, now. One run of
+  the equipment e2e under load logged a Svelte async error on deleting a unit from its page
+  (`Cannot read properties of null (reading 'async_deriveds')`); it didn't happen again in three
+  more runs.
+
+**What's still missing.**
+
+- Grouping by a module's column; filter kinds other than a fixed set for module columns; module
+  columns in the orders and materials lists (only `equipment.list` is a point); their default
+  visibility, position and the column menu's order.
+- An `orders.created` event, if a module needs to hear about new orders.
+- Module filters and row actions on core tables, `order.actions`-style slots, slot options.
+- A way for the generator to check that a column's two halves describe the same columns (it checks
+  that both files exist; the server finds a column's definition through its SQL's import, the
+  client through the definition file, and a mismatch is a 400 at runtime).
+- From the spec's "not in this version": automatic order creation, running-hour intervals,
+  checklists, templates, reminders, planning the created orders.
