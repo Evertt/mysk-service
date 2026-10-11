@@ -34,7 +34,10 @@ const { customer, engineer, equipment, order } = schema;
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
-const db = drizzle(createClient({ url: DATABASE_URL }), { schema: { ...schema, ...moduleSchema } });
+const db = drizzle(
+	createClient({ url: DATABASE_URL, authToken: process.env.DATABASE_AUTH_TOKEN || undefined }),
+	{ schema: { ...schema, ...moduleSchema } },
+);
 
 /** The generator's randomness, in Dutch; seeded per tenant, so the data is the same every time. */
 const faker = new Faker({ locale: [nl, en] });

@@ -34,7 +34,10 @@ if (options === "help") {
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
-const db = drizzle(createClient({ url: DATABASE_URL }), { schema });
+const db = drizzle(
+	createClient({ url: DATABASE_URL, authToken: process.env.DATABASE_AUTH_TOKEN || undefined }),
+	{ schema },
+);
 
 /** 18 random bytes: 24 characters, letters, digits, `-` and `_`. */
 const password = randomBytes(18).toString("base64url");
