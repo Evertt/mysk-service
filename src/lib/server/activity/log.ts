@@ -20,10 +20,10 @@
  * the invitation's organization rather than the current one). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
-import { type ActivityAction, roundQuantity } from "#lib/models.ts";
-import { idsInTenant, requireTenant } from "#lib/server/auth/index.ts";
+import type { ActivityAction } from "#lib/models.ts";
+import { requireTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { activity, type ActivityChanges, material } from "#lib/server/db/schema.ts";
+import { activity, type ActivityChanges } from "#lib/server/db/schema.ts";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {
@@ -127,57 +127,3 @@ export async function recordActivity(
  */
 export const recordActivityAfter = (record: ActivityRecord, by?: Actor) =>
 	db.transaction((tx) => recordActivity(tx, record, by));
-
-// --- Order lines ---------------------------------------------------------------------------------
-
-interface Line {
-	materialId: number;
-	quantity: number;
-}
-
-/**
- * Logs the changes to an order's lines, against the order: a material added (`created`), removed
- * (`deleted`) or its quantity changed (`updated`). Lines are replaced on every save, so they're
- * told apart by material (the subject's id), with their quantities added up, like their stock.
- */
-export async function recordOrderLines(
-	tx: Transaction,
-	order: Subject,
-	before: readonly Line[],
-	after: readonly Line[],
-) {
-	const total = (lines: readonly Line[]) => {
-		const totals = new Map<number, number>();
-		for (const line of lines) {
-			totals.set(
-				line.materialId,
-				roundQuantity((totals.get(line.materialId) ?? 0) + line.quantity),
-			);
-		}
-		return totals;
-	};
-	const [was, is] = [total(before), total(after)];
-	const changed = [...new Set([...was.keys(), ...is.keys()])].filter(
-		(id) => was.get(id) !== is.get(id),
-	);
-	if (!changed.length) return;
-
-	const names = new Map(
-		(
-			await tx
-				.select({ id: material.id, name: material.name })
-				.from(material)
-				.where(idsInTenant(material, changed))
-		).map((row) => [row.id, row.name]),
-	);
-	for (const id of changed) {
-		const [quantity, now] = [was.get(id), is.get(id)];
-		await recordActivity(tx, {
-			action: quantity === undefined ? "created" : now === undefined ? "deleted" : "updated",
-			subject: { type: "order_line", id, label: names.get(id) ?? `#${id}` },
-			parent: order,
-			before: { quantity: quantity ?? null },
-			after: { quantity: now ?? null },
-		});
-	}
-}

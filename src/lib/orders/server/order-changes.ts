@@ -3,15 +3,16 @@
  * changing, assigning or deleting many orders refuses what doing it to one refuses.
  */
 import { error, invalid } from "@sveltejs/kit";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, isNull } from "drizzle-orm";
 
-import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
 import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, idsInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { engineer, order, stockMovement } from "#lib/server/db/schema.ts";
+import { engineer, order } from "#lib/server/db/schema.ts";
+
+import { OrderRefused, saveOrderParts } from "./hooks.ts";
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 export const notEditable = (number: string, change: "changed" | "deleted") =>
@@ -24,28 +25,20 @@ export const completedAt = (status: OrderStatus, existing?: { completedAt: Date 
 	isDoneOrder(status) ? (existing?.completedAt ?? new Date()) : null;
 
 /**
- * Deletes one of the current tenant's orders; what it held goes back into stock. Refuses an
- * invoiced order, and one that an optional module's record (e.g. an invoice) still refers to; a
- * 404 if there's no such order. The order's page and the list's bulk delete share it.
+ * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it
+ * held goes back into stock). Refuses an invoiced order, one that a module refuses to let go of,
+ * and one that an optional module's record (e.g. an invoice) still refers to; a 404 if there's no
+ * such order. The order's page and the list's bulk delete share it.
  */
 export async function removeOrder(id: number) {
 	const deleting = db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
 			columns: { id: true, number: true, status: true },
 			where: idInTenant(order, id),
-			with: { lines: true },
 		});
 		if (!found) error(404, m.orders_not_found_plain());
 		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "deleted"));
-		// What it held goes back into stock. The stock history keeps the order's number, but no
-		// longer refers to the order itself.
-		// The note is stored, in the language of whoever deletes it.
-		const note = m.orders_stock_note_deleted();
-		await moveOrderStock(tx, found, found, { status: found.status, lines: [] }, note);
-		await tx
-			.update(stockMovement)
-			.set({ orderId: null })
-			.where(and(eq(stockMovement.orderId, found.id), inTenant(stockMovement)));
+		await saveOrderParts({ tx, order: found, status: null }).catch(refuseRefused);
 		await tx.delete(order).where(idInTenant(order, found.id));
 		await recordActivity(tx, {
 			action: "deleted",
@@ -56,24 +49,29 @@ export async function removeOrder(id: number) {
 	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
 }
 
+/** Refuses with what a module said when it refused its part of an order's change. */
+function refuseRefused(error: unknown): never {
+	if (error instanceof OrderRefused) invalid(error.message);
+	throw error;
+}
+
 /**
  * Gives one of the tenant's orders another status, as saving it in the order form would: not an
- * invoiced one; its completion date set or cleared; its materials taken from or returned to stock
- * (refused if there isn't enough). A 404 if there's no such order.
+ * invoiced one; its completion date set or cleared; the modules' parts following it (e.g. its
+ * materials taken from or returned to stock, refused if there isn't enough). A 404 if there's no
+ * such order.
  */
 export async function changeOrderStatus(id: number, status: OrderStatus) {
-	try {
-		await db.transaction(async (tx) => {
-			const found = await tx.query.order.findFirst({
-				where: idInTenant(order, id),
-				with: { lines: true },
-			});
+	await db
+		.transaction(async (tx) => {
+			const found = await tx.query.order.findFirst({ where: idInTenant(order, id) });
 			if (!found) error(404, m.orders_not_found_plain());
 			if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
 			if (found.status === status) return;
 			const values = { status, completedAt: completedAt(status, found) };
 			await tx.update(order).set(values).where(idInTenant(order, id));
-			await moveOrderStock(tx, found, found, { status, lines: found.lines });
+			// Thrown when refused, so the transaction stores nothing of it.
+			await saveOrderParts({ tx, order: found, status });
 			const subject = { type: "order", id, label: found.number };
 			const ignore = ["completedAt"];
 			await recordActivity(tx, {
@@ -83,12 +81,8 @@ export async function changeOrderStatus(id: number, status: OrderStatus) {
 				after: values,
 				ignore,
 			});
-		});
-	} catch (error) {
-		// Thrown, so the transaction stores nothing of it.
-		if (error instanceof OrderStockShortage) invalid(error.message);
-		throw error;
-	}
+		})
+		.catch(refuseRefused);
 }
 
 /**
@@ -96,8 +90,9 @@ export async function changeOrderStatus(id: number, status: OrderStatus) {
  * transaction `tx`, for an optional module that moves orders along with its own records, such as
  * invoicing: the completion date is set or cleared as `completedAt()` does, and one `updated`
  * entry per order is logged, with `note` (stored, so in the language of whoever makes the change)
- * saying why. It makes no checks: the caller has them (an order's stock and editability stay with
- * `changeOrderStatus()`).
+ * saying why. It makes no checks: the caller has them (an order's editability stays with
+ * `changeOrderStatus()`). Nor does it ask the modules about their parts (`orders.saving`): the
+ * statuses it moves between, completed and invoiced, are the same to them (both hold stock).
  */
 export async function setOrdersStatus(
 	tx: Transaction,

@@ -3,7 +3,7 @@
  * movements, and `moveStock` is the only thing that changes it.
  */
 import { error } from "@sveltejs/kit";
-import { sql, type SQLWrapper } from "drizzle-orm";
+import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 
 import { formatNumber, label } from "#lib/i18n/index.ts";
 import {
@@ -16,7 +16,7 @@ import {
 	type StockLevel,
 	type StockMovementKind,
 } from "#lib/models.ts";
-import { idInTenant, requireTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { material, stockMovement } from "#lib/server/db/schema.ts";
 
@@ -101,17 +101,21 @@ export function stockChanges(
 	);
 }
 
-/** An order's status and material lines, which decide what it holds of the stock. */
+/**
+ * An order's status and material lines, which decide what it holds of the stock. A status of
+ * `null` is an order being deleted.
+ */
 export interface OrderStock {
-	status: OrderStatus;
+	status: OrderStatus | null;
 	lines: { materialId: number; quantity: number }[];
 }
 
 /**
  * The lines of an order that hold stock: all of them while its status holds stock (see
- * `holdsStock`), none while it's a quote or once it's cancelled.
+ * `holdsStock`), none while it's a quote, once it's cancelled, or while it's being deleted.
  */
-export const heldLines = (order: OrderStock) => (holdsStock(order.status) ? order.lines : []);
+export const heldLines = (order: OrderStock) =>
+	order.status && holdsStock(order.status) ? order.lines : [];
 
 /** An order that needs more of a material than is in stock, with what it can have. */
 export class OrderStockShortage extends Error {
@@ -132,20 +136,48 @@ export class OrderStockShortage extends Error {
 }
 
 /**
- * Takes or returns stock for an order whose status or lines change from `before` to `after`: the
- * difference in what it holds (see `heldLines`), recorded with the order. So scheduling a quote
- * takes its materials, cancelling an order returns them, and an order that holds nothing returns
- * nothing. Call it in the transaction that changes the order. Throws an `OrderStockShortage` if
- * there isn't enough of a material.
+ * What one of the tenant's orders holds of each material, as its stock movements say: what it took
+ * less what it gave back. Materials it holds none of are left out.
+ */
+export async function heldByOrder(tx: Transaction, orderId: number) {
+	const rows = await tx
+		.select({
+			materialId: stockMovement.materialId,
+			quantity: sql<number>`-sum(${stockMovement.quantity})`,
+		})
+		.from(stockMovement)
+		.where(and(eq(stockMovement.orderId, orderId), inTenant(stockMovement)))
+		.groupBy(stockMovement.materialId)
+		.orderBy(sql`min(${stockMovement.id})`);
+	return rows
+		.map((row) => ({ materialId: row.materialId, quantity: roundQuantity(row.quantity) }))
+		.filter((row) => row.quantity !== 0);
+}
+
+/**
+ * Takes or returns stock for an order whose status or lines changed, or that is being deleted
+ * (its status `null`): the difference between what it holds as the stock ledger says
+ * (`heldByOrder`) and what it should hold now (see `heldLines`), recorded with the order. So
+ * scheduling a quote takes its materials, cancelling an order returns them, deleting it returns
+ * what it took, and an order whose status changed while the tenant had materials switched off is
+ * put right. The movements go in the order of `lineOrder` (material ids, by default the lines'),
+ * then the new materials'. Call it in the transaction that changes the order. Throws an
+ * `OrderStockShortage` if there isn't enough of a material.
  */
 export async function moveOrderStock(
 	tx: Transaction,
 	order: { id: number; number: string },
-	before: OrderStock,
 	after: OrderStock,
 	note: string | null = null,
+	lineOrder: number[] = after.lines.map((line) => line.materialId),
 ) {
-	const held = heldLines(before);
+	const rank = (materialId: number) => {
+		const index = lineOrder.indexOf(materialId);
+		return index < 0 ? lineOrder.length : index;
+	};
+	const held = (await heldByOrder(tx, order.id)).toSorted(
+		(a, b) => rank(a.materialId) - rank(b.materialId),
+	);
 	for (const [materialId, change] of stockChanges(held, heldLines(after))) {
 		try {
 			await moveStock(tx, {
@@ -158,9 +190,7 @@ export async function moveOrderStock(
 			});
 		} catch (error) {
 			if (!(error instanceof StockShortage)) throw error;
-			const taken = held
-				.filter((line) => line.materialId === materialId)
-				.reduce((sum, line) => sum + line.quantity, 0);
+			const taken = held.find((line) => line.materialId === materialId)?.quantity ?? 0;
 			throw new OrderStockShortage(
 				materialId,
 				roundQuantity(error.material.stock + taken),

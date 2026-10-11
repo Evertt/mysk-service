@@ -17,6 +17,7 @@ const kinds = {
 	Collector: "collector",
 	Event: "event",
 	Vote: "vote",
+	SaveHook: "save",
 } as const;
 
 /** An extension point as its owner's `extensions.ts` declares it. */
@@ -38,6 +39,7 @@ const kindNames: Record<ExtensionPoint["kind"], string> = {
 	collector: "a collector",
 	event: "an event",
 	vote: "a vote",
+	save: "a save hook",
 };
 
 /** `export const <name> = define<Kind>`, before the type arguments and the id. */

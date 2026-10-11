@@ -1,11 +1,12 @@
-import { sql, type SQLWrapper } from "drizzle-orm";
-
-import { inTenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
-import { orderLine } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
-import { adjustPrices, type OrderFacts, type PriceAdjustment } from "../extensions.ts";
+import {
+	adjustPrices,
+	costs,
+	type OrderCost,
+	type OrderFacts,
+	type PriceAdjustment,
+} from "../extensions.ts";
 
 /** Used to estimate labour cost while no engineer is assigned yet. In cents. */
 export const STANDARD_HOURLY_RATE = 8500;
@@ -14,33 +15,12 @@ export const STANDARD_HOURLY_RATE = 8500;
 export const laborCost = (hours: number, hourlyRate: number | null | undefined) =>
 	Math.round(hours * (hourlyRate ?? STANDARD_HOURLY_RATE));
 
-/**
- * An order line's total in cents, in SQL: the twin of `lineTotal()` in `#lib/models.ts`, which
- * rounds the same way. To add the lines up, wrap it in `sum()` in a `sql` template.
- */
-export const lineTotalSql = (line: { quantity: SQLWrapper; unitPrice: SQLWrapper } = orderLine) =>
-	sql<number>`round(${line.quantity} * ${line.unitPrice})`;
+/** What the costs add up to, in cents. */
+export const costsTotal = (orderCosts: readonly OrderCost[]) =>
+	orderCosts.reduce((sum, cost) => sum + cost.amount, 0);
 
-/**
- * The tenant's order lines added up per order, as a subquery to join to `order` and feed
- * `priceOrders()`: `.leftJoin(materials, eq(materials.orderId, order.id))`. Select `materials.total`
- * with a `coalesce(…, 0)`, for an order without lines.
- */
-export const materialsPerOrder = () =>
-	db
-		.select({
-			orderId: orderLine.orderId,
-			total: sql<number>`sum(${lineTotalSql()})`.as("total"),
-		})
-		.from(orderLine)
-		.where(inTenant(orderLine))
-		.groupBy(orderLine.orderId)
-		.as("materials");
-
-/** An order to price: what modules know about it, its materials (in cents) and its labour. */
+/** An order to price: what modules know about it, and its labour. */
 export interface OrderToPrice extends OrderFacts {
-	/** The order lines' total, in cents. */
-	materials: number;
 	laborHours: number;
 	/** The assigned engineer's, if any. In cents. */
 	hourlyRate: number | null | undefined;
@@ -48,42 +28,49 @@ export interface OrderToPrice extends OrderFacts {
 
 /** An order's price, in cents. */
 export interface OrderPrice {
-	materials: number;
 	labor: number;
+	/** From the tenant's modules, e.g. the materials used on it. */
+	costs: OrderCost[];
 	/** From the tenant's modules, e.g. work a service contract includes. */
 	adjustments: PriceAdjustment[];
 	total: number;
 }
 
-/** Materials plus labour plus adjustments, but never below zero. */
-export const orderTotal = (materials: number, labor: number, adjustments: PriceAdjustment[]) =>
+/** Costs plus labour plus adjustments, but never below zero. */
+export const orderTotal = (orderCosts: number, labor: number, adjustments: PriceAdjustment[]) =>
 	Math.max(
 		0,
-		adjustments.reduce((sum, adjustment) => sum + adjustment.amount, materials + labor),
+		adjustments.reduce((sum, adjustment) => sum + adjustment.amount, orderCosts + labor),
 	);
 
 /**
- * What orders cost: materials, labour, and the adjustments of the tenant's modules. Everything that
- * shows or adds up order totals (the order's page, the orders table, the dashboard's revenue, an
- * invoice) prices them here, so they agree. Returns the prices in the same order as `orders`.
+ * What orders cost: labour, the costs the tenant's modules add (e.g. materials) and their
+ * adjustments. Everything that shows or adds up order totals (the order's page, the orders table,
+ * the dashboard's revenue, an invoice) prices them here, so they agree. Returns the prices in the
+ * same order as `orders`; with `items`, the costs list what they're made of (for a page that shows
+ * them).
  *
- * The one place the modules' `orders.adjustPrices` is called (for the `enabled` modules, by
- * default the current tenant's). It's a collector (see `#lib/server/extensions.ts`): asked in
- * parallel about all the orders at once, the adjustments merged in registry order; a module that
- * throws fails the pricing.
+ * The one place the modules' `orders.costs` and `orders.adjustPrices` are called (for the
+ * `enabled` modules, by default the current tenant's). Both are collectors (see
+ * `#lib/server/extensions.ts`): asked in parallel about all the orders at once, merged in registry
+ * order; a module that throws fails the pricing. The costs come first: the adjustments get them.
  */
 export async function priceOrders(
 	orders: OrderToPrice[],
-	enabled?: readonly string[],
+	{ items = false, enabled }: { items?: boolean; enabled?: readonly string[] } = {},
 ): Promise<OrderPrice[]> {
+	if (!orders.length) return [];
+	const facts = orders.map(({ laborHours: _hours, hourlyRate: _rate, ...order }) => order);
+	const costAnswers = await collect(costs, { orders: facts, items }, enabled);
 	const priced = orders.map(({ laborHours, hourlyRate, ...order }) => ({
 		...order,
 		labor: laborCost(laborHours, hourlyRate),
+		costs: costAnswers.flatMap((answer) => answer.get(order.id) ?? []),
 	}));
-	if (!priced.length) return [];
 	const answers = await collect(adjustPrices, priced, enabled);
-	return priced.map(({ id, materials, labor }) => {
+	return priced.map(({ id, costs: orderCosts, labor }) => {
 		const adjustments = answers.flatMap((adjusted) => adjusted.get(id) ?? []);
-		return { materials, labor, adjustments, total: orderTotal(materials, labor, adjustments) };
+		const total = orderTotal(costsTotal(orderCosts), labor, adjustments);
+		return { labor, costs: orderCosts, adjustments, total };
 	});
 }

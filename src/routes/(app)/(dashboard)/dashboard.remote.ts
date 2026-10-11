@@ -3,7 +3,7 @@ import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 import { DAY } from "#lib/dates.ts";
 import { stockLevel } from "#lib/materials/index.ts";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
-import { materialsPerOrder, priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
@@ -31,8 +31,6 @@ export const getDashboard = forMembers.query(async () => {
 		.from(order)
 		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)));
 
-	const materials = materialsPerOrder();
-
 	// Work completed in the last 30 days, priced like everywhere else.
 	const done = await db
 		.select({
@@ -43,10 +41,8 @@ export const getDashboard = forMembers.query(async () => {
 			createdAt: order.createdAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(
@@ -120,7 +116,6 @@ export const getCharts = forMembers.query(async () => {
 		.where(and(inTenant(order), gte(order.createdAt, weeks[0])))
 		.groupBy(week, order.status);
 
-	const materials = materialsPerOrder();
 	const done = await db
 		.select({
 			id: order.id,
@@ -131,10 +126,8 @@ export const getCharts = forMembers.query(async () => {
 			completedAt: order.completedAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
-			materials: sql<number>`coalesce(${materials.total}, 0)`,
 		})
 		.from(order)
-		.leftJoin(materials, eq(materials.orderId, order.id))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(
 			and(

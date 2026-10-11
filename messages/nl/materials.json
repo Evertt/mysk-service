@@ -135,5 +135,7 @@
 	"materials_count_unchanged": "Dat is de voorraad al",
 	"materials_bulk_delete_title": "Geselecteerde materialen verwijderen?",
 	"materials_bulk_delete_description": "De materialen worden definitief uit de catalogus verwijderd, met hun voorraadhistorie. Materialen die op opdrachten staan, kun je niet verwijderen.",
-	"materials_bulk_in_use": "{name} staat op opdrachten"
+	"materials_bulk_in_use": "{name} staat op opdrachten",
+	"materials_cost_label": "Materialen",
+	"materials_order_no_lines": "Geen materialen op deze opdracht."
 }

@@ -1,31 +1,22 @@
-import { sql } from "drizzle-orm";
-import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
-import { lineTotal } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { adjustPrices, tag } from "#lib/orders/extensions.ts";
+import { adjustPrices, costs, tag } from "#lib/orders/extensions.ts";
 import {
+	costsTotal,
 	laborCost,
-	lineTotalSql,
-	materialsPerOrder,
 	orderTotal,
 	type OrderToPrice,
 	priceOrders,
 	STANDARD_HOURLY_RATE,
 } from "#lib/orders/server/pricing.ts";
-import { db } from "#lib/server/db/index.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
 const locals = { user: { id: "u1", name: "Jo" }, tenant: { organizationId: "north" } };
 
-// An in-memory database instead of the app's, which needs `DATABASE_URL`. The priceOrders tests
-// pass the modules that are on.
-vi.mock("#lib/server/db/index.ts", async () => {
-	const { createClient } = await import("@libsql/client");
-	const { drizzle } = await import("drizzle-orm/libsql");
-	const schema = await import("#lib/server/db/schema.ts");
-	return { db: drizzle(createClient({ url: ":memory:" }), { schema }) };
-});
+// The app's database needs `DATABASE_URL`; pricing doesn't use it. The priceOrders tests pass
+// the modules that are on.
+vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 // Made-up modules instead of the ones in `src/modules`, set by the priceOrders tests.
 const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
@@ -57,44 +48,18 @@ test("no hours cost nothing", () => {
 	expect(laborCost(0, null)).toBe(0);
 });
 
-describe("lineTotalSql", () => {
-	test.each([
-		[2, 1999],
-		[1.5, 3],
-		[0.25, 4999],
-		[1 / 3, 8500],
-		[0, 100],
-	])("rounds %d × %d like lineTotal", async (quantity, unitPrice) => {
-		const line = { quantity: sql`${quantity}`, unitPrice: sql`${unitPrice}` };
-		const row = await db.get<{ total: number }>(sql`select ${lineTotalSql(line)} as total`);
-		expect(row.total).toBe(lineTotal(quantity, unitPrice));
-	});
-});
-
-describe("materialsPerOrder", () => {
-	beforeAll(async () => {
-		await db.run(sql`create table order_line (
-			id integer primary key, organization_id text, order_id integer, material_id integer,
-			quantity real, unit_price integer
-		)`);
-		await db.run(sql`insert into order_line (organization_id, order_id, quantity, unit_price) values
-			('north', 1, 1.5, 3), ('north', 1, 2, 1999), ('north', 2, 4, 100), ('south', 3, 1, 999)`);
-	});
-
-	test("adds the current tenant's lines up per order", async () => {
-		const rows = await db
-			.select()
-			.from(materialsPerOrder())
-			.orderBy(sql`order_id`);
-		expect(rows).toEqual([
-			{ orderId: 1, total: 5 + 3998 },
-			{ orderId: 2, total: 400 },
-		]);
-	});
+test("costs add up", () => {
+	expect(costsTotal([])).toBe(0);
+	expect(
+		costsTotal([
+			{ label: "Materials", amount: 1200 },
+			{ label: "Travel", amount: 300 },
+		]),
+	).toBe(1500);
 });
 
 describe("orderTotal", () => {
-	test("adds materials, labour and the adjustments", () => {
+	test("adds the costs, labour and the adjustments", () => {
 		expect(orderTotal(10_000, 5_000, [])).toBe(15_000);
 		expect(
 			orderTotal(10_000, 5_000, [
@@ -116,22 +81,46 @@ describe("priceOrders", () => {
 		status: "completed",
 		equipmentId: id,
 		createdAt: new Date(2026, 9, 1),
-		materials: 10_000,
 		laborHours: 2,
 		hourlyRate: 6_000,
 		...fields,
 	});
 
-	test("prices materials and labour without modules", async () => {
-		expect(await priceOrders([order(1), order(2, { hourlyRate: null })], [])).toEqual([
-			{ materials: 10_000, labor: 12_000, adjustments: [], total: 22_000 },
-			{ materials: 10_000, labor: 2 * STANDARD_HOURLY_RATE, adjustments: [], total: 27_000 },
+	const seal = { key: "1", label: "Seal", quantity: "1 pcs", unitPrice: 10_000, amount: 10_000 };
+	/** A module that costs every order 10,000 in materials, with an item when asked. */
+	const materials = defineServerModule("materials" as ModuleId, [
+		contribute(costs, async ({ orders, items }) => {
+			const cost = { label: "Materials", amount: 10_000, ...(items && { items: [seal] }) };
+			return new Map(orders.map((o) => [o.id, cost]));
+		}),
+	]);
+
+	test("prices labour alone without modules", async () => {
+		registry.modules = [materials];
+		expect(await priceOrders([order(1), order(2, { hourlyRate: null })], { enabled: [] })).toEqual([
+			{ costs: [], labor: 12_000, adjustments: [], total: 12_000 },
+			{ costs: [], labor: 2 * STANDARD_HOURLY_RATE, adjustments: [], total: 17_000 },
 		]);
+	});
+
+	test("adds the modules' costs, with their items only when asked", async () => {
+		registry.modules = [materials];
+		const enabled = ["materials"];
+		const [plain] = await priceOrders([order(1)], { enabled });
+		expect(plain).toEqual({
+			costs: [{ label: "Materials", amount: 10_000 }],
+			labor: 12_000,
+			adjustments: [],
+			total: 22_000,
+		});
+		const [detailed] = await priceOrders([order(1)], { enabled, items: true });
+		expect(detailed.costs).toEqual([{ label: "Materials", amount: 10_000, items: [seal] }]);
 	});
 
 	test("applies each module's adjustments, in the modules' order, to the orders they name", async () => {
 		const seen: unknown[] = [];
 		registry.modules = [
+			materials,
 			defineServerModule("half-labour" as ModuleId, [
 				contribute(adjustPrices, async (orders) => {
 					seen.push(...orders);
@@ -144,16 +133,20 @@ describe("priceOrders", () => {
 			]),
 		];
 
-		const enabled = ["fee", "tags-only", "half-labour"];
-		const [first, second] = await priceOrders([order(1), order(2)], enabled);
-		expect(first).toEqual({ materials: 10_000, labor: 12_000, adjustments: [], total: 22_000 });
+		const enabled = ["fee", "tags-only", "half-labour", "materials"];
+		const [first, second] = await priceOrders([order(1), order(2)], { enabled });
+		expect(first).toMatchObject({ labor: 12_000, adjustments: [], total: 22_000 });
 		expect(second.adjustments.map((a) => a.label)).toEqual(["Half labour", "Fee"]);
 		expect(second.total).toBe(10_000 + 12_000 - 6_000 + 500);
-		// Modules get the labour's cost, not its hours and rate.
-		expect(seen[0]).toMatchObject({ id: 1, materials: 10_000, labor: 12_000 });
+		// Modules get the labour's cost, not its hours and rate, and the costs.
+		expect(seen[0]).toMatchObject({
+			id: 1,
+			labor: 12_000,
+			costs: [{ label: "Materials", amount: 10_000 }],
+		});
 		expect(seen[0]).not.toHaveProperty("laborHours");
 		// Only the modules that are on.
-		expect((await priceOrders([order(2)], ["fee"]))[0].adjustments).toEqual([
+		expect((await priceOrders([order(2)], { enabled: ["fee"] }))[0].adjustments).toEqual([
 			{ label: "Fee", amount: 500 },
 		]);
 	});
@@ -164,7 +157,7 @@ describe("priceOrders", () => {
 				contribute(adjustPrices, () => Promise.reject(new Error("Broken"))),
 			]),
 		];
-		await expect(priceOrders([order(1)], ["broken"])).rejects.toThrow("Broken");
+		await expect(priceOrders([order(1)], { enabled: ["broken"] })).rejects.toThrow("Broken");
 	});
 
 	test("doesn't ask the modules about no orders", async () => {
@@ -173,6 +166,6 @@ describe("priceOrders", () => {
 				contribute(adjustPrices, () => Promise.reject(new Error("Shouldn't be asked"))),
 			]),
 		];
-		expect(await priceOrders([], ["broken"])).toEqual([]);
+		expect(await priceOrders([], { enabled: ["broken"] })).toEqual([]);
 	});
 });

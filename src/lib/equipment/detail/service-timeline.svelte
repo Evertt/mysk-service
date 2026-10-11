@@ -12,9 +12,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
-	import { MaterialLink } from "#lib/materials/components.ts";
-	import { formatQuantity } from "#lib/materials/index.ts";
-	import { OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
+	import { CostItem, OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
 	import { types } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
@@ -113,23 +111,24 @@
 									value="{hours} · {formatCents(order.cost.labor)}"
 								/>
 							</dl>
-							{#if order.materials.length}
+							{#each order.cost.costs.filter((cost) => cost.items?.length) as cost, i (i)}
 								<div class="flex flex-col gap-2">
 									<p class="text-xs text-muted-foreground">
-										{m.equipment_history_materials({ cost: formatCents(order.cost.materials) })}
+										{m.equipment_history_cost({
+											label: cost.label,
+											cost: formatCents(cost.amount),
+										})}
 									</p>
 									<ul class="flex flex-col gap-2 text-sm">
-										{#each order.materials as line (line.id)}
+										{#each cost.items ?? [] as item (item.key)}
 											<li class="flex items-center gap-3">
-												<span class="w-16 shrink-0 text-right tabular-nums">
-													{formatQuantity(line.quantity, line.unit)}
-												</span>
-												<MaterialLink sku={line.sku} name={line.name} />
+												<span class="w-16 shrink-0 text-right tabular-nums">{item.quantity}</span>
+												<CostItem {item} />
 											</li>
 										{/each}
 									</ul>
 								</div>
-							{/if}
+							{/each}
 							{#if order.cost.adjustments.length}
 								<ul
 									aria-label={m.equipment_history_adjustments()}

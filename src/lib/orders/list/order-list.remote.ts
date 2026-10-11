@@ -1,15 +1,12 @@
-import { and, count, inArray, sql } from "drizzle-orm";
-
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { pageGroupsOf, planList } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { tagOrders } from "../server/hooks.ts";
 import { ordersSql, withOrderJoins } from "../server/list-sql.ts";
-import { lineTotalSql, priceOrders } from "../server/pricing.ts";
+import { priceOrders } from "../server/pricing.ts";
 import { ordersList } from "./orders-list.ts";
 
 /**
@@ -51,35 +48,15 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 		plan.groupCounts(),
 	]);
 
-	// The page's lines (only, with the rows around it when grouped), to price it.
-	const ids = rows.map((row) => row.id);
-	const lines = ids.length
-		? await db
-				.select({
-					orderId: orderLine.orderId,
-					count: count(),
-					total: sql<number>`sum(${lineTotalSql()})`,
-				})
-				.from(orderLine)
-				.where(and(inTenant(orderLine), inArray(orderLine.orderId, ids)))
-				.groupBy(orderLine.orderId)
-		: [];
-	const linesOf = new Map(lines.map((line) => [line.orderId, line]));
-
-	const page = rows.map((row) => ({
-		...row,
-		lineCount: linesOf.get(row.id)?.count ?? 0,
-		materialsTotal: linesOf.get(row.id)?.total ?? 0,
-	}));
-	const facts = page.map((row) => ({
+	// The page's orders (only, with the rows around it when grouped) priced and tagged.
+	const facts = rows.map((row) => ({
 		...row,
 		equipmentId: row.equipment?.id ?? null,
-		materials: row.materialsTotal,
 		hourlyRate: row.engineer?.hourlyRate,
 	}));
 	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
 	const priced = plan.page(
-		page.map((row, i) => ({
+		rows.map((row, i) => ({
 			...row,
 			laborTotal: prices[i].labor,
 			total: prices[i].total,

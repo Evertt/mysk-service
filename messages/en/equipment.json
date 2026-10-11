@@ -120,7 +120,7 @@
 	"equipment_history_scheduled": "Scheduled",
 	"equipment_history_completed": "Completed",
 	"equipment_history_labour": "Labour",
-	"equipment_history_materials": "Materials · {cost}",
+	"equipment_history_cost": "{label} · {cost}",
 	"equipment_history_adjustments": "Adjustments",
 	"equipment_stats_orders": "Orders",
 	"equipment_stats_open": "{count} open",

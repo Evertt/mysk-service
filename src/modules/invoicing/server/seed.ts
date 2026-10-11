@@ -49,7 +49,7 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 			0,
 			adjustments.reduce((sum, adjustment) => sum + adjustment.amount, materials + labor),
 		);
-		return { materials, labor, adjustments, total };
+		return { costs: [{ amount: materials }], labor, adjustments, total };
 	}
 
 	// The seed's texts are in Dutch.

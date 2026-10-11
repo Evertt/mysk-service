@@ -4,7 +4,6 @@ import * as v from "valibot";
 
 import { label } from "#lib/i18n/index.ts";
 import { fitsUnit, isOpenOrder, type MaterialUnit } from "#lib/models.ts";
-import { lineTotalSql } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -22,6 +21,7 @@ import { nextNumber } from "#lib/server/numbering.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { materialFields, newMaterialFields } from "./form/material-schema.ts";
+import { lineTotalSql } from "./server/costs.ts";
 import { findMaterial, ordersUsing, removeMaterial } from "./server/materials.ts";
 import { moveStock, withBalances } from "./server/stock.ts";
 

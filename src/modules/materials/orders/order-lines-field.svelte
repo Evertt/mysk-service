@@ -1,32 +1,36 @@
 <!--
 	@component
-	The materials card of the order form: the order's lines, to add to and remove from, and their
-	total. The inputs' names (from the form's `field`) make the lines part of the submission.
+	The materials card of the order form (the module's part of it, see `orders.form`): the order's
+	lines, to add to and remove from, and their total. The inputs' names (from `field`, under the
+	form's `modules.materials`) make the lines part of the order's submission.
 -->
 <script lang="ts">
+	import type { RemoteFormFields } from "$app/server";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
+	import type * as v from "valibot";
 
 	import { formatCents, label } from "#lib/i18n/index.ts";
+	import type { materialsPart } from "#lib/materials/index.ts";
 	import { lineTotal, quantityStep } from "#lib/models.ts";
 
-	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
+	import type { getMaterialOptions, getOrderLines } from "./order-lines.remote.ts";
 
 	let {
 		field,
 		materials,
-		order,
+		quoted,
 	}: {
-		/** The form's `lines` field. */
-		field: (typeof createOrder)["fields"]["lines"] | (typeof updateOrder)["fields"]["lines"];
-		materials: Awaited<ReturnType<typeof getOrderFormOptions>>["materials"];
-		/** The order being edited: its lines are the initial ones, at the price they were quoted at. */
-		order?: Awaited<ReturnType<typeof getOrder>>["order"];
+		/** The lines' field of the materials' part of the order form. */
+		field: RemoteFormFields<v.InferInput<typeof materialsPart>>["lines"];
+		materials: Awaited<ReturnType<typeof getMaterialOptions>>;
+		/** The lines of the order being edited, at the prices they were quoted at; none for a new one. */
+		quoted?: Awaited<ReturnType<typeof getOrderLines>>;
 	} = $props();
 
 	// Kept here so rows can be added and removed.
 	const initialLines = () =>
-		order?.lines.map((line) => ({
+		quoted?.map((line) => ({
 			key: crypto.randomUUID(),
 			materialId: String(line.materialId),
 			quantity: line.quantity,
@@ -36,7 +40,7 @@
 		new Map(materials.map((material) => [String(material.id), material])),
 	);
 	const quotedPrices = $derived(
-		new Map(order?.lines.map((line) => [String(line.materialId), line.unitPrice])),
+		new Map(quoted?.map((line) => [String(line.materialId), line.unitPrice])),
 	);
 	const unitPrice = (materialId: string) =>
 		quotedPrices.get(materialId) ?? materialsById.get(materialId)?.unitPrice ?? 0;
@@ -59,7 +63,7 @@
 	<Card.Header>
 		<Card.Title>{m.orders_materials()}</Card.Title>
 		<Card.Description>
-			{order ? m.orders_materials_quoted() : m.orders_materials_list_price()}
+			{quoted ? m.orders_materials_quoted() : m.orders_materials_list_price()}
 		</Card.Description>
 		<Card.Action>
 			<Button type="button" variant="outline" size="sm" onclick={addLine}>

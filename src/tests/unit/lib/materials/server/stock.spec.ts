@@ -165,15 +165,8 @@ describe("moveOrderStock", () => {
 		{ materialId: 3, quantity: 2 },
 	];
 	/** Runs `moveOrderStock` in a transaction, like the app does. */
-	const moveOrder = (
-		movedOrder: typeof order,
-		before: OrderStock,
-		after: OrderStock,
-		note?: string,
-	) =>
-		db.transaction((tx) =>
-			moveOrderStock(tx as unknown as Transaction, movedOrder, before, after, note),
-		);
+	const moveOrder = (movedOrder: typeof order, after: OrderStock, note?: string) =>
+		db.transaction((tx) => moveOrderStock(tx as unknown as Transaction, movedOrder, after, note));
 
 	beforeEach(async () => {
 		Object.assign(locals, { user: { id: "u1", name: "Jo" }, tenant: tenant("north") });
@@ -186,10 +179,10 @@ describe("moveOrderStock", () => {
 	});
 
 	test("a quote's lines take nothing; scheduling it takes them", async () => {
-		await moveOrder(order, { status: "quote", lines: [] }, { status: "quote", lines });
+		await moveOrder(order, { status: "quote", lines });
 		expect((await ledger(1)).movements).toEqual([]);
 
-		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
+		await moveOrder(order, { status: "scheduled", lines });
 		expect(await ledger(1)).toMatchObject({
 			stock: 6,
 			movements: [{ quantity: -4, kind: "consumption", order_number: "ORD-7" }],
@@ -198,26 +191,63 @@ describe("moveOrderStock", () => {
 	});
 
 	test("moving on from scheduled takes nothing more", async () => {
-		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
-		await moveOrder(order, { status: "scheduled", lines }, { status: "in_progress", lines });
-		await moveOrder(order, { status: "in_progress", lines }, { status: "completed", lines });
+		await moveOrder(order, { status: "scheduled", lines });
+		await moveOrder(order, { status: "in_progress", lines });
+		await moveOrder(order, { status: "completed", lines });
 		expect((await ledger(1)).movements).toHaveLength(1);
 	});
 
 	test("cancelling returns what it held, and reopening takes it again", async () => {
-		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
-		await moveOrder(order, { status: "scheduled", lines }, { status: "cancelled", lines });
+		await moveOrder(order, { status: "scheduled", lines });
+		await moveOrder(order, { status: "cancelled", lines });
 		expect(await ledger(1)).toMatchObject({
 			stock: 10,
 			movements: [{ kind: "consumption" }, { quantity: 4, kind: "return" }],
 		});
-		await moveOrder(order, { status: "cancelled", lines }, { status: "scheduled", lines });
+		await moveOrder(order, { status: "scheduled", lines });
 		expect((await ledger(1)).stock).toBe(6);
 	});
 
 	test("removing the lines of a cancelled order returns nothing", async () => {
-		await moveOrder(order, { status: "cancelled", lines }, { status: "cancelled", lines: [] }, "x");
+		await moveOrder(order, { status: "cancelled", lines: [] }, "x");
 		expect((await ledger(1)).movements).toEqual([]);
+	});
+
+	test("deleting an order returns what it took, with the note", async () => {
+		await moveOrder(order, { status: "scheduled", lines });
+		await moveOrder(order, { status: null, lines }, "Deleted");
+		expect(await ledger(1)).toMatchObject({
+			stock: 10,
+			movements: [{ kind: "consumption" }, { quantity: 4, kind: "return", note: "Deleted" }],
+		});
+		expect((await ledger(3)).stock).toBe(5);
+	});
+
+	test("moves in the order of the lines, then the new materials", async () => {
+		await moveOrder(order, { status: "scheduled", lines });
+		const shuffled = [
+			{ materialId: 3, quantity: 1 },
+			{ materialId: 1, quantity: 5 },
+		];
+		await moveOrder(order, { status: "scheduled", lines: shuffled });
+		const { rows } = await db.$client.execute(
+			"select material_id from stock_movement order by id desc limit 2",
+		);
+		expect(rows.map((row) => row.material_id).toReversed()).toEqual([3, 1]);
+	});
+
+	test("goes by what the ledger says the order holds, so a change it missed is put right", async () => {
+		// Scheduled while it took nothing (the tenant had materials off): its next change takes it.
+		await moveOrder(order, { status: "in_progress", lines });
+		expect((await ledger(1)).stock).toBe(6);
+		// Cancelled while it held its lines: its next change gives them back.
+		await moveOrder(order, { status: "cancelled", lines });
+		await moveOrder(order, { status: "cancelled", lines });
+		expect((await ledger(1)).stock).toBe(10);
+		// Another order's movements are its own.
+		await moveOrder({ id: 8, number: "ORD-8" }, { status: "scheduled", lines });
+		await moveOrder(order, { status: "cancelled", lines: [] });
+		expect((await ledger(1)).stock).toBe(6);
 	});
 
 	test("refuses a shortage, saying what the order can have, and the transaction takes nothing", async () => {
@@ -225,23 +255,15 @@ describe("moveOrderStock", () => {
 			{ materialId: 1, quantity: 4 },
 			{ materialId: 3, quantity: 6 },
 		];
-		const error = await moveOrder(
-			order,
-			{ status: "quote", lines: [] },
-			{ status: "scheduled", lines: more },
-		).catch((e) => e);
+		const error = await moveOrder(order, { status: "scheduled", lines: more }).catch((e) => e);
 		expect(error).toBeInstanceOf(OrderStockShortage);
 		expect(error).toMatchObject({ materialId: 3, available: 5 });
 		expect(error.message).toBe("Only 5 pcs of Ball valve in stock");
 		expect((await ledger(1)).movements).toEqual([]);
 
 		// What it already holds counts towards what it can have.
-		await moveOrder(order, { status: "quote", lines }, { status: "scheduled", lines });
-		const again = await moveOrder(
-			order,
-			{ status: "scheduled", lines },
-			{ status: "scheduled", lines: more },
-		).catch((e) => e);
+		await moveOrder(order, { status: "scheduled", lines });
+		const again = await moveOrder(order, { status: "scheduled", lines: more }).catch((e) => e);
 		expect(again).toMatchObject({ materialId: 3, available: 5 });
 	});
 });

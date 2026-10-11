@@ -20,21 +20,35 @@
  *   are logged with the module's id, never thrown: the change is made.
  * - Vote (`vote()`): every contributor is asked whether something may happen, and answers with a
  *   refusal or nothing; any refusal wins. A voter that throws fails the request.
+ * - Save hook (`save()`): each contributor saves its part of a change in the owner's transaction
+ *   (the input carries it), one after another in registry order, and answers the problems that
+ *   keep it from saving, or nothing. The first problems stop the rest; the owner then refuses the
+ *   change, which rolls the transaction back. A contributor that throws fails the request (and so
+ *   rolls it back too).
  *
  * A module's point is dispatched only while its owner is on (the id's prefix, e.g. `invoicing`):
- * otherwise `collect()` and `vote()` answer `[]` and `emit()` tells no one.
+ * otherwise `collect()`, `vote()` and `save()` answer `[]` and `emit()` tells no one.
  *
  * Registry order is dependency order: the modules' `server/index.ts` in `hooks.gen.ts`, each after
  * the modules it requires. Add a point when a module needs one, not before.
  */
-import type { CollectorPoint, EventPoint, VotePoint } from "#lib/extensions/define.ts";
+import type {
+	CollectorPoint,
+	EventPoint,
+	SaveHookPoint,
+	VotePoint,
+} from "#lib/extensions/define.ts";
 import { type ModuleId, moduleIds } from "#lib/modules/ids.ts";
 import { requireTenant } from "#lib/server/auth/session.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
 
 import { generatedServerModules } from "./modules/hooks.gen.ts";
 
-type AnyPoint = CollectorPoint<unknown, unknown> | EventPoint<unknown> | VotePoint<unknown>;
+type AnyPoint =
+	| CollectorPoint<unknown, unknown>
+	| EventPoint<unknown>
+	| VotePoint<unknown>
+	| SaveHookPoint<unknown, unknown>;
 
 /** A module's answer to one point, made with `contribute()`. */
 export interface Contribution {
@@ -62,6 +76,11 @@ export function contribute<Payload>(
 export function contribute<In>(
 	point: VotePoint<In>,
 	voter: (input: In) => Promise<string | undefined>,
+): Contribution;
+/** A module's part of a save: what it saves in the owner's transaction, or the problems in the way. */
+export function contribute<In, Problem>(
+	point: SaveHookPoint<In, Problem>,
+	save: (input: In) => Promise<Problem[] | undefined>,
 ): Contribution;
 export function contribute(point: AnyPoint, answer: (input: never) => unknown): Contribution {
 	return { point, answer };
@@ -161,4 +180,25 @@ export async function vote<In>(
 	const voters = contributionsTo<(input: In) => Promise<string | undefined>>(point, enabled);
 	const answers = await Promise.all(voters.map(({ answer }) => ask(answer, input)));
 	return answers.filter((answer) => answer !== undefined);
+}
+
+/**
+ * Lets the modules that are on (by default the current tenant's) save their part of `input`, one
+ * after another in registry order, in the owner's transaction (which `input` carries). Returns the
+ * problems of the first that answers any, without asking the rest: the owner then refuses the
+ * change. Empty when every module saved its part.
+ */
+export async function save<In, Problem>(
+	point: SaveHookPoint<In, Problem>,
+	input: In,
+	enabled: readonly string[] = requireTenant().modules,
+): Promise<Problem[]> {
+	for (const { answer } of contributionsTo<(input: In) => Promise<Problem[] | undefined>>(
+		point,
+		enabled,
+	)) {
+		const problems = await answer(input);
+		if (problems?.length) return problems;
+	}
+	return [];
 }

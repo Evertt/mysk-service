@@ -79,3 +79,12 @@ export const typeOptions = labelOptions("orderType", orderTypes, typeDetails);
  */
 export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
 	status === "quote" && engineerId !== null ? "scheduled" : status;
+
+/**
+ * What an order's price is made of, in words, from the costs the tenant's modules add to it and
+ * labour: "Materials and labour", or "Labour" when no module adds anything.
+ */
+export const costsLabour = (costs: readonly { label: string }[]) =>
+	costs.length
+		? m.orders_costs_labour({ costs: costs.map((cost) => cost.label).join(", ") })
+		: m.orders_labour();

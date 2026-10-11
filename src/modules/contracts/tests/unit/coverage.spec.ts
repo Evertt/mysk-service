@@ -61,7 +61,7 @@ describe("coverage", () => {
 });
 
 describe("what a contract includes", () => {
-	const price = { materials: 12_345, labor: 17_000 };
+	const price = { costs: 12_345, labor: 17_000 };
 
 	test.each<[ContractLevel, number]>([
 		["basic", 0],
@@ -72,7 +72,7 @@ describe("what a contract includes", () => {
 	});
 
 	test("includes nothing of an order that costs nothing", () => {
-		expect(coveredAmount("premium", { materials: 0, labor: 0 })).toBe(0);
+		expect(coveredAmount("premium", { costs: 0, labor: 0 })).toBe(0);
 	});
 });
 

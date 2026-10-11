@@ -1,12 +1,11 @@
 import { error } from "@sveltejs/kit";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { lineTotal } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, order, orderLine } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 /** How many orders the customer page lists; the orders list has them all. */
@@ -51,34 +50,8 @@ export const getCustomerActivity = forMembers.query(v.string(), async (code) => 
 			.limit(RECENT),
 	]);
 
-	const lines = orders.length
-		? await db
-				.select({
-					orderId: orderLine.orderId,
-					quantity: orderLine.quantity,
-					unitPrice: orderLine.unitPrice,
-				})
-				.from(orderLine)
-				.where(
-					and(
-						inArray(
-							orderLine.orderId,
-							orders.map((row) => row.id),
-						),
-						inTenant(orderLine),
-					),
-				)
-		: [];
-
 	// Priced like everywhere else, so a covered order costs here what it does on its own page.
-	const prices = await priceOrders(
-		orders.map((row) => ({
-			...row,
-			materials: lines
-				.filter((line) => line.orderId === row.id)
-				.reduce((sum, line) => sum + lineTotal(line.quantity, line.unitPrice), 0),
-		})),
-	);
+	const prices = await priceOrders(orders);
 	return {
 		total,
 		orders: orders.map(

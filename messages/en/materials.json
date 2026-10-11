@@ -135,5 +135,7 @@
 	"materials_count_unchanged": "That's the stock already",
 	"materials_bulk_delete_title": "Delete the selected materials?",
 	"materials_bulk_delete_description": "The materials are removed from the catalogue permanently, with their stock history. Materials used on orders can't be deleted.",
-	"materials_bulk_in_use": "{name} is used on orders"
+	"materials_bulk_in_use": "{name} is used on orders",
+	"materials_cost_label": "Materials",
+	"materials_order_no_lines": "No materials on this order."
 }

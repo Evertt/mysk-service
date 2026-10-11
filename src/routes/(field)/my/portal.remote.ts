@@ -9,10 +9,11 @@ import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatNumber, label } from "#lib/i18n/index.ts";
-import { OrderStockShortage, moveOrderStock } from "#lib/materials/server/index.ts";
+import { orderLines } from "#lib/materials/index.ts";
+import { checkLines, OrderStockShortage, saveLines } from "#lib/materials/server/index.ts";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { checkLines, saveOrderLines } from "#lib/orders/server/index.ts";
-import { id, laborHours, orderLines, text } from "#lib/schema.ts";
+import { OrderRefused, saveOrderParts } from "#lib/orders/server/index.ts";
+import { id, laborHours, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	auth,
@@ -132,7 +133,6 @@ async function findMyOrder(
 	const found = await tx.query.order.findFirst({
 		columns: { id: true, number: true, status: true, laborHours: true },
 		where: and(idInTenant(order, orderId), eq(order.engineerId, engineerId)),
-		with: { lines: true },
 	});
 	if (!found) error(404, m.portal_not_found_plain());
 	if (!fieldActions(found.status)[action]) {
@@ -151,8 +151,8 @@ type MyOrder = Awaited<ReturnType<typeof findMyOrder>>;
 const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
 
 /**
- * Changes the status of an order (in the transaction), with the stock that follows from it, and
- * logs it as `action`.
+ * Changes the status of an order (in the transaction), with what the modules' parts of it follow
+ * (e.g. its stock), and logs it as `action`. Refused with a module's message.
  */
 async function setStatus(
 	tx: Transaction,
@@ -162,7 +162,10 @@ async function setStatus(
 	{ completedAt, note }: { completedAt?: Date; note?: string } = {},
 ) {
 	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
-	await moveOrderStock(tx, found, found, { status, lines: found.lines });
+	await saveOrderParts({ tx, order: found, status }).catch((error) => {
+		if (error instanceof OrderRefused) invalid(error.message);
+		throw error;
+	});
 	await recordActivity(tx, {
 		action,
 		subject: subjectOf(found),
@@ -226,7 +229,7 @@ export const saveMaterials = forEngineers.form(
 		const number = await db
 			.transaction(async (tx) => {
 				const found = await findMyOrder(tx, engineer.id, input.id, "work");
-				await saveOrderLines(tx, found, found, { status: found.status, lines: input.lines });
+				await saveLines(tx, found, found.status, input.lines);
 				return found.number;
 			})
 			.catch((error) => {
