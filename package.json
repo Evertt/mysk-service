@@ -31,7 +31,7 @@
 		"auth:schema": "auth generate --config src/lib/server/auth/better-auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"db:seed": "node --env-file=.env src/lib/server/db/seed/index.ts",
 		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
-		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit migrate && pnpm run db:seed",
+		"db:reset": "node -e \"fs.rmSync('local.db', { force: true })\" && drizzle-kit migrate && node -e \"const c = require('@libsql/client').createClient({ url: 'file:local.db' }); c.execute('PRAGMA journal_mode=WAL').then(() => c.close())\" && pnpm run db:seed",
 		"themes:sync": "node scripts/theme-components.ts && vp check --fix",
 		"knip": "knip"
 	},
