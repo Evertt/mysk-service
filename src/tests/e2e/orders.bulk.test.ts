@@ -114,10 +114,7 @@ describe("bulk actions on selected orders, in North", () => {
 		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
 		await dialog.getByRole("button", { name: "Apply" }).click();
 
-		await app.toast("1 updated, 1 skipped");
-		await page
-			.locator("[data-sonner-toast]", { hasText: `${invoiced.number} is invoiced` })
-			.waitFor();
+		await app.toast("1 updated, 1 skipped", `${invoiced.number} is invoiced`);
 		expect(await value(`select status from "order" where id = ?`, [quote.id])).toBe("cancelled");
 		expect(await snapshot(invoiced.id)).toEqual(before);
 		expect((await activityOf(quote.id))[0].action).toBe("updated");

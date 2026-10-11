@@ -185,8 +185,9 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(total);
 	});
 
-	test("a malformed query for the list is refused with a 400", async () => {
-		const { page } = app;
+	// One test per request, each loading the page afresh: in one test, the six page loads took up
+	// half its time under the load of a full run.
+	describe("a malformed query for the list is refused with a 400", () => {
 		type Query = Record<string, unknown>;
 		/** The error status of the response to the next `name` request, with its argument changed. */
 		const statusOf = async (
@@ -195,37 +196,37 @@ describe("in North", () => {
 			trigger: () => unknown,
 		) => {
 			await app.go("/equipment");
-			await tamperWithQuery<Query>(page, name, change);
+			await tamperWithQuery<Query>(app.page, name, change);
 			const [response] = await app.expectingErrors(() =>
-				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
+				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
 			);
 			return remoteErrorStatus(response);
 		};
-		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
-		const search = () => page.getByLabel("Search equipment…").fill("A");
+		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
 
 		// An unknown category, a filter the list doesn't have, a number for a customer's code, a
 		// page size it doesn't offer.
-		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
-		for (const change of [
+		test.each<Query>([
 			{ filters: { category: ["bogus"] } },
 			{ filters: { total: [1] } },
 			{ filters: { customer: [1] } },
 			{ pageSize: 5000 },
-		]) {
-			expect(
-				await statusOf("getEquipmentList", rowsWith(change), nextPage),
-				JSON.stringify(change),
-			).toBe(400);
-		}
-		// The counts in the filters take the same care.
-		expect(
-			await statusOf("getEquipmentFacets", rowsWith({ filters: { status: ["bogus"] } }), search),
-		).toBe(400);
+		])("in the rows' query: %j", async (change) => {
+			const nextPage = () => app.page.getByRole("button", { name: "Go to next page" }).click();
+			expect(await statusOf("getEquipmentList", rowsWith(change), nextPage)).toBe(400);
+		});
 
-		// The list works as before once the request is right.
-		await app.go("/equipment");
-		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
+		test("in the filters' counts", async () => {
+			const search = () => app.page.getByLabel("Search equipment…").fill("A");
+			expect(
+				await statusOf("getEquipmentFacets", rowsWith({ filters: { status: ["bogus"] } }), search),
+			).toBe(400);
+		});
+
+		test("while the list works as before once the request is right", async () => {
+			await app.go("/equipment");
+			expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
+		});
 	});
 
 	test("filtering by customer, found by searching the filter", async () => {
@@ -309,14 +310,19 @@ describe("in North", () => {
 			await app.tableSettled();
 		}
 		expect(listed).toEqual(expected.map((unit) => unit.serial));
+	});
 
-		// A reload keeps it grouped.
-		await app.go(`/equipment${new URL(page.url()).search}`);
+	// A test of its own: the one above goes through every page, which took up half its time under
+	// the load of a full run.
+	test("a reload keeps it grouped, and it can be ungrouped", async () => {
+		const { page } = app;
+		const params = () => new URL(page.url()).searchParams;
+		await app.go("/equipment?status=operational&group=category");
 		expect(params().get("group")).toBe("category");
 		expect((await app.groups()).length).toBeGreaterThan(0);
 
 		await app.groupBy("None");
-		expect(params().has("group")).toBe(false);
+		await expect.poll(() => params().has("group")).toBe(false);
 		expect(await page.locator("tbody tr[data-group]").count()).toBe(0);
 		await page.getByRole("button", { name: "Reset" }).click();
 		await app.tableSettled();

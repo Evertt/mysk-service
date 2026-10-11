@@ -34,6 +34,19 @@ test("confirming submits the record's id", async () => {
 	expect(Object.fromEntries(onsubmit.mock.calls[0][0])).toEqual({ id: "42" });
 });
 
+test("deleting leaves the page's queries alone, as the form refreshes what it changes", async () => {
+	const onupdates = vi.fn();
+	const onsubmit = vi.fn();
+	render(DeleteDialog, { form: fakeIdForm({ onsubmit, onupdates }), ...props });
+
+	await page.getByRole("button", { name: "Delete" }).click();
+	await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+
+	expect(onsubmit).toHaveBeenCalledOnce();
+	// `updates()` with nothing: none of the page's queries, instead of all of them.
+	expect(onupdates.mock.calls).toEqual([[]]);
+});
+
 test("cancelling closes the dialog without submitting", async () => {
 	const onsubmit = vi.fn();
 	render(DeleteDialog, { form: fakeIdForm({ onsubmit }), ...props });

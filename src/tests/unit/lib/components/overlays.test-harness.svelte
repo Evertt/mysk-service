@@ -41,7 +41,10 @@
 {:else if overlay === "tooltip"}
 	<Tooltip.Provider>
 		<Tooltip.Root {open}>
-			<Tooltip.Trigger>Trigger</Tooltip.Trigger>
+			<!-- Out of the pointer's reach: the test opens and closes the tooltip through `open`, and the
+			pointer, wherever an earlier test left it, would reopen it right after it closes (moving over
+			the trigger within the provider's skip delay), so it never went. -->
+			<Tooltip.Trigger class="pointer-events-none">Trigger</Tooltip.Trigger>
 			<Tooltip.Content>Content</Tooltip.Content>
 		</Tooltip.Root>
 	</Tooltip.Provider>

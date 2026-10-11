@@ -37,10 +37,12 @@ describe("in South", () => {
 		// The filters count South's units only.
 		await app.go("/equipment");
 		await app.openFilter("Category");
-		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
-			Number(/(\d+)$/.exec(text.trim())![1]),
-		);
-		expect(counts.reduce((sum, n) => sum + n, 0)).toBe(await countIn("equipment", south.id));
+		// Polled: the menu shows the filters' titles until it has switched to the picked one's values.
+		const counted = async () =>
+			(await page.getByRole("option").allInnerTexts())
+				.map((text) => Number(/(\d+)$/.exec(text.trim())?.[1]))
+				.reduce((sum, n) => sum + n, 0);
+		await expect.poll(counted).toBe(await countIn("equipment", south.id));
 		await page.keyboard.press("Escape");
 	});
 

@@ -340,21 +340,33 @@ describe("in North", () => {
 		});
 	});
 
-	test("the Active box saves both ways across edits", async () => {
-		const { page } = app;
+	describe("the Active box saves both ways across edits", () => {
+		/** Edits the engineer created above, ticking or unticking the box if `toggle`; their `active`. */
 		const edit = async (toggle: boolean) => {
 			await app.go(`/engineers/${created}/edit`);
 			if (toggle) await active().click();
 			await save("Save engineer");
 			return (await engineer(created)).active;
 		};
-		expect(await edit(true)).toBe(0);
-		await app.toast("Engineer saved");
-		expect(await page.locator("main").innerText()).toContain("Inactive");
-		expect(await edit(true)).toBe(1);
-		expect(await edit(false)).toBe(1);
-		expect(await edit(true)).toBe(0);
-		expect(await edit(false)).toBe(0);
+
+		// Two edits per test: the five of them took up the time of one test under the load of a full
+		// run.
+		test("unticked, the engineer is inactive", async () => {
+			expect(await edit(true)).toBe(0);
+			await app.toast("Engineer saved");
+			// The redirect shows the cached engineer first and refreshes it right after.
+			await expect.poll(() => app.page.locator("main").innerText()).toContain("Inactive");
+		});
+
+		test("ticked, active, and it stays so when the box isn't touched", async () => {
+			expect(await edit(true)).toBe(1);
+			expect(await edit(false)).toBe(1);
+		});
+
+		test("and the same for inactive", async () => {
+			expect(await edit(true)).toBe(0);
+			expect(await edit(false)).toBe(0);
+		});
 	});
 
 	test("a refused edit keeps the box as the user left it", async () => {

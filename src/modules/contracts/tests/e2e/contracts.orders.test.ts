@@ -117,7 +117,7 @@ describe("in North, contracts count on orders", () => {
 			.filter((callOut) => slaOf(callOut) !== "on_track")
 			.map((callOut) => callOut.number);
 		const listed = card("Response times at risk").locator('a[href^="/orders/"]');
-		expect(await listed.allInnerTexts()).toEqual(expected);
+		await expect.poll(() => listed.allInnerTexts()).toEqual(expected);
 	});
 
 	test("and the contracts ending in the next 60 days that weren't renewed", async () => {
@@ -133,7 +133,7 @@ describe("in North, contracts count on orders", () => {
 		);
 		expect(expected.length).toBeGreaterThan(0);
 		const listed = card("Contracts ending soon").locator('a[href^="/contracts/CTR-"]');
-		expect(await listed.allInnerTexts()).toEqual(expected.map((row) => row.number));
+		await expect.poll(() => listed.allInnerTexts()).toEqual(expected.map((row) => row.number));
 	});
 
 	test("the dashboard's revenue takes off what contracts include", async () => {
@@ -149,57 +149,74 @@ describe("in North, contracts count on orders", () => {
 		expect(cents(await revenue.innerText())).toBe(expected);
 	});
 
-	test("a covered order shows what its contract includes, and its total agrees everywhere", async () => {
-		const { page } = app;
-		// A premium-covered repair with both labour and materials, among its customer's ten latest
-		// orders (which their page lists).
-		const [order] = await pricing(
-			`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
-			 and exists (select 1 from order_line l where l.order_id = o.id)
-			 and o.id in (select r.id from "order" r where r.customer_id = o.customer_id
-			 order by r.created_at desc, r.id desc limit 10)`,
-		);
-		const price = priceOf(order);
-		expect(price.included).toBe(order.materials + price.labor);
+	describe("a covered order shows what its contract includes, and its total agrees everywhere", () => {
+		/**
+		 * A premium-covered repair with both labour and materials, among its customer's ten latest
+		 * orders (which their page lists), and its price.
+		 */
+		const covered = async () => {
+			const [order] = await pricing(
+				`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
+				 and exists (select 1 from order_line l where l.order_id = o.id)
+				 and o.id in (select r.id from "order" r where r.customer_id = o.customer_id
+				 order by r.created_at desc, r.id desc limit 10)`,
+			);
+			return { order, price: priceOf(order) };
+		};
 
-		await app.go(`/orders/${order.number}`);
-		const lines = card("Materials and labour");
-		const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
-		expect(await adjustment.innerText()).toContain(
-			`Covered by ${order.contract} (Premium)\nLabour and materials included`,
-		);
-		expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.included);
-		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(price.total);
+		// One test per page: the four of them took up half a test's time under the load of a full
+		// run.
+		test("on its page", async () => {
+			const { order, price } = await covered();
+			expect(price.included).toBe(order.materials + price.labor);
+			await app.go(`/orders/${order.number}`);
+			const lines = card("Materials and labour");
+			const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
+			expect(await adjustment.innerText()).toContain(
+				`Covered by ${order.contract} (Premium)\nLabour and materials included`,
+			);
+			expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.included);
+			expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(price.total);
+		});
 
-		await app.go("/orders");
-		await page.getByLabel("Search orders…").fill(order.number);
-		await expect.poll(() => app.rowCount()).toBe(1);
-		expect(cents(await tableRows().first().locator("td:nth-last-child(2)").innerText())).toBe(
-			price.total,
-		);
+		test("in the orders list", async () => {
+			const { order, price } = await covered();
+			await app.go("/orders");
+			await app.page.getByLabel("Search orders…").fill(order.number);
+			await expect.poll(() => app.rowCount()).toBe(1);
+			expect(cents(await tableRows().first().locator("td:nth-last-child(2)").innerText())).toBe(
+				price.total,
+			);
+		});
 
-		// The unit's service history shows the same total, and what the contract took off.
-		await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
-		const entry = page
-			.getByRole("list", { name: "Service history" })
-			.locator(":scope > li")
-			.filter({ has: page.getByRole("link", { name: order.number }) });
-		expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(price.total);
-		const adjustments = entry.getByRole("list", { name: "Adjustments" });
-		expect(await adjustments.innerText()).toContain(
-			`Covered by ${order.contract} (Premium)\nLabour and materials included`,
-		);
-		expect(cents(await adjustments.locator('[data-cost="adjustment"]').innerText())).toBe(
-			-price.included,
-		);
+		test("in the unit's service history, with what the contract took off", async () => {
+			const { page } = app;
+			const { order, price } = await covered();
+			await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
+			const entry = page
+				.getByRole("list", { name: "Service history" })
+				.locator(":scope > li")
+				.filter({ has: page.getByRole("link", { name: order.number }) });
+			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(price.total);
+			const adjustments = entry.getByRole("list", { name: "Adjustments" });
+			expect(await adjustments.innerText()).toContain(
+				`Covered by ${order.contract} (Premium)\nLabour and materials included`,
+			);
+			expect(cents(await adjustments.locator('[data-cost="adjustment"]').innerText())).toBe(
+				-price.included,
+			);
+		});
 
-		// And so does the customer's recent activity.
-		await app.go(`/customers/${order.customer}`);
-		const activity = page
-			.getByRole("list", { name: "Recent activity" })
-			.locator(":scope > li")
-			.filter({ has: page.getByRole("link", { name: order.number }) });
-		expect(cents(await activity.locator('[data-cost="total"]').innerText())).toBe(price.total);
+		test("in the customer's recent activity", async () => {
+			const { page } = app;
+			const { order, price } = await covered();
+			await app.go(`/customers/${order.customer}`);
+			const activity = page
+				.getByRole("list", { name: "Recent activity" })
+				.locator(":scope > li")
+				.filter({ has: page.getByRole("link", { name: order.number }) });
+			expect(cents(await activity.locator('[data-cost="total"]').innerText())).toBe(price.total);
+		});
 	});
 
 	test("a standard contract includes the labour only", async () => {
@@ -229,9 +246,10 @@ describe("in North, contracts count on orders", () => {
 		await app.go(`/equipment/${encodeURIComponent(unit.serial_number)}`);
 		const contracts = card("Service contracts");
 		const items = contracts.locator("li");
-		expect(await items.locator('a[href^="/contracts/"]').allInnerTexts()).toEqual(
-			covering.map((row) => row.number),
-		);
+		// The card is the contracts module's part of the page, which comes with its own query.
+		await expect
+			.poll(() => items.locator('a[href^="/contracts/"]').allInnerTexts())
+			.toEqual(covering.map((row) => row.number));
 		const date = new Intl.DateTimeFormat("en-GB", {
 			day: "numeric",
 			month: "short",
@@ -258,6 +276,7 @@ describe("in North, contracts count on orders", () => {
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await page.waitForLoadState("networkidle");
+		await app.toast("Order created");
 		const number = app.path().split("/").pop()!;
 
 		const [stored] = await rows<{ created_at: number }>(
@@ -332,8 +351,14 @@ describe("in North, contracts count on orders", () => {
 		await app.go("/");
 		expect(await card("Response times at risk").count()).toBe(0);
 		expect(await card("Contracts ending soon").count()).toBe(0);
+	});
 
+	// A test of its own, so that it switches the module back on for the tests after it (which share
+	// the database) even when the one before ran out of time.
+	test("switched on again, it shows again", async () => {
+		const { page } = app;
 		await app.go("/settings");
+		const row = page.locator("div.rounded-lg.border", { hasText: "Service contracts" });
 		await row.getByRole("button", { name: "Enable" }).click();
 		await row.getByText(/Enabled since/).waitFor();
 		await app.go(`/orders/${overdue.number}`);

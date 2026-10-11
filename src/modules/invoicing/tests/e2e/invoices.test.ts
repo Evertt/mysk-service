@@ -220,7 +220,7 @@ describe("in North", () => {
 		const fees = await feesDue(customer.id);
 		number = await createDraft(north.id);
 		await app.toast("Draft invoice created");
-		expect(await badges()).toEqual(["Draft"]);
+		await expect.poll(badges).toEqual(["Draft"]);
 
 		const stored = await invoiceOf(number, north.id);
 		expect(stored).toMatchObject({
@@ -327,7 +327,7 @@ describe("in North", () => {
 			vat_rate: 21,
 		});
 		expect(await statusesOf(orderIds)).toEqual(orderIds.map(() => "invoiced"));
-		expect(await badges()).toEqual(["Sent"]);
+		await expect.poll(badges).toEqual(["Sent"]);
 		expect(await app.page.getByRole("button", { name: "Remove line" }).count()).toBe(0);
 		expect(await card("Add to the invoice").count()).toBe(0);
 	});
@@ -371,7 +371,7 @@ describe("in North", () => {
 		await confirm("Mark paid");
 		await app.toast("Invoice marked paid");
 		expect(await invoiceOf(number, north.id)).toMatchObject({ status: "paid", paid_on: today() });
-		expect(await badges()).toEqual(["Paid"]);
+		await expect.poll(badges).toEqual(["Paid"]);
 		// Paid is final.
 		expect(await app.page.getByRole("button", { name: "Void" }).count()).toBe(0);
 		const [order] = await rows<{ number: string }>(`select number from "order" where id = ?`, [
@@ -441,7 +441,7 @@ describe("in North", () => {
 		// It keeps its lines, but they no longer count.
 		expect((await linesOf(stored.id)).length).toBeGreaterThan(0);
 		expect(await statusesOf(ids)).toEqual(ids.map(() => "completed"));
-		expect(await badges()).toEqual(["Void"]);
+		await expect.poll(badges).toEqual(["Void"]);
 
 		await app.go(`/orders/${orders[0].number}`);
 		const text = await card("Invoice").innerText();
@@ -640,63 +640,84 @@ describe("in South, which has invoicing but no contracts", () => {
 		});
 	}
 
-	test("with the module switched off, its pages are 404s and nothing of it shows", async () => {
-		const { page } = app;
-		const [order] = await rows<{ number: string }>(
-			`select o.number from "order" o join invoice_line l on l.order_id = o.id
-			 join invoice i on i.id = l.invoice_id where i.number = ? and i.organization_id = ? limit 1`,
-			[number, south.id],
-		);
-		await app.go(`/orders/${order.number}`);
-		expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
-		// Opened client-side, the invoice's page loads its data through remote queries.
+	describe("with the module switched off", () => {
+		/** An order on South's draft. */
+		let order: { number: string };
+		/** The module's queries that the invoice's page made, opened client-side. */
 		const queries: string[] = [];
-		const record = (request: { url(): string }) => {
-			const names = ["getInvoice", "getBillable", "getSubjectActivity"];
-			if (names.some((name) => isRemote(request.url(), name))) queries.push(request.url());
-		};
-		page.on("request", record);
-		await card("Invoice").getByRole("link", { name: number }).click();
-		await page.waitForURL((url) => url.pathname === `/invoices/${number}`);
-		await card("Activity").getByRole("list", { name: "Activity log", exact: true }).waitFor();
-		page.off("request", record);
-		const names = queries.map((url) => new URL(url).pathname.split("/").pop());
-		expect(names).toEqual(expect.arrayContaining(["getInvoice", "getSubjectActivity"]));
+		const row = () => app.page.locator("div.rounded-lg.border", { hasText: "Invoicing" });
 
-		await app.go("/settings");
-		const row = page.locator("div.rounded-lg.border", { hasText: "Invoicing" });
-		await row.getByRole("button", { name: "Disable" }).click();
-		await row.getByText("Disabled").waitFor();
-		expect(await sidebar()).not.toContain("Invoicing");
+		// Split in steps, each with a test's time: together they took most of it under the load of a
+		// full run, and the last one, which switches the module back on for the tests after it (which
+		// share the database), has to run even if one before ran out of time.
+		test("opened client-side, the invoice's page loads its data through remote queries", async () => {
+			const { page } = app;
+			[order] = await rows<{ number: string }>(
+				`select o.number from "order" o join invoice_line l on l.order_id = o.id
+				 join invoice i on i.id = l.invoice_id where i.number = ? and i.organization_id = ? limit 1`,
+				[number, south.id],
+			);
+			await app.go(`/orders/${order.number}`);
+			expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
+			const record = (request: { url(): string }) => {
+				const names = ["getInvoice", "getBillable", "getSubjectActivity"];
+				if (names.some((name) => isRemote(request.url(), name))) queries.push(request.url());
+			};
+			page.on("request", record);
+			await card("Invoice").getByRole("link", { name: number }).click();
+			await page.waitForURL((url) => url.pathname === `/invoices/${number}`);
+			await card("Activity").getByRole("list", { name: "Activity log", exact: true }).waitFor();
+			page.off("request", record);
+			const names = queries.map((url) => new URL(url).pathname.split("/").pop());
+			expect(names).toEqual(expect.arrayContaining(["getInvoice", "getSubjectActivity"]));
+		});
 
-		for (const path of [
-			"/invoices",
-			"/invoices/new",
-			"/invoices/settings",
-			`/invoices/${number}`,
-		]) {
-			expect((await app.go(path))?.status(), path).toBe(404);
-		}
-		const pdf = await page.context().request.get(new URL(`/invoices/${number}/pdf`, baseURL).href);
-		expect(pdf.status()).toBe(404);
-		// The module's own queries and the invoice's activity: refused too.
-		for (const url of queries) {
-			const response = await page.context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-			expect(body).not.toContain(number);
-		}
-		await app.go(`/orders/${order.number}`);
-		expect(await card("Invoice").count()).toBe(0);
-		await app.go("/");
-		expect(await card("Receivables").count()).toBe(0);
-		expect(await card("Overdue invoices").count()).toBe(0);
+		test("its pages, PDFs and queries are 404s", async () => {
+			const { page } = app;
+			await app.go("/settings");
+			await row().getByRole("button", { name: "Disable" }).click();
+			await row().getByText("Disabled").waitFor();
+			expect(await sidebar()).not.toContain("Invoicing");
 
-		await app.go("/settings");
-		await row.getByRole("button", { name: "Enable" }).click();
-		await row.getByText(/Enabled since/).waitFor();
-		expect(await sidebar()).toContain("Invoicing");
-		await app.go(`/orders/${order.number}`);
-		expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
+			for (const path of [
+				"/invoices",
+				"/invoices/new",
+				"/invoices/settings",
+				`/invoices/${number}`,
+			]) {
+				expect((await app.go(path))?.status(), path).toBe(404);
+			}
+			const pdf = await page
+				.context()
+				.request.get(new URL(`/invoices/${number}/pdf`, baseURL).href);
+			expect(pdf.status()).toBe(404);
+			// The module's own queries and the invoice's activity: refused too.
+			expect(queries).not.toEqual([]);
+			for (const url of queries) {
+				const response = await page.context().request.get(url);
+				const body = await response.text();
+				expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+				expect(body).not.toContain(number);
+			}
+		});
+
+		test("and nothing of it shows on the core's pages", async () => {
+			await app.go(`/orders/${order.number}`);
+			expect(await card("Invoice").count()).toBe(0);
+			await app.go("/");
+			expect(await card("Receivables").count()).toBe(0);
+			expect(await card("Overdue invoices").count()).toBe(0);
+		});
+
+		test("switched on again, it shows again", async () => {
+			await app.go("/settings");
+			await row().getByRole("button", { name: "Enable" }).click();
+			await row()
+				.getByText(/Enabled since/)
+				.waitFor();
+			expect(await sidebar()).toContain("Invoicing");
+			await app.go(`/orders/${order.number}`);
+			expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
+		});
 	});
 });

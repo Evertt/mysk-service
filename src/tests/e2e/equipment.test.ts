@@ -47,6 +47,7 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Register equipment" }).click();
 		await page.waitForURL((url) => url.pathname === `/equipment/${serial}`);
 		await page.getByRole("heading", { name: "Testco TX-1" }).waitFor();
+		await app.toast("Equipment registered");
 		expect(
 			await rows(`select organization_id from equipment where serial_number = ?`, [serial]),
 		).toEqual([{ organization_id: north.id }]);
@@ -118,21 +119,34 @@ describe("in North", () => {
 		await bar.getByRole("button", { name: "Delete" }).click();
 		await dialog.getByText("Delete the selected units?").waitFor();
 		await dialog.getByRole("button", { name: "Delete" }).click();
-		await app.toast("1 skipped");
-		await page
-			.locator("[data-sonner-toast]", {
-				hasText: `${used.serial_number}: This unit can't be deleted`,
-			})
-			.waitFor();
+		await app.toast("1 skipped", `${used.serial_number}: This unit can't be deleted`);
 		expect(await unit(used.id)).toEqual(before);
 		await app.go(`/equipment/${serial}`);
 	});
 
 	test("deleting it removes it, after which it's a 404", async () => {
 		const { page } = app;
+		/** The arguments of the queries the page asks for, as sent. */
+		const asked: string[] = [];
+		const record = (request: { url(): string; method(): string }) => {
+			const url = new URL(request.url());
+			if (!url.pathname.includes("/_app/remote/") || request.method() !== "GET") return;
+			asked.push(Buffer.from(url.searchParams.get("payload") ?? "", "base64url").toString());
+		};
+		page.on("request", record);
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/equipment");
+		// The list, not an error page: the page being left, asking for its queries again, asked for
+		// the unit with the list's params (no serial), and its 400 became the page's error.
+		await expect
+			.poll(async () => (await page.locator("main").innerText()).replace(/\s+/g, " "))
+			.toContain("Installed units across all customer sites.");
+		await app.tableSettled();
+		page.off("request", record);
+		// Nor does it ask about the unit again: it would only hear it's gone, and the parts of the
+		// page that show their errors (the modules' slots) would.
+		expect(asked.filter((argument) => argument.includes(serial))).toEqual([]);
 		expect(await unitId(serial, north.id)).toBeUndefined();
 		expect((await app.go(`/equipment/${serial}`))?.status()).toBe(404);
 	});

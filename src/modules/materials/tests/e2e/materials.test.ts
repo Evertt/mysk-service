@@ -162,8 +162,9 @@ describe("in North", () => {
 		await app.tableSettled();
 	});
 
-	test("a malformed query for the list is refused with a 400", async () => {
-		const { page } = app;
+	// One test per request, each loading the page afresh: in one test, the six page loads took up
+	// half its time under the load of a full run.
+	describe("a malformed query for the list is refused with a 400", () => {
 		type Query = Record<string, unknown>;
 		/** The error status of the response to the next `name` request, with its argument changed. */
 		const statusOf = async (
@@ -172,37 +173,37 @@ describe("in North", () => {
 			trigger: () => unknown,
 		) => {
 			await app.go("/materials");
-			await tamperWithQuery<Query>(page, name, change);
+			await tamperWithQuery<Query>(app.page, name, change);
 			const [response] = await app.expectingErrors(() =>
-				Promise.all([page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
+				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
 			);
 			return remoteErrorStatus(response);
 		};
-		const nextPage = () => page.getByRole("button", { name: "Go to next page" }).click();
-		const searchFor = () => search().fill("MAT");
+		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
 
 		// An unknown stock level, a filter the list doesn't have, a string for a list of units, a
 		// page size it doesn't offer.
-		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
-		for (const change of [
+		test.each<Query>([
 			{ filters: { stockLevel: ["bogus"] } },
 			{ filters: { unitPrice: [1] } },
 			{ filters: { unit: "pcs" } },
 			{ pageSize: 5000 },
-		]) {
-			expect(
-				await statusOf("getMaterials", rowsWith(change), nextPage),
-				JSON.stringify(change),
-			).toBe(400);
-		}
-		// The counts in the filters take the same care.
-		expect(
-			await statusOf("getMaterialFacets", rowsWith({ filters: { unit: ["bogus"] } }), searchFor),
-		).toBe(400);
+		])("in the rows' query: %j", async (change) => {
+			const nextPage = () => app.page.getByRole("button", { name: "Go to next page" }).click();
+			expect(await statusOf("getMaterials", rowsWith(change), nextPage)).toBe(400);
+		});
 
-		// The list works as before once the request is right.
-		await app.go("/materials");
-		expect(await app.rowCount()).toBe(await countIn("material", north.id));
+		test("in the filters' counts", async () => {
+			const searchFor = () => search().fill("MAT");
+			expect(
+				await statusOf("getMaterialFacets", rowsWith({ filters: { unit: ["bogus"] } }), searchFor),
+			).toBe(400);
+		});
+
+		test("while the list works as before once the request is right", async () => {
+			await app.go("/materials");
+			expect(await app.rowCount()).toBe(await countIn("material", north.id));
+		});
 	});
 
 	test("searching finds materials by SKU and by name", async () => {
@@ -560,8 +561,9 @@ describe("in North", () => {
 		await page.waitForLoadState("networkidle");
 		await app.toast("Material saved");
 		expect(await material(sku, north.id)).toMatchObject({ unit: "m", unit_price: 399, stock: 4 });
+		// The redirect shows the cached material first and refreshes it right after.
+		await expect.poll(main).toContain("€3.99");
 		const text = await main();
-		expect(text).toContain("€3.99");
 		expect(text).toContain("4 m");
 		expect(text).toContain("Low");
 	});
@@ -785,10 +787,12 @@ describe("in South", () => {
 		const { page } = app;
 		await app.go("/materials");
 		await app.openFilter("Stock level");
-		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
-			Number(/(\d+)$/.exec(text.trim())![1]),
-		);
-		expect(counts.reduce((sum, n) => sum + n, 0)).toBe(await countIn("material", south.id));
+		// Polled: the menu shows the filters' titles until it has switched to the picked one's values.
+		const counted = async () =>
+			(await page.getByRole("option").allInnerTexts())
+				.map((text) => Number(/(\d+)$/.exec(text.trim())?.[1]))
+				.reduce((sum, n) => sum + n, 0);
+		await expect.poll(counted).toBe(await countIn("material", south.id));
 		await page.keyboard.press("Escape");
 	});
 
