@@ -137,23 +137,27 @@ describe("in South, with materials switched off", () => {
 		await page.getByLabel("Status").selectOption("scheduled");
 		await page.getByLabel("Engineer").selectOption({ index: 1 });
 		await page.getByLabel("Labour (hours)").fill("2");
-		// What the materials' part would submit, were it there, posted the way a browser without
-		// JavaScript would (the enhanced form wouldn't send fields it didn't make): refused, as a
-		// field the form doesn't have, and nothing is stored.
+		// What the materials' part would submit, were it there (named for this form, as its own
+		// fields are), posted the way a browser without JavaScript would: the form's schema knows the
+		// part, but South hasn't the module, so the form is refused with a message, and nothing is
+		// stored.
 		const description = "Without materials (test order)";
-		const status = await app.expectingErrors(() =>
-			page.evaluate(async (id) => {
-				const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
-				const body = new URLSearchParams(
-					[...new FormData(form)].map(([name, value]) => [name, String(value)]),
-				);
-				body.append("modules.materials.lines[0].materialId", String(id));
-				body.append("n:modules.materials.lines[0].quantity", "1");
-				const headers = { accept: "text/html" };
-				return (await fetch(form.action, { method: "POST", body, headers })).status;
-			}, materialId),
+		const { status, html } = await page.evaluate(async (id) => {
+			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
+			const fields = [...new FormData(form)].map(([name, value]) => [name, String(value)]);
+			const body = new URLSearchParams(fields);
+			// The suffix SvelteKit gives the form's field names: `/<the form's id>`.
+			const suffix = fields[0][0].slice(fields[0][0].indexOf("/"));
+			body.append(`modules.materials.lines[0].materialId${suffix}`, String(id));
+			body.append(`n:modules.materials.lines[0].quantity${suffix}`, "1");
+			const headers = { accept: "text/html" };
+			const response = await fetch(form.action, { method: "POST", body, headers });
+			return { status: response.status, html: await response.text() };
+		}, materialId);
+		expect(status).toBe(200);
+		expect(html).toContain(
+			"Materials is switched off for this organization: reload the page and try again.",
 		);
-		expect(status).toBeGreaterThanOrEqual(400);
 		const created = () =>
 			rows<{ id: number; number: string }>(
 				`select id, number from "order" where organization_id = ? and description = ?`,

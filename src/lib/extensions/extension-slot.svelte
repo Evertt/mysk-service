@@ -1,7 +1,8 @@
 <!--
 	@component
 	What the current tenant's modules add to a core page at the slot `point` (see `defineSlot()` in
-	`#lib/extensions/define.ts`), with `props` passed on: the contributions in
+	`#lib/extensions/define.ts`), with `props` passed on (and, at a form slot, `defineFormSlot()`,
+	each module's part of the form's `fields`, the form's `modules` field, as `fields`): the contributions in
 	`#lib/extensions/contributions.gen.ts` to that point, of the modules the tenant has, in registry
 	order. Wrapped in a `div` with `class` (by default `contents`, so the components lay out as the
 	page's own), or nothing if no module adds anything.
@@ -26,14 +27,26 @@
 
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
-	import type { SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
+	import type { FormSlotPoint, SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
 	import { type ModuleId, modules } from "#lib/modules/manifests.ts";
 
 	let {
 		point,
 		props,
+		fields,
 		class: className = "contents",
-	}: { point: SlotPoint<Props>; props: Props; class?: string } = $props();
+	}: (
+		| { point: SlotPoint<Props>; fields?: undefined }
+		| {
+				point: FormSlotPoint<Props>;
+				/** The form's `modules` field, whose `<module id>` is each module's part. */
+				fields: object;
+		  }
+	) & { props: Props; class?: string } = $props();
+
+	/** What a contribution gets besides `props`: at a form slot, its module's part's fields. */
+	const partOf = (module: ModuleId) =>
+		fields ? { fields: (fields as Record<string, unknown>)[module] } : {};
 
 	/** How often each contribution was tried again: each time loads it again, in a new boundary. */
 	const attempts = $state<Record<string, number>>({});
@@ -45,8 +58,9 @@
 				.filter((entry) => entry.point === point.id && enabled.includes(entry.module))
 				.map(({ id, module, load }) => {
 					const attempt = attempts[id] ?? 0;
-					// A contribution to this point takes this point's props (`slotContribution()`).
-					return (load as SlotContribution<Props>["load"])().then(
+					// A contribution to this point takes this point's props (`slotContribution()`), and at a
+					// form slot its part's fields (`formSlotContribution()`).
+					return (load as SlotContribution<Props & { fields?: unknown }>["load"])().then(
 						({ default: Slot }) => ({ id, module, attempt, Slot, error: undefined }),
 						(error: unknown) => ({ id, module, attempt, Slot: undefined, error }),
 					);
@@ -70,7 +84,7 @@
 					onerror={(error: unknown) => console.error(`The ${id} contribution failed`, error)}
 				>
 					{#if Slot}
-						<Slot {...props} />
+						<Slot {...props} {...partOf(module)} />
 					{:else}
 						{fail(error)}
 					{/if}

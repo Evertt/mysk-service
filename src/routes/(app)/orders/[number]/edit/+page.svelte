@@ -39,7 +39,7 @@
 		cancelHref={orderHref}
 	>
 		{#snippet parts(fields)}
-			<ExtensionSlot point={formParts} props={{ fields, order: { id: order.id } }} />
+			<ExtensionSlot point={formParts} props={{ order: { id: order.id } }} {fields} />
 		{/snippet}
 	</OrderForm>
 {:else}

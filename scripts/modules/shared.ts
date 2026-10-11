@@ -54,6 +54,11 @@ export interface ModuleFolder {
 	 */
 	columnFiles: string[];
 	serverColumnFiles: string[];
+	/**
+	 * The schemas of its parts of forms (`form-parts/<point id>.ts`), which go with its components
+	 * at those form slots.
+	 */
+	formPartFiles: string[];
 	/** Which of the server files it has. */
 	server: { index: boolean; schema: boolean; seed: boolean };
 	/** Its message sections (`messages/<locale>/<section>.json`) per language, sorted. */

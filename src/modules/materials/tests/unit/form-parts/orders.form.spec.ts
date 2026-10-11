@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
-import { materialsPart } from "#modules/materials/form/order-lines-schema.ts";
+import materialsPart from "#modules/materials/form-parts/orders.form.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (input: Record<string, unknown>) => {

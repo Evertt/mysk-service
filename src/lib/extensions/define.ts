@@ -14,12 +14,20 @@
  *   `src/modules/<id>/bulk-actions/<point id>.ts`. The generator lists them in
  *   `contributions.gen.ts` with `slotContribution()` and `bulkContribution()`, which hold each to
  *   its point's types.
+ * - Form slots: a slot inside a core form (`defineFormSlot()`), whose components add inputs that are
+ *   submitted with the form. A module contributing to one also gives the schema of its part, the
+ *   default export of `src/modules/<id>/form-parts/<point id>.ts` (a valibot object schema). The
+ *   generator lists the schemas in `form-parts.gen.ts`, which the form's own schema is made from
+ *   (`formPartsSchema()` in `#lib/extensions/form-parts.ts`), and holds each component to its
+ *   part's schema (`formSlotContribution()`).
  * - List columns: modules contribute by file too, two files per list: the columns' definitions
  *   and cells (`src/modules/<id>/columns/<point id>.ts`, listed with `columnsContribution()`) and
  *   their SQL (`src/modules/<id>/server/columns/<point id>.ts`, in the server's
  *   `#lib/server/lists/columns.gen.ts`). See `#lib/components/data-table/module-columns.ts`.
  */
+import type { RemoteFormFields, RemoteFormInput } from "$app/server";
 import type { Component } from "svelte";
+import type * as v from "valibot";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
 import type { ModuleListColumn } from "#lib/components/data-table/module-columns.ts";
@@ -98,6 +106,27 @@ export interface BulkTable<Row> extends Typed<{ row: Row }> {
 	readonly kind: "bulk";
 }
 
+/**
+ * A slot inside a core form, where modules add inputs that are submitted with it: each module's
+ * under the form's `modules.<module id>`, as the schema of its part says. Its components get `Props`
+ * and their part's fields (`fields`, see `FormPartFields`).
+ */
+export interface FormSlotPoint<Props extends Record<string, unknown>> extends Typed<{
+	props: Props;
+}> {
+	readonly id: string;
+	readonly kind: "form";
+}
+
+/**
+ * The schema of a module's part of a form (`src/modules/<id>/form-parts/<point id>.ts`): an object
+ * of the part's inputs, as a remote form submits them.
+ */
+export type FormPartSchema = v.GenericSchema<RemoteFormInput, Record<string, unknown>>;
+
+/** A module's part's fields in a form, typed from its schema: what its components name inputs with. */
+export type FormPartFields<Part extends FormPartSchema> = RemoteFormFields<v.InferInput<Part>>;
+
 /** Declares a slot, whose components get `Props`. */
 export const defineSlot = <Props extends Record<string, unknown>>(
 	id: string,
@@ -105,6 +134,11 @@ export const defineSlot = <Props extends Record<string, unknown>>(
 	id,
 	kind: "slot",
 });
+
+/** Declares a form slot, whose components get `Props` and their module's part's fields. */
+export const defineFormSlot = <Props extends Record<string, unknown>>(
+	id: string,
+): FormSlotPoint<Props> => ({ id, kind: "form" });
 
 /** Declares a table that modules add bulk actions to, for its `Row`s. */
 export const defineBulkTable = <Row>(id: string): BulkTable<Row> => ({ id, kind: "bulk" });
@@ -184,6 +218,31 @@ export const slotContribution = <Props extends Record<string, unknown>>(
 	name: string,
 	load: () => Promise<{ default: Component<NoInfer<Props>> }>,
 ): SlotContribution<Props> => ({
+	id: `${module}/${point.id}/${name}`,
+	module,
+	point: point.id,
+	load,
+});
+
+/** The props of a form slot's components, given their module's part's schema. */
+type FormSlotProps<Point, Part extends FormPartSchema> =
+	Point extends FormSlotPoint<infer Props> ? Props & { fields: FormPartFields<Part> } : never;
+
+/**
+ * The module's component `name` at the form slot `point`, as `contributions.gen.ts` lists it, with
+ * the types of the point and of the module's part's schema (`form-parts/<point id>.ts`). The
+ * component's props are checked against the slot's and its part's fields, so the type check refuses
+ * a component whose fields don't match its part's schema.
+ */
+export const formSlotContribution = <
+	Point extends FormSlotPoint<Record<string, unknown>>,
+	Part extends FormPartSchema,
+>(
+	point: Point,
+	module: ModuleId,
+	name: string,
+	load: () => Promise<{ default: Component<FormSlotProps<Point, Part>> }>,
+): SlotContribution<FormSlotProps<Point, Part>> => ({
 	id: `${module}/${point.id}/${name}`,
 	module,
 	point: point.id,

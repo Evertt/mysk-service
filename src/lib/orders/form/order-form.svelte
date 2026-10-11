@@ -2,7 +2,7 @@
 	@component
 	The order form, for creating (`createOrder`) and editing (`updateOrder`, with `order`) an order.
 	`parts` renders what the tenant's modules add to it (the `orders.form` slot, which the page
-	renders) with the form's fields for them.
+	renders) with the form's fields for them; the browser checks those parts before submitting.
 -->
 <script lang="ts">
 	import type { Snippet } from "svelte";
@@ -14,11 +14,12 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { timeOfDay, toDateInput } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
+	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
-	import type { ModuleFormFields } from "../extensions.ts";
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
+	import { orderFormPreflight } from "./order-schema.ts";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];
@@ -35,7 +36,7 @@
 		order?: Order;
 		cancelHref: string;
 		/** The modules' parts of the form, given the fields to name their inputs under. */
-		parts?: Snippet<[ModuleFormFields]>;
+		parts?: Snippet<[FormPartsFields<"orders.form">]>;
 	} = $props();
 
 	const fields = $derived(form.fields);
@@ -64,8 +65,9 @@
 	);
 </script>
 
+<!-- The modules' parts are checked before submitting, so their fields show what's wrong at once. -->
 <form
-	{...form.enhance(async ({ submit }) => {
+	{...form.preflight(orderFormPreflight).enhance(async ({ submit }) => {
 		// On success the server redirects to the order; otherwise the fields show what's wrong.
 		if (await submit()) toast.success(order ? m.orders_saved() : m.orders_created());
 	})}
