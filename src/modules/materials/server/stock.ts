@@ -141,7 +141,7 @@ export class OrderStockShortage extends Error {
  * What one of the tenant's orders holds of each material, as its stock movements say: what it took
  * less what it gave back. Materials it holds none of are left out.
  */
-export async function heldByOrder(tx: Transaction, orderId: number) {
+async function heldByOrder(tx: Transaction, orderId: number) {
 	const rows = await tx
 		.select({
 			materialId: stockMovement.materialId,

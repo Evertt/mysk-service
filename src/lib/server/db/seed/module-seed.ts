@@ -50,14 +50,14 @@ export type TenantDraft = TenantData & {
 export type SeedOrder = TenantData["orders"][number];
 
 /** What an order costs besides labour, as a module adds it at seed time (like `OrderCost`). */
-export interface SeedCost {
+interface SeedCost {
 	/** In Dutch, the demo's language. */
 	label: string;
 	amount: number;
 }
 
 /** An order's price before adjustments, at seed time: labour and the costs added up. */
-export interface SeedPrice {
+interface SeedPrice {
 	costs: number;
 	labor: number;
 }

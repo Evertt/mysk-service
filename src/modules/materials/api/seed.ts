@@ -5,7 +5,7 @@
  */
 
 /** A seeded material; ids from 1, the tenant's own. */
-export interface SeedMaterial {
+interface SeedMaterial {
 	id: number;
 	sku: string;
 	name: string;
@@ -16,7 +16,7 @@ export interface SeedMaterial {
 }
 
 /** A seeded order line, by the draft's order and material ids. */
-export interface SeedOrderLine {
+interface SeedOrderLine {
 	orderId: number;
 	materialId: number;
 	quantity: number;
