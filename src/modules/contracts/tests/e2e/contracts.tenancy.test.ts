@@ -148,7 +148,8 @@ describe("in South, which doesn't have the module", () => {
 		await other.waitForLoadState("networkidle");
 		await other.locator('[data-sidebar="header"] button').first().click();
 		await other.getByRole("menuitem", { name: south.name }).click();
-		await other.waitForURL((url) => url.pathname === "/");
+		// The tab is at / already, so wait for the switch itself: the header names South.
+		await other.locator('[data-sidebar="header"]').getByText(south.name).waitFor();
 		await other.context().close();
 
 		const [northBefore, southBefore] = [
