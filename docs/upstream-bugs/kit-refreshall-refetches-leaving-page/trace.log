@@ -1,0 +1,40 @@
+Requests and console of the browser while deleting a unit of equipment from its page
+(`repro.test.ts`, CPU throttled 8x during the delete). Times from the start of the test.
+
+Before the workaround: the form's redirect runs `_goto(redirect, { refreshAll: true })`. Between
+the POST's answer and the navigation, the page being left asks again for every query it renders,
+the deleted unit's four among them (each answers 404), and Svelte warns about a derived of a
+destroyed effect.
+
+--- ZZ-SLOT-1: delete
+5789ms POST deleteEquipment
+5877ms GET getTheme
+5877ms GET getMode
+5877ms GET getCurrentTenant
+5877ms GET getCurrentUser
+5877ms GET getEquipment
+5877ms GET getServiceHistory
+5877ms GET getSubjectActivity
+5877ms GET getUnitCoverage
+5928ms console.warning: [svelte] derived_inert
+  Reading a derived belonging to a now-destroyed effect may result in stale values
+  https://svelte.dev/e/derived_inert
+6070ms nav http://localhost:57656/equipment
+6098ms GET getEquipmentList
+6098ms GET getEquipmentFacets
+6637ms GET getTableViews
+
+After the workaround (the delete dialog submits with `submit().updates()`, so no refreshAll): only
+the list it lands on loads.
+
+--- ZZ-SLOT-1: delete
+5409ms POST deleteEquipment
+5542ms nav http://localhost:58071/equipment
+5563ms GET getEquipmentList
+5563ms GET getEquipmentFacets
+6261ms GET getTableViews
+
+When the 404 of getUnitCoverage arrives before the old page is destroyed (under load), the
+contracts module's slot on that page logs (from e2e/orders.test.ts in a loaded full run):
+
+error: The contracts/orders.detail.side/coverage contribution failed {status: 404, message: Order ORD-2026-00754 not found}
