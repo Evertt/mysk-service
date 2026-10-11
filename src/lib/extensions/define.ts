@@ -14,10 +14,15 @@
  *   `src/modules/<id>/bulk-actions/<point id>.ts`. The generator lists them in
  *   `contributions.gen.ts` with `slotContribution()` and `bulkContribution()`, which hold each to
  *   its point's types.
+ * - List columns: modules contribute by file too, two files per list: the columns' definitions
+ *   and cells (`src/modules/<id>/columns/<point id>.ts`, listed with `columnsContribution()`) and
+ *   their SQL (`src/modules/<id>/server/columns/<point id>.ts`, in the server's
+ *   `#lib/server/lists/columns.gen.ts`). See `#lib/components/data-table/module-columns.ts`.
  */
 import type { Component } from "svelte";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import type { ModuleListColumn } from "#lib/components/data-table/module-columns.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 
 /**
@@ -103,6 +108,35 @@ export const defineSlot = <Props extends Record<string, unknown>>(
 
 /** Declares a table that modules add bulk actions to, for its `Row`s. */
 export const defineBulkTable = <Row>(id: string): BulkTable<Row> => ({ id, kind: "bulk" });
+
+/**
+ * A server-side list that modules add columns to, sorted and filtered in the database like its
+ * own. The list's definition names it (`defineList({ moduleColumns })`).
+ */
+export interface ListColumnsPoint {
+	readonly id: string;
+	readonly kind: "columns";
+}
+
+/** Declares a server-side list that modules add columns to. */
+export const defineListColumns = (id: string): ListColumnsPoint => ({ id, kind: "columns" });
+
+/** A module's columns for a list (their definitions and cells), loaded like a slot's component. */
+export interface ColumnsContribution {
+	/** `<module>/<point id>`, for error reports. */
+	readonly id: string;
+	readonly module: ModuleId;
+	/** The list's id. */
+	readonly point: string;
+	readonly load: () => Promise<{ default: readonly ModuleListColumn[] }>;
+}
+
+/** The module's columns for `list`, as `contributions.gen.ts` lists them. */
+export const columnsContribution = (
+	list: ListColumnsPoint,
+	module: ModuleId,
+	load: () => Promise<{ default: readonly ModuleListColumn[] }>,
+): ColumnsContribution => ({ id: `${module}/${list.id}`, module, point: list.id, load });
 
 /** A module's component at a slot. Loaded when shown, so a tenant without the module doesn't download it. */
 export interface SlotContribution<Props extends Record<string, unknown>> {

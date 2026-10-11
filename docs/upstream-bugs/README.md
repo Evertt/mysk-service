@@ -29,7 +29,7 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   `APP=AppAsyncIf.svelte` etc. pick the variants; `AppSync*.svelte` (no async block) hydrate fine,
   which narrows it to the async case.
 - **In the app:** a module's part of a core page that fails during SSR
-  (`src/routes/(app)/extension-slot.svelte`).
+  (`src/lib/extensions/extension-slot.svelte`).
 
 ## 2. Svelte: the tab freezes when a component in an `{#each}` awaits its own loader
 

@@ -22,6 +22,7 @@
  * the table to tell whether the page's first and last groups go on beyond it, and `groupCounts()`
  * counts each group's rows on every page.
  */
+import { error } from "@sveltejs/kit";
 import {
 	and,
 	count as countRows,
@@ -33,6 +34,7 @@ import {
 	type SQLWrapper,
 } from "drizzle-orm";
 import type { SelectedFields, SQLiteSelect } from "drizzle-orm/sqlite-core";
+import * as v from "valibot";
 
 import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.ts";
 import type {
@@ -97,6 +99,12 @@ export interface ListSql<C> {
 	id: SQLWrapper;
 	/** The rows the current user may see, e.g. `() => inTenant(order)`; part of every `where`. */
 	scope: () => SQL;
+	/**
+	 * The modules' columns of a list that has them (added by `withModuleColumns()`, see
+	 * `module-columns.ts`), by id: what each shows (`moduleValues()`) and what its rows count under
+	 * in its filter (`moduleFacets()`).
+	 */
+	modules?: Readonly<Record<string, { value: SQLWrapper; facet?: SQLWrapper }>>;
 }
 
 /** What decides which rows match a list's search and filters. */
@@ -300,6 +308,14 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 export function planList<C>(listSql: ListSql<C>, query: ListQuery<C>): ListPlan<C>;
 export function planList<C>(listSql: ListSql<C>, query: ListWhere<C>): ListWherePlan<C>;
 export function planList<C>(listSql: ListSql<C>, query: ListWhere<C> | ListQuery<C>) {
+	// The remote function's schema let any module column through (`List.query`): only the
+	// tenant's own columns, with their own values, are planned.
+	if (listSql.list.point) {
+		const { strict } = listSql.list;
+		if (!v.is("sort" in query ? strict.query : strict.where, query)) {
+			error(400, m.common_error_generic());
+		}
+	}
 	const source = listSql as unknown as LooseSql;
 	if ("sort" in query) return buildPlan(source, query as unknown as LooseQuery);
 	const { where, count, facets, ids } = buildPlan(source, {

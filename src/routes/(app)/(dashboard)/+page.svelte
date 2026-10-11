@@ -5,10 +5,10 @@
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { cards, stats } from "#lib/dashboard/extensions.ts";
 	import { EngineerLink } from "#lib/engineers/components.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
 
-	import ExtensionSlot from "../../extension-slot.svelte";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
 	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
 	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";

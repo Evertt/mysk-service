@@ -109,3 +109,10 @@ The generator (route stubs, `*.gen.ts` registries, the 404 guard per module) is 
 piece of infrastructure in these plans. It pays off once there are more than the two current
 modules. Plugins steps 1–2 give most of the decoupling without it. If no third module is expected
 soon, do steps 1–2 and leave the generator until one is.
+
+## Maintenance plans
+
+[maintenance-plans.md](maintenance-plans.md) (design) and
+[maintenance-plans-implementation.md](maintenance-plans-implementation.md) (done): the first module
+built from scratch, which added module columns in core lists, slots owned by a module and the core's
+`createOrders()`.

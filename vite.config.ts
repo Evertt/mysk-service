@@ -99,8 +99,11 @@ export default defineConfig({
 	// entries), but the shadcn-svelte components are auto-imported (see `shadcnImports`), so the
 	// scan doesn't reach them or what they import (e.g. their icons). Those were found on the first
 	// page that used them, after the deps cache was cleared: Vite then pre-bundled them again and
-	// reloaded the page. Scanning the components as well finds them up front.
-	optimizeDeps: { entries: ["src/lib/**/*.svelte", "src/modules/**/*.svelte"] },
+	// reloaded the page. Scanning the components, and the modules' manifests (their nav icons), finds
+	// them up front.
+	optimizeDeps: {
+		entries: ["src/lib/**/*.svelte", "src/modules/**/*.svelte", "src/modules/*/module.ts"],
+	},
 	plugins: lazyPlugins(() => [
 		modulesPlugin(import.meta.dirname),
 		AutoImport({
@@ -153,6 +156,7 @@ export default defineConfig({
 						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
 						"src/lib/**/*.svelte",
 						"src/modules/**/*.svelte",
+						"src/modules/*/module.ts",
 					],
 				},
 				test: {

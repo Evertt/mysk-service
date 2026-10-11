@@ -48,6 +48,12 @@ export interface ModuleFolder {
 	slotFiles: string[];
 	/** Its bulk actions for tables, likewise: `bulk-actions/<point id>.ts`. */
 	bulkFiles: string[];
+	/**
+	 * Its columns for lists, likewise, in two halves: the definitions (`columns/<point id>.ts`) and
+	 * their SQL (`server/columns/<point id>.ts`).
+	 */
+	columnFiles: string[];
+	serverColumnFiles: string[];
 	/** Which of the server files it has. */
 	server: { index: boolean; schema: boolean; seed: boolean };
 	/** Its message sections (`messages/<locale>/<section>.json`) per language, sorted. */

@@ -8,12 +8,12 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
-	import ExtensionSlot from "../../../extension-slot.svelte";
 	import { getMyOrder, startWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";

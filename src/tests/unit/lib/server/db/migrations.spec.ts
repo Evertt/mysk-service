@@ -53,7 +53,7 @@ test("the migrations build the schema's tables from an empty database", async ()
 
 test.each([
 	["0003_enable-schedule", "schedule"],
-	["0004_enable-materials", "materials"],
+	["0005_enable-materials", "materials"],
 ])("%s switches %s on for every organization there is", async (tag, moduleId) => {
 	// The migrations before it, in a copy of the folder whose journal stops there.
 	const before = join(folder, `before-${moduleId}`);

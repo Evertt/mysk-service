@@ -240,7 +240,10 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Save contract" }).click();
 		await page.waitForURL((url) => url.pathname === `/contracts/${number}`);
 		await page.waitForLoadState("networkidle");
-		expect(await page.locator('h1 ~ [data-slot="badge"]').allInnerTexts()).toContain("Basic");
+		// The page shows once its parts are in, the modules' cards among them.
+		await expect
+			.poll(() => page.locator('h1 ~ [data-slot="badge"]').allInnerTexts())
+			.toContain("Basic");
 
 		const id = await contractId(number, north.id);
 		const [stored] = await rows(`select level, response_hours from contract where id = ?`, [id]);
