@@ -1,0 +1,19 @@
+Remote responses and console around the second of three deletes of a unit from its page, without
+the workaround (main at 1089fa1). After it, /equipment showed "Something went wrong / Bad Request (400)".
+The empty payload of the last getEquipment is the old page asking with the list's params.
+
+200 POST deleteEquipment 
+200 GET getTheme 
+200 GET getMode 
+console.warning: %c[svelte] await_waterfall
+200 GET getCurrentTenant 
+200 GET getCurrentUser 
+console.warning: %c[svelte] derived_inert
+200 GET getEquipment ["ZZ-SCRATCH-1"] => {"type":"error","error":{"status":404,"message":"Equipment ZZ-SCRATCH-1 not found"}}
+200 GET getServiceHistory ["ZZ-SCRATCH-1"] => {"type":"error","error":{"status":404,"message":"Equipment ZZ-SCRATCH-1 not found"}}
+200 GET getUnitCoverage ["ZZ-SCRATCH-1"] => {"type":"error","error":{"status":404,"message":"Equipment ZZ-SCRATCH-1 not found"}}
+200 GET getUnitPlans ["ZZ-SCRATCH-1"] => {"type":"error","error":{"status":404,"message":"Unit ZZ-SCRATCH-1 not found"}}
+200 GET getTenantModules 
+200 GET getSubjectActivity [["__skrao",1],{"id":2,"type":3},"248","equipment"]
+200 GET getEquipment  => {"type":"error","error":{"status":400,"message":"Bad Request"}}
+200 GET getEquipmentFacets [["__skrao",1],{"filters":2,"q":4},["__skrao",3],{},""]

@@ -126,9 +126,27 @@ describe("in North", () => {
 
 	test("deleting it removes it, after which it's a 404", async () => {
 		const { page } = app;
+		/** The arguments of the queries the page asks for, as sent. */
+		const asked: string[] = [];
+		const record = (request: { url(): string; method(): string }) => {
+			const url = new URL(request.url());
+			if (!url.pathname.includes("/_app/remote/") || request.method() !== "GET") return;
+			asked.push(Buffer.from(url.searchParams.get("payload") ?? "", "base64url").toString());
+		};
+		page.on("request", record);
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/equipment");
+		// The list, not an error page: the page being left, asking for its queries again, asked for
+		// the unit with the list's params (no serial), and its 400 became the page's error.
+		await expect
+			.poll(async () => (await page.locator("main").innerText()).replace(/\s+/g, " "))
+			.toContain("Installed units across all customer sites.");
+		await app.tableSettled();
+		page.off("request", record);
+		// Nor does it ask about the unit again: it would only hear it's gone, and the parts of the
+		// page that show their errors (the modules' slots) would.
+		expect(asked.filter((argument) => argument.includes(serial))).toEqual([]);
 		expect(await unitId(serial, north.id)).toBeUndefined();
 		expect((await app.go(`/equipment/${serial}`))?.status()).toBe(404);
 	});

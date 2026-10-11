@@ -130,15 +130,19 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   again, before the navigation (and Svelte warns `derived_inert`). After a delete, that's the
   deleted record's own queries, which answer 404. Any part of the old page that shows its errors
   shows the failure; ours, a module's slot, logged it when the 404 came in before the page was
-  gone (under load). Besides, every query of the layout is fetched twice: once there, once by the
-  `start()` after the navigation.
+  gone (under load). Worse, the old page re-runs its queries with the new route's params: after
+  deleting a unit, `/equipment/[serial]`'s `getEquipment(params.serial)` was asked with no
+  argument, answered 400, and the list it navigated to showed the error page ("Bad Request (400)")
+  instead, two deletes out of three in a row (`trace-400.log`). Besides, every query of the layout
+  is fetched twice: once there, once by the `start()` after the navigation.
 - **Expected:** the queries of the page being left aren't fetched again; those still rendered
   after the navigation are refreshed once, as the code's comment intends.
 - **Workaround in the app:** the delete dialog (`src/lib/components/form/delete-dialog.svelte`)
   submits with `submit().updates()` and nothing in it, so there's no `refreshAll`; its forms
   refresh what they change on the server or redirect to a list that loads afresh.
-  `src/tests/e2e/orders.test.ts` ("deleting it removes it…") checks that no query asks about the deleted
-  order.
+  The e2e tests of deleting a unit (`src/tests/e2e/equipment.test.ts`) and an order
+  (`src/modules/materials/tests/e2e/materials.orders.test.ts`) check that no query asks about it
+  after the delete.
 - **Evidence:** `kit-refreshall-refetches-leaving-page/`: `trace.log` (the requests around a delete,
   before and after the workaround) and `repro.test.ts`, the e2e test that logged them.
 - **Not minimized.** Next step: a page rendering `await getThing(id)`, and a form on it that
