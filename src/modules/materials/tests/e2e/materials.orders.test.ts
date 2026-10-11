@@ -386,9 +386,25 @@ describe("in North, an order's materials", () => {
 		const before = await stocks(north.id);
 		const history = await orderMovements(number, north.id, since);
 
+		/** The arguments of the queries the page asks for, as sent. */
+		const asked: string[] = [];
+		const record = (request: { url(): string; method(): string }) => {
+			const url = new URL(request.url());
+			if (!url.pathname.includes("/_app/remote/") || request.method() !== "GET") return;
+			asked.push(Buffer.from(url.searchParams.get("payload") ?? "", "base64url").toString());
+		};
+		page.on("request", record);
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
+		await page.getByLabel("Search orders…").waitFor();
+		await app.tableSettled();
+		page.off("request", record);
+		// The page it leaves doesn't ask about the order again (it would only hear it's gone, and
+		// the parts of the page that show their errors would), and the list it lands on is fresh:
+		// the order, the latest, would be on its first page.
+		expect(asked.filter((argument) => argument.includes(number))).toEqual([]);
+		expect(await page.getByRole("link", { name: number }).count()).toBe(0);
 		expect(await orderId(number, north.id)).toBeUndefined();
 		expect((await app.go(`/orders/${number}`))?.status()).toBe(404);
 

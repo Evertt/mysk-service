@@ -3,6 +3,11 @@
 	A delete button that asks for confirmation, then submits `form` (a remote form taking the record's
 	`id`) without needing JavaScript for the submission itself. If the server refuses with
 	`invalid("…")`, the reason is shown in the dialog.
+
+	The submission doesn't refresh the page's queries (which SvelteKit does by default): `form` says
+	what changes itself, refreshing it on the server or redirecting to a page that loads afresh (the
+	list), and the record's own queries would only answer that it's gone. Asked again while the page
+	is left, they failed in the parts that show their errors, the modules' slots.
 -->
 <script lang="ts">
 	import type { RemoteForm } from "$app/server";
@@ -37,7 +42,11 @@
 			<AlertDialog.Title>{title}</AlertDialog.Title>
 			<AlertDialog.Description>{description}</AlertDialog.Description>
 		</AlertDialog.Header>
-		<form {...form}>
+		<form
+			{...form.enhance(async ({ submit }) => {
+				await submit().updates();
+			})}
+		>
 			<input {...form.fields.id.as("hidden", id)} />
 			<!-- E.g. when the record is still referenced and can't be deleted. -->
 			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />

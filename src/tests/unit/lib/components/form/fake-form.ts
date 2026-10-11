@@ -38,22 +38,45 @@ interface FakeFormOptions {
 	pending?: number;
 	/** Called with the submitted data instead of sending it. */
 	onsubmit?: (data: FormData) => void;
+	/** Called with what an `enhance` callback passes to its submission's `updates(…)`. */
+	onupdates?: (...updates: unknown[]) => void;
 }
+
+type EnhanceCallback = (submission: {
+	form: HTMLFormElement;
+	data: FormData;
+	submit: () => Promise<boolean> & { updates: (...updates: unknown[]) => Promise<boolean> };
+}) => unknown;
 
 /**
  * A remote form with the fields `fields`, and `issues` as the form's validation messages.
- * Submitting it calls `onsubmit` with the submitted data instead of sending it.
+ * Submitting it calls `onsubmit` with the submitted data instead of sending it, through the
+ * callback of `enhance(callback)` if it has one, as SvelteKit does.
  */
 export function fakeForm<Input extends RemoteFormInput>(
 	fields: (keyof Input & string)[],
-	{ issues = [], pending = 0, onsubmit }: FakeFormOptions = {},
+	{ issues = [], pending = 0, onsubmit, onupdates }: FakeFormOptions = {},
 ) {
+	let enhanced: EnhanceCallback | undefined;
+	const send = (data: FormData) => {
+		onsubmit?.(data);
+		const sent = Promise.resolve(issues.length === 0);
+		return Object.assign(sent, {
+			updates: (...updates: unknown[]) => {
+				onupdates?.(...updates);
+				return sent;
+			},
+		});
+	};
 	const form = {
 		method: "POST",
 		action: "?/remote=fake",
 		onsubmit(event: SubmitEvent) {
 			event.preventDefault();
-			onsubmit?.(new FormData(event.currentTarget as HTMLFormElement));
+			const element = event.currentTarget as HTMLFormElement;
+			const data = new FormData(element);
+			if (enhanced) void enhanced({ form: element, data, submit: () => send(data) });
+			else void send(data);
 		},
 	};
 	const [first = "form"] = fields;
@@ -66,6 +89,12 @@ export function fakeForm<Input extends RemoteFormInput>(
 			},
 		},
 		pending: { value: pending },
+		enhance: {
+			value: (callback: EnhanceCallback) => {
+				enhanced = callback;
+				return form;
+			},
+		},
 	});
 	return form as unknown as RemoteForm<Input, unknown>;
 }
