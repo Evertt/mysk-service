@@ -39,30 +39,24 @@ function sampleUntilRemoved(elements: HTMLElement[]) {
 	});
 }
 
-// The sampling follows real frames and animations of a real browser, which a loaded machine
-// (a full run next to other work) can stretch well past Vitest's default, so it gets room.
-test.each(overlays)(
-	"a closing %s fades out without flashing back in",
-	async (overlay) => {
-		const screen = render(Harness, { overlay, open: true });
-		await expect.poll(() => animated().length, { timeout: 10_000 }).toBeGreaterThan(0);
-		const elements = animated();
-		await settled(elements);
+test.each(overlays)("a closing %s fades out without flashing back in", async (overlay) => {
+	const screen = render(Harness, { overlay, open: true });
+	await expect.poll(() => animated().length, { timeout: 10_000 }).toBeGreaterThan(0);
+	const elements = animated();
+	await settled(elements);
 
-		const sampling = sampleUntilRemoved(elements);
-		await screen.rerender({ overlay, open: false });
-		const frames = await sampling;
+	const sampling = sampleUntilRemoved(elements);
+	await screen.rerender({ overlay, open: false });
+	const frames = await sampling;
 
-		for (const slot of new Set(frames.map((frame) => frame.slot))) {
-			const own = frames.filter((frame) => frame.slot === slot);
-			const closing = own.slice(own.findIndex((frame) => frame.opacity < 1));
-			expect(closing.length, `${slot} fades out`).toBeGreaterThan(1);
-			// Without `animation-fill-mode: forwards` the element jumps back to its full opacity when the
-			// exit animation ends, and stays there until it's removed: a flicker at the end of the close.
-			expect(Math.max(...closing.map((frame) => frame.opacity)), slot).toBeLessThan(1);
-			expect(closing.at(-1)!.opacity, slot).toBeLessThan(0.05);
-			expect(own.at(-1)!.fill, slot).toBe("forwards");
-		}
-	},
-	60_000,
-);
+	for (const slot of new Set(frames.map((frame) => frame.slot))) {
+		const own = frames.filter((frame) => frame.slot === slot);
+		const closing = own.slice(own.findIndex((frame) => frame.opacity < 1));
+		expect(closing.length, `${slot} fades out`).toBeGreaterThan(1);
+		// Without `animation-fill-mode: forwards` the element jumps back to its full opacity when the
+		// exit animation ends, and stays there until it's removed: a flicker at the end of the close.
+		expect(Math.max(...closing.map((frame) => frame.opacity)), slot).toBeLessThan(1);
+		expect(closing.at(-1)!.opacity, slot).toBeLessThan(0.05);
+		expect(own.at(-1)!.fill, slot).toBe("forwards");
+	}
+});
