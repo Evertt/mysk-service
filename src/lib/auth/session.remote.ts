@@ -38,6 +38,13 @@ export const getCurrentTenant = forAnyRole.query(async () => {
 	};
 });
 
+/**
+ * The modules the current organization has on: what the extension slots show (`ExtensionSlot`),
+ * on the office's pages and the engineer portal's alike (unlike `getCurrentTenant`, which sends
+ * field engineers to their portal).
+ */
+export const getTenantModules = forAnyRole.query(async () => currentTenant().modules);
+
 export const switchOrganization = forUsers.form(
 	v.object({ organizationId: v.string() }),
 	async ({ organizationId }) => {

@@ -24,7 +24,7 @@
 <script lang="ts" generics="Props extends Record<string, unknown>">
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
-	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 	import type { SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
 	import { type ModuleId, modules } from "#lib/modules/manifests.ts";
@@ -38,11 +38,11 @@
 	/** How often each contribution was tried again: each time loads it again, in a new boundary. */
 	const attempts = $state<Record<string, number>>({});
 
-	const tenant = $derived(await getCurrentTenant());
+	const enabled = $derived(await getTenantModules());
 	const parts = $derived(
 		await Promise.all(
 			slotContributions
-				.filter((entry) => entry.point === point.id && tenant.modules.includes(entry.module))
+				.filter((entry) => entry.point === point.id && enabled.includes(entry.module))
 				.map(({ id, module, load }) => {
 					const attempt = attempts[id] ?? 0;
 					// A contribution to this point takes this point's props (`slotContribution()`).

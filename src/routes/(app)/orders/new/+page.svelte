@@ -6,7 +6,7 @@
 	import { form as formParts } from "#lib/orders/extensions.ts";
 	import { createOrder, getOrderFormOptions } from "#lib/orders/remotes.ts";
 
-	import ExtensionSlot from "../../extension-slot.svelte";
+	import ExtensionSlot from "../../../extension-slot.svelte";
 </script>
 
 <svelte:head>

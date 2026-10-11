@@ -4,7 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager, parseRoles } from "#lib/auth/index.ts";
-import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+import { getCurrentTenant, getTenantModules } from "#lib/auth/session.remote.ts";
 import { changeModules, effectiveModules } from "#lib/modules/graph.ts";
 import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
@@ -113,5 +113,6 @@ export const setModules = forManagers.form(
 		if (tenant) tenant.modules = effectiveModules(outcome.stored);
 		void getOrganizationSettings().refresh();
 		void getCurrentTenant().refresh();
+		void getTenantModules().refresh();
 	},
 );

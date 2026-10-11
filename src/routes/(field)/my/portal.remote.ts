@@ -8,11 +8,14 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatNumber, label } from "#lib/i18n/index.ts";
-import { orderLines } from "#lib/materials/index.ts";
-import { checkLines, OrderStockShortage, saveLines } from "#lib/materials/server/index.ts";
+import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { OrderRefused, saveOrderParts } from "#lib/orders/server/index.ts";
+import {
+	findEngineerOrder,
+	orderCommitted,
+	OrderRefused,
+	saveOrderParts,
+} from "#lib/orders/server/index.ts";
 import { id, laborHours, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -24,10 +27,10 @@ import {
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { customer, material, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
+import { customer, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
-import { fieldActions, signature } from "./work.ts";
+import { signature } from "./work.ts";
 
 /** Who is signed in, for the portal's header. */
 export const getMe = forEngineers.query(async () => {
@@ -82,11 +85,6 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 			equipment: {
 				columns: { model: true, manufacturer: true, serialNumber: true, category: true },
 			},
-			lines: {
-				columns: { id: true, materialId: true, quantity: true },
-				with: { material: { columns: { sku: true, name: true, unit: true } } },
-				orderBy: (line, { asc }) => asc(line.id),
-			},
 		},
 	});
 	if (!found) error(404, m.portal_not_found({ number }));
@@ -111,41 +109,7 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	return { order: found, notes, signoff: signoff ?? null };
 });
 
-/** The materials an engineer can use on a job, by name. */
-export const getUsableMaterials = forEngineers.query(async () => {
-	return db
-		.select({ id: material.id, sku: material.sku, name: material.name, unit: material.unit })
-		.from(material)
-		.where(inTenant(material))
-		.orderBy(asc(material.name));
-});
-
-/**
- * One of the engineer's (`engineerId`) orders, with its lines, in a transaction, if they may do
- * `action` with it in its current status; otherwise a 404 (not theirs) or what's in the way.
- */
-async function findMyOrder(
-	tx: Transaction,
-	engineerId: number,
-	orderId: number,
-	action: keyof ReturnType<typeof fieldActions>,
-) {
-	const found = await tx.query.order.findFirst({
-		columns: { id: true, number: true, status: true, laborHours: true },
-		where: and(idInTenant(order, orderId), eq(order.engineerId, engineerId)),
-	});
-	if (!found) error(404, m.portal_not_found_plain());
-	if (!fieldActions(found.status)[action]) {
-		invalid(
-			found.status === "scheduled"
-				? m.portal_start_first()
-				: m.portal_cant_change({ status: label("orderStatus", found.status).toLowerCase() }),
-		);
-	}
-	return found;
-}
-
-type MyOrder = Awaited<ReturnType<typeof findMyOrder>>;
+type MyOrder = Awaited<ReturnType<typeof findEngineerOrder>>;
 
 /** How an order shows in the activity log. */
 const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
@@ -175,17 +139,21 @@ async function setStatus(
 	});
 }
 
-/** Refreshes what the portal shows of an order after a change. */
+/**
+ * Refreshes what the portal shows of an order after a change, the modules' cards on it too (they
+ * refresh their own queries on `orders.committed`).
+ */
 function refreshMyOrder(number: string) {
 	void getMyOrder(number).refresh();
 	void getMyWork().refresh();
+	orderCommitted({ number });
 }
 
 /** Starts a scheduled job: it's then in progress. */
 export const startWork = forEngineers.form(v.object({ id: id() }), async (input) => {
 	const engineer = await currentEngineer();
 	const number = await db.transaction(async (tx) => {
-		const found = await findMyOrder(tx, engineer.id, input.id, "start");
+		const found = await findEngineerOrder(tx, engineer.id, input.id, "start");
 		await setStatus(tx, found, "in_progress", "work_started");
 		return found.number;
 	});
@@ -199,7 +167,7 @@ export const logHours = forEngineers.form(
 		const engineer = await currentEngineer();
 		if (input.laborHours > 24 * 14) invalid(issue.laborHours(m.portal_hours_too_many()));
 		const number = await db.transaction(async (tx) => {
-			const found = await findMyOrder(tx, engineer.id, input.id, "work");
+			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
 			const after = { laborHours: input.laborHours };
 			await tx.update(order).set(after).where(idInTenant(order, found.id));
 			await recordActivity(tx, {
@@ -210,33 +178,6 @@ export const logHours = forEngineers.form(
 			});
 			return found.number;
 		});
-		refreshMyOrder(number);
-	},
-);
-
-/**
- * Replaces the materials used on a job under way, through the same code as the office's order
- * form: they take or return stock, and more than there is in stock is refused on the line.
- */
-export const saveMaterials = forEngineers.form(
-	v.object({ id: id(), lines: orderLines() }),
-	async (input, issue) => {
-		const engineer = await currentEngineer();
-		const problems = await checkLines(input.lines);
-		if (problems.length) {
-			invalid(...problems.map((p) => issue.lines[p.line][p.field](p.message)));
-		}
-		const number = await db
-			.transaction(async (tx) => {
-				const found = await findMyOrder(tx, engineer.id, input.id, "work");
-				await saveLines(tx, found, found.status, input.lines);
-				return found.number;
-			})
-			.catch((error) => {
-				if (!(error instanceof OrderStockShortage)) throw error;
-				const line = input.lines.findLastIndex((line) => line.materialId === error.materialId);
-				invalid(issue.lines[line].quantity(error.message));
-			});
 		refreshMyOrder(number);
 	},
 );
@@ -254,7 +195,7 @@ export const addNote = forEngineers.form(
 			invalid(issue.text(m.portal_note_too_long({ max: formatNumber(MAX_NOTE_LENGTH) })));
 		}
 		const number = await db.transaction(async (tx) => {
-			const found = await findMyOrder(tx, engineer.id, input.id, "note");
+			const found = await findEngineerOrder(tx, engineer.id, input.id, "note");
 			await tx.insert(orderNote).values({
 				organizationId,
 				orderId: found.id,
@@ -283,7 +224,7 @@ export const completeWork = forEngineers.form(
 		const { organizationId, user: signedInUser } = currentTenant();
 		const engineer = await currentEngineer();
 		const number = await db.transaction(async (tx) => {
-			const found = await findMyOrder(tx, engineer.id, input.id, "work");
+			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
 			const now = new Date();
 			await setStatus(tx, found, "completed", "completed", {
 				completedAt: now,

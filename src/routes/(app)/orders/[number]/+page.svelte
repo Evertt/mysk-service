@@ -26,7 +26,7 @@
 	import { detailSide } from "#lib/orders/extensions.ts";
 	import { deleteOrder, getOrder } from "#lib/orders/remotes.ts";
 
-	import ExtensionSlot from "../../extension-slot.svelte";
+	import ExtensionSlot from "../../../extension-slot.svelte";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();

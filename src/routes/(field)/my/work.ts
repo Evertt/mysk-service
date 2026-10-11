@@ -1,24 +1,12 @@
 /**
- * The rules of the engineer portal: what an engineer can do with an order in each status, how
- * their work is grouped by day, and what a customer's signature must be.
+ * The rules of the engineer portal: how an engineer's work is grouped by day, and what a customer's
+ * signature must be. What they can do with an order in each status is `fieldActions()` in
+ * `#lib/orders/field.ts`.
  */
 import * as v from "valibot";
 
 import { startOfDay } from "#lib/dates.ts";
 import { dateFormatter, formatTime } from "#lib/i18n/index.ts";
-import type { OrderStatus } from "#lib/models.ts";
-
-/** What the engineer can do with one of their orders, by its status. */
-export function fieldActions(status: OrderStatus) {
-	return {
-		/** Start the job: a scheduled order is then in progress. */
-		start: status === "scheduled",
-		/** Log hours and materials, and complete it with the customer's sign-off. */
-		work: status === "in_progress",
-		/** Write a note, e.g. about access or what they found. */
-		note: status === "scheduled" || status === "in_progress",
-	};
-}
 
 const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });

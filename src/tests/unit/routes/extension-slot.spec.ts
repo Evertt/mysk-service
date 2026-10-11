@@ -4,7 +4,7 @@ import { render } from "svelte/server";
 import { expect, test, vi } from "vite-plus/test";
 
 import { detailSide } from "#lib/orders/extensions.ts";
-import ExtensionSlot from "#routes/(app)/extension-slot.svelte";
+import ExtensionSlot from "#routes/extension-slot.svelte";
 
 // The same made-up modules as in the component test: gadgets' card renders, gizmos' component
 // doesn't load and widgets' card fails on its data (see there for the others).
@@ -37,7 +37,7 @@ vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 });
 
 vi.mock("#lib/auth/session.remote.ts", () => ({
-	getCurrentTenant: vi.fn(() => Promise.resolve({ modules: ["gadgets", "gizmos", "widgets"] })),
+	getTenantModules: vi.fn(() => Promise.resolve(["gadgets", "gizmos", "widgets"])),
 }));
 
 const props = { point: detailSide, props: { number: "ORD-0001" } };

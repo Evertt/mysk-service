@@ -1,12 +1,11 @@
 import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { DAY } from "#lib/dates.ts";
-import { stockLevel } from "#lib/materials/index.ts";
 import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import {
@@ -81,20 +80,7 @@ export const getDashboard = forMembers.query(async () => {
 		.orderBy(asc(order.scheduledFor))
 		.limit(6);
 
-	// Materials running low or out, by the same levels as the materials list.
-	const levels = (
-		await db
-			.select({ stock: material.stock, unit: material.unit })
-			.from(material)
-			.where(inTenant(material))
-	).map((row) => stockLevel(row.stock, row.unit));
-	const stock = {
-		low: levels.filter((level) => level === "low").length,
-		out: levels.filter((level) => level === "out").length,
-		total: levels.length,
-	};
-
-	return { open, revenue, fleet, upcoming, stock };
+	return { open, revenue, fleet, upcoming };
 });
 
 /**

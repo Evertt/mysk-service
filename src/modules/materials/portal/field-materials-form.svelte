@@ -1,7 +1,7 @@
 <!--
 	@component
-	The materials used on a job: add, change or remove lines and save them, which takes them from (or
-	returns them to) stock like the office's order form does.
+	The materials used on a job, in the engineer portal: add, change or remove lines and save them,
+	which takes them from (or returns them to) stock like the office's order form does.
 -->
 <script lang="ts">
 	import PlusIcon from "@lucide/svelte/icons/plus";
@@ -12,7 +12,10 @@
 	import { label } from "#lib/i18n/index.ts";
 	import { quantityStep } from "#lib/models.ts";
 
-	import { getUsableMaterials, saveMaterials } from "../portal.remote.ts";
+	import {
+		getUsableMaterials,
+		saveFieldMaterials as saveMaterials,
+	} from "./field-materials.remote.ts";
 
 	let {
 		orderId,

@@ -9,15 +9,16 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
-	import { formatQuantity } from "#lib/materials/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { fieldActions } from "#lib/orders/index.ts";
+	import { order as orderParts } from "#lib/portal/extensions.ts";
 
+	import ExtensionSlot from "../../../extension-slot.svelte";
 	import { getMyOrder, startWork } from "../portal.remote.ts";
-	import { dayLabel, fieldActions } from "../work.ts";
+	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
 	import HoursForm from "./hours-form.svelte";
-	import MaterialsForm from "./materials-form.svelte";
 	import NotesCard from "./notes-card.svelte";
 
 	let { params }: PageProps = $props();
@@ -132,32 +133,7 @@
 	</Card.Content>
 </Card.Root>
 
-<Card.Root>
-	<Card.Header>
-		<Card.Title>{m.portal_materials()}</Card.Title>
-		<Card.Description>
-			{actions.work ? m.portal_materials_work() : m.portal_materials_done()}
-		</Card.Description>
-	</Card.Header>
-	<Card.Content>
-		{#if actions.work}
-			<MaterialsForm orderId={order.id} lines={order.lines} />
-		{:else if order.lines.length}
-			<ul class="flex flex-col divide-y">
-				{#each order.lines as line (line.id)}
-					<li class="flex justify-between gap-4 py-2">
-						<span>{line.material.name}</span>
-						<span class="text-muted-foreground tabular-nums">
-							{formatQuantity(line.quantity, line.material.unit)}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="text-sm text-muted-foreground">{m.portal_no_materials()}</p>
-		{/if}
-	</Card.Content>
-</Card.Root>
+<ExtensionSlot point={orderParts} props={{ number: order.number }} />
 
 <NotesCard orderId={order.id} notes={data.notes} canAdd={actions.note} />
 
