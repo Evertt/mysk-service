@@ -51,8 +51,10 @@ registries, which know every module at build time.
    schema, without a cast. `<ExtensionSlot>` takes the form's `modules` fields for a form slot and
    gives each contribution its module's (`fields.<module id>`).
 
-4. **The browser validates the parts.** The order form preflights `{ modules: formPartsSchema(…) }`,
-   so a bad quantity shows on its line without a request, with the message the server would give.
+4. **The browser validates the parts.** The order form preflights its own schema through
+   `preflightParts()`, which reports only the issues under `modules` (and is typed as the form's
+   schema, which `preflight()` requires), so a bad quantity shows on its line without a request,
+   with the message the server would give.
    Only the parts: core's own fields keep being validated by the server on submit, as now
    (preflighting them too would change what core's tests and forms do; it's a separate change).
    Parts are optional, so the preflight needs no list of the tenant's modules: a part that isn't
