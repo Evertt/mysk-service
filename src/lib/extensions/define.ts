@@ -233,6 +233,8 @@ type FormSlotProps<Point, Part extends FormPartSchema> =
  * the types of the point and of the module's part's schema (`form-parts/<point id>.ts`). The
  * component's props are checked against the slot's and its part's fields, so the type check refuses
  * a component whose fields don't match its part's schema.
+ *
+ * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
  */
 export const formSlotContribution = <
 	Point extends FormSlotPoint<Record<string, unknown>>,
