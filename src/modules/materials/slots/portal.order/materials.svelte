@@ -4,8 +4,7 @@
 	which they can change while the job is in progress.
 -->
 <script lang="ts">
-	import { formatQuantity } from "#lib/materials/index.ts";
-
+	import { formatQuantity } from "../../display.ts";
 	import FieldMaterialsForm from "../../portal/field-materials-form.svelte";
 	import { getFieldMaterials } from "../../portal/field-materials.remote.ts";
 
@@ -16,9 +15,9 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>{m.portal_materials()}</Card.Title>
+		<Card.Title>{m.materials_portal_title()}</Card.Title>
 		<Card.Description>
-			{data.canChange ? m.portal_materials_work() : m.portal_materials_done()}
+			{data.canChange ? m.materials_portal_work() : m.materials_portal_done()}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
@@ -36,7 +35,7 @@
 				{/each}
 			</ul>
 		{:else}
-			<p class="text-sm text-muted-foreground">{m.portal_no_materials()}</p>
+			<p class="text-sm text-muted-foreground">{m.materials_portal_none()}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>

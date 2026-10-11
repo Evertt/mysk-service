@@ -13,7 +13,7 @@ const kinds = Object.keys(numberFormats) as NumberKind[];
 describe("formatCode", () => {
 	test("pads the sequence after the prefix", () => {
 		expect(formatCode("customer", 1)).toBe("CUST-0001");
-		expect(formatCode("material", 42)).toBe("MAT-0042");
+		expect(formatCode({ prefix: "MAT-", digits: 4 }, 42)).toBe("MAT-0042");
 	});
 
 	test("puts the year of yearly numbers between the prefix and the sequence", () => {
@@ -35,7 +35,7 @@ describe("formatCode", () => {
 describe("sequenceStart", () => {
 	test("is where the sequence starts, counting from 1 as SQL's substr does", () => {
 		expect(sequenceStart("customer")).toBe(6);
-		expect(sequenceStart("material")).toBe(5);
+		expect(sequenceStart({ prefix: "MAT-", digits: 4 })).toBe(5);
 		expect(sequenceStart("order")).toBe(10);
 	});
 

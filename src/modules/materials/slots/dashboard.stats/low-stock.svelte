@@ -14,13 +14,17 @@
 </script>
 
 <StatCard
-	label={m.dashboard_low_stock()}
+	label={m.materials_dashboard_low_stock()}
 	value={formatNumber(stock.low + stock.out)}
-	detail={m.dashboard_low_stock_of({ out: formatNumber(stock.out), count: stock.total })}
+	detail={m.materials_dashboard_low_stock_of({ out: formatNumber(stock.out), count: stock.total })}
 >
 	{#snippet action()}
 		<!-- The materials list, filtered to the low and out of stock ones. -->
-		<Button variant="outline" size="sm" href="{resolve('/(app)/materials')}?stock=out,low">
+		<Button
+			variant="outline"
+			size="sm"
+			href="{resolve('/(app)/(modules)/materials')}?stock=out,low"
+		>
 			{m.common_view()}
 		</Button>
 	{/snippet}

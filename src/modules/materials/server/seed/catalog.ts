@@ -1,10 +1,12 @@
 /** The materials module's demo data: its catalog, and the lines orders use it in. */
 import type { Faker } from "@faker-js/faker";
 
-import type { MaterialUnit, OrderType } from "#lib/models.ts";
+import type { OrderType } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
 import { DAY, now } from "#lib/server/db/seed/clock.ts";
 import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
+
+import { type MaterialUnit, materialNumberFormat } from "../../model.ts";
 
 /** The materials in stock, in Dutch, with the range of their price in euros. */
 const catalog: [name: string, unit: MaterialUnit, minPrice: number, maxPrice: number][] = [
@@ -54,7 +56,7 @@ const catalog: [name: string, unit: MaterialUnit, minPrice: number, maxPrice: nu
 export function generateMaterials(faker: Faker) {
 	return catalog.map(([name, unit, min, max], i) => ({
 		id: i + 1,
-		sku: formatCode("material", i + 1),
+		sku: formatCode(materialNumberFormat, i + 1),
 		name,
 		unit,
 		unitPrice: faker.number.int({ min: min * 100, max: max * 100, multipleOf: 5 }),

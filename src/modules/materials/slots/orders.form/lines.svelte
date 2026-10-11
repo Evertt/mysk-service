@@ -7,9 +7,9 @@
 	import type { RemoteFormFields } from "$app/server";
 	import type * as v from "valibot";
 
-	import type { materialsPart } from "#lib/materials/index.ts";
 	import type { ModuleFormFields } from "#lib/orders/extensions.ts";
 
+	import type { materialsPart } from "../../form/order-lines-schema.ts";
 	import OrderLinesField from "../../orders/order-lines-field.svelte";
 	import { getMaterialOptions, getOrderLines } from "../../orders/order-lines.remote.ts";
 

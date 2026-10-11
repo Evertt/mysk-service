@@ -11,7 +11,7 @@ import {
 
 import { inTenant, type TenantTable } from "./auth/session.ts";
 import type { Transaction } from "./db/index.ts";
-import { customer, material, order } from "./db/schema.ts";
+import { customer, order } from "./db/schema.ts";
 
 /** What numbers a kind of record: its format, and the tenant table and column that hold them. */
 export interface NumberTarget {
@@ -26,7 +26,6 @@ export interface NumberTarget {
  */
 const coreTargets: Record<NumberKind, NumberTarget> = {
 	customer: { format: numberFormats.customer, table: customer, column: customer.code },
-	material: { format: numberFormats.material, table: material, column: material.sku },
 	order: { format: numberFormats.order, table: order, column: order.number },
 };
 

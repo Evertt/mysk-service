@@ -2,16 +2,18 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { orderLines } from "#lib/materials/index.ts";
-import { checkLines, OrderStockShortage, saveLines } from "#lib/materials/server/index.ts";
 import { fieldActions } from "#lib/orders/index.ts";
 import { findEngineerOrder } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { currentEngineer, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { material, order, orderLine } from "#lib/server/db/schema.ts";
+import { order } from "#lib/server/db/schema.ts";
 
+import { orderLines } from "../form/order-lines-schema.ts";
 import { forEngineers } from "../remote-functions.ts";
+import { checkLines, saveLines } from "../server/lines.ts";
+import { material, orderLine } from "../server/schema.ts";
+import { OrderStockShortage } from "../server/stock.ts";
 
 /**
  * The materials used on one of the engineer's orders (by its number), and whether they can change
@@ -23,7 +25,7 @@ export const getFieldMaterials = forEngineers.query(v.string(), async (number) =
 		.select({ id: order.id, status: order.status })
 		.from(order)
 		.where(and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineer.id)));
-	if (!found) error(404, m.portal_not_found({ number }));
+	if (!found) error(404, m.materials_portal_not_found({ number }));
 	const lines = await db
 		.select({
 			id: orderLine.id,

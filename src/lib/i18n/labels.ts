@@ -8,17 +8,14 @@ import type { MemberRole } from "#lib/auth/index.ts";
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type { StockLevel } from "#lib/materials/index.ts";
 import type {
 	CustomerSegment,
 	EngineerSpecialty,
 	EquipmentCategory,
 	EquipmentStatus,
-	MaterialUnit,
 	OrderPriority,
 	OrderStatus,
 	OrderType,
-	StockMovementKind,
 } from "#lib/models.ts";
 
 export type Labels<T extends string> = Record<T, () => string>;
@@ -72,31 +69,6 @@ const coreLabels = {
 		decommissioned: m.enum_equipment_status_decommissioned,
 	} satisfies Labels<EquipmentStatus>,
 	/** A unit's name, e.g. `Pieces`. */
-	materialUnit: {
-		pcs: m.enum_material_unit_pcs,
-		m: m.enum_material_unit_m,
-		kg: m.enum_material_unit_kg,
-		l: m.enum_material_unit_l,
-	} satisfies Labels<MaterialUnit>,
-	/** A unit's abbreviation after a quantity, e.g. `pcs` in `12 pcs`. */
-	materialUnitSymbol: {
-		pcs: m.enum_material_unit_symbol_pcs,
-		m: m.enum_material_unit_symbol_m,
-		kg: m.enum_material_unit_symbol_kg,
-		l: m.enum_material_unit_symbol_l,
-	} satisfies Labels<MaterialUnit>,
-	stockLevel: {
-		out: m.enum_stock_level_out,
-		low: m.enum_stock_level_low,
-		in_stock: m.enum_stock_level_in_stock,
-	} satisfies Labels<StockLevel>,
-	stockMovementKind: {
-		opening_balance: m.enum_stock_movement_kind_opening_balance,
-		receipt: m.enum_stock_movement_kind_receipt,
-		adjustment: m.enum_stock_movement_kind_adjustment,
-		consumption: m.enum_stock_movement_kind_consumption,
-		return: m.enum_stock_movement_kind_return,
-	} satisfies Labels<StockMovementKind>,
 	memberRole: {
 		owner: m.enum_member_role_owner,
 		admin: m.enum_member_role_admin,

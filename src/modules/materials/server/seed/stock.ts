@@ -1,10 +1,10 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
-import { holdsStock } from "#lib/models.ts";
 import { addDays, now } from "#lib/server/db/seed/clock.ts";
 import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
 
 import type { MaterialsDraft } from "../../api/seed.ts";
+import { holdsStock } from "../../model.ts";
 
 /**
  * The stock ledger that adds up to each generated material's stock: an opening balance before

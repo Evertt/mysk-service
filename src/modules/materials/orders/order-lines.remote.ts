@@ -3,9 +3,9 @@ import * as v from "valibot";
 
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { material, orderLine } from "#lib/server/db/schema.ts";
 
 import { query } from "../remote-functions.ts";
+import { material, orderLine } from "../server/schema.ts";
 
 /** The materials an order's lines can use, by name, with their list prices. */
 export const getMaterialOptions = query(async () => {

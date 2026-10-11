@@ -15,11 +15,9 @@ import {
 	engineerSpecialties,
 	equipmentCategories,
 	equipmentStatuses,
-	materialUnits,
 	orderPriorities,
 	orderStatuses,
 	orderTypes,
-	stockMovementKinds,
 } from "#lib/models.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
@@ -37,10 +35,6 @@ const kinds: [LabelKind, readonly string[]][] = [
 	["engineerSpecialty", engineerSpecialties],
 	["equipmentCategory", equipmentCategories],
 	["equipmentStatus", equipmentStatuses],
-	["materialUnit", materialUnits],
-	["materialUnitSymbol", materialUnits],
-	["stockLevel", ["out", "low", "in_stock"]],
-	["stockMovementKind", stockMovementKinds],
 	["memberRole", memberRoles],
 	["memberRoleDescription", memberRoles],
 ];
@@ -82,7 +76,6 @@ test("a label is in the current language", () => {
 	expect(label("orderStatus", "in_progress")).toBe("In progress");
 	inLanguage("nl");
 	expect(label("orderStatus", "in_progress")).toBe("In uitvoering");
-	expect(label("materialUnitSymbol", "pcs")).toBe("st.");
 });
 
 test("an unknown value is shown as it is", () => {

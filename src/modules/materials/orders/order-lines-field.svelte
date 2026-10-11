@@ -11,9 +11,10 @@
 	import type * as v from "valibot";
 
 	import { formatCents, label } from "#lib/i18n/index.ts";
-	import type { materialsPart } from "#lib/materials/index.ts";
-	import { lineTotal, quantityStep } from "#lib/models.ts";
 
+	import type { materialsPart } from "../form/order-lines-schema.ts";
+	import { materialLabels } from "../labels.ts";
+	import { lineTotal, quantityStep } from "../model.ts";
 	import type { getMaterialOptions, getOrderLines } from "./order-lines.remote.ts";
 
 	let {
@@ -61,14 +62,14 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>{m.orders_materials()}</Card.Title>
+		<Card.Title>{m.materials_order_title()}</Card.Title>
 		<Card.Description>
-			{quoted ? m.orders_materials_quoted() : m.orders_materials_list_price()}
+			{quoted ? m.materials_order_quoted() : m.materials_order_list_price()}
 		</Card.Description>
 		<Card.Action>
 			<Button type="button" variant="outline" size="sm" onclick={addLine}>
 				<PlusIcon data-icon="inline-start" />
-				{m.orders_add_material()}
+				{m.materials_order_add()}
 			</Button>
 		</Card.Action>
 	</Card.Header>
@@ -77,11 +78,11 @@
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>{m.orders_line_material()}</Table.Head>
-						<Table.Head class="w-28">{m.orders_line_quantity()}</Table.Head>
-						<Table.Head class="text-right">{m.orders_line_amount()}</Table.Head>
+						<Table.Head>{m.materials_order_line_material()}</Table.Head>
+						<Table.Head class="w-28">{m.materials_order_line_quantity()}</Table.Head>
+						<Table.Head class="text-right">{m.materials_order_line_amount()}</Table.Head>
 						<Table.Head class="w-10"
-							><span class="sr-only">{m.orders_line_remove()}</span></Table.Head
+							><span class="sr-only">{m.materials_order_line_remove()}</span></Table.Head
 						>
 					</Table.Row>
 				</Table.Header>
@@ -92,12 +93,12 @@
 							<Table.Cell>
 								<NativeSelect.Root
 									class="w-full"
-									aria-label={m.orders_line_material()}
+									aria-label={m.materials_order_line_material()}
 									{...withoutValue(lineFields.materialId.as("select"))}
 									value={line.materialId}
 									onchange={(event) => (line.materialId = event.currentTarget.value)}
 								>
-									<NativeSelect.Option value="">{m.orders_choose_material()}</NativeSelect.Option>
+									<NativeSelect.Option value="">{m.materials_order_choose()}</NativeSelect.Option>
 									{#each materials as material (material.id)}
 										<NativeSelect.Option value={String(material.id)}>
 											{material.name} ({material.sku})
@@ -110,7 +111,7 @@
 									{@const unit = materialsById.get(line.materialId)?.unit}
 									{@const step = quantityStep(unit ?? "m")}
 									<InputGroup.Input
-										aria-label={m.orders_line_quantity()}
+										aria-label={m.materials_order_line_quantity()}
 										min={step}
 										{step}
 										class="tabular-nums"
@@ -120,7 +121,9 @@
 									/>
 									<InputGroup.Addon align="inline-end">
 										<InputGroup.Text
-											>{unit ? label("materialUnitSymbol", unit) : ""}</InputGroup.Text
+											>{unit
+												? materialLabels.label("materialUnitSymbol", unit)
+												: ""}</InputGroup.Text
 										>
 									</InputGroup.Addon>
 								</InputGroup.Root>
@@ -133,7 +136,7 @@
 									type="button"
 									variant="ghost"
 									size="icon-sm"
-									aria-label={m.orders_line_remove_line()}
+									aria-label={m.materials_order_line_remove_line()}
 									onclick={() => lines.splice(index, 1)}
 								>
 									<Trash2Icon />
@@ -144,7 +147,7 @@
 				</Table.Body>
 				<Table.Footer>
 					<Table.Row>
-						<Table.Cell colspan={2}>{m.orders_materials_total()}</Table.Cell>
+						<Table.Cell colspan={2}>{m.materials_order_total()}</Table.Cell>
 						<Table.Cell class="text-right tabular-nums">{formatCents(materialsTotal)}</Table.Cell>
 						<Table.Cell></Table.Cell>
 					</Table.Row>
@@ -152,7 +155,7 @@
 			</Table.Root>
 			<Field.FieldError errors={field.allIssues()} />
 		{:else}
-			<p class="text-sm text-muted-foreground">{m.orders_no_materials_yet()}</p>
+			<p class="text-sm text-muted-foreground">{m.materials_order_none_yet()}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>

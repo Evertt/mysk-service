@@ -36,21 +36,6 @@
 			}
 		}
 	],
-	"dashboard_low_stock": "Lage voorraad",
-	"dashboard_low_stock_of": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "{out} niet op voorraad, van {countText} materiaal",
-				"countPlural=*": "{out} niet op voorraad, van {countText} materialen"
-			}
-		}
-	],
 	"dashboard_orders_per_week": "Opdrachten per week",
 	"dashboard_orders_per_week_description": "Nieuwe opdrachten in de laatste 12 weken, naar hun huidige status.",
 	"dashboard_revenue_per_month": "Omzet per maand",

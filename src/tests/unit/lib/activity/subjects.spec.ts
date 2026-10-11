@@ -62,7 +62,6 @@ describe("subjectTypes", () => {
 		expect(engineer.href?.({ id: "7", label: "Jan" })).toBe("/engineers/7");
 		expect(equipment.href?.({ id: "2", label: "SN-12" })).toBe("/equipment/SN-12");
 		expect(module.href?.({ id: "widgets", label: "Widgets" })).toBe("/settings");
-		expect(coreSubjectTypes.order_line.href).toBeUndefined();
 	});
 
 	test("links a module's subjects to its pages", () => {
@@ -71,7 +70,7 @@ describe("subjectTypes", () => {
 	});
 
 	test("labels types for the filter", () => {
-		expect(subjectTypeLabel("order_line", coreSubjectTypes.order_line)).toBe("Order line");
+		expect(subjectTypeLabel("saved_view", coreSubjectTypes.saved_view)).toBe("Saved view");
 		expect(subjectTypeLabel("widget", subjectTypes(["widgets"]).widget)).toBe("Widget");
 		expect(subjectTypeLabel("time_entry")).toBe("Time entry");
 	});
@@ -85,6 +84,6 @@ describe("subjectTypes", () => {
 describe("in Dutch", () => {
 	test("reads nouns in Dutch", () => {
 		overwriteGetLocale(() => "nl");
-		expect(subjectTypeLabel("order_line", coreSubjectTypes.order_line)).toBe("Opdrachtregel");
+		expect(subjectTypeLabel("saved_view", coreSubjectTypes.saved_view)).toBe("Opgeslagen weergave");
 	});
 });

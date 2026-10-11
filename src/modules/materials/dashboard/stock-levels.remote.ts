@@ -1,9 +1,9 @@
-import { stockLevel } from "#lib/materials/index.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { material } from "#lib/server/db/schema.ts";
 
+import { stockLevel } from "../model.ts";
 import { query } from "../remote-functions.ts";
+import { material } from "../server/schema.ts";
 
 /** How many of the tenant's materials run low or out, by the same levels as the materials list. */
 export const getStockLevels = query(async () => {

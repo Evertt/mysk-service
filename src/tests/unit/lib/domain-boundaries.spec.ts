@@ -1,5 +1,5 @@
 /**
- * Keeps the core domains (`src/lib/{orders,customers,equipment,engineers,materials}`) behind their
+ * Keeps the core domains (`src/lib/{orders,customers,equipment,engineers}`) behind their
  * barrels (see "Where files go" in AGENTS.md):
  *
  * - code outside a domain imports it only through its barrels (`#lib/<d>/index.ts`, `components.ts`,
@@ -30,21 +30,15 @@ interface SourceFile {
 	source: string;
 }
 
-export const domains = ["customers", "engineers", "equipment", "materials", "orders"];
+export const domains = ["customers", "engineers", "equipment", "orders"];
 
 /**
  * The domains whose files have left `src/routes`, and the modules whose files have left their
  * `routes/`. Until then their route folders still hold the files that are about to move, and those
  * may use the old imports.
  */
-export const migratedDomains: string[] = [
-	"engineers",
-	"customers",
-	"equipment",
-	"materials",
-	"orders",
-];
-export const migratedModules: string[] = ["contracts", "invoicing", "schedule"];
+export const migratedDomains: string[] = ["engineers", "customers", "equipment", "orders"];
+export const migratedModules: string[] = ["contracts", "invoicing", "materials", "schedule"];
 
 const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];
 const isBarrel = (path: string) =>

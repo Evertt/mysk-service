@@ -1,4 +1,3 @@
-import { material, orderLine, stockMovement } from "#lib/server/db/schema.ts";
 /**
  * The materials module's demo data (see `#lib/server/db/seed/module-seed.ts`): each tenant's
  * catalog with its stock, its orders' material lines and the stock ledger that adds up to it. The
@@ -9,6 +8,7 @@ import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
 import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
 
 import type { MaterialsDraft } from "../api/seed.ts";
+import { material, orderLine, stockMovement } from "./schema.ts";
 import { generateMaterials, generateOrderLines } from "./seed/catalog.ts";
 import { generateStockMovements } from "./seed/stock.ts";
 

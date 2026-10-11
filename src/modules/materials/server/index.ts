@@ -5,12 +5,13 @@
  * engineer made to it (`orders.committed`).
  */
 import { isFieldEngineer } from "#lib/auth/index.ts";
-import { materialCosts, saveOrderMaterials } from "#lib/materials/server/index.ts";
 import { committed, costs, saving } from "#lib/orders/extensions.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 
 import { getFieldMaterials } from "../portal/field-materials.remote.ts";
+import { materialCosts } from "./costs.ts";
+import { saveOrderMaterials } from "./lines.ts";
 
 export default defineServerModule("materials", [
 	contribute(costs, materialCosts),

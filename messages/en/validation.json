@@ -11,7 +11,6 @@
 	"validation_phone_required": "Enter a phone number",
 	"validation_phone_invalid": "Enter a valid phone number",
 	"validation_hours_required": "Enter the hours",
-	"validation_material_required": "Choose a material",
 	"validation_quantity_required": "Enter a quantity",
 	"validation_more_than_zero": "More than 0",
 	"validation_two_decimals": "At most two decimals",
