@@ -150,7 +150,7 @@ describe("createOrders", () => {
 		expect(created.number).toBe(`ORD-${year}-00001`);
 	});
 
-	test("logs each order as created and announces it to the modules", async () => {
+	test("logs each order as created, without the event for saved orders", async () => {
 		await db.transaction(async (tx) => {
 			await createOrders(tx, [draft()]);
 			expect(logged).toHaveBeenCalledWith(
@@ -160,7 +160,8 @@ describe("createOrders", () => {
 				}),
 			);
 		});
-		expect(committed).toHaveBeenCalledWith({ number: `ORD-${year}-00001` });
+		// `orders.committed` refreshes what pages show of an order; a new one is on none yet.
+		expect(committed).not.toHaveBeenCalled();
 	});
 
 	test("refuses another tenant's customer, unit or engineer, and a unit of another customer", async () => {

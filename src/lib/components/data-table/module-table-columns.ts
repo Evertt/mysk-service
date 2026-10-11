@@ -10,7 +10,7 @@ import type { ModuleListColumn, WithModuleValues } from "./module-columns.ts";
 import { createAppColumnHelper } from "./table.svelte.ts";
 
 /** The table columns for the modules' `columns`, for rows that carry their values. */
-export function moduleTableColumns<TData extends RowData & WithModuleValues>(
+function moduleTableColumns<TData extends RowData & WithModuleValues>(
 	columns: readonly ModuleListColumn[],
 ) {
 	const column = createAppColumnHelper<TData>();

@@ -22,7 +22,7 @@ import { advanceDueDate, type PlanOrderType } from "../model.ts";
 import { maintenancePlan } from "./schema.ts";
 
 /** What the office sets on a plan. */
-export interface PlanInput {
+interface PlanInput {
 	orderType: PlanOrderType;
 	description: string;
 	intervalMonths: number;

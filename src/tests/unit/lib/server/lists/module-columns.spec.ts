@@ -13,8 +13,8 @@ import {
 	columnSql,
 	moduleFacets,
 	moduleValues,
-	withModuleColumns,
-} from "#lib/server/lists/module-columns.ts";
+} from "#lib/server/lists/column-sql.ts";
+import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 import { type ListSql, planList } from "#lib/server/lists/plan.ts";
 import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
 

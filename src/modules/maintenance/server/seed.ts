@@ -34,7 +34,7 @@ const isPlanned = (category: string): category is keyof typeof kinds => category
  * coming months, a few are overdue and a few paused. With a faker of its own, seeded per tenant,
  * so the rest of the demo data is the same with or without the module.
  */
-export function generatePlans(equipments: TenantDraft["equipments"], seed: number) {
+function generatePlans(equipments: TenantDraft["equipments"], seed: number) {
 	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

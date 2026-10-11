@@ -1,7 +1,7 @@
 /**
  * The one way to create orders: the order form (`createOrder` in `../order.remote.ts`) and the
  * modules (e.g. maintenance plans turning what's due into orders) both call `createOrders()`, so
- * every new order is checked, numbered, logged and announced the same way.
+ * every new order is checked, numbered and logged the same way.
  */
 import { invalid } from "@sveltejs/kit";
 
@@ -11,8 +11,6 @@ import { currentTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
-
-import { orderCommitted } from "./hooks.ts";
 
 /** A new order's fields, without its number and tenant, which `createOrders()` gives it. */
 export interface OrderDraft {
@@ -32,7 +30,7 @@ export interface OrderDraft {
 }
 
 /** What's wrong with a draft's references, by field. */
-export interface DraftProblem {
+interface DraftProblem {
 	/** The draft's index in the batch. */
 	draft: number;
 	field: "customerId" | "equipmentId" | "engineerId";
@@ -47,7 +45,7 @@ const unique = (ids: (number | null | undefined)[]) => [
  * Checks that the drafts' customers, units and engineers are the current tenant's, and that each
  * unit belongs to its draft's customer. One query per kind of reference, whatever the batch's size.
  */
-export async function orderDraftProblems(
+async function orderDraftProblems(
 	tx: Transaction,
 	drafts: readonly OrderDraft[],
 ): Promise<DraftProblem[]> {
@@ -94,10 +92,14 @@ export async function orderDraftProblems(
 /**
  * Creates orders in the current tenant, in `tx`: checks their references (refusing the lot with
  * `invalid()` if any is wrong, so a form shows why and a bulk command skips the record with the
- * reason), gives each the tenant's next number, inserts them, logs each one's `created` and, once
- * `tx` has committed, lets the modules know (`orderCommitted()`). Returns their ids and numbers, in
- * the drafts' order. Material lines aren't part of a draft: save them with `saveOrderLines()`
- * afterwards, in the same transaction.
+ * reason), gives each the tenant's next number, inserts them and logs each one's `created`.
+ * Returns their ids and numbers, in the drafts' order. Material lines aren't part of a draft: save
+ * them with `saveOrderLines()` afterwards, in the same transaction.
+ *
+ * It doesn't emit `orders.committed` (`orderCommitted()`), as core's create never did: that event
+ * has the modules refresh their queries about an order on the client's pages, and a new order is on
+ * none yet. Refreshing them anyway left them in the client, failing once the order was deleted (the
+ * orders e2e caught it). A module that needs to hear about new orders gets an event of its own.
  */
 export async function createOrders(
 	tx: Transaction,
@@ -121,6 +123,5 @@ export async function createOrders(
 		await recordActivity(tx, { action: "created", subject, after: values });
 		created.push({ id: inserted.id, number });
 	}
-	for (const { number } of created) orderCommitted({ number });
 	return created;
 }

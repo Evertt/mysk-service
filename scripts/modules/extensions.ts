@@ -323,7 +323,7 @@ export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[
 		`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}`;
 	return [
 		`// ${GENERATED} from src/modules/*/server/columns. Don't edit.`,
-		`import type { ColumnSqlContribution } from "./module-columns.ts";`,
+		`import type { ColumnSqlContribution } from "./column-sql.ts";`,
 		...pointImports(columns.map(({ point }) => point)),
 		...columns.map(
 			({ module, contribution }) =>
@@ -331,8 +331,7 @@ export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[
 		),
 		"",
 		`/**`,
-		` * A function, not a constant: the modules import \`columnSql()\` from \`./module-columns.ts\`,`,
-		` * which imports this, so one of them is always evaluated first.`,
+		` * A function, like the server registry of hooks: nothing is read while the modules load.`,
 		` */`,
 		`export function generatedColumnSql(): readonly ColumnSqlContribution[] {`,
 		`\treturn ${listOf(

@@ -7,7 +7,7 @@ import { intervalLimits, planOrderTypes } from "../model.ts";
 const intervalMessage = () => m.maintenance_interval_range(intervalLimits);
 
 /** A plan's interval in whole months, 1–60. */
-export const intervalMonths = () =>
+const intervalMonths = () =>
 	v.pipe(
 		v.number(intervalMessage),
 		v.integer(intervalMessage),

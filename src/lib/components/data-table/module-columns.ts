@@ -23,7 +23,7 @@ import type { Component } from "svelte";
 import type { FilterKind } from "./list-definition.ts";
 
 /** A module column's id: its module's id, a dot and a name, e.g. `maintenance.nextDue`. */
-export type ModuleColumnId = `${string}.${string}`;
+type ModuleColumnId = `${string}.${string}`;
 
 /** The shape of a module column's id. */
 export const moduleColumnIdPattern = /^[a-z][a-z0-9-]*\.[A-Za-z][A-Za-z0-9]*$/;
