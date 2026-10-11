@@ -47,6 +47,7 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Register equipment" }).click();
 		await page.waitForURL((url) => url.pathname === `/equipment/${serial}`);
 		await page.getByRole("heading", { name: "Testco TX-1" }).waitFor();
+		await app.toast("Equipment registered");
 		expect(
 			await rows(`select organization_id from equipment where serial_number = ?`, [serial]),
 		).toEqual([{ organization_id: north.id }]);
@@ -118,12 +119,7 @@ describe("in North", () => {
 		await bar.getByRole("button", { name: "Delete" }).click();
 		await dialog.getByText("Delete the selected units?").waitFor();
 		await dialog.getByRole("button", { name: "Delete" }).click();
-		await app.toast("1 skipped");
-		await page
-			.locator("[data-sonner-toast]", {
-				hasText: `${used.serial_number}: This unit can't be deleted`,
-			})
-			.waitFor();
+		await app.toast("1 skipped", `${used.serial_number}: This unit can't be deleted`);
 		expect(await unit(used.id)).toEqual(before);
 		await app.go(`/equipment/${serial}`);
 	});

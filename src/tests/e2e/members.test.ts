@@ -185,11 +185,12 @@ describe("invitations", () => {
 
 	test("used, cancelled and made-up invitation links say so", async () => {
 		await invite("never.mind@example.com", "member");
+		await app.toast("Invitation sent to never.mind@example.com");
 		await app.submit(
 			invitationRow("never.mind@example.com").getByRole("button", { name: "Cancel" }),
 		);
 		expect(await invitations("never.mind@example.com")).toMatchObject([{ status: "canceled" }]);
-		expect(await invitationRow("never.mind@example.com").count()).toBe(0);
+		await expect.poll(() => invitationRow("never.mind@example.com").count()).toBe(0);
 
 		const page = await otherBrowser();
 		try {
@@ -422,6 +423,7 @@ describe("other organizations", () => {
 		const { page } = app;
 		await app.go("/settings/members");
 		await invite("south.only@example.com", "member");
+		await app.toast("Invitation sent to south.only@example.com");
 		const [northInvitation] = await invitations(northInvitee);
 		const plannerInNorth = await memberId(north.id, users.planner);
 

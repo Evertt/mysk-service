@@ -25,14 +25,15 @@ describe("in North", () => {
 		const [busiest] = customers;
 		await app.go("/invoices");
 		await app.openFilter("Customer");
-		expect(await page.getByRole("option").count()).toBe(customers.length);
+		// The options come from a query of their own.
+		await expect.poll(() => page.getByRole("option").count()).toBe(customers.length);
 		await page.getByPlaceholder("Customer").fill(busiest.code);
 		const option = page.getByRole("option", { name: new RegExp(busiest.code) });
 		expect(await option.innerText()).toMatch(new RegExp(`${busiest.n}$`));
 		await option.click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("customer") === busiest.code);
-		expect(await app.rowCount()).toBe(busiest.n);
+		await expect.poll(() => app.rowCount()).toBe(busiest.n);
 		await app.go(`/invoices?customer=${busiest.code}`);
 		expect(await app.rowCount()).toBe(busiest.n);
 		await app.go("/invoices");
@@ -66,8 +67,10 @@ describe("in North", () => {
 		const total = (list: typeof sent) =>
 			list.reduce((sum, i) => sum + i.subtotal + vatOf(i.subtotal, i.vat_rate), 0);
 		await app.go("/");
-		const amounts = await card("Receivables").locator("dd.text-3xl").allInnerTexts();
-		expect(amounts.map(cents)).toEqual([
+		// The card is the invoicing module's part of the dashboard.
+		const amounts = card("Receivables").locator("dd.text-3xl");
+		await expect.poll(() => amounts.count()).toBe(2);
+		expect((await amounts.allInnerTexts()).map(cents)).toEqual([
 			total(sent),
 			total(sent.filter((i) => i.due_on < today())),
 		]);
@@ -94,8 +97,7 @@ describe("in North", () => {
 		await dialog.getByText("Applies to 1 of the 2 selected; the others are skipped.").waitFor();
 		await dialog.getByRole("button", { name: "Mark paid" }).click();
 
-		await app.toast("1 marked paid, 1 skipped");
-		await page.locator("[data-sonner-toast]", { hasText: `${draft.number} is a draft` }).waitFor();
+		await app.toast("1 marked paid, 1 skipped", `${draft.number} is a draft`);
 		expect(
 			await rows(`select status, paid_on is not null as paid from invoice where id = ?`, [sent.id]),
 		).toEqual([{ status: "paid", paid: 1 }]);

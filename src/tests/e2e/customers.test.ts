@@ -181,6 +181,7 @@ describe("in North", () => {
 	test("the column menu can show 'Customer since' but not the search column", async () => {
 		const { page } = app;
 		await page.getByRole("button", { name: "View", exact: true }).click();
+		await page.getByRole("menuitemcheckbox").first().waitFor();
 		const columns = await page.getByRole("menuitemcheckbox").allInnerTexts();
 		expect(columns).toContainEqual(expect.stringContaining("Customer since"));
 		expect(columns.some((column) => /search/i.test(column))).toBe(false);
@@ -569,7 +570,7 @@ describe("in South", () => {
 		await page.getByRole("button", { name: "Delete" }).click();
 		const dialog = page.getByRole("alertdialog");
 		const hidden = dialog.locator('input[type="hidden"][name^="id/"]');
-		expect(await hidden.count()).toBe(1);
+		await expect.poll(() => hidden.count()).toBe(1);
 		const result = await app.expectingErrors(async () => {
 			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
 			return app.submit(dialog.getByRole("button", { name: "Delete" }));

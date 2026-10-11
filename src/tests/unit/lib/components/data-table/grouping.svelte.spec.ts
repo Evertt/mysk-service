@@ -125,7 +125,9 @@ describe("grouping", () => {
 		await expect.element(groupRow("open")).toMatchTextContent(/Amount: €62\.00/);
 	});
 
-	test("groups collapse and expand, one at a time or all at once", async () => {
+	// One at a time and all at once in a test each: together they came close to a test's time under
+	// the load of a full run.
+	test("groups collapse and expand one at a time", async () => {
 		visit("/items?group=status");
 		render(Harness, { items });
 
@@ -137,6 +139,11 @@ describe("grouping", () => {
 			.toEqual(["open | 3", "closed | 2", "Chiller repair", "Pump replacement"]);
 		await toggle("open").click();
 		await expect.poll(shown).toHaveLength(7);
+	});
+
+	test("or all at once", async () => {
+		visit("/items?group=status");
+		render(Harness, { items });
 
 		await openViewMenu();
 		await page.getByRole("menuitem", { name: "Collapse all groups" }).click();

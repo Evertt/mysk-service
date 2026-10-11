@@ -96,8 +96,8 @@ export interface App {
 	groupBy(column: string): Promise<void>;
 	/** The data table's group rows on the page, in order. */
 	groups(): Promise<TableGroup[]>;
-	/** Waits for a toast with this text. */
-	toast(text: string): Promise<void>;
+	/** Waits for a toast with these texts (e.g. its title and description), and closes it. */
+	toast(...texts: string[]): Promise<void>;
 	/**
 	 * Opens another tab in the same session, e.g. to do two things at once or to change the
 	 * session elsewhere. Close its context when done.
@@ -165,6 +165,7 @@ export function useApp({
 			await page.waitForLoadState("networkidle");
 		},
 		async submit(target) {
+			const button = await target.elementHandle();
 			const [response] = await Promise.all([
 				page.waitForResponse(
 					(r) => r.url().includes("/_app/remote") && r.request().method() === "POST",
@@ -172,6 +173,15 @@ export function useApp({
 				target.click(),
 			]);
 			const body = await response.text();
+			// The page applies the answer after it arrives: it shows the issues (until then, those of
+			// the previous submission), refreshes or navigates. The form is `pending` until it's done,
+			// which disables its submit button (`SubmitButton`), so that's what's waited for. A wait for
+			// the network to idle wouldn't do: once a page has idled, Playwright doesn't wait again.
+			await page.waitForFunction(
+				(element) => !element?.isConnected || !(element as HTMLButtonElement).disabled,
+				button,
+			);
+			await button?.dispose();
 			await page.waitForLoadState("networkidle");
 			return body;
 		},
@@ -235,7 +245,22 @@ export function useApp({
 					};
 				}),
 			),
-		toast: (text) => page.locator("[data-sonner-toast]", { hasText: text }).first().waitFor(),
+		async toast(...texts) {
+			const found = texts
+				.reduce(
+					(toasts, text) => toasts.filter({ hasText: text }),
+					page.locator("[data-sonner-toast]"),
+				)
+				.first();
+			await found.waitFor();
+			// Closed once seen: it covers the bottom right of the page (a row's buttons, a form's Save)
+			// until it times out, and for good while the pointer rests on it, e.g. where it was left by
+			// the click that brought the toast up. Clicked without the pointer, so as not to rest on it.
+			const toast = await found.elementHandle();
+			await toast?.$eval("[data-close-button]", (button: HTMLElement) => button.click());
+			await page.waitForFunction((element) => !element?.isConnected, toast);
+			await toast?.dispose();
+		},
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
 			const context = await browser.newContext({
@@ -271,7 +296,11 @@ export function useApp({
 		if (user) await app.signIn(user);
 	});
 
-	afterEach(() => {
+	afterEach(async () => {
+		// The toasts a test leaves would cover the bottom right of the page for the next (see `toast`).
+		await page
+			?.locator("[data-sonner-toast] [data-close-button]")
+			.evaluateAll((buttons: HTMLElement[]) => buttons.forEach((button) => button.click()));
 		const logged = errors.splice(0);
 		expect(logged, "console errors and hydration warnings").toEqual([]);
 	});

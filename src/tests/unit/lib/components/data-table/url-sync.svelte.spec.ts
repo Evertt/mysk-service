@@ -34,7 +34,9 @@ describe("the URL", () => {
 		expect(visits).toEqual([]);
 	});
 
-	test("filtering, sorting and paging go into the URL, each as a history entry", async () => {
+	// Filtering, sorting and paging in a test each: together they came close to a test's time under
+	// the load of a full run.
+	test("filtering goes into the URL, each change as a history entry", async () => {
 		render(Harness, { items });
 
 		await openStatusFilter();
@@ -45,7 +47,15 @@ describe("the URL", () => {
 		await expect.poll(lastSearch).toBe("?status=open,draft,closed");
 		await userEvent.keyboard("{Escape}");
 
-		const filtered = "?status=open,draft,closed";
+		expect(visits.every((visit) => !visit.replace)).toBe(true);
+	});
+
+	const filtered = "?status=open,draft,closed";
+
+	test("so does sorting", async () => {
+		visit(`/items${filtered}`);
+		render(Harness, { items });
+
 		await columnHeader("Amount").click();
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=amount`);
 		await columnHeader("Amount").click();
@@ -53,12 +63,20 @@ describe("the URL", () => {
 		await addToSort("Name");
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name`);
 
+		expect(visits.every((visit) => !visit.replace)).toBe(true);
+	});
+
+	test("and paging", async () => {
+		visit(`/items${filtered}&sort=-amount,name`);
+		render(Harness, { items });
+
 		await page.getByRole("button", { name: "Go to next page" }).click();
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&page=2`);
 		await page.getByRole("button", { name: "Rows per page" }).click();
 		await page.getByRole("option", { name: "10" }).click();
 		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&size=10`);
 
+		expect(visits).toHaveLength(2);
 		expect(visits.every((visit) => !visit.replace)).toBe(true);
 	});
 

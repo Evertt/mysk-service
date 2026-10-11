@@ -342,50 +342,60 @@ describe("what a field engineer can't do", () => {
 		for (const answer of answers) expect(answer).toMatch(/^403|"status":403/);
 	});
 
-	test("another engineer's order is a 404, also by a tampered id", async () => {
-		const { page } = app;
-		const mine = await me();
-		const [others] = await rows<Order>(
-			`select id, number, status from "order" where organization_id = ? and engineer_id <> ?
-			 and status = 'in_progress' order by id limit 1`,
-			[north.id, mine.id],
-		);
-		expect((await app.go(`/my/${others.number}`))?.status()).toBe(404);
+	describe("another engineer's order is a 404, also by a tampered id", () => {
+		/** An order in progress of another North engineer, one of South's, and one of their own. */
+		const orders = async () => {
+			const mine = await me();
+			const [others] = await rows<Order>(
+				`select id, number, status from "order" where organization_id = ? and engineer_id <> ?
+				 and status = 'in_progress' order by id limit 1`,
+				[north.id, mine.id],
+			);
+			const [own] = await rows<Order>(
+				`select id, number from "order" where engineer_id = ? and status = 'in_progress' limit 1`,
+				[mine.id],
+			);
+			const [southern] = await rows<Order>(
+				`select id, number from "order" where organization_id = ? and status = 'in_progress' limit 1`,
+				[south.id],
+			);
+			return { others, own, southern };
+		};
 
-		const [own] = await rows<Order>(
-			`select id, number from "order" where engineer_id = ? and status = 'in_progress' limit 1`,
-			[mine.id],
-		);
-		const [southern] = await rows<Order>(
-			`select id, number from "order" where organization_id = ? and status = 'in_progress' limit 1`,
-			[south.id],
-		);
-		const before = [await snapshot(others.id), await snapshot(southern.id), await snapshot(own.id)];
-		await app.go(`/my/${own.number}`);
-		for (const victim of [others.id, southern.id]) {
-			for (const [form, button] of [
-				["Add a note", "Add note"],
-				["Hours", "Save hours"],
-			]) {
-				await page.getByLabel(form).fill("1");
-				const result = await app.expectingErrors(async () => {
-					await page.getByRole("button", { name: button }).evaluate((element, id) => {
-						element
-							.closest("form")!
-							.querySelector<HTMLInputElement>('input[type="hidden"][name^="id"]')!.value =
-							String(id);
-					}, victim);
-					return app.submit(page.getByRole("button", { name: button }));
-				});
-				expect(result, `${button} on ${victim}`).toMatch(/"status":404/);
+		test("by its page", async () => {
+			const { others } = await orders();
+			expect((await app.go(`/my/${others.number}`))?.status()).toBe(404);
+		});
+
+		// One test per order: the four submissions, each followed by a page load, took up half a
+		// test's time under the load of a full run.
+		test.each(["others", "southern"] as const)(
+			"by the id in the forms of their own order (%s)",
+			async (whose) => {
+				const { page } = app;
+				const { own, [whose]: victim } = await orders();
+				const before = [await snapshot(victim.id), await snapshot(own.id)];
 				await app.go(`/my/${own.number}`);
-			}
-		}
-		expect([
-			await snapshot(others.id),
-			await snapshot(southern.id),
-			await snapshot(own.id),
-		]).toEqual(before);
+				for (const [form, button] of [
+					["Add a note", "Add note"],
+					["Hours", "Save hours"],
+				]) {
+					await page.getByLabel(form).fill("1");
+					const result = await app.expectingErrors(async () => {
+						await page.getByRole("button", { name: button }).evaluate((element, id) => {
+							element
+								.closest("form")!
+								.querySelector<HTMLInputElement>('input[type="hidden"][name^="id"]')!.value =
+								String(id);
+						}, victim.id);
+						return app.submit(page.getByRole("button", { name: button }));
+					});
+					expect(result, button).toMatch(/"status":404/);
+					await app.go(`/my/${own.number}`);
+				}
+				expect([await snapshot(victim.id), await snapshot(own.id)]).toEqual(before);
+			},
+		);
 	});
 });
 
