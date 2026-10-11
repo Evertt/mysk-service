@@ -1,0 +1,218 @@
+# Module dependencies, part 4: materials as a module — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Status:** at the checkpoint. The survey and the technical decisions are done; the decisions marked **(open)** change what a tenant sees and wait for the user. The tasks below assume the recommended answers; where another answer changes a task, the decision says which.
+
+**Goal:** The core materials domain becomes the optional module `src/modules/materials/`: tenants can switch it off, existing tenants keep it, and core knows nothing about materials. It's the second "core feature becomes a module" pilot, and the first with tables of its own that core used to read and write: order lines, the stock ledger, and the pricing, forms and pages built on them.
+
+**Architecture:** The three tables (`material`, `order_line`, `stock_movement`) move, unchanged, to the module's schema; core keeps `order.laborHours` and the order's status, and stops joining order lines anywhere. Everything core did with materials becomes a contribution to an extension point core declares:
+
+- **Prices:** `priceOrders()` asks a new collector, `orders.costs`, what an order costs besides labour (the materials module answers with the order lines' total, and, when asked for them, the lines themselves for display), before it asks `orders.adjustPrices`. `materialsPerOrder()`, `lineTotalSql()` and every caller's own materials subquery go.
+- **Saving:** a new kind of hook, the _save hook_, runs inside the owner's transaction. Core calls `orders.saving` wherever an order is created, updated, deleted or changes status. The module saves the order form's material lines there, and takes or returns stock as the status says.
+- **Pages:** the order form gets a form slot (`orders.form`) where the module renders its lines card, submitted with the order; the dashboard's headline row gets a slot (`dashboard.stats`) for the low-stock card; the engineer portal's order page gets a slot (`portal.order`) for the materials card. The order page and a unit's service history render the costs' items generically.
+- The materials pages (`/materials`, `/materials/new`, `/materials/[sku]`, `/materials/[sku]/edit`), its components, remote functions, messages, activity subjects and verbs, enum labels, number format and seed move into the module. The sidebar entry comes from the manifest (`nav: { after: "engineers" }`, the same place as today).
+
+**Tech Stack:** SvelteKit 3 (remote functions), Svelte 5, TypeScript, drizzle (SQLite), valibot, Vitest (+ vitest-browser-svelte, Playwright e2e), pnpm, Vite+ (`vp`).
+
+**Spec:** [`docs/plans/module-dependencies.md`](module-dependencies.md): section 2 (read tables, write through services; a module's tables reference core and what it requires), section 3 (extension points their owners declare; new points when a module needs them) and section 5 (a migration keeps the feature for existing tenants). Template: [step 3, the schedule](module-dependencies-3-schedule.md).
+
+## Survey: what core does with materials today
+
+Every use outside `src/lib/materials/` (October 2026, `grep -rn` and codegraph):
+
+| Where                                                                                                                    | What                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/server/db/schema.ts`                                                                                            | `material`, `orderLine`, `stockMovement` and their relations; `orderRelations.lines`                                                                                                                                                                                      |
+| `src/lib/models.ts`                                                                                                      | `materialUnits`, `quantityStep`, `fitsUnit`, `stockLevels`, `lowStockThresholds`, `stockLevel`, `lineTotal`, `roundQuantity`, `holdsStock`, `stockMovementKinds`, the `stock_received`/`stock_adjusted` actions                                                           |
+| `src/lib/schema.ts`                                                                                                      | `orderLines()`, the lines' valibot schema (order form, portal)                                                                                                                                                                                                            |
+| `src/lib/numbering.ts`, `src/lib/server/numbering.ts`                                                                    | the `material` number format (`MAT-0001`)                                                                                                                                                                                                                                 |
+| `src/lib/i18n/labels.ts`, `messages/*/enum.json`                                                                         | `materialUnit`, `materialUnitSymbol`, `stockLevel`, `stockMovementKind`                                                                                                                                                                                                   |
+| `src/lib/activity/subjects.ts`, `format.ts`, `src/lib/server/activity/log.ts`, `feed.ts`                                 | `material` and `order_line` subjects, the stock verbs, `recordOrderLines()` (reads `material`), a `material` reference type (no field uses it)                                                                                                                            |
+| `src/lib/orders/server/lines.ts`                                                                                         | `checkLines()`, `saveOrderLines()` (order form, portal)                                                                                                                                                                                                                   |
+| `src/lib/orders/server/order-changes.ts`, `scheduling.ts`                                                                | `moveOrderStock()` on delete, status change, scheduling; `OrderStockShortage`                                                                                                                                                                                             |
+| `src/lib/orders/server/pricing.ts`                                                                                       | `lineTotalSql()`, `materialsPerOrder()`, `OrderToPrice.materials`, `OrderPrice.materials`                                                                                                                                                                                 |
+| `src/lib/orders/order.remote.ts`, `form/order-form.svelte`, `form/order-lines-field.svelte`, `form/order-schema.ts`      | the form's `lines` and the materials it offers; saving lines and stock in the order's transaction; refusing a shortage on its line                                                                                                                                        |
+| `src/lib/orders/detail/order-lines-card.svelte`                                                                          | the order page's "Materials & labour" card: lines, labour, adjustments, total                                                                                                                                                                                             |
+| `src/lib/orders/list/order-list.remote.ts`                                                                               | the page's lines' totals and counts (`lineCount` and `materialsTotal` aren't shown)                                                                                                                                                                                       |
+| `src/lib/customers/customers.remote.ts`, `detail/activity.remote.ts`; `src/routes/(app)/(dashboard)/dashboard.remote.ts` | materials totals to price orders (revenue)                                                                                                                                                                                                                                |
+| `src/routes/(app)/(dashboard)/+page.svelte`, `dashboard.remote.ts`                                                       | the low-stock stat card, linking to `/materials?stock=out,low`                                                                                                                                                                                                            |
+| `src/lib/equipment/detail/service-history.remote.ts`, `service-history.ts`, `service-timeline.svelte`                    | each order's lines and materials cost in a unit's service history                                                                                                                                                                                                         |
+| `src/routes/(field)/my/portal.remote.ts`, `[number]/+page.svelte`, `[number]/materials-form.svelte`                      | the engineer's materials card: `getUsableMaterials`, `saveMaterials`; stock on start and complete                                                                                                                                                                         |
+| `src/routes/(app)/app-sidebar.svelte`, `src/lib/modules/nav.ts`                                                          | the Materials entry, `"materials"` in `coreNavIds`                                                                                                                                                                                                                        |
+| `src/routes/(app)/materials/**`                                                                                          | the four pages                                                                                                                                                                                                                                                            |
+| `src/modules/schedule/schedule.remote.ts`                                                                                | catches `OrderStockShortage`                                                                                                                                                                                                                                              |
+| `src/modules/invoicing/server/billable.ts`, `invoice.ts`, `server/seed.ts`                                               | `materialsPerOrder()`; an order's line is "Materials and labour" at materials plus labour                                                                                                                                                                                 |
+| `src/modules/contracts/coverage.ts`, `server/seed.ts`                                                                    | premium includes "labour and materials"; the seed's call-outs get a material line                                                                                                                                                                                         |
+| `src/lib/server/db/seed/`                                                                                                | `materials.ts`, `stock.ts`, the order lines in `orders.ts`, their place in `generateTenant()`, inserts and offsets in `index.ts`, `module-seed.ts`'s `price: { materials, labor }`                                                                                        |
+| `e2e/`                                                                                                                   | `materials.test.ts` (932 lines), the line and stock tests of `orders.test.ts`, `orders.tenancy.test.ts`, `portal.test.ts`, `activity.test.ts`, `equipment.detail.test.ts`; SQL in `db.ts`, `orders-helpers.ts`, `contracts-helpers.ts`; contracts' and the schedule's e2e |
+
+## Decisions
+
+### Open: for the user
+
+1. **The order page with materials on (open).** Recommended: **unchanged.** The price card lists the order's material lines as today, then labour, the adjustments and the total; it renders whatever `orders.costs` reports with its items, so core doesn't know they're materials. Visible differences: the first column's heading becomes "Item" (it can no longer say "Material"), and the card's title is made from the costs' names ("Materials & labour"; "Labour" without materials). Alternative: the lines move to a card of their own that the module adds (a new `orders.detail.main` slot), and the price card shows one "Materials" row.
+   **With materials off:** the card shows labour, the adjustments and the total, titled "Labour".
+2. **The order form with materials on (open).** Recommended: **unchanged.** The module's materials card sits in the order form (the `orders.form` slot), is submitted with it, and is saved with the order in one transaction, refusing a shortage on its line as today. Alternative: materials leave the order form, and are added on the order page in the module's card, saved on their own (like the portal's); a new order then gets its materials after it's created.
+   **With materials off:** the form has no materials card.
+3. **Existing organizations keep materials (open).** Recommended: **yes**, by migration (`drizzle/0004_enable-materials.sql`), like the schedule.
+4. **New organizations (open).** Recommended: **only when asked**, `org:create --modules materials,…`, like the schedule (the user decided "nothing is on by default for a new organization" then).
+5. **The demo tenants (open).** Recommended: **both keep materials**, so the demo data doesn't change at all, and the module's e2e makes "a tenant without materials" by switching it off for South on the settings page and on again at the end (as the schedule's tenancy test does the other way round). Alternative: South loses materials. South's orders stay the same (the seed still draws the materials' randomness for it, see Decision 14), but they have no lines, nothing is in stock, and its prices are labour only; the core e2e that use South's materials (`orders.tenancy.test.ts` and others) change with it.
+6. **Switching materials off while orders have lines (open).** Recommended: **allowed, and the data is kept.** While it's off, prices leave the materials out (core asks only the modules that are on), the lines and the stock stay stored, and a status change moves no stock. When it's switched on again, prices include them again, and an order's next status change or save puts its stock right (what an order holds is read from the ledger, Decision 11). Alternative: refuse switching it off while any order has lines.
+
+### Technical: decided here
+
+7. **No real `requires`.** Nothing needs materials to work: contracts covers labour and costs, invoicing bills prices, the schedule plans orders. So the e2e of the settings page's dependency prompts stays carried to the first module with a real `requires` (README "Carried from step 1"). Contracts gets `enhances: ["materials"]` for its seed only (Decision 14).
+8. **The tables move unchanged.** `material`, `order_line` and `stock_movement`, with their columns, indexes and foreign keys, move from `src/lib/server/db/schema.ts` to `src/modules/materials/server/schema.ts`, with their relations. `orderRelations` loses `lines`; the module's `orderLineRelations` and `stockMovementRelations` keep their `order` side. The same table definitions make no DDL, which `pnpm db:generate` confirms (no migration besides Decision 3's data migration); `modules.spec.ts` accepts them (they reference `order` and `user`, both core, and their own). `moveStock()` stays the only writer of `material.stock`.
+9. **Prices: the collector `orders.costs`** (`onError: "fail"`), in `#lib/orders/extensions.ts`:
+
+   ```ts
+   /** What an order costs besides labour, as one of the tenant's modules adds it, e.g. its materials. */
+   export interface OrderCost {
+   	label: string; // "Materials"
+   	amount: number; // cents
+   	/** What it's made of, when the caller asks for items: e.g. one per material line. */
+   	items?: OrderCostItem[];
+   	/** Shown when it has no items, e.g. "No materials". */
+   	empty?: string;
+   }
+   export interface OrderCostItem {
+   	key: string;
+   	label: string;
+   	href?: string;
+   	quantity: string; // formatted, e.g. "2.5 m"
+   	unitPrice: number;
+   	amount: number;
+   }
+   export const costs = defineCollector<
+   	{ orders: OrderFacts[]; items: boolean },
+   	Map<number, OrderCost>
+   >("orders.costs", { onError: "fail" });
+   ```
+
+   `priceOrders(orders, { items?, enabled? })` asks `costs` first, then `adjustPrices` with `PricedOrderFacts = OrderFacts & { labor: number; costs: OrderCost[] }`, and returns `OrderPrice = { labor; costs: OrderCost[]; adjustments; total }`. `OrderToPrice` loses `materials`, so every caller drops its subquery. The materials module answers every order it's asked about (an order without lines costs 0 materials), so a tenant with materials sees "No materials" and "Materials and labour" where it does today; it asks the lines' totals in one grouped query filtered to the batch (in chunks under SQLite's variable limit), and the lines themselves only when `items` is asked (the order page and a unit's service history).
+
+10. **Contracts' premium level includes labour and every cost** (today the only cost is materials, so nothing changes; its text stays "Labour and materials"). **Invoicing**'s order line is the order at labour plus costs; its detail is made from the costs' names, "{costs} and labour" ("Materials and labour"), or "Labour" when there are none. Stored invoice texts don't change.
+11. **Saving: a new kind of hook, the save hook** (`defineSaveHook<In, Problem>(id)` in `#lib/extensions/define.ts`, kind `"save"`, dispatched by `save(point, input)` in `#lib/server/extensions.ts`, read by the generator like the others). Its contributors run one after another in registry order inside the owner's transaction (the input carries `tx`), and each answers problems or nothing; dispatch stops at the first that answers problems, and the owner refuses the change, which rolls the transaction back. A contributor that throws fails the request, also rolling it back. Not chosen: a vote (votes run in parallel and don't write) or an event (after commit, too late to refuse).
+    - **`orders.saving`**, called by one function, `saveOrderParts(tx, change)` in `#lib/orders/server/hooks.ts`, which throws a core `OrderRefused` (with the problems) when a module refuses. Its input: `{ tx, order: { id, number }, before: { status } | null (new), after: { status } | null (deleted), parts?: Record<string, unknown> (the modules' parts of the order form's submission), note?: string }`; a problem is `{ path?: (string | number)[]; message }`, a path into the form's fields (`["modules", "materials", "lines", 2, "quantity"]`).
+    - Called from `saveOrder()` (with the form's parts), `changeOrderStatus()`, `removeOrder()` (before the order's row goes, with the "deleted" stock note), `scheduleOrder()`, `setOrdersStatus()` (invoicing: completed ↔ invoiced holds the same stock, so nothing moves, but every status change goes through it) and the portal's `startWork`/`completeWork`. Their callers catch `OrderRefused` where they caught `OrderStockShortage`: the form puts each problem on its field, the others refuse with its message, the schedule's `plan()` returns it.
+    - **What an order holds is read from the stock ledger**, not inferred from its old status: the module sums the order's movements per material and moves the difference to what `heldLines(after)` says. So an order whose status changed while materials was off (Decision 6) is put right at its next change, and deleting an order returns exactly what it took. For an order saved with materials on all along this is the same as today (the seed's ledger matches the lines). The shortage message's "available" is the stock plus what the order holds of it, as today.
+12. **The form slot `orders.form`** (`defineSlot<{ fields: ModuleFormFields; order: { id: number } | undefined }>`), rendered in the order form after the order's own card, inside the `<form>` (`ExtensionSlot`'s default `contents` wrapper). `orderFields` gains `modules: v.optional(v.record(v.string(), v.unknown()))`; a module's part's inputs are named under `modules.<id>` through `fields.modules.<id>` (SvelteKit's field proxy takes any path; the module casts it to its own shape once), and the module validates its part with its own valibot schema in its save hook. The materials card loads what it offers and the order's lines (with their quoted prices) with its own remote queries.
+13. **The other slots**: `dashboard.stats` (stat cards in the headline row; the module's low-stock card and its `getStockLevels` query), and `portal.order` (cards on an engineer's page of one of their orders, in a new `src/lib/portal/extensions.ts` like the dashboard's; it moves to the portal module's `api/` when the portal becomes one). For the portal card, `moduleRemote()` gains the role `"engineer"` (`requireEngineer()`), and the portal's `fieldActions()` and `findMyOrder()` move from `src/routes/(field)/my/` to `#lib/orders/field.ts` and `#lib/orders/server/field.ts`, so the module's `saveFieldMaterials` keeps the portal's rules (the engineer's own order, while it's in progress).
+14. **Seed: the faker sequence stays.** Materials are drawn between the equipment and the orders, and the lines right after the orders; moving them to after the core's generation would change every tenant's data. So `ModuleSeed` gains `during: { afterEquipment?(draft), afterOrders?(draft) }`, steps `generateTenant()` runs at those two points, for the tenants that have the module. Module data in the draft lives under `draft.modules[<id>]` (core doesn't know its shape). `generateStockMovements()` keeps its own faker and moves with `materials.ts` and the lines' ranges into `src/modules/materials/server/seed.ts`; the module's `run()` inserts materials, lines and movements with its own id offset (from `previous`, like contracts'). `SeedCollectors` gains `costs(order)`, which invoicing's and contracts' seeds use in place of `price.materials`. Contracts' call-outs keep their line through `draft.modules.materials` (a type import from `#modules/materials/api/seed.ts`), hence `enhances: ["materials"]`. If the user picks "South loses materials" (Decision 5), the `during` steps run for every tenant and only the tenants with the module get rows.
+15. **Activity:** `recordOrderLines()` moves to the module; the `material` and `order_line` subjects and the `stock_received`/`stock_adjusted` verbs move to the manifest's `subjects` and `actions`, so old entries read the same with materials off (as contracts' do). The unused `material` reference type goes.
+16. **Domain rules and labels** move to the module's root: `model.ts` (units, `fitsUnit`, `quantityStep`, stock levels and thresholds, `lineTotal`, `roundQuantity`, `holdsStock`, `stockMovementKinds`, `materialNumbers` = `MAT-`, 4 digits, used with `nextNumber(tx, { format, table, column })`), `labels.ts` (`materialLabels`, the four enum kinds), `display.ts`, `activity.ts`. Their messages move with them: `messages/<locale>/materials.json` to the module, and the `orders_*`, `portal_*`, `dashboard_*`, `enum_*` and `activity_*` keys about materials into it as `materials_*`, texts unchanged.
+17. **Moves, by the module's folders:** `ui/` (`material-link`, `stock-badge`), `list/`, `form/`, `detail/` (stock history and dialogs), `orders/` (the order form's lines card, the order's `costs` answer), `portal/` (the portal card), `dashboard/` (the stats card) and `server/` (`stock.ts`, `materials.ts`, `list-sql.ts`, `lines.ts`, `costs.ts`, `index.ts`, `schema.ts`, `seed.ts`); its contributions in `slots/orders.form/`, `slots/dashboard.stats/` and `slots/portal.order/`; `api/seed.ts` (types for contracts' seed); routes `routes/(app)/materials/…` (route ids `/(app)/(modules)/materials/…`). `src/lib/materials/` goes; `materials` leaves the domains of `domain-boundaries.spec.ts` and `coreNavIds`.
+18. **The orders list** stops loading `lineCount` and `materialsTotal`, which no column shows.
+19. **E2e:** `e2e/materials.test.ts` moves to `src/modules/materials/e2e/` (split by aspect: `materials.test.ts`, `materials.stock.test.ts`); the line and stock tests of `orders.test.ts` and the portal's materials tests move there too (`materials.orders.test.ts`, `materials.portal.test.ts`), as "a core test of what a module adds is that module's e2e test". `materials.tenancy.test.ts` covers South with materials switched off and isolation (Review focus 1 and 3). Core e2e that only read stock in SQL keep doing so (an e2e reads tables, it doesn't import them).
+
+## Global Constraints
+
+- Follow `AGENTS.md`: imports name a file by its real extension; outside a domain, import through its barrels; every user-facing text a message in `en` and `nl` (Dutch informal, sentence case); no messages at module scope.
+- Every select, update and delete on a tenant table includes `inTenant()` (or `idInTenant`/`idsInTenant`/`tenantJoin`); every mutation logs with `recordActivity(tx, …)` inside its transaction.
+- The module writes only its own tables (`foreignWrites`); core never imports the module (`boundaries.spec.ts`); its remote functions come from its own set; its route files are `+` files only.
+- A tenant with materials sees and gets what it does today, apart from the open decisions' stated differences: same URLs, texts, prices, stock movements, activity entries and refusals.
+- The seeded data doesn't change (the rows `pnpm db:reset` makes, compared before and after with a dump; Task 6).
+- Each task ends with a commit (message ending `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`). Run single test files while working; the coordinator runs `pnpm run check`, `pnpm knip` and `pnpm test`.
+
+## Review Focus
+
+1. **A tenant without materials** (South, switched off): `/materials…` are 404s inside the app layout; no sidebar entry; no materials card in the order form, on the order page, on the portal's order page, no low-stock card; the module's remote functions refuse with a 404, also a tampered `modules.materials` part in the order form (ignored, nothing stored); orders can be created, edited, scheduled, cancelled and deleted, priced labour plus adjustments, the same on the order page, the orders list, the dashboard, the customer and the unit.
+2. **Stock follows status through every path**, with materials on: the order form, bulk status changes, the schedule, the portal's start and complete, deleting; a shortage is refused with the same message and stores nothing (no order change, no lines, no activity).
+3. **Tenant isolation**: South can't see or use North's materials, through the pages, the module's queries, the order form's part (a North material id) or the portal card.
+4. **Prices agree everywhere** and match today's for a tenant with materials (contracts' coverage, invoices' lines).
+5. **The demo data is unchanged** (Task 6's dump comparison) and existing tenants keep materials (`migrations.spec.ts`).
+
+---
+
+## File structure
+
+| File                                                                                            | Responsibility                                                           |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `src/lib/extensions/define.ts`, `src/lib/server/extensions.ts`, `scripts/modules/extensions.ts` | The save hook kind: `defineSaveHook()`, `save()`, read by the generator  |
+| `src/lib/orders/extensions.ts`                                                                  | `costs`, `saving`, `form` (+ `OrderCost`, `OrderSaving`, `OrderProblem`) |
+| `src/lib/orders/server/pricing.ts`, `hooks.ts`                                                  | `priceOrders()` asks `costs`; `saveOrderParts()`, `OrderRefused`         |
+| `src/lib/orders/field.ts`, `server/field.ts` (moved from the portal)                            | `fieldActions()`, `findMyOrder()`                                        |
+| `src/lib/dashboard/extensions.ts`, `src/lib/portal/extensions.ts` (new)                         | `dashboard.stats`, `portal.order`                                        |
+| `src/lib/server/remote-functions.ts`                                                            | `moduleRemote(id, "engineer")`                                           |
+| `src/lib/server/db/seed/`                                                                       | `during` steps, `draft.modules`, `costs` collector; materials out        |
+| `drizzle/0004_enable-materials.sql` (new, custom)                                               | Switches materials on for every existing organization                    |
+| `src/modules/materials/` (new)                                                                  | The module (Decision 17)                                                 |
+
+---
+
+### Task 1: Prices through `orders.costs`
+
+**Files:** `src/lib/orders/extensions.ts`, `src/lib/orders/server/pricing.ts` (+ spec), every `priceOrders()` caller (orders' `order.remote.ts` and `order-list.remote.ts`, customers' two, the dashboard, equipment's service history, invoicing's `billable.ts`), `order-lines-card.svelte` (renders costs), `service-history.ts`/`service-timeline.svelte`, `src/modules/contracts/coverage.ts` + `server/index.ts`, `src/modules/invoicing/invoice.ts` (+ spec, messages), a temporary contribution in core.
+
+To keep the app working mid-way, the materials answer is first contributed from core itself: `#lib/materials/server/costs.ts` answers `orders.costs`, called directly by `priceOrders()` until Task 5 moves it into the module's `server/index.ts`. (Core may call its own code; the point exists so that the module can answer it.)
+
+- [ ] **Step 1: Failing specs.** `pricing.spec.ts`: a cost from a contributor is added to the total and passed to `adjustPrices` as `costs`; `items` is passed through. `invoice.spec.ts`: an order with a cost reads "{label} and labour"; without, "Labour". `coverage.spec.ts`: premium includes labour and every cost.
+- [ ] **Step 2: Run them to see them fail.** `pnpm vp test run src/lib/orders/server/pricing.spec.ts src/modules/invoicing/invoice.spec.ts src/modules/contracts/coverage.spec.ts`
+- [ ] **Step 3: Implement**; the order page's card and the service timeline render costs and their items (Decision 1).
+- [ ] **Step 4: Run** the specs and `e2e/orders.test.ts`, `src/modules/contracts/e2e/contracts.orders.test.ts`, `src/modules/invoicing/e2e`, `e2e/equipment.detail.test.ts`, `e2e/customers.test.ts`, `e2e/dashboard.test.ts`: prices unchanged.
+- [ ] **Step 5: Commit** "Price orders' costs through a collector instead of materials".
+
+### Task 2: The save hook and `orders.saving`
+
+**Files:** `define.ts` (+ spec), `src/lib/server/extensions.ts` (+ spec for `save()`: registry order, stops at the first problems, skips modules that are off), `scripts/modules/extensions.ts` (+ spec), `src/lib/orders/extensions.ts`, `src/lib/orders/server/hooks.ts` (+ spec), `order.remote.ts`, `order-changes.ts`, `scheduling.ts`, the portal's remote, `src/modules/schedule/schedule.remote.ts`; again a temporary direct call of the materials answer from `saveOrderParts()`.
+
+- [ ] **Step 1: Failing specs** for `save()` and `saveOrderParts()` (with made-up contributors, as `hooks.spec.ts` does).
+- [ ] **Step 2: Implement**; the ledger-based `moveOrderStock()` (Decision 11) in `#lib/materials/server/stock.ts` (+ `stock.spec.ts`: an order that holds nothing but should, and the reverse, is put right).
+- [ ] **Step 3: Run** the specs and `e2e/orders.test.ts`, `e2e/orders.bulk.test.ts`, `e2e/portal.test.ts`, `src/modules/schedule/e2e`, `e2e/materials.test.ts`: unchanged.
+- [ ] **Step 4: Commit** "Save what modules add to an order through a save hook in its transaction".
+
+### Task 3: The order form's slot
+
+**Files:** `src/lib/orders/extensions.ts` (`form`), `order-schema.ts` (`modules`), `order-form.svelte` (the slot), `order.remote.ts` (parts to `saveOrderParts()`, problems to fields), the lines card moves to `#lib/materials/orders/` and its lines' schema to `#lib/materials/` — rendered by core directly until Task 5.
+
+- [ ] **Step 1:** Run `e2e/orders.test.ts` first as the baseline (it covers lines, decimals, shortages, quoted prices).
+- [ ] **Step 2: Implement.** Inputs named under `modules.materials.lines[n]`; a problem's path walks the issue proxy.
+- [ ] **Step 3: Run** `e2e/orders.test.ts` and `src/lib/orders/form/order-schema.spec.ts`: unchanged.
+- [ ] **Step 4: Commit** "Let modules add a part to the order form, saved with the order".
+
+### Task 4: The dashboard and portal slots, `fieldActions()` to orders
+
+**Files:** `src/lib/dashboard/extensions.ts`, `src/lib/portal/extensions.ts` (new), the dashboard page and remote, the portal's page and remote, `#lib/orders/field.ts` + `server/field.ts` (moved, with `work.spec.ts`'s part), `src/lib/server/remote-functions.ts` (+ spec: `"engineer"`).
+
+- [ ] Implement, run `e2e/dashboard.test.ts`, `e2e/portal.test.ts`, `src/lib/server/remote-functions.spec.ts`; commit "Add slots to the dashboard's headline row and the portal's order page".
+
+### Task 5: Move materials into `src/modules/materials/`
+
+**Files:** everything in Decision 17; `module.ts` (`nav: { after: "engineers" }`, `subjects`, `actions`), `remote-functions.ts` (`moduleRemote("materials")` and `"engineer"`), `server/index.ts` (`contribute(costs, …)`, `contribute(saving, …)`), the temporary direct calls of Tasks 1–3 go; core's `schema.ts`, `models.ts`, `schema.ts` (lib), `numbering.ts`, `labels.ts`, activity files, `coreNavIds`, the sidebar, `project.inlang/settings.json`, messages; `domain-boundaries.spec.ts` (`materials` out of the domains, into `migratedModules`).
+
+- [ ] **Step 1:** Move `e2e/materials.test.ts` into the module first and split it (Decision 19).
+- [ ] **Step 2:** `git mv` the code; fix imports, route ids (`/(app)/(modules)/materials/…`), the remote sets, messages.
+- [ ] **Step 3:** `pnpm generate && pnpm db:generate --name move-materials` must write no migration (delete the empty one it may write, and say so here); run `src/modules src/lib/modules src/lib/domain-boundaries.spec.ts src/lib/server/remote-functions.spec.ts src/lib/i18n/messages.spec.ts src/import-extensions.spec.ts src/lib/server/db scripts/modules`.
+- [ ] **Step 4:** Run the module's e2e and `e2e/orders.test.ts`, `e2e/portal.test.ts`, `e2e/dashboard.test.ts`, `e2e/activity.test.ts`, `e2e/i18n.test.ts`.
+- [ ] **Step 5:** svelte-check once (the moved pages' stubs).
+- [ ] **Step 6: Commit** "Make materials an optional module".
+
+### Task 6: The seed
+
+**Files:** `src/lib/server/db/seed/` (`tenant.ts`, `orders.ts`, `index.ts`, `module-seed.ts`), `src/modules/materials/server/seed.ts`, `api/seed.ts`, `src/modules/contracts/module.ts` (`enhances`) + `server/seed.ts`, `src/modules/invoicing/server/seed.ts`.
+
+- [ ] **Step 1:** Before changing it: `pnpm db:reset` into a scratch database and dump every table (`sqlite3 … .dump`, sorted) to the scratch directory.
+- [ ] **Step 2:** Implement Decision 14.
+- [ ] **Step 3:** Reset again and compare the dumps: identical (but the `created_at` of rows stamped with the time of seeding, which the comparison leaves out).
+- [ ] **Step 4: Commit** "Seed materials from the module, at the same points of the generation".
+
+### Task 7: Existing organizations keep materials
+
+- [ ] `pnpm db:generate --custom --name enable-materials`; the SQL like `0003_enable-schedule.sql`; a test in `migrations.spec.ts` like the schedule's. Commit "Switch materials on for every organization, now that it's a module".
+
+### Task 8: The module's e2e for a tenant without it, isolation
+
+**Files:** `src/modules/materials/e2e/materials.tenancy.test.ts`, `helpers.ts`.
+
+In order, sharing the page: switch materials off for South on the settings page (one `module_disabled` entry); the sidebar has no Materials; `/materials`, `/materials/new`, `/materials/<a South sku>` are 404s; a North `getMaterials` URL kept from North is refused; the order form has no materials card, and a tampered `modules.materials` part stores no lines; an order is created, scheduled, cancelled and deleted with no stock movement, and its total on the order page, in the list and on the dashboard is labour plus adjustments; no low-stock card; the portal's order page has no materials card; switching materials on again (one `module_enabled`) brings the lines and prices back. Plus isolation: South can't open North's materials, use a North material in the order form's part or the portal card, or read North's stock history.
+
+- [ ] Run `pnpm vp test run --project e2e src/modules/materials/e2e` and, on one worker, the tenancy file before `e2e/orders.tenancy.test.ts` (it must leave South as seeded). Commit "Test materials for a tenant without it, and isolation".
+
+### Task 9: Docs
+
+- [ ] `AGENTS.md`: materials is no longer a core domain ("Where files go", barrels: only orders has a `server/index.ts`, "Server-side lists", "Tenants and modules"' shared helpers, the activity log's order lines and stock, "Translations"' sections, "Modules": materials as the fourth module and the example of one with tables core used to own, the save hook and the form slot). `README.md`: `org:create --modules` lists materials. `docs/plans/README.md`: this step, and what's still carried. Commit "Document materials as a module".
+
+## Order
+
+Tasks 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9; each leaves the app working. Tasks 1–4 make the extension points while materials is still in `src/lib/materials/` (core calls its answers directly for the time being), so Task 5 is a move.
