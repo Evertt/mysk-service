@@ -10,6 +10,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { refuseOffParts } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
@@ -140,7 +141,7 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			tx,
 			order: { id: orderId, number },
 			status: fields.status,
-			form: modules,
+			form: modules ?? {},
 		});
 		// The modules log their parts; a new order is logged by `createOrders()`; the completion
 		// date follows from the status.
@@ -161,12 +162,11 @@ async function saveOrder(id: number | null, input: OrderInput) {
 
 /**
  * Refuses the form with the problems of a module that couldn't save its part, each on the field of
- * the form it names (a module's part's fields are under `modules.<its id>`), or for the whole form.
+ * the form it names (a module's part's fields are under `modules.<its id>`), or for the whole form:
+ * they're validation issues as they are.
  */
 function refuseParts(refused: OrderRefused): never {
-	invalid(
-		...refused.problems.map(({ path, message }) => (path?.length ? { message, path } : message)),
-	);
+	invalid(...refused.problems);
 }
 
 interface ReferenceProblem {
@@ -205,8 +205,12 @@ async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
 	return problems;
 }
 
-/** Refuses the form if the order's references are wrong, each problem on its field. */
+/**
+ * Refuses the form if it has a part of a module the tenant doesn't have, or the order's references
+ * are wrong, each problem on its field.
+ */
 async function refuseProblems(issue: OrderIssue, input: OrderInput) {
+	refuseOffParts(input.modules ?? {});
 	const problems = await checkReferences(input);
 	if (problems.length) invalid(...problems.map(({ field, message }) => issue[field](message)));
 }

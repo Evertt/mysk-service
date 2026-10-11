@@ -4,7 +4,6 @@
  * portal, so both do it the same way.
  */
 import { and, asc, eq } from "drizzle-orm";
-import * as v from "valibot";
 
 import { type OrderStatus } from "#lib/models.ts";
 import type { OrderProblem, OrderSaving } from "#lib/orders/extensions.ts";
@@ -12,7 +11,6 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idsInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
-import { materialsPart } from "../form/order-lines-schema.ts";
 import { fitsUnit, roundQuantity } from "../model.ts";
 import { material, orderLine, stockMovement } from "./schema.ts";
 import { moveOrderStock, OrderStockShortage } from "./stock.ts";
@@ -172,7 +170,8 @@ const formPath = ["modules", "materials"];
 
 /**
  * The materials module's part of saving an order (`orders.saving`): from the order form, its
- * lines (checked, saved and logged); for every change, the stock that follows its status (taken
+ * lines (validated by the form with `form-parts/orders.form.ts`, none when the form had no line
+ * inputs; here checked against the tenant's materials, saved and logged); for every change, the stock that follows its status (taken
  * or returned as the stock ledger says it holds, see `moveOrderStock`); for a deletion, what it
  * held back into stock, its movements no longer referring to it. Answers the problems with the
  * lines, or a shortage of stock, on the form's field where there is one.
@@ -186,14 +185,7 @@ export async function saveOrderMaterials({
 	let submitted: LineInput[] | undefined;
 	try {
 		if (form && status) {
-			const parsed = v.safeParse(materialsPart, form.materials ?? {});
-			if (!parsed.success) {
-				return parsed.issues.map((issue) => ({
-					path: [...formPath, ...(issue.path ?? []).map((item) => item.key as string | number)],
-					message: issue.message,
-				}));
-			}
-			submitted = parsed.output.lines;
+			submitted = form.materials?.lines ?? [];
 			const problems = await checkLines(submitted, tx);
 			if (problems.length) {
 				return problems.map(({ line, field, message }) => ({

@@ -1,7 +1,14 @@
 import * as v from "valibot";
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
-import { orderFields } from "#lib/orders/form/order-schema.ts";
+import { orderFields, orderFormPreflight } from "#lib/orders/form/order-schema.ts";
+
+// A made-up module's part of the order form: gadgets' count.
+vi.mock("#lib/extensions/form-parts.gen.ts", async () => {
+	const v = await import("valibot");
+	const count = v.pipe(v.number(), v.minValue(1, "At least 1"));
+	return { formParts: { "orders.form": { gadgets: v.object({ count }) } } };
+});
 
 /** The parsed value, or the messages of all issues. */
 const parse = (input: Record<string, unknown>) => {
@@ -33,7 +40,6 @@ test("a filled-in form becomes an order", () => {
 			engineerId: 2,
 			description: "Replace the pump seal",
 			scheduledFor: new Date(2026, 9, 20),
-			modules: {},
 		},
 	});
 });
@@ -79,16 +85,29 @@ describe("laborHours", () => {
 });
 
 describe("modules", () => {
-	test("each module's part comes through as submitted, for the module to check", () => {
-		const modules = { materials: { lines: [{ materialId: "9", quantity: 2 }] } };
+	test("each module's part is validated by its schema", () => {
+		const modules = { gadgets: { count: 2 } };
 		expect(parse({ ...form, modules })).toHaveProperty("value.modules", modules);
+		expect(parse({ ...form, modules: { gadgets: { count: 0 } } })).toEqual({
+			issues: ["At least 1"],
+		});
+		expect(parse({ ...form, modules: { gadgets: "9" } })).toHaveProperty("issues");
 	});
 
 	test("without any, there are none", () => {
-		expect(parse(form)).toHaveProperty("value.modules", {});
+		expect(parse(form)).not.toHaveProperty("value.modules");
 	});
 
-	test("a module's part is an object of its inputs", () => {
-		expect(parse({ ...form, modules: { materials: "9" } })).toHaveProperty("issues");
+	test("a part of no module is dropped", () => {
+		expect(parse({ ...form, modules: { other: { x: "1" } } })).toHaveProperty("value.modules", {});
+	});
+
+	test("the browser checks the modules' parts before submitting, and leaves the rest to the server", async () => {
+		const validate = (value: unknown) => orderFormPreflight["~standard"].validate(value);
+		const bad = await validate({ ...form, description: "", modules: { gadgets: { count: 0 } } });
+		expect(bad.issues?.map((issue) => issue.message)).toEqual(["At least 1"]);
+		expect((await validate({ customerId: "", modules: { gadgets: { count: 1 } } })).issues).toBe(
+			undefined,
+		);
 	});
 });

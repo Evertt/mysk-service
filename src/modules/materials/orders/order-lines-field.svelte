@@ -5,14 +5,13 @@
 	form's `modules.materials`) make the lines part of the order's submission.
 -->
 <script lang="ts">
-	import type { RemoteFormFields } from "$app/server";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import type * as v from "valibot";
 
+	import type { FormPartFields } from "#lib/extensions/define.ts";
 	import { formatCents, label } from "#lib/i18n/index.ts";
 
-	import type { materialsPart } from "../form/order-lines-schema.ts";
+	import type part from "../form-parts/orders.form.ts";
 	import { materialLabels } from "../labels.ts";
 	import { lineTotal, quantityStep } from "../model.ts";
 	import type { getMaterialOptions, getOrderLines } from "./order-lines.remote.ts";
@@ -23,7 +22,7 @@
 		quoted,
 	}: {
 		/** The lines' field of the materials' part of the order form. */
-		field: RemoteFormFields<v.InferInput<typeof materialsPart>>["lines"];
+		field: FormPartFields<typeof part>["lines"];
 		materials: Awaited<ReturnType<typeof getMaterialOptions>>;
 		/** The lines of the order being edited, at the prices they were quoted at; none for a new one. */
 		quoted?: Awaited<ReturnType<typeof getOrderLines>>;

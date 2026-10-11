@@ -15,6 +15,7 @@ import {
 	findPoints,
 	renderColumnSql,
 	renderContributions,
+	renderFormParts,
 } from "./extensions.ts";
 import { discoverModules } from "./find.ts";
 import { byDependency } from "./graph.ts";
@@ -90,6 +91,7 @@ export function generateModules(root: string) {
 	for (const [path, content] of Object.entries(renderRegistries(ordered))) write(path, content);
 	write("src/lib/extensions/contributions.gen.ts", renderContributions(points, ordered));
 	write("src/lib/server/lists/columns.gen.ts", renderColumnSql(points, ordered));
+	write("src/lib/extensions/form-parts.gen.ts", renderFormParts(points, ordered));
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

@@ -1,6 +1,7 @@
 /**
- * The materials' part of the order form, and the lines the engineer portal submits: a material and
- * a quantity each. Isomorphic: the form's part and the server check them the same way.
+ * An order's material lines, as the order form's part (`form-parts/orders.form.ts`) and the engineer
+ * portal submit them: a material and a quantity each. Isomorphic: the browser and the server check
+ * them the same way.
  */
 import * as v from "valibot";
 
@@ -26,9 +27,3 @@ export const orderLines = () =>
 		),
 		[],
 	);
-
-/**
- * What the materials' part of the order form submits (under `modules.materials`, see `orders.form`):
- * its lines, none when it has none.
- */
-export const materialsPart = v.object({ lines: orderLines() });

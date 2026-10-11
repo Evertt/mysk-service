@@ -1,8 +1,9 @@
 /**
  * The extension points their owners declare (core's in `src/lib/<domain>/extensions.ts`, a module's
  * in its `api/extensions.ts`, see `#lib/extensions/define.ts`) and what the modules contribute to
- * them by file: a component at a slot (`slots/<point id>/<name>.svelte`) and bulk actions for a
- * table (`bulk-actions/<point id>.ts`). Read from the source, without running it: a point's id is
+ * them by file: a component at a slot (`slots/<point id>/<name>.svelte`), bulk actions for a
+ * table (`bulk-actions/<point id>.ts`), a list's columns (`columns/<point id>.ts` and their SQL) and
+ * a part of a form (its components at the form slot, and its schema in `form-parts/<point id>.ts`). Read from the source, without running it: a point's id is
  * a string literal. Hooks are contributed in code (`server/index.ts`), so only their points are
  * read here.
  */
@@ -13,6 +14,7 @@ import { byName, GENERATED, type ModuleFolder } from "./shared.ts";
 
 const kinds = {
 	Slot: "slot",
+	FormSlot: "form",
 	ListColumns: "columns",
 	BulkTable: "bulk",
 	Collector: "collector",
@@ -36,6 +38,7 @@ export interface ExtensionPoint {
 
 const kindNames: Record<ExtensionPoint["kind"], string> = {
 	slot: "a slot",
+	form: "a form slot",
 	bulk: "a bulk table",
 	columns: "a list that takes columns",
 	collector: "a collector",
@@ -115,7 +118,8 @@ export function findPoints(root: string): ExtensionPoint[] {
 interface FileContribution {
 	/** Relative to the module's folder. */
 	file: string;
-	kind: "slot" | "bulk" | "columns";
+	/** `slot` for a component at a slot or a form slot; `part` for a form part's schema. */
+	kind: "slot" | "bulk" | "columns" | "part";
 	point: string;
 	/** A slot component's name: its file name. */
 	name: string;
@@ -125,6 +129,7 @@ const slotFile = /^slots\/([^/]+)\/([^/]+)\.svelte$/;
 const bulkFile = /^bulk-actions\/([^/]+)\.ts$/;
 const columnsFile = /^columns\/([^/]+)\.ts$/;
 const serverColumnsFile = /^server\/columns\/([^/]+)\.ts$/;
+const formPartFile = /^form-parts\/([^/]+)\.ts$/;
 
 /** The module's contributions, and its contribution files that are in the wrong place. */
 function contributionsOf(module: ModuleFolder) {
@@ -163,8 +168,29 @@ function contributionsOf(module: ModuleFolder) {
 			);
 		}
 	}
+	for (const file of module.formPartFiles) {
+		const match = formPartFile.exec(file);
+		if (match) contributions.push({ file, kind: "part", point: match[1], name: match[1] });
+		else misplaced.push(`${file}: a form's part's schema is form-parts/<point id>.ts.`);
+	}
 	return { contributions, misplaced };
 }
+
+/** The kinds of point a contribution of `kind` may go to. */
+const pointKinds: Record<FileContribution["kind"], ExtensionPoint["kind"][]> = {
+	slot: ["slot", "form"],
+	bulk: ["bulk"],
+	columns: ["columns"],
+	part: ["form"],
+};
+
+/** The kind of point a contribution of `kind` is named after in a problem. */
+const contributionKinds: Record<FileContribution["kind"], ExtensionPoint["kind"]> = {
+	slot: "slot",
+	bulk: "bulk",
+	columns: "columns",
+	part: "form",
+};
 
 /**
  * What's wrong with the points and the modules' contributions to them: a point's id must start
@@ -197,15 +223,30 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 		const { contributions, misplaced } = contributionsOf(module);
 		const at = (file: string) => `src/modules/${module.id}/${file}`;
 		problems.push(...misplaced.map((problem) => `src/modules/${module.id}/${problem}`));
+		// A form slot's components and the schema of their part go together.
+		const parts = new Set(
+			contributions.filter(({ kind }) => kind === "part").map(({ point }) => point),
+		);
+		const rendered = new Set(
+			contributions.filter(({ kind }) => kind === "slot").map(({ point }) => point),
+		);
 		for (const contribution of contributions) {
 			const point = byId.get(contribution.point);
 			if (!point) {
 				problems.push(
 					`${at(contribution.file)}: there is no extension point ${contribution.point}.`,
 				);
-			} else if (point.kind !== contribution.kind) {
+			} else if (!pointKinds[contribution.kind].includes(point.kind)) {
 				problems.push(
-					`${at(contribution.file)}: ${point.id} is ${kindNames[point.kind]}, not ${kindNames[contribution.kind]}.`,
+					`${at(contribution.file)}: ${point.id} is ${kindNames[point.kind]}, not ${kindNames[contributionKinds[contribution.kind]]}.`,
+				);
+			} else if (point.kind === "form" && contribution.kind === "slot" && !parts.has(point.id)) {
+				problems.push(
+					`${at(contribution.file)}: its part's schema is missing, in form-parts/${point.id}.ts.`,
+				);
+			} else if (contribution.kind === "part" && !rendered.has(point.id)) {
+				problems.push(
+					`${at(contribution.file)}: no component renders the part, in slots/${point.id}/<name>.svelte.`,
 				);
 			} else if (
 				moduleIds.has(point.owner) &&
@@ -224,6 +265,10 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 
 /** `orders.detail.side` → `ordersDetailSide`: the name a point is imported as. */
 const localName = (id: string) => id.replace(/[.-](\w)/g, (_, c: string) => c.toUpperCase());
+
+/** `materials` and `orders.form` → `materialsOrdersFormPart`: the name a part's schema is imported as. */
+const partName = (module: ModuleFolder, point: string) =>
+	`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}Part`;
 
 /** `src/lib/orders/extensions.ts` → `#lib/orders/extensions.ts`. */
 const specifier = (file: string) =>
@@ -267,30 +312,47 @@ const listOf = (entries: string[]) =>
  * bulk actions to their table's rows. Expects `extensionProblems()` to have found nothing.
  */
 export function renderContributions(points: ExtensionPoint[], modules: ModuleFolder[]): string {
-	const all = allContributions(points, modules);
+	const all = allContributions(points, modules).filter(
+		({ contribution }) => contribution.kind !== "part",
+	);
 	const of = (kind: FileContribution["kind"]) =>
 		all.filter(({ contribution }) => contribution.kind === kind);
 	const load = (module: ModuleFolder, file: string) =>
 		`() => import("#modules/${module.id}/${file}")`;
+	// A component at a form slot is held to its module's part's schema, imported only as a type.
+	const atForms = of("slot").filter(({ point }) => point.kind === "form");
+	const partImports = [
+		...new Set(
+			atForms.map(
+				({ module, point }) =>
+					`import type ${partName(module, point.id)} from "#modules/${module.id}/form-parts/${point.id}.ts";`,
+			),
+		),
+	];
+	const slotCall = ({ module, contribution, point }: (typeof all)[number]) => {
+		const args = `${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)}`;
+		return point.kind === "form"
+			? `formSlotContribution<typeof ${localName(point.id)}, typeof ${partName(module, point.id)}>(${args})`
+			: `slotContribution(${args})`;
+	};
 
 	return [
-		`// ${GENERATED} from src/modules/*/slots, src/modules/*/bulk-actions and src/modules/*/columns. Don't edit.`,
+		`// ${GENERATED} from src/modules/*/slots, src/modules/*/bulk-actions, src/modules/*/columns and src/modules/*/form-parts. Don't edit.`,
 		`import {`,
 		`\ttype AnyBulkContribution,`,
 		`\ttype AnySlotContribution,`,
 		`\tbulkContribution,`,
 		`\ttype ColumnsContribution,`,
 		`\tcolumnsContribution,`,
+		...(atForms.length ? [`\tformSlotContribution,`] : []),
 		`\tslotContribution,`,
 		`} from "#lib/extensions/define.ts";`,
 		...pointImports(all.map(({ point }) => point)),
+		...partImports,
 		"",
 		`/** The components the modules add at slots, in registry order. */`,
 		`export const slotContributions: readonly AnySlotContribution[] = ${listOf(
-			of("slot").map(
-				({ module, contribution }) =>
-					`slotContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)})`,
-			),
+			of("slot").map(slotCall),
 		)};`,
 		"",
 		`/** The bulk actions the modules add to tables, in registry order. */`,
@@ -343,6 +405,38 @@ export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[
 			),
 		).replaceAll("\n", "\n\t")};`,
 		`}`,
+		"",
+	].join("\n");
+}
+
+/**
+ * `src/lib/extensions/form-parts.gen.ts`: the schemas of the parts the modules add to forms
+ * (`form-parts/<point id>.ts`), by form slot and module, in registry order, imported statically:
+ * the form's schema (`formPartsSchema()` in `#lib/extensions/form-parts.ts`) is made from them at
+ * module scope, for the server's validation and the browser's preflight alike. Every form slot has
+ * an entry, an empty one without parts. Isomorphic.
+ */
+export function renderFormParts(points: ExtensionPoint[], modules: ModuleFolder[]): string {
+	const parts = allContributions(points, modules).filter(
+		({ contribution }) => contribution.kind === "part",
+	);
+	const entries = points
+		.filter((point) => point.kind === "form")
+		.map((point) => {
+			const named = parts
+				.filter((part) => part.point.id === point.id)
+				.map(({ module }) => `${JSON.stringify(module.id)}: ${partName(module, point.id)}`);
+			return `${JSON.stringify(point.id)}: ${named.length ? `{ ${named.join(", ")} }` : "{}"},`;
+		});
+	return [
+		`// ${GENERATED} from src/modules/*/form-parts. Don't edit.`,
+		...parts.map(
+			({ module, point, contribution }) =>
+				`import ${partName(module, point.id)} from "#modules/${module.id}/${contribution.file}";`,
+		),
+		"",
+		`/** The schemas of the modules' parts of forms, by form slot id and module id. */`,
+		`export const formParts = ${entries.length ? `{\n${entries.map((entry) => `\t${entry}`).join("\n")}\n}` : "{}"};`,
 		"",
 	].join("\n");
 }

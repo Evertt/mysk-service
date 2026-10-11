@@ -159,12 +159,28 @@ helpers are in `src/lib/server/auth/session.ts`:
   materials, with what they're made of when asked for `items`) and their adjustments.
   Every change to an order's status, its form's save and its deletion goes through
   `saveOrderParts()` (`orders.saving`), which throws an `OrderRefused` with the problems of a module
-  that refuses (e.g. a shortage of stock); the caller shows them on the form's fields or as a
-  message. The order form's slot `orders.form` renders the modules' parts of it, named under
-  `fields.modules.<id>` and handed to the module, as submitted, as the save's `form`.
+  that refuses (e.g. a shortage of stock; its problems are Standard Schema issues, `{ message,
+path? }` from the form's root, which the form passes to `invalid()` as they are); the caller
+  shows them on the form's fields or as a message.
+- **Form slots** (`defineFormSlot()`, e.g. the order form's `orders.form`) take a module's inputs
+  into a core form. The module gives, besides its components at `slots/<point id>/`, the valibot
+  object schema of its part as the default export of `form-parts/<point id>.ts`; the generator
+  lists the schemas in `src/lib/extensions/form-parts.gen.ts`, and the form makes its `modules`
+  field from them with `formPartsSchema("orders.form")` (`#lib/extensions/form-parts.ts`): each
+  module's part optional, under `modules.<id>`, static and exactly typed. So SvelteKit validates
+  the parts with the form on the server, and the browser before submitting (the order form's
+  `preflight(preflightParts(schema))`, which reports only the parts' issues). A component gets its
+  part's fields as `fields: FormPartFields<typeof part>` (no cast), and the type check holds it to
+  its schema (`formSlotContribution()` in `contributions.gen.ts`); `<ExtensionSlot>` takes the
+  form's `modules` fields as `fields` and hands each module its part. The handler refuses a part
+  of a module the tenant doesn't have (`refuseOffParts()`, `src/lib/server/forms.ts`), and the save
+  hook gets the parts parsed and typed (`OrderSaving.form`); whether a module's part is required
+  is the module's call there (materials takes an absent part as no lines). What the schema can't
+  check (a material of the tenant's, stock) the save hook refuses.
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
   `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
-  (`records.ts`) and `refuse()` for refusing a form with its problems (`forms.ts`).
+  (`records.ts`), `refuse()` for refusing a form with its problems and `refuseOffParts()` for a
+  form slot's parts (`forms.ts`).
 
 ## Modules
 
@@ -190,7 +206,7 @@ migration committed.
   dev it reruns when a module's files come or go. It writes the registries (`src/lib/modules/manifests.gen.ts`,
   `ids.gen.ts`, `src/lib/server/modules/hooks.gen.ts`,
   `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts`, `module-seeds.gen.ts`,
-  `src/lib/extensions/contributions.gen.ts` and `src/lib/server/lists/columns.gen.ts`; gitignored), the route stubs (below)
+  `src/lib/extensions/contributions.gen.ts`, `form-parts.gen.ts` and `src/lib/server/lists/columns.gen.ts`; gitignored), the route stubs (below)
   and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
   everything wrong, when a module's route folder collides with a core route or another module's, a
   route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
@@ -238,7 +254,10 @@ migration committed.
   `extensions.ts`), and a table gets its contributed actions with
   `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
-  id (`<module>/<point id>/<name>`).
+  id (`<module>/<point id>/<name>`). At a form slot, a module's components come with its part's
+  schema, `form-parts/<point id>.ts` (the generator refuses either without the other; see "Form
+  slots" under "Tenants and modules"), and the page passes the form's fields:
+  `<ExtensionSlot point={form} props={{ order }} {fields} />`.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
   `{ number: string; equipmentIds: number[] }`) and its contract page renders
@@ -316,7 +335,8 @@ in a core list (`columns/`, `server/columns/`), a contribution to another module
 (`slots/contracts.detail.side/`) and records created through a core service (`server/orders.ts`).
 Materials was core until it became a module: look there for a module whose tables core used to own
 (order lines and the stock ledger), a cost in orders' prices (`orders.costs`), a part of the order
-form saved in its transaction (`slots/orders.form/`, `orders.saving`), stat cards on the dashboard
+form, typed and validated by its schema and saved in its transaction (`slots/orders.form/`,
+`form-parts/orders.form.ts`, `orders.saving`), stat cards on the dashboard
 (`dashboard.stats`), a card on the engineer portal's order page (`portal.order`, with
 `moduleRemote(id, "engineer")`), and seed steps in the middle of the core's generation (`during`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
