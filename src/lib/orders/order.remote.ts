@@ -8,13 +8,13 @@ import { OrderStockShortage } from "#lib/materials/server/index.ts";
 import { isEditableOrder, lineTotal } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, material, order } from "#lib/server/db/schema.ts";
-import { nextNumber } from "#lib/server/numbering.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
+import { createOrders } from "./server/creation.ts";
 import { orderCommitted, tagOrders } from "./server/hooks.ts";
 import { checkLines, saveOrderLines, type LineInput, type LineProblem } from "./server/lines.ts";
 import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
@@ -123,7 +123,6 @@ type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
  * there isn't enough, throws an `OrderStockShortage` (see `refuseShortage`).
  */
 async function saveOrder(id: number | null, input: OrderInput) {
-	const { organizationId } = currentTenant();
 	const { lines, scheduledTime, ...fields } = input;
 
 	return db.transaction(async (tx) => {
@@ -152,12 +151,8 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			number = existing.number;
 			await tx.update(order).set(values).where(idInTenant(order, orderId));
 		} else {
-			number = await nextNumber(tx, "order");
-			const [inserted] = await tx
-				.insert(order)
-				.values({ ...values, organizationId, number })
-				.returning({ id: order.id });
-			orderId = inserted.id;
+			// Checked, numbered and logged as created there.
+			[{ id: orderId, number }] = await createOrders(tx, [values]);
 		}
 
 		// The lines take their materials from stock, or return them, as the status says.
@@ -166,10 +161,17 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			lines,
 		});
 		// Its lines are logged by `saveOrderLines`; the completion date follows from the status.
-		const subject = { type: "order", id: orderId, label: number };
-		const action = existing ? "updated" : "created";
-		const ignore = ["completedAt"];
-		await recordActivity(tx, { action, subject, before: existing, after: values, ignore });
+		if (existing) {
+			const subject = { type: "order", id: orderId, label: number };
+			const ignore = ["completedAt"];
+			await recordActivity(tx, {
+				action: "updated",
+				subject,
+				before: existing,
+				after: values,
+				ignore,
+			});
+		}
 		return number;
 	});
 }
