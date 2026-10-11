@@ -226,7 +226,7 @@ describe("in South, with the module enabled", () => {
 				`select module_id from organization_module where organization_id = ? order by module_id`,
 				[south.id],
 			),
-		).toEqual([{ module_id: "contracts" }, { module_id: "invoicing" }]);
+		).toEqual([{ module_id: "contracts" }, { module_id: "invoicing" }, { module_id: "materials" }]);
 		await app.go("/settings");
 		expect(await sidebar()).toContain("Service contracts");
 	});

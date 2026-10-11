@@ -1,5 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"materials_module_name": "Materialen",
+	"materials_module_description": "Onderdelen en verbruiksartikelen: hun prijzen, hun voorraad en wat opdrachten ervan gebruiken.",
 	"materials_title": "Materialen",
 	"materials_description": "Onderdelen en verbruiksartikelen, hun lijstprijzen en voorraad.",
 	"materials_head_title": "{title} · Materialen",

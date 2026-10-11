@@ -13,7 +13,6 @@ const coreNavIds = [
 	"customers",
 	"equipment",
 	"engineers",
-	"materials",
 ] as const;
 
 export type CoreNavId = (typeof coreNavIds)[number];

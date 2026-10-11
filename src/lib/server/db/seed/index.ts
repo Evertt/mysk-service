@@ -49,8 +49,9 @@ async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>)
 
 /**
  * The demo organizations. North has all the modules (also the ones added later in
- * `src/modules`); South only invoicing, so the other modules' tests (contracts, the schedule) have
- * a tenant without them.
+ * `src/modules`); South only invoicing and materials, so the other modules' tests (contracts, the
+ * schedule) have a tenant without them. Materials were core until they became a module, and both
+ * kept them; their tests switch them off for South to see a tenant without them.
  */
 const tenants = [
 	{
@@ -63,7 +64,7 @@ const tenants = [
 	{
 		...demoOrganizations.south,
 		slug: "south",
-		modules: ["invoicing"] as string[],
+		modules: ["invoicing", "materials"] as string[],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320 },
 	},
