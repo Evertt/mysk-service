@@ -2,8 +2,7 @@ import { expect, test, vi } from "vite-plus/test";
 
 import { committed } from "#lib/orders/extensions.ts";
 import { emit, type ServerModule } from "#lib/server/extensions.ts";
-
-import contracts from "./index.ts";
+import contracts from "#modules/contracts/server/index.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
@@ -14,7 +13,7 @@ vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
 	generatedServerModules: () => registry.modules,
 }));
 const refreshed = vi.hoisted(() => [] as string[]);
-vi.mock("../coverage.remote.ts", () => ({
+vi.mock("#modules/contracts/coverage.remote.ts", () => ({
 	getOrderCoverage: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
 }));
 

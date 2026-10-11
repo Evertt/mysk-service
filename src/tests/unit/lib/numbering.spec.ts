@@ -6,7 +6,7 @@ import {
 	type NumberKind,
 	numberFormats,
 	sequenceStart,
-} from "./numbering.ts";
+} from "#lib/numbering.ts";
 
 const kinds = Object.keys(numberFormats) as NumberKind[];
 

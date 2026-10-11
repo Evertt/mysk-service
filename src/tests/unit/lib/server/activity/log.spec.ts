@@ -2,16 +2,15 @@ import { rmSync } from "node:fs";
 
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import type { Tenant } from "#lib/server/auth/index.ts";
-import { db, type Transaction } from "#lib/server/db/index.ts";
-
 import {
 	type ActivityRecord,
 	diff,
 	ignoredFields,
 	recordActivity,
 	recordOrderLines,
-} from "./log.ts";
+} from "#lib/server/activity/log.ts";
+import type { Tenant } from "#lib/server/auth/index.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

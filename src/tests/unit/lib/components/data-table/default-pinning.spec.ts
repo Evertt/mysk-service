@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { defaultColumnPinning } from "./default-pinning.ts";
-import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
+import { defaultColumnPinning } from "#lib/components/data-table/default-pinning.ts";
+import { createAppColumnHelper, createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
 describe("defaultColumnPinning", () => {
 	test("pins the selection and identifying columns to the start, the actions to the end", () => {

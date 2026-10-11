@@ -2,8 +2,9 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import MoneyField from "#lib/components/form/money-field.svelte";
+
 import { fakeField } from "./fake-form.ts";
-import MoneyField from "./money-field.svelte";
 
 test("shows an amount in cents as euros in a number input", async () => {
 	render(MoneyField, { field: fakeField("price"), label: "Price", cents: 123456 });

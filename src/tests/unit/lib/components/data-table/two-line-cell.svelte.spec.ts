@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import TwoLineCell from "./two-line-cell.svelte";
+import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 
 test("the primary value links to href, with the detail line below it", async () => {
 	render(TwoLineCell, { primary: "Acme B.V.", secondary: "C-0001", href: "/customers/C-0001" });

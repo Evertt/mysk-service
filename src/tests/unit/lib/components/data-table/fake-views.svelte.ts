@@ -1,15 +1,14 @@
+import type { TableView } from "#lib/components/data-table/views.remote.ts";
 /**
  * A stand-in for `views.remote.ts` in component tests of tables, where remote functions can't run:
  * the views are `saved` (none unless a test adds some), and what the menu sends is recorded in
  * `sent` instead.
  *
  * ```ts
- * vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
+ * vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
  * ```
  */
-import { fakeField } from "#lib/components/form/fake-form.ts";
-
-import type { TableView } from "./views.remote.ts";
+import { fakeField } from "#unit/lib/components/form/fake-form.ts";
 
 export type { TableView };
 

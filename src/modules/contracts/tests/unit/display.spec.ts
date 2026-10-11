@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
-import { formatTerm, levelOptions, statusOptions } from "./display.ts";
-import { contractLevels, contractStatuses } from "./model.ts";
+import { formatTerm, levelOptions, statusOptions } from "#modules/contracts/display.ts";
+import { contractLevels, contractStatuses } from "#modules/contracts/model.ts";
 
 const day = (value: string) => new Date(`${value}T00:00`);
 

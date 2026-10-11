@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
-import { engineerFields } from "./engineer-schema.ts";
+import { engineerFields } from "#lib/engineers/form/engineer-schema.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (input: Record<string, unknown>) => {

@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { parseTableUrl, type TableUrlSpec } from "./url-state.ts";
-import { canShareViews, matchingViews, tableViewsKey, viewQuery, viewState } from "./views.ts";
+import { parseTableUrl, type TableUrlSpec } from "#lib/components/data-table/url-state.ts";
+import {
+	canShareViews,
+	matchingViews,
+	tableViewsKey,
+	viewQuery,
+	viewState,
+} from "#lib/components/data-table/views.ts";
 
 const spec: TableUrlSpec = {
 	columns: [

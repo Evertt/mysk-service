@@ -4,7 +4,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import SubmitButton from "./submit-button.svelte";
+import SubmitButton from "#lib/components/form/submit-button.svelte";
 
 const text = (label: string) => createRawSnippet(() => ({ render: () => `<span>${label}</span>` }));
 

@@ -100,14 +100,15 @@ pnpm test:e2e      # end-to-end tests only
 The browser tests use Playwright's own Chromium, which `pnpm install` downloads (or run
 `pnpm exec playwright install chromium`).
 
-- **Unit tests** sit next to the code they test: `*.spec.ts` runs in Node, `*.svelte.spec.ts` in
-  the browser.
-- **End-to-end tests** are in `e2e/` (a module's in `src/modules/<id>/e2e/`). They sign in and click through the app like a user, then
+- **Unit tests** are in `src/tests/unit/`, which mirrors `src/` (a module's in
+  `src/modules/<id>/tests/unit/`, mirroring the module): `*.spec.ts` runs in Node,
+  `*.svelte.spec.ts` in the browser.
+- **End-to-end tests** are in `src/tests/e2e/` (a module's in `src/modules/<id>/tests/e2e/`). They sign in and click through the app like a user, then
   check the database. Each run builds the app, seeds a fresh database in a temporary folder and
   starts a production server per test worker, each with its own copy of the database
-  (`e2e/global-setup.ts`). The test files run in parallel across them, and none of it touches
+  (`src/tests/e2e/global-setup.ts`). The test files run in parallel across them, and none of it touches
   `local.db` or a dev server you have running (which reloads once when the build starts).
-  `e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching organizations, submitting
+  `src/tests/e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching organizations, submitting
   remote forms, reading the database, and reading the mail the app sent (each server writes it to
   a file in the temporary folder, `MAIL_OUTBOX`, instead of sending it). `E2E_DEV=1 pnpm test:e2e` runs them against a single dev
   server instead: slower, but with Svelte's dev-only warnings.

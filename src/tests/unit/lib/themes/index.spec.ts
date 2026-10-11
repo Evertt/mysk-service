@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { parseMode, parseTheme, themeNames, themes, themeStylesheet } from "./index.ts";
+import { parseMode, parseTheme, themeNames, themes, themeStylesheet } from "#lib/themes/index.ts";
 
 describe("cookies", () => {
 	test("a known theme is used, anything else falls back to the first", () => {

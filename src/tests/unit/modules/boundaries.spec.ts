@@ -23,7 +23,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { type ModuleGraph } from "#lib/modules/graph.ts";
 import { moduleGraph } from "#lib/modules/ids.ts";
 
-const root = join(import.meta.dirname, "../..");
+const root = join(import.meta.dirname, "../../../..");
 
 interface SourceFile {
 	/** Relative to the project root, with `/`. */
@@ -332,7 +332,7 @@ describe("the module rules", () => {
 function sourceFiles(): SourceFile[] {
 	const skip = /(?:^|\/)(?:node_modules|\.svelte-kit|paraglide|build)(?:\/|$)/;
 	const files: SourceFile[] = [];
-	for (const folder of ["src", "e2e"]) {
+	for (const folder of ["src"]) {
 		if (!existsSync(join(root, folder))) continue;
 		for (const entry of readdirSync(join(root, folder), { recursive: true, withFileTypes: true })) {
 			if (!entry.isFile() || !/\.(?:ts|js|svelte)$/.test(entry.name)) continue;
@@ -345,7 +345,8 @@ function sourceFiles(): SourceFile[] {
 }
 
 describe("the project", () => {
-	const files = sourceFiles();
+	// Leaving out this file, whose made-up files are in strings.
+	const files = sourceFiles().filter((f) => f.path !== "src/tests/unit/modules/boundaries.spec.ts");
 
 	test("nothing outside src/modules imports a module", () => {
 		expect(outsideImports(files)).toEqual([]);

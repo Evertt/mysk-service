@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { fakeGraph } from "#lib/modules/fakes.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
-
-import { parseCreateArgs, UsageError } from "./create-organization-args.ts";
+import { parseCreateArgs, UsageError } from "#lib/server/db/create-organization-args.ts";
+import { fakeGraph } from "#unit/lib/modules/fakes.ts";
 
 const args = [
 	"--org",

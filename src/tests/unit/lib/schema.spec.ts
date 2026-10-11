@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
-import { toDateInput } from "./dates.ts";
+import { toDateInput } from "#lib/dates.ts";
 import {
 	cents,
 	date,
@@ -13,7 +13,7 @@ import {
 	phone,
 	text,
 	time,
-} from "./schema.ts";
+} from "#lib/schema.ts";
 
 /** The parsed value, or the first issue's message. */
 const parse = (schema: v.GenericSchema, input: unknown) => {

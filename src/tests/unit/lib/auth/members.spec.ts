@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { assignableRoles, invitationState, removalRefusal, roleChangeRefusal } from "./members.ts";
+import {
+	assignableRoles,
+	invitationState,
+	removalRefusal,
+	roleChangeRefusal,
+} from "#lib/auth/members.ts";
 
 const owner = { userId: "owner", roles: ["owner"] };
 const otherOwner = { userId: "owner-2", roles: ["owner"] };

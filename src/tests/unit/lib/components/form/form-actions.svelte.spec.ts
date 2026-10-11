@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import FormActions from "./form-actions.svelte";
+import FormActions from "#lib/components/form/form-actions.svelte";
 
 test("a submit button, and a cancel link when there's somewhere to go back to", async () => {
 	render(FormActions, { submitLabel: "Create order", cancelHref: "/orders" });

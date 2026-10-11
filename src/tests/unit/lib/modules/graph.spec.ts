@@ -1,14 +1,15 @@
 import { expect, test } from "vite-plus/test";
 
-import { fakeGraph } from "./fakes.ts";
 import {
 	changeModules,
 	dependentsOf,
 	effectiveModules,
 	moduleSetProblems,
 	requirementsOf,
-} from "./graph.ts";
-import type { ModuleId } from "./ids.ts";
+} from "#lib/modules/graph.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
+
+import { fakeGraph } from "./fakes.ts";
 
 // The fake graph's ids aren't the real modules'.
 const id = (value: string) => value as ModuleId;

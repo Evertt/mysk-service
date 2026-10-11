@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatCode, sequenceStart } from "#lib/numbering.ts";
-
-import { contractNumberFormat, contractStatus } from "./model.ts";
+import { contractNumberFormat, contractStatus } from "#modules/contracts/model.ts";
 
 describe("contractStatus", () => {
 	const contract = { startsOn: new Date(2026, 0, 1), endsOn: new Date(2026, 11, 31) };

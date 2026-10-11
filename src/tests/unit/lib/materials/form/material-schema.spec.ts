@@ -6,7 +6,7 @@ import {
 	materialFields,
 	newMaterialFields,
 	receiveFields,
-} from "./material-schema.ts";
+} from "#lib/materials/form/material-schema.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parser =

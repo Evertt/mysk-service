@@ -3,7 +3,6 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { orderStatuses } from "#lib/models.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
 import {
 	dayLabel,
 	fieldActions,
@@ -11,7 +10,7 @@ import {
 	MAX_SIGNATURE_LENGTH,
 	plannedTime,
 	signature,
-} from "./work.ts";
+} from "#routes/(field)/my/work.ts";
 
 describe("fieldActions", () => {
 	test("a scheduled job can be started and noted, not yet worked on", () => {

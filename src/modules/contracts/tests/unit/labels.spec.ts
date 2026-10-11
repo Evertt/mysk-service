@@ -2,9 +2,8 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { hasLabel } from "#lib/i18n/index.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
-import { contractLabels } from "./labels.ts";
-import { contractLevels, contractStatuses } from "./model.ts";
+import { contractLabels } from "#modules/contracts/labels.ts";
+import { contractLevels, contractStatuses } from "#modules/contracts/model.ts";
 
 const englishByDefault = getLocale;
 const inLanguage = (locale: Locale) => overwriteGetLocale(() => locale);

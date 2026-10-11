@@ -8,7 +8,7 @@
  *
  * Oxlint's `import/extensions` only checks that an extension is there, not that it's the file's
  * own, so this reads the specifiers (`from "…"`, `import("…")`, `vi.mock("…")`, …) of relative and
- * `#lib/`, `#modules/` and `#e2e/` imports and looks at what is on disk. What points at nothing is
+ * `#lib/`, `#modules/`, `#routes/`, `#e2e/` and `#unit/` imports and looks at what is on disk. What points at nothing is
  * left to the type check. The `#ui/<name>` imports are a package.json `imports` pattern that adds
  * `/index.ts` itself, and `./$types` is Kit's.
  */
@@ -17,7 +17,7 @@ import { join, posix, relative } from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
 
-const root = join(import.meta.dirname, "..");
+const root = join(import.meta.dirname, "../../..");
 
 interface SourceFile {
 	/** Relative to the project root, with `/`. */
@@ -28,7 +28,9 @@ interface SourceFile {
 const aliases: Record<string, string> = {
 	"#lib/": "src/lib/",
 	"#modules/": "src/modules/",
-	"#e2e/": "e2e/",
+	"#routes/": "src/routes/",
+	"#e2e/": "src/tests/e2e/",
+	"#unit/": "src/tests/unit/",
 };
 
 /** Where a specifier written in the file at `path` points, from the project root. */
@@ -124,7 +126,7 @@ describe("the check", () => {
 function sourceFiles(): SourceFile[] {
 	const skip = /(?:^|\/)(?:node_modules|\.svelte-kit|paraglide|build)(?:\/|$)/;
 	const files: SourceFile[] = [];
-	for (const folder of ["src", "e2e", "scripts"]) {
+	for (const folder of ["src", "scripts"]) {
 		for (const entry of readdirSync(join(root, folder), { recursive: true, withFileTypes: true })) {
 			if (!entry.isFile() || !/\.(?:ts|js|svelte)$/.test(entry.name)) continue;
 			const path = relative(root, join(entry.parentPath, entry.name)).replaceAll("\\", "/");

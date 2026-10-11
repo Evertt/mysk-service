@@ -4,9 +4,8 @@ import { expect, test } from "vite-plus/test";
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
-
-import { columns, type EquipmentRow } from "./columns.ts";
-import { equipmentList } from "./equipment-list.ts";
+import { columns, type EquipmentRow } from "#lib/equipment/list/columns.ts";
+import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
 
 const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): EquipmentRow => ({
 	id: 1,

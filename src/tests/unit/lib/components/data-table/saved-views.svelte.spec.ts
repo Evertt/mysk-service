@@ -10,7 +10,7 @@ vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svel
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
-vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
 
 const items: Item[] = [
 	{ id: 1, name: "Boiler service", status: "open", amount: 100, quantity: 1, dueOn: null },

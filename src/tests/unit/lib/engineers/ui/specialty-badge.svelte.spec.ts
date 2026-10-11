@@ -2,9 +2,8 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import SpecialtyBadge from "#lib/engineers/ui/specialty-badge.svelte";
 import type { EngineerSpecialty } from "#lib/models.ts";
-
-import SpecialtyBadge from "./specialty-badge.svelte";
 
 test.each<[EngineerSpecialty, string]>([
 	["electrical", "Electrical"],

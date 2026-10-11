@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 
-import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
+import OrdersPerWeekChart from "#routes/(app)/(dashboard)/orders-per-week-chart.svelte";
 
 const data = [
 	{

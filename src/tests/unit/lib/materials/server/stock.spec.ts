@@ -3,11 +3,6 @@ import { rmSync } from "node:fs";
 import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { type MaterialUnit, roundQuantity, stockLevel } from "#lib/models.ts";
-import type { Tenant } from "#lib/server/auth/index.ts";
-import { db, type Transaction } from "#lib/server/db/index.ts";
-import { material } from "#lib/server/db/schema.ts";
-
 import {
 	heldLines,
 	moveOrderStock,
@@ -18,7 +13,11 @@ import {
 	stockChanges,
 	stockLevelSql,
 	withBalances,
-} from "./stock.ts";
+} from "#lib/materials/server/stock.ts";
+import { type MaterialUnit, roundQuantity, stockLevel } from "#lib/models.ts";
+import type { Tenant } from "#lib/server/auth/index.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { material } from "#lib/server/db/schema.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

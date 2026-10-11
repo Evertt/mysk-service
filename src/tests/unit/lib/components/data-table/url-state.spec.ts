@@ -10,7 +10,7 @@ import {
 	type TableUrlSpec,
 	type TableUrlState,
 	writeTableUrl,
-} from "./url-state.ts";
+} from "#lib/components/data-table/url-state.ts";
 
 const spec: TableUrlSpec = {
 	columns: [

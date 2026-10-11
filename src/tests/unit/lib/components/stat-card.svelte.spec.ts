@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import StatCard from "./stat-card.svelte";
+import StatCard from "#lib/components/stat-card.svelte";
 
 test("shows the label above the value, and the detail below", async () => {
 	render(StatCard, { label: "Open orders", value: "12", detail: "3 without an engineer" });

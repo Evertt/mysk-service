@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import PageHeader from "./page-header.svelte";
+import PageHeader from "#lib/components/page-header.svelte";
 
 const html = (markup: string) => createRawSnippet(() => ({ render: () => markup }));
 

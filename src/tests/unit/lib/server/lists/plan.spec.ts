@@ -19,7 +19,6 @@ import {
 	whereOf,
 } from "#lib/components/data-table/list-definition.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
-
 import {
 	anyOf,
 	type ListSql,
@@ -28,7 +27,7 @@ import {
 	rank,
 	searchMatch,
 	type SqlColumns,
-} from "./plan.ts";
+} from "#lib/server/lists/plan.ts";
 
 // Tables of their own in a temporary database, rather than the app's.
 const item = sqliteTable("item", {

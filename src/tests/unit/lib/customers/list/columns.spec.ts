@@ -2,8 +2,7 @@ import type { TableState } from "@tanstack/svelte-table";
 import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-
-import { type CustomerRow, columns } from "./columns.ts";
+import { type CustomerRow, columns } from "#lib/customers/list/columns.ts";
 
 const customer = (name: string, fields: Partial<CustomerRow> = {}): CustomerRow => ({
 	id: 1,

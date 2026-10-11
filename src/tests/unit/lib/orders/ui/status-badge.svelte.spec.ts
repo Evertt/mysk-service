@@ -5,8 +5,7 @@ import { render } from "vitest-browser-svelte";
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 import type { OrderStatus } from "#lib/models.ts";
-
-import StatusBadge from "./status-badge.svelte";
+import StatusBadge from "#lib/orders/ui/status-badge.svelte";
 
 test.each<[OrderStatus, string, BadgeVariant]>([
 	["quote", "Quote", "outline"],

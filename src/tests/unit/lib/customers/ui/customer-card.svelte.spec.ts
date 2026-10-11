@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import CustomerCard from "./customer-card.svelte";
+import CustomerCard from "#lib/customers/ui/customer-card.svelte";
 
 const customer = {
 	code: "C-0012",

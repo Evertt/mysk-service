@@ -20,13 +20,15 @@
 <script lang="ts">
 	import { type ColumnPinningState, renderComponent } from "@tanstack/svelte-table";
 
+	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import RowActions from "#lib/components/data-table/row-actions.svelte";
+	import {
+		createAppColumnHelper,
+		createAppTable,
+	} from "#lib/components/data-table/table.svelte.ts";
+	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+	import { noneToken } from "#lib/components/data-table/url-state.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
-
-	import FacetedFilter from "./faceted-filter.svelte";
-	import RowActions from "./row-actions.svelte";
-	import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
-	import TwoLineCell from "./two-line-cell.svelte";
-	import { noneToken } from "./url-state.ts";
 
 	let {
 		items,

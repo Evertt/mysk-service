@@ -2,8 +2,7 @@ import { isHttpError } from "@sveltejs/kit";
 import { expect, test, vi } from "vite-plus/test";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
-
-import { guarded, guardedActions, guardModuleRoute } from "./hooks.ts";
+import { guarded, guardedActions, guardModuleRoute } from "#lib/server/modules/hooks.ts";
 
 // The guards' session code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));

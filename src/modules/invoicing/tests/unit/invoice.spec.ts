@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatRate } from "./display.ts";
+import { formatRate } from "#modules/invoicing/display.ts";
 import {
 	canChange,
 	dueDate,
@@ -14,8 +14,8 @@ import {
 	roundCents,
 	today,
 	vatOf,
-} from "./invoice.ts";
-import { invoiceStatuses } from "./model.ts";
+} from "#modules/invoicing/invoice.ts";
+import { invoiceStatuses } from "#modules/invoicing/model.ts";
 
 describe("amounts", () => {
 	test("round to the cent, halves away from zero", () => {

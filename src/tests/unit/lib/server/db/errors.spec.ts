@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 
-import { isForeignKeyViolation, refuseIfReferenced } from "./errors.ts";
+import { isForeignKeyViolation, refuseIfReferenced } from "#lib/server/db/errors.ts";
 
 describe("refuseIfReferenced", () => {
 	let db: ReturnType<typeof drizzle>;

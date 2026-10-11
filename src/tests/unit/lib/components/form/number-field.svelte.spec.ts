@@ -2,8 +2,9 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import NumberField from "#lib/components/form/number-field.svelte";
+
 import { fakeField } from "./fake-form.ts";
-import NumberField from "./number-field.svelte";
 
 test("a number input with the initial value and its limits", async () => {
 	render(NumberField, {

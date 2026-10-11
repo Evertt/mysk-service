@@ -5,10 +5,9 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { formatCode, type NumberKind } from "#lib/numbering.ts";
+import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
-
-import type { Tenant } from "./auth/session.ts";
-import { nextNumber, type NumberTarget } from "./numbering.ts";
+import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

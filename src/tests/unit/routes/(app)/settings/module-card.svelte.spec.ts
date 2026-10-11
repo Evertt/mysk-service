@@ -2,16 +2,15 @@ import { beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { fakeForm } from "#lib/components/form/fake-form.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-
-import ModuleCard from "./module-card.svelte";
+import ModuleCard from "#routes/(app)/settings/module-card.svelte";
+import { fakeForm } from "#unit/lib/components/form/fake-form.ts";
 
 // The made-up graph: addon requires base, extra requires addon, core-ish is always on. No real
 // module has requirements yet, so this is where the card's prompts are tested.
 vi.mock("#lib/modules/ids.ts", async (importOriginal) => ({
 	...(await importOriginal<typeof import("#lib/modules/ids.ts")>()),
-	moduleGraph: (await import("#lib/modules/fakes.ts")).fakeGraph,
+	moduleGraph: (await import("#unit/lib/modules/fakes.ts")).fakeGraph,
 }));
 
 /** What the next form the card makes is like, and what it submitted. */
@@ -19,7 +18,7 @@ const form = vi.hoisted(() => ({
 	issues: [] as string[],
 	submitted: [] as FormData[],
 }));
-vi.mock("./settings.remote.ts", () => ({
+vi.mock("#routes/(app)/settings/settings.remote.ts", () => ({
 	setModules: {
 		for: () =>
 			fakeForm<{ enable: string[]; disable: string[] }>(["enable", "disable"], {

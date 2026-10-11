@@ -3,22 +3,22 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { detailSide } from "#lib/orders/extensions.ts";
+import ExtensionSlot from "#routes/(app)/extension-slot.svelte";
 
 import { data } from "./extension-slot.failing.test-harness.svelte";
-import ExtensionSlot from "./extension-slot.svelte";
 
 // Made-up modules on an order's page: gadgets' card renders, gizmos' component doesn't load and
 // widgets' card fails on its data (until `data.fails` is cleared). Dormant's card is of a module
 // the tenant doesn't have, and gadgets has one more at the dashboard, a point of another slot.
 vi.mock("#lib/modules/manifests.gen.ts", async () => {
-	const { dormant, gadgets, gizmos, widgets } = await import("#lib/modules/fakes.ts");
+	const { dormant, gadgets, gizmos, widgets } = await import("#unit/lib/modules/fakes.ts");
 	return { manifests: [gadgets, gizmos, widgets, dormant] };
 });
 vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 	const { slotContribution } = await import("#lib/extensions/define.ts");
 	const { detailSide } = await import("#lib/orders/extensions.ts");
 	const { dormant, fakeSlotContributions, gadgets, gizmosOrderCard, widgets } =
-		await import("#lib/modules/fakes.ts");
+		await import("#unit/lib/modules/fakes.ts");
 	return {
 		slotContributions: [
 			fakeSlotContributions[0],

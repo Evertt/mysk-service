@@ -1,7 +1,7 @@
 import type { Component } from "svelte";
 import { expect, test } from "vite-plus/test";
 
-import { type NavGroup, type NavItem, placeNav } from "./nav.ts";
+import { type NavGroup, type NavItem, placeNav } from "#lib/modules/nav.ts";
 
 const item = (id: string): NavItem => ({
 	id,

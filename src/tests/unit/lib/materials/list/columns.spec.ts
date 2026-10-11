@@ -4,9 +4,8 @@ import { expect, test } from "vite-plus/test";
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
-
-import { columns, type MaterialRow } from "./columns.ts";
-import { materialsList } from "./materials-list.ts";
+import { columns, type MaterialRow } from "#lib/materials/list/columns.ts";
+import { materialsList } from "#lib/materials/list/materials-list.ts";
 
 const material = (sku: string, fields: Partial<MaterialRow> = {}): MaterialRow => ({
 	id: 1,

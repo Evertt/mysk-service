@@ -1,7 +1,12 @@
 import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
-import { lineFields, newInvoiceFields, settingsFields, termsFields } from "./invoice-schema.ts";
+import {
+	lineFields,
+	newInvoiceFields,
+	settingsFields,
+	termsFields,
+} from "#modules/invoicing/form/invoice-schema.ts";
 
 const parse = <T extends v.ObjectEntries>(fields: T, input: unknown) =>
 	v.safeParse(v.object(fields), input);

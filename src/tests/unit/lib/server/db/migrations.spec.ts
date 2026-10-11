@@ -10,13 +10,13 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { afterAll, expect, test } from "vite-plus/test";
 
-import * as moduleSchema from "./modules.gen.ts";
-import * as coreSchema from "./schema.ts";
+import * as moduleSchema from "#lib/server/db/modules.gen.ts";
+import * as coreSchema from "#lib/server/db/schema.ts";
 
 /** The core's tables and the modules'. */
 const schema = { ...coreSchema, ...moduleSchema };
 
-const migrationsFolder = join(import.meta.dirname, "../../../../drizzle");
+const migrationsFolder = join(import.meta.dirname, "../../../../../../drizzle");
 
 const journal = JSON.parse(readFileSync(join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
 	entries: { idx: number; tag: string }[];

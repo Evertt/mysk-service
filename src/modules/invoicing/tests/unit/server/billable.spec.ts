@@ -2,9 +2,8 @@ import { expect, test, vi } from "vite-plus/test";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
-
-import { billableItems } from "../api/extensions.ts";
-import { offeredItems } from "./billable.ts";
+import { billableItems } from "#modules/invoicing/api/extensions.ts";
+import { offeredItems } from "#modules/invoicing/server/billable.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));

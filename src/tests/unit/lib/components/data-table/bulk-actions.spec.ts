@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { applicability, type BulkAction, summarizeBulkResult } from "./bulk-actions.ts";
+import {
+	applicability,
+	type BulkAction,
+	summarizeBulkResult,
+} from "#lib/components/data-table/bulk-actions.ts";
 
 interface Row {
 	number: string;

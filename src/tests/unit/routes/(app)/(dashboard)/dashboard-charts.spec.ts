@@ -6,7 +6,7 @@ import {
 	lastWeeks,
 	ordersPerWeek,
 	revenuePerMonth,
-} from "./dashboard-charts.ts";
+} from "#routes/(app)/(dashboard)/dashboard-charts.ts";
 
 // A Wednesday.
 const now = new Date(2026, 9, 7, 14, 30);

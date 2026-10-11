@@ -2,8 +2,9 @@ import { expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import SelectField from "#lib/components/form/select-field.svelte";
+
 import { fakeField } from "./fake-form.ts";
-import SelectField from "./select-field.svelte";
 
 const options = [
 	{ value: "pcs", label: "Pieces" },

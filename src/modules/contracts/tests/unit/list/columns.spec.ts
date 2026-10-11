@@ -2,8 +2,7 @@ import type { TableState } from "@tanstack/svelte-table";
 import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-
-import { type ContractRow, columns } from "./columns.ts";
+import { type ContractRow, columns } from "#modules/contracts/list/columns.ts";
 
 const year = new Date().getFullYear();
 

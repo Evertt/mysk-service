@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import EquipmentLink from "./equipment-link.svelte";
+import EquipmentLink from "#lib/equipment/ui/equipment-link.svelte";
 
 test("links the serial number to the unit's page", async () => {
 	render(EquipmentLink, { serialNumber: "GEN-0007" });

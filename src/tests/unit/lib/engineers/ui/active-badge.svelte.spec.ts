@@ -3,8 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
-
-import ActiveBadge from "./active-badge.svelte";
+import ActiveBadge from "#lib/engineers/ui/active-badge.svelte";
 
 test("an active engineer is marked active", async () => {
 	render(ActiveBadge, { active: true });

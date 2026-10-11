@@ -3,8 +3,9 @@ import { describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import type { BulkAction, BulkResult } from "#lib/components/data-table/bulk-actions.ts";
+
 import Harness, { type Job } from "./bulk-action-bar.test-harness.svelte";
-import type { BulkAction, BulkResult } from "./bulk-actions.ts";
 import { visits } from "./fake-navigation.svelte.ts";
 
 // Opening a page goes to a fake URL.
@@ -13,7 +14,7 @@ vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
 // The table's toolbar (unused here) brings in the saved views: none.
-vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
 
 const jobs: Job[] = [
 	{ id: 1, name: "Boiler service", status: "open" },

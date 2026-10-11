@@ -16,8 +16,7 @@ import { error, isHttpError } from "@sveltejs/kit";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { requireManager, requireModule } from "#lib/server/auth/index.ts";
-
-import { forAnyone, moduleRemote, remoteSet } from "./remote-functions.ts";
+import { forAnyone, moduleRemote, remoteSet } from "#lib/server/remote-functions.ts";
 
 /** SvelteKit's functions, as stand-ins that hand back what they were made with. */
 vi.mock("$app/server", () => {
@@ -342,10 +341,10 @@ describe("the checks", () => {
 
 /** The source files of the project that are checked in, leaving out what's generated or installed. */
 function sourceFiles(): SourceFile[] {
-	const root = join(import.meta.dirname, "../../..");
+	const root = join(import.meta.dirname, "../../../../..");
 	const skip = /(?:^|\/)(?:node_modules|\.svelte-kit|paraglide|build)(?:\/|$)/;
 	const files: SourceFile[] = [];
-	for (const folder of ["src", "e2e", "scripts"]) {
+	for (const folder of ["src", "scripts"]) {
 		if (!existsSync(join(root, folder))) continue;
 		for (const entry of readdirSync(join(root, folder), { recursive: true, withFileTypes: true })) {
 			if (!entry.isFile() || !/\.(?:ts|js|svelte)$/.test(entry.name)) continue;
@@ -360,7 +359,7 @@ function sourceFiles(): SourceFile[] {
 describe("the project", () => {
 	// Leaving out this file, whose made-up files are in strings.
 	const files = sourceFiles().filter(
-		(file) => file.path !== "src/lib/server/remote-functions.spec.ts",
+		(file) => file.path !== "src/tests/unit/lib/server/remote-functions.spec.ts",
 	);
 
 	test("makes remote functions only through the gated sets", () => {

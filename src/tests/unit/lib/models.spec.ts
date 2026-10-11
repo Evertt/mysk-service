@@ -13,7 +13,7 @@ import {
 	type OrderStatus,
 	orderStatuses,
 	quantityStep,
-} from "./models.ts";
+} from "#lib/models.ts";
 
 test("every order status is either open, done or cancelled", () => {
 	for (const status of orderStatuses) {

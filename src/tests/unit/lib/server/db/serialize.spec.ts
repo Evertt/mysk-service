@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { afterCommit, drizzleQueued } from "./serialize.ts";
+import { afterCommit, drizzleQueued } from "#lib/server/db/serialize.ts";
 
 describe("drizzleQueued", () => {
 	// A file, not `:memory:`: transactions get a connection of their own, as in the app.

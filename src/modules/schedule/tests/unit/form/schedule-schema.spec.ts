@@ -2,8 +2,7 @@ import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
 import { id } from "#lib/schema.ts";
-
-import { moveFields, scheduleFields } from "./schedule-schema.ts";
+import { moveFields, scheduleFields } from "#modules/schedule/form/schedule-schema.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (schema: v.GenericSchema, input: Record<string, unknown>) => {

@@ -3,9 +3,6 @@ import { sql } from "drizzle-orm";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, order } from "#lib/server/db/schema.ts";
-
 import {
 	currentEngineer,
 	currentTenant,
@@ -23,7 +20,9 @@ import {
 	requireUser,
 	type Tenant,
 	tenantJoin,
-} from "./session.ts";
+} from "#lib/server/auth/session.ts";
+import { db } from "#lib/server/db/index.ts";
+import { customer, engineer, order } from "#lib/server/db/schema.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
@@ -37,7 +36,7 @@ const nextRequest = () => {
 // The made-up graph of modules, in which `core-ish` is always on and `addon` requires `base`.
 vi.mock("#lib/modules/ids.ts", async (importOriginal) => ({
 	...(await importOriginal<typeof import("#lib/modules/ids.ts")>()),
-	moduleGraph: (await import("#lib/modules/fakes.ts")).fakeGraph,
+	moduleGraph: (await import("#unit/lib/modules/fakes.ts")).fakeGraph,
 }));
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`.

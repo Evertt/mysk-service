@@ -3,11 +3,10 @@ import { rmSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { material } from "#lib/server/db/schema.ts";
-
-import type { Tenant } from "./auth/session.ts";
-import { deleteAndLog } from "./records.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 

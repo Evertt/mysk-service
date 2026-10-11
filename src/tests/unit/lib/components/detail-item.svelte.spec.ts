@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import DetailItem from "./detail-item.svelte";
+import DetailItem from "#lib/components/detail-item.svelte";
 
 /** The term and its description, as rendered. */
 const item = (container: HTMLElement) => ({

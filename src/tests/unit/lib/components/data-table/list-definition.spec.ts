@@ -4,8 +4,6 @@ import { pathToFileURL } from "node:url";
 import * as v from "valibot";
 import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
-
 import {
 	code,
 	defineList,
@@ -19,8 +17,9 @@ import {
 	toListQuery,
 	toUrlSpec,
 	whereOf,
-} from "./list-definition.ts";
-import { parseTableUrl, type TableUrlState } from "./url-state.ts";
+} from "#lib/components/data-table/list-definition.ts";
+import { parseTableUrl, type TableUrlState } from "#lib/components/data-table/url-state.ts";
+import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
 /** The orders list, as `orders-list.ts` defines it. */
 const ordersList = defineList({

@@ -14,9 +14,12 @@
 <script lang="ts">
 	import { renderComponent } from "@tanstack/svelte-table";
 
-	import BulkActionBar from "./bulk-action-bar.svelte";
-	import type { BulkAction } from "./bulk-actions.ts";
-	import { createAppColumnHelper, createAppTable } from "./table.svelte.ts";
+	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+	import {
+		createAppColumnHelper,
+		createAppTable,
+	} from "#lib/components/data-table/table.svelte.ts";
 
 	let {
 		jobs,

@@ -4,7 +4,6 @@ import { afterEach, expect, test, vi } from "vite-plus/test";
 import { defineCollector, defineEvent, defineVote } from "#lib/extensions/define.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { drizzleQueued } from "#lib/server/db/serialize.ts";
-
 import {
 	collect,
 	contribute,
@@ -12,7 +11,7 @@ import {
 	emit,
 	type ServerModule,
 	vote,
-} from "./extensions.ts";
+} from "#lib/server/extensions.ts";
 
 // The kernel's default tenant needs a request; these tests pass the modules that are on.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));

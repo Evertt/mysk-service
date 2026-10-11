@@ -5,9 +5,8 @@
 <script lang="ts">
 	import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 	import type { ButtonSize, ButtonVariant } from "#lib/components/ui/button/index.ts";
-
-	import type { Mode, ThemeName } from "./index.ts";
-	import ThemeProvider from "./theme-provider.svelte";
+	import type { Mode, ThemeName } from "#lib/themes/index.ts";
+	import ThemeProvider from "#lib/themes/theme-provider.svelte";
 
 	let {
 		name,

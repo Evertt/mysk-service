@@ -3,8 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
-
-import WarrantyBadge from "./warranty-badge.svelte";
+import WarrantyBadge from "#lib/equipment/ui/warranty-badge.svelte";
 
 const until = new Date(2026, 5, 30);
 

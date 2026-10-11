@@ -2,8 +2,7 @@ import type { TableState } from "@tanstack/svelte-table";
 import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-
-import { columns, type InvoiceRow } from "./columns.ts";
+import { columns, type InvoiceRow } from "#modules/invoicing/list/columns.ts";
 
 const invoice = (number: string, fields: Partial<InvoiceRow> = {}): InvoiceRow => ({
 	id: 1,

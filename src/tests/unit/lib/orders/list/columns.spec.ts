@@ -4,9 +4,8 @@ import { describe, expect, test } from "vite-plus/test";
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
-
-import { columns, type OrderRow } from "./columns.ts";
-import { ordersList } from "./orders-list.ts";
+import { columns, type OrderRow } from "#lib/orders/list/columns.ts";
+import { ordersList } from "#lib/orders/list/orders-list.ts";
 
 const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	id: Number(number.slice(-3)),

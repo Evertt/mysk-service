@@ -6,7 +6,8 @@
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
-import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "../src/lib/server/db/demo.ts";
+import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
+
 import { baseURL } from "./lane.ts";
 
 export { baseURL } from "./lane.ts";

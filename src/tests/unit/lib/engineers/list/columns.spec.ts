@@ -2,8 +2,7 @@ import type { TableState } from "@tanstack/svelte-table";
 import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-
-import { columns, type EngineerRow } from "./columns.ts";
+import { columns, type EngineerRow } from "#lib/engineers/list/columns.ts";
 
 const engineer = (name: string, fields: Partial<EngineerRow> = {}): EngineerRow => ({
 	id: 1,

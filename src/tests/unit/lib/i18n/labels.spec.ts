@@ -2,6 +2,15 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { memberRoles } from "#lib/auth/index.ts";
 import {
+	defineLabels,
+	hasLabel,
+	label,
+	type LabelKind,
+	labelOptions,
+	labelOrValue,
+	withLabels,
+} from "#lib/i18n/labels.ts";
+import {
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
@@ -13,16 +22,6 @@ import {
 	stockMovementKinds,
 } from "#lib/models.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
-import {
-	defineLabels,
-	hasLabel,
-	label,
-	type LabelKind,
-	labelOptions,
-	labelOrValue,
-	withLabels,
-} from "./labels.ts";
 
 const englishByDefault = getLocale;
 const inLanguage = (locale: Locale) => overwriteGetLocale(() => locale);

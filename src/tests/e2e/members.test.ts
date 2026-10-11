@@ -1,7 +1,8 @@
 import type { Page } from "playwright";
 import { afterAll, describe, expect, test } from "vite-plus/test";
 
-import { DEMO_PASSWORD } from "../src/lib/server/db/demo.ts";
+import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
+
 import {
 	BROWSER_LOCALE,
 	baseURL,

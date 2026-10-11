@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 
-import { formatChange } from "./stock-history.ts";
+import { formatChange } from "#lib/materials/detail/stock-history.ts";
 
 test("a change shows its sign and unit", () => {
 	expect(formatChange(12, "pcs")).toBe("+12 pcs");

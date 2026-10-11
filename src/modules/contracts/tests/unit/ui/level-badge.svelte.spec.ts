@@ -4,9 +4,8 @@ import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-
-import type { ContractLevel } from "../model.ts";
-import LevelBadge from "./level-badge.svelte";
+import type { ContractLevel } from "#modules/contracts/model.ts";
+import LevelBadge from "#modules/contracts/ui/level-badge.svelte";
 
 test.each<[ContractLevel, string, BadgeVariant]>([
 	["basic", "Basic", "outline"],

@@ -4,9 +4,8 @@ import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import SegmentBadge from "#lib/customers/ui/segment-badge.svelte";
 import type { CustomerSegment } from "#lib/models.ts";
-
-import SegmentBadge from "./segment-badge.svelte";
 
 test.each<[CustomerSegment, string, BadgeVariant]>([
 	["enterprise", "Enterprise", "default"],

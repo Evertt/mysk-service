@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatNumber } from "../src/lib/i18n/format.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
+
 import { isRemote, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
 import { orderId, shownNumbers, snapshot } from "./orders-helpers.ts";
 import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";

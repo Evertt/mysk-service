@@ -6,7 +6,7 @@ import {
 	type HistoryOrder,
 	orderDate,
 	serviceStats,
-} from "./service-history.ts";
+} from "#lib/equipment/detail/service-history.ts";
 
 let nextId = 1;
 

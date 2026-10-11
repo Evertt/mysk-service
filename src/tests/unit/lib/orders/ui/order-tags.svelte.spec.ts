@@ -3,8 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
-
-import OrderTags from "./order-tags.svelte";
+import OrderTags from "#lib/orders/ui/order-tags.svelte";
 
 test("shows each tag as a badge in its tone, with its detail on hover", async () => {
 	render(OrderTags, {

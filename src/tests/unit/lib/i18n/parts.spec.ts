@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 
-import { messageParts } from "./parts.ts";
+import { messageParts } from "#lib/i18n/parts.ts";
 
 test("splits a message around its slots, wherever the language puts them", () => {
 	const english = (v: { user: string; subject: string }) => `${v.user} updated ${v.subject}`;

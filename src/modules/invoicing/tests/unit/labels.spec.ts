@@ -2,9 +2,8 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { hasLabel } from "#lib/i18n/index.ts";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
-import { invoiceStates } from "./invoice.ts";
-import { invoicingLabels } from "./labels.ts";
+import { invoiceStates } from "#modules/invoicing/invoice.ts";
+import { invoicingLabels } from "#modules/invoicing/labels.ts";
 
 const englishByDefault = getLocale;
 const inLanguage = (locale: Locale) => overwriteGetLocale(() => locale);

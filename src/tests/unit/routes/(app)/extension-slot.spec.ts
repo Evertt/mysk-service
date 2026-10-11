@@ -4,19 +4,18 @@ import { render } from "svelte/server";
 import { expect, test, vi } from "vite-plus/test";
 
 import { detailSide } from "#lib/orders/extensions.ts";
-
-import ExtensionSlot from "./extension-slot.svelte";
+import ExtensionSlot from "#routes/(app)/extension-slot.svelte";
 
 // The same made-up modules as in the component test: gadgets' card renders, gizmos' component
 // doesn't load and widgets' card fails on its data (see there for the others).
 vi.mock("#lib/modules/manifests.gen.ts", async () => {
-	const { gadgets, gizmos, widgets } = await import("#lib/modules/fakes.ts");
+	const { gadgets, gizmos, widgets } = await import("#unit/lib/modules/fakes.ts");
 	return { manifests: [gadgets, gizmos, widgets] };
 });
 vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 	const { slotContribution } = await import("#lib/extensions/define.ts");
 	const { detailSide } = await import("#lib/orders/extensions.ts");
-	const { gadgets, gizmosOrderCard, widgets } = await import("#lib/modules/fakes.ts");
+	const { gadgets, gizmosOrderCard, widgets } = await import("#unit/lib/modules/fakes.ts");
 	return {
 		slotContributions: [
 			slotContribution(

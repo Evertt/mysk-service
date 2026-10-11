@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { isFieldEngineer, isManager, memberRoles, officeRoles, parseRoles } from "./roles.ts";
+import {
+	isFieldEngineer,
+	isManager,
+	memberRoles,
+	officeRoles,
+	parseRoles,
+} from "#lib/auth/roles.ts";
 
 describe("isFieldEngineer", () => {
 	test("is a member whose only role is engineer", () => {

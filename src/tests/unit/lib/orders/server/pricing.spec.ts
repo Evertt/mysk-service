@@ -3,10 +3,7 @@ import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { lineTotal } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { db } from "#lib/server/db/index.ts";
-import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
-
-import { adjustPrices, tag } from "../extensions.ts";
+import { adjustPrices, tag } from "#lib/orders/extensions.ts";
 import {
 	laborCost,
 	lineTotalSql,
@@ -15,7 +12,9 @@ import {
 	type OrderToPrice,
 	priceOrders,
 	STANDARD_HOURLY_RATE,
-} from "./pricing.ts";
+} from "#lib/orders/server/pricing.ts";
+import { db } from "#lib/server/db/index.ts";
+import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
 const locals = { user: { id: "u1", name: "Jo" }, tenant: { organizationId: "north" } };
 

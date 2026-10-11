@@ -1,19 +1,18 @@
 import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { activityActions } from "#lib/models.ts";
-import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-
 import {
 	actionSentence,
 	actionVerbs,
 	coreSubjectTypes,
 	subjectTypeLabel,
 	subjectTypes,
-} from "./subjects.ts";
+} from "#lib/activity/subjects.ts";
+import { activityActions } from "#lib/models.ts";
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 // Made-up modules instead of the ones in `src/modules`.
 vi.mock("#lib/modules/manifests.gen.ts", async () => ({
-	manifests: (await import("#lib/modules/fakes.ts")).fakeModules,
+	manifests: (await import("#unit/lib/modules/fakes.ts")).fakeModules,
 }));
 
 const { order, equipment, engineer, module } = coreSubjectTypes;

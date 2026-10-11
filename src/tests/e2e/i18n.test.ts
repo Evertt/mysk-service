@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { DEMO_PASSWORD } from "../src/lib/server/db/demo.ts";
+import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
+
 import { hydrated, organizations, useApp, users } from "./app.ts";
 
 const app = useApp({ user: null });

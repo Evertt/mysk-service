@@ -2,9 +2,13 @@ import type { Component } from "svelte";
 import { expect, test } from "vite-plus/test";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import {
+	bulkContribution,
+	defineBulkTable,
+	defineSlot,
+	slotContribution,
+} from "#lib/extensions/define.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-
-import { bulkContribution, defineBulkTable, defineSlot, slotContribution } from "./define.ts";
 
 // Made-up points and modules: the type check (svelte-check) runs the `@ts-expect-error`s below.
 const side = defineSlot<{ number: string }>("orders.detail.side");

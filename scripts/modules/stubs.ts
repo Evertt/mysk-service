@@ -169,7 +169,7 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 
 			const from = `src/modules/${module.id}/routes/${file}`;
 			// By alias, not relatively: the same specifier whatever the stub's depth, and it names the
-			// module (`#modules/…` is for what the generator writes, see `src/modules/boundaries.spec.ts`).
+			// module (`#modules/…` is for what the generator writes, see `src/tests/unit/modules/boundaries.spec.ts`).
 			const importPath = `#modules/${module.id}/routes/${file}`;
 			const server = serverFileKind(posix.basename(file));
 			const stub =

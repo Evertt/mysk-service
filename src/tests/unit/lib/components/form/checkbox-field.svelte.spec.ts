@@ -2,7 +2,8 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import CheckboxField from "./checkbox-field.svelte";
+import CheckboxField from "#lib/components/form/checkbox-field.svelte";
+
 import { fakeField } from "./fake-form.ts";
 
 test("starts from the initial state", async () => {

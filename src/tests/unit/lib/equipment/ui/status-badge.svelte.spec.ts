@@ -3,9 +3,8 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { type BadgeVariant, badgeVariants } from "#lib/components/ui/badge/index.ts";
+import StatusBadge from "#lib/equipment/ui/status-badge.svelte";
 import type { EquipmentStatus } from "#lib/models.ts";
-
-import StatusBadge from "./status-badge.svelte";
 
 test.each<[EquipmentStatus, string, BadgeVariant]>([
 	["operational", "Operational", "secondary"],

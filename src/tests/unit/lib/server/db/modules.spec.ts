@@ -15,10 +15,9 @@ import { describe, expect, test } from "vite-plus/test";
 
 import type { ModuleGraph } from "#lib/modules/graph.ts";
 import { moduleGraph } from "#lib/modules/ids.ts";
-
-import { moduleSchemas } from "./module-schemas.gen.ts";
-import * as moduleSchema from "./modules.gen.ts";
-import * as coreSchema from "./schema.ts";
+import { moduleSchemas } from "#lib/server/db/module-schemas.gen.ts";
+import * as moduleSchema from "#lib/server/db/modules.gen.ts";
+import * as coreSchema from "#lib/server/db/schema.ts";
 
 const tablesOf = (schema: Record<string, unknown>) =>
 	Object.values(schema).filter((value): value is SQLiteTable => is(value, SQLiteTable));

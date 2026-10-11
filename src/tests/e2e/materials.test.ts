@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatCents, formatNumber } from "../src/lib/i18n/format.ts";
+import { formatCents, formatNumber } from "#lib/i18n/format.ts";
+
 import {
 	countIn,
 	isRemote,

@@ -4,8 +4,9 @@
  *
  * - code outside a domain imports it only through its barrels (`#lib/<d>/index.ts`, `components.ts`,
  *   `remotes.ts` and `server/index.ts`), except `extensions.ts` (the module generator and the
- *   modules' module-scope contributions need that file itself) and `e2e/` and `scripts/` (no Vite
- *   plugins: they import plain files by path);
+ *   modules' module-scope contributions need that file itself), the tests (`src/tests/` and the
+ *   modules' `tests/` folders: a unit test reaches into the code it tests, and the e2e tests have
+ *   no Vite plugins) and `scripts/` (no Vite plugins: they import plain files by path);
  * - code inside a domain imports its siblings relatively, never its own barrels (a cycle);
  * - the barrels hold what their names say (no component in the main barrel, no `server/` file
  *   outside the server one, ...);
@@ -21,7 +22,7 @@ import { join, posix, relative } from "node:path";
 import { parseSync } from "vite-plus";
 import { describe, expect, test } from "vite-plus/test";
 
-const root = join(import.meta.dirname, "../..");
+const root = join(import.meta.dirname, "../../../..");
 
 interface SourceFile {
 	/** Relative to the project root, with `/`. */
@@ -54,6 +55,10 @@ const ownDomain = (path: string) => {
 	return d && domains.includes(d) ? d : undefined;
 };
 
+/** `src/tests/` and the `tests/` folder of a module (`src/modules/<id>/tests/`). */
+const inTestFolder = (path: string) =>
+	path.startsWith("src/tests/") || /^src\/modules\/[^/]+\/tests\//.test(path);
+
 /** Where a specifier written in the file at `path` points, from the project root. */
 export function target(specifier: string, path: string): string | undefined {
 	if (specifier.startsWith(".")) return posix.join(posix.dirname(path), specifier);
@@ -85,8 +90,9 @@ export function importsOf(source: string): { specifier: string; kind: ImportKind
 /** Imports of a domain from outside it that don't go through its barrels. */
 export function outsideImports(files: SourceFile[]): string[] {
 	return files.flatMap((file) => {
-		// Plain Node and the e2e project have no Svelte plugin or SvelteKit: they import files by path.
-		if (file.path.startsWith("e2e/") || file.path.startsWith("scripts/")) return [];
+		// Tests import what they test, wherever it is; plain Node and the e2e project have no Svelte
+		// plugin or SvelteKit, and import files by path.
+		if (inTestFolder(file.path) || file.path.startsWith("scripts/")) return [];
 		const own = ownDomain(file.path);
 		return importsOf(file.source).flatMap(({ specifier, kind }) => {
 			const to = target(specifier, file.path);
@@ -262,7 +268,9 @@ describe("the checks", () => {
 			),
 			file("src/lib/customers/x.ts", `import { e } from "#lib/orders/components.ts";`),
 			file("src/lib/customers/y.ts", `import { e } from "#lib/orders/ui/order-link.svelte";`),
-			file("e2e/a.test.ts", `import { f } from "../src/lib/customers/countries.ts";`),
+			file("src/tests/e2e/a.test.ts", `import { f } from "#lib/customers/countries.ts";`),
+			file("src/tests/unit/lib/b.spec.ts", `import { g } from "#lib/customers/display.ts";`),
+			file("src/modules/a/tests/unit/c.spec.ts", `import { h } from "#lib/customers/display.ts";`),
 		];
 		expect(outsideImports(files)).toEqual([
 			`src/routes/(app)/dashboard/x.ts imports #lib/orders/display.ts: go through #lib/orders/index.ts, components.ts, remotes.ts or server/index.ts`,
@@ -353,7 +361,7 @@ describe("the checks", () => {
 function sourceFiles(): SourceFile[] {
 	const skip = /(?:^|\/)(?:node_modules|\.svelte-kit|paraglide|build)(?:\/|$)/;
 	const files: SourceFile[] = [];
-	for (const folder of ["src", "e2e", "scripts"]) {
+	for (const folder of ["src", "scripts"]) {
 		if (!existsSync(join(root, folder))) continue;
 		for (const entry of readdirSync(join(root, folder), { recursive: true, withFileTypes: true })) {
 			if (!entry.isFile() || !/\.(?:ts|js|svelte)$/.test(entry.name)) continue;
@@ -367,7 +375,9 @@ function sourceFiles(): SourceFile[] {
 
 describe("the project", () => {
 	// Leaving out this file, whose made-up files are in strings.
-	const files = sourceFiles().filter((f) => f.path !== "src/lib/domain-boundaries.spec.ts");
+	const files = sourceFiles().filter(
+		(f) => f.path !== "src/tests/unit/lib/domain-boundaries.spec.ts",
+	);
 
 	test("imports a domain only through its barrels", () => {
 		expect(outsideImports(files)).toEqual([]);

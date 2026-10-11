@@ -2,7 +2,7 @@ import { expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import RowActions from "./row-actions.svelte";
+import RowActions from "#lib/components/data-table/row-actions.svelte";
 
 test("the menu is named after the row and has its open and edit links", async () => {
 	render(RowActions, {

@@ -10,7 +10,7 @@ import {
 	startOfWeek,
 	timeOfDay,
 	toDateInput,
-} from "./dates.ts";
+} from "#lib/dates.ts";
 
 test("a day is 24 hours in milliseconds", () => {
 	expect(DAY).toBe(86_400_000);

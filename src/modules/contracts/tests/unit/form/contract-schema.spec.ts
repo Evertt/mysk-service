@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
-import { contractFields } from "./contract-schema.ts";
+import { contractFields } from "#modules/contracts/form/contract-schema.ts";
 
 /** The parsed value, or the first issue's message. */
 const parse = (schema: v.GenericSchema, input: unknown) => {

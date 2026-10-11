@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 
-import { countryName, countryOptions, europeanCountries } from "./countries.ts";
+import { countryName, countryOptions, europeanCountries } from "#lib/customers/countries.ts";
 
 test("the offered countries are sorted and listed once", () => {
 	expect(europeanCountries).toEqual([...new Set(europeanCountries)].sort());

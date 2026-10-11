@@ -1,9 +1,9 @@
 /**
  * What the contracts module does to an order's price and to what is billed, worked out in SQL for
  * the e2e tests: which contract covers an order, what the order costs, and which monthly fees are
- * due. It stays here, not in the module's `e2e/`, because the core's tests of prices (a customer's
+ * due. It stays here, not in the module's `tests/e2e/`, because the core's tests of prices (a customer's
  * revenue, a unit's cost) need it, and so do the invoicing module's, which bills the discounts and
- * fees of contracts; only a module's own files may import from it (`src/modules/boundaries.spec.ts`).
+ * fees of contracts; only a module's own files may import from it (`src/tests/unit/modules/boundaries.spec.ts`).
  * It names the contracts' tables in SQL only.
  */
 import { rows } from "./app.ts";

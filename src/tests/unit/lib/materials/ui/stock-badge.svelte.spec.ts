@@ -3,9 +3,8 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import { type BadgeVariant, badgeVariants } from "#lib/components/ui/badge/index.ts";
+import StockBadge from "#lib/materials/ui/stock-badge.svelte";
 import type { MaterialUnit } from "#lib/models.ts";
-
-import StockBadge from "./stock-badge.svelte";
 
 test.each<[number, MaterialUnit, string, BadgeVariant]>([
 	[0, "pcs", "Out of stock", "destructive"],

@@ -5,8 +5,7 @@ import { render } from "vitest-browser-svelte";
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
 import type { OrderPriority } from "#lib/models.ts";
-
-import PriorityBadge from "./priority-badge.svelte";
+import PriorityBadge from "#lib/orders/ui/priority-badge.svelte";
 
 test.each<[OrderPriority, string, BadgeVariant]>([
 	["low", "Low", "ghost"],

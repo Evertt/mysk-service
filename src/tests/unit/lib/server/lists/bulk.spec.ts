@@ -7,9 +7,14 @@ import { code, defineList } from "#lib/components/data-table/list-definition.ts"
 import { inTenant, type Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
-
-import { bulkChange, idsTarget, listTarget, REQUESTED_PAGES, refreshRequested } from "./bulk.ts";
-import type { ListSql } from "./plan.ts";
+import {
+	bulkChange,
+	idsTarget,
+	listTarget,
+	REQUESTED_PAGES,
+	refreshRequested,
+} from "#lib/server/lists/bulk.ts";
+import type { ListSql } from "#lib/server/lists/plan.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const refreshAll = vi.fn();

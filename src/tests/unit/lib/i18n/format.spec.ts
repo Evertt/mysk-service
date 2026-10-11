@@ -9,7 +9,7 @@ import {
 	formatTime,
 	intlLocale,
 	numberFormatter,
-} from "./format.ts";
+} from "#lib/i18n/format.ts";
 
 /** Dutch puts a no-break space after the euro sign; written as a plain space here. */
 const plain = (text: string) => text.replaceAll(" ", " ");

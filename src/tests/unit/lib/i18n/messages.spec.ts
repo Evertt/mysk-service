@@ -10,7 +10,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { baseLocale, locales } from "#lib/paraglide/runtime.js";
 
-const root = new URL("../../../", import.meta.url);
+const root = new URL("../../../../../", import.meta.url);
 const read = (path: string) => JSON.parse(readFileSync(new URL(path, root), "utf8"));
 
 /** A message as stored: a text, or a variant message (e.g. a plural) as an array of one object. */

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatNumber } from "../src/lib/i18n/format.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
+
 import { baseURL, organizations, rows, useApp, userNames, users, value } from "./app.ts";
 
 const { north, south } = organizations;

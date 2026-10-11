@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 
-import { contractMonths, monthlyFee, monthReference } from "./billing.ts";
+import { contractMonths, monthlyFee, monthReference } from "#modules/contracts/server/billing.ts";
 
 const year = { startsOn: new Date(2026, 0, 1), endsOn: new Date(2026, 11, 31) };
 const days = (months: { startsOn: Date; endsOn: Date }[]) =>

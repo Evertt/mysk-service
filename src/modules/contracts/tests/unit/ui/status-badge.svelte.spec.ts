@@ -4,9 +4,8 @@ import { render } from "vitest-browser-svelte";
 
 import { badgeVariants } from "#lib/components/ui/badge/index.ts";
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-
-import type { ContractStatus } from "../model.ts";
-import StatusBadge from "./status-badge.svelte";
+import type { ContractStatus } from "#modules/contracts/model.ts";
+import StatusBadge from "#modules/contracts/ui/status-badge.svelte";
 
 test.each<[ContractStatus, string, BadgeVariant]>([
 	["upcoming", "Upcoming", "outline"],

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 
-import { sendMail } from "./send.ts";
+import { sendMail } from "#lib/server/mail/send.ts";
 
 const env = vi.hoisted(() => ({
 	MAIL_FROM: "Fieldworks <noreply@fieldworks.example>",

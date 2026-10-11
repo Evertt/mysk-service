@@ -1,7 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 
-import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
+import EquipmentByStatusChart from "#routes/(app)/(dashboard)/equipment-by-status-chart.svelte";
 
 const data = [
 	{ status: "operational" as const, count: 128 },

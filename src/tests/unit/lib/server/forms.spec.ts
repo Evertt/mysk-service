@@ -1,7 +1,7 @@
 import { isValidationError } from "@sveltejs/kit";
 import { describe, expect, test } from "vite-plus/test";
 
-import { refuse } from "./forms.ts";
+import { refuse } from "#lib/server/forms.ts";
 
 /** Like the `issue` of a remote form: a function per field that makes an issue for it. */
 const issue = {

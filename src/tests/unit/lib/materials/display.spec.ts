@@ -1,15 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { materialUnits } from "#lib/models.ts";
-
-import { describeOptions } from "../display.test-support.ts";
 import {
 	formatQuantity,
 	stockLevel,
 	stockLevelOptions,
 	stockLevels,
 	unitOptions,
-} from "./display.ts";
+} from "#lib/materials/display.ts";
+import { materialUnits } from "#lib/models.ts";
+
+import { describeOptions } from "../display.test-support.ts";
 
 // Material units are shown as plain text.
 describeOptions("material units", unitOptions, materialUnits, { icons: false });

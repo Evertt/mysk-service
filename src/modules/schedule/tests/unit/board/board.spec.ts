@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import type { OrderStatus } from "#lib/models.ts";
-
 import {
 	applyMove,
 	boardEngineers,
@@ -18,7 +17,7 @@ import {
 	weekDays,
 	weekFromParam,
 	weekNumber,
-} from "./board.ts";
+} from "#modules/schedule/board/board.ts";
 
 describe("days and weeks", () => {
 	test("parseDay reads yyyy-mm-dd as the local start of that day", () => {

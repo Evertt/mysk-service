@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { groupedPage, groupKey, groupRowId, groupsFirst, pageGroups, sumOf } from "./grouping.ts";
+import {
+	groupedPage,
+	groupKey,
+	groupRowId,
+	groupsFirst,
+	pageGroups,
+	sumOf,
+} from "#lib/components/data-table/grouping.ts";
 
 interface Item {
 	name: string;

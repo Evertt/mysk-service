@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/tes
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { DENSITY_COOKIE, tableDensity } from "./density.svelte.ts";
+import { DENSITY_COOKIE, tableDensity } from "#lib/components/data-table/density.svelte.ts";
+
 import { visit } from "./fake-navigation.svelte.ts";
 import Harness, { type Item } from "./table.test-harness.svelte";
 
@@ -11,7 +12,7 @@ vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
 // The toolbar's saved views (see `saved-views.svelte.spec.ts`): none.
-vi.mock("./views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
 
 beforeEach(() => visit("/items"));
 
