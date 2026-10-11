@@ -251,9 +251,16 @@ describe("generateModules", () => {
 			`export const detailSide = defineSlot<{ number: string }>("orders.detail.side");`,
 		);
 		put("src/modules/sample/slots/orders.detail.side/card.svelte");
-		put("src/modules/sample/slots/orders.detail.side/card.svelte.spec.ts");
+		// The module's tests mirror its folders, but they are not the module's code.
+		put("src/modules/sample/tests/unit/slots/orders.detail.side/card.svelte.spec.ts");
+		put("src/modules/sample/tests/unit/slots/orders.detail.side/card.test-harness.svelte");
+		put("src/modules/sample/tests/unit/bulk-actions/orders.detail.side.spec.ts");
+		put("src/modules/sample/tests/unit/routes/(app)/sample/+page.spec.ts");
+		put("src/modules/sample/tests/e2e/sample.test.ts");
 		generateModules(root);
 		const file = read("src/lib/extensions/contributions.gen.ts");
+		expect(file).not.toContain("tests");
+		expect(has("src/routes/(app)/(modules)/sample/tests")).toBe(false);
 		expect(file).toContain(
 			`import { detailSide as ordersDetailSide } from "#lib/orders/extensions.ts";`,
 		);
