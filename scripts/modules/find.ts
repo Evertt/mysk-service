@@ -42,7 +42,7 @@ export function discoverModules(root: string, locales: string[]) {
 			...graph,
 			routeFiles: walk(join(dir, "routes")).filter((file) => posix.basename(file).startsWith("+")),
 			// (The module's specs, test harnesses and end-to-end tests are in its `tests/` folder, which
-			// the generator never reads: only `routes/`, `slots/`, `bulk-actions/`, `messages/`, ...)
+			// the generator never reads: only `routes/`, `slots/`, `bulk-actions/`, `form-parts/`, `messages/`, ...)
 			slotFiles: walk(join(dir, "slots"))
 				.filter((file) => file.endsWith(".svelte"))
 				.map((file) => `slots/${file}`),
@@ -55,6 +55,9 @@ export function discoverModules(root: string, locales: string[]) {
 			serverColumnFiles: walk(join(dir, "server/columns"))
 				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
 				.map((file) => `server/columns/${file}`),
+			formPartFiles: walk(join(dir, "form-parts"))
+				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
+				.map((file) => `form-parts/${file}`),
 			server: {
 				index: hasFile("server/index.ts"),
 				schema: hasFile("server/schema.ts"),

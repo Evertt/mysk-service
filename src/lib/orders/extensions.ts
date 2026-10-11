@@ -6,15 +6,15 @@
  * `tagOrders()`, `orderCommitted()` and `saveOrderParts()` (`hooks.ts`). Isomorphic, so the types
  * are also there for the pages that show costs, tags and adjustments.
  */
-import type { RemoteFormFields } from "$app/server";
-
 import {
 	defineBulkTable,
 	defineCollector,
 	defineEvent,
+	defineFormSlot,
 	defineSaveHook,
 	defineSlot,
 } from "#lib/extensions/define.ts";
+import type { FormPartsOutput } from "#lib/extensions/form-parts.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
 // Only the type: this file is isomorphic.
 import type { Transaction } from "#lib/server/db/index.ts";
@@ -151,20 +151,27 @@ export interface OrderSaving {
 	/** Its status once changed; `null` while it's being deleted (before its row goes). */
 	status: OrderStatus | null;
 	/**
-	 * When it's saved from the order form, what the modules' parts of the form (`form`) submitted,
-	 * by module id, as submitted: each module checks its own. Absent for other changes.
+	 * When it's saved from the order form, the modules' parts of it (`form`), by module id, validated
+	 * by their schemas (`form-parts/orders.form.ts`); a module's part is absent when the form
+	 * rendered none of its inputs. Only the tenant's modules' parts. Absent for other changes.
 	 */
-	form?: Record<string, unknown>;
+	form?: OrderFormParts;
 }
 
-/** Why a module can't save its part of an order. */
+/** The modules' parts of the order form, by module id, as validated by their schemas. */
+type OrderFormParts = FormPartsOutput<"orders.form">;
+
+/**
+ * Why a module can't save its part of an order, as a Standard Schema issue, which the order form
+ * passes to `invalid()` as it is: what its schema can't check, e.g. a stock shortage.
+ */
 export interface OrderProblem {
+	message: string;
 	/**
 	 * The order form's field it's about (from the form's root, e.g.
 	 * `["modules", "materials", "lines", 2, "quantity"]`), or none for the whole change.
 	 */
 	path?: (string | number)[];
-	message: string;
 }
 
 /**
@@ -175,33 +182,13 @@ export interface OrderProblem {
 export const saving = defineSaveHook<OrderSaving, OrderProblem>("orders.saving");
 
 /**
- * The order form's fields for the modules' parts: `fields.<module id>`, under which a module names
- * its inputs. Each module knows the shape of its own part (see `form`).
+ * Parts of the order form, after the order's own card: a module's inputs, named with the `fields` of
+ * its part (under the form's `modules.<module id>`, typed and validated by its
+ * `form-parts/orders.form.ts`), are submitted with the order and saved with it (`saving`, as
+ * `form`). The components load what they offer through their module's remote functions. `order` is
+ * the order being edited, none for a new one.
  */
-export type ModuleFormFields = RemoteFormFields<Record<string, ModuleFormPart> | undefined>;
-
-/**
- * A module's part of the order form, as submitted: its inputs' values by name, nested as their
- * names say (`lines[0].quantity`), two levels deep at most. Not recursive, and without booleans:
- * SvelteKit's form types check every boolean of a form is optional, which a recursive type defeats.
- */
-export interface ModuleFormPart {
-	[name: string]: FormValue | FormValue[] | FormRecord | FormRecord[] | undefined;
-}
-type FormValue = string | number;
-interface FormRecord {
-	[name: string]: FormValue | FormValue[] | undefined;
-}
-
-/**
- * Parts of the order form, after the order's own card: a module's inputs, named under
- * `fields.<module id>`, are submitted with the order and saved with it (`saving`, as `form`). The
- * components load what they offer through their module's remote functions. `order` is the order
- * being edited, none for a new one.
- */
-export const form = defineSlot<{ fields: ModuleFormFields; order: { id: number } | undefined }>(
-	"orders.form",
-);
+export const form = defineFormSlot<{ order: { id: number } | undefined }>("orders.form");
 
 /**
  * Cards in the side column of an order's page. The components load their own data through their

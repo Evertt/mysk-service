@@ -40,6 +40,7 @@
 	"common_error_not_linked": "Je account is niet gekoppeld aan een monteur",
 	"common_error_no_permission": "Je hebt geen toestemming om dit te doen",
 	"common_error_module_part": "Kon niet laden wat {module} hier toevoegt.",
+	"common_error_module_off": "{module} staat uit voor deze organisatie: laad de pagina opnieuw en probeer het nog eens.",
 	"common_try_again": "Opnieuw proberen",
 	"common_save": "Opslaan",
 	"common_cancel": "Annuleren",

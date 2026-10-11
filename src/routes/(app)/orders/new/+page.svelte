@@ -27,6 +27,6 @@
 	cancelHref={resolve("/(app)/orders")}
 >
 	{#snippet parts(fields)}
-		<ExtensionSlot point={formParts} props={{ fields, order: undefined }} />
+		<ExtensionSlot point={formParts} props={{ order: undefined }} {fields} />
 	{/snippet}
 </OrderForm>

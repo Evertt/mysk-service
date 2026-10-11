@@ -168,6 +168,62 @@ describe("in North, an order's materials", () => {
 		);
 	});
 
+	test("the lines are checked in the browser, before anything is sent", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const before = await snapshot(id);
+		await app.go(`/orders/${number}/edit`);
+		// Past the browser's own check of the minimum, to see the app's.
+		await page
+			.locator("form")
+			.last()
+			.evaluate((form: HTMLFormElement) => (form.noValidate = true));
+		const posts: string[] = [];
+		const record = (request: { method(): string; url(): string }) => {
+			if (request.method() === "POST") posts.push(request.url());
+		};
+		page.on("request", record);
+		try {
+			await page.locator("tbody tr").first().getByLabel("Quantity").fill("0");
+			await page.getByRole("button", { name: "Save order" }).click();
+			await expect.poll(() => app.issues()).toEqual(["More than 0"]);
+
+			// A line without a material, too.
+			await page.getByRole("button", { name: "Add material" }).click();
+			await page.getByRole("button", { name: "Save order" }).click();
+			// (The lines' issues are listed in one field error, a line each.)
+			await expect
+				.poll(async () => (await app.issues()).join("\n").split("\n").toSorted())
+				.toEqual(["Choose a material", "More than 0"]);
+		} finally {
+			page.off("request", record);
+		}
+		expect(posts).toEqual([]);
+		expect(app.path()).toBe(`/orders/${number}/edit`);
+		expect(await snapshot(id)).toEqual(before);
+	});
+
+	test("the server checks the lines too, when the browser doesn't", async () => {
+		const { page } = app;
+		const id = await orderId(number, north.id);
+		const before = await snapshot(id);
+		await app.go(`/orders/${number}/edit`);
+		await page.locator("tbody tr").first().getByLabel("Quantity").fill("-1");
+		// Posted the way a browser without JavaScript would, so nothing checks it before the server.
+		const { status, html } = await page.evaluate(async () => {
+			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
+			const body = new URLSearchParams(
+				[...new FormData(form)].map(([name, value]) => [name, String(value)]),
+			);
+			const headers = { accept: "text/html" };
+			const response = await fetch(form.action, { method: "POST", body, headers });
+			return { status: response.status, html: await response.text() };
+		});
+		expect(status).toBe(200);
+		expect(html).toContain("More than 0");
+		expect(await snapshot(id)).toEqual(before);
+	});
+
 	test("lines take decimals in kilos, metres and litres, but whole pieces", async () => {
 		const { page } = app;
 		const pick = (unit: string) =>
