@@ -128,7 +128,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   coverage), the key pairs `customer_id` instead.
 - An optional module's tables reference core tables, never the reverse; core sections don't know
   about modules. A module adds to core pages through slots (components that load their own data
-  with the module's remote functions; `<ExtensionSlot>`, `src/routes/(app)/extension-slot.svelte`,
+  with the module's remote functions; `<ExtensionSlot>`, `src/lib/extensions/extension-slot.svelte`,
   renders each in a boundary of its own, so one that fails shows a notice instead of breaking the
   page) and bulk actions on tables' selections, and to its owners' server logic through hooks; all
   only take part for tenants that have the module.
@@ -441,7 +441,7 @@ core and for each module.
   module's code: the generator never reads it, and the boundary specs hold its files to the module's
   rules (its own files by any import, another module only through its `api/`).
 - Tests import what they test through aliases, not relatively: `#lib/orders/display.ts`,
-  `#modules/<id>/server/billing.ts`, `#routes/(app)/extension-slot.svelte`, and the test helpers by
+  `#modules/<id>/server/billing.ts`, `#routes/(app)/app-sidebar.svelte`, and the test helpers by
   `#unit/lib/modules/fakes.ts` (`src/tests/unit/`) and `#e2e/app.ts` (`src/tests/e2e/`). A helper
   next to the spec that uses it (a harness, `display.test-support.ts`) is imported relatively. A
   test is exempt from the barrel rule (above): it imports the domain's internals.

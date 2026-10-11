@@ -3,8 +3,8 @@
 import { render } from "svelte/server";
 import { expect, test, vi } from "vite-plus/test";
 
+import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 import { detailSide } from "#lib/orders/extensions.ts";
-import ExtensionSlot from "#routes/(app)/extension-slot.svelte";
 
 // The same made-up modules as in the component test: gadgets' card renders, gizmos' component
 // doesn't load and widgets' card fails on its data (see there for the others).

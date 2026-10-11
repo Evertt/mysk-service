@@ -8,8 +8,10 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, label } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { detailSide } from "#modules/contracts/api/extensions.ts";
 	import { deleteContract, getContract } from "#modules/contracts/contracts.remote.ts";
 	import { formatTerm, levels } from "#modules/contracts/display.ts";
 	import { contractStatus } from "#modules/contracts/model.ts";
@@ -222,6 +224,11 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<ExtensionSlot
+			point={detailSide}
+			props={{ number: contract.number, equipmentIds: equipment.map((unit) => unit.id) }}
+		/>
 
 		<ActivityCard type="contract" id={contract.id} />
 	</div>
