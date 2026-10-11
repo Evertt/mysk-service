@@ -11,6 +11,8 @@ import {
 	bulkChange,
 	listTarget,
 	refreshRequested,
+	moduleFacets,
+	moduleValues,
 	pageGroupsOf,
 	planList,
 } from "#lib/server/lists/index.ts";
@@ -26,7 +28,8 @@ import { equipmentList } from "./equipment-list.ts";
  * grouped, what the table needs to know of the page's groups.
  */
 export const getEquipmentList = forMembers.query(equipmentList.query, async (input) => {
-	const plan = planList(equipmentSql(), input);
+	const listSql = equipmentSql();
+	const plan = planList(listSql, input);
 	const [fetched, rowCount, counts] = await Promise.all([
 		plan.paged(
 			withEquipmentJoins(
@@ -66,8 +69,16 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 				.groupBy(order.equipmentId)
 		: [];
 	const openOf = new Map(open.map((row) => [row.equipmentId, row.count]));
+	// What the tenant's modules' columns show for them, e.g. the next maintenance.
+	const valuesOf = await moduleValues(listSql, ids);
 
-	const page = plan.page(fetched.map((row) => ({ ...row, openOrders: openOf.get(row.id) ?? 0 })));
+	const page = plan.page(
+		fetched.map((row) => ({
+			...row,
+			openOrders: openOf.get(row.id) ?? 0,
+			moduleValues: valuesOf.get(row.id) ?? {},
+		})),
+	);
 	return {
 		rows: page.rows,
 		rowCount,
@@ -84,11 +95,15 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
  * matching the search and the other filters.
  */
 export const getEquipmentFacets = forMembers.query(equipmentList.where, async (where) => {
-	return planList(equipmentSql(), where).facets({
+	const listSql = equipmentSql();
+	const counts = await planList(listSql, where).facets({
 		category: equipment.category,
 		status: equipment.status,
 		manufacturer: equipment.manufacturer,
+		// And the tenant's modules' columns, by their ids (the type names the list's own only).
+		...(moduleFacets(listSql) as Record<never, never>),
 	});
+	return counts as typeof counts & { readonly [moduleColumn: string]: Record<string, number> };
 });
 
 // --- Bulk actions on the list's selected units (see `bulk-actions.ts`) -------------------------

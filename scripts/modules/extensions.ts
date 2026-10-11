@@ -13,6 +13,7 @@ import { byName, GENERATED, type ModuleFolder } from "./shared.ts";
 
 const kinds = {
 	Slot: "slot",
+	ListColumns: "columns",
 	BulkTable: "bulk",
 	Collector: "collector",
 	Event: "event",
@@ -35,6 +36,7 @@ export interface ExtensionPoint {
 const kindNames: Record<ExtensionPoint["kind"], string> = {
 	slot: "a slot",
 	bulk: "a bulk table",
+	columns: "a list that takes columns",
 	collector: "a collector",
 	event: "an event",
 	vote: "a vote",
@@ -111,7 +113,7 @@ export function findPoints(root: string): ExtensionPoint[] {
 interface FileContribution {
 	/** Relative to the module's folder. */
 	file: string;
-	kind: "slot" | "bulk";
+	kind: "slot" | "bulk" | "columns";
 	point: string;
 	/** A slot component's name: its file name. */
 	name: string;
@@ -119,6 +121,8 @@ interface FileContribution {
 
 const slotFile = /^slots\/([^/]+)\/([^/]+)\.svelte$/;
 const bulkFile = /^bulk-actions\/([^/]+)\.ts$/;
+const columnsFile = /^columns\/([^/]+)\.ts$/;
+const serverColumnsFile = /^server\/columns\/([^/]+)\.ts$/;
 
 /** The module's contributions, and its contribution files that are in the wrong place. */
 function contributionsOf(module: ModuleFolder) {
@@ -133,6 +137,29 @@ function contributionsOf(module: ModuleFolder) {
 		const match = bulkFile.exec(file);
 		if (match) contributions.push({ file, kind: "bulk", point: match[1], name: match[1] });
 		else misplaced.push(`${file}: a table's bulk actions are bulk-actions/<point id>.ts.`);
+	}
+	// A list's columns come in two halves, the definitions and their SQL, which go together.
+	const serverHalves = new Set(module.serverColumnFiles);
+	for (const file of module.columnFiles) {
+		const match = columnsFile.exec(file);
+		if (!match) {
+			misplaced.push(`${file}: a list's columns are columns/<point id>.ts.`);
+			continue;
+		}
+		contributions.push({ file, kind: "columns", point: match[1], name: match[1] });
+		if (!serverHalves.has(`server/${file}`)) {
+			misplaced.push(`${file}: its columns' SQL is missing, in server/${file}.`);
+		}
+	}
+	const halves = new Set(module.columnFiles);
+	for (const file of module.serverColumnFiles) {
+		const match = serverColumnsFile.exec(file);
+		if (!match) misplaced.push(`${file}: a list's columns' SQL is server/columns/<point id>.ts.`);
+		else if (!halves.has(`columns/${match[1]}.ts`)) {
+			misplaced.push(
+				`${file}: the columns it's the SQL of are missing, in columns/${match[1]}.ts.`,
+			);
+		}
 	}
 	return { contributions, misplaced };
 }
@@ -200,27 +227,25 @@ const localName = (id: string) => id.replace(/[.-](\w)/g, (_, c: string) => c.to
 const specifier = (file: string) =>
 	file.replace(/^src\/lib\//, "#lib/").replace(/^src\/modules\//, "#modules/");
 
-/**
- * `src/lib/extensions/contributions.gen.ts`: the modules' contributions by file, in registry order
- * (`modules` is), each a typed call, so the type check holds a component to its slot's props and
- * bulk actions to their table's rows. Expects `extensionProblems()` to have found nothing.
- */
-export function renderContributions(points: ExtensionPoint[], modules: ModuleFolder[]): string {
+/** The modules' contributions by file, in registry order, with the points they go to. */
+function allContributions(points: ExtensionPoint[], modules: ModuleFolder[]) {
 	const byId = new Map(points.map((point) => [point.id, point]));
-	const all = modules.flatMap((module) =>
-		contributionsOf(module).contributions.map((contribution) => ({ module, contribution })),
+	return modules.flatMap((module) =>
+		contributionsOf(module).contributions.flatMap((contribution) => {
+			const point = byId.get(contribution.point);
+			return point ? [{ module, contribution, point }] : [];
+		}),
 	);
-	const slots = all.filter(({ contribution }) => contribution.kind === "slot");
-	const bulk = all.filter(({ contribution }) => contribution.kind === "bulk");
+}
 
+/** The imports of `points`, each as its `localName()`, by file. */
+function pointImports(points: ExtensionPoint[]) {
 	const used = new Map<string, ExtensionPoint[]>();
-	for (const { contribution } of all) {
-		const point = byId.get(contribution.point);
-		if (!point) continue;
+	for (const point of points) {
 		const named = used.get(point.file) ?? [];
 		if (!named.includes(point)) used.set(point.file, [...named, point]);
 	}
-	const imports = [...used]
+	return [...used]
 		.toSorted(([a], [b]) => byName(specifier(a), specifier(b)))
 		.map(
 			([file, named]) =>
@@ -229,37 +254,94 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
 					.map((point) => `${point.exportName} as ${localName(point.id)}`)
 					.join(", ")} } from "${specifier(file)}";`,
 		);
+}
 
+const listOf = (entries: string[]) =>
+	entries.length ? `[\n${entries.map((entry) => `\t${entry},`).join("\n")}\n]` : "[]";
+
+/**
+ * `src/lib/extensions/contributions.gen.ts`: the modules' contributions by file, in registry order
+ * (`modules` is), each a typed call, so the type check holds a component to its slot's props and
+ * bulk actions to their table's rows. Expects `extensionProblems()` to have found nothing.
+ */
+export function renderContributions(points: ExtensionPoint[], modules: ModuleFolder[]): string {
+	const all = allContributions(points, modules);
+	const of = (kind: FileContribution["kind"]) =>
+		all.filter(({ contribution }) => contribution.kind === kind);
 	const load = (module: ModuleFolder, file: string) =>
 		`() => import("#modules/${module.id}/${file}")`;
-	const list = (entries: string[]) =>
-		entries.length ? `[\n${entries.map((entry) => `\t${entry},`).join("\n")}\n]` : "[]";
 
 	return [
-		`// ${GENERATED} from src/modules/*/slots and src/modules/*/bulk-actions. Don't edit.`,
+		`// ${GENERATED} from src/modules/*/slots, src/modules/*/bulk-actions and src/modules/*/columns. Don't edit.`,
 		`import {`,
 		`\ttype AnyBulkContribution,`,
 		`\ttype AnySlotContribution,`,
 		`\tbulkContribution,`,
+		`\ttype ColumnsContribution,`,
+		`\tcolumnsContribution,`,
 		`\tslotContribution,`,
 		`} from "#lib/extensions/define.ts";`,
-		...imports,
+		...pointImports(all.map(({ point }) => point)),
 		"",
 		`/** The components the modules add at slots, in registry order. */`,
-		`export const slotContributions: readonly AnySlotContribution[] = ${list(
-			slots.map(
+		`export const slotContributions: readonly AnySlotContribution[] = ${listOf(
+			of("slot").map(
 				({ module, contribution }) =>
 					`slotContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)})`,
 			),
 		)};`,
 		"",
 		`/** The bulk actions the modules add to tables, in registry order. */`,
-		`export const bulkContributions: readonly AnyBulkContribution[] = ${list(
-			bulk.map(
+		`export const bulkContributions: readonly AnyBulkContribution[] = ${listOf(
+			of("bulk").map(
 				({ module, contribution }) =>
 					`bulkContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
 			),
 		)};`,
+		"",
+		`/** The columns the modules add to lists (their definitions and cells), in registry order. */`,
+		`export const columnContributions: readonly ColumnsContribution[] = ${listOf(
+			of("columns").map(
+				({ module, contribution }) =>
+					`columnsContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
+			),
+		)};`,
+		"",
+	].join("\n");
+}
+
+/**
+ * `src/lib/server/lists/columns.gen.ts`: the SQL of the columns the modules add to lists
+ * (`server/columns/<point id>.ts`), in registry order, for `withModuleColumns()`. Server-only, and
+ * imported statically: the server merges a tenant's columns while it plans the list.
+ */
+export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[]): string {
+	const columns = allContributions(points, modules).filter(
+		({ contribution }) => contribution.kind === "columns",
+	);
+	const sqlName = (module: ModuleFolder, point: string) =>
+		`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}`;
+	return [
+		`// ${GENERATED} from src/modules/*/server/columns. Don't edit.`,
+		`import type { ColumnSqlContribution } from "./module-columns.ts";`,
+		...pointImports(columns.map(({ point }) => point)),
+		...columns.map(
+			({ module, contribution }) =>
+				`import ${sqlName(module, contribution.point)} from "#modules/${module.id}/server/${contribution.file}";`,
+		),
+		"",
+		`/**`,
+		` * A function, not a constant: the modules import \`columnSql()\` from \`./module-columns.ts\`,`,
+		` * which imports this, so one of them is always evaluated first.`,
+		` */`,
+		`export function generatedColumnSql(): readonly ColumnSqlContribution[] {`,
+		`\treturn ${listOf(
+			columns.map(
+				({ module, contribution }) =>
+					`{ module: ${JSON.stringify(module.id)}, point: ${localName(contribution.point)}, columns: ${sqlName(module, contribution.point)} }`,
+			),
+		).replaceAll("\n", "\n\t")};`,
+		`}`,
 		"",
 	].join("\n");
 }

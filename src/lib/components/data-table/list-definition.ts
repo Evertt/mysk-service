@@ -28,6 +28,9 @@
  */
 import * as v from "valibot";
 
+import type { ListColumnsPoint } from "#lib/extensions/define.ts";
+
+import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
 import {
 	defaultPageSizes,
 	filterValues,
@@ -159,11 +162,24 @@ export interface ListDef<C extends ListColumns> {
 	};
 	/** The page sizes besides the default one; `defaultPageSizes` if not given. */
 	pageSizes?: readonly number[];
+	/**
+	 * The extension point through which modules add columns to the list (see `module-columns.ts`),
+	 * if they may.
+	 */
+	moduleColumns?: ListColumnsPoint;
 }
 
 /** A defined list. */
 export interface List<C> {
+	/**
+	 * Its columns: the definition's, and, in a list `extendList()` made, the modules' (by their
+	 * namespaced ids, which the type doesn't name).
+	 */
 	columns: C;
+	/** What it was defined from, for `extendList()`. */
+	definition: ListDef<ListColumns>;
+	/** The modules' columns in it (`extendList()`), in order. */
+	moduleColumns: readonly ModuleListColumn[];
 	/** The filtered columns' kinds, by id. */
 	filterKinds: Readonly<Record<string, FilterKind<any>>>;
 	sortIds: readonly string[];
@@ -173,10 +189,18 @@ export interface List<C> {
 	defaultPageSize: number;
 	/** How the table's state maps onto the URL. */
 	urlSpec: TableUrlSpec;
-	/** A remote query's argument for a page of rows. */
+	/**
+	 * A remote query's argument for a page of rows. For a list modules add columns to, it also takes
+	 * filters and sorts on any module column's id (`<module>.<name>`), whose values `planList()` then
+	 * checks against the tenant's list (`strict`).
+	 */
 	query: v.GenericSchema<ListQuery<C>>;
-	/** A remote query's argument for the counts in the filters and for bulk targets. */
+	/** A remote query's argument for the counts in the filters and for bulk targets; like `query`. */
 	where: v.GenericSchema<ListWhere<C>>;
+	/** `query` and `where` for exactly this list's columns: nothing else gets through. */
+	strict: { query: v.GenericSchema<ListQuery<C>>; where: v.GenericSchema<ListWhere<C>> };
+	/** The point modules add columns through, if they may (`ListDef.moduleColumns`). */
+	point?: ListColumnsPoint;
 }
 
 const defaultPageSize = 20;
@@ -235,16 +259,71 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 	const defaultSize = def.defaults?.pageSize ?? defaultPageSize;
 	const pageSizes = [...new Set([...(def.pageSizes ?? defaultPageSizes), defaultSize])];
 
-	const filters = v.strictObject(
-		Object.fromEntries(
-			Object.entries(filterKinds).map(([id, kind]) => [
-				id,
-				v.exactOptional(
-					v.pipe(v.array(kind.value), v.minLength(1), v.maxLength(listLimits.values)),
-				),
-			]),
-		),
+	const shape = { filterKinds, sortIds, groupIds, pageSizes };
+	const strict = listSchemas(shape, false);
+	const boundary = def.moduleColumns ? listSchemas(shape, true) : strict;
+	return {
+		columns: def.columns,
+		definition: def as unknown as ListDef<ListColumns>,
+		moduleColumns: [],
+		filterKinds,
+		sortIds,
+		groupIds,
+		pageSizes,
+		defaultPageSize: defaultSize,
+		urlSpec: toUrlSpec(def),
+		query: boundary.query as unknown as v.GenericSchema<ListQuery<C>>,
+		where: boundary.where as unknown as v.GenericSchema<ListWhere<C>>,
+		strict: strict as unknown as List<C>["strict"],
+		...(def.moduleColumns ? { point: def.moduleColumns } : {}),
+	};
+}
+
+/** Any module column's filter values, at the boundary (`planList()` checks them against the column). */
+const anyFilterValues = v.pipe(
+	v.array(v.union([v.pipe(v.string(), v.maxLength(64)), v.number(), v.null()])),
+	v.minLength(1),
+	v.maxLength(listLimits.values),
+);
+const anyModuleColumn = v.pipe(v.string(), v.regex(moduleColumnIdPattern));
+
+/**
+ * The schemas of a list's query and where. `withModuleColumns` also lets through filters and sorts
+ * on any module column's id (`<module>.<name>`), with values of any filter's shape: the remote
+ * function's boundary, before `planList()` checks them against the tenant's list.
+ */
+function listSchemas(
+	{
+		filterKinds,
+		sortIds,
+		groupIds,
+		pageSizes,
+	}: {
+		filterKinds: Record<string, FilterKind<any>>;
+		sortIds: string[];
+		groupIds: string[];
+		pageSizes: number[];
+	},
+	withModuleColumns: boolean,
+) {
+	const entries = Object.fromEntries(
+		Object.entries(filterKinds).map(([id, kind]) => [
+			id,
+			v.exactOptional(v.pipe(v.array(kind.value), v.minLength(1), v.maxLength(listLimits.values))),
+		]),
 	);
+	const filters = withModuleColumns
+		? v.pipe(
+				v.objectWithRest(entries, anyFilterValues),
+				v.check(
+					(given) => Object.keys(given).every((id) => id in entries || v.is(anyModuleColumn, id)),
+					m.common_error_generic,
+				),
+			)
+		: v.strictObject(entries);
+	const sortId = withModuleColumns
+		? v.union([v.picklist(sortIds), anyModuleColumn])
+		: v.picklist(sortIds);
 	const whereEntries = {
 		q: v.pipe(v.string(), v.maxLength(listLimits.search)),
 		filters,
@@ -253,7 +332,7 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 		v.strictObject({
 			...whereEntries,
 			sort: v.pipe(
-				v.array(v.strictObject({ id: v.picklist(sortIds), desc: v.boolean() })),
+				v.array(v.strictObject({ id: sortId, desc: v.boolean() })),
 				v.check(
 					(sort) => new Set(sort.map((item) => item.id)).size === sort.length,
 					m.common_error_generic,
@@ -269,18 +348,51 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 		v.strictObject(whereEntries),
 		v.check((input) => jsonBytes(input) <= listLimits.bytes, m.common_error_generic),
 	);
+	return { query, where };
+}
 
-	return {
-		columns: def.columns,
-		filterKinds,
-		sortIds,
-		groupIds,
-		pageSizes,
-		defaultPageSize: defaultSize,
-		urlSpec: toUrlSpec(def),
-		query: query as unknown as v.GenericSchema<ListQuery<C>>,
-		where: where as unknown as v.GenericSchema<ListWhere<C>>,
-	};
+/** The lists `extendList()` made, by the list and the ids of the columns added. */
+const extended = new WeakMap<object, Map<string, List<any>>>();
+
+/**
+ * The list with the modules' `columns` added (see `module-columns.ts`), for the tenant that has
+ * them: the same list for the same columns, so its URL spec and schemas stay the same objects. Its
+ * type is the list's own: the core's code never names a module's column. Without columns, the
+ * list itself. Throws when a column's id or URL name clashes with another column's.
+ */
+export function extendList<C>(list: List<C>, columns: readonly ModuleListColumn[]): List<C> {
+	if (!columns.length) return list;
+	const key = columns.map((column) => column.id).join(" ");
+	let lists = extended.get(list);
+	if (!lists) extended.set(list, (lists = new Map()));
+	const found = lists.get(key);
+	if (found) return found;
+
+	const own = list.definition.columns;
+	for (const column of columns) {
+		if (!moduleColumnIdPattern.test(column.id) || column.id in own) {
+			throw new Error(`A module's column can't be called "${column.id}"`);
+		}
+	}
+	const merged = defineList<ListColumns>({
+		...(list.definition as ListDef<ListColumns>),
+		columns: {
+			...own,
+			...Object.fromEntries(
+				columns.map((column) => [
+					column.id,
+					{
+						param: column.param,
+						...(column.sort ? { sort: true } : {}),
+						...(column.filter ? { filter: column.filter } : {}),
+					},
+				]),
+			),
+		},
+	}) as unknown as List<C>;
+	const result = { ...merged, moduleColumns: [...list.moduleColumns, ...columns] };
+	lists.set(key, result);
+	return result;
 }
 
 /** Sorts values; `null` (rows without one, see `orNone`) first. */

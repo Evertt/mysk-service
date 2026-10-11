@@ -1,11 +1,14 @@
 import type { TableState } from "@tanstack/svelte-table";
 import { expect, test } from "vite-plus/test";
 
+import { extendList } from "#lib/components/data-table/list-definition.ts";
+import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type EquipmentRow } from "#lib/equipment/list/columns.ts";
 import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
+import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
 
 const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): EquipmentRow => ({
 	id: 1,
@@ -18,6 +21,7 @@ const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): Equipme
 	warrantyUntil: new Date(2028, 3, 30),
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	openOrders: 0,
+	moduleValues: {},
 	...fields,
 });
 
@@ -75,4 +79,29 @@ test("the table reads and writes the URL as the equipment list says", () => {
 		initialState: { ...equipmentList.urlSpec.defaults },
 	});
 	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(equipmentList.urlSpec));
+});
+
+test("with the tenant's modules' columns, the table and the merged list agree on the URL", () => {
+	const modules = [gadgetsRating, widgetsNote];
+	const list = extendList(equipmentList, modules);
+	const withModules = withModuleTableColumns<EquipmentRow, (typeof columns)[number]>(
+		columns,
+		modules,
+	);
+	const table = createAppTable({
+		columns: withModules,
+		data: [unit("GEN-1", { moduleValues: { "gadgets.rating": 7 } })],
+		initialState: { ...list.urlSpec.defaults },
+	});
+	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(list.urlSpec));
+	// After the list's own columns, before the row actions.
+	expect(
+		table
+			.getAllLeafColumns()
+			.map((column) => column.id)
+			.slice(-3),
+	).toEqual(["gadgets.rating", "widgets.note", "actions"]);
+	const [row] = table.getRowModel().rows;
+	expect(row.getValue("gadgets.rating")).toBe(7);
+	expect(row.getValue("widgets.note")).toBeNull();
 });

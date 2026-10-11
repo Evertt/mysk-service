@@ -49,6 +49,12 @@ export function discoverModules(root: string, locales: string[]) {
 			bulkFiles: walk(join(dir, "bulk-actions"))
 				.filter((file) => file.endsWith(".ts"))
 				.map((file) => `bulk-actions/${file}`),
+			columnFiles: walk(join(dir, "columns"))
+				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
+				.map((file) => `columns/${file}`),
+			serverColumnFiles: walk(join(dir, "server/columns"))
+				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
+				.map((file) => `server/columns/${file}`),
 			server: {
 				index: hasFile("server/index.ts"),
 				schema: hasFile("server/schema.ts"),
