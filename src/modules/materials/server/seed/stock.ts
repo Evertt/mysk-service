@@ -1,9 +1,10 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
 import { holdsStock } from "#lib/models.ts";
+import { addDays, now } from "#lib/server/db/seed/clock.ts";
+import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
 
-import { addDays, now } from "./clock.ts";
-import type { TenantData } from "./tenant.ts";
+import type { MaterialsDraft } from "../../api/seed.ts";
 
 /**
  * The stock ledger that adds up to each generated material's stock: an opening balance before
@@ -12,7 +13,7 @@ import type { TenantData } from "./tenant.ts";
  * own, so the rest of the data is the same with or without it.
  */
 export function generateStockMovements(
-	data: Pick<TenantData, "orders" | "orderLines" | "materials">,
+	data: MaterialsDraft & { orders: SeedOrder[] },
 	seed: number,
 ) {
 	const random = new Faker({ locale: [nl, en] });

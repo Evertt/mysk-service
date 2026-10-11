@@ -11,5 +11,6 @@ export default defineModule({
 	route: "/(app)/(modules)/contracts",
 	icon: FileCheckIcon,
 	subjects: contractSubjects,
-	enhances: ["invoicing"],
+	// Materials only for the seed: the call-outs it makes get material lines.
+	enhances: ["invoicing", "materials"],
 });

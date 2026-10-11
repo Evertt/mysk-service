@@ -1,7 +1,10 @@
+/** The materials module's demo data: its catalog, and the lines orders use it in. */
 import type { Faker } from "@faker-js/faker";
 
-import type { MaterialUnit } from "#lib/models.ts";
+import type { MaterialUnit, OrderType } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
+import { DAY, now } from "#lib/server/db/seed/clock.ts";
+import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
 
 /** The materials in stock, in Dutch, with the range of their price in euros. */
 const catalog: [name: string, unit: MaterialUnit, minPrice: number, maxPrice: number][] = [
@@ -60,4 +63,34 @@ export function generateMaterials(faker: Faker) {
 				? faker.number.int({ min: 0, max: 250 })
 				: faker.number.float({ min: 0, max: 900, fractionDigits: 1 }),
 	}));
+}
+
+const linesRange: Record<OrderType, [number, number]> = {
+	installation: [3, 8],
+	maintenance: [1, 4],
+	repair: [1, 4],
+	inspection: [0, 1],
+};
+
+/** The tenant's orders' material lines, a few per order, by its type; ids from 1. */
+export function generateOrderLines(
+	faker: Faker,
+	orders: SeedOrder[],
+	materials: ReturnType<typeof generateMaterials>,
+) {
+	return orders.flatMap((o) => {
+		const [min, max] = linesRange[o.type];
+		const picked = faker.helpers.arrayElements(materials, faker.number.int({ min, max }));
+		// Older orders were priced a little lower than today's list price.
+		const ageInYears = (now.getTime() - o.createdAt.getTime()) / (365 * DAY);
+		return picked.map((m) => ({
+			orderId: o.id,
+			materialId: m.id,
+			quantity:
+				m.unit === "pcs"
+					? faker.number.int({ min: 1, max: 6 })
+					: faker.number.float({ min: 0.5, max: 25, fractionDigits: 2 }),
+			unitPrice: Math.round(m.unitPrice * (1 - 0.04 * ageInYears)),
+		}));
+	});
 }
