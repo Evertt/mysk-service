@@ -1,0 +1,114 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"maintenance_module_name": "Maintenance plans",
+	"maintenance_module_description": "Service each unit on a fixed interval, and turn what's due into orders.",
+	"maintenance_title": "Maintenance plans",
+	"maintenance_description": "The visits that are due. Select plans to create their orders.",
+	"maintenance_search": "Search plans…",
+	"maintenance_empty": "No visits due",
+	"maintenance_column_unit": "Unit",
+	"maintenance_column_customer": "Customer",
+	"maintenance_column_plan": "Plan",
+	"maintenance_column_interval": "Interval",
+	"maintenance_column_next_due": "Next due",
+	"maintenance_column_last_order": "Last order",
+	"maintenance_column_next_maintenance": "Next maintenance",
+	"maintenance_range": "Due",
+	"maintenance_range_overdue": "Overdue",
+	"maintenance_range_30_days": "Overdue and the next 30 days",
+	"maintenance_range_90_days": "Overdue and the next 90 days",
+	"maintenance_range_all": "Every plan",
+	"maintenance_bucket_overdue": "Overdue",
+	"maintenance_bucket_soon": "Due within 30 days",
+	"maintenance_bucket_none": "No plan",
+	"maintenance_overdue": "Overdue",
+	"maintenance_paused": "Paused",
+	"maintenance_active": "Active",
+	"maintenance_every_months": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Every month",
+				"countPlural=*": "Every {countText} months"
+			}
+		}
+	],
+	"maintenance_count_plans": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} plan",
+				"countPlural=*": "{countText} plans"
+			}
+		}
+	],
+	"maintenance_bulk_create": "Create orders",
+	"maintenance_bulk_create_title": "Create orders for {plans}?",
+	"maintenance_bulk_create_description": "Each plan gets an order for its unit, and its next visit moves on one interval.",
+	"maintenance_bulk_created": "{count} created",
+	"maintenance_plan_paused": "{label} is paused",
+	"maintenance_field_order_type": "Order type",
+	"maintenance_field_description": "Description",
+	"maintenance_field_interval": "Interval in months",
+	"maintenance_field_next_due": "Next due on",
+	"maintenance_field_paused": "Paused",
+	"maintenance_field_last_order": "Last order",
+	"maintenance_activity_subject": "maintenance plan",
+	"maintenance_card_title": "Maintenance",
+	"maintenance_card_description": "Visits on a fixed interval.",
+	"maintenance_card_empty_title": "No maintenance plans",
+	"maintenance_card_empty_description": "Add a plan to service this unit on a fixed interval.",
+	"maintenance_add": "Add plan",
+	"maintenance_pause": "Pause",
+	"maintenance_resume": "Resume",
+	"maintenance_plan_actions": "Actions for {plan}",
+	"maintenance_delete_title": "Delete “{plan}”?",
+	"maintenance_delete_description": "The orders it created stay as they are.",
+	"maintenance_dialog_new_title": "New maintenance plan",
+	"maintenance_dialog_edit_title": "Edit maintenance plan",
+	"maintenance_dialog_description": "You create the orders from the list of maintenance that's due.",
+	"maintenance_save": "Save plan",
+	"maintenance_due_on": "Due {date}",
+	"maintenance_last_order_none": "No order yet",
+	"maintenance_plan_saved": "Plan saved",
+	"maintenance_plan_deleted": "Plan deleted",
+	"maintenance_description_required": "Describe the visit",
+	"maintenance_interval_range": "Between {min} and {max} months",
+	"maintenance_due_required": "Choose the day the next visit is due",
+	"maintenance_plan_not_found": "Plan not found",
+	"maintenance_equipment_not_found": "Unit {serial} not found",
+	"maintenance_unknown_equipment": "Unknown unit",
+	"maintenance_dashboard_description": "The visits your units' plans have due.",
+	"maintenance_dashboard_overdue": "Overdue",
+	"maintenance_dashboard_soon": "Due within 30 days",
+	"maintenance_contract_title": "Maintenance plans",
+	"maintenance_contract_description": "The plans of the units this contract covers.",
+	"maintenance_contract_empty": "None of the covered units has a plan yet.",
+	"maintenance_contract_add": "Add a plan to each covered unit without one",
+	"maintenance_contract_add_description": "Each covered unit without a plan gets this one, first due one interval from today.",
+	"maintenance_contract_added": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} plan added",
+				"countPlural=*": "{countText} plans added"
+			}
+		}
+	],
+	"maintenance_contract_all_planned": "Every covered unit has a plan."
+}
