@@ -10,7 +10,14 @@ export const variables = defineEnvVars({
 		schema: (value) => value || undefined,
 	},
 	ORIGIN: {
-		description: "The app origin (base URL), e.g. `http://localhost:5173`.",
+		description:
+			"The app origin (base URL), e.g. `http://localhost:5173`. Optional on Vercel, which sets `VERCEL_BRANCH_URL`.",
+		schema: (value) => value || undefined,
+	},
+	VERCEL_BRANCH_URL: {
+		description:
+			"Set by Vercel: the deployment's branch domain, without `https://`. The origin when `ORIGIN` isn't set.",
+		schema: (value) => value || undefined,
 	},
 	BETTER_AUTH_SECRET: {
 		description:

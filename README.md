@@ -140,6 +140,7 @@ Environment variables (see `.env.example` and `src/env.ts`):
 | `DATABASE_URL`        | yes      | The database, e.g. `file:/var/lib/fieldworks/fieldworks.db`: a file on a persistent disk |
 | `DATABASE_AUTH_TOKEN` | no       | The access token of a Turso database (`DATABASE_URL=libsql://<name>.turso.io`)           |
 | `ORIGIN`              | yes      | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails       |
+| `VERCEL_BRANCH_URL`   | no       | Set by Vercel: without `ORIGIN`, the origin is `https://` and this domain                |
 | `BETTER_AUTH_SECRET`  | yes      | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`               |
 | `SMTP_URL`            | no       | Sends mail, e.g. `smtps://user:password@smtp.example.com:465`; otherwise it's logged     |
 | `MAIL_FROM`           | no       | The sender, e.g. `Fieldworks <noreply@example.com>`                                      |

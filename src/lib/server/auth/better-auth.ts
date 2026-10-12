@@ -1,4 +1,4 @@
-import { ORIGIN, BETTER_AUTH_SECRET } from "$app/env/private";
+import { ORIGIN, BETTER_AUTH_SECRET, VERCEL_BRANCH_URL } from "$app/env/private";
 import { getRequestEvent } from "$app/server";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
@@ -11,6 +11,9 @@ import { INVITATION_EXPIRES_IN } from "#lib/auth/index.ts";
 import type { MemberRole } from "#lib/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitationMail, sendMail } from "#lib/server/mail/index.ts";
+
+/** The app's public origin: `ORIGIN`, else Vercel's branch URL (a domain without the protocol). */
+const origin = ORIGIN || (VERCEL_BRANCH_URL && `https://${VERCEL_BRANCH_URL}`);
 
 /**
  * The organization a user works in when they sign in: the first one they joined, or none yet (e.g.
@@ -25,7 +28,7 @@ async function initialOrganizationId(userId: string) {
 }
 
 export const auth = betterAuth({
-	baseURL: ORIGIN,
+	baseURL: origin,
 	secret: BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: "sqlite" }),
 	// Accounts are created by the seed, `pnpm run org:create` and accepting an invitation
@@ -62,7 +65,7 @@ export const auth = betterAuth({
 						organization: organization.name,
 						inviter: inviter.user.name,
 						role,
-						url: new URL(`/invite/${id}`, origin).href,
+						url: new URL(`/invite/${id}`, origin || getRequestEvent().url.origin).href,
 						expiresAt: invitation.expiresAt,
 					}),
 				);
