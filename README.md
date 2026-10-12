@@ -111,7 +111,8 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
   `src/tests/e2e/app.ts` has the helpers: a signed-in page (`useApp`), switching organizations, submitting
   remote forms, reading the database, and reading the mail the app sent (each server writes it to
   a file in the temporary folder, `MAIL_OUTBOX`, instead of sending it). `E2E_DEV=1 pnpm test:e2e` runs them against a single dev
-  server instead: slower, but with Svelte's dev-only warnings.
+  server instead: slower, but with Svelte's dev-only warnings. `pnpm test` runs a file that fails
+  once more, afresh, before calling the run failed (`scripts/test.ts`).
 
 ## Deploying
 

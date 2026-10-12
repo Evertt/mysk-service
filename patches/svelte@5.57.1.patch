@@ -21,3 +21,20 @@ index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e1
  				// "[1", "[2", etc. for if blocks
  				(data[0] === '[' && !isNaN(Number(data.slice(1))))
  			) {
+diff --git a/src/internal/client/reactivity/batch.js b/src/internal/client/reactivity/batch.js
+index 75ce33b1c56dcf090c289517209baf095724ad89..d4cbf0ee74d9155ec63e1ef508bd67a69cc6600e 100644
+--- a/src/internal/client/reactivity/batch.js
++++ b/src/internal/client/reactivity/batch.js
+@@ -769,8 +769,10 @@ export class Batch {
+ 			} else if (sources.length > 0) {
+ 				// The microtask queue can contain the batch already scheduled to run right
+ 				// after this one is finished, so throwing the invariant would be wrong here.
+-				if (DEV && !batch.#decrement_queued) {
+-					invariant(batch.#scheduled.length === 0, 'Batch has scheduled effects');
++				// (Patched: a warning, not a throw. Thrown here it left this commit half done, with
++				// `batch` active, and the page froze; production builds skip the check and run on.)
++				if (DEV && !batch.#decrement_queued && batch.#scheduled.length > 0) {
++					console.warn('Svelte invariant: "Batch has scheduled effects" (see patches/svelte@5.57.1.patch)');
+ 				}
+ 
+ 				// A batch was unskipped in a later batch -> tell prior batches to unskip it, too

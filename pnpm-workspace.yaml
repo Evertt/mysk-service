@@ -14,6 +14,9 @@ patchedDependencies:
   # Hydration skipped past the end of an async block that holds a `<svelte:boundary>` that failed
   # on the server (`skip_nodes` didn't count its `<!--[?…-->` marker as an opening), so the page
   # failed to hydrate; see `extension-slot.svelte`. Still in 5.57.2: drop it once Svelte fixes it.
+  # Also: the dev-only "Batch has scheduled effects" invariant warns instead of throwing; thrown
+  # mid-commit it froze the page (a module skeleton coming in during the sign-in navigation, see
+  # "Skeletons" in AGENTS.md). Production builds skip that check.
   svelte@5.57.1: patches/svelte@5.57.1.patch
 peerDependencyRules:
   allowAny:

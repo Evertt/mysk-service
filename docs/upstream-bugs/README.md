@@ -80,6 +80,16 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   the same spec, gave no errors.
 - **Not minimized.** Next step: an `{#each await promise}` inside a boundary with a `pending`
   snippet, in a component test.
+- **Second trigger (2026-10-13):** loading a module's skeleton with `import()` right after the
+  office layout mounts, then navigating within a split second of signing in. Reproduced by
+  `src/tests/e2e/skeletons.repro.test.ts` (`REPRO_SKELETONS=1 REPRO_CPU_RATE=1`) in a dev build only:
+  a few rounds in 50 alone, 27 in 50 beside three other e2e files. The check is `DEV`-only
+  (`batch.js` `#commit`, "Batch has scheduled effects"); its throw aborts the commit with the other
+  batch still active, followed by `effect_update_depth_exceeded` and a frozen page. Production
+  builds were clean (0 in 50, twice). Worked around in `patches/svelte@5.57.1.patch` (a warning
+  instead of the throw). The question for upstream: why a started batch still has scheduled
+  effects (and no decrement queued) when another batch commits, i.e. whether the check is wrong
+  or the scheduling is.
 
 ## 5. Svelte (with layerchart): the tab freezes when a `pending` boundary hydrates slow work
 
