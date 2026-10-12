@@ -292,14 +292,36 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 			return column && values?.length ? [{ id, column, values: values as unknown[] }] : [];
 		});
 
+	/**
+	 * Per computed filter (`match`), what it made of each row so far: the facets' conditions (one
+	 * per column, in parallel) look at mostly the same rows, and each is asked about once. One
+	 * `match` at a time per column, so they don't ask about the same rows together.
+	 */
+	const matched = new Map<string, { kept: Map<number, boolean>; queue: Promise<unknown> }>();
+	async function matching(id: string, column: LooseColumn, values: unknown[], ids: number[]) {
+		let known = matched.get(id);
+		if (!known) matched.set(id, (known = { kept: new Map(), queue: Promise.resolve() }));
+		const { kept } = known;
+		const run = known.queue.then(async () => {
+			const fresh = ids.filter((row) => !kept.has(row));
+			if (!fresh.length) return;
+			const found = new Set(await column.match!(values, fresh));
+			for (const row of fresh) kept.set(row, found.has(row));
+		});
+		known.queue = run.catch(() => {});
+		await run;
+		return ids.filter((row) => kept.get(row));
+	}
+
 	/** The filters SQL has, then those computed in code (`match`), narrowing down by id. */
 	async function conditionFor(except?: string) {
-		const inSql = filtered(except).flatMap(({ column, values }) => {
+		const columns = filtered(except);
+		const inSql = columns.flatMap(({ column, values }) => {
 			const condition = column.filter?.(values);
 			return condition ? [condition] : [];
 		});
 		let condition = and(source.scope(), ...inSql, searchMatch(source.search, query.q));
-		for (const { column, values } of filtered(except)) {
+		for (const { id, column, values } of columns) {
 			if (!column.match) continue;
 			const rows = (await source
 				.from({ id: sql<number>`${source.id}` })
@@ -308,7 +330,9 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 			if (rows.length > MAX_MATCHED_ROWS) {
 				error(400, m.common_table_filter_too_many({ max: formatNumber(MAX_MATCHED_ROWS) }));
 			}
-			const kept = await column.match(
+			const kept = await matching(
+				id,
+				column,
 				values,
 				rows.map((row) => row.id),
 			);

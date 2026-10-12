@@ -195,11 +195,16 @@ export function parseDateRange(token: string, today = new Date()): DateRange | u
 }
 
 /**
- * A range of days or presets (its ends as the URL has them) as the URL's token: `from..to`, an open
- * end left empty, one day or preset on its own.
+ * A range as the URL's token, its ends as `write` has them: `from..to`, an open end left empty, a
+ * range of one value that value on its own.
  */
-export const dateRangeToken = ({ from, to }: DateRange) =>
-	from !== null && from === to ? from : `${from ?? ""}${separator}${to ?? ""}`;
+const rangeToken = <T>({ from, to }: Range<T>, write: (end: T) => string) =>
+	from !== null && from === to
+		? write(from)
+		: `${from === null ? "" : write(from)}${separator}${to === null ? "" : write(to)}`;
+
+/** A range of days or presets (its ends as the URL has them) as the URL's token, e.g. `today..`. */
+export const dateRangeToken = (range: DateRange) => rangeToken(range, String);
 
 /** The numbers a token means, or `undefined` if it isn't a number range. */
 export function parseNumberRange(token: string): NumberRange | undefined {
@@ -213,8 +218,7 @@ export function parseNumberRange(token: string): NumberRange | undefined {
 }
 
 /** A number range as the URL's token, like `dateRangeToken`. */
-export const numberRangeToken = ({ from, to }: NumberRange) =>
-	from !== null && from === to ? String(from) : `${from ?? ""}${separator}${to ?? ""}`;
+export const numberRangeToken = (range: NumberRange) => rangeToken(range, String);
 
 /** An amount of euros as the URL writes it (`12.5`) in cents, exactly; `undefined` if it isn't one. */
 export function euroCents(text: string): number | undefined {
@@ -247,10 +251,7 @@ export function parseMoneyRange(token: string): NumberRange | undefined {
 }
 
 /** A range of cents as the URL's token, in euros, like `dateRangeToken`. */
-export const moneyRangeToken = ({ from, to }: NumberRange) =>
-	from !== null && from === to
-		? centsEuros(from)
-		: `${from === null ? "" : centsEuros(from)}${separator}${to === null ? "" : centsEuros(to)}`;
+export const moneyRangeToken = (range: NumberRange) => rangeToken(range, centsEuros);
 
 /** A token as a range in a grammar, if it is one. */
 function parseRange(grammar: RangeGrammar, token: string, today = new Date()) {

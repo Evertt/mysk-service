@@ -8,7 +8,7 @@
 import { and, eq, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { savedView, tableMemory } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -25,9 +25,16 @@ export interface TableMemory {
 	viewId: number | null;
 }
 
+/** The signed-in member's row of a table's memory. */
+const memoryOf = (key: string) =>
+	and(
+		inTenant(tableMemory),
+		eq(tableMemory.userId, currentTenant().user.id),
+		eq(tableMemory.tableKey, key),
+	);
+
 /** The signed-in member's memory of a table: `null` if there's nothing to remember. */
 export const getTableMemory = forMembers.query(tableKeySchema, async (key) => {
-	const tenant = currentTenant();
 	const [row] = await db
 		.select({
 			columns: tableMemory.columns,
@@ -35,13 +42,7 @@ export const getTableMemory = forMembers.query(tableKeySchema, async (key) => {
 			viewId: tableMemory.viewId,
 		})
 		.from(tableMemory)
-		.where(
-			and(
-				inTenant(tableMemory),
-				eq(tableMemory.userId, tenant.user.id),
-				eq(tableMemory.tableKey, key),
-			),
-		);
+		.where(memoryOf(key));
 	return row ?? null;
 });
 
@@ -53,8 +54,7 @@ async function seesView(viewId: number, key: string) {
 		.from(savedView)
 		.where(
 			and(
-				eq(savedView.id, viewId),
-				inTenant(savedView),
+				idInTenant(savedView, viewId),
 				eq(savedView.tableKey, key),
 				or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
 			),
@@ -81,13 +81,8 @@ export const rememberTable = forMembers.command(
 			query: input.query,
 			viewId: viewId ? input.viewId : null,
 		};
-		const mine = and(
-			inTenant(tableMemory),
-			eq(tableMemory.userId, tenant.user.id),
-			eq(tableMemory.tableKey, input.tableKey),
-		);
 		if (!memory.columns && !memory.query && memory.viewId === null) {
-			await db.delete(tableMemory).where(mine);
+			await db.delete(tableMemory).where(memoryOf(input.tableKey));
 		} else {
 			await db
 				.insert(tableMemory)
