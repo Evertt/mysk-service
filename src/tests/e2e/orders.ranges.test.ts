@@ -4,7 +4,7 @@ import { type DateRange, dayStart, presetRange } from "#lib/components/data-tabl
 import { addDays, nextDay, toDateInput } from "#lib/dates.ts";
 import { formatDate, formatNumber } from "#lib/i18n/format.ts";
 
-import { isRemote, organizations, rows, useApp, value } from "./app.ts";
+import { afresh, isRemote, organizations, rows, useApp, value } from "./app.ts";
 import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -34,7 +34,7 @@ describe("range filters on the orders' dates, in North", () => {
 		const { page } = app;
 		const expected = await countIn("scheduled_for", presetRange("next-7-days"));
 		expect(expected).toBeGreaterThan(0);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 
 		await app.openFilter("Scheduled");
 		await page
@@ -63,7 +63,7 @@ describe("range filters on the orders' dates, in North", () => {
 		const range = { from: toDateInput(addDays(today, -20)), to: toDateInput(addDays(today, -6)) };
 		const expected = await countIn("scheduled_for", range);
 		expect(expected).toBeGreaterThan(0);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 
 		await app.openFilter("Scheduled");
 		await page.getByLabel("From: date").fill(range.from);
@@ -127,7 +127,7 @@ describe("range filters on the orders' dates, in North", () => {
 		);
 		const soon = await countIn("scheduled_for", presetRange("next-7-days"));
 		expect(unscheduled).toBeGreaterThan(0);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 
 		await app.openFilter("Scheduled");
 		await page
@@ -152,14 +152,14 @@ describe("range filters on the orders' dates, in North", () => {
 		await page.waitForURL((url) => url.searchParams.get("scheduled") === "next-7-days");
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(soon);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("a preset as an end, picked in the Filter menu and from a link", async () => {
 		const { page } = app;
 		const fromToday = await countIn("scheduled_for", { from: toDateInput(new Date()), to: null });
 		expect(fromToday).toBeGreaterThan(0);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		await app.openFilter("Scheduled");
 		await page.getByLabel("From", { exact: true }).selectOption({ label: "Today" });
 		await page.getByRole("button", { name: "Add" }).click();
@@ -194,7 +194,7 @@ describe("range filters on the orders' dates, in North", () => {
 				Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100),
 			);
 
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		await app.openFilter("Total");
 		await page.getByLabel("Minimum", { exact: true }).fill("500");
 		await page.getByRole("button", { name: "Add" }).click();
@@ -228,7 +228,7 @@ describe("range filters on the orders' dates, in North", () => {
 		const total = formatNumber(over, "en");
 		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
 		await bar.getByText(`All ${total} matching selected`).waitFor();
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("a bulk action on all the matching orders acts on those in the range only", async () => {
@@ -297,7 +297,7 @@ describe("range filters on the orders' dates, in North", () => {
 			{ total: [{ from: 12.5, to: null }] },
 			{ total: ["500.."] },
 		])("%j", async (filters) => {
-			await app.go("/orders");
+			await app.go(afresh("/orders"));
 			await tamperWithQuery<Query>(app.page, "getOrders", (arg) => ({ ...arg, filters }));
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([

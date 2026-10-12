@@ -108,17 +108,18 @@ describe("in North", () => {
 		await leaveAndComeBack(page);
 		expect(search(page)).toBe("?status=quote&sort=-priority");
 		await admin.tableSettled();
-		expect(await menu(page).getAttribute("aria-label")).toBe(
-			"Saved views: Quotes, with unsaved changes",
-		);
+		// The menu loads on its own.
+		await expect
+			.poll(() => menu(page).getAttribute("aria-label"))
+			.toBe("Saved views: Quotes, with unsaved changes");
 		expect(await headers(page)).not.toContain("Total");
 
 		// Also when the page is opened afresh.
 		await admin.go("/orders");
 		expect(search(page)).toBe("?status=quote&sort=-priority");
-		expect(await menu(page).getAttribute("aria-label")).toBe(
-			"Saved views: Quotes, with unsaved changes",
-		);
+		await expect
+			.poll(() => menu(page).getAttribute("aria-label"))
+			.toBe("Saved views: Quotes, with unsaved changes");
 	});
 
 	test("a link with parameters wins", async () => {
@@ -126,6 +127,8 @@ describe("in North", () => {
 		await admin.go("/orders?priority=urgent");
 		await admin.tableSettled();
 		expect(search(page)).toBe("?priority=urgent");
+		// Once the menu has loaded (it's disabled until then): no view.
+		await expect.poll(() => menu(page).isEnabled()).toBe(true);
 		expect(await menu(page).getAttribute("aria-label")).toBeNull();
 		// The columns still come back, and the list is now left like this.
 		expect(await headers(page)).not.toContain("Total");

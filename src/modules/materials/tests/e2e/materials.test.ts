@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	afresh,
 	countIn,
 	isRemote,
 	nextCode,
@@ -11,8 +12,8 @@ import {
 	tamperWithQuery,
 	unbalancedStock,
 	useApp,
-	users,
 	userNames,
+	users,
 	value,
 } from "#e2e/app.ts";
 import { formatCents, formatNumber } from "#lib/i18n/format.ts";
@@ -140,7 +141,7 @@ describe("in North", () => {
 	});
 
 	test("the list shows North's materials by name, 20 per page", async () => {
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 		const total = await countIn("material", north.id);
 		expect(await app.rowCount()).toBe(total);
 		const shown = await names();
@@ -172,7 +173,7 @@ describe("in North", () => {
 			change: (arg: Query) => Query,
 			trigger: () => unknown,
 		) => {
-			await app.go("/materials");
+			await app.go(afresh("/materials"));
 			await tamperWithQuery<Query>(app.page, name, change);
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
@@ -201,7 +202,7 @@ describe("in North", () => {
 		});
 
 		test("while the list works as before once the request is right", async () => {
-			await app.go("/materials");
+			await app.go(afresh("/materials"));
 			expect(await app.rowCount()).toBe(await countIn("material", north.id));
 		});
 	});
@@ -294,7 +295,7 @@ describe("in North", () => {
 		const search = () => new URL(page.url()).search;
 		const pageOf = (pages: number) => page.getByText(new RegExp(`^Page \\d+ of ${pages}$`));
 
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 		await app.sortBy("Unit price", "descending");
 		await page.waitForURL(() => search() === "?sort=-price");
 		await app.tableSettled();
@@ -370,7 +371,7 @@ describe("in North", () => {
 		expect(await page.getByLabel("Search materials…").inputValue()).toBe("filter");
 		expect(await page.getByRole("button", { name: "Rows per page" }).innerText()).toBe("50");
 
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 	});
 
 	test("the server sorts by stock level and sends one page at a time", async () => {
@@ -393,7 +394,7 @@ describe("in North", () => {
 		expect((await response.text()).split("unitPrice").length - 1).toBe(Math.min(20, total - 20));
 		await app.tableSettled();
 		expect(await names()).toEqual(expected.slice(20, 40).map((row) => row.name));
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 	});
 
 	test("sorting by unit price puts the most expensive first", async () => {
@@ -778,14 +779,14 @@ describe("in South", () => {
 			[testName, north.id],
 		);
 		await app.switchOrganization(south.name);
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 		expect(await app.rowCount()).toBe(await countIn("material", south.id));
 		await expectFirstMaterial(south.id);
 	});
 
 	test("the filters count South's materials only", async () => {
 		const { page } = app;
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 		await app.openFilter("Stock level");
 		// Polled: the menu shows the filters' titles until it has switched to the picked one's values.
 		const counted = async () =>
