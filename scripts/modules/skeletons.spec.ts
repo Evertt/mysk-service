@@ -31,12 +31,12 @@ describe("skeletonProblems", () => {
 
 describe("renderSkeletons", () => {
 	test("is valid and empty with no skeletons", () => {
-		expect(renderSkeletons([module("contracts")])).toContain(
-			"export const moduleSkeletons: { module: string; routeId: string; skeleton: Component }[] = [];",
-		);
+		const source = renderSkeletons([module("contracts")]);
+		expect(source).toContain("load: () => Promise<{ default: Component }>;\n}[] = [];");
+		expect(source).not.toContain("import(");
 	});
 
-	test("imports each skeleton and lists it by its page's route id", () => {
+	test("lists a loader for each skeleton by its page's route id, and imports none statically", () => {
 		const source = renderSkeletons([
 			module("schedule", {
 				routeFiles: ["(app)/schedule/+page.svelte"],
@@ -44,10 +44,9 @@ describe("renderSkeletons", () => {
 			}),
 		]);
 		expect(source).toContain(
-			'import scheduleSkeleton0 from "#modules/schedule/skeletons/(app)/schedule.svelte";',
+			'\t{\n\t\tmodule: "schedule",\n\t\trouteId: "/(app)/(modules)/schedule",\n' +
+				'\t\tload: () => import("#modules/schedule/skeletons/(app)/schedule.svelte"),\n\t},',
 		);
-		expect(source).toContain(
-			'{ module: "schedule", routeId: "/(app)/(modules)/schedule", skeleton: scheduleSkeleton0 },',
-		);
+		expect(source).not.toMatch(/^import \w+ from "#modules/m);
 	});
 });

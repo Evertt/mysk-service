@@ -30,16 +30,16 @@ export function skeletonProblems(modules: ModuleFolder[]) {
 }
 
 /**
- * The registry of the modules' skeletons, `src/lib/modules/skeletons.gen.ts`. It imports them
- * statically, so they're in the office's bundle for every tenant: they're small, and a component
- * module that comes in during a navigation trips Svelte (5.57) up.
+ * The registry of the modules' skeletons, `src/lib/modules/skeletons.gen.ts`. It lists a loader
+ * for each, so a tenant's office loads only its modules' skeletons, after the layout mounts
+ * (`loadModuleSkeletons()`). An experiment: a component module that comes in this way has been
+ * seen to trip Svelte (5.57) up while signing in ("Batch has scheduled effects").
  */
 export function renderSkeletons(modules: ModuleFolder[]) {
 	const entries = modules.flatMap((module) =>
-		module.skeletonFiles.map((file, index) => ({
+		module.skeletonFiles.map((file) => ({
 			module: module.id,
 			file,
-			name: `${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}Skeleton${index}`,
 			routeId: skeletonPage(file).routeId!,
 		})),
 	);
@@ -47,17 +47,13 @@ export function renderSkeletons(modules: ModuleFolder[]) {
 		`// ${GENERATED} from src/modules/*/skeletons/. Don't edit.`,
 		`import type { Component } from "svelte";`,
 		"",
-		...entries.map(
-			(entry) => `import ${entry.name} from "#modules/${entry.module}/${entry.file}";`,
-		),
-		...(entries.length ? [""] : []),
 		`/** What the modules' pages show while they load, by route id (\`src/routes/(app)/page-skeleton.ts\`). */`,
-		`export const moduleSkeletons: { module: string; routeId: string; skeleton: Component }[] = ${
+		`export const moduleSkeletons: {\n\tmodule: string;\n\trouteId: string;\n\tload: () => Promise<{ default: Component }>;\n}[] = ${
 			entries.length
 				? `[\n${entries
 						.map(
 							(entry) =>
-								`\t{ module: ${JSON.stringify(entry.module)}, routeId: ${JSON.stringify(entry.routeId)}, skeleton: ${entry.name} },`,
+								`\t{\n\t\tmodule: ${JSON.stringify(entry.module)},\n\t\trouteId: ${JSON.stringify(entry.routeId)},\n\t\tload: () => import(${JSON.stringify(`#modules/${entry.module}/${entry.file}`)}),\n\t},`,
 						)
 						.join("\n")}\n]`
 				: "[]"

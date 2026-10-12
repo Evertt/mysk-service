@@ -3,6 +3,8 @@
 	The app shell (sidebar and header) for everything behind the login.
 -->
 <script lang="ts">
+	import { type Component, onMount } from "svelte";
+
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
@@ -10,7 +12,7 @@
 	import AppHeader from "./app-header.svelte";
 	import AppSidebar from "./app-sidebar.svelte";
 	import PageSkeleton from "./page-skeleton.svelte";
-	import { moduleSkeletonsOf } from "./page-skeleton.ts";
+	import { loadModuleSkeletons } from "./page-skeleton.ts";
 
 	let { children }: LayoutProps = $props();
 
@@ -18,8 +20,16 @@
 	// once, not as a `$derived`: a refresh of the tenant must not hold up the shell.
 	const { modules: moduleIds } = await getCurrentTenant();
 
-	/** The skeletons of the tenant's modules' pages, by route id. */
-	const skeletons = moduleSkeletonsOf(moduleIds);
+	/**
+	 * The skeletons of the tenant's modules' pages, by route id, loaded once the shell has mounted.
+	 * A plain `Map`: the overlay is made anew for each navigation, so it reads what's there then.
+	 */
+	const skeletons = new Map<string, Component>();
+	onMount(() => {
+		void loadModuleSkeletons(moduleIds).then((loaded) => {
+			for (const [routeId, skeleton] of loaded) skeletons.set(routeId, skeleton);
+		});
+	});
 </script>
 
 <!-- A list page whose table fills the viewport (see `data-table.svelte`) is as high as the screen,

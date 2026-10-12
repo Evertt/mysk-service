@@ -37,4 +37,9 @@ export const variables = defineEnvVars({
 			"Optional, for tests. A file that mail is appended to (one JSON object per line) instead of being sent or logged.",
 		schema: (value) => value || undefined,
 	},
+	DEV_REMOTE_DELAY_MS: {
+		description:
+			"Optional, in development only. Milliseconds to hold up each remote function call, to try navigations under a slow server.",
+		schema: (value) => (value ? Number(value) : undefined),
+	},
 });

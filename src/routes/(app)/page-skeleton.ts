@@ -27,16 +27,21 @@ export function pageShape(routeId: string | null): PageShape {
 }
 
 /**
- * The skeletons the tenant's modules have for their pages (`src/modules/<id>/skeletons/`), by
- * route id.
+ * Loads the skeletons the tenant's modules have for their pages (`src/modules/<id>/skeletons/`),
+ * by route id.
  */
-export function moduleSkeletonsOf(
+export async function loadModuleSkeletons(
 	moduleIds: readonly string[],
-	registry: readonly { module: string; routeId: string; skeleton: Component }[] = moduleSkeletons,
+	registry: readonly {
+		module: string;
+		routeId: string;
+		load: () => Promise<{ default: Component }>;
+	}[] = moduleSkeletons,
 ) {
-	return new Map(
+	const entries = await Promise.all(
 		registry
 			.filter((entry) => moduleIds.includes(entry.module))
-			.map((entry) => [entry.routeId, entry.skeleton]),
+			.map(async (entry) => [entry.routeId, (await entry.load()).default] as const),
 	);
+	return new Map<string, Component>(entries);
 }

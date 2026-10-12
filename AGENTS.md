@@ -268,8 +268,14 @@ migration committed.
   it, guessed from its route (`pageShape()` in `src/routes/(app)/page-skeleton.ts`: list, details,
   form). A module page that looks otherwise gets its own: `src/modules/<id>/skeletons/<path>.svelte`
   mirrors `routes/<path>/+page.svelte` (the schedule's `skeletons/(app)/schedule.svelte`). The
-  generator lists them in `src/lib/modules/skeletons.gen.ts`, which imports them statically (a
-  component loaded with `import()` during a navigation trips Svelte 5.57 up), so keep them small.
+  generator lists a loader for each in `src/lib/modules/skeletons.gen.ts`
+  (`load: () => import(…)`), and the office layout loads its tenant's after it mounts
+  (`loadModuleSkeletons()`, in `onMount`) into a plain `Map` that `PageSkeleton` reads.
+  **On this branch (`lazy-module-skeletons`) this is an experiment** for reproducing a Svelte 5.57
+  invariant: a component module that comes in after the layout mounts has made signing in throw
+  `invariant_violation` "Batch has scheduled effects" under load; `main` imports the skeletons
+  statically. To try it by hand, `DEV_REMOTE_DELAY_MS=<ms>` holds up each remote function call in
+  `pnpm dev` (`delayRemoteCalls` in `src/hooks.server.ts`).
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
   `{ number: string; equipmentIds: number[] }`) and its contract page renders

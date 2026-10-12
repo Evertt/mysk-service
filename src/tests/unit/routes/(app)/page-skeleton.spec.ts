@@ -1,7 +1,7 @@
 import type { Component } from "svelte";
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
-import { moduleSkeletonsOf, pageShape } from "#routes/(app)/page-skeleton.ts";
+import { loadModuleSkeletons, pageShape } from "#routes/(app)/page-skeleton.ts";
 
 describe("pageShape", () => {
 	test.each([
@@ -24,17 +24,23 @@ describe("pageShape", () => {
 	});
 });
 
-describe("moduleSkeletonsOf", () => {
+describe("loadModuleSkeletons", () => {
 	const Board = (() => {}) as unknown as Component;
 	const Plans = (() => {}) as unknown as Component;
+	const loadPlans = vi.fn(async () => ({ default: Plans }));
 	const registry = [
-		{ module: "schedule", routeId: "/(app)/(modules)/schedule", skeleton: Board },
-		{ module: "maintenance", routeId: "/(app)/(modules)/maintenance", skeleton: Plans },
+		{
+			module: "schedule",
+			routeId: "/(app)/(modules)/schedule",
+			load: async () => ({ default: Board }),
+		},
+		{ module: "maintenance", routeId: "/(app)/(modules)/maintenance", load: loadPlans },
 	];
 
-	test("has the skeletons of the tenant's modules, by route id", () => {
-		expect([...moduleSkeletonsOf(["schedule", "contracts"], registry)]).toEqual([
+	test("loads the skeletons of the tenant's modules, by route id, and only those", async () => {
+		expect([...(await loadModuleSkeletons(["schedule", "contracts"], registry))]).toEqual([
 			["/(app)/(modules)/schedule", Board],
 		]);
+		expect(loadPlans).not.toHaveBeenCalled();
 	});
 });
