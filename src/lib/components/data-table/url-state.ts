@@ -71,6 +71,11 @@ interface TableUrlColumn {
 	filter?: "set" | RangeGrammar;
 	/** The values its filter accepts (others in the URL are ignored); any if not given. */
 	values?: readonly string[];
+	/**
+	 * For a range filter, whether it takes `none`, the rows without a value (a column that can be
+	 * empty); else `none` is ignored like any other token that isn't a range.
+	 */
+	none?: boolean;
 }
 
 /** How a table's state maps onto the URL. */
@@ -218,7 +223,10 @@ function positive(raw: string | null) {
 
 /** Whether a column's filter takes a value from the URL. */
 function accepts(column: TableUrlColumn, value: string) {
-	if (column.filter && column.filter !== "set") return isRangeToken(column.filter, value.trim());
+	if (column.filter && column.filter !== "set") {
+		const token = value.trim();
+		return token === noneToken ? column.none === true : isRangeToken(column.filter, token);
+	}
 	return !column.values || column.values.includes(value);
 }
 

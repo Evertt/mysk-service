@@ -48,6 +48,11 @@ export interface DataTableColumnMeta {
 	 */
 	filter?: "set" | RangeGrammar;
 	/**
+	 * For a range filter on a column that can be empty: takes `none` (`?scheduled=none,this-week`),
+	 * the rows without a value. Give the filter's component its `none` label too.
+	 */
+	filterNone?: boolean;
+	/**
 	 * The values the column's filter can have; others in the URL are ignored. For a column that can
 	 * be empty, `noneToken` among them (the filter's `none` option, `?status=none`).
 	 */

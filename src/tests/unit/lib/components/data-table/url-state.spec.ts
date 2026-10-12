@@ -308,7 +308,7 @@ describe("specs", () => {
 describe("range filters", () => {
 	const ranged: TableUrlSpec = {
 		columns: [
-			{ id: "scheduledFor", param: "scheduled", sortable: true, filter: "dateRange" },
+			{ id: "scheduledFor", param: "scheduled", sortable: true, filter: "dateRange", none: true },
 			{ id: "stock", param: "quantity", filter: "numberRange" },
 		],
 	};
@@ -336,6 +336,13 @@ describe("range filters", () => {
 		]);
 		// A number isn't a day, nor a day a number.
 		expect(filtersOf("scheduled=5..10&quantity=2026-10-01")).toEqual([]);
+	});
+
+	test("take `none` only on a column that can be empty", () => {
+		expect(filtersOf("scheduled=none&quantity=none")).toEqual([
+			{ id: "scheduledFor", value: ["none"] },
+		]);
+		expect(filtersOf("quantity=none,..10")).toEqual([{ id: "stock", value: ["..10"] }]);
 	});
 
 	test("are written as they are, readable", () => {

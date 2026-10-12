@@ -60,6 +60,7 @@ export function tableUrlSpec<TData extends RowData>(
 						? filterFnGrammar[column.columnDef.filterFn]
 						: undefined),
 				values: meta?.filterValues,
+				none: meta?.filterNone,
 			};
 		}),
 		defaults: {

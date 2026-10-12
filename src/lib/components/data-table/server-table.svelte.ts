@@ -30,6 +30,7 @@ export function urlGrammar(spec: TableUrlSpec) {
 				groupable: Boolean(column.groupable),
 				filter: column.filter,
 				values: column.values && [...column.values],
+				none: Boolean(column.none),
 			})),
 		defaults: parseTableUrl(new URLSearchParams(), spec),
 		pageSizes: spec.pageSizes,

@@ -112,7 +112,8 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		// By a range of days, e.g. `?scheduled=this-week`.
 		filterFn: "inDateRange",
-		meta: { label: m.orders_column_scheduled, param: "scheduled" },
+		// `?scheduled=none`: the unscheduled orders.
+		meta: { label: m.orders_column_scheduled, param: "scheduled", filterNone: true },
 	}),
 	column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),

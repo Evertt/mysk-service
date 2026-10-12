@@ -86,6 +86,8 @@ export interface FilterKind<T> {
 	 * value, a range, rather than a set of values.
 	 */
 	range?: RangeGrammar;
+	/** For a range filter, whether it takes `none` (`orNone(dateRange)`, see `TableUrlColumn.none`). */
+	none?: boolean;
 }
 
 /** A filter on a text, e.g. a customer's code. */
@@ -122,7 +124,7 @@ export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
 	fromUrl: (token) => (token === noneToken ? null : kind.fromUrl(token)),
 	toUrl: (value) => (value === null ? noneToken : kind.toUrl(value)),
 	...(kind.values ? { values: [...kind.values, noneToken] } : {}),
-	...(kind.range ? { range: kind.range } : {}),
+	...(kind.range ? { range: kind.range, none: true } : {}),
 });
 
 /** A range's schema: both ends, either may be open (`null`) but not both, in order. */
@@ -296,6 +298,7 @@ export function toUrlSpec<C extends ListColumns>(def: ListDef<C>): TableUrlSpec 
 				? {
 						filter: column.filter.range ?? ("set" as const),
 						...(column.filter.values ? { values: column.filter.values } : {}),
+						...(column.filter.none ? { none: true } : {}),
 					}
 				: {}),
 		})),

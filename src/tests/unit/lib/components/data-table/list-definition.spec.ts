@@ -729,7 +729,10 @@ describe("range filters", () => {
 		);
 		expect(query.filters).toEqual({ due: [null, { from: "2026-10-12", to: "2026-10-18" }] });
 		expect(v.safeParse(nullable.query, query).success).toBe(true);
-		expect(nullable.urlSpec.columns).toEqual([{ id: "due", filter: "dateRange" }]);
+		expect(nullable.urlSpec.columns).toEqual([{ id: "due", filter: "dateRange", none: true }]);
+		// A range that can't be empty doesn't take `none` from the URL, so no filter shows it.
+		const plain = defineList({ columns: { due: { filter: dateRange } } });
+		expect(parseTableUrl(new URLSearchParams("due=none"), plain.urlSpec).columnFilters).toEqual([]);
 	});
 
 	test("a preset is an end: its first day as the start, its last as the end", () => {

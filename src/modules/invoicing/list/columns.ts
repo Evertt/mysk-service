@@ -62,7 +62,7 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		// `?due=before-today`: due before today; `none` the drafts.
 		filterFn: "inDateRange",
-		meta: { label: m.invoices_column_due, param: "due" },
+		meta: { label: m.invoices_column_due, param: "due", filterNone: true },
 	}),
 	column.accessor("total", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
