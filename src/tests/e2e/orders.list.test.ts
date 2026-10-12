@@ -312,7 +312,8 @@ describe("in North", () => {
 			await page.getByRole("button", { name: "Go to next page" }).click();
 			await expect.poll(() => table.getAttribute("aria-busy")).toBe("true");
 			expect(await shownNumbers(app)).toEqual(before);
-			expect(await table.getByRole("progressbar").count()).toBe(1);
+			// The bar shows once the wait has taken a moment (see `progress-bar.svelte`).
+			await expect.poll(() => table.getByRole("progressbar").count()).toBe(1);
 			await expect
 				.poll(() => table.locator("tbody").evaluate((tbody) => getComputedStyle(tbody).opacity))
 				.toBe("0.5");

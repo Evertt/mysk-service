@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { navigating } from "$app/state";
 	import { onMount } from "svelte";
 
 	import favicon from "#lib/assets/favicon.svg";
+	import ProgressBar from "#lib/components/progress-bar.svelte";
 	import ThemeProvider from "#lib/themes/theme-provider.svelte";
 	import { getMode, getTheme } from "#lib/themes/theme.remote.ts";
 
 	import "./layout.css";
 	import type { LayoutProps } from "./$types";
-	import NavigationProgress from "./navigation-progress.svelte";
 
 	let { children }: LayoutProps = $props();
 
@@ -22,7 +23,13 @@
 </svelte:head>
 
 <ThemeProvider name={await getTheme()} mode={await getMode()}>
-	<NavigationProgress />
+	<!-- While a navigation waits for the next page's data (SvelteKit keeps `navigating` set until its
+		remote queries have answered). -->
+	<ProgressBar
+		active={!!navigating.to}
+		label={m.common_navigation_loading()}
+		class="navigation-progress fixed inset-x-0 top-0 z-100"
+	/>
 	{@render children()}
 	<Toaster
 		richColors
@@ -31,3 +38,10 @@
 		closeButtonAriaLabel={m.common_close_notification()}
 	/>
 </ThemeProvider>
+
+<style>
+	/* A table's own loading bar is enough (a filter, sort or page of a list, see `data-table.svelte`). */
+	:global(body:has([data-slot="data-table"][aria-busy="true"]) .navigation-progress) {
+		display: none;
+	}
+</style>

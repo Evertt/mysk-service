@@ -22,6 +22,7 @@
 	the keyboard navigation.
 -->
 <script lang="ts">
+	import ProgressBar from "#lib/components/progress-bar.svelte";
 	import { useTheme } from "#lib/themes/context.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -114,13 +115,11 @@
 	)}
 	{@attach overflowTracker}
 >
-	{#if loading}
-		<div
-			role="progressbar"
-			aria-label={m.common_table_loading()}
-			class="absolute inset-x-0 top-0 z-40 h-0.5 animate-pulse bg-primary/60"
-		></div>
-	{/if}
+	<ProgressBar
+		active={loading}
+		label={m.common_table_loading()}
+		class="absolute inset-x-0 top-0 z-40"
+	/>
 	<span id={hintId} class="sr-only">
 		{m.common_table_keyboard_hint()}
 		{#if grouped}{m.common_table_keyboard_hint_groups()}{/if}
