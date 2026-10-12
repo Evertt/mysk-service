@@ -6,7 +6,7 @@ import { generateModules } from "./generate.ts";
 
 /** The files whose coming and going changes what the generator writes. */
 const inputs =
-	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|slots(?:\/.*)?|bulk-actions(?:\/.*)?|columns(?:\/.*)?|api(?:\/extensions\.ts)?|server(?:\/(?:index\.ts|schema\.ts|seed\.ts|columns(?:\/.*)?))?|messages(?:\/.*)?))?)?$/;
+	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|slots(?:\/.*)?|skeletons(?:\/.*)?|bulk-actions(?:\/.*)?|columns(?:\/.*)?|api(?:\/extensions\.ts)?|server(?:\/(?:index\.ts|schema\.ts|seed\.ts|columns(?:\/.*)?))?|messages(?:\/.*)?))?)?$/;
 
 /** The files that declare extension points, whose ids and names the generator reads. */
 const pointFiles = /^src\/(?:lib\/[^/]+|modules\/[^/]+\/api)\/extensions\.ts$/;

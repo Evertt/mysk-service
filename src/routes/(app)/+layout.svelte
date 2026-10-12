@@ -10,11 +10,16 @@
 	import AppHeader from "./app-header.svelte";
 	import AppSidebar from "./app-sidebar.svelte";
 	import PageSkeleton from "./page-skeleton.svelte";
+	import { moduleSkeletonsOf } from "./page-skeleton.ts";
 
 	let { children }: LayoutProps = $props();
 
-	// Before any office page loads: sends field engineers who navigate here to their portal.
-	await getCurrentTenant();
+	// Before any office page loads: sends field engineers who navigate here to their portal. Read
+	// once, not as a `$derived`: a refresh of the tenant must not hold up the shell.
+	const { modules: moduleIds } = await getCurrentTenant();
+
+	/** The skeletons of the tenant's modules' pages, by route id. */
+	const skeletons = moduleSkeletonsOf(moduleIds);
 </script>
 
 <!-- A list page whose table fills the viewport (see `data-table.svelte`) is as high as the screen,
@@ -26,9 +31,9 @@
 		<AppHeader />
 		<div class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6">
 			{@render children()}
-			<NavigationSkeleton class="p-4 md:p-6">
+			<NavigationSkeleton group="/(app)" class="p-4 md:p-6">
 				{#snippet skeleton(routeId)}
-					<PageSkeleton {routeId} />
+					<PageSkeleton {routeId} {skeletons} />
 				{/snippet}
 			</NavigationSkeleton>
 		</div>

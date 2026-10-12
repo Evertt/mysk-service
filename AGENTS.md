@@ -258,6 +258,12 @@ migration committed.
   schema, `form-parts/<point id>.ts` (the generator refuses either without the other; see "Form
   slots" under "Tenants and modules"), and the page passes the form's fields:
   `<ExtensionSlot point={form} props={{ order }} {fields} />`.
+- **Skeletons**: while a navigation waits for the next page's data, the office shows a skeleton of
+  it, guessed from its route (`pageShape()` in `src/routes/(app)/page-skeleton.ts`: list, details,
+  form). A module page that looks otherwise gets its own: `src/modules/<id>/skeletons/<path>.svelte`
+  mirrors `routes/<path>/+page.svelte` (the schedule's `skeletons/(app)/schedule.svelte`). The
+  generator lists them in `src/lib/modules/skeletons.gen.ts`, which imports them statically (a
+  component loaded with `import()` during a navigation trips Svelte 5.57 up), so keep them small.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
   `{ number: string; equipmentIds: number[] }`) and its contract page renders

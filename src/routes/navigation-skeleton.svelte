@@ -16,16 +16,25 @@
 	import type { ClassValue } from "svelte/elements";
 
 	let {
+		group,
 		skeleton,
 		class: className,
 	}: {
+		/**
+		 * The route group whose pages it stands in for, e.g. `/(app)`: a navigation out of it (signing
+		 * out) leaves this layout, so shows no skeleton of its pages.
+		 */
+		group: string;
 		/** The skeleton, given the id of the route the navigation goes to. */
 		skeleton: Snippet<[routeId: string | null]>;
 		class?: ClassValue;
 	} = $props();
 
 	// The delay is CSS: state set from a timer would wait for the navigation, like the page.
-	const leaving = $derived(!!navigating.to && navigating.to.url.pathname !== page.url.pathname);
+	const leaving = $derived(
+		!!navigating.to?.route.id?.startsWith(`${group}/`) &&
+			navigating.to.url.pathname !== page.url.pathname,
+	);
 </script>
 
 {#if leaving}

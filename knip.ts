@@ -22,6 +22,7 @@ const config: KnipConfig = {
 		"src/modules/*/module.ts",
 		"src/modules/*/server/{index,schema,seed}.ts",
 		"src/modules/*/slots/*/*.svelte",
+		"src/modules/*/skeletons/**/*.svelte",
 		"src/modules/*/bulk-actions/*.ts",
 		"src/modules/*/columns/*.ts",
 		"src/modules/*/server/columns/*.ts",

@@ -22,6 +22,7 @@ import { byDependency } from "./graph.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
 import { renderRegistries } from "./registries.ts";
 import { isGenerated, walk } from "./shared.ts";
+import { renderSkeletons, skeletonProblems } from "./skeletons.ts";
 import { planStubs } from "./stubs.ts";
 
 /** Writes `file` unless it already has this content; through a rename, so readers never see half. */
@@ -79,6 +80,7 @@ export function generateModules(root: string) {
 	problems.push(...checkModules(modules, { coreRouteFolders: routes.core, patterns, locales }));
 	const points = findPoints(root);
 	problems.push(...extensionProblems(points, modules));
+	problems.push(...skeletonProblems(modules));
 	if (problems.length) {
 		throw new Error(`The modules in src/modules break the rules:\n- ${problems.join("\n- ")}`);
 	}
@@ -92,6 +94,7 @@ export function generateModules(root: string) {
 	write("src/lib/extensions/contributions.gen.ts", renderContributions(points, ordered));
 	write("src/lib/server/lists/columns.gen.ts", renderColumnSql(points, ordered));
 	write("src/lib/extensions/form-parts.gen.ts", renderFormParts(points, ordered));
+	write("src/lib/modules/skeletons.gen.ts", renderSkeletons(ordered));
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

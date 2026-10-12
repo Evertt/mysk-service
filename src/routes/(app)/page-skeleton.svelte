@@ -1,13 +1,24 @@
 <!--
 	@component
-	What an office page shows while its data loads: the outline of the page it'll be, by its route
-	(see `pageShape()`).
+	What an office page shows while its data loads: the page's own skeleton if it has one (a
+	module's, see `moduleSkeletonsOf()`), else the outline of the page it'll be, by its route (see
+	`pageShape()`).
 -->
 <script lang="ts">
+	import type { Component } from "svelte";
+
 	import { pageShape } from "./page-skeleton.ts";
 
-	let { routeId }: { routeId: string | null } = $props();
+	let {
+		routeId,
+		skeletons,
+	}: {
+		routeId: string | null;
+		/** The pages' own skeletons, by route id. */
+		skeletons: ReadonlyMap<string, Component>;
+	} = $props();
 
+	const Own = $derived(routeId === null ? undefined : skeletons.get(routeId));
 	const shape = $derived(pageShape(routeId));
 </script>
 
@@ -37,7 +48,9 @@
 {/snippet}
 
 <div class="flex flex-col gap-6">
-	{#if shape === "dashboard"}
+	{#if Own}
+		<Own />
+	{:else if shape === "dashboard"}
 		{@render header({})}
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 			{#each { length: 5 }, index (index)}

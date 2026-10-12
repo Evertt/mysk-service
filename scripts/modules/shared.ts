@@ -59,6 +59,11 @@ export interface ModuleFolder {
 	 * at those form slots.
 	 */
 	formPartFiles: string[];
+	/**
+	 * What its pages show while they load, one per page, mirroring `routes/`:
+	 * `skeletons/(app)/schedule.svelte` for `routes/(app)/schedule/+page.svelte`.
+	 */
+	skeletonFiles: string[];
 	/** Which of the server files it has. */
 	server: { index: boolean; schema: boolean; seed: boolean };
 	/** Its message sections (`messages/<locale>/<section>.json`) per language, sorted. */

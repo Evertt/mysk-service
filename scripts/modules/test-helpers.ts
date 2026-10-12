@@ -32,6 +32,7 @@ export function module(
 		columnFiles: [],
 		serverColumnFiles: [],
 		formPartFiles: [],
+		skeletonFiles: [],
 		server: { index: false, schema: false, seed: false },
 		messages: { en: sections, nl: sections },
 		...rest,
