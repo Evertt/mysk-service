@@ -7,6 +7,7 @@
 
 	import "./layout.css";
 	import type { LayoutProps } from "./$types";
+	import NavigationProgress from "./navigation-progress.svelte";
 
 	let { children }: LayoutProps = $props();
 
@@ -21,6 +22,7 @@
 </svelte:head>
 
 <ThemeProvider name={await getTheme()} mode={await getMode()}>
+	<NavigationProgress />
 	{@render children()}
 	<Toaster
 		richColors

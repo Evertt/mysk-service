@@ -11,6 +11,7 @@
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
+	import NavigationSkeleton from "../navigation-skeleton.svelte";
 	import type { LayoutProps } from "./$types";
 	import { getMe, signOut } from "./my/portal.remote.ts";
 
@@ -45,7 +46,12 @@
 			</form>
 		</div>
 	</header>
-	<main class="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 p-4 pb-12">
+	<main class="relative mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 p-4 pb-12">
 		{@render children()}
+		<NavigationSkeleton class="flex flex-col gap-4 p-4">
+			<Skeleton class="h-8 w-48" />
+			<Skeleton class="h-32" />
+			<Skeleton class="h-32" />
+		</NavigationSkeleton>
 	</main>
 </div>
