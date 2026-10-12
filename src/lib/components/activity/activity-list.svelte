@@ -76,7 +76,7 @@
 				{#if entry.note}
 					<p class="text-muted-foreground italic">{entry.note}</p>
 				{/if}
-				<time datetime={entry.at.toISOString()} class="text-xs text-muted-foreground tabular-nums">
+				<time datetime={entry.at.toString()} class="text-xs text-muted-foreground tabular-nums">
 					{formatDateTime(entry.at)}
 				</time>
 			</li>

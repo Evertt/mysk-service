@@ -3,7 +3,6 @@ import { describe, expect, test } from "vite-plus/test";
 import { formatRate } from "#modules/invoicing/display.ts";
 import {
 	canChange,
-	dueDate,
 	invoiceState,
 	invoiceTotals,
 	isEditable,
@@ -12,10 +11,10 @@ import {
 	lineAmount,
 	orderLines,
 	roundCents,
-	today,
 	vatOf,
 } from "#modules/invoicing/invoice.ts";
 import { invoiceStatuses } from "#modules/invoicing/model.ts";
+import { day } from "#unit/temporal-support.ts";
 
 describe("amounts", () => {
 	test("round to the cent, halves away from zero", () => {
@@ -64,18 +63,18 @@ describe("amounts", () => {
 });
 
 describe("status", () => {
-	const due = new Date(2026, 9, 7);
+	const due = day("2026-10-07");
 
 	test("a sent invoice is overdue from the day after its due date", () => {
 		const sent = { status: "sent" as const, dueOn: due };
-		expect(isOverdue(sent, new Date(2026, 9, 7, 23, 59))).toBe(false);
-		expect(isOverdue(sent, new Date(2026, 9, 8))).toBe(true);
-		expect(invoiceState(sent, new Date(2026, 9, 8))).toBe("overdue");
-		expect(invoiceState(sent, new Date(2026, 9, 1))).toBe("sent");
+		expect(isOverdue(sent, day("2026-10-07"))).toBe(false);
+		expect(isOverdue(sent, day("2026-10-08"))).toBe(true);
+		expect(invoiceState(sent, day("2026-10-08"))).toBe("overdue");
+		expect(invoiceState(sent, day("2026-10-01"))).toBe("sent");
 	});
 
 	test.each(["draft", "paid", "void"] as const)("a %s invoice is never overdue", (status) => {
-		expect(invoiceState({ status, dueOn: due }, new Date(2027, 0, 1))).toBe(status);
+		expect(invoiceState({ status, dueOn: due }, day("2027-01-01"))).toBe(status);
 	});
 
 	test("a draft is issued or voided; a sent invoice paid or voided; then it's final", () => {
@@ -87,16 +86,6 @@ describe("status", () => {
 
 	test("only a draft can be edited", () => {
 		expect(invoiceStatuses.filter(isEditable)).toEqual(["draft"]);
-	});
-
-	test("the due date is the payment term after the issue date, across months", () => {
-		expect(dueDate(new Date(2026, 9, 7), 30)).toEqual(new Date(2026, 10, 6));
-		expect(dueDate(new Date(2026, 11, 15), 30)).toEqual(new Date(2027, 0, 14));
-		expect(dueDate(new Date(2026, 9, 7), 0)).toEqual(new Date(2026, 9, 7));
-	});
-
-	test("today is at midnight", () => {
-		expect(today(new Date(2026, 9, 7, 15, 30))).toEqual(new Date(2026, 9, 7));
 	});
 });
 

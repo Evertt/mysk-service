@@ -3,6 +3,7 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { setOrdersStatus } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -11,7 +12,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 
-import { canChange, dueDate, today } from "./invoice.ts";
+import { canChange } from "./invoice.ts";
 import { getInvoices } from "./invoices.remote.ts";
 import type { InvoiceStatus } from "./model.ts";
 import { command, form } from "./remote-functions.ts";
@@ -85,11 +86,12 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 			await setOrdersStatus(tx, orders, "invoiced", invoiceNote(found));
 		}
 
-		const issuedOn = today();
+		// Today, the user's.
+		const issuedOn = Temporal.Now.plainDateISO(getTimeZone());
 		const issued = {
 			status: "sent" as const,
 			issuedOn,
-			dueOn: dueDate(issuedOn, found.paymentTermDays),
+			dueOn: issuedOn.add({ days: found.paymentTermDays }),
 			vatRate: settings.vatRate,
 		};
 		await tx.update(invoice).set(issued).where(idInTenant(invoice, found.id));
@@ -111,7 +113,7 @@ function payInvoice(id: number) {
 		const found = await changing(tx, id, "paid");
 		await tx
 			.update(invoice)
-			.set({ status: "paid", paidOn: today() })
+			.set({ status: "paid", paidOn: Temporal.Now.plainDateISO(getTimeZone()) })
 			.where(idInTenant(invoice, found.id));
 		await recordActivity(tx, { action: "paid", subject: invoiceSubject(found) });
 		return found;
@@ -152,7 +154,7 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		}
 		await tx
 			.update(invoice)
-			.set({ status: "void", voidedAt: new Date() })
+			.set({ status: "void", voidedAt: Temporal.Now.instant() })
 			.where(idInTenant(invoice, found.id));
 		await recordActivity(tx, { action: "voided", subject: invoiceSubject(found) });
 		return found;

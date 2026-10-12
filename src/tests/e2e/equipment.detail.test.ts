@@ -16,21 +16,23 @@ const { card, customerOptions, shownTimeline, timeline } = equipmentPage(app);
  * below them.
  */
 async function expectedTimeline(id: number) {
-	const [unit] = await rows<{ installed: number; warranty: number }>(
+	const [unit] = await rows<{ installed: string; warranty: string }>(
 		`select installed_at as installed, warranty_until as warranty from equipment where id = ?`,
 		[id],
 	);
-	const orders = await rows<{ number: string; at: number }>(
-		`select number, coalesce(completed_at, scheduled_for, created_at) as at from "order"
+	// An order's day in the machine's time zone (the test server's), and its moment that day.
+	const orders = await rows<{ number: string; day: string; at: number }>(
+		`select number, date(coalesce(completed_at, scheduled_for, created_at), 'unixepoch',
+		 'localtime') as day, coalesce(completed_at, scheduled_for, created_at) as at from "order"
 		 where equipment_id = ? order by at desc, id desc`,
 		[id],
 	);
 	return [
-		{ label: "warranty", at: unit.warranty, rank: 0 },
-		...orders.map((order) => ({ label: order.number, at: order.at, rank: 1 })),
-		{ label: "installation", at: unit.installed, rank: 2 },
+		{ label: "warranty", day: unit.warranty, rank: 0, at: 0 },
+		...orders.map((order) => ({ label: order.number, day: order.day, rank: 1, at: order.at })),
+		{ label: "installation", day: unit.installed, rank: 2, at: 0 },
 	]
-		.sort((a, b) => b.at - a.at || a.rank - b.rank)
+		.sort((a, b) => b.day.localeCompare(a.day) || a.rank - b.rank || b.at - a.at)
 		.map((event) => event.label);
 }
 

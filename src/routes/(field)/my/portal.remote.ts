@@ -123,7 +123,7 @@ async function setStatus(
 	found: MyOrder,
 	status: OrderStatus,
 	action: "work_started" | "completed",
-	{ completedAt, note }: { completedAt?: Date; note?: string } = {},
+	{ completedAt, note }: { completedAt?: Temporal.Instant; note?: string } = {},
 ) {
 	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
 	await saveOrderParts({ tx, order: found, status }).catch((error) => {
@@ -225,7 +225,7 @@ export const completeWork = forEngineers.form(
 		const engineer = await currentEngineer();
 		const number = await db.transaction(async (tx) => {
 			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
-			const now = new Date();
+			const now = Temporal.Now.instant();
 			await setStatus(tx, found, "completed", "completed", {
 				completedAt: now,
 				// Stored, in the language of whoever completes it.

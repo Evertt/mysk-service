@@ -7,7 +7,7 @@ import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "driz
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { addDays, startOfDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
@@ -65,9 +65,9 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
  * and active contracts that end in the coming `days` without a later contract for the customer.
  */
 export const getContractsOverview = query(async () => {
-	const now = new Date();
-	const today = startOfDay(now);
-	const horizon = addDays(today, EXPIRING_DAYS);
+	const now = Temporal.Now.instant();
+	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const horizon = today.add({ days: EXPIRING_DAYS });
 
 	// Only repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).
 	const waiting = await db
@@ -100,7 +100,7 @@ export const getContractsOverview = query(async () => {
 				? [{ ...row, contract: covering, response }]
 				: [];
 		})
-		.sort((a, b) => a.response.due.getTime() - b.response.due.getTime());
+		.sort((a, b) => Temporal.Instant.compare(a.response.due, b.response.due));
 
 	const later = alias(contract, "later");
 	const expiring = await db
@@ -116,7 +116,7 @@ export const getContractsOverview = query(async () => {
 		.where(
 			and(
 				inTenant(contract),
-				lte(contract.startsOn, now),
+				lte(contract.startsOn, today),
 				gte(contract.endsOn, today),
 				lt(contract.endsOn, horizon),
 				notExists(

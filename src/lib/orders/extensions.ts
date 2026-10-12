@@ -33,7 +33,7 @@ export interface OrderFacts {
 	type: OrderType;
 	status: OrderStatus;
 	equipmentId: number | null;
-	createdAt: Date;
+	createdAt: Temporal.Instant;
 }
 
 /**
@@ -129,10 +129,10 @@ export const adjustPrices = defineCollector<PricedOrderFacts[], Map<number, Pric
  * Badges for orders (at `now`), by order id, e.g. a response time about to be missed. A module
  * that fails is left out: the orders still show, without its badges.
  */
-export const tag = defineCollector<{ orders: OrderFacts[]; now: Date }, Map<number, OrderTag[]>>(
-	"orders.tag",
-	{ onError: "skip" },
-);
+export const tag = defineCollector<
+	{ orders: OrderFacts[]; now: Temporal.Instant },
+	Map<number, OrderTag[]>
+>("orders.tag", { onError: "skip" });
 
 /**
  * Core has saved an order. A module refreshes its own queries about it (e.g. what its card on the

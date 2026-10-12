@@ -9,7 +9,6 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
@@ -117,13 +116,13 @@
 					field={fields.installedAt}
 					label={m.equipment_field_installed()}
 					type="date"
-					value={toDateInput(unit?.installedAt)}
+					value={unit?.installedAt.toString() ?? ""}
 				/>
 				<TextField
 					field={fields.warrantyUntil}
 					label={m.equipment_field_warranty()}
 					type="date"
-					value={toDateInput(unit?.warrantyUntil)}
+					value={unit?.warrantyUntil.toString() ?? ""}
 				/>
 			</Field.FieldGroup>
 		</Card.Content>

@@ -2,10 +2,11 @@ import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 
 import OrdersPerWeekChart from "#routes/(app)/(dashboard)/orders-per-week-chart.svelte";
+import { day } from "#unit/temporal-support.ts";
 
 const data = [
 	{
-		week: new Date(2026, 8, 28),
+		week: day("2026-09-28"),
 		quote: 1,
 		scheduled: 2,
 		in_progress: 0,
@@ -14,7 +15,7 @@ const data = [
 		cancelled: 0,
 	},
 	{
-		week: new Date(2026, 9, 5),
+		week: day("2026-10-05"),
 		quote: 11,
 		scheduled: 17,
 		in_progress: 1,

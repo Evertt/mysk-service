@@ -5,6 +5,7 @@ import {
 	columnPinningFeature,
 	columnVisibilityFeature,
 	constructFilterFn,
+	constructSortFn,
 	createFacetedRowModel,
 	createFacetedUniqueValues,
 	createFilteredRowModel,
@@ -25,6 +26,7 @@ import {
 
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
+import { inAnyRange, type RangeGrammar } from "./ranges.ts";
 import { noneToken } from "./url-state.ts";
 
 export interface DataTableColumnMeta {
@@ -40,8 +42,17 @@ export interface DataTableColumnMeta {
 	 * lower case, e.g. `scheduled` for `scheduledFor`. See `url-state.ts`.
 	 */
 	param?: string;
-	/** Puts the column's filter in the URL as a set of values; implied by `filterFn: "oneOf"`. */
-	filter?: "set";
+	/**
+	 * Puts the column's filter in the URL as a set of values (implied by `filterFn: "oneOf"`) or a
+	 * range (`dateRange`, `numberRange`, `moneyRange`: implied by `filterFn: "inDateRange"`,
+	 * `"inNumberRange"` and `"inMoneyRange"`, see `ranges.ts`).
+	 */
+	filter?: "set" | RangeGrammar;
+	/**
+	 * For a range filter on a column that can be empty: takes `none` (`?scheduled=none,this-week`),
+	 * the rows without a value. Give the filter's component its `none` label too.
+	 */
+	filterNone?: boolean;
 	/**
 	 * The values the column's filter can have; others in the URL are ignored. For a column that can
 	 * be empty, `noneToken` among them (the filter's `none` option, `?status=none`).
@@ -77,6 +88,53 @@ const filterFn_oneOf = constructFilterFn({
 });
 
 /**
+ * A range filter's function: keeps the rows whose value is in any of the filter's values, its
+ * tokens from the URL (e.g. `none,this-week` or `..10`, see `ranges.ts`), read on the day it
+ * filters. Used by `DateRangeFilter` and `NumberRangeFilter`.
+ */
+const rangeFilterFn = (grammar: RangeGrammar) =>
+	constructFilterFn({
+		filter: (dataValue: unknown, filterValue: string[]) =>
+			inAnyRange(grammar, dataValue, filterValue),
+		autoRemove: (value: string[] | undefined) => !value?.length,
+	});
+
+/**
+ * Every column's sort unless it brings its own (`defaultColumn` in `table.svelte.ts`): days and
+ * moments (`Temporal.PlainDate`, `Temporal.Instant`) by their own `compare`, as they have no
+ * `valueOf` for TanStack's `basic` (which it falls back to for anything but text and `Date`s) to
+ * compare with; anything else as TanStack's `auto` would.
+ */
+const sortFn_byValue = constructSortFn({
+	sort: (a: unknown, b: unknown, rowA, rowB, columnId) => {
+		if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) {
+			return Temporal.PlainDate.compare(a, b);
+		}
+		if (a instanceof Temporal.Instant && b instanceof Temporal.Instant) {
+			return Temporal.Instant.compare(a, b);
+		}
+		const { table } = rowA as unknown as {
+			table: { getColumn(id: string): AutoSorted | undefined };
+		};
+		const auto = table.getColumn(columnId)?.getAutoSortFn() ?? sortFn_basic;
+		return auto(rowA, rowB, columnId);
+	},
+});
+
+/** What `sortFn_byValue` needs of a column (TanStack's). */
+interface AutoSorted {
+	getAutoSortFn(): typeof sortFn_basic;
+}
+
+/** The URL grammar a column's filter function implies (see `DataTableColumnMeta.filter`). */
+export const filterFnGrammar: Readonly<Record<string, "set" | RangeGrammar>> = {
+	oneOf: "set",
+	inDateRange: "dateRange",
+	inNumberRange: "numberRange",
+	inMoneyRange: "moneyRange",
+};
+
+/**
  * The table features every data table in the app opts into. TanStack Table v9 is tree-shaken:
  * only registered features, row models and sort/filter functions end up in the bundle.
  */
@@ -100,10 +158,15 @@ const tableFeatureSet = tableFeatures({
 	filterFns: {
 		includesString: filterFn_includesString,
 		oneOf: filterFn_oneOf,
+		inDateRange: rangeFilterFn("dateRange"),
+		inNumberRange: rangeFilterFn("numberRange"),
+		// Money in cents, the URL's in euros.
+		inMoneyRange: rangeFilterFn("moneyRange"),
 	},
 	sortFns: {
 		alphanumeric: sortFn_alphanumeric,
 		basic: sortFn_basic,
+		byValue: sortFn_byValue,
 		datetime: sortFn_datetime,
 		text: sortFn_text,
 	},

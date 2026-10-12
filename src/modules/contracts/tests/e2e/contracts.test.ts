@@ -58,7 +58,7 @@ describe("in North", () => {
 		const activePremium = Number(
 			await value(
 				`select count(*) from contract where organization_id = ? and level = 'premium'
-				 and starts_on <= unixepoch() and ends_on + 86400 > unixepoch()`,
+				 and starts_on <= date('now', 'localtime') and ends_on >= date('now', 'localtime')`,
 				[north.id],
 			),
 		);

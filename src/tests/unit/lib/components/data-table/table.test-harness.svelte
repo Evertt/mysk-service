@@ -13,7 +13,7 @@
 		/** In cents. */
 		amount: number;
 		quantity: number;
-		dueOn: Date | null;
+		dueOn: Temporal.PlainDate | null;
 	}
 </script>
 

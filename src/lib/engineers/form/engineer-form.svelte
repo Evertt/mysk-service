@@ -11,7 +11,6 @@
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.ts";
 
 	import { regionOptions, specialtyOptions } from "../display.ts";
 	import type { createEngineer, getEngineer, updateEngineer } from "../engineers.remote.ts";
@@ -106,7 +105,7 @@
 					field={fields.hiredAt}
 					label={m.engineers_field_hired()}
 					type="date"
-					value={toDateInput(engineer?.hiredAt)}
+					value={engineer?.hiredAt.toString() ?? ""}
 				/>
 				<CheckboxField
 					field={fields.active}

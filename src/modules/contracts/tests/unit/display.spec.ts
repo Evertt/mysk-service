@@ -4,7 +4,7 @@ import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import { formatTerm, levelOptions, statusOptions } from "#modules/contracts/display.ts";
 import { contractLevels, contractStatuses } from "#modules/contracts/model.ts";
 
-const day = (value: string) => new Date(`${value}T00:00`);
+const day = (value: string) => Temporal.PlainDate.from(value);
 
 describe("formatTerm", () => {
 	test.each([

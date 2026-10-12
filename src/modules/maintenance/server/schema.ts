@@ -9,7 +9,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, organizationId } from "#lib/server/db/columns.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
 import { planOrderTypes } from "../model.ts";
@@ -34,7 +34,7 @@ export const maintenancePlan = sqliteTable(
 		/** In whole months, 1–60. */
 		intervalMonths: integer("interval_months").notNull(),
 		/** The day the next visit is due, at local midnight. */
-		nextDueOn: integer("next_due_on", { mode: "timestamp" }).notNull(),
+		nextDueOn: day("next_due_on").notNull(),
 		/**
 		 * The day of the month the visits fall on (1–31): the day of the due date the office last set.
 		 * A shorter month takes its last day, and the next step comes back to this one.

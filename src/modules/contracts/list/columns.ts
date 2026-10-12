@@ -79,6 +79,7 @@ export const columns = column.columns([
 	column.accessor("monthlyFee", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
+		filterFn: "inMoneyRange",
 		meta: {
 			label: m.contracts_monthly_fee,
 			align: "end",

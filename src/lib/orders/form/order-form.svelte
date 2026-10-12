@@ -12,7 +12,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { timeOfDay, toDateInput } from "#lib/dates.ts";
+	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
@@ -40,6 +40,8 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// When the order is scheduled for, on the user's clock.
+	const scheduled = $derived(order?.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
 	// Equipment is limited to the chosen customer's units.
 	let customerId = $derived(order ? String(order.customerId) : "");
@@ -155,13 +157,13 @@
 						field={fields.scheduledFor}
 						label={m.orders_field_scheduled_for()}
 						type="date"
-						value={toDateInput(order?.scheduledFor)}
+						value={scheduled?.toPlainDate().toString() ?? ""}
 					/>
 					<TextField
 						field={fields.scheduledTime}
 						label={m.orders_field_time()}
 						type="time"
-						value={order?.scheduledFor ? timeOfDay(order.scheduledFor) : ""}
+						value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? ""}
 					/>
 				</div>
 				<NumberField

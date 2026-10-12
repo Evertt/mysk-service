@@ -7,8 +7,8 @@
 
 /** From and until which days (at midnight, both inclusive) to look for billable items. */
 export interface BillingPeriod {
-	from: Date;
-	until: Date;
+	from: Temporal.PlainDate;
+	until: Temporal.PlainDate;
 }
 
 /** Something a module bills a customer for, other than an order. Amounts in cents. */
@@ -23,5 +23,5 @@ export interface BillableItem {
 	quantity: number;
 	unitPrice: number;
 	/** When it became due. */
-	date: Date;
+	date: Temporal.PlainDate;
 }

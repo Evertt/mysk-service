@@ -7,7 +7,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
+import { between, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
 import { materialsList } from "../list/materials-list.ts";
 import { stockLevels } from "../model.ts";
@@ -20,6 +20,10 @@ import { stockLevelSql } from "./stock.ts";
  */
 export const materialsSql = (): ListSql<typeof materialsList.columns> => {
 	const level = stockLevelSql(material.stock, material.unit);
+	const orderCount = sql`(select count(distinct ${orderLine.orderId}) from ${orderLine} where ${and(
+		inTenant(orderLine),
+		eq(orderLine.materialId, material.id),
+	)})`;
 	return {
 		list: materialsList,
 		// No joins: the usage is counted in a subquery, to sort by it.
@@ -32,21 +36,19 @@ export const materialsSql = (): ListSql<typeof materialsList.columns> => {
 				filter: (units) => inArray(material.unit, units),
 				group: material.unit,
 			},
-			unitPrice: { sort: material.unitPrice },
-			stock: { sort: material.stock },
+			unitPrice: {
+				sort: material.unitPrice,
+				filter: (ranges) => between(material.unitPrice, ranges),
+			},
+			stock: { sort: material.stock, filter: (ranges) => between(material.stock, ranges) },
 			// From out of stock to in stock rather than alphabetically.
 			stockLevel: {
 				sort: rank(level, stockLevels),
 				filter: (levels) => inArray(level, levels),
 				group: level,
 			},
-			// Counted for every material only to sort by them (the page's own are counted apart).
-			orderCount: {
-				sort: sql`(select count(distinct ${orderLine.orderId}) from ${orderLine} where ${and(
-					inTenant(orderLine),
-					eq(orderLine.materialId, material.id),
-				)})`,
-			},
+			// Counted for every material to sort and filter by them (the page's own are counted apart).
+			orderCount: { sort: orderCount, filter: (ranges) => between(orderCount, ranges) },
 		},
 		search: [material.name, material.sku],
 		id: material.id,

@@ -5,6 +5,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth/index.ts";
@@ -98,7 +99,10 @@ export async function createDraft(input: {
 }
 
 /** One of the tenant's invoices with its customer, lines and totals, or a 404. */
-export async function loadInvoice(number: string, now = new Date()) {
+export async function loadInvoice(
+	number: string,
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+) {
 	const found = await db.query.invoice.findFirst({
 		where: and(eq(invoice.number, number), inTenant(invoice)),
 		with: {
@@ -111,7 +115,7 @@ export async function loadInvoice(number: string, now = new Date()) {
 	});
 	if (!found) error(404, m.invoices_number_not_found({ number }));
 	return {
-		invoice: { ...found, state: invoiceState(found, now) },
+		invoice: { ...found, state: invoiceState(found, today) },
 		totals: invoiceTotals(found.lines, found.vatRate),
 	};
 }

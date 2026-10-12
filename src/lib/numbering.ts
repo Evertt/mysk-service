@@ -1,14 +1,15 @@
 /**
  * The codes and numbers of the records the app numbers itself: `CUST-0001`, `ORD-2026-00001`, …
  * The one place that says what they look like; the server picks the next one (`nextNumber()` in
- * `#lib/server/numbering.ts`) and the seed script makes them too. Without imports at runtime, so
- * the seed script can use it. These are the core's; a module numbers its own records the same way
+ * `#lib/server/numbering.ts`) and the seed script makes them too. It imports only `#lib/dates.ts`
+ * (which imports nothing), so the seed script can use it. These are the core's; a module numbers its own records the same way
  * with a `NumberFormat` of its own (e.g. `contractNumber` in `src/modules/contracts/model.ts`),
  * which `formatCode()`, `sequenceStart()` and `nextNumber()` take in place of a kind.
  *
  * They are sequential per organization. A yearly one has the year in it, but the sequence runs on
  * across years: `ORD-2026-00041` is followed by `ORD-2027-00042`.
  */
+import { getTimeZone } from "#lib/dates.ts";
 
 export interface NumberFormat {
 	prefix: string;
@@ -32,7 +33,7 @@ const formatOf = (kind: NumberKind | NumberFormat): NumberFormat =>
 export function formatCode(
 	kind: NumberKind | NumberFormat,
 	sequence: number,
-	year = new Date().getFullYear(),
+	year = Temporal.Now.plainDateISO(getTimeZone()).year,
 ) {
 	const { prefix, digits, yearly } = formatOf(kind);
 	return `${prefix}${yearly ? `${year}-` : ""}${String(sequence).padStart(digits, "0")}`;

@@ -26,6 +26,7 @@
 	import { useTheme } from "#lib/themes/context.ts";
 	import { cn } from "#lib/utils.ts";
 
+	import { columnWidths } from "./column-widths.svelte.ts";
 	import { SELECT_COLUMN } from "./default-pinning.ts";
 	import { groupExpansion } from "./group-expansion.svelte.ts";
 	import GroupRow from "./group-row.svelte";
@@ -35,6 +36,7 @@
 	import { compact, focusRing, opaque } from "./table-classes.ts";
 	import { useTableContext } from "./table.svelte.ts";
 	import { trackOverflow } from "./track-overflow.ts";
+	import { tableUrlSync } from "./url-sync.svelte.ts";
 
 	let {
 		emptyTitle = m.common_table_empty_title(),
@@ -97,6 +99,11 @@
 	let overflow = $state({ start: false, end: false });
 
 	const overflowTracker = trackOverflow((value) => (overflow = value));
+
+	// Columns as wide as the widest cells seen, from page to page (see `column-widths.svelte.ts`).
+	const sync = tableUrlSync(table);
+	// Kept for the visit per owner, so another organization or member never sees its rows.
+	const widths = columnWidths(table, () => sync?.owner && `${sync.owner}|${sync.viewsKey}`);
 </script>
 
 <div
@@ -124,7 +131,21 @@
 		{m.common_table_keyboard_hint()}
 		{#if grouped}{m.common_table_keyboard_hint_groups()}{/if}
 	</span>
-	<Table.Root aria-describedby={hintId}>
+	<Table.Root
+		aria-describedby={hintId}
+		class={cn(widths.frozen && "table-fixed")}
+		data-frozen={widths.frozen ? "" : undefined}
+		{@attach widths.attach}
+	>
+		<!-- While paging, the columns keep their widths. -->
+		{#if widths.frozen}
+			{@const frozen = widths.frozen}
+			<colgroup>
+				{#each columns as column (column.id)}
+					<col style:width={frozen[column.id] ? `${frozen[column.id]}px` : undefined} />
+				{/each}
+			</colgroup>
+		{/if}
 		<Table.Header>
 			{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 				<!-- The header cells inherit the header's background (see `opaque`) through the row. -->
@@ -134,6 +155,7 @@
 						<table.AppHeader {header}>
 							{#snippet children(h)}
 								<Table.Head
+									data-column-id={h.column.id}
 									data-pinned={pin["data-pinned"]}
 									style={pin.style}
 									class={cn(
@@ -193,6 +215,29 @@
 				{/each}
 			{/if}
 		</Table.Body>
+		<!-- The widest cells seen so far (see `column-widths.svelte.ts`): laid out, but not shown. -->
+		<tfoot inert aria-hidden="true" data-slot="data-table-hidden-rows">
+			{#each widths.rows as row, index (index)}
+				<tr class="collapse">
+					{#each columns as column (column.id)}
+						{@const hidden = row.get(column.id)}
+						<Table.Cell data-column-id={column.id} class={compact.cell} {@attach hidden?.attach}>
+							{#if hidden}
+								<!-- In the browser, a cell that can't show what's tried in it just doesn't count. -->
+								<svelte:boundary>
+									<table.AppCell cell={hidden.cell}>
+										{#snippet children(c)}
+											<c.FlexRender cell={c} />
+										{/snippet}
+									</table.AppCell>
+									{#snippet failed()}{/snippet}
+								</svelte:boundary>
+							{/if}
+						</Table.Cell>
+					{/each}
+				</tr>
+			{/each}
+		</tfoot>
 	</Table.Root>
 </div>
 
@@ -210,9 +255,16 @@
 			<table.AppCell {cell}>
 				{#snippet children(c)}
 					<Table.Cell
+						data-column-id={c.column.id}
 						data-pinned={pin["data-pinned"]}
 						style={pin.style}
-						class={cn(compact.cell, pin["data-pinned"] && ["relative z-10", opaque], pin.class)}
+						class={cn(
+							compact.cell,
+							pin["data-pinned"]
+								? ["relative z-10", opaque]
+								: widths.frozen && "overflow-hidden text-ellipsis",
+							pin.class,
+						)}
 					>
 						<c.FlexRender cell={c} />
 					</Table.Cell>

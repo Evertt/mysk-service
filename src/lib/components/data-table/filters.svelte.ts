@@ -1,7 +1,8 @@
 import { getContext, onDestroy, setContext, type Snippet } from "svelte";
 
 /**
- * A filter of a table's toolbar, as `FacetedFilter` and `RecordFilter` register it: the toolbar
+ * A filter of a table's toolbar, as `FacetedFilter`, `RecordFilter`, `DateRangeFilter` and
+ * `NumberRangeFilter` register it: the toolbar
  * lists it in its Filter menu and, while it has values, shows it as a pill (see `Toolbar`).
  */
 export interface TableFilter {
@@ -9,9 +10,15 @@ export interface TableFilter {
 	readonly columnId: string;
 	/** The column's label, e.g. "Status". */
 	readonly title: string;
-	/** The labels of the chosen values, in the filter's order; none while the filter is off. */
+	/**
+	 * The labels of the chosen values, in the filter's order (a range's: one, e.g. "This week");
+	 * none while the filter is off.
+	 */
 	readonly chosen: readonly string[];
-	/** The values to choose from, with a search box: shown in the Filter menu and the pill. */
+	/**
+	 * The values to choose from, with a search box (or a range's presets and ends): shown in the
+	 * Filter menu and the pill.
+	 */
 	content: Snippet;
 	/** Takes the filter off. */
 	clear(): void;

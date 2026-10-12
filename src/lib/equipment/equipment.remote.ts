@@ -76,7 +76,7 @@ async function checkUnit(
 			problems.push({ field: "customerId", message: m.equipment_move_refused({ count: total }) });
 		}
 	}
-	if (input.warrantyUntil < input.installedAt) {
+	if (Temporal.PlainDate.compare(input.warrantyUntil, input.installedAt) < 0) {
 		problems.push({ field: "warrantyUntil", message: m.equipment_warranty_before_installed() });
 	}
 	return problems;

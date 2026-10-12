@@ -4,7 +4,7 @@
 	orders scroll by. The orders can't be dragged here, only planned with `onschedule`.
 -->
 <script lang="ts">
-	import { dayKey, formatLongDay, type ScheduleOrder } from "./board.ts";
+	import { formatLongDay, type ScheduleOrder } from "./board.ts";
 	import OrderCard from "./order-card.svelte";
 
 	let {
@@ -14,11 +14,11 @@
 		names,
 		onschedule,
 	}: {
-		days: Date[];
+		days: Temporal.PlainDate[];
 		/** The day to mark (`yyyy-mm-dd`). */
-		today: string;
+		today: Temporal.PlainDate;
 		/** The orders scheduled on a day. */
-		ordersOn: (day: Date) => ScheduleOrder[];
+		ordersOn: (day: Temporal.PlainDate) => ScheduleOrder[];
 		/** The engineers' names by id, shown on the cards. */
 		names: Map<number, string>;
 		onschedule: (order: ScheduleOrder) => void;
@@ -26,9 +26,9 @@
 </script>
 
 <div class="flex flex-col gap-4 lg:hidden">
-	{#each days as day (dayKey(day))}
+	{#each days as day (day.toString())}
 		{@const orders = ordersOn(day)}
-		{@const isToday = dayKey(day) === today}
+		{@const isToday = day.equals(today)}
 		<section aria-label={formatLongDay(day)} class="flex flex-col gap-2">
 			<!-- Sticks to the top while its day's orders scroll by, opaque above them. -->
 			<h2

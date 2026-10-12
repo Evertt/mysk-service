@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
+import { afresh, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
 import { shownNumbers } from "./orders-helpers.ts";
 import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 
@@ -9,7 +9,7 @@ const app = useApp();
 
 describe("in North", () => {
 	test("the list shows North's orders", async () => {
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		expect(await app.rowCount()).toBe(await countIn("order", north.id));
 	});
 
@@ -61,7 +61,7 @@ describe("in North", () => {
 			[north.id],
 		);
 		expect(await app.rowCount()).toBe(all.length);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("the server sends one page at a time, in the database's order", async () => {
@@ -72,7 +72,7 @@ describe("in North", () => {
 			 order by created_at desc, id limit 20 offset 20`,
 			[north.id],
 		);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		expect(await app.rowCount()).toBe(total);
 		const [response] = await Promise.all([
 			page.waitForResponse((r) => isRemote(r.url(), "getOrders")),
@@ -99,7 +99,7 @@ describe("in North", () => {
 			change: (arg: Query) => Query,
 			trigger: () => unknown,
 		) => {
-			await app.go("/orders");
+			await app.go(afresh("/orders"));
 			await tamperWithQuery<Query>(app.page, name, change);
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
@@ -128,7 +128,7 @@ describe("in North", () => {
 		});
 
 		test("while the list works as before once the request is right", async () => {
-			await app.go("/orders");
+			await app.go(afresh("/orders"));
 			expect(await app.rowCount()).toBe(await countIn("order", north.id));
 		});
 	});
@@ -182,7 +182,7 @@ describe("in North", () => {
 			);
 		}
 		await page.keyboard.press("Escape");
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("filtering by customer and engineer, finding them by searching the filters", async () => {
@@ -199,7 +199,7 @@ describe("in North", () => {
 			 where o.organization_id = ? group by c.id, e.id order by count(*) desc, c.id, e.id limit 1`,
 			[north.id],
 		);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 
 		// Searching the customers finds them by name or code, North's only, at most 20.
 		await app.openFilter("Customer");
@@ -244,7 +244,7 @@ describe("in North", () => {
 		);
 		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
 		expect(new Set(engineers)).toEqual(new Set([busy.engineer_name]));
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("filtering on the unassigned orders and the new installations, by the filter and the URL", async () => {
@@ -255,7 +255,7 @@ describe("in North", () => {
 			[north.id],
 		);
 		expect(unassigned).toBeGreaterThan(0);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 
 		// The engineer filter offers "Unassigned" first, with how many there are.
 		await app.openFilter("Engineer");
@@ -294,12 +294,12 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(installations);
 		const units = await page.locator("tbody td:nth-child(4)").allInnerTexts();
 		expect(new Set(units)).toEqual(new Set(["New installation"]));
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("while the next page loads, the rows shown stay, dimmed", async () => {
 		const { page } = app;
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		const before = await shownNumbers(app);
 		const table = page.locator('[data-slot="data-table"]');
 		let release = () => {};
@@ -326,7 +326,7 @@ describe("in North", () => {
 		expect(await table.getAttribute("aria-busy")).toBeNull();
 		expect(await table.getByRole("progressbar").count()).toBe(0);
 		expect(await shownNumbers(app)).not.toEqual(before);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 
 	test("a link to another page of the list shows the table loading until its rows are in", async () => {
@@ -360,6 +360,6 @@ describe("in North", () => {
 		await app.tableSettled();
 		expect(await table.getAttribute("aria-busy")).toBeNull();
 		expect(await shownNumbers(app)).not.toEqual(first);
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 	});
 });

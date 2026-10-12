@@ -25,9 +25,13 @@
 import { error } from "@sveltejs/kit";
 import {
 	and,
+	type Column,
 	count as countRows,
+	gte,
 	inArray,
 	isNull,
+	lt,
+	lte,
 	or,
 	sql,
 	type SQL,
@@ -46,7 +50,10 @@ import type {
 	ListWhere,
 	SortId,
 } from "#lib/components/data-table/list-definition.ts";
+import { type DateRange, type NumberRange } from "#lib/components/data-table/ranges.ts";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import { getTimeZone } from "#lib/dates.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
 
 /**
  * The SQL for every column a list's definition sorts, groups or filters by, and nothing else: a
@@ -71,13 +78,29 @@ export type SqlColumns<C> = {
 					group: SQLWrapper;
 				}
 			: unknown) &
-		(K extends FilterId<C>
-			? {
-					/** Keeps the rows with any of the values. */
-					filter: (values: FilterValue<C, K & keyof C>[]) => SQL | undefined;
-				}
-			: unknown);
+		(K extends FilterId<C> ? FilterSql<FilterValue<C, K & keyof C>> : unknown);
 };
+
+/** How a column's filter keeps rows: in SQL, or, for a value SQL doesn't have, by their ids. */
+type FilterSql<T> =
+	| {
+			/** Keeps the rows with any of the values. */
+			filter: (values: T[]) => SQL | undefined;
+			match?: never;
+	  }
+	| {
+			/**
+			 * For a value that isn't in the database but computed in code, e.g. an order's total, which
+			 * the modules adjust (`priceOrders()`): of the rows that match the search and the other
+			 * filters (by id, at most `MAX_MATCHED_ROWS`), those whose value is any of `values`. The
+			 * plan keeps them by id, so the rows, counts, facets and bulk ids all agree.
+			 */
+			match: (values: T[], ids: number[]) => Promise<number[]>;
+			filter?: never;
+	  };
+
+/** The most rows a computed filter (`FilterSql.match`) looks at; beyond, the request is refused. */
+const MAX_MATCHED_ROWS = 10_000;
 
 /**
  * How a list's query maps onto SQL. Build it per request (a function returning it), as
@@ -113,7 +136,7 @@ export interface ListWherePlan<C> {
 	 * The scope, the filters and the search; without the filter of `except` (a column id), for the
 	 * counts in that column's filter (which shouldn't depend on what's ticked in it).
 	 */
-	where(except?: FilterId<C>): SQL | undefined;
+	where(except?: FilterId<C>): Promise<SQL | undefined>;
 	/** How many rows match. */
 	count(): Promise<number>;
 	/**
@@ -141,7 +164,7 @@ export interface ListPlan<C> extends ListWherePlan<C> {
 	 * `ListSql.from`, with the fields wanted), e.g.
 	 * `plan.paged(withOrderJoins(db.select({ … }).from(order).$dynamic()))`.
 	 */
-	paged<Q extends SQLiteSelect>(query: Q): Q;
+	paged<Q extends SQLiteSelect>(query: Q): Promise<Awaited<Q>>;
 	/**
 	 * The fetched rows (`limit` from `offset`, in order) split into the page's and, when grouped,
 	 * the rows just before and after it, if there are any.
@@ -185,6 +208,51 @@ export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
 }
 
 /**
+ * A date range filter's condition (`dateRange`): the rows whose `column` is on one of the days of
+ * any of the ranges, both ends included, e.g. `filter: (ranges) => inDays(order.scheduledFor,
+ * ranges)`. A day column (`day`) is compared as days; a moment's (`moment`) from the start of the
+ * first day to the end of the last in the user's time zone (`getTimeZone()`). Rows without a date
+ * are in no range; `null` among the ranges (`orNone(dateRange)`, `none` in the URL) keeps them.
+ */
+export function inDays(column: Column, ranges: readonly (DateRange | null)[]) {
+	const days = column.getSQLType() === "text";
+	const start = (day: Temporal.PlainDate) =>
+		days ? day : day.toZonedDateTime(getTimeZone()).toInstant();
+	return or(
+		...ranges.map((range) => {
+			if (range === null) return isNull(column);
+			const from = range.from === null ? undefined : Temporal.PlainDate.from(range.from);
+			const to = range.to === null ? undefined : Temporal.PlainDate.from(range.to);
+			return and(
+				sql`${column} is not null`,
+				from && gte(column, start(from)),
+				to && (days ? lte(column, to) : lt(column, start(to.add({ days: 1 })))),
+			);
+		}),
+	);
+}
+
+/**
+ * A number or money range filter's condition (`numberRange`, `moneyRange` in cents): the rows
+ * whose `expression` is in any of the ranges, both ends included, e.g. `filter: (ranges) =>
+ * between(material.stock, ranges)`. Rows without a value are in no range; `null` among the
+ * ranges keeps them.
+ */
+export function between(expression: SQLWrapper, ranges: readonly (NumberRange | null)[]) {
+	return or(
+		...ranges.map((range) =>
+			range === null
+				? sql`${expression} is null`
+				: and(
+						sql`${expression} is not null`,
+						range.from === null ? undefined : gte(expression, range.from),
+						range.to === null ? undefined : lte(expression, range.to),
+					),
+		),
+	);
+}
+
+/**
  * A search's condition: each word of `text` is in one of `columns`, in any case (for letters
  * without accents: SQLite's `like`). `undefined` for an empty search.
  */
@@ -199,6 +267,7 @@ interface LooseColumn {
 	sort?: SQLWrapper | readonly SQLWrapper[];
 	nullsLast?: boolean;
 	filter?: (values: any[]) => SQL | undefined;
+	match?: (values: any[], ids: number[]) => Promise<number[]>;
 	group?: SQLWrapper;
 }
 
@@ -220,13 +289,69 @@ const sortOf = (column: LooseColumn): readonly SQLWrapper[] =>
 
 /** Plans a query on a list's SQL. */
 function buildPlan(source: LooseSql, query: LooseQuery) {
-	const where = (except?: string) => {
-		const filters = Object.entries(source.columns).flatMap(([id, column]) => {
+	/** The columns with values to filter by, but for `except`'s. */
+	const filtered = (except?: string) =>
+		Object.entries(source.columns).flatMap(([id, column]) => {
 			const values = id === except ? undefined : query.filters[id];
-			const condition = values?.length ? column?.filter?.(values as unknown[]) : undefined;
+			return column && values?.length ? [{ id, column, values: values as unknown[] }] : [];
+		});
+
+	/**
+	 * Per computed filter (`match`), what it made of each row so far: the facets' conditions (one
+	 * per column, in parallel) look at mostly the same rows, and each is asked about once. One
+	 * `match` at a time per column, so they don't ask about the same rows together.
+	 */
+	const matched = new Map<string, { kept: Map<number, boolean>; queue: Promise<unknown> }>();
+	async function matching(id: string, column: LooseColumn, values: unknown[], ids: number[]) {
+		let known = matched.get(id);
+		if (!known) matched.set(id, (known = { kept: new Map(), queue: Promise.resolve() }));
+		const { kept } = known;
+		const run = known.queue.then(async () => {
+			const fresh = ids.filter((row) => !kept.has(row));
+			if (!fresh.length) return;
+			const found = new Set(await column.match!(values, fresh));
+			for (const row of fresh) kept.set(row, found.has(row));
+		});
+		known.queue = run.catch(() => {});
+		await run;
+		return ids.filter((row) => kept.get(row));
+	}
+
+	/** The filters SQL has, then those computed in code (`match`), narrowing down by id. */
+	async function conditionFor(except?: string) {
+		const columns = filtered(except);
+		const inSql = columns.flatMap(({ column, values }) => {
+			const condition = column.filter?.(values);
 			return condition ? [condition] : [];
 		});
-		return and(source.scope(), ...filters, searchMatch(source.search, query.q));
+		let condition = and(source.scope(), ...inSql, searchMatch(source.search, query.q));
+		for (const { id, column, values } of columns) {
+			if (!column.match) continue;
+			const rows = (await source
+				.from({ id: sql<number>`${source.id}` })
+				.where(condition)
+				.limit(MAX_MATCHED_ROWS + 1)) as { id: number }[];
+			if (rows.length > MAX_MATCHED_ROWS) {
+				error(400, m.common_table_filter_too_many({ max: formatNumber(MAX_MATCHED_ROWS) }));
+			}
+			const kept = await matching(
+				id,
+				column,
+				values,
+				rows.map((row) => row.id),
+			);
+			condition = and(condition, kept.length ? inArray(source.id, kept) : sql`0`);
+		}
+		return condition;
+	}
+
+	// Each asked for once, though the rows, the count and the groups all want it.
+	const conditions = new Map<string, Promise<SQL | undefined>>();
+	const where = (except?: string) => {
+		const key = except ?? "";
+		let found = conditions.get(key);
+		if (!found) conditions.set(key, (found = conditionFor(except)));
+		return found;
 	};
 
 	const order = (column: LooseColumn, desc: boolean, expressions = sortOf(column)) => {
@@ -254,10 +379,10 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 	const after = group ? 1 : 0;
 
 	/** How many rows match `where` for each value of `by`. */
-	const countBy = async (where: SQL | undefined, by: SQLWrapper) =>
+	const countBy = async (where: Promise<SQL | undefined>, by: SQLWrapper) =>
 		(await source
 			.from({ value: sql<unknown>`${by}`, count: countRows() })
-			.where(where)
+			.where(await where)
 			.groupBy(sql`${by}`)) as { value: unknown; count: number }[];
 
 	return {
@@ -274,14 +399,14 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 				next: fetched[before + pageSize],
 			};
 		},
-		paged: <Q extends SQLiteSelect>(select: Q) =>
-			select
-				.where(where())
+		paged: async <Q extends SQLiteSelect>(select: Q) =>
+			(await select
+				.where(await where())
 				.orderBy(...orderBy)
 				.limit(pageSize + before + after)
-				.offset(offset - before) as Q,
+				.offset(offset - before)) as Awaited<Q>,
 		count: async () => {
-			const [row] = (await source.from({ total: countRows() }).where(where())) as {
+			const [row] = (await source.from({ total: countRows() }).where(await where())) as {
 				total: number;
 			}[];
 			return row.total;
@@ -291,7 +416,7 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 		ids: async (limit: number) => {
 			const rows = (await source
 				.from({ id: sql<number>`${source.id}` })
-				.where(where())
+				.where(await where())
 				.orderBy(sql`${source.id} asc`)
 				.limit(limit)) as { id: number }[];
 			return rows.map((row) => row.id);
@@ -336,10 +461,10 @@ export function planList<C>(listSql: ListSql<C>, query: ListWhere<C> | ListQuery
  * without a value under `none`.
  */
 async function facetCounts<Id extends string>(
-	plan: { where(except?: string): SQL | undefined },
+	plan: { where(except?: string): Promise<SQL | undefined> },
 	columns: Readonly<Record<Id, SQLWrapper>>,
 	count: (
-		where: SQL | undefined,
+		where: Promise<SQL | undefined>,
 		by: SQLWrapper,
 	) => PromiseLike<{ value: unknown; count: number }[]>,
 ): Promise<Record<Id, Record<string, number>>> {
@@ -364,9 +489,9 @@ async function facetCounts<Id extends string>(
  * the search and the filters: for the group rows' counts. `count` is as for `facetCounts`.
  */
 async function groupCounts(
-	plan: { where(except?: string): SQL | undefined; group?: { value: SQLWrapper } },
+	plan: { where(except?: string): Promise<SQL | undefined>; group?: { value: SQLWrapper } },
 	count: (
-		where: SQL | undefined,
+		where: Promise<SQL | undefined>,
 		by: SQLWrapper,
 	) => PromiseLike<{ value: unknown; count: number }[]>,
 ): Promise<Record<string, number> | undefined> {

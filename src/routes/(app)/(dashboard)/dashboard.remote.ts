@@ -1,7 +1,7 @@
-import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, min, sql } from "drizzle-orm";
 
-import { DAY } from "#lib/dates.ts";
-import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
+import { getTimeZone } from "#lib/dates.ts";
+import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -18,8 +18,8 @@ import {
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = forMembers.query(async () => {
-	const now = new Date();
-	const monthAgo = new Date(now.getTime() - 30 * DAY);
+	const now = Temporal.Now.instant();
+	const monthAgo = now.subtract({ hours: 30 * 24 });
 
 	const [open] = await db
 		.select({
@@ -85,22 +85,35 @@ export const getDashboard = forMembers.query(async () => {
 
 /**
  * The dashboard's charts (see `dashboard-charts.ts`): the orders made per week by status, the
- * revenue per month, and the equipment by status. Aggregated in the database per local week or
- * status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
+ * revenue per month, and the equipment by status. Aggregated in the database per quarter of an hour
+ * (then per week in the user's time zone) or status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
  */
 export const getCharts = forMembers.query(async () => {
-	const now = new Date();
-	const weeks = lastWeeks(now);
-	const months = lastMonths(now);
+	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const weeks = lastWeeks(today);
+	const months = lastMonths(today);
+	/** The moment a day starts, in the user's time zone. */
+	const start = (day: Temporal.PlainDate) => day.toZonedDateTime(getTimeZone()).toInstant();
 
-	// The Monday of the order's week, in local time (`-6 days` then on to the next Monday, which is
-	// the day itself for a Monday), as `yyyy-mm-dd`: what `toDateInput(startOfWeek())` gives.
-	const week = sql<string>`date(${order.createdAt}, 'unixepoch', 'localtime', '-6 days', 'weekday 1')`;
-	const perWeek = await db
-		.select({ week, status: order.status, count: count() })
+	// Counted per quarter of an hour in the database (every time zone's offset is a whole number of
+	// them), then per week (its Monday, as `yyyy-mm-dd`) here: SQLite knows only the server's time
+	// zone, and the weeks are the user's.
+	const quarter = sql<number>`${order.createdAt} / 900`;
+	const perQuarter = await db
+		.select({ createdAt: min(order.createdAt), status: order.status, count: count() })
 		.from(order)
-		.where(and(inTenant(order), gte(order.createdAt, weeks[0])))
-		.groupBy(week, order.status);
+		.where(and(inTenant(order), gte(order.createdAt, start(weeks[0]))))
+		.groupBy(quarter, order.status);
+	const counts = new Map<string, { week: string; status: OrderStatus; count: number }>();
+	for (const row of perQuarter) {
+		const day = row.createdAt!.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+		const week = day.subtract({ days: day.dayOfWeek - 1 }).toString();
+		const key = `${week}|${row.status}`;
+		const found = counts.get(key);
+		if (found) found.count += row.count;
+		else counts.set(key, { week, status: row.status, count: row.count });
+	}
+	const perWeek = [...counts.values()];
 
 	const done = await db
 		.select({
@@ -119,7 +132,7 @@ export const getCharts = forMembers.query(async () => {
 			and(
 				inTenant(order),
 				inArray(order.status, doneOrderStatuses),
-				gte(order.completedAt, months[0]),
+				gte(order.completedAt, start(months[0])),
 			),
 		);
 	const prices = await priceOrders(done);

@@ -46,6 +46,8 @@ const hook = createTableHook({
 	// restored from the URL, and jump to the first page whenever the data is reloaded.
 	autoResetPageIndex: false,
 	defaultColumn: {
+		// Days and moments by their own order, anything else as TanStack picks (see `features.ts`).
+		sortFn: "byValue",
 		// Columns opt into grouping (see `grouping.ts`), which leaves the columns where they are.
 		enableGrouping: false,
 		// A data column's header sorts it (see `ColumnHeader`); a display column, e.g. the actions,

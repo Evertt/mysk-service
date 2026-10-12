@@ -14,6 +14,9 @@
  * in plain Node (not through Vite), so the files in this folder import each other with `.ts`
  * extensions, and from `#lib` only modules that don't need SvelteKit.
  */
+// First: the zone the demo data is made in, before anything reads it.
+import "./time-zone.ts";
+import "temporal-polyfill/global";
 import { en, Faker, nl } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
@@ -26,6 +29,7 @@ import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
 
@@ -140,17 +144,32 @@ await db.transaction(async (tx) => {
 		const organizationId = tenant.id;
 		const o = { ...offset };
 		const rows = {
-			customers: data.customers.map((c) => ({ ...c, organizationId, id: c.id + o.customer })),
-			engineers: data.engineers.map((e) => ({ ...e, organizationId, id: e.id + o.engineer })),
+			customers: data.customers.map((c) => ({
+				...c,
+				organizationId,
+				id: c.id + o.customer,
+				createdAt: toMoment(c.createdAt),
+			})),
+			engineers: data.engineers.map((e) => ({
+				...e,
+				organizationId,
+				id: e.id + o.engineer,
+				hiredAt: toDay(e.hiredAt),
+			})),
 			equipments: data.equipments.map((e) => ({
 				...e,
 				organizationId,
+				installedAt: toDay(e.installedAt),
+				warrantyUntil: toDay(e.warrantyUntil),
 				id: e.id + o.equipment,
 				customerId: e.customerId + o.customer,
 			})),
 			orders: data.orders.map((r) => ({
 				...r,
 				organizationId,
+				createdAt: toMoment(r.createdAt),
+				scheduledFor: toMomentOrNull(r.scheduledFor),
+				completedAt: toMomentOrNull(r.completedAt),
 				id: r.id + o.order,
 				customerId: r.customerId + o.customer,
 				equipmentId: r.equipmentId && r.equipmentId + o.equipment,
@@ -168,7 +187,7 @@ await db.transaction(async (tx) => {
 			u.memberships.some((m) => m.organizationId === tenant.id && m.role !== "engineer"),
 		);
 		const created = rows.orders
-			.toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+			.toSorted((a, b) => Temporal.Instant.compare(a.createdAt, b.createdAt))
 			.slice(-8)
 			.map((row, i) => ({
 				organizationId,

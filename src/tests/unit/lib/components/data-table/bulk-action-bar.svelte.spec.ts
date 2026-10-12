@@ -15,6 +15,10 @@ vi.mock("$app/navigation", async () => ({
 }));
 // The table's toolbar (unused here) brings in the saved views: none.
 vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock(
+	"#lib/components/data-table/table-memory.remote.ts",
+	() => import("./fake-table-memory.ts"),
+);
 
 const jobs: Job[] = [
 	{ id: 1, name: "Boiler service", status: "open" },

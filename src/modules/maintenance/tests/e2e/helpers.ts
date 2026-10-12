@@ -1,16 +1,12 @@
 /** What the maintenance module's end-to-end tests share: days, plans as stored, and the page's parts. */
 import { type App, rows, value } from "#e2e/app.ts";
-import { addDays, startOfDay } from "#lib/dates.ts";
 
-export const today = startOfDay(new Date());
+/** Today, the machine's (which is the test server's). */
+export const today = Temporal.Now.plainDateISO();
 
-const pad = (n: number) => String(n).padStart(2, "0");
-/** A day as a date input takes it: `yyyy-mm-dd`. */
-export const dayKey = (date: Date) =>
-	`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-/** Timestamps are stored in seconds. */
-export const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
-export const daysFromToday = (days: number) => addDays(today, days);
+/** A day as a date input takes it, and as the database has it: `yyyy-mm-dd`. */
+export const dayKey = (date: Temporal.PlainDate) => date.toString();
+export const daysFromToday = (days: number) => today.add({ days });
 
 /** A plan as stored. */
 export interface Plan {
@@ -20,7 +16,7 @@ export interface Plan {
 	order_type: string;
 	description: string;
 	interval_months: number;
-	next_due_on: number;
+	next_due_on: string;
 	anchor_day: number;
 	paused: number;
 	last_order_id: number | null;
@@ -46,12 +42,16 @@ export const unitWithoutPlan = async (organizationId: string) =>
 	)[0];
 
 /** How many of the tenant's active plans are due before `before`. */
-export const activeDueBefore = async (organizationId: string, before: Date, from?: Date) =>
+export const activeDueBefore = async (
+	organizationId: string,
+	before: Temporal.PlainDate,
+	from?: Temporal.PlainDate,
+) =>
 	Number(
 		await value(
 			`select count(*) from maintenance_plan where organization_id = ? and paused = 0
 			 and next_due_on < ? and next_due_on >= ?`,
-			[organizationId, seconds(before), from ? seconds(from) : -1e12],
+			[organizationId, dayKey(before), from ? dayKey(from) : ""],
 		),
 	);
 

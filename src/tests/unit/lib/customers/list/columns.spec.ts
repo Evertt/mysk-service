@@ -3,6 +3,7 @@ import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { type CustomerRow, columns } from "#lib/customers/list/columns.ts";
+import { at } from "#unit/temporal-support.ts";
 
 const customer = (name: string, fields: Partial<CustomerRow> = {}): CustomerRow => ({
 	id: 1,
@@ -15,7 +16,7 @@ const customer = (name: string, fields: Partial<CustomerRow> = {}): CustomerRow 
 	phone: "+31 20 123 4567",
 	city: "Utrecht",
 	country: "Netherlands",
-	createdAt: new Date(2025, 0, 1),
+	createdAt: at("2025-01-01 00:00"),
 	equipmentCount: 0,
 	openOrders: 0,
 	...fields,

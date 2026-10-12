@@ -2,6 +2,7 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
@@ -58,6 +59,9 @@
 				options={stockLevelOptions}
 				counts={facets.stockLevel}
 			/>
+			<NumberRangeFilter columnId="unitPrice" title={m.materials_unit_price()} money min={0} />
+			<NumberRangeFilter columnId="stock" title={m.materials_stock()} min={0} />
+			<NumberRangeFilter columnId="orderCount" title={m.materials_used_on()} step={1} min={0} />
 		</table.Toolbar>
 		<table.Table
 			emptyTitle={m.materials_empty()}

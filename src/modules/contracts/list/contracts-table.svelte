@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import { recordFacets } from "#lib/components/data-table/record-facets.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
@@ -45,6 +46,7 @@
 				options={customers.options}
 				counts={customers.counts}
 			/>
+			<NumberRangeFilter columnId="monthlyFee" title={m.contracts_monthly_fee()} money min={0} />
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
 		<BulkActionBar actions={[deleteContracts]} />

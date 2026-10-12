@@ -3,7 +3,7 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { SubjectType } from "#lib/activity/index.ts";
-import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
+import { formatStoredDay, labelOrValue } from "#lib/i18n/index.ts";
 
 /** A plan's label in the log: its unit's serial number and its description. */
 export const planLabel = (plan: { serialNumber: string; description: string }) =>
@@ -28,7 +28,7 @@ export const maintenanceSubjects: Record<string, SubjectType> = {
 			},
 			nextDueOn: {
 				label: m.maintenance_field_next_due,
-				format: (value) => formatDate(new Date(String(value))),
+				format: formatStoredDay,
 			},
 			paused: {
 				label: m.maintenance_field_paused,

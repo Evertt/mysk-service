@@ -21,7 +21,8 @@ export const covered = `covered as (
 		row_number() over (partition by o.id order by k.response_hours, k.id) as n
 	from "order" o join contract_equipment ce on ce.equipment_id = o.equipment_id
 	join contract k on k.id = ce.contract_id and k.organization_id = o.organization_id
-	where o.type != 'installation' and k.starts_on <= o.created_at and o.created_at < k.ends_on + 86400
+	where o.type != 'installation' and k.starts_on <= date(o.created_at, 'unixepoch', 'localtime')
+		and date(o.created_at, 'unixepoch', 'localtime') <= k.ends_on
 )`;
 
 /** An order with what goes into its price. */
@@ -77,7 +78,7 @@ export async function feesDue(customerId: number) {
 	const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 	const active = await rows<{ id: number; monthly_fee: number }>(
 		`select id, monthly_fee from contract where customer_id = ?
-		 and starts_on <= unixepoch() and ends_on + 86400 > unixepoch() order by id`,
+		 and starts_on <= date('now', 'localtime') and ends_on >= date('now', 'localtime') order by id`,
 		[customerId],
 	);
 	return active.map((c) => ({ reference: `contracts:${c.id}:${month}`, fee: c.monthly_fee }));

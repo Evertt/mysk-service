@@ -28,7 +28,11 @@ import { type Coverage, coverageOf } from "./contracts.ts";
 import { contract } from "./schema.ts";
 
 /** The badge for a covered order whose response is at risk or overdue. */
-function responseTag(order: OrderFacts, coverage: Coverage, now: Date): OrderTag | undefined {
+function responseTag(
+	order: OrderFacts,
+	coverage: Coverage,
+	now: Temporal.Instant,
+): OrderTag | undefined {
 	const deadline = responseDeadline(order, coverage.responseHours, now);
 	if (!deadline) return undefined;
 	const detail = m.contracts_respond_by_detail({

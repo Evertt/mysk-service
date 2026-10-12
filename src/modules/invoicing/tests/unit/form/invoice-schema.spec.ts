@@ -7,6 +7,7 @@ import {
 	settingsFields,
 	termsFields,
 } from "#modules/invoicing/form/invoice-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 const parse = <T extends v.ObjectEntries>(fields: T, input: unknown) =>
 	v.safeParse(v.object(fields), input);
@@ -60,7 +61,7 @@ test("the VAT rate is a percentage", () => {
 	expect(parse(settingsFields, valid).output).toEqual({
 		vatRate: 9,
 		paymentTermDays: 30,
-		billFrom: new Date(2026, 0, 1),
+		billFrom: day("2026-01-01"),
 	});
 	expect(messages(parse(settingsFields, { ...valid, vatRate: 120 }))).toEqual(["At most 100%"]);
 	expect(messages(parse(settingsFields, { ...valid, vatRate: -1 }))).toEqual(["Can't be negative"]);

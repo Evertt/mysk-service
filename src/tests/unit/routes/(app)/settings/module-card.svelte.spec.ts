@@ -5,6 +5,7 @@ import { render } from "vitest-browser-svelte";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import ModuleCard from "#routes/(app)/settings/module-card.svelte";
 import { fakeForm } from "#unit/lib/components/form/fake-form.ts";
+import { at } from "#unit/temporal-support.ts";
 
 // The made-up graph: addon requires base, extra requires addon, core-ish is always on. No real
 // module has requirements yet, so this is where the card's prompts are tested.
@@ -46,7 +47,7 @@ const modulesWith = (on: string[]) =>
 		id: id as ModuleId,
 		label: labels[id],
 		description: `What ${labels[id]} does`,
-		enabledAt: on.includes(id) ? new Date(2026, 9, 1) : null,
+		enabledAt: on.includes(id) ? at("2026-10-01 00:00") : null,
 		alwaysOn: id === "core-ish",
 		on: on.includes(id) || id === "core-ish",
 	}));

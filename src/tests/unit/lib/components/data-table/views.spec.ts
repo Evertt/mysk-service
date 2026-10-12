@@ -92,6 +92,28 @@ describe("matchingViews", () => {
 		expect(ids("?status=quote")).toEqual([]);
 		expect(ids("?status=quote,scheduled&size=50")).toEqual([]);
 	});
+
+	describe("with the table's columns", () => {
+		const defaults = { customer: true, total: true, createdAt: false };
+		const withColumns: { id: number; query: string; columns: Record<string, boolean> | null }[] = [
+			{ id: 1, query: "", columns: { customer: true, total: false, createdAt: false } },
+			// Saved before the table had `createdAt`: it gets its default.
+			{ id: 2, query: "", columns: { customer: true, total: true } },
+			// Saved before views had columns: whatever the columns.
+			{ id: 3, query: "", columns: null },
+		];
+		const shown = (current: Record<string, boolean>) =>
+			matchingViews(withColumns, state(""), spec, { current, defaults }).map((view) => view.id);
+
+		test("finds the views that show the same columns", () => {
+			expect(shown({ customer: true, total: false, createdAt: false })).toEqual([1, 3]);
+			expect(shown(defaults)).toEqual([2, 3]);
+		});
+
+		test("reads a column a view doesn't know as its default", () => {
+			expect(shown({ customer: true, total: true, createdAt: true })).toEqual([3]);
+		});
+	});
 });
 
 test("tableViewsKey names a table by its route, and its prefix if it has one", () => {

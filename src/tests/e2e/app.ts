@@ -6,8 +6,10 @@
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
+import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 
+import { forgetTables } from "./db.ts";
 import { baseURL } from "./lane.ts";
 
 export { baseURL } from "./lane.ts";
@@ -28,6 +30,13 @@ export const hydrated = (page: Page) =>
 		page.locator("html[data-hydrated]").waitFor({ state: "attached" }),
 		page.waitForLoadState("networkidle"),
 	]);
+
+/**
+ * A list's page as a link to its first page (`/orders?page=1`): the list as it is by default,
+ * rather than as the user left it, which a visit without parameters brings back (see
+ * `table-memory.svelte.ts`).
+ */
+export const afresh = (path: string) => `${path}?page=1`;
 
 /** The demo organizations: North (Fieldworks Noord) and South (Fieldworks Zuid). */
 export const organizations = demoOrganizations;
@@ -124,12 +133,20 @@ interface TableGroup {
 /**
  * Gives the tests in a file one browser page, signed in as `user` (the admin by default, who
  * starts in North; `null` for signed out), on a desktop screen unless `viewport` says
- * otherwise. After each test, checks that the app logged no errors or hydration warnings.
+ * otherwise, in the time zone of the machine running them (the server's) unless `timeZone` says
+ * otherwise: then the browser has told the server its zone already (the cookie the app sets, see
+ * `src/routes/time-zone.ts`). After each test, checks that the app logged no errors or hydration
+ * warnings.
  */
 export function useApp({
 	user = users.admin,
 	viewport = { width: 1440, height: 1000 },
-}: { user?: string | null; viewport?: { width: number; height: number } } = {}): App {
+	timeZone,
+}: {
+	user?: string | null;
+	viewport?: { width: number; height: number };
+	timeZone?: string;
+} = {}): App {
 	let browser: Browser;
 	let page: Page;
 	const errors: string[] = [];
@@ -220,7 +237,11 @@ export function useApp({
 		tableSettled: () => settled(),
 		async openFilter(title) {
 			await page.getByRole("button", { name: "Filter", exact: true }).click();
-			await page.getByRole("option", { name: new RegExp(`^${title}( |$)`) }).click();
+			// By the filter's title exactly: "Unit" isn't "Unit price". (What's chosen follows it.)
+			await page
+				.getByRole("option")
+				.filter({ has: page.getByText(title, { exact: true }) })
+				.click();
 		},
 		filterPill: (title) => page.locator('[data-slot="filter-pill"]', { hasText: title }),
 		async groupBy(column) {
@@ -287,7 +308,14 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE });
+		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE, timezoneId: timeZone });
+		if (timeZone) {
+			await page
+				.context()
+				.addCookies([
+					{ name: TIME_ZONE_COOKIE, value: encodeURIComponent(timeZone), url: baseURL },
+				]);
+		}
 		page.on("pageerror", (error) => expecting || errors.push(`pageerror: ${error.message}`));
 		page.on("console", (message) => {
 			const text = message.text();
@@ -296,6 +324,7 @@ export function useApp({
 			if (message.type() === "error" && !expecting) errors.push(`error: ${text}`);
 			else if (/hydrat/i.test(text)) errors.push(`${message.type()}: ${text}`);
 		});
+		await forgetTables();
 		if (user) await app.signIn(user);
 	});
 

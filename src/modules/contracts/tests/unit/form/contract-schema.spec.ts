@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
 import { contractFields } from "#modules/contracts/form/contract-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 /** The parsed value, or the first issue's message. */
 const parse = (schema: v.GenericSchema, input: unknown) => {
@@ -25,8 +26,8 @@ test("a filled-in form becomes a contract", () => {
 		value: {
 			customerId: 12,
 			level: "premium",
-			startsOn: new Date(2026, 0, 1),
-			endsOn: new Date(2026, 11, 31),
+			startsOn: day("2026-01-01"),
+			endsOn: day("2026-12-31"),
 			monthlyFee: 24_950,
 			responseHours: 4,
 			notes: "Keys at the front desk",

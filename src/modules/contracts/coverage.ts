@@ -44,10 +44,9 @@ export const includedLabel = (level: ContractLevel) => includedLabels[level]();
 export const isCoveredWork = (type: OrderType) => type !== "installation";
 
 /** Of the contracts covering a unit, the one that covered it at `at`, if any: the fastest response wins. */
-export function coveringContract<T extends { startsOn: Date; endsOn: Date; responseHours: number }>(
-	contracts: readonly T[],
-	at: Date,
-): T | undefined {
+export function coveringContract<
+	T extends { startsOn: Temporal.PlainDate; endsOn: Temporal.PlainDate; responseHours: number },
+>(contracts: readonly T[], at: Temporal.PlainDate | Temporal.Instant): T | undefined {
 	return contracts
 		.filter((contract) => contractStatus(contract, at) === "active")
 		.reduce<T | undefined>(
@@ -79,8 +78,6 @@ export type SlaState = (typeof slaStates)[number];
 /** At risk once less than this share of the response time is left. */
 const AT_RISK_SHARE = 0.25;
 
-const HOUR = 60 * 60 * 1000;
-
 /** Whether this type of work has to be responded to within the contract's response time. */
 const hasResponseTime = (type: OrderType) => type === "repair";
 
@@ -89,22 +86,27 @@ const hasResponseTime = (type: OrderType) => type === "repair";
  * a repair, or cancelled).
  */
 export function responseDeadline(
-	order: { type: OrderType; status: OrderStatus; createdAt: Date },
+	order: { type: OrderType; status: OrderStatus; createdAt: Temporal.Instant },
 	responseHours: number,
-	now = new Date(),
-): { due: Date; state: SlaState } | null {
+	now = Temporal.Now.instant(),
+): { due: Temporal.Instant; state: SlaState } | null {
 	if (!hasResponseTime(order.type) || order.status === "cancelled") return null;
-	const window = responseHours * HOUR;
-	const due = new Date(order.createdAt.getTime() + window);
+	const window = Temporal.Duration.from({ hours: responseHours });
+	const due = order.createdAt.add(window);
 	return { due, state: slaState(order.status, due, window, now) };
 }
 
-/** Where an order with a deadline of `due`, `window` milliseconds after it was created, stands. */
-export function slaState(status: OrderStatus, due: Date, window: number, now: Date): SlaState {
+/** Where an order with a deadline of `due`, `window` after it was created, stands. */
+export function slaState(
+	status: OrderStatus,
+	due: Temporal.Instant,
+	window: Temporal.Duration,
+	now: Temporal.Instant,
+): SlaState {
 	if (status !== "quote") return "responded";
-	const left = due.getTime() - now.getTime();
+	const left = now.until(due).total("milliseconds");
 	if (left <= 0) return "overdue";
-	return left < window * AT_RISK_SHARE ? "at_risk" : "on_track";
+	return left < window.total("milliseconds") * AT_RISK_SHARE ? "at_risk" : "on_track";
 }
 
 /** Whether an order's response needs attention: at risk or overdue. */

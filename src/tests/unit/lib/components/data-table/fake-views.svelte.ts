@@ -43,7 +43,10 @@ function fakeForm(name: string) {
 			...attributes,
 			enhance: () => attributes,
 			fields: Object.fromEntries(
-				["id", "tableKey", "query", "name", "shared"].map((field) => [field, fakeField(field)]),
+				["id", "tableKey", "query", "columns", "name", "shared"].map((field) => [
+					field,
+					fakeField(field),
+				]),
 			),
 			pending: 0,
 			result: undefined,

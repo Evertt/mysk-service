@@ -7,11 +7,11 @@
 
 	import WarrantyBadge from "../ui/warranty-badge.svelte";
 
-	let { until }: { until: Date } = $props();
+	let { until }: { until: Temporal.PlainDate } = $props();
 </script>
 
 <div class="flex items-center gap-2">
-	<time datetime={until.toISOString()} class="whitespace-nowrap tabular-nums">
+	<time datetime={until.toString()} class="whitespace-nowrap tabular-nums">
 		{formatDate(until)}
 	</time>
 	<WarrantyBadge {until} />

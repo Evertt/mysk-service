@@ -36,7 +36,8 @@
 		"knip": "knip"
 	},
 	"dependencies": {
-		"@libsql/client": "^0.17.4"
+		"@libsql/client": "^0.17.4",
+		"temporal-polyfill": "1.0.5"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.6.0",
@@ -62,6 +63,7 @@
 		"better-auth": "^1.6.24",
 		"bits-ui": "^2.19.5",
 		"cn": "^0.4.0",
+		"devalue": "5.9.4",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"knip": "^6.40.0",

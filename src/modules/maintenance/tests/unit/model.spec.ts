@@ -2,10 +2,11 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { advanceDueDate, dueBefore, isOverdue, nextDueBucket } from "#modules/maintenance/model.ts";
 
-const day = (year: number, month: number, date: number) => new Date(year, month - 1, date);
+const day = (year: number, month: number, date: number) =>
+	Temporal.PlainDate.from({ year, month, day: date });
 
 describe("advanceDueDate", () => {
-	test("moves on by whole months, at the start of the day", () => {
+	test("moves on by whole months", () => {
 		expect(advanceDueDate(day(2026, 3, 15), 1)).toEqual(day(2026, 4, 15));
 		expect(advanceDueDate(day(2026, 3, 15), 12)).toEqual(day(2027, 3, 15));
 		expect(advanceDueDate(day(2026, 11, 10), 3)).toEqual(day(2027, 2, 10));
@@ -29,9 +30,9 @@ describe("advanceDueDate", () => {
 });
 
 describe("due ranges", () => {
-	const now = new Date(2026, 9, 11, 14, 30);
+	const now = day(2026, 10, 11);
 
-	test("are horizons from the start of today", () => {
+	test("are horizons from today", () => {
 		expect(dueBefore("overdue", now)).toEqual(day(2026, 10, 11));
 		expect(dueBefore("30-days", now)).toEqual(day(2026, 11, 10));
 		expect(dueBefore("90-days", now)).toEqual(day(2027, 1, 9));

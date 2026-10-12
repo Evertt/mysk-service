@@ -10,7 +10,7 @@ import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { type ListSql, nocase } from "#lib/server/lists/index.ts";
+import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { equipmentList } from "../list/equipment-list.ts";
@@ -28,8 +28,13 @@ export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
  * for each request, not at module scope: `inTenant()` reads the request. The columns of the
  * tenant's modules (`listColumns`) are added to it.
  */
-export const equipmentSql = (): ListSql<typeof equipmentList.columns> =>
-	withModuleColumns({
+export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
+	const openOrders = sql`(select count(*) from ${order} where ${and(
+		inTenant(order),
+		eq(order.equipmentId, equipment.id),
+		inArray(order.status, openOrderStatuses),
+	)})`;
+	return withModuleColumns({
 		list: equipmentList,
 		from: (fields) => withEquipmentJoins(db.select(fields).from(equipment).$dynamic()),
 		columns: {
@@ -55,15 +60,18 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> =>
 				filter: (codes) => inArray(customer.code, codes),
 				group: customer.code,
 			},
-			installedAt: { sort: equipment.installedAt },
-			warrantyUntil: { sort: equipment.warrantyUntil },
-			// Counted for every unit only to sort by them (the page's own are counted apart).
+			installedAt: {
+				sort: equipment.installedAt,
+				filter: (ranges) => inDays(equipment.installedAt, ranges),
+			},
+			warrantyUntil: {
+				sort: equipment.warrantyUntil,
+				filter: (ranges) => inDays(equipment.warrantyUntil, ranges),
+			},
+			// Counted for every unit to sort and filter by them (the page's own are counted apart).
 			openOrders: {
-				sort: sql`(select count(*) from ${order} where ${and(
-					inTenant(order),
-					eq(order.equipmentId, equipment.id),
-					inArray(order.status, openOrderStatuses),
-				)})`,
+				sort: openOrders,
+				filter: (ranges) => between(openOrders, ranges),
 			},
 		},
 		search: [
@@ -76,3 +84,4 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> =>
 		id: equipment.id,
 		scope: () => inTenant(equipment),
 	});
+};

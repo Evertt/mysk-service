@@ -1,10 +1,13 @@
 /**
  * Saved views: a table's search, filters, sorting and page size (its URL parameters, see
- * `url-state.ts`, without the page) saved under a name, to get back to in one click. They're
- * stored as the query string the table writes, so they work for any table that keeps its state in
- * the URL, and are read back through the table's own grammar: a parameter the table no longer
- * knows is ignored, like in a link.
+ * `url-state.ts`, without the page) and its columns saved under a name, to get back to in one
+ * click. The parameters are stored as the query string the table writes, so they work for any
+ * table that keeps its state in the URL, and are read back through the table's own grammar: a
+ * parameter the table no longer knows is ignored, like in a link. The columns are the visibility
+ * of the table's hideable columns (see `column-visibility.ts`): a column the view doesn't know
+ * (e.g. one a module added since) gets its default.
  */
+import { type ColumnVisibility, sameVisibility, withSaved } from "./column-visibility.ts";
 import { parseTableUrl, tableUrlKey, type TableUrlSpec, type TableUrlState } from "./url-state.ts";
 
 /** The longest name a view can have. */
@@ -48,17 +51,31 @@ const sortedValues = (state: TableUrlState): TableUrlState => ({
 	),
 });
 
+/** The table's columns: which of its hideable ones it shows, and shows by default. */
+export interface TableColumns {
+	current: ColumnVisibility;
+	defaults: ColumnVisibility;
+}
+
 /**
- * The views that show the table's current state (whatever its page), compared as the table reads
- * them: `?status=quote,paid` matches `?status=paid,quote&page=3`, and a saved view with parameters
- * the table no longer knows still matches what it shows.
+ * The views that show the table's current state (whatever its page) and columns, compared as the
+ * table reads them: `?status=quote,paid` matches `?status=paid,quote&page=3`, a saved view with
+ * parameters the table no longer knows still matches what it shows, and so does one saved before
+ * views had columns, whatever the columns.
  */
-export function matchingViews<View extends { query: string }>(
+export function matchingViews<View extends { query: string; columns?: ColumnVisibility | null }>(
 	views: readonly View[],
 	state: TableUrlState,
 	spec: TableUrlSpec,
+	columns?: TableColumns,
 ): View[] {
 	const key = (state: TableUrlState) => viewQuery(sortedValues(state), spec);
 	const current = key(state);
-	return views.filter((view) => key(viewState(view.query, spec)) === current);
+	return views.filter(
+		(view) =>
+			key(viewState(view.query, spec)) === current &&
+			(!columns ||
+				!view.columns ||
+				sameVisibility(withSaved(columns.defaults, view.columns), columns.current)),
+	);
 }

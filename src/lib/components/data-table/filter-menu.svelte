@@ -26,9 +26,15 @@
 		list?.focus();
 	}
 
-	/** On the picked filter's values: focuses their search box. */
+	/**
+	 * On the picked filter's values: focuses what the filter marks for it (`data-filter-autofocus`,
+	 * e.g. a range's presets), else its first input (a search box, or a range's first end).
+	 */
 	const focusSearch: Attachment = (node) => {
-		node.querySelector<HTMLElement>("input")?.focus();
+		(
+			node.querySelector<HTMLElement>("[data-filter-autofocus]") ??
+			node.querySelector<HTMLElement>("input")
+		)?.focus();
 	};
 
 	function summary(filter: TableFilter) {

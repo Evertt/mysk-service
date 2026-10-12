@@ -28,7 +28,11 @@
 	<title>{engineer.name} · {m.engineers_title()}</title>
 </svelte:head>
 
-{#snippet orders(rows: OrderRow[], dateLabel: string, date: (row: OrderRow) => Date | null)}
+{#snippet orders(
+	rows: OrderRow[],
+	dateLabel: string,
+	date: (row: OrderRow) => Temporal.Instant | null,
+)}
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>

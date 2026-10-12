@@ -8,7 +8,6 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { toDateInput } from "#lib/dates.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import { formatRate } from "#modules/invoicing/display.ts";
 	import { getInvoicingSettings, saveSettings } from "#modules/invoicing/settings.remote.ts";
@@ -63,7 +62,7 @@
 						field={saveSettings.fields.billFrom}
 						label={m.invoices_bill_from()}
 						type="date"
-						value={toDateInput(settings.billFrom)}
+						value={settings.billFrom.toString()}
 						description={m.invoices_bill_from_description()}
 					/>
 				</Field.FieldGroup>

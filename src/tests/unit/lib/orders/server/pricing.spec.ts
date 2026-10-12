@@ -11,6 +11,7 @@ import {
 	STANDARD_HOURLY_RATE,
 } from "#lib/orders/server/pricing.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
+import { at } from "#unit/temporal-support.ts";
 
 const locals = { user: { id: "u1", name: "Jo" }, tenant: { organizationId: "north" } };
 
@@ -80,7 +81,7 @@ describe("priceOrders", () => {
 		type: "repair",
 		status: "completed",
 		equipmentId: id,
-		createdAt: new Date(2026, 9, 1),
+		createdAt: at("2026-10-01 00:00"),
 		laborHours: 2,
 		hourlyRate: 6_000,
 		...fields,

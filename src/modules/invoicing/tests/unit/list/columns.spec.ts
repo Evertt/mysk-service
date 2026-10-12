@@ -3,17 +3,18 @@ import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { columns, type InvoiceRow } from "#modules/invoicing/list/columns.ts";
+import { at, day } from "#unit/temporal-support.ts";
 
 const invoice = (number: string, fields: Partial<InvoiceRow> = {}): InvoiceRow => ({
 	id: 1,
 	number,
 	status: "sent",
 	state: "sent",
-	issuedOn: new Date(2026, 9, 1),
-	dueOn: new Date(2026, 9, 31),
+	issuedOn: day("2026-10-01"),
+	dueOn: day("2026-10-31"),
 	paidOn: null,
 	vatRate: 21,
-	createdAt: new Date(2026, 9, 1),
+	createdAt: at("2026-10-01 00:00"),
 	customer: { id: 1, code: "CUST-0001", name: "Acme" },
 	lineCount: 1,
 	subtotal: 10_000,
@@ -61,7 +62,7 @@ test("the status sorts in the order an invoice goes through", () => {
 test("drafts, without dates yet, sort last by date either way", () => {
 	const rows = [
 		invoice("INV-1", draft),
-		invoice("INV-2", { issuedOn: new Date(2026, 8, 1) }),
+		invoice("INV-2", { issuedOn: day("2026-09-01") }),
 		invoice("INV-3"),
 	];
 	expect(shown(rows, { sorting: [{ id: "issuedOn", desc: false }] })).toEqual([

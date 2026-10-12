@@ -1,7 +1,7 @@
 /**
  * What the equipment tests share: reading units as stored, and the list's and a unit's page.
  */
-import { type App, organizations, rows, value } from "./app.ts";
+import { afresh, type App, organizations, rows, value } from "./app.ts";
 
 const { north, south } = organizations;
 
@@ -71,7 +71,7 @@ export function equipmentPage(app: App) {
 	/** The serial numbers on every page of the list, 100 per page, sorted. */
 	async function listedSerials() {
 		const { page } = app;
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await page.getByLabel("Rows per page").click();
 		await page.getByRole("option", { name: "100", exact: true }).click();
 		await app.tableSettled();

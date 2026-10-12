@@ -1,7 +1,7 @@
 <!--
 	@component
-	Search, a Filter button whose menu lists the filters (`children`: `FacetedFilter`s and
-	`RecordFilter`s, which register themselves and render nothing), the active filters as pills in
+	Search, a Filter button whose menu lists the filters (`children`: `FacetedFilter`s,
+	`RecordFilter`s and range filters, which register themselves and render nothing), the active filters as pills in
 	a row that scrolls sideways, a reset button when anything is filtered, extra `actions`, the
 	saved views and the column visibility menu. One row on a desktop screen; on a phone the search
 	box and the pills get rows of their own.
@@ -15,6 +15,7 @@
 	import FilterPill from "./filter-pill.svelte";
 	import { provideTableFilters } from "./filters.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
+	import { tableUrlSync } from "./url-sync.svelte.ts";
 	import ViewsMenu from "./views-menu.svelte";
 
 	let {
@@ -59,6 +60,9 @@
 				onclick={() => {
 					table.resetColumnFilters();
 					table.resetGlobalFilter();
+					// A fresh start: no view's changes (see `saved-views.svelte`).
+					const sync = tableUrlSync(table);
+					if (sync) sync.viewId = undefined;
 				}}
 			>
 				{m.common_table_reset()}

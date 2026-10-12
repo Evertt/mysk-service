@@ -10,9 +10,7 @@ import {
 	slaState,
 } from "#modules/contracts/coverage.ts";
 import type { ContractLevel } from "#modules/contracts/model.ts";
-
-const day = (value: string) => new Date(`${value}T00:00`);
-const HOUR = 60 * 60 * 1000;
+import { at, day } from "#unit/temporal-support.ts";
 
 describe("coverage", () => {
 	const contract = (number: string, startsOn: string, endsOn: string, responseHours = 24) => ({
@@ -25,7 +23,7 @@ describe("coverage", () => {
 	test("counts a contract active on the day the order was created, up to its last day", () => {
 		const year = contract("CTR-1", "2026-01-01", "2026-12-31");
 		expect(coveringContract([year], day("2026-01-01"))).toBe(year);
-		expect(coveringContract([year], new Date(2026, 11, 31, 23, 59))).toBe(year);
+		expect(coveringContract([year], at("2026-12-31 23:59"))).toBe(year);
 		expect(coveringContract([year], day("2025-12-31"))).toBeUndefined();
 		expect(coveringContract([year], day("2027-01-01"))).toBeUndefined();
 	});
@@ -77,56 +75,61 @@ describe("what a contract includes", () => {
 });
 
 describe("response time", () => {
-	const createdAt = new Date(2026, 9, 7, 8, 0);
+	const createdAt = at("2026-10-07 08:00");
 	const order = (fields: { type?: OrderType; status?: OrderStatus } = {}) => ({
 		type: "repair" as OrderType,
 		status: "quote" as OrderStatus,
 		createdAt,
 		...fields,
 	});
-	const at = (hours: number) => new Date(createdAt.getTime() + hours * HOUR);
+	/** `hours` after the order was created. */
+	const later = (hours: number) => createdAt.add({ milliseconds: Math.round(hours * 3_600_000) });
 
 	test("a covered repair is due the contract's response time after it was created", () => {
-		expect(responseDeadline(order(), 4, at(1))).toEqual({
-			due: new Date(2026, 9, 7, 12, 0),
+		expect(responseDeadline(order(), 4, later(1))).toEqual({
+			due: at("2026-10-07 12:00"),
 			state: "on_track",
 		});
-		expect(responseDeadline(order(), 72, at(1))?.due).toEqual(new Date(2026, 9, 10, 8, 0));
+		expect(responseDeadline(order(), 72, later(1))?.due).toEqual(at("2026-10-10 08:00"));
 	});
 
 	test.each<OrderType>(["maintenance", "inspection", "installation"])(
 		"%s work has no deadline",
 		(type) => {
-			expect(responseDeadline(order({ type }), 4, at(10))).toBeNull();
+			expect(responseDeadline(order({ type }), 4, later(10))).toBeNull();
 		},
 	);
 
 	test("a cancelled call-out has no deadline", () => {
-		expect(responseDeadline(order({ status: "cancelled" }), 4, at(10))).toBeNull();
+		expect(responseDeadline(order({ status: "cancelled" }), 4, later(10))).toBeNull();
 	});
 
 	test.each<OrderStatus>(["scheduled", "in_progress", "completed", "invoiced"])(
 		"a %s call-out has been responded to, even after the deadline",
 		(status) => {
-			expect(responseDeadline(order({ status }), 4, at(1))?.state).toBe("responded");
-			expect(responseDeadline(order({ status }), 4, at(10))?.state).toBe("responded");
+			expect(responseDeadline(order({ status }), 4, later(1))?.state).toBe("responded");
+			expect(responseDeadline(order({ status }), 4, later(10))?.state).toBe("responded");
 		},
 	);
 
 	test("a call-out waiting for a response is on track until a quarter of the time is left", () => {
 		// 24 hours to respond: at risk for the last 6.
-		expect(responseDeadline(order(), 24, at(0))?.state).toBe("on_track");
-		expect(responseDeadline(order(), 24, at(18))?.state).toBe("on_track");
-		expect(responseDeadline(order(), 24, new Date(at(18).getTime() + 1))?.state).toBe("at_risk");
-		expect(responseDeadline(order(), 24, at(23.99))?.state).toBe("at_risk");
+		expect(responseDeadline(order(), 24, later(0))?.state).toBe("on_track");
+		expect(responseDeadline(order(), 24, later(18))?.state).toBe("on_track");
+		expect(responseDeadline(order(), 24, later(18).add({ milliseconds: 1 }))?.state).toBe(
+			"at_risk",
+		);
+		expect(responseDeadline(order(), 24, later(23.99))?.state).toBe("at_risk");
 	});
 
 	test("it's overdue from the deadline on", () => {
-		expect(responseDeadline(order(), 24, at(24))?.state).toBe("overdue");
-		expect(responseDeadline(order(), 24, at(100))?.state).toBe("overdue");
+		expect(responseDeadline(order(), 24, later(24))?.state).toBe("overdue");
+		expect(responseDeadline(order(), 24, later(100))?.state).toBe("overdue");
 	});
 
 	test("without any time to respond, it's overdue at once", () => {
-		expect(slaState("quote", createdAt, 0, createdAt)).toBe("overdue");
+		expect(slaState("quote", createdAt, Temporal.Duration.from({ hours: 0 }), createdAt)).toBe(
+			"overdue",
+		);
 	});
 });

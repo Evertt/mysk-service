@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import {
 		getCustomerOptions,
@@ -7,6 +8,7 @@
 		getEquipmentOptions,
 	} from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
@@ -99,6 +101,36 @@
 				none={m.orders_new_installation()}
 				counts={facets.equipment}
 			/>
+			<DateRangeFilter
+				columnId="scheduledFor"
+				title={m.orders_column_scheduled()}
+				none={m.orders_unscheduled()}
+				presets={[
+					"today",
+					"tomorrow",
+					"this-week",
+					"next-week",
+					"next-7-days",
+					"this-month",
+					"before-today",
+					"from-today",
+				]}
+			/>
+			<DateRangeFilter
+				columnId="createdAt"
+				title={m.orders_column_created()}
+				presets={[
+					"today",
+					"yesterday",
+					"this-week",
+					"last-week",
+					"last-7-days",
+					"last-30-days",
+					"this-month",
+					"last-month",
+				]}
+			/>
+			<NumberRangeFilter columnId="total" title={m.orders_column_total()} money min={0} />
 		</table.Toolbar>
 		<table.Table
 			emptyTitle={m.orders_empty()}

@@ -22,11 +22,8 @@ const year = new Date().getFullYear();
 
 // --- What invoices are, as `../invoice.ts` defines it ------------------------------------------
 
-/** `days` after today at midnight, in seconds. */
-const daysFromToday = (days: number) => {
-	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate() + days).getTime() / 1000;
-};
+/** `days` after today, as the database has days. */
+const daysFromToday = (days: number) => Temporal.Now.plainDateISO().add({ days }).toString();
 
 /** An organization's next invoice number: `INV-<this year>-<highest sequence + 1>`. */
 async function nextNumber(organizationId: string) {
@@ -58,9 +55,9 @@ const invoiceOf = (number: string, organizationId: string) =>
 		customer_id: number;
 		vat_rate: number;
 		payment_term_days: number;
-		issued_on: number | null;
-		due_on: number | null;
-		paid_on: number | null;
+		issued_on: string | null;
+		due_on: string | null;
+		paid_on: string | null;
 		voided_at: number | null;
 	}>(`select * from invoice where number = ? and organization_id = ?`, [
 		number,
@@ -171,7 +168,7 @@ beforeAll(async () => {
 	[customer] = await rows<typeof customer>(
 		`with ${billable}, ${covered} select c.id, c.code from customer c where c.organization_id = ?
 		 and exists (select 1 from contract k where k.customer_id = c.id
-			and k.starts_on <= unixepoch() and k.ends_on + 86400 > unixepoch())
+			and k.starts_on <= date('now', 'localtime') and k.ends_on >= date('now', 'localtime'))
 		 and (select count(*) from billable b where b.customer_id = c.id) >= 2
 		 and exists (select 1 from billable b join covered v on v.order_id = b.id and v.n = 1
 			where b.customer_id = c.id and v.level in ('standard', 'premium') and b.labor_hours > 0)

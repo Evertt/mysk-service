@@ -2,6 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { isOpenOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -77,9 +78,10 @@ export const getMaterial = query(v.string(), async (sku) => {
 		.where(and(eq(stockMovement.materialId, found.id), inTenant(stockMovement)))
 		.orderBy(desc(stockMovement.createdAt), desc(stockMovement.id));
 
-	const yearAgo = new Date();
-	yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-	const lastYear = usage.filter((row) => row.createdAt >= yearAgo && row.status !== "cancelled");
+	const yearAgo = Temporal.Now.zonedDateTimeISO(getTimeZone()).subtract({ years: 1 }).toInstant();
+	const lastYear = usage.filter(
+		(row) => Temporal.Instant.compare(row.createdAt, yearAgo) >= 0 && row.status !== "cancelled",
+	);
 	const open = usage.filter((row) => isOpenOrder(row.status));
 	const total = (rows: typeof usage) => rows.reduce((sum, row) => sum + row.quantity, 0);
 

@@ -1,11 +1,12 @@
 import type { TableState } from "@tanstack/svelte-table";
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type OrderRow } from "#lib/orders/list/columns.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
+import { at, freezeNow } from "#unit/temporal-support.ts";
 
 const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	id: Number(number.slice(-3)),
@@ -14,9 +15,9 @@ const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	status: "scheduled",
 	priority: "normal",
 	description: "Replace the seal",
-	scheduledFor: new Date(2026, 9, 20),
+	scheduledFor: at("2026-10-20 00:00"),
 	completedAt: null,
-	createdAt: new Date(2026, 9, 1),
+	createdAt: at("2026-10-01 00:00"),
 	laborHours: 1,
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	equipment: { id: 1, model: "C15", manufacturer: "Caterpillar", serialNumber: "GEN-1" },
@@ -115,6 +116,45 @@ test("the search finds orders by number, customer, equipment and engineer", () =
 	for (const search of ["ord-002", "bolt", "daikin xr9", "priya"]) {
 		expect(shown(rows, { globalFilter: search }), search).toEqual(["ORD-002"]);
 	}
+});
+
+test("the date filters keep the orders on the days of a range, a preset's on the day it's read", () => {
+	freezeNow(at("2026-10-14 12:00"));
+	try {
+		const rows = [
+			order("ORD-001", {
+				scheduledFor: at("2026-10-12 08:00"),
+				createdAt: at("2026-09-30 00:00"),
+			}),
+			order("ORD-002", { scheduledFor: at("2026-10-19 08:00") }),
+			order("ORD-003", { scheduledFor: null }),
+		];
+		const by = (id: string, range: string) =>
+			shown(rows, { columnFilters: [{ id, value: [range] }] });
+		expect(by("scheduledFor", "this-week")).toEqual(["ORD-001"]);
+		expect(by("scheduledFor", "2026-10-13..")).toEqual(["ORD-002"]);
+		// Unscheduled orders are in no range.
+		expect(by("scheduledFor", "..2026-12-31")).toEqual(["ORD-001", "ORD-002"]);
+		expect(by("createdAt", "last-month")).toEqual(["ORD-001"]);
+		// Several values, `none` among them: unscheduled or next week.
+		expect(
+			shown(rows, { columnFilters: [{ id: "scheduledFor", value: ["none", "next-week"] }] }),
+		).toEqual(["ORD-002", "ORD-003"]);
+	} finally {
+		vi.restoreAllMocks();
+	}
+});
+
+test("the total filters by amounts in euros, on the cents the table shows", () => {
+	const rows = [
+		order("ORD-001", { total: 49_999 }),
+		order("ORD-002", { total: 50_000 }),
+		order("ORD-003", { total: 1250 }),
+	];
+	const by = (...value: string[]) => shown(rows, { columnFilters: [{ id: "total", value }] });
+	expect(by("500..")).toEqual(["ORD-002"]);
+	expect(by("..499.99")).toEqual(["ORD-001", "ORD-003"]);
+	expect(by("12.5", "500")).toEqual(["ORD-002", "ORD-003"]);
 });
 
 test("the type and status filters keep the chosen values", () => {

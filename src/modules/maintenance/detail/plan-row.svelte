@@ -29,7 +29,7 @@
 			orderType: PlanOrderType;
 			description: string;
 			intervalMonths: number;
-			nextDueOn: Date;
+			nextDueOn: Temporal.PlainDate;
 			paused: boolean;
 			lastOrder: string | null;
 		};

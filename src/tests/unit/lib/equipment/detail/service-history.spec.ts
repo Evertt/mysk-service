@@ -7,6 +7,7 @@ import {
 	orderDate,
 	serviceStats,
 } from "#lib/equipment/detail/service-history.ts";
+import { at, day } from "#unit/temporal-support.ts";
 
 let nextId = 1;
 
@@ -21,7 +22,7 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		description: "Annual service",
 		scheduledFor: null,
 		completedAt: null,
-		createdAt: new Date(2026, 0, 1),
+		createdAt: at("2026-01-01 00:00"),
 		laborHours: 2,
 		engineer: null,
 		cost: { costs: [], labor: 0, adjustments: [], total: 10_000 },
@@ -29,14 +30,14 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 	};
 }
 
-const now = new Date(2026, 9, 7, 14, 30);
-const unit = { installedAt: new Date(2024, 2, 1), warrantyUntil: new Date(2027, 2, 1) };
+const now = at("2026-10-07 14:30");
+const unit = { installedAt: day("2024-03-01"), warrantyUntil: day("2027-03-01") };
 
 describe("orderDate", () => {
 	test("is the completion, else the schedule, else the creation", () => {
-		const createdAt = new Date(2026, 0, 1);
-		const scheduledFor = new Date(2026, 0, 10);
-		const completedAt = new Date(2026, 0, 11);
+		const createdAt = at("2026-01-01 00:00");
+		const scheduledFor = at("2026-01-10 00:00");
+		const completedAt = at("2026-01-11 00:00");
 		expect(orderDate({ createdAt, scheduledFor, completedAt })).toBe(completedAt);
 		expect(orderDate({ createdAt, scheduledFor, completedAt: null })).toBe(scheduledFor);
 		expect(orderDate({ createdAt, scheduledFor: null, completedAt: null })).toBe(createdAt);
@@ -45,9 +46,9 @@ describe("orderDate", () => {
 
 describe("buildTimeline", () => {
 	test("puts the installation, the orders and the warranty's end newest first", () => {
-		const repair = order({ type: "repair", completedAt: new Date(2025, 5, 3) });
-		const quote = order({ status: "quote", createdAt: new Date(2026, 8, 30) });
-		const visit = order({ scheduledFor: new Date(2026, 9, 20) });
+		const repair = order({ type: "repair", completedAt: at("2025-06-03 00:00") });
+		const quote = order({ status: "quote", createdAt: at("2026-09-30 00:00") });
+		const visit = order({ scheduledFor: at("2026-10-20 00:00") });
 
 		const events = buildTimeline(unit, [quote, repair, visit], now);
 		expect(
@@ -55,28 +56,32 @@ describe("buildTimeline", () => {
 		).toEqual(["warranty", visit.number, quote.number, repair.number, "installation"]);
 		expect(events.map((event) => event.date)).toEqual([
 			unit.warrantyUntil,
-			visit.scheduledFor,
-			quote.createdAt,
-			repair.completedAt,
+			day("2026-10-20"),
+			day("2026-09-30"),
+			day("2025-06-03"),
 			unit.installedAt,
 		]);
 	});
 
 	test("marks a warranty that still covers work as upcoming, including on its last day", () => {
-		const until = new Date(2026, 9, 7);
-		const upcoming = (at: Date) =>
-			buildTimeline({ ...unit, warrantyUntil: until }, [], at).find(
+		const until = day("2026-10-07");
+		const upcoming = (when: Temporal.Instant | Temporal.PlainDate) =>
+			buildTimeline({ ...unit, warrantyUntil: until }, [], when).find(
 				(event) => event.kind === "warranty",
 			);
 		expect(upcoming(now)).toEqual({ kind: "warranty", date: until, upcoming: true });
-		expect(upcoming(new Date(2026, 9, 8))).toMatchObject({ upcoming: false });
+		expect(upcoming(day("2026-10-08"))).toMatchObject({ upcoming: false });
 	});
 
 	test("on the same day, shows the warranty's end above orders and the installation below", () => {
-		const day = new Date(2025, 0, 1);
-		const first = order({ completedAt: day });
-		const second = order({ completedAt: day });
-		const events = buildTimeline({ installedAt: day, warrantyUntil: day }, [first, second], now);
+		const moment = at("2025-01-01 00:00");
+		const first = order({ completedAt: moment });
+		const second = order({ completedAt: moment });
+		const events = buildTimeline(
+			{ installedAt: day("2025-01-01"), warrantyUntil: day("2025-01-01") },
+			[first, second],
+			now,
+		);
 		expect(events.map((event) => (event.kind === "order" ? event.order.id : event.kind))).toEqual([
 			"warranty",
 			second.id,
@@ -95,14 +100,14 @@ describe("buildTimeline", () => {
 
 describe("daysBetween", () => {
 	test("counts calendar days, whatever the time of day", () => {
-		expect(daysBetween(new Date(2026, 0, 1, 23, 59), new Date(2026, 0, 2, 0, 1))).toBe(1);
-		expect(daysBetween(new Date(2026, 0, 1, 0, 1), new Date(2026, 0, 1, 23, 59))).toBe(0);
-		expect(daysBetween(new Date(2026, 0, 1), new Date(2026, 11, 31))).toBe(364);
+		expect(daysBetween(at("2026-01-01 23:59"), at("2026-01-02 00:01"))).toBe(1);
+		expect(daysBetween(at("2026-01-01 00:01"), at("2026-01-01 23:59"))).toBe(0);
+		expect(daysBetween(at("2026-01-01 00:00"), at("2026-12-31 00:00"))).toBe(364);
 	});
 
 	test("isn't thrown off by daylight saving time", () => {
-		expect(daysBetween(new Date(2026, 2, 1), new Date(2026, 3, 1))).toBe(31);
-		expect(daysBetween(new Date(2026, 9, 1), new Date(2026, 10, 1))).toBe(31);
+		expect(daysBetween(at("2026-03-01 00:00"), at("2026-04-01 00:00"))).toBe(31);
+		expect(daysBetween(at("2026-10-01 00:00"), at("2026-11-01 00:00"))).toBe(31);
 	});
 });
 
@@ -124,8 +129,8 @@ describe("serviceStats", () => {
 	test("counts orders by type and status, and the cost of the done ones only", () => {
 		const stats = serviceStats(
 			[
-				order({ type: "installation", status: "invoiced", completedAt: new Date(2024, 2, 1) }),
-				order({ type: "maintenance", completedAt: new Date(2025, 2, 1) }),
+				order({ type: "installation", status: "invoiced", completedAt: at("2024-03-01 00:00") }),
+				order({ type: "maintenance", completedAt: at("2025-03-01 00:00") }),
 				order({ type: "maintenance", status: "in_progress" }),
 				order({ type: "inspection", status: "quote" }),
 				order({ type: "repair", status: "cancelled" }),
@@ -138,25 +143,25 @@ describe("serviceStats", () => {
 			openOrders: 2,
 			doneOrders: 2,
 			cost: 20_000,
-			lastService: new Date(2025, 2, 1),
+			lastService: at("2025-03-01 00:00"),
 		});
 	});
 
 	test("the last service is the latest completion, whatever the order of the orders", () => {
 		const stats = serviceStats(
 			[
-				order({ completedAt: new Date(2025, 4, 1) }),
-				order({ completedAt: new Date(2026, 4, 1) }),
-				order({ completedAt: new Date(2025, 9, 1) }),
+				order({ completedAt: at("2025-05-01 00:00") }),
+				order({ completedAt: at("2026-05-01 00:00") }),
+				order({ completedAt: at("2025-10-01 00:00") }),
 			],
 			now,
 		);
-		expect(stats.lastService).toEqual(new Date(2026, 4, 1));
+		expect(stats.lastService).toEqual(at("2026-05-01 00:00"));
 	});
 
 	test("one repair gives the days since, but no mean time between repairs", () => {
 		const stats = serviceStats(
-			[order({ type: "repair", completedAt: new Date(2026, 9, 1, 16, 0) })],
+			[order({ type: "repair", completedAt: at("2026-10-01 16:00") })],
 			now,
 		);
 		expect(stats).toMatchObject({ repairs: 1, daysSinceLastRepair: 6, daysBetweenRepairs: null });
@@ -165,12 +170,12 @@ describe("serviceStats", () => {
 	test("the mean time between repairs spans the first to the last done repair", () => {
 		const stats = serviceStats(
 			[
-				order({ type: "repair", completedAt: new Date(2026, 6, 1) }),
-				order({ type: "repair", completedAt: new Date(2026, 0, 1) }),
-				order({ type: "repair", completedAt: new Date(2026, 3, 1) }),
+				order({ type: "repair", completedAt: at("2026-07-01 00:00") }),
+				order({ type: "repair", completedAt: at("2026-01-01 00:00") }),
+				order({ type: "repair", completedAt: at("2026-04-01 00:00") }),
 				// Not done yet, and not a repair: neither counts.
-				order({ type: "repair", status: "in_progress", scheduledFor: new Date(2026, 9, 6) }),
-				order({ type: "maintenance", completedAt: new Date(2026, 8, 1) }),
+				order({ type: "repair", status: "in_progress", scheduledFor: at("2026-10-06 00:00") }),
+				order({ type: "maintenance", completedAt: at("2026-09-01 00:00") }),
 			],
 			now,
 		);
@@ -180,7 +185,7 @@ describe("serviceStats", () => {
 
 	test("a repair completed today was zero days ago", () => {
 		const stats = serviceStats(
-			[order({ type: "repair", completedAt: new Date(2026, 9, 7, 9) })],
+			[order({ type: "repair", completedAt: at("2026-10-07 09:00") })],
 			now,
 		);
 		expect(stats.daysSinceLastRepair).toBe(0);

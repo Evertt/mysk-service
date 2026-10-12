@@ -68,7 +68,7 @@ domain. Whatever belongs to a core domain lives in that domain's folder.
   i18n, module manifests, extension point declarations): `src/lib/components/`, `src/lib/activity/`,
   `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`, `src/lib/extensions/`, `src/lib/themes/`;
   the loose `src/lib/*.ts` that remain are domain enums (`models.ts`), valibot blocks
-  (`schema.ts`), date maths (`dates.ts`), code shapes (`numbering.ts`), what's billed besides
+  (`schema.ts`), the time zone and Temporal's transport (`dates.ts`), code shapes (`numbering.ts`), what's billed besides
   orders (`billing.ts`, types the seed shares with invoicing) and shadcn's `cn` (`utils.ts`).
   Infrastructure on the server (database, auth, activity log, list plans and bulk helpers, mail,
   the modules' route guards): `src/lib/server/db/`, `server/auth/`, `server/activity/`,
@@ -431,6 +431,15 @@ filters. Such a list's `list.query` and `list.where` let any namespaced column (
 through, and `planList()` checks the query against the tenant's list (`listSql.list.strict`). The
 equipment list is the example.
 
+**Range filters**: `dateRange`, `numberRange` and `moneyRange` (cents in the query, euros in the
+URL) filter by ranges, both ends included: `?scheduled=2026-10-01..2026-10-07`, `?quantity=..10`,
+`?total=500..`. A date end may be a preset that stays relative in the URL (`?scheduled=today..`,
+`this-week..next-month`; `datePresets` in `ranges.ts`). Like a set filter's, a range filter's value
+takes several, comma-separated, any of which keeps a row, and `none` with `orNone()`:
+`?scheduled=none,this-week`. Their SQL is `inDays()` and `between()`; a value that isn't in the
+database (an order's total) uses `match` instead of `filter` and is kept by id (see
+`docs/plans/table-query.md`, "Range filters").
+
 ## Database schema
 
 The schema is `src/lib/server/db/schema.ts`; the database gets it through the migrations in
@@ -520,6 +529,34 @@ remote functions. Every user-facing text goes through a message; nothing English
   `numberFormatter(options)` for other formats, safe at module scope), never `new Intl.*("en-GB")`
   or `toLocaleString()`. Number and date inputs stay `type="number"`/`"date"`: the browser shows
   them in its own language and submits a dot and `yyyy-mm-dd`.
+- **Days and moments** are Temporal's, never `Date`s (but better-auth's own columns): a day on the
+  calendar (a due date, a contract's start, an install date) is a `Temporal.PlainDate`, stored as
+  `yyyy-mm-dd` (`day()` in `src/lib/server/db/columns.ts`); a moment (when an order was made,
+  completed or is scheduled for) a `Temporal.Instant`, stored as seconds (`moment()`, `createdAt()`).
+  They reach the browser as themselves (`transport` in `src/hooks.ts`; for devalue elsewhere,
+  `temporalReducers`/`temporalRevivers` in `#lib/dates.ts`), and form schemas make days
+  (`date()`, `optionalDate()` in `#lib/schema.ts`). Call Temporal directly at the call site
+  (`day.add({ days: 1 })`, `instant.toZonedDateTimeISO(getTimeZone()).toPlainDate()`) rather than
+  through wrappers, and compare with `Temporal.PlainDate.compare(a, b)` / `.equals()`, never `<`,
+  `>` or `===`: a Temporal value has no `valueOf` (`<` throws) and TypeScript doesn't catch it.
+  The tables sort them with `byValue` (`features.ts`), TanStack's own sorts can't. Temporal comes
+  from `temporal-polyfill` where the runtime has none (Node 24, which Vercel runs, and Safari):
+  `import "temporal-polyfill/global"` first in both hooks files, the seed, and the tests' setup
+  (`src/tests/unit/temporal-setup.ts`, which also makes `toEqual()` compare Temporal values by
+  value: they have no properties of their own). Tests write days and moments with
+  `day("2026-10-14")` and `at("2026-10-14 15:30")`, and stop the clock with `freezeNow()`
+  (`#unit/temporal-support.ts`): fake timers don't move `Temporal.Now`.
+- **Time zone**: a moment's day and time of day are the user's, on the server too. The browser
+  keeps its zone in a cookie (`src/routes/time-zone.ts`, which reloads a page the server rendered
+  in another zone once); `handleTimeZone` (`src/lib/server/time-zone.ts`) runs each request in it,
+  and `getTimeZone()` (`#lib/dates.ts`) answers with it, like `getLocale()`; outside a request
+  (scripts) it's the machine's, and the seed's always Amsterdam's
+  (`src/lib/server/db/seed/time-zone.ts`), so the demo data's days are the same everywhere.
+  `format.ts` formats moments in it (a formatter that names a `timeZone`, like the invitation
+  mail's UTC, keeps its own); a day is the same day everywhere. A date range filter keeps a moment
+  column's rows by their day in the zone, and a day column's as days (`inDays()` in
+  `src/lib/server/lists/plan.ts`). SQLite knows only the server's zone, so group moments by day in
+  code, not with `'localtime'` (see the dashboard's orders per week).
 - **Stored text** (e.g. an invoice line's description) is in the language of whoever made it; store
   values and translate when showing where you can.
 - **Dutch**: informal (`je`, never `u`), short, sentence case like the English. Terms: order →

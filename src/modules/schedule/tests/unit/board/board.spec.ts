@@ -6,53 +6,46 @@ import {
 	boardEngineers,
 	byPriorityThenAge,
 	cellKey,
-	dayKey,
 	formatDay,
 	formatLongDay,
 	formatWeek,
 	groupByCell,
 	load,
 	parseDay,
-	startOfWeek,
 	weekDays,
 	weekFromParam,
-	weekNumber,
 } from "#modules/schedule/board/board.ts";
+import { at, day } from "#unit/temporal-support.ts";
 
 describe("days and weeks", () => {
-	test("parseDay reads yyyy-mm-dd as the local start of that day", () => {
-		expect(parseDay("2026-10-07")).toEqual(new Date(2026, 9, 7));
+	test("parseDay reads yyyy-mm-dd as that day", () => {
+		expect(parseDay("2026-10-07")).toEqual(day("2026-10-07"));
 		expect(parseDay("2026-02-31")).toBeUndefined();
 		expect(parseDay("7 October")).toBeUndefined();
 		expect(parseDay("")).toBeUndefined();
 		expect(parseDay(null)).toBeUndefined();
 	});
 
-	test("dayKey is the reverse", () => {
-		expect(dayKey(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
-	});
-
 	test("weeks start on Monday", () => {
-		const monday = new Date(2026, 9, 5);
-		expect(startOfWeek(new Date(2026, 9, 5, 8))).toEqual(monday);
-		expect(startOfWeek(new Date(2026, 9, 7, 15, 30))).toEqual(monday);
+		const monday = day("2026-10-05");
+		expect(weekFromParam("2026-10-05")).toEqual(monday);
 		// Sunday is the last day of the week, not the first.
-		expect(startOfWeek(new Date(2026, 9, 11, 23, 59))).toEqual(monday);
-		expect(startOfWeek(new Date(2026, 9, 12))).toEqual(new Date(2026, 9, 12));
+		expect(weekFromParam("2026-10-11")).toEqual(monday);
+		expect(weekFromParam("2026-10-12")).toEqual(day("2026-10-12"));
 		// Across a month and a year.
-		expect(startOfWeek(new Date(2027, 0, 1))).toEqual(new Date(2026, 11, 28));
+		expect(weekFromParam("2027-01-01")).toEqual(day("2026-12-28"));
 	});
 
 	test("the ?week= param may be any day of the week, and defaults to this week", () => {
-		const today = new Date(2026, 9, 7, 10);
-		expect(weekFromParam("2026-10-09", today)).toEqual(new Date(2026, 9, 5));
-		expect(weekFromParam(null, today)).toEqual(new Date(2026, 9, 5));
-		expect(weekFromParam("next week", today)).toEqual(new Date(2026, 9, 5));
+		const today = day("2026-10-07");
+		expect(weekFromParam("2026-10-09", today)).toEqual(day("2026-10-05"));
+		expect(weekFromParam(null, today)).toEqual(day("2026-10-05"));
+		expect(weekFromParam("next week", today)).toEqual(day("2026-10-05"));
 	});
 
 	test("a week has seven days, Monday to Sunday", () => {
-		const days = weekDays(new Date(2026, 9, 26));
-		expect(days.map(dayKey)).toEqual([
+		const days = weekDays(day("2026-10-26"));
+		expect(days.map(String)).toEqual([
 			"2026-10-26",
 			"2026-10-27",
 			"2026-10-28",
@@ -61,27 +54,19 @@ describe("days and weeks", () => {
 			"2026-10-31",
 			"2026-11-01",
 		]);
-		expect(days.every((day) => day.getHours() === 0)).toBe(true);
-	});
-
-	test("week numbers follow ISO 8601", () => {
-		expect(weekNumber(new Date(2026, 9, 7))).toBe(41);
-		expect(weekNumber(new Date(2026, 0, 1))).toBe(1);
-		// 1 January 2027 is a Friday, so it's in the last week of 2026.
-		expect(weekNumber(new Date(2027, 0, 1))).toBe(53);
-		expect(weekNumber(new Date(2027, 0, 4))).toBe(1);
-		expect(weekNumber(new Date(2024, 11, 30))).toBe(1);
 	});
 
 	test("formatting", () => {
-		expect(formatDay(new Date(2026, 9, 5))).toBe("Mon 5 Oct");
-		expect(formatLongDay(new Date(2026, 9, 11))).toBe("Sunday 11 October");
-		expect(formatWeek(new Date(2026, 9, 5))).toMatch(/^5\s?–\s?11 Oct 2026$/);
+		expect(formatDay(day("2026-10-05"))).toBe("Mon 5 Oct");
+		expect(formatLongDay(day("2026-10-11"))).toBe("Sunday 11 October");
+		expect(formatWeek(day("2026-10-05"))).toMatch(/^5\s?–\s?11 Oct 2026$/);
 	});
 });
 
 describe("the board", () => {
-	const on = (day: number, hours: number) => new Date(2026, 9, day, hours);
+	/** An hour of a day of October 2026. */
+	const on = (date: number, hours: number) =>
+		at(`2026-10-${String(date).padStart(2, "0")} ${String(hours).padStart(2, "0")}:00`);
 	const orders = [
 		{ id: 1, engineerId: 7, scheduledFor: on(6, 14) },
 		{ id: 2, engineerId: 7, scheduledFor: on(6, 8) },
@@ -97,8 +82,8 @@ describe("the board", () => {
 			"9/2026-10-07",
 			"unassigned/2026-10-06",
 		]);
-		expect(cells.get(cellKey(7, on(6, 0)))!.map((o) => o.id)).toEqual([2, 1]);
-		expect(cells.get(cellKey("unassigned", on(6, 0)))!.map((o) => o.id)).toEqual([3]);
+		expect(cells.get(cellKey(7, day("2026-10-06")))!.map((o) => o.id)).toEqual([2, 1]);
+		expect(cells.get(cellKey("unassigned", day("2026-10-06")))!.map((o) => o.id)).toEqual([3]);
 	});
 
 	test("orders of an engineer without a row count as unassigned", () => {
@@ -130,19 +115,19 @@ describe("the board", () => {
 
 	test("the backlog is most urgent first, then the longest waiting", () => {
 		const backlog = [
-			{ id: 1, priority: "normal" as const, createdAt: new Date(2026, 9, 1) },
-			{ id: 2, priority: "urgent" as const, createdAt: new Date(2026, 9, 6) },
-			{ id: 3, priority: "normal" as const, createdAt: new Date(2026, 8, 20) },
-			{ id: 4, priority: "low" as const, createdAt: new Date(2026, 7, 1) },
-			{ id: 5, priority: "high" as const, createdAt: new Date(2026, 9, 2) },
+			{ id: 1, priority: "normal" as const, createdAt: at("2026-10-01 00:00") },
+			{ id: 2, priority: "urgent" as const, createdAt: at("2026-10-06 00:00") },
+			{ id: 3, priority: "normal" as const, createdAt: at("2026-09-20 00:00") },
+			{ id: 4, priority: "low" as const, createdAt: at("2026-08-01 00:00") },
+			{ id: 5, priority: "high" as const, createdAt: at("2026-10-02 00:00") },
 		];
 		expect(backlog.sort(byPriorityThenAge).map((o) => o.id)).toEqual([2, 5, 3, 1, 4]);
 	});
 });
 
 describe("planning an order", () => {
-	const start = new Date(2026, 9, 5);
-	const order = (id: number, status: OrderStatus, scheduledFor: Date | null) => ({
+	const start = day("2026-10-05");
+	const order = (id: number, status: OrderStatus, scheduledFor: Temporal.Instant | null) => ({
 		id,
 		status,
 		scheduledFor,
@@ -151,8 +136,8 @@ describe("planning an order", () => {
 	const schedule = {
 		start,
 		orders: [
-			order(1, "scheduled", new Date(2026, 9, 6, 10)),
-			order(2, "scheduled", new Date(2026, 9, 7, 8)),
+			order(1, "scheduled", at("2026-10-06 10:00")),
+			order(2, "scheduled", at("2026-10-07 08:00")),
 		],
 		backlog: [order(3, "quote", null), order(4, "quote", null)],
 	};
@@ -161,11 +146,11 @@ describe("planning an order", () => {
 		const moved = applyMove(schedule, {
 			id: 1,
 			engineerId: null,
-			scheduledFor: new Date(2026, 9, 9, 10),
+			scheduledFor: at("2026-10-09 10:00"),
 		});
 		expect(moved.orders).toEqual([
 			schedule.orders[1],
-			{ ...schedule.orders[0], engineerId: null, scheduledFor: new Date(2026, 9, 9, 10) },
+			{ ...schedule.orders[0], engineerId: null, scheduledFor: at("2026-10-09 10:00") },
 		]);
 		expect(moved.backlog).toEqual(schedule.backlog);
 	});
@@ -174,14 +159,14 @@ describe("planning an order", () => {
 		const moved = applyMove(schedule, {
 			id: 3,
 			engineerId: 9,
-			scheduledFor: new Date(2026, 9, 8, 9),
+			scheduledFor: at("2026-10-08 09:00"),
 		});
 		expect(moved.backlog.map((o) => o.id)).toEqual([4]);
 		expect(moved.orders.at(-1)).toEqual({
 			id: 3,
 			status: "scheduled",
 			engineerId: 9,
-			scheduledFor: new Date(2026, 9, 8, 9),
+			scheduledFor: at("2026-10-08 09:00"),
 		});
 	});
 
@@ -189,12 +174,14 @@ describe("planning an order", () => {
 		const moved = applyMove(schedule, {
 			id: 2,
 			engineerId: 7,
-			scheduledFor: new Date(2026, 9, 12, 8),
+			scheduledFor: at("2026-10-12 08:00"),
 		});
 		expect(moved.orders.map((o) => o.id)).toEqual([1]);
 	});
 
 	test("an unknown order changes nothing", () => {
-		expect(applyMove(schedule, { id: 99, engineerId: 7, scheduledFor: start })).toBe(schedule);
+		expect(
+			applyMove(schedule, { id: 99, engineerId: 7, scheduledFor: at("2026-10-05 09:00") }),
+		).toBe(schedule);
 	});
 });

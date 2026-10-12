@@ -13,6 +13,7 @@
  * | `?status=quote&status=paid` | the same, repeated (read, never written)                      |
  * | `?status=`                  | no filter on the column, when the table has one by default   |
  * | `?engineer=none,12`         | rows without a value (`none`, see `noneToken`) or with one    |
+ * | `?scheduled=none,this-week` | a range filter: rows in any of the ranges, or without a value |
  * | `?sort=-priority,scheduled` | sorted by priority descending (`-`), then scheduled ascending |
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
  * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
@@ -21,6 +22,11 @@
  * | `?size=50`                  | 50 rows per page                                              |
  *
  * - A value with a comma or backslash in it escapes them with a backslash: `Smith\, Jones`.
+ * - A range filter (`dateRange`, `numberRange`, `moneyRange`) takes ranges, both ends included,
+ *   and on a column that can be empty `none`: `2026-10-01..2026-10-07`, `2026-10-01..` (on or
+ *   after), `..2026-10-07` (on or before), one day `2026-10-01`, or a preset that stays relative,
+ *   on its own (`this-week`) or as an end (`today..`, `this-week..next-month`); numbers `5..10`,
+ *   `..10`, `5..` or `5`; money in euros, `500..`, `..12.50`. See `ranges.ts`.
  * - Parameters that match the table's defaults are left out, so an untouched table has a clean
  *   URL; an absent parameter means the default.
  * - Unknown columns, values a column doesn't have, and malformed numbers are ignored (the default
@@ -28,6 +34,7 @@
  * - With a `prefix`, every parameter gets it: `orders.status=quote`, `orders.page=2` (for a page
  *   with more than one table).
  */
+import { isRangeToken, type RangeGrammar } from "./ranges.ts";
 
 /** The parts of a table's state that live in the URL, shaped like TanStack Table's. */
 export interface TableUrlState {
@@ -56,10 +63,19 @@ interface TableUrlColumn {
 	sortable?: boolean;
 	/** Whether `?group=` can name it. */
 	groupable?: boolean;
-	/** Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values. */
-	filter?: "set";
+	/**
+	 * Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values, a range
+	 * kind (`dateRange`, `numberRange`, `moneyRange`) the rows in any of its ranges (or without a
+	 * value, for `none`; see `ranges.ts`).
+	 */
+	filter?: "set" | RangeGrammar;
 	/** The values its filter accepts (others in the URL are ignored); any if not given. */
 	values?: readonly string[];
+	/**
+	 * For a range filter, whether it takes `none`, the rows without a value (a column that can be
+	 * empty); else `none` is ignored like any other token that isn't a range.
+	 */
+	none?: boolean;
 }
 
 /** How a table's state maps onto the URL. */
@@ -205,6 +221,15 @@ function positive(raw: string | null) {
 	return number > 0 ? number : undefined;
 }
 
+/** Whether a column's filter takes a value from the URL. */
+function accepts(column: TableUrlColumn, value: string) {
+	if (column.filter && column.filter !== "set") {
+		const token = value.trim();
+		return token === noneToken ? column.none === true : isRangeToken(column.filter, token);
+	}
+	return !column.values || column.values.includes(value);
+}
+
 /** Reads a table's state from the URL's parameters; what's absent or invalid is the default. */
 export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUrlState {
 	const { key, defaults, pageSizes, sortByParam, groupByParam, filters } = compile(spec);
@@ -237,7 +262,7 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 		else if (raw.length) {
 			const parsed = [
 				...new Set(raw.flatMap(splitValues).filter((value) => value.trim() !== "")),
-			].filter((value) => !column.values || column.values.includes(value));
+			].filter((value) => accepts(column, value));
 			if (parsed.length) values = parsed;
 		}
 		if (values) columnFilters.push({ id: column.id, value: values });

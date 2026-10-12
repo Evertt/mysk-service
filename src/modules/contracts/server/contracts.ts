@@ -69,7 +69,7 @@ export async function coverageOf(
  */
 export function overlappingCoverage(
 	equipmentIds: number[],
-	period: { startsOn: Date; endsOn: Date },
+	period: { startsOn: Temporal.PlainDate; endsOn: Temporal.PlainDate },
 	exceptId: number | null,
 ) {
 	return db

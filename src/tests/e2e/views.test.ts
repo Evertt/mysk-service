@@ -6,7 +6,7 @@ import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, userNames, users, value } from "./app.ts";
-import { tamperWithCommand } from "./remote-functions.ts";
+import { isRemote, tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const admin = useApp();
@@ -127,7 +127,10 @@ describe("in North", () => {
 		await page.getByRole("option", { name: /^Small business/ }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("segment")?.split(",").length === 3);
-		expect(await menu(page).innerText()).toBe("Saved views");
+		// Changed since it was opened: still the view, with unsaved changes.
+		await expect
+			.poll(() => menu(page).getAttribute("aria-label"))
+			.toBe("Saved views: Big accounts, with unsaved changes");
 
 		await act(page, "Update with the current view");
 		await admin.toast("View updated");
@@ -208,7 +211,7 @@ describe("in North", () => {
 			await tamperWithCommand<number>(page, "deleteView", () => shared.id);
 			await act(page, "Delete…");
 			const [response] = await Promise.all([
-				page.waitForResponse((r) => r.url().includes("/_app/remote")),
+				page.waitForResponse((r) => isRemote(r.url(), "deleteView")),
 				page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click(),
 			]);
 			expect(await response.text()).toMatch(/"status":403/);
@@ -299,7 +302,7 @@ describe("in South", () => {
 				id: target.id,
 			}));
 			const [update] = await Promise.all([
-				page.waitForResponse((r) => r.url().includes("/_app/remote")),
+				page.waitForResponse((r) => isRemote(r.url(), "updateView")),
 				act(page, "Update with the current view"),
 			]);
 			expect(await update.text()).toMatch(/"status":404/);
@@ -307,7 +310,7 @@ describe("in South", () => {
 			await tamperWithCommand<number>(page, "deleteView", () => target.id);
 			await act(page, "Delete…");
 			const [remove] = await Promise.all([
-				page.waitForResponse((r) => r.url().includes("/_app/remote")),
+				page.waitForResponse((r) => isRemote(r.url(), "deleteView")),
 				page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click(),
 			]);
 			expect(await remove.text()).toMatch(/"status":404/);

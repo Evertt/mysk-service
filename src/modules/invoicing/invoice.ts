@@ -1,10 +1,8 @@
-import type { PriceAdjustment } from "#lib/orders/extensions.ts";
-
 /**
  * What an invoice is, as rules: its number, its totals, where it stands, and the lines an order
  * turns into. The one place that says so; the server applies it (`server/`, the remote functions
- * in `routes/(app)/invoices/`) and the pages show it. Without imports at runtime, so the seed
- * script can use it too.
+ * in `routes/(app)/invoices/`) and the pages show it. It imports only `#lib/dates.ts` at runtime, so
+ * the seed script can use it too.
  *
  * - **Numbers** are sequential per organization, across years: `INV-2026-00001`, `INV-2027-00002`,
  *   … (`invoiceNumberFormat` in `./model.ts`). A draft gets its number when it's made; a draft that isn't needed
@@ -18,6 +16,9 @@ import type { PriceAdjustment } from "#lib/orders/extensions.ts";
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
+import { getTimeZone } from "#lib/dates.ts";
+import type { PriceAdjustment } from "#lib/orders/extensions.ts";
+
 import type { InvoiceStatus } from "./model.ts";
 
 // --- Status ----------------------------------------------------------------------------------
@@ -26,19 +27,19 @@ import type { InvoiceStatus } from "./model.ts";
 export const invoiceStates = ["draft", "sent", "overdue", "paid", "void"] as const;
 export type InvoiceState = (typeof invoiceStates)[number];
 
-/** The day after `date`, at midnight. */
-const nextDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-
-/** Whether a sent invoice is overdue at `now`: from the day after its due date. */
+/** Whether a sent invoice is overdue `today` (the user's): from the day after its due date. */
 export const isOverdue = (
-	invoice: { status: InvoiceStatus; dueOn: Date | null },
-	now = new Date(),
-) => invoice.status === "sent" && !!invoice.dueOn && now >= nextDay(invoice.dueOn);
+	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+) =>
+	invoice.status === "sent" &&
+	!!invoice.dueOn &&
+	Temporal.PlainDate.compare(today, invoice.dueOn) > 0;
 
 export const invoiceState = (
-	invoice: { status: InvoiceStatus; dueOn: Date | null },
-	now = new Date(),
-): InvoiceState => (isOverdue(invoice, now) ? "overdue" : invoice.status);
+	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+): InvoiceState => (isOverdue(invoice, today) ? "overdue" : invoice.status);
 
 /** Where an invoice of each status can go next. */
 const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
@@ -53,14 +54,6 @@ export const canChange = (from: InvoiceStatus, to: InvoiceStatus) =>
 
 /** Only drafts can have their lines and terms changed. */
 export const isEditable = (status: InvoiceStatus) => status === "draft";
-
-/** Today at midnight. */
-export const today = (now = new Date()) =>
-	new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-/** The last day to pay an invoice issued on `issuedOn` with a term of `days`. */
-export const dueDate = (issuedOn: Date, days: number) =>
-	new Date(issuedOn.getFullYear(), issuedOn.getMonth(), issuedOn.getDate() + days);
 
 // --- Amounts ---------------------------------------------------------------------------------
 

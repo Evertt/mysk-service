@@ -55,13 +55,20 @@ export const ignoredFields = ["id", "organizationId", "createdAt", "updatedAt"];
 /** `null`, `undefined` and the empty string all mean "nothing". */
 const isEmpty = (value: unknown) => value === null || value === undefined || value === "";
 
-/** A value as it's stored in the log (JSON): dates as ISO strings, nothing as `null`. */
-const normalize = (value: unknown) =>
-	isEmpty(value) ? null : value instanceof Date ? value.toISOString() : value;
+/**
+ * A value as it's stored in the log (JSON): days as `yyyy-mm-dd`, moments as ISO strings
+ * (`2026-10-12T07:30:00Z`), nothing as `null`.
+ */
+function normalize(value: unknown) {
+	if (isEmpty(value)) return null;
+	if (value instanceof Temporal.PlainDate || value instanceof Temporal.Instant)
+		return value.toString();
+	return value instanceof Date ? value.toISOString() : value;
+}
 
 /**
  * The fields of `after` whose value differs from the same field of `before`, with both values:
- * `{ status: ["quote", "scheduled"] }`. Dates compare by time and are given as ISO strings;
+ * `{ status: ["quote", "scheduled"] }`. Days and moments compare as their ISO strings;
  * arrays and objects compare by value; `null`, `undefined` and `""` are the same (nothing).
  * Fields in `ignore`, and fields that `after` leaves `undefined`, are skipped.
  */

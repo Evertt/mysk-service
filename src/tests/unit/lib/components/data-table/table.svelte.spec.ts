@@ -24,6 +24,10 @@ vi.mock("$app/navigation", async () => ({
 }));
 // The toolbar's saved views (see `saved-views.svelte.spec.ts`): none.
 vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock(
+	"#lib/components/data-table/table-memory.remote.ts",
+	() => import("./fake-table-memory.ts"),
+);
 
 beforeEach(() => visit("/items"));
 
@@ -106,7 +110,7 @@ describe("cells", () => {
 		render(Harness, { items });
 
 		const time = cell("Boiler service", 5).getByText("1 Mar 2026");
-		await expect.element(time).toHaveAttribute("datetime", new Date(2026, 2, 1).toISOString());
+		await expect.element(time).toHaveAttribute("datetime", "2026-03-01");
 		await expect.element(cell("Chiller repair", 5)).toHaveTextContent("—");
 	});
 });

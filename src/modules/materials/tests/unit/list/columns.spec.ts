@@ -31,6 +31,17 @@ const rows = [
 	material("MAT-004", { stock: 30, unit: "pcs" }),
 ];
 
+test("the quantity and usage filters keep the materials in a range, both ends included", () => {
+	const by = (id: string, range: string) =>
+		shown(rows, { columnFilters: [{ id, value: [range] }] });
+	expect(by("stock", "..30")).toEqual(["MAT-002", "MAT-003", "MAT-004"]);
+	expect(by("stock", "30..")).toEqual(["MAT-001", "MAT-003", "MAT-004"]);
+	expect(by("stock", "1..29")).toEqual([]);
+	expect(by("orderCount", "0")).toHaveLength(4);
+	// What isn't a range filters nothing.
+	expect(by("stock", "lots")).toHaveLength(4);
+});
+
 test("the stock level filter judges the stock by its unit", () => {
 	expect(shown(rows, { columnFilters: [{ id: "stockLevel", value: ["low"] }] })).toEqual([
 		"MAT-003",

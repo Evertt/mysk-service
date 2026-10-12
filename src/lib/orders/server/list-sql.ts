@@ -6,13 +6,15 @@
 import { inArray } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
+import { type NumberRange, numberInRange } from "#lib/components/data-table/ranges.ts";
 import { orderPriorities } from "#lib/models.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
+import { anyOf, inDays, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
 import { ordersList } from "../list/orders-list.ts";
+import { priceOrders } from "./pricing.ts";
 
 /**
  * The orders list's joins: the order's customer, unit and engineer, each scoped to the tenant.
@@ -24,6 +26,33 @@ export const withOrderJoins = <T extends SQLiteSelect>(query: T) =>
 		.innerJoin(...tenantJoin(customer, order.customerId))
 		.leftJoin(...tenantJoin(equipment, order.equipmentId))
 		.leftJoin(...tenantJoin(engineer, order.engineerId));
+
+/**
+ * Of the orders `ids`, those whose total is in any of `ranges` (in cents). A total isn't in the
+ * database: it's what `priceOrders()` makes of the order with the tenant's modules (materials'
+ * costs, what a contract includes), as the list shows it, so it's priced here the same way, from
+ * the same facts as the list's rows, rather than worked out again in SQL.
+ */
+async function withTotalIn(ranges: readonly (NumberRange | null)[], ids: number[]) {
+	if (!ids.length) return [];
+	const orders = await db
+		.select({
+			id: order.id,
+			type: order.type,
+			status: order.status,
+			equipmentId: order.equipmentId,
+			createdAt: order.createdAt,
+			laborHours: order.laborHours,
+			hourlyRate: engineer.hourlyRate,
+		})
+		.from(order)
+		.leftJoin(...tenantJoin(engineer, order.engineerId))
+		.where(idsInTenant(order, ids));
+	const prices = await priceOrders(orders);
+	return orders
+		.filter((_, i) => ranges.some((range) => range && numberInRange(prices[i].total, range)))
+		.map((row) => row.id);
+}
 
 /**
  * The orders list's columns in SQL, checked against its definition (`ordersList`). Call it for
@@ -68,8 +97,13 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 			filter: (ids) => anyOf(order.engineerId, ids),
 			group: order.engineerId,
 		},
-		scheduledFor: { sort: order.scheduledFor, nullsLast: true },
-		createdAt: { sort: order.createdAt },
+		scheduledFor: {
+			sort: order.scheduledFor,
+			nullsLast: true,
+			filter: (ranges) => inDays(order.scheduledFor, ranges),
+		},
+		createdAt: { sort: order.createdAt, filter: (ranges) => inDays(order.createdAt, ranges) },
+		total: { match: withTotalIn },
 	},
 	search: [
 		order.number,

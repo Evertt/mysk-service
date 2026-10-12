@@ -1,6 +1,6 @@
 <!--
 	@component
-	The dialog to save the table's current view (its URL's parameters) under a name, for the user
+	The dialog to save the table's current view (its URL's parameters and its columns) under a name, for the user
 	or, if they may share views, for the whole organization (see `saved-views.svelte`).
 -->
 <script lang="ts">
@@ -9,12 +9,14 @@
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
+	import type { ColumnVisibility } from "./column-visibility.ts";
 	import { createView } from "./views.remote.ts";
 
 	let {
 		open = $bindable(false),
 		tableKey,
 		query,
+		columns,
 		canShare,
 		onsaved,
 	}: {
@@ -23,6 +25,8 @@
 		tableKey: string;
 		/** What the view saves: the table's parameters as its URL has them. */
 		query: string;
+		/** And its columns (see `column-visibility.ts`). */
+		columns: ColumnVisibility;
 		/** Whether the user may share the view with the organization. */
 		canShare: boolean;
 		/** Called with the id of the view just saved. */
@@ -52,6 +56,7 @@
 		>
 			<input {...save.fields.tableKey.as("hidden", tableKey)} />
 			<input {...save.fields.query.as("hidden", query)} />
+			<input {...save.fields.columns.as("hidden", JSON.stringify(columns))} />
 			<Field.FieldGroup>
 				<TextField
 					field={save.fields.name}

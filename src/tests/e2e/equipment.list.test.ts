@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
 
-import { countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
+import { afresh, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
 import { busiest, equipmentPage, serialsIn, unit } from "./equipment-helpers.ts";
 import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
@@ -39,7 +39,7 @@ const count = (where: string, args: (string | number)[] = []) =>
 describe("in North", () => {
 	test("the list shows exactly North's units, 20 per page", async () => {
 		expect(await listedSerials()).toEqual(await serialsIn(north.id));
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 		expect(await bodyRows().count()).toBe(20);
 	});
@@ -48,7 +48,7 @@ describe("in North", () => {
 		const { page } = app;
 		await page.setViewportSize({ width: 1440, height: 900 });
 		try {
-			await app.go("/equipment");
+			await app.go(afresh("/equipment"));
 			expect(await bodyRows().count()).toBe(20);
 			const pagination = await page.getByRole("button", { name: "Go to next page" }).boundingBox();
 			expect(pagination!.y + pagination!.height).toBeLessThanOrEqual(900);
@@ -173,7 +173,7 @@ describe("in North", () => {
 			 order by manufacturer collate nocase, model collate nocase, id limit 20 offset 20`,
 			[north.id],
 		);
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		const [response] = await Promise.all([
 			page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
 			page.getByRole("button", { name: "Go to next page" }).click(),
@@ -195,7 +195,7 @@ describe("in North", () => {
 			change: (arg: Query) => Query,
 			trigger: () => unknown,
 		) => {
-			await app.go("/equipment");
+			await app.go(afresh("/equipment"));
 			await tamperWithQuery<Query>(app.page, name, change);
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
@@ -224,7 +224,7 @@ describe("in North", () => {
 		});
 
 		test("while the list works as before once the request is right", async () => {
-			await app.go("/equipment");
+			await app.go(afresh("/equipment"));
 			expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 		});
 	});
@@ -236,7 +236,7 @@ describe("in North", () => {
 			 where e.organization_id = ? group by c.id order by units desc, c.id limit 1`,
 			[north.id],
 		);
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await app.openFilter("Customer");
 		await page.getByPlaceholder("Search customers…").fill(owner.code.toLowerCase());
 		await page.getByRole("option", { name: new RegExp(owner.code) }).click();
@@ -253,7 +253,7 @@ describe("in North", () => {
 
 	test("grouped by category, each category is counted whole and kept together across pages", async () => {
 		const { page } = app;
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await filter("Status", "Operational");
 		await app.tableSettled();
 		await app.groupBy("Category");

@@ -108,12 +108,13 @@ describe("in South, which doesn't have the module", () => {
 		const { page } = app;
 		// Navigate client-side, so the pages load their data through remote queries.
 		const record = (request: { url(): string; method(): string }) => {
-			// Not the toolbar's saved views or the slots' module list: core queries, which answer with
-			// South's own.
+			// Not the toolbar's saved views, the table's memory or the slots' module list: core
+			// queries, which answer with South's own.
 			const url = request.url();
 			if (
 				url.includes("/_app/remote/") &&
 				!url.includes("/getTableViews") &&
+				!url.includes("/getTableMemory") &&
 				!url.includes("/getTenantModules") &&
 				request.method() === "GET"
 			) {

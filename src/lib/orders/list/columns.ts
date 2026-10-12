@@ -110,18 +110,24 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.orders_column_scheduled, param: "scheduled" },
+		// By a range of days, e.g. `?scheduled=this-week`.
+		filterFn: "inDateRange",
+		// `?scheduled=none`: the unscheduled orders.
+		meta: { label: m.orders_column_scheduled, param: "scheduled", filterNone: true },
 	}),
 	column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
+		filterFn: "inDateRange",
 		meta: { label: m.orders_column_created, param: "created" },
 	}),
 	column.accessor("total", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		// Modules adjust it (e.g. what a contract includes), which the database can't sort by.
+		// Modules adjust it (e.g. what a contract includes), which the database can't sort by; it
+		// filters by amounts in euros (`?total=500..`), priced like the rows (`withTotalIn`).
 		enableSorting: false,
+		filterFn: "inMoneyRange",
 		meta: { label: m.orders_column_total, align: "end" },
 	}),
 	column.display({

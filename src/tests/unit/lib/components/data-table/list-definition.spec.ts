@@ -2,15 +2,18 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 import * as v from "valibot";
-import { describe, expect, expectTypeOf, test } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from "vite-plus/test";
 
 import {
 	code,
+	dateRange,
 	defineList,
 	id,
 	type ListQuery,
 	type ListWhere,
 	listLimits,
+	moneyRange,
+	numberRange,
 	oneOf,
 	orNone,
 	queryKey,
@@ -18,8 +21,10 @@ import {
 	toUrlSpec,
 	whereOf,
 } from "#lib/components/data-table/list-definition.ts";
+import type { DateRange, NumberRange } from "#lib/components/data-table/ranges.ts";
 import { parseTableUrl, type TableUrlState } from "#lib/components/data-table/url-state.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
+import { at, freezeNow } from "#unit/temporal-support.ts";
 
 /** The orders list, as `orders-list.ts` defines it. */
 const ordersList = defineList({
@@ -581,3 +586,194 @@ describe("types", () => {
 });
 
 const canonicalState: TableUrlState = parseTableUrl(new URLSearchParams(), ordersList.urlSpec);
+
+describe("range filters", () => {
+	/** A list with a date and a number to filter by a range. */
+	const rangeList = defineList({
+		columns: {
+			number: { sort: true },
+			scheduledFor: { param: "scheduled", sort: true, filter: dateRange },
+			stock: { param: "quantity", sort: true, filter: numberRange },
+		},
+		defaults: { sort: [{ id: "number", desc: false }], pageSize: 20 },
+	});
+
+	const rangesFromUrl = (search: string) =>
+		toListQuery(rangeList, parseTableUrl(new URLSearchParams(search), rangeList.urlSpec));
+
+	const rangeQuery = (filters: Record<string, unknown>) => ({
+		q: "",
+		filters,
+		sort: [],
+		group: null,
+		pageIndex: 0,
+		pageSize: 20,
+	});
+	const acceptsRanges = (filters: Record<string, unknown>) =>
+		v.safeParse(rangeList.query, rangeQuery(filters)).success;
+
+	// Wednesday 14 October 2026.
+	beforeEach(() => {
+		freezeNow(at("2026-10-14 15:30"));
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	describe("the URL spec", () => {
+		test("has the range filters' grammar", () => {
+			expect(rangeList.urlSpec.columns).toEqual([
+				{ id: "number", sortable: true },
+				{ id: "scheduledFor", param: "scheduled", sortable: true, filter: "dateRange" },
+				{ id: "stock", param: "quantity", sortable: true, filter: "numberRange" },
+			]);
+		});
+	});
+
+	describe("toListQuery", () => {
+		test("has a range as its ends, a preset as the days it means today", () => {
+			expect(rangesFromUrl("scheduled=this-week&quantity=..10").filters).toEqual({
+				scheduledFor: [{ from: "2026-10-12", to: "2026-10-18" }],
+				stock: [{ from: null, to: 10 }],
+			});
+			expect(rangesFromUrl("scheduled=2026-10-01..&quantity=5..10").filters).toEqual({
+				scheduledFor: [{ from: "2026-10-01", to: null }],
+				stock: [{ from: 5, to: 10 }],
+			});
+		});
+
+		test("follows the day it's built on", () => {
+			freezeNow(at("2026-11-02 09:00"));
+			expect(rangesFromUrl("scheduled=before-today").filters).toEqual({
+				scheduledFor: [{ from: null, to: "2026-11-01" }],
+			});
+		});
+
+		test("leaves out what isn't a range", () => {
+			expect(rangesFromUrl("scheduled=2026-10-07..2026-10-01&quantity=lots").filters).toEqual({});
+		});
+
+		test("is the same query for a preset and its days", () => {
+			expect(rangesFromUrl("scheduled=this-week")).toEqual(
+				rangesFromUrl("scheduled=2026-10-12..2026-10-18"),
+			);
+		});
+
+		test("always passes the schema", () => {
+			for (const search of [
+				"scheduled=today",
+				"scheduled=before-today&quantity=0",
+				"scheduled=..2026-10-07&quantity=-2.5..",
+				"quantity=1000000000000",
+			]) {
+				expect(v.safeParse(rangeList.query, rangesFromUrl(search)).success, search).toBe(true);
+				expect(v.safeParse(rangeList.where, whereOf(rangesFromUrl(search))).success, search).toBe(
+					true,
+				);
+			}
+		});
+	});
+
+	describe("the query schema", () => {
+		test("takes a range with both ends or either", () => {
+			expect(acceptsRanges({ scheduledFor: [{ from: "2026-10-01", to: "2026-10-07" }] })).toBe(
+				true,
+			);
+			expect(acceptsRanges({ scheduledFor: [{ from: null, to: "2026-10-07" }] })).toBe(true);
+			expect(acceptsRanges({ stock: [{ from: 0, to: null }] })).toBe(true);
+			expect(acceptsRanges({ stock: [{ from: 1.5, to: 1.5 }] })).toBe(true);
+		});
+
+		test.each<[string, Record<string, unknown>]>([
+			["no end", { stock: [{ from: null, to: null }] }],
+			["the ends the wrong way round", { stock: [{ from: 10, to: 5 }] }],
+			[
+				"more ranges than a filter takes",
+				{
+					stock: Array.from({ length: listLimits.ranges + 1 }, (_, i) => ({ from: i, to: i })),
+				},
+			],
+			["no range", { stock: [] }],
+			["a token rather than a range", { scheduledFor: ["this-week"] }],
+			["a day that doesn't exist", { scheduledFor: [{ from: "2026-02-30", to: null }] }],
+			["a moment rather than a day", { scheduledFor: [{ from: "2026-10-01T00:00", to: null }] }],
+			["a number for a day", { scheduledFor: [{ from: 20261001, to: null }] }],
+			["a text for a number", { stock: [{ from: "5", to: null }] }],
+			["a number too big", { stock: [{ from: null, to: 1e13 }] }],
+			["not a number", { stock: [{ from: Number.NaN, to: null }] }],
+			["a missing end", { stock: [{ from: 5 }] }],
+			["an extra key", { stock: [{ from: 5, to: null, inclusive: false }] }],
+		])("refuses %s", (_, filters) => {
+			expect(acceptsRanges(filters)).toBe(false);
+		});
+	});
+
+	test("several ranges keep their order and lose their duplicates; `none` only where it may", () => {
+		expect(rangesFromUrl("quantity=12,5..8,2,5..8&scheduled=next-week,today..").filters).toEqual({
+			scheduledFor: [
+				{ from: "2026-10-14", to: null },
+				{ from: "2026-10-19", to: "2026-10-25" },
+			],
+			stock: [
+				{ from: 2, to: 2 },
+				{ from: 5, to: 8 },
+				{ from: 12, to: 12 },
+			],
+		});
+		// `stock` can't be empty, so `none` is left out of it.
+		expect(rangesFromUrl("quantity=none").filters).toEqual({});
+		const nullable = defineList({ columns: { due: { filter: orNone(dateRange) } } });
+		const query = toListQuery(
+			nullable,
+			parseTableUrl(new URLSearchParams("due=this-week,none"), nullable.urlSpec),
+		);
+		expect(query.filters).toEqual({ due: [null, { from: "2026-10-12", to: "2026-10-18" }] });
+		expect(v.safeParse(nullable.query, query).success).toBe(true);
+		expect(nullable.urlSpec.columns).toEqual([{ id: "due", filter: "dateRange", none: true }]);
+		// A range that can't be empty doesn't take `none` from the URL, so no filter shows it.
+		const plain = defineList({ columns: { due: { filter: dateRange } } });
+		expect(parseTableUrl(new URLSearchParams("due=none"), plain.urlSpec).columnFilters).toEqual([]);
+	});
+
+	test("a preset is an end: its first day as the start, its last as the end", () => {
+		expect(rangesFromUrl("scheduled=this-week..next-month").filters).toEqual({
+			scheduledFor: [{ from: "2026-10-12", to: "2026-11-30" }],
+		});
+		expect(rangesFromUrl("scheduled=..yesterday").filters).toEqual({
+			scheduledFor: [{ from: null, to: "2026-10-13" }],
+		});
+	});
+
+	test("money is in euros in the URL and in cents in the query, exactly", () => {
+		const money = defineList({ columns: { total: { filter: moneyRange } } });
+		const filtersOf = (search: string) =>
+			toListQuery(money, parseTableUrl(new URLSearchParams(search), money.urlSpec)).filters;
+		expect(filtersOf("total=500..,0.29..0.57,..12.5")).toEqual({
+			total: [
+				{ from: null, to: 1250 },
+				{ from: 29, to: 57 },
+				{ from: 50000, to: null },
+			],
+		});
+		const accepts = (total: unknown) =>
+			v.safeParse(money.where, { q: "", filters: { total } }).success;
+		expect(accepts([{ from: 1250, to: null }])).toBe(true);
+		// Cents are whole.
+		expect(accepts([{ from: 12.5, to: null }])).toBe(false);
+		expect(money.urlSpec.columns).toEqual([{ id: "total", filter: "moneyRange" }]);
+	});
+
+	test("a range filter's values are typed as ranges", () => {
+		expectTypeOf<ListQuery<typeof rangeList.columns>["filters"]["scheduledFor"]>().toEqualTypeOf<
+			DateRange[] | undefined
+		>();
+		expectTypeOf<ListQuery<typeof rangeList.columns>["filters"]["stock"]>().toEqualTypeOf<
+			NumberRange[] | undefined
+		>();
+		const filters: ListQuery<typeof rangeList.columns>["filters"] = {
+			// @ts-expect-error a range filter takes ranges, not the URL's tokens
+			scheduledFor: ["this-week"],
+		};
+		expect(filters).toBeDefined();
+	});
+});

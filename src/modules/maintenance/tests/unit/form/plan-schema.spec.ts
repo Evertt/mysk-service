@@ -6,6 +6,7 @@ import {
 	newPlanSchema,
 	planSchema,
 } from "#modules/maintenance/form/plan-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 const fields = {
 	orderType: "maintenance",
@@ -27,7 +28,7 @@ describe("a plan's fields", () => {
 			orderType: "maintenance",
 			description: "Annual boiler service",
 			intervalMonths: 12,
-			nextDueOn: new Date(2026, 10, 30),
+			nextDueOn: day("2026-11-30"),
 		});
 		expect(v.parse(planSchema, { id: "3", ...fields, orderType: "inspection" })).toMatchObject({
 			id: 3,

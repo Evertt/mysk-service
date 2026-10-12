@@ -4,17 +4,18 @@
  * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
 import { error } from "@sveltejs/kit";
-import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
 import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
-import { nextDay } from "#lib/dates.ts";
+import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import { inDays } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
@@ -32,8 +33,10 @@ const about = (type: string, id: string) =>
 	);
 
 /** A day of a date input (`yyyy-mm-dd`). */
-const day = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/));
-const startOf = (value: string) => new Date(`${value}T00:00`);
+const day = v.pipe(
+	v.string(),
+	v.check((value) => isDay(value)),
+);
 
 /**
  * One page of the tenant's activity, newest first, optionally of one subject `type` (with `id`:
@@ -54,8 +57,8 @@ export const getActivity = forMembers.query(
 			inTenant(activity),
 			type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
 			user ? eq(activity.userId, user) : undefined,
-			from ? gte(activity.createdAt, startOf(from)) : undefined,
-			to ? lt(activity.createdAt, nextDay(startOf(to))) : undefined,
+			// The days in the user's time zone.
+			from || to ? inDays(activity.createdAt, [{ from: from ?? null, to: to ?? null }]) : undefined,
 			before ? lt(activity.id, before) : undefined,
 		];
 		const rows = await db

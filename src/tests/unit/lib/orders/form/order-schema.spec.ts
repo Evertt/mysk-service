@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { describe, expect, test, vi } from "vite-plus/test";
 
 import { orderFields, orderFormPreflight } from "#lib/orders/form/order-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 // A made-up module's part of the order form: gadgets' count.
 vi.mock("#lib/extensions/form-parts.gen.ts", async () => {
@@ -39,7 +40,7 @@ test("a filled-in form becomes an order", () => {
 			equipmentId: 11,
 			engineerId: 2,
 			description: "Replace the pump seal",
-			scheduledFor: new Date(2026, 9, 20),
+			scheduledFor: day("2026-10-20"),
 		},
 	});
 });

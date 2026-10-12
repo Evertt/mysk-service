@@ -4,6 +4,7 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import { committed, type OrderFacts, tag } from "#lib/orders/extensions.ts";
 import { orderCommitted, tagOrders } from "#lib/orders/server/hooks.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
+import { at } from "#unit/temporal-support.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
@@ -26,7 +27,7 @@ const order = (id: number): OrderFacts => ({
 	type: "repair",
 	status: "quote",
 	equipmentId: id,
-	createdAt: new Date(2026, 9, 7),
+	createdAt: at("2026-10-07 00:00"),
 });
 
 const asked: unknown[] = [];
@@ -59,7 +60,7 @@ registry.modules = [
 const flush = () => new Promise((resolve) => setTimeout(resolve));
 
 test("tags come from each module, in the modules' order, for the orders they name", async () => {
-	const now = new Date(2026, 9, 7, 12);
+	const now = at("2026-10-07 12:00");
 	expect(await tagOrders([order(1), order(2), order(3)], now, ["vip", "late"])).toEqual([
 		[{ label: "Soon", tone: "warning" }],
 		[
@@ -78,7 +79,7 @@ test("by default, the current tenant's modules tag", async () => {
 test("a module that fails to tag is left out, and logged", async () => {
 	const log = vi.spyOn(console, "error").mockImplementation(() => {});
 	try {
-		expect(await tagOrders([order(2)], new Date(), ["late", "broken"])).toEqual([
+		expect(await tagOrders([order(2)], Temporal.Now.instant(), ["late", "broken"])).toEqual([
 			[{ label: "Late", tone: "danger" }],
 		]);
 		expect(String(log.mock.calls[0])).toContain("broken");
@@ -89,7 +90,7 @@ test("a module that fails to tag is left out, and logged", async () => {
 
 test("no orders, no questions", async () => {
 	asked.length = 0;
-	expect(await tagOrders([], new Date(), ["late"])).toEqual([]);
+	expect(await tagOrders([], Temporal.Now.instant(), ["late"])).toEqual([]);
 	expect(asked).toEqual([]);
 });
 

@@ -17,6 +17,7 @@
  * 		customer: { sort: true, group: true, filter: code }, // by customer code
  * 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
  * 		engineer: { sort: true, group: true, filter: orNone(id) }, // by engineer id: (number | null)[]
+ * 		scheduledFor: { param: "scheduled", sort: true, filter: orNone(dateRange) }, // [null, { from, to }]
  * 		createdAt: { param: "created", sort: true },
  * 	},
  * 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
@@ -28,9 +29,25 @@
  */
 import * as v from "valibot";
 
+import { isDay } from "#lib/dates.ts";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
 
 import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
+import {
+	type DateRange,
+	dateRangeToken,
+	isOrdered,
+	isRangeCents,
+	isRangeNumber,
+	type NumberRange,
+	moneyRangeToken,
+	numberRangeToken,
+	parseDateRange,
+	parseMoneyRange,
+	parseNumberRange,
+	type Range,
+	type RangeGrammar,
+} from "./ranges.ts";
 import {
 	defaultPageSizes,
 	filterValues,
@@ -46,6 +63,8 @@ export const listLimits = {
 	search: 200,
 	/** The values of one filter. */
 	values: 50,
+	/** The values of one range filter (`dateRange`, …): ranges, and `none`. */
+	ranges: 10,
 	/** The page index. */
 	pageIndex: 100_000,
 	/** The query as JSON, in bytes: with `devalue`'s overhead its payload stays under 8 KB. */
@@ -62,6 +81,13 @@ export interface FilterKind<T> {
 	toUrl: (value: T) => string;
 	/** The tokens the URL accepts, if there is a fixed set of them (`TableUrlColumn.values`). */
 	values?: readonly string[];
+	/**
+	 * For a range filter (`dateRange`, `numberRange`), how the URL writes it: a filter with one
+	 * value, a range, rather than a set of values.
+	 */
+	range?: RangeGrammar;
+	/** For a range filter, whether it takes `none` (`orNone(dateRange)`, see `TableUrlColumn.none`). */
+	none?: boolean;
 }
 
 /** A filter on a text, e.g. a customer's code. */
@@ -98,8 +124,54 @@ export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
 	fromUrl: (token) => (token === noneToken ? null : kind.fromUrl(token)),
 	toUrl: (value) => (value === null ? noneToken : kind.toUrl(value)),
 	...(kind.values ? { values: [...kind.values, noneToken] } : {}),
+	...(kind.range ? { range: kind.range, none: true } : {}),
 });
-// Later: `range(kind)` → { from?, to? } with `a..b` in the URL. A kind is all a new filter needs.
+
+/** A range's schema: both ends, either may be open (`null`) but not both, in order. */
+const rangeOf = <T extends string | number>(end: v.GenericSchema<T>) =>
+	v.pipe(
+		v.strictObject({ from: v.nullable(end), to: v.nullable(end) }),
+		v.check(isOrdered, m.common_error_generic),
+	);
+
+/**
+ * A filter on a date, by ranges of days (`ranges.ts`): `?scheduled=2026-10-01..2026-10-07`,
+ * `..2026-10-07`, or presets that stay relative in the URL, on their own or as an end:
+ * `?scheduled=this-week`, `?scheduled=today..`. The query has the days they mean when it's built
+ * (`toListQuery()`). Several ranges keep the rows in any of them, and with `orNone(dateRange)`,
+ * `none` the rows without a date (`?scheduled=none,this-week`); the SQL keeps them with `inDays()`
+ * (`#lib/server/lists/plan.ts`).
+ */
+export const dateRange: FilterKind<DateRange> = {
+	value: rangeOf(v.custom<string>(isDay)),
+	fromUrl: (token) => parseDateRange(token),
+	toUrl: dateRangeToken,
+	range: "dateRange",
+};
+
+/**
+ * A filter on a number, by ranges: `?quantity=..10` (at most 10), `5..` (at least 5), `5..10`,
+ * `2,5..8,12` (any of them). The SQL keeps the rows in them with `between()`.
+ */
+export const numberRange: FilterKind<NumberRange> = {
+	value: rangeOf(v.custom<number>(isRangeNumber)),
+	fromUrl: (token) => parseNumberRange(token),
+	toUrl: numberRangeToken,
+	range: "numberRange",
+};
+
+/**
+ * A filter on an amount of money stored in cents, by ranges in euros in the URL (`?price=..12.50`,
+ * `?total=500..`; at most two decimals) and in cents in the query (`{ from: null, to: 1250 }`),
+ * converted digit by digit, so no amount is off by a rounding. The SQL keeps the rows in them with
+ * `between()` on the cents.
+ */
+export const moneyRange: FilterKind<NumberRange> = {
+	value: rangeOf(v.custom<number>(isRangeCents)),
+	fromUrl: (token) => parseMoneyRange(token),
+	toUrl: moneyRangeToken,
+	range: "moneyRange",
+};
 
 /** What a column of a list can do. */
 interface ListColumn {
@@ -224,8 +296,9 @@ export function toUrlSpec<C extends ListColumns>(def: ListDef<C>): TableUrlSpec 
 			...(column.group ? { groupable: true } : {}),
 			...(column.filter
 				? {
-						filter: "set" as const,
+						filter: column.filter.range ?? ("set" as const),
 						...(column.filter.values ? { values: column.filter.values } : {}),
+						...(column.filter.none ? { none: true } : {}),
 					}
 				: {}),
 		})),
@@ -309,7 +382,13 @@ function listSchemas(
 	const entries = Object.fromEntries(
 		Object.entries(filterKinds).map(([id, kind]) => [
 			id,
-			v.exactOptional(v.pipe(v.array(kind.value), v.minLength(1), v.maxLength(listLimits.values))),
+			v.exactOptional(
+				v.pipe(
+					v.array(kind.value),
+					v.minLength(1),
+					v.maxLength(kind.range ? listLimits.ranges : listLimits.values),
+				),
+			),
 		]),
 	);
 	const filters = withModuleColumns
@@ -395,9 +474,17 @@ export function extendList<C>(list: List<C>, columns: readonly ModuleListColumn[
 	return result;
 }
 
-/** Sorts values; `null` (rows without one, see `orNone`) first. */
-const compare = (a: unknown, b: unknown) =>
-	a === b ? 0 : a === null ? -1 : b === null ? 1 : (a as any) < (b as any) ? -1 : 1;
+/** Sorts values; `null` (rows without one, see `orNone`) first, ranges by their start, then end. */
+function compare(a: unknown, b: unknown): number {
+	if (a === b) return 0;
+	if (a === null) return -1;
+	if (b === null) return 1;
+	if (typeof a === "object" && typeof b === "object") {
+		const [x, y] = [a as Range<unknown>, b as Range<unknown>];
+		return compare(x.from, y.from) || compare(x.to, y.to);
+	}
+	return (a as any) < (b as any) ? -1 : 1;
+}
 
 /**
  * The canonical query for a table's state (read from the URL, or the table's own): a query that
@@ -414,7 +501,10 @@ export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C
 		const valid = tokens
 			.map((token) => kind.fromUrl(String(token)))
 			.filter((x) => v.is(kind.value, x));
-		const values = [...new Set(valid)].sort(compare).slice(0, listLimits.values);
+		// Deduped (ranges by their ends) and in order.
+		const unique = [...new Map(valid.map((value) => [JSON.stringify(value), value])).values()];
+		const limit = kind.range ? listLimits.ranges : listLimits.values;
+		const values = unique.sort(compare).slice(0, limit);
 		if (values.length) filters[id] = values;
 	}
 

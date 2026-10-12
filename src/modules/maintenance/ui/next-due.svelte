@@ -12,7 +12,7 @@
 		value,
 		badge = true,
 	}: {
-		value: Date | null;
+		value: Temporal.PlainDate | null;
 		/** Whether to badge it when it's overdue (not for a paused plan, say). */
 		badge?: boolean;
 	} = $props();

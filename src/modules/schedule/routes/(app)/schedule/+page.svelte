@@ -6,15 +6,8 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { addDays } from "#lib/dates.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import {
-		dayKey,
-		formatWeek,
-		startOfWeek,
-		weekFromParam,
-		weekNumber,
-	} from "#modules/schedule/board/board.ts";
+	import { formatWeek, weekFromParam } from "#modules/schedule/board/board.ts";
 	import ScheduleBoard from "#modules/schedule/board/schedule-board.svelte";
 	import { getSchedule } from "#modules/schedule/schedule.remote.ts";
 
@@ -23,11 +16,11 @@
 
 	// The week is in the URL (`?week=` any day of it), so it can be linked to; this week by default.
 	const start = $derived(weekFromParam(page.url.searchParams.get("week")));
-	const week = $derived(dayKey(start));
+	const week = $derived(start.toString());
 	const schedule = $derived(await getSchedule(week));
 
-	const href = (day: Date) => `${resolve("/(app)/(modules)/schedule")}?week=${dayKey(day)}`;
-	const isThisWeek = $derived(week === dayKey(startOfWeek(new Date())));
+	const href = (day: Temporal.PlainDate) => `${resolve("/(app)/(modules)/schedule")}?week=${day}`;
+	const isThisWeek = $derived(start.equals(weekFromParam(null)));
 </script>
 
 <svelte:head>
@@ -37,13 +30,13 @@
 <PageHeader
 	title={m.schedule_title()}
 	description={m.schedule_description({
-		week: formatNumber(weekNumber(start)),
+		week: formatNumber(start.weekOfYear!),
 		range: formatWeek(start),
 	})}
 >
 	{#snippet actions()}
 		<Button
-			href={href(addDays(start, -7))}
+			href={href(start.subtract({ weeks: 1 }))}
 			variant="outline"
 			size="icon"
 			aria-label={m.schedule_previous_week()}
@@ -54,7 +47,7 @@
 			{m.schedule_this_week()}
 		</Button>
 		<Button
-			href={href(addDays(start, 7))}
+			href={href(start.add({ weeks: 1 }))}
 			variant="outline"
 			size="icon"
 			aria-label={m.schedule_next_week()}

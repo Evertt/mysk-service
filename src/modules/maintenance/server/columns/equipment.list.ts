@@ -5,7 +5,7 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { addDays, startOfDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
@@ -14,20 +14,18 @@ import { nextMaintenance } from "../../columns/equipment.list.ts";
 import { SOON_DAYS } from "../../model.ts";
 import { maintenancePlan } from "../schema.ts";
 
-/** Timestamps are stored in seconds. */
-const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
-
 export default [
 	columnSql(nextMaintenance, () => {
 		const next =
-			sql<Date | null>`(select min(${maintenancePlan.nextDueOn}) from ${maintenancePlan} where ${and(
+			sql<Temporal.PlainDate | null>`(select min(${maintenancePlan.nextDueOn}) from ${maintenancePlan} where ${and(
 				eq(maintenancePlan.equipmentId, equipment.id),
 				eq(maintenancePlan.paused, false),
 				inTenant(maintenancePlan),
 			)})`.mapWith(maintenancePlan.nextDueOn);
-		const today = startOfDay(new Date());
+		const today = Temporal.Now.plainDateISO(getTimeZone());
 		// The filter's values; `later` for a unit whose next visit is further off (in none of them).
-		const bucket = sql<string>`(case when ${next} is null then 'none' when ${next} < ${seconds(today)} then 'overdue' when ${next} < ${seconds(addDays(today, SOON_DAYS))} then 'soon' else 'later' end)`;
+		// Days as `yyyy-mm-dd` compare as text.
+		const bucket = sql<string>`(case when ${next} is null then 'none' when ${next} < ${today.toString()} then 'overdue' when ${next} < ${today.add({ days: SOON_DAYS }).toString()} then 'soon' else 'later' end)`;
 		return {
 			value: next,
 			sort: next,
