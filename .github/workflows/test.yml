@@ -43,7 +43,7 @@ jobs:
       - run: pnpm run check
       - run: pnpm knip
       - name: Unit and component tests
-        run: pnpm exec vp test run --project server --project client
+        run: pnpm exec vp test run --project 'server-*' --project client
 
   e2e:
     name: End-to-end tests (${{ matrix.shard }}/3)
