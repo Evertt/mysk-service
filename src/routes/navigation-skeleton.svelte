@@ -15,7 +15,14 @@
 	import type { Snippet } from "svelte";
 	import type { ClassValue } from "svelte/elements";
 
-	let { children, class: className }: { children: Snippet; class?: ClassValue } = $props();
+	let {
+		skeleton,
+		class: className,
+	}: {
+		/** The skeleton, given the id of the route the navigation goes to. */
+		skeleton: Snippet<[routeId: string | null]>;
+		class?: ClassValue;
+	} = $props();
 
 	// The delay is CSS: state set from a timer would wait for the navigation, like the page.
 	const leaving = $derived(!!navigating.to && navigating.to.url.pathname !== page.url.pathname);
@@ -23,11 +30,11 @@
 
 {#if leaving}
 	<div
-		class={["navigation-skeleton absolute inset-0 z-10 bg-background", className]}
+		class={["navigation-skeleton absolute inset-0 z-50 bg-background", className]}
 		role="status"
 		aria-label={m.common_navigation_loading()}
 	>
-		{@render children()}
+		{@render skeleton(navigating.to?.route.id ?? null)}
 	</div>
 {/if}
 

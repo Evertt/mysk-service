@@ -49,9 +49,11 @@
 	<main class="relative mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 p-4 pb-12">
 		{@render children()}
 		<NavigationSkeleton class="flex flex-col gap-4 p-4">
-			<Skeleton class="h-8 w-48" />
-			<Skeleton class="h-32" />
-			<Skeleton class="h-32" />
+			{#snippet skeleton()}
+				<Skeleton class="h-8 w-48" />
+				<Skeleton class="h-32" />
+				<Skeleton class="h-32" />
+			{/snippet}
 		</NavigationSkeleton>
 	</main>
 </div>

@@ -27,7 +27,9 @@
 		<div class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6">
 			{@render children()}
 			<NavigationSkeleton class="p-4 md:p-6">
-				<PageSkeleton />
+				{#snippet skeleton(routeId)}
+					<PageSkeleton {routeId} />
+				{/snippet}
 			</NavigationSkeleton>
 		</div>
 	</Sidebar.Inset>
