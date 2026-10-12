@@ -6,7 +6,13 @@
 - **Before committing**: `pnpm run check` (code generation, format, lint and svelte-check; plain
   `vp check` skips the type check), then `pnpm knip` (unused files, exports and dependencies; about
   3 seconds; drop what's unused, or, if it's used in a way knip can't follow, say why in `knip.ts`),
-  then `pnpm test`.
+  then the tests of what you changed: the changed files' specs and the e2e files of the sections and
+  modules it affects (`pnpm exec vp test run src/tests/unit/lib/dates.spec.ts`,
+  `pnpm exec vp test run --project e2e src/tests/e2e/orders.test.ts`). The whole suite runs in CI
+  (`.github/workflows/test.yml`, on every push; check its result after pushing). Run `pnpm test`
+  locally only when you need to, and, like any e2e run, through the shared lock, so that runs in
+  other checkouts and sessions wait their turn instead of timing each other out:
+  `flock /tmp/mysk-service-tests.lock pnpm test`.
 - **Parallel agents** that edit code each get their own worktree (`isolation: "worktree"`), rename
   its branch after the task, copy in `.env` (`git worktreeinclude apply`) and run `pnpm install`
   first: in a shared checkout they type-check each other's half-written files and reload each
@@ -568,7 +574,9 @@ core and for each module.
   order. A file may change data (through the UI), but must not rely on another file's changes, nor
   break when another file ran before it on the same worker (so a test that needs the seeded state
   stays in a file before the tests that change it, or reads what it needs from the database).
-- Only run one e2e run at a time: each run builds into `.svelte-kit/output`.
+- Only run one e2e run at a time: each run builds into `.svelte-kit/output`, and parallel runs (also
+  from other checkouts) slow each other into timeouts. Wrap them in
+  `flock /tmp/mysk-service-tests.lock …` (see "Before committing").
 
 ---
 
