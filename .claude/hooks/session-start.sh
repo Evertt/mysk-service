@@ -1,6 +1,7 @@
 #!/bin/bash
-# Prepares a Claude Code cloud session: the pnpm version the project pins, Node's fetch() through the
-# proxy, a local .env and the dependencies. Does nothing on your own machine.
+# Prepares a Claude Code cloud session: Node's fetch() through the proxy, a local .env and the
+# dependencies (the image's pnpm switches to the version package.json's `packageManager` pins).
+# Does nothing on your own machine.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -22,15 +23,6 @@ persist() {
 # Node's own fetch() ignores HTTPS_PROXY unless this is set; Paraglide downloads its plugins with it.
 export NODE_USE_ENV_PROXY=1
 persist 'export NODE_USE_ENV_PROXY=1'
-
-# The pnpm version package.json pins (devEngines), in a folder of its own, ahead on the PATH.
-version=$(node -p 'require("./package.json").devEngines.packageManager.version')
-prefix="$HOME/.cache/pnpm-versions/$version"
-if [ ! -x "$prefix/node_modules/.bin/pnpm" ]; then
-	npm install --prefix "$prefix" --no-save --no-audit --no-fund "pnpm@$version"
-fi
-export PATH="$prefix/node_modules/.bin:$PATH"
-persist "export PATH=\"$prefix/node_modules/.bin:\$PATH\""
 
 # A local .env (gitignored) from the example, with a fresh secret.
 if [ ! -f .env ]; then
