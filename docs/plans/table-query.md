@@ -597,45 +597,70 @@ runs `pnpm run check` and then the relevant spec and e2e files before committing
 
 ## Range filters (#11)
 
-Built on the design above as two more `FilterKind`s, `dateRange` and `numberRange`
-(`list-definition.ts`), with their grammar in `src/lib/components/data-table/ranges.ts`. What was
-decided:
+Built on the design above as three more `FilterKind`s, `dateRange`, `numberRange` and
+`moneyRange` (`list-definition.ts`), with their grammar in
+`src/lib/components/data-table/ranges.ts`. What was decided:
 
-- **One token per range, both ends included.** `?scheduled=2026-10-01..2026-10-07`,
-  `?scheduled=2026-10-01..` (on or after), `?scheduled=..2026-10-07` (on or before), one day
-  `?scheduled=2026-10-01`; numbers `?quantity=5..10`, `?quantity=..10` (at most 10),
-  `?quantity=5..` (at least 5), `?quantity=0`. `..` can't be part of a day or a plain number
-  (`-2.5`, no exponents), and a range has no commas, so it fits the set grammar's escaping
-  without any. "Below 10" is `..9` for whole numbers: inclusive ends read the same on both sides,
-  and match the inputs' "Minimum" and "Maximum".
-- **Presets stay relative in the URL.** `?scheduled=this-week`, `before-today`, `next-7-days`, …
-  (`datePresets`): a link or a saved view ("scheduled this week") means the current week whenever
-  it's opened. A preset is a whole token, not an end (`today..` is not a range). `toListQuery()`
-  turns it into the days it means when it builds the query, so the remote query only ever gets
-  days (`{ from: "2026-10-12", to: "2026-10-18" }`), its schema stays strict, and the cache key
-  changes with the day. Weeks start on Monday.
+- **A range is one token, both ends included.** `?scheduled=2026-10-01..2026-10-07`,
+  `2026-10-01..` (on or after), `..2026-10-07` (on or before), one day `2026-10-01`; numbers
+  `?quantity=5..10`, `..10` (at most 10), `5..` (at least 5), `0`. `..` can't be part of a day or a
+  plain number (`-2.5`, no exponents), and a range has no commas. "Below 10" is `..9` for whole
+  numbers: inclusive ends read the same on both sides, and match the inputs' "Minimum" and
+  "Maximum".
+- **Presets stay relative in the URL, also as an end.** `?scheduled=this-week`, `before-today`,
+  `next-7-days`, … (`datePresets`) on their own mean their days; as an end, a preset means its first
+  day as the start and its last as the end: `today..` (from today on), `..yesterday`,
+  `this-week..next-month`. A preset without that day can't be that end (`before-today..` and
+  `..from-today` aren't ranges). A link or a saved view ("scheduled this week") means the current
+  week whenever it's opened. `toListQuery()` turns the presets into the days they mean when it
+  builds the query, so the remote query only ever gets days (`{ from: "2026-10-12", to: null }`),
+  its schema stays strict, and the cache key changes with the day. Weeks start on Monday.
+- **Several values per filter, comma-separated, like a set filter's.** The rows in any of them are
+  kept: `?quantity=2,5..8,12`. On a column that can be empty (`orNone(dateRange)`) `none` keeps the
+  rows without a value, as in #19: `?scheduled=none,this-week` ("unscheduled or this week"). The
+  query has them as an array like any filter's (`[null, { from, to }]`), deduped and sorted (`null`
+  first, then by start and end), at most `listLimits.ranges` (10). The planner, `whereOf()`,
+  `queryKey()`, bulk targets and saved views (URL strings) needed nothing new.
+- **Money is in euros in the URL and in cents everywhere else.** `?total=500..`, `?price=..12.50`
+  (at most two decimals). `euroCents()` reads the digits, not a float (`0.29` is 29 cents, not
+  28.999…), and the query's schema takes whole cents only, so an amount is never off by a rounding.
+  The client-side tables compare the cents their rows have.
+- **Order totals are filtered on what the list shows.** An order's total isn't in the database: it
+  is `priceOrders()`'s labour plus the modules' costs (`orders.costs`, e.g. materials) and
+  adjustments (`orders.adjustPrices`, e.g. what a contract includes, which depends on the contract
+  covering the unit on the order's date). Filtering a SQL column instead would disagree with the
+  table, and working the modules' rules out again in SQL would have to match their code exactly,
+  forever. So a column's SQL can `match` instead of `filter` (`FilterSql` in `plan.ts`): the plan
+  takes the ids of the rows matching the search and the other filters, the column picks those whose
+  value is in the ranges (orders price them with `priceOrders()`, from the same facts as the rows),
+  and the plan keeps them by id. The rows, the count, the facets, the groups and the bulk ids all
+  use that one `where`, worked out once per plan. It costs pricing every matching order (not just a
+  page), so it is refused with a 400 beyond `MAX_MATCHED_ROWS` (10,000) rows: narrow down with the
+  other filters first. Totals aren't sortable, as before.
 - **Whose today, whose midnight.** The days are the browser's (where `toListQuery()` runs; the
   server's while it renders the page), and the server turns a day into timestamps at its own local
   midnight (`inDays()`, as the activity feed's date filter already did). Both are the same zone in
   practice; a tenant time zone would fix both ends if that ever changes.
-- **One range per filter.** The query's filter is an array like the others (`[{ from, to }]`), so
-  the planner, `whereOf()`, `queryKey()` and bulk targets need nothing new, but the schema takes
-  exactly one, and the URL keeps the first valid token. A range can't be combined with `none`
-  (`orNone(dateRange)` isn't offered): "unscheduled or this week" is two views.
-- **Lenient URL, strict query.** A token that isn't a range (a day that doesn't exist, ends in the
-  wrong order, a number with an exponent) is dropped from the URL's state, as an unknown status is.
-  A query with a malformed range (no end, ends reversed, two ranges, a token instead of a range, a
-  string for a number, a number beyond ±10¹²) is a 400.
+- **Lenient URL, strict query.** A token that isn't a value (a day that doesn't exist, ends in the
+  wrong order, a number with an exponent, euros with three decimals) is dropped from the URL's
+  state, the others kept, as an unknown status is. A query with a malformed range (no end, ends
+  reversed, more than ten values, a token instead of a range, a string for a number, cents that
+  aren't whole, a number beyond ±10¹², `null` on a column that can't be empty) is a 400.
 - **No facets.** Range columns have no counts; the filters show what they mean instead (a preset's
-  days, "At least 2").
-- **Client-side tables** use the same grammar through `filterFn: "inDateRange"` and
-  `"inNumberRange"` (`features.ts`), which also give the URL spec its `filter` kind, so
+  days, "At least 2", "Unscheduled, Next 7 days").
+- **The UI.** `DateRangeFilter` lists `none` (where the column can be empty) and presets to toggle,
+  and adds a range of one's own whose ends are each a day or a preset; `NumberRangeFilter` (with
+  `money` for cents) adds a minimum, a maximum or both. The values chosen are listed at the top, each
+  with a button that takes it off; the pill sums them up ("Unscheduled, Next 7 days", or "3
+  selected").
+- **Client-side tables** use the same grammar through `filterFn: "inDateRange"`, `"inNumberRange"`
+  and `"inMoneyRange"` (`features.ts`), which also give the URL spec its `filter` kind, so
   `columns.spec.ts` still compares the table's spec with the list's.
-- **Where:** orders' scheduled and created dates; equipment's installed and warranty dates and
-  open orders; materials' quantity in stock (`quantity`, as `stock` is the stock level) and
-  orders used on; customers' equipment, open orders and "since"; engineers' open orders and hire
-  date. Money columns (prices, rates, totals) have none yet: they're cents in the database and
-  euros on screen, and orders' total is adjusted by modules after the query.
+- **Where:** orders' scheduled (with `none`) and created dates and total; equipment's installed and
+  warranty dates and open orders; materials' quantity in stock (`quantity`, as `stock` is the stock
+  level), orders used on and unit price; customers' equipment, open orders and "since"; engineers'
+  open orders, hire date and hourly rate; invoices' total and due date (`none`: the drafts);
+  contracts' monthly fee.
 
 ## Open questions
 
