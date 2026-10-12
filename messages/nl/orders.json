@@ -23,6 +23,7 @@
 	"orders_column_completed": "Afgerond",
 	"orders_column_total": "Totaal",
 	"orders_new_installation": "Nieuwe installatie",
+	"orders_unscheduled": "Niet ingepland",
 	"orders_copy_number": "Opdrachtnummer kopiëren",
 	"orders_copy_customer_code": "Klantcode kopiëren",
 	"orders_created": "Opdracht aangemaakt",

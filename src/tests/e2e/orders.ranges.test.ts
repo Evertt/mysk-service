@@ -37,7 +37,10 @@ describe("range filters on the orders' dates, in North", () => {
 		await app.go("/orders");
 
 		await app.openFilter("Scheduled");
-		await page.getByRole("option", { name: /^Next 7 days/ }).click();
+		await page
+			.locator('[data-slot="command-list"]')
+			.getByRole("option", { name: /^Next 7 days/ })
+			.click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("scheduled") === "next-7-days");
 		await app.tableSettled();
@@ -63,9 +66,9 @@ describe("range filters on the orders' dates, in North", () => {
 		await app.go("/orders");
 
 		await app.openFilter("Scheduled");
-		await page.getByLabel("From", { exact: true }).fill(range.from);
-		await page.getByLabel("To", { exact: true }).fill(range.to);
-		await page.getByRole("button", { name: "Apply" }).click();
+		await page.getByLabel("From: date").fill(range.from);
+		await page.getByLabel("To: date").fill(range.to);
+		await page.getByRole("button", { name: "Add" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL(
 			(url) => url.searchParams.get("scheduled") === `${range.from}..${range.to}`,
@@ -114,6 +117,118 @@ describe("range filters on the orders' dates, in North", () => {
 			expect(await shownFor(`scheduled=${bad}`), bad).toBe(all);
 			expect(await app.filterPill("Scheduled").count()).toBe(0);
 		}
+	});
+
+	test("several values from the Filter menu: unscheduled or in the next seven days", async () => {
+		const { page } = app;
+		const unscheduled = await value<number>(
+			`select count(*) from "order" where organization_id = ? and scheduled_for is null`,
+			[north.id],
+		);
+		const soon = await countIn("scheduled_for", presetRange("next-7-days"));
+		expect(unscheduled).toBeGreaterThan(0);
+		await app.go("/orders");
+
+		await app.openFilter("Scheduled");
+		await page
+			.locator('[data-slot="command-list"]')
+			.getByRole("option", { name: /^Unscheduled/ })
+			.click();
+		await page
+			.locator('[data-slot="command-list"]')
+			.getByRole("option", { name: /^Next 7 days/ })
+			.click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("scheduled") === "none,next-7-days");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(unscheduled + soon);
+		const pill = app.filterPill("Scheduled");
+		expect(await pill.innerText()).toContain("Unscheduled, Next 7 days");
+
+		// One taken off in the pill, by its own button.
+		await pill.locator('[data-slot="popover-trigger"]').click();
+		await page.getByRole("button", { name: "Remove Unscheduled" }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("scheduled") === "next-7-days");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(soon);
+		await app.go("/orders");
+	});
+
+	test("a preset as an end, picked in the Filter menu and from a link", async () => {
+		const { page } = app;
+		const fromToday = await countIn("scheduled_for", { from: toDateInput(new Date()), to: null });
+		expect(fromToday).toBeGreaterThan(0);
+		await app.go("/orders");
+		await app.openFilter("Scheduled");
+		await page.getByLabel("From", { exact: true }).selectOption({ label: "Today" });
+		await page.getByRole("button", { name: "Add" }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("scheduled") === "today..");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(fromToday);
+		expect(await app.filterPill("Scheduled").innerText()).toContain("From Today");
+
+		const thisWeek = presetRange("this-week");
+		const nextMonth = presetRange("next-month");
+		expect(await shownFor("scheduled=this-week..next-month")).toBe(
+			await countIn("scheduled_for", { from: thisWeek.from, to: nextMonth.to }),
+		);
+		expect(await shownFor("scheduled=..yesterday,none")).toBe(
+			(await countIn("scheduled_for", presetRange("before-today"))) +
+				(await value<number>(
+					`select count(*) from "order" where organization_id = ? and scheduled_for is null`,
+					[north.id],
+				)),
+		);
+	});
+
+	test("totals in euros, as priced with the modules, from the Filter menu and a link", async () => {
+		const { page } = app;
+		const all = await value<number>(`select count(*) from "order" where organization_id = ?`, [
+			north.id,
+		]);
+		/** The totals the table shows on its page, in cents. */
+		const shownTotals = async () =>
+			(await page.locator("tbody td:nth-child(10)").allInnerTexts()).map((text) =>
+				Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100),
+			);
+
+		await app.go("/orders");
+		await app.openFilter("Total");
+		await page.getByLabel("Minimum", { exact: true }).fill("500");
+		await page.getByRole("button", { name: "Add" }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("total") === "500..");
+		await app.tableSettled();
+		const over = await app.rowCount();
+		expect(over).toBeGreaterThan(0);
+		expect(await app.filterPill("Total").innerText()).toContain("At least €500.00");
+		for (const total of await shownTotals()) expect(total).toBeGreaterThanOrEqual(50_000);
+
+		// The rest are below, to the cent: together, every order.
+		const under = await shownFor("total=..499.99");
+		expect(under).toBeGreaterThan(0);
+		expect(over + under).toBe(all);
+		for (const total of await shownTotals()) expect(total).toBeLessThanOrEqual(49_999);
+
+		// With the other filters, and several ranges.
+		const completedOver = await shownFor("total=500..&status=completed");
+		const completed = await value<number>(
+			`select count(*) from "order" where organization_id = ? and status = 'completed'`,
+			[north.id],
+		);
+		expect(completedOver + (await shownFor("total=..499.99&status=completed"))).toBe(completed);
+		expect(await shownFor("total=..100,500..")).toBe(over + (await shownFor("total=..100")));
+
+		// "Select all matching" counts what the filter keeps.
+		await app.go("/orders?total=500..");
+		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
+		const total = formatNumber(over, "en");
+		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
+		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await app.go("/orders");
 	});
 
 	test("a bulk action on all the matching orders acts on those in the range only", async () => {
@@ -171,11 +286,13 @@ describe("range filters on the orders' dates, in North", () => {
 			{ scheduledFor: [{ from: null, to: null }] },
 			{ scheduledFor: [{ from: "2026-02-30", to: null }] },
 			{
-				createdAt: [
-					{ from: "2026-10-01", to: null },
-					{ from: null, to: "2026-09-01" },
-				],
+				createdAt: Array.from({ length: 11 }, (_, i) => ({ from: `2026-10-${10 + i}`, to: null })),
 			},
+			// The creation date can't be empty.
+			{ createdAt: [null] },
+			// Cents are whole, and a range of them isn't a token.
+			{ total: [{ from: 12.5, to: null }] },
+			{ total: ["500.."] },
 		])("%j", async (filters) => {
 			await app.go("/orders");
 			await tamperWithQuery<Query>(app.page, "getOrders", (arg) => ({ ...arg, filters }));
@@ -205,5 +322,10 @@ describe("range filters on the orders' dates, in South", () => {
 		expect(await app.page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(
 			numbers.map((row) => row.number),
 		);
+		const southOrders = await value<number>(
+			`select count(*) from "order" where organization_id = ?`,
+			[south.id],
+		);
+		expect((await shownFor("total=500..")) + (await shownFor("total=..499.99"))).toBe(southOrders);
 	});
 });

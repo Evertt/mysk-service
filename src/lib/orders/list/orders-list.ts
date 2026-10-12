@@ -3,6 +3,7 @@ import {
 	dateRange,
 	defineList,
 	id,
+	moneyRange,
 	oneOf,
 	orNone,
 } from "#lib/components/data-table/list-definition.ts";
@@ -15,7 +16,8 @@ import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
  * (`columns.spec.ts` checks that the table reads and writes the same). Customers are filtered (and
  * grouped) by code, equipment by serial number, engineers by id; `?equipment=none` is the new
  * installations, `?engineer=none` the unassigned orders. The dates filter by a range of days,
- * e.g. `?scheduled=this-week` or `?created=2026-10-01..2026-10-07` (see `ranges.ts`).
+ * e.g. `?scheduled=none,this-week` (unscheduled or this week) or `?created=today..`, and the total
+ * by amounts in euros, `?total=500..` (see `ranges.ts`).
  */
 export const ordersList = defineList({
 	columns: {
@@ -26,8 +28,10 @@ export const ordersList = defineList({
 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
 		priority: { sort: true, group: true, filter: oneOf(orderPriorities) },
 		engineer: { sort: true, group: true, filter: orNone(id) },
-		scheduledFor: { param: "scheduled", sort: true, filter: dateRange },
+		scheduledFor: { param: "scheduled", sort: true, filter: orNone(dateRange) },
 		createdAt: { param: "created", sort: true, filter: dateRange },
+		// What `priceOrders()` makes of it, with the tenant's modules: filtered, not sorted.
+		total: { filter: moneyRange },
 	},
 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
 });

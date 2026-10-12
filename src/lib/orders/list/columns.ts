@@ -123,8 +123,10 @@ export const columns = column.columns([
 	column.accessor("total", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		// Modules adjust it (e.g. what a contract includes), which the database can't sort by.
+		// Modules adjust it (e.g. what a contract includes), which the database can't sort by; it
+		// filters by amounts in euros (`?total=500..`), priced like the rows (`withTotalIn`).
 		enableSorting: false,
+		filterFn: "inMoneyRange",
 		meta: { label: m.orders_column_total, align: "end" },
 	}),
 	column.display({

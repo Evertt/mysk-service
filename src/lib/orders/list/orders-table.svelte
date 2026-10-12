@@ -8,6 +8,7 @@
 		getEquipmentOptions,
 	} from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
@@ -103,6 +104,7 @@
 			<DateRangeFilter
 				columnId="scheduledFor"
 				title={m.orders_column_scheduled()}
+				none={m.orders_unscheduled()}
 				presets={[
 					"today",
 					"tomorrow",
@@ -128,6 +130,7 @@
 					"last-month",
 				]}
 			/>
+			<NumberRangeFilter columnId="total" title={m.orders_column_total()} money min={0} />
 		</table.Toolbar>
 		<table.Table
 			emptyTitle={m.orders_empty()}

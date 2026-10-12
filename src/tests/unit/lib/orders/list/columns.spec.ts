@@ -136,9 +136,25 @@ test("the date filters keep the orders on the days of a range, a preset's on the
 		// Unscheduled orders are in no range.
 		expect(by("scheduledFor", "..2026-12-31")).toEqual(["ORD-001", "ORD-002"]);
 		expect(by("createdAt", "last-month")).toEqual(["ORD-001"]);
+		// Several values, `none` among them: unscheduled or next week.
+		expect(
+			shown(rows, { columnFilters: [{ id: "scheduledFor", value: ["none", "next-week"] }] }),
+		).toEqual(["ORD-002", "ORD-003"]);
 	} finally {
 		vi.useRealTimers();
 	}
+});
+
+test("the total filters by amounts in euros, on the cents the table shows", () => {
+	const rows = [
+		order("ORD-001", { total: 49_999 }),
+		order("ORD-002", { total: 50_000 }),
+		order("ORD-003", { total: 1250 }),
+	];
+	const by = (...value: string[]) => shown(rows, { columnFilters: [{ id: "total", value }] });
+	expect(by("500..")).toEqual(["ORD-002"]);
+	expect(by("..499.99")).toEqual(["ORD-001", "ORD-003"]);
+	expect(by("12.5", "500")).toEqual(["ORD-002", "ORD-003"]);
 });
 
 test("the type and status filters keep the chosen values", () => {

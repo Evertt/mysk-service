@@ -23,6 +23,7 @@
 	"orders_column_completed": "Completed",
 	"orders_column_total": "Total",
 	"orders_new_installation": "New installation",
+	"orders_unscheduled": "Unscheduled",
 	"orders_copy_number": "Copy order number",
 	"orders_copy_customer_code": "Copy customer code",
 	"orders_created": "Order created",
