@@ -88,6 +88,7 @@
 	"activity_field_notes": "notities",
 	"activity_field_role": "rol",
 	"activity_field_query": "filters",
+	"activity_field_hidden_columns": "verborgen kolommen",
 	"activity_value_yes": "ja",
 	"activity_value_no": "nee"
 }

@@ -2,11 +2,15 @@
 	@component
 	A table's saved views (see `views.ts`): the user's own and those shared with the organization,
 	one click away, with the one the table shows checked. Saves the current view under a name, and
-	changes the view the table is on: the checked one, or the one last opened here if the table has
-	changed since (to update it with the change).
+	changes the view the table is on: the checked one, or the one last opened if the table has
+	changed since (to update it with the change), which the button shows as having unsaved changes.
+	The view last opened is kept with the table's memory (see `table-memory.svelte.ts`), so it and
+	its changes are still there when the user comes back; "No view" goes back to the table's
+	defaults, and forgets it.
 -->
 <script lang="ts">
 	import BookmarkIcon from "@lucide/svelte/icons/bookmark";
+	import BookmarkXIcon from "@lucide/svelte/icons/bookmark-x";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
@@ -28,7 +32,7 @@
 		type TableView,
 		updateView,
 	} from "./views.remote.ts";
-	import { matchingViews, viewQuery, viewState } from "./views.ts";
+	import { matchingViews, viewState } from "./views.ts";
 
 	let { sync }: { sync: TableUrlSync } = $props();
 
@@ -37,24 +41,29 @@
 	const others = $derived(data.views.filter((view) => !view.mine));
 
 	/** What a view would save now. */
-	const query = $derived(viewQuery(sync.state(), sync.spec));
-	const matching = $derived(matchingViews(data.views, sync.state(), sync.spec));
+	const query = $derived(sync.viewQuery());
+	const columns = $derived(sync.columns());
+	const matching = $derived(matchingViews(data.views, sync.state(), sync.spec, columns));
 
-	/** The view last opened or saved here, which the table may have moved away from since. */
-	let selectedId = $state<number>();
-
-	/** The view the table shows: the one opened here if it still matches, else one of the user's. */
+	/** The view the table shows: the one opened last if it still matches, else one of the user's. */
 	const active = $derived(
-		matching.find((view) => view.id === selectedId) ??
+		matching.find((view) => view.id === sync.viewId) ??
 			matching.find((view) => view.mine) ??
 			matching[0],
 	);
-	/** The view the actions are about. */
-	const current = $derived(active ?? data.views.find((view) => view.id === selectedId));
+	/** The view the actions are about: the one shown, or the one opened last, changed since. */
+	const current = $derived(active ?? data.views.find((view) => view.id === sync.viewId));
 
 	function open(view: TableView) {
-		selectedId = view.id;
-		sync.show(viewState(view.query, sync.spec));
+		sync.viewId = view.id;
+		// A view saved before views had columns leaves them as they are.
+		sync.show(viewState(view.query, sync.spec), view.columns ?? undefined);
+	}
+
+	/** Back to the table's defaults, forgetting the view. */
+	function clear() {
+		sync.viewId = undefined;
+		sync.show(viewState("", sync.spec), null);
 	}
 
 	let saving = $state(false);
@@ -81,7 +90,7 @@
 	async function remove(view: TableView) {
 		if (await run(() => deleteView(view.id), m.common_views_deleted())) {
 			deleting = false;
-			if (selectedId === view.id) selectedId = undefined;
+			if (sync.viewId === view.id) sync.viewId = undefined;
 		}
 	}
 </script>
@@ -119,10 +128,21 @@
 				{...props}
 				variant="outline"
 				size="sm"
-				aria-label={active ? m.common_views_menu_active({ name: active.name }) : undefined}
+				aria-label={active
+					? m.common_views_menu_active({ name: active.name })
+					: current
+						? m.common_views_menu_edited({ name: current.name })
+						: undefined}
 			>
 				<BookmarkIcon data-icon="inline-start" />
-				<span class="max-w-40 truncate">{active?.name ?? m.common_views_menu()}</span>
+				<span class="max-w-40 truncate">{current?.name ?? m.common_views_menu()}</span>
+				{#if current && !active}
+					<span
+						class="size-1.5 shrink-0 rounded-full bg-primary"
+						title={m.common_views_edited()}
+						data-testid="views-edited"
+					></span>
+				{/if}
 			</Button>
 		{/snippet}
 	</DropdownMenu.Trigger>
@@ -142,6 +162,12 @@
 			<PlusIcon />
 			{m.common_views_save()}
 		</DropdownMenu.Item>
+		{#if current}
+			<DropdownMenu.Item onSelect={clear}>
+				<BookmarkXIcon />
+				{m.common_views_clear()}
+			</DropdownMenu.Item>
+		{/if}
 		{#if current?.editable}
 			<DropdownMenu.Separator />
 			<DropdownMenu.Group>
@@ -149,7 +175,10 @@
 				<DropdownMenu.Item
 					disabled={current === active || busy}
 					onSelect={() =>
-						run(() => updateView({ id: current.id, query }), m.common_views_updated())}
+						run(
+							() => updateView({ id: current.id, query, columns: columns.current }),
+							m.common_views_updated(),
+						)}
 				>
 					<RefreshCwIcon />
 					{m.common_views_update()}
@@ -198,8 +227,9 @@
 	bind:open={saving}
 	tableKey={sync.viewsKey}
 	{query}
+	columns={columns.current}
 	canShare={data.canShare}
-	onsaved={(id) => (selectedId = id)}
+	onsaved={(id) => (sync.viewId = id)}
 />
 
 {#if current}

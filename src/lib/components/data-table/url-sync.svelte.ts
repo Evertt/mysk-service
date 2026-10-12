@@ -3,7 +3,14 @@ import { page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { untrack } from "svelte";
 
+import {
+	type ColumnVisibility,
+	currentVisibility,
+	defaultVisibility,
+	showColumns,
+} from "./column-visibility.ts";
 import { type Features, filterFnGrammar } from "./features.ts";
+import { passedMemory, rememberTable } from "./table-memory.svelte.ts";
 import {
 	parseTableUrl,
 	searchString,
@@ -12,7 +19,7 @@ import {
 	type TableUrlState,
 	writeTableUrl,
 } from "./url-state.ts";
-import { tableViewsKey } from "./views.ts";
+import { type TableColumns, tableViewsKey, viewQuery } from "./views.ts";
 
 /** How a table keeps its state in the URL (see `url-state.ts` for the grammar). */
 export interface UrlStateOptions {
@@ -85,15 +92,30 @@ function apply<TData extends RowData>(table: Table<TData>, state: TableUrlState)
 	table.setPagination(state.pagination);
 }
 
-/** A table's link with the URL, for what works on its URL state, e.g. its saved views. */
+/**
+ * A table's link with the URL, for what works on its URL state and columns: its saved views
+ * (`saved-views.svelte`) and its memory (`table-memory.svelte.ts`).
+ */
 export interface TableUrlSync {
 	spec: TableUrlSpec;
-	/** Which table it is, for its saved views (see `tableViewsKey`). */
+	/** Which table it is, for its saved views and memory (see `tableViewsKey`). */
 	viewsKey: string;
 	/** The table's state, as far as the URL holds it. */
 	state(): TableUrlState;
-	/** Shows a state, e.g. a saved view's: in the table and the URL, as a new history entry. */
-	show(state: TableUrlState): void;
+	/** What a view would save of the state (see `viewQuery`). */
+	viewQuery(): string;
+	/** Its hideable columns' visibility, now and by default. */
+	columns(): TableColumns;
+	/**
+	 * Shows a state, e.g. a saved view's: in the table and the URL, as a new history entry, with
+	 * the columns given (the defaults for those it doesn't have), if any.
+	 */
+	show(state: TableUrlState, columns?: ColumnVisibility | null): void;
+	/**
+	 * The saved view last opened or saved (whose changes the table may show), until another is
+	 * chosen, or none: kept with the table's memory.
+	 */
+	viewId: number | undefined;
 }
 
 const syncs = new WeakMap<object, TableUrlSync>();
@@ -138,16 +160,37 @@ export function syncTableWithUrl<TData extends RowData>(
 			.finally(() => writing--);
 	}
 
-	syncs.set(table, {
+	const viewsKey = tableViewsKey(page.route.id ?? pathname, options.prefix);
+	let viewId = $state<number>();
+	const sync: TableUrlSync = {
 		spec,
-		viewsKey: tableViewsKey(page.route.id ?? pathname, options.prefix),
+		viewsKey,
 		state: () => currentState(table),
-		show(state) {
+		viewQuery: () => viewQuery(currentState(table), spec),
+		columns: () => ({ current: currentVisibility(table), defaults: defaultVisibility(table) }),
+		show(state, columns) {
 			const key = tableUrlKey(state, spec);
 			if (key !== synced) commit(state, key, false);
 			apply(table, state);
+			if (columns !== undefined) showColumns(table, columns);
 		},
-	});
+		get viewId() {
+			return viewId;
+		},
+		set viewId(id) {
+			viewId = id;
+		},
+	};
+	syncs.set(table, sync);
+
+	// The table as the member left it, if its page brings it back (see `table-memory.svelte.ts`):
+	// its columns, and the view if it shows what the view was left at.
+	const memory = passedMemory(viewsKey);
+	if (memory !== undefined) {
+		showColumns(table, memory?.columns);
+		if (memory?.viewId != null && memory.query === sync.viewQuery()) viewId = memory.viewId;
+		rememberTable(table, sync, memory);
+	}
 
 	// The table's changes into the URL.
 	$effect(() => {

@@ -15,6 +15,7 @@
 	import FilterPill from "./filter-pill.svelte";
 	import { provideTableFilters } from "./filters.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
+	import { tableUrlSync } from "./url-sync.svelte.ts";
 	import ViewsMenu from "./views-menu.svelte";
 
 	let {
@@ -59,6 +60,9 @@
 				onclick={() => {
 					table.resetColumnFilters();
 					table.resetGlobalFilter();
+					// A fresh start: no view's changes (see `saved-views.svelte`).
+					const sync = tableUrlSync(table);
+					if (sync) sync.viewId = undefined;
 				}}
 			>
 				{m.common_table_reset()}

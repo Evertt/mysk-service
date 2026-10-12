@@ -19,27 +19,28 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { savedView } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { canShareViews, viewNameMax, viewQueryMax } from "./views.ts";
-
-const tableKey = v.pipe(v.string(), v.nonEmpty(), v.maxLength(200));
+import {
+	columnVisibilitySchema,
+	tableKeySchema as tableKey,
+	viewQuerySchema as viewQuery,
+} from "./views.server.ts";
+import { canShareViews, viewNameMax } from "./views.ts";
 
 const viewName = v.pipe(
 	text(m.common_views_name_required),
 	v.maxLength(viewNameMax, () => m.common_views_name_too_long({ max: viewNameMax })),
 );
 
-/** A table's parameters as its URL has them: `""` or `?…`. */
-const viewQuery = v.pipe(
-	v.string(),
-	v.maxLength(viewQueryMax),
-	v.check((value) => value === "" || value.startsWith("?")),
-);
+/** A view's columns, from a form: as JSON (see `column-visibility.ts`). */
+const viewColumns = v.pipe(v.string(), v.parseJson(), columnVisibilitySchema);
 
 /** A view as the menu shows it. */
 export interface TableView {
 	id: number;
 	name: string;
 	query: string;
+	/** Which of the table's hideable columns it shows, if it saved them (see `column-visibility.ts`). */
+	columns: Record<string, boolean> | null;
 	shared: boolean;
 	/** Whether the signed-in user saved it. */
 	mine: boolean;
@@ -57,6 +58,7 @@ export const getTableViews = forMembers.query(tableKey, async (key) => {
 			id: savedView.id,
 			name: savedView.name,
 			query: savedView.query,
+			columns: savedView.columns,
 			shared: savedView.shared,
 			userId: savedView.userId,
 			owner: user.name,
@@ -134,12 +136,13 @@ const subjectOf = (view: { id: number; name: string }) => ({
 	label: view.name,
 });
 
-/** Saves a table's current parameters as a view of the signed-in user's, shared if asked. */
+/** Saves a table's current parameters and columns as a view of the signed-in user's, shared if asked. */
 export const createView = forMembers.form(
 	v.object({
 		tableKey,
 		name: viewName,
 		query: viewQuery,
+		columns: viewColumns,
 		shared: v.optional(v.boolean(), false),
 	}),
 	async (input, issue) => {
@@ -188,22 +191,27 @@ export const renameView = forMembers.form(
 	},
 );
 
-/** Saves a table's current parameters in an existing view. */
+/** Saves a table's current parameters and columns in an existing view. */
 export const updateView = forMembers.command(
-	v.object({ id: v.pipe(v.number(), v.integer()), query: viewQuery }),
+	v.object({
+		id: v.pipe(v.number(), v.integer()),
+		query: viewQuery,
+		columns: columnVisibilitySchema,
+	}),
 	async (input) => {
 		const existing = await findView(input.id, { edit: true });
+		const after = { query: input.query, columns: input.columns };
 		await db.transaction(async (tx) => {
 			await tx
 				.update(savedView)
-				.set({ query: input.query })
+				.set(after)
 				.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
 			if (existing.shared) {
 				await recordActivity(tx, {
 					action: "updated",
 					subject: subjectOf(existing),
 					before: existing,
-					after: { query: input.query },
+					after,
 				});
 			}
 		});

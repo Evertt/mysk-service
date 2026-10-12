@@ -263,8 +263,11 @@ export const orderNoteRelations = relations(orderNote, ({ one }) => ({
 
 // --- Saved views ----------------------------------------------------------------------------------
 
+/** Which of a table's columns are shown, by id (see `#lib/components/data-table/column-visibility.ts`). */
+type ColumnVisibility = Record<string, boolean>;
+
 /**
- * A data table's search, filters, sorting and page size saved under a name (see
+ * A data table's search, filters, sorting, page size and columns saved under a name (see
  * `#lib/components/data-table/views.ts`), to get back to in one click. Personal to the user who
  * saved it, unless an owner or admin shares it with the whole organization. It references no
  * business records: only the tenant and its creator (deleted with either), so a member who leaves
@@ -284,6 +287,11 @@ export const savedView = sqliteTable(
 		name: text("name").notNull(),
 		/** The table's parameters as its URL has them, e.g. `?status=quote&sort=-priority`. */
 		query: text("query").notNull(),
+		/**
+		 * Which of the table's hideable columns it shows, as they were when it was saved; `null` for a
+		 * view saved before views had columns, which leaves the columns as they are.
+		 */
+		columns: text("columns", { mode: "json" }).$type<ColumnVisibility>(),
 		/** Whether every member of the organization sees it. */
 		shared: integer("shared", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
@@ -302,6 +310,39 @@ export const savedView = sqliteTable(
 		),
 		index("saved_view_table").on(table.organizationId, table.tableKey),
 	],
+);
+
+/**
+ * What the app remembers of a user's data table (see
+ * `#lib/components/data-table/table-memory.svelte.ts`): the columns they show, and where they left
+ * it (its parameters and the saved view they had open), to come back to. One row per user and
+ * table, only while there's something to remember. Like a personal view, it concerns nobody else.
+ */
+export const tableMemory = sqliteTable(
+	"table_memory",
+	{
+		organizationId: organizationId(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		/** The table, as for saved views: `/(app)/orders`. */
+		tableKey: text("table_key").notNull(),
+		/** Which of the table's hideable columns they show; `null` for the table's defaults. */
+		columns: text("columns", { mode: "json" }).$type<ColumnVisibility>(),
+		/** The table's parameters as its URL had them last, without the page: `?status=quote`. */
+		query: text("query").notNull().default(""),
+		/**
+		 * The saved view they had open, if any (with `query` as they left it, which may have changes
+		 * they didn't save in it). Not a foreign key: a view that's gone (or no longer shared) is
+		 * simply not found.
+		 */
+		viewId: integer("view_id"),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.default(sql`(unixepoch())`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [primaryKey({ columns: [table.organizationId, table.userId, table.tableKey] })],
 );
 
 // --- Activity log ---------------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	afresh,
 	countIn,
 	isRemote,
 	organizations,
@@ -34,7 +35,7 @@ describe("range filters on the materials list, in North", () => {
 		const { page } = app;
 		const expected = await count("stock <= 10");
 		expect(expected).toBeGreaterThan(0);
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 		await page.getByRole("button", { name: "Filter", exact: true }).click();
 		// "Stock", not "Stock level".
 		await page.getByRole("option", { name: "Stock", exact: true }).click();
@@ -60,7 +61,7 @@ describe("range filters on the materials list, in North", () => {
 		await page.waitForURL((url) => url.searchParams.get("quantity") === "50..60");
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await count("stock between 50 and 60"));
-		await app.go("/materials");
+		await app.go(afresh("/materials"));
 	});
 
 	test("links combine ranges with each other and the other filters", async () => {
@@ -91,7 +92,7 @@ describe("range filters on the materials list, in North", () => {
 			{ unitPrice: [{ from: 0.5, to: null }] },
 			{ unitPrice: ["..10"] },
 		])("%j", async (filters) => {
-			await app.go("/materials");
+			await app.go(afresh("/materials"));
 			await tamperWithQuery<Query>(app.page, "getMaterials", (arg) => ({ ...arg, filters }));
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([

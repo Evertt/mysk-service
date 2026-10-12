@@ -3,7 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { dayStart, presetRange } from "#lib/components/data-table/ranges.ts";
 import { nextDay, startOfDay } from "#lib/dates.ts";
 
-import { isRemote, organizations, useApp, value } from "./app.ts";
+import { afresh, isRemote, organizations, useApp, value } from "./app.ts";
 import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -34,7 +34,7 @@ describe("range filters on the equipment list, in North", () => {
 		const { page } = app;
 		const expected = await count("warranty_until < ?", [today()]);
 		expect(expected).toBeGreaterThan(0);
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await app.openFilter("Warranty");
 		await page
 			.locator('[data-slot="command-list"]')
@@ -51,7 +51,7 @@ describe("range filters on the equipment list, in North", () => {
 		const { page } = app;
 		const expected = await count(`${openOrders} >= 1`);
 		expect(expected).toBeGreaterThan(0);
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await app.openFilter("Open orders");
 		await page.getByLabel("Minimum", { exact: true }).fill("1");
 		await page.getByRole("button", { name: "Add" }).click();
@@ -92,7 +92,7 @@ describe("range filters on the equipment list, in North", () => {
 			{ openOrders: [{ from: 1e13, to: null }] },
 			{ warrantyUntil: [{ from: "today", to: null }] },
 		])("%j", async (filters) => {
-			await app.go("/equipment");
+			await app.go(afresh("/equipment"));
 			await tamperWithQuery<Query>(app.page, "getEquipmentList", (arg) => ({ ...arg, filters }));
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([

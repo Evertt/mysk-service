@@ -1,4 +1,7 @@
-/** Read access to the app under test's database, to check what the app stored. */
+/**
+ * Read access to the app under test's database, to check what the app stored (and `forgetTables`,
+ * the one write).
+ */
 import { createClient, type InValue } from "@libsql/client";
 
 import { lane } from "./lane.ts";
@@ -13,6 +16,15 @@ const client = createClient({ url: lane.databaseURL, timeout: 5000 });
 export async function rows<T = Record<string, unknown>>(sql: string, args: InValue[] = []) {
 	const result = await client.execute({ sql, args });
 	return result.rows as unknown as T[];
+}
+
+/**
+ * Forgets every user's tables (`table_memory`): the one thing a test file can't help leaving
+ * behind, as every visit to a list remembers how it was left (see `table-memory.svelte.ts`), and
+ * the next file on the worker would get it back. So each file starts without it (`useApp`).
+ */
+export async function forgetTables() {
+	await client.execute("delete from table_memory");
 }
 
 /** The first column of the first row, e.g. of a `select count(*)`. */

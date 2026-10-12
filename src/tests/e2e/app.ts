@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 
+import { forgetTables } from "./db.ts";
 import { baseURL } from "./lane.ts";
 
 export { baseURL } from "./lane.ts";
@@ -28,6 +29,13 @@ export const hydrated = (page: Page) =>
 		page.locator("html[data-hydrated]").waitFor({ state: "attached" }),
 		page.waitForLoadState("networkidle"),
 	]);
+
+/**
+ * A list's page as a link to its first page (`/orders?page=1`): the list as it is by default,
+ * rather than as the user left it, which a visit without parameters brings back (see
+ * `table-memory.svelte.ts`).
+ */
+export const afresh = (path: string) => `${path}?page=1`;
 
 /** The demo organizations: North (Fieldworks Noord) and South (Fieldworks Zuid). */
 export const organizations = demoOrganizations;
@@ -300,6 +308,7 @@ export function useApp({
 			if (message.type() === "error" && !expecting) errors.push(`error: ${text}`);
 			else if (/hydrat/i.test(text)) errors.push(`${message.type()}: ${text}`);
 		});
+		await forgetTables();
 		if (user) await app.signIn(user);
 	});
 

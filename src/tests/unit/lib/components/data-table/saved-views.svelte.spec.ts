@@ -11,6 +11,10 @@ vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
 vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock(
+	"#lib/components/data-table/table-memory.remote.ts",
+	() => import("./fake-table-memory.ts"),
+);
 
 const items: Item[] = [
 	{ id: 1, name: "Boiler service", status: "open", amount: 100, quantity: 1, dueOn: null },
@@ -22,6 +26,7 @@ const items: Item[] = [
 const view = (
 	fields: Partial<TableView> & Pick<TableView, "id" | "name" | "query">,
 ): TableView => ({
+	columns: null,
 	shared: false,
 	mine: true,
 	owner: null,
@@ -52,6 +57,9 @@ const menuButton = () => page.getByRole("button", { name: /^Saved views/ });
 const viewItem = (name: string) =>
 	page.getByRole("menuitemradio", { name: new RegExp(`^${name}`) });
 const action = (name: string) => page.getByRole("menuitem", { name });
+/** The column headers' names, as shown. */
+const headers = () =>
+	[...document.querySelectorAll("thead th")].map((th) => th.textContent?.trim() ?? "");
 
 beforeEach(() => {
 	visit("/items");
@@ -96,7 +104,7 @@ describe("the saved views menu", () => {
 		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Priciest first");
 	});
 
-	test("saving sends the table's parameters without the page", async () => {
+	test("saving sends the table's parameters without the page, and its columns", async () => {
 		visit("/items?status=open,draft&page=2");
 		render(Harness, { items });
 
@@ -107,7 +115,12 @@ describe("the saved views menu", () => {
 
 		expect(sent.at(-1)).toEqual({
 			name: "createView",
-			data: { tableKey: "/items", query: "?status=open,draft", name: "Open and drafts" },
+			data: {
+				tableKey: "/items",
+				query: "?status=open,draft",
+				columns: JSON.stringify({ status: true, amount: true, quantity: true }),
+				name: "Open and drafts",
+			},
 		});
 	});
 
@@ -131,14 +144,74 @@ describe("the saved views menu", () => {
 		await userEvent.keyboard("{Escape}");
 
 		visit("/items?status=open,closed", { clear: false });
-		await expect.element(menuButton()).toHaveAccessibleName("Saved views");
+		await expect
+			.element(menuButton())
+			.toHaveAccessibleName("Saved views: Open work, with unsaved changes");
 		await menuButton().click();
 		await action("Update with the current view").click();
 
 		expect(sent.at(-1)).toEqual({
 			name: "updateView",
-			data: { id: open.id, query: "?status=open,closed" },
+			data: {
+				id: open.id,
+				query: "?status=open,closed",
+				columns: { status: true, amount: true, quantity: true },
+			},
 		});
+	});
+
+	test("a view shows the columns it saved, and the defaults of those it doesn't know", async () => {
+		reset([
+			view({ id: 4, name: "Lean", query: "", columns: { amount: false, gone: false } }),
+			open,
+		]);
+		render(Harness, { items });
+		await expect.poll(headers).toContain("Amount");
+
+		await menuButton().click();
+		await viewItem("Lean").click();
+		await expect.poll(headers).not.toContain("Amount");
+		await expect.poll(headers).toContain("Status");
+		await expect.poll(headers).toContain("Quantity");
+		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Lean");
+
+		// A view saved before views had columns leaves them as they are.
+		await menuButton().click();
+		await viewItem("Open work").click();
+		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Open work");
+		await expect.poll(headers).not.toContain("Amount");
+	});
+
+	test("showing or hiding a column is a change to the open view", async () => {
+		reset([view({ ...open, columns: { status: true, amount: true, quantity: true } })]);
+		render(Harness, { items });
+		await menuButton().click();
+		await viewItem("Open work").click();
+		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Open work");
+
+		await page.getByRole("button", { name: "View", exact: true }).click();
+		await page.getByRole("menuitemcheckbox", { name: "Quantity" }).click();
+		await userEvent.keyboard("{Escape}");
+
+		await expect
+			.element(menuButton())
+			.toHaveAccessibleName("Saved views: Open work, with unsaved changes");
+	});
+
+	test("No view goes back to the table's defaults, columns too", async () => {
+		reset([view({ ...open, columns: { status: false, amount: true, quantity: true } })]);
+		render(Harness, { items });
+		await menuButton().click();
+		expect(action("No view").elements()).toHaveLength(0);
+		await viewItem("Open work").click();
+		await expect.poll(headers).not.toContain("Status");
+
+		await menuButton().click();
+		await action("No view").click();
+
+		await expect.element(menuButton()).toHaveAccessibleName("Saved views");
+		await expect.poll(headers).toContain("Status");
+		await expect.poll(lastSearch).toBe("");
 	});
 
 	test("deleting a view asks first", async () => {

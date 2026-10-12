@@ -11,6 +11,10 @@ vi.mock("$app/navigation", async () => ({
 }));
 // The toolbar's saved views (see `saved-views.svelte.spec.ts`): none.
 vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
+vi.mock(
+	"#lib/components/data-table/table-memory.remote.ts",
+	() => import("./fake-table-memory.ts"),
+);
 
 /** The links followed (and stopped, so the test page stays put), oldest first. */
 const opened: string[] = [];

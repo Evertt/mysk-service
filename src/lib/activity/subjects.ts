@@ -106,6 +106,12 @@ const labelled =
 const money = (value: unknown) => formatCents(Number(value));
 const day = (value: unknown) => formatDate(new Date(String(value)));
 const moment = (value: unknown) => formatDateTime(new Date(String(value)));
+/** A saved view's columns (see `column-visibility.ts`): the hidden ones, by id. */
+const hiddenColumns = (value: unknown) =>
+	Object.entries((value ?? {}) as Record<string, boolean>)
+		.filter(([, visible]) => !visible)
+		.map(([id]) => id)
+		.join(", ") || "—";
 /** A number of hours, e.g. "2.5 h". */
 const hours = (value: unknown) => m.common_count_hours_short({ count: Number(value) });
 /** A member's roles as stored (`owner,engineer`), e.g. "Owner, Field engineer". */
@@ -171,11 +177,14 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	invitation: { noun: m.activity_subject_invitation, fields: { role: { format: roles } } },
 	/**
 	 * A data table's saved view, by its name. Only shared views are logged: personal ones concern
-	 * nobody else. Its filters show as their URL parameters.
+	 * nobody else. Its filters show as their URL parameters, its columns as the hidden ones' ids.
 	 */
 	saved_view: {
 		noun: m.activity_subject_saved_view,
-		fields: { query: { label: m.activity_field_query } },
+		fields: {
+			query: { label: m.activity_field_query },
+			columns: { label: m.activity_field_hidden_columns, format: hiddenColumns },
+		},
 	},
 };
 
