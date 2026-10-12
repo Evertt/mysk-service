@@ -45,6 +45,8 @@ export const columns = column.columns([
 		cell: ({ row }) =>
 			renderComponent(StockCell, { stock: row.original.stock, unit: row.original.unit }),
 		enableGlobalFilter: false,
+		// `?quantity=..10`: at most 10 in stock.
+		filterFn: "inNumberRange",
 		meta: { label: m.materials_stock, align: "end", param: "quantity" },
 	}),
 	// Not shown; the stock level filter filters on it, and the rows can be grouped by it.
@@ -63,6 +65,7 @@ export const columns = column.columns([
 	column.accessor("orderCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
+		filterFn: "inNumberRange",
 		meta: { label: m.materials_used_on, align: "end", param: "used" },
 	}),
 	column.display({
