@@ -21,7 +21,7 @@ import { baseURL, organizations, useApp, users } from "./app.ts";
 
 const rate = Number(process.env.REPRO_CPU_RATE ?? 6);
 const iterations = Number(process.env.REPRO_ITERATIONS ?? 50);
-const settleMs = Number(process.env.REPRO_SETTLE_MS ?? 10_000 * Math.max(1, rate / 6));
+const settleMs = Number(process.env.REPRO_SETTLE_MS ?? Math.round(10_000 * Math.max(1, rate / 6)));
 /** How much longer a page that hasn't settled gets before it counts as hung, not slow. */
 const hungMs = 30_000;
 
