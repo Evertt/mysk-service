@@ -1,4 +1,5 @@
-import { building } from "$app/env";
+import { building, dev } from "$app/env";
+import { DEV_REMOTE_DELAY_MS } from "$app/env/private";
 import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
@@ -9,6 +10,19 @@ import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
+
+/**
+ * In development, with `DEV_REMOTE_DELAY_MS` set, holds up each remote function call that long: a
+ * slow server, to try what navigations do while they wait (an experiment, see `AGENTS.md`).
+ */
+const delayRemoteCalls: Handle = async ({ event, resolve }) => {
+	// The request's own URL: a remote call's `event.url` is the calling page's.
+	const { pathname } = new URL(event.request.url);
+	if (dev && DEV_REMOTE_DELAY_MS && pathname.includes("/_app/remote")) {
+		await new Promise((done) => setTimeout(done, DEV_REMOTE_DELAY_MS));
+	}
+	return resolve(event);
+};
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -111,6 +125,7 @@ const handleGuard: Handle = ({ event, resolve }) => {
 
 // The guard runs after `handleBetterAuth`, which sets `locals.user` and answers /api/auth itself.
 export const handle: Handle = sequence(
+	delayRemoteCalls,
 	handleParaglide,
 	handleTheme,
 	blockOrganizationEndpoints,

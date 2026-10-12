@@ -1,7 +1,7 @@
 <!--
 	@component
 	What an office page shows while its data loads: the page's own skeleton if it has one (a
-	module's, see `moduleSkeletonsOf()`), else the outline of the page it'll be, by its route (see
+	module's, see `loadModuleSkeletons()`), else the outline of the page it'll be, by its route (see
 	`pageShape()`).
 -->
 <script lang="ts">
