@@ -17,15 +17,15 @@ stands. Status: ⬜ to do · 🔄 in progress (branch) · ✅ done (merged into 
 
 ## Suggested
 
-| #   | Item                                                                                                                                       | Status |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
-| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | ✅     |
-| 9   | **CSV export** of the current filtered view; server-side for the big tables.                                                               | ⬜     |
-| 10  | **Bulk actions on selected rows**, e.g. assign an engineer, change status, add to an invoice. (Row selection exists but does nothing yet.) | ✅     |
-| 11  | **Range filters for dates and numbers**, e.g. "scheduled this week", "stock below 10".                                                     | ⬜     |
-| 12  | **Remembered column settings and resizing.** Column visibility, order and width persist per user; drag to resize.                          | ⬜     |
-| 13  | **Density toggle and keyboard navigation.** Compact/comfortable rows; arrow keys move between rows, Enter opens one.                       | ✅     |
-| 14  | **Loading state for server-side tables.** While a page, filter or sort loads, keep the previous rows (dimmed) instead of flashing empty.   | ✅     |
+| #   | Item                                                                                                                                       | Status                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| 8   | **Saved views.** Name and save a combination of filters, sorting and columns per user (e.g. "My urgent orders").                           | ✅                       |
+| 9   | **CSV export** of the current filtered view; server-side for the big tables.                                                               | ⬜                       |
+| 10  | **Bulk actions on selected rows**, e.g. assign an engineer, change status, add to an invoice. (Row selection exists but does nothing yet.) | ✅                       |
+| 11  | **Range filters for dates and numbers**, e.g. "scheduled this week", "stock below 10".                                                     | 🔄 `table-range-filters` |
+| 12  | **Remembered column settings and resizing.** Column visibility, order and width persist per user; drag to resize.                          | ⬜                       |
+| 13  | **Density toggle and keyboard navigation.** Compact/comfortable rows; arrow keys move between rows, Enter opens one.                       | ✅                       |
+| 14  | **Loading state for server-side tables.** While a page, filter or sort loads, keep the previous rows (dimmed) instead of flashing empty.   | ✅                       |
 
 ## Other
 

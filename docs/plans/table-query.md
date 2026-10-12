@@ -595,6 +595,48 @@ runs `pnpm run check` and then the relevant spec and e2e files before committing
 - **Saved views.** Unchanged storage and codec, so existing rows keep working. `views.spec.ts` and
   `saved-views.svelte.spec.ts` should pass untouched. Run them in step 3 to confirm.
 
+## Range filters (#11)
+
+Built on the design above as two more `FilterKind`s, `dateRange` and `numberRange`
+(`list-definition.ts`), with their grammar in `src/lib/components/data-table/ranges.ts`. What was
+decided:
+
+- **One token per range, both ends included.** `?scheduled=2026-10-01..2026-10-07`,
+  `?scheduled=2026-10-01..` (on or after), `?scheduled=..2026-10-07` (on or before), one day
+  `?scheduled=2026-10-01`; numbers `?quantity=5..10`, `?quantity=..10` (at most 10),
+  `?quantity=5..` (at least 5), `?quantity=0`. `..` can't be part of a day or a plain number
+  (`-2.5`, no exponents), and a range has no commas, so it fits the set grammar's escaping
+  without any. "Below 10" is `..9` for whole numbers: inclusive ends read the same on both sides,
+  and match the inputs' "Minimum" and "Maximum".
+- **Presets stay relative in the URL.** `?scheduled=this-week`, `before-today`, `next-7-days`, …
+  (`datePresets`): a link or a saved view ("scheduled this week") means the current week whenever
+  it's opened. A preset is a whole token, not an end (`today..` is not a range). `toListQuery()`
+  turns it into the days it means when it builds the query, so the remote query only ever gets
+  days (`{ from: "2026-10-12", to: "2026-10-18" }`), its schema stays strict, and the cache key
+  changes with the day. Weeks start on Monday.
+- **Whose today, whose midnight.** The days are the browser's (where `toListQuery()` runs; the
+  server's while it renders the page), and the server turns a day into timestamps at its own local
+  midnight (`inDays()`, as the activity feed's date filter already did). Both are the same zone in
+  practice; a tenant time zone would fix both ends if that ever changes.
+- **One range per filter.** The query's filter is an array like the others (`[{ from, to }]`), so
+  the planner, `whereOf()`, `queryKey()` and bulk targets need nothing new, but the schema takes
+  exactly one, and the URL keeps the first valid token. A range can't be combined with `none`
+  (`orNone(dateRange)` isn't offered): "unscheduled or this week" is two views.
+- **Lenient URL, strict query.** A token that isn't a range (a day that doesn't exist, ends in the
+  wrong order, a number with an exponent) is dropped from the URL's state, as an unknown status is.
+  A query with a malformed range (no end, ends reversed, two ranges, a token instead of a range, a
+  string for a number, a number beyond ±10¹²) is a 400.
+- **No facets.** Range columns have no counts; the filters show what they mean instead (a preset's
+  days, "At least 2").
+- **Client-side tables** use the same grammar through `filterFn: "inDateRange"` and
+  `"inNumberRange"` (`features.ts`), which also give the URL spec its `filter` kind, so
+  `columns.spec.ts` still compares the table's spec with the list's.
+- **Where:** orders' scheduled and created dates; equipment's installed and warranty dates and
+  open orders; materials' quantity in stock (`quantity`, as `stock` is the stock level) and
+  orders used on; customers' equipment, open orders and "since"; engineers' open orders and hire
+  date. Money columns (prices, rates, totals) have none yet: they're cents in the database and
+  euros on screen, and orders' total is adjusted by modules after the query.
+
 ## Open questions
 
 - Should client-side tables (customers, engineers, …) also get a definition? It's not needed for
