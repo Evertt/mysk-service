@@ -71,16 +71,19 @@ export const columns = column.columns([
 	column.accessor("installedAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
+		filterFn: "inDateRange",
 		meta: { label: m.equipment_column_installed, param: "installed" },
 	}),
 	column.accessor("warrantyUntil", {
 		cell: ({ getValue }) => renderComponent(WarrantyCell, { until: getValue() }),
 		enableGlobalFilter: false,
+		filterFn: "inDateRange",
 		meta: { label: m.equipment_column_warranty, param: "warranty" },
 	}),
 	column.accessor("openOrders", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
+		filterFn: "inNumberRange",
 		meta: { label: m.equipment_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.display({

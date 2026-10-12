@@ -2,10 +2,12 @@
 	import { untrack } from "svelte";
 
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
 	import { type List, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
@@ -107,6 +109,29 @@
 				title={m.equipment_column_customer()}
 				searchLabel={m.common_table_search_customers()}
 				load={getCustomerOptions}
+			/>
+			<DateRangeFilter
+				columnId="installedAt"
+				title={m.equipment_column_installed()}
+				presets={["this-month", "last-month", "last-30-days", "this-year", "last-year"]}
+			/>
+			<DateRangeFilter
+				columnId="warrantyUntil"
+				title={m.equipment_column_warranty()}
+				presets={[
+					"before-today",
+					"from-today",
+					"next-30-days",
+					"this-month",
+					"next-month",
+					"this-year",
+				]}
+			/>
+			<NumberRangeFilter
+				columnId="openOrders"
+				title={m.equipment_column_open_orders()}
+				step={1}
+				min={0}
 			/>
 			{#each moduleFilters as { column, options } (column.id)}
 				<FacetedFilter
