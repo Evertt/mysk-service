@@ -39,6 +39,8 @@ export const columns = column.columns([
 	column.accessor("unitPrice", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
+		// In euros in the URL: `?price=..12.50`.
+		filterFn: "inMoneyRange",
 		meta: { label: m.materials_unit_price, align: "end", param: "price" },
 	}),
 	column.accessor("stock", {

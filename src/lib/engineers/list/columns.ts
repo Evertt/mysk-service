@@ -49,6 +49,7 @@ export const columns = column.columns([
 	column.accessor("hourlyRate", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
+		filterFn: "inMoneyRange",
 		meta: { label: m.engineers_column_hourly_rate, align: "end", param: "rate" },
 	}),
 	column.accessor((row) => (row.active ? "active" : "inactive"), {

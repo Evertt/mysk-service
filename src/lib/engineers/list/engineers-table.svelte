@@ -49,6 +49,12 @@
 				options={statusOptions}
 			/>
 			<NumberRangeFilter
+				columnId="hourlyRate"
+				title={m.engineers_column_hourly_rate()}
+				money
+				min={0}
+			/>
+			<NumberRangeFilter
 				columnId="openOrders"
 				title={m.engineers_column_open_orders()}
 				step={1}

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import { recordFacets } from "#lib/components/data-table/record-facets.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
@@ -43,6 +45,13 @@
 				title={m.invoices_column_customer()}
 				options={customers.options}
 				counts={customers.counts}
+			/>
+			<NumberRangeFilter columnId="total" title={m.invoices_column_total()} money />
+			<DateRangeFilter
+				columnId="dueOn"
+				title={m.invoices_column_due()}
+				presets={["before-today", "from-today", "this-week", "next-7-days", "this-month"]}
+				none={m.invoices_state_draft()}
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />

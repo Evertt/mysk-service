@@ -59,6 +59,7 @@
 				options={stockLevelOptions}
 				counts={facets.stockLevel}
 			/>
+			<NumberRangeFilter columnId="unitPrice" title={m.materials_unit_price()} money min={0} />
 			<NumberRangeFilter columnId="stock" title={m.materials_stock()} min={0} />
 			<NumberRangeFilter columnId="orderCount" title={m.materials_used_on()} step={1} min={0} />
 		</table.Toolbar>

@@ -39,7 +39,7 @@ describe("range filters on the materials list, in North", () => {
 		// "Stock", not "Stock level".
 		await page.getByRole("option", { name: "Stock", exact: true }).click();
 		await page.getByLabel("Maximum", { exact: true }).fill("10");
-		await page.getByRole("button", { name: "Apply" }).click();
+		await page.getByRole("button", { name: "Add" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("quantity") === "..10");
 		await app.tableSettled();
@@ -47,14 +47,19 @@ describe("range filters on the materials list, in North", () => {
 		const pill = app.page.locator('[data-slot="filter-pill"]', { hasText: "At most 10" });
 		expect(await pill.innerText()).toMatch(/^Stock\s+At most 10/);
 
-		// Changed in its pill: from 5 to 10 (both included).
+		// Changed in its pill: a second range, 50 to 60, then the first taken off.
 		await pill.locator('[data-slot="popover-trigger"]').click();
-		await page.getByLabel("Minimum", { exact: true }).fill("5");
-		await page.getByRole("button", { name: "Apply" }).click();
-		await page.keyboard.press("Escape");
-		await page.waitForURL((url) => url.searchParams.get("quantity") === "5..10");
+		await page.getByLabel("Minimum", { exact: true }).fill("50");
+		await page.getByLabel("Maximum", { exact: true }).fill("60");
+		await page.getByRole("button", { name: "Add" }).click();
+		await page.waitForURL((url) => url.searchParams.get("quantity") === "..10,50..60");
 		await app.tableSettled();
-		expect(await app.rowCount()).toBe(await count("stock between 5 and 10"));
+		expect(await app.rowCount()).toBe(await count("(stock <= 10 or stock between 50 and 60)"));
+		await page.getByRole("button", { name: "Remove At most 10" }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("quantity") === "50..60");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(await count("stock between 50 and 60"));
 		await app.go("/materials");
 	});
 
@@ -63,6 +68,13 @@ describe("range filters on the materials list, in North", () => {
 			await count(`${usedOn} >= 1 and stock >= 50`),
 		);
 		expect(await shownFor("used=0&unit=pcs")).toBe(await count(`${usedOn} = 0 and unit = 'pcs'`));
+		// Prices in euros, to the cent.
+		expect(await shownFor("price=..10")).toBe(await count("unit_price <= 1000"));
+		expect(await shownFor("price=10.01..")).toBe(await count("unit_price >= 1001"));
+		// Several values: either.
+		expect(await shownFor("quantity=0,50..60")).toBe(
+			await count("(stock = 0 or stock between 50 and 60)"),
+		);
 		// What isn't a range is ignored.
 		expect(await shownFor("quantity=10..5&used=lots")).toBe(await countIn("material", north.id));
 	});
@@ -74,12 +86,10 @@ describe("range filters on the materials list, in North", () => {
 			{ stock: [{ from: 10, to: 5 }] },
 			{ stock: ["..10"] },
 			{ orderCount: [{ from: null, to: "3" }] },
-			{
-				stock: [
-					{ from: 1, to: 2 },
-					{ from: 5, to: 6 },
-				],
-			},
+			{ stock: Array.from({ length: 11 }, (_, i) => ({ from: i, to: i })) },
+			{ stock: [null] },
+			{ unitPrice: [{ from: 0.5, to: null }] },
+			{ unitPrice: ["..10"] },
 		])("%j", async (filters) => {
 			await app.go("/materials");
 			await tamperWithQuery<Query>(app.page, "getMaterials", (arg) => ({ ...arg, filters }));

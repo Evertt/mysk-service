@@ -60,11 +60,14 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
+		// `?due=before-today`: due before today; `none` the drafts.
+		filterFn: "inDateRange",
 		meta: { label: m.invoices_column_due, param: "due" },
 	}),
 	column.accessor("total", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
+		filterFn: "inMoneyRange",
 		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
 	}),
 	column.accessor("createdAt", {

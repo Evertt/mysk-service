@@ -36,7 +36,10 @@ export const materialsSql = (): ListSql<typeof materialsList.columns> => {
 				filter: (units) => inArray(material.unit, units),
 				group: material.unit,
 			},
-			unitPrice: { sort: material.unitPrice },
+			unitPrice: {
+				sort: material.unitPrice,
+				filter: (ranges) => between(material.unitPrice, ranges),
+			},
 			stock: { sort: material.stock, filter: (ranges) => between(material.stock, ranges) },
 			// From out of stock to in stock rather than alphabetically.
 			stockLevel: {
