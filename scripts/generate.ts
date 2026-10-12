@@ -23,5 +23,10 @@ run("paraglide-js", [
 	"preferredLanguage",
 	"baseLocale",
 	"--emit-ts-declarations",
+	// The layout the Vite plugin writes outside production builds (`vite.config.ts`), so the tests'
+	// servers find the messages as they compile them: the CLI's default, a module per message
+	// (~2,900), slowed the next component test run into timeouts.
+	"--output-structure",
+	"locale-modules",
 	"--silent",
 ]);
