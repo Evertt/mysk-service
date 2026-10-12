@@ -1,7 +1,7 @@
 <!--
 	@component
-	Search, a Filter button whose menu lists the filters (`children`: `FacetedFilter`s and
-	`RecordFilter`s, which register themselves and render nothing), the active filters as pills in
+	Search, a Filter button whose menu lists the filters (`children`: `FacetedFilter`s,
+	`RecordFilter`s and range filters, which register themselves and render nothing), the active filters as pills in
 	a row that scrolls sideways, a reset button when anything is filtered, extra `actions`, the
 	saved views and the column visibility menu. One row on a desktop screen; on a phone the search
 	box and the pills get rows of their own.
