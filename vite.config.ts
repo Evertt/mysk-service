@@ -133,6 +133,14 @@ export default defineConfig({
 			emitTsDeclarations: true,
 			// A chosen language (cookie) wins, then the browser's language, then English.
 			strategy: ["cookie", "preferredLanguage", "baseLocale"],
+			// A production build writes a module per message, anything else a module per language, into
+			// the same folder. The end-to-end tests' build asks for the latter (see
+			// src/tests/e2e/global-setup.ts), so it leaves the folder as the component tests' server has
+			// it: swapping in ~2,900 modules under them slowed their clicks into timeouts.
+			outputStructure: process.env.PARAGLIDE_OUTPUT_STRUCTURE as
+				| "locale-modules"
+				| "message-modules"
+				| undefined,
 		}),
 	]),
 	test: {
