@@ -12,6 +12,7 @@ import {
 	type ListQuery,
 	type ListWhere,
 	listLimits,
+	moneyRange,
 	numberRange,
 	oneOf,
 	orNone,
@@ -687,12 +688,9 @@ describe("range filters", () => {
 			["no end", { stock: [{ from: null, to: null }] }],
 			["the ends the wrong way round", { stock: [{ from: 10, to: 5 }] }],
 			[
-				"two ranges",
+				"more ranges than a filter takes",
 				{
-					stock: [
-						{ from: 1, to: 2 },
-						{ from: 5, to: 6 },
-					],
+					stock: Array.from({ length: listLimits.ranges + 1 }, (_, i) => ({ from: i, to: i })),
 				},
 			],
 			["no range", { stock: [] }],
@@ -708,6 +706,58 @@ describe("range filters", () => {
 		])("refuses %s", (_, filters) => {
 			expect(acceptsRanges(filters)).toBe(false);
 		});
+	});
+
+	test("several ranges keep their order and lose their duplicates; `none` only where it may", () => {
+		expect(rangesFromUrl("quantity=12,5..8,2,5..8&scheduled=next-week,today..").filters).toEqual({
+			scheduledFor: [
+				{ from: "2026-10-14", to: null },
+				{ from: "2026-10-19", to: "2026-10-25" },
+			],
+			stock: [
+				{ from: 2, to: 2 },
+				{ from: 5, to: 8 },
+				{ from: 12, to: 12 },
+			],
+		});
+		// `stock` can't be empty, so `none` is left out of it.
+		expect(rangesFromUrl("quantity=none").filters).toEqual({});
+		const nullable = defineList({ columns: { due: { filter: orNone(dateRange) } } });
+		const query = toListQuery(
+			nullable,
+			parseTableUrl(new URLSearchParams("due=this-week,none"), nullable.urlSpec),
+		);
+		expect(query.filters).toEqual({ due: [null, { from: "2026-10-12", to: "2026-10-18" }] });
+		expect(v.safeParse(nullable.query, query).success).toBe(true);
+		expect(nullable.urlSpec.columns).toEqual([{ id: "due", filter: "dateRange" }]);
+	});
+
+	test("a preset is an end: its first day as the start, its last as the end", () => {
+		expect(rangesFromUrl("scheduled=this-week..next-month").filters).toEqual({
+			scheduledFor: [{ from: "2026-10-12", to: "2026-11-30" }],
+		});
+		expect(rangesFromUrl("scheduled=..yesterday").filters).toEqual({
+			scheduledFor: [{ from: null, to: "2026-10-13" }],
+		});
+	});
+
+	test("money is in euros in the URL and in cents in the query, exactly", () => {
+		const money = defineList({ columns: { total: { filter: moneyRange } } });
+		const filtersOf = (search: string) =>
+			toListQuery(money, parseTableUrl(new URLSearchParams(search), money.urlSpec)).filters;
+		expect(filtersOf("total=500..,0.29..0.57,..12.5")).toEqual({
+			total: [
+				{ from: null, to: 1250 },
+				{ from: 29, to: 57 },
+				{ from: 50000, to: null },
+			],
+		});
+		const accepts = (total: unknown) =>
+			v.safeParse(money.where, { q: "", filters: { total } }).success;
+		expect(accepts([{ from: 1250, to: null }])).toBe(true);
+		// Cents are whole.
+		expect(accepts([{ from: 12.5, to: null }])).toBe(false);
+		expect(money.urlSpec.columns).toEqual([{ id: "total", filter: "moneyRange" }]);
 	});
 
 	test("a range filter's values are typed as ranges", () => {

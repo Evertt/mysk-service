@@ -324,12 +324,15 @@ describe("range filters", () => {
 		]);
 	});
 
-	test("ignore what isn't a range, and keep only the first that is", () => {
+	test("keep several values, `none` among them, and drop only what isn't one", () => {
 		expect(filtersOf("scheduled=bogus&quantity=10..5")).toEqual([]);
 		expect(filtersOf("scheduled=2026-02-30..&quantity=abc")).toEqual([]);
-		expect(filtersOf("scheduled=soon,today,tomorrow&quantity=x,5..,..3")).toEqual([
-			{ id: "scheduledFor", value: ["today"] },
-			{ id: "stock", value: ["5.."] },
+		expect(filtersOf("scheduled=soon,none,today,tomorrow..&quantity=x,5..,..3,5..")).toEqual([
+			{ id: "scheduledFor", value: ["none", "today", "tomorrow.."] },
+			{ id: "stock", value: ["5..", "..3"] },
+		]);
+		expect(filtersOf("scheduled=this-week..next-month,before-today..")).toEqual([
+			{ id: "scheduledFor", value: ["this-week..next-month"] },
 		]);
 		// A number isn't a day, nor a day a number.
 		expect(filtersOf("scheduled=5..10&quantity=2026-10-01")).toEqual([]);
@@ -347,4 +350,13 @@ describe("range filters", () => {
 		expect(search).toBe("?scheduled=2026-10-01..2026-10-07&quantity=..10");
 		expect(parse(search.slice(1), ranged)).toEqual(state);
 	});
+});
+
+test("a money range filter reads amounts in euros, at most two decimals", () => {
+	const spec: TableUrlSpec = { columns: [{ id: "total", filter: "moneyRange" }] };
+	expect(parse("total=500..,..12.50,1.234,2..1,0.5", spec).columnFilters).toEqual([
+		{ id: "total", value: ["500..", "..12.50", "0.5"] },
+	]);
+	const state = { ...parse("", spec), columnFilters: [{ id: "total", value: ["none", "..9.99"] }] };
+	expect(write(state, "", spec)).toBe("?total=none,..9.99");
 });

@@ -1,15 +1,21 @@
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import {
+	centsEuros,
 	dateInRange,
 	dateRangeToken,
 	datePresets,
+	euroCents,
+	inAnyRange,
 	isDay,
 	isRangeToken,
+	moneyRangeToken,
 	numberInRange,
 	numberRangeToken,
 	parseDateRange,
+	parseMoneyRange,
 	parseNumberRange,
+	presetCanBe,
 	presetRange,
 } from "#lib/components/data-table/ranges.ts";
 
@@ -190,5 +196,112 @@ describe("whether a row's value is in a range", () => {
 		expect(numberInRange(5, { from: 5, to: null })).toBe(true);
 		expect(numberInRange(4, { from: 5, to: null })).toBe(false);
 		expect(numberInRange(null, { from: null, to: 10 })).toBe(false);
+	});
+});
+
+describe("presets as the ends of a date range", () => {
+	test("as the start, a preset is its first day; as the end, its last", () => {
+		expect(parseDateRange("today..", today)).toEqual({ from: "2026-10-14", to: null });
+		expect(parseDateRange("..yesterday", today)).toEqual({ from: null, to: "2026-10-13" });
+		expect(parseDateRange("this-week..next-month", today)).toEqual({
+			from: "2026-10-12",
+			to: "2026-11-30",
+		});
+		expect(parseDateRange("2026-10-01..this-week", today)).toEqual({
+			from: "2026-10-01",
+			to: "2026-10-18",
+		});
+		// An open end of a preset is open as an end too: from today on.
+		expect(parseDateRange("from-today..", today)).toEqual({ from: "2026-10-14", to: null });
+		expect(parseDateRange("..before-today", today)).toEqual({ from: null, to: "2026-10-13" });
+	});
+
+	test("a preset without that day can't be that end, nor can the ends be the wrong way round", () => {
+		for (const token of [
+			"before-today..",
+			"..from-today",
+			"next-week..last-week",
+			"today..2026-01-01",
+		]) {
+			expect(parseDateRange(token, today), token).toBeUndefined();
+		}
+		expect(presetCanBe("before-today", "from")).toBe(false);
+		expect(presetCanBe("before-today", "to")).toBe(true);
+		expect(presetCanBe("from-today", "to")).toBe(false);
+		expect(presetCanBe("this-week", "from")).toBe(true);
+	});
+
+	test("are written back as they're read", () => {
+		for (const token of ["today..", "..yesterday", "this-week..next-month", "2026-10-01..today"]) {
+			const [from, to] = token.split("..");
+			expect(dateRangeToken({ from: from || null, to: to || null })).toBe(token);
+		}
+	});
+});
+
+describe("money", () => {
+	test("euros in the URL are cents, digit by digit", () => {
+		expect(euroCents("12.5")).toBe(1250);
+		expect(euroCents("12.05")).toBe(1205);
+		expect(euroCents("0.29")).toBe(29);
+		expect(euroCents("1.13")).toBe(113);
+		expect(euroCents("-3.5")).toBe(-350);
+		expect(euroCents("-0")).toBe(0);
+		expect(euroCents("9999999999.99")).toBe(999_999_999_999);
+		for (const text of ["1.234", "1,5", "1e3", "", ".5", "€5", "12345678901"]) {
+			expect(euroCents(text), text).toBeUndefined();
+		}
+	});
+
+	test("cents are written as euros, as short as they go", () => {
+		expect(centsEuros(1250)).toBe("12.5");
+		expect(centsEuros(1205)).toBe("12.05");
+		expect(centsEuros(1200)).toBe("12");
+		expect(centsEuros(29)).toBe("0.29");
+		expect(centsEuros(-350)).toBe("-3.5");
+		expect(centsEuros(0)).toBe("0");
+	});
+
+	test("a money range is in cents, and written back in euros", () => {
+		expect(parseMoneyRange("500..")).toEqual({ from: 50000, to: null });
+		expect(parseMoneyRange("..12.50")).toEqual({ from: null, to: 1250 });
+		expect(parseMoneyRange("0.1..0.2")).toEqual({ from: 10, to: 20 });
+		expect(parseMoneyRange("20..10")).toBeUndefined();
+		expect(parseMoneyRange("5.001..")).toBeUndefined();
+		for (const token of ["500..", "..12.5", "0.1..0.2", "7"]) {
+			expect(moneyRangeToken(parseMoneyRange(token)!)).toBe(token);
+		}
+		expect(isRangeToken("moneyRange", "..12.50")).toBe(true);
+		expect(isRangeToken("moneyRange", "..12.505")).toBe(false);
+	});
+});
+
+describe("several values", () => {
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(today);
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	test("keep a row in any of them, `none` the rows without a value", () => {
+		const at = (day: number) => new Date(2026, 9, day, 9);
+		const keeps = (value: unknown, tokens: string[]) => inAnyRange("dateRange", value, tokens);
+		expect(keeps(at(14), ["none", "today"])).toBe(true);
+		expect(keeps(null, ["none", "today"])).toBe(true);
+		expect(keeps(undefined, ["none"])).toBe(true);
+		expect(keeps(at(20), ["none", "today"])).toBe(false);
+		expect(keeps(at(20), ["..2026-10-01", "2026-10-19..2026-10-21"])).toBe(true);
+		expect(inAnyRange("numberRange", 7, ["2", "5..8", "12"])).toBe(true);
+		expect(inAnyRange("numberRange", 9, ["2", "5..8", "12"])).toBe(false);
+		expect(inAnyRange("moneyRange", 1250, ["..12.50"])).toBe(true);
+		expect(inAnyRange("moneyRange", 1251, ["..12.50"])).toBe(false);
+	});
+
+	test("that aren't values are left out; with none left, every row is kept", () => {
+		expect(inAnyRange("numberRange", 9, ["bogus", "2"])).toBe(false);
+		expect(inAnyRange("numberRange", 9, ["bogus"])).toBe(true);
+		expect(isRangeToken("dateRange", "none")).toBe(true);
 	});
 });

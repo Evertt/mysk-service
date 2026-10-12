@@ -17,7 +17,7 @@
  * 		customer: { sort: true, group: true, filter: code }, // by customer code
  * 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
  * 		engineer: { sort: true, group: true, filter: orNone(id) }, // by engineer id: (number | null)[]
- * 		scheduledFor: { param: "scheduled", sort: true, filter: dateRange }, // [{ from, to }]
+ * 		scheduledFor: { param: "scheduled", sort: true, filter: orNone(dateRange) }, // [null, { from, to }]
  * 		createdAt: { param: "created", sort: true },
  * 	},
  * 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
@@ -37,11 +37,15 @@ import {
 	dateRangeToken,
 	isDay,
 	isOrdered,
+	isRangeCents,
 	isRangeNumber,
 	type NumberRange,
+	moneyRangeToken,
 	numberRangeToken,
 	parseDateRange,
+	parseMoneyRange,
 	parseNumberRange,
+	type Range,
 	type RangeGrammar,
 } from "./ranges.ts";
 import {
@@ -59,6 +63,8 @@ export const listLimits = {
 	search: 200,
 	/** The values of one filter. */
 	values: 50,
+	/** The values of one range filter (`dateRange`, …): ranges, and `none`. */
+	ranges: 10,
 	/** The page index. */
 	pageIndex: 100_000,
 	/** The query as JSON, in bytes: with `devalue`'s overhead its payload stays under 8 KB. */
@@ -116,6 +122,7 @@ export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
 	fromUrl: (token) => (token === noneToken ? null : kind.fromUrl(token)),
 	toUrl: (value) => (value === null ? noneToken : kind.toUrl(value)),
 	...(kind.values ? { values: [...kind.values, noneToken] } : {}),
+	...(kind.range ? { range: kind.range } : {}),
 });
 
 /** A range's schema: both ends, either may be open (`null`) but not both, in order. */
@@ -126,10 +133,12 @@ const rangeOf = <T extends string | number>(end: v.GenericSchema<T>) =>
 	);
 
 /**
- * A filter on a date, by a range of days (`ranges.ts`): `?scheduled=2026-10-01..2026-10-07`,
- * `..2026-10-07` or a preset that stays relative in the URL, `?scheduled=this-week`, which the
- * query has as the days it means when it's built (`toListQuery()`). One range per filter; the SQL
- * keeps the rows in it with `inDays()` (`#lib/server/lists/plan.ts`).
+ * A filter on a date, by ranges of days (`ranges.ts`): `?scheduled=2026-10-01..2026-10-07`,
+ * `..2026-10-07`, or presets that stay relative in the URL, on their own or as an end:
+ * `?scheduled=this-week`, `?scheduled=today..`. The query has the days they mean when it's built
+ * (`toListQuery()`). Several ranges keep the rows in any of them, and with `orNone(dateRange)`,
+ * `none` the rows without a date (`?scheduled=none,this-week`); the SQL keeps them with `inDays()`
+ * (`#lib/server/lists/plan.ts`).
  */
 export const dateRange: FilterKind<DateRange> = {
 	value: rangeOf(v.custom<string>(isDay)),
@@ -139,14 +148,27 @@ export const dateRange: FilterKind<DateRange> = {
 };
 
 /**
- * A filter on a number, by a range: `?quantity=..10` (at most 10), `5..` (at least 5), `5..10`.
- * One range per filter; the SQL keeps the rows in it with `between()`.
+ * A filter on a number, by ranges: `?quantity=..10` (at most 10), `5..` (at least 5), `5..10`,
+ * `2,5..8,12` (any of them). The SQL keeps the rows in them with `between()`.
  */
 export const numberRange: FilterKind<NumberRange> = {
 	value: rangeOf(v.custom<number>(isRangeNumber)),
 	fromUrl: (token) => parseNumberRange(token),
 	toUrl: numberRangeToken,
 	range: "numberRange",
+};
+
+/**
+ * A filter on an amount of money stored in cents, by ranges in euros in the URL (`?price=..12.50`,
+ * `?total=500..`; at most two decimals) and in cents in the query (`{ from: null, to: 1250 }`),
+ * converted digit by digit, so no amount is off by a rounding. The SQL keeps the rows in them with
+ * `between()` on the cents.
+ */
+export const moneyRange: FilterKind<NumberRange> = {
+	value: rangeOf(v.custom<number>(isRangeCents)),
+	fromUrl: (token) => parseMoneyRange(token),
+	toUrl: moneyRangeToken,
+	range: "moneyRange",
 };
 
 /** What a column of a list can do. */
@@ -361,8 +383,7 @@ function listSchemas(
 				v.pipe(
 					v.array(kind.value),
 					v.minLength(1),
-					// A range filter has one range.
-					v.maxLength(kind.range ? 1 : listLimits.values),
+					v.maxLength(kind.range ? listLimits.ranges : listLimits.values),
 				),
 			),
 		]),
@@ -450,9 +471,17 @@ export function extendList<C>(list: List<C>, columns: readonly ModuleListColumn[
 	return result;
 }
 
-/** Sorts values; `null` (rows without one, see `orNone`) first. */
-const compare = (a: unknown, b: unknown) =>
-	a === b ? 0 : a === null ? -1 : b === null ? 1 : (a as any) < (b as any) ? -1 : 1;
+/** Sorts values; `null` (rows without one, see `orNone`) first, ranges by their start, then end. */
+function compare(a: unknown, b: unknown): number {
+	if (a === b) return 0;
+	if (a === null) return -1;
+	if (b === null) return 1;
+	if (typeof a === "object" && typeof b === "object") {
+		const [x, y] = [a as Range<unknown>, b as Range<unknown>];
+		return compare(x.from, y.from) || compare(x.to, y.to);
+	}
+	return (a as any) < (b as any) ? -1 : 1;
+}
 
 /**
  * The canonical query for a table's state (read from the URL, or the table's own): a query that
@@ -469,10 +498,10 @@ export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C
 		const valid = tokens
 			.map((token) => kind.fromUrl(String(token)))
 			.filter((x) => v.is(kind.value, x));
-		// A range filter has one range, the first; a set its values deduped and in order.
-		const values = kind.range
-			? valid.slice(0, 1)
-			: [...new Set(valid)].sort(compare).slice(0, listLimits.values);
+		// Deduped (ranges by their ends) and in order.
+		const unique = [...new Map(valid.map((value) => [JSON.stringify(value), value])).values()];
+		const limit = kind.range ? listLimits.ranges : listLimits.values;
+		const values = unique.sort(compare).slice(0, limit);
 		if (values.length) filters[id] = values;
 	}
 

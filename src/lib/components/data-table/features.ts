@@ -25,13 +25,7 @@ import {
 
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
-import {
-	dateInRange,
-	numberInRange,
-	parseDateRange,
-	parseNumberRange,
-	type RangeGrammar,
-} from "./ranges.ts";
+import { inAnyRange, type RangeGrammar } from "./ranges.ts";
 import { noneToken } from "./url-state.ts";
 
 export interface DataTableColumnMeta {
@@ -49,8 +43,8 @@ export interface DataTableColumnMeta {
 	param?: string;
 	/**
 	 * Puts the column's filter in the URL as a set of values (implied by `filterFn: "oneOf"`) or a
-	 * range (`dateRange`, `numberRange`: implied by `filterFn: "inDateRange"` and
-	 * `"inNumberRange"`, see `ranges.ts`).
+	 * range (`dateRange`, `numberRange`, `moneyRange`: implied by `filterFn: "inDateRange"`,
+	 * `"inNumberRange"` and `"inMoneyRange"`, see `ranges.ts`).
 	 */
 	filter?: "set" | RangeGrammar;
 	/**
@@ -88,35 +82,23 @@ const filterFn_oneOf = constructFilterFn({
 });
 
 /**
- * Keeps rows whose date is in the range of the filter's value, its token from the URL (e.g.
- * `this-week` or `2026-10-01..2026-10-07`, see `ranges.ts`), read on the day it filters. Rows
- * without a date are left out. Used by `DateRangeFilter`.
+ * A range filter's function: keeps the rows whose value is in any of the filter's values, its
+ * tokens from the URL (e.g. `none,this-week` or `..10`, see `ranges.ts`), read on the day it
+ * filters. Used by `DateRangeFilter` and `NumberRangeFilter`.
  */
-const filterFn_inDateRange = constructFilterFn({
-	filter: (dataValue: unknown, filterValue: string[]) => {
-		const range = parseDateRange(filterValue[0] ?? "");
-		return !range || dateInRange(dataValue, range);
-	},
-	autoRemove: (value: string[] | undefined) => !value?.length,
-});
-
-/**
- * Keeps rows whose number is in the range of the filter's value (e.g. `..10`), like
- * `inDateRange`. Used by `NumberRangeFilter`.
- */
-const filterFn_inNumberRange = constructFilterFn({
-	filter: (dataValue: unknown, filterValue: string[]) => {
-		const range = parseNumberRange(filterValue[0] ?? "");
-		return !range || numberInRange(dataValue, range);
-	},
-	autoRemove: (value: string[] | undefined) => !value?.length,
-});
+const rangeFilterFn = (grammar: RangeGrammar) =>
+	constructFilterFn({
+		filter: (dataValue: unknown, filterValue: string[]) =>
+			inAnyRange(grammar, dataValue, filterValue),
+		autoRemove: (value: string[] | undefined) => !value?.length,
+	});
 
 /** The URL grammar a column's filter function implies (see `DataTableColumnMeta.filter`). */
 export const filterFnGrammar: Readonly<Record<string, "set" | RangeGrammar>> = {
 	oneOf: "set",
 	inDateRange: "dateRange",
 	inNumberRange: "numberRange",
+	inMoneyRange: "moneyRange",
 };
 
 /**
@@ -143,8 +125,10 @@ const tableFeatureSet = tableFeatures({
 	filterFns: {
 		includesString: filterFn_includesString,
 		oneOf: filterFn_oneOf,
-		inDateRange: filterFn_inDateRange,
-		inNumberRange: filterFn_inNumberRange,
+		inDateRange: rangeFilterFn("dateRange"),
+		inNumberRange: rangeFilterFn("numberRange"),
+		// Money in cents, the URL's in euros.
+		inMoneyRange: rangeFilterFn("moneyRange"),
 	},
 	sortFns: {
 		alphanumeric: sortFn_alphanumeric,

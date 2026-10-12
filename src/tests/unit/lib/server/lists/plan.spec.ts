@@ -29,6 +29,7 @@ import {
 	toListQuery,
 	whereOf,
 } from "#lib/components/data-table/list-definition.ts";
+import { numberInRange } from "#lib/components/data-table/ranges.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import {
 	anyOf,
@@ -502,8 +503,10 @@ describe("range filters", () => {
 	});
 	const visitList = defineList({
 		columns: {
-			at: { sort: true, filter: dateRange },
-			amount: { sort: true, filter: numberRange },
+			at: { sort: true, filter: orNone(dateRange) },
+			amount: { sort: true, filter: orNone(numberRange) },
+			// Twice the amount, worked out in code rather than SQL, like an order's total.
+			double: { filter: numberRange },
 		},
 		defaults: { sort: [{ id: "at", desc: false }], pageSize: 20 },
 	});
@@ -513,11 +516,30 @@ describe("range filters", () => {
 		columns: {
 			at: { sort: visit.at, filter: (ranges) => inDays(visit.at, ranges) },
 			amount: { sort: visit.amount, filter: (ranges) => between(visit.amount, ranges) },
+			double: {
+				match: async (ranges, ids) => {
+					asked.push(ids);
+					const rows = await db
+						.select({ id: visit.id, amount: visit.amount })
+						.from(visit)
+						.where(inArray(visit.id, ids));
+					return rows
+						.filter(
+							(row) =>
+								row.amount !== null &&
+								ranges.some((range) => numberInRange(row.amount! * 2, range)),
+						)
+						.map((row) => row.id);
+				},
+			},
 		},
 		search: [],
 		id: visit.id,
 		scope: () => eq(visit.tenant, "a"),
 	});
+
+	/** The ids `double`'s `match` was asked about, each time. */
+	const asked: number[][] = [];
 
 	/** A moment in October 2026, local time. */
 	const october = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours, minutes);
@@ -578,5 +600,46 @@ describe("range filters", () => {
 		expect(rows.map((row) => row.id)).toEqual([4, 3, 2]);
 		expect(await plan.count()).toBe(3);
 		expect(await planList(visitSql(), whereOf(query)).ids(10)).toEqual([2, 3, 4]);
+	});
+
+	test("several values keep the rows in any of them, `none` those without a value", async () => {
+		expect(await ids("at=none,2026-10-11")).toEqual([1, 5]);
+		expect(await ids("at=2026-10-11,2026-10-19..")).toEqual([1, 4]);
+		expect(await ids("amount=0,10..10.5")).toEqual([1, 3, 4]);
+		expect(await ids("amount=none")).toEqual([5]);
+		expect(await ids("at=none&amount=none,0")).toEqual([5]);
+	});
+
+	describe("a filter computed in code", () => {
+		test("keeps the rows its function picks, of the tenant's that match the other filters", async () => {
+			asked.length = 0;
+			expect(await ids("double=20..")).toEqual([3, 4]);
+			expect(asked).toEqual([[1, 2, 3, 4, 5]]);
+			expect(await ids("double=..5&at=2026-10-12..")).toEqual([2]);
+			expect(asked.at(-1)).toEqual([2, 3, 4]);
+			expect(await ids("double=..5,21")).toEqual([1, 2, 4]);
+		});
+
+		test("the rows, the count and the facets agree, and it's asked once per where", async () => {
+			asked.length = 0;
+			const query = visitsFromUrl("double=1..20&sort=-amount");
+			const plan = planList(visitSql(), query);
+			const [rows, total] = await Promise.all([
+				plan.paged(db.select({ id: visit.id }).from(visit).$dynamic()),
+				plan.count(),
+			]);
+			expect(rows.map((row) => row.id)).toEqual([3, 2]);
+			expect(total).toBe(2);
+			expect(asked).toHaveLength(1);
+			// The facets of another column count the rows the computed filter keeps.
+			expect(await planList(visitSql(), whereOf(query)).facets({ amount: visit.amount })).toEqual({
+				amount: { "2.5": 1, "10": 1 },
+			});
+		});
+
+		test("keeps none when its function picks none", async () => {
+			expect(await ids("double=1000..")).toEqual([]);
+			expect(await planList(visitSql(), whereOf(visitsFromUrl("double=1000.."))).count()).toBe(0);
+		});
 	});
 });

@@ -13,7 +13,7 @@
  * | `?status=quote&status=paid` | the same, repeated (read, never written)                      |
  * | `?status=`                  | no filter on the column, when the table has one by default   |
  * | `?engineer=none,12`         | rows without a value (`none`, see `noneToken`) or with one    |
- * | `?scheduled=this-week`      | a range filter: rows in a range of days or numbers (below)    |
+ * | `?scheduled=none,this-week` | a range filter: rows in any of the ranges, or without a value |
  * | `?sort=-priority,scheduled` | sorted by priority descending (`-`), then scheduled ascending |
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
  * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
@@ -22,10 +22,11 @@
  * | `?size=50`                  | 50 rows per page                                              |
  *
  * - A value with a comma or backslash in it escapes them with a backslash: `Smith\, Jones`.
- * - A range filter (`dateRange`, `numberRange`) has one value, a range with both ends included:
- *   `2026-10-01..2026-10-07`, `2026-10-01..` (on or after), `..2026-10-07` (on or before), one
- *   day `2026-10-01`, or a preset that stays relative, e.g. `this-week` or `before-today`; for
- *   numbers `5..10`, `..10` (at most 10), `5..` (at least 5) or `5`. See `ranges.ts`.
+ * - A range filter (`dateRange`, `numberRange`, `moneyRange`) takes ranges, both ends included,
+ *   and on a column that can be empty `none`: `2026-10-01..2026-10-07`, `2026-10-01..` (on or
+ *   after), `..2026-10-07` (on or before), one day `2026-10-01`, or a preset that stays relative,
+ *   on its own (`this-week`) or as an end (`today..`, `this-week..next-month`); numbers `5..10`,
+ *   `..10`, `5..` or `5`; money in euros, `500..`, `..12.50`. See `ranges.ts`.
  * - Parameters that match the table's defaults are left out, so an untouched table has a clean
  *   URL; an absent parameter means the default.
  * - Unknown columns, values a column doesn't have, and malformed numbers are ignored (the default
@@ -64,7 +65,8 @@ interface TableUrlColumn {
 	groupable?: boolean;
 	/**
 	 * Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values, a range
-	 * (`dateRange`, `numberRange`) the rows in it (one value, see `ranges.ts`).
+	 * kind (`dateRange`, `numberRange`, `moneyRange`) the rows in any of its ranges (or without a
+	 * value, for `none`; see `ranges.ts`).
 	 */
 	filter?: "set" | RangeGrammar;
 	/** The values its filter accepts (others in the URL are ignored); any if not given. */
@@ -253,8 +255,7 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 			const parsed = [
 				...new Set(raw.flatMap(splitValues).filter((value) => value.trim() !== "")),
 			].filter((value) => accepts(column, value));
-			// A range has one value: the first that is one.
-			if (parsed.length) values = column.filter === "set" ? parsed : parsed.slice(0, 1);
+			if (parsed.length) values = parsed;
 		}
 		if (values) columnFilters.push({ id: column.id, value: values });
 	}
