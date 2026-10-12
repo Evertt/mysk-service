@@ -532,8 +532,9 @@ remote functions. Every user-facing text goes through a message; nothing English
 - **Time zone**: days and times are the user's, on the server too. The browser keeps its zone in a
   cookie (`src/routes/time-zone.ts`, which reloads a page the server rendered in another zone
   once); `handleTimeZone` (`src/lib/server/time-zone.ts`) runs each request in it, and
-  `getTimeZone()` (`#lib/dates.ts`) answers with it, like `getLocale()`; outside a request (the
-  seed, scripts) it's the machine's. `format.ts` formats in it (a formatter that names a
+  `getTimeZone()` (`#lib/dates.ts`) answers with it, like `getLocale()`; outside a request
+  (scripts) it's the machine's, and the seed's always Amsterdam's
+  (`src/lib/server/db/seed/time-zone.ts`), so the demo data's days are the same everywhere. `format.ts` formats in it (a formatter that names a
   `timeZone`, like the invitation mail's UTC, keeps its own). Never work out a day with a `Date`'s
   local getters or constructor (`getDate()`, `new Date(year, month, day)`, `new Date("…T00:00")`):
   on the server they're in the server's zone. Use `#lib/dates.ts`: `dateParts()`, `zonedDate()`,

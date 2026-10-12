@@ -14,6 +14,8 @@
  * in plain Node (not through Vite), so the files in this folder import each other with `.ts`
  * extensions, and from `#lib` only modules that don't need SvelteKit.
  */
+// First: the zone the demo data is made in, before anything reads it.
+import "./time-zone.ts";
 import { en, Faker, nl } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
