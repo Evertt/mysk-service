@@ -22,7 +22,7 @@
 		"generate": "node scripts/generate.ts",
 		"check": "vpr generate && vp check && svelte-check",
 		"check:watch": "vpr check --watch",
-		"test:unit": "vp test --project server --project client",
+		"test:unit": "vp test --project 'server-*' --project client",
 		"test:e2e": "vp test run --project e2e",
 		"test": "node scripts/test.ts",
 		"db:generate": "drizzle-kit generate",
