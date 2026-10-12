@@ -426,6 +426,15 @@ filters. Such a list's `list.query` and `list.where` let any namespaced column (
 through, and `planList()` checks the query against the tenant's list (`listSql.list.strict`). The
 equipment list is the example.
 
+**Range filters**: `dateRange`, `numberRange` and `moneyRange` (cents in the query, euros in the
+URL) filter by ranges, both ends included: `?scheduled=2026-10-01..2026-10-07`, `?quantity=..10`,
+`?total=500..`. A date end may be a preset that stays relative in the URL (`?scheduled=today..`,
+`this-week..next-month`; `datePresets` in `ranges.ts`). Like a set filter's, a range filter's value
+takes several, comma-separated, any of which keeps a row, and `none` with `orNone()`:
+`?scheduled=none,this-week`. Their SQL is `inDays()` and `between()`; a value that isn't in the
+database (an order's total) uses `match` instead of `filter` and is kept by id (see
+`docs/plans/table-query.md`, "Range filters").
+
 ## Database schema
 
 The schema is `src/lib/server/db/schema.ts`; the database gets it through the migrations in
