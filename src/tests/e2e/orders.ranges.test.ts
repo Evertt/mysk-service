@@ -233,17 +233,20 @@ describe("range filters on the orders' dates, in North", () => {
 
 	test("a bulk action on all the matching orders acts on those in the range only", async () => {
 		const { page } = app;
-		const range = presetRange("last-30-days");
+		// Cancelled orders only (as `orders.bulk.test.ts` does), created up to last week: the other
+		// files on this worker pick open orders by their latest activity, which this would change.
+		const range = { from: null, to: presetRange("last-week").to };
 		const [from, to] = bounds(range);
 		const matching = await rows<{ id: number }>(
-			`select id from "order" where organization_id = ? and created_at >= ? and created_at < ?`,
+			`select id from "order" where organization_id = ? and status = 'cancelled'
+			 and created_at >= ? and created_at < ?`,
 			[north.id, from, to],
 		);
 		// More than fit on a page.
 		expect(matching.length).toBeGreaterThan(20);
 		const inRange = new Set(matching.map((o) => o.id));
 		const [engineer] = await rows<{ id: number; name: string }>(
-			`select id, name from engineer where organization_id = ? and active = 1 order by id limit 1`,
+			`select id, name from engineer where organization_id = ? and active = 1 order by id desc limit 1`,
 			[north.id],
 		);
 		/** Every order of every organization with its engineer. */
@@ -253,7 +256,7 @@ describe("range filters on the orders' dates, in North", () => {
 			);
 		const before = await engineers();
 
-		await app.go("/orders?created=last-30-days");
+		await app.go("/orders?created=..last-week&status=cancelled");
 		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
 		const total = formatNumber(matching.length, "en");
