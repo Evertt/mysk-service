@@ -177,7 +177,7 @@ describe("in North", () => {
 		await app.go("/customers");
 		await app.openFilter("Open orders");
 		await page.getByLabel("Minimum", { exact: true }).fill("2");
-		await page.getByRole("button", { name: "Apply" }).click();
+		await page.getByRole("button", { name: "Add" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("open-orders") === "2..");
 		const expected = await withOpen(2);

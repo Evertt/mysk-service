@@ -220,7 +220,11 @@ export function useApp({
 		tableSettled: () => settled(),
 		async openFilter(title) {
 			await page.getByRole("button", { name: "Filter", exact: true }).click();
-			await page.getByRole("option", { name: new RegExp(`^${title}( |$)`) }).click();
+			// By the filter's title exactly: "Unit" isn't "Unit price". (What's chosen follows it.)
+			await page
+				.getByRole("option")
+				.filter({ has: page.getByText(title, { exact: true }) })
+				.click();
 		},
 		filterPill: (title) => page.locator('[data-slot="filter-pill"]', { hasText: title }),
 		async groupBy(column) {

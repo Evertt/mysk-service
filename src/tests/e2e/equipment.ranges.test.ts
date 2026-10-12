@@ -36,7 +36,10 @@ describe("range filters on the equipment list, in North", () => {
 		expect(expected).toBeGreaterThan(0);
 		await app.go("/equipment");
 		await app.openFilter("Warranty");
-		await page.getByRole("option", { name: /^Before today/ }).click();
+		await page
+			.locator('[data-slot="command-list"]')
+			.getByRole("option", { name: /^Before today/ })
+			.click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("warranty") === "before-today");
 		await app.tableSettled();
@@ -51,7 +54,7 @@ describe("range filters on the equipment list, in North", () => {
 		await app.go("/equipment");
 		await app.openFilter("Open orders");
 		await page.getByLabel("Minimum", { exact: true }).fill("1");
-		await page.getByRole("button", { name: "Apply" }).click();
+		await page.getByRole("button", { name: "Add" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("open-orders") === "1..");
 		await app.tableSettled();
