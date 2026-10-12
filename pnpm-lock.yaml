@@ -263,6 +263,9 @@ importers:
       cn:
         specifier: ^0.4.0
         version: 0.4.0
+      devalue:
+        specifier: 5.9.4
+        version: 5.9.4
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.11

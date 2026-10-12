@@ -12,7 +12,8 @@
 
 	let { children }: LayoutProps = $props();
 
-	// Marks the page as interactive (hydrated), which the end-to-end tests wait for.
+	// Marks the page as interactive (hydrated), which the end-to-end tests wait for, and after which
+	// components are rendered in the browser (e.g. the data tables read their column widths at once).
 	onMount(() => {
 		document.documentElement.dataset.hydrated = "";
 	});
