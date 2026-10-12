@@ -80,6 +80,23 @@ describe("range filters on the materials list, in North", () => {
 		expect(await shownFor("quantity=10..5&used=lots")).toBe(await countIn("material", north.id));
 	});
 
+	test("takes no more ranges than the list does: Add is off until one comes off", async () => {
+		const { page } = app;
+		await app.go(`/materials?quantity=${Array.from({ length: 10 }, (_, i) => i + 1).join(",")}`);
+		await app.tableSettled();
+		const pill = page.locator('[data-slot="filter-pill"]', { hasText: "Stock" }).first();
+		await pill.locator('[data-slot="popover-trigger"]').click();
+		await page.getByLabel("Minimum", { exact: true }).fill("50");
+		expect(await page.getByTestId("range-filter-full").innerText()).toContain("up to 10");
+		expect(await page.getByRole("button", { name: "Add" }).isDisabled()).toBe(true);
+		await page.getByRole("button", { name: "Remove 10" }).click();
+		expect(await page.getByTestId("range-filter-full").count()).toBe(0);
+		await page.getByRole("button", { name: "Add" }).click();
+		await page.waitForURL((url) => url.searchParams.get("quantity")?.endsWith(",50..") ?? false);
+		await page.keyboard.press("Escape");
+		await app.go(afresh("/materials"));
+	});
+
 	// One test per request, each loading the page afresh.
 	describe("a malformed range in the list's query is refused with a 400", () => {
 		type Query = Record<string, unknown>;

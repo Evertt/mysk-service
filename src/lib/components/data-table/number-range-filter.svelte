@@ -7,16 +7,12 @@
 	The column needs `filterFn: "inNumberRange"` or, for money (cents), `"inMoneyRange"` (a
 	server-side list, `numberRange` or `moneyRange` in its definition). It goes inside the table's
 	`Toolbar`, which lists it in its Filter menu and shows it as a pill while it's on; this component
-	renders nothing of its own.
+	renders nothing of its own (see `RangeFilter`).
 -->
 <script lang="ts">
-	import CheckIcon from "@lucide/svelte/icons/check";
-
 	import { formatCents, formatNumber } from "#lib/i18n/format.ts";
-	import { cn } from "#lib/utils.ts";
 
-	import { registerTableFilter } from "./filters.svelte.ts";
-	import RangeValues from "./range-values.svelte";
+	import RangeFilter from "./range-filter.svelte";
 	import {
 		euroCents,
 		isRangeNumber,
@@ -26,7 +22,6 @@
 		parseMoneyRange,
 		parseNumberRange,
 	} from "./ranges.ts";
-	import { useTableContext } from "./table.svelte.ts";
 	import { noneToken } from "./url-state.ts";
 
 	let {
@@ -45,15 +40,14 @@
 		step?: number | "any";
 		/** The smallest value the inputs offer, e.g. 0 for counts. */
 		min?: number;
-		/** For a column that can be empty: offers the rows without a value, with this label. */
+		/**
+		 * For a column that can be empty (`meta.filterNone`): offers the rows without a value, with
+		 * this label.
+		 */
 		none?: string;
 	} = $props();
 
 	const id = $props.id();
-	const table = useTableContext();
-	const column = $derived(table.getColumn(columnId));
-	/** The filter's values, their tokens in the URL. */
-	const tokens = $derived((column?.getFilterValue() as string[] | undefined) ?? []);
 
 	const parse = (token: string) => (money ? parseMoneyRange(token) : parseNumberRange(token));
 	const format = (value: number) => (money ? formatCents(value) : formatNumber(value));
@@ -75,12 +69,6 @@
 		return range ? describe(range) : token;
 	}
 
-	function set(next: readonly string[]) {
-		column?.setFilterValue(next.length ? [...next] : undefined);
-	}
-	const toggle = (token: string) =>
-		set(tokens.includes(token) ? tokens.filter((t) => t !== token) : [...tokens, token]);
-
 	// The inputs (an empty number input binds `null`).
 	let from = $state<number | null | undefined>(null);
 	let to = $state<number | null | undefined>(null);
@@ -100,66 +88,25 @@
 		const token = money ? moneyRangeToken(range) : numberRangeToken(range);
 		return parse(token) ? token : undefined;
 	});
-
-	function add(event: SubmitEvent) {
-		event.preventDefault();
-		if (!custom) return;
-		if (!tokens.includes(custom)) set([...tokens, custom]);
-		from = to = null;
-	}
-
-	registerTableFilter({
-		get columnId() {
-			return columnId;
-		},
-		get title() {
-			return title;
-		},
-		get chosen() {
-			return tokens.map(labelOf);
-		},
-		content,
-		clear: () => set([]),
-	});
 </script>
 
-{#snippet content()}
-	<RangeValues
-		values={tokens.map((token) => ({ token, label: labelOf(token) }))}
-		onremove={toggle}
-	/>
-	{#if none}
-		<Command.Root class="border-b">
-			<Command.List>
-				<Command.Group>
-					<Command.Item value={noneToken} onSelect={() => toggle(noneToken)}>
-						<CheckIcon class={cn("size-4", !tokens.includes(noneToken) && "invisible")} />
-						<span class="truncate">{none}</span>
-					</Command.Item>
-				</Command.Group>
-			</Command.List>
-		</Command.Root>
-	{/if}
-	<form class="flex flex-col gap-3 p-3" onsubmit={add}>
-		<div class="grid grid-cols-2 gap-2">
-			<Field.Field class="gap-1.5">
-				<Field.Label for="{id}-from">{m.common_table_range_min()}</Field.Label>
-				<Input id="{id}-from" type="number" inputmode="decimal" {step} {min} bind:value={from} />
-			</Field.Field>
-			<Field.Field class="gap-1.5">
-				<Field.Label for="{id}-to">{m.common_table_range_max()}</Field.Label>
-				<Input id="{id}-to" type="number" inputmode="decimal" {step} {min} bind:value={to} />
-			</Field.Field>
-		</div>
-		<div class="flex justify-end gap-2">
-			{#if tokens.length}
-				<Button type="button" variant="ghost" size="sm" onclick={() => set([])}>
-					{m.common_table_filter_clear()}
-				</Button>
-			{/if}
-			<Button type="submit" size="sm" disabled={!custom}>
-				{m.common_table_range_add()}
-			</Button>
-		</div>
-	</form>
+{#snippet ends()}
+	<Field.Field class="gap-1.5">
+		<Field.Label for="{id}-from">{m.common_table_range_min()}</Field.Label>
+		<Input id="{id}-from" type="number" inputmode="decimal" {step} {min} bind:value={from} />
+	</Field.Field>
+	<Field.Field class="gap-1.5">
+		<Field.Label for="{id}-to">{m.common_table_range_max()}</Field.Label>
+		<Input id="{id}-to" type="number" inputmode="decimal" {step} {min} bind:value={to} />
+	</Field.Field>
 {/snippet}
+
+<RangeFilter
+	{columnId}
+	{title}
+	{labelOf}
+	{none}
+	{ends}
+	{custom}
+	onadded={() => (from = to = null)}
+/>

@@ -86,6 +86,7 @@
 	"common_table_range_end_day": "{end}: datum",
 	"common_table_filter_too_many": "Te veel rijen om zo te filteren (meer dan {max}): beperk ze eerst met de andere filters.",
 	"common_table_range_add": "Toevoegen",
+	"common_table_range_full": "Je kunt er maximaal {max} kiezen: haal er één weg om een andere toe te voegen.",
 	"common_table_range_remove": "{value} verwijderen",
 	"common_table_range_pick_date": "Een datum",
 	"common_table_preset_today": "Vandaag",

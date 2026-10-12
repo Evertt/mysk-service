@@ -86,6 +86,7 @@
 	"common_table_range_end_day": "{end}: date",
 	"common_table_filter_too_many": "Too many rows to filter this way (more than {max}): narrow them down with the other filters first.",
 	"common_table_range_add": "Add",
+	"common_table_range_full": "You can choose up to {max}: take one off to add another.",
 	"common_table_range_remove": "Remove {value}",
 	"common_table_range_pick_date": "A date",
 	"common_table_preset_today": "Today",
