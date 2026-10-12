@@ -78,7 +78,7 @@ type Widths = { max: number; min: number };
 /**
  * Measures the widths of cells, on one line (max-content) and wrapped wherever they can be
  * (min-content), as the table's automatic layout sees them: on copies, off-screen, next to the
- * table (so in its styles). Copies are costly (the browser styles each anew), so a cell that looks
+ * table (so in its styles, and its text's). Copies are costly (the browser styles each anew), so a cell that looks
  * like one measured before (the same classes and contents, as many do: a status, a date) isn't
  * measured again.
  */
@@ -96,14 +96,16 @@ function cellMeasurer() {
 			// Laid out (`display: none` isn't), but out of view and of the page's layout.
 			box.style.cssText =
 				"position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;visibility:hidden;contain:strict";
-			box.style.font = getComputedStyle(table).font;
+			// The table's text, which the cells inherit.
+			const { font, letterSpacing } = getComputedStyle(table);
+			Object.assign(box.style, { font, letterSpacing });
 			const copies = [...fresh.values()].map((cell) => {
 				const copy = cell.cloneNode(true) as HTMLElement;
 				copy.style.cssText = "display:block;position:absolute;width:max-content";
 				return copy;
 			});
 			box.append(...copies);
-			document.body.append(box);
+			table.after(box);
 			// Read all, then write all: two layouts in all.
 			const max = copies.map((copy) => copy.getBoundingClientRect().width);
 			for (const copy of copies) copy.style.width = "min-content";
@@ -131,13 +133,16 @@ function headerWidths(table: HTMLElement) {
 // --- Known values ---------------------------------------------------------------------------------
 
 /**
- * The values a column's cells can have that are known up front, to start its width right: its
- * filter's options (`meta.filterValues`), or, for a column of dates, the 28th of every month (the
- * longest month names, two-digit days, a late hour for a format with the time).
+ * The values a column's cells can have that are known up front, to start its width right (`value`
+ * is one of its cells'): for a column of strings, its filter's options (`meta.filterValues`); for a
+ * column of dates, the 28th of every month (the longest month names, two-digit days, a late hour
+ * for a format with the time). A filter's options on a column of other values (e.g. buckets of
+ * dates, `overdue`) aren't its cells' values.
  */
 function knownValues(column: WidthsColumn, value: unknown): unknown[] {
-	const options = column.columnDef.meta?.filterValues?.filter((option) => option !== noneToken);
-	if (options?.length) return options;
+	if (typeof value === "string") {
+		return column.columnDef.meta?.filterValues?.filter((option) => option !== noneToken) ?? [];
+	}
 	if (value instanceof Date) {
 		const year = value.getFullYear();
 		return Array.from({ length: 12 }, (_, month) => new Date(year, month, 28, 23, 58));

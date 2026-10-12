@@ -222,11 +222,15 @@
 						{@const hidden = row.get(column.id)}
 						<Table.Cell data-column-id={column.id} class={compact.cell} {@attach hidden?.attach}>
 							{#if hidden}
-								<table.AppCell cell={hidden.cell}>
-									{#snippet children(c)}
-										<c.FlexRender cell={c} />
-									{/snippet}
-								</table.AppCell>
+								<!-- In the browser, a cell that can't show what's tried in it just doesn't count. -->
+								<svelte:boundary>
+									<table.AppCell cell={hidden.cell}>
+										{#snippet children(c)}
+											<c.FlexRender cell={c} />
+										{/snippet}
+									</table.AppCell>
+									{#snippet failed()}{/snippet}
+								</svelte:boundary>
 							{/if}
 						</Table.Cell>
 					{/each}

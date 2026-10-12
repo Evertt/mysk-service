@@ -346,7 +346,12 @@ describe("in North, contracts count on orders", () => {
 		expect(await card("Service contracts").count()).toBe(0);
 		await app.go("/orders");
 		expect(
-			await page.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ }).count(),
+			// The page's rows (not the hidden ones that keep the columns wide, see `column-widths.svelte.ts`).
+			await page
+				.locator('[data-slot="table-body"] [data-slot="badge"]', {
+					hasText: /SLA (overdue|at risk)/,
+				})
+				.count(),
 		).toBe(0);
 		await app.go("/");
 		expect(await card("Response times at risk").count()).toBe(0);
