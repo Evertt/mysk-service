@@ -25,9 +25,13 @@
 import { error } from "@sveltejs/kit";
 import {
 	and,
+	type Column,
 	count as countRows,
+	gte,
 	inArray,
 	isNull,
+	lt,
+	lte,
 	or,
 	sql,
 	type SQL,
@@ -46,7 +50,9 @@ import type {
 	ListWhere,
 	SortId,
 } from "#lib/components/data-table/list-definition.ts";
+import { type DateRange, dayStart, type NumberRange } from "#lib/components/data-table/ranges.ts";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import { nextDay } from "#lib/dates.ts";
 
 /**
  * The SQL for every column a list's definition sorts, groups or filters by, and nothing else: a
@@ -181,6 +187,40 @@ export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
 	return or(
 		...(some.length ? [inArray(expression, some)] : []),
 		...(some.length < values.length ? [isNull(expression)] : []),
+	);
+}
+
+/**
+ * A date range filter's condition (`dateRange`): the rows whose `column` (a timestamp) is on one
+ * of the days of a range, both ends included, from the start of the first day to the end of the
+ * last in the server's time zone, e.g. `filter: (ranges) => inDays(order.scheduledFor, ranges)`.
+ * Rows without a date are never in one.
+ */
+export function inDays(column: Column, ranges: readonly DateRange[]) {
+	return or(
+		...ranges.map(({ from, to }) =>
+			and(
+				from === null ? undefined : gte(column, dayStart(from)),
+				to === null ? undefined : lt(column, nextDay(dayStart(to))),
+			),
+		),
+	);
+}
+
+/**
+ * A number range filter's condition (`numberRange`): the rows whose `expression` is in one of the
+ * ranges, both ends included, e.g. `filter: (ranges) => between(material.stock, ranges)`. Rows
+ * without a value are never in one.
+ */
+export function between(expression: SQLWrapper, ranges: readonly NumberRange[]) {
+	return or(
+		...ranges.map(({ from, to }) =>
+			and(
+				sql`${expression} is not null`,
+				from === null ? undefined : gte(expression, from),
+				to === null ? undefined : lte(expression, to),
+			),
+		),
 	);
 }
 

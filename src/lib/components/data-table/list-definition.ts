@@ -17,6 +17,7 @@
  * 		customer: { sort: true, group: true, filter: code }, // by customer code
  * 		status: { sort: true, group: true, filter: oneOf(orderStatuses) },
  * 		engineer: { sort: true, group: true, filter: orNone(id) }, // by engineer id: (number | null)[]
+ * 		scheduledFor: { param: "scheduled", sort: true, filter: dateRange }, // [{ from, to }]
  * 		createdAt: { param: "created", sort: true },
  * 	},
  * 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
@@ -31,6 +32,18 @@ import * as v from "valibot";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
 
 import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
+import {
+	type DateRange,
+	dateRangeToken,
+	isDay,
+	isOrdered,
+	isRangeNumber,
+	type NumberRange,
+	numberRangeToken,
+	parseDateRange,
+	parseNumberRange,
+	type RangeGrammar,
+} from "./ranges.ts";
 import {
 	defaultPageSizes,
 	filterValues,
@@ -62,6 +75,11 @@ export interface FilterKind<T> {
 	toUrl: (value: T) => string;
 	/** The tokens the URL accepts, if there is a fixed set of them (`TableUrlColumn.values`). */
 	values?: readonly string[];
+	/**
+	 * For a range filter (`dateRange`, `numberRange`), how the URL writes it: a filter with one
+	 * value, a range, rather than a set of values.
+	 */
+	range?: RangeGrammar;
 }
 
 /** A filter on a text, e.g. a customer's code. */
@@ -99,7 +117,37 @@ export const orNone = <T>(kind: FilterKind<T>): FilterKind<T | null> => ({
 	toUrl: (value) => (value === null ? noneToken : kind.toUrl(value)),
 	...(kind.values ? { values: [...kind.values, noneToken] } : {}),
 });
-// Later: `range(kind)` → { from?, to? } with `a..b` in the URL. A kind is all a new filter needs.
+
+/** A range's schema: both ends, either may be open (`null`) but not both, in order. */
+const rangeOf = <T extends string | number>(end: v.GenericSchema<T>) =>
+	v.pipe(
+		v.strictObject({ from: v.nullable(end), to: v.nullable(end) }),
+		v.check(isOrdered, m.common_error_generic),
+	);
+
+/**
+ * A filter on a date, by a range of days (`ranges.ts`): `?scheduled=2026-10-01..2026-10-07`,
+ * `..2026-10-07` or a preset that stays relative in the URL, `?scheduled=this-week`, which the
+ * query has as the days it means when it's built (`toListQuery()`). One range per filter; the SQL
+ * keeps the rows in it with `inDays()` (`#lib/server/lists/plan.ts`).
+ */
+export const dateRange: FilterKind<DateRange> = {
+	value: rangeOf(v.custom<string>(isDay)),
+	fromUrl: (token) => parseDateRange(token),
+	toUrl: dateRangeToken,
+	range: "dateRange",
+};
+
+/**
+ * A filter on a number, by a range: `?quantity=..10` (at most 10), `5..` (at least 5), `5..10`.
+ * One range per filter; the SQL keeps the rows in it with `between()`.
+ */
+export const numberRange: FilterKind<NumberRange> = {
+	value: rangeOf(v.custom<number>(isRangeNumber)),
+	fromUrl: (token) => parseNumberRange(token),
+	toUrl: numberRangeToken,
+	range: "numberRange",
+};
 
 /** What a column of a list can do. */
 interface ListColumn {
@@ -224,7 +272,7 @@ export function toUrlSpec<C extends ListColumns>(def: ListDef<C>): TableUrlSpec 
 			...(column.group ? { groupable: true } : {}),
 			...(column.filter
 				? {
-						filter: "set" as const,
+						filter: column.filter.range ?? ("set" as const),
 						...(column.filter.values ? { values: column.filter.values } : {}),
 					}
 				: {}),
@@ -309,7 +357,14 @@ function listSchemas(
 	const entries = Object.fromEntries(
 		Object.entries(filterKinds).map(([id, kind]) => [
 			id,
-			v.exactOptional(v.pipe(v.array(kind.value), v.minLength(1), v.maxLength(listLimits.values))),
+			v.exactOptional(
+				v.pipe(
+					v.array(kind.value),
+					v.minLength(1),
+					// A range filter has one range.
+					v.maxLength(kind.range ? 1 : listLimits.values),
+				),
+			),
 		]),
 	);
 	const filters = withModuleColumns
@@ -414,7 +469,10 @@ export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C
 		const valid = tokens
 			.map((token) => kind.fromUrl(String(token)))
 			.filter((x) => v.is(kind.value, x));
-		const values = [...new Set(valid)].sort(compare).slice(0, listLimits.values);
+		// A range filter has one range, the first; a set its values deduped and in order.
+		const values = kind.range
+			? valid.slice(0, 1)
+			: [...new Set(valid)].sort(compare).slice(0, listLimits.values);
 		if (values.length) filters[id] = values;
 	}
 

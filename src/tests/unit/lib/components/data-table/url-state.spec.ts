@@ -304,3 +304,47 @@ describe("specs", () => {
 		).not.toThrow();
 	});
 });
+
+describe("range filters", () => {
+	const ranged: TableUrlSpec = {
+		columns: [
+			{ id: "scheduledFor", param: "scheduled", sortable: true, filter: "dateRange" },
+			{ id: "stock", param: "quantity", filter: "numberRange" },
+		],
+	};
+	const filtersOf = (search: string) => parse(search, ranged).columnFilters;
+
+	test("read one range, a preset kept as it is", () => {
+		expect(filtersOf("scheduled=this-week&quantity=..10")).toEqual([
+			{ id: "scheduledFor", value: ["this-week"] },
+			{ id: "stock", value: ["..10"] },
+		]);
+		expect(filtersOf("scheduled=2026-10-01..2026-10-07")).toEqual([
+			{ id: "scheduledFor", value: ["2026-10-01..2026-10-07"] },
+		]);
+	});
+
+	test("ignore what isn't a range, and keep only the first that is", () => {
+		expect(filtersOf("scheduled=bogus&quantity=10..5")).toEqual([]);
+		expect(filtersOf("scheduled=2026-02-30..&quantity=abc")).toEqual([]);
+		expect(filtersOf("scheduled=soon,today,tomorrow&quantity=x,5..,..3")).toEqual([
+			{ id: "scheduledFor", value: ["today"] },
+			{ id: "stock", value: ["5.."] },
+		]);
+		// A number isn't a day, nor a day a number.
+		expect(filtersOf("scheduled=5..10&quantity=2026-10-01")).toEqual([]);
+	});
+
+	test("are written as they are, readable", () => {
+		const state = {
+			...parse("", ranged),
+			columnFilters: [
+				{ id: "scheduledFor", value: ["2026-10-01..2026-10-07"] },
+				{ id: "stock", value: ["..10"] },
+			],
+		};
+		const search = write(state, "", ranged);
+		expect(search).toBe("?scheduled=2026-10-01..2026-10-07&quantity=..10");
+		expect(parse(search.slice(1), ranged)).toEqual(state);
+	});
+});

@@ -3,7 +3,7 @@ import { page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { untrack } from "svelte";
 
-import type { Features } from "./features.ts";
+import { type Features, filterFnGrammar } from "./features.ts";
 import {
 	parseTableUrl,
 	searchString,
@@ -29,8 +29,8 @@ const searchDelay = 300;
 
 /**
  * The URL spec of a table, from its columns: their `meta.param` names them, sortable columns can
- * be sorted by, groupable ones (`enableGrouping`) grouped by, and those with a `oneOf` filter (or
- * `meta.filter`) filtered by. The table's initial state is the default, left out of the URL.
+ * be sorted by, groupable ones (`enableGrouping`) grouped by, and those with a `oneOf` filter, a
+ * range filter (`inDateRange`, `inNumberRange`) or `meta.filter` filtered by. The table's initial state is the default, left out of the URL.
  */
 export function tableUrlSpec<TData extends RowData>(
 	table: Table<TData>,
@@ -47,7 +47,11 @@ export function tableUrlSpec<TData extends RowData>(
 				param: meta?.param,
 				sortable: column.getCanSort(),
 				groupable: column.getCanGroup(),
-				filter: meta?.filter ?? (column.columnDef.filterFn === "oneOf" ? "set" : undefined),
+				filter:
+					meta?.filter ??
+					(typeof column.columnDef.filterFn === "string"
+						? filterFnGrammar[column.columnDef.filterFn]
+						: undefined),
 				values: meta?.filterValues,
 			};
 		}),

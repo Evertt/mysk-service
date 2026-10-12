@@ -5,14 +5,25 @@ import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
-import { integer, type SQLiteSelect, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { afterAll, beforeAll, describe, expect, expectTypeOf, test } from "vite-plus/test";
+import { integer, real, type SQLiteSelect, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	expectTypeOf,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import {
 	code,
+	dateRange,
 	defineList,
 	id,
 	type ListQuery,
+	numberRange,
 	oneOf as oneOfKind,
 	orNone,
 	toListQuery,
@@ -21,6 +32,8 @@ import {
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import {
 	anyOf,
+	between,
+	inDays,
 	type ListSql,
 	nocase,
 	planList,
@@ -476,5 +489,94 @@ describe("planList on typed queries", () => {
 		// @ts-expect-error `name` is missing
 		withColumns(withoutName);
 		expect(withColumns(columns).columns).toBe(columns);
+	});
+});
+
+describe("range filters", () => {
+	// Visits of their own: when (a timestamp, in seconds, as the app's dates) and how much.
+	const visit = sqliteTable("visit", {
+		id: integer("id").primaryKey(),
+		tenant: text("tenant").notNull(),
+		at: integer("at", { mode: "timestamp" }),
+		amount: real("amount"),
+	});
+	const visitList = defineList({
+		columns: {
+			at: { sort: true, filter: dateRange },
+			amount: { sort: true, filter: numberRange },
+		},
+		defaults: { sort: [{ id: "at", desc: false }], pageSize: 20 },
+	});
+	const visitSql = (): ListSql<typeof visitList.columns> => ({
+		list: visitList,
+		from: (fields) => db.select(fields).from(visit).$dynamic(),
+		columns: {
+			at: { sort: visit.at, filter: (ranges) => inDays(visit.at, ranges) },
+			amount: { sort: visit.amount, filter: (ranges) => between(visit.amount, ranges) },
+		},
+		search: [],
+		id: visit.id,
+		scope: () => eq(visit.tenant, "a"),
+	});
+
+	/** A moment in October 2026, local time. */
+	const october = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours, minutes);
+
+	beforeAll(async () => {
+		await client.execute(
+			"create table visit (id integer primary key, tenant text not null, at integer, amount real)",
+		);
+		await db.insert(visit).values([
+			{ id: 1, tenant: "a", at: october(11, 23, 59), amount: 0 },
+			{ id: 2, tenant: "a", at: october(12), amount: 2.5 },
+			{ id: 3, tenant: "a", at: october(18, 23, 59), amount: 10 },
+			{ id: 4, tenant: "a", at: october(19), amount: 10.5 },
+			{ id: 5, tenant: "a", at: null, amount: null },
+			// Another tenant's, which no query may return.
+			{ id: 6, tenant: "b", at: october(14), amount: 1 },
+		]);
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	const visitsFromUrl = (search: string) =>
+		toListQuery(visitList, parseTableUrl(new URLSearchParams(search), visitList.urlSpec));
+	const ids = (search: string) => planList(visitSql(), whereOf(visitsFromUrl(search))).ids(10);
+
+	test("keep the rows on the days of a range, from the first day's start to the last's end", async () => {
+		expect(await ids("at=2026-10-12..2026-10-18")).toEqual([2, 3]);
+		expect(await ids("at=2026-10-11")).toEqual([1]);
+		expect(await ids("at=..2026-10-11")).toEqual([1]);
+		expect(await ids("at=2026-10-19..")).toEqual([4]);
+	});
+
+	test("a preset is the days it means on the day it's asked", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(october(14, 15, 30));
+		expect(await ids("at=this-week")).toEqual([2, 3]);
+		expect(await ids("at=before-today")).toEqual([1, 2]);
+		expect(await ids("at=from-today")).toEqual([3, 4]);
+	});
+
+	test("numbers keep both ends", async () => {
+		expect(await ids("amount=..10")).toEqual([1, 2, 3]);
+		expect(await ids("amount=10..")).toEqual([3, 4]);
+		expect(await ids("amount=2.5..10")).toEqual([2, 3]);
+		expect(await ids("amount=0")).toEqual([1]);
+	});
+
+	test("rows without a value are in no range", async () => {
+		expect(await ids("amount=-1000..1000")).toEqual([1, 2, 3, 4]);
+		expect(await ids("at=2000-01-01..2100-01-01")).toEqual([1, 2, 3, 4]);
+	});
+
+	test("the rows, the count and the ids agree, with the other filters", async () => {
+		const query = visitsFromUrl("at=2026-10-12..&amount=..10.5&sort=-at");
+		const plan = planList(visitSql(), query);
+		const rows = await plan.paged(db.select({ id: visit.id }).from(visit).$dynamic());
+		expect(rows.map((row) => row.id)).toEqual([4, 3, 2]);
+		expect(await plan.count()).toBe(3);
+		expect(await planList(visitSql(), whereOf(query)).ids(10)).toEqual([2, 3, 4]);
 	});
 });

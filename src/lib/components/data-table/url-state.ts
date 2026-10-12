@@ -13,6 +13,7 @@
  * | `?status=quote&status=paid` | the same, repeated (read, never written)                      |
  * | `?status=`                  | no filter on the column, when the table has one by default   |
  * | `?engineer=none,12`         | rows without a value (`none`, see `noneToken`) or with one    |
+ * | `?scheduled=this-week`      | a range filter: rows in a range of days or numbers (below)    |
  * | `?sort=-priority,scheduled` | sorted by priority descending (`-`), then scheduled ascending |
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
  * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
@@ -21,6 +22,10 @@
  * | `?size=50`                  | 50 rows per page                                              |
  *
  * - A value with a comma or backslash in it escapes them with a backslash: `Smith\, Jones`.
+ * - A range filter (`dateRange`, `numberRange`) has one value, a range with both ends included:
+ *   `2026-10-01..2026-10-07`, `2026-10-01..` (on or after), `..2026-10-07` (on or before), one
+ *   day `2026-10-01`, or a preset that stays relative, e.g. `this-week` or `before-today`; for
+ *   numbers `5..10`, `..10` (at most 10), `5..` (at least 5) or `5`. See `ranges.ts`.
  * - Parameters that match the table's defaults are left out, so an untouched table has a clean
  *   URL; an absent parameter means the default.
  * - Unknown columns, values a column doesn't have, and malformed numbers are ignored (the default
@@ -28,6 +33,7 @@
  * - With a `prefix`, every parameter gets it: `orders.status=quote`, `orders.page=2` (for a page
  *   with more than one table).
  */
+import { isRangeToken, type RangeGrammar } from "./ranges.ts";
 
 /** The parts of a table's state that live in the URL, shaped like TanStack Table's. */
 export interface TableUrlState {
@@ -56,8 +62,11 @@ interface TableUrlColumn {
 	sortable?: boolean;
 	/** Whether `?group=` can name it. */
 	groupable?: boolean;
-	/** Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values. */
-	filter?: "set";
+	/**
+	 * Its filter's kind, if it has one in the URL: `set` keeps rows with any of the values, a range
+	 * (`dateRange`, `numberRange`) the rows in it (one value, see `ranges.ts`).
+	 */
+	filter?: "set" | RangeGrammar;
 	/** The values its filter accepts (others in the URL are ignored); any if not given. */
 	values?: readonly string[];
 }
@@ -205,6 +214,12 @@ function positive(raw: string | null) {
 	return number > 0 ? number : undefined;
 }
 
+/** Whether a column's filter takes a value from the URL. */
+function accepts(column: TableUrlColumn, value: string) {
+	if (column.filter && column.filter !== "set") return isRangeToken(column.filter, value.trim());
+	return !column.values || column.values.includes(value);
+}
+
 /** Reads a table's state from the URL's parameters; what's absent or invalid is the default. */
 export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUrlState {
 	const { key, defaults, pageSizes, sortByParam, groupByParam, filters } = compile(spec);
@@ -237,8 +252,9 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 		else if (raw.length) {
 			const parsed = [
 				...new Set(raw.flatMap(splitValues).filter((value) => value.trim() !== "")),
-			].filter((value) => !column.values || column.values.includes(value));
-			if (parsed.length) values = parsed;
+			].filter((value) => accepts(column, value));
+			// A range has one value: the first that is one.
+			if (parsed.length) values = column.filter === "set" ? parsed : parsed.slice(0, 1);
 		}
 		if (values) columnFilters.push({ id: column.id, value: values });
 	}

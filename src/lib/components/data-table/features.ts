@@ -25,6 +25,13 @@ import {
 
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
+import {
+	dateInRange,
+	numberInRange,
+	parseDateRange,
+	parseNumberRange,
+	type RangeGrammar,
+} from "./ranges.ts";
 import { noneToken } from "./url-state.ts";
 
 export interface DataTableColumnMeta {
@@ -40,8 +47,12 @@ export interface DataTableColumnMeta {
 	 * lower case, e.g. `scheduled` for `scheduledFor`. See `url-state.ts`.
 	 */
 	param?: string;
-	/** Puts the column's filter in the URL as a set of values; implied by `filterFn: "oneOf"`. */
-	filter?: "set";
+	/**
+	 * Puts the column's filter in the URL as a set of values (implied by `filterFn: "oneOf"`) or a
+	 * range (`dateRange`, `numberRange`: implied by `filterFn: "inDateRange"` and
+	 * `"inNumberRange"`, see `ranges.ts`).
+	 */
+	filter?: "set" | RangeGrammar;
 	/**
 	 * The values the column's filter can have; others in the URL are ignored. For a column that can
 	 * be empty, `noneToken` among them (the filter's `none` option, `?status=none`).
@@ -77,6 +88,38 @@ const filterFn_oneOf = constructFilterFn({
 });
 
 /**
+ * Keeps rows whose date is in the range of the filter's value, its token from the URL (e.g.
+ * `this-week` or `2026-10-01..2026-10-07`, see `ranges.ts`), read on the day it filters. Rows
+ * without a date are left out. Used by `DateRangeFilter`.
+ */
+const filterFn_inDateRange = constructFilterFn({
+	filter: (dataValue: unknown, filterValue: string[]) => {
+		const range = parseDateRange(filterValue[0] ?? "");
+		return !range || dateInRange(dataValue, range);
+	},
+	autoRemove: (value: string[] | undefined) => !value?.length,
+});
+
+/**
+ * Keeps rows whose number is in the range of the filter's value (e.g. `..10`), like
+ * `inDateRange`. Used by `NumberRangeFilter`.
+ */
+const filterFn_inNumberRange = constructFilterFn({
+	filter: (dataValue: unknown, filterValue: string[]) => {
+		const range = parseNumberRange(filterValue[0] ?? "");
+		return !range || numberInRange(dataValue, range);
+	},
+	autoRemove: (value: string[] | undefined) => !value?.length,
+});
+
+/** The URL grammar a column's filter function implies (see `DataTableColumnMeta.filter`). */
+export const filterFnGrammar: Readonly<Record<string, "set" | RangeGrammar>> = {
+	oneOf: "set",
+	inDateRange: "dateRange",
+	inNumberRange: "numberRange",
+};
+
+/**
  * The table features every data table in the app opts into. TanStack Table v9 is tree-shaken:
  * only registered features, row models and sort/filter functions end up in the bundle.
  */
@@ -100,6 +143,8 @@ const tableFeatureSet = tableFeatures({
 	filterFns: {
 		includesString: filterFn_includesString,
 		oneOf: filterFn_oneOf,
+		inDateRange: filterFn_inDateRange,
+		inNumberRange: filterFn_inNumberRange,
 	},
 	sortFns: {
 		alphanumeric: sortFn_alphanumeric,
