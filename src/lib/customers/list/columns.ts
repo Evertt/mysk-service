@@ -69,16 +69,21 @@ export const columns = column.columns([
 	column.accessor("equipmentCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
+		filterFn: "inNumberRange",
 		meta: { label: m.customers_column_equipment, align: "end", param: "equipment" },
 	}),
 	column.accessor("openOrders", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
+		// `?open-orders=1..`: the customers with open orders.
+		filterFn: "inNumberRange",
 		meta: { label: m.customers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
+		// `?since=this-year`: the customers who joined this year.
+		filterFn: "inDateRange",
 		meta: { label: m.customers_column_since, param: "since" },
 	}),
 	// Hidden, and not in the column menu: lets the search box find customers by details that

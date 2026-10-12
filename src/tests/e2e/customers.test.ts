@@ -163,6 +163,36 @@ describe("in North", () => {
 		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
 	});
 
+	test("filtering by a range of open orders, from the Filter menu and from a link", async () => {
+		const { page } = app;
+		/** North's customers with open orders from `min` up to `max`. */
+		const withOpen = (min: number, max = 1e9) =>
+			value<number>(
+				`select count(*) from customer c where c.organization_id = ? and (
+					select count(*) from "order" o where o.customer_id = c.id
+					and o.status in ('quote', 'scheduled', 'in_progress')
+				) between ? and ?`,
+				[north.id, min, max],
+			);
+		await app.go("/customers");
+		await app.openFilter("Open orders");
+		await page.getByLabel("Minimum", { exact: true }).fill("2");
+		await page.getByRole("button", { name: "Apply" }).click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("open-orders") === "2..");
+		const expected = await withOpen(2);
+		expect(expected).toBeGreaterThan(0);
+		await expect.poll(() => app.rowCount()).toBe(expected);
+		expect(await app.filterPill("Open orders").innerText()).toContain("At least 2");
+
+		// From a link, with both ends; one that isn't a range is ignored.
+		await app.go("/customers?open-orders=0..1");
+		await expect.poll(() => app.rowCount()).toBe(await withOpen(0, 1));
+		await app.go("/customers?open-orders=many");
+		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
+		await app.go("/customers");
+	});
+
 	test("sorting by open orders puts the busiest customer first", async () => {
 		const busiest = await rows<{ name: string }>(
 			`with open as (

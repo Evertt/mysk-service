@@ -1,6 +1,8 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
+	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
 	import { countryOptions } from "../countries.ts";
@@ -37,6 +39,23 @@
 				options={segmentOptions}
 			/>
 			<FacetedFilter columnId="country" title={m.customers_column_country()} options={countries} />
+			<NumberRangeFilter
+				columnId="equipmentCount"
+				title={m.customers_column_equipment()}
+				step={1}
+				min={0}
+			/>
+			<NumberRangeFilter
+				columnId="openOrders"
+				title={m.customers_column_open_orders()}
+				step={1}
+				min={0}
+			/>
+			<DateRangeFilter
+				columnId="createdAt"
+				title={m.customers_column_since()}
+				presets={["this-week", "this-month", "last-30-days", "this-year", "last-year"]}
+			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.customers_empty()} fillViewport />
 		<BulkActionBar actions={[deleteCustomers]} />

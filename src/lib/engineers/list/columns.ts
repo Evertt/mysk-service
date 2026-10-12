@@ -62,11 +62,13 @@ export const columns = column.columns([
 	column.accessor("openOrders", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
+		filterFn: "inNumberRange",
 		meta: { label: m.engineers_column_open_orders, align: "end", param: "open-orders" },
 	}),
 	column.accessor("hiredAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
+		filterFn: "inDateRange",
 		meta: { label: m.engineers_column_hired, param: "hired" },
 	}),
 	column.display({
