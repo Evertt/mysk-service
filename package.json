@@ -18,7 +18,7 @@
 		"dev": "vp dev",
 		"build": "vp build",
 		"preview": "vp preview",
-		"prepare": "(vp config && vpr generate || echo '') && (playwright install chromium || echo '')",
+		"prepare": "node scripts/prepare.ts",
 		"generate": "node scripts/generate.ts",
 		"check": "vpr generate && vp check && svelte-check",
 		"check:watch": "vpr check --watch",
