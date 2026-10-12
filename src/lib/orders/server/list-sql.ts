@@ -10,7 +10,7 @@ import { orderPriorities } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { anyOf, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
+import { anyOf, inDays, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
 import { ordersList } from "../list/orders-list.ts";
 
@@ -68,8 +68,12 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 			filter: (ids) => anyOf(order.engineerId, ids),
 			group: order.engineerId,
 		},
-		scheduledFor: { sort: order.scheduledFor, nullsLast: true },
-		createdAt: { sort: order.createdAt },
+		scheduledFor: {
+			sort: order.scheduledFor,
+			nullsLast: true,
+			filter: (ranges) => inDays(order.scheduledFor, ranges),
+		},
+		createdAt: { sort: order.createdAt, filter: (ranges) => inDays(order.createdAt, ranges) },
 	},
 	search: [
 		order.number,

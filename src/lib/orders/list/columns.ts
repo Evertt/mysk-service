@@ -110,11 +110,14 @@ export const columns = column.columns([
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
+		// By a range of days, e.g. `?scheduled=this-week`.
+		filterFn: "inDateRange",
 		meta: { label: m.orders_column_scheduled, param: "scheduled" },
 	}),
 	column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
+		filterFn: "inDateRange",
 		meta: { label: m.orders_column_created, param: "created" },
 	}),
 	column.accessor("total", {

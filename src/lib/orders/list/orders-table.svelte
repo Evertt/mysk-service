@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
+	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import {
 		getCustomerOptions,
@@ -98,6 +99,34 @@
 				load={getEquipmentOptions}
 				none={m.orders_new_installation()}
 				counts={facets.equipment}
+			/>
+			<DateRangeFilter
+				columnId="scheduledFor"
+				title={m.orders_column_scheduled()}
+				presets={[
+					"today",
+					"tomorrow",
+					"this-week",
+					"next-week",
+					"next-7-days",
+					"this-month",
+					"before-today",
+					"from-today",
+				]}
+			/>
+			<DateRangeFilter
+				columnId="createdAt"
+				title={m.orders_column_created()}
+				presets={[
+					"today",
+					"yesterday",
+					"this-week",
+					"last-week",
+					"last-7-days",
+					"last-30-days",
+					"this-month",
+					"last-month",
+				]}
 			/>
 		</table.Toolbar>
 		<table.Table

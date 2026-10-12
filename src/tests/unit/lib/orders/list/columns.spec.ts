@@ -1,5 +1,5 @@
 import type { TableState } from "@tanstack/svelte-table";
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
@@ -114,6 +114,30 @@ test("the search finds orders by number, customer, equipment and engineer", () =
 	];
 	for (const search of ["ord-002", "bolt", "daikin xr9", "priya"]) {
 		expect(shown(rows, { globalFilter: search }), search).toEqual(["ORD-002"]);
+	}
+});
+
+test("the date filters keep the orders on the days of a range, a preset's on the day it's read", () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(new Date(2026, 9, 14, 12));
+	try {
+		const rows = [
+			order("ORD-001", {
+				scheduledFor: new Date(2026, 9, 12, 8),
+				createdAt: new Date(2026, 8, 30),
+			}),
+			order("ORD-002", { scheduledFor: new Date(2026, 9, 19, 8) }),
+			order("ORD-003", { scheduledFor: null }),
+		];
+		const by = (id: string, range: string) =>
+			shown(rows, { columnFilters: [{ id, value: [range] }] });
+		expect(by("scheduledFor", "this-week")).toEqual(["ORD-001"]);
+		expect(by("scheduledFor", "2026-10-13..")).toEqual(["ORD-002"]);
+		// Unscheduled orders are in no range.
+		expect(by("scheduledFor", "..2026-12-31")).toEqual(["ORD-001", "ORD-002"]);
+		expect(by("createdAt", "last-month")).toEqual(["ORD-001"]);
+	} finally {
+		vi.useRealTimers();
 	}
 });
 
