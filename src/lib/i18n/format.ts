@@ -3,7 +3,7 @@
  * page's in the browser, so server-rendered and hydrated pages agree). The formatters read the
  * locale on every call, so they're safe to create at module scope; pass `locale` to override it.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { getTimeZone, isDay } from "#lib/dates.ts";
 import { getLocale, type Locale } from "#lib/paraglide/runtime.js";
 
 /**
@@ -26,6 +26,13 @@ function perLocale<T>(create: (locale: string) => T) {
 }
 
 /**
+ * What a date formatter formats: a day (`Temporal.PlainDate`, as it is), a moment
+ * (`Temporal.Instant`, in the user's time zone), or a `Date` (better-auth's, e.g. an invitation's
+ * expiry).
+ */
+export type Formattable = Temporal.PlainDate | Temporal.Instant | Date;
+
+/**
  * Formats dates with `options` in the current language and the user's time zone (`getTimeZone()`,
  * so the server shows the days and times the browser does), e.g.
  * `const weekday = dateFormatter({ weekday: "long" })` → `weekday(date)`: `Monday` or `maandag`.
@@ -46,8 +53,9 @@ export function dateFormatter(options: Intl.DateTimeFormatOptions) {
 		}
 		return found;
 	};
-	return Object.assign((value: Date, locale?: Locale) => formatter(locale).format(value), {
-		range: (start: Date, end: Date, locale?: Locale) => formatter(locale).formatRange(start, end),
+	return Object.assign((value: Formattable, locale?: Locale) => formatter(locale).format(value), {
+		range: <T extends Formattable>(start: T, end: T, locale?: Locale) =>
+			formatter(locale).formatRange(start, end),
 	});
 }
 
@@ -73,6 +81,19 @@ export const formatDateTime = dateFormatter({
 	hour: "2-digit",
 	minute: "2-digit",
 });
+
+/**
+ * Formats a day stored as text, e.g. in the activity log: `yyyy-mm-dd`, or, as logged before days
+ * were days (`Temporal.PlainDate`), the moment of its midnight, e.g. `2026-10-11T22:00:00.000Z`.
+ */
+export function formatStoredDay(value: unknown) {
+	const text = String(value);
+	return formatDate(isDay(text) ? Temporal.PlainDate.from(text) : Temporal.Instant.from(text));
+}
+
+/** Formats a moment stored as text (ISO), e.g. in the activity log, to the minute. */
+export const formatStoredMoment = (value: unknown) =>
+	formatDateTime(Temporal.Instant.from(String(value)));
 
 /** Formats a time of day, e.g. `09:30`. */
 export const formatTime = dateFormatter({ hour: "2-digit", minute: "2-digit" });

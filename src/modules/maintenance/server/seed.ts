@@ -2,6 +2,7 @@ import { en, Faker, nl } from "@faker-js/faker";
 
 import { addDays, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
+import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 
 import { type PlanOrderType } from "../model.ts";
 import { maintenancePlan } from "./schema.ts";
@@ -81,6 +82,8 @@ export default defineSeed<TenantDraft["equipments"]>({
 				...plan,
 				organizationId: tenant.id,
 				equipmentId: tenant.equipmentIds[plan.equipmentId - 1],
+				nextDueOn: toDay(plan.nextDueOn),
+				createdAt: toMoment(plan.createdAt),
 			}));
 			await insertAll(plans, (chunk) => tx.insert(maintenancePlan).values(chunk));
 			count("maintenancePlans", plans);

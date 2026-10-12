@@ -8,7 +8,8 @@
 
 	import { isUnderWarranty } from "../display.ts";
 
-	let { until, at }: { until: Date; at?: Date } = $props();
+	let { until, at }: { until: Temporal.PlainDate; at?: Temporal.PlainDate | Temporal.Instant } =
+		$props();
 
 	const covered = $derived(isUnderWarranty(until, at));
 </script>

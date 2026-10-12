@@ -1,3 +1,5 @@
+// First: Temporal, where the runtime has none yet (Node 24), before any other module runs.
+import "temporal-polyfill/global";
 import { building, dev } from "$app/env";
 import { DEV_REMOTE_DELAY_MS } from "$app/env/private";
 import { redirect } from "@sveltejs/kit";

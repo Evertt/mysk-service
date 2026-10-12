@@ -1,8 +1,7 @@
 import { error } from "@sveltejs/kit";
-import { and, asc, gte, inArray, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, inArray, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { addDays } from "#lib/dates.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import {
 	type OrderPlan,
@@ -14,9 +13,9 @@ import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
-import { refreshRequested } from "#lib/server/lists/index.ts";
+import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 
-import { byPriorityThenAge, startOfWeek } from "./board/board.ts";
+import { byPriorityThenAge } from "./board/board.ts";
 import { moveFields, scheduleFields } from "./form/schedule-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
 
@@ -39,8 +38,8 @@ const cardColumns = {
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
 export const getSchedule = query(date(m.schedule_week_required), async (day) => {
-	const start = startOfWeek(day);
-	const end = addDays(start, 7);
+	const start = day.subtract({ days: day.dayOfWeek - 1 });
+	const week = { from: start.toString(), to: start.add({ days: 6 }).toString() };
 
 	const [engineers, orders, backlog] = await Promise.all([
 		db
@@ -60,8 +59,8 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 			.where(
 				and(
 					inTenant(order),
-					gte(order.scheduledFor, start),
-					lt(order.scheduledFor, end),
+					// The week's days in the user's time zone.
+					inDays(order.scheduledFor, [week]),
 					ne(order.status, "cancelled"),
 				),
 			)

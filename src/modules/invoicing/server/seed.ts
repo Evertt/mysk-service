@@ -7,9 +7,10 @@ import {
 	type SeedCollectors,
 	type SeedOrder,
 } from "#lib/server/db/seed/module-seed.ts";
+import { fromDay, toDay, toMoment, toMomentOrNull } from "#lib/server/db/seed/temporal.ts";
 import type { TenantData } from "#lib/server/db/seed/tenant.ts";
 
-import { dueDate, itemLine, type LineDraft, orderLines } from "../invoice.ts";
+import { itemLine, type LineDraft, orderLines } from "../invoice.ts";
 import { invoiceNumberFormat } from "../model.ts";
 import { invoice, invoiceLine, invoicingSettings } from "./schema.ts";
 
@@ -69,11 +70,14 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 	for (const o of invoiced)
 		groupOf(o.customerId, o.completedAt!).lines.push(...orderLines(o, price(o), detailOf(o)));
 	const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-	for (const item of collect.billableItems({ from: billFrom, until: lastMonthEnd })) {
-		groupOf(item.customerId, item.date).lines.push(itemLine(item));
+	for (const item of collect.billableItems({ from: toDay(billFrom), until: toDay(lastMonthEnd) })) {
+		groupOf(item.customerId, fromDay(item.date)).lines.push(itemLine(item));
 	}
 
 	const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);
+	/** `days` calendar days after `day`. */
+	const dueDate = (day: Date, after: number) =>
+		new Date(day.getFullYear(), day.getMonth(), day.getDate() + after);
 	const atNine = (day: Date) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
 	const issued = [...groups.values()]
 		.sort((a, b) => a.month.getTime() - b.month.getTime() || a.customerId - b.customerId)
@@ -162,6 +166,11 @@ export default defineSeed<InvoicedData>({
 				organizationId: tenant.id,
 				id: row.id + offset,
 				customerId: tenant.customerIds[row.customerId - 1],
+				issuedOn: row.issuedOn && toDay(row.issuedOn),
+				dueOn: row.dueOn && toDay(row.dueOn),
+				paidOn: row.paidOn && toDay(row.paidOn),
+				voidedAt: toMomentOrNull(row.voidedAt),
+				createdAt: toMoment(row.createdAt),
 			}));
 			const lineRows = invoices.flatMap((row) =>
 				row.lines.map((line) => ({
@@ -171,7 +180,9 @@ export default defineSeed<InvoicedData>({
 					orderId: line.orderId && tenant.orderIds[line.orderId - 1],
 				})),
 			);
-			const settings = [{ organizationId: tenant.id, vatRate: 21, paymentTermDays: 30, billFrom }];
+			const settings = [
+				{ organizationId: tenant.id, vatRate: 21, paymentTermDays: 30, billFrom: toDay(billFrom) },
+			];
 			await insertAll(invoiceRows, (chunk) => tx.insert(invoice).values(chunk));
 			await insertAll(lineRows, (chunk) => tx.insert(invoiceLine).values(chunk));
 			await insertAll(settings, (chunk) => tx.insert(invoicingSettings).values(chunk));

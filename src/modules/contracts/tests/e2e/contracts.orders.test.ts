@@ -42,7 +42,7 @@ beforeAll(async () => {
 		`select e.id, e.customer_id, k.number, k.response_hours from contract k
 		 join contract_equipment ce on ce.contract_id = k.id join equipment e on e.id = ce.equipment_id
 		 where k.organization_id = ? and k.level = 'premium' and e.status != 'decommissioned'
-		 and k.starts_on <= unixepoch() and k.ends_on + 86400 > unixepoch() order by k.id, e.id limit 1`,
+		 and k.starts_on <= date('now', 'localtime') and k.ends_on >= date('now', 'localtime') order by k.id, e.id limit 1`,
 		[north.id],
 	);
 });
@@ -121,15 +121,13 @@ describe("in North, contracts count on orders", () => {
 	});
 
 	test("and the contracts ending in the next 60 days that weren't renewed", async () => {
-		const now = new Date();
-		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		const horizon = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
 		const expected = await rows<{ number: string }>(
-			`select number from contract k where organization_id = ? and starts_on <= unixepoch()
-			 and ends_on >= ? and ends_on < ? and not exists (select 1 from contract later
+			`select number from contract k where organization_id = ? and starts_on <= date('now', 'localtime')
+			 and ends_on >= date('now', 'localtime') and ends_on < date('now', 'localtime', '+60 days')
+			 and not exists (select 1 from contract later
 			 where later.customer_id = k.customer_id and later.starts_on > k.ends_on)
 			 order by ends_on, number`,
-			[north.id, today.getTime() / 1000, horizon.getTime() / 1000],
+			[north.id],
 		);
 		expect(expected.length).toBeGreaterThan(0);
 		const listed = card("Contracts ending soon").locator('a[href^="/contracts/CTR-"]');
@@ -238,7 +236,7 @@ describe("in North, contracts count on orders", () => {
 			`select serial_number from equipment where id = ?`,
 			[busy.equipment_id],
 		);
-		const covering = await rows<{ number: string; level: string; ends_on: number }>(
+		const covering = await rows<{ number: string; level: string; ends_on: string }>(
 			`select k.number, k.level, k.ends_on from contract_equipment ce
 			 join contract k on k.id = ce.contract_id where ce.equipment_id = ? order by k.starts_on desc`,
 			[busy.equipment_id],
@@ -258,7 +256,7 @@ describe("in North, contracts count on orders", () => {
 		for (const [i, row] of covering.entries()) {
 			const text = await items.nth(i).innerText();
 			expect(text).toContain(levelLabel(row.level));
-			expect(text).toContain(date.format(new Date(row.ends_on * 1000)));
+			expect(text).toContain(date.format(Temporal.PlainDate.from(row.ends_on)));
 		}
 	});
 

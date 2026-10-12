@@ -4,6 +4,7 @@ import { describeChanges, fieldLabel, formatValue, referencedIds } from "#lib/ac
 import { coreSubjectTypes, subjectTypes } from "#lib/activity/subjects.ts";
 import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
+import { at, day } from "#unit/temporal-support.ts";
 
 // Made-up modules instead of the ones in `src/modules`.
 vi.mock("#lib/modules/manifests.gen.ts", async () => ({
@@ -46,20 +47,31 @@ describe("formatValue", () => {
 
 	test("shows money (in cents), dates and moments", () => {
 		expect(formatValue(123456, engineer.fields?.hourlyRate)).toBe(formatCents(123456));
-		const day = new Date(2026, 9, 7);
-		expect(formatValue(day.toISOString(), equipment.fields?.warrantyUntil)).toBe(formatDate(day));
-		const moment = new Date(2026, 9, 7, 14, 5);
-		expect(formatValue(moment.toISOString(), order.fields?.scheduledFor)).toBe(
-			formatDateTime(moment),
+		const warranty = day("2026-10-07");
+		expect(formatValue(warranty.toString(), equipment.fields?.warrantyUntil)).toBe(
+			formatDate(warranty),
 		);
+		const moment = at("2026-10-07 14:05");
+		expect(formatValue(moment.toString(), order.fields?.scheduledFor)).toBe(formatDateTime(moment));
 		expect(formatValue(2.5, order.fields?.laborHours)).toBe("2.5 h");
 	});
 
-	test("tells dates from moments in fields it doesn't know", () => {
-		const day = new Date(2026, 9, 7);
-		const moment = new Date(2026, 9, 7, 9, 30);
-		expect(formatValue(day.toISOString())).toBe(formatDate(day));
-		expect(formatValue(moment.toISOString())).toBe(formatDateTime(moment));
+	test("tells days from moments in fields it doesn't know", () => {
+		const date = day("2026-10-07");
+		const moment = at("2026-10-07 09:30");
+		expect(formatValue(date.toString())).toBe(formatDate(date));
+		expect(formatValue(moment.toString())).toBe(formatDateTime(moment));
+	});
+
+	test("reads a day logged before days were days: a moment at midnight", () => {
+		const midnight = at("2026-10-07 00:00");
+		// As a `Date` was logged, and as a day field has it.
+		expect(formatValue(new Date(midnight.epochMilliseconds).toISOString())).toBe(
+			formatDate(day("2026-10-07")),
+		);
+		expect(formatValue(midnight.toString(), equipment.fields?.warrantyUntil)).toBe(
+			formatDate(day("2026-10-07")),
+		);
 	});
 
 	test("shows referenced records by name, or by id if unknown", () => {

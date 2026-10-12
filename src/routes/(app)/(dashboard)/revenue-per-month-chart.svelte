@@ -14,6 +14,10 @@
 
 	let { data }: { data: RevenueInMonth[] } = $props();
 
+	// The chart's scale keys its bars by value: the months as text (`yyyy-mm-dd`, their first days).
+	const bars = $derived(data.map((month) => ({ ...month, month: month.month.toString() })));
+	const first = (month: string) => Temporal.PlainDate.from(month);
+
 	const tick = dateFormatter({ month: "short" });
 	const monthLabel = dateFormatter({ month: "long", year: "numeric" });
 	/** Short amounts for the axis, e.g. `€12K`. */
@@ -37,18 +41,18 @@
 	<Card.Content>
 		<Chart.Container {config} class="aspect-auto h-72 w-full" aria-hidden="true">
 			<BarChart
-				{data}
+				data={bars}
 				x="month"
 				series={[{ key: "total", label: config.total.label, color: config.total.color }]}
 				props={{
-					xAxis: { format: (month: Date) => tick(month), tickOcclusion: { padding: 8 } },
+					xAxis: { format: (month: string) => tick(first(month)), tickOcclusion: { padding: 8 } },
 					yAxis: { format: (cents: number) => compactEuros(cents / 100) },
 				}}
 			>
 				{#snippet tooltip()}
 					<Chart.Tooltip
 						class="min-w-44"
-						labelFormatter={(month: Date) => monthLabel(month)}
+						labelFormatter={(month: string) => monthLabel(first(month))}
 						valueFormatter={formatCents}
 					/>
 				{/snippet}

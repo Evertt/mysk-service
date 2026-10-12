@@ -3,7 +3,7 @@ import * as devalue from "devalue";
 import { untrack } from "svelte";
 import type { Attachment } from "svelte/attachments";
 
-import { dateParts, zonedDate } from "#lib/dates.ts";
+import { getTimeZone, temporalReducers, temporalRevivers } from "#lib/dates.ts";
 import { getLocale } from "#lib/paraglide/runtime.js";
 
 import { hiddenRows, learn, type Sample, widthContext, type WidthMemory } from "./column-widths.ts";
@@ -56,7 +56,7 @@ function load<TData>(key: string, context: string): WidthMemory<TData> | undefin
 	try {
 		const stored = sessionStorage.getItem(storageKey(key));
 		if (!stored) return;
-		const parsed = devalue.parse(stored) as Stored<TData>;
+		const parsed = devalue.parse(stored, temporalRevivers) as Stored<TData>;
 		return parsed.context === context ? parsed.memory : undefined;
 	} catch {
 		// No storage (e.g. blocked), or something it can't read: start over.
@@ -66,7 +66,10 @@ function load<TData>(key: string, context: string): WidthMemory<TData> | undefin
 
 function save<TData>(key: string, context: string, memory: WidthMemory<TData>) {
 	try {
-		sessionStorage.setItem(storageKey(key), devalue.stringify({ context, memory }));
+		sessionStorage.setItem(
+			storageKey(key),
+			devalue.stringify({ context, memory }, temporalReducers),
+		);
 	} catch {
 		// No storage, no room in it, or rows it can't hold: the memory lasts as long as the table.
 	}
@@ -144,9 +147,14 @@ function knownValues(column: WidthsColumn, value: unknown): unknown[] {
 	if (typeof value === "string") {
 		return column.columnDef.meta?.filterValues?.filter((option) => option !== noneToken) ?? [];
 	}
-	if (value instanceof Date) {
-		const { year } = dateParts(value);
-		return Array.from({ length: 12 }, (_, month) => zonedDate(year, month, 28, 23, 58));
+	if (value instanceof Temporal.PlainDate) {
+		return Array.from({ length: 12 }, (_, month) => value.with({ month: month + 1, day: 28 }));
+	}
+	if (value instanceof Temporal.Instant) {
+		const zoned = value.toZonedDateTimeISO(getTimeZone());
+		return Array.from({ length: 12 }, (_, month) =>
+			zoned.with({ month: month + 1, day: 28, hour: 23, minute: 58 }).toInstant(),
+		);
 	}
 	return [];
 }

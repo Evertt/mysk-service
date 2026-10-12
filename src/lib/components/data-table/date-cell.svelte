@@ -3,12 +3,12 @@
 
 	import { useCellContext } from "./table.svelte.ts";
 
-	const cell = useCellContext<Date | null>();
+	const cell = useCellContext<Temporal.PlainDate | Temporal.Instant | null>();
 	const value = $derived(cell.getValue());
 </script>
 
 {#if value}
-	<time datetime={value.toISOString()} class="whitespace-nowrap tabular-nums">
+	<time datetime={value.toString()} class="whitespace-nowrap tabular-nums">
 		{formatDate(value)}
 	</time>
 {:else}

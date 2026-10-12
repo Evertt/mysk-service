@@ -1,7 +1,6 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
-import { toDateInput } from "#lib/dates.ts";
 import {
 	cents,
 	date,
@@ -48,12 +47,10 @@ test("text is trimmed and required", () => {
 });
 
 describe("dates", () => {
-	test("are local days", () => {
-		const { value } = parse(date(), "2026-10-20") as { value: Date };
-		expect([value.getFullYear(), value.getMonth(), value.getDate(), value.getHours()]).toEqual([
-			2026, 9, 20, 0,
-		]);
-		expect(toDateInput(value)).toBe("2026-10-20");
+	test("are days", () => {
+		const { value } = parse(date(), "2026-10-20") as { value: Temporal.PlainDate };
+		expect(value).toBeInstanceOf(Temporal.PlainDate);
+		expect(value.toString()).toBe("2026-10-20");
 	});
 
 	test("a required date must be there and valid", () => {
@@ -70,7 +67,6 @@ describe("dates", () => {
 		expect(parse(optionalDate(), "")).toEqual({ value: null });
 		expect(parse(optionalDate(), "garbage")).toEqual({ issue: "Enter a valid date" });
 		expect(parse(optionalDate(), "2026-02-29")).toEqual({ issue: "Enter a valid date" });
-		expect(toDateInput(null)).toBe("");
 	});
 });
 

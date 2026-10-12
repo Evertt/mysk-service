@@ -15,9 +15,9 @@ export interface PdfInvoice {
 	organization: string;
 	number: string;
 	state: InvoiceState;
-	issuedOn: Date | null;
-	dueOn: Date | null;
-	paidOn: Date | null;
+	issuedOn: Temporal.PlainDate | null;
+	dueOn: Temporal.PlainDate | null;
+	paidOn: Temporal.PlainDate | null;
 	paymentTermDays: number;
 	vatRate: number;
 	notes: string | null;

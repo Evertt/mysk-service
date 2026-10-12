@@ -10,7 +10,7 @@ import { maintenanceLabels } from "../labels.ts";
 import { type NextDueBucket, nextDueBuckets } from "../model.ts";
 import NextDue from "../ui/next-due.svelte";
 
-export const nextMaintenance = listColumn<Date | null, NextDueBucket>({
+export const nextMaintenance = listColumn<Temporal.PlainDate | null, NextDueBucket>({
 	id: "maintenance.nextDue",
 	param: "next-maintenance",
 	label: m.maintenance_column_next_maintenance,

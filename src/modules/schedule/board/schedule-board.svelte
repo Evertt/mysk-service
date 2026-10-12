@@ -13,6 +13,7 @@
 	import { resolve } from "$app/paths";
 	import { MediaQuery } from "svelte/reactivity";
 
+	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 
 	import ScheduleDialog from "../form/schedule-dialog.svelte";
@@ -21,12 +22,10 @@
 	import {
 		type BoardRow,
 		boardEngineers,
-		dayKey,
 		groupByCell,
 		type RowId,
 		type Schedule,
 		type ScheduleOrder,
-		startOfWeek,
 		weekDays,
 	} from "./board.ts";
 	import DayList from "./day-list.svelte";
@@ -34,7 +33,7 @@
 
 	let { schedule, week }: { schedule: Schedule; week: string } = $props();
 
-	const today = dayKey(new Date());
+	const today = Temporal.Now.plainDateISO(getTimeZone());
 	// Where the board is shown (`lg`), the page fits the viewport (see `(app)/+layout.svelte`); below
 	// that, the list scrolls with the page. Assumed wide until known, so the board doesn't jump on
 	// load; on a narrower screen the switch happens before anything's scrolled.
@@ -63,10 +62,12 @@
 		),
 	);
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
-	const ordersOn = (day: Date) =>
+	const ordersOn = (day: Temporal.PlainDate) =>
 		schedule.orders
-			.filter((order) => order.scheduledFor && dayKey(order.scheduledFor) === dayKey(day))
-			.sort((a, b) => a.scheduledFor!.getTime() - b.scheduledFor!.getTime());
+			.filter((order) =>
+				order.scheduledFor?.toZonedDateTimeISO(getTimeZone()).toPlainDate().equals(day),
+			)
+			.sort((a, b) => Temporal.Instant.compare(a.scheduledFor!, b.scheduledFor!));
 
 	const drag = createBoardDrag({
 		week: () => week,
@@ -76,7 +77,7 @@
 	// The schedule dialog, for planning without dragging.
 	let selected = $state.raw<ScheduleOrder>();
 	let dialogOpen = $state(false);
-	const defaultDay = $derived(days.find((day) => dayKey(day) === today) ?? days[0]);
+	const defaultDay = $derived(days.find((day) => day.equals(today)) ?? days[0]);
 
 	function openDialog(order: ScheduleOrder) {
 		selected = order;
@@ -84,8 +85,8 @@
 	}
 
 	/** After planning in the dialog, shows the week the order went to. */
-	function showWeekOf(day: Date) {
-		const start = dayKey(startOfWeek(day));
+	function showWeekOf(day: Temporal.PlainDate) {
+		const start = day.subtract({ days: day.dayOfWeek - 1 }).toString();
 		if (start !== week) void goto(`${resolve("/(app)/(modules)/schedule")}?week=${start}`);
 	}
 </script>

@@ -50,9 +50,9 @@ import type {
 	ListWhere,
 	SortId,
 } from "#lib/components/data-table/list-definition.ts";
-import { type DateRange, dayStart, type NumberRange } from "#lib/components/data-table/ranges.ts";
+import { type DateRange, type NumberRange } from "#lib/components/data-table/ranges.ts";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
-import { nextDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { formatNumber } from "#lib/i18n/format.ts";
 
 /**
@@ -208,23 +208,27 @@ export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
 }
 
 /**
- * A date range filter's condition (`dateRange`): the rows whose `column` (a timestamp) is on one
- * of the days of any of the ranges, both ends included, from the start of the first day to the end
- * of the last in the user's time zone (`getTimeZone()`), e.g. `filter: (ranges) => inDays(order.scheduledFor,
- * ranges)`. Rows without a date are in no range; `null` among the ranges (`orNone(dateRange)`,
- * `none` in the URL) keeps them.
+ * A date range filter's condition (`dateRange`): the rows whose `column` is on one of the days of
+ * any of the ranges, both ends included, e.g. `filter: (ranges) => inDays(order.scheduledFor,
+ * ranges)`. A day column (`day`) is compared as days; a moment's (`moment`) from the start of the
+ * first day to the end of the last in the user's time zone (`getTimeZone()`). Rows without a date
+ * are in no range; `null` among the ranges (`orNone(dateRange)`, `none` in the URL) keeps them.
  */
 export function inDays(column: Column, ranges: readonly (DateRange | null)[]) {
+	const days = column.getSQLType() === "text";
+	const start = (day: Temporal.PlainDate) =>
+		days ? day : day.toZonedDateTime(getTimeZone()).toInstant();
 	return or(
-		...ranges.map((range) =>
-			range === null
-				? isNull(column)
-				: and(
-						sql`${column} is not null`,
-						range.from === null ? undefined : gte(column, dayStart(range.from)),
-						range.to === null ? undefined : lt(column, nextDay(dayStart(range.to))),
-					),
-		),
+		...ranges.map((range) => {
+			if (range === null) return isNull(column);
+			const from = range.from === null ? undefined : Temporal.PlainDate.from(range.from);
+			const to = range.to === null ? undefined : Temporal.PlainDate.from(range.to);
+			return and(
+				sql`${column} is not null`,
+				from && gte(column, start(from)),
+				to && (days ? lte(column, to) : lt(column, start(to.add({ days: 1 })))),
+			);
+		}),
 	);
 }
 

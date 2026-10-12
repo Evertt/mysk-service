@@ -5,11 +5,8 @@ export const round = (cents: number) => Math.sign(cents) * Math.round(Math.abs(c
 /** The VAT on a subtotal: the rate in percent, rounded once on the sum. */
 export const vatOf = (subtotal: number, rate = 21) => round((subtotal * rate) / 100);
 
-/** Today at midnight, in seconds like the database's timestamps. */
-export const today = () => {
-	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
-};
+/** Today as the database has days, `yyyy-mm-dd` (the machine's, which is the test server's). */
+export const today = () => Temporal.Now.plainDateISO().toString();
 
 /** An amount as shown, e.g. `-€1,234.50`, in cents. */
 export const cents = (text: string) => Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100);

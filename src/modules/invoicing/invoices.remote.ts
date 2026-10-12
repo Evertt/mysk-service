@@ -2,6 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
@@ -47,10 +48,10 @@ export const getInvoices = query(async () => {
 		.where(inTenant(invoice))
 		.orderBy(desc(invoice.id));
 
-	const now = new Date();
+	const today = Temporal.Now.plainDateISO(getTimeZone());
 	return rows.map(({ subtotal, ...row }) => ({
 		...row,
-		state: invoiceState(row, now),
+		state: invoiceState(row, today),
 		...invoiceTotals([{ amount: subtotal }], row.vatRate),
 	}));
 });

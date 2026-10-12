@@ -10,6 +10,7 @@ import {
 	intlLocale,
 	numberFormatter,
 } from "#lib/i18n/format.ts";
+import { at, day } from "#unit/temporal-support.ts";
 
 /** Dutch puts a no-break space after the euro sign; written as a plain space here. */
 const plain = (text: string) => text.replaceAll(" ", " ");
@@ -38,20 +39,20 @@ describe("formatCents", () => {
 
 describe("formatDate", () => {
 	test("shows the day, the short month and the year", () => {
-		expect(formatDate(new Date(2026, 9, 20))).toBe("20 Oct 2026");
+		expect(formatDate(day("2026-10-20"))).toBe("20 Oct 2026");
 	});
 
 	test("shows the local day, also late in the evening", () => {
-		expect(formatDate(new Date(2026, 0, 1, 23, 59))).toBe("1 Jan 2026");
+		expect(formatDate(at("2026-01-01 23:59"))).toBe("1 Jan 2026");
 	});
 
 	test("in Dutch, with the Dutch month", () => {
-		expect(formatDate(new Date(2026, 9, 7), "nl")).toBe("7 okt 2026");
-		expect(formatDate(new Date(2026, 2, 1), "nl")).toBe("1 mrt 2026");
+		expect(formatDate(day("2026-10-07"), "nl")).toBe("7 okt 2026");
+		expect(formatDate(day("2026-03-01"), "nl")).toBe("1 mrt 2026");
 	});
 
 	test("formats a range of days", () => {
-		const [start, end] = [new Date(2026, 9, 5), new Date(2026, 9, 11)];
+		const [start, end] = [day("2026-10-05"), day("2026-10-11")];
 		expect(formatDate.range(start, end)).toMatch(/^5\s?–\s?11 Oct 2026$/);
 		expect(formatDate.range(start, end, "nl")).toMatch(/^5\s?–\s?11 okt 2026$/);
 	});
@@ -60,17 +61,17 @@ describe("formatDate", () => {
 describe("formatDateTime", () => {
 	test("shows the date and the local time to the minute, on a 24-hour clock", () => {
 		expect(formatDateTime(new Date(2026, 9, 7, 14, 5, 59))).toBe("7 Oct 2026, 14:05");
-		expect(formatDateTime(new Date(2026, 0, 1, 0, 0))).toBe("1 Jan 2026, 00:00");
+		expect(formatDateTime(at("2026-01-01 00:00"))).toBe("1 Jan 2026, 00:00");
 	});
 
 	test("in Dutch", () => {
-		expect(formatDateTime(new Date(2026, 9, 7, 14, 5), "nl")).toBe("7 okt 2026, 14:05");
+		expect(formatDateTime(at("2026-10-07 14:05"), "nl")).toBe("7 okt 2026, 14:05");
 	});
 });
 
 test("formatTime shows the time of day on a 24-hour clock in both languages", () => {
-	expect(formatTime(new Date(2026, 9, 7, 9, 30))).toBe("09:30");
-	expect(formatTime(new Date(2026, 9, 7, 21, 5), "nl")).toBe("21:05");
+	expect(formatTime(at("2026-10-07 09:30"))).toBe("09:30");
+	expect(formatTime(at("2026-10-07 21:05"), "nl")).toBe("21:05");
 });
 
 describe("formatNumber", () => {
@@ -90,7 +91,7 @@ describe("formatNumber", () => {
 describe("custom formatters", () => {
 	test("follow the language they're called in, also when created up front", () => {
 		const weekday = dateFormatter({ weekday: "long" });
-		const monday = new Date(2026, 9, 5);
+		const monday = day("2026-10-05");
 		expect(weekday(monday)).toBe("Monday");
 		expect(weekday(monday, "nl")).toBe("maandag");
 

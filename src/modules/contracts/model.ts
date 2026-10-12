@@ -2,7 +2,7 @@
  * The contracts module's domain enums, shared by its database tables, the seed script and the UI.
  * Kept out of `server/` so client code (filters, badges) can import them.
  */
-import { nextDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
 
 /** What a contract's number looks like, e.g. `CTR-2026-0007` (see `#lib/numbering.ts`). */
@@ -22,11 +22,16 @@ export const defaultResponseHours: Record<ContractLevel, number> = {
 export const contractStatuses = ["upcoming", "active", "expired"] as const;
 export type ContractStatus = (typeof contractStatuses)[number];
 
-/** Where `now` falls in a contract's period; both dates are inclusive days. */
+/**
+ * Where `at` (a day, or a moment's day in the user's time zone; now by default) falls in a
+ * contract's period; both its days are included.
+ */
 export function contractStatus(
-	contract: { startsOn: Date; endsOn: Date },
-	now = new Date(),
+	contract: { startsOn: Temporal.PlainDate; endsOn: Temporal.PlainDate },
+	at: Temporal.PlainDate | Temporal.Instant = Temporal.Now.instant(),
 ): ContractStatus {
-	if (now < contract.startsOn) return "upcoming";
-	return now < nextDay(contract.endsOn) ? "active" : "expired";
+	const day =
+		at instanceof Temporal.Instant ? at.toZonedDateTimeISO(getTimeZone()).toPlainDate() : at;
+	if (Temporal.PlainDate.compare(day, contract.startsOn) < 0) return "upcoming";
+	return Temporal.PlainDate.compare(day, contract.endsOn) <= 0 ? "active" : "expired";
 }

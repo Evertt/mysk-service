@@ -58,7 +58,7 @@ describe("in North", () => {
 	});
 
 	test("the dashboard adds up what's outstanding and overdue, with VAT", async () => {
-		const sent = await rows<{ subtotal: number; vat_rate: number; due_on: number }>(
+		const sent = await rows<{ subtotal: number; vat_rate: number; due_on: string }>(
 			`select i.vat_rate, i.due_on, coalesce((select sum(amount) from invoice_line l
 			 where l.invoice_id = i.id), 0) as subtotal from invoice i
 			 where i.organization_id = ? and i.status = 'sent'`,

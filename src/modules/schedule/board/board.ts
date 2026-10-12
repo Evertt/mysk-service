@@ -1,17 +1,8 @@
 /**
- * Week maths and grouping for the dispatch board. Days are days in the user's time zone, like the
- * dates entered in the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
+ * Week maths and grouping for the dispatch board. Days are `Temporal.PlainDate`s, an order's the
+ * day of its moment in the user's time zone, and weeks run Monday to Sunday.
  */
-import {
-	addDays,
-	DAY,
-	fromDateInput,
-	isDateInput,
-	startOfWeek as mondayOf,
-	toDateInput,
-	zonedDate,
-	dateParts,
-} from "#lib/dates.ts";
+import { getTimeZone, isDay } from "#lib/dates.ts";
 import { dateFormatter, formatDate } from "#lib/i18n/index.ts";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 import { plannedStatus } from "#lib/orders/index.ts";
@@ -28,41 +19,35 @@ export const DEFAULT_TIME = "09:00";
 /** Orders per engineer per day before the day counts as full; more is over-booked. */
 const DAILY_CAPACITY = 3;
 
-/** A day as `yyyy-mm-dd`, as in the `?week=` search param and `<input type="date">`. */
-export const dayKey = (date: Date) => toDateInput(date);
+/** The day `value` (`yyyy-mm-dd`, as in the `?week=` search param) stands for, if it's one. */
+export const parseDay = (value: string | null | undefined) =>
+	isDay(value) ? Temporal.PlainDate.from(value) : undefined;
 
-/** The start of the day `value` (`yyyy-mm-dd`) stands for, if it's a day on the calendar. */
-export const parseDay = (value: string | null | undefined): Date | undefined =>
-	value && isDateInput(value) ? fromDateInput(value) : undefined;
-
-/** The Monday of the week `date` falls in, at the start of the day. */
-export const startOfWeek = (date: Date) => mondayOf(date);
-
-/** The week a `?week=` search param stands for: the week of that day, or else this week. */
-export const weekFromParam = (param: string | null | undefined, today = new Date()) =>
-	startOfWeek(parseDay(param) ?? today);
+/** The week (its Monday) a `?week=` search param stands for: that day's, or else this week. */
+export function weekFromParam(
+	param: string | null | undefined,
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+) {
+	const day = parseDay(param) ?? today;
+	return day.subtract({ days: day.dayOfWeek - 1 });
+}
 
 /** The seven days of the week starting at `start`. */
-export const weekDays = (start: Date) => Array.from({ length: 7 }, (_, i) => addDays(start, i));
-
-/** The ISO 8601 week number: weeks start on Monday, and week 1 has the year's first Thursday. */
-export function weekNumber(date: Date) {
-	const thursday = addDays(startOfWeek(date), 3);
-	const firstThursday = addDays(startOfWeek(zonedDate(dateParts(thursday).year, 0, 4)), 3);
-	return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * DAY));
-}
+export const weekDays = (start: Temporal.PlainDate) =>
+	Array.from({ length: 7 }, (_, i) => start.add({ days: i }));
 
 const shortDay = dateFormatter({ weekday: "short", day: "numeric", month: "short" });
 const longDay = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 
 /** A day in a column header, e.g. `Mon 5 Oct` (in Dutch `ma 5 okt`). */
-export const formatDay = (day: Date) => shortDay(day);
+export const formatDay = (day: Temporal.PlainDate) => shortDay(day);
 
 /** A day in full, e.g. `Monday 5 October` (in Dutch `maandag 5 oktober`). */
-export const formatLongDay = (day: Date) => longDay(day);
+export const formatLongDay = (day: Temporal.PlainDate) => longDay(day);
 
 /** The week starting at `start`, e.g. `5–11 Oct 2026`. */
-export const formatWeek = (start: Date) => formatDate.range(start, addDays(start, 6));
+export const formatWeek = (start: Temporal.PlainDate) =>
+	formatDate.range(start, start.add({ days: 6 }));
 
 /** An engineer's row on the board, or the unassigned orders' row. */
 export type RowId = number | "unassigned";
@@ -76,11 +61,11 @@ export interface BoardRow {
 }
 
 /** Identifies a cell of the board: a row on a day. */
-export const cellKey = (row: RowId, day: Date) => `${row}/${dayKey(day)}`;
+export const cellKey = (row: RowId, day: Temporal.PlainDate) => `${row}/${day.toString()}`;
 
 interface Placed {
 	engineerId: number | null;
-	scheduledFor: Date | null;
+	scheduledFor: Temporal.Instant | null;
 }
 
 /**
@@ -94,11 +79,11 @@ export function groupByCell<T extends Placed>(orders: T[], rows: RowId[]) {
 		if (!order.scheduledFor) continue;
 		const row =
 			order.engineerId !== null && known.has(order.engineerId) ? order.engineerId : "unassigned";
-		const key = cellKey(row, order.scheduledFor);
+		const key = cellKey(row, order.scheduledFor.toZonedDateTimeISO(getTimeZone()).toPlainDate());
 		cells.set(key, [...(cells.get(key) ?? []), order]);
 	}
 	for (const cell of cells.values()) {
-		cell.sort((a, b) => a.scheduledFor!.getTime() - b.scheduledFor!.getTime());
+		cell.sort((a, b) => Temporal.Instant.compare(a.scheduledFor!, b.scheduledFor!));
 	}
 	return cells;
 }
@@ -128,11 +113,11 @@ const priorityRank = (priority: OrderPriority) => orderPriorities.indexOf(priori
 
 /** Backlog order: most urgent first, then the longest waiting. */
 export const byPriorityThenAge = (
-	a: { priority: OrderPriority; createdAt: Date },
-	b: { priority: OrderPriority; createdAt: Date },
+	a: { priority: OrderPriority; createdAt: Temporal.Instant },
+	b: { priority: OrderPriority; createdAt: Temporal.Instant },
 ) =>
 	priorityRank(b.priority) - priorityRank(a.priority) ||
-	a.createdAt.getTime() - b.createdAt.getTime();
+	Temporal.Instant.compare(a.createdAt, b.createdAt);
 
 interface Movable extends Placed {
 	id: number;
@@ -144,10 +129,10 @@ interface Movable extends Placed {
  * before the server confirms it: the order leaves the backlog, and stays on the board only if it's
  * still in the week starting at `start`.
  */
-export function applyMove<O extends Movable, S extends { start: Date; orders: O[]; backlog: O[] }>(
-	schedule: S,
-	move: { id: number; engineerId: number | null; scheduledFor: Date },
-): S {
+export function applyMove<
+	O extends Movable,
+	S extends { start: Temporal.PlainDate; orders: O[]; backlog: O[] },
+>(schedule: S, move: { id: number; engineerId: number | null; scheduledFor: Temporal.Instant }): S {
 	const order =
 		schedule.orders.find((o) => o.id === move.id) ?? schedule.backlog.find((o) => o.id === move.id);
 	if (!order) return schedule;
@@ -157,8 +142,10 @@ export function applyMove<O extends Movable, S extends { start: Date; orders: O[
 		scheduledFor: move.scheduledFor,
 		status: plannedStatus(order.status, move.engineerId),
 	};
-	const end = addDays(schedule.start, 7);
-	const inWeek = move.scheduledFor >= schedule.start && move.scheduledFor < end;
+	const day = move.scheduledFor.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+	const inWeek =
+		Temporal.PlainDate.compare(day, schedule.start) >= 0 &&
+		Temporal.PlainDate.compare(day, schedule.start.add({ days: 7 })) < 0;
 	return {
 		...schedule,
 		orders: [...schedule.orders.filter((o) => o.id !== move.id), ...(inWeek ? [moved] : [])],

@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { expect, test } from "vite-plus/test";
 
 import { engineerFields } from "#lib/engineers/form/engineer-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (input: Record<string, unknown>) => {
@@ -24,7 +25,7 @@ const form = {
 
 test("a filled-in form becomes an engineer, with the rate in cents", () => {
 	expect(parse(form)).toEqual({
-		value: { ...form, hourlyRate: 7250, hiredAt: new Date(2024, 2, 1) },
+		value: { ...form, hourlyRate: 7250, hiredAt: day("2024-03-01") },
 	});
 });
 

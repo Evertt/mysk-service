@@ -24,8 +24,8 @@ export interface OrderDraft {
 	/** `normal` if not given, as the order form starts. */
 	priority?: OrderPriority;
 	description: string;
-	scheduledFor?: Date | null;
-	completedAt?: Date | null;
+	scheduledFor?: Temporal.Instant | null;
+	completedAt?: Temporal.Instant | null;
 	laborHours?: number;
 }
 

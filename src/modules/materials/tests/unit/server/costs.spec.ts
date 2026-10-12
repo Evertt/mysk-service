@@ -6,6 +6,7 @@ import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { lineTotal } from "#modules/materials/model.ts";
 import { lineTotalSql, materialCosts } from "#modules/materials/server/costs.ts";
+import { at } from "#unit/temporal-support.ts";
 
 const tenant: Tenant = {
 	organizationId: "north",
@@ -65,7 +66,7 @@ describe("materialCosts", () => {
 			type: "repair",
 			status: "completed",
 			equipmentId: null,
-			createdAt: new Date(2026, 9, 1),
+			createdAt: at("2026-10-01 00:00"),
 		}));
 
 	test("adds the current tenant's lines up per order, and nothing for an order without", async () => {

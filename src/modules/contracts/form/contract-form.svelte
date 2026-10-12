@@ -12,7 +12,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { addDays, startOfMonth, toDateInput } from "#lib/dates.ts";
+	import { getTimeZone } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
 	import { label } from "#lib/i18n/index.ts";
 
@@ -44,9 +44,9 @@
 	const uid = $props.id();
 
 	// A new contract runs for a year from the first of next month.
-	const today = new Date();
-	const startsOn = $derived(contract?.startsOn ?? startOfMonth(today, 1));
-	const endsOn = $derived(contract?.endsOn ?? addDays(startOfMonth(today, 13), -1));
+	const nextMonth = Temporal.Now.plainDateISO(getTimeZone()).with({ day: 1 }).add({ months: 1 });
+	const startsOn = $derived(contract?.startsOn ?? nextMonth);
+	const endsOn = $derived(contract?.endsOn ?? nextMonth.add({ years: 1 }).subtract({ days: 1 }));
 
 	// Only the chosen customer's equipment can be covered.
 	let customerId = $derived(contract ? String(contract.customerId) : "");
@@ -113,13 +113,13 @@
 					field={fields.startsOn}
 					label={m.contracts_starts_on()}
 					type="date"
-					value={toDateInput(startsOn)}
+					value={startsOn.toString()}
 				/>
 				<TextField
 					field={fields.endsOn}
 					label={m.contracts_ends_on()}
 					type="date"
-					value={toDateInput(endsOn)}
+					value={endsOn.toString()}
 					description={m.contracts_form_ends_description()}
 				/>
 				<MoneyField

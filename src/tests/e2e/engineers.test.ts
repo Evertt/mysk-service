@@ -325,7 +325,7 @@ describe("in North", () => {
 		await app.toast("Engineer added");
 		const [row] = await rows(
 			`select organization_id, name, email, specialty, region, hourly_rate, active,
-			 date(hired_at, 'unixepoch', 'localtime') as hired from engineer where id = ?`,
+			 hired_at as hired from engineer where id = ?`,
 			[created],
 		);
 		expect({ ...row }).toEqual({

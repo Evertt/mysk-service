@@ -6,6 +6,7 @@ import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type OrderRow } from "#lib/orders/list/columns.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
+import { at, freezeNow } from "#unit/temporal-support.ts";
 
 const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	id: Number(number.slice(-3)),
@@ -14,9 +15,9 @@ const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	status: "scheduled",
 	priority: "normal",
 	description: "Replace the seal",
-	scheduledFor: new Date(2026, 9, 20),
+	scheduledFor: at("2026-10-20 00:00"),
 	completedAt: null,
-	createdAt: new Date(2026, 9, 1),
+	createdAt: at("2026-10-01 00:00"),
 	laborHours: 1,
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	equipment: { id: 1, model: "C15", manufacturer: "Caterpillar", serialNumber: "GEN-1" },
@@ -118,15 +119,14 @@ test("the search finds orders by number, customer, equipment and engineer", () =
 });
 
 test("the date filters keep the orders on the days of a range, a preset's on the day it's read", () => {
-	vi.useFakeTimers({ toFake: ["Date"] });
-	vi.setSystemTime(new Date(2026, 9, 14, 12));
+	freezeNow(at("2026-10-14 12:00"));
 	try {
 		const rows = [
 			order("ORD-001", {
-				scheduledFor: new Date(2026, 9, 12, 8),
-				createdAt: new Date(2026, 8, 30),
+				scheduledFor: at("2026-10-12 08:00"),
+				createdAt: at("2026-09-30 00:00"),
 			}),
-			order("ORD-002", { scheduledFor: new Date(2026, 9, 19, 8) }),
+			order("ORD-002", { scheduledFor: at("2026-10-19 08:00") }),
 			order("ORD-003", { scheduledFor: null }),
 		];
 		const by = (id: string, range: string) =>
@@ -141,7 +141,7 @@ test("the date filters keep the orders on the days of a range, a preset's on the
 			shown(rows, { columnFilters: [{ id: "scheduledFor", value: ["none", "next-week"] }] }),
 		).toEqual(["ORD-002", "ORD-003"]);
 	} finally {
-		vi.useRealTimers();
+		vi.restoreAllMocks();
 	}
 });
 

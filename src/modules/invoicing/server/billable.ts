@@ -9,6 +9,7 @@
 import { and, asc, eq, inArray, ne, notExists, or } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -16,7 +17,7 @@ import { engineer, order } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 import { billableItems } from "../api/extensions.ts";
-import { itemLine, type LineDraft, orderLines, today } from "../invoice.ts";
+import { itemLine, type LineDraft, orderLines } from "../invoice.ts";
 import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
 
@@ -25,7 +26,7 @@ export interface BillableOrder {
 	id: number;
 	number: string;
 	description: string;
-	completedAt: Date | null;
+	completedAt: Temporal.Instant | null;
 	lines: LineDraft[];
 	total: number;
 }
@@ -117,19 +118,23 @@ export async function offeredItems(
 	enabled?: readonly string[],
 ): Promise<BillableItem[]> {
 	const answers = await collect(billableItems, { customerId, period }, enabled);
-	return answers.flat().sort((a, b) => a.date.getTime() - b.date.getTime());
+	return answers.flat().sort((a, b) => Temporal.PlainDate.compare(a.date, b.date));
 }
 
 /** The modules' items for the customer that are due by `at` and not billed yet. */
-async function unbilledItems(customerId: number, at: Date): Promise<BillableItem[]> {
+async function unbilledItems(customerId: number, at: Temporal.PlainDate): Promise<BillableItem[]> {
 	const settings = await settingsOf();
-	const items = await offeredItems(customerId, { from: settings.billFrom, until: today(at) });
+	const items = await offeredItems(customerId, { from: settings.billFrom, until: at });
 	const done = await billedReferences(items.map((item) => item.reference));
 	return items.filter((item) => !done.has(item.reference));
 }
 
 /** What the customer can be billed for now: completed orders and other modules' items. */
-export async function billableFor(customerId: number, at = new Date()) {
+/** `at` is a day: today, the user's, by default. */
+export async function billableFor(
+	customerId: number,
+	at = Temporal.Now.plainDateISO(getTimeZone()),
+) {
 	const [orders, items] = await Promise.all([
 		billableOrders(customerId),
 		unbilledItems(customerId, at),

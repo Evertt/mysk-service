@@ -31,6 +31,8 @@ import {
 } from "#lib/components/data-table/list-definition.ts";
 import { numberInRange } from "#lib/components/data-table/ranges.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+import { getTimeZone, overwriteGetTimeZone, runtimeTimeZone } from "#lib/dates.ts";
+import { day, moment } from "#lib/server/db/columns.ts";
 import {
 	anyOf,
 	between,
@@ -42,6 +44,7 @@ import {
 	searchMatch,
 	type SqlColumns,
 } from "#lib/server/lists/plan.ts";
+import { freezeNow } from "#unit/temporal-support.ts";
 
 // Tables of their own in a temporary database, rather than the app's.
 const item = sqliteTable("item", {
@@ -498,12 +501,14 @@ describe("range filters", () => {
 	const visit = sqliteTable("visit", {
 		id: integer("id").primaryKey(),
 		tenant: text("tenant").notNull(),
-		at: integer("at", { mode: "timestamp" }),
+		at: moment("at"),
+		on: day("on"),
 		amount: real("amount"),
 	});
 	const visitList = defineList({
 		columns: {
 			at: { sort: true, filter: orNone(dateRange) },
+			on: { filter: dateRange },
 			amount: { sort: true, filter: orNone(numberRange) },
 			// Twice the amount, worked out in code rather than SQL, like an order's total.
 			double: { filter: numberRange },
@@ -515,6 +520,7 @@ describe("range filters", () => {
 		from: (fields) => db.select(fields).from(visit).$dynamic(),
 		columns: {
 			at: { sort: visit.at, filter: (ranges) => inDays(visit.at, ranges) },
+			on: { filter: (ranges) => inDays(visit.on, ranges) },
 			amount: { sort: visit.amount, filter: (ranges) => between(visit.amount, ranges) },
 			double: {
 				match: async (ranges, ids) => {
@@ -541,25 +547,30 @@ describe("range filters", () => {
 	/** The ids `double`'s `match` was asked about, each time. */
 	const asked: number[][] = [];
 
-	/** A moment in October 2026, local time. */
-	const october = (day: number, hours = 0, minutes = 0) => new Date(2026, 9, day, hours, minutes);
+	/** A moment in October 2026, in the runtime's time zone. */
+	const october = (date: number, hours = 0, minutes = 0) =>
+		Temporal.PlainDateTime.from({ year: 2026, month: 10, day: date, hour: hours, minute: minutes })
+			.toZonedDateTime(getTimeZone())
+			.toInstant();
+	/** A day in October 2026. */
+	const onDay = (date: number) => Temporal.PlainDate.from({ year: 2026, month: 10, day: date });
 
 	beforeAll(async () => {
 		await client.execute(
-			"create table visit (id integer primary key, tenant text not null, at integer, amount real)",
+			"create table visit (id integer primary key, tenant text not null, at integer, `on` text, amount real)",
 		);
 		await db.insert(visit).values([
-			{ id: 1, tenant: "a", at: october(11, 23, 59), amount: 0 },
-			{ id: 2, tenant: "a", at: october(12), amount: 2.5 },
-			{ id: 3, tenant: "a", at: october(18, 23, 59), amount: 10 },
-			{ id: 4, tenant: "a", at: october(19), amount: 10.5 },
-			{ id: 5, tenant: "a", at: null, amount: null },
+			{ id: 1, tenant: "a", at: october(11, 23, 59), on: onDay(11), amount: 0 },
+			{ id: 2, tenant: "a", at: october(12), on: onDay(12), amount: 2.5 },
+			{ id: 3, tenant: "a", at: october(18, 23, 59), on: onDay(18), amount: 10 },
+			{ id: 4, tenant: "a", at: october(19), on: onDay(19), amount: 10.5 },
+			{ id: 5, tenant: "a", at: null, on: null, amount: null },
 			// Another tenant's, which no query may return.
-			{ id: 6, tenant: "b", at: october(14), amount: 1 },
+			{ id: 6, tenant: "b", at: october(14), on: onDay(14), amount: 1 },
 		]);
 	});
 	afterEach(() => {
-		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	const visitsFromUrl = (search: string) =>
@@ -573,9 +584,28 @@ describe("range filters", () => {
 		expect(await ids("at=2026-10-19..")).toEqual([4]);
 	});
 
+	test("keep the rows of a day column on the days of a range, as days", async () => {
+		expect(await ids("on=2026-10-12..2026-10-18")).toEqual([2, 3]);
+		expect(await ids("on=2026-10-11")).toEqual([1]);
+		expect(await ids("on=..2026-10-11")).toEqual([1]);
+		expect(await ids("on=2026-10-19..")).toEqual([4]);
+	});
+
+	test("count a moment's day in the user's time zone", async () => {
+		// 23:59 on the 11th here is the 12th already a day's width further east.
+		overwriteGetTimeZone(() => "Pacific/Kiritimati");
+		try {
+			const far = await ids("at=2026-10-12");
+			overwriteGetTimeZone(() => runtimeTimeZone);
+			expect(await ids("at=2026-10-12")).toEqual([2]);
+			expect(far).not.toEqual([2]);
+		} finally {
+			overwriteGetTimeZone(() => runtimeTimeZone);
+		}
+	});
+
 	test("a preset is the days it means on the day it's asked", async () => {
-		vi.useFakeTimers({ toFake: ["Date"] });
-		vi.setSystemTime(october(14, 15, 30));
+		freezeNow(october(14, 15, 30));
 		expect(await ids("at=this-week")).toEqual([2, 3]);
 		expect(await ids("at=before-today")).toEqual([1, 2]);
 		expect(await ids("at=from-today")).toEqual([3, 4]);

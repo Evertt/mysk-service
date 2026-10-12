@@ -57,6 +57,8 @@ const serverSpecs = {
 	// Worker threads start faster than forked processes: `vitest doctor` measured 16% off.
 	pool: "threads" as const,
 	environment: "node",
+	// Temporal (see the file).
+	setupFiles: ["./src/tests/unit/temporal-setup.ts"],
 	include: [
 		"src/tests/unit/**/*.{test,spec}.{js,ts}",
 		"src/modules/*/tests/unit/**/*.{test,spec}.{js,ts}",
@@ -214,7 +216,10 @@ export default defineConfig({
 					],
 					// Server code (`server/` folders, also the modules') doesn't run in the browser.
 					exclude: ["src/tests/unit/**/server/**", "src/modules/*/tests/unit/**/server/**"],
-					setupFiles: ["./src/tests/unit/vitest-setup-client.ts"],
+					setupFiles: [
+						"./src/tests/unit/temporal-setup.ts",
+						"./src/tests/unit/vitest-setup-client.ts",
+					],
 				},
 			},
 
@@ -247,6 +252,7 @@ export default defineConfig({
 					environment: "node",
 					include: ["src/tests/e2e/**/*.test.ts", "src/modules/*/tests/e2e/**/*.test.ts"],
 					globalSetup: ["src/tests/e2e/global-setup.ts"],
+					setupFiles: ["./src/tests/unit/temporal-setup.ts"],
 					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the
 					// files share, so they take turns.
 					maxWorkers: "60%",

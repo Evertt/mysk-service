@@ -65,7 +65,7 @@
 					</span>
 					<div class="flex min-w-0 flex-1 flex-col gap-2 pt-1">
 						<time
-							datetime={event.date.toISOString()}
+							datetime={event.date.toString()}
 							class="text-xs text-muted-foreground tabular-nums"
 						>
 							{formatDate(event.date)}

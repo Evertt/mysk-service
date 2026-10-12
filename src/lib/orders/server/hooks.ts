@@ -19,7 +19,7 @@ import {
 /** The modules' badges for each order, in the same order as `orders`. */
 export async function tagOrders(
 	orders: OrderFacts[],
-	now = new Date(),
+	now = Temporal.Now.instant(),
 	enabled?: readonly string[],
 ): Promise<OrderTag[][]> {
 	if (!orders.length) return [];

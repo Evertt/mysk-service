@@ -10,11 +10,11 @@ const contract = (number: string, fields: Partial<ContractRow> = {}): ContractRo
 	id: 1,
 	number,
 	level: "standard",
-	startsOn: new Date(year, 0, 1),
-	endsOn: new Date(year, 11, 31),
+	startsOn: Temporal.PlainDate.from({ year, month: 1, day: 1 }),
+	endsOn: Temporal.PlainDate.from({ year, month: 12, day: 31 }),
 	monthlyFee: 10_000,
 	responseHours: 24,
-	createdAt: new Date(year - 1, 11, 1),
+	createdAt: Temporal.Instant.from(`${year - 1}-12-01T00:00:00Z`),
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	units: 1,
 	...fields,
@@ -26,8 +26,13 @@ const shown = (rows: ContractRow[], state: Partial<TableState<never>>) =>
 		.getRowModel()
 		.rows.map((row) => row.original.number);
 
-const lastYear = { startsOn: new Date(year - 1, 0, 1), endsOn: new Date(year - 1, 11, 31) };
-const nextYear = { startsOn: new Date(year + 1, 0, 1), endsOn: new Date(year + 1, 11, 31) };
+/** A contract term for the calendar year `year`. */
+const term = (year: number) => ({
+	startsOn: Temporal.PlainDate.from({ year, month: 1, day: 1 }),
+	endsOn: Temporal.PlainDate.from({ year, month: 12, day: 31 }),
+});
+const lastYear = term(year - 1);
+const nextYear = term(year + 1);
 
 test("the level sorts from basic to premium rather than alphabetically", () => {
 	const rows = [

@@ -29,13 +29,13 @@
  */
 import * as v from "valibot";
 
+import { isDay } from "#lib/dates.ts";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
 
 import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
 import {
 	type DateRange,
 	dateRangeToken,
-	isDay,
 	isOrdered,
 	isRangeCents,
 	isRangeNumber,

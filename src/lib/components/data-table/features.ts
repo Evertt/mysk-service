@@ -5,6 +5,7 @@ import {
 	columnPinningFeature,
 	columnVisibilityFeature,
 	constructFilterFn,
+	constructSortFn,
 	createFacetedRowModel,
 	createFacetedUniqueValues,
 	createFilteredRowModel,
@@ -98,6 +99,33 @@ const rangeFilterFn = (grammar: RangeGrammar) =>
 		autoRemove: (value: string[] | undefined) => !value?.length,
 	});
 
+/**
+ * Every column's sort unless it brings its own (`defaultColumn` in `table.svelte.ts`): days and
+ * moments (`Temporal.PlainDate`, `Temporal.Instant`) by their own `compare`, as they have no
+ * `valueOf` for TanStack's `basic` (which it falls back to for anything but text and `Date`s) to
+ * compare with; anything else as TanStack's `auto` would.
+ */
+const sortFn_byValue = constructSortFn({
+	sort: (a: unknown, b: unknown, rowA, rowB, columnId) => {
+		if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) {
+			return Temporal.PlainDate.compare(a, b);
+		}
+		if (a instanceof Temporal.Instant && b instanceof Temporal.Instant) {
+			return Temporal.Instant.compare(a, b);
+		}
+		const { table } = rowA as unknown as {
+			table: { getColumn(id: string): AutoSorted | undefined };
+		};
+		const auto = table.getColumn(columnId)?.getAutoSortFn() ?? sortFn_basic;
+		return auto(rowA, rowB, columnId);
+	},
+});
+
+/** What `sortFn_byValue` needs of a column (TanStack's). */
+interface AutoSorted {
+	getAutoSortFn(): typeof sortFn_basic;
+}
+
 /** The URL grammar a column's filter function implies (see `DataTableColumnMeta.filter`). */
 export const filterFnGrammar: Readonly<Record<string, "set" | RangeGrammar>> = {
 	oneOf: "set",
@@ -138,6 +166,7 @@ const tableFeatureSet = tableFeatures({
 	sortFns: {
 		alphanumeric: sortFn_alphanumeric,
 		basic: sortFn_basic,
+		byValue: sortFn_byValue,
 		datetime: sortFn_datetime,
 		text: sortFn_text,
 	},

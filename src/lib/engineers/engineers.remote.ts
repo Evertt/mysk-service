@@ -2,7 +2,6 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { DAY } from "#lib/dates.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { laborCost } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
@@ -70,7 +69,7 @@ export const getEngineer = forMembers.query(v.string(), async (param) => {
 		laborHours: order.laborHours,
 		customer: { id: customer.id, code: customer.code, name: customer.name },
 	};
-	const since = new Date(Date.now() - 30 * DAY);
+	const since = Temporal.Now.instant().subtract({ hours: 30 * 24 });
 
 	const [openOrders, completedOrders, lastMonth] = await Promise.all([
 		// Soonest first; unscheduled work (e.g. quotes) last.

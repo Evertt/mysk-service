@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { dayStart, presetRange } from "#lib/components/data-table/ranges.ts";
-import { nextDay, startOfDay } from "#lib/dates.ts";
+import { presetRange } from "#lib/components/data-table/ranges.ts";
 
 import { afresh, isRemote, organizations, useApp, value } from "./app.ts";
 import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
@@ -10,7 +9,7 @@ const { north, south } = organizations;
 const app = useApp();
 
 /** How many of an organization's units match `where`. */
-const count = (where: string, args: number[] = [], organizationId: string = north.id) =>
+const count = (where: string, args: (number | string)[] = [], organizationId: string = north.id) =>
 	value<number>(`select count(*) from equipment e where organization_id = ? and ${where}`, [
 		organizationId,
 		...args,
@@ -20,8 +19,8 @@ const count = (where: string, args: number[] = [], organizationId: string = nort
 const openOrders = `(select count(*) from "order" o where o.equipment_id = e.id
 	and o.status in ('quote', 'scheduled', 'in_progress'))`;
 
-/** The start of today, in seconds. */
-const today = () => startOfDay(new Date()).getTime() / 1000;
+/** Today, as the database has days: `yyyy-mm-dd`. */
+const today = () => Temporal.Now.plainDateISO().toString();
 
 /** The units the URL's parameters show, in all. */
 const shownFor = async (search: string) => {
@@ -64,19 +63,14 @@ describe("range filters on the equipment list, in North", () => {
 
 	test("links combine ranges with each other and the other filters", async () => {
 		const thisYear = presetRange("this-year");
-		const [from, to] = [dayStart(thisYear.from!), nextDay(dayStart(thisYear.to!))].map(
-			(date) => date.getTime() / 1000,
-		);
 		const lastYear = presetRange("last-year").from!;
 		expect(await shownFor(`installed=${lastYear}..&open-orders=..0`)).toBe(
-			await count(`installed_at >= ? and ${openOrders} <= 0`, [
-				dayStart(lastYear).getTime() / 1000,
-			]),
+			await count(`installed_at >= ? and ${openOrders} <= 0`, [lastYear]),
 		);
 		expect(await shownFor("warranty=this-year&category=chiller")).toBe(
-			await count("warranty_until >= ? and warranty_until < ? and category = 'chiller'", [
-				from,
-				to,
+			await count("warranty_until between ? and ? and category = 'chiller'", [
+				thisYear.from!,
+				thisYear.to!,
 			]),
 		);
 		// What isn't a range is ignored.

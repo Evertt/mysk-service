@@ -5,25 +5,31 @@
  */
 import * as v from "valibot";
 
-import { startOfDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { dateFormatter, formatTime } from "#lib/i18n/index.ts";
 
 const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });
 
+/** A moment's day, in the user's time zone. */
+const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+
+/** Today, in the user's time zone. */
+const todayNow = () => Temporal.Now.plainDateISO(getTimeZone());
+
 /**
  * When an order is planned, as a card in its day's group shows it: the time, with the day too if
  * it's work left over from an earlier day (which is grouped under today).
  */
-export function plannedTime(date: Date, today = new Date()) {
-	return date < startOfDay(today)
-		? `${shortDayFormat(date)}, ${formatTime(date)}`
-		: formatTime(date);
+export function plannedTime(moment: Temporal.Instant, today = todayNow()) {
+	return Temporal.PlainDate.compare(dayOf(moment), today) < 0
+		? `${shortDayFormat(moment)}, ${formatTime(moment)}`
+		: formatTime(moment);
 }
 
 /** A day relative to today: `Today`, `Tomorrow` or e.g. `Friday 9 October`. */
-export function dayLabel(day: Date, today = new Date()) {
-	const days = Math.round((startOfDay(day).getTime() - startOfDay(today).getTime()) / 86_400_000);
+export function dayLabel(day: Temporal.PlainDate, today = todayNow()) {
+	const days = today.until(day).days;
 	if (days === 0) return m.portal_today();
 	if (days === 1) return m.portal_tomorrow();
 	return dayFormat(day);
@@ -31,40 +37,41 @@ export function dayLabel(day: Date, today = new Date()) {
 
 export interface DayGroup<T> {
 	/** The day, or `null` for orders without a date. */
-	day: Date | null;
+	day: Temporal.PlainDate | null;
 	label: string;
 	orders: T[];
 }
 
 /**
- * Open orders by the day they're planned for, soonest first. Orders planned before today that
- * aren't done yet are still today's work; orders without a date come last.
+ * Open orders by the day they're planned for (in the user's time zone), soonest first. Orders
+ * planned before today that aren't done yet are still today's work; orders without a date come
+ * last.
  */
-export function groupByDay<T extends { scheduledFor: Date | null }>(
+export function groupByDay<T extends { scheduledFor: Temporal.Instant | null }>(
 	orders: T[],
-	today = new Date(),
+	today = todayNow(),
 ): DayGroup<T>[] {
-	const start = startOfDay(today);
-	const days = new Map<number, T[]>();
+	const days = new Map<string, T[]>();
 	const undated: T[] = [];
-	const sorted = orders.toSorted(
-		(a, b) => (a.scheduledFor?.getTime() ?? 0) - (b.scheduledFor?.getTime() ?? 0),
+	const sorted = orders.toSorted((a, b) =>
+		a.scheduledFor && b.scheduledFor ? Temporal.Instant.compare(a.scheduledFor, b.scheduledFor) : 0,
 	);
 	for (const order of sorted) {
 		if (!order.scheduledFor) {
 			undated.push(order);
 			continue;
 		}
-		const day = Math.max(startOfDay(order.scheduledFor).getTime(), start.getTime());
+		const planned = dayOf(order.scheduledFor);
+		const day = (Temporal.PlainDate.compare(planned, today) < 0 ? today : planned).toString();
 		days.set(day, [...(days.get(day) ?? []), order]);
 	}
+	// Days as `yyyy-mm-dd` sort as text.
 	const groups: DayGroup<T>[] = [...days]
-		.sort(([a], [b]) => a - b)
-		.map(([time, dayOrders]) => ({
-			day: new Date(time),
-			label: dayLabel(new Date(time), today),
-			orders: dayOrders,
-		}));
+		.sort(([a], [b]) => (a < b ? -1 : 1))
+		.map(([text, dayOrders]) => {
+			const day = Temporal.PlainDate.from(text);
+			return { day, label: dayLabel(day, today), orders: dayOrders };
+		});
 	if (undated.length) groups.push({ day: null, label: m.portal_not_planned(), orders: undated });
 	return groups;
 }

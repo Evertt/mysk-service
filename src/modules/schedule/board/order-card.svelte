@@ -8,8 +8,7 @@
 	import { resolve } from "$app/paths";
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
-	import { timeOfDay } from "#lib/dates.ts";
-	import { formatDate } from "#lib/i18n/index.ts";
+	import { formatDate, formatTime } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
 	import { priorities, statuses, types } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
@@ -67,7 +66,7 @@
 	<div class="flex items-center gap-1">
 		<span class="text-muted-foreground tabular-nums">
 			{order.scheduledFor
-				? timeOfDay(order.scheduledFor)
+				? formatTime(order.scheduledFor)
 				: m.schedule_since({ date: formatDate(order.createdAt) })}
 		</span>
 		<span title={m.schedule_priority({ priority: priority.label })}>

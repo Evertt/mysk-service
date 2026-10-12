@@ -7,7 +7,6 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { addDays } from "#lib/dates.ts";
 	import { dateFormatter, formatNumber } from "#lib/i18n/index.ts";
 	import { orderStatuses } from "#lib/models.ts";
 	import { statuses } from "#lib/orders/index.ts";
@@ -17,10 +16,14 @@
 
 	let { data }: { data: OrdersInWeek[] } = $props();
 
+	// The chart's scale keys its bars by value: the weeks as text (`yyyy-mm-dd`, their Mondays).
+	const bars = $derived(data.map((week) => ({ ...week, week: week.week.toString() })));
+	const monday = (week: string) => Temporal.PlainDate.from(week);
+
 	const tick = dateFormatter({ day: "numeric", month: "short" });
 	const days = dateFormatter({ day: "numeric", month: "short", year: "numeric" });
 	/** A week by its days, e.g. `5 – 11 Oct 2026`. */
-	const weekLabel = (week: Date) => days.range(week, addDays(week, 6));
+	const weekLabel = (week: Temporal.PlainDate) => days.range(week, week.add({ days: 6 }));
 	/** Whole numbers only on the count axis. */
 	const countTick = (value: number) => (Number.isInteger(value) ? formatNumber(value) : "");
 	/**
@@ -29,7 +32,7 @@
 	 * on a narrow one.
 	 */
 	const weekTicks = (scale: unknown) => {
-		const band = scale as { domain(): Date[]; step(): number };
+		const band = scale as { domain(): string[]; step(): number };
 		const weeks = band.domain();
 		const every = Math.max(1, Math.ceil(56 / band.step()));
 		return weeks.filter((_, i) => (weeks.length - 1 - i) % every === 0);
@@ -61,7 +64,7 @@
 		<div class="flex flex-col gap-3" aria-hidden="true">
 			<Chart.Container {config} class="aspect-auto h-64 w-full">
 				<BarChart
-					{data}
+					data={bars}
 					x="week"
 					{series}
 					seriesLayout="stack"
@@ -70,7 +73,7 @@
 						// Only as many week labels as fit, evenly spaced, the latest for sure; the occlusion
 						// check is the backstop for a label that still turns out wider.
 						xAxis: {
-							format: (week: Date) => tick(week),
+							format: (week: string) => tick(monday(week)),
 							ticks: weekTicks,
 							tickOcclusion: { padding: 8 },
 						},
@@ -78,7 +81,7 @@
 					}}
 				>
 					{#snippet tooltip()}
-						<Chart.Tooltip labelFormatter={(week: Date) => weekLabel(week)} />
+						<Chart.Tooltip labelFormatter={(week: string) => weekLabel(monday(week))} />
 					{/snippet}
 				</BarChart>
 			</Chart.Container>

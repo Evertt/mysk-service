@@ -24,6 +24,7 @@ import {
 import type { DateRange, NumberRange } from "#lib/components/data-table/ranges.ts";
 import { parseTableUrl, type TableUrlState } from "#lib/components/data-table/url-state.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
+import { at, freezeNow } from "#unit/temporal-support.ts";
 
 /** The orders list, as `orders-list.ts` defines it. */
 const ordersList = defineList({
@@ -613,11 +614,10 @@ describe("range filters", () => {
 
 	// Wednesday 14 October 2026.
 	beforeEach(() => {
-		vi.useFakeTimers({ toFake: ["Date"] });
-		vi.setSystemTime(new Date(2026, 9, 14, 15, 30));
+		freezeNow(at("2026-10-14 15:30"));
 	});
 	afterEach(() => {
-		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	describe("the URL spec", () => {
@@ -643,7 +643,7 @@ describe("range filters", () => {
 		});
 
 		test("follows the day it's built on", () => {
-			vi.setSystemTime(new Date(2026, 10, 2, 9));
+			freezeNow(at("2026-11-02 09:00"));
 			expect(rangesFromUrl("scheduled=before-today").filters).toEqual({
 				scheduledFor: [{ from: null, to: "2026-11-01" }],
 			});

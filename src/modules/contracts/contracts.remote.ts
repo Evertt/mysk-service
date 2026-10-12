@@ -1,8 +1,7 @@
 import { error, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { nextDay } from "#lib/dates.ts";
 import { formatDate } from "#lib/i18n/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -16,7 +15,7 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
-import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
+import { bulkChange, idsTarget, inDays } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 
 import { contractFields } from "./form/contract-schema.ts";
@@ -88,8 +87,10 @@ export const getContract = query(v.string(), async (number) => {
 						order.equipmentId,
 						units.map((unit) => unit.id),
 					),
-					gte(order.createdAt, found.startsOn),
-					lt(order.createdAt, nextDay(found.endsOn)),
+					// Made during the contract, on its days in the user's time zone.
+					inDays(order.createdAt, [
+						{ from: found.startsOn.toString(), to: found.endsOn.toString() },
+					]),
 				),
 				orderBy: desc(order.createdAt),
 			})
@@ -148,7 +149,7 @@ async function checkContract(
 	if (!owner) {
 		problems.push({ field: "customerId", message: m.contracts_unknown_customer() });
 	}
-	if (input.endsOn <= input.startsOn) {
+	if (Temporal.PlainDate.compare(input.endsOn, input.startsOn) <= 0) {
 		problems.push({ field: "endsOn", message: m.contracts_ends_before_start() });
 	}
 

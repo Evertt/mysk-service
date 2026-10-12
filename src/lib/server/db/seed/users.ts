@@ -6,6 +6,7 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import { DEMO_PASSWORD, demoUsers } from "../demo.ts";
 import * as schema from "../schema.ts";
 import { now } from "./clock.ts";
+import { toDay } from "./temporal.ts";
 
 const { account, engineer, order, session, user } = schema;
 
@@ -44,13 +45,13 @@ async function linkDemoEngineer(tx: Transaction, userId: string, organizationId:
 	] as const;
 	for (const [i, { id }] of work.entries()) {
 		const { days, hours, minutes, status } = plan[i];
-		const scheduledFor = new Date(
-			now.getFullYear(),
-			now.getMonth(),
-			now.getDate() + days,
-			hours,
-			minutes,
-		);
+		const scheduledFor = toDay(now)
+			.add({ days })
+			.toZonedDateTime({
+				timeZone: Temporal.Now.timeZoneId(),
+				plainTime: { hour: hours, minute: minutes },
+			})
+			.toInstant();
 		await tx
 			.update(order)
 			.set({ engineerId: first.id, scheduledFor, status })

@@ -1,5 +1,7 @@
 import { page, type Locator } from "vite-plus/test/browser";
 
+import { day } from "#unit/temporal-support.ts";
+
 import type { Item } from "./table.test-harness.svelte";
 
 /** The work items the table specs show: seven, five to a page. */
@@ -10,7 +12,7 @@ export const items: Item[] = [
 		status: "open",
 		amount: 123456,
 		quantity: 1,
-		dueOn: new Date(2026, 2, 1),
+		dueOn: day("2026-03-01"),
 	},
 	{ id: 2, name: "Chiller repair", status: "closed", amount: 0, quantity: 0, dueOn: null },
 	{ id: 3, name: "Air handler check", status: "open", amount: 5000, quantity: 3, dueOn: null },

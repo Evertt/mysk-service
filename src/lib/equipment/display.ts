@@ -8,7 +8,7 @@ import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
-import { nextDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { labelOptions, withLabels } from "#lib/i18n/index.ts";
 import {
 	type EquipmentCategory,
@@ -53,6 +53,15 @@ const statusDetails: Record<EquipmentStatus, { variant: BadgeVariant; color: str
 /** Each status's translated `label`, badge variant and chart colour. */
 export const statuses = withLabels("equipmentStatus", statusDetails);
 
-/** Whether the unit's warranty still covers work done at `at` (now by default); its last day counts. */
-export const isUnderWarranty = (warrantyUntil: Date, at: Date = new Date()) =>
-	at < nextDay(warrantyUntil);
+/**
+ * Whether the unit's warranty still covers work done on `at` (a day, or the day of a moment in
+ * the user's time zone; today by default); its last day counts.
+ */
+export function isUnderWarranty(
+	warrantyUntil: Temporal.PlainDate,
+	at: Temporal.PlainDate | Temporal.Instant = Temporal.Now.instant(),
+) {
+	const day =
+		at instanceof Temporal.Instant ? at.toZonedDateTimeISO(getTimeZone()).toPlainDate() : at;
+	return Temporal.PlainDate.compare(day, warrantyUntil) <= 0;
+}

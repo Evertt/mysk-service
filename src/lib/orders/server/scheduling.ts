@@ -9,7 +9,7 @@
  */
 import { error } from "@sveltejs/kit";
 
-import { atTime } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { isOpenOrder } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
@@ -25,7 +25,8 @@ import { assigneeProblem } from "./order-changes.ts";
 export interface OrderPlan {
 	id: number;
 	engineerId: number | null;
-	day: Date;
+	day: Temporal.PlainDate;
+	/** `HH:MM`, in the user's time zone. */
 	time: string;
 }
 
@@ -55,7 +56,9 @@ export async function scheduleOrder(
 	}
 	const planned = {
 		engineerId: plan.engineerId,
-		scheduledFor: atTime(plan.day, plan.time),
+		scheduledFor: plan.day
+			.toZonedDateTime({ timeZone: getTimeZone(), plainTime: plan.time })
+			.toInstant(),
 		status: plannedStatus(found.status, plan.engineerId),
 	};
 	await tx.update(order).set(planned).where(idInTenant(order, plan.id));

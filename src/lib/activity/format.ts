@@ -8,7 +8,7 @@
  */
 // Only types from `#lib/activity/subjects.ts`, which uses this file's types in turn.
 import type { FieldFormat, SubjectType, Text } from "#lib/activity/index.ts";
-import { dateParts } from "#lib/dates.ts";
+import { getTimeZone, isDay } from "#lib/dates.ts";
 import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
@@ -83,7 +83,8 @@ export function fieldLabel(field: string, format?: FieldFormat) {
 		.trim();
 }
 
-const isoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+/** A moment as logged (`Temporal.Instant`'s and `Date`'s JSON), e.g. `2026-10-12T07:30:00Z`. */
+const isoMoment = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
 /** An id as text, as `Names` has them. */
 const idText = (value: unknown) =>
@@ -99,12 +100,14 @@ export function formatValue(value: unknown, format: FieldFormat = {}, names: Nam
 	if (format.format) return format.format(value);
 	if (typeof value === "boolean") return value ? m.activity_value_yes() : m.activity_value_no();
 	if (typeof value === "number") return formatNumber(value);
-	if (typeof value === "string" && isoDate.test(value)) {
-		const date = new Date(value);
-		// A date (e.g. from a date input) is midnight in the user's zone; anything else is a moment.
-		const { hours, minutes, seconds } = dateParts(date);
-		const midnight = !hours && !minutes && !seconds;
-		return midnight ? formatDate(date) : formatDateTime(date);
+	if (typeof value === "string" && isDay(value)) return formatDate(Temporal.PlainDate.from(value));
+	if (typeof value === "string" && isoMoment.test(value)) {
+		const moment = Temporal.Instant.from(value);
+		// Logged before days were days, a day was a moment at midnight: shown as the day still.
+		const time = moment.toZonedDateTimeISO(getTimeZone()).toPlainTime();
+		return time.equals(Temporal.PlainTime.from("00:00"))
+			? formatDate(moment)
+			: formatDateTime(moment);
 	}
 	const text = typeof value === "string" ? value : JSON.stringify(value);
 	return text.length > 80 ? `${text.slice(0, 79)}…` : text;

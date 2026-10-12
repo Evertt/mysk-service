@@ -13,7 +13,6 @@
 	import {
 		type BoardRow,
 		cellKey,
-		dayKey,
 		formatDay,
 		formatLongDay,
 		load,
@@ -30,14 +29,14 @@
 		drag,
 		onschedule,
 	}: {
-		days: Date[];
+		days: Temporal.PlainDate[];
 		rows: BoardRow[];
 		/** The orders by cell (see `cellKey`). */
 		cells: Map<string, ScheduleOrder[]>;
 		/** The day to highlight (`yyyy-mm-dd`). */
-		today: string;
+		today: Temporal.PlainDate;
 		/** The orders scheduled on a day, for the count in its header. */
-		ordersOn: (day: Date) => ScheduleOrder[];
+		ordersOn: (day: Temporal.PlainDate) => ScheduleOrder[];
 		drag: ReturnType<typeof createBoardDrag>;
 		onschedule: (order: ScheduleOrder) => void;
 	} = $props();
@@ -55,11 +54,11 @@
 >
 	<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
 		<div class="sticky start-0 top-0 z-30 border-e border-b bg-card p-2"></div>
-		{#each days as day, i (dayKey(day))}
-			{@const isToday = dayKey(day) === today}
+		{#each days as day, i (day.toString())}
+			{@const isToday = day.equals(today)}
 			{@const count = ordersOn(day).length}
 			<div
-				data-day={dayKey(day)}
+				data-day={day.toString()}
 				class={cn(
 					"sticky top-0 z-20 flex items-baseline justify-between gap-1 border-b bg-card p-2",
 					i > 0 && "border-s",
@@ -100,7 +99,7 @@
 					{row.droppable ? row.detail : m.schedule_inactive()}
 				</span>
 			</div>
-			{#each days as day, i (dayKey(day))}
+			{#each days as day, i (day.toString())}
 				{@const key = cellKey(row.id, day)}
 				{@const orders = cells.get(key) ?? []}
 				{@const level = load(orders.length)}
@@ -112,7 +111,7 @@
 						"flex min-h-24 min-w-0 flex-col gap-1 p-1 transition-colors",
 						r > 0 && "border-t",
 						i > 0 && "border-s",
-						dayKey(day) === today && "bg-accent/40",
+						day.equals(today) && "bg-accent/40",
 						row.id !== "unassigned" && level === "over" && "bg-destructive/5",
 						drag.target === key && "bg-primary/10 ring-2 ring-primary ring-inset",
 					)}

@@ -10,7 +10,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { toDateInput } from "#lib/dates.ts";
+	import { getTimeZone } from "#lib/dates.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
@@ -30,7 +30,7 @@
 			orderType: (typeof planOrderTypes)[number];
 			description: string;
 			intervalMonths: number;
-			nextDueOn: Date;
+			nextDueOn: Temporal.PlainDate;
 		};
 		open?: boolean;
 	} = $props();
@@ -96,7 +96,7 @@
 						field={form.fields.nextDueOn}
 						label={m.maintenance_field_next_due()}
 						type="date"
-						value={toDateInput(plan?.nextDueOn ?? new Date())}
+						value={(plan?.nextDueOn ?? Temporal.Now.plainDateISO(getTimeZone())).toString()}
 					/>
 				</div>
 			</Field.FieldGroup>

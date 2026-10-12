@@ -3,6 +3,7 @@ import { expect, test } from "vite-plus/test";
 
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { columns, type EngineerRow } from "#lib/engineers/list/columns.ts";
+import { day } from "#unit/temporal-support.ts";
 
 const engineer = (name: string, fields: Partial<EngineerRow> = {}): EngineerRow => ({
 	id: 1,
@@ -13,7 +14,7 @@ const engineer = (name: string, fields: Partial<EngineerRow> = {}): EngineerRow 
 	region: "North",
 	hourlyRate: 6000,
 	active: true,
-	hiredAt: new Date(2024, 2, 1),
+	hiredAt: day("2024-03-01"),
 	openOrders: 0,
 	...fields,
 });

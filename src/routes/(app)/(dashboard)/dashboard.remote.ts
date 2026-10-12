@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, inArray, min, sql } from "drizzle-orm";
 
-import { DAY, startOfWeek, toDateInput } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -18,8 +18,8 @@ import {
 
 /** Headline numbers and upcoming work for the dashboard. */
 export const getDashboard = forMembers.query(async () => {
-	const now = new Date();
-	const monthAgo = new Date(now.getTime() - 30 * DAY);
+	const now = Temporal.Now.instant();
+	const monthAgo = now.subtract({ hours: 30 * 24 });
 
 	const [open] = await db
 		.select({
@@ -89,9 +89,11 @@ export const getDashboard = forMembers.query(async () => {
  * (then per week in the user's time zone) or status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
  */
 export const getCharts = forMembers.query(async () => {
-	const now = new Date();
-	const weeks = lastWeeks(now);
-	const months = lastMonths(now);
+	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const weeks = lastWeeks(today);
+	const months = lastMonths(today);
+	/** The moment a day starts, in the user's time zone. */
+	const start = (day: Temporal.PlainDate) => day.toZonedDateTime(getTimeZone()).toInstant();
 
 	// Counted per quarter of an hour in the database (every time zone's offset is a whole number of
 	// them), then per week (its Monday, as `yyyy-mm-dd`) here: SQLite knows only the server's time
@@ -100,11 +102,12 @@ export const getCharts = forMembers.query(async () => {
 	const perQuarter = await db
 		.select({ createdAt: min(order.createdAt), status: order.status, count: count() })
 		.from(order)
-		.where(and(inTenant(order), gte(order.createdAt, weeks[0])))
+		.where(and(inTenant(order), gte(order.createdAt, start(weeks[0]))))
 		.groupBy(quarter, order.status);
 	const counts = new Map<string, { week: string; status: OrderStatus; count: number }>();
 	for (const row of perQuarter) {
-		const week = toDateInput(startOfWeek(row.createdAt!));
+		const day = row.createdAt!.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+		const week = day.subtract({ days: day.dayOfWeek - 1 }).toString();
 		const key = `${week}|${row.status}`;
 		const found = counts.get(key);
 		if (found) found.count += row.count;
@@ -129,7 +132,7 @@ export const getCharts = forMembers.query(async () => {
 			and(
 				inTenant(order),
 				inArray(order.status, doneOrderStatuses),
-				gte(order.completedAt, months[0]),
+				gte(order.completedAt, start(months[0])),
 			),
 		);
 	const prices = await priceOrders(done);

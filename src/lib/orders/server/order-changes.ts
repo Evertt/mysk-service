@@ -21,8 +21,10 @@ export const notEditable = (number: string, change: "changed" | "deleted") =>
 		: m.orders_invoiced_cant_delete({ number });
 
 /** When an order with `status` was completed: kept from before, set when it's done, else none. */
-export const completedAt = (status: OrderStatus, existing?: { completedAt: Date | null }) =>
-	isDoneOrder(status) ? (existing?.completedAt ?? new Date()) : null;
+export const completedAt = (
+	status: OrderStatus,
+	existing?: { completedAt: Temporal.Instant | null },
+) => (isDoneOrder(status) ? (existing?.completedAt ?? Temporal.Now.instant()) : null);
 
 /**
  * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it

@@ -17,8 +17,8 @@ import { resolve } from "$app/paths";
 import { parseRoles } from "#lib/auth/index.ts";
 import {
 	formatCents,
-	formatDate,
-	formatDateTime,
+	formatStoredDay,
+	formatStoredMoment,
 	hasLabel,
 	label,
 	type LabelKind,
@@ -104,8 +104,8 @@ const labelled =
 		return hasLabel(kind, text) ? label(kind, text) : humanize(text);
 	};
 const money = (value: unknown) => formatCents(Number(value));
-const day = (value: unknown) => formatDate(new Date(String(value)));
-const moment = (value: unknown) => formatDateTime(new Date(String(value)));
+const day = formatStoredDay;
+const moment = formatStoredMoment;
 /** A saved view's columns (see `column-visibility.ts`): the hidden ones, by id. */
 const hiddenColumns = (value: unknown) =>
 	Object.entries((value ?? {}) as Record<string, boolean>)

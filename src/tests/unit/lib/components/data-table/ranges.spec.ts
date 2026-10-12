@@ -7,7 +7,6 @@ import {
 	datePresets,
 	euroCents,
 	inAnyRange,
-	isDay,
 	isRangeToken,
 	moneyRangeToken,
 	numberInRange,
@@ -18,23 +17,10 @@ import {
 	presetCanBe,
 	presetRange,
 } from "#lib/components/data-table/ranges.ts";
+import { at, day, freezeNow } from "#unit/temporal-support.ts";
 
-/** Wednesday 14 October 2026, in the afternoon. */
-const today = new Date(2026, 9, 14, 15, 30);
-
-describe("isDay", () => {
-	test("takes real days as yyyy-mm-dd", () => {
-		expect(isDay("2026-10-14")).toBe(true);
-		expect(isDay("2028-02-29")).toBe(true);
-	});
-
-	test.each(["2026-02-30", "2027-02-29", "2026-13-01", "2026-1-14", "14-10-2026", "", 20261014])(
-		"refuses %j",
-		(text) => {
-			expect(isDay(text)).toBe(false);
-		},
-	);
-});
+/** Wednesday 14 October 2026. */
+const today = day("2026-10-14");
 
 describe("presets", () => {
 	test.each<[string, string | null, string | null]>([
@@ -69,31 +55,31 @@ describe("presets", () => {
 
 	test("go by the calendar across months, years and leap days", () => {
 		// A Sunday: still the week that began on Monday.
-		expect(presetRange("this-week", new Date(2026, 10, 1))).toEqual({
+		expect(presetRange("this-week", day("2026-11-01"))).toEqual({
 			from: "2026-10-26",
 			to: "2026-11-01",
 		});
 		// A Monday at midnight.
-		expect(presetRange("this-week", new Date(2026, 10, 2))).toEqual({
+		expect(presetRange("this-week", day("2026-11-02"))).toEqual({
 			from: "2026-11-02",
 			to: "2026-11-08",
 		});
-		expect(presetRange("last-month", new Date(2027, 0, 31))).toEqual({
+		expect(presetRange("last-month", day("2027-01-31"))).toEqual({
 			from: "2026-12-01",
 			to: "2026-12-31",
 		});
-		expect(presetRange("next-month", new Date(2028, 0, 31))).toEqual({
+		expect(presetRange("next-month", day("2028-01-31"))).toEqual({
 			from: "2028-02-01",
 			to: "2028-02-29",
 		});
-		expect(presetRange("next-week", new Date(2026, 11, 30))).toEqual({
+		expect(presetRange("next-week", day("2026-12-30"))).toEqual({
 			from: "2027-01-04",
 			to: "2027-01-10",
 		});
 	});
 
 	test("follow the day they're read on", () => {
-		expect(parseDateRange("today", new Date(2026, 11, 31))).toEqual({
+		expect(parseDateRange("today", day("2026-12-31"))).toEqual({
 			from: "2026-12-31",
 			to: "2026-12-31",
 		});
@@ -176,18 +162,18 @@ describe("number ranges in the URL", () => {
 describe("whether a row's value is in a range", () => {
 	test("a date by its day, both ends included", () => {
 		const range = { from: "2026-10-12", to: "2026-10-18" };
-		expect(dateInRange(new Date(2026, 9, 12, 0, 0), range)).toBe(true);
-		expect(dateInRange(new Date(2026, 9, 18, 23, 59), range)).toBe(true);
-		expect(dateInRange(new Date(2026, 9, 19, 0, 0), range)).toBe(false);
-		expect(dateInRange(new Date(2026, 9, 11, 23, 59), range)).toBe(false);
-		expect(dateInRange(new Date(2020, 0, 1), { from: null, to: "2026-10-13" })).toBe(true);
+		expect(dateInRange(at("2026-10-12 00:00"), range)).toBe(true);
+		expect(dateInRange(at("2026-10-18 23:59"), range)).toBe(true);
+		expect(dateInRange(at("2026-10-19 00:00"), range)).toBe(false);
+		expect(dateInRange(at("2026-10-11 23:59"), range)).toBe(false);
+		expect(dateInRange(day("2020-01-01"), { from: null, to: "2026-10-13" })).toBe(true);
 	});
 
 	test("never without a date", () => {
 		const range = { from: null, to: "2026-10-13" };
 		expect(dateInRange(null, range)).toBe(false);
 		expect(dateInRange(undefined, range)).toBe(false);
-		expect(dateInRange(new Date(Number.NaN), range)).toBe(false);
+		expect(dateInRange("2026-10-01", range)).toBe(false);
 	});
 
 	test("a number, both ends included, never without one", () => {
@@ -278,21 +264,23 @@ describe("money", () => {
 
 describe("several values", () => {
 	beforeEach(() => {
-		vi.useFakeTimers({ toFake: ["Date"] });
-		vi.setSystemTime(today);
+		// In the afternoon.
+		freezeNow(at("2026-10-14 15:30"));
 	});
 	afterEach(() => {
-		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	test("keep a row in any of them, `none` the rows without a value", () => {
-		const at = (day: number) => new Date(2026, 9, day, 9);
+		const nine = (date: number) => at(`2026-10-${date} 09:00`);
 		const keeps = (value: unknown, tokens: string[]) => inAnyRange("dateRange", value, tokens);
-		expect(keeps(at(14), ["none", "today"])).toBe(true);
+		expect(keeps(nine(14), ["none", "today"])).toBe(true);
+		// A day as it is.
+		expect(keeps(day("2026-10-14"), ["today"])).toBe(true);
 		expect(keeps(null, ["none", "today"])).toBe(true);
 		expect(keeps(undefined, ["none"])).toBe(true);
-		expect(keeps(at(20), ["none", "today"])).toBe(false);
-		expect(keeps(at(20), ["..2026-10-01", "2026-10-19..2026-10-21"])).toBe(true);
+		expect(keeps(nine(20), ["none", "today"])).toBe(false);
+		expect(keeps(nine(20), ["..2026-10-01", "2026-10-19..2026-10-21"])).toBe(true);
 		expect(inAnyRange("numberRange", 7, ["2", "5..8", "12"])).toBe(true);
 		expect(inAnyRange("numberRange", 9, ["2", "5..8", "12"])).toBe(false);
 		expect(inAnyRange("moneyRange", 1250, ["..12.50"])).toBe(true);

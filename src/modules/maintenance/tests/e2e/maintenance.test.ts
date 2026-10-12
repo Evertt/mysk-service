@@ -13,7 +13,6 @@ import {
 	planActivity,
 	planById,
 	plansOf,
-	seconds,
 	today,
 	unitWithoutPlan,
 } from "./helpers.ts";
@@ -52,8 +51,8 @@ describe("a unit's maintenance plans, in North", () => {
 			order_type: "inspection",
 			description: "Quarterly filter check",
 			interval_months: 3,
-			next_due_on: seconds(due),
-			anchor_day: due.getDate(),
+			next_due_on: dayKey(due),
+			anchor_day: due.day,
 			paused: 0,
 			last_order_id: null,
 		});
@@ -138,7 +137,7 @@ describe("the due list, in North", () => {
 			 join equipment e on e.id = p.equipment_id
 			 where p.organization_id = ? and p.paused = 0 and p.next_due_on < ?
 			 order by p.next_due_on, p.id limit 2`,
-			[north.id, seconds(today)],
+			[north.id, dayKey(today)],
 		);
 		expect(picked[0].id).toBe(plan.id);
 		const ordersBefore = Number(
@@ -189,12 +188,12 @@ describe("the due list, in North", () => {
 			});
 			const now = await planById(was.id);
 			const next = advanceDueDate(
-				new Date(was.next_due_on * 1000),
+				Temporal.PlainDate.from(was.next_due_on),
 				was.interval_months,
 				was.anchor_day,
 			);
 			expect(now).toMatchObject({
-				next_due_on: seconds(next),
+				next_due_on: dayKey(next),
 				last_order_id: order.id,
 				last_order_organization_id: north.id,
 			});
@@ -203,7 +202,7 @@ describe("the due list, in North", () => {
 				[
 					"updated",
 					{
-						nextDueOn: [new Date(was.next_due_on * 1000).toISOString(), next.toISOString()],
+						nextDueOn: [was.next_due_on, next.toString()],
 						lastOrder: [null, order.number],
 					},
 				],
@@ -282,7 +281,7 @@ describe("the dashboard and the equipment list, in North", () => {
 			Number(
 				await value(
 					`select count(*) from equipment e where e.organization_id = ? and ${nextDue} < ?`,
-					[north.id, seconds(today)],
+					[north.id, dayKey(today)],
 				),
 			),
 		);
@@ -341,7 +340,7 @@ describe("a contract's page, in North", () => {
 					description: "Jaarlijkse servicebeurt",
 					order_type: "maintenance",
 					interval_months: 12,
-					next_due_on: seconds(due),
+					next_due_on: dayKey(due),
 				}),
 			]);
 		}

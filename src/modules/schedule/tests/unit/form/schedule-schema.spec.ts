@@ -3,6 +3,7 @@ import { expect, test } from "vite-plus/test";
 
 import { id } from "#lib/schema.ts";
 import { moveFields, scheduleFields } from "#modules/schedule/form/schedule-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (schema: v.GenericSchema, input: Record<string, unknown>) => {
@@ -17,7 +18,7 @@ const move = v.object(moveFields);
 
 test("the dialog's fields become a plan", () => {
 	expect(parse(dialog, { id: "12", engineerId: "3", day: "2026-10-08", time: "13:45" })).toEqual({
-		value: { id: 12, engineerId: 3, day: new Date(2026, 9, 8), time: "13:45" },
+		value: { id: 12, engineerId: 3, day: day("2026-10-08"), time: "13:45" },
 	});
 });
 
@@ -41,7 +42,7 @@ test("a date and a time are required, and must be valid", () => {
 
 test("a move takes ids as numbers, with null for unassigned", () => {
 	expect(parse(move, { id: 12, engineerId: null, day: "2026-10-08", time: "07:30" })).toEqual({
-		value: { id: 12, engineerId: null, day: new Date(2026, 9, 8), time: "07:30" },
+		value: { id: 12, engineerId: null, day: day("2026-10-08"), time: "07:30" },
 	});
 	expect(parse(move, { id: "12", engineerId: 0, day: "2026-10-08", time: "07:30" })).toMatchObject({
 		issues: expect.arrayContaining([expect.any(String)]),

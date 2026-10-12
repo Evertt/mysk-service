@@ -5,6 +5,7 @@
 import { and, eq, inArray, lt } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
@@ -28,7 +29,9 @@ export const withPlanJoins = <T extends SQLiteSelect>(query: T) =>
  * The due list's columns in SQL, checked against its definition. Call it for each request: the
  * tenant and today are the request's.
  */
-export const dueSql = (now = new Date()): ListSql<typeof dueList.columns> => ({
+export const dueSql = (
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+): ListSql<typeof dueList.columns> => ({
 	list: dueList,
 	from: (fields) => withPlanJoins(db.select(fields).from(maintenancePlan).$dynamic()),
 	columns: {
@@ -47,7 +50,9 @@ export const dueSql = (now = new Date()): ListSql<typeof dueList.columns> => ({
 			filter: (ranges) =>
 				lt(
 					maintenancePlan.nextDueOn,
-					new Date(Math.max(...ranges.map((range) => dueBefore(range, now).getTime()))),
+					ranges
+						.map((range) => dueBefore(range, today))
+						.reduce((a, b) => (Temporal.PlainDate.compare(a, b) > 0 ? a : b)),
 				),
 		},
 	},

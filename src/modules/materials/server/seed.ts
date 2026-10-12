@@ -1,11 +1,12 @@
+import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
+import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
 /**
  * The materials module's demo data (see `#lib/server/db/seed/module-seed.ts`): each tenant's
  * catalog with its stock, its orders' material lines and the stock ledger that adds up to it. The
  * catalog and the lines are drawn in the middle of the core's generation (`during`), where the core
  * drew them before materials were a module, so the demo data stays the same.
  */
-import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
-import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
+import { toMoment } from "#lib/server/db/seed/temporal.ts";
 
 import type { MaterialsDraft } from "../api/seed.ts";
 import { material, orderLine, stockMovement } from "./schema.ts";
@@ -76,6 +77,7 @@ export default defineSeed<MaterialsSeed>({
 				organizationId,
 				materialId: m.materialId + offset,
 				orderId: m.orderId && orderIdOf(m.orderId),
+				createdAt: toMoment(m.createdAt),
 			}));
 			await insertAll(materials, (chunk) => tx.insert(material).values(chunk));
 			await insertAll(orderLines, (chunk) => tx.insert(orderLine).values(chunk));

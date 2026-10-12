@@ -9,6 +9,7 @@ import {
 	type SeedOrder,
 	type TenantDraft,
 } from "#lib/server/db/seed/module-seed.ts";
+import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 import type { MaterialsDraft } from "#modules/materials/api/seed.ts";
 
 import { type ContractLevel, contractNumberFormat, defaultResponseHours } from "../model.ts";
@@ -306,7 +307,11 @@ export default defineSeed<ContractsSeed>({
 	// A month's fee for each month of the customers' contracts, like `invoicing.billableItems`.
 	billableItems({ terms, contractOffset }, { from, until }): SeedBillableItem[] {
 		return terms.flatMap((term) =>
-			contractMonths(term, from, until).map((month) => ({
+			contractMonths(
+				{ startsOn: toDay(term.startsOn), endsOn: toDay(term.endsOn) },
+				from,
+				until,
+			).map((month) => ({
 				customerId: term.customerId,
 				...monthlyFee(
 					{ ...term, id: term.id + contractOffset },
@@ -326,6 +331,9 @@ export default defineSeed<ContractsSeed>({
 				organizationId: tenant.id,
 				id: term.id + contractOffset,
 				customerId: customerId(term),
+				startsOn: toDay(term.startsOn),
+				endsOn: toDay(term.endsOn),
+				createdAt: toMoment(term.createdAt),
 			}));
 			const coverage = terms.flatMap((term) =>
 				term.equipmentIds.map((equipmentId) => ({

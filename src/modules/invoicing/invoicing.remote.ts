@@ -6,6 +6,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
@@ -57,7 +58,7 @@ export const getOrderInvoice = query(v.string(), async (number) => {
  * first), and how many drafts wait to be issued.
  */
 export const getReceivables = query(async () => {
-	const now = new Date();
+	const today = Temporal.Now.plainDateISO(getTimeZone());
 	const subtotals = db
 		.select({
 			invoiceId: invoiceLine.invoiceId,
@@ -87,8 +88,10 @@ export const getReceivables = query(async () => {
 		total: invoiceTotals([{ amount: subtotal }], row.vatRate).total,
 	}));
 	const overdue = priced
-		.filter((row) => isOverdue(row, now))
-		.sort((a, b) => a.dueOn!.getTime() - b.dueOn!.getTime() || a.number.localeCompare(b.number));
+		.filter((row) => isOverdue(row, today))
+		.sort(
+			(a, b) => Temporal.PlainDate.compare(a.dueOn!, b.dueOn!) || a.number.localeCompare(b.number),
+		);
 
 	const [drafts] = await db
 		.select({ n: count() })

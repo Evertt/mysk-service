@@ -1,4 +1,4 @@
-import { DAY, startOfDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import {
 	isDoneOrder,
 	isOpenOrder,
@@ -21,9 +21,9 @@ export interface HistoryOrder {
 	type: OrderType;
 	status: OrderStatus;
 	description: string;
-	scheduledFor: Date | null;
-	completedAt: Date | null;
-	createdAt: Date;
+	scheduledFor: Temporal.Instant | null;
+	completedAt: Temporal.Instant | null;
+	createdAt: Temporal.Instant;
 	laborHours: number;
 	engineer: { id: number; name: string } | null;
 	/**
@@ -33,16 +33,20 @@ export interface HistoryOrder {
 	cost: { costs: OrderCost[]; labor: number; adjustments: PriceAdjustment[]; total: number };
 }
 
+/** Something that happened to a unit, on a day (an order's in the user's time zone). */
 export type ServiceEvent =
-	| { kind: "installation"; date: Date }
-	| { kind: "order"; date: Date; order: HistoryOrder }
+	| { kind: "installation"; date: Temporal.PlainDate }
+	| { kind: "order"; date: Temporal.PlainDate; order: HistoryOrder }
 	/** The warranty's last day; `upcoming` while it still covers work. */
-	| { kind: "warranty"; date: Date; upcoming: boolean };
+	| { kind: "warranty"; date: Temporal.PlainDate; upcoming: boolean };
 
 /** When an order happened: when it was completed, else when it's scheduled, else when it was made. */
 export const orderDate = (
 	order: Pick<HistoryOrder, "completedAt" | "scheduledFor" | "createdAt">,
 ) => order.completedAt ?? order.scheduledFor ?? order.createdAt;
+
+/** A moment's day, in the user's time zone. */
+const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
 
 /** On the same day, the warranty's end goes above orders, and the installation below them. */
 const rank: Record<ServiceEvent["kind"], number> = { warranty: 0, order: 1, installation: 2 };
@@ -52,13 +56,13 @@ const rank: Record<ServiceEvent["kind"], number> = { warranty: 0, order: 1, inst
  * and the end of its warranty, which may still be ahead.
  */
 export function buildTimeline(
-	unit: { installedAt: Date; warrantyUntil: Date },
+	unit: { installedAt: Temporal.PlainDate; warrantyUntil: Temporal.PlainDate },
 	orders: HistoryOrder[],
-	now = new Date(),
+	now: Temporal.Instant | Temporal.PlainDate = Temporal.Now.instant(),
 ): ServiceEvent[] {
 	const events: ServiceEvent[] = [
 		{ kind: "installation", date: unit.installedAt },
-		...orders.map((order) => ({ kind: "order" as const, date: orderDate(order), order })),
+		...orders.map((order) => ({ kind: "order" as const, date: dayOf(orderDate(order)), order })),
 		{
 			kind: "warranty",
 			date: unit.warrantyUntil,
@@ -67,17 +71,21 @@ export function buildTimeline(
 	];
 	return events.sort(
 		(a, b) =>
-			b.date.getTime() - a.date.getTime() ||
+			Temporal.PlainDate.compare(b.date, a.date) ||
 			rank[a.kind] - rank[b.kind] ||
-			(a.kind === "order" && b.kind === "order" ? b.order.id - a.order.id : 0),
+			(a.kind === "order" && b.kind === "order"
+				? Temporal.Instant.compare(orderDate(b.order), orderDate(a.order)) ||
+					b.order.id - a.order.id
+				: 0),
 	);
 }
 
-/** Calendar days from one date to another, e.g. 1 from late on Monday to early on Tuesday. */
-export function daysBetween(from: Date, to: Date) {
-	// Rounded, as a day across a daylight saving change is an hour shorter or longer.
-	return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / DAY);
-}
+/**
+ * Calendar days from one moment to another in the user's time zone, e.g. 1 from late on Monday
+ * to early on Tuesday.
+ */
+export const daysBetween = (from: Temporal.Instant, to: Temporal.Instant) =>
+	dayOf(from).until(dayOf(to)).days;
 
 export interface ServiceStats {
 	/** All orders on the unit, of every status. */
@@ -90,7 +98,7 @@ export interface ServiceStats {
 	/** What the completed and invoiced orders cost, after adjustments, in cents. */
 	cost: number;
 	/** When the latest completed or invoiced order was completed. */
-	lastService: Date | null;
+	lastService: Temporal.Instant | null;
 	/** Completed or invoiced repairs. */
 	repairs: number;
 	daysSinceLastRepair: number | null;
@@ -99,10 +107,10 @@ export interface ServiceStats {
 }
 
 /** The figures of a unit's service history. Repairs count once they are done, when they were. */
-export function serviceStats(orders: HistoryOrder[], now = new Date()): ServiceStats {
+export function serviceStats(orders: HistoryOrder[], now = Temporal.Now.instant()): ServiceStats {
 	const done = orders.filter((order) => isDoneOrder(order.status) && order.completedAt);
 	const completions = (list: HistoryOrder[]) =>
-		list.map((order) => order.completedAt as Date).sort((a, b) => a.getTime() - b.getTime());
+		list.map((order) => order.completedAt!).sort((a, b) => Temporal.Instant.compare(a, b));
 	const services = completions(done);
 	const repairs = completions(done.filter((order) => order.type === "repair"));
 	const lastRepair = repairs.at(-1);

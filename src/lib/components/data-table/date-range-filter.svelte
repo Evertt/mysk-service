@@ -35,6 +35,7 @@
 </script>
 
 <script lang="ts">
+	import { isDay } from "#lib/dates.ts";
 	import { dateFormatter, formatDate } from "#lib/i18n/format.ts";
 
 	import RangeFilter from "./range-filter.svelte";
@@ -42,9 +43,7 @@
 		type DateRange,
 		dateRangeToken,
 		datePresets,
-		dayStart,
 		isDatePreset,
-		isDay,
 		parseDateRange,
 		presetCanBe,
 		presetRange,
@@ -74,13 +73,14 @@
 
 	/** An end of a range in words: a day, or a preset's name. */
 	const endLabel = (end: string, format: typeof formatDate) =>
-		isDatePreset(end) ? presetLabels[end]() : format(dayStart(end));
+		isDatePreset(end) ? presetLabels[end]() : format(Temporal.PlainDate.from(end));
 
 	/** A range in words, e.g. `1–7 Oct 2026`, `From today` or `Until 7 Oct 2026`. */
 	function describe({ from, to }: DateRange, format: typeof formatDate = formatDate) {
 		if (from !== null && to !== null) {
 			if (from === to) return endLabel(from, format);
-			if (isDay(from) && isDay(to)) return format.range(dayStart(from), dayStart(to));
+			if (isDay(from) && isDay(to))
+				return format.range(Temporal.PlainDate.from(from), Temporal.PlainDate.from(to));
 			return m.common_table_range_between({
 				from: endLabel(from, format),
 				to: endLabel(to, format),

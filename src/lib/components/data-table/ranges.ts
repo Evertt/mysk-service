@@ -23,15 +23,7 @@
  * week", "due from today") means the current week whenever it's opened; the list's query
  * (`toListQuery()`) has it as the days it means on the day it's built, in the user's time zone.
  */
-import {
-	addDays,
-	dateParts,
-	fromDateInput,
-	isDateInput,
-	startOfMonth,
-	startOfWeek,
-	toDateInput,
-} from "#lib/dates.ts";
+import { getTimeZone, isDay } from "#lib/dates.ts";
 
 /** How a range filter is written in the URL, besides a set of values (`"set"`). */
 export type RangeGrammar = "dateRange" | "numberRange" | "moneyRange";
@@ -80,13 +72,6 @@ export const isDatePreset = (token: string): token is DatePreset =>
 /** Between the ends in the URL. */
 const separator = "..";
 
-/** Whether `text` is a real day as `yyyy-mm-dd`, e.g. not `2026-02-30`. */
-export const isDay = (text: unknown): text is string =>
-	typeof text === "string" && isDateInput(text);
-
-/** The start of a day (`yyyy-mm-dd`), in the user's time zone. */
-export const dayStart = (day: string) => fromDateInput(day);
-
 /** The largest number a number range takes, either way: well within what SQLite and JS agree on. */
 const rangeNumberLimit = 1e12;
 
@@ -118,49 +103,61 @@ function ends(token: string): [string, string] | undefined {
 	return rest.includes(separator) ? undefined : [token.slice(0, at), rest];
 }
 
-/** The days a preset means, on `today` (local). */
-export function presetRange(preset: DatePreset, today = new Date()): DateRange {
-	const day = (date: Date) => toDateInput(date);
-	const span = (from: Date, to: Date) => ({ from: day(from), to: day(to) });
-	const week = startOfWeek(today);
-	const month = startOfMonth(today);
-	const monthFrom = (offset: number) => startOfMonth(today, offset);
-	const { year } = dateParts(today);
+/** The days a preset means, on `today` (the user's, by default). */
+export function presetRange(
+	preset: DatePreset,
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+): DateRange {
+	const span = (from: Temporal.PlainDate, to: Temporal.PlainDate) => ({
+		from: from.toString(),
+		to: to.toString(),
+	});
+	/** The days from the start of `today`'s week, month or year, `offset` of them on, for one. */
+	const period = (unit: "weeks" | "months" | "years", offset = 0) => {
+		const start = (
+			unit === "weeks"
+				? today.subtract({ days: today.dayOfWeek - 1 })
+				: today.with(unit === "months" ? { day: 1 } : { month: 1, day: 1 })
+		).add({ [unit]: offset });
+		return span(start, start.add({ [unit]: 1 }).subtract({ days: 1 }));
+	};
+	const days = (from: number, to: number) =>
+		span(today.add({ days: from }), today.add({ days: to }));
 	switch (preset) {
 		case "today":
-			return span(today, today);
+			return days(0, 0);
 		case "yesterday":
-			return span(addDays(today, -1), addDays(today, -1));
+			return days(-1, -1);
 		case "tomorrow":
-			return span(addDays(today, 1), addDays(today, 1));
+			return days(1, 1);
 		case "this-week":
-			return span(week, addDays(week, 6));
+			return period("weeks");
 		case "last-week":
-			return span(addDays(week, -7), addDays(week, -1));
+			return period("weeks", -1);
 		case "next-week":
-			return span(addDays(week, 7), addDays(week, 13));
+			return period("weeks", 1);
 		case "this-month":
-			return span(month, addDays(monthFrom(1), -1));
+			return period("months");
 		case "last-month":
-			return span(monthFrom(-1), addDays(month, -1));
+			return period("months", -1);
 		case "next-month":
-			return span(monthFrom(1), addDays(monthFrom(2), -1));
+			return period("months", 1);
 		case "this-year":
-			return { from: `${year}-01-01`, to: `${year}-12-31` };
+			return period("years");
 		case "last-year":
-			return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
+			return period("years", -1);
 		case "last-7-days":
-			return span(addDays(today, -6), today);
+			return days(-6, 0);
 		case "next-7-days":
-			return span(today, addDays(today, 6));
+			return days(0, 6);
 		case "last-30-days":
-			return span(addDays(today, -29), today);
+			return days(-29, 0);
 		case "next-30-days":
-			return span(today, addDays(today, 29));
+			return days(0, 29);
 		case "before-today":
-			return { from: null, to: day(addDays(today, -1)) };
+			return { from: null, to: today.subtract({ days: 1 }).toString() };
 		case "from-today":
-			return { from: day(today), to: null };
+			return { from: today.toString(), to: null };
 	}
 }
 
@@ -173,7 +170,7 @@ export const presetCanBe = (preset: DatePreset, end: keyof DateRange) =>
  * last as the end (`undefined` for one without that day, e.g. `before-today` as the start, or for
  * what isn't a day or a preset).
  */
-function dateEnd(text: string, end: keyof DateRange, today: Date) {
+function dateEnd(text: string, end: keyof DateRange, today: Temporal.PlainDate) {
 	if (isDay(text)) return text;
 	return isDatePreset(text) ? (presetRange(text, today)[end] ?? undefined) : undefined;
 }
@@ -183,7 +180,10 @@ function dateEnd(text: string, end: keyof DateRange, today: Date) {
  * aren't days or presets (or can't be that end), days that don't exist, no end at all, or the end
  * before the start.
  */
-export function parseDateRange(token: string, today = new Date()): DateRange | undefined {
+export function parseDateRange(
+	token: string,
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+): DateRange | undefined {
 	const text = token.trim();
 	// A preset on its own is its days, also those with an open end.
 	if (isDatePreset(text)) return presetRange(text, today);
@@ -258,7 +258,11 @@ export function parseMoneyRange(token: string): NumberRange | undefined {
 export const moneyRangeToken = (range: NumberRange) => rangeToken(range, centsEuros);
 
 /** A token as a range in a grammar, if it is one. */
-function parseRange(grammar: RangeGrammar, token: string, today = new Date()) {
+function parseRange(
+	grammar: RangeGrammar,
+	token: string,
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+) {
 	if (grammar === "dateRange") return parseDateRange(token, today);
 	return grammar === "numberRange" ? parseNumberRange(token) : parseMoneyRange(token);
 }
@@ -269,8 +273,14 @@ export const isRangeToken = (grammar: RangeGrammar, token: string) =>
 
 /** Whether a date (a row's) is in a range of days; never when it has none. */
 export function dateInRange(value: unknown, { from, to }: DateRange) {
-	if (!(value instanceof Date) || Number.isNaN(value.getTime())) return false;
-	const day = toDateInput(value);
+	const day =
+		value instanceof Temporal.PlainDate
+			? value.toString()
+			: value instanceof Temporal.Instant
+				? value.toZonedDateTimeISO(getTimeZone()).toPlainDate().toString()
+				: undefined;
+	if (day === undefined) return false;
+	// Days as `yyyy-mm-dd` sort as text.
 	return (from === null || day >= from) && (to === null || day <= to);
 }
 
@@ -286,7 +296,7 @@ export function numberInRange(value: unknown, { from, to }: NumberRange) {
  * with none left, every row is.
  */
 export function inAnyRange(grammar: RangeGrammar, value: unknown, tokens: readonly string[]) {
-	const today = new Date();
+	const today = Temporal.Now.plainDateISO(getTimeZone());
 	let any = false;
 	for (const token of tokens) {
 		if (token.trim() === none) {

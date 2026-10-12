@@ -3,7 +3,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { atTime } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -120,7 +120,11 @@ async function saveOrder(id: number | null, input: OrderInput) {
 
 		const values = {
 			...fields,
-			scheduledFor: fields.scheduledFor && atTime(fields.scheduledFor, scheduledTime ?? "00:00"),
+			scheduledFor: fields.scheduledFor
+				? fields.scheduledFor
+						.toZonedDateTime({ timeZone: getTimeZone(), plainTime: scheduledTime ?? "00:00" })
+						.toInstant()
+				: null,
 			// Keep the original completion date; set or clear it when the status changes.
 			completedAt: completedAt(fields.status, existing),
 		};

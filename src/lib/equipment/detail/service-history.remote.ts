@@ -51,6 +51,6 @@ export const getServiceHistory = forMembers.query(v.string(), async (serialNumbe
 		engineer: engineer && { id: engineer.id, name: engineer.name },
 		cost: prices[i],
 	}));
-	const now = new Date();
+	const now = Temporal.Now.instant();
 	return { events: buildTimeline(unit, history, now), stats: serviceStats(history, now) };
 });

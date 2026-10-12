@@ -9,33 +9,40 @@ import {
 	plannedTime,
 	signature,
 } from "#routes/(field)/my/work.ts";
+import { at, day } from "#unit/temporal-support.ts";
 
 describe("groupByDay", () => {
-	const today = new Date(2026, 9, 7, 7, 30);
-	const at = (day: number, hours: number) => ({
-		id: `${day}-${hours}`,
-		scheduledFor: new Date(2026, 9, day, hours),
+	const today = day("2026-10-07");
+	/** An order planned on a day of October 2026, at an hour. */
+	const planned = (date: number, hours: number) => ({
+		id: `${date}-${hours}`,
+		scheduledFor: at(
+			`2026-10-${String(date).padStart(2, "0")} ${String(hours).padStart(2, "0")}:00`,
+		),
 	});
 
 	test("groups by day, soonest first, each day by time", () => {
-		const groups = groupByDay([at(9, 10), at(7, 14), at(8, 9), at(7, 8)], today);
+		const groups = groupByDay(
+			[planned(9, 10), planned(7, 14), planned(8, 9), planned(7, 8)],
+			today,
+		);
 		expect(groups.map((g) => [g.label, g.orders.map((o) => o.id)])).toEqual([
 			["Today", ["7-8", "7-14"]],
 			["Tomorrow", ["8-9"]],
 			["Friday 9 October", ["9-10"]],
 		]);
-		expect(groups[0].day).toEqual(new Date(2026, 9, 7));
+		expect(groups[0].day).toEqual(day("2026-10-07"));
 	});
 
 	test("unfinished work from earlier days is today's, first", () => {
-		const groups = groupByDay([at(7, 9), at(5, 13)], today);
+		const groups = groupByDay([planned(7, 9), planned(5, 13)], today);
 		expect(groups.map((g) => [g.label, g.orders.map((o) => o.id)])).toEqual([
 			["Today", ["5-13", "7-9"]],
 		]);
 	});
 
 	test("orders without a date come last", () => {
-		const groups = groupByDay([{ id: "none", scheduledFor: null }, at(8, 9)], today);
+		const groups = groupByDay([{ id: "none", scheduledFor: null }, planned(8, 9)], today);
 		expect(groups.map((g) => g.label)).toEqual(["Tomorrow", "Not planned yet"]);
 		expect(groups[1].day).toBeNull();
 	});
@@ -45,11 +52,11 @@ describe("groupByDay", () => {
 	});
 });
 
-test("days are labelled relative to today, across midnight", () => {
-	const today = new Date(2026, 9, 7, 23, 59);
-	expect(dayLabel(new Date(2026, 9, 7, 0, 1), today)).toBe("Today");
-	expect(dayLabel(new Date(2026, 9, 8, 0, 1), today)).toBe("Tomorrow");
-	expect(dayLabel(new Date(2026, 9, 12), today)).toBe("Monday 12 October");
+test("days are labelled relative to today", () => {
+	const today = day("2026-10-07");
+	expect(dayLabel(day("2026-10-07"), today)).toBe("Today");
+	expect(dayLabel(day("2026-10-08"), today)).toBe("Tomorrow");
+	expect(dayLabel(day("2026-10-12"), today)).toBe("Monday 12 October");
 });
 
 describe("in Dutch", () => {
@@ -58,11 +65,11 @@ describe("in Dutch", () => {
 
 	test("days and groups are labelled in Dutch", () => {
 		overwriteGetLocale(() => "nl");
-		const today = new Date(2026, 9, 7, 7, 30);
-		expect(dayLabel(new Date(2026, 9, 7, 13), today)).toBe("Vandaag");
-		expect(dayLabel(new Date(2026, 9, 8, 9), today)).toBe("Morgen");
-		expect(dayLabel(new Date(2026, 9, 12), today)).toBe("maandag 12 oktober");
-		expect(plannedTime(new Date(2026, 9, 6, 2, 23), today)).toBe("6 okt, 02:23");
+		const today = day("2026-10-07");
+		expect(dayLabel(day("2026-10-07"), today)).toBe("Vandaag");
+		expect(dayLabel(day("2026-10-08"), today)).toBe("Morgen");
+		expect(dayLabel(day("2026-10-12"), today)).toBe("maandag 12 oktober");
+		expect(plannedTime(at("2026-10-06 02:23"), today)).toBe("6 okt, 02:23");
 		const groups = groupByDay([{ id: "none", scheduledFor: null }], today);
 		expect(groups.map((g) => g.label)).toEqual(["Nog niet ingepland"]);
 	});
@@ -75,10 +82,10 @@ describe("in Dutch", () => {
 });
 
 test("a card shows the time, and the day too for work left over from an earlier day", () => {
-	const today = new Date(2026, 9, 7, 7, 30);
-	expect(plannedTime(new Date(2026, 9, 7, 13, 30), today)).toBe("13:30");
-	expect(plannedTime(new Date(2026, 9, 8, 9, 0), today)).toBe("09:00");
-	expect(plannedTime(new Date(2026, 9, 6, 2, 23), today)).toBe("6 Oct, 02:23");
+	const today = day("2026-10-07");
+	expect(plannedTime(at("2026-10-07 13:30"), today)).toBe("13:30");
+	expect(plannedTime(at("2026-10-08 09:00"), today)).toBe("09:00");
+	expect(plannedTime(at("2026-10-06 02:23"), today)).toBe("6 Oct, 02:23");
 });
 
 describe("signature", () => {

@@ -9,6 +9,7 @@ import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type EquipmentRow } from "#lib/equipment/list/columns.ts";
 import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
 import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
+import { day } from "#unit/temporal-support.ts";
 
 const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): EquipmentRow => ({
 	id: 1,
@@ -17,8 +18,8 @@ const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): Equipme
 	model: "C15",
 	category: "generator",
 	status: "operational",
-	installedAt: new Date(2025, 4, 1),
-	warrantyUntil: new Date(2028, 3, 30),
+	installedAt: day("2025-05-01"),
+	warrantyUntil: day("2028-04-30"),
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
 	openOrders: 0,
 	moduleValues: {},

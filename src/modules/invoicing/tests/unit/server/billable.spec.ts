@@ -4,6 +4,7 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 import { billableItems } from "#modules/invoicing/api/extensions.ts";
 import { offeredItems } from "#modules/invoicing/server/billable.ts";
+import { day } from "#unit/temporal-support.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
@@ -15,9 +16,9 @@ vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
 }));
 
 test("billable items come from each module that is on and has any, by date", async () => {
-	const period = { from: new Date(2026, 0, 1), until: new Date(2026, 9, 7) };
+	const period = { from: day("2026-01-01"), until: day("2026-10-07") };
 	const asked: unknown[] = [];
-	const item = (reference: string, date: Date) => ({
+	const item = (reference: string, date: Temporal.PlainDate) => ({
 		reference,
 		description: reference,
 		quantity: 1,
@@ -28,12 +29,12 @@ test("billable items come from each module that is on and has any, by date", asy
 		defineServerModule("fees" as ModuleId, [
 			contribute(billableItems, async (input) => {
 				asked.push(input);
-				return [item("fees:2", new Date(2026, 8, 1)), item("fees:1", new Date(2026, 7, 1))];
+				return [item("fees:2", day("2026-09-01")), item("fees:1", day("2026-08-01"))];
 			}),
 		]),
 		defineServerModule("nothing" as ModuleId, []),
 		defineServerModule("rentals" as ModuleId, [
-			contribute(billableItems, async () => [item("rentals:1", new Date(2026, 7, 15))]),
+			contribute(billableItems, async () => [item("rentals:1", day("2026-08-15"))]),
 		]),
 	];
 

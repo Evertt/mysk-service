@@ -16,7 +16,7 @@
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
-import { addDays, nextDay, startOfDay } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 import type { InvoiceStatus } from "./model.ts";
@@ -27,16 +27,19 @@ import type { InvoiceStatus } from "./model.ts";
 export const invoiceStates = ["draft", "sent", "overdue", "paid", "void"] as const;
 export type InvoiceState = (typeof invoiceStates)[number];
 
-/** Whether a sent invoice is overdue at `now`: from the day after its due date. */
+/** Whether a sent invoice is overdue `today` (the user's): from the day after its due date. */
 export const isOverdue = (
-	invoice: { status: InvoiceStatus; dueOn: Date | null },
-	now = new Date(),
-) => invoice.status === "sent" && !!invoice.dueOn && now >= nextDay(invoice.dueOn);
+	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+) =>
+	invoice.status === "sent" &&
+	!!invoice.dueOn &&
+	Temporal.PlainDate.compare(today, invoice.dueOn) > 0;
 
 export const invoiceState = (
-	invoice: { status: InvoiceStatus; dueOn: Date | null },
-	now = new Date(),
-): InvoiceState => (isOverdue(invoice, now) ? "overdue" : invoice.status);
+	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
+	today = Temporal.Now.plainDateISO(getTimeZone()),
+): InvoiceState => (isOverdue(invoice, today) ? "overdue" : invoice.status);
 
 /** Where an invoice of each status can go next. */
 const nextStatuses: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
@@ -51,12 +54,6 @@ export const canChange = (from: InvoiceStatus, to: InvoiceStatus) =>
 
 /** Only drafts can have their lines and terms changed. */
 export const isEditable = (status: InvoiceStatus) => status === "draft";
-
-/** Today at midnight, in the user's time zone. */
-export const today = (now = new Date()) => startOfDay(now);
-
-/** The last day to pay an invoice issued on `issuedOn` with a term of `days`. */
-export const dueDate = (issuedOn: Date, days: number) => addDays(startOfDay(issuedOn), days);
 
 // --- Amounts ---------------------------------------------------------------------------------
 

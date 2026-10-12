@@ -47,7 +47,7 @@ export const activeContract = async () =>
 		await rows<ActiveContract>(
 			`select k.id, k.number, k.customer_id, ce.equipment_id from contract k
 			 join contract_equipment ce on ce.contract_id = k.id where k.organization_id = ?
-			 and k.starts_on <= unixepoch() and k.ends_on + 86400 > unixepoch() order by k.id limit 1`,
+			 and k.starts_on <= date('now', 'localtime') and k.ends_on >= date('now', 'localtime') order by k.id limit 1`,
 			[north.id],
 		)
 	)[0];

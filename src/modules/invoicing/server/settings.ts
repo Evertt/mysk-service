@@ -1,7 +1,7 @@
 /** The tenant's invoicing settings: the defaults for the invoices it makes. */
 import { eq } from "drizzle-orm";
 
-import { startOfMonth } from "#lib/dates.ts";
+import { getTimeZone } from "#lib/dates.ts";
 import { requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -17,7 +17,7 @@ export async function settingsOf(organizationId = requireMember().organizationId
 	if (found) return found;
 	await db
 		.insert(invoicingSettings)
-		.values({ organizationId, billFrom: startOfMonth(new Date()) })
+		.values({ organizationId, billFrom: Temporal.Now.plainDateISO(getTimeZone()).with({ day: 1 }) })
 		.onConflictDoNothing();
 	return (await db.query.invoicingSettings.findFirst({ where }))!;
 }

@@ -22,7 +22,7 @@ import {
 } from "#lib/models.ts";
 
 import { user } from "./auth.schema.ts";
-import { createdAt, organizationId } from "./columns.ts";
+import { createdAt, day, moment, organizationId } from "./columns.ts";
 
 /** A company that owns equipment and places orders. */
 export const customer = sqliteTable(
@@ -63,7 +63,7 @@ export const engineer = sqliteTable(
 		/** In cents. */
 		hourlyRate: integer("hourly_rate").notNull(),
 		active: integer("active", { mode: "boolean" }).notNull().default(true),
-		hiredAt: integer("hired_at", { mode: "timestamp" }).notNull(),
+		hiredAt: day("hired_at").notNull(),
 		/** The user account they sign in to the engineer portal with, if any. */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 	},
@@ -89,8 +89,8 @@ export const equipment = sqliteTable(
 		category: text("category", { enum: equipmentCategories }).notNull(),
 		status: text("status", { enum: equipmentStatuses }).notNull(),
 		customerId: integer("customer_id").notNull(),
-		installedAt: integer("installed_at", { mode: "timestamp" }).notNull(),
-		warrantyUntil: integer("warranty_until", { mode: "timestamp" }).notNull(),
+		installedAt: day("installed_at").notNull(),
+		warrantyUntil: day("warranty_until").notNull(),
 	},
 	(table) => [
 		// Unique within a tenant; another tenant may use the same serialNumber.
@@ -127,8 +127,8 @@ export const order = sqliteTable(
 		status: text("status", { enum: orderStatuses }).notNull(),
 		priority: text("priority", { enum: orderPriorities }).notNull(),
 		description: text("description").notNull(),
-		scheduledFor: integer("scheduled_for", { mode: "timestamp" }),
-		completedAt: integer("completed_at", { mode: "timestamp" }),
+		scheduledFor: moment("scheduled_for"),
+		completedAt: moment("completed_at"),
 		laborHours: real("labor_hours").notNull().default(0),
 		createdAt: createdAt(),
 	},
@@ -243,7 +243,7 @@ export const orderSignoff = sqliteTable(
 		signature: text("signature").notNull(),
 		/** Who collected it; empty once their account is deleted. */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
-		signedAt: integer("signed_at", { mode: "timestamp" }).notNull(),
+		signedAt: moment("signed_at").notNull(),
 	},
 	(table) => [
 		foreignKey({
@@ -295,10 +295,10 @@ export const savedView = sqliteTable(
 		/** Whether every member of the organization sees it. */
 		shared: integer("shared", { mode: "boolean" }).notNull().default(false),
 		createdAt: createdAt(),
-		updatedAt: integer("updated_at", { mode: "timestamp" })
+		updatedAt: moment("updated_at")
 			.notNull()
 			.default(sql`(unixepoch())`)
-			.$onUpdate(() => new Date()),
+			.$onUpdate(() => Temporal.Now.instant()),
 	},
 	(table) => [
 		// A user's views of a table have different names.
@@ -337,10 +337,10 @@ export const tableMemory = sqliteTable(
 		 * simply not found.
 		 */
 		viewId: integer("view_id"),
-		updatedAt: integer("updated_at", { mode: "timestamp" })
+		updatedAt: moment("updated_at")
 			.notNull()
 			.default(sql`(unixepoch())`)
-			.$onUpdate(() => new Date()),
+			.$onUpdate(() => Temporal.Now.instant()),
 	},
 	(table) => [primaryKey({ columns: [table.organizationId, table.userId, table.tableKey] })],
 );

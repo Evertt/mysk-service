@@ -9,7 +9,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
 
 import { invoiceStatuses } from "../model.ts";
@@ -35,11 +35,11 @@ export const invoice = sqliteTable(
 		/** In percent, e.g. 21: the organization's rate, fixed when the invoice is issued. */
 		vatRate: real("vat_rate").notNull(),
 		/** The day it was issued (sent), at local midnight; none while a draft. */
-		issuedOn: integer("issued_on", { mode: "timestamp" }),
+		issuedOn: day("issued_on"),
 		/** The last day to pay, at local midnight; none while a draft. */
-		dueOn: integer("due_on", { mode: "timestamp" }),
-		paidOn: integer("paid_on", { mode: "timestamp" }),
-		voidedAt: integer("voided_at", { mode: "timestamp" }),
+		dueOn: day("due_on"),
+		paidOn: day("paid_on"),
+		voidedAt: moment("voided_at"),
 		notes: text("notes"),
 		createdAt: createdAt(),
 	},
@@ -105,7 +105,7 @@ export const invoicingSettings = sqliteTable("invoicing_settings", {
 	 * Other modules' items (e.g. contract fees) are billed from this day on: earlier ones were
 	 * billed before the tenant invoiced through the app.
 	 */
-	billFrom: integer("bill_from", { mode: "timestamp" }).notNull(),
+	billFrom: day("bill_from").notNull(),
 });
 
 export const invoiceRelations = relations(invoice, ({ one, many }) => ({

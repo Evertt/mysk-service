@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { type DateRange, dayStart, presetRange } from "#lib/components/data-table/ranges.ts";
-import { addDays, nextDay, toDateInput } from "#lib/dates.ts";
+import { type DateRange, presetRange } from "#lib/components/data-table/ranges.ts";
 import { formatDate, formatNumber } from "#lib/i18n/format.ts";
 
 import { afresh, isRemote, organizations, rows, useApp, value } from "./app.ts";
@@ -10,11 +9,18 @@ import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 const { north, south } = organizations;
 const app = useApp();
 
+/** The moment a day starts, in seconds, in the machine's time zone (the test server's). */
+const start = (day: Temporal.PlainDate) =>
+	day.toZonedDateTime(Temporal.Now.timeZoneId()).epochMilliseconds / 1000;
+
 /** A range of days in SQL: from the first day's start, before the start of the day after the last. */
 const bounds = ({ from, to }: DateRange) => [
-	from === null ? -1e12 : dayStart(from).getTime() / 1000,
-	to === null ? 1e12 : nextDay(dayStart(to)).getTime() / 1000,
+	from === null ? -1e12 : start(Temporal.PlainDate.from(from)),
+	to === null ? 1e12 : start(Temporal.PlainDate.from(to).add({ days: 1 })),
 ];
+
+/** Today, the machine's. */
+const today = () => Temporal.Now.plainDateISO();
 
 /** How many of an organization's orders have `column` (a date) in a range of days. */
 const countIn = (column: string, range: DateRange, organizationId: string = north.id, and = "") =>
@@ -49,18 +55,22 @@ describe("range filters on the orders' dates, in North", () => {
 
 		// Every order shown is scheduled in the next seven days.
 		const { from, to } = presetRange("next-7-days");
-		const first = dayStart(from!);
-		const last = dayStart(to!);
+		const first = Temporal.PlainDate.from(from!);
+		const last = Temporal.PlainDate.from(to!);
 		const dates = await page.locator("tbody td:nth-child(9)").allInnerTexts();
-		const days = new Set(Array.from({ length: 7 }, (_, i) => formatDate(addDays(first, i), "en")));
+		const days = new Set(
+			Array.from({ length: 7 }, (_, i) => formatDate(first.add({ days: i }), "en")),
+		);
 		for (const date of dates) expect(days.has(date), date).toBe(true);
 		expect(days.has(formatDate(last, "en"))).toBe(true);
 	});
 
 	test("days of one's own, from the Filter menu, with a summary in the pill", async () => {
 		const { page } = app;
-		const today = new Date();
-		const range = { from: toDateInput(addDays(today, -20)), to: toDateInput(addDays(today, -6)) };
+		const range = {
+			from: today().subtract({ days: 20 }).toString(),
+			to: today().subtract({ days: 6 }).toString(),
+		};
 		const expected = await countIn("scheduled_for", range);
 		expect(expected).toBeGreaterThan(0);
 		await app.go(afresh("/orders"));
@@ -79,7 +89,13 @@ describe("range filters on the orders' dates, in North", () => {
 		// (Intl puts thin spaces around the dash.)
 		const spaced = (text: string) => text.replace(/\s+/g, " ");
 		expect(spaced(await pill.innerText())).toContain(
-			spaced(formatDate.range(dayStart(range.from), dayStart(range.to), "en")),
+			spaced(
+				formatDate.range(
+					Temporal.PlainDate.from(range.from),
+					Temporal.PlainDate.from(range.to),
+					"en",
+				),
+			),
 		);
 
 		// Taken off by its pill's button.
@@ -96,7 +112,7 @@ describe("range filters on the orders' dates, in North", () => {
 		expect(await shownFor("created=last-30-days&status=quote")).toBe(
 			await countIn("created_at", lastMonth, north.id, "and status = 'quote'"),
 		);
-		const since = toDateInput(addDays(new Date(), -10));
+		const since = today().subtract({ days: 10 }).toString();
 		expect(await shownFor(`scheduled=${since}..`)).toBe(
 			await countIn("scheduled_for", { from: since, to: null }),
 		);
@@ -157,7 +173,7 @@ describe("range filters on the orders' dates, in North", () => {
 
 	test("a preset as an end, picked in the Filter menu and from a link", async () => {
 		const { page } = app;
-		const fromToday = await countIn("scheduled_for", { from: toDateInput(new Date()), to: null });
+		const fromToday = await countIn("scheduled_for", { from: today().toString(), to: null });
 		expect(fromToday).toBeGreaterThan(0);
 		await app.go(afresh("/orders"));
 		await app.openFilter("Scheduled");

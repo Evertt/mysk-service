@@ -9,11 +9,11 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { timeOfDay } from "#lib/dates.ts";
+	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
-	import { DEFAULT_TIME, dayKey, parseDay } from "../board/board.ts";
+	import { DEFAULT_TIME, parseDay } from "../board/board.ts";
 	import { getSchedule, scheduleOrder } from "../schedule.remote.ts";
 
 	type Schedule = Awaited<ReturnType<typeof getSchedule>>;
@@ -31,12 +31,14 @@
 		/** The board's week (`yyyy-mm-dd`), to refresh along with saving. */
 		week: string;
 		/** The day to suggest for an order without a date. */
-		defaultDay: Date;
+		defaultDay: Temporal.PlainDate;
 		open?: boolean;
-		onscheduled?: (day: Date) => void;
+		onscheduled?: (day: Temporal.PlainDate) => void;
 	} = $props();
 
 	const form = $derived(scheduleOrder.for(String(order.id)));
+	// When the order is planned now, on the user's clock.
+	const scheduled = $derived(order.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
 	const engineerOptions = $derived(
 		engineers
@@ -83,13 +85,13 @@
 						field={form.fields.day}
 						label={m.schedule_field_date()}
 						type="date"
-						value={dayKey(order.scheduledFor ?? defaultDay)}
+						value={(scheduled?.toPlainDate() ?? defaultDay).toString()}
 					/>
 					<TextField
 						field={form.fields.time}
 						label={m.schedule_field_time()}
 						type="time"
-						value={order.scheduledFor ? timeOfDay(order.scheduledFor) : DEFAULT_TIME}
+						value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? DEFAULT_TIME}
 					/>
 				</div>
 			</Field.FieldGroup>

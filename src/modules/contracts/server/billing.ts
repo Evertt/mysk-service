@@ -3,38 +3,43 @@
  * the contract's first day, e.g. the 15th to the 14th of the next month (from the 31st, to the end
  * of shorter months); the last one ends with the contract. A month is billed in advance, from its
  * first day, and in full. The server offers them to invoicing (`invoicing.billableItems`
- * in `server/index.ts`). It imports only `#lib/dates.ts` (which imports nothing), so the seed
- * script can use it too. Its days are in the user's time zone (`getTimeZone()`).
+ * in `server/index.ts`). Without imports at runtime, so the seed script can use it too.
  */
-import { addDays, addMonths, toDateInput } from "#lib/dates.ts";
 
-/** One month of a contract, as days at midnight (both inclusive). */
+/** One month of a contract, as days (both included). */
 export interface ContractMonth {
-	startsOn: Date;
-	endsOn: Date;
+	startsOn: Temporal.PlainDate;
+	endsOn: Temporal.PlainDate;
 }
 
 /** The months of a contract that start between `from` and `until` (both inclusive). */
 export function contractMonths(
-	contract: { startsOn: Date; endsOn: Date },
-	from: Date,
-	until: Date,
+	contract: { startsOn: Temporal.PlainDate; endsOn: Temporal.PlainDate },
+	from: Temporal.PlainDate,
+	until: Temporal.PlainDate,
 ): ContractMonth[] {
 	const months: ContractMonth[] = [];
 	for (let i = 0; ; i++) {
-		const startsOn = addMonths(contract.startsOn, i);
-		if (startsOn > contract.endsOn || startsOn > until) break;
-		if (startsOn < from) continue;
-		const next = addMonths(contract.startsOn, i + 1);
-		const endsOn = addDays(next, -1);
-		months.push({ startsOn, endsOn: endsOn < contract.endsOn ? endsOn : contract.endsOn });
+		// On the contract's day of the month, or the month's last day if it's shorter.
+		const startsOn = contract.startsOn.add({ months: i });
+		if (
+			Temporal.PlainDate.compare(startsOn, contract.endsOn) > 0 ||
+			Temporal.PlainDate.compare(startsOn, until) > 0
+		)
+			break;
+		if (Temporal.PlainDate.compare(startsOn, from) < 0) continue;
+		const endsOn = contract.startsOn.add({ months: i + 1 }).subtract({ days: 1 });
+		months.push({
+			startsOn,
+			endsOn: Temporal.PlainDate.compare(endsOn, contract.endsOn) < 0 ? endsOn : contract.endsOn,
+		});
 	}
 	return months;
 }
 
 /** The billable item for a contract's month: `contracts:<contract id>:<first day>`. */
 export const monthReference = (contractId: number, month: Pick<ContractMonth, "startsOn">) =>
-	`contracts:${contractId}:${toDateInput(month.startsOn)}`;
+	`contracts:${contractId}:${month.startsOn.toString()}`;
 
 /**
  * How a month's fee reads on the invoice, e.g. "Service contract CTR-2026-0012 (Premium)" and

@@ -8,7 +8,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, organizationId } from "#lib/server/db/columns.ts";
 import { customer, equipment } from "#lib/server/db/schema.ts";
 
 import { contractLevels } from "../model.ts";
@@ -29,9 +29,9 @@ export const contract = sqliteTable(
 		customerId: integer("customer_id").notNull(),
 		level: text("level", { enum: contractLevels }).notNull(),
 		/** The first day of the contract, at local midnight. */
-		startsOn: integer("starts_on", { mode: "timestamp" }).notNull(),
+		startsOn: day("starts_on").notNull(),
 		/** The last day of the contract (inclusive), at local midnight. */
-		endsOn: integer("ends_on", { mode: "timestamp" }).notNull(),
+		endsOn: day("ends_on").notNull(),
 		/** In cents. */
 		monthlyFee: integer("monthly_fee").notNull(),
 		/** The promised response time for a call-out. */

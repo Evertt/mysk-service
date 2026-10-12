@@ -2,6 +2,7 @@ import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
 import { equipmentFields } from "#lib/equipment/form/equipment-schema.ts";
+import { day } from "#unit/temporal-support.ts";
 
 /** The parsed value, or the messages of all issues. */
 const parse = (schema: v.GenericSchema, input: unknown) => {
@@ -27,8 +28,8 @@ test("a filled-in form becomes a unit", () => {
 			...form,
 			serialNumber: "GEN-2041-A",
 			customerId: 7,
-			installedAt: new Date(2025, 4, 1),
-			warrantyUntil: new Date(2028, 3, 30),
+			installedAt: day("2025-05-01"),
+			warrantyUntil: day("2028-04-30"),
 		},
 	});
 });

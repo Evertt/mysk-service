@@ -25,7 +25,7 @@
 			customer: { name: string; city: string };
 		};
 		/** What to show as its time, e.g. the planned time or the completion date. */
-		when: { date: Date | null; show: "time" | "date" };
+		when: { date: Temporal.Instant | null; show: "time" | "date" };
 	} = $props();
 </script>
 

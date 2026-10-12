@@ -35,7 +35,7 @@ export interface SubjectLink {
 
 export interface ActivityEntry {
 	id: number;
-	at: Date;
+	at: Temporal.Instant;
 	user: string;
 	/** What they did, e.g. `updated` (see `actionVerbs` in `#lib/activity/subjects.ts`). */
 	action: string;

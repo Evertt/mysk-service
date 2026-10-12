@@ -8,7 +8,7 @@
  */
 import * as v from "valibot";
 
-import { fromDateInput, isDateInput } from "#lib/dates.ts";
+import { isDay } from "#lib/dates.ts";
 
 /**
  * A validation message: a message function (`m.…`) or one that builds the text, e.g.
@@ -42,14 +42,14 @@ export const text = (message: Message = m.validation_required) =>
 
 /** The day a valid date input stands for (checked only once there's a value). */
 const day = () =>
-	v.check((value: string) => value === "" || isDateInput(value), m.validation_date_invalid);
+	v.check((value: string) => value === "" || isDay(value), m.validation_date_invalid);
 
-/** An optional date from `<input type="date">`, as the start of that day in the user's time zone. */
+/** An optional day from `<input type="date">`. */
 export const optionalDate = () =>
 	v.pipe(
 		v.string(),
 		day(),
-		v.transform((value) => (value ? fromDateInput(value) : null)),
+		v.transform((value) => (value ? Temporal.PlainDate.from(value) : null)),
 	);
 
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
@@ -61,13 +61,13 @@ export const cents = (required: Message = m.validation_amount_required) =>
 		v.transform((euros) => Math.round(euros * 100)),
 	);
 
-/** A required date from `<input type="date">`, as the start of that day in the user's time zone. */
+/** A required day from `<input type="date">`. */
 export const date = (required: Message = m.validation_date_required) =>
 	v.pipe(
 		v.string(),
 		v.nonEmpty(required),
 		day(),
-		v.transform((value) => fromDateInput(value)),
+		v.transform((value) => Temporal.PlainDate.from(value)),
 	);
 
 /**
