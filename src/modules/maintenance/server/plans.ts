@@ -6,6 +6,7 @@
 import { error } from "@sveltejs/kit";
 import { and, eq, notExists } from "drizzle-orm";
 
+import { dateParts, startOfDay } from "#lib/dates.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
@@ -67,7 +68,7 @@ export function createPlan(equipmentId: number, input: PlanInput) {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
 		const unit = await findUnit(tx, equipmentId);
-		const values = { ...input, anchorDay: input.nextDueOn.getDate() };
+		const values = { ...input, anchorDay: dateParts(input.nextDueOn).day };
 		const [created] = await tx
 			.insert(maintenancePlan)
 			.values({ ...values, organizationId, equipmentId: unit.id })
@@ -87,7 +88,7 @@ export function createPlan(equipmentId: number, input: PlanInput) {
 export function updatePlan(id: number, input: PlanInput) {
 	return db.transaction(async (tx) => {
 		const { plan, unit } = await findPlan(tx, id);
-		const values = { ...input, anchorDay: input.nextDueOn.getDate() };
+		const values = { ...input, anchorDay: dateParts(input.nextDueOn).day };
 		await tx.update(maintenancePlan).set(values).where(idInTenant(maintenancePlan, id));
 		await recordActivity(tx, {
 			action: "updated",
@@ -137,10 +138,7 @@ export function addPlansToUnits(
 	now = new Date(),
 ) {
 	const { organizationId } = currentTenant();
-	const nextDueOn = advanceDueDate(
-		new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-		input.intervalMonths,
-	);
+	const nextDueOn = advanceDueDate(startOfDay(now), input.intervalMonths);
 	return db.transaction(async (tx) => {
 		const units = await tx
 			.select({ id: equipment.id, serialNumber: equipment.serialNumber })
@@ -168,7 +166,7 @@ export function addPlansToUnits(
 				.values({
 					...input,
 					nextDueOn,
-					anchorDay: nextDueOn.getDate(),
+					anchorDay: dateParts(nextDueOn).day,
 					organizationId,
 					equipmentId: unit.id,
 				})

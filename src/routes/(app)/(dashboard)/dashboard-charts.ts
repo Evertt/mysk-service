@@ -21,17 +21,13 @@ export const lastWeeks = (now: Date, count = WEEKS) =>
 
 /** The first days of the last `count` months up to and including `now`'s, oldest first. */
 export const lastMonths = (now: Date, count = MONTHS) =>
-	Array.from(
-		{ length: count },
-		(_, i) => new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1),
-	);
+	Array.from({ length: count }, (_, i) => startOfMonth(now, -(count - 1 - i)));
 
 /** The orders made in a week, by their status now: a stacked bar. */
 export type OrdersInWeek = { week: Date } & Record<OrderStatus, number>;
 
 /**
- * Lays the counts per week and status (the week as its Monday, `yyyy-mm-dd` in local time, as the
- * SQL groups it) over `weeks`, with zeroes where nothing happened.
+ * Lays the counts per week and status (the week as its Monday, `yyyy-mm-dd` in the user's time zone) over `weeks`, with zeroes where nothing happened.
  */
 export function ordersPerWeek(
 	rows: { week: string; status: OrderStatus; count: number }[],

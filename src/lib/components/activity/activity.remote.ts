@@ -8,7 +8,7 @@ import { and, desc, eq, gte, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
 import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
-import { nextDay } from "#lib/dates.ts";
+import { fromDateInput, isDateInput, nextDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity/index.ts";
@@ -31,9 +31,8 @@ const about = (type: string, id: string) =>
 		and(eq(activity.parentType, type), eq(activity.parentId, id)),
 	);
 
-/** A day of a date input (`yyyy-mm-dd`). */
-const day = v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/));
-const startOf = (value: string) => new Date(`${value}T00:00`);
+/** A day of a date input (`yyyy-mm-dd`), in the user's time zone. */
+const day = v.pipe(v.string(), v.check(isDateInput));
 
 /**
  * One page of the tenant's activity, newest first, optionally of one subject `type` (with `id`:
@@ -54,8 +53,8 @@ export const getActivity = forMembers.query(
 			inTenant(activity),
 			type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
 			user ? eq(activity.userId, user) : undefined,
-			from ? gte(activity.createdAt, startOf(from)) : undefined,
-			to ? lt(activity.createdAt, nextDay(startOf(to))) : undefined,
+			from ? gte(activity.createdAt, fromDateInput(from)) : undefined,
+			to ? lt(activity.createdAt, nextDay(fromDateInput(to))) : undefined,
 			before ? lt(activity.id, before) : undefined,
 		];
 		const rows = await db

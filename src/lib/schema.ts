@@ -8,6 +8,8 @@
  */
 import * as v from "valibot";
 
+import { fromDateInput, isDateInput } from "#lib/dates.ts";
+
 /**
  * A validation message: a message function (`m.…`) or one that builds the text, e.g.
  * `() => m.orders_quantity_max({ max })`. A plain string isn't translated; avoid it.
@@ -38,23 +40,16 @@ export const optionalId = (message: Message = m.validation_choose_one) =>
 export const text = (message: Message = m.validation_required) =>
 	v.pipe(v.string(), v.trim(), v.nonEmpty(message));
 
-/** Whether `value` (`yyyy-mm-dd`) is a day on the calendar, so not e.g. `2026-02-31`. */
-const isDay = (value: string) => {
-	const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)?.map(Number) ?? [];
-	const date = new Date(year, month - 1, day);
-	return date.getMonth() === month - 1 && date.getDate() === day;
-};
-
 /** The day a valid date input stands for (checked only once there's a value). */
 const day = () =>
-	v.check((value: string) => value === "" || isDay(value), m.validation_date_invalid);
+	v.check((value: string) => value === "" || isDateInput(value), m.validation_date_invalid);
 
-/** An optional date from `<input type="date">`, as a local date at the start of the day. */
+/** An optional date from `<input type="date">`, as the start of that day in the user's time zone. */
 export const optionalDate = () =>
 	v.pipe(
 		v.string(),
 		day(),
-		v.transform((value) => (value ? new Date(`${value}T00:00`) : null)),
+		v.transform((value) => (value ? fromDateInput(value) : null)),
 	);
 
 /** An amount entered in euros (e.g. with `MoneyField`), stored in cents. */
@@ -66,13 +61,13 @@ export const cents = (required: Message = m.validation_amount_required) =>
 		v.transform((euros) => Math.round(euros * 100)),
 	);
 
-/** A required date from `<input type="date">`, as a local date at the start of the day. */
+/** A required date from `<input type="date">`, as the start of that day in the user's time zone. */
 export const date = (required: Message = m.validation_date_required) =>
 	v.pipe(
 		v.string(),
 		v.nonEmpty(required),
 		day(),
-		v.transform((value) => new Date(`${value}T00:00`)),
+		v.transform((value) => fromDateInput(value)),
 	);
 
 /**

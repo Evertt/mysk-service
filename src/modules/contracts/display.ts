@@ -11,6 +11,7 @@ import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
 import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import { dateParts, DAY, daysInMonth, nextDay, zonedDate } from "#lib/dates.ts";
 
 import type { SlaState } from "./coverage.ts";
 import { contractLabels } from "./labels.ts";
@@ -65,19 +66,17 @@ export const statusOptions = contractLabels.labelOptions(
 
 /** A contract's length, e.g. "2 years", "18 months" or "3 months, 10 days"; both days count. */
 export function formatTerm(startsOn: Date, endsOn: Date) {
-	const end = new Date(endsOn.getFullYear(), endsOn.getMonth(), endsOn.getDate() + 1);
+	const end = nextDay(endsOn);
+	const start = dateParts(startsOn);
+	const last = dateParts(end);
 	// `months` after the start; from the 31st, a month later in a shorter month is the 1st after it.
-	const after = (months: number) => {
-		const target = new Date(startsOn.getFullYear(), startsOn.getMonth() + months, 1);
-		const length = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-		return startsOn.getDate() > length
-			? new Date(target.getFullYear(), target.getMonth() + 1, 1)
-			: new Date(target.getFullYear(), target.getMonth(), startsOn.getDate());
-	};
-	let months =
-		(end.getFullYear() - startsOn.getFullYear()) * 12 + end.getMonth() - startsOn.getMonth();
+	const after = (months: number) =>
+		start.day > daysInMonth(start.year, start.month + months)
+			? zonedDate(start.year, start.month + months + 1, 1)
+			: zonedDate(start.year, start.month + months, start.day);
+	let months = (last.year - start.year) * 12 + last.month - start.month;
 	while (months > 0 && after(months) > end) months--;
-	const days = Math.round((end.getTime() - after(months).getTime()) / (24 * 60 * 60 * 1000));
+	const days = Math.round((end.getTime() - after(months).getTime()) / DAY);
 
 	if (days) {
 		const daysText = m.contracts_term_days({ count: days });

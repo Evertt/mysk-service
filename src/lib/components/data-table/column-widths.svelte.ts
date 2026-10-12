@@ -3,6 +3,7 @@ import * as devalue from "devalue";
 import { untrack } from "svelte";
 import type { Attachment } from "svelte/attachments";
 
+import { dateParts, zonedDate } from "#lib/dates.ts";
 import { getLocale } from "#lib/paraglide/runtime.js";
 
 import { hiddenRows, learn, type Sample, widthContext, type WidthMemory } from "./column-widths.ts";
@@ -144,8 +145,8 @@ function knownValues(column: WidthsColumn, value: unknown): unknown[] {
 		return column.columnDef.meta?.filterValues?.filter((option) => option !== noneToken) ?? [];
 	}
 	if (value instanceof Date) {
-		const year = value.getFullYear();
-		return Array.from({ length: 12 }, (_, month) => new Date(year, month, 28, 23, 58));
+		const { year } = dateParts(value);
+		return Array.from({ length: 12 }, (_, month) => zonedDate(year, month, 28, 23, 58));
 	}
 	return [];
 }

@@ -11,6 +11,7 @@
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
 	import { deleteCustomer, getCustomer } from "#lib/customers/remotes.ts";
+	import { dateParts } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 
@@ -82,7 +83,7 @@
 	/>
 	<StatCard
 		label={m.customers_column_since()}
-		value={String(customer.createdAt.getFullYear())}
+		value={String(dateParts(customer.createdAt).year)}
 		detail={stats.lastOrderAt
 			? m.customers_stats_last_order({ date: formatDate(stats.lastOrderAt) })
 			: m.customers_stats_no_orders()}

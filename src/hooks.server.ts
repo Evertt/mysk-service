@@ -9,6 +9,7 @@ import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
+import { handleTimeZone } from "#lib/server/time-zone.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 /**
@@ -127,6 +128,7 @@ const handleGuard: Handle = ({ event, resolve }) => {
 export const handle: Handle = sequence(
 	delayRemoteCalls,
 	handleParaglide,
+	handleTimeZone,
 	handleTheme,
 	blockOrganizationEndpoints,
 	handleBetterAuth,

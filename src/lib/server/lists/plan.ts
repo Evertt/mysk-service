@@ -210,7 +210,7 @@ export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
 /**
  * A date range filter's condition (`dateRange`): the rows whose `column` (a timestamp) is on one
  * of the days of any of the ranges, both ends included, from the start of the first day to the end
- * of the last in the server's time zone, e.g. `filter: (ranges) => inDays(order.scheduledFor,
+ * of the last in the user's time zone (`getTimeZone()`), e.g. `filter: (ranges) => inDays(order.scheduledFor,
  * ranges)`. Rows without a date are in no range; `null` among the ranges (`orNone(dateRange)`,
  * `none` in the URL) keeps them.
  */

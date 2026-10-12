@@ -6,6 +6,7 @@
 import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
+import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 
 import { forgetTables } from "./db.ts";
@@ -132,12 +133,20 @@ interface TableGroup {
 /**
  * Gives the tests in a file one browser page, signed in as `user` (the admin by default, who
  * starts in North; `null` for signed out), on a desktop screen unless `viewport` says
- * otherwise. After each test, checks that the app logged no errors or hydration warnings.
+ * otherwise, in the time zone of the machine running them (the server's) unless `timeZone` says
+ * otherwise: then the browser has told the server its zone already (the cookie the app sets, see
+ * `src/routes/time-zone.ts`). After each test, checks that the app logged no errors or hydration
+ * warnings.
  */
 export function useApp({
 	user = users.admin,
 	viewport = { width: 1440, height: 1000 },
-}: { user?: string | null; viewport?: { width: number; height: number } } = {}): App {
+	timeZone,
+}: {
+	user?: string | null;
+	viewport?: { width: number; height: number };
+	timeZone?: string;
+} = {}): App {
 	let browser: Browser;
 	let page: Page;
 	const errors: string[] = [];
@@ -299,7 +308,14 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE });
+		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE, timezoneId: timeZone });
+		if (timeZone) {
+			await page
+				.context()
+				.addCookies([
+					{ name: TIME_ZONE_COOKIE, value: encodeURIComponent(timeZone), url: baseURL },
+				]);
+		}
 		page.on("pageerror", (error) => expecting || errors.push(`pageerror: ${error.message}`));
 		page.on("console", (message) => {
 			const text = message.text();

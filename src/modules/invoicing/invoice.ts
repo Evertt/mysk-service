@@ -1,10 +1,8 @@
-import type { PriceAdjustment } from "#lib/orders/extensions.ts";
-
 /**
  * What an invoice is, as rules: its number, its totals, where it stands, and the lines an order
  * turns into. The one place that says so; the server applies it (`server/`, the remote functions
- * in `routes/(app)/invoices/`) and the pages show it. Without imports at runtime, so the seed
- * script can use it too.
+ * in `routes/(app)/invoices/`) and the pages show it. It imports only `#lib/dates.ts` at runtime, so
+ * the seed script can use it too.
  *
  * - **Numbers** are sequential per organization, across years: `INV-2026-00001`, `INV-2027-00002`,
  *   … (`invoiceNumberFormat` in `./model.ts`). A draft gets its number when it's made; a draft that isn't needed
@@ -18,6 +16,9 @@ import type { PriceAdjustment } from "#lib/orders/extensions.ts";
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
+import { addDays, nextDay, startOfDay } from "#lib/dates.ts";
+import type { PriceAdjustment } from "#lib/orders/extensions.ts";
+
 import type { InvoiceStatus } from "./model.ts";
 
 // --- Status ----------------------------------------------------------------------------------
@@ -25,9 +26,6 @@ import type { InvoiceStatus } from "./model.ts";
 /** What an invoice shows: its status, with sent ones past their due date as overdue. */
 export const invoiceStates = ["draft", "sent", "overdue", "paid", "void"] as const;
 export type InvoiceState = (typeof invoiceStates)[number];
-
-/** The day after `date`, at midnight. */
-const nextDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
 /** Whether a sent invoice is overdue at `now`: from the day after its due date. */
 export const isOverdue = (
@@ -54,13 +52,11 @@ export const canChange = (from: InvoiceStatus, to: InvoiceStatus) =>
 /** Only drafts can have their lines and terms changed. */
 export const isEditable = (status: InvoiceStatus) => status === "draft";
 
-/** Today at midnight. */
-export const today = (now = new Date()) =>
-	new Date(now.getFullYear(), now.getMonth(), now.getDate());
+/** Today at midnight, in the user's time zone. */
+export const today = (now = new Date()) => startOfDay(now);
 
 /** The last day to pay an invoice issued on `issuedOn` with a term of `days`. */
-export const dueDate = (issuedOn: Date, days: number) =>
-	new Date(issuedOn.getFullYear(), issuedOn.getMonth(), issuedOn.getDate() + days);
+export const dueDate = (issuedOn: Date, days: number) => addDays(startOfDay(issuedOn), days);
 
 // --- Amounts ---------------------------------------------------------------------------------
 

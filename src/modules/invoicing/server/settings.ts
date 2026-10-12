@@ -1,6 +1,7 @@
 /** The tenant's invoicing settings: the defaults for the invoices it makes. */
 import { eq } from "drizzle-orm";
 
+import { startOfMonth } from "#lib/dates.ts";
 import { requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -14,10 +15,9 @@ export async function settingsOf(organizationId = requireMember().organizationId
 	const where = eq(invoicingSettings.organizationId, organizationId);
 	const found = await db.query.invoicingSettings.findFirst({ where });
 	if (found) return found;
-	const now = new Date();
 	await db
 		.insert(invoicingSettings)
-		.values({ organizationId, billFrom: new Date(now.getFullYear(), now.getMonth(), 1) })
+		.values({ organizationId, billFrom: startOfMonth(new Date()) })
 		.onConflictDoNothing();
 	return (await db.query.invoicingSettings.findFirst({ where }))!;
 }

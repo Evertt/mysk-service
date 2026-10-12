@@ -529,6 +529,16 @@ remote functions. Every user-facing text goes through a message; nothing English
   `numberFormatter(options)` for other formats, safe at module scope), never `new Intl.*("en-GB")`
   or `toLocaleString()`. Number and date inputs stay `type="number"`/`"date"`: the browser shows
   them in its own language and submits a dot and `yyyy-mm-dd`.
+- **Time zone**: days and times are the user's, on the server too. The browser keeps its zone in a
+  cookie (`src/routes/time-zone.ts`, which reloads a page the server rendered in another zone
+  once); `handleTimeZone` (`src/lib/server/time-zone.ts`) runs each request in it, and
+  `getTimeZone()` (`#lib/dates.ts`) answers with it, like `getLocale()`; outside a request (the
+  seed, scripts) it's the machine's. `format.ts` formats in it (a formatter that names a
+  `timeZone`, like the invitation mail's UTC, keeps its own). Never work out a day with a `Date`'s
+  local getters or constructor (`getDate()`, `new Date(year, month, day)`, `new Date("…T00:00")`):
+  on the server they're in the server's zone. Use `#lib/dates.ts`: `dateParts()`, `zonedDate()`,
+  `startOfDay()`, `fromDateInput()`, `toDateInput()` and friends. SQLite knows only the server's
+  zone, so group by days in code, not with `'localtime'` (see the dashboard's orders per week).
 - **Stored text** (e.g. an invoice line's description) is in the language of whoever made it; store
   values and translate when showing where you can.
 - **Dutch**: informal (`je`, never `u`), short, sentence case like the English. Terms: order →

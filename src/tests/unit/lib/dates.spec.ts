@@ -1,15 +1,24 @@
-import { expect, test } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import {
 	addDays,
+	addMonths,
 	atTime,
 	DAY,
+	dateParts,
+	daysInMonth,
+	fromDateInput,
+	isDateInput,
+	isTimeZone,
 	nextDay,
+	overwriteGetTimeZone,
+	runtimeTimeZone,
 	startOfDay,
 	startOfMonth,
 	startOfWeek,
 	timeOfDay,
 	toDateInput,
+	zonedDate,
 } from "#lib/dates.ts";
 
 test("a day is 24 hours in milliseconds", () => {
@@ -83,4 +92,81 @@ test("atTime leaves its argument alone", () => {
 	atTime(day, "09:00");
 
 	expect(day).toEqual(new Date(2026, 9, 7, 23, 59, 59));
+});
+
+describe("in another time zone than the runtime's", () => {
+	// Never the runtime's own zone, so the zone maths are what's tested, not `Date`'s local ones.
+	const zone = runtimeTimeZone === "America/New_York" ? "Asia/Kolkata" : "America/New_York";
+	beforeEach(() => overwriteGetTimeZone(() => zone));
+	afterEach(() => overwriteGetTimeZone(() => runtimeTimeZone));
+
+	/** A moment as the zone's wall clock shows it, `yyyy-mm-dd HH:MM`. */
+	const wall = (date: Date) =>
+		new Intl.DateTimeFormat("sv-SE", {
+			timeZone: zone,
+			dateStyle: "short",
+			timeStyle: "short",
+		}).format(date);
+
+	test("days start at the zone's midnight", () => {
+		const day = fromDateInput("2026-10-12");
+		expect(wall(day)).toBe("2026-10-12 00:00");
+		expect(toDateInput(day)).toBe("2026-10-12");
+		expect(wall(nextDay(day))).toBe("2026-10-13 00:00");
+		expect(wall(startOfWeek(day))).toBe("2026-10-12 00:00");
+		expect(wall(startOfMonth(day, 1))).toBe("2026-11-01 00:00");
+		expect(wall(atTime(day, "09:30"))).toBe("2026-10-12 09:30");
+		expect(timeOfDay(atTime(day, "09:30"))).toBe("09:30");
+	});
+
+	test("a moment is on the zone's day, not the runtime's", () => {
+		// 03:00 UTC: the evening before in New York, the morning in Kolkata.
+		const moment = new Date(Date.UTC(2026, 9, 12, 3, 0));
+		const expected = zone === "America/New_York" ? "2026-10-11" : "2026-10-12";
+		expect(toDateInput(moment)).toBe(expected);
+		expect(toDateInput(startOfDay(moment))).toBe(expected);
+		expect(wall(startOfDay(moment)).endsWith("00:00")).toBe(true);
+	});
+
+	test("adding days across the clocks changing keeps the time of day", () => {
+		overwriteGetTimeZone(() => "America/New_York");
+		// The clocks went forward on 8 March 2026 and back on 1 November 2026 there.
+		const before = zonedDate(2026, 2, 7, 9, 0);
+		expect(addDays(before, 1).getTime() - before.getTime()).toBe(23 * 60 * 60 * 1000);
+		expect(dateParts(addDays(before, 1)).hours).toBe(9);
+		const autumn = zonedDate(2026, 9, 31, 9, 0);
+		expect(addDays(autumn, 1).getTime() - autumn.getTime()).toBe(25 * 60 * 60 * 1000);
+		// A time the clocks skip is an hour later.
+		expect(timeOfDay(zonedDate(2026, 2, 8, 2, 30))).toBe("03:30");
+	});
+
+	test("months carry over, and a shorter month ends on its last day", () => {
+		expect(toDateInput(addMonths(fromDateInput("2026-01-31"), 1))).toBe("2026-02-28");
+		expect(toDateInput(zonedDate(2026, 12, 1))).toBe("2027-01-01");
+		expect(daysInMonth(2028, 1)).toBe(29);
+	});
+});
+
+test("a day as a date input is real or refused", () => {
+	expect(isDateInput("2026-02-28")).toBe(true);
+	expect(isDateInput("2026-02-30")).toBe(false);
+	expect(isDateInput("2026-2-3")).toBe(false);
+	expect(() => fromDateInput("2026-13-01")).toThrow();
+});
+
+test("only time zones Intl knows are time zones", () => {
+	expect(isTimeZone("Europe/Amsterdam")).toBe(true);
+	expect(isTimeZone("Mars/Olympus")).toBe(false);
+	expect(isTimeZone("")).toBe(false);
+	expect(isTimeZone(42)).toBe(false);
+});
+
+test("a time the clocks go back over is its first moment, as with `Date`", () => {
+	overwriteGetTimeZone(() => "America/New_York");
+	try {
+		// 01:30 on 1 November 2026 is first EDT (05:30 UTC), then EST (06:30 UTC).
+		expect(zonedDate(2026, 10, 1, 1, 30).toISOString()).toBe("2026-11-01T05:30:00.000Z");
+	} finally {
+		overwriteGetTimeZone(() => runtimeTimeZone);
+	}
 });

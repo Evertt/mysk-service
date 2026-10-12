@@ -3,7 +3,7 @@
  * which orders a plan makes, how a due date moves on, and the ranges the due list and the
  * equipment list's column filter by. Pure, so client code (filters, badges) can import it.
  */
-import { addDays, startOfDay } from "#lib/dates.ts";
+import { addDays, dateParts, daysInMonth, startOfDay, zonedDate } from "#lib/dates.ts";
 import type { OrderType } from "#lib/models.ts";
 
 /** The order types a plan makes: a subset of the orders' own. */
@@ -13,18 +13,15 @@ export type PlanOrderType = (typeof planOrderTypes)[number];
 /** A plan's interval, in whole months. */
 export const intervalLimits = { min: 1, max: 60 } as const;
 
-/** The number of days in a month (`month` 0-based; it may run past December). */
-const daysIn = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-
 /**
  * The due date `months` after `due`, on the plan's day of the month (`anchorDay`, 1–31), or the
  * month's last day if it's shorter: 31 January + 1 month is 28 (or 29) February, and the step after
  * that is 31 March again, as the anchor stays 31. At the start of the day.
  */
-export function advanceDueDate(due: Date, months: number, anchorDay = due.getDate()): Date {
-	const year = due.getFullYear();
-	const month = due.getMonth() + months;
-	return new Date(year, month, Math.min(anchorDay, daysIn(year, month)));
+export function advanceDueDate(due: Date, months: number, anchorDay = dateParts(due).day): Date {
+	const { year } = dateParts(due);
+	const month = dateParts(due).month + months;
+	return zonedDate(year, month, Math.min(anchorDay, daysInMonth(year, month)));
 }
 
 /**

@@ -8,6 +8,7 @@
  */
 // Only types from `#lib/activity/subjects.ts`, which uses this file's types in turn.
 import type { FieldFormat, SubjectType, Text } from "#lib/activity/index.ts";
+import { dateParts } from "#lib/dates.ts";
 import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
@@ -100,8 +101,9 @@ export function formatValue(value: unknown, format: FieldFormat = {}, names: Nam
 	if (typeof value === "number") return formatNumber(value);
 	if (typeof value === "string" && isoDate.test(value)) {
 		const date = new Date(value);
-		// A date (e.g. from a date input) is local midnight; anything else is a moment.
-		const midnight = !date.getHours() && !date.getMinutes() && !date.getSeconds();
+		// A date (e.g. from a date input) is midnight in the user's zone; anything else is a moment.
+		const { hours, minutes, seconds } = dateParts(date);
+		const midnight = !hours && !minutes && !seconds;
 		return midnight ? formatDate(date) : formatDateTime(date);
 	}
 	const text = typeof value === "string" ? value : JSON.stringify(value);

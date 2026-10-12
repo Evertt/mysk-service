@@ -2,6 +2,7 @@
  * The contracts module's domain enums, shared by its database tables, the seed script and the UI.
  * Kept out of `server/` so client code (filters, badges) can import them.
  */
+import { nextDay } from "#lib/dates.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
 
 /** What a contract's number looks like, e.g. `CTR-2026-0007` (see `#lib/numbering.ts`). */
@@ -27,7 +28,5 @@ export function contractStatus(
 	now = new Date(),
 ): ContractStatus {
 	if (now < contract.startsOn) return "upcoming";
-	const afterEnd = new Date(contract.endsOn);
-	afterEnd.setDate(afterEnd.getDate() + 1);
-	return now < afterEnd ? "active" : "expired";
+	return now < nextDay(contract.endsOn) ? "active" : "expired";
 }

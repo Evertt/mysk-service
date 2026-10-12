@@ -21,9 +21,17 @@
  *
  * A preset stays a preset in the URL, also as an end, so a link or a saved view ("scheduled this
  * week", "due from today") means the current week whenever it's opened; the list's query
- * (`toListQuery()`) has it as the days it means on the day it's built, in the browser's time zone.
+ * (`toListQuery()`) has it as the days it means on the day it's built, in the user's time zone.
  */
-import { addDays, startOfMonth, startOfWeek, toDateInput } from "#lib/dates.ts";
+import {
+	addDays,
+	dateParts,
+	fromDateInput,
+	isDateInput,
+	startOfMonth,
+	startOfWeek,
+	toDateInput,
+} from "#lib/dates.ts";
 
 /** How a range filter is written in the URL, besides a set of values (`"set"`). */
 export type RangeGrammar = "dateRange" | "numberRange" | "moneyRange";
@@ -73,15 +81,11 @@ export const isDatePreset = (token: string): token is DatePreset =>
 const separator = "..";
 
 /** Whether `text` is a real day as `yyyy-mm-dd`, e.g. not `2026-02-30`. */
-export function isDay(text: unknown): text is string {
-	if (typeof text !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
-	const [year, month, day] = text.split("-").map(Number);
-	const date = new Date(year, month - 1, day);
-	return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-}
+export const isDay = (text: unknown): text is string =>
+	typeof text === "string" && isDateInput(text);
 
-/** The start of a day (`yyyy-mm-dd`), in the local time zone. */
-export const dayStart = (day: string) => new Date(`${day}T00:00`);
+/** The start of a day (`yyyy-mm-dd`), in the user's time zone. */
+export const dayStart = (day: string) => fromDateInput(day);
 
 /** The largest number a number range takes, either way: well within what SQLite and JS agree on. */
 const rangeNumberLimit = 1e12;
@@ -120,8 +124,8 @@ export function presetRange(preset: DatePreset, today = new Date()): DateRange {
 	const span = (from: Date, to: Date) => ({ from: day(from), to: day(to) });
 	const week = startOfWeek(today);
 	const month = startOfMonth(today);
-	const monthFrom = (offset: number) => new Date(month.getFullYear(), month.getMonth() + offset, 1);
-	const year = today.getFullYear();
+	const monthFrom = (offset: number) => startOfMonth(today, offset);
+	const { year } = dateParts(today);
 	switch (preset) {
 		case "today":
 			return span(today, today);
@@ -142,9 +146,9 @@ export function presetRange(preset: DatePreset, today = new Date()): DateRange {
 		case "next-month":
 			return span(monthFrom(1), addDays(monthFrom(2), -1));
 		case "this-year":
-			return span(new Date(year, 0, 1), new Date(year, 11, 31));
+			return { from: `${year}-01-01`, to: `${year}-12-31` };
 		case "last-year":
-			return span(new Date(year - 1, 0, 1), new Date(year - 1, 11, 31));
+			return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` };
 		case "last-7-days":
 			return span(addDays(today, -6), today);
 		case "next-7-days":

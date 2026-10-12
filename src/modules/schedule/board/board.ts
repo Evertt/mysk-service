@@ -1,8 +1,17 @@
 /**
- * Week maths and grouping for the dispatch board. Days are local days, like the dates entered in
- * the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
+ * Week maths and grouping for the dispatch board. Days are days in the user's time zone, like the
+ * dates entered in the order form (see `#lib/schema.ts`), and weeks run Monday to Sunday.
  */
-import { addDays, DAY, startOfDay, toDateInput } from "#lib/dates.ts";
+import {
+	addDays,
+	DAY,
+	fromDateInput,
+	isDateInput,
+	startOfWeek as mondayOf,
+	toDateInput,
+	zonedDate,
+	dateParts,
+} from "#lib/dates.ts";
 import { dateFormatter, formatDate } from "#lib/i18n/index.ts";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 import { plannedStatus } from "#lib/orders/index.ts";
@@ -22,20 +31,12 @@ const DAILY_CAPACITY = 3;
 /** A day as `yyyy-mm-dd`, as in the `?week=` search param and `<input type="date">`. */
 export const dayKey = (date: Date) => toDateInput(date);
 
-/** The local start of the day `value` (`yyyy-mm-dd`) stands for, if it's a day on the calendar. */
-export function parseDay(value: string | null | undefined): Date | undefined {
-	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
-	if (!match) return undefined;
-	const [year, month, day] = match.slice(1).map(Number);
-	const date = new Date(year, month - 1, day);
-	return date.getMonth() === month - 1 && date.getDate() === day ? date : undefined;
-}
+/** The start of the day `value` (`yyyy-mm-dd`) stands for, if it's a day on the calendar. */
+export const parseDay = (value: string | null | undefined): Date | undefined =>
+	value && isDateInput(value) ? fromDateInput(value) : undefined;
 
 /** The Monday of the week `date` falls in, at the start of the day. */
-export function startOfWeek(date: Date) {
-	const day = startOfDay(date);
-	return addDays(day, -((day.getDay() + 6) % 7));
-}
+export const startOfWeek = (date: Date) => mondayOf(date);
 
 /** The week a `?week=` search param stands for: the week of that day, or else this week. */
 export const weekFromParam = (param: string | null | undefined, today = new Date()) =>
@@ -47,7 +48,7 @@ export const weekDays = (start: Date) => Array.from({ length: 7 }, (_, i) => add
 /** The ISO 8601 week number: weeks start on Monday, and week 1 has the year's first Thursday. */
 export function weekNumber(date: Date) {
 	const thursday = addDays(startOfWeek(date), 3);
-	const firstThursday = addDays(startOfWeek(new Date(thursday.getFullYear(), 0, 4)), 3);
+	const firstThursday = addDays(startOfWeek(zonedDate(dateParts(thursday).year, 0, 4)), 3);
 	return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * DAY));
 }
 
