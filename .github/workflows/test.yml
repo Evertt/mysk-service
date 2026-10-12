@@ -43,7 +43,7 @@ jobs:
       - run: pnpm run check
       - run: pnpm knip
       - name: Unit and component tests
-        run: pnpm exec vp test run --project server --project client
+        run: pnpm exec vp test run --project 'server-*' --project client
 
   e2e:
     name: End-to-end tests (${{ matrix.shard }}/3)
@@ -75,5 +75,6 @@ jobs:
             .env.example > .env
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      # A file that fails is run once more on its own (see scripts/test.ts).
       - name: End-to-end tests
-        run: pnpm exec vp test run --project e2e --shard=${{ matrix.shard }}/3
+        run: pnpm test --project e2e --shard=${{ matrix.shard }}/3

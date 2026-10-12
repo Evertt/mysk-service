@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { globSync, readdirSync, readFileSync } from "node:fs";
 
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import adapter from "@sveltejs/adapter-auto";
@@ -51,6 +51,40 @@ function shadcnImports(): ImportsMap {
 	});
 	return Object.fromEntries(entries);
 }
+
+/** The unit tests that run in Node (`*.svelte.spec.ts` run in the browser). */
+const serverSpecs = {
+	// Worker threads start faster than forked processes: `vitest doctor` measured 16% off.
+	pool: "threads" as const,
+	environment: "node",
+	include: [
+		"src/tests/unit/**/*.{test,spec}.{js,ts}",
+		"src/modules/*/tests/unit/**/*.{test,spec}.{js,ts}",
+		"scripts/**/*.spec.ts",
+	],
+	// (The end-to-end tests are in `tests/e2e/` folders, which these globs don't reach.)
+	exclude: [
+		"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+		"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
+	],
+};
+
+/**
+ * The Node specs that need modules of their own: those that replace a module with `vi.mock()` (or
+ * friends). Most specs share their worker's modules (the `server-shared` project), but a mock
+ * reaches only what imports the mocked module after it's registered: in a shared worker an earlier
+ * file has already imported those against the real one, so the mock would miss, and it would
+ * leak into the next file. Found from the source, so a new spec lands in the right project; comments
+ * are left out first, so one that explains why it doesn't mock stays shared.
+ */
+const isolatedServerSpecs = globSync(serverSpecs.include, { exclude: serverSpecs.exclude }).filter(
+	(file) =>
+		/\bvi\.(mock|doMock|unmock|resetModules)\(/.test(
+			readFileSync(file, "utf8")
+				.replace(/\/\*[\s\S]*?\*\//g, "")
+				.replace(/(^|[^:])\/\/.*$/gm, "$1"),
+		),
+);
 
 export default defineConfig({
 	run: {
@@ -133,6 +167,14 @@ export default defineConfig({
 			emitTsDeclarations: true,
 			// A chosen language (cookie) wins, then the browser's language, then English.
 			strategy: ["cookie", "preferredLanguage", "baseLocale"],
+			// A production build writes a module per message, anything else a module per language, into
+			// the same folder. The end-to-end tests' build asks for the latter (see
+			// src/tests/e2e/global-setup.ts), so it leaves the folder as the component tests' server has
+			// it: swapping in ~2,900 modules under them slowed their clicks into timeouts.
+			outputStructure: process.env.PARAGLIDE_OUTPUT_STRUCTURE as
+				| "locale-modules"
+				| "message-modules"
+				| undefined,
 		}),
 	]),
 	test: {
@@ -179,19 +221,22 @@ export default defineConfig({
 			{
 				extends: "./vite.config.ts",
 				test: {
-					name: "server",
-					environment: "node",
-					include: [
-						"src/tests/unit/**/*.{test,spec}.{js,ts}",
-						"src/modules/*/tests/unit/**/*.{test,spec}.{js,ts}",
-						"scripts/**/*.spec.ts",
-					],
-					// (The end-to-end tests are in `tests/e2e/` folders, which these globs don't reach.)
-					exclude: [
-						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
-						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
-					],
+					name: "server-shared",
+					...serverSpecs,
+					exclude: [...serverSpecs.exclude, ...isolatedServerSpecs],
+					// The files share their worker's modules, evaluated once, instead of each importing
+					// them anew: about a third off these files' run.
+					isolate: false,
+					// Undoes a file's `vi.stubGlobal()` and `vi.stubEnv()`, which would otherwise outlive it
+					// into the next file of its worker.
+					unstubGlobals: true,
+					unstubEnvs: true,
 				},
+			},
+
+			{
+				extends: "./vite.config.ts",
+				test: { name: "server-isolated", ...serverSpecs, include: isolatedServerSpecs },
 			},
 
 			{

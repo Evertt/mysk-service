@@ -271,11 +271,16 @@ migration committed.
   generator lists a loader for each in `src/lib/modules/skeletons.gen.ts`
   (`load: () => import(…)`), and the office layout loads its tenant's after it mounts
   (`loadModuleSkeletons()`, in `onMount`) into a plain `Map` that `PageSkeleton` reads.
-  **On this branch (`lazy-module-skeletons`) this is an experiment** for reproducing a Svelte 5.57
-  invariant: a component module that comes in after the layout mounts has made signing in throw
-  `invariant_violation` "Batch has scheduled effects" under load; `main` imports the skeletons
-  statically. To try it by hand, `DEV_REMOTE_DELAY_MS=<ms>` holds up each remote function call in
-  `pnpm dev` (`delayRemoteCalls` in `src/hooks.server.ts`).
+  So a tenant downloads only its modules' skeletons, and only once the office is open; until one is
+  in, its page gets the guessed outline. Known issue (Svelte 5.57): in a dev build, a skeleton that
+  arrives while a navigation is pending (a click within a split second of signing in) trips Svelte's
+  dev-only "Batch has scheduled effects" invariant, whose throw froze the page;
+  `patches/svelte@5.57.1.patch` makes it a console warning, and production builds skip the check.
+  An opt-in e2e test reproduces it (`REPRO_SKELETONS=1 REPRO_CPU_RATE=1 pnpm vp test run --project
+e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race needs a dev build:
+  retest without the patch after upgrading Svelte). To feel a slow database by hand,
+  `DEV_REMOTE_DELAY_MS=<ms> pnpm dev` holds up each remote function call (`delayRemoteCalls` in
+  `src/hooks.server.ts`).
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
   `{ number: string; equipmentIds: number[] }`) and its contract page renders
@@ -542,8 +547,12 @@ remote functions. Every user-facing text goes through a message; nothing English
 ## Tests
 
 `pnpm test` runs everything: unit tests (`*.spec.ts` in Node; `*.svelte.spec.ts` in the browser)
-and the end-to-end tests, which drive a production build of the app in Chromium, one server and
-fresh, seeded database per test worker (see the Testing section of README.md).
+and the end-to-end tests, which drive a production build of the app in Chromium (built with
+`NODE_ENV=production`, as deployed), one server and fresh, seeded database per test worker (see the
+Testing section of README.md). Svelte's dev-only checks, such as hydration mismatch warnings, are
+only in `E2E_DEV=1` runs (one dev server, the files one at a time). `pnpm test` runs each file that
+fails once more, afresh (`scripts/test.ts`; CI too): a file that fails twice is a real failure, and
+one that only passes the second time is worth a look in the log. `vp test run` runs them once.
 
 **Where tests go**: all in `tests/` folders, never next to their subject, in the same shape for the
 core and for each module.

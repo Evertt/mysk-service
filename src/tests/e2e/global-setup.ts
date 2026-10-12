@@ -4,10 +4,12 @@
  *
  * The app is built once and served by one production server per test worker ("lane"), each on a
  * free port with its own copy of a freshly seeded database. Test files run in parallel across the
- * lanes; within a lane, one after another.
+ * lanes; within a lane, one after another. The build and the servers run with
+ * `NODE_ENV=production`, which Vitest would otherwise pass on as `test`, making a dev build of
+ * Svelte: the tests check what's deployed.
  *
  * With `E2E_DEV=1`, it uses a single dev server instead (and the files run one at a time): slower,
- * but with Svelte's dev-only warnings, for debugging.
+ * but with Svelte's dev-only checks, e.g. the hydration mismatch warnings, for debugging.
  */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -79,7 +81,13 @@ async function startServer(databaseURL: string, outbox: string) {
 		"node_modules/.bin/vp",
 		[dev ? "dev" : "preview", "--port", String(port), "--strictPort"],
 		{
-			env: { ...process.env, DATABASE_URL: databaseURL, ORIGIN: baseURL, MAIL_OUTBOX: outbox },
+			env: {
+				...process.env,
+				...(dev ? {} : { NODE_ENV: "production" }),
+				DATABASE_URL: databaseURL,
+				ORIGIN: baseURL,
+				MAIL_OUTBOX: outbox,
+			},
 			stdio: ["ignore", "pipe", "pipe"],
 			detached: true,
 		},
@@ -161,7 +169,20 @@ export default async function setup(project: TestProject) {
 		});
 	run("node_modules/.bin/drizzle-kit", ["migrate"]);
 	run("node", ["--env-file=.env", "src/lib/server/db/seed/index.ts"]);
-	if (!dev) run("node_modules/.bin/vp", ["build"]);
+	if (!dev) {
+		// Paraglide compiles the messages into `src/lib/paraglide`, a module per message in a
+		// production build. The component tests, which run while the servers are up, load them from
+		// there too, a module per language: keeping that layout keeps them from loading ~2,900 modules
+		// per test file, which slowed their clicks into timeouts.
+		execFileSync("node_modules/.bin/vp", ["build"], {
+			env: {
+				...process.env,
+				NODE_ENV: "production",
+				PARAGLIDE_OUTPUT_STRUCTURE: "locale-modules",
+			},
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+	}
 
 	const count = dev ? 1 : project.config.maxWorkers;
 	const started = await Promise.allSettled(
