@@ -18,6 +18,8 @@ declare global {
 		interface PageData {
 			/** What's remembered of the page's data table, if it brings it back (`loadTableMemory`). */
 			tableMemory?: Record<string, TableMemory | null>;
+			/** Whose tables the page shows (organization and member), with `tableMemory`. */
+			tableOwner?: string;
 		}
 		// interface PageState {}
 		// interface Platform {}

@@ -198,8 +198,9 @@ function candidatesOf<TData extends RowData>(
  * current language, and the widest kept.
  *
  * The memory starts over when columns are hidden or shown, or the density or language changes,
- * and lasts a visit: `key` (the table's, see `tableViewsKey`) keeps it in `sessionStorage` (if
- * there is any; else it lasts as long as the table). Attach `attach` to the `<table>`, whose header
+ * and lasts a visit: `key` (the table's and its owner's, so the rows of one organization or member
+ * are never shown to another in the same tab) keeps it in `sessionStorage` (if there is any, and a
+ * key; else it lasts as long as the table). Attach `attach` to the `<table>`, whose header
  * cells and cells have `data-column-id` and page rows `data-row-id`, and each hidden cell's
  * `attach` to its `<td>`.
  */

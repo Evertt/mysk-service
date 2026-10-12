@@ -89,6 +89,7 @@ test("the table remembers its changes once they settle, and forgets them at its 
 	await expect
 		.poll(() => remembered.at(-1), { timeout: 2000 })
 		.toEqual({
+			owner: "org:user",
 			tableKey: "/items",
 			query: "?status=open",
 			viewId: open.id,
@@ -100,7 +101,7 @@ test("the table remembers its changes once they settle, and forgets them at its 
 	await page.getByRole("menuitem", { name: "No view" }).click();
 	await expect
 		.poll(() => remembered.at(-1), { timeout: 2000 })
-		.toEqual({ tableKey: "/items", query: "", viewId: null, columns: null });
+		.toEqual({ owner: "org:user", tableKey: "/items", query: "", viewId: null, columns: null });
 });
 
 test("a table whose page doesn't bring it back remembers nothing", async () => {

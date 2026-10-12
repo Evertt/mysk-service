@@ -6,7 +6,7 @@
 import type { Page } from "playwright";
 import { expect, test } from "vite-plus/test";
 
-import { useApp } from "./app.ts";
+import { organizations, useApp } from "./app.ts";
 
 const admin = useApp();
 
@@ -83,4 +83,27 @@ test("a filter lays the columns out again, wide enough for what the list has sho
 		expect(await clipped(page)).toEqual([]);
 		expect(await widths(page)).toEqual(laidOut);
 	}
+});
+
+test("another organization's table never starts from the rows the first one kept", async () => {
+	const { page } = admin;
+	const { north, south } = organizations;
+	/** The keys the tables' widths are kept under for the visit (see `column-widths.svelte.ts`). */
+	const keys = () =>
+		page.evaluate(() =>
+			Object.keys(sessionStorage).filter((key) => key.startsWith("data-table-widths:")),
+		);
+	const before = await keys();
+	expect(before.length).toBeGreaterThan(0);
+
+	// South's orders list keeps its own, under another key: North's rows aren't laid out in it.
+	await admin.switchOrganization(south.name);
+	await admin.go("/orders?page=1");
+	await admin.tableSettled();
+	await expect
+		.poll(async () => (await keys()).filter((key) => !before.includes(key)))
+		.toHaveLength(1);
+	expect(before.some((key) => key.includes(north.id))).toBe(true);
+	expect((await keys()).filter((key) => key.includes(south.id))).toHaveLength(1);
+	await admin.switchOrganization(north.name);
 });

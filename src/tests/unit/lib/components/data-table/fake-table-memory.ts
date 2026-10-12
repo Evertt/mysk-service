@@ -6,15 +6,21 @@
  * vi.mock("#lib/components/data-table/table-memory.remote.ts", () => import("./fake-table-memory.ts"));
  * ```
  */
-import type { TableMemory } from "#lib/components/data-table/table-memory.remote.ts";
+import type {
+	TableMemory,
+	TableMemoryAnswer,
+} from "#lib/components/data-table/table-memory.remote.ts";
 
-export type { TableMemory };
+export type { TableMemory, TableMemoryAnswer };
 
-/** What the tables asked to remember, oldest first. */
-export const remembered: ({ tableKey: string } & TableMemory)[] = [];
+/** What the tables asked to remember, oldest first (whose, as the page passed it: `org:user`). */
+export const remembered: ({ owner: string; tableKey: string } & TableMemory)[] = [];
 
-export const getTableMemory = async (_key: string): Promise<TableMemory | null> => null;
+export const getTableMemory = async (_key: string): Promise<TableMemoryAnswer> => ({
+	owner: "org:user",
+	memory: null,
+});
 
-export const rememberTable = async (memory: { tableKey: string } & TableMemory) => {
+export const rememberTable = async (memory: { owner: string; tableKey: string } & TableMemory) => {
 	remembered.push(memory);
 };

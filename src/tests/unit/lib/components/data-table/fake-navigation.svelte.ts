@@ -33,7 +33,10 @@ export function visit(
 	{ clear = true, memory }: { clear?: boolean; memory?: TableMemory | null } = {},
 ) {
 	page.url = new URL(path, "http://localhost");
-	page.data = memory === undefined ? {} : { tableMemory: { [page.route.id ?? ""]: memory } };
+	page.data =
+		memory === undefined
+			? {}
+			: { tableOwner: "org:user", tableMemory: { [page.route.id ?? ""]: memory } };
 	if (clear) visits.length = 0;
 }
 

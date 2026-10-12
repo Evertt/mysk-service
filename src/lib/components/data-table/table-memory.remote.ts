@@ -25,6 +25,22 @@ export interface TableMemory {
 	viewId: number | null;
 }
 
+/** What's remembered of a table, and whose it is (see `memoryOwner`). */
+export interface TableMemoryAnswer {
+	owner: string;
+	memory: TableMemory | null;
+}
+
+/**
+ * Whose tables the request is about: the organization and the member, e.g. for what the browser
+ * keeps of them (see `column-widths.svelte.ts`) and for a save that arrives after the member
+ * switched organizations (see `rememberTable`).
+ */
+const memoryOwner = () => {
+	const tenant = currentTenant();
+	return `${tenant.organizationId}:${tenant.user.id}`;
+};
+
 /** The signed-in member's row of a table's memory. */
 const memoryOf = (key: string) =>
 	and(
@@ -33,18 +49,21 @@ const memoryOf = (key: string) =>
 		eq(tableMemory.tableKey, key),
 	);
 
-/** The signed-in member's memory of a table: `null` if there's nothing to remember. */
-export const getTableMemory = forMembers.query(tableKeySchema, async (key) => {
-	const [row] = await db
-		.select({
-			columns: tableMemory.columns,
-			query: tableMemory.query,
-			viewId: tableMemory.viewId,
-		})
-		.from(tableMemory)
-		.where(memoryOf(key));
-	return row ?? null;
-});
+/** The signed-in member's memory of a table (`null` if there's nothing to remember), and whose. */
+export const getTableMemory = forMembers.query(
+	tableKeySchema,
+	async (key): Promise<TableMemoryAnswer> => {
+		const [row] = await db
+			.select({
+				columns: tableMemory.columns,
+				query: tableMemory.query,
+				viewId: tableMemory.viewId,
+			})
+			.from(tableMemory)
+			.where(memoryOf(key));
+		return { owner: memoryOwner(), memory: row ?? null };
+	},
+);
 
 /** Whether the member sees a view of the table: their own, or a shared one. */
 async function seesView(viewId: number, key: string) {
@@ -64,16 +83,19 @@ async function seesView(viewId: number, key: string) {
 
 /**
  * Remembers a table as the member left it; with nothing to remember (the default columns and
- * parameters, no view), forgets it.
+ * parameters, no view), forgets it. Only for its `owner`: a save that arrives once the member has
+ * switched organizations (sent as they leave the page) belongs to the one they left, and is dropped.
  */
 export const rememberTable = forMembers.command(
 	v.object({
+		owner: v.string(),
 		tableKey: tableKeySchema,
 		columns: v.nullable(columnVisibilitySchema),
 		query: viewQuerySchema,
 		viewId: v.nullable(v.pipe(v.number(), v.integer())),
 	}),
 	async (input) => {
+		if (input.owner !== memoryOwner()) return;
 		const tenant = currentTenant();
 		const viewId = input.viewId !== null && (await seesView(input.viewId, input.tableKey));
 		const memory = {

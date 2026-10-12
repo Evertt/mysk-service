@@ -38,11 +38,14 @@ import { tableViewsKey } from "./views.ts";
 const saveDelay = 500;
 
 /**
- * Memory saved in this tab and not yet on the server, by table: newer than what the server
- * answers. Only ever filled in the browser (by `rememberTable`'s effects), so never shared between
- * the server's requests.
+ * Memory saved in this tab and not yet on the server, by owner and table (`unsavedKey`): newer
+ * than what the server answers. Only ever filled in the browser (by `rememberTable`'s effects), so
+ * never shared between the server's requests.
  */
 const unsaved = new Map<string, TableMemory>();
+
+/** Where `unsaved` keeps a table's memory: per owner, so another organization never reads it. */
+const unsavedKey = (owner: string, key: string) => `${owner}|${key}`;
 
 /** What a load needs of its event (SvelteKit's `LoadEvent`). */
 interface MemoryLoadEvent {
@@ -60,10 +63,11 @@ interface MemoryLoadEvent {
  */
 export async function loadTableMemory(event: MemoryLoadEvent) {
 	const key = tableViewsKey(event.route.id ?? event.untrack(() => event.url.pathname));
-	const memory = unsaved.get(key) ?? (await fetchMemory(key));
+	const answer = await fetchMemory(key);
+	const memory = unsaved.get(unsavedKey(answer.owner, key)) ?? answer.memory;
 	const url = event.untrack(() => event.url);
 	if (memory?.query && url.search === "") redirect(307, `${url.pathname}${memory.query}`);
-	return { tableMemory: { [key]: memory } };
+	return { tableOwner: answer.owner, tableMemory: { [key]: memory } };
 }
 
 /**
@@ -75,12 +79,18 @@ async function fetchMemory(key: string) {
 	if (!browser) return getTableMemory(key);
 	const query = getTableMemory(key);
 	await query.refresh();
-	return query.current ?? null;
+	return query.current!;
 }
 
 /** The memory the page's load passed for a table: `undefined` if it doesn't take part. */
 export const passedMemory = (key: string): TableMemory | null | undefined =>
 	page.data.tableMemory?.[key];
+
+/**
+ * Whose tables the page shows (the organization and the member), if its load brings them back:
+ * what the browser keeps of a table is kept per owner (see `column-widths.svelte.ts`).
+ */
+export const passedOwner = (): string | undefined => page.data.tableOwner;
 
 /** What the memory needs of the table (TanStack Table's). */
 type MemoryTable = Parameters<typeof defaultVisibility>[0];
@@ -94,8 +104,10 @@ export function rememberTable(
 	table: MemoryTable,
 	sync: Pick<TableUrlSync, "viewsKey" | "viewQuery" | "viewId">,
 	memory: TableMemory | null,
+	owner: string,
 ) {
 	const key = sync.viewsKey;
+	const pending = unsavedKey(owner, key);
 	const defaults = defaultVisibility(table);
 	const now = $derived<TableMemory>({
 		columns: changedVisibility(defaults, currentVisibility(table)),
@@ -108,14 +120,14 @@ export function rememberTable(
 	function save() {
 		clearTimeout(timer);
 		timer = undefined;
-		const next = unsaved.get(key);
+		const next = unsaved.get(pending);
 		if (!next) return;
-		remember({ tableKey: key, ...next })
+		remember({ owner, tableKey: key, ...next })
 			.catch(() => {
 				// Not remembered: the table works all the same.
 			})
 			.finally(() => {
-				if (unsaved.get(key) === next) unsaved.delete(key);
+				if (unsaved.get(pending) === next) unsaved.delete(pending);
 			});
 	}
 
@@ -124,7 +136,7 @@ export function rememberTable(
 		const json = JSON.stringify(next);
 		if (json === saved) return;
 		saved = json;
-		unsaved.set(key, next);
+		unsaved.set(pending, next);
 		clearTimeout(timer);
 		timer = setTimeout(save, saveDelay);
 	});

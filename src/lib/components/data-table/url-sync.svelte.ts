@@ -10,7 +10,7 @@ import {
 	showColumns,
 } from "./column-visibility.ts";
 import { type Features, filterFnGrammar } from "./features.ts";
-import { passedMemory, rememberTable } from "./table-memory.svelte.ts";
+import { passedMemory, passedOwner, rememberTable } from "./table-memory.svelte.ts";
 import {
 	parseTableUrl,
 	searchString,
@@ -100,6 +100,11 @@ export interface TableUrlSync {
 	spec: TableUrlSpec;
 	/** Which table it is, for its saved views and memory (see `tableViewsKey`). */
 	viewsKey: string;
+	/**
+	 * Whose table it is (the organization and the member), if its page brings back its memory
+	 * (see `table-memory.svelte.ts`): what the browser keeps of it is kept per owner.
+	 */
+	owner: string | undefined;
 	/** The table's state, as far as the URL holds it. */
 	state(): TableUrlState;
 	/** What a view would save of the state (see `viewQuery`). */
@@ -165,6 +170,7 @@ export function syncTableWithUrl<TData extends RowData>(
 	const sync: TableUrlSync = {
 		spec,
 		viewsKey,
+		owner: passedOwner(),
 		state: () => currentState(table),
 		viewQuery: () => viewQuery(currentState(table), spec),
 		columns: () => ({ current: currentVisibility(table), defaults: defaultVisibility(table) }),
@@ -186,10 +192,10 @@ export function syncTableWithUrl<TData extends RowData>(
 	// The table as the member left it, if its page brings it back (see `table-memory.svelte.ts`):
 	// its columns, and the view if it shows what the view was left at.
 	const memory = passedMemory(viewsKey);
-	if (memory !== undefined) {
+	if (memory !== undefined && sync.owner !== undefined) {
 		showColumns(table, memory?.columns);
 		if (memory?.viewId != null && memory.query === sync.viewQuery()) viewId = memory.viewId;
-		rememberTable(table, sync, memory);
+		rememberTable(table, sync, memory, sync.owner);
 	}
 
 	// The table's changes into the URL.

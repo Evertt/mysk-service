@@ -102,7 +102,8 @@
 
 	// Columns as wide as the widest cells seen, from page to page (see `column-widths.svelte.ts`).
 	const sync = tableUrlSync(table);
-	const widths = columnWidths(table, () => sync?.viewsKey);
+	// Kept for the visit per owner, so another organization or member never sees its rows.
+	const widths = columnWidths(table, () => sync?.owner && `${sync.owner}|${sync.viewsKey}`);
 </script>
 
 <div
