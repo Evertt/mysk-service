@@ -11,9 +11,16 @@ make the office feel snappy? Off unless switched on per browser (`?sw=on`, `?sw=
   `GET /_app/remote/<file hash>/<name>?payload=…` with a JSON answer, so the worker can keep and
   replay the answers without knowing anything about the function (`src/service-worker/index.ts`).
 - **Stale-while-revalidate.** A cached answer is served at once, and the worker asks the server
-  again in the background. If the answer changed, it tells the tab (`swr:updated`), which calls
-  `refreshAll()`; for that refresh (`swr:refreshing`) the worker answers from its cache without
-  asking again, so there's no second round trip and no refresh loop.
+  again in the background. If the answer changed, it tells the tab (`swr:updated`), which refreshes
+  just that query; the refresh finds the new answer in the cache, so there's no second round trip
+  and no refresh loop. SvelteKit keys its active queries by exactly what the worker knows
+  (`<file hash>/<name>` and the payload, in `query_map`), so the tab finds the query with one
+  import of SvelteKit's client runtime (`$kit-client`, aliased in `vite.config.ts`). That's
+  internal: if a SvelteKit upgrade moves it, `refreshAll()` does the same job, refreshing every
+  query on the page (invisibly: they're answered from the cache, which holds what they show).
+- **Showing it.** While the page shows answers the worker is checking (`swr:revalidating`, until
+  `swr:updated` or `swr:revalidated`), the header shows a cloud with a turning arrow
+  (`sync-indicator.svelte`), after 150 ms so a quick check doesn't flicker.
 - **Changes come first.** Any other request (a command, a form, a sign-in) makes the answers stored
   before it network-first until asked again, so the app never shows data older than the user's own
   change. Remembering a table's state (`rememberTable`) only outdates its own file's answers.
@@ -51,17 +58,17 @@ So preloading is instant once the hover outlasts the round trips, and the worker
 instant, hover or not. `node scripts/sw-check.ts`, with a customer renamed by someone else (in the
 database):
 
-- revisited with a click: the old name at commit (~30 ms), the new one ~1.3 s later, then quiet;
+- revisited with a click: the old name at commit (~30 ms) and the sync indicator from ~250 ms, the
+  new name ~0.65 s later and the indicator gone with it; the worker asked the server 3 times (the
+  page's queries), then nothing;
 - hovered 1.5 s, then clicked: the new name at commit (~30 ms), never the old one;
 - hovered 100 ms, then clicked: the old name at commit, the new one ~0.5 s later;
 - renamed in the app instead: the old name never shows again.
 
 ## What's left, if it's adopted
 
-- **Targeted refresh.** `refreshAll()` refreshes every query on the page, and waits for the shell's
-  queries the worker has never seen (they were server-rendered), which costs one extra round trip
-  the first time. SvelteKit has no public way to refresh one query by its key, which is what the
-  worker knows; that would be worth asking for upstream.
+- **A public way to refresh a query by its key** (what `query_map` gives here) would be worth
+  asking SvelteKit for.
 - **First visits** aren't faster: the worker learns a page's queries by seeing it. What it learned
   survives reloads, so it helps from the second session on. Seeding it with the server-rendered
   answers would help first visits after a full load.

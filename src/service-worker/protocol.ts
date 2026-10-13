@@ -16,11 +16,6 @@ export type PageMessage =
 	 * now on are that page's.
 	 */
 	| { type: "swr:page"; path: string }
-	/**
-	 * The tab refreshes its queries because the worker told it of new answers (`swr:updated`): for a
-	 * moment, the worker answers from its cache without asking the server again.
-	 */
-	| { type: "swr:refreshing" }
 	/** Pages the user may open next: the worker asks again for the queries it saw them make. */
 	| { type: "swr:warm"; paths: string[] }
 	/**
@@ -31,8 +26,11 @@ export type PageMessage =
 
 /** From the worker to a page. */
 export type WorkerMessage =
+	/** The worker answered the query at `url` from its cache, and asks the server for a newer answer. */
+	| { type: "swr:revalidating"; url: string }
+	/** The server's answer to the query at `url` is the one the worker gave, or didn't come. */
+	| { type: "swr:revalidated"; url: string }
 	/**
-	 * A query the worker answered from its cache has a different answer now, in the cache:
-	 * refresh the page's queries to show it.
+	 * The query at `url` has a different answer now, in the worker's cache: refresh it to show it.
 	 */
-	{ type: "swr:updated"; url: string };
+	| { type: "swr:updated"; url: string };

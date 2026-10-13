@@ -8,8 +8,8 @@
  *   the server, against the database): it only replays answers.
  * - **Stale, then fresh**: a cached answer is served at once, and the worker asks the server again
  *   in the background. If the answer differs, it stores it and tells the tab (`swr:updated`), which
- *   refreshes its queries (`swr:refreshing`); for that refresh the worker answers what it has
- *   from the cache, without asking the server again.
+ *   refreshes that query; the refresh finds the new answer in the cache (`freshFor`), without
+ *   asking the server again.
  * - **After a change**: any other request (a command, a form, a sign-in) may have changed what the
  *   queries answer, so answers stored before it are asked for again before they're shown
  *   (network first) instead of shown stale. Asking for a table's memory (`quietChanges`) only
@@ -47,11 +47,9 @@ const remotePath = "/_app/remote/";
 
 /**
  * How long an answer the worker just got is shown as it is, without asking the server again: the
- * same query asked for twice in one go.
+ * same query asked for twice in one go, or the refresh after the tab was told of a new answer.
  */
 const freshFor = 1_000;
-/** How long a tab's refresh for new answers (`swr:refreshing`) takes the cache's answers as they are. */
-const refreshFor = 3_000;
 /** How long after hovering a link the worker holds its page's answers for fresh ones, at most. */
 const holdFor = 3_000;
 /** How old an answer has to be for warming to ask for it again. */
@@ -239,12 +237,12 @@ async function freshForHover(clientId: string, url: URL, fresh: Promise<string |
 	return Promise.race([fresh, hover.navigated.then(() => undefined), timeout]);
 }
 
-/** Until when each tab (by client id) refreshes for new answers it was told about. */
-const refreshing = new Map<string, number>();
+async function post(clientId: string, message: WorkerMessage) {
+	(await self.clients.get(clientId))?.postMessage(message);
+}
 
 async function notify(clientId: string, url: URL) {
-	const client = await self.clients.get(clientId);
-	client?.postMessage({ type: "swr:updated", url: url.href } satisfies WorkerMessage);
+	await post(clientId, { type: "swr:updated", url: url.href });
 }
 
 /** Answers a remote query: from the cache if it has a recent enough answer, else from the server. */
@@ -269,8 +267,7 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 		}
 	}
 
-	const isRefreshing = Date.now() < (refreshing.get(event.clientId) ?? 0);
-	if (isRefreshing || Date.now() - storedAt < freshFor) return cached;
+	if (Date.now() - storedAt < freshFor) return cached;
 
 	const fresh = revalidate(url, scope);
 	const freshBody = await freshForHover(event.clientId, url, fresh);
@@ -278,10 +275,14 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 		return new Response(freshBody, { status: cached.status, headers: cached.headers });
 	}
 
+	// The tab shows that it's checking for newer answers (`swr:revalidating`) until it was told of a
+	// new one (`swr:updated`) or that there's none (`swr:revalidated`).
 	const cachedBody = await cached.clone().text();
+	event.waitUntil(post(event.clientId, { type: "swr:revalidating", url: url.href }));
 	event.waitUntil(
 		fresh.then(async (body) => {
 			if (body !== undefined && body !== cachedBody) await notify(event.clientId, url);
+			else await post(event.clientId, { type: "swr:revalidated", url: url.href });
 		}),
 	);
 	return cached;
@@ -377,9 +378,6 @@ self.addEventListener("message", (event) => {
 				tabPages.set(clientId, message.path);
 				endHover(clientId);
 			}
-			break;
-		case "swr:refreshing":
-			if (clientId) refreshing.set(clientId, Date.now() + refreshFor);
 			break;
 		case "swr:warm":
 			event.waitUntil(warm(message.paths));

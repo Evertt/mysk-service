@@ -4,8 +4,9 @@
  * open any office page with `?sw=on` (and `?sw=off` to unregister it and drop its caches).
  */
 import { dev } from "$app/env";
-import { afterNavigate, beforeNavigate, refreshAll } from "$app/navigation";
+import { afterNavigate, beforeNavigate } from "$app/navigation";
 import { onMount } from "svelte";
+import { SvelteSet } from "svelte/reactivity";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { getLocale } from "#lib/paraglide/runtime.js";
@@ -13,6 +14,14 @@ import { getLocale } from "#lib/paraglide/runtime.js";
 import type { PageMessage, WorkerMessage } from "../../service-worker/protocol.ts";
 
 const storageKey = "swr-worker";
+/** How long a query is shown as being checked, at most. */
+const giveUpAfter = 15_000;
+
+/**
+ * The queries the page shows the worker's cached answers of while the worker asks the server for
+ * newer ones, by request URL: while there are any, the header shows it (`sync-indicator.svelte`).
+ */
+export const revalidating = new SvelteSet<string>();
 
 /** Whether the worker is switched on in this browser, after applying a `?sw=` in the URL. */
 function switchedOn() {
@@ -31,6 +40,21 @@ async function switchOff() {
 	for (const name of await caches.keys()) {
 		if (name.startsWith("swr-")) await caches.delete(name);
 	}
+}
+
+/**
+ * Refreshes the query whose request `href` was, if the page has it (or SvelteKit still keeps it in
+ * memory, for a page a preload may render from it): it gets the new answer from the worker's cache.
+ * SvelteKit keys its queries by the request's parts, `<file hash>/<name>` and the payload.
+ */
+async function refreshQuery(href: string) {
+	// Left out of the server's build, where SvelteKit's client runtime can't be imported.
+	if (import.meta.env.SSR) return;
+	const { query_map } = await import("$kit-client");
+	const url = new URL(href);
+	const id = url.pathname.slice("/_app/remote/".length);
+	const payload = url.searchParams.get("payload") ?? "";
+	await query_map.get(id)?.get(payload)?.resource.refresh();
 }
 
 /** The page's path as the worker remembers it. */
@@ -67,15 +91,21 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 	});
 
 	onMount(() => {
-		let refreshing: ReturnType<typeof setTimeout> | undefined;
 		const onMessage = (event: MessageEvent<WorkerMessage>) => {
-			if (event.data?.type !== "swr:updated") return;
-			// Several queries come in at once: one refresh for all of them.
-			clearTimeout(refreshing);
-			refreshing = setTimeout(() => {
-				post({ type: "swr:refreshing" });
-				void refreshAll();
-			}, 30);
+			const message = event.data;
+			switch (message?.type) {
+				case "swr:revalidating":
+					revalidating.add(message.url);
+					// In case the worker's answer never comes (it was stopped, the tab went elsewhere).
+					setTimeout(() => revalidating.delete(message.url), giveUpAfter);
+					break;
+				case "swr:revalidated":
+					revalidating.delete(message.url);
+					break;
+				case "swr:updated":
+					void refreshQuery(message.url).finally(() => revalidating.delete(message.url));
+					break;
+			}
 		};
 		navigator.serviceWorker.addEventListener("message", onMessage);
 
@@ -112,7 +142,6 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 		})();
 
 		return () => {
-			clearTimeout(refreshing);
 			navigator.serviceWorker.removeEventListener("message", onMessage);
 			document.removeEventListener("pointerover", onPointerOver);
 		};

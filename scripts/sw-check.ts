@@ -33,7 +33,10 @@ async function go(page: Page, path: string) {
 const heading = (page: Page) => page.locator("h1").first().innerText();
 
 const browser = await chromium.launch();
-const context = await browser.newContext({ locale: "en-GB" });
+const context = await browser.newContext({
+	locale: "en-GB",
+	deviceScaleFactor: Number(process.env.SCALE ?? 1),
+});
 const page = await context.newPage();
 let t0 = Date.now();
 const log = (text: string) =>
@@ -78,11 +81,19 @@ workerRequests = [];
 const started = (t0 = Date.now());
 await go(page, `/customers/${code}`);
 console.log(`   at commit, ${Date.now() - started} ms: ${await heading(page)}`);
+const indicator = page.locator('[data-slot="sync-indicator"]');
+await indicator.waitFor({ state: "visible", timeout: 2_000 });
+console.log(`   the sync indicator shows from ${Date.now() - started} ms`);
+if (process.env.SCREENSHOT) {
+	await indicator.screenshot({ path: process.env.SCREENSHOT });
+}
 await page.waitForFunction(
 	(name) => document.querySelector("h1")?.textContent?.includes(name),
 	"changed elsewhere",
 );
 console.log(`   then, ${Date.now() - started} ms: ${await heading(page)}`);
+await indicator.waitFor({ state: "hidden", timeout: 5_000 });
+console.log(`   the sync indicator is gone at ${Date.now() - started} ms`);
 await page.waitForTimeout(5_000);
 console.log(
 	`   the worker asked the server ${workerRequests.length}x in 5 s: ${workerRequests.join(", ")}`,
@@ -162,6 +173,54 @@ for (const [step, hover] of [
 	const shown = await hoverAndOpen(page, `/customers/${code}`, hover);
 	for (const line of shown.filter((line) => !line.endsWith("Engineers"))) console.log(`   ${line}`);
 }
+
+console.log(
+	"5. Changed elsewhere, then a hover of 2 s without a click: what the current page does",
+);
+await go(page, "/orders");
+await page.waitForTimeout(2_000);
+await rename(`${original} (5)`);
+await page.evaluate((href) => {
+	const link = Object.assign(document.createElement("a"), {
+		href,
+		id: "probe",
+		textContent: "probe",
+	});
+	link.style.cssText = "position:fixed;top:0;left:0;z-index:9999;padding:8px;background:white";
+	document.body.append(link);
+	const main = document.querySelector("main") ?? document.body;
+	const started = performance.now();
+	const changes: string[] = [];
+	const before = main.innerText;
+	new MutationObserver((records) => {
+		for (const record of records) {
+			if (record.target instanceof Element && record.target.closest("#probe")) continue;
+			const target = record.target instanceof Element ? record.target : record.target.parentElement;
+			const what =
+				record.type === "attributes"
+					? `${record.attributeName}=${target?.getAttribute(record.attributeName!)}`
+					: record.type;
+			changes.push(
+				`${Math.round(performance.now() - started)} ms: ${what} on <${target?.tagName.toLowerCase()}>`,
+			);
+		}
+	}).observe(main, { subtree: true, childList: true, characterData: true, attributes: true });
+	Object.assign(window, { __changes: changes, __before: before, __main: main });
+}, `/customers/${code}`);
+await page.hover("#probe");
+await page.waitForTimeout(2_000);
+const { changes, textChanged, path } = await page.evaluate(() => {
+	const w = window as unknown as { __changes: string[]; __before: string; __main: HTMLElement };
+	return {
+		changes: w.__changes,
+		textChanged: w.__main.innerText !== w.__before,
+		path: location.pathname,
+	};
+});
+console.log(
+	`   still on ${path}; the page's text changed: ${textChanged}; ${changes.length} DOM changes`,
+);
+for (const change of [...new Set(changes)].slice(0, 15)) console.log(`   ${change}`);
 
 await rename(original);
 await browser.close();
