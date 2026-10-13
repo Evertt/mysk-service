@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
+	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
@@ -35,6 +36,8 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// What's typed and not saved yet comes back with the page (back button, reload).
+	formSnapshot("customer", () => form);
 </script>
 
 <form

@@ -61,13 +61,14 @@
 			{...form.enhance(async ({ submit }) => {
 				if (!(await submit().updates(getSchedule(week)))) return;
 				const day = parseDay(form.fields.day.value());
-				open = false;
 				toast.success(
 					day
 						? m.schedule_scheduled_for({ number: order.number, date: formatDate(day) })
 						: m.schedule_scheduled({ number: order.number }),
 				);
+				// First, so it can leave the page from the dialog (see `historyDialog()`).
 				if (day) onscheduled?.(day);
+				open = false;
 			})}
 			class="flex flex-col gap-6"
 		>

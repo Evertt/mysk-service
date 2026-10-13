@@ -8,10 +8,14 @@
 	what changes itself, refreshing it on the server or redirecting to a page that loads afresh (the
 	list), and the record's own queries would only answer that it's gone. Asked again while the page
 	is left, they failed in the parts that show their errors, the modules' slots.
+
+	The open dialog has a history entry of its own (`historyDialog()`), so going back closes it.
 -->
 <script lang="ts">
 	import type { RemoteForm } from "$app/server";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
+
+	import { historyDialog } from "../history-dialog.svelte.ts";
 
 	let {
 		form,
@@ -26,9 +30,12 @@
 		description: string;
 		label?: string;
 	} = $props();
+
+	// Keyed by the record, for a list of them (the members).
+	const dialog = $derived(historyDialog(`delete-${id}`));
 </script>
 
-<AlertDialog.Root>
+<AlertDialog.Root bind:open={() => dialog.open, (open) => (dialog.open = open)}>
 	<AlertDialog.Trigger>
 		{#snippet child({ props })}
 			<Button {...props} variant="destructive">
@@ -44,7 +51,8 @@
 		</AlertDialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				await submit().updates();
+				// Deleted without leaving the page (a member): the dialog's history entry goes too.
+				if ((await submit().updates()) && dialog.open) dialog.open = false;
 			})}
 		>
 			<input {...form.fields.id.as("hidden", id)} />

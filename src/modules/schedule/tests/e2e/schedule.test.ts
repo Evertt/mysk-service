@@ -179,6 +179,22 @@ describe("in North", () => {
 		expect(await backlog().locator(`[data-order="${number}"]`).count()).toBe(0);
 	});
 
+	test("going back closes the dialog, and going forward opens it again", async () => {
+		const { page } = app;
+		const number = (await cards(backlog()).first().getAttribute("data-order"))!;
+		const dialog = await openDialog(number);
+		await page.goBack();
+		await dialog.waitFor({ state: "hidden" });
+		expect(app.path()).toBe("/schedule");
+		await page.goForward();
+		await dialog.waitFor();
+		expect(await dialog.getByRole("heading").innerText()).toBe(`Schedule ${number}`);
+		// Cancelling goes back too, so going back again leaves the page.
+		await dialog.getByRole("button", { name: "Cancel" }).click();
+		await dialog.waitFor({ state: "hidden" });
+		expect(await page.evaluate(() => history.state["sveltekit:metadata"].state)).toBe("[{}]");
+	});
+
 	test("dragging an order to another engineer and day keeps its time", async () => {
 		const [, engineer] = engineers;
 		const card = cell(engineers[0].name, weekday(2)).locator(`[data-order="${planned.number}"]`);
@@ -237,5 +253,21 @@ describe("in North", () => {
 		expect(await app.issues()).toContain("Only open orders can be scheduled");
 		expect(await snapshot(done.id)).toEqual(before);
 		await page.keyboard.press("Escape");
+	});
+
+	test("planned for another week, the board goes there, and back to this week without the dialog", async () => {
+		const { page } = app;
+		const number = (await cards(backlog()).first().getAttribute("data-order"))!;
+		const dialog = await openDialog(number);
+		await dialog.getByLabel("Date").fill(dayKey(weekday(8)));
+		await app.submit(dialog.getByRole("button", { name: "Schedule" }));
+		await page.waitForURL((url) => url.searchParams.get("week") === dayKey(weekday(7)));
+		await cell("Unassigned", weekday(8)).locator(`[data-order="${number}"]`).waitFor();
+		await dialog.waitFor({ state: "hidden" });
+
+		await page.goBack();
+		await page.waitForURL((url) => url.pathname === "/schedule" && !url.search);
+		await cell("Unassigned", weekday(0)).waitFor();
+		expect(await dialog.isVisible()).toBe(false);
 	});
 });

@@ -162,7 +162,11 @@ export function useApp({
 			return page;
 		},
 		async go(path) {
-			const response = await page.goto(new URL(path, baseURL).href);
+			const url = new URL(path, baseURL).href;
+			// A visit, also to the page that's open: the browser takes a visit to the same URL for a
+			// reload, which brings back what's typed into its forms (see `formSnapshot()`).
+			if (page.url() === url) await page.goto("about:blank");
+			const response = await page.goto(url);
 			await hydrated(page);
 			return response;
 		},

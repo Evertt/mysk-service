@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
+	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
@@ -40,11 +41,13 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// What's typed and not saved yet comes back with the page (back button, reload).
+	formSnapshot("order", () => form);
 	// When the order is scheduled for, on the user's clock.
 	const scheduled = $derived(order?.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
-	// Equipment is limited to the chosen customer's units.
-	let customerId = $derived(order ? String(order.customerId) : "");
+	// Equipment is limited to the chosen customer's units (also when the snapshot brings one back).
+	let customerId = $derived(fields.customerId.value() ?? (order ? String(order.customerId) : ""));
 	// Reset when the customer changes: a select whose value is no longer among its options has no
 	// selection at all, and would then be left out of the submission.
 	let equipmentId = $derived(order?.equipmentId ? String(order.equipmentId) : "");

@@ -21,7 +21,10 @@ declare global {
 			/** Whose tables the page shows (organization and member), with `tableMemory`. */
 			tableOwner?: string;
 		}
-		// interface PageState {}
+		interface PageState {
+			/** The dialog open in this history entry (`historyDialog()`), and what it's about. */
+			dialog?: { key: string; value?: string };
+		}
 		// interface Platform {}
 	}
 }
