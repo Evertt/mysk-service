@@ -6,6 +6,15 @@
 			"runtimeExecutable": "pnpm",
 			"runtimeArgs": ["run", "dev"],
 			"port": 5173
+		},
+		{
+			"name": "sw-preview",
+			"runtimeExecutable": "sh",
+			"runtimeArgs": [
+				"-c",
+				"DATABASE_URL=file:local.db DATABASE_AUTH_TOKEN= DEV_REMOTE_DELAY_MS=600 ORIGIN=http://localhost:4180 BETTER_AUTH_URL=http://localhost:4180 pnpm exec vp preview --port 4180 --strictPort"
+			],
+			"port": 4180
 		}
 	]
 }

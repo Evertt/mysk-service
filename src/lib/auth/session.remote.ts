@@ -30,6 +30,7 @@ export const getCurrentTenant = forAnyRole.query(async () => {
 		.where(eq(member.userId, tenant.user.id))
 		.orderBy(asc(member.createdAt));
 	return {
+		userId: tenant.user.id,
 		organizationId: tenant.organizationId,
 		name: tenant.name,
 		roles: tenant.roles,

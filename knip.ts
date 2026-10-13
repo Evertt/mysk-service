@@ -32,6 +32,8 @@ const config: KnipConfig = {
 		// The tests of every Vitest project: `src/tests/{unit,e2e}/` and the modules' `tests/{unit,e2e}/`.
 		"src/**/*.{test,spec}.{ts,js}",
 		"scripts/**/*.spec.ts",
+		// The service worker experiment's measurements, run by hand (`node scripts/sw-benchmark.ts`).
+		"scripts/sw-{benchmark,check}.ts",
 	],
 	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
 	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)

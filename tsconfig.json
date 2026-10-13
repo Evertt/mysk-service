@@ -10,5 +10,6 @@
 		"scripts/modules/**/*.ts",
 		"vite.config.ts",
 		"drizzle.config.ts"
-	]
+	],
+	"exclude": ["src/service-worker"]
 }
