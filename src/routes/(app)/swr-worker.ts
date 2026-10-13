@@ -13,8 +13,6 @@ import { getLocale } from "#lib/paraglide/runtime.js";
 import type { PageMessage, WorkerMessage } from "../../service-worker/protocol.ts";
 
 const storageKey = "swr-worker";
-/** How long after hovering a link the worker isn't asked to warm it again. */
-const rewarmAfter = 10_000;
 
 /** Whether the worker is switched on in this browser, after applying a `?sw=` in the URL. */
 function switchedOn() {
@@ -81,14 +79,15 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 		};
 		navigator.serviceWorker.addEventListener("message", onMessage);
 
-		const warmedAt = new Map<string, number>();
+		// Once per link the pointer enters (it enters the link's children too), before SvelteKit's
+		// preload of its page asks for the page's queries.
+		let hovered: Element | null = null;
 		const onPointerOver = (event: PointerEvent) => {
-			const link = (event.target as Element | null)?.closest?.("a[href]");
+			const link = (event.target as Element | null)?.closest?.("a[href]") ?? null;
+			if (link === hovered) return;
+			hovered = link;
 			if (!(link instanceof HTMLAnchorElement) || link.origin !== location.origin) return;
-			const path = pagePath(new URL(link.href));
-			if (Date.now() - (warmedAt.get(path) ?? 0) < rewarmAfter) return;
-			warmedAt.set(path, Date.now());
-			send({ type: "swr:warm", paths: [path] });
+			send({ type: "swr:hover", path: pagePath(new URL(link.href)) });
 		};
 		document.addEventListener("pointerover", onPointerOver);
 

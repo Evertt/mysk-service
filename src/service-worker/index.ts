@@ -18,8 +18,12 @@
  *   zone. A page tells the worker this scope (`swr:scope`); each scope has a cache of its own, the
  *   others are deleted when it changes, and without one the worker caches nothing.
  * - **Warming**: the worker remembers which queries each page asked for (`swr:page`), and asks for
- *   them again when the page says the user may go there (`swr:warm`: hovering a link, the
- *   sidebar's links once the shell is up), so the cache is fresh by the time they click.
+ *   them again when the page says the user may go there (`swr:warm`: the sidebar's links once the
+ *   shell is up; `swr:hover`: a hovered link), so the cache is fresh by the time they click.
+ * - **Hovering**: SvelteKit renders a hovered link's page ahead (`forkPreloads`), with its queries.
+ *   The user isn't waiting for that page yet, so the worker holds those queries' answers until the
+ *   server's fresh ones are in: the page opens with fresh data, without a refresh. Once they click
+ *   (`swr:page`), it answers what it still holds from the cache at once, as for any navigation.
  */
 import { immutable } from "$app/manifest";
 import { self } from "$app/service-worker";
@@ -48,6 +52,8 @@ const remotePath = "/_app/remote/";
 const freshFor = 1_000;
 /** How long a tab's refresh for new answers (`swr:refreshing`) takes the cache's answers as they are. */
 const refreshFor = 3_000;
+/** How long after hovering a link the worker holds its page's answers for fresh ones, at most. */
+const holdFor = 3_000;
 /** How old an answer has to be for warming to ask for it again. */
 const warmAfter = 30_000;
 /** How many requests warming has in flight at once. */
@@ -181,7 +187,11 @@ function revalidate(url: URL, scope: string) {
 }
 
 async function rememberQuery(clientId: string, url: URL) {
-	const page = tabPages.get(clientId);
+	const current = tabPages.get(clientId);
+	// While a link is hovered, a query the tab's page didn't ask for is the hovered page's preload.
+	const hovered = hovers.get(clientId)?.path;
+	const isPreload = hovered && !(current && meta.pages[current]?.includes(url.href));
+	const page = isPreload ? hovered : current;
 	if (!page) return;
 	const queries = (meta.pages[page] ?? []).filter((known) => known !== url.href);
 	// Reinserted, so the most recently seen page is last and the oldest go first.
@@ -190,6 +200,43 @@ async function rememberQuery(clientId: string, url: URL) {
 	const pages = Object.keys(meta.pages);
 	for (const old of pages.slice(0, Math.max(0, pages.length - maxPages))) delete meta.pages[old];
 	await saveMeta();
+}
+
+/** The link each tab (by client id) hovers, until it navigates or `holdFor` has passed. */
+interface Hover {
+	path: string;
+	until: number;
+	/** Settles when the tab navigates: what's held is answered from the cache then. */
+	navigated: Promise<void>;
+	navigate: () => void;
+}
+const hovers = new Map<string, Hover>();
+
+function startHover(clientId: string, path: string) {
+	endHover(clientId);
+	const { promise, resolve } = Promise.withResolvers<void>();
+	hovers.set(clientId, {
+		path,
+		until: Date.now() + holdFor,
+		navigated: promise,
+		navigate: resolve,
+	});
+}
+
+function endHover(clientId: string) {
+	hovers.get(clientId)?.navigate();
+	hovers.delete(clientId);
+}
+
+/**
+ * For a query of the page whose link a tab hovers: the fresh answer, if it comes before the tab
+ * navigates or `holdFor` has passed.
+ */
+async function freshForHover(clientId: string, url: URL, fresh: Promise<string | undefined>) {
+	const hover = hovers.get(clientId);
+	if (!hover || Date.now() > hover.until || !meta.pages[hover.path]?.includes(url.href)) return;
+	const timeout = new Promise<undefined>((done) => setTimeout(done, hover.until - Date.now()));
+	return Promise.race([fresh, hover.navigated.then(() => undefined), timeout]);
 }
 
 /** Until when each tab (by client id) refreshes for new answers it was told about. */
@@ -225,9 +272,15 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 	const isRefreshing = Date.now() < (refreshing.get(event.clientId) ?? 0);
 	if (isRefreshing || Date.now() - storedAt < freshFor) return cached;
 
+	const fresh = revalidate(url, scope);
+	const freshBody = await freshForHover(event.clientId, url, fresh);
+	if (freshBody !== undefined) {
+		return new Response(freshBody, { status: cached.status, headers: cached.headers });
+	}
+
 	const cachedBody = await cached.clone().text();
 	event.waitUntil(
-		revalidate(url, scope).then(async (body) => {
+		fresh.then(async (body) => {
 			if (body !== undefined && body !== cachedBody) await notify(event.clientId, url);
 		}),
 	);
@@ -248,22 +301,36 @@ function noteChange(url: URL) {
 	void loaded.then(saveMeta);
 }
 
-/** Asks again for the queries of `paths` whose answers are missing or older than `warmAfter`. */
-async function warm(paths: string[]) {
+/**
+ * Asks again for the queries of `paths` whose answers are missing or older than `maxAge`. With a
+ * `clientId`, tells that tab of answers that changed: SvelteKit keeps a query a page used in memory
+ * for a while, and a preload of the page takes it from there without asking, so the tab refreshes
+ * it (`swr:updated`).
+ */
+async function warm(
+	paths: string[],
+	{ maxAge = warmAfter, clientId }: { maxAge?: number; clientId?: string } = {},
+) {
 	await loaded;
 	const { scope } = meta;
 	if (!scope) return;
 	const cache = await scopeCache(scope);
-	const due: URL[] = [];
+	const due: { url: URL; body?: string }[] = [];
 	for (const href of new Set(paths.flatMap((path) => meta.pages[path] ?? []))) {
 		const url = new URL(href);
 		const cached = await cache.match(href);
 		const storedAt = Number(cached?.headers.get(storedAtHeader) ?? 0);
 		const askedAt = Number(cached?.headers.get(askedAtHeader) ?? 0);
-		if (!cached || outdated(url, askedAt) || Date.now() - storedAt > warmAfter) due.push(url);
+		if (!cached || outdated(url, askedAt) || Date.now() - storedAt > maxAge) {
+			due.push({ url, body: await cached?.text() });
+		}
 	}
 	const workers = Array.from({ length: warmConcurrency }, async () => {
-		for (let url = due.shift(); url; url = due.shift()) await revalidate(url, scope);
+		for (let next = due.shift(); next; next = due.shift()) {
+			const body = await revalidate(next.url, scope);
+			const changed = body !== undefined && next.body !== undefined && body !== next.body;
+			if (changed && clientId) await notify(clientId, next.url);
+		}
 	});
 	await Promise.all(workers);
 }
@@ -306,13 +373,21 @@ self.addEventListener("message", (event) => {
 			event.waitUntil(setScope(message.scope));
 			break;
 		case "swr:page":
-			if (clientId) tabPages.set(clientId, message.path);
+			if (clientId) {
+				tabPages.set(clientId, message.path);
+				endHover(clientId);
+			}
 			break;
 		case "swr:refreshing":
 			if (clientId) refreshing.set(clientId, Date.now() + refreshFor);
 			break;
 		case "swr:warm":
 			event.waitUntil(warm(message.paths));
+			break;
+		case "swr:hover":
+			if (clientId) startHover(clientId, message.path);
+			// Anything older than a moment: the user is about to see it.
+			event.waitUntil(warm([message.path], { maxAge: freshFor, clientId }));
 			break;
 	}
 });

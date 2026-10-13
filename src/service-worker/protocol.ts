@@ -11,7 +11,10 @@ export type PageMessage =
 	 * worker keeps a cache per scope and answers from none until a page names one.
 	 */
 	| { type: "swr:scope"; scope: string }
-	/** The page this tab is going to: the queries it asks for from now on are that page's. */
+	/**
+	 * The page this tab is going to, when a navigation starts and ends: the queries it asks for from
+	 * now on are that page's.
+	 */
 	| { type: "swr:page"; path: string }
 	/**
 	 * The tab refreshes its queries because the worker told it of new answers (`swr:updated`): for a
@@ -19,7 +22,12 @@ export type PageMessage =
 	 */
 	| { type: "swr:refreshing" }
 	/** Pages the user may open next: the worker asks again for the queries it saw them make. */
-	| { type: "swr:warm"; paths: string[] };
+	| { type: "swr:warm"; paths: string[] }
+	/**
+	 * The user hovers a link to `path`: the worker warms it, and holds the answers of its preload
+	 * until the fresh ones are in or the tab navigates (`swr:page`).
+	 */
+	| { type: "swr:hover"; path: string };
 
 /** From the worker to a page. */
 export type WorkerMessage =

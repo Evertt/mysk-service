@@ -82,8 +82,10 @@ async function run(mode: "off" | "on") {
 		for (const path of pages) rounds[name].push(await navigate(page, path, options));
 	};
 	await round("first visit");
-	await round("second visit");
-	await round("hover 300ms, then click", { hover: 300 });
+	await round("again, click");
+	await round("again, hover 100ms", { hover: 100 });
+	await round("again, hover 300ms", { hover: 300 });
+	await round("again, hover 1s", { hover: 1_000 });
 	await browser.close();
 	return rounds;
 }
