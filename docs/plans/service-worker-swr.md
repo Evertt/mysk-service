@@ -72,6 +72,27 @@ database):
 - hovered 100 ms, then clicked: the old name at commit, the new one ~0.5 s later;
 - renamed in the app instead: the old name never shows again.
 
+## New deployments
+
+SvelteKit notices a new deployment by the `x-sveltekit-version` header of what the server answers,
+by `version.json` when the tab is shown or focused, and hourly, and then only sets `updated`; it
+reloads by itself only when a navigation fails (a page's code that's gone). The worker would have
+hidden the first: a cached answer carries the header of when it was stored, and a fresh answer
+with the same body never reached the page. Now:
+
+- **An answer from a server of another version counts as changed** (`differs`), so the tab reads
+  it and SvelteKit notices. Without that (`scripts/sw-deploy.ts`, comparing bodies only), a tab on
+  the old build never noticed and kept navigating on it.
+- **The cache's scope includes the app's version**, so a tab of a newer version never gets an older
+  one's answers.
+- **The root layout acts on `updated`**: the next navigation loads the page afresh (SvelteKit's own
+  pattern), and a tab nobody has touched for an hour reloads by itself (`idle.ts`); either way the
+  new page says the app was updated (`new-version.ts`).
+- **A new tab** always runs the newest version: the worker keeps no pages, so the page and the
+  files it names come from the current deployment.
+
+`node scripts/sw-deploy.ts <url> [idle|fresh]` checks each against a rebuilt and restarted server.
+
 ## What's left, if it's adopted
 
 - **A public way to refresh a query by its key** (what `query_map` gives here) would be worth

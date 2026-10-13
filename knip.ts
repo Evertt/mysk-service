@@ -33,7 +33,7 @@ const config: KnipConfig = {
 		"src/**/*.{test,spec}.{ts,js}",
 		"scripts/**/*.spec.ts",
 		// The service worker experiment's measurements, run by hand (`node scripts/sw-benchmark.ts`).
-		"scripts/sw-{benchmark,check,files}.ts",
+		"scripts/sw-{benchmark,check,deploy,files}.ts",
 	],
 	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
 	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)
