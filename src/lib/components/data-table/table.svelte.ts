@@ -6,8 +6,9 @@ import {
 	renderComponent,
 	type RowData,
 } from "@tanstack/svelte-table";
-import { getAllContexts, untrack } from "svelte";
+import { type Component, getAllContexts, type Snippet, untrack } from "svelte";
 
+import AfterMount from "./after-mount.svelte";
 import ColumnHeader from "./column-header.svelte";
 import CurrencyCell from "./currency-cell.svelte";
 import DataTable from "./data-table.svelte";
@@ -153,6 +154,11 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 
 	table = hook.createAppTable(tableOptions);
 	if (!inComponent()) return table;
+
+	// What's inside `<table.AppTable>` waits for the page to mount (see `after-mount.svelte`).
+	const AppTable = table.AppTable as Component<{ children: Snippet }>;
+	table.AppTable = ((internal: never, props: { children: Snippet }) =>
+		AfterMount(internal, { component: AppTable, props })) as unknown as typeof table.AppTable;
 
 	if (options.serverSide) {
 		$effect(() => {

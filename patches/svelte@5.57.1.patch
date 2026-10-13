@@ -1,3 +1,37 @@
+diff --git a/src/internal/client/dom/blocks/branches.js b/src/internal/client/dom/blocks/branches.js
+index 141b914537e3e9a463061a34eab08cba85bff86e..16e108981a3fb340a63c968a88814478d24f8620 100644
+--- a/src/internal/client/dom/blocks/branches.js
++++ b/src/internal/client/dom/blocks/branches.js
+@@ -1,5 +1,5 @@
+ /** @import { Effect, TemplateNode } from '#client' */
+-import { Batch, current_batch } from '../../reactivity/batch.js';
++import { Batch, current_batch, fork_branches } from '../../reactivity/batch.js';
+ import {
+ 	branch,
+ 	destroy_effect,
+@@ -92,6 +92,7 @@ export class BranchManager {
+ 			if (offscreen) {
+ 				// effect could have been outro'ed before through a prior batch — resume if necessary
+ 				resume_effect(offscreen.effect);
++				fork_branches.delete(offscreen.effect);
+ 				this.#onscreen.set(key, offscreen.effect);
+ 				this.#offscreen.delete(key);
+ 
+@@ -194,8 +195,13 @@ export class BranchManager {
+ 
+ 				fragment.append(target);
+ 
++				var offscreen_effect = branch(() => fn(target));
++
++				// (Patched) see `fork_branches` in batch.js
++				if (batch.is_fork) fork_branches.set(offscreen_effect, batch);
++
+ 				this.#offscreen.set(key, {
+-					effect: branch(() => fn(target)),
++					effect: offscreen_effect,
+ 					fragment
+ 				});
+ 			} else {
 diff --git a/src/internal/client/dom/hydration.js b/src/internal/client/dom/hydration.js
 index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e198756b27 100644
 --- a/src/internal/client/dom/hydration.js
@@ -22,10 +56,95 @@ index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e1
  				(data[0] === '[' && !isNaN(Number(data.slice(1))))
  			) {
 diff --git a/src/internal/client/reactivity/batch.js b/src/internal/client/reactivity/batch.js
-index 75ce33b1c56dcf090c289517209baf095724ad89..d4cbf0ee74d9155ec63e1ef508bd67a69cc6600e 100644
+index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2a297ae83 100644
 --- a/src/internal/client/reactivity/batch.js
 +++ b/src/internal/client/reactivity/batch.js
-@@ -769,8 +769,10 @@ export class Batch {
+@@ -94,6 +94,40 @@ var source_stacks = new Set();
+ 
+ let uid = 1;
+ 
++/**
++ * (Patched) Branches that a fork created offscreen (e.g. the page a preload renders ahead), by
++ * the fork. Until the fork is committed, only the fork may run what's in them: their async
++ * deriveds have values in the fork's batch only, so another batch (e.g. one started by a remote
++ * query that resolved) would read them as `UNINITIALIZED`. Another batch leaves them to the fork,
++ * which reruns what depends on that batch's changes when it commits (see `#commit`).
++ * @type {WeakMap<Effect, Batch>}
++ */
++export const fork_branches = new WeakMap();
++
++/**
++ * (Patched) The fork other than `batch` whose offscreen branch `effect` is in, if any.
++ * @param {Effect} effect
++ * @param {Batch} batch
++ */
++function other_fork(effect, batch) {
++	/** @type {Effect | null} */
++	var e = effect;
++	while (e !== null) {
++		var owner = fork_branches.get(e);
++		if (is_other_fork(owner, batch)) return owner;
++		e = e.parent;
++	}
++	return null;
++}
++
++/**
++ * @param {Batch | undefined} owner
++ * @param {Batch} batch
++ */
++function is_other_fork(owner, batch) {
++	return owner !== undefined && owner !== batch && owner.is_fork && owner.linked;
++}
++
+ export class Batch {
+ 	id = uid++;
+ 
+@@ -205,6 +239,18 @@ export class Batch {
+ 
+ 	is_fork = false;
+ 
++	/**
++	 * (Patched) In a fork, the value each derived had when it was last computed, and the write
++	 * version then. A fork keeps them out of `derived.v` and leaves the deriveds dirty (see
++	 * `update_derived`), so without them every flush recomputed every derived it read, and took it
++	 * for changed whenever it made a new object or function — e.g. a remote query's `then`, so an
++	 * `await` of it ran again, and the fork flushed again, forever. With them, a derived is
++	 * recomputed in the fork only when one of its dependencies changed since (`is_dirty`), read
++	 * from here (`get`), and compared with its value in the fork.
++	 * @type {Map<Derived, { v: any, wv: number }>}
++	 */
++	fork_deriveds = new Map();
++
+ 	#decrement_queued = false;
+ 
+ 	constructor() {
+@@ -297,6 +343,9 @@ export class Batch {
+ 			// or because they were scheduled twice)
+ 			if ((effect.f & DESTROYED) !== 0 || (effect.f & (DIRTY | MAYBE_DIRTY)) === 0) continue;
+ 
++			// (Patched) left dirty for the fork that owns it, see `fork_branches`
++			if (other_fork(effect, this) !== null) continue;
++
+ 			var e = effect;
+ 			var covered = false;
+ 
+@@ -500,7 +549,13 @@ export class Batch {
+ 			var is_branch = (flags & (BRANCH_EFFECT | ROOT_EFFECT)) !== 0;
+ 			var is_skippable_branch = is_branch && (flags & CLEAN) !== 0;
+ 
+-			var skip = is_skippable_branch || (flags & INERT) !== 0 || this.#skipped_branches.has(effect);
++			var skip =
++				is_skippable_branch ||
++				(flags & INERT) !== 0 ||
++				this.#skipped_branches.has(effect) ||
++				// (Patched) see `fork_branches` (a root inside one is left out by `#resolve`, so the
++				// traversal meets the branch itself first)
++				(is_branch && is_other_fork(fork_branches.get(effect), this));
+ 
+ 			if (!skip && effect.fn !== null) {
+ 				if (is_branch) {
+@@ -769,8 +824,10 @@ export class Batch {
  			} else if (sources.length > 0) {
  				// The microtask queue can contain the batch already scheduled to run right
  				// after this one is finished, so throwing the invariant would be wrong here.
@@ -38,3 +157,89 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..d4cbf0ee74d9155ec63e1ef508bd67a6
  				}
  
  				// A batch was unskipped in a later batch -> tell prior batches to unskip it, too
+diff --git a/src/internal/client/reactivity/deriveds.js b/src/internal/client/reactivity/deriveds.js
+index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..e84aa8c49a0272d9e0121d06b828438a5b871e8c 100644
+--- a/src/internal/client/reactivity/deriveds.js
++++ b/src/internal/client/reactivity/deriveds.js
+@@ -19,6 +19,7 @@ import {
+ 	active_effect,
+ 	update_reaction,
+ 	increment_write_version,
++	write_version,
+ 	set_active_effect,
+ 	push_reaction_value,
+ 	is_destroying_effect,
+@@ -390,7 +391,12 @@ export function execute_derived(derived) {
+ export function update_derived(derived) {
+ 	var value = execute_derived(derived);
+ 
+-	if (!derived.equals(value)) {
++	// (Patched) in a fork, compare with the value it had in the fork, see `fork_deriveds`
++	var fork = current_batch?.is_fork ? current_batch : null;
++	var in_fork = fork !== null ? fork.fork_deriveds.get(derived) : undefined;
++	var changed = in_fork !== undefined ? !derived.equals.call(in_fork, value) : !derived.equals(value);
++
++	if (changed) {
+ 		derived.wv = increment_write_version();
+ 
+ 		// in a fork, we don't update the underlying value, just `batch_values`.
+@@ -419,6 +425,11 @@ export function update_derived(derived) {
+ 		}
+ 	}
+ 
++	// (Patched) see `fork_deriveds`
++	if (fork !== null && derived.deps !== null) {
++		fork.fork_deriveds.set(derived, { v: value, wv: write_version });
++	}
++
+ 	// don't mark derived clean if we're reading it inside a
+ 	// cleanup function, or it will cache a stale value
+ 	if (is_destroying_effect) {
+diff --git a/src/internal/client/runtime.js b/src/internal/client/runtime.js
+index 27def053008cc438af3186a5d939668c786e871d..231eb97ee738913b54064a0ce7cabacd345e862c 100644
+--- a/src/internal/client/runtime.js
++++ b/src/internal/client/runtime.js
+@@ -159,6 +159,30 @@ export function increment_write_version() {
+ export function is_dirty(reaction) {
+ 	var flags = reaction.f;
+ 
++	// (Patched) a derived computed in this fork is dirty only if a dependency changed since, see
++	// `fork_deriveds` in batch.js
++	if ((flags & DERIVED) !== 0 && current_batch?.is_fork) {
++		var in_fork = current_batch.fork_deriveds.get(/** @type {Derived} */ (reaction));
++
++		if (in_fork !== undefined) {
++			var deps = /** @type {Value[]} */ (reaction.deps);
++
++			for (var j = 0; j < deps.length; j++) {
++				var dep = deps[j];
++
++				if (is_dirty(/** @type {Derived} */ (dep))) {
++					update_derived(/** @type {Derived} */ (dep));
++				}
++
++				if (dep.wv > in_fork.wv) {
++					return true;
++				}
++			}
++
++			return false;
++		}
++	}
++
+ 	if ((flags & DIRTY) !== 0) {
+ 		return true;
+ 	}
+@@ -706,6 +730,12 @@ export function get(signal) {
+ 		}
+ 	}
+ 
++	// (Patched) see `fork_deriveds` in batch.js
++	if (is_derived && current_batch?.is_fork) {
++		var in_fork = current_batch.fork_deriveds.get(/** @type {Derived} */ (signal));
++		if (in_fork !== undefined) return in_fork.v;
++	}
++
+ 	if (batch_values?.has(signal)) {
+ 		return batch_values.get(signal);
+ 	}

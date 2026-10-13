@@ -160,7 +160,7 @@ export default defineConfig({
 
 			// A Node server (`node build`), next to its SQLite database file. See "Deploying" in README.md.
 			adapter: adapter(),
-			experimental: { remoteFunctions: true },
+			experimental: { remoteFunctions: true, forkPreloads: true },
 		}),
 
 		paraglideVitePlugin({
