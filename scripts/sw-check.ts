@@ -67,7 +67,7 @@ await page.fill('input[type="email"]', "admin@fieldworks.example");
 await page.fill('input[type="password"]', "fieldworks-demo");
 await page.press('input[type="password"]', "Enter");
 await page.waitForURL(`${origin}/`);
-await page.goto(`${origin}/?sw=on`);
+await page.goto(`${origin}/`);
 await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 await page.waitForTimeout(1_000);
 

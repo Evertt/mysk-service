@@ -567,8 +567,8 @@ remote functions. Every user-facing text goes through a message; nothing English
   serial number → serienummer, manufacturer → fabrikant, warranty → garantie, organization →
   organisatie, member → lid, settings → instellingen, sign in/out → inloggen/afmelden, save →
   opslaan, cancel → annuleren, delete → verwijderen, edit → bewerken.
-- **Tests** run in English: e2e browsers use `BROWSER_LOCALE` (pass it to every new browser
-  context), so e2e and component tests keep asserting English texts; `src/tests/e2e/i18n.test.ts` covers
+- **Tests** run in English: e2e browsers use `BROWSER_OPTIONS` (pass them to every new browser
+  context; they also block the service worker), so e2e and component tests keep asserting English texts; `src/tests/e2e/i18n.test.ts` covers
   Dutch. Unit tests check Dutch output with the `locale` argument of the format helpers, or
   `overwriteGetLocale(() => "nl")` (see `src/tests/unit/lib/i18n/labels.spec.ts`).
 

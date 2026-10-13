@@ -1,7 +1,8 @@
 /**
  * An experiment: the service worker answers the office's remote queries from a cache while it asks
  * the server again (stale-while-revalidate), so a page the user has seen before opens at once, with
- * the data it had, and catches up a round trip later.
+ * the data it had, and catches up a round trip later. It also keeps the build's files from when
+ * it's installed (`files`), so no page waits for its JavaScript.
  *
  * - **What it caches**: a remote query is a `GET /_app/remote/<file hash>/<name>?payload=…`, whose
  *   JSON answer the worker keeps as it came. It never runs a remote function itself (they run on
@@ -25,7 +26,7 @@
  *   server's fresh ones are in: the page opens with fresh data, without a refresh. Once they click
  *   (`swr:page`), it answers what it still holds from the cache at once, as for any navigation.
  */
-import { immutable } from "$app/manifest";
+import { assets, immutable } from "$app/manifest";
 import { self } from "$app/service-worker";
 
 import type { PageMessage, WorkerMessage } from "./protocol.ts";
@@ -336,27 +337,56 @@ async function warm(
 	await Promise.all(workers);
 }
 
-self.addEventListener("install", () => {
-	void self.skipWaiting();
+/**
+ * The build's files: its JavaScript, CSS and fonts (`immutable`, named by their content) and the
+ * `static` folder's (`assets`). The worker keeps them from when it's installed, so the app's pages
+ * load without asking for them, and answers them from its cache (cache first).
+ */
+const files = new Set([...immutable, ...assets].map((file) => `/${file.path}`));
+const filesPrefix = "files-";
+// Named so they sort by when they were made (see `activate`).
+const filesCacheName = `${filesPrefix}${Date.now().toString(36).padStart(9, "0")}-${version}`;
+
+self.addEventListener("install", (event) => {
+	event.waitUntil(
+		(async () => {
+			await (await caches.open(filesCacheName)).addAll([...files]);
+			await self.skipWaiting();
+		})(),
+	);
 });
 
 self.addEventListener("activate", (event) => {
-	// Answers stored by an older version may not fit its remote functions.
 	event.waitUntil(
 		(async () => {
-			for (const name of await caches.keys()) {
+			const names = await caches.keys();
+			// Answers stored by an older version may not fit its remote functions.
+			for (const name of names) {
 				if (name.startsWith("swr-") && !name.includes(`-${version}`)) await caches.delete(name);
 			}
+			// The worker takes over at once (`skipWaiting`), while a tab may still run the previous
+			// build and load more of its files: those stay until the build after.
+			const builds = names.filter((name) => name.startsWith(filesPrefix)).sort();
+			for (const name of builds.slice(0, -2)) await caches.delete(name);
 			await self.clients.claim();
 		})(),
 	);
 });
+
+/** A file of the build, this one's or the previous one's, from the cache, else from the server. */
+async function answerFile(request: Request) {
+	return (await caches.match(request, { ignoreSearch: true })) ?? fetch(request);
+}
 
 self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 	if (url.origin !== self.location.origin) return;
 	if (event.request.method !== "GET") {
 		noteChange(url);
+		return;
+	}
+	if (files.has(url.pathname) || url.pathname.startsWith("/_app/immutable/")) {
+		event.respondWith(answerFile(event.request));
 		return;
 	}
 	// A plain query's request (`query.live` streams events, which aren't for keeping).

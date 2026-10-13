@@ -2,7 +2,8 @@
 
 Branch `service-worker-swr` (October 2026). The question: on Vercel with Turso, navigating is slow
 because each page waits for its remote queries' round trips to the database. Can a service worker
-make the office feel snappy? Off unless switched on per browser (`?sw=on`, `?sw=off`).
+make the office feel snappy? SvelteKit registers the worker on every page, the canonical way (its
+default `serviceWorker.register`, a module worker, so in `vp dev` too).
 
 ## What it does
 
@@ -21,6 +22,12 @@ make the office feel snappy? Off unless switched on per browser (`?sw=on`, `?sw=
 - **Showing it.** While the page shows answers the worker is checking (`swr:revalidating`, until
   `swr:updated` or `swr:revalidated`), the header shows a cloud with a turning arrow
   (`sync-indicator.svelte`), after 150 ms so a quick check doesn't flicker.
+- **The build's files.** As in SvelteKit's example, the worker caches the build's JavaScript, CSS
+  and fonts and the `static` files when it's installed (390 files, 3.8 MB before compression), and
+  answers them from its cache: a reload takes all of them (58) from the worker
+  (`scripts/sw-files.ts`). Unlike the example, it takes over at once (`skipWaiting`, so remote
+  answers never outlive their server version), so it keeps the previous build's files too, for a
+  tab still running it.
 - **Changes come first.** Any other request (a command, a form, a sign-in) makes the answers stored
   before it network-first until asked again, so the app never shows data older than the user's own
   change. Remembering a table's state (`rememberTable`) only outdates its own file's answers.
@@ -78,5 +85,7 @@ database):
   payload global); the worker names its caches after a hash of `$app/manifest`'s files instead.
 - **A hover that ends** without a click leaves the worker's fresh answers in the cache, and the
   revalidation it started may refresh the tab's queries once; cheap, but not free on Turso.
-- **Not covered by the e2e tests** (they run with the worker off); `?sw=on` in a test would need
-  its own file.
+- **The e2e tests block the worker** (`BROWSER_OPTIONS`, `src/tests/e2e/app.ts`): with it, at
+  least 18 failed (in a run stopped part-way), mostly because `page.route()`, which they tamper with and slow down requests with, doesn't
+  see requests a worker answers. The worker's checks are `scripts/sw-check.ts` and
+  `scripts/sw-files.ts`, by hand, against a production build.

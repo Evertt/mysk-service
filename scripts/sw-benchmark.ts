@@ -49,6 +49,8 @@ async function navigate(page: Page, path: string, { hover = 0 } = {}) {
 async function run(mode: "off" | "on") {
 	const browser = await chromium.launch();
 	const context = await browser.newContext({
+		// Without the worker, as a browser that has none.
+		serviceWorkers: mode === "on" ? "allow" : "block",
 		locale: "en-GB",
 		viewport: { width: 1400, height: 900 },
 	});
@@ -67,7 +69,7 @@ async function run(mode: "off" | "on") {
 	});
 	const page = await context.newPage();
 	await signIn(page);
-	await page.goto(`${origin}/?sw=${mode}`);
+	await page.goto(`${origin}/`);
 	if (mode === "on") {
 		await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 		// The worker learns the pages' queries from the tab's navigations, and needs its scope.

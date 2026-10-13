@@ -22,7 +22,7 @@
 	const tenant = await getCurrentTenant();
 	const moduleIds = tenant.modules;
 
-	// An experiment, off unless switched on (see `swr-worker.ts`).
+	// The service worker that answers queries from its cache (see `swr-worker.ts`).
 	connectSwrWorker(tenant);
 
 	/**

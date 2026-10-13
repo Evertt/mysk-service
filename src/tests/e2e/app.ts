@@ -3,7 +3,14 @@
  * `global-setup.ts`). The database (`db.ts`), the mail (`mail.ts`) and remote function requests
  * (`remote-functions.ts`) have their own files, which this one re-exports.
  */
-import { type Browser, chromium, type Locator, type Page, type Response } from "playwright";
+import {
+	type Browser,
+	type BrowserContextOptions,
+	chromium,
+	type Locator,
+	type Page,
+	type Response,
+} from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
@@ -58,10 +65,21 @@ export const userNames = {
 
 /**
  * The browser's language in every test browser: English, so the app is in English (the tests read
- * its English texts) whatever the language of the machine running them. Pass it to every new
- * browser context: `browser.newContext({ locale: BROWSER_LOCALE })`.
+ * its English texts) whatever the language of the machine running them.
  */
-export const BROWSER_LOCALE = "en-GB";
+const BROWSER_LOCALE = "en-GB";
+
+/**
+ * The options of every test browser context: pass them to each new one,
+ * `browser.newContext({ ...BROWSER_OPTIONS })`. Besides the language, without the app's service
+ * worker (`src/service-worker/index.ts`): the tests check what the server answers, and
+ * `page.route()`, which they tamper with and slow down requests with, doesn't see the requests a
+ * worker answers. The worker has its own checks (`scripts/sw-check.ts`).
+ */
+export const BROWSER_OPTIONS = {
+	locale: BROWSER_LOCALE,
+	serviceWorkers: "block",
+} as const satisfies BrowserContextOptions;
 
 /** A phone's screen, e.g. for the engineer portal. */
 export const mobileViewport = { width: 375, height: 812 };
@@ -292,7 +310,7 @@ export function useApp({
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
 			const context = await browser.newContext({
-				locale: BROWSER_LOCALE,
+				...BROWSER_OPTIONS,
 				storageState: await page.context().storageState(),
 			});
 			return context.newPage();
@@ -312,7 +330,7 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({ viewport, locale: BROWSER_LOCALE, timezoneId: timeZone });
+		page = await browser.newPage({ ...BROWSER_OPTIONS, viewport, timezoneId: timeZone });
 		if (timeZone) {
 			await page
 				.context()

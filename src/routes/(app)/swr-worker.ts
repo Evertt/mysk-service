@@ -1,9 +1,8 @@
 /**
  * The office's side of the service worker experiment (`src/service-worker/index.ts`), which answers
- * remote queries from its cache while it asks the server again. Off unless switched on per browser:
- * open any office page with `?sw=on` (and `?sw=off` to unregister it and drop its caches).
+ * remote queries from its cache while it asks the server again. SvelteKit registers the worker
+ * itself, on every page, in development too (as a module worker).
  */
-import { dev } from "$app/env";
 import { afterNavigate, beforeNavigate } from "$app/navigation";
 import { onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
@@ -13,7 +12,6 @@ import { getLocale } from "#lib/paraglide/runtime.js";
 
 import type { PageMessage, WorkerMessage } from "../../service-worker/protocol.ts";
 
-const storageKey = "swr-worker";
 /** How long a query is shown as being checked, at most. */
 const giveUpAfter = 15_000;
 
@@ -22,25 +20,6 @@ const giveUpAfter = 15_000;
  * newer ones, by request URL: while there are any, the header shows it (`sync-indicator.svelte`).
  */
 export const revalidating = new SvelteSet<string>();
-
-/** Whether the worker is switched on in this browser, after applying a `?sw=` in the URL. */
-function switchedOn() {
-	try {
-		const asked = new URL(location.href).searchParams.get("sw");
-		if (asked === "on" || asked === "off") localStorage.setItem(storageKey, asked);
-		return localStorage.getItem(storageKey) === "on";
-	} catch {
-		return false;
-	}
-}
-
-async function switchOff() {
-	const registrations = await navigator.serviceWorker.getRegistrations();
-	await Promise.all(registrations.map((registration) => registration.unregister()));
-	for (const name of await caches.keys()) {
-		if (name.startsWith("swr-")) await caches.delete(name);
-	}
-}
 
 /**
  * Refreshes the query whose request `href` was, if the page has it (or SvelteKit still keeps it in
@@ -63,18 +42,12 @@ function pagePath(url: URL) {
 }
 
 /**
- * Connects the office shell to the worker, when it's switched on: registers it, tells it whose data
- * the server answers with and which page the tab is on, warms the pages the user may go to next,
+ * Connects the office shell to the worker, once it's up: tells it whose data the server answers with and which page the tab is on, warms the pages the user may go to next,
  * and refreshes the page's queries when the worker has newer answers than it showed. Call it while
  * the shell's component initializes.
  */
 export function connectSwrWorker(tenant: { userId: string; organizationId: string }) {
-	// Vite serves no worker in development (SvelteKit bundles it for production builds only).
-	if (dev || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-	if (!switchedOn()) {
-		void switchOff();
-		return;
-	}
+	if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
 	let worker: ServiceWorker | null = null;
 	const post = (message: PageMessage) => worker?.postMessage(message);
@@ -122,9 +95,9 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 		document.addEventListener("pointerover", onPointerOver);
 
 		void (async () => {
-			const registration = await navigator.serviceWorker.register("/service-worker.js");
+			// SvelteKit registers the worker once the page has loaded.
 			const ready = await navigator.serviceWorker.ready;
-			worker = navigator.serviceWorker.controller ?? ready.active ?? registration.active;
+			worker = navigator.serviceWorker.controller ?? ready.active;
 			const scope = [tenant.userId, tenant.organizationId, getLocale(), getTimeZone()].join("|");
 			post({ type: "swr:scope", scope: await digest(scope) });
 			for (const message of queued.splice(0)) post(message);

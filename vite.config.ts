@@ -172,8 +172,6 @@ export default defineConfig({
 			// A Node server (`node build`), next to its SQLite database file. See "Deploying" in README.md.
 			adapter: adapter(),
 			experimental: { remoteFunctions: true, forkPreloads: true },
-			// Registered by the office shell, when switched on (see `src/routes/(app)/swr-worker.ts`).
-			serviceWorker: { register: false },
 		}),
 
 		paraglideVitePlugin({
