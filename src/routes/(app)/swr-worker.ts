@@ -3,6 +3,7 @@
  * remote queries from its cache while it asks the server again. SvelteKit registers the worker
  * itself, on every page, in development too (as a module worker).
  */
+import { version } from "$app/env";
 import { afterNavigate, beforeNavigate } from "$app/navigation";
 import { onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
@@ -98,8 +99,9 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 			// SvelteKit registers the worker once the page has loaded.
 			const ready = await navigator.serviceWorker.ready;
 			worker = navigator.serviceWorker.controller ?? ready.active;
-			const scope = [tenant.userId, tenant.organizationId, getLocale(), getTimeZone()].join("|");
-			post({ type: "swr:scope", scope: await digest(scope) });
+			// With the app's version: a tab of a newer version never gets an older one's answers.
+			const scope = [tenant.userId, tenant.organizationId, getLocale(), getTimeZone(), version];
+			post({ type: "swr:scope", scope: await digest(scope.join("|")) });
 			for (const message of queued.splice(0)) post(message);
 
 			// Once the page has settled, warm the sidebar's pages.

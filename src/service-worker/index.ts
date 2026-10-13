@@ -16,8 +16,12 @@
  *   (network first) instead of shown stale. Asking for a table's memory (`quietChanges`) only
  *   outdates the answers of its own file. Signing out or switching organizations drops the lot.
  * - **Whose data**: the answers are the signed-in user's, in their organization, language and time
- *   zone. A page tells the worker this scope (`swr:scope`); each scope has a cache of its own, the
- *   others are deleted when it changes, and without one the worker caches nothing.
+ *   zone, for the app's version. A page tells the worker this scope (`swr:scope`); each scope has a
+ *   cache of its own, the others are deleted when it changes, and without one the worker caches
+ *   nothing.
+ * - **New versions**: SvelteKit notices a new deployment by the version header of the answers it
+ *   reads (`x-sveltekit-version`). An answer from a server of another version counts as changed
+ *   (`differs`), so the tab reads it, and SvelteKit notices.
  * - **Warming**: the worker remembers which queries each page asked for (`swr:page`), and asks for
  *   them again when the page says the user may go there (`swr:warm`: the sidebar's links once the
  *   shell is up; `swr:hover`: a hovered link), so the cache is fresh by the time they click.
@@ -139,23 +143,46 @@ async function setScope(scope: string | null) {
 }
 
 /**
+ * An answer as the page sees it: its body, and the app version of the server that gave it, which
+ * SvelteKit reads to notice a new deployment (`x-sveltekit-version`, see `updated` in `$app/state`).
+ */
+interface Answer {
+	body: string;
+	version: string | null;
+}
+
+const versionHeader = "x-sveltekit-version";
+
+async function answerOf(response: Response): Promise<Answer> {
+	return { body: await response.clone().text(), version: response.headers.get(versionHeader) };
+}
+
+/**
+ * Whether the page should be shown `fresh` instead of `shown`: a different body, or a server of
+ * another version, which the page only notices by reading the new answer.
+ */
+function differs(fresh: Answer, shown: Answer) {
+	return fresh.body !== shown.body || fresh.version !== shown.version;
+}
+
+/**
  * Asks the server for `url` and stores a successful answer for `scope`, unless a change or another
- * scope came along while it was on its way. Answers with the response, and its body if it stored it.
+ * scope came along while it was on its way. Answers with the response, and the answer it stored.
  */
 async function fetchAndStore(url: URL, scope: string) {
 	const askedAt = Date.now();
 	const response = await fetch(url, { credentials: "same-origin" });
 	if (!response.ok) return { response };
 
-	const body = await response.clone().text();
-	if (!storable(body) || meta.scope !== scope || outdated(url, askedAt)) return { response };
+	const answer = await answerOf(response);
+	if (!storable(answer.body) || meta.scope !== scope || outdated(url, askedAt)) return { response };
 
 	const headers = new Headers(response.headers);
 	headers.set(askedAtHeader, String(askedAt));
 	headers.set(storedAtHeader, String(Date.now()));
-	const stored = new Response(body, { status: response.status, headers });
+	const stored = new Response(answer.body, { status: response.status, headers });
 	await (await scopeCache(scope)).put(url.href, stored);
-	return { response, body };
+	return { response, answer };
 }
 
 /** A result to keep: not an error (answered with a 200 too) or a redirect. */
@@ -169,15 +196,15 @@ function storable(body: string) {
 }
 
 /** Requests for the same URL in flight, shared: revalidating and warming ask for each only once. */
-const inFlight = new Map<string, Promise<string | undefined>>();
+const inFlight = new Map<string, Promise<Answer | undefined>>();
 
-/** Asks the server again for `url`; answers with the new body if it stored one. */
+/** Asks the server again for `url`; answers with the new answer if it stored one. */
 function revalidate(url: URL, scope: string) {
 	const key = `${scope} ${url.href}`;
 	let request = inFlight.get(key);
 	if (!request) {
 		request = fetchAndStore(url, scope)
-			.then(({ body }) => body)
+			.then(({ answer }) => answer)
 			.catch(() => undefined)
 			.finally(() => inFlight.delete(key));
 		inFlight.set(key, request);
@@ -231,7 +258,7 @@ function endHover(clientId: string) {
  * For a query of the page whose link a tab hovers: the fresh answer, if it comes before the tab
  * navigates or `holdFor` has passed.
  */
-async function freshForHover(clientId: string, url: URL, fresh: Promise<string | undefined>) {
+async function freshForHover(clientId: string, url: URL, fresh: Promise<Answer | undefined>) {
 	const hover = hovers.get(clientId);
 	if (!hover || Date.now() > hover.until || !meta.pages[hover.path]?.includes(url.href)) return;
 	const timeout = new Promise<undefined>((done) => setTimeout(done, hover.until - Date.now()));
@@ -271,18 +298,18 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 	if (Date.now() - storedAt < freshFor) return cached;
 
 	const fresh = revalidate(url, scope);
-	const freshBody = await freshForHover(event.clientId, url, fresh);
-	if (freshBody !== undefined) {
-		return new Response(freshBody, { status: cached.status, headers: cached.headers });
+	if (await freshForHover(event.clientId, url, fresh)) {
+		// Stored by now, with the server's headers.
+		return (await (await scopeCache(scope)).match(url.href)) ?? cached;
 	}
 
 	// The tab shows that it's checking for newer answers (`swr:revalidating`) until it was told of a
 	// new one (`swr:updated`) or that there's none (`swr:revalidated`).
-	const cachedBody = await cached.clone().text();
+	const shown = await answerOf(cached);
 	event.waitUntil(post(event.clientId, { type: "swr:revalidating", url: url.href }));
 	event.waitUntil(
-		fresh.then(async (body) => {
-			if (body !== undefined && body !== cachedBody) await notify(event.clientId, url);
+		fresh.then(async (answer) => {
+			if (answer && differs(answer, shown)) await notify(event.clientId, url);
 			else await post(event.clientId, { type: "swr:revalidated", url: url.href });
 		}),
 	);
@@ -317,20 +344,20 @@ async function warm(
 	const { scope } = meta;
 	if (!scope) return;
 	const cache = await scopeCache(scope);
-	const due: { url: URL; body?: string }[] = [];
+	const due: { url: URL; cached?: Answer }[] = [];
 	for (const href of new Set(paths.flatMap((path) => meta.pages[path] ?? []))) {
 		const url = new URL(href);
 		const cached = await cache.match(href);
 		const storedAt = Number(cached?.headers.get(storedAtHeader) ?? 0);
 		const askedAt = Number(cached?.headers.get(askedAtHeader) ?? 0);
 		if (!cached || outdated(url, askedAt) || Date.now() - storedAt > maxAge) {
-			due.push({ url, body: await cached?.text() });
+			due.push({ url, cached: cached && (await answerOf(cached)) });
 		}
 	}
 	const workers = Array.from({ length: warmConcurrency }, async () => {
 		for (let next = due.shift(); next; next = due.shift()) {
-			const body = await revalidate(next.url, scope);
-			const changed = body !== undefined && next.body !== undefined && body !== next.body;
+			const answer = await revalidate(next.url, scope);
+			const changed = answer && next.cached && differs(answer, next.cached);
 			if (changed && clientId) await notify(clientId, next.url);
 		}
 	});

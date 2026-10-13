@@ -7,8 +7,9 @@
 /** From a page to the worker. */
 export type PageMessage =
 	/**
-	 * Whose data the server answers with now: the user, organization, language and time zone. The
-	 * worker keeps a cache per scope and answers from none until a page names one.
+	 * Whose data the server answers with now: the user, organization, language and time zone, and
+	 * the app's version. The worker keeps a cache per scope and answers from none until a page names
+	 * one.
 	 */
 	| { type: "swr:scope"; scope: string }
 	/**
