@@ -9,10 +9,10 @@
 	stay in view. Elsewhere the page scrolls, and the day headings of the list stick to the top.
 -->
 <script lang="ts">
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { MediaQuery } from "svelte/reactivity";
 
+	import { historyDialog } from "#lib/components/history-dialog.svelte.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 
@@ -74,20 +74,26 @@
 		names: () => names,
 	});
 
-	// The schedule dialog, for planning without dragging.
-	let selected = $state.raw<ScheduleOrder>();
-	let dialogOpen = $state(false);
+	// The schedule dialog, for planning without dragging. It has a history entry of its own, so
+	// going back closes it and forward opens it again (with the order as the board has it then).
+	const dialog = historyDialog("schedule");
+	// The order last opened, kept while the dialog closes.
+	let opened = $state.raw<ScheduleOrder>();
+	const selected = $derived(
+		[...schedule.orders, ...schedule.backlog].find((order) => String(order.id) === dialog.value) ??
+			opened,
+	);
 	const defaultDay = $derived(days.find((day) => day.equals(today)) ?? days[0]);
 
 	function openDialog(order: ScheduleOrder) {
-		selected = order;
-		dialogOpen = true;
+		opened = order;
+		dialog.show(String(order.id));
 	}
 
 	/** After planning in the dialog, shows the week the order went to. */
 	function showWeekOf(day: Temporal.PlainDate) {
 		const start = day.subtract({ days: day.dayOfWeek - 1 }).toString();
-		if (start !== week) void goto(`${resolve("/(app)/(modules)/schedule")}?week=${start}`);
+		if (start !== week) void dialog.leave(`${resolve("/(app)/(modules)/schedule")}?week=${start}`);
 	}
 </script>
 
@@ -112,7 +118,7 @@
 		engineers={schedule.engineers}
 		{week}
 		{defaultDay}
-		bind:open={dialogOpen}
+		bind:open={() => dialog.open, (open) => (dialog.open = open)}
 		onscheduled={showWeekOf}
 	/>
 {/if}

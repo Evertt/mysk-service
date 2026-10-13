@@ -8,6 +8,7 @@
 	import { toast } from "svelte-sonner";
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
+	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
@@ -41,6 +42,8 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// What's typed and not saved yet comes back with the page (back button, reload).
+	formSnapshot("contract", () => form);
 	const uid = $props.id();
 
 	// A new contract runs for a year from the first of next month.
@@ -48,8 +51,10 @@
 	const startsOn = $derived(contract?.startsOn ?? nextMonth);
 	const endsOn = $derived(contract?.endsOn ?? nextMonth.add({ years: 1 }).subtract({ days: 1 }));
 
-	// Only the chosen customer's equipment can be covered.
-	let customerId = $derived(contract ? String(contract.customerId) : "");
+	// Only the chosen customer's equipment can be covered (also when the snapshot brings one back).
+	let customerId = $derived(
+		fields.customerId.value() ?? (contract ? String(contract.customerId) : ""),
+	);
 	const units = $derived(
 		options.equipments.filter((unit) => String(unit.customerId) === customerId),
 	);

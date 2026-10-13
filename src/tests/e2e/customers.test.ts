@@ -305,6 +305,24 @@ describe("in North", () => {
 		expect(app.path()).toBe(`/customers/${code}`);
 		expect(await customerId(code, north.id)).toBe(id);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
+		await dialog.waitFor({ state: "hidden" });
+		expect(app.path()).toBe(`/customers/${code}`);
+	});
+
+	test("going back closes the delete dialog, and going forward opens it again", async () => {
+		const { page } = app;
+		const path = app.path();
+		await page.getByRole("button", { name: "Delete" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.waitFor();
+		await page.goBack();
+		await dialog.waitFor({ state: "hidden" });
+		expect(app.path()).toBe(path);
+		await page.goForward();
+		await dialog.waitFor();
+		await page.keyboard.press("Escape");
+		await dialog.waitFor({ state: "hidden" });
+		expect(app.path()).toBe(path);
 	});
 
 	test("its recent activity links to all its orders in the orders list", async () => {
@@ -494,6 +512,33 @@ describe("in North", () => {
 		expect(await page.locator("h1 ~ [data-slot=badge]").innerText()).toContain("Enterprise");
 		const [saved] = await rows(`select code, city, segment from customer where id = ?`, [target]);
 		expect(saved).toEqual({ code, city: "Amersfoort", segment: "enterprise" });
+	});
+
+	test("what's typed and not saved comes back on going back and on reloading, not on a new visit", async () => {
+		const { page } = app;
+		await app.go("/customers/new");
+		await page.getByLabel("Name").fill("Unsaved BV");
+		await page.getByLabel("Country").selectOption("Belgium");
+		await page.getByRole("link", { name: "Orders", exact: true }).first().click();
+		await page.waitForURL((url) => url.pathname === "/orders");
+
+		await page.goBack();
+		await page.waitForURL((url) => url.pathname === "/customers/new");
+		await page.getByLabel("Name").waitFor();
+		expect(await page.getByLabel("Name").inputValue()).toBe("Unsaved BV");
+		expect(await page.getByLabel("Country").inputValue()).toBe("Belgium");
+		expect(await page.getByLabel("City").inputValue()).toBe("");
+
+		await page.reload();
+		await hydrated(page);
+		expect(await page.getByLabel("Name").inputValue()).toBe("Unsaved BV");
+
+		await page.getByRole("link", { name: "Customers", exact: true }).first().click();
+		await page.waitForURL((url) => url.pathname === "/customers");
+		await page.getByRole("link", { name: "New customer" }).click();
+		await page.waitForURL((url) => url.pathname === "/customers/new");
+		await page.getByLabel("Name").waitFor();
+		expect(await page.getByLabel("Name").inputValue()).toBe("");
 	});
 
 	test("customers created at the same moment get consecutive codes", async () => {

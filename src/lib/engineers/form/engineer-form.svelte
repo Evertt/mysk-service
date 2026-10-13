@@ -8,6 +8,7 @@
 
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
+	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
@@ -28,6 +29,8 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// What's typed and not saved yet comes back with the page (back button, reload).
+	formSnapshot("engineer", () => form);
 </script>
 
 <form

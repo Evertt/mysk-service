@@ -5,6 +5,7 @@
 	form's `modules.materials`) make the lines part of the order's submission.
 -->
 <script lang="ts">
+	import { snapshot } from "$app/navigation";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
@@ -36,6 +37,20 @@
 			quantity: line.quantity,
 		})) ?? [];
 	let lines = $state(initialLines());
+	// The lines come back with the rest of the form (see `formSnapshot()`), if they were changed.
+	const unchanged = JSON.stringify(
+		initialLines().map(({ materialId, quantity }) => [materialId, quantity]),
+	);
+	snapshot<typeof lines | null>({
+		id: "materials:order-lines",
+		capture: () => {
+			const now = lines.map(({ materialId, quantity }) => [materialId, quantity]);
+			return JSON.stringify(now) === unchanged ? null : $state.snapshot(lines);
+		},
+		restore: (restored) => {
+			if (restored) lines = restored;
+		},
+	});
 	const materialsById = $derived(
 		new Map(materials.map((material) => [String(material.id), material])),
 	);
