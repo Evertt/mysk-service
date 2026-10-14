@@ -6,7 +6,8 @@
  *
  * - **What it caches**: a remote query is a `GET /_app/remote/<file hash>/<name>?payload=…`, whose
  *   JSON answer the worker keeps as it came. It never runs a remote function itself (they run on
- *   the server, against the database): it only replays answers.
+ *   the server, against the database): it only replays answers. A page's server data
+ *   (`__data.json`, a module page's guard) it keeps the same way (`isPageData`).
  * - **Stale, then fresh**: a cached answer is served at once, and the worker asks the server again
  *   in the background. If the answer differs, it stores it and tells the tab (`swr:updated`), which
  *   refreshes that query; the refresh finds the new answer in the cache (`freshFor`), without
@@ -23,12 +24,16 @@
  *   reads (`x-sveltekit-version`). An answer from a server of another version counts as changed
  *   (`differs`), so the tab reads it, and SvelteKit notices.
  * - **Warming**: the worker remembers which queries each page asked for (`swr:page`), and asks for
- *   them again when the page says the user may go there (`swr:warm`: the sidebar's links once the
- *   shell is up; `swr:hover`: a hovered link), so the cache is fresh by the time they click.
+ *   them again when the page says the user may go there: the sidebar's links once the shell is up
+ *   (`swr:warm`, answers over an hour old: `warmAfter`), a hovered link (`swr:hover`, over 15
+ *   seconds old: `hoverFreshFor`, so hovering back and forth asks once).
  * - **Hovering**: SvelteKit renders a hovered link's page ahead (`forkPreloads`), with its queries.
  *   The user isn't waiting for that page yet, so the worker holds those queries' answers until the
  *   server's fresh ones are in: the page opens with fresh data, without a refresh. Once they click
- *   (`swr:page`), it answers what it still holds from the cache at once, as for any navigation.
+ *   (`swr:visit`), it answers what it still holds from the cache at once, as for any navigation.
+ * - **Visiting**: a navigation asks again for the page's queries (`swr:visit`), also those the page
+ *   doesn't ask for itself (opened from a preload, or from queries SvelteKit still holds), and the
+ *   tab shows it's checking until they're in.
  */
 import { assets, immutable } from "$app/manifest";
 import { self } from "$app/service-worker";
@@ -57,8 +62,16 @@ const remotePath = "/_app/remote/";
 const freshFor = 1_000;
 /** How long after hovering a link the worker holds its page's answers for fresh ones, at most. */
 const holdFor = 3_000;
-/** How old an answer has to be for warming to ask for it again. */
-const warmAfter = 30_000;
+/**
+ * How old the answers of a hovered link's page have to be for the worker to ask for them again:
+ * hovering the same link back and forth asks once.
+ */
+const hoverFreshFor = 15_000;
+/**
+ * How old an answer has to be for warming the sidebar's pages to ask for it again: an hour after
+ * the worker last got it, whether by warming, a hover or a visit.
+ */
+const warmAfter = 60 * 60 * 1000;
 /** How many requests warming has in flight at once. */
 const warmConcurrency = 4;
 /** How many pages, and queries per page, the worker remembers for warming. */
@@ -175,7 +188,9 @@ async function fetchAndStore(url: URL, scope: string) {
 	if (!response.ok) return { response };
 
 	const answer = await answerOf(response);
-	if (!storable(answer.body) || meta.scope !== scope || outdated(url, askedAt)) return { response };
+	if (!storable(url, answer.body) || meta.scope !== scope || outdated(url, askedAt)) {
+		return { response };
+	}
 
 	const headers = new Headers(response.headers);
 	headers.set(askedAtHeader, String(askedAt));
@@ -185,9 +200,25 @@ async function fetchAndStore(url: URL, scope: string) {
 	return { response, answer };
 }
 
-/** A result to keep: not an error (answered with a 200 too) or a redirect. */
-function storable(body: string) {
+/**
+ * A page's server data (`__data.json`): what its server `load`s answer. A module's pages have one,
+ * the guard that refuses tenants without the module, so each navigation to them asks the server
+ * (a function call and the session's and tenant's lookups); the worker keeps it like a query's.
+ */
+function isPageData(url: URL) {
+	return url.pathname.endsWith("/__data.json");
+}
+
+/**
+ * An answer to keep: a query's result, not an error (answered with a 200 too) or a redirect; a
+ * page's data, not a redirect or a node's error (and not streamed, which doesn't parse).
+ */
+function storable(url: URL, body: string) {
 	try {
+		if (isPageData(url)) {
+			const data = JSON.parse(body) as { type?: string; nodes?: ({ type?: string } | null)[] };
+			return data.type === "data" && !data.nodes?.some((node) => node?.type === "error");
+		}
 		const answer = JSON.parse(body) as { type?: string; data?: string };
 		return answer.type === "result" && !answer.data?.startsWith('[{"redirect":');
 	} catch {
@@ -254,15 +285,21 @@ function endHover(clientId: string) {
 	hovers.delete(clientId);
 }
 
+/** Whether `url` is a query of the page whose link the tab hovers (its preload's). */
+function forHover(clientId: string, url: URL) {
+	const hover = hovers.get(clientId);
+	return !!hover && Date.now() <= hover.until && !!meta.pages[hover.path]?.includes(url.href);
+}
+
 /**
  * For a query of the page whose link a tab hovers: the fresh answer, if it comes before the tab
  * navigates or `holdFor` has passed.
  */
 async function freshForHover(clientId: string, url: URL, fresh: Promise<Answer | undefined>) {
 	const hover = hovers.get(clientId);
-	if (!hover || Date.now() > hover.until || !meta.pages[hover.path]?.includes(url.href)) return;
+	if (!hover || !forHover(clientId, url)) return;
 	const timeout = new Promise<undefined>((done) => setTimeout(done, hover.until - Date.now()));
-	return Promise.race([fresh, hover.navigated.then(() => undefined), timeout]);
+	return Promise.race([fresh, hover.navigated, timeout]);
 }
 
 async function post(clientId: string, message: WorkerMessage) {
@@ -273,7 +310,10 @@ async function notify(clientId: string, url: URL) {
 	await post(clientId, { type: "swr:updated", url: url.href });
 }
 
-/** Answers a remote query: from the cache if it has a recent enough answer, else from the server. */
+/**
+ * Answers a remote query (or a page's data): from the cache if it has a recent enough answer, else
+ * from the server.
+ */
 async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 	await loaded;
 	const { scope } = meta;
@@ -295,7 +335,8 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 		}
 	}
 
-	if (Date.now() - storedAt < freshFor) return cached;
+	const age = Date.now() - storedAt;
+	if (age < freshFor || (age < hoverFreshFor && forHover(event.clientId, url))) return cached;
 
 	const fresh = revalidate(url, scope);
 	if (await freshForHover(event.clientId, url, fresh)) {
@@ -338,7 +379,16 @@ function noteChange(url: URL) {
  */
 async function warm(
 	paths: string[],
-	{ maxAge = warmAfter, clientId }: { maxAge?: number; clientId?: string } = {},
+	{
+		maxAge = warmAfter,
+		clientId,
+		shown = false,
+	}: {
+		maxAge?: number;
+		clientId?: string;
+		/** Whether the tab shows what's asked for (the page it visits): it shows it's checking. */
+		shown?: boolean;
+	} = {},
 ) {
 	await loaded;
 	const { scope } = meta;
@@ -354,11 +404,16 @@ async function warm(
 			due.push({ url, cached: cached && (await answerOf(cached)) });
 		}
 	}
+	const showing = shown && clientId ? clientId : undefined;
+	for (const { url } of due) {
+		if (showing) void post(showing, { type: "swr:revalidating", url: url.href });
+	}
 	const workers = Array.from({ length: warmConcurrency }, async () => {
 		for (let next = due.shift(); next; next = due.shift()) {
 			const answer = await revalidate(next.url, scope);
 			const changed = answer && next.cached && differs(answer, next.cached);
 			if (changed && clientId) await notify(clientId, next.url);
+			else if (showing) await post(showing, { type: "swr:revalidated", url: next.url.href });
 		}
 	});
 	await Promise.all(workers);
@@ -418,7 +473,7 @@ self.addEventListener("fetch", (event) => {
 	}
 	// A plain query's request (`query.live` streams events, which aren't for keeping).
 	const streams = event.request.headers.get("accept")?.includes("text/event-stream");
-	if (url.pathname.startsWith(remotePath) && !streams) {
+	if ((url.pathname.startsWith(remotePath) || isPageData(url)) && !streams) {
 		event.respondWith(answerQuery(event, url));
 	}
 });
@@ -436,13 +491,21 @@ self.addEventListener("message", (event) => {
 				endHover(clientId);
 			}
 			break;
+		case "swr:visit":
+			if (!clientId) break;
+			tabPages.set(clientId, message.path);
+			endHover(clientId);
+			// A page that opens from a preload, or from queries SvelteKit still holds, asks for
+			// nothing: the visit asks for what it knows the page has, like the page's own requests.
+			event.waitUntil(warm([message.path], { maxAge: freshFor, clientId, shown: true }));
+			break;
 		case "swr:warm":
 			event.waitUntil(warm(message.paths));
 			break;
 		case "swr:hover":
 			if (clientId) startHover(clientId, message.path);
-			// Anything older than a moment: the user is about to see it.
-			event.waitUntil(warm([message.path], { maxAge: freshFor, clientId }));
+			// The user is about to see it, unless a hover just asked (`hoverFreshFor`).
+			event.waitUntil(warm([message.path], { maxAge: hoverFreshFor, clientId }));
 			break;
 	}
 });

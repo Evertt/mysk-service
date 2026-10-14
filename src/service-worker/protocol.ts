@@ -17,6 +17,12 @@ export type PageMessage =
 	 * now on are that page's.
 	 */
 	| { type: "swr:page"; path: string }
+	/**
+	 * The tab starts a navigation to `path`: besides `swr:page`, the worker asks again for the
+	 * queries it knows the page has, as a page may open without asking for them (from a preload,
+	 * or with queries SvelteKit still holds), and tells the tab of new answers.
+	 */
+	| { type: "swr:visit"; path: string }
 	/** Pages the user may open next: the worker asks again for the queries it saw them make. */
 	| { type: "swr:warm"; paths: string[] }
 	/**

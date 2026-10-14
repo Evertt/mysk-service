@@ -58,7 +58,7 @@ export function connectSwrWorker(tenant: { userId: string; organizationId: strin
 	const send = (message: PageMessage) => (worker ? post(message) : queued.push(message));
 
 	beforeNavigate(({ to }) => {
-		if (to?.url) send({ type: "swr:page", path: pagePath(to.url) });
+		if (to?.url) send({ type: "swr:visit", path: pagePath(to.url) });
 	});
 	afterNavigate(({ to }) => {
 		if (to?.url) send({ type: "swr:page", path: pagePath(to.url) });
