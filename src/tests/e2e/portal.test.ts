@@ -4,7 +4,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
 import {
-	BROWSER_LOCALE,
+	BROWSER_OPTIONS,
 	baseURL,
 	hydrated,
 	mobileViewport,
@@ -407,7 +407,7 @@ async function signedInPage(email: string) {
 	const browser = app.page.context().browser()!;
 	const context = await browser.newContext({
 		viewport: { width: 1440, height: 1000 },
-		locale: BROWSER_LOCALE,
+		...BROWSER_OPTIONS,
 	});
 	const page = await context.newPage();
 	const requests: string[] = [];

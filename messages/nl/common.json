@@ -5,6 +5,8 @@
 	"common_nav_records": "Stamgegevens",
 	"common_nav_modules": "Modules",
 	"common_nav_dashboard": "Dashboard",
+	"common_sync_checking": "Kijken of er nieuwere gegevens zijn",
+	"common_new_version_loaded": "De app is bijgewerkt: je hebt nu de nieuwste versie",
 	"common_nav_orders": "Opdrachten",
 	"common_nav_activity": "Activiteit",
 	"common_nav_customers": "Klanten",

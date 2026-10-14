@@ -1,4 +1,5 @@
 import { globSync, readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import adapter from "@sveltejs/adapter-auto";
@@ -130,6 +131,16 @@ export default defineConfig({
 		// Type errors are reported by svelte-check, which understands .svelte files;
 		// tsgolint's typeCheck doesn't and would flag every .svelte import.
 		options: { typeAware: true, typeCheck: false },
+	},
+	resolve: {
+		alias: {
+			// SvelteKit's client runtime, which keeps the page's active queries (`query_map`): the
+			// service worker experiment refreshes the one whose answer changed by its key
+			// (`src/routes/(app)/swr-worker.ts`). Internal, so it may move in another SvelteKit version.
+			"$kit-client": fileURLToPath(
+				new URL("../runtime/client/client.js", import.meta.resolve("@sveltejs/kit")),
+			),
+		},
 	},
 	// The dev server pre-bundles the dependencies it finds by scanning from the routes (SvelteKit's
 	// entries), but the shadcn-svelte components are auto-imported (see `shadcnImports`), so the

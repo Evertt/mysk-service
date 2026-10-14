@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { BROWSER_LOCALE, baseURL, hydrated, useApp, userNames, users } from "./app.ts";
+import { BROWSER_OPTIONS, baseURL, hydrated, useApp, userNames, users } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -104,7 +104,7 @@ describe("signing in", () => {
 		const context = await app.page
 			.context()
 			.browser()!
-			.newContext({ javaScriptEnabled: false, locale: BROWSER_LOCALE });
+			.newContext({ ...BROWSER_OPTIONS, javaScriptEnabled: false });
 		try {
 			const page = await context.newPage();
 			await page.goto(`${baseURL}/orders`);

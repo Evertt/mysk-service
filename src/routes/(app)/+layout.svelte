@@ -13,12 +13,17 @@
 	import AppSidebar from "./app-sidebar.svelte";
 	import PageSkeleton from "./page-skeleton.svelte";
 	import { loadModuleSkeletons } from "./page-skeleton.ts";
+	import { connectSwrWorker } from "./swr-worker.ts";
 
 	let { children }: LayoutProps = $props();
 
 	// Before any office page loads: sends field engineers who navigate here to their portal. Read
 	// once, not as a `$derived`: a refresh of the tenant must not hold up the shell.
-	const { modules: moduleIds } = await getCurrentTenant();
+	const tenant = await getCurrentTenant();
+	const moduleIds = tenant.modules;
+
+	// The service worker that answers queries from its cache (see `swr-worker.ts`).
+	connectSwrWorker(tenant);
 
 	/**
 	 * The skeletons of the tenant's modules' pages, by route id, loaded once the shell has mounted.

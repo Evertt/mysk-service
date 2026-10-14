@@ -1,6 +1,6 @@
 // First: Temporal, where the runtime has none yet (Node 24), before any other module runs.
 import "temporal-polyfill/global";
-import { building, dev } from "$app/env";
+import { building } from "$app/env";
 import { DEV_REMOTE_DELAY_MS } from "$app/env/private";
 import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
@@ -15,13 +15,16 @@ import { handleTimeZone } from "#lib/server/time-zone.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 /**
- * In development, with `DEV_REMOTE_DELAY_MS` set, holds up each remote function call that long: a
- * slow server, to try what navigations do while they wait (an experiment, see `AGENTS.md`).
+ * With `DEV_REMOTE_DELAY_MS` set, holds up each remote function call (and each page's server data,
+ * `__data.json`, which a module's pages have) that long: a slow server, to try what navigations do
+ * while they wait (an experiment, see `AGENTS.md`). Also in a production build (`vp preview`), to
+ * measure the service worker (`scripts/sw-benchmark.ts`).
  */
 const delayRemoteCalls: Handle = async ({ event, resolve }) => {
 	// The request's own URL: a remote call's `event.url` is the calling page's.
 	const { pathname } = new URL(event.request.url);
-	if (dev && DEV_REMOTE_DELAY_MS && pathname.includes("/_app/remote")) {
+	const slow = pathname.includes("/_app/remote") || pathname.endsWith("/__data.json");
+	if (DEV_REMOTE_DELAY_MS && slow) {
 		await new Promise((done) => setTimeout(done, DEV_REMOTE_DELAY_MS));
 	}
 	return resolve(event);

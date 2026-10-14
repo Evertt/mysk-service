@@ -5,6 +5,8 @@
 	"common_nav_records": "Records",
 	"common_nav_modules": "Modules",
 	"common_nav_dashboard": "Dashboard",
+	"common_sync_checking": "Checking for newer data",
+	"common_new_version_loaded": "The app was updated: you're on its latest version now",
 	"common_nav_orders": "Orders",
 	"common_nav_activity": "Activity",
 	"common_nav_customers": "Customers",

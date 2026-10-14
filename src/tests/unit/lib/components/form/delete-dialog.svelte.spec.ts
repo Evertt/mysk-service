@@ -1,10 +1,22 @@
-import { expect, test, vi } from "vite-plus/test";
+import { beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
+import { resetHistoryDialogs } from "#unit/lib/components/fake-history-dialog.svelte.ts";
 
 import { fakeIdForm } from "./fake-form.ts";
+
+// The dialog opens with a history entry of its own, through SvelteKit's router, which a component
+// test hasn't got.
+vi.mock(
+	"#lib/components/history-dialog.svelte.ts",
+	() => import("#unit/lib/components/fake-history-dialog.svelte.ts"),
+);
+
+beforeEach(() => {
+	resetHistoryDialogs();
+});
 
 const props = {
 	id: "42",

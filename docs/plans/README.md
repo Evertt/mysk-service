@@ -9,6 +9,7 @@ Three plans from a clean-up and planning pass (October 2026). Nothing in them is
 | [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement                                |
 | [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)          |
 | [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted      |
+| [service-worker-swr.md](service-worker-swr.md)                   | Spike: a service worker answering remote queries stale-while-revalidate (opt-in, `?sw=on`)       |
 
 ## The decisions in short
 
