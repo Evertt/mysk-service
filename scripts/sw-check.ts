@@ -12,6 +12,9 @@ const origin = process.argv[2] ?? "http://localhost:4180";
 const code = "CUST-0030";
 const original = "Autobedrijf Vandenberghe";
 
+/** How long to wait for the worker's answers to be old enough to be asked for again. */
+const staleAfter = 16_000;
+
 const db = createClient({ url: "file:local.db" });
 const rename = (name: string) =>
 	db.execute({
@@ -75,7 +78,8 @@ console.log("1. Changed elsewhere");
 await go(page, `/customers/${code}`);
 await page.waitForTimeout(1_500);
 await go(page, "/engineers");
-await page.waitForTimeout(1_500);
+// Past the worker's `freshFor`: answers younger than that are shown without asking again.
+await page.waitForTimeout(staleAfter);
 await rename(`${original} (changed elsewhere)`);
 workerRequests = [];
 const started = (t0 = Date.now());
@@ -168,7 +172,7 @@ for (const [step, hover] of [
 ] as const) {
 	console.log(`${step}. Changed elsewhere, then a hover of ${hover} ms and a click`);
 	await go(page, "/engineers");
-	await page.waitForTimeout(1_500);
+	await page.waitForTimeout(staleAfter);
 	await rename(`${original} (${step})`);
 	const shown = await hoverAndOpen(page, `/customers/${code}`, hover);
 	for (const line of shown.filter((line) => !line.endsWith("Engineers"))) console.log(`   ${line}`);

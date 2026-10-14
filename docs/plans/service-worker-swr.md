@@ -38,10 +38,12 @@ default `serviceWorker.register`, a module worker, so in `vp dev` too).
 - **Warming.** The worker remembers which queries each page asked for (`swr:page`), and asks for
   them again for the sidebar's pages once the shell is up (`swr:warm`), when its answer is over an
   hour old (`warmAfter`; a hover or a visit that got it counts too), so revisits show recent data.
-- **Visits and hovers.** A navigation asks again for its page's queries (`swr:visit`), also those
-  the page doesn't ask for itself (opened from a preload, or from queries SvelteKit still holds),
-  with the sync indicator until they're in. A hover asks only for answers over 15 seconds old
-  (`hoverFreshFor`), so moving back and forth over a link asks once.
+- **Fresh enough: 15 seconds.** An answer at most 15 seconds old (`freshFor`) is shown without
+  asking the server again, whether a visit, a hover or a page's own request wants it, so moving back
+  and forth over a link asks once. A navigation asks again for its page's older answers
+  (`swr:visit`), also those the page doesn't ask for itself (opened from a preload, or from
+  queries SvelteKit still holds), with the sync indicator until they're in. Changes of the user's
+  own still go first: answers stored before one are asked for again whatever their age.
 - **Pages' server data.** A module's pages have a server `load` (the guard that refuses tenants
   without the module), so each navigation to them fetched `__data.json`: on Vercel a function call
   plus the session's and tenant's lookups on Turso, which no cache answered, hence the skeleton on

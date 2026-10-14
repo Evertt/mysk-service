@@ -26,14 +26,14 @@
  * - **Warming**: the worker remembers which queries each page asked for (`swr:page`), and asks for
  *   them again when the page says the user may go there: the sidebar's links once the shell is up
  *   (`swr:warm`, answers over an hour old: `warmAfter`), a hovered link (`swr:hover`, over 15
- *   seconds old: `hoverFreshFor`, so hovering back and forth asks once).
+ *   seconds old: `freshFor`, so hovering back and forth asks once).
  * - **Hovering**: SvelteKit renders a hovered link's page ahead (`forkPreloads`), with its queries.
  *   The user isn't waiting for that page yet, so the worker holds those queries' answers until the
  *   server's fresh ones are in: the page opens with fresh data, without a refresh. Once they click
  *   (`swr:visit`), it answers what it still holds from the cache at once, as for any navigation.
- * - **Visiting**: a navigation asks again for the page's queries (`swr:visit`), also those the page
- *   doesn't ask for itself (opened from a preload, or from queries SvelteKit still holds), and the
- *   tab shows it's checking until they're in.
+ * - **Visiting**: a navigation asks again for the page's queries over 15 seconds old (`swr:visit`),
+ *   also those the page doesn't ask for itself (opened from a preload, or from queries SvelteKit
+ *   still holds), and the tab shows it's checking until they're in.
  */
 import { assets, immutable } from "$app/manifest";
 import { self } from "$app/service-worker";
@@ -56,17 +56,13 @@ function fnv1a(text: string) {
 const remotePath = "/_app/remote/";
 
 /**
- * How long an answer the worker just got is shown as it is, without asking the server again: the
- * same query asked for twice in one go, or the refresh after the tab was told of a new answer.
+ * How long an answer the worker got is shown as it is, without asking the server again, by a
+ * visit, a hover or a page's own request: data at most this old is fresh enough, and hovering a
+ * link back and forth, or the refresh after the tab was told of a new answer, asks once.
  */
-const freshFor = 1_000;
+const freshFor = 15_000;
 /** How long after hovering a link the worker holds its page's answers for fresh ones, at most. */
 const holdFor = 3_000;
-/**
- * How old the answers of a hovered link's page have to be for the worker to ask for them again:
- * hovering the same link back and forth asks once.
- */
-const hoverFreshFor = 15_000;
 /**
  * How old an answer has to be for warming the sidebar's pages to ask for it again: an hour after
  * the worker last got it, whether by warming, a hover or a visit.
@@ -336,7 +332,7 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 	}
 
 	const age = Date.now() - storedAt;
-	if (age < freshFor || (age < hoverFreshFor && forHover(event.clientId, url))) return cached;
+	if (age < freshFor) return cached;
 
 	const fresh = revalidate(url, scope);
 	if (await freshForHover(event.clientId, url, fresh)) {
@@ -504,8 +500,8 @@ self.addEventListener("message", (event) => {
 			break;
 		case "swr:hover":
 			if (clientId) startHover(clientId, message.path);
-			// The user is about to see it, unless a hover just asked (`hoverFreshFor`).
-			event.waitUntil(warm([message.path], { maxAge: hoverFreshFor, clientId }));
+			// The user is about to see it.
+			event.waitUntil(warm([message.path], { maxAge: freshFor, clientId }));
 			break;
 	}
 });
