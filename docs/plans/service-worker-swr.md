@@ -36,8 +36,18 @@ default `serviceWorker.register`, a module worker, so in `vp dev` too).
   shell tells the worker (`swr:scope`, `src/routes/(app)/swr-worker.ts`), and without a scope it
   caches nothing.
 - **Warming.** The worker remembers which queries each page asked for (`swr:page`), and asks for
-  them again for the sidebar's pages once the shell is up (`swr:warm`), so revisits show recent
-  data.
+  them again for the sidebar's pages once the shell is up (`swr:warm`), when its answer is over an
+  hour old (`warmAfter`; a hover or a visit that got it counts too), so revisits show recent data.
+- **Visits and hovers.** A navigation asks again for its page's queries (`swr:visit`), also those
+  the page doesn't ask for itself (opened from a preload, or from queries SvelteKit still holds),
+  with the sync indicator until they're in. A hover asks only for answers over 15 seconds old
+  (`hoverFreshFor`), so moving back and forth over a link asks once.
+- **Pages' server data.** A module's pages have a server `load` (the guard that refuses tenants
+  without the module), so each navigation to them fetched `__data.json`: on Vercel a function call
+  plus the session's and tenant's lookups on Turso, which no cache answered, hence the skeleton on
+  `/schedule` and the other module pages. The worker keeps it like a query's answer (only plain
+  data: no redirects, error nodes or streamed data). Moving the guard to a universal `load` with a
+  cached query would remove that round trip for everyone; a bigger change, for its own branch.
 - **With hover preloading (`forkPreloads`).** Hovering a link renders its page ahead, in a fork,
   with its queries. The user isn't waiting yet, so on hover (`swr:hover`) the worker asks again for
   that page's queries and holds the preload's answers until the fresh ones are in: a page hovered
@@ -92,6 +102,10 @@ with the same body never reached the page. Now:
   files it names come from the current deployment.
 
 `node scripts/sw-deploy.ts <url> [idle|fresh]` checks each against a rebuilt and restarted server.
+
+To see what a navigation asks for, and from where, `node scripts/sw-probe.ts <url> /schedule /orders`
+logs every request the page and the worker make in a later session's clicks, and hovers back and
+forth over the first link.
 
 ## What's left, if it's adopted
 
