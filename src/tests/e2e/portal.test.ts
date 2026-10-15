@@ -1,10 +1,7 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
-
 import {
-	BROWSER_OPTIONS,
 	baseURL,
 	hydrated,
 	mobileViewport,
@@ -15,6 +12,7 @@ import {
 	value,
 	quiet,
 } from "./app.ts";
+import { signedInPage } from "./portal-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp({ user: users.engineer, viewport: mobileViewport });
@@ -211,7 +209,7 @@ describe("the engineer portal", () => {
 	});
 
 	test("the office sees the sign-off on the order", async () => {
-		const { page: office } = await signedInPage(users.admin);
+		const { page: office } = await signedInPage(app, users.admin);
 		try {
 			await office.goto(`${baseURL}/orders/${job.number}`);
 			await hydrated(office);
@@ -281,7 +279,7 @@ describe("the engineer portal", () => {
 			},
 		]);
 
-		const { page: office } = await signedInPage(users.admin);
+		const { page: office } = await signedInPage(app, users.admin);
 		try {
 			await office.goto(`${baseURL}/orders/${job.number}`);
 			await hydrated(office);
@@ -310,7 +308,7 @@ describe("what a field engineer can't do", () => {
 	test("office remote functions refuse them with a 403", async () => {
 		// The dashboard's query (which signing in calls) and the delete-order form, as the office
 		// calls them.
-		const office = await signedInPage(users.admin);
+		const office = await signedInPage(app, users.admin);
 		let form: Awaited<ReturnType<typeof captureDelete>>;
 		try {
 			form = await captureDelete(office.page);
@@ -399,31 +397,6 @@ describe("what a field engineer can't do", () => {
 		);
 	});
 });
-
-/**
- * A page in a browser context of its own, signed in as `email`, with the URLs of the remote
- * functions it called on the way. Close its context when done.
- */
-async function signedInPage(email: string) {
-	const browser = app.page.context().browser()!;
-	const context = await browser.newContext({
-		viewport: { width: 1440, height: 1000 },
-		...BROWSER_OPTIONS,
-	});
-	const page = await context.newPage();
-	const requests: string[] = [];
-	page.on("request", (request) => {
-		if (request.url().includes("/_app/remote")) requests.push(request.url());
-	});
-	await page.goto(`${baseURL}/login`);
-	await hydrated(page);
-	await page.getByLabel("Email").fill(email);
-	await page.getByLabel("Password").fill(DEMO_PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
-	await page.waitForURL((url) => url.pathname !== "/login");
-	await quiet(page);
-	return { page, requests };
-}
 
 /**
  * The request the office's delete-order form sends (its URL, headers and binary body), for an

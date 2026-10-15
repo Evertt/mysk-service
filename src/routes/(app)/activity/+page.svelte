@@ -3,11 +3,17 @@
 	import { page } from "$app/state";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+	import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
 	import XIcon from "@lucide/svelte/icons/x";
 
 	import { subjectNoun, subjectTypes } from "#lib/activity/index.ts";
 	import ActivityList from "#lib/components/activity/activity-list.svelte";
-	import { getActivity, getActivityFilters } from "#lib/components/activity/activity.remote.ts";
+	import {
+		countNewActivity,
+		getActivity,
+		getActivityFilters,
+	} from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { modules } from "#lib/modules/manifests.ts";
 
@@ -33,6 +39,20 @@
 	});
 
 	const [feed, options] = $derived(await Promise.all([getActivity(filters), getActivityFilters()]));
+
+	// Live: the first page shows new entries as they're logged. A page past it keeps its entries
+	// where they are, and says how many came in since it was shown instead, with a link to them.
+	const newer = $derived.by(() => {
+		if (!filters.before) return undefined;
+		const { before: _, ...matching } = filters;
+		return countNewActivity({ ...matching, after: feed.newest });
+	});
+	refreshOnActivity(() =>
+		Promise.all([
+			filters.before ? newer?.refresh() : getActivity(filters).refresh(),
+			getActivityFilters().refresh(),
+		]),
+	);
 
 	/** The record the feed is narrowed to, as its entries name it. */
 	const subject = $derived.by(() => {
@@ -125,6 +145,19 @@
 		{/if}
 	</Card.Header>
 	<Card.Content>
+		{#if newer?.current}
+			<div
+				class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+				role="status"
+				data-slot="new-activity"
+			>
+				<span>{m.activity_new_entries({ count: newer.current })}</span>
+				<Button variant="outline" size="sm" href={withParams({ before: null })}>
+					<ArrowUpIcon data-icon="inline-start" />
+					{m.activity_show_new()}
+				</Button>
+			</div>
+		{/if}
 		<ActivityList
 			entries={feed.entries}
 			empty={filters.before ? m.activity_nothing_older() : m.activity_nothing_matches()}

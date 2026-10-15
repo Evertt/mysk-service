@@ -5,7 +5,7 @@
  */
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, desc, eq, isNotNull, lt, or, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
 import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
@@ -14,7 +14,7 @@ import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, type TenantTable } from "#lib/server/auth/index.ts";
-import { watchSubject } from "#lib/server/changes.ts";
+import { changedAt, watchChanges, watchSubject } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
@@ -40,43 +40,95 @@ const day = v.pipe(
 	v.check((value) => isDay(value)),
 );
 
+/** What the feed can be narrowed to (the URL's filters, but its page). */
+const feedFilters = v.object({
+	type: v.optional(v.string()),
+	id: v.optional(v.string()),
+	user: v.optional(v.string()),
+	from: v.optional(day),
+	to: v.optional(day),
+});
+
+/** The conditions of the feed's `filters`, in the tenant. */
+const matching = ({ type, id, user, from, to }: v.InferOutput<typeof feedFilters>) => [
+	inTenant(activity),
+	type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
+	user ? eq(activity.userId, user) : undefined,
+	// The days in the user's time zone.
+	from || to ? inDays(activity.createdAt, [{ from: from ?? null, to: to ?? null }]) : undefined,
+];
+
 /**
  * One page of the tenant's activity, newest first, optionally of one subject `type` (with `id`:
  * of one subject and its parts), by one `user`, between `from` and `to` (days, inclusive), and
  * `before` an entry (the previous page's `older`).
  */
 export const getActivity = forMembers.query(
-	v.object({
-		type: v.optional(v.string()),
-		id: v.optional(v.string()),
-		user: v.optional(v.string()),
-		from: v.optional(day),
-		to: v.optional(day),
-		before: v.optional(v.pipe(v.number(), v.integer())),
-	}),
-	async ({ type, id, user, from, to, before }) => {
-		const filters: (SQL | undefined)[] = [
-			inTenant(activity),
-			type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
-			user ? eq(activity.userId, user) : undefined,
-			// The days in the user's time zone.
-			from || to ? inDays(activity.createdAt, [{ from: from ?? null, to: to ?? null }]) : undefined,
-			before ? lt(activity.id, before) : undefined,
-		];
+	v.object({ ...feedFilters.entries, before: v.optional(v.pipe(v.number(), v.integer())) }),
+	async ({ before, ...filters }) => {
+		const conditions = matching(filters);
 		const rows = await db
 			.select()
 			.from(activity)
-			.where(and(...filters))
+			.where(and(...conditions, before ? lt(activity.id, before) : undefined))
 			.orderBy(desc(activity.id))
 			.limit(PAGE + 1);
 		const page = rows.slice(0, PAGE);
+		// The newest entry of the filters on any page: what `countNewActivity()` counts from.
+		const [newest] = before
+			? await db
+					.select({ id: max(activity.id) })
+					.from(activity)
+					.where(and(...conditions))
+			: [{ id: page[0]?.id ?? null }];
 		return {
 			entries: await present(page),
 			/** Where the next (older) page starts, if there is one. */
 			older: rows.length > PAGE ? page[page.length - 1].id : null,
+			/** The newest entry matching the filters (on the first page or not), if any. */
+			newest: newest?.id ?? null,
 		};
 	},
 );
+
+/**
+ * How many entries matching the feed's filters came in `after` an entry (the feed's `newest`), for
+ * a page past the first, which says so rather than move its entries.
+ */
+export const countNewActivity = forMembers.query(
+	v.object({ ...feedFilters.entries, after: v.nullable(v.pipe(v.number(), v.integer())) }),
+	async ({ after, ...filters }) => {
+		const [found] = await db
+			.select({ count: count() })
+			.from(activity)
+			.where(and(...matching(filters), after === null ? undefined : gt(activity.id, after)));
+		return found.count;
+	},
+);
+
+/**
+ * Every subject type the log may name, the core's and all modules' (not only the tenant's: a module
+ * switched on while a page watches logs as well).
+ */
+const loggedTypes = Object.keys(subjectTypes(allModules));
+
+/**
+ * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again
+ * on each change (once per burst), so the feed and the dashboard look again when anyone changes
+ * something. See `watchSchedule` in the schedule module.
+ */
+export const watchActivity = forMembers.query.live(async function* () {
+	const { organizationId } = currentTenant();
+	// Watching before the first answer, so a change in between isn't missed.
+	const changes = watchChanges(organizationId, loggedTypes);
+	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	try {
+		yield changedAt(organizationId, loggedTypes);
+		for await (const _ of changes) yield changedAt(organizationId, loggedTypes);
+	} finally {
+		changes.stop();
+	}
+});
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(

@@ -5,7 +5,7 @@
  * Retrying single tests wouldn't do: an end-to-end file's tests are steps on one shared page, so a
  * retried test would start from where its failed first try left the page. It's for failures that
  * aren't the app's: a module skeleton that comes in while a navigation is pending can freeze the
- * page (a Svelte 5.57 bug, see "Skeletons" in AGENTS.md). A file that fails again fails the run.
+ * page (a Svelte 5.57 bug, see "Skeletons" in docs/agents/modules.md). A file that fails again fails the run.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";

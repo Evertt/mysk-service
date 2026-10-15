@@ -1,5 +1,5 @@
 /**
- * The guards of the optional modules' server route files (see "Modules" in AGENTS.md). The
+ * The guards of the optional modules' server route files (see docs/agents/modules.md). The
  * modules' hooks into core server logic are in `#lib/server/extensions.ts`.
  */
 import type { ModuleId } from "#lib/modules/ids.ts";

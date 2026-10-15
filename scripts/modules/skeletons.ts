@@ -45,7 +45,7 @@ export function skeletonProblems(modules: ModuleFolder[]) {
  * The registry of the modules' skeletons, `src/lib/modules/skeletons.gen.ts`. It lists a loader
  * for each, so a tenant's office loads only its modules' skeletons, after the layout mounts
  * (`loadModuleSkeletons()`). One that comes in while a navigation is pending can trip Svelte (5.57)
- * up ("Batch has scheduled effects"); see "Skeletons" in `AGENTS.md`.
+ * up ("Batch has scheduled effects"); see "Skeletons" in docs/agents/modules.md.
  */
 export function renderSkeletons(modules: ModuleFolder[]) {
 	const entries = modules.flatMap((module) =>

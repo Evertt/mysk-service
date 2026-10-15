@@ -1,6 +1,6 @@
 /**
  * Keeps the core domains (`src/lib/{orders,customers,equipment,engineers}`) behind their
- * barrels (see "Where files go" in AGENTS.md):
+ * barrels (see docs/agents/structure.md):
  *
  * - code outside a domain imports it only through its barrels (`#lib/<d>/index.ts`, `components.ts`,
  *   `remotes.ts` and `server/index.ts`), except `extensions.ts` (the module generator and the

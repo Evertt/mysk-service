@@ -3,12 +3,16 @@
 
 	import { formatNumber } from "#lib/i18n/index.ts";
 
+	import { refreshOnChanges } from "./live.svelte.ts";
 	import { getMyWork } from "./portal.remote.ts";
 	import WorkCard from "./work-card.svelte";
 	import { groupByDay } from "./work.ts";
 
 	const work = $derived(await getMyWork());
 	const days = $derived(groupByDay(work.open));
+
+	// Live: the office assigning, rescheduling or cancelling an order shows without a reload.
+	refreshOnChanges(() => getMyWork().refresh());
 </script>
 
 <svelte:head>
