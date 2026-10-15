@@ -26,19 +26,19 @@ describe("generateModules", () => {
 		put("src/routes/+layout.svelte");
 
 		put("src/modules/sample/module.ts", `export default { id: "sample" };`);
-		put("src/modules/sample/routes/(app)/sample/+page.svelte");
-		put("src/modules/sample/routes/(app)/sample/+layout.svelte");
-		put("src/modules/sample/routes/(app)/sample/+error.svelte");
-		put("src/modules/sample/routes/(app)/sample/[id]/+page.svelte");
+		put("src/modules/sample/routes/(app)/+page.svelte");
+		put("src/modules/sample/routes/(app)/+layout.svelte");
+		put("src/modules/sample/routes/(app)/+error.svelte");
+		put("src/modules/sample/routes/(app)/[id]/+page.svelte");
 		put(
-			"src/modules/sample/routes/(app)/sample/[id]/+page.ts",
+			"src/modules/sample/routes/(app)/[id]/+page.ts",
 			`export const ssr = false;\nexport const load = () => ({});`,
 		);
 		put(
-			"src/modules/sample/routes/(app)/sample/[id]/pdf/+server.ts",
+			"src/modules/sample/routes/(app)/[id]/pdf/+server.ts",
 			`export const GET = () => new Response();`,
 		);
-		put("src/modules/sample/routes/(app)/sample/sample.remote.ts", `export const x = 1;`);
+		put("src/modules/sample/routes/(app)/sample.remote.ts", `export const x = 1;`);
 		put("src/modules/sample/server/index.ts");
 		put("src/modules/sample/server/schema.ts");
 		put("src/modules/sample/messages/en/sample.json", "{}");
@@ -99,7 +99,7 @@ describe("generateModules", () => {
 		const folder = `${group}/sample`;
 		expect(has("src/routes/(app)/sample")).toBe(false);
 		expect(read(`${folder}/[id]/+page.svelte`)).toContain(
-			`import Route from "#modules/sample/routes/(app)/sample/[id]/+page.svelte";`,
+			`import Route from "#modules/sample/routes/(app)/[id]/+page.svelte";`,
 		);
 		expect(read(`${folder}/+layout.svelte`)).toContain("LayoutProps");
 		expect(read(`${folder}/+error.svelte`)).toContain("<Route />");
@@ -108,10 +108,8 @@ describe("generateModules", () => {
 		expect(read(`${folder}/[id]/pdf/+server.ts`)).toContain(
 			`export const GET = guarded<RequestEvent, ReturnType<typeof moduleGET>>("sample", moduleGET);`,
 		);
-		// One guard for the group, which knows each route folder's module.
-		expect(read(`${group}/+layout.ts`)).toContain(
-			`const owners = {\n\t"/(app)/(modules)/sample": "sample",\n} as const;`,
-		);
+		// One guard for the group, which reads the module from the route's folder.
+		expect(read(`${group}/+layout.ts`)).toContain("await guardModuleRoute(route.id);");
 		expect(has(`${folder}/+layout.server.ts`)).toBe(false);
 		// A universal load: no server load in the chain of a module's page.
 		expect(has(`${group}/+layout.server.ts`)).toBe(false);
@@ -121,7 +119,7 @@ describe("generateModules", () => {
 
 	test("guards the module's own server files, beside the group's guard", () => {
 		put(
-			"src/modules/sample/routes/(app)/sample/+layout.server.ts",
+			"src/modules/sample/routes/(app)/+layout.server.ts",
 			`export const load = () => ({ a: 1 });`,
 		);
 		generateModules(root);
@@ -133,15 +131,21 @@ describe("generateModules", () => {
 
 	test("puts the routes of every module in a group in one (modules) folder, and others apart", () => {
 		put("src/modules/other/module.ts", `export default { id: "other" };`);
-		put("src/modules/other/routes/(app)/other/+page.svelte");
-		put("src/modules/other/routes/reports/+page.svelte");
+		put("src/modules/other/routes/(app)/+page.svelte");
+		put("src/modules/other/routes/(field)/(inner)/reports/+page.svelte");
 		generateModules(root);
-		expect(read("src/routes/(app)/(modules)/+layout.ts")).toContain(
-			`\t"/(app)/(modules)/other": "other",\n\t"/(app)/(modules)/sample": "sample",\n`,
-		);
 		expect(has("src/routes/(app)/(modules)/other/+page.svelte")).toBe(true);
-		expect(read("src/routes/(modules)/+layout.ts")).toContain(`\t"/(modules)/reports": "other",\n`);
-		expect(has("src/routes/(modules)/reports/+page.svelte")).toBe(true);
+		expect(has("src/routes/(app)/(modules)/sample/+page.svelte")).toBe(true);
+		expect(read("src/routes/(field)/(inner)/(modules)/+layout.ts")).toContain("guardModuleRoute(");
+		expect(has("src/routes/(field)/(inner)/(modules)/other/reports/+page.svelte")).toBe(true);
+	});
+
+	test("refuses route files outside a group of the module's routes/", () => {
+		put("src/modules/sample/routes/+page.svelte");
+		put("src/modules/sample/routes/reports/+page.svelte");
+		expect(() => generateModules(root)).toThrow(
+			/routes\/\+page\.svelte isn't in a route group[\s\S]*routes\/reports\/\+page\.svelte isn't in a route group/,
+		);
 	});
 
 	test("removes the stubs that earlier versions wrote beside the core's routes", () => {
@@ -212,7 +216,7 @@ describe("generateModules", () => {
 
 	test("removes the stubs of a route file that is gone", () => {
 		generateModules(root);
-		rmSync(join(root, "src/modules/sample/routes/(app)/sample/[id]"), { recursive: true });
+		rmSync(join(root, "src/modules/sample/routes/(app)/[id]"), { recursive: true });
 		generateModules(root);
 		expect(has("src/routes/(app)/(modules)/sample/[id]")).toBe(false);
 		expect(has("src/routes/(app)/(modules)/sample/+page.svelte")).toBe(true);
@@ -220,7 +224,7 @@ describe("generateModules", () => {
 
 	test("picks up a page option that was added", () => {
 		generateModules(root);
-		put("src/modules/sample/routes/(app)/sample/[id]/+page.ts", `export const prerender = true;`);
+		put("src/modules/sample/routes/(app)/[id]/+page.ts", `export const prerender = true;`);
 		expect(generateModules(root).changed).toEqual([
 			"src/routes/(app)/(modules)/sample/[id]/+page.ts",
 		]);
@@ -255,7 +259,7 @@ describe("generateModules", () => {
 		put("src/modules/sample/tests/unit/slots/orders.detail.side/card.svelte.spec.ts");
 		put("src/modules/sample/tests/unit/slots/orders.detail.side/card.test-harness.svelte");
 		put("src/modules/sample/tests/unit/bulk-actions/orders.detail.side.spec.ts");
-		put("src/modules/sample/tests/unit/routes/(app)/sample/+page.spec.ts");
+		put("src/modules/sample/tests/unit/routes/(app)/+page.spec.ts");
 		put("src/modules/sample/tests/e2e/sample.test.ts");
 		generateModules(root);
 		const file = read("src/lib/extensions/contributions.gen.ts");

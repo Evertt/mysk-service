@@ -111,21 +111,14 @@ export const actions = guardedActions("sample", moduleActions satisfies Actions)
 });
 
 describe("renderGroupGuard", () => {
-	test("guards each route folder of the group for its module", () => {
-		const stub = renderGroupGuard(
-			new Map([
-				["/(app)/(modules)/sample", "sample"],
-				["/(app)/(modules)/other", "other-module"],
-			]),
-		);
+	test("guards each route of the group for the module its folder names, and names no module", () => {
+		const stub = renderGroupGuard();
 		expect(stub).toContain(`import type { LayoutLoadEvent } from "./$types";`);
 		expect(stub).toContain(`import { guardModuleRoute } from "#lib/modules/route-guard.ts";`);
 		expect(stub).toContain(
-			`const owners = {\n\t"/(app)/(modules)/sample": "sample",\n\t"/(app)/(modules)/other": "other-module",\n} as const;`,
+			`export const load = async ({ route }: LayoutLoadEvent) => {\n\tawait guardModuleRoute(route.id);\n};`,
 		);
-		expect(stub).toContain(
-			`export const load = async ({ route }: LayoutLoadEvent) => {\n\tawait guardModuleRoute(route.id, owners);\n};`,
-		);
+		expect(stub).not.toContain("owners");
 	});
 });
 

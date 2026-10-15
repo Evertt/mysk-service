@@ -16,41 +16,44 @@ describe("checkModules", () => {
 		expect(
 			check([
 				module("sample", {
-					routeFiles: ["(app)/sample/+page.svelte", "(app)/sample/[id]/+page.ts"],
+					routeFiles: [
+						"(app)/+layout.svelte",
+						"(app)/+page.svelte",
+						"(app)/[id]/+page.ts",
+						"(app)/(inner)/reports/+page.svelte",
+					],
 				}),
 			]),
 		).toEqual([]);
 	});
 
-	test("refuses route folders that collide with the core's or another module's", () => {
+	test("refuses a module whose id is a core route's first segment, if it has routes", () => {
 		const problems = check([
-			module("a", { routeFiles: ["(app)/orders/+page.svelte", "(app)/shared/+page.svelte"] }),
-			module("b", { routeFiles: ["(app)/shared/+page.svelte", "login/+page.svelte"] }),
+			module("orders", { routeFiles: ["(app)/+page.svelte"] }),
+			module("login", { routeFiles: ["(field)/[id]/+page.svelte"] }),
+			// Its own folder: modules can't collide with each other.
+			module("other", { routeFiles: ["(app)/+page.svelte"] }),
 		]);
-		expect(problems).toHaveLength(3);
-		expect(problems[0]).toMatch(/a\/routes\/\(app\)\/orders collides with the core's \/orders/);
-		expect(problems[1]).toMatch(
-			/b\/routes\/\(app\)\/shared collides with the \/shared route of the a module/,
-		);
-		expect(problems[2]).toMatch(/login collides with the core's \/login/);
+		expect(problems).toEqual([
+			"src/modules/orders/routes: the module's routes are under /orders, which collides with the core's /orders route.",
+			"src/modules/login/routes: the module's routes are under /login, which collides with the core's /login route.",
+		]);
+		expect(check([module("orders")])).toEqual([]);
 	});
 
-	test("refuses routes outside a folder of the module's own, and unknown route files", () => {
+	test("refuses routes outside a route group, and unknown route files", () => {
 		const problems = check([
 			module("a", {
-				routeFiles: [
-					"(app)/+layout.svelte",
-					"+page.svelte",
-					"(app)/a/+hooks.ts",
-					"(app)/[id]/+page.svelte",
-				],
+				routeFiles: ["+page.svelte", "a/+page.svelte", "a/(app)/+page.svelte", "(app)/+hooks.ts"],
 			}),
 		]);
 		expect(problems).toHaveLength(4);
-		expect(problems.join("\n")).toMatch(/outside a route folder of its own/);
-		expect(problems.join("\n")).not.toMatch(/\(modules\)/);
-		expect(problems.join("\n")).toMatch(/isn't a route file/);
-		expect(problems.join("\n")).toMatch(/plain name/);
+		expect(problems.slice(0, 3)).toEqual([
+			"src/modules/a/routes/+page.svelte isn't in a route group: a module's routes/ holds groups only (routes/(app)/…), whose files are in the module's own route folder, /a.",
+			expect.stringMatching(/a\/routes\/a\/\+page\.svelte isn't in a route group/),
+			expect.stringMatching(/a\/routes\/a\/\(app\)\/\+page\.svelte isn't in a route group/),
+		]);
+		expect(problems[3]).toMatch(/\(app\)\/\+hooks\.ts isn't a route file/);
 	});
 
 	test("refuses routes in a (modules) group, which is the generator's", () => {

@@ -16,8 +16,9 @@
  *   `src/lib/server/db/module-seeds.gen.ts`) and what it contributes to extension points by file
  *   (`slots/<point id>/<name>.svelte`, `bulk-actions/<point id>.ts`, in
  *   `src/lib/extensions/contributions.gen.ts`, each held to its point's types);
- * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, in a `(modules)`
- *   group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte` becomes
+ * - writes a stub in `src/routes` for every `+` file under the module's `routes/`, which holds route
+ *   groups only, in the module's own folder (its id) in a `(modules)` group inside the file's
+ *   leading groups: the contracts module's `routes/(app)/[number]/+page.svelte` becomes
  *   `src/routes/(app)/(modules)/contracts/[number]/+page.svelte` (route id
  *   `/(app)/(modules)/contracts/[number]`, URL `/contracts/…`), so the routes are real ones (typed
  *   `./$types`, `RouteId`, the groups' layouts, endpoints, code splitting, and SvelteKit's
@@ -30,14 +31,15 @@
  *   wrote beside the core's route folders;
  * - guards the modules' routes: a universal `+layout.ts` in each `(modules)` group refuses the
  *   tenants without the module that owns the route (`guardModuleRoute()` in
- *   `#lib/modules/route-guard.ts`, with the route folders' owners), and since that doesn't run
+ *   `#lib/modules/route-guard.ts`, which reads the module from the route's folder in the group),
+ *   and since that doesn't run
  *   before server loads, form actions and endpoints, the stub of each server file guards its
  *   `load`, `actions` and request handlers itself (`guarded()`, `guardedActions()`);
  * - lists the module's message files in `pathPattern`: the core's entries first, then each module's,
  *   in id order;
  * - checks the rules and stops with the full list of what's wrong: a module's folder name is its id
- *   (`^[a-z][a-z0-9-]*$`); its route folders are plain names of their own (not a core route's, nor
- *   another module's); its message sections (`messages/<locale>/<section>.json`) are in every
+ *   (`^[a-z][a-z0-9-]*$`); its route files are in route groups, and its id, the first segment of its
+ *   routes' URLs, isn't a core route's; its skeletons are each a page's; its message sections (`messages/<locale>/<section>.json`) are in every
  *   language and unique across the app; an extension point's id starts with its owner's and is
  *   unique, and a contribution names an existing point of its kind whose owner is core, the module
  *   itself, or a module it requires or enhances.

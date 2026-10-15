@@ -24,31 +24,30 @@ export const MODULES_GROUP = "(modules)";
 
 export const isGroup = (segment: string) => /^\(.*\)$/.test(segment);
 
-/** Where a module's route file sits: behind which groups, in which route folder of its own. */
+/**
+ * Where a module's route file sits. A module's `routes/` holds route groups only (`(app)`); what's
+ * in them goes in the module's own route folder, which is its id (implied, never written):
+ * `routes/(app)/[number]/+page.svelte` is `(app)/(modules)/<id>/[number]/+page.svelte`.
+ */
 export interface RoutePlace {
-	/** The groups in front of the route folder (`(app)`), whose layouts it gets; maybe none. */
+	/** The groups in front of the module's folder (`(app)`), whose layouts it gets: at least one. */
 	groups: string[];
-	/** The first folder that's not a group (`contracts`): the module's own. */
-	folder: string;
-	/** The path below that folder (`[number]/+page.svelte`). */
+	/** The path inside the module's folder (`[number]/+page.svelte`, or just `+page.svelte`). */
 	rest: string;
 }
 
 /**
- * Splits a route file's path (relative to `routes/`) into its leading groups, its route folder and
- * the rest: `(app)/contracts/[number]/+page.svelte` → `(app)`, `contracts`, `[number]/+page.svelte`.
- * A file that sits in a group or at the root has no route folder, and no place.
+ * Splits a route file's path (relative to `routes/`) into its leading groups (all the leading
+ * segments in parentheses) and the rest: `(app)/[number]/+page.svelte` → `(app)`,
+ * `[number]/+page.svelte`. A file directly in `routes/`, or in a top-level folder that isn't a
+ * group, has no place.
  */
 export function routePlace(file: string): RoutePlace | undefined {
 	const parts = file.split("/");
+	// The file's own name is never a group, so some part isn't one.
 	const index = parts.findIndex((part) => !isGroup(part));
-	// The file itself is the first part that's not a group: it has no folder.
-	if (index === -1 || index === parts.length - 1) return undefined;
-	return {
-		groups: parts.slice(0, index),
-		folder: parts[index],
-		rest: parts.slice(index + 1).join("/"),
-	};
+	if (index < 1) return undefined;
+	return { groups: parts.slice(0, index), rest: parts.slice(index).join("/") };
 }
 
 /**

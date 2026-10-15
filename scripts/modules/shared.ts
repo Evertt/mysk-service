@@ -61,7 +61,7 @@ export interface ModuleFolder {
 	formPartFiles: string[];
 	/**
 	 * What its pages show while they load, one per page, mirroring `routes/`:
-	 * `skeletons/(app)/schedule.svelte` for `routes/(app)/schedule/+page.svelte`.
+	 * `skeletons/(app)/page.svelte` for `routes/(app)/+page.svelte`.
 	 */
 	skeletonFiles: string[];
 	/** Which of the server files it has. */
