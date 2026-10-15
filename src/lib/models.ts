@@ -82,6 +82,13 @@ export const manualOrderStatuses = [
  */
 export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
 
+/**
+ * The statuses an order with `status` can be given by hand (its own among them), e.g. from the
+ * status in the orders list: any of `manualOrderStatuses`, none once it's invoiced.
+ */
+export const orderStatusChoices = (status: OrderStatus): readonly OrderStatus[] =>
+	isEditableOrder(status) ? manualOrderStatuses : [];
+
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
 

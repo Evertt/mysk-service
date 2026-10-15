@@ -2,7 +2,8 @@
 	@component
 	Asks before a bulk action runs: to confirm it (e.g. a delete), or to choose its parameter
 	(e.g. the engineer to assign), whose options load when it opens. Says how many of the selected
-	rows it applies to, if not all. `onrun` runs the action with the chosen value. Make it anew for
+	rows it applies to, if not all. For a single row's action, `record` names the row in the title.
+	`onrun` runs the action with the chosen value. Make it anew for
 	each time it asks (e.g. in a `{#key}`), so it starts without a choice.
 -->
 <script lang="ts" generics="TData, Where = never">
@@ -15,6 +16,7 @@
 		open = $bindable(false),
 		count,
 		applies,
+		record,
 		busy = false,
 		onrun,
 	}: {
@@ -24,6 +26,8 @@
 		count: number;
 		/** How many of them the action applies to (as far as the table can tell). */
 		applies: number;
+		/** The row it's for, by its label, when it's for a single row rather than a selection. */
+		record?: string;
 		busy?: boolean;
 		onrun: (value?: string) => void;
 	} = $props();
@@ -34,7 +38,9 @@
 	const choices = $derived(action.parameter && Promise.resolve(action.parameter.options()));
 
 	const title = $derived(
-		action.parameter?.title(count) ?? action.confirm?.title(count) ?? action.label(),
+		record !== undefined
+			? m.common_row_action_title({ action: action.label(), label: record })
+			: (action.parameter?.title(count) ?? action.confirm?.title(count) ?? action.label()),
 	);
 	const description = $derived(
 		action.parameter?.description?.() ?? action.confirm?.description() ?? "",

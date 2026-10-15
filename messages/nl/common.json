@@ -190,6 +190,7 @@
 	"common_bulk_missing": "{count} niet gevonden",
 	"common_bulk_skip_reason": "{label}: {reason}",
 	"common_bulk_more": "en nog {count}",
+	"common_row_action_title": "{action}: {label}",
 	"common_views_menu": "Opgeslagen weergaven",
 	"common_views_menu_active": "Opgeslagen weergaven: {name}",
 	"common_views_menu_edited": "Opgeslagen weergaven: {name}, met niet-opgeslagen wijzigingen",
@@ -267,5 +268,6 @@
 				"countPlural=*": "{countText} u"
 			}
 		}
-	]
+	],
+	"common_badge_select_label": "{label}: {value}"
 }

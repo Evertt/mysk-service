@@ -20,13 +20,17 @@
 	import { columns } from "./columns.ts";
 	import type { getOrderFacets, getOrders } from "./order-list.remote.ts";
 	import { ordersList } from "./orders-list.ts";
+	import { setStatusCellQuery } from "./status-cell.svelte";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
+		query,
 		orders,
 		facets,
 	}: {
+		/** The query the page asked for the rows with (`getOrders(query)`). */
+		query: Parameters<typeof getOrders>[0];
 		/** A page of orders, as the URL says, how many match in all, and its groups when grouped. */
 		orders: Awaited<ReturnType<typeof getOrders>>;
 		/**
@@ -49,6 +53,9 @@
 		// Newest first, 20 per page: the defaults the server has too.
 		initialState: { ...ordersList.urlSpec.defaults, columnVisibility: { createdAt: false } },
 	});
+
+	// The status cells change an order's status, showing it at once in the rows of this query.
+	setStatusCellQuery(() => query);
 
 	// Until the rows for a new search, filter, sort or page are in.
 	const loading = serverTableLoading(table, ordersList, () => orders.key);

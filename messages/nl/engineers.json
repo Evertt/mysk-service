@@ -102,5 +102,7 @@
 	"engineers_bulk_activate": "Activeren",
 	"engineers_bulk_deactivate": "Deactiveren",
 	"engineers_bulk_already_active": "{name} is al actief",
-	"engineers_bulk_already_inactive": "{name} is al inactief"
+	"engineers_bulk_already_inactive": "{name} is al inactief",
+	"engineers_status_of": "Status van {name}",
+	"engineers_status_change_failed": "Kon niet wijzigen of {name} actief is."
 }

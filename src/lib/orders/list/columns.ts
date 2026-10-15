@@ -71,8 +71,15 @@ export const columns = column.columns([
 		meta: { label: m.orders_column_type, filterValues: orderTypes },
 	}),
 	column.accessor("status", {
-		cell: ({ getValue, row }) =>
-			renderComponent(StatusCell, { status: getValue(), tags: row.original.tags }),
+		cell: ({ getValue, row, column }) =>
+			renderComponent(StatusCell, {
+				id: row.original.id,
+				number: row.original.number,
+				status: getValue(),
+				tags: row.original.tags,
+				// Grouped by status, it's the group's heading, which changes no order.
+				fixed: column.getIsGrouped(),
+			}),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		meta: { label: m.orders_column_status, filterValues: orderStatuses },

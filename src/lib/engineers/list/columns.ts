@@ -8,8 +8,8 @@ import { engineerSpecialties } from "#lib/models.ts";
 
 import { regionLabel } from "../display.ts";
 import type { getEngineers } from "../engineers.remote.ts";
-import ActiveBadge from "../ui/active-badge.svelte";
 import SpecialtyBadge from "../ui/specialty-badge.svelte";
+import StatusCell from "./status-cell.svelte";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 
@@ -54,7 +54,14 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => (row.active ? "active" : "inactive"), {
 		id: "status",
-		cell: ({ row }) => renderComponent(ActiveBadge, { active: row.original.active }),
+		cell: ({ row, column }) =>
+			renderComponent(StatusCell, {
+				id: row.original.id,
+				name: row.original.name,
+				active: row.original.active,
+				// Grouped by status, it's the group's heading, which changes no engineer.
+				fixed: column.getIsGrouped(),
+			}),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		enableGlobalFilter: false,
