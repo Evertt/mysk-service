@@ -6,8 +6,9 @@ async transactions (`nextNumber`, `saveOrderParts`) hold there?
 
 **Answer: yes, locally under `wrangler dev` (workerd, the production runtime).** Every office page
 renders from the object, sign-in works, orders are created, refused and rolled back, and concurrent
-creates get unique numbers. It took one fix in our code and four workarounds, listed below. Not
-deployed yet: that needs a Cloudflare account (`wrangler login`).
+creates get unique numbers. It took one fix in our code and four workarounds, listed below. **Deployed** as
+`fieldworks-spike` on workers.dev, with North and South imported: the same checks hold there, and
+the schedule board is live (below).
 
 ## How it's wired (no fork of the adapter)
 
@@ -80,9 +81,42 @@ deployed yet: that needs a Cloudflare account (`wrangler login`).
 - Five concurrent `createCustomer` posts: `CUST-0061`…`0065`, unique, no gaps (finished out of
   order, so they did run concurrently).
 
+## On Cloudflare
+
+- `wrangler deploy` (the second config, `wrangler.jsonc`): Worker start-up 91–109 ms (limit 1 s),
+  1.68 MB gzipped. Secrets went up with `--secrets-file .dev.vars` on the first deploy; later
+  deploys keep them (don't pass `.dev.vars` again: it now holds the local `ORIGIN`).
+  `ORIGIN` is a var in `wrangler.jsonc`.
+- Import: North in 1.8 s, South in 2.3 s (one request each, one transaction each).
+- One `error code: 1042` from Cloudflare on the first query right after a deploy; not seen again.
+- From here (curl, no session), the login page took 0.45–1.1 s to first byte against 0.12 s for a
+  static file, and one of five requests failed to connect. Signed in, the app felt much faster
+  than Vercel with Turso: every query is a call into SQLite in the same process, no network.
+
+## The live schedule board (`query.live`)
+
+- `recordActivity()` announces each change it logs once its transaction commits
+  (`announceChange()`, `src/lib/server/changes.ts`), with the subject's type and its parent's.
+- `watchSchedule` (`src/modules/schedule/schedule.remote.ts`), a live query, yields when the
+  tenant's orders, engineers or customers last changed, and again on each change; the schedule
+  page refreshes `getSchedule(week)` when the value moves. So the board keeps its optimistic
+  drag and drop, and the stream carries a number, not the week's orders.
+- The listeners are in memory. In a Durable Object per organization that's enough: every board of
+  the tenant is served by the same object (and isolate). On Vercel it would only reach boards on
+  the same instance: there it needs a broker (Redis, Postgres `LISTEN`).
+- `watchChanges()` subscribes when called, not on the first `next()`, so a change between the
+  first answer and the wait isn't missed; its `stop()` runs from the live query's `finally` and on
+  the request's `abort`, since SSR closes a generator that never ran its body, and a consumer
+  waiting for a change can't be returned otherwise.
+- Checked locally and deployed: a board in one tab, the order's date changed in another; the
+  board updated without a reload (one `getSchedule` refetch after the `watchSchedule` event).
+- Cost to keep in mind: an open stream keeps its Durable Object awake (billed duration). Workers'
+  WebSocket hibernation would avoid that, but `query.live` streams over HTTP.
+- The service worker already leaves live streams alone (it skips `text/event-stream`).
+
 ## Not checked
 
-- The deploy itself, latency, and cold starts on Cloudflare.
+- Latency from elsewhere than the Netherlands, and cold starts after an object was evicted.
 - The engineer portal, invoices' and maintenance's writes, bulk actions, e2e tests (they run a
   Node build; they'd need workerd or Miniflare to cover this path).
 - The service worker (the in-app browser refused to register it; the file is served).
