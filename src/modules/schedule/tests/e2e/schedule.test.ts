@@ -112,6 +112,16 @@ describe("in North", () => {
 		}
 	});
 
+	test("the page itself doesn't scroll: nothing hangs below the board", async () => {
+		await app.go("/schedule");
+		const room = await app.page.evaluate(() =>
+			[document.documentElement, document.querySelector("main")!].map(
+				(element) => element.scrollHeight - element.clientHeight,
+			),
+		);
+		expect(room).toEqual([0, 0]);
+	});
+
 	test("the week is in the URL, and can be paged through", async () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Next week" }).click();

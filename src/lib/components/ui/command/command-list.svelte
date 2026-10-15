@@ -17,7 +17,7 @@
 	bind:ref
 	data-slot="command-list"
 	class={cn(
-		"no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+		"relative no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
 		theme.classes("command-list"),
 		className,
 	)}

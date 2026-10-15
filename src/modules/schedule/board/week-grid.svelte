@@ -49,8 +49,10 @@
 	} as const;
 </script>
 
+<!-- Positioned, so the cards' visually hidden texts (`sr-only`, absolutely positioned) are placed
+     in its scroll area, not below the page, which they would make taller. -->
 <div
-	class="hidden min-h-0 scroll-ps-32 scroll-pt-10 overflow-auto rounded-lg border bg-card lg:block"
+	class="relative hidden min-h-0 scroll-ps-32 scroll-pt-10 overflow-auto rounded-lg border bg-card lg:block"
 >
 	<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
 		<div class="sticky start-0 top-0 z-30 border-e border-b bg-card p-2"></div>

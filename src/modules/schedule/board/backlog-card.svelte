@@ -31,7 +31,8 @@
 			{m.schedule_backlog_description({ count: backlog.length })}
 		</Card.Description>
 	</Card.Header>
-	<Card.Content class="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+	<!-- Positioned for the cards' visually hidden texts, as the week grid is. -->
+	<Card.Content class="relative flex min-h-0 flex-col gap-1.5 overflow-y-auto">
 		{#each backlog as order (order.id)}
 			<OrderCard
 				{order}

@@ -48,7 +48,7 @@
 	{/if}
 	{#if isFiltered}
 		<div
-			class="order-last -my-1 flex min-w-0 flex-1 basis-full [scrollbar-width:thin] items-center gap-2 overflow-x-auto py-1 sm:order-none sm:basis-0"
+			class="relative order-last -my-1 flex min-w-0 flex-1 basis-full [scrollbar-width:thin] items-center gap-2 overflow-x-auto py-1 sm:order-none sm:basis-0"
 		>
 			{#each filters.active as filter (filter.columnId)}
 				<FilterPill {filter} />
