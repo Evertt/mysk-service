@@ -1,27 +1,35 @@
 # Refactoring plans
 
-Three plans from a clean-up and planning pass (October 2026). Nothing in them is implemented yet.
+The plans of the clean-up and planning passes of October 2026, and what became of them. The first
+three came from one pass and are built (see "Order of work"); the rest are listed with their
+status.
 
-| Plan                                                             | Covers                                                                                           |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [feature-folders-and-plugins.md](feature-folders-and-plugins.md) | Whether to group code by feature (`src/features/`), and a plugin system for the optional modules |
-| [table-query.md](table-query.md)                                 | The server-side tables: `tableParams` as a typed object, one list definition per table           |
-| [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement                                |
-| [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)          |
-| [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted      |
-| [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files  |
-| [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)  |
+| Plan                                                             | Covers                                                                                                         |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [feature-folders-and-plugins.md](feature-folders-and-plugins.md) | No `src/features/`; domain folders; the optional modules as self-contained folders (built)                     |
+| [table-query.md](table-query.md)                                 | The server-side tables: `tableParams` as a typed object, one list definition per table (built, but step 7)     |
+| [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement (done in phases 1–3 below)                   |
+| [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)                        |
+| [module-dependencies.md](module-dependencies.md)                 | Modules that depend on each other, points their owners declare, roles, core features as modules (partly built) |
+| [maintenance-plans.md](maintenance-plans.md)                     | The maintenance module, the first built from scratch (built)                                                   |
+| [module-form-schemas.md](module-form-schemas.md)                 | Typed, validated parts of a core form that modules add (built)                                                 |
+| [table-columns.md](table-columns.md)                             | Remembered columns, the last view, stable column widths (built; the rationale)                                 |
+| [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted                    |
+| [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files                |
+| [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)                |
 
 ## The decisions in short
 
-- **No `src/features/` for the core.** The route folders already are the feature folders, and the
-  core domains are too intertwined for feature folders to have real boundaries. Optionally, later:
-  domain folders `src/lib/<domain>/` (with `server/`) instead of `src/lib/components/<domain>/` plus
-  flat `src/lib/server/*.ts`.
-- **Optional modules become self-contained folders**, `src/modules/<id>/`. A generator links each
-  folder into the app (route stubs, typed registries, message files). Core declares every extension
-  point as a typed interface. Modules never import each other, and core never imports a module.
-  The name stays "module".
+- **No `src/features/` for the core.** The core domains are too intertwined for feature folders to
+  have real boundaries. Instead, each core domain has a domain folder `src/lib/<domain>/`, split by
+  feature (`ui/`, `list/`, `form/`, `detail/`, `server/`) and imported through its barrels, and
+  `src/routes` holds route files only ([domain-folders.md](domain-folders.md)).
+- **Optional modules are self-contained folders**, `src/modules/<id>/`. A generator links each
+  folder into the app (route stubs, typed registries, message files). Extension points are typed
+  values declared by their owner: core in `#lib/<domain>/extensions.ts`, a module in its
+  `api/extensions.ts`. Core never imports a module; a module imports another only through its
+  `api/`, along `requires` (or only its extension points and types, along `enhances`). The name
+  stays "module".
 - **Table queries take a typed object**, validated by a valibot schema generated from one list
   definition per table. The URL grammar only does URL ↔ table state. Saved views keep storing URL
   strings. The join chain, counts, facets and bulk ids are written once per table.
@@ -32,7 +40,7 @@ Three plans from a clean-up and planning pass (October 2026). Nothing in them is
 
 ## How the plans fit together
 
-Where they overlap:
+Where they overlapped, which set the order of work below (all of it is done):
 
 - **List queries.** The cleanup plan moves each list's query code into its own file
   (`order-list.remote.ts`, …) unchanged; the table-query plan then reshapes that file. Splits first.
@@ -44,10 +52,11 @@ Where they overlap:
 - **Data table.** `data-table.svelte`'s split waits for the table-query changes (`grouping.ts`, the
   `groups` prop).
 - **Module table columns** (plugins, "Tables") must fit the typed list definitions (table-query):
-  module columns are namespaced (`contracts.covered`) and merged into a list's definition and SQL
-  per tenant. That needs some design work. It's deferred until a module needs a column.
-- **Entity links and badges** live together per entity, whether in `#lib/components/<entity>/` (now,
-  with the CLAUDE.md exception the cleanup plan proposes) or in `#lib/<domain>/` (later).
+  module columns are namespaced and merged into a list's definition and SQL per tenant. Built when
+  the first module needed one: maintenance's `maintenance.nextDue` in the equipment list (see
+  [maintenance-plans-implementation.md](maintenance-plans-implementation.md)).
+- **Entity links and badges** live together per entity: in `#lib/<domain>/ui/` for a core domain,
+  in a module's `ui/` for its records.
 
 ## Order of work
 
@@ -70,7 +79,8 @@ parallel agents in their own worktrees.
    zero modules, move contracts, move invoicing, remove the transition code).
 5. **Optional** ✅ done: domain folders in `src/lib`, splitting the largest e2e files (orders,
    equipment, contracts; invoicing only in two), `knip` (`pnpm knip`), and one rule for import
-   extensions (a file is imported by its real extension, checked by `src/import-extensions.spec.ts`).
+   extensions (a file is imported by its real extension, checked by
+   `src/tests/unit/import-extensions.spec.ts`).
 
 All phases are done. Plugins step 7 (new extension points) stays as planned: add one when a
 module needs it.
@@ -79,8 +89,9 @@ module needs it.
 
 [module-dependencies.md](module-dependencies.md) (design, October 2026): modules that depend on
 each other, extension points declared by their owners, roles that come with a module, and the
-schedule and engineer portal as the first core features turned into switchable modules. Not built
-yet.
+schedule and engineer portal as the first core features turned into switchable modules. Built: the
+machinery and the schedule, and materials as a module besides. Not built: roles, the portal as a
+module, the inspector and slot options.
 
 Implementation plans, one per step of its order of work:
 
@@ -90,8 +101,8 @@ Implementation plans, one per step of its order of work:
 3. [module-dependencies-3-schedule.md](module-dependencies-3-schedule.md) ✅ done: the planning
    board as the optional module `src/modules/schedule/`, writing orders through a core scheduling
    service; `nav: { after }`; and the switching fixes carried from step 1.
-4. [module-dependencies-4-materials.md](module-dependencies-4-materials.md) ✅ done (on branch
-   `materials-module`, for review): the core materials domain as the optional module
+4. [module-dependencies-4-materials.md](module-dependencies-4-materials.md) ✅ done (merged from
+   branch `materials-module`): the core materials domain as the optional module
    `src/modules/materials/`, with the extension points it needed (`orders.costs`, the save hook
    `orders.saving`, the form slot `orders.form`, `dashboard.stats`, `portal.order`). Its last
    section weighs what the module system gained against what got more indirect.
