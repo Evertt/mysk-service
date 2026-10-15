@@ -48,9 +48,9 @@ test("an open portal shows what the office assigns, changes and cancels, without
 	const { page: office } = await signedInPage(app, users.admin);
 	try {
 		// Assigned to them: it shows in their list.
-		await editOrder(office, number, (form) =>
-			form.getByLabel("Engineer").selectOption(String(engineer.id)),
-		);
+		await editOrder(office, number, async (form) => {
+			await form.getByLabel("Engineer").selectOption(String(engineer.id));
+		});
 		await card.first().waitFor();
 
 		// On the order's page, a change of its description shows too.
@@ -64,7 +64,9 @@ test("an open portal shows what the office assigns, changes and cancels, without
 		await page.getByRole("link", { name: "My work" }).first().click();
 		await page.waitForURL((url) => url.pathname === "/my");
 		await card.first().waitFor();
-		await editOrder(office, number, (form) => form.getByLabel("Status").selectOption("cancelled"));
+		await editOrder(office, number, async (form) => {
+			await form.getByLabel("Status").selectOption("cancelled");
+		});
 		await card.waitFor({ state: "detached" });
 	} finally {
 		await office.context().close();
