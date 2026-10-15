@@ -17,6 +17,7 @@
 	import { specialties } from "#lib/engineers/index.ts";
 
 	import ScheduleDialog from "../form/schedule-dialog.svelte";
+	import { getSchedule, watchSchedule } from "../schedule.remote.ts";
 	import BacklogCard from "./backlog-card.svelte";
 	import { createBoardDrag } from "./board-drag.svelte.ts";
 	import {
@@ -69,9 +70,38 @@
 			)
 			.sort((a, b) => Temporal.Instant.compare(a.scheduledFor!, b.scheduledFor!));
 
+	// Live: when someone changes an order, an engineer or a customer, the board asks for the week
+	// again (`watchSchedule`). Not while a move of its own is on its way: that brings the week back
+	// itself, and a refresh that started before it could answer from before it, putting the order
+	// back where it came from. So it waits for the moves (`settled`), and asks again if one started
+	// while it asked.
+	const changes = watchSchedule();
+	let seen: number | undefined;
+	let outdated = false;
+	$effect(() => {
+		const changed = changes.current;
+		if (changed === undefined) return;
+		if (seen !== undefined && changed !== seen) {
+			outdated = true;
+			if (!drag.busy) void refresh();
+		}
+		seen = changed;
+	});
+
+	async function refresh() {
+		outdated = false;
+		const moves = drag.started;
+		await getSchedule(week).refresh();
+		if (drag.started !== moves) outdated = true;
+		if (outdated && !drag.busy) void refresh();
+	}
+
 	const drag = createBoardDrag({
 		week: () => week,
 		names: () => names,
+		settled: () => {
+			if (outdated) void refresh();
+		},
 	});
 
 	// The schedule dialog, for planning without dragging. It has a history entry of its own, so

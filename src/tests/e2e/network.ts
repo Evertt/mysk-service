@@ -27,7 +27,9 @@ const timeout = 20_000; // below the tests' 30 s, so its message, naming the req
  * to hydrate, as `networkidle` did), but a live query's stream, which stays open (SvelteKit asks
  * for it as `text/event-stream`).
  */
-const counts = (request: Request) => !request.headers().accept?.includes("text/event-stream");
+const counts = (request: Request) =>
+	// A service worker's own requests (`serviceWorkers: "allow"`) belong to no page.
+	!request.serviceWorker() && !request.headers().accept?.includes("text/event-stream");
 
 /** The requests in flight of each page, and when the last of them ended. */
 const pages = new WeakMap<Page, { inFlight: Map<Request, number>; lastChange: number }>();
@@ -44,6 +46,7 @@ export function trackNetwork(context: BrowserContext) {
 		return state;
 	};
 	const ended = (request: Request) => {
+		if (request.serviceWorker()) return;
 		const state = stateOf(request);
 		if (state.inFlight.delete(request)) state.lastChange = Date.now();
 	};

@@ -10,12 +10,18 @@ import { applyMove, DEFAULT_TIME, formatDay, type RowId, type ScheduleOrder } fr
 /**
  * Drag and drop on the board: the order being dragged and the cell it's over, and the move when it
  * drops. `week` (`yyyy-mm-dd`) and `names` (the engineers' names by id) are read when needed, so
- * they can follow the board's props.
+ * they can follow the board's props; `settled` is called when the last move on its way is done.
  */
-export function createBoardDrag(options: { week: () => string; names: () => Map<number, string> }) {
+export function createBoardDrag(options: {
+	week: () => string;
+	names: () => Map<number, string>;
+	settled?: () => void;
+}) {
 	let dragging = $state.raw<ScheduleOrder>();
 	let target = $state<string>();
 	const moving = new SvelteSet<number>();
+	/** How many moves have started: a refresh that a move overlapped may answer from before it. */
+	let started = 0;
 
 	async function move(order: ScheduleOrder, engineerId: number | null, day: Temporal.PlainDate) {
 		// Moves keep the time of day; orders from the backlog start at the default time.
@@ -29,6 +35,7 @@ export function createBoardDrag(options: { week: () => string; names: () => Map<
 		if (order.engineerId === engineerId && order.scheduledFor?.equals(scheduledFor)) return;
 
 		moving.add(order.id);
+		started++;
 		try {
 			await moveOrder({ id: order.id, engineerId, day: day.toString(), time }).updates(
 				getSchedule(options.week()).withOverride((current) =>
@@ -41,6 +48,7 @@ export function createBoardDrag(options: { week: () => string; names: () => Map<
 			toast.error(errorMessage(error, m.schedule_move_failed({ number: order.number })));
 		} finally {
 			moving.delete(order.id);
+			if (!moving.size) options.settled?.();
 		}
 	}
 
@@ -51,6 +59,14 @@ export function createBoardDrag(options: { week: () => string; names: () => Map<
 		},
 		/** Whether a move of `order` is on its way to the server. */
 		isMoving: (order: ScheduleOrder) => moving.has(order.id),
+		/** Whether any move is on its way to the server. */
+		get busy() {
+			return moving.size > 0;
+		},
+		/** How many moves have started so far. */
+		get started() {
+			return started;
+		},
 
 		start(event: DragEvent, order: ScheduleOrder) {
 			event.dataTransfer?.setData("text/plain", order.number);

@@ -159,10 +159,16 @@ export function useApp({
 	user = users.admin,
 	viewport = { width: 1440, height: 1000 },
 	timeZone,
+	serviceWorkers = BROWSER_OPTIONS.serviceWorkers,
 }: {
 	user?: string | null;
 	viewport?: { width: number; height: number };
 	timeZone?: string;
+	/**
+	 * `"allow"` to run with the app's service worker (`src/service-worker/`), in this page and in
+	 * `anotherTab()`: for what depends on it. Blocked by default (see `BROWSER_OPTIONS`).
+	 */
+	serviceWorkers?: "allow" | "block";
 } = {}): App {
 	let browser: Browser;
 	let page: Page;
@@ -310,6 +316,7 @@ export function useApp({
 			// The page has a context of its own, so a new context with its cookies.
 			const context = await browser.newContext({
 				...BROWSER_OPTIONS,
+				serviceWorkers,
 				storageState: await page.context().storageState(),
 			});
 			trackNetwork(context);
@@ -330,7 +337,12 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({ ...BROWSER_OPTIONS, viewport, timezoneId: timeZone });
+		page = await browser.newPage({
+			...BROWSER_OPTIONS,
+			serviceWorkers,
+			viewport,
+			timezoneId: timeZone,
+		});
 		trackNetwork(page.context());
 		if (timeZone) {
 			await page

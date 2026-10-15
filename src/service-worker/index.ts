@@ -467,12 +467,54 @@ self.addEventListener("fetch", (event) => {
 		event.respondWith(answerFile(event.request));
 		return;
 	}
-	// A plain query's request (`query.live` streams events, which aren't for keeping).
+	// A live query's stream (`query.live`) is passed on, never kept; its events are changes.
 	const streams = event.request.headers.get("accept")?.includes("text/event-stream");
-	if ((url.pathname.startsWith(remotePath) || isPageData(url)) && !streams) {
+	if (streams && url.pathname.startsWith(remotePath)) {
+		event.respondWith(passLiveStream(event.request));
+		return;
+	}
+	if (url.pathname.startsWith(remotePath) || isPageData(url)) {
 		event.respondWith(answerQuery(event, url));
 	}
 });
+
+/**
+ * A live query's stream, passed on to the tab as it comes. Its first event is the query's answer;
+ * each one after it says the server's data changed, made by someone else (the tab's own changes
+ * are requests the worker sees, `noteChange`). So, as each comes in, before the tab gets it, the
+ * answers stored until then are outdated: the queries the tab refreshes on it get the server's new
+ * answers, not the cache's. SvelteKit's stream is Server-Sent Events: `data:` events, and comments
+ * (`: keep-alive`) to hold the connection, which aren't changes.
+ */
+async function passLiveStream(request: Request) {
+	const response = await fetch(request);
+	if (!response.ok || !response.body) return response;
+	const decoder = new TextDecoder();
+	let buffer = "";
+	let events = 0;
+	const body = response.body.pipeThrough(
+		new TransformStream<Uint8Array, Uint8Array>({
+			transform(chunk, controller) {
+				buffer += decoder.decode(chunk, { stream: true });
+				const complete = buffer.split("\n\n");
+				buffer = complete.pop() ?? "";
+				for (const message of complete) {
+					if (message.split("\n").some((line) => line.startsWith("data:")) && events++ > 0) {
+						noteServerChange();
+					}
+				}
+				controller.enqueue(chunk);
+			},
+		}),
+	);
+	return new Response(body, response);
+}
+
+/** The server's data changed elsewhere: every answer stored until now is outdated. */
+function noteServerChange() {
+	meta.changedAt = Date.now();
+	void loaded.then(saveMeta);
+}
 
 self.addEventListener("message", (event) => {
 	const message = event.data as PageMessage;

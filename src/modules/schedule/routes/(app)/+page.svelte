@@ -9,7 +9,7 @@
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatWeek, weekFromParam } from "#modules/schedule/board/board.ts";
 	import ScheduleBoard from "#modules/schedule/board/schedule-board.svelte";
-	import { getSchedule, watchSchedule } from "#modules/schedule/schedule.remote.ts";
+	import { getSchedule } from "#modules/schedule/schedule.remote.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/schedule"> } = $props();
@@ -18,16 +18,6 @@
 	const start = $derived(weekFromParam(page.url.searchParams.get("week")));
 	const week = $derived(start.toString());
 	const schedule = $derived(await getSchedule(week));
-
-	// Live: when someone else changes an order, an engineer or a customer, the board looks again.
-	const changes = watchSchedule();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) void getSchedule(week).refresh();
-		seen = changed;
-	});
 
 	const href = (day: Temporal.PlainDate) => `${resolve("/(app)/(modules)/schedule")}?week=${day}`;
 	const isThisWeek = $derived(start.equals(weekFromParam(null)));
