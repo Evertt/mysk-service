@@ -37,6 +37,21 @@ export {
 export const hydrated = (page: Page) =>
 	Promise.race([page.locator("html[data-hydrated]").waitFor({ state: "attached" }), quiet(page)]);
 
+/** Whether the page fits its screen's width: nothing on it makes it scroll sideways. */
+export const fitsWidth = (page: Page) =>
+	page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+
+/** Runs steps on a phone's screen (`mobileViewport`), then goes back to the screen it was on. */
+export async function onPhone<T>(page: Page, steps: () => Promise<T>): Promise<T> {
+	const before = page.viewportSize();
+	await page.setViewportSize(mobileViewport);
+	try {
+		return await steps();
+	} finally {
+		if (before) await page.setViewportSize(before);
+	}
+}
+
 /**
  * A list's page as a link to its first page (`/orders?page=1`): the list as it is by default,
  * rather than as the user left it, which a visit without parameters brings back (see

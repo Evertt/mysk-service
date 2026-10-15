@@ -7,6 +7,7 @@ import {
 	baseURL,
 	cents,
 	countIn,
+	fitsWidth,
 	hydrated,
 	nextCode,
 	organizations,
@@ -435,9 +436,7 @@ describe("in North", () => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		try {
 			await app.go(`/customers/${code}`);
-			expect(
-				await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-			).toBe(true);
+			expect(await fitsWidth(page)).toBe(true);
 		} finally {
 			await page.setViewportSize({ width: 1440, height: 1000 });
 		}

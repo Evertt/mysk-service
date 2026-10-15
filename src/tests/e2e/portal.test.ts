@@ -3,6 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import {
 	baseURL,
+	fitsWidth,
 	hydrated,
 	mobileViewport,
 	organizations,
@@ -100,9 +101,7 @@ describe("the engineer portal", () => {
 		expect(await cardsIn("Recently completed")).toEqual(done.map((o) => o.number));
 
 		// Fits a phone's screen.
-		expect(
-			await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-		).toBe(true);
+		expect(await fitsWidth(page)).toBe(true);
 	});
 
 	test("an order shows what's needed on site, with a tap-to-call link", async () => {
@@ -143,6 +142,8 @@ describe("the engineer portal", () => {
 		expect((await orderByNumber(job.number)).status).toBe("in_progress");
 		expect(await movements(job.number)).toEqual(before);
 		await page.getByRole("button", { name: "Complete job" }).waitFor();
+		// With its forms for the job in progress, it still fits a phone's screen.
+		expect(await fitsWidth(page)).toBe(true);
 	});
 
 	test("logging hours saves them", async () => {
