@@ -12,5 +12,5 @@ export default defineModule({
 	icon: FileCheckIcon,
 	subjects: contractSubjects,
 	// Materials only for the seed: the call-outs it makes get material lines.
-	enhances: ["invoicing", "materials"],
+	enhances: ["invoices", "materials"],
 });

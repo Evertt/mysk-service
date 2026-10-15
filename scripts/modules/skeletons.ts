@@ -1,31 +1,43 @@
-import { isGroup, MODULES_GROUP } from "./routes.ts";
+import { posix } from "node:path";
+
+import { MODULES_GROUP, routePlace } from "./routes.ts";
 import { GENERATED, type ModuleFolder } from "./shared.ts";
 
+/** The name of a skeleton's file: the `+page.svelte` it stands in for, without the `+`. */
+const SKELETON = "page.svelte";
+
 /**
- * The page a module's skeleton stands in for: `skeletons/(app)/schedule.svelte` is the one of
- * `routes/(app)/schedule/+page.svelte`, whose route id is `/(app)/(modules)/schedule`.
+ * The page a module's skeleton stands in for: the one at the same path in `routes/`, with
+ * `page.svelte` for `+page.svelte`. The schedule's `skeletons/(app)/page.svelte` is the one of
+ * `routes/(app)/+page.svelte`, whose route id is `/(app)/(modules)/schedule`; a skeleton of
+ * `routes/(app)/[number]/+page.svelte` would be `skeletons/(app)/[number]/page.svelte`.
  */
-export function skeletonPage(file: string) {
-	const path = file.slice("skeletons/".length, -".svelte".length);
-	const parts = path.split("/");
-	const groups = parts.findIndex((part) => !isGroup(part));
-	const routeId =
-		groups === -1
-			? undefined
-			: `/${[...parts.slice(0, groups), MODULES_GROUP, ...parts.slice(groups)].join("/")}`;
-	return { routeFile: `${path}/+page.svelte`, routeId };
+export function skeletonPage(id: string, file: string) {
+	const path = file.slice("skeletons/".length);
+	const routeFile = `${path.slice(0, -SKELETON.length)}+page.svelte`;
+	const place = routePlace(routeFile);
+	const rest = place && posix.dirname(place.rest);
+	const routeId = place
+		? `/${[...place.groups, MODULES_GROUP, id, ...(rest === "." ? [] : [rest])].join("/")}`
+		: undefined;
+	return { routeFile, routeId };
 }
 
-/** The skeletons that stand in for no page of their module. */
+/** The skeletons that stand in for no page of their module, or aren't named for one. */
 export function skeletonProblems(modules: ModuleFolder[]) {
 	return modules.flatMap((module) =>
-		module.skeletonFiles
-			.filter((file) => !module.routeFiles.includes(skeletonPage(file).routeFile))
-			.map(
-				(file) =>
-					`src/modules/${module.id}/${file} is the skeleton of no page: ` +
-					`routes/${skeletonPage(file).routeFile} doesn't exist.`,
-			),
+		module.skeletonFiles.flatMap((file) => {
+			const where = `src/modules/${module.id}/${file}`;
+			if (posix.basename(file) !== SKELETON) {
+				return [
+					`${where}: a skeleton is a ${SKELETON}, at the path of its page's +page.svelte in routes/.`,
+				];
+			}
+			const { routeFile } = skeletonPage(module.id, file);
+			return module.routeFiles.includes(routeFile)
+				? []
+				: [`${where} is the skeleton of no page: routes/${routeFile} doesn't exist.`];
+		}),
 	);
 }
 
@@ -40,7 +52,7 @@ export function renderSkeletons(modules: ModuleFolder[]) {
 		module.skeletonFiles.map((file) => ({
 			module: module.id,
 			file,
-			routeId: skeletonPage(file).routeId!,
+			routeId: skeletonPage(module.id, file).routeId!,
 		})),
 	);
 	return [

@@ -70,7 +70,7 @@ const tenants = [
 	{
 		...demoOrganizations.south,
 		slug: "south",
-		modules: ["invoicing", "materials"] as string[],
+		modules: ["invoices", "materials"] as string[],
 		seed: 20261006,
 		size: { customers: 30, engineers: 10, orders: 320 },
 	},

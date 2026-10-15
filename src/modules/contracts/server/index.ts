@@ -18,7 +18,7 @@ import {
 import { inTenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
-import { billableItems } from "#modules/invoicing/api/extensions.ts";
+import { billableItems } from "#modules/invoices/api/extensions.ts";
 
 import { getOrderCoverage } from "../coverage.remote.ts";
 import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.ts";

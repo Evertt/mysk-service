@@ -46,37 +46,36 @@ describe("serverFileKind", () => {
 });
 
 describe("routePlace", () => {
-	test("is the first folder that isn't a group, the groups before it and the rest", () => {
-		expect(routePlace("(app)/contracts/[number]/+page.svelte")).toEqual({
+	test("is the leading groups, and the path inside the module's folder after them", () => {
+		expect(routePlace("(app)/[number]/+page.svelte")).toEqual({
 			groups: ["(app)"],
-			folder: "contracts",
 			rest: "[number]/+page.svelte",
 		});
-		expect(routePlace("(app)/(inner)/contracts/+layout.svelte")).toEqual({
+		expect(routePlace("(app)/+page.svelte")).toEqual({ groups: ["(app)"], rest: "+page.svelte" });
+		expect(routePlace("(app)/(inner)/+layout.svelte")).toEqual({
 			groups: ["(app)", "(inner)"],
-			folder: "contracts",
 			rest: "+layout.svelte",
 		});
-		expect(routePlace("reports/+page.ts")).toEqual({
-			groups: [],
-			folder: "reports",
-			rest: "+page.ts",
+		// A group further down is inside the module's folder.
+		expect(routePlace("(app)/reports/(print)/+page.svelte")).toEqual({
+			groups: ["(app)"],
+			rest: "reports/(print)/+page.svelte",
 		});
 	});
 
-	test("is nothing for a file that sits in a group or at the root", () => {
-		expect(routePlace("(app)/+page.svelte")).toBeUndefined();
+	test("is nothing for a file directly in routes/ or in a top-level folder that isn't a group", () => {
 		expect(routePlace("+layout.svelte")).toBeUndefined();
+		expect(routePlace("reports/+page.ts")).toBeUndefined();
+		expect(routePlace("reports/(app)/+page.ts")).toBeUndefined();
 	});
 });
 
 describe("modulesGroupOf", () => {
 	test("is the (modules) group inside the route's groups, so it keeps their layouts", () => {
-		expect(modulesGroupOf(routePlace("(app)/contracts/+page.svelte")!)).toBe("(app)/(modules)");
+		expect(modulesGroupOf(routePlace("(app)/+page.svelte")!)).toBe("(app)/(modules)");
 		expect(modulesGroupOf(routePlace("(app)/(inner)/x/+page.svelte")!)).toBe(
 			"(app)/(inner)/(modules)",
 		);
-		expect(modulesGroupOf(routePlace("reports/+page.svelte")!)).toBe("(modules)");
 	});
 });
 

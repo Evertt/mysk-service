@@ -7,7 +7,6 @@ import { isGroup, MODULES_GROUP, routeFileKind, routePlace } from "./routes.ts";
 import { byName, isGenerated, isLegacyStubFolder, type ModuleFolder, walk } from "./shared.ts";
 
 const SECTION = /^[a-z][a-z0-9]*$/;
-const ROUTE_FOLDER = /^[a-z][a-z0-9-]*$/;
 
 /**
  * What's in `src/routes`, relative to it:
@@ -74,9 +73,8 @@ export function checkModules(
 	options: { coreRouteFolders: string[]; patterns: string[]; locales: string[] },
 ): string[] {
 	const problems: string[] = graphProblems(modules);
+	/** The first segments of the core's URLs (`orders`, `login`), which no module's id may be. */
 	const coreSegments = new Set(options.coreRouteFolders.map((folder) => posix.basename(folder)));
-	/** The module that has a route segment, to refuse a second one. */
-	const segmentOwner = new Map<string, string>();
 	const sectionOwner = new Map<string, string>();
 	for (const pattern of options.patterns) {
 		const section = /^\.\/messages\/\{locale\}\/([\w-]+)\.json$/.exec(pattern)?.[1];
@@ -98,29 +96,19 @@ export function checkModules(
 				);
 				continue;
 			}
-			const place = routePlace(file);
-			if (!place) {
+			if (!routePlace(file)) {
 				problems.push(
-					`${where}/routes/${file} is outside a route folder of its own: a module's routes live in ` +
-						`folders it names itself (e.g. routes/(app)/${module.id}/…), never in the core's.`,
+					`${where}/routes/${file} isn't in a route group: a module's routes/ holds groups only ` +
+						`(routes/(app)/…), whose files are in the module's own route folder, /${module.id}.`,
 				);
-				continue;
 			}
-			const segment = place.folder;
-			const folder = [...place.groups, segment].join("/");
-			if (!ROUTE_FOLDER.test(segment)) {
-				problems.push(
-					`${where}/routes/${folder}: a module's route folder is a plain name (${ROUTE_FOLDER}).`,
-				);
-			} else if (coreSegments.has(segment)) {
-				problems.push(`${where}/routes/${folder} collides with the core's /${segment} route.`);
-			} else if (segmentOwner.get(segment) && segmentOwner.get(segment) !== module.id) {
-				problems.push(
-					`${where}/routes/${folder} collides with the /${segment} route of the ${segmentOwner.get(segment)} module.`,
-				);
-			} else {
-				segmentOwner.set(segment, module.id);
-			}
+		}
+		// Every route of a module is in its folder, which is its id: two modules can't collide.
+		if (module.routeFiles.length && coreSegments.has(module.id)) {
+			problems.push(
+				`${where}/routes: the module's routes are under /${module.id}, which collides with the ` +
+					`core's /${module.id} route.`,
+			);
 		}
 
 		const [first, ...others] = options.locales;

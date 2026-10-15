@@ -149,19 +149,19 @@ describe("moduleRemote", () => {
 	test("refuses a tenant without the module, before the handler", async () => {
 		vi.mocked(requireModule).mockImplementation(() => error(404, "Not found"));
 		const handler = vi.fn();
-		const made = moduleRemote("invoicing").query(handler);
+		const made = moduleRemote("invoices").query(handler);
 		expect(await statusOf(() => handlerOf(made)())).toBe(404);
-		expect(requireModule).toHaveBeenCalledWith("invoicing");
+		expect(requireModule).toHaveBeenCalledWith("invoices");
 		expect(handler).not.toHaveBeenCalled();
 	});
 
 	test("asks for a manager only in the manager set", async () => {
 		const handler = vi.fn(() => "done");
-		expect(handlerOf(moduleRemote("invoicing").form(handler))()).toBe("done");
+		expect(handlerOf(moduleRemote("invoices").form(handler))()).toBe("done");
 		expect(requireManager).not.toHaveBeenCalled();
 
 		vi.mocked(requireManager).mockImplementation(() => error(403, "No"));
-		const made = moduleRemote("invoicing", "manager").form(handler);
+		const made = moduleRemote("invoices", "manager").form(handler);
 		expect(await statusOf(() => handlerOf(made)())).toBe(403);
 		expect(requireModule).toHaveBeenCalledTimes(2);
 		expect(handler).toHaveBeenCalledTimes(1);

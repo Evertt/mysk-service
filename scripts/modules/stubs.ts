@@ -98,14 +98,11 @@ export function renderScriptStub(options: {
 
 /**
  * The `+layout.ts` of a `(modules)` group: refuses the tenants without the module that owns the
- * route (by its route folder, `owners`: route id → module id), so they get the app's own 404 page
+ * route (the folder in the group, which is the module's id), so they get the app's own 404 page
  * inside the group's layouts. A universal load, so that client-side navigations to a module's page
  * don't ask the server for its data (see `#lib/modules/route-guard.ts`).
  */
-export function renderGroupGuard(owners: Map<string, string>): string {
-	const entries = [...owners].map(
-		([routeId, id]) => `\t${JSON.stringify(routeId)}: ${JSON.stringify(id)},`,
-	);
+export function renderGroupGuard(): string {
 	return [
 		`// ${generatedBy("the modules' routes")}`,
 		"",
@@ -113,13 +110,8 @@ export function renderGroupGuard(owners: Map<string, string>): string {
 		"",
 		`import { guardModuleRoute } from "${routeGuard}";`,
 		"",
-		`/** The module that owns each route folder in this group, by its route id. */`,
-		`const owners = {`,
-		...entries,
-		`} as const;`,
-		"",
 		`export const load = async ({ route }: LayoutLoadEvent) => {`,
-		`\tawait guardModuleRoute(route.id, owners);`,
+		`\tawait guardModuleRoute(route.id);`,
 		`};`,
 		"",
 	].join("\n");
@@ -157,12 +149,12 @@ export function renderComponentStub(options: {
 
 /**
  * The stubs for the modules' routes, per `(modules)` group under `src/routes` (e.g. `(app)/(modules)`):
- * the files in it, relative to it, with their content. A module's
- * `routes/(app)/contracts/[number]/+page.svelte` is `contracts/[number]/+page.svelte` in
- * `(app)/(modules)`, whose `+layout.ts` guards the routes of every module in it.
+ * the files in it, relative to it, with their content. The contracts module's
+ * `routes/(app)/[number]/+page.svelte` is `contracts/[number]/+page.svelte` in `(app)/(modules)`,
+ * whose `+layout.ts` guards the routes of every module in it.
  */
 export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Map<string, string>> {
-	const groups = new Map<string, { files: Map<string, string>; owners: Map<string, string> }>();
+	const groups = new Map<string, Map<string, string>>();
 	for (const module of modules) {
 		for (const file of module.routeFiles) {
 			const place = routePlace(file);
@@ -186,16 +178,10 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 					: renderComponentStub({ from, importPath, kind });
 
 			const group = modulesGroupOf(place);
-			const entry = groups.get(group) ?? { files: new Map(), owners: new Map() };
-			groups.set(group, entry);
-			entry.files.set(`${place.folder}/${place.rest}`, stub);
-			entry.owners.set(`/${group}/${place.folder}`, module.id);
+			const files = groups.get(group) ?? new Map([["+layout.ts", renderGroupGuard()]]);
+			groups.set(group, files);
+			files.set(`${module.id}/${place.rest}`, stub);
 		}
 	}
-	return new Map(
-		[...groups].map(([group, { files, owners }]) => [
-			group,
-			files.set("+layout.ts", renderGroupGuard(owners)),
-		]),
-	);
+	return groups;
 }

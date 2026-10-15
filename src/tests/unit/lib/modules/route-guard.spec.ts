@@ -1,16 +1,10 @@
 import { isHttpError } from "@sveltejs/kit";
 import { expect, test, vi } from "vite-plus/test";
 
-import type { ModuleId } from "#lib/modules/ids.ts";
 import { guardModuleRoute, routeModule } from "#lib/modules/route-guard.ts";
 
-// The tenant has widgets, not gadgets (`ModuleId` only knows the real modules).
-const has = "widgets" as ModuleId;
-const lacks = "gadgets" as ModuleId;
-
+// The tenant has widgets, not gadgets.
 vi.mock("#lib/auth/session.remote.ts", () => ({ getTenantModules: async () => ["widgets"] }));
-
-const owners = { "/(app)/(modules)/widgets": has, "/(app)/(modules)/gadgets": lacks };
 
 /** The status a call fails with, or `undefined` when it doesn't. */
 async function statusOf(call: () => Promise<unknown>) {
@@ -21,22 +15,21 @@ async function statusOf(call: () => Promise<unknown>) {
 	}
 }
 
-test("a route belongs to the module of its route folder", () => {
-	expect(routeModule("/(app)/(modules)/widgets", owners)).toBe(has);
-	expect(routeModule("/(app)/(modules)/gadgets/[id]/pdf", owners)).toBe(lacks);
-	// Neither a longer name that starts with a folder's, nor a route no module owns.
-	expect(routeModule("/(app)/(modules)/widgetsx", owners)).toBeUndefined();
-	expect(routeModule(null, owners)).toBeUndefined();
+test("a route belongs to the module whose folder it is in, in the (modules) group", () => {
+	expect(routeModule("/(app)/(modules)/widgets")).toBe("widgets");
+	expect(routeModule("/(app)/(modules)/gadgets/[id]/pdf")).toBe("gadgets");
+	expect(routeModule("/(field)/(inner)/(modules)/widgets/[id]")).toBe("widgets");
+	// Neither a route outside a (modules) group, nor none at all.
+	expect(routeModule("/(app)/orders/[number]")).toBeUndefined();
+	expect(routeModule("/(app)/(modules)")).toBeUndefined();
+	expect(routeModule(null)).toBeUndefined();
 });
 
 test("a (modules) group's guard refuses the tenants without the route's module", async () => {
-	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgets", owners))).toBe(
-		undefined,
-	);
-	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgets/[id]", owners))).toBe(
-		undefined,
-	);
-	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/gadgets/[id]", owners))).toBe(404);
-	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgetsx", owners))).toBe(404);
-	expect(await statusOf(() => guardModuleRoute(null, owners))).toBe(404);
+	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgets"))).toBe(undefined);
+	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgets/[id]"))).toBe(undefined);
+	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/gadgets/[id]"))).toBe(404);
+	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)/widgetsx"))).toBe(404);
+	expect(await statusOf(() => guardModuleRoute("/(app)/(modules)"))).toBe(404);
+	expect(await statusOf(() => guardModuleRoute(null))).toBe(404);
 });

@@ -18,7 +18,7 @@
  * What the module does at runtime through hooks (`#lib/server/extensions.ts`), it does at seed time
  * through collectors, which the seed of whoever consumes it asks without knowing the module:
  * `costs()` for `orders.costs`, `adjustPrices()` for `orders.adjustPrices`, `billableItems()` for
- * `invoicing.billableItems`. They
+ * `invoices.billableItems`. They
  * answer from what the modules made in `generate()`, so a consumer asks in `run()` (a tenant's
  * `collect`), when every module's data is there, whatever the order the modules are in.
  *
@@ -115,7 +115,7 @@ export interface ModuleSeed<Data = any> {
 	/** Collector, like `orders.adjustPrices`: changes to an order's price. */
 	adjustPrices?(data: Data, order: SeedOrder, price: SeedPrice): PriceAdjustment[];
 	/**
-	 * Collector, like `invoicing.billableItems`: what the tenant's customers are billed for besides
+	 * Collector, like `invoices.billableItems`: what the tenant's customers are billed for besides
 	 * orders in `period`. Ids in references are global, as in the database.
 	 */
 	billableItems?(data: Data, period: BillingPeriod): SeedBillableItem[];

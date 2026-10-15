@@ -14,28 +14,24 @@ import { error } from "@sveltejs/kit";
 import { getTenantModules } from "#lib/auth/session.remote.ts";
 import { m } from "#lib/paraglide/messages.js";
 
-import type { ModuleId } from "./ids.ts";
-
 /**
- * The module that owns route `routeId` (`owners`: the route id of each route folder in a
- * `(modules)` group → its module), or `undefined` when no module does.
+ * The module that owns route `routeId`: the folder right after its `(modules)` group, which the
+ * generator names after the module (`/(app)/(modules)/contracts/[number]` → `contracts`); or
+ * `undefined` for a route outside a `(modules)` group.
  */
-export function routeModule(
-	routeId: string | null,
-	owners: Readonly<Record<string, ModuleId>>,
-): ModuleId | undefined {
-	const folder = Object.keys(owners).find((id) => routeId === id || routeId?.startsWith(`${id}/`));
-	return folder ? owners[folder] : undefined;
+export function routeModule(routeId: string | null): string | undefined {
+	const segments = routeId?.split("/") ?? [];
+	const group = segments.indexOf("(modules)");
+	return group === -1 ? undefined : segments[group + 1];
 }
 
 /**
  * Refuses the current tenant a `(modules)` group's route with a 404 unless it has the module that
- * owns it (by `owners`, see `routeModule()`); also every route there that no module owns.
+ * owns it (see `routeModule()`).
  */
-export async function guardModuleRoute(
-	routeId: string | null,
-	owners: Readonly<Record<string, ModuleId>>,
-) {
-	const owner = routeModule(routeId, owners);
-	if (!owner || !(await getTenantModules()).includes(owner)) error(404, m.common_error_not_found());
+export async function guardModuleRoute(routeId: string | null) {
+	const owner = routeModule(routeId);
+	if (!owner || !(await getTenantModules()).some((id) => id === owner)) {
+		error(404, m.common_error_not_found());
+	}
 }

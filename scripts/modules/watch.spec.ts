@@ -8,7 +8,7 @@ describe("rerunsOn", () => {
 	});
 
 	test("reruns when a route script changes, not other files", () => {
-		expect(rerunsOn("change", "src/modules/sample/routes/(app)/sample/+page.ts")).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/routes/(app)/+page.ts")).toBe(true);
 		expect(rerunsOn("change", "src/modules/sample/server/index.ts")).toBe(false);
 		expect(rerunsOn("change", "src/modules/sample/messages/en/sample.json")).toBe(false);
 	});

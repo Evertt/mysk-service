@@ -54,15 +54,15 @@ describe("findPoints", () => {
 			].join("\n"),
 		);
 		put(
-			"src/modules/invoicing/api/extensions.ts",
+			"src/modules/invoices/api/extensions.ts",
 			[
 				`export const billableItems = defineCollector<`,
 				`\t{ customerId: number; period: BillingPeriod },`,
 				`\tBillableItem[]`,
-				`>("invoicing.billableItems", { onError: "fail" });`,
+				`>("invoices.billableItems", { onError: "fail" });`,
 			].join("\n"),
 		);
-		put("src/modules/invoicing/extensions.ts", `export const x = defineSlot("invoicing.x");`);
+		put("src/modules/invoices/extensions.ts", `export const x = defineSlot("invoices.x");`);
 		put("src/lib/orders/other.ts", `export const x = defineSlot("orders.other");`);
 
 		const orders = "src/lib/orders/extensions.ts";
@@ -104,10 +104,10 @@ describe("findPoints", () => {
 				exportName: "saving",
 			},
 			{
-				id: "invoicing.billableItems",
+				id: "invoices.billableItems",
 				kind: "collector",
-				owner: "invoicing",
-				file: "src/modules/invoicing/api/extensions.ts",
+				owner: "invoices",
+				file: "src/modules/invoices/api/extensions.ts",
 				exportName: "billableItems",
 			},
 		]);
@@ -257,18 +257,18 @@ describe("renderContributions", () => {
 		point("orders.detail.side", "slot", "orders", "src/lib/orders/extensions.ts", "detailSide"),
 		point("orders.list", "bulk", "orders", "src/lib/orders/extensions.ts", "list"),
 		point("orders.adjustPrices", "collector", "orders"),
-		point("invoicing.side", "slot", "invoicing", "src/modules/invoicing/api/extensions.ts", "side"),
+		point("invoices.side", "slot", "invoices", "src/modules/invoices/api/extensions.ts", "side"),
 	];
 	const modules = [
-		module("invoicing", {
+		module("invoices", {
 			slotFiles: ["slots/dashboard.cards/invoices.svelte"],
 			bulkFiles: ["bulk-actions/orders.list.ts"],
 		}),
 		module("contracts", {
-			enhances: ["invoicing"],
+			enhances: ["invoices"],
 			slotFiles: [
 				"slots/dashboard.cards/contracts.svelte",
-				"slots/invoicing.side/fees.svelte",
+				"slots/invoices.side/fees.svelte",
 				"slots/orders.detail.side/coverage.svelte",
 			],
 		}),
@@ -283,14 +283,14 @@ describe("renderContributions", () => {
 			(match) => match[1],
 		);
 		expect(calls).toEqual([
-			`slotContribution(dashboardCards, "invoicing", "invoices"`,
+			`slotContribution(dashboardCards, "invoices", "invoices"`,
 			`slotContribution(dashboardCards, "contracts", "contracts"`,
-			`slotContribution(invoicingSide, "contracts", "fees"`,
+			`slotContribution(invoicesSide, "contracts", "fees"`,
 			`slotContribution(ordersDetailSide, "contracts", "coverage"`,
-			`bulkContribution(ordersList, "invoicing"`,
+			`bulkContribution(ordersList, "invoices"`,
 		]);
 		expect(file).toContain(
-			`bulkContribution(ordersList, "invoicing", () => import("#modules/invoicing/bulk-actions/orders.list.ts"))`,
+			`bulkContribution(ordersList, "invoices", () => import("#modules/invoices/bulk-actions/orders.list.ts"))`,
 		);
 	});
 
@@ -303,7 +303,7 @@ describe("renderContributions", () => {
 			`import { detailSide as ordersDetailSide, list as ordersList } from "#lib/orders/extensions.ts";`,
 		);
 		expect(file).toContain(
-			`import { side as invoicingSide } from "#modules/invoicing/api/extensions.ts";`,
+			`import { side as invoicesSide } from "#modules/invoices/api/extensions.ts";`,
 		);
 		expect(file).not.toContain("adjustPrices");
 	});

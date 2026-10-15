@@ -57,6 +57,13 @@
       "when": 1791837192920,
       "tag": "0007_store-days-as-dates",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792049373993,
+      "tag": "0008_rename-invoicing-module",
+      "breakpoints": true
     }
   ]
 }

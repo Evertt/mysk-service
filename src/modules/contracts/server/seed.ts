@@ -304,7 +304,7 @@ export default defineSeed<ContractsSeed>({
 		];
 	},
 
-	// A month's fee for each month of the customers' contracts, like `invoicing.billableItems`.
+	// A month's fee for each month of the customers' contracts, like `invoices.billableItems`.
 	billableItems({ terms, contractOffset }, { from, until }): SeedBillableItem[] {
 		return terms.flatMap((term) =>
 			contractMonths(
