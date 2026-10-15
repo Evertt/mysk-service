@@ -1,6 +1,6 @@
 /**
  * Keeps the modules in `src/modules` apart from the core and from each other, so that deleting a
- * module's folder breaks nothing else (see "Modules" in AGENTS.md):
+ * module's folder breaks nothing else (see docs/agents/modules.md):
  *
  * - nothing outside `src/modules` imports a module, except the registries `scripts/modules.ts`
  *   generates (`*.gen.ts`) and the route stubs it writes in `src/routes`;

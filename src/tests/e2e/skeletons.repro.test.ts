@@ -1,7 +1,7 @@
 /**
  * Tries to reproduce the sign-in hang and Svelte's `invariant_violation` "Batch has scheduled
  * effects" seen with the modules' skeletons loaded after the office layout mounts (see
- * "Skeletons" in AGENTS.md). Not part of the suite: it runs only with `REPRO_SKELETONS=1`.
+ * "Skeletons" in docs/agents/modules.md). Not part of the suite: it runs only with `REPRO_SKELETONS=1`.
  *
  * `REPRO_CPU_RATE` (default 6) slows the browser's CPU down that many times, `REPRO_ITERATIONS`
  * (default 50) is how many navigations it tries, and `REPRO_SETTLE_MS` (default 10 s, more for a

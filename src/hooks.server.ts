@@ -17,7 +17,7 @@ import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/in
 /**
  * With `DEV_REMOTE_DELAY_MS` set, holds up each remote function call (and each page's server data,
  * `__data.json`, which a module's pages have) that long: a slow server, to try what navigations do
- * while they wait (an experiment, see `AGENTS.md`). Also in a production build (`vp preview`), to
+ * while they wait (an experiment, see "Skeletons" in `docs/agents/modules.md`). Also in a production build (`vp preview`), to
  * measure the service worker (`scripts/sw-benchmark.ts`).
  */
 const delayRemoteCalls: Handle = async ({ event, resolve }) => {

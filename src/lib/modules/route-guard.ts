@@ -1,5 +1,5 @@
 /**
- * The guard of the optional modules' pages (see "Modules" in AGENTS.md): the universal `+layout.ts`
+ * The guard of the optional modules' pages (see docs/agents/modules.md): the universal `+layout.ts`
  * of each `(modules)` route group, which `scripts/modules.ts` writes, calls `guardModuleRoute()`, so
  * a tenant without the module that owns the route gets the app's own 404 page inside the app
  * layout. Universal rather than a server load, so that a client-side navigation to a module's page
