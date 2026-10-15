@@ -74,7 +74,7 @@ domain. Whatever belongs to a core domain lives in that domain's folder.
   the modules' route guards): `src/lib/server/db/`, `server/auth/`, `server/activity/`,
   `server/lists/`, `server/mail/`, `server/modules/`; the loose `src/lib/server/*.ts` that remain
   are `extensions.ts` (the hooks' dispatch), `forms.ts`, `records.ts` and `numbering.ts`.
-- **An optional module** (something a tenant can switch off, like contracts and invoicing): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder (see "Modules"). Core code never imports from `src/modules/`.
+- **An optional module** (something a tenant can switch off, like contracts and invoices): everything of it in `src/modules/<id>/`, whoever uses it, see "Modules". Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder (see "Modules"). Core code never imports from `src/modules/`.
 
 **Imports name a file by its real extension**: `.ts` for TypeScript (`allowImportingTsExtensions` is
 on, and plain Node, which runs the seed, `org:create` and `scripts/modules.ts`, needs it), `.svelte.ts`
@@ -125,7 +125,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   the same one). A module numbers its own records with a format and table of its own:
   `nextNumber(tx, { format, table, column })`, e.g. `contractNumbers` in
   `src/modules/contracts/server/contracts.ts` and `invoiceNumbers` in
-  `src/modules/invoicing/server/invoices.ts`. An order is created only through
+  `src/modules/invoices/server/invoices.ts`. An order is created only through
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`, in `#lib/orders/server/index.ts`),
   which checks each draft's customer, unit and engineer, numbers, inserts and logs it: core's order
   form calls it (and saves its modules' parts with `saveOrderParts()` after it, see below), and so
@@ -147,7 +147,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/lib/<domain>/extensions.ts` (`orders.costs`, `orders.adjustPrices`, `orders.tag`,
   `orders.committed`, `orders.saving` in `src/lib/orders/extensions.ts`), a module's in its
   `api/extensions.ts`
-  (`invoicing.billableItems`). A module contributes in its `server/index.ts`:
+  (`invoices.billableItems`). A module contributes in its `server/index.ts`:
   `defineServerModule(id, [contribute(adjustPrices, …), …])`, with the point imported from its
   owner. The owner calls it through the kernel (`src/lib/server/extensions.ts`), for the modules
   that are on, in registry order: `collect()` for a collector (asked in parallel about a batch;
@@ -158,7 +158,7 @@ helpers are in `src/lib/server/auth/session.ts`:
   transaction, which the input carries, one after another; the first that answers problems stops
   the rest, and the owner refuses the change, rolling the transaction back). Each point has one
   caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()` and
-  `saveOrderParts()` in `src/lib/orders/server/`, `offeredItems()` in invoicing's
+  `saveOrderParts()` in `src/lib/orders/server/`, `offeredItems()` in invoices'
   `server/billable.ts`); a new extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`): labour, the costs the modules add (`orders.costs`, e.g.
@@ -195,16 +195,19 @@ self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/d
 description, `route`, icon, `nav`, `subjects`, `actions`; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
-columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, mirroring `src/routes`: `+` files only), its components
+columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under
+the module's own URL, `/<id>`: `+` files only), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
 or a feature's own, e.g. the schedule's `board/`), `messages/<locale>/<section>.json` and
 `tests/` (below). Its model, labels, display maps, domain rules and activity subjects stay at the
 root: `module.ts` may only import its own files from the root (`./activity.ts`), and they need
 each other. A remote file sits in a feature's folder when only that feature and its page use it
-(invoicing's `detail/draft.remote.ts`), else at the root next to `remote-functions.ts` (the
+(invoices' `detail/draft.remote.ts`), else at the root next to `remote-functions.ts` (the
 record's own, and those that several folders, slots, bulk actions or server hooks share; `slots/`,
 `bulk-actions/` and `columns/` hold only their contributions). The folder name is the id
-(`^[a-z][a-z0-9-]*$`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
+(`^[a-z][a-z0-9-]*$`), and is stored (`organization_module.module_id`, the activity log's
+`module` subjects): renaming a module takes a migration that renames those
+(`drizzle/0008_rename-invoicing-module.sql`). A module with tables also needs `pnpm db:generate --name add-<id>` and its
 migration committed.
 
 - `scripts/modules.ts` (its parts, each with a spec, are in `scripts/modules/`) links the folders in;
@@ -214,9 +217,9 @@ migration committed.
   `src/lib/server/db/modules.gen.ts`, `module-schemas.gen.ts`, `module-seeds.gen.ts`,
   `src/lib/extensions/contributions.gen.ts`, `form-parts.gen.ts` and `src/lib/server/lists/columns.gen.ts`; gitignored), the route stubs (below)
   and the module entries of `pathPattern` in `project.inlang/settings.json`. It fails, listing
-  everything wrong, when a module's route folder collides with a core route or another module's, a
-  route file is outside a folder of the module's own, a `(modules)` folder holds a file it didn't
-  write, or message sections are missing in a language or not unique.
+  everything wrong, when a module with routes has the id of a core route's first segment, a route
+  file is outside a route group, a skeleton is of no page, a `(modules)` folder holds a file it
+  didn't write, or message sections are missing in a language or not unique.
 - **Dependencies**: `module.ts` may list `requires` (modules it can't work without) and `enhances`
   (modules it only adds to when they're on) as string-literal arrays, and `alwaysOn: true`; the
   generator reads them with a pattern, and `manifests.spec.ts` compares them with the runtime
@@ -230,18 +233,29 @@ migration committed.
   `nav: { after: "orders" }` (a core entry's id from `coreNavIds` in `#lib/modules/nav.ts`, or
   another module's id; a literal, read by the generator like `requires`): then it goes right after
   that entry (`placeNav()`), or in the Modules group while that entry isn't shown.
-- **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in a
-  `(modules)` group inside the file's leading groups: `routes/(app)/contracts/[number]/+page.svelte`
-  → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`. They are real routes (`RouteId`,
-  `resolve()`, the `(app)` layout, endpoints, SvelteKit's server-only guard), the URL is unchanged
-  (`/contracts/…`), and the core's route folders hold only core files. Every `(modules)` folder
+- **Routes under the module's id**: a module's `routes/` holds route groups only (`(app)`; a `+`
+  file directly in `routes/` or a top-level folder that isn't a group is refused), and what's in a
+  group is under the module's own route folder, which is its id, implied rather than written:
+  `routes/<groups…>/<rest>` is the route `<groups…>/(modules)/<id>/<rest>`. So the contracts
+  module's `routes/(app)/+page.svelte` is its list at `/contracts`, and
+  `routes/(app)/[number]/+page.svelte` a contract's page at `/contracts/<number>`. The leading
+  groups are all the leading segments in parentheses; a group further down is inside the module's
+  folder. Two modules can't collide, and a module with routes can't have the id of a core route's
+  first segment (`orders`, `login`).
+- **Route stubs**: every `+` file of a module's `routes/` gets a stub in `src/routes`, in its
+  module's folder in a `(modules)` group inside the file's leading groups: contracts'
+  `routes/(app)/[number]/+page.svelte` → `src/routes/(app)/(modules)/contracts/[number]/+page.svelte`.
+  They are real routes (`RouteId`, `resolve()`, the `(app)` layout, endpoints, SvelteKit's
+  server-only guard), the URL is `/contracts/…`, and the core's route folders hold only core
+  files. Every `(modules)` folder
   is the generator's (gitignored; it deletes and rewrites them), so never edit one, and core never
   uses the name.
 - **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
   everywhere a route id goes: `resolve()`, `RouteParams<…>`, the manifest's `route`, its activity
   subjects' `href`s.
 - **The guard**: each `(modules)` group's generated `+layout.ts` 404s the tenants without the
-  module that owns the route (`guardModuleRoute()` in `#lib/modules/route-guard.ts`, which asks
+  module that owns the route (`guardModuleRoute()` in `#lib/modules/route-guard.ts`: the module is
+  the folder after `(modules)` in the route id, so the layout names no modules; it asks
   `getTenantModules`), so they get the app's own 404 page inside the app layout. It is a universal
   load, so a client-side navigation to a module's page asks the server for no `__data.json` (a
   cached query instead); on a direct visit it runs on the server, during SSR. It only keeps the
@@ -271,8 +285,10 @@ migration committed.
   `<ExtensionSlot point={form} props={{ order }} {fields} />`.
 - **Skeletons**: while a navigation waits for the next page's data, the office shows a skeleton of
   it, guessed from its route (`pageShape()` in `src/routes/(app)/page-skeleton.ts`: list, details,
-  form). A module page that looks otherwise gets its own: `src/modules/<id>/skeletons/<path>.svelte`
-  mirrors `routes/<path>/+page.svelte` (the schedule's `skeletons/(app)/schedule.svelte`). The
+  form). A module page that looks otherwise gets its own: `src/modules/<id>/skeletons/<path>/page.svelte`
+  mirrors `routes/<path>/+page.svelte` (the schedule's `skeletons/(app)/page.svelte` is the one of
+  its `routes/(app)/+page.svelte`, at `/schedule`; a contract's page would have
+  `skeletons/(app)/[number]/page.svelte`). The
   generator lists a loader for each in `src/lib/modules/skeletons.gen.ts`
   (`load: () => import(…)`), and the office layout loads its tenant's after it mounts
   (`loadModuleSkeletons()`, in `onMount`) into a plain `Map` that `PageSkeleton` reads.
@@ -312,8 +328,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   contributed. Sorting and set filters only (no grouping); see `docs/plans/maintenance-plans-implementation.md`.
 - A module's `routes/` holds route files (`+` files) only; everything they use is in the module's own
   folders (`list/`, `form/`, `detail/`, `server/`, the root) and imported as `#modules/<id>/…`.
-  A module's route folders are plain names of its own (`routes/(app)/contracts/…`); it never adds
-  files to a core route. To add something to a core page, use a slot. Its pages type their params
+  A module's routes are under its own id (`routes/(app)/…` is `/contracts/…`); it never adds files
+  to a core route. To add something to a core page, use a slot. Its pages type their params
   with `RouteParams<"/(app)/(modules)/contracts/[number]">` from `$app/types`, since `./$types`
   only resolves for files physically in `src/routes`; the stub is typed with the route's `PageProps`, so
   svelte-check verifies that the page accepts what SvelteKit passes it. Page options
@@ -336,7 +352,7 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   module's schema for it). A module's tests are in its `tests/` folder, `tests/unit/` and `tests/e2e/`
   (see "Tests"); the generator and the boundary specs treat what is in it as tests, not as the module's code.
 - **The `api/` folder**: what a module offers the modules that depend on it (its types, queries and
-  services, and its extension points in `api/extensions.ts`, like invoicing's) is in `src/modules/<id>/api/`, and nothing else of
+  services, and its extension points in `api/extensions.ts`, like invoices') is in `src/modules/<id>/api/`, and nothing else of
   it is public. A module imports another's files only as `#modules/<other>/api/…`, and only if it
   lists `<other>` in `requires`; for a module it only `enhances` it may import `api/extensions.ts`
   (the points its enhancements plug into) and types. `src/tests/unit/modules/boundaries.spec.ts` checks it (`apiImports`)
@@ -345,15 +361,15 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   `order`), but changes only its own: `.insert()`, `.update()` and `.delete()` take its own
   tables (`foreignWrites` in `src/tests/unit/modules/boundaries.spec.ts`). A change to the core's records goes through the
   service the core offers, which holds the rules and the activity log entry, e.g.
-  `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which invoicing uses to mark an
+  `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which the invoices module uses to mark an
   invoice's orders invoiced and completed again, `scheduleOrder(tx, plan)`
   (`src/lib/orders/server/scheduling.ts`), through which the schedule plans orders, and
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`), through which maintenance turns
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Contracts, invoicing, maintenance, materials and the schedule are the modules
-(`src/modules/contracts/`, `src/modules/invoicing/`, `src/modules/maintenance/`,
+Contracts, invoices, maintenance, materials and the schedule are the modules
+(`src/modules/contracts/`, `src/modules/invoices/`, `src/modules/maintenance/`,
 `src/modules/materials/`, `src/modules/schedule/`: look there for an example of each part; the
 registries list them by id). The schedule is the one without tables of its own: a view of the
 orders, which changes them through a core service and owns only its route, components and messages.
@@ -380,10 +396,10 @@ slot options (order, roles), `settings.cards`, and a save hook for other records
   with where the module's code lives), and may add to the core's draft (contracts adds call-out
   orders); `run()` inserts it. A module that adds nothing to the draft may draw from a faker of its
   own instead, seeded per tenant (`tenant.seed`), so the others' data can't change with it
-  (invoicing, maintenance). What a module does at runtime through hooks it does at seed time
+  (invoices, maintenance). What a module does at runtime through hooks it does at seed time
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
   asks without knowing the module, from `run()` (a tenant's `collect`), when every module has made
-  its data: invoicing's seed prices orders and bills fees through them.
+  its data: the invoices module's seed prices orders and bills fees through them.
 - The page guard is a layout load that also runs on the server when a page is rendered there, so it
   also answers a form posted without JavaScript from a module's page in an organization without the
   module (the organization switcher on its 404 page, which posts to the page itself): a refused form
@@ -393,7 +409,7 @@ slot options (order, roles), `settings.cards`, and a save hook for other records
   can't import the module's helpers, and a module's e2e can't import another module's, so
   `src/tests/e2e/contracts-helpers.ts`, which works the contracts' effect on prices and billing out in SQL
   (which contract covers an order, the fees due), stays in the core's `src/tests/e2e/`; the e2e of contracts and
-  invoicing import it from there. A core test of what a module adds (invoicing's bulk action on the
+  invoices import it from there. A core test of what a module adds (the invoices module's bulk action on the
   orders list) is that module's e2e test, not the core's.
 - Core specs test core with made-up modules (`src/tests/unit/lib/modules/fakes.ts`, mocked in as `manifests.gen.ts`
   or passed to the function as the registry); what a module does is tested in its own folder.
@@ -503,7 +519,7 @@ remote functions. Every user-facing text goes through a message; nothing English
   `activity`), each listed in `project.inlang/settings.json`. A new file goes
   in every locale folder and in that list. A module's sections are in its own folder
   (`src/modules/contracts/messages/<locale>/contracts.json`, `schedule.json` of the schedule,
-  `materials.json` of materials, and `invoices.json` of the invoicing module: the section's name is the key prefix, not the module's
+  `materials.json` of materials, and `invoices.json` of the invoices module: the section's name is the key prefix, not the module's
   id), which the generator lists.
 - **Keys**: `<section>_<what>` in snake_case, e.g. `orders_title`, `orders_column_customer`,
   `orders_delete_refused`; shared UI is `common_*`. Add each key to `en` and `nl` together:

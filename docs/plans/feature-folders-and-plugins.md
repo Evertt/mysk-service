@@ -201,6 +201,10 @@ src/modules/contracts/
   e2e/contracts.test.ts
 ```
 
+(Since October 2026 a module's `routes/` holds route groups only, and its pages are under its id:
+contracts' list is `routes/(app)/+page.svelte`, a contract `routes/(app)/[number]/+page.svelte`,
+linked in as `src/routes/(app)/(modules)/contracts/…`. See "Modules" in `AGENTS.md`.)
+
 "Installing" a module means adding the folder. If it has tables, also run
 `pnpm db:generate --name add-<id>` and commit the migration. Then switch it on for an organization
 in settings or with `org:create --modules`. Removing a module means deleting the folder plus a

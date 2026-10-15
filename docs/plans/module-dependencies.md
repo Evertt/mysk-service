@@ -251,6 +251,9 @@ own tables, a contribution to a core page).
   generator must accept a module owning a group's root layout when core has no files in that group
   (today it refuses route files outside a folder of the module's own). If the module has a
   `+layout.server.ts` at the group root, the generated group guard runs before it in the same file.
+  (Since October 2026 a module's routes are always under its id, `/(field)/(modules)/portal/…`,
+  and a module owns no group's root: this would need a module-owned group, or the portal's URLs
+  under `/portal`.)
 - Role `field_engineer` (`office: false`, `home: "/(field)/(modules)/my"`). `forEngineers` and
   `requireEngineer()`/`currentEngineer()` leave the kernel for
   `moduleRemote("portal", { role: "field_engineer" })` and a portal helper that finds the linked
