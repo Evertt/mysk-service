@@ -480,6 +480,40 @@ describe("in North", () => {
 		await expect.poll(() => bar.count()).toBe(0);
 		expect(await activeOf()).toEqual([1, 1]);
 	});
+
+	test("an engineer is deactivated from their row's menu, which then offers to activate them", async () => {
+		const { page } = app;
+		const [picked] = await rows<{ id: number; name: string }>(
+			`select id, name from engineer where organization_id = ? and active = 1
+			 order by id desc limit 1`,
+			[north.id],
+		);
+		const menu = async () => {
+			await page.getByRole("button", { name: `Actions for ${picked.name}` }).click();
+			return page.getByRole("menu");
+		};
+
+		await app.go("/engineers?size=50");
+		let items = await menu();
+		// Active already: activating would do nothing.
+		await items.getByRole("menuitem", { name: "Deactivate", exact: true }).waitFor();
+		expect(await items.getByRole("menuitem", { name: "Activate", exact: true }).count()).toBe(0);
+		await items.getByRole("menuitem", { name: "Deactivate", exact: true }).click();
+		await app.toast(`${picked.name} updated`);
+		expect((await engineer(picked.id)).active).toBe(0);
+		const [logged] = await rows<{ action: string; changes: string }>(
+			`select action, changes from activity where organization_id = ? and subject_type = 'engineer'
+			 and subject_id = ? order by id desc limit 1`,
+			[north.id, String(picked.id)],
+		);
+		expect(logged.action).toBe("updated");
+		expect(JSON.parse(logged.changes)).toEqual({ active: [true, false] });
+
+		items = await menu();
+		await items.getByRole("menuitem", { name: "Activate", exact: true }).click();
+		await app.toast(`${picked.name} updated`);
+		expect((await engineer(picked.id)).active).toBe(1);
+	});
 });
 
 describe("in South", () => {

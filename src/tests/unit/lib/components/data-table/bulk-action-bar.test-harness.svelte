@@ -1,7 +1,7 @@
 <!--
 	@component
-	A data table over a few jobs with a selection column and the bulk action bar, for
-	`bulk-action-bar.svelte.spec.ts`. Its state isn't kept in the URL.
+	A data table over a few jobs with a selection column, a row menu on each row and the bulk action
+	bar, for `bulk-action-bar.svelte.spec.ts`. Its state isn't kept in the URL.
 -->
 <script lang="ts" module>
 	export interface Job {
@@ -16,6 +16,7 @@
 
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import type { BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+	import RowActions from "#lib/components/data-table/row-actions.svelte";
 	import {
 		createAppColumnHelper,
 		createAppTable,
@@ -45,6 +46,10 @@
 		}),
 		column.accessor("name", { meta: { label: "Name" } }),
 		column.accessor("status", { meta: { label: "Status" } }),
+		column.display({
+			id: "actions",
+			cell: ({ row }) => renderComponent(RowActions, { label: row.original.name }),
+		}),
 	]);
 
 	// The page size, read once.

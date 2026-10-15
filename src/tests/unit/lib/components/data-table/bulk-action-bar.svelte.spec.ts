@@ -215,6 +215,76 @@ describe("the action bar", () => {
 	});
 });
 
+describe("on a single row, from its menu", () => {
+	const menuOf = async (name: string) => {
+		await page.getByRole("button", { name: `Actions for ${name}` }).click();
+		return page.getByRole("menu");
+	};
+
+	test("offers the actions that apply to the row, and runs one on it alone", async () => {
+		const run = vi.fn(async () => done());
+		render(Harness, { jobs, actions: [close(run)] });
+		// Another row selected, which the row's action leaves as it is.
+		await select("Pump check");
+
+		const menu = await menuOf("Boiler service");
+		await menu.getByRole("menuitem", { name: "Close" }).click();
+
+		expect(run).toHaveBeenCalledWith({ ids: [1] }, undefined);
+		await expect.element(page.getByText("Boiler service updated")).toBeVisible();
+		await expect.element(bar().getByText("1 selected")).toBeVisible();
+	});
+
+	test("leaves out the actions that don't apply to the row, or opt out of rows", async () => {
+		const merge: BulkAction<Job, any> = {
+			...close(),
+			id: "merge",
+			label: () => "Merge",
+			row: false,
+		};
+		render(Harness, { jobs, actions: [close(), merge] });
+
+		const menu = await menuOf("Chiller repair");
+		await expect.element(menu.getByText("Chiller repair")).toBeVisible();
+		expect(menu.getByRole("menuitem").elements()).toHaveLength(0);
+	});
+
+	test("asks first, naming the row, when the action wants confirming", async () => {
+		const run = vi.fn(async () => done());
+		const remove: BulkAction<Job, any> = {
+			id: "delete",
+			label: () => "Delete",
+			destructive: true,
+			confirm: { title: (count) => `Delete ${count} jobs?`, description: () => "For good." },
+			run,
+			done: ({ count }) => `${count} deleted`,
+		};
+		render(Harness, { jobs, actions: [remove] });
+
+		const menu = await menuOf("Pump check");
+		await menu.getByRole("menuitem", { name: "Delete" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await expect.element(dialog.getByText("Delete: Pump check")).toBeVisible();
+		await expect.element(dialog.getByText("For good.")).toBeVisible();
+		expect(run).not.toHaveBeenCalled();
+
+		await dialog.getByRole("button", { name: "Delete" }).click();
+		expect(run).toHaveBeenCalledWith({ ids: [3] }, undefined);
+		await expect.element(page.getByText("Pump check deleted")).toBeVisible();
+	});
+
+	test("says why the server skipped the row", async () => {
+		const run = vi.fn(async () =>
+			done({ done: 0, skipped: [{ label: "Boiler service", reason: "Boiler service is locked" }] }),
+		);
+		render(Harness, { jobs, actions: [close(run)] });
+
+		const menu = await menuOf("Boiler service");
+		await menu.getByRole("menuitem", { name: "Close" }).click();
+		await expect.element(page.getByText("Boiler service is locked")).toBeVisible();
+	});
+});
+
 test("the table shows the new values of rows that come back changed, e.g. after an action", async () => {
 	const { rerender } = render(Harness, { jobs, actions: [close()] });
 	await expect.element(page.getByRole("row", { name: /Boiler service open/ })).toBeVisible();

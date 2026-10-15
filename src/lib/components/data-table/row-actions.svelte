@@ -1,6 +1,11 @@
 <!--
 	@component
-	A row's action menu: open, edit, and copy actions for identifiers.
+	A row's action menu: open, edit, the table's bulk actions that apply to the row, and copy
+	actions for identifiers.
+
+	The bulk actions are those of the table's action bar (`bulk-action-bar.svelte`, the core's and
+	the tenant's modules'), run on this row alone (see `row-bulk-actions.svelte.ts`); the bar asks
+	first and says how it went, as for a selection. In a table without an action bar, there are none.
 
 	A list shows one on every row, and a dropdown menu is a lot to set up a hundred times for menus
 	that are mostly never opened: until the pointer or the focus reaches it, the row has a plain
@@ -13,6 +18,10 @@
 	import EyeIcon from "@lucide/svelte/icons/eye";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import type { Attachment } from "svelte/attachments";
+
+	import { actionsForRow, type BulkAction } from "./bulk-actions.ts";
+	import { getRowBulkActions } from "./row-bulk-actions.svelte.ts";
+	import { useCellContext } from "./table.svelte.ts";
 
 	let {
 		label,
@@ -32,6 +41,18 @@
 	let open = $state(false);
 	/** The plain button had the focus, which goes to the trigger that replaces it. */
 	let focused = false;
+
+	// The table's bulk actions, in a table's cell (with the cell's row).
+	const bulk = getRowBulkActions();
+	const cell = bulk && useCellContext();
+	/** Those that apply to the row, worked out once the menu is set up. */
+	const rowActions = $derived(
+		active && bulk && cell ? actionsForRow(bulk.actions, cell.row.original) : [],
+	);
+
+	function runOnRow(action: BulkAction<unknown, unknown>) {
+		if (cell) bulk?.start(action, { id: cell.row.id, original: cell.row.original, label });
+	}
 
 	const takeFocus: Attachment<HTMLElement> = (element) => {
 		if (focused) element.focus();
@@ -72,6 +93,23 @@
 					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Group>
+			{#if rowActions.length}
+				<DropdownMenu.Separator />
+				<DropdownMenu.Group>
+					{#each rowActions as action (action.id)}
+						{@const Icon = action.icon}
+						<DropdownMenu.Item
+							variant={action.destructive ? "destructive" : "default"}
+							onclick={() => runOnRow(action)}
+						>
+							{#if Icon}
+								<Icon />
+							{/if}
+							{action.label()}
+						</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.Group>
+			{/if}
 			{#if copy.length}
 				<DropdownMenu.Separator />
 				<DropdownMenu.Group>

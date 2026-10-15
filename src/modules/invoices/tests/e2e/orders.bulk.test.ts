@@ -65,6 +65,54 @@ describe("bulk actions on selected orders, in North", () => {
 		).toBe("created");
 	});
 
+	test("a completed order's row menu creates an invoice for it alone; others' don't offer it", async () => {
+		const { page } = app;
+		const billable = `o.status = 'completed' and not exists (select 1 from invoice_line l
+			join invoice i on i.id = l.invoice_id where l.order_id = o.id and i.status != 'void')`;
+		const [order] = await rows<{ id: number; number: string; customerId: number }>(
+			`select o.id, o.number, o.customer_id as customerId from "order" o
+			 where o.organization_id = ? and ${billable} order by o.number desc limit 1`,
+			[north.id],
+		);
+		const [quote] = await rows<{ number: string }>(
+			`select number from "order" where organization_id = ? and status = 'quote'
+			 order by number limit 1`,
+			[north.id],
+		);
+		const menuOf = async (number: string) => {
+			await page.getByRole("button", { name: `Actions for ${number}` }).click();
+			return page.getByRole("menu");
+		};
+
+		// Not for an order that isn't completed.
+		await app.go(`/orders?status=quote&sort=number`);
+		let menu = await menuOf(quote.number);
+		await menu.getByRole("menuitem", { name: "Assign engineer" }).waitFor();
+		expect(await menu.getByRole("menuitem", { name: "Create invoice" }).count()).toBe(0);
+		await page.keyboard.press("Escape");
+
+		await app.go(`/orders?q=${encodeURIComponent(order.number)}`);
+		menu = await menuOf(order.number);
+		await menu.getByRole("menuitem", { name: "Create invoice" }).click();
+		const dialog = page.getByRole("alertdialog");
+		await dialog.getByText(`Create invoice: ${order.number}`).waitFor();
+		await dialog.getByRole("button", { name: "Create invoice" }).click();
+
+		await page.waitForURL((url) => /^\/invoices\/[^/]+$/.test(url.pathname));
+		await app.toast(`${order.number} on a new draft`);
+		const number = decodeURIComponent(app.path().split("/").at(-1)!);
+		const [invoice] = await rows<{ id: number; status: string; customer_id: number }>(
+			`select id, status, customer_id from invoice where number = ? and organization_id = ?`,
+			[number, north.id],
+		);
+		expect(invoice).toMatchObject({ status: "draft", customer_id: order.customerId });
+		const billed = await rows<{ order_id: number }>(
+			`select distinct order_id from invoice_line where invoice_id = ?`,
+			[invoice.id],
+		);
+		expect(billed.map((line) => line.order_id)).toEqual([order.id]);
+	});
+
 	test("orders of several customers can't be invoiced together", async () => {
 		const { page } = app;
 		await app.go(`/orders?status=completed&sort=number&size=50`);

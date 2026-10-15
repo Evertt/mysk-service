@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	actionsForRow,
 	applicability,
 	type BulkAction,
 	summarizeBulkResult,
@@ -125,5 +126,75 @@ describe("how a result reads", () => {
 		expect(summarizeBulkResult({ done: 1234, skipped: [], missing: 0 }).title).toBe(
 			"1,234 updated",
 		);
+	});
+});
+
+describe("which actions a row's menu offers", () => {
+	const action = (id: string, rules: Partial<BulkAction<Row>> = {}): BulkAction<Row> => ({
+		id,
+		label: () => id,
+		run: async () => ({ done: 1, skipped: [], missing: 0 }),
+		...rules,
+	});
+
+	test("those that apply to the row", () => {
+		const actions = [action("assign", notInvoiced), action("delete")];
+		expect(actionsForRow(actions, rows[0]).map((a) => a.id)).toEqual(["assign", "delete"]);
+		expect(actionsForRow(actions, rows[1]).map((a) => a.id)).toEqual(["delete"]);
+	});
+
+	test("not those the row rules out as a whole", () => {
+		const firstCustomer = action("invoice", {
+			disabled: (selection) =>
+				selection.every((row) => row.customer === 1) ? undefined : "Another customer",
+		});
+		expect(actionsForRow([firstCustomer], rows[0])).toEqual([firstCustomer]);
+		expect(actionsForRow([firstCustomer], rows[2])).toEqual([]);
+	});
+
+	test("not those that opt out of rows", () => {
+		expect(actionsForRow([action("merge", { row: false })], rows[0])).toEqual([]);
+	});
+
+	test("those that don't act on all matching rows still act on one", () => {
+		expect(actionsForRow([action("invoice", { matching: false })], rows[0])).toHaveLength(1);
+	});
+});
+
+describe("how a result reads for a single row", () => {
+	const deleted = ({ count }: { count: string }) => `${count} deleted`;
+
+	test("done: names the row", () => {
+		expect(summarizeBulkResult({ done: 1, skipped: [], missing: 0 }, undefined, "ORD-1")).toEqual({
+			tone: "success",
+			title: "ORD-1 updated",
+			details: [],
+		});
+		expect(summarizeBulkResult({ done: 1, skipped: [], missing: 0 }, deleted, "ORD-1").title).toBe(
+			"ORD-1 deleted",
+		);
+	});
+
+	test("skipped: says why", () => {
+		const skipped = (reason: string) =>
+			summarizeBulkResult(
+				{ done: 0, skipped: [{ label: "ORD-2", reason }], missing: 0 },
+				undefined,
+				"ORD-2",
+			);
+		expect(skipped("ORD-2 is invoiced")).toEqual({
+			tone: "error",
+			title: "ORD-2 is invoiced",
+			details: [],
+		});
+		expect(skipped("It's used on orders").title).toBe("ORD-2: It's used on orders");
+	});
+
+	test("not found (deleted meanwhile, or not the tenant's)", () => {
+		expect(summarizeBulkResult({ done: 0, skipped: [], missing: 1 }, undefined, "ORD-3")).toEqual({
+			tone: "error",
+			title: "ORD-3 not found",
+			details: [],
+		});
 	});
 });
