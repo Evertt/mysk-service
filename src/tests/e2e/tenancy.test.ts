@@ -102,7 +102,7 @@ describe("modules", () => {
 			]),
 		).toMatchObject([
 			{ module_id: "contracts" },
-			{ module_id: "invoicing" },
+			{ module_id: "invoices" },
 			{ module_id: "materials" },
 		]);
 		expect(await moduleEntries("contracts", south.id, since)).toEqual([
@@ -125,7 +125,7 @@ describe("modules", () => {
 				`select module_id from organization_module where organization_id = ? order by module_id`,
 				[south.id],
 			),
-		).toEqual([{ module_id: "invoicing" }, { module_id: "materials" }]);
+		).toEqual([{ module_id: "invoices" }, { module_id: "materials" }]);
 		expect(await sidebarLink(contracts).count()).toBe(0);
 		expect((await app.go("/contracts"))?.status()).toBe(404);
 		// One entry for each change, none for invoicing, which stayed.
@@ -133,7 +133,7 @@ describe("modules", () => {
 			{ action: "module_enabled" },
 			{ action: "module_disabled" },
 		]);
-		expect(await moduleEntries("invoicing", south.id, since)).toEqual([]);
+		expect(await moduleEntries("invoices", south.id, since)).toEqual([]);
 	});
 
 	test("a submission that switches nothing is refused, saying so", async () => {

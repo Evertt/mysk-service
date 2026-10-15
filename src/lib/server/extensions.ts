@@ -2,7 +2,7 @@
  * The kernel's dispatch of hooks: how the optional modules take part in their owners' server logic
  * without the owner importing them. An owner declares its extension points with
  * `#lib/extensions/define.ts` (core's in `#lib/<domain>/extensions.ts`, e.g. `orders.adjustPrices`;
- * a module's in its `api/extensions.ts`, e.g. `invoicing.billableItems`). A module contributes in
+ * a module's in its `api/extensions.ts`, e.g. `invoices.billableItems`). A module contributes in
  * its `server/index.ts`: `defineServerModule("contracts", [contribute(adjustPrices, …), …])`, the
  * point imported from its owner, so the types follow it. The owner calls each point from one
  * function of its own, e.g. `priceOrders()` (`#lib/orders/server/pricing.ts`), for the modules the
@@ -26,7 +26,7 @@
  *   change, which rolls the transaction back. A contributor that throws fails the request (and so
  *   rolls it back too).
  *
- * A module's point is dispatched only while its owner is on (the id's prefix, e.g. `invoicing`):
+ * A module's point is dispatched only while its owner is on (the id's prefix, e.g. `invoices`):
  * otherwise `collect()`, `vote()` and `save()` answer `[]` and `emit()` tells no one.
  *
  * Registry order is dependency order: the modules' `server/index.ts` in `hooks.gen.ts`, each after
@@ -96,7 +96,7 @@ export function defineServerModule(id: ModuleId, contributions: Contribution[]):
 
 /**
  * Whether `point` belongs to a module that isn't among the `enabled`: its id starts with its
- * owner's (`invoicing.billableItems`). A point whose prefix is no module's id is the core's.
+ * owner's (`invoices.billableItems`). A point whose prefix is no module's id is the core's.
  */
 function ownerIsOff(point: AnyPoint, enabled: readonly string[]) {
 	const owner = point.id.split(".")[0];

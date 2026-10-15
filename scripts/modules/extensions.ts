@@ -28,7 +28,7 @@ export interface ExtensionPoint {
 	/** E.g. `orders.detail.side`: its owner's id, a dot, and a name. */
 	id: string;
 	kind: (typeof kinds)[keyof typeof kinds];
-	/** Core's domain folder (`orders`) or the module's id (`invoicing`). */
+	/** Core's domain folder (`orders`) or the module's id (`invoices`). */
 	owner: string;
 	/** The file that declares it, relative to the root, with `/`. */
 	file: string;

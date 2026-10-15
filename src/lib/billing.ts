@@ -1,5 +1,5 @@
 /**
- * What is billed besides orders, as types: the invoicing module's `invoicing.billableItems` point
+ * What is billed besides orders, as types: the invoicing module's `invoices.billableItems` point
  * (its `api/extensions.ts`) asks the other modules for them at runtime, and the seed's collectors
  * (`#lib/server/db/seed/module-seed.ts`) at seed time. Here in core because the seed is core's,
  * and core doesn't import modules.

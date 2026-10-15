@@ -38,7 +38,7 @@ export const domains = ["customers", "engineers", "equipment", "orders"];
  * may use the old imports.
  */
 export const migratedDomains: string[] = ["engineers", "customers", "equipment", "orders"];
-export const migratedModules: string[] = ["contracts", "invoicing", "materials", "schedule"];
+export const migratedModules: string[] = ["contracts", "invoices", "materials", "schedule"];
 
 const barrelNames = ["index.ts", "components.ts", "remotes.ts", "server/index.ts"];
 const isBarrel = (path: string) =>

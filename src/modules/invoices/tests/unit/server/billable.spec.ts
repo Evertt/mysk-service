@@ -1,0 +1,50 @@
+import { expect, test, vi } from "vite-plus/test";
+
+import type { ModuleId } from "#lib/modules/ids.ts";
+import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
+import { billableItems } from "#modules/invoices/api/extensions.ts";
+import { offeredItems } from "#modules/invoices/server/billable.ts";
+import { day } from "#unit/temporal-support.ts";
+
+// The modules' server code needs the app's database; these tests don't get that far.
+vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
+vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
+// Made-up modules instead of the ones in `src/modules`.
+const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => registry.modules,
+}));
+
+test("billable items come from each module that is on and has any, by date", async () => {
+	const period = { from: day("2026-01-01"), until: day("2026-10-07") };
+	const asked: unknown[] = [];
+	const item = (reference: string, date: Temporal.PlainDate) => ({
+		reference,
+		description: reference,
+		quantity: 1,
+		unitPrice: 100,
+		date,
+	});
+	registry.modules = [
+		defineServerModule("fees" as ModuleId, [
+			contribute(billableItems, async (input) => {
+				asked.push(input);
+				return [item("fees:2", day("2026-09-01")), item("fees:1", day("2026-08-01"))];
+			}),
+		]),
+		defineServerModule("nothing" as ModuleId, []),
+		defineServerModule("rentals" as ModuleId, [
+			contribute(billableItems, async () => [item("rentals:1", day("2026-08-15"))]),
+		]),
+	];
+
+	const items = await offeredItems(7, period, ["invoices", "fees", "nothing", "rentals"]);
+	expect(items.map((i) => i.reference)).toEqual(["fees:1", "rentals:1", "fees:2"]);
+	expect(asked).toEqual([{ customerId: 7, period }]);
+	expect(await offeredItems(7, period, ["invoices", "nothing"])).toEqual([]);
+	expect((await offeredItems(7, period, ["invoices", "rentals"])).map((i) => i.reference)).toEqual([
+		"rentals:1",
+	]);
+	// Not asked while invoicing, whose point it is, is off.
+	expect(await offeredItems(7, period, ["fees", "rentals"])).toEqual([]);
+});

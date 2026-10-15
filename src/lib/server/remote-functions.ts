@@ -103,8 +103,8 @@ type ModuleRole = "member" | "manager" | "engineer";
  * its own id:
  *
  * ```ts
- * export const { query, form, command } = moduleRemote("invoicing");
- * export const forManagers = moduleRemote("invoicing", "manager");
+ * export const { query, form, command } = moduleRemote("invoices");
+ * export const forManagers = moduleRemote("invoices", "manager");
  * ```
  */
 export function moduleRemote(id: ModuleId, role: ModuleRole = "member"): RemoteSet {

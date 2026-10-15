@@ -85,9 +85,10 @@ describe("checks", () => {
 
 describe("modules", () => {
 	test("are a comma-separated list, without duplicates", () => {
-		expect(
-			parseCreateArgs([...args, "--modules", "contracts, invoicing,contracts"]),
-		).toHaveProperty("modules", ["contracts", "invoicing"]);
+		expect(parseCreateArgs([...args, "--modules", "contracts, invoices,contracts"])).toHaveProperty(
+			"modules",
+			["contracts", "invoices"],
+		);
 	});
 
 	test("must exist", () => {
