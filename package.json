@@ -8,6 +8,10 @@
 		"./.svelte-kit/output/**"
 	],
 	"imports": {
+		"#kit-worker": {
+			"types": "./cloudflare/kit-worker.d.ts",
+			"default": "./.svelte-kit/cloudflare/_worker.js"
+		},
 		"#lib/*": "./src/lib/*",
 		"#modules/*": "./src/modules/*",
 		"#routes/*": "./src/routes/*",

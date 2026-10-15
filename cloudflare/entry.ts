@@ -18,7 +18,8 @@ import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import kit from "../.svelte-kit/cloudflare/_worker.js";
+import kit from "#kit-worker";
+
 import type { DurableRequest } from "../src/lib/server/db/durable.ts";
 import migrations from "./migrations/migrations.js";
 
