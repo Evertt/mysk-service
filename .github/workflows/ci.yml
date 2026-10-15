@@ -73,9 +73,11 @@ jobs:
         with:
           node-version: "24"
           cache: true
-      # The Worker's secrets (BETTER_AUTH_SECRET, OPS_TOKEN) are on Cloudflare already; the build
-      # reads no .env.
+      # The Worker's secrets (BETTER_AUTH_SECRET, OPS_TOKEN) are on Cloudflare. The build only checks
+      # that the app's required variables are set (src/env.ts) and doesn't keep their values, so a
+      # placeholder will do.
       - run: vp run deploy:cloudflare
         env:
+          BETTER_AUTH_SECRET: set-on-cloudflare
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
