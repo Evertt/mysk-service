@@ -17,6 +17,7 @@ status.
 | [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted                    |
 | [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files                |
 | [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)                |
+| [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                        |
 
 ## The decisions in short
 
