@@ -105,8 +105,10 @@
 						{@const lineFields = field[index]}
 						<Table.Row>
 							<Table.Cell>
+								<!-- The fields are at least this wide: in a table cell they'd otherwise shrink to
+								     nothing on a phone. -->
 								<NativeSelect.Root
-									class="w-full"
+									class="w-full min-w-40"
 									aria-label={m.materials_order_line_material()}
 									{...withoutValue(lineFields.materialId.as("select"))}
 									value={line.materialId}
@@ -121,7 +123,7 @@
 								</NativeSelect.Root>
 							</Table.Cell>
 							<Table.Cell>
-								<InputGroup.Root>
+								<InputGroup.Root class="min-w-28">
 									{@const unit = materialsById.get(line.materialId)?.unit}
 									{@const step = quantityStep(unit ?? "m")}
 									<InputGroup.Input

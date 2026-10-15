@@ -45,75 +45,82 @@
 	{#if Icon}
 		<Icon class="mt-0.5 size-5 text-muted-foreground" />
 	{/if}
-	<div class="flex min-w-0 flex-1 flex-col gap-1">
-		<div class="flex flex-wrap items-center gap-2">
-			<span class="font-medium">{module.label}</span>
-			{#if module.alwaysOn}
-				{#if !canManage}
-					<Badge variant="secondary">{m.settings_modules_always_on()}</Badge>
+	<!-- On a phone the button goes under the text, which would otherwise be squeezed beside it. -->
+	<div class="flex min-w-0 flex-1 flex-wrap items-start gap-x-4 gap-y-3">
+		<div class="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="font-medium">{module.label}</span>
+				{#if module.alwaysOn}
+					{#if !canManage}
+						<Badge variant="secondary">{m.settings_modules_always_on()}</Badge>
+					{/if}
+				{:else if module.on && module.enabledAt}
+					<Badge variant="secondary"
+						>{m.settings_enabled_since({ date: formatDate(module.enabledAt) })}</Badge
+					>
+				{:else}
+					<Badge variant="outline">{m.settings_disabled()}</Badge>
 				{/if}
-			{:else if module.on && module.enabledAt}
-				<Badge variant="secondary"
-					>{m.settings_enabled_since({ date: formatDate(module.enabledAt) })}</Badge
-				>
-			{:else}
-				<Badge variant="outline">{m.settings_disabled()}</Badge>
+			</div>
+			<p class="text-sm text-muted-foreground">{module.description}</p>
+			{#if canManage && !module.on && needed.length}
+				<p class="text-sm text-muted-foreground">
+					{m.settings_modules_also_enables({ modules: names(needed) })}
+				</p>
+			{/if}
+			{#if !asksFirst}
+				<Field.FieldError errors={form.fields.allIssues()} />
 			{/if}
 		</div>
-		<p class="text-sm text-muted-foreground">{module.description}</p>
-		{#if canManage && !module.on && needed.length}
-			<p class="text-sm text-muted-foreground">
-				{m.settings_modules_also_enables({ modules: names(needed) })}
-			</p>
-		{/if}
-		{#if !asksFirst}
-			<Field.FieldError errors={form.fields.allIssues()} />
+		{#if canManage}
+			{#if module.alwaysOn}
+				<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
+			{:else if asksFirst}
+				<AlertDialog.Root>
+					<AlertDialog.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} variant="outline" size="sm">{m.settings_disable()}</Button>
+						{/snippet}
+					</AlertDialog.Trigger>
+					<AlertDialog.Content>
+						<AlertDialog.Header>
+							<AlertDialog.Title>
+								{m.settings_modules_disable_title({ module: module.label })}
+							</AlertDialog.Title>
+							<AlertDialog.Description>
+								{m.settings_modules_also_disables({ modules: names(needing) })}
+							</AlertDialog.Description>
+						</AlertDialog.Header>
+						<Field.FieldError errors={form.fields.allIssues()} />
+						<form {...form}>
+							{#each [module.id, ...needing] as id (id)}
+								<input hidden {...form.fields.disable.as("checkbox", id, true)} />
+							{/each}
+							<AlertDialog.Footer>
+								<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
+								<SubmitButton pending={form.pending}>{m.settings_disable()}</SubmitButton>
+							</AlertDialog.Footer>
+						</form>
+					</AlertDialog.Content>
+				</AlertDialog.Root>
+			{:else}
+				<form {...form}>
+					{#if module.on}
+						<input hidden {...form.fields.disable.as("checkbox", module.id, true)} />
+					{:else}
+						{#each [module.id, ...needed] as id (id)}
+							<input hidden {...form.fields.enable.as("checkbox", id, true)} />
+						{/each}
+					{/if}
+					<SubmitButton
+						variant={module.on ? "outline" : "default"}
+						size="sm"
+						pending={form.pending}
+					>
+						{module.on ? m.settings_disable() : m.settings_enable()}
+					</SubmitButton>
+				</form>
+			{/if}
 		{/if}
 	</div>
-	{#if canManage}
-		{#if module.alwaysOn}
-			<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
-		{:else if asksFirst}
-			<AlertDialog.Root>
-				<AlertDialog.Trigger>
-					{#snippet child({ props })}
-						<Button {...props} variant="outline" size="sm">{m.settings_disable()}</Button>
-					{/snippet}
-				</AlertDialog.Trigger>
-				<AlertDialog.Content>
-					<AlertDialog.Header>
-						<AlertDialog.Title>
-							{m.settings_modules_disable_title({ module: module.label })}
-						</AlertDialog.Title>
-						<AlertDialog.Description>
-							{m.settings_modules_also_disables({ modules: names(needing) })}
-						</AlertDialog.Description>
-					</AlertDialog.Header>
-					<Field.FieldError errors={form.fields.allIssues()} />
-					<form {...form}>
-						{#each [module.id, ...needing] as id (id)}
-							<input hidden {...form.fields.disable.as("checkbox", id, true)} />
-						{/each}
-						<AlertDialog.Footer>
-							<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-							<SubmitButton pending={form.pending}>{m.settings_disable()}</SubmitButton>
-						</AlertDialog.Footer>
-					</form>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
-		{:else}
-			<form {...form}>
-				{#if module.on}
-					<input hidden {...form.fields.disable.as("checkbox", module.id, true)} />
-				{:else}
-					{#each [module.id, ...needed] as id (id)}
-						<input hidden {...form.fields.enable.as("checkbox", id, true)} />
-					{/each}
-				{/if}
-				<SubmitButton variant={module.on ? "outline" : "default"} size="sm" pending={form.pending}>
-					{module.on ? m.settings_disable() : m.settings_enable()}
-				</SubmitButton>
-			</form>
-		{/if}
-	{/if}
 </div>

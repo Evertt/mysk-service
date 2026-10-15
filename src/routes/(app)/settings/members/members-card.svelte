@@ -69,8 +69,10 @@
 								>
 									<input {...change.fields.memberId.as("hidden", member.id)} />
 									<div class="flex items-center gap-2">
-										<!-- Saves as soon as another role is chosen. -->
+										<!-- Saves as soon as another role is chosen. As wide as its options: in a table cell it
+										     would otherwise shrink to nothing on a phone. -->
 										<NativeSelect.Root
+											class="min-w-max"
 											aria-label={m.settings_role_of({ name: member.name })}
 											size="sm"
 											{...change.fields.role.as("select", member.roles[0] as MemberRole)}
