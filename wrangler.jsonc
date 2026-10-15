@@ -9,6 +9,6 @@
 	"rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
 	"durable_objects": { "bindings": [{ "name": "TENANT", "class_name": "Tenant" }] },
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tenant"] }],
-	"vars": { "DATABASE_URL": "durable-object", "ORIGIN": "http://localhost:8787" },
+	"vars": { "DATABASE_URL": "durable-object", "ORIGIN": "https://fieldworks-spike.devign.workers.dev" },
 	"observability": { "enabled": true }
 }

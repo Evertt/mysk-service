@@ -1,3 +1,4 @@
+import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, inArray, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
@@ -9,7 +10,8 @@ import {
 	scheduleOrder as planOrder,
 } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
@@ -74,6 +76,27 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 			),
 	]);
 	return { start, engineers, orders, backlog: backlog.sort(byPriorityThenAge) };
+});
+
+/** The records the board shows: a change to any of them outdates it. */
+const boardSubjects = ["order", "engineer", "customer"] as const;
+
+/**
+ * When the board's records last changed (epoch ms, 0 if not since the server started), sent again
+ * on each change, so an open board refreshes `getSchedule` when someone else plans an order, an
+ * engineer completes one, or an order comes in.
+ */
+export const watchSchedule = query.live(async function* () {
+	const { organizationId } = currentTenant();
+	// Watching before the first answer, so a change in between isn't missed.
+	const changes = watchChanges(organizationId, boardSubjects);
+	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	try {
+		yield changedAt(organizationId, boardSubjects);
+		for await (const _ of changes) yield changedAt(organizationId, boardSubjects);
+	} finally {
+		changes.stop();
+	}
 });
 
 /**
