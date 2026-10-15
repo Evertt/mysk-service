@@ -190,6 +190,7 @@
 	"common_bulk_missing": "{count} not found",
 	"common_bulk_skip_reason": "{label}: {reason}",
 	"common_bulk_more": "and {count} more",
+	"common_row_action_title": "{action}: {label}",
 	"common_views_menu": "Saved views",
 	"common_views_menu_active": "Saved views: {name}",
 	"common_views_menu_edited": "Saved views: {name}, with unsaved changes",

@@ -140,7 +140,9 @@ migration committed.
   refused by the type check at a slot that passes props. The owner's page renders a slot with
   `<ExtensionSlot point={detailSide} props={{ number }} />` (`detailSide` from the owner's
   `extensions.ts`), and a table gets its contributed actions with
-  `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`); both show only
+  `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`), which its action bar
+  also offers in each row's menu, for that row alone (an action that makes no sense for one row
+  says `row: false`; see `#lib/components/data-table/bulk-actions.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
   id (`<module>/<point id>/<name>`). At a form slot, a module's components come with its part's
   schema, `form-parts/<point id>.ts` (the generator refuses either without the other; see "Extension points" above), and the page passes the form's fields:

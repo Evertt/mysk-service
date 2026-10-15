@@ -16,6 +16,7 @@ import DateCell from "./date-cell.svelte";
 import { features } from "./features.ts";
 import NumberCell from "./number-cell.svelte";
 import Pagination from "./pagination.svelte";
+import { setRowBulkActions } from "./row-bulk-actions.svelte.ts";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
 import Toolbar from "./toolbar.svelte";
@@ -154,6 +155,9 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 
 	table = hook.createAppTable(tableOptions);
 	if (!inComponent()) return table;
+
+	// The action bar's actions, for the rows' menus too.
+	setRowBulkActions();
 
 	// What's inside `<table.AppTable>` waits for the page to mount (see `after-mount.svelte`).
 	const AppTable = table.AppTable as Component<{ children: Snippet }>;

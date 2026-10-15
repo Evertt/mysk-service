@@ -7,6 +7,10 @@
 	(a confirmation, an engineer to assign) open a dialog; the result shows as a toast, e.g.
 	"7 updated, 2 skipped" with the reasons, and the selection is cleared.
 
+	It also offers its actions to the rows' menus (`row-actions.svelte`, through
+	`row-bulk-actions.svelte.ts`), and runs one on a single row the same way, without touching the
+	selection: the dialog then names the row, and the toast says how it went for it.
+
 	For a server-side table, pass `matching` (the rows' query `where` and key, and how many match in
 	all): with every row of the page selected, it offers to select all the rows that match, and the
 	action then acts on the `where`, the search and filters, rather than on ids (the server finds the
@@ -33,6 +37,7 @@
 		MAX_BULK_RECORDS,
 		summarizeBulkResult,
 	} from "./bulk-actions.ts";
+	import { type BulkRow, getRowBulkActions } from "./row-bulk-actions.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
 
 	let {
@@ -80,9 +85,20 @@
 	const menu = $derived(states.length > inline ? states.slice(inline - 1) : []);
 
 	let busy = $state(false);
-	/** The action whose dialog is open, if any. */
-	let asking = $state.raw<(typeof states)[number]>();
+	/** The action whose dialog is open, if any, and the single row it's for, if it is. */
+	let asking = $state.raw<{ action: BulkAction<TData, Where>; applies: number; row?: BulkRow }>();
 	let dialogOpen = $state(false);
+
+	// The rows' menus offer these actions too.
+	const rowActions = getRowBulkActions();
+	$effect(() =>
+		rowActions?.provide({
+			get actions() {
+				return actions as unknown as BulkAction<unknown, unknown>[];
+			},
+			start: (action, row) => ask(action as unknown as BulkAction<TData, Where>, 1, row),
+		}),
+	);
 
 	function clear() {
 		matchingKey = undefined;
@@ -90,25 +106,35 @@
 	}
 
 	function start(state: (typeof states)[number]) {
-		if (state.disabled || busy) return;
-		if (state.action.confirm || state.action.parameter) {
+		if (state.disabled) return;
+		ask(state.action, allMatching ? count : state.applies.length);
+	}
+
+	/** Runs `action` on the selection, or on `row` alone, asking first if it asks. */
+	function ask(action: BulkAction<TData, Where>, applies: number, row?: BulkRow) {
+		if (busy) return;
+		if (action.confirm || action.parameter) {
 			// A new object, so the dialog starts anew (see `{#key asking}`).
-			asking = { ...state };
+			asking = { action, applies, row };
 			dialogOpen = true;
 		} else {
-			void run(state.action);
+			void run(action, undefined, row);
 		}
 	}
 
-	async function run(action: BulkAction<TData, Where>, value?: string) {
+	async function run(action: BulkAction<TData, Where>, value?: string, row?: BulkRow) {
 		const target = (
-			allMatching ? { matching: matching!.where } : { ids: selected.map((row) => Number(row.id)) }
+			row
+				? { ids: [Number(row.id)] }
+				: allMatching
+					? { matching: matching!.where }
+					: { ids: selected.map((each) => Number(each.id)) }
 		) as BulkTarget<Where>;
 		busy = true;
 		try {
 			const result = await action.run(target, value);
 			dialogOpen = false;
-			const summary = summarizeBulkResult(result, action.done);
+			const summary = summarizeBulkResult(result, action.done, row?.label);
 			const show = { success: toast.success, warning: toast.warning, error: toast.error };
 			show[summary.tone](summary.title, {
 				description: summary.details.join("\n") || undefined,
@@ -116,7 +142,7 @@
 				duration: summary.details.length ? 12_000 : undefined,
 				classes: { description: "whitespace-pre-line" },
 			});
-			clear();
+			if (!row) clear();
 			if (result.href) await goto(result.href);
 		} catch (error) {
 			toast.error(errorMessage(error, m.common_error_generic()));
@@ -232,10 +258,11 @@
 		<BulkActionDialog
 			action={asking.action}
 			bind:open={dialogOpen}
-			{count}
-			applies={allMatching ? count : asking.applies.length}
+			count={asking.row ? 1 : count}
+			applies={asking.applies}
+			record={asking.row?.label}
 			{busy}
-			onrun={(value) => run(asking!.action, value)}
+			onrun={(value) => run(asking!.action, value, asking!.row)}
 		/>
 	{/if}
 {/key}

@@ -1,8 +1,13 @@
 /**
- * Bulk actions on a data table's selected rows: what a table declares (`BulkAction`), what its
- * remote command gets (`BulkTarget`) and answers (`BulkResult`), and the pure rules the action bar
- * (`bulk-action-bar.svelte`) follows: which selected rows an action applies to, and how a result
- * reads.
+ * Bulk actions on a data table's selected rows, and on a single row: what a table declares
+ * (`BulkAction`), what its remote command gets (`BulkTarget`) and answers (`BulkResult`), and the
+ * pure rules the action bar (`bulk-action-bar.svelte`) and a row's menu (`row-actions.svelte`)
+ * follow: which rows an action applies to, which a row's menu offers, and how a result reads.
+ *
+ * One definition serves both: the action bar runs an action on the selection, and a row's menu
+ * runs it on that row alone, with `{ ids: [id] }` as its target. A table's rows get the actions of
+ * its action bar (the core's and its modules') without more code; an action that makes no sense
+ * for one row says `row: false`.
  *
  * Each action's command runs on the server (see `#lib/server/lists/bulk.ts`): it checks every record
  * again, with the same rules as the single-record path, and changes each one in a transaction of
@@ -77,6 +82,8 @@ export interface BulkAction<TData, Where = never> {
 	 * selected ones (default `true`). Actions that check the selection as a whole can't.
 	 */
 	matching?: boolean;
+	/** Whether a row's menu offers it too, for that row alone (default `true`). */
+	row?: boolean;
 	/** Asks before running, e.g. before deleting. */
 	confirm?: { title: (count: number) => string; description: Text };
 	/** A value to choose first, e.g. the engineer to assign, in a dialog. */
@@ -89,7 +96,11 @@ export interface BulkAction<TData, Where = never> {
 	};
 	/** Calls the action's remote command. */
 	run: (target: BulkTarget<Where>, value?: string) => Promise<BulkResult>;
-	/** What it did, e.g. `m.common_bulk_updated` ("3 updated"); updated by default. */
+	/**
+	 * What it did, e.g. `m.common_bulk_updated` ("3 updated"); updated by default. Run on a single
+	 * row, `count` is the row's label instead ("ORD-2026-00012 updated"), so word it to read both
+	 * ways.
+	 */
 	done?: (inputs: { count: string }) => string;
 }
 
@@ -127,6 +138,17 @@ export function applicability<TData>(
 	return { applies, skipped, disabled };
 }
 
+/**
+ * The actions a row's menu offers for `row`: those that don't opt out (`row: false`) and apply to
+ * it. The others are left out rather than shown disabled, as a row has a menu of its own.
+ */
+export function actionsForRow<TData, Where>(
+	actions: BulkAction<TData, Where>[],
+	row: TData,
+): BulkAction<TData, Where>[] {
+	return actions.filter((action) => action.row !== false && !applicability(action, [row]).disabled);
+}
+
 /** How many reasons for skipping a result lists; the rest are counted. */
 const LISTED_SKIPS = 5;
 
@@ -141,12 +163,15 @@ export interface BulkSummary {
 
 /**
  * How a bulk action's result reads, e.g. "7 updated, 2 skipped" with the reasons. `done` says what
- * was done (by default "… updated").
+ * was done (by default "… updated"). Run on a single row, `label`, the row's, says which: "ORD-…
+ * updated", or why it was skipped.
  */
 export function summarizeBulkResult(
 	result: BulkResult,
 	done: (inputs: { count: string }) => string = m.common_bulk_updated,
+	label?: string,
 ): BulkSummary {
+	if (label !== undefined) return summarizeRowResult(result, done, label);
 	const skipped = result.skipped.length;
 	const parts = [
 		result.done || (!skipped && !result.missing) ? done({ count: formatNumber(result.done) }) : "",
@@ -163,4 +188,23 @@ export function summarizeBulkResult(
 	}
 	const tone = !skipped && !result.missing ? "success" : result.done ? "warning" : "error";
 	return { tone, title: parts.join(", "), details };
+}
+
+/** How a result reads for a single row, named by its `label`. */
+function summarizeRowResult(
+	result: BulkResult,
+	done: (inputs: { count: string }) => string,
+	label: string,
+): BulkSummary {
+	const [skip] = result.skipped;
+	if (result.done || (!skip && !result.missing)) {
+		return { tone: "success", title: done({ count: label }), details: [] };
+	}
+	if (skip) {
+		const reason = skip.reason.includes(skip.label)
+			? skip.reason
+			: m.common_bulk_skip_reason({ label: skip.label, reason: skip.reason });
+		return { tone: "error", title: reason, details: [] };
+	}
+	return { tone: "error", title: m.common_bulk_missing({ count: label }), details: [] };
 }
