@@ -43,7 +43,7 @@ const statusIn = (number: string) =>
 		.locator('[data-column-id="status"]');
 /** The status select of the order `number`, showing `label`. */
 const select = (number: string, label: string) =>
-	statusIn(number).getByRole("button", { name: `Status of ${number}: ${label}` });
+	statusIn(number).getByRole("button", { name: `Change status of ${number}: ${label}` });
 
 describe("changing an order's status in the list, in North", () => {
 	let order: { id: number; number: string };
@@ -91,7 +91,7 @@ describe("changing an order's status in the list, in North", () => {
 		// The focus is back on the select, not on a row.
 		expect(
 			await page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? ""),
-		).toBe(`Status of ${order.number}: In progress`);
+		).toBe(`Change status of ${order.number}: In progress`);
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
@@ -112,11 +112,13 @@ describe("changing an order's status in the list, in North", () => {
 		expect(await statusOf(order.id)).toBe("in_progress");
 	});
 
-	test("an invoiced order's status is a plain badge", async () => {
+	test("an invoiced order's status can't be changed, only filtered by", async () => {
 		const invoiced = await orderWith(north.id, "invoiced");
 		await app.go(`/orders?q=${invoiced.number}`);
 		await statusIn(invoiced.number).getByText("Invoiced").waitFor();
-		expect(await statusIn(invoiced.number).getByRole("button").count()).toBe(0);
+		const buttons = statusIn(invoiced.number).getByRole("button");
+		expect(await buttons.count()).toBe(1);
+		expect(await buttons.getAttribute("aria-label")).toBe("Filter by Invoiced");
 	});
 
 	test("a change the server refuses shows why, and the status goes back", async () => {

@@ -69,6 +69,13 @@ export interface DataTableColumnMeta {
 	 * (of the group's first row, which the group's header shows otherwise) wouldn't do.
 	 */
 	groupLabel?: (value: unknown) => string;
+	/**
+	 * Clicking a cell's value toggles it in the column's set filter (see `cell-filter.svelte.ts`);
+	 * this names the value as shown, for "Filter by …", e.g. `(type) => types[type].label`. For a
+	 * column of plain values with a set filter of their own: a column that links to another
+	 * record's page keeps its link instead. A cell without a value (`null`) isn't clickable.
+	 */
+	clickFilter?: (value: string) => string;
 }
 
 /** A column's name as shown: its translated `meta.label`, or its id. */

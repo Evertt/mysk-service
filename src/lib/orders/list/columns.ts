@@ -5,6 +5,7 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import { labelOrValue } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
 import OrderLink from "../ui/order-link.svelte";
@@ -68,7 +69,11 @@ export const columns = column.columns([
 		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
-		meta: { label: m.orders_column_type, filterValues: orderTypes },
+		meta: {
+			label: m.orders_column_type,
+			filterValues: orderTypes,
+			clickFilter: (type) => labelOrValue("orderType", type),
+		},
 	}),
 	column.accessor("status", {
 		cell: ({ getValue, row, column }) =>
@@ -91,7 +96,11 @@ export const columns = column.columns([
 		// By urgency rather than alphabetically.
 		sortFn: (a, b, id) =>
 			orderPriorities.indexOf(a.getValue(id)) - orderPriorities.indexOf(b.getValue(id)),
-		meta: { label: m.orders_column_priority, filterValues: orderPriorities },
+		meta: {
+			label: m.orders_column_priority,
+			filterValues: orderPriorities,
+			clickFilter: (priority) => labelOrValue("orderPriority", priority),
+		},
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",

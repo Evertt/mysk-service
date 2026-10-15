@@ -40,6 +40,9 @@ describe("the bulk actions on a single order, from its row's menu, in North", ()
 
 		await app.go("/orders?status=quote&sort=number");
 		const menu = await openMenu(order.number);
+		// The status is changed right in its cell, not from the menu.
+		await menu.getByRole("menuitem", { name: "Assign engineer" }).waitFor();
+		expect(await menu.getByRole("menuitem", { name: "Change status" }).count()).toBe(0);
 		await menu.getByRole("menuitem", { name: "Assign engineer" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await dialog.getByText(`Assign engineer: ${order.number}`).waitFor();

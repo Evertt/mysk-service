@@ -16,6 +16,9 @@
 	The rows can be navigated with the keyboard (see `row-navigation.svelte.ts`), and are spaced as
 	the chosen density says (see `density.svelte.ts`).
 
+	A column with `meta.clickFilter` shows its cells' values as buttons that filter the table by them
+	(see `cell-filter.svelte.ts`).
+
 	While `loading` (a server-side table fetching rows for another filter, sort or search), the rows
 	shown so far stay, dimmed, under a thin progress bar, and the table is `aria-busy`. Rows that
 	come in above (a table opened partway down, scrolled up) show the bar too.
@@ -34,6 +37,7 @@
 
 	import { columnWidths } from "./column-widths.svelte.ts";
 	import { SELECT_COLUMN } from "./default-pinning.ts";
+	import FilterValue from "./filter-value.svelte";
 	import { groupExpansion } from "./group-expansion.svelte.ts";
 	import GroupRow from "./group-row.svelte";
 	import { groupedPage, groupRowId, type PageGroups } from "./grouping.ts";
@@ -311,6 +315,8 @@
 			{@const pin = pinned(cell.column.id)}
 			<table.AppCell {cell}>
 				{#snippet children(c)}
+					{@const clickFilter = c.column.columnDef.meta?.clickFilter}
+					{@const value = c.getValue()}
 					<Table.Cell
 						data-column-id={c.column.id}
 						data-pinned={pin["data-pinned"]}
@@ -323,7 +329,13 @@
 							pin.class,
 						)}
 					>
-						<c.FlexRender cell={c} />
+						{#if clickFilter && typeof value === "string"}
+							<FilterValue filter={{ value, label: clickFilter(value) }}>
+								<c.FlexRender cell={c} />
+							</FilterValue>
+						{:else}
+							<c.FlexRender cell={c} />
+						{/if}
 					</Table.Cell>
 				{/snippet}
 			</table.AppCell>

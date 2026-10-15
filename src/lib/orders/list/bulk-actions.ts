@@ -55,6 +55,8 @@ export const changeStatus: BulkAction<OrderBulkRow, AnyListWhere> = {
 	label: m.orders_bulk_status,
 	icon: CircleDotIcon,
 	skip: invoiced,
+	// A row's status is changed right in its cell (`status-cell.svelte`).
+	row: false,
 	parameter: {
 		label: m.orders_field_status,
 		title: (count) => m.orders_bulk_status_title({ orders: orders(count) }),

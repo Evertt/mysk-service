@@ -103,6 +103,6 @@
 	"engineers_bulk_deactivate": "Deactivate",
 	"engineers_bulk_already_active": "{name} is active already",
 	"engineers_bulk_already_inactive": "{name} is inactive already",
-	"engineers_status_of": "Status of {name}",
+	"engineers_status_of": "Change status of {name}",
 	"engineers_status_change_failed": "Couldn't change whether {name} is active."
 }

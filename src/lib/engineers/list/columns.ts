@@ -4,6 +4,7 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { labelOrValue } from "#lib/i18n/index.ts";
 import { engineerSpecialties } from "#lib/models.ts";
 
 import { regionLabel } from "../display.ts";
@@ -38,13 +39,17 @@ export const columns = column.columns([
 		filterFn: "oneOf",
 		enableGrouping: true,
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_specialty, filterValues: engineerSpecialties },
+		meta: {
+			label: m.engineers_column_specialty,
+			filterValues: engineerSpecialties,
+			clickFilter: (specialty) => labelOrValue("engineerSpecialty", specialty),
+		},
 	}),
 	column.accessor("region", {
 		cell: ({ getValue }) => regionLabel(getValue()),
 		filterFn: "oneOf",
 		enableGrouping: true,
-		meta: { label: m.engineers_column_region },
+		meta: { label: m.engineers_column_region, clickFilter: regionLabel },
 	}),
 	column.accessor("hourlyRate", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),

@@ -34,7 +34,11 @@ export const columns = column.columns([
 		filterFn: "oneOf",
 		enableGrouping: true,
 		enableGlobalFilter: false,
-		meta: { label: m.materials_unit, filterValues: materialUnits },
+		meta: {
+			label: m.materials_unit,
+			filterValues: materialUnits,
+			clickFilter: (unit) => materialLabels.labelOrValue("materialUnit", unit),
+		},
 	}),
 	column.accessor("unitPrice", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
