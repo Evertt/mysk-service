@@ -14,9 +14,11 @@
 	const theme = useTheme();
 </script>
 
+<!-- Scrolls sideways only: as tall as its table, which can be a fraction of a pixel taller than its
+     rounded height, and would otherwise scroll by that pixel, catching the page's scrolling. -->
 <div
 	data-slot="table-container"
-	class={cn("relative w-full overflow-x-auto", theme.classes("table-container"))}
+	class={cn("relative w-full overflow-x-auto overflow-y-hidden", theme.classes("table-container"))}
 >
 	<table
 		bind:this={ref}

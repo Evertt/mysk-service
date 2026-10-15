@@ -1,6 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
+import {
+	afresh,
+	countIn,
+	fitsWidth,
+	isRemote,
+	onPhone,
+	organizations,
+	rows,
+	useApp,
+	value,
+} from "./app.ts";
 import { shownNumbers } from "./orders-helpers.ts";
 import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 
@@ -62,6 +72,19 @@ describe("in North", () => {
 		);
 		expect(await app.rowCount()).toBe(all.length);
 		await app.go(afresh("/orders"));
+	});
+
+	test("the rows scroll inside the table on a desktop screen; on a phone, the page does", async () => {
+		const container = app.page.locator('[data-slot="data-table"] [data-slot="table-container"]');
+		const overflowY = () => container.evaluate((element) => getComputedStyle(element).overflowY);
+		await app.go(afresh("/orders"));
+		expect(await overflowY()).toBe("auto");
+		await onPhone(app.page, async () => {
+			await app.go(afresh("/orders"));
+			// Sideways only, so it never catches the page's scrolling.
+			expect(await overflowY()).toBe("hidden");
+			expect(await fitsWidth(app.page)).toBe(true);
+		});
 	});
 
 	test("the server sends one page at a time, in the database's order", async () => {

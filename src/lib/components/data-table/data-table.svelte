@@ -115,9 +115,11 @@
 	aria-busy={loading || undefined}
 	class={cn(
 		"group/data-table relative flex min-h-0 flex-col overflow-hidden rounded-lg border [--data-table-surface:var(--background)]",
-		"*:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:overflow-auto",
+		"*:data-[slot=table-container]:min-h-0",
 		compact.area,
-		fillViewport && "desktop:min-h-48",
+		// The rows scroll inside the table only when it fills the viewport; otherwise the table
+		// container scrolls sideways only.
+		fillViewport && "desktop:min-h-48 desktop:*:data-[slot=table-container]:overflow-y-auto",
 		theme.classes("data-table"),
 	)}
 	{@attach overflowTracker}
@@ -218,7 +220,8 @@
 		<!-- The widest cells seen so far (see `column-widths.svelte.ts`): laid out, but not shown. -->
 		<tfoot inert aria-hidden="true" data-slot="data-table-hidden-rows">
 			{#each widths.rows as row, index (index)}
-				<tr class="collapse">
+				<!-- Their cells clip what they hold, which would otherwise hang below the table. -->
+				<tr class="collapse *:overflow-hidden">
 					{#each columns as column (column.id)}
 						{@const hidden = row.get(column.id)}
 						<Table.Cell data-column-id={column.id} class={compact.cell} {@attach hidden?.attach}>
