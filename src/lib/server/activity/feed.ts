@@ -147,7 +147,8 @@ export async function present(rows: Row[]): Promise<ActivityEntry[]> {
 	return rows.map((row) => ({
 		id: row.id,
 		at: row.createdAt,
-		user: row.userName,
+		// The system's changes (the daily jobs) have no user's name.
+		user: row.userName || m.activity_system_user(),
 		action: row.action,
 		subject: link(row.subjectType, row.subjectId, row.subjectLabel),
 		parent:

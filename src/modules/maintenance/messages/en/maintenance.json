@@ -109,5 +109,42 @@
 			}
 		}
 	],
-	"maintenance_contract_all_planned": "Every covered unit has a plan."
+	"maintenance_contract_all_planned": "Every covered unit has a plan.",
+	"maintenance_settings": "Settings",
+	"maintenance_settings_title": "Maintenance settings",
+	"maintenance_settings_description": "Whether the plans that are due become orders by themselves.",
+	"maintenance_settings_managers": "Only owners and admins can change these settings.",
+	"maintenance_settings_saved": "Settings saved",
+	"maintenance_save_settings": "Save settings",
+	"maintenance_activity_subject_settings": "maintenance settings",
+	"maintenance_auto_create": "Create orders automatically",
+	"maintenance_auto_create_description": "Every day, the plans that are due get their orders by themselves, as with “Create orders”. A plan gets no new order while its last one is still open.",
+	"maintenance_lead_days": "Days ahead",
+	"maintenance_lead_days_description": "A plan is due when its next visit is less than this many days away. Overdue plans always are.",
+	"maintenance_lead_days_range": "Between {min} and {max} days",
+	"maintenance_remind_customers": "Email customers",
+	"maintenance_remind_customers_description": "A customer gets an email when an order is created automatically for their unit.",
+	"maintenance_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} day",
+				"countPlural=*": "{countText} days"
+			}
+		}
+	],
+	"maintenance_on": "On",
+	"maintenance_off": "Off",
+	"maintenance_last_run": "Last automatic run",
+	"maintenance_last_run_never": "Not yet",
+	"maintenance_last_run_result": "{when}: {orders} created",
+	"maintenance_reminder_mail_subject": "Maintenance coming up for unit {serial}",
+	"maintenance_reminder_mail_greeting": "Dear {contact},",
+	"maintenance_reminder_mail_body": "{organization} has planned “{description}” for your unit {serial}. We'll contact you to agree on a date.",
+	"maintenance_reminder_mail_reference": "Reference: order {number}"
 }

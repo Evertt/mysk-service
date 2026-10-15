@@ -109,5 +109,42 @@
 			}
 		}
 	],
-	"maintenance_contract_all_planned": "Elk gedekt apparaat heeft een plan."
+	"maintenance_contract_all_planned": "Elk gedekt apparaat heeft een plan.",
+	"maintenance_settings": "Instellingen",
+	"maintenance_settings_title": "Onderhoudsinstellingen",
+	"maintenance_settings_description": "Of de geplande onderhoudsbeurten vanzelf opdrachten worden.",
+	"maintenance_settings_managers": "Alleen eigenaren en beheerders kunnen deze instellingen wijzigen.",
+	"maintenance_settings_saved": "Instellingen opgeslagen",
+	"maintenance_save_settings": "Instellingen opslaan",
+	"maintenance_activity_subject_settings": "onderhoudsinstellingen",
+	"maintenance_auto_create": "Opdrachten automatisch aanmaken",
+	"maintenance_auto_create_description": "Elke dag krijgen de geplande onderhoudsplannen vanzelf hun opdracht, zoals met “Opdrachten aanmaken”. Een plan krijgt geen nieuwe opdracht zolang de vorige nog openstaat.",
+	"maintenance_lead_days": "Dagen vooruit",
+	"maintenance_lead_days_description": "Een plan is gepland als het volgende bezoek minder dan dit aantal dagen weg is. Plannen die te laat zijn altijd.",
+	"maintenance_lead_days_range": "Tussen {min} en {max} dagen",
+	"maintenance_remind_customers": "Klanten mailen",
+	"maintenance_remind_customers_description": "Een klant krijgt een e-mail als er automatisch een opdracht voor hun apparaat is aangemaakt.",
+	"maintenance_days": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} dag",
+				"countPlural=*": "{countText} dagen"
+			}
+		}
+	],
+	"maintenance_on": "Aan",
+	"maintenance_off": "Uit",
+	"maintenance_last_run": "Laatste automatische run",
+	"maintenance_last_run_never": "Nog niet",
+	"maintenance_last_run_result": "{when}: {orders} aangemaakt",
+	"maintenance_reminder_mail_subject": "Onderhoud gepland voor apparaat {serial}",
+	"maintenance_reminder_mail_greeting": "Beste {contact},",
+	"maintenance_reminder_mail_body": "{organization} heeft “{description}” gepland voor je apparaat {serial}. We nemen contact met je op om een datum af te spreken.",
+	"maintenance_reminder_mail_reference": "Referentie: opdracht {number}"
 }

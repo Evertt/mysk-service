@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
+	import SettingsIcon from "@lucide/svelte/icons/settings";
 
 	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
@@ -25,6 +27,13 @@
 	<title>{m.maintenance_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.maintenance_title()} description={m.maintenance_description()} />
+<PageHeader title={m.maintenance_title()} description={m.maintenance_description()}>
+	{#snippet actions()}
+		<Button variant="outline" href={resolve("/(app)/(modules)/maintenance/settings")}>
+			<SettingsIcon data-icon="inline-start" />
+			{m.maintenance_settings()}
+		</Button>
+	{/snippet}
+</PageHeader>
 
 <DueTable plans={await plans} facets={await facets} />

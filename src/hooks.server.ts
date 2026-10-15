@@ -90,14 +90,16 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 };
 
 /**
- * Paths anyone may open: the login page, invitations (`/invite/[id]`), better-auth's endpoints and
- * SvelteKit's own assets.
+ * Paths anyone may open: the login page, invitations (`/invite/[id]`), better-auth's endpoints,
+ * SvelteKit's own assets, and the operations endpoints (`/_ops/daily`), which check a token of
+ * their own instead of a session.
  */
 const isPublic = (pathname: string) =>
 	pathname === "/login" ||
 	pathname.startsWith("/invite/") ||
 	pathname.startsWith("/api/auth/") ||
-	pathname.startsWith("/_app/");
+	pathname.startsWith("/_app/") ||
+	pathname.startsWith("/_ops/");
 
 /** The engineer portal, the only part of the app field engineers use. */
 const isPortal = (pathname: string) => pathname === "/my" || pathname.startsWith("/my/");

@@ -4,7 +4,7 @@
  * equipment list's column filter by. Pure, so client code (filters, badges) can import it.
  */
 import { getTimeZone } from "#lib/dates.ts";
-import type { OrderType } from "#lib/models.ts";
+import type { OrderStatus, OrderType } from "#lib/models.ts";
 
 /** The order types a plan makes: a subset of the orders' own. */
 export const planOrderTypes = ["maintenance", "inspection"] as const satisfies OrderType[];
@@ -67,3 +67,41 @@ export function nextDueBucket(
 /** Whether a plan that's due on `due` is overdue `today`. */
 export const isOverdue = (due: Temporal.PlainDate, today = todayNow()) =>
 	Temporal.PlainDate.compare(due, today) < 0;
+
+// --- Automatic orders (the daily run, `server/automatic.ts`) ---------------------------------
+
+/**
+ * How many days ahead the daily run looks by default: a plan due before today + 30 days gets its
+ * order, as the due list shows it by default (`30-days`).
+ */
+export const defaultLeadDays = 30;
+
+/** The lead time a tenant may set, in days. */
+export const leadDayLimits = { min: 0, max: 90 } as const;
+
+/** Statuses of an order that's done with: its plan may get the next one. */
+export const finishedStatuses: readonly OrderStatus[] = ["completed", "invoiced", "cancelled"];
+
+/** Whether an order with `status` is done with (see `finishedStatuses`). */
+const isFinished = (status: OrderStatus) => finishedStatuses.includes(status);
+
+/** The day before which a plan is due for the daily run: `leadDays` after `today`. */
+export const automaticHorizon = (today: Temporal.PlainDate, leadDays: number) =>
+	today.add({ days: leadDays });
+
+/**
+ * Whether the daily run makes an order for a plan, before `horizon`: it isn't paused, it's due
+ * before the horizon, and the order it made last (if it still has one: a deleted one is cleared) is
+ * done with. That last rule makes the run safe to repeat: the plan moves on when its order is
+ * made, but with a short interval or a long lead time it may still be due; it then gets its next
+ * order once the open one is finished, never a second one beside it. It also keeps the run from
+ * adding to an order someone made by hand with "Create orders".
+ */
+export function dueForAutomaticOrder(
+	plan: { paused: boolean; nextDueOn: Temporal.PlainDate },
+	lastOrderStatus: OrderStatus | null,
+	horizon: Temporal.PlainDate,
+) {
+	if (plan.paused || Temporal.PlainDate.compare(plan.nextDueOn, horizon) >= 0) return false;
+	return lastOrderStatus === null || isFinished(lastOrderStatus);
+}

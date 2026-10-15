@@ -38,6 +38,16 @@ export const variables = defineEnvVars({
 			"Optional, for tests. A file that mail is appended to (one JSON object per line) instead of being sent or logged.",
 		schema: (value) => value || undefined,
 	},
+	CRON_SECRET: {
+		description:
+			"Optional. The token a cron sends (`Authorization: Bearer <token>`) to start the daily jobs at `/_ops/daily`, e.g. Vercel Cron's own. Without it (or `OPS_TOKEN`), nothing can start them.",
+		schema: (value) => value || undefined,
+	},
+	OPS_TOKEN: {
+		description:
+			"Optional. The operations token: on Cloudflare it guards `/_ops/import` and starts the daily jobs (the Cron Trigger, `cloudflare/entry.ts`); `/_ops/daily` takes it as well as `CRON_SECRET`.",
+		schema: (value) => value || undefined,
+	},
 	DEV_REMOTE_DELAY_MS: {
 		description:
 			"Optional, in development only. Milliseconds to hold up each remote function call, to try navigations under a slow server.",

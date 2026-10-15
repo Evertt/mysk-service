@@ -9,6 +9,9 @@ import { formatStoredDay, labelOrValue } from "#lib/i18n/index.ts";
 export const planLabel = (plan: { serialNumber: string; description: string }) =>
 	`${plan.serialNumber} · ${plan.description}`;
 
+/** A setting that's on or off. */
+const onOff = (value: unknown) => (value ? m.maintenance_on() : m.maintenance_off());
+
 /** The unit's serial number in a plan's label. */
 const serialOf = (label: string) => label.split(" · ")[0];
 
@@ -35,6 +38,19 @@ export const maintenanceSubjects: Record<string, SubjectType> = {
 				format: (value) => (value ? m.maintenance_paused() : m.maintenance_active()),
 			},
 			lastOrder: { label: m.maintenance_field_last_order },
+		},
+	},
+	/** The organization's maintenance settings; they have no label, so they read as their noun. */
+	maintenance_settings: {
+		noun: m.maintenance_activity_subject_settings,
+		href: () => resolve("/(app)/(modules)/maintenance/settings"),
+		fields: {
+			autoCreate: { label: m.maintenance_auto_create, format: onOff },
+			leadDays: {
+				label: m.maintenance_lead_days,
+				format: (value) => m.maintenance_days({ count: Number(value) }),
+			},
+			remindCustomers: { label: m.maintenance_remind_customers, format: onOff },
 		},
 	},
 };

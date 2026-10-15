@@ -11,6 +11,9 @@
  * - `POST /_ops/import` (with `Authorization: Bearer <OPS_TOKEN>`) replaces the database's data
  *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
  *   start with the demo data.
+ * - The Cron Trigger (`triggers.crons` in `wrangler.jsonc`) starts the daily jobs: `scheduled()`
+ *   has the object answer `POST /_ops/daily` with the `OPS_TOKEN`, like a request from outside, so
+ *   the jobs run inside it with its database (`runDaily()`, `src/lib/server/jobs/daily.ts`).
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -48,6 +51,28 @@ export class AppDatabase extends DurableObject<Env> {
 		return globalThis.durableRequests!.run({ storage: this.ctx.storage }, () =>
 			kit.fetch(request, this.env, this.ctx),
 		);
+	}
+
+	/**
+	 * Runs the daily jobs (see `scheduled()` below) through the app's own endpoint, as a cron would
+	 * on Node, and answers what they did (as JSON); throws if the app refused or failed.
+	 */
+	async daily(): Promise<string> {
+		const response = await this.fetch(
+			new Request(new URL("/_ops/daily", this.env.ORIGIN), {
+				method: "POST",
+				// JSON, not a form: SvelteKit refuses a cross-site POST without a content type (CSRF).
+				headers: {
+					authorization: `Bearer ${this.env.OPS_TOKEN}`,
+					"content-type": "application/json",
+				},
+				body: "{}",
+			}),
+		);
+		if (!response.ok) {
+			throw new Error(`The daily run failed (${response.status}): ${await response.text()}`);
+		}
+		return response.text();
 	}
 
 	/** Replaces the data of the tables in `data` with its rows, in one transaction. */
@@ -89,10 +114,13 @@ function authorized(request: Request, token: string | undefined) {
 	return given.byteLength === wanted.byteLength && crypto.subtle.timingSafeEqual(given, wanted);
 }
 
+/** The app's one object, kept in western Europe, near its users. */
+const appDatabase = (env: Env) =>
+	env.APP_DATABASE.get(env.APP_DATABASE.idFromName("app"), { locationHint: "weur" });
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
-		// One object for the app, kept in western Europe, near its users.
-		const app = env.APP_DATABASE.get(env.APP_DATABASE.idFromName("app"), { locationHint: "weur" });
+		const app = appDatabase(env);
 
 		if (new URL(request.url).pathname === "/_ops/import") {
 			if (request.method !== "POST") return new Response(null, { status: 405 });
@@ -100,5 +128,14 @@ export default {
 			return Response.json(await app.import(await request.json()));
 		}
 		return app.fetch(request);
+	},
+
+	/** The Cron Trigger: the daily jobs, in the object (see `AppDatabase.daily()`). */
+	async scheduled(_controller, env, ctx) {
+		ctx.waitUntil(
+			appDatabase(env)
+				.daily()
+				.then((report) => console.info("The daily run:", report)),
+		);
 	},
 } satisfies ExportedHandler<Env>;

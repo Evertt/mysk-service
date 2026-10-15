@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { advanceDueDate, dueBefore, isOverdue, nextDueBucket } from "#modules/maintenance/model.ts";
+import {
+	advanceDueDate,
+	automaticHorizon,
+	dueBefore,
+	dueForAutomaticOrder,
+	isOverdue,
+	nextDueBucket,
+} from "#modules/maintenance/model.ts";
 
 const day = (year: number, month: number, date: number) =>
 	Temporal.PlainDate.from({ year, month, day: date });
@@ -49,5 +56,33 @@ describe("due ranges", () => {
 		expect(nextDueBucket(day(2026, 10, 11), now)).toBe("soon");
 		expect(nextDueBucket(day(2026, 11, 9), now)).toBe("soon");
 		expect(nextDueBucket(day(2026, 11, 10), now)).toBe("later");
+	});
+});
+
+describe("dueForAutomaticOrder", () => {
+	const today = day(2026, 10, 11);
+	const horizon = automaticHorizon(today, 30);
+	const plan = (due: Temporal.PlainDate, paused = false) => ({ nextDueOn: due, paused });
+
+	test("the horizon is the lead time from today", () => {
+		expect(horizon).toEqual(day(2026, 11, 10));
+		expect(automaticHorizon(today, 0)).toEqual(today);
+	});
+
+	test("takes active plans due before the horizon, overdue ones included", () => {
+		expect(dueForAutomaticOrder(plan(day(2026, 1, 1)), null, horizon)).toBe(true);
+		expect(dueForAutomaticOrder(plan(day(2026, 11, 9)), null, horizon)).toBe(true);
+		expect(dueForAutomaticOrder(plan(day(2026, 11, 10)), null, horizon)).toBe(false);
+		expect(dueForAutomaticOrder(plan(day(2026, 10, 1), true), null, horizon)).toBe(false);
+	});
+
+	test("never makes a second order while the last one is open", () => {
+		const due = plan(day(2026, 10, 1));
+		for (const status of ["quote", "scheduled", "in_progress"] as const) {
+			expect(dueForAutomaticOrder(due, status, horizon)).toBe(false);
+		}
+		for (const status of ["completed", "invoiced", "cancelled"] as const) {
+			expect(dueForAutomaticOrder(due, status, horizon)).toBe(true);
+		}
 	});
 });

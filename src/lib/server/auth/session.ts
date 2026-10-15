@@ -10,6 +10,8 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 
+import { systemTenant, systemUser } from "./system.ts";
+
 /** The organization a request works in, with the signed-in user's role there. */
 export interface Tenant {
 	organizationId: string;
@@ -63,6 +65,8 @@ export async function loadTenant(
  * /login in `hooks.server.ts` only guards page requests, not remote function calls.
  */
 export function requireUser() {
+	// The daily jobs, as the system (see `asSystem()`).
+	if (systemTenant()) return systemUser;
 	const { user } = getRequestEvent().locals;
 	if (!user) error(401, m.common_error_not_signed_in());
 	return user;
@@ -74,6 +78,8 @@ export function requireUser() {
  * are gated by `forMembers` or `forEngineers` (`#lib/server/remote-functions.ts`) instead.
  */
 export function requireTenant() {
+	const system = systemTenant();
+	if (system) return { user: systemUser, ...system };
 	const user = requireUser();
 	const { tenant } = getRequestEvent().locals;
 	if (!tenant) error(403, m.common_error_no_organization());

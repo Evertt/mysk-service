@@ -2,7 +2,8 @@
  * Turning a due plan into an order: the order comes from the core's `createOrders()` (which checks,
  * numbers and logs it), and the plan moves on one interval from its previous due date (not from
  * today, so a late visit doesn't shift the rhythm), on its day of the month, remembering the order
- * as its last one.
+ * as its last one. "Create orders" on the due list and the daily run (`automatic.ts`) both do it
+ * here, so their orders are made, numbered and logged alike.
  */
 import { error, invalid } from "@sveltejs/kit";
 
@@ -13,16 +14,30 @@ import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
 import { planLabel } from "../activity.ts";
-import { advanceDueDate } from "../model.ts";
+import { advanceDueDate, dueForAutomaticOrder } from "../model.ts";
 import { maintenancePlan } from "./schema.ts";
+
+/** The order a plan made: its number, and the unit and customer it's for. */
+export interface PlanOrder {
+	number: string;
+	description: string;
+	unit: { id: number; serialNumber: string; customerId: number };
+}
 
 /**
  * Makes the order for the tenant's plan `id` and moves the plan on, in one transaction: a quote of
  * normal priority for the plan's unit and its customer, with the plan's type and description, as a
  * new order from the order form without a date. Refuses a paused plan (`invalid()`); a plan that
- * isn't the tenant's is a 404. Returns the order's number.
+ * isn't the tenant's is a 404.
+ *
+ * With `automatic` (the daily run), it first checks again, in the transaction, that the plan is
+ * still due for an automatic order before that horizon (`dueForAutomaticOrder()`), and makes
+ * nothing (`null`) if it isn't: so two runs at once can't both make it, as transactions take turns.
  */
-export function orderPlan(id: number) {
+export function orderPlan(
+	id: number,
+	automatic?: { horizon: Temporal.PlainDate },
+): Promise<PlanOrder | null> {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
 		const [found] = await tx
@@ -34,6 +49,7 @@ export function orderPlan(id: number) {
 					customerId: equipment.customerId,
 				},
 				lastOrder: order.number,
+				lastOrderStatus: order.status,
 			})
 			.from(maintenancePlan)
 			.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
@@ -41,6 +57,9 @@ export function orderPlan(id: number) {
 			.where(idInTenant(maintenancePlan, id));
 		if (!found) error(404, m.maintenance_plan_not_found());
 		const { plan, unit } = found;
+		if (automatic && !dueForAutomaticOrder(plan, found.lastOrderStatus, automatic.horizon)) {
+			return null;
+		}
 		const label = planLabel({ serialNumber: unit.serialNumber, description: plan.description });
 		if (plan.paused) invalid(m.maintenance_plan_paused({ label }));
 
@@ -64,6 +83,6 @@ export function orderPlan(id: number) {
 			before: { nextDueOn: plan.nextDueOn, lastOrder: found.lastOrder },
 			after: { nextDueOn, lastOrder: created.number },
 		});
-		return created.number;
+		return { number: created.number, description: plan.description, unit };
 	});
 }

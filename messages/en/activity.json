@@ -5,6 +5,7 @@
 	"activity_log": "Activity log",
 	"activity_none": "No activity",
 	"activity_none_description": "Nothing has changed yet.",
+	"activity_system_user": "Fieldworks (automatic)",
 	"activity_filter_label": "Filter activity",
 	"activity_filter_type": "Record type",
 	"activity_filter_all_types": "All types",

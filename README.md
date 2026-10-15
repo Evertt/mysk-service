@@ -145,6 +145,8 @@ Environment variables (see `.env.example` and `src/env.ts`):
 | `BETTER_AUTH_SECRET`  | yes      | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`               |
 | `SMTP_URL`            | no       | Sends mail, e.g. `smtps://user:password@smtp.example.com:465`; otherwise it's logged     |
 | `MAIL_FROM`           | no       | The sender, e.g. `Fieldworks <noreply@example.com>`                                      |
+| `CRON_SECRET`         | no       | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself         |
+| `OPS_TOKEN`           | no       | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                  |
 
 The server assumes it's reached over HTTPS, from a reverse proxy that terminates TLS and passes on
 the `Host` header (form submissions from any other origin are refused). If the proxy sets
@@ -170,6 +172,25 @@ Back up the database file (and its `-wal` file, if any) like any other data. Don
 `pnpm db:seed` or `db:reset` against it: the seed deletes every organization and its data, and puts
 demo data and demo users in their place.
 
+### Daily jobs
+
+Once a day the app does some work by itself, organization by organization: for now, the
+maintenance module turns the plans that are due into orders, for organizations that switched that
+on (Maintenance plans → Settings). A cron starts it with `POST /_ops/daily` (or `GET`, as Vercel
+Cron sends), with `Authorization: Bearer <CRON_SECRET or OPS_TOKEN>`; running it more than once a
+day does no harm. Without either variable set, nothing can start it.
+
+- **Vercel**: `vercel.json` schedules it at 04:00 UTC; set `CRON_SECRET` in the project's
+  environment variables, and Vercel Cron sends it.
+- **A server of your own**: a crontab line such as
+  `0 4 * * * cd /srv/fieldworks && pnpm jobs:daily` (it posts to `ORIGIN` with the token from
+  `.env`).
+- **Cloudflare**: the Worker's Cron Trigger (`triggers.crons` in `wrangler.jsonc`) starts it inside
+  the Durable Object, with `OPS_TOKEN`.
+
+The run's day is the server's (UTC on Vercel and Cloudflare), and its mail (customer reminders) is
+in English: the cron's request has no user's time zone or language.
+
 ### On Cloudflare
 
 The app also runs on Cloudflare Workers, with its database in a
@@ -182,7 +203,7 @@ migrates its database itself when it starts (`cloudflare/migrations/`).
 ```sh
 pnpm exec wrangler login                    # once
 pnpm exec wrangler secret put BETTER_AUTH_SECRET
-pnpm exec wrangler secret put OPS_TOKEN      # allows importing data, see below
+pnpm exec wrangler secret put OPS_TOKEN      # allows importing data (see below) and the daily jobs
 pnpm deploy:cloudflare                      # builds with ADAPTER=cloudflare and deploys
 ```
 

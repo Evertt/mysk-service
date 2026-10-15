@@ -9,10 +9,10 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, day, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
-import { planOrderTypes } from "../model.ts";
+import { defaultLeadDays, planOrderTypes } from "../model.ts";
 
 // This table references the core's, never the other way round.
 
@@ -72,6 +72,24 @@ export const maintenancePlan = sqliteTable(
 		),
 	],
 );
+
+/**
+ * The organization's maintenance settings: whether the daily run turns its due plans into orders
+ * by itself (`runDueMaintenance()`), how far ahead, and whether it tells the customers. Made with
+ * the defaults when first read (`settingsOf()`).
+ */
+export const maintenanceSettings = sqliteTable("maintenance_settings", {
+	organizationId: organizationId().primaryKey(),
+	/** Whether the daily run makes the orders of the plans that are due. */
+	autoCreate: integer("auto_create", { mode: "boolean" }).notNull().default(false),
+	/** A plan is due when its next visit is less than this many days away (overdue ones too). */
+	leadDays: integer("lead_days").notNull().default(defaultLeadDays),
+	/** Whether a customer gets an email when the daily run makes an order for their unit. */
+	remindCustomers: integer("remind_customers", { mode: "boolean" }).notNull().default(false),
+	/** When the daily run last looked at the plans, and how many orders it made then. */
+	lastRunAt: moment("last_run_at"),
+	lastRunOrders: integer("last_run_orders"),
+});
 
 export const maintenancePlanRelations = relations(maintenancePlan, ({ one }) => ({
 	equipment: one(equipment, {

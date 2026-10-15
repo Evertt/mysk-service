@@ -37,6 +37,9 @@ declare module "vitest" {
 
 const dev = !!process.env.E2E_DEV;
 
+/** The token the servers take to start the daily jobs (`CRON_SECRET`, see `jobs.ts`). */
+export const cronSecret = "e2e-cron-secret";
+
 /**
  * The process groups of the servers that may still be running. Each is a `vp` process and the
  * Vite process it starts, which outlives `vp` (a SIGTERM ends `vp` at once, while Vite closes).
@@ -87,6 +90,7 @@ async function startServer(databaseURL: string, outbox: string) {
 				DATABASE_URL: databaseURL,
 				ORIGIN: baseURL,
 				MAIL_OUTBOX: outbox,
+				CRON_SECRET: cronSecret,
 			},
 			stdio: ["ignore", "pipe", "pipe"],
 			detached: true,

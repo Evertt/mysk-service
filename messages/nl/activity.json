@@ -5,6 +5,7 @@
 	"activity_log": "Activiteitenlog",
 	"activity_none": "Geen activiteit",
 	"activity_none_description": "Er is nog niets gewijzigd.",
+	"activity_system_user": "Fieldworks (automatisch)",
 	"activity_filter_label": "Activiteit filteren",
 	"activity_filter_type": "Soort gegeven",
 	"activity_filter_all_types": "Alle soorten",

@@ -35,6 +35,17 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   that refuses (e.g. a shortage of stock; its problems are Standard Schema issues, `{ message,
 path? }` from the form's root, which the form passes to `invalid()` as they are); the caller
   shows them on the form's fields or as a message.
+- **Daily jobs** (`jobs.daily`, a `skip` collector in `src/lib/jobs/extensions.ts`): what a
+  module does by itself once a day. `runDaily()` (`src/lib/server/jobs/daily.ts`) asks each
+  organization's modules that are on, one organization after another, inside one request to
+  `/_ops/daily` (a cron's, with `CRON_SECRET` or `OPS_TOKEN`; on Cloudflare the Worker's Cron
+  Trigger, `scheduled()` in `cloudflare/entry.ts`, makes it inside the Durable Object). Each runs as
+  the system (`asSystem(tenant, work)`, `src/lib/server/auth/system.ts`): `requireTenant()`,
+  `inTenant()`, `currentTenant()`, `collect()`, `createOrders()` and `recordActivity()` work as in
+  a member's request, and the log stores no user (shown as "Fieldworks (automatic)"). A job must be
+  safe to repeat, makes its changes in transactions of its own, keeps mail out of them, and
+  answers counts for the run's report (`{ "maintenance.orders": 3 }`). Maintenance's
+  `server/automatic.ts` is the example.
 - **Form slots** (`defineFormSlot()`, e.g. the order form's `orders.form`) take a module's inputs
   into a core form. The module gives, besides its components at `slots/<point id>/`, the valibot
   object schema of its part as the default export of `form-parts/<point id>.ts`; the generator

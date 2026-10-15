@@ -17,11 +17,13 @@
  *
  * The tenant and the user come from the request (`requireTenant()`, so the engineer portal's
  * changes are logged too), unless given as `by` (e.g. accepting an invitation, which is done in
- * the invitation's organization rather than the current one). How entries read (the
+ * the invitation's organization rather than the current one). A change the system made by itself
+ * (`asSystem()`, e.g. the daily jobs) is logged without a user and an empty `userName`, which the
+ * log shows as the system's (`m.activity_system_user()`). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
 import type { ActivityAction } from "#lib/models.ts";
-import { requireTenant } from "#lib/server/auth/index.ts";
+import { isSystemUser, requireTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity, type ActivityChanges } from "#lib/server/db/schema.ts";
@@ -107,6 +109,8 @@ export async function recordActivity(
 	by: Actor = requireTenant(),
 ) {
 	const { organizationId, user } = by;
+	// The system is no row of the user table: it's logged as no user, and shown as itself.
+	const system = isSystemUser(user);
 	const { action, subject, parent, before, after, note } = record;
 	let changes: ActivityChanges | null = null;
 	if (before && after) {
@@ -115,8 +119,8 @@ export async function recordActivity(
 	}
 	await tx.insert(activity).values({
 		organizationId,
-		userId: user.id,
-		userName: user.name,
+		userId: system ? null : user.id,
+		userName: system ? "" : user.name,
 		action,
 		subjectType: subject.type,
 		subjectId: String(subject.id),
@@ -129,7 +133,8 @@ export async function recordActivity(
 	});
 	// Live queries showing records of this type (or its parent's), or this record (or its parent),
 	// look again once it's committed.
-	const made = { action, user: { id: user.id, name: user.name } };
+	const name = system ? m.activity_system_user() : user.name;
+	const made = { action, user: { id: user.id, name } };
 	afterCommit(() => {
 		announceChange(organizationId, subject.type, { ...made, id: String(subject.id) });
 		if (parent) announceChange(organizationId, parent.type, { ...made, id: String(parent.id) });

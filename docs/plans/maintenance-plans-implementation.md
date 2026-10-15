@@ -304,5 +304,78 @@ business table dumped the same way: the only differences are North's `maintenanc
 - A way for the generator to check that a column's two halves describe the same columns (it checks
   that both files exist; the server finds a column's definition through its SQL's import, the
   client through the definition file, and a mismatch is a 400 at runtime).
-- From the spec's "not in this version": automatic order creation, running-hour intervals,
-  checklists, templates, reminders, planning the created orders.
+- From the spec's "not in this version": running-hour intervals, checklists, templates, planning
+  the created orders. (Automatic order creation and customer reminders came later: below.)
+
+## Automatic orders (October 2026)
+
+"Create orders" needed someone to remember it. Now a tenant can have the plans that are due become
+orders by themselves, once a day.
+
+- **The setting**: `maintenance_settings` (one row per organization, made with the defaults when
+  first read, `server/settings.ts`; migration `drizzle/0009_add-maintenance-settings.sql` and
+  `cloudflare/migrations/0001_add-maintenance-settings.sql`): `auto_create` (off by default),
+  `lead_days` (30 by default, 0–90: a plan is due when its next visit is less than that many days
+  away, overdue ones included; the due list's default range), `remind_customers` (off), and when
+  the run last made orders and how many. The page is `/maintenance/settings` (a Settings button on
+  the due list); every member can read it, only managers save it
+  (`moduleRemote("maintenance", "manager")`), logged as `maintenance_settings` `updated`.
+- **The job**: `runDueMaintenance({ today })` (`server/automatic.ts`), contributed to core's
+  `jobs.daily` in `server/index.ts`. For each plan that `dueForAutomaticOrder()` (`model.ts`)
+  takes, it calls `orderPlan(id, { horizon })` (`server/orders.ts`), the same function as the bulk
+  action, so the order is made by `createOrders()` and the plan moves on and is logged alike. Each
+  plan in a transaction of its own; one that fails is logged and the others go on.
+- **Idempotent**: a plan gets an automatic order only if it's active, due before today + the lead
+  time, and its last order (if it still has one) is finished (completed, invoiced or cancelled).
+  The plan moves on one interval when it gets its order, but with a short interval or a long lead
+  time it may still be due: then it waits until the open order is done, never getting a second one
+  beside it. `orderPlan()` checks it again inside its transaction, so two runs at once (or the
+  run and someone pressing "Create orders") can't both make it: transactions take turns. The same
+  rule keeps the run from adding to an order made by hand that's still open.
+- **Who did it**: no one is signed in. `asSystem(tenant, work)` (`src/lib/server/auth/system.ts`,
+  an AsyncLocalStorage) makes `requireTenant()` answer with the organization and a system user
+  (`id: "system"`, no `user` row); `recordActivity()` stores such an entry with no user and an empty
+  name, and the log shows it as "Fieldworks (automatic)" (`m.activity_system_user()`).
+- **Reminders**: with `remind_customers` on, each order's customer (`customer.email`) gets a short
+  email after the orders are made, outside their transactions (`sendMail()`; one that fails is
+  logged). In the run's language, English, as a cron's request has none; a per-organization
+  language would fix that.
+
+### Scheduling
+
+One entry point for both targets, always inside a request, since the database (on Cloudflare) and
+the request helpers (`getRequestEvent()`, the locale, the time zone) live there:
+
+- **Core**, not the module, owns the trigger: an extension point `jobs.daily`
+  (`src/lib/jobs/extensions.ts`, a `skip` collector: awaited, a failing module is logged and left
+  out, and each answers counts for the report), `runDaily(today)` (`src/lib/server/jobs/daily.ts`)
+  which goes through every organization and asks its modules that are on as the system, and the
+  endpoint `GET|POST /_ops/daily` (`src/routes/_ops/daily/+server.ts`, past the login guard like
+  `/_app/`; a bearer token, `CRON_SECRET` or `OPS_TOKEN`, compared in constant time). Core never
+  imports the module; a second module's daily work is one `contribute(daily, …)`. A route of the
+  module's own wouldn't do: its stubs guard every handler with the tenant's module, and a cron has
+  no tenant.
+- **Node**: Vercel Cron (`vercel.json`, 04:00 UTC, sends `CRON_SECRET` with a `GET`), or
+  `pnpm jobs:daily` (`scripts/daily.ts`) from a crontab. A `POST` carries a JSON body: SvelteKit
+  refuses a cross-site POST without a content type (its CSRF check).
+- **Cloudflare**: a Cron Trigger (`triggers.crons` in `wrangler.jsonc`, 04:00 UTC); the Worker's
+  `scheduled()` calls `AppDatabase.daily()`, which has the object answer `POST /_ops/daily` with
+  the `OPS_TOKEN` through `kit.fetch`, as any request, so the jobs run in the object with its
+  database. A Durable Object alarm would also work, but would need rescheduling itself and a way
+  in for the first one; the Cron Trigger is configuration only.
+- The run's "today" is the server's time zone (UTC on Vercel and Cloudflare). With a lead time in
+  days that's harmless.
+
+Tests: `tests/unit/server/automatic.spec.ts` (a migrated temporary database: lead time, paused
+plans, once only, the next order after the last is finished, logged without a user, reminders,
+tenant), `model.spec.ts` (`dueForAutomaticOrder`), core's
+`src/tests/unit/lib/server/jobs/daily.spec.ts` (each organization's modules that are on, as the
+system, a failing job left out, the token), and `tests/e2e/maintenance.automatic.test.ts` (the
+token, off at first, a manager turns it on, one run makes the due plans' orders and a second none,
+South gets none, the log, reminders by mail, off again, a planner can't change it). The e2e servers
+get a `CRON_SECRET` (`src/tests/e2e/global-setup.ts`), and `runDailyJobs()` (`#e2e/app.ts`) starts
+the run.
+
+Open: a per-organization language and time zone for the run (and its mail); a Durable Object
+alarm if Cron Triggers ever fall short; reminders when someone presses "Create orders" (only the
+automatic run sends them now).
