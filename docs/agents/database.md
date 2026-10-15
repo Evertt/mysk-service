@@ -42,7 +42,9 @@ every request inside one Durable Object, `AppDatabase`, whose SQLite is the app'
   `wrangler.jsonc`).
 - What changed, for live queries: `recordActivity()` announces each change after its commit
   (`announceChange()`, `src/lib/server/changes.ts`), and a `query.live` watches the subject types it
-  shows (`watchChanges()`; the schedule's `watchSchedule` is the example). In memory: on Cloudflare
+  shows (`watchChanges()`; the schedule's `watchSchedule` is the example) or one record
+  (`watchSubject()`, which says who changed it; `<ChangedElsewhere>` on an order's and a customer's
+  pages, through `watchRecordChanges`). In memory: on Cloudflare
   one object serves every request; on Node, one process.
 
 ## Activity log

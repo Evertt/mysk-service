@@ -63,8 +63,8 @@ Details and the shared server helpers: `docs/agents/tenancy.md`.
 
 Every mutation calls `recordActivity(tx, { action, subject, before, after })` inside the
 `db.transaction` that makes it, after the change, so a rolled-back change logs nothing. The log also
-announces the change to live queries (`watchChanges()` in `src/lib/server/changes.ts`; the
-schedule's `watchSchedule` is the example). Keep outside I/O (mail, `fetch`) out of transactions:
+announces the change to live queries (`watchChanges()` and `watchSubject()` in `src/lib/server/changes.ts`;
+`watchSchedule` and `<ChangedElsewhere>` are the examples). Keep outside I/O (mail, `fetch`) out of transactions:
 on Cloudflare a transaction holds every other request.
 
 A statement binds at most 100 values: pass lists with `inList()`/`notInList()` and insert rows with
