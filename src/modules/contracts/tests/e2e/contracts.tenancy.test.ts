@@ -107,16 +107,22 @@ describe("in South, which doesn't have the module", () => {
 	test("a contracts form left open in North is refused after switching to South elsewhere", async () => {
 		const { page } = app;
 		// Navigate client-side, so the pages load their data through remote queries.
-		const record = (request: { url(): string; method(): string }) => {
+		const record = (request: {
+			url(): string;
+			method(): string;
+			headers(): Record<string, string>;
+		}) => {
 			// Not the toolbar's saved views, the table's memory or the slots' module list: core
-			// queries, which answer with South's own.
+			// queries, which answer with South's own. Nor live queries (the dashboard's activity),
+			// whose stream doesn't end.
 			const url = request.url();
 			if (
 				url.includes("/_app/remote/") &&
 				!url.includes("/getTableViews") &&
 				!url.includes("/getTableMemory") &&
 				!url.includes("/getTenantModules") &&
-				request.method() === "GET"
+				request.method() === "GET" &&
+				request.headers().accept !== "text/event-stream"
 			) {
 				queries.push(url);
 			}
