@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { getRecentActivity } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { cards, stats } from "#lib/dashboard/extensions.ts";
@@ -17,6 +19,12 @@
 
 	const data = $derived(await getDashboard());
 	const charts = $derived(await getCharts());
+
+	// Live: when anyone changes something, the numbers, charts and recent activity are asked for
+	// again (once for a burst of changes). The modules' stat cards look after their own.
+	refreshOnActivity(() =>
+		Promise.all([getDashboard().refresh(), getCharts().refresh(), getRecentActivity().refresh()]),
+	);
 </script>
 
 <svelte:head>

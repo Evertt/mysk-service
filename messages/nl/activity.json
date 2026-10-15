@@ -20,6 +20,21 @@
 	"activity_nothing_matches": "Niets voldoet aan deze filters. Probeer een ruimere periode.",
 	"activity_newest": "Nieuwste",
 	"activity_older": "Ouder",
+	"activity_new_entries": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} nieuwe wijziging",
+				"countPlural=*": "{countText} nieuwe wijzigingen"
+			}
+		}
+	],
+	"activity_show_new": "Nieuwe tonen",
 	"activity_card_description": "De laatste wijzigingen, nieuwste eerst.",
 	"activity_card_view_all": "Alles bekijken",
 	"activity_card_empty": "Hier is nog niets gewijzigd.",

@@ -20,6 +20,21 @@
 	"activity_nothing_matches": "Nothing matches these filters. Try a wider date range.",
 	"activity_newest": "Newest",
 	"activity_older": "Older",
+	"activity_new_entries": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} new entry",
+				"countPlural=*": "{countText} new entries"
+			}
+		}
+	],
+	"activity_show_new": "Show new",
 	"activity_card_description": "The latest changes, newest first.",
 	"activity_card_view_all": "View all",
 	"activity_card_empty": "No changes have been made here yet.",
