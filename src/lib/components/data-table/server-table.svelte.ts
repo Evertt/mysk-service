@@ -1,17 +1,22 @@
-import { navigating, page } from "$app/state";
 /**
  * The client side of a server-side table (see `#lib/server/lists/plan.ts`): the page reads the
- * table's state from the URL into the list's query (`toListQuery()` in `list-definition.ts`) and
- * asks its remote queries for that page of rows (the query) and its filters' counts (its
- * `whereOf()`), so the URL (which the table keeps in sync, debouncing the search) decides what's
- * fetched. The table itself (`createAppTable` with `serverSide`) shows the rows as they come, and
- * `isStale()` and `serverTableLoading()` tell whether they are the table's.
+ * table's state from the URL into the list's query (`urlListQuery()`) and asks its remote queries
+ * for the first page of rows (the query) and its filters' counts (its `whereOf()`), so the URL
+ * (which the table keeps in sync, debouncing the search) decides what's fetched. The table loads
+ * the pages after it as it's scrolled (`scrollPages()`), and shows the rows as they come
+ * (`createAppTable` with `serverSide`); `isStale()` and `serverTableLoading()` tell whether they
+ * are the table's.
  */
+import type { RemoteQuery } from "$app/server";
+import { navigating, page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
+import { untrack } from "svelte";
 
 import type { Features } from "./features.ts";
-import { type List, queryKey, toListQuery } from "./list-definition.ts";
-import { parseTableUrl, type TableUrlSpec } from "./url-state.ts";
+import type { PageGroups } from "./grouping.ts";
+import { type List, type ListQuery, queryKey, startingAt, toListQuery } from "./list-definition.ts";
+import type { ScrollWindow } from "./scroll-window.svelte.ts";
+import { parseTablePosition, parseTableUrl, type TableUrlSpec } from "./url-state.ts";
 
 /**
  * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names
@@ -33,14 +38,13 @@ export function urlGrammar(spec: TableUrlSpec) {
 				none: Boolean(column.none),
 			})),
 		defaults: parseTableUrl(new URLSearchParams(), spec),
-		pageSizes: spec.pageSizes,
 	};
 }
 
 /**
  * Whether the rows a server-side table shows are for another state than the table's: its search,
- * filters, sorting or page changed, and the rows for them haven't come yet. `key` is the one the
- * rows' query answered with (`queryKey(input)`).
+ * filters, sorting or grouping changed, and the rows for them haven't come yet. `key` is the one
+ * of the rows' first page (`ScrollPages.key`).
  */
 function isStale<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
@@ -51,7 +55,6 @@ function isStale<TData extends RowData>(
 		globalFilter: table.atoms.globalFilter.get() ?? "",
 		sorting: table.atoms.sorting.get(),
 		columnFilters: table.atoms.columnFilters.get(),
-		pagination: table.atoms.pagination.get(),
 		grouping: table.atoms.grouping.get(),
 	};
 	return queryKey(toListQuery(list, state)) !== key;
@@ -59,9 +62,9 @@ function isStale<TData extends RowData>(
 
 /**
  * Whether a server-side table is waiting for rows (pass to `<table.Table {loading}>`): from when
- * its search, filters, sorting or page change until the rows for them are in, and while a change
- * to the URL (e.g. going back) waits for them, which only then reaches the table. `key` is the one
- * the rows came with. Call it while the component initializes.
+ * its search, filters, sorting or grouping change until the rows for them are in, and while a
+ * change to the URL (e.g. going back) waits for them, which only then reaches the table. `key` is
+ * the one the rows came with (`ScrollPages.key`). Call it while the component initializes.
  *
  * It compares the rows' key with what the table and a navigation under way ask for, rather than
  * counting pending work with `$effect.pending()`: Svelte (5.57) keeps whatever reads that alive
@@ -105,4 +108,207 @@ export interface RecordOptions {
 	selected: RecordOption[];
 	/** Whether more match than `options` has. */
 	more: boolean;
+}
+
+/**
+ * The query for a server-side list's rows, as the page's URL says (`list` may be one the tenant's
+ * modules extended): the first page to show, the one with the row the URL says the table was
+ * scrolled to (`?row=`, see `parseTablePosition`). Only a change of the search, filters, sorting or
+ * grouping makes another query: the position, which the table keeps in the URL while it's
+ * scrolled, is read when they change (or the page opens), not as it changes. Call it while the
+ * page initializes, and ask for the rows with `current`.
+ */
+export function urlListQuery<C>(list: () => List<C>) {
+	const base = $derived(toListQuery(list(), parseTableUrl(page.url.searchParams, list().urlSpec)));
+	const key = $derived(queryKey(base));
+	const query = $derived.by(() => {
+		void key;
+		return untrack(() =>
+			startingAt(base, parseTablePosition(page.url.searchParams, list().urlSpec)),
+		);
+	});
+	return {
+		get current() {
+			return query;
+		},
+	};
+}
+
+/** What a server-side list's rows query answers for a page (e.g. `getOrders()`). */
+export interface ListPage<Row, Query> {
+	rows: Row[];
+	/** How many rows match in all. */
+	rowCount: number;
+	/** The query the rows are for. */
+	query: Query;
+	/** The same as a string (`queryKey`). */
+	key: string;
+	/** When grouped, what the server knows of the page's groups. */
+	groups?: PageGroups<Row>;
+}
+
+/** A server-side table's rows as it's scrolled: see `scrollPages`. */
+export interface ScrollPages<Row, Query> extends ScrollWindow {
+	/** The rows of the pages loaded, in order. */
+	readonly rows: Row[];
+	/** How many rows match in all. */
+	readonly rowCount: number;
+	/** What the server knows of the loaded rows' groups, when grouped. */
+	readonly groups: PageGroups<Row> | undefined;
+	/** The query of the page a row was loaded with (e.g. to update it optimistically). */
+	queryOf(id: unknown): Query;
+}
+
+/**
+ * The rows of a server-side table, page after page as it's scrolled (pass it to `createAppTable`
+ * as `scroll`, and its `rows` as the data): `first` is the page the page asked for and awaited
+ * (`urlListQuery()`), and `fetch` the rows' remote query, which it asks for the pages after it
+ * when the table nears its end, and for those before it when the table opened partway down and
+ * nears its start. Call it while the component initializes.
+ *
+ * The pages are offsets into the list (`ListQuery.pageIndex`), each its own cached query, so a
+ * mutation's `updates(getOrders)` refreshes each loaded page in place: no row the reader loaded
+ * goes, and nothing moves. A row that moves from one page to the next between two loads (a row
+ * added or removed before it) shows once.
+ */
+export function scrollPages<Page extends ListPage<{ id: unknown }, ListQuery<any>>>({
+	first,
+	fetch,
+}: {
+	first: () => Page;
+	fetch: (query: Page["query"]) => RemoteQuery<Page>;
+}): ScrollPages<Page["rows"][number], Page["query"]> {
+	type Row = Page["rows"][number];
+	type Query = Page["query"];
+	/** The first page's query on page 0: what the rows are for, whatever page they start at. */
+	const key = $derived(queryKey(startingAt(first().query, 0)));
+	const startPage = $derived(first().query.pageIndex);
+	const pageSize = $derived(first().query.pageSize);
+
+	/**
+	 * How many pages are asked for before and after the first: none for other rows (or another
+	 * first page), even those of a key seen before (going back to them starts over too).
+	 */
+	let span = $derived({ key, start: startPage, before: 0, after: 0 });
+
+	// The pages' queries, kept while they're the table's (SvelteKit keeps a query as long as it's
+	// referenced), by their index.
+	let cached = { key: "", queries: new Map<number, RemoteQuery<Page>>() };
+	function pageQuery(index: number) {
+		if (cached.key !== key) cached = { key, queries: new Map() };
+		let found = cached.queries.get(index);
+		if (!found) {
+			found = fetch({ ...first().query, pageIndex: index });
+			cached.queries.set(index, found);
+		}
+		return found;
+	}
+
+	/** The pages asked for, in order, with what they hold so far. */
+	const pages = $derived.by(() => {
+		const list: { index: number; page?: Page; failed: boolean }[] = [];
+		for (let index = startPage - span.before; index <= startPage + span.after; index++) {
+			if (index === startPage) {
+				list.push({ index, page: first(), failed: false });
+				continue;
+			}
+			const query = pageQuery(index);
+			list.push({ index, page: query.current, failed: !!query.error });
+		}
+		return list;
+	});
+
+	/** The pages loaded around the first, which are shown: up to one that isn't in yet. */
+	const loaded = $derived.by(() => {
+		const at = span.before;
+		let from = at;
+		while (from > 0 && pages[from - 1].page) from--;
+		let to = at;
+		while (to < pages.length - 1 && pages[to + 1].page) to++;
+		return pages.slice(from, to + 1) as { index: number; page: Page }[];
+	});
+
+	const rows = $derived.by(() => {
+		const seen = new Set<unknown>();
+		const all: Row[] = [];
+		for (const { page } of loaded) {
+			for (const row of page.rows) {
+				if (seen.has(row.id)) continue;
+				seen.add(row.id);
+				all.push(row);
+			}
+		}
+		return all;
+	});
+
+	const rowCount = $derived(first().rowCount);
+	const firstLoaded = $derived(loaded[0].index);
+	const lastLoaded = $derived(loaded.at(-1)!.index);
+	const more = $derived((lastLoaded + 1) * pageSize < rowCount);
+	const earlier = $derived(firstLoaded > 0);
+	const before = $derived(pages[0]);
+	const after = $derived(pages.at(-1)!);
+	const loadingMore = $derived(span.after > 0 && !after.page && !after.failed);
+	const loadingEarlier = $derived(span.before > 0 && !before.page && !before.failed);
+
+	const scroll: ScrollPages<Row, Query> = {
+		get key() {
+			return key;
+		},
+		get start() {
+			return firstLoaded * pageSize;
+		},
+		get step() {
+			return pageSize;
+		},
+		get more() {
+			return more;
+		},
+		get earlier() {
+			return earlier;
+		},
+		get loadingMore() {
+			return loadingMore;
+		},
+		get loadingEarlier() {
+			return loadingEarlier;
+		},
+		loadMore() {
+			if (!more || loadingMore) return;
+			// A page that failed is asked for again rather than skipped.
+			if (span.after > 0 && after.failed) return void pageQuery(after.index).refresh();
+			span = { ...span, after: span.after + 1 };
+		},
+		loadEarlier() {
+			if (!earlier || loadingEarlier) return;
+			if (span.before > 0 && before.failed) return void pageQuery(before.index).refresh();
+			span = { ...span, before: span.before + 1 };
+		},
+		get rows() {
+			return rows;
+		},
+		get rowCount() {
+			return rowCount;
+		},
+		get groups() {
+			const groups = first().groups;
+			if (!groups) return undefined;
+			return {
+				counts: groups.counts,
+				previous: loaded[0].page.groups?.previous,
+				next: loaded.at(-1)!.page.groups?.next,
+			};
+		},
+		queryOf(id) {
+			const found = loaded.find(({ page }) => page.rows.some((row) => row.id === id));
+			return found ? found.page.query : first().query;
+		},
+	};
+
+	// Opened beyond the last row (a link from when there were more): show the rows before it.
+	$effect(() => {
+		if (!rows.length && earlier && !loadingEarlier) untrack(() => scroll.loadEarlier());
+	});
+
+	return scroll;
 }

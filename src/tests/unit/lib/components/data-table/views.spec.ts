@@ -23,22 +23,21 @@ const spec: TableUrlSpec = {
 	],
 	defaults: {
 		sorting: [{ id: "number", desc: true }],
-		pagination: { pageIndex: 0, pageSize: 20 },
 	},
 };
 
 const state = (search: string, using = spec) => parseTableUrl(new URLSearchParams(search), using);
 
 describe("viewQuery", () => {
-	test("saves the search, filters, sorting, grouping and page size, but not the page", () => {
-		expect(
-			viewQuery(state("?q=boiler&status=quote&sort=priority&group=status&page=3&size=50"), spec),
-		).toBe("?q=boiler&status=quote&sort=priority&group=status&size=50");
+	test("saves the search, filters, sorting and grouping, but not the position", () => {
+		expect(viewQuery(state("?q=boiler&status=quote&sort=priority&group=status&row=30"), spec)).toBe(
+			"?q=boiler&status=quote&sort=priority&group=status",
+		);
 	});
 
 	test("leaves out the defaults, so an untouched table saves nothing", () => {
-		expect(viewQuery(state("?page=2"), spec)).toBe("");
-		expect(viewQuery(state("?sort=-number&size=20"), spec)).toBe("");
+		expect(viewQuery(state("?row=2"), spec)).toBe("");
+		expect(viewQuery(state("?sort=-number&size=20&page=2"), spec)).toBe("");
 	});
 
 	test("keeps that the table was unsorted or unfiltered against its defaults", () => {
@@ -47,19 +46,18 @@ describe("viewQuery", () => {
 
 	test("uses the table's prefix", () => {
 		const prefixed = { ...spec, prefix: "orders" };
-		expect(viewQuery(state("?orders.status=quote&orders.page=2", prefixed), prefixed)).toBe(
+		expect(viewQuery(state("?orders.status=quote&orders.row=21", prefixed), prefixed)).toBe(
 			"?orders.status=quote",
 		);
 	});
 });
 
 describe("viewState", () => {
-	test("reads a saved query as the table would, on the first page", () => {
+	test("reads a saved query as the table would (one saved with a page size still works)", () => {
 		expect(viewState("?status=quote,paid&sort=-priority&size=50&page=4", spec)).toEqual({
 			globalFilter: "",
 			sorting: [{ id: "priority", desc: true }],
 			columnFilters: [{ id: "status", value: ["quote"] }],
-			pagination: { pageIndex: 0, pageSize: 50 },
 			grouping: [],
 		});
 	});
@@ -78,9 +76,9 @@ describe("matchingViews", () => {
 	];
 	const ids = (search: string) => matchingViews(views, state(search), spec).map((view) => view.id);
 
-	test("finds the views that show the table as it is, whatever its page", () => {
-		expect(ids("?status=quote,scheduled&page=2")).toEqual([1, 4]);
-		expect(ids("?page=3")).toEqual([3]);
+	test("finds the views that show the table as it is, wherever it's scrolled to", () => {
+		expect(ids("?status=quote,scheduled&row=40")).toEqual([1, 4]);
+		expect(ids("?row=3")).toEqual([3]);
 	});
 
 	test("doesn't mind the order of a filter's values", () => {
@@ -90,7 +88,7 @@ describe("matchingViews", () => {
 
 	test("finds none when the table shows something else", () => {
 		expect(ids("?status=quote")).toEqual([]);
-		expect(ids("?status=quote,scheduled&size=50")).toEqual([]);
+		expect(ids("?status=quote,scheduled&sort=number")).toEqual([]);
 	});
 
 	describe("with the table's columns", () => {

@@ -22,7 +22,6 @@
 		initialState: {
 			sorting: [{ id: "name", desc: false }],
 			columnVisibility: { email: false },
-			pagination: { pageIndex: 0, pageSize: 10 },
 		},
 	});
 
@@ -68,6 +67,6 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.engineers_empty()} fillViewport />
 		<BulkActionBar actions={[activate, deactivate]} />
-		<table.Pagination />
+		<table.Footer />
 	</div>
 </table.AppTable>

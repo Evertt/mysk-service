@@ -34,12 +34,12 @@ describe("the URL", () => {
 	test("an untouched table leaves the URL alone", async () => {
 		render(Harness, { items });
 
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 		expect(visits).toEqual([]);
 	});
 
-	// Filtering, sorting and paging in a test each: together they came close to a test's time under
-	// the load of a full run.
+	// Filtering and sorting in a test each: together they came close to a test's time under the load
+	// of a full run.
 	test("filtering goes into the URL, each change as a history entry", async () => {
 		render(Harness, { items });
 
@@ -70,24 +70,10 @@ describe("the URL", () => {
 		expect(visits.every((visit) => !visit.replace)).toBe(true);
 	});
 
-	test("and paging", async () => {
-		visit(`/items${filtered}&sort=-amount,name`);
+	test("searching replaces its history entry once typing pauses, and drops the position", async () => {
+		visit("/items?row=3");
 		render(Harness, { items });
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&page=2`);
-		await page.getByRole("button", { name: "Rows per page" }).click();
-		await page.getByRole("option", { name: "10" }).click();
-		await expect.poll(lastSearch).toBe(`${filtered}&sort=-amount,name&size=10`);
-
-		expect(visits).toHaveLength(2);
-		expect(visits.every((visit) => !visit.replace)).toBe(true);
-	});
-
-	test("searching replaces its history entry once typing pauses, and goes to the first page", async () => {
-		visit("/items?page=2");
-		render(Harness, { items });
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
+		await expect.poll(names).toEqual(byName);
 
 		const search = page.getByRole("textbox", { name: "Search items…" });
 		await search.fill("p");
@@ -98,33 +84,33 @@ describe("the URL", () => {
 		expect(visits.map((visit) => visit.replace)).toEqual([false, true]);
 	});
 
-	test("a page from the URL shows, sorted and filtered as the URL says", async () => {
-		visit("/items?status=draft,open,closed&sort=-amount,name&page=2&tab=notes");
+	test("the rows show sorted and filtered as the URL says", async () => {
+		visit("/items?status=draft,open,closed&sort=-amount,name&row=2&tab=notes");
 		render(Harness, { items });
 
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-		await expect.poll(names).toEqual(["Pump replacement", "Chiller repair"]);
+		await expect
+			.poll(names)
+			.toEqual([
+				"Boiler service",
+				"Air handler check",
+				"Compressor overhaul",
+				"Elevator inspection",
+				"Generator install",
+				"Pump replacement",
+				"Chiller repair",
+			]);
 		await expect.poll(textOf(statusPill())).toBe("Status 3 selected");
 		await expect.element(columnHeader("Amount")).toHaveAccessibleName(/sorted descending/);
 		expect(visits).toEqual([]);
 	});
 
 	test("invalid parameters are ignored", async () => {
-		visit("/items?status=bogus&sort=nothing&page=-3&size=7");
+		visit("/items?status=bogus&sort=nothing&row=-3&page=2&size=7");
 		render(Harness, { items });
 
-		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
+		expect(visits).toEqual([]);
 		expect(statusPill().elements()).toHaveLength(0);
-	});
-
-	test("a page past the last becomes the last, replacing the history entry", async () => {
-		visit("/items?page=9");
-		render(Harness, { items });
-
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-		await expect.poll(lastSearch).toBe("?page=2");
-		expect(visits.at(-1)?.replace).toBe(true);
 	});
 
 	test("going back to an earlier URL takes the table back", async () => {
@@ -137,7 +123,7 @@ describe("the URL", () => {
 		await expect.poll(names).toEqual(["Chiller repair", "Pump replacement"]);
 
 		visit("/items", { clear: false });
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 		await expect.element(statusPill()).not.toBeInTheDocument();
 
 		visit("/items?status=closed&sort=-name", { clear: false });
@@ -153,6 +139,6 @@ describe("the URL", () => {
 
 		await page.getByRole("button", { name: "Reset" }).click();
 		await expect.poll(lastSearch).toBe("");
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 });

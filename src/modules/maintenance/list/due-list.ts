@@ -22,6 +22,5 @@ export const dueList = defineList({
 	defaults: {
 		sort: [{ id: "nextDue", desc: false }],
 		filters: { due: [defaultDueRange] },
-		pageSize: 20,
 	},
 });

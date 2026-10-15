@@ -141,27 +141,22 @@ describe("in North", () => {
 		);
 	});
 
-	test("the list shows North's materials by name, 20 per page", async () => {
+	test("the list shows North's materials by name, 50 at a time as it scrolls", async () => {
 		await app.go(afresh("/materials"));
 		const total = await countIn("material", north.id);
 		expect(await app.rowCount()).toBe(total);
 		const shown = await names();
-		expect(shown).toHaveLength(Math.min(20, total));
+		expect(shown).toHaveLength(Math.min(50, total));
 		expect(shown).toEqual(shown.toSorted((a, b) => a.localeCompare(b)));
 		await expectFirstMaterial(north.id);
 	});
 
-	test("the list pages", async () => {
+	test("a list shorter than a page of rows has nothing more to load", async () => {
 		const { page } = app;
 		const total = await countIn("material", north.id);
-		const pages = Math.ceil(total / 20);
-		expect(await page.getByText(`Page 1 of ${pages}`).count()).toBe(1);
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await app.tableSettled();
-		expect(await page.getByText(`Page 2 of ${pages}`).count()).toBe(1);
-		expect(await tableRows().count()).toBe(Math.min(20, total - 20));
-		await page.getByRole("button", { name: "Go to previous page" }).click();
-		await app.tableSettled();
+		expect(total).toBeLessThanOrEqual(50);
+		expect(await tableRows().count()).toBe(total);
+		expect(await page.locator('[data-slot="data-table-more"]').count()).toBe(0);
 	});
 
 	// One test per request, each loading the page afresh: in one test, the six page loads took up
@@ -184,15 +179,19 @@ describe("in North", () => {
 		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
 
 		// An unknown stock level, a filter the list doesn't have, a string for a list of units, a
-		// page size it doesn't offer.
+		// page size it doesn't have.
 		test.each<Query>([
 			{ filters: { stockLevel: ["bogus"] } },
 			{ filters: { unitPrice: [1] } },
 			{ filters: { unit: "pcs" } },
 			{ pageSize: 5000 },
 		])("in the rows' query: %j", async (change) => {
-			const nextPage = () => app.page.getByRole("button", { name: "Go to next page" }).click();
-			expect(await statusOf("getMaterials", rowsWith(change), nextPage)).toBe(400);
+			const sort = () =>
+				app.page
+					.locator("thead")
+					.getByRole("button", { name: /^Material/ })
+					.click();
+			expect(await statusOf("getMaterials", rowsWith(change), sort)).toBe(400);
 		});
 
 		test("in the filters' counts", async () => {
@@ -285,7 +284,7 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(await countIn("material", north.id));
 	});
 
-	test("the list keeps its sorting, page and filters in the URL, through reloads and back", async () => {
+	test("the list keeps its sorting and filters in the URL, through reloads and back", async () => {
 		const { page } = app;
 		const total = await countIn("material", north.id);
 		const priced = await rows<{ name: string; unit: string }>(
@@ -294,31 +293,22 @@ describe("in North", () => {
 		);
 		expect(total).toBeGreaterThan(20);
 		const search = () => new URL(page.url()).search;
-		const pageOf = (pages: number) => page.getByText(new RegExp(`^Page \\d+ of ${pages}$`));
 
 		await app.go(afresh("/materials"));
 		await app.sortBy("Unit price", "descending");
 		await page.waitForURL(() => search() === "?sort=-price");
 		await app.tableSettled();
 		const first = await names();
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await app.tableSettled();
-		await page.waitForURL(() => search() === "?sort=-price&page=2");
-		await app.tableSettled();
-		const second = await names();
-		expect(second).toHaveLength(Math.min(20, total - 20));
+		expect(first[0]).toBe(priced[0].name);
 
-		// A reload shows the same page, already when rendered on the server.
+		// A reload shows the same rows, already when rendered on the server.
 		const html = await (await page.request.get(page.url())).text();
-		expect(html).toContain(`Page 2 of ${Math.ceil(total / 20)}`);
+		expect(html).toContain(first[0]);
 		await page.reload();
 		await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
-		expect(await names()).toEqual(second);
-		expect(await pageOf(Math.ceil(total / 20)).innerText()).toBe(
-			`Page 2 of ${Math.ceil(total / 20)}`,
-		);
+		expect(await names()).toEqual(first);
 
-		// Filtering goes back to the first page.
+		// Filtering starts the rows over.
 		await filter("Unit", /Litres/);
 		await page.waitForURL(() => search() === "?unit=l&sort=-price");
 		await app.tableSettled();
@@ -347,20 +337,17 @@ describe("in North", () => {
 		await page.waitForURL(() => search() === "?unit=l&sort=-price");
 		await app.tableSettled();
 		await page.goBack();
-		await page.waitForURL(() => search() === "?sort=-price&page=2");
-		await app.tableSettled();
-		await expect.poll(names).toEqual(second);
-		expect(await app.filterPill("Unit").count()).toBe(0);
-		await page.goBack();
 		await page.waitForURL(() => search() === "?sort=-price");
 		await app.tableSettled();
 		await expect.poll(names).toEqual(first);
+		expect(await app.filterPill("Unit").count()).toBe(0);
 		await page.goForward();
-		await page.waitForURL(() => search() === "?sort=-price&page=2");
+		await page.waitForURL(() => search() === "?unit=l&sort=-price");
 		await app.tableSettled();
-		await expect.poll(names).toEqual(second);
+		expect(await app.filterPill("Unit").count()).toBe(1);
 
-		// A link with the state in it opens the list that way; unknown values are ignored.
+		// A link with the state in it opens the list that way; unknown values (and an old link's
+		// page size) are ignored.
 		await app.go("/materials?unit=pcs,bogus&sort=name&size=50&q=filter");
 		const filters = priced
 			.filter((row) => row.unit === "pcs" && /filter/i.test(row.name))
@@ -370,14 +357,11 @@ describe("in North", () => {
 		expect(await names()).toEqual(filters);
 		expect(search()).toBe("?unit=pcs,bogus&sort=name&size=50&q=filter");
 		expect(await page.getByLabel("Search materials…").inputValue()).toBe("filter");
-		expect(await page.getByRole("button", { name: "Rows per page" }).innerText()).toBe("50");
 
 		await app.go(afresh("/materials"));
 	});
 
-	test("the server sorts by stock level and sends one page at a time", async () => {
-		const { page } = app;
-		const total = await countIn("material", north.id);
+	test("the server sorts by stock level", async () => {
 		// Out of stock, then low, then in stock (as `stockLevel()` has it), each by name.
 		const expected = await rows<{ name: string }>(
 			`select name from material where organization_id = ?
@@ -386,15 +370,7 @@ describe("in North", () => {
 			[north.id],
 		);
 		await app.go("/materials?sort=stock,name");
-		expect(await names()).toEqual(expected.slice(0, 20).map((row) => row.name));
-		const [response] = await Promise.all([
-			page.waitForResponse((r) => isRemote(r.url(), "getMaterials")),
-			page.getByRole("button", { name: "Go to next page" }).click(),
-		]);
-		// That page's materials came, not all of them.
-		expect((await response.text()).split("unitPrice").length - 1).toBe(Math.min(20, total - 20));
-		await app.tableSettled();
-		expect(await names()).toEqual(expected.slice(20, 40).map((row) => row.name));
+		expect(await names()).toEqual(expected.slice(0, 50).map((row) => row.name));
 		await app.go(afresh("/materials"));
 	});
 
@@ -700,7 +676,7 @@ describe("in North", () => {
 		await page.keyboard.press("Escape");
 	});
 
-	test("selecting all the matching materials acts on exactly the filtered ones", async () => {
+	test("selecting all the loaded materials acts on exactly the filtered ones", async () => {
 		const { page } = app;
 		// A material nobody uses, so deleting it works: the others are used on orders.
 		await app.go("/materials/new");
@@ -718,19 +694,19 @@ describe("in North", () => {
 			`select id from material where organization_id = ? and unit = 'pcs'`,
 			[north.id],
 		);
-		// More than fit on a page.
+		// Fewer than a page of rows: all of them load at once.
 		expect(pieces.length).toBeGreaterThan(20);
+		expect(pieces.length).toBeLessThanOrEqual(50);
 		const unused = [];
 		for (const { id } of pieces) if (!(await ordersUsing(id))) unused.push(id);
 		expect(unused).toEqual([created.id]);
 		const before = await all();
 
 		await app.go("/materials?unit=pcs&sort=sku");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const total = formatNumber(pieces.length);
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
-		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
-		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByText(`${total} selected`, { exact: true }).waitFor();
 		await bar.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await app.toast(`1 deleted, ${pieces.length - 1} skipped`);
@@ -743,12 +719,11 @@ describe("in North", () => {
 		const { page } = app;
 		const before = await rows(`select * from material order by id`);
 		await app.go("/materials?sort=sku");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
-		// Materials used on orders can't be deleted, so the action only applies to all matching.
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
+		// All of them are loaded, and selected.
 		const total = formatNumber(await countIn("material", north.id));
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
-		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
-		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByText(`${total} selected`, { exact: true }).waitFor();
 		await bar.getByRole("button", { name: "Delete" }).click();
 		// The command goes out with a filter that doesn't exist, instead of the matching ones.
 		await tamperWithCommand<Record<string, unknown>>(page, "bulkDeleteMaterials", () => ({

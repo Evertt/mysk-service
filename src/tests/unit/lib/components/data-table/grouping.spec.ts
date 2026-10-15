@@ -162,7 +162,7 @@ describe("a grouped table's page", () => {
 		column("amount", { groupSum: (sum) => `${sum} cents` }),
 	];
 
-	// All the rows, as sorted, and the page of them the table shows.
+	// All the rows, as sorted, and the first of them, which the table shows.
 	const all = [
 		row(priced("A", "boiler", 100)),
 		row(priced("B", "boiler", 250)),
@@ -170,14 +170,11 @@ describe("a grouped table's page", () => {
 		row(priced("D", "chiller", 60)),
 		row(priced("E", null, 5)),
 	];
-	const tableOn = (pageIndex: number, pageSize: number, grouping = ["category"]) => ({
-		atoms: {
-			grouping: { get: () => grouping },
-			pagination: { get: () => ({ pageIndex, pageSize }) },
-		},
+	const tableOn = (shown: number, grouping = ["category"]) => ({
+		atoms: { grouping: { get: () => grouping } },
 		getColumn: (id: string) => columns.find((column) => column.id === id),
 		getVisibleLeafColumns: () => columns,
-		getRowModel: () => ({ rows: all.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize) }),
+		getRowModel: () => ({ rows: all.slice(0, shown) }),
 		getPrePaginatedRowModel: () => ({ rows: all }),
 	});
 	const nameOf = (rows: Row[]) => rows.map((row) => row.original.name);
@@ -186,12 +183,12 @@ describe("a grouped table's page", () => {
 	) => groups.map(({ key, count, continued, continues }) => [key, count, continued, continues]);
 
 	test("is nothing while the table isn't grouped", () => {
-		expect(groupedPage(tableOn(0, 5, []))).toBeUndefined();
-		expect(groupedPage(tableOn(0, 5, ["nothing"]))).toBeUndefined();
+		expect(groupedPage(tableOn(5, []))).toBeUndefined();
+		expect(groupedPage(tableOn(5, ["nothing"]))).toBeUndefined();
 	});
 
 	test("groups the page's rows by the grouped column", () => {
-		const page = groupedPage(tableOn(0, 5))!;
+		const page = groupedPage(tableOn(5))!;
 		expect(page.column.id).toBe("category");
 		expect(page.groups.map((group) => [group.key, nameOf(group.rows)])).toEqual([
 			["boiler", ["A", "B"]],
@@ -200,19 +197,20 @@ describe("a grouped table's page", () => {
 		]);
 	});
 
-	test("counts every row of a group, also on other pages, and says where it goes on", () => {
-		expect(summary(groupedPage(tableOn(0, 3))!.groups)).toEqual([
+	test("counts every row of a group, also those not shown yet, and says where it goes on", () => {
+		expect(summary(groupedPage(tableOn(3))!.groups)).toEqual([
 			["boiler", 2, false, false],
 			["chiller", 2, false, true],
 		]);
-		expect(summary(groupedPage(tableOn(1, 3))!.groups)).toEqual([
-			["chiller", 2, true, false],
+		expect(summary(groupedPage(tableOn(5))!.groups)).toEqual([
+			["boiler", 2, false, false],
+			["chiller", 2, false, false],
 			["", 1, false, false],
 		]);
 	});
 
-	test("sums the groupSum columns over a group's rows on every page", () => {
-		const page = groupedPage(tableOn(0, 3))!;
+	test("sums the groupSum columns over all of a group's rows", () => {
+		const page = groupedPage(tableOn(3))!;
 		const sums = (key: string) => page.sums(key).map((sum) => [sum.column.id, sum.sum]);
 		expect(sums("boiler")).toEqual([["amount", 350]]);
 		expect(sums("chiller")).toEqual([["amount", 100]]);
@@ -220,21 +218,22 @@ describe("a grouped table's page", () => {
 	});
 
 	test("leaves out the sums of hidden columns", () => {
-		const table = { ...tableOn(0, 5), getVisibleLeafColumns: () => columns.slice(0, 2) };
+		const table = { ...tableOn(5), getVisibleLeafColumns: () => columns.slice(0, 2) };
 		expect(groupedPage(table)!.sums("boiler")).toEqual([]);
 	});
 
 	describe("of a server-side table", () => {
-		// The server's second page of the same rows, and what it knows of the groups.
+		// The rows from the fourth on (opened partway down), and what the server knows of the groups.
+		const laterRows = { ...tableOn(3), getRowModel: () => ({ rows: all.slice(3, 6) }) };
 		const known = { counts: { boiler: 4, chiller: 9, "": 1 }, previous: priced("Z", "boiler", 1) };
 
 		test("takes the counts, and the rows around the page, from the server", () => {
-			expect(summary(groupedPage(tableOn(1, 3), known)!.groups)).toEqual([
+			expect(summary(groupedPage(laterRows, known)!.groups)).toEqual([
 				["chiller", 9, false, false],
 				["", 1, false, false],
 			]);
 			const next = priced("Y", "chiller", 1);
-			const page = groupedPage(tableOn(0, 3), { counts: known.counts, next })!;
+			const page = groupedPage(tableOn(3), { counts: known.counts, next })!;
 			expect(summary(page.groups)).toEqual([
 				["boiler", 4, false, false],
 				["chiller", 9, false, true],
@@ -242,7 +241,7 @@ describe("a grouped table's page", () => {
 		});
 
 		test("reads the key of a row around the page from the column", () => {
-			const before = groupedPage(tableOn(0, 3), {
+			const before = groupedPage(tableOn(3), {
 				counts: {},
 				previous: priced("Z", "boiler", 1),
 			})!;
@@ -250,7 +249,7 @@ describe("a grouped table's page", () => {
 			// A column with a grouping value of its own, here the name.
 			const grouped = column("category", { grouped: true });
 			const table = {
-				...tableOn(0, 3),
+				...tableOn(3),
 				getColumn: () => ({
 					...grouped,
 					columnDef: { ...grouped.columnDef, getGroupingValue: (data: Priced) => data.name },
@@ -261,7 +260,7 @@ describe("a grouped table's page", () => {
 		});
 
 		test("has no sums", () => {
-			expect(groupedPage(tableOn(1, 3), known)!.sums("chiller")).toEqual([]);
+			expect(groupedPage(laterRows, known)!.sums("chiller")).toEqual([]);
 		});
 	});
 });

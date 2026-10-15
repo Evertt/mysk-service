@@ -141,14 +141,10 @@
 			}
 		}
 	],
-	"common_table_rows_per_page": "Rijen per pagina",
-	"common_table_page": "Pagina {page} van {pages}",
-	"common_table_first_page": "Naar de eerste pagina",
-	"common_table_previous_page": "Naar de vorige pagina",
-	"common_table_next_page": "Naar de volgende pagina",
-	"common_table_last_page": "Naar de laatste pagina",
+	"common_table_loading_more": "Meer laden…",
+	"common_table_end": "Einde van de lijst",
 	"common_table_row_actions": "Acties voor {label}",
-	"common_table_select_all": "Alle rijen op deze pagina selecteren",
+	"common_table_select_all": "Alle geladen rijen selecteren",
 	"common_table_select_row": "Rij selecteren",
 	"common_table_group_by": "Groeperen op",
 	"common_table_group_none": "Geen",
@@ -168,8 +164,8 @@
 			}
 		}
 	],
-	"common_table_group_continued": "vervolg van de vorige pagina",
-	"common_table_group_continues": "gaat verder op de volgende pagina",
+	"common_table_group_continued": "vervolg van rijen hierboven",
+	"common_table_group_continues": "gaat verder in meer rijen hieronder",
 	"common_table_group_sum": "{label}: {sum}",
 	"common_table_select_group": "Rijen van deze groep selecteren",
 	"common_table_keyboard_hint_groups": "Op de rij van een groep toon of verberg je de rijen met Enter of spatie.",

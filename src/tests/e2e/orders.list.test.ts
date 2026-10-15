@@ -52,7 +52,7 @@ describe("in North", () => {
 		await app.go(`/orders?customer=${code}&${filtered}`);
 		expect(await app.rowCount()).toBe(open.length);
 		expect(await page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(
-			expected.slice(0, 20),
+			expected.slice(0, 50),
 		);
 		const headers = await page.locator("thead").innerText();
 		expect(headers).toMatch(/Priority\s*1/);
@@ -87,29 +87,29 @@ describe("in North", () => {
 		});
 	});
 
-	test("the server sends one page at a time, in the database's order", async () => {
+	test("the server sends a page of rows at a time, in the database's order, as the table scrolls", async () => {
 		const { page } = app;
 		const total = await countIn("order", north.id);
-		const second = await rows<{ number: string }>(
-			`select number from "order" where organization_id = ?
-			 order by created_at desc, id limit 20 offset 20`,
-			[north.id],
-		);
+		const numbers = (
+			await rows<{ number: string }>(
+				`select number from "order" where organization_id = ?
+				 order by created_at desc, id limit 100`,
+				[north.id],
+			)
+		).map((row) => row.number);
 		await app.go(afresh("/orders"));
 		expect(await app.rowCount()).toBe(total);
+		expect(await shownNumbers(app)).toEqual(numbers.slice(0, 50));
 		const [response] = await Promise.all([
 			page.waitForResponse((r) => isRemote(r.url(), "getOrders")),
-			page.getByRole("button", { name: "Go to next page" }).click(),
+			page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
 		]);
-		// Just that page's orders came, not all of them.
+		// Just the next page's orders came, not all of them.
 		const sent = new Set((await response.text()).match(/ORD-\d{4}-\d{5}/g));
-		expect([...sent].sort()).toEqual(second.map((row) => row.number).sort());
-		await app.tableSettled();
-		expect(await shownNumbers(app)).toEqual(second.map((row) => row.number));
+		expect([...sent].sort()).toEqual(numbers.slice(50).sort());
+		// Added under those shown.
+		await expect.poll(() => shownNumbers(app)).toEqual(numbers);
 		expect(await app.rowCount()).toBe(total);
-		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toBe(
-			`Page 2 of ${Math.ceil(total / 20)}`,
-		);
 	});
 
 	// One test per request, each loading the page afresh: in one test, the six page loads took up
@@ -132,15 +132,15 @@ describe("in North", () => {
 		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
 
 		// An unknown status, a filter the list doesn't have, a string for an id, a page size it
-		// doesn't offer.
+		// doesn't have.
 		test.each<Query>([
 			{ filters: { status: ["bogus"] } },
 			{ filters: { total: [1] } },
 			{ filters: { engineer: ["1"] } },
 			{ pageSize: 5000 },
 		])("in the rows' query: %j", async (change) => {
-			const nextPage = () => app.page.getByRole("button", { name: "Go to next page" }).click();
-			expect(await statusOf("getOrders", rowsWith(change), nextPage)).toBe(400);
+			const more = () => app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded();
+			expect(await statusOf("getOrders", rowsWith(change), more)).toBe(400);
 		});
 
 		test("in the filters' counts", async () => {
@@ -185,7 +185,7 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.searchParams.get("q") === word);
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(expected.length);
-		expect(await shownNumbers(app)).toEqual(expected.slice(0, 20).map((row) => row.number));
+		expect(await shownNumbers(app)).toEqual(expected.slice(0, 50).map((row) => row.number));
 
 		// The status filter counts what the search and the other filters leave.
 		const counts = await rows<{ status: string; n: number }>(
@@ -320,7 +320,7 @@ describe("in North", () => {
 		await app.go(afresh("/orders"));
 	});
 
-	test("while the next page loads, the rows shown stay, dimmed", async () => {
+	test("while another sorting loads, the rows shown stay, dimmed", async () => {
 		const { page } = app;
 		await app.go(afresh("/orders"));
 		const before = await shownNumbers(app);
@@ -332,7 +332,7 @@ describe("in North", () => {
 			await route.continue();
 		});
 		try {
-			await page.getByRole("button", { name: "Go to next page" }).click();
+			await page.locator("thead").getByRole("button", { name: "Order" }).click();
 			await expect.poll(() => table.getAttribute("aria-busy")).toBe("true");
 			expect(await shownNumbers(app)).toEqual(before);
 			// The bar shows once the wait has taken a moment (see `progress-bar.svelte`).
@@ -352,16 +352,16 @@ describe("in North", () => {
 		await app.go(afresh("/orders"));
 	});
 
-	test("a link to another page of the list shows the table loading until its rows are in", async () => {
+	test("a link to the list sorted otherwise shows the table loading until its rows are in", async () => {
 		const { page } = app;
-		await app.go("/orders?size=50");
+		await app.go(afresh("/orders"));
 		const first = await shownNumbers(app);
 		const table = page.locator('[data-slot="data-table"]');
-		// A link elsewhere in the app to this list, on a page whose rows aren't loaded yet. (In a
-		// corner on top: the page fills the viewport, so the end of the body is out of view.)
+		// A link elsewhere in the app to this list, sorted in a way whose rows aren't loaded yet. (In
+		// a corner on top: the page fills the viewport, so the end of the body is out of view.)
 		await page.evaluate(() => {
-			const link = Object.assign(document.createElement("a"), { href: "/orders?page=3&size=50" });
-			link.textContent = "Third page";
+			const link = Object.assign(document.createElement("a"), { href: "/orders?sort=number" });
+			link.textContent = "By number";
 			link.style.cssText = "position: fixed; top: 0; left: 0; z-index: 100";
 			document.body.append(link);
 		});
@@ -372,8 +372,8 @@ describe("in North", () => {
 			await route.continue();
 		});
 		try {
-			await page.getByRole("link", { name: "Third page" }).click();
-			// The URL asks for the third page, the rows are still the first's: the table says so.
+			await page.getByRole("link", { name: "By number" }).click();
+			// The URL asks for other rows, those shown are still the newest: the table says so.
 			await expect.poll(() => table.getAttribute("aria-busy")).toBe("true");
 			expect(await shownNumbers(app)).toEqual(first);
 		} finally {

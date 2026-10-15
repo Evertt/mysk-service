@@ -29,7 +29,7 @@ export const equipmentList = defineList({
 		warrantyUntil: { param: "warranty", sort: true, filter: dateRange },
 		openOrders: { param: "open-orders", sort: true, filter: numberRange },
 	},
-	defaults: { sort: [{ id: "unit", desc: false }], pageSize: 20 },
+	defaults: { sort: [{ id: "unit", desc: false }] },
 	// The tenant's modules may add columns, e.g. maintenance's next due date.
 	moduleColumns: listColumns,
 });

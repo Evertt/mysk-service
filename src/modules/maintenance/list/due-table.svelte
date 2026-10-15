@@ -4,7 +4,10 @@
 	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import {
+		scrollPages,
+		serverTableLoading,
+	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 
@@ -12,7 +15,7 @@
 	import { dueRanges, planOrderTypes } from "../model.ts";
 	import { createOrdersAction } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
-	import type { getDueFacets, getDuePlans } from "./due-list.remote.ts";
+	import { type getDueFacets, getDuePlans } from "./due-list.remote.ts";
 	import { dueList } from "./due-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -21,20 +24,23 @@
 		plans,
 		facets,
 	}: {
-		/** A page of due plans, as the URL says, and how many match in all. */
+		/** The first page of due plans, as the URL says, and how many match in all. */
 		plans: Awaited<ReturnType<typeof getDuePlans>>;
 		/** How many plans have each order type. */
 		facets: Awaited<ReturnType<typeof getDueFacets>>;
 	} = $props();
 
+	const pages = scrollPages({ first: () => plans, fetch: getDuePlans });
+
 	const table = createAppTable({
 		columns,
 		serverSide: true,
+		scroll: pages,
 		get data() {
-			return plans.rows;
+			return pages.rows;
 		},
 		get rowCount() {
-			return plans.rowCount;
+			return pages.rowCount;
 		},
 		getRowId: (row) => String(row.id),
 		initialState: {
@@ -45,7 +51,7 @@
 		},
 	});
 
-	const loading = serverTableLoading(table, dueList, () => plans.key);
+	const loading = serverTableLoading(table, dueList, () => pages.key);
 
 	/** "Every plan": no range at all. */
 	const ALL = "all";
@@ -95,6 +101,6 @@
 			actions={[createOrdersAction]}
 			matching={{ where: whereOf(plans.query), key: plans.key, count: plans.rowCount }}
 		/>
-		<table.Pagination />
+		<table.Footer />
 	</div>
 </table.AppTable>

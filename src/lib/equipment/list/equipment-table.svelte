@@ -9,13 +9,16 @@
 	import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import {
+		scrollPages,
+		serverTableLoading,
+	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
 	import { categoryOptions, statusOptions } from "../display.ts";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
 	import { columns, type EquipmentRow } from "./columns.ts";
-	import type { getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
+	import { type getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
 	import type { equipmentList } from "./equipment-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -27,7 +30,10 @@
 	}: {
 		/** The equipment list with the tenant's modules' columns (`extendList()`). */
 		list: List<typeof equipmentList.columns>;
-		/** A page of units, as the URL says, how many match in all, and its groups when grouped. */
+		/**
+		 * The first page of units, as the URL says, how many match in all, and its groups when
+		 * grouped: the table loads the next as it's scrolled.
+		 */
 		equipment: Awaited<ReturnType<typeof getEquipmentList>>;
 		/** How many units have each value of the filters'. */
 		facets: Awaited<ReturnType<typeof getEquipmentFacets>>;
@@ -50,21 +56,24 @@
 			: [],
 	);
 
+	const pages = scrollPages({ first: () => equipment, fetch: getEquipmentList });
+
 	const table = createAppTable({
 		columns: withModuleTableColumns<EquipmentRow, (typeof columns)[number]>(
 			columns,
 			list.moduleColumns,
 		),
 		serverSide: true,
+		scroll: pages,
 		get data() {
-			return equipment.rows;
+			return pages.rows;
 		},
 		get rowCount() {
-			return equipment.rowCount;
+			return pages.rowCount;
 		},
 		getRowId: (row) => String(row.id),
 		initialState: {
-			// By unit, 20 per page: the defaults the server has too.
+			// By unit: the default the server has too.
 			...list.urlSpec.defaults,
 			// Only there to search and filter by; the unit column shows them.
 			columnVisibility: { serialNumber: false, manufacturer: false },
@@ -80,7 +89,7 @@
 			.map((value) => ({ value, label: value }));
 	});
 
-	const loading = serverTableLoading(table, list, () => equipment.key);
+	const loading = serverTableLoading(table, list, () => pages.key);
 </script>
 
 <table.AppTable>
@@ -146,12 +155,12 @@
 			emptyTitle={m.equipment_empty()}
 			fillViewport
 			loading={loading.current}
-			groups={equipment.groups}
+			groups={pages.groups}
 		/>
 		<BulkActionBar
 			actions={[changeStatus, deleteEquipment]}
 			matching={{ where: whereOf(equipment.query), key: equipment.key, count: equipment.rowCount }}
 		/>
-		<table.Pagination />
+		<table.Footer />
 	</div>
 </table.AppTable>

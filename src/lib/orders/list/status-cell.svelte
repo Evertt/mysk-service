@@ -7,7 +7,7 @@
 	(`setOrderStatus`), so the modules may refuse it (e.g. for a shortage of stock): then a toast
 	says why, and the badge goes back. The table's rows and its filters' counts refresh with it.
 
-	It needs the query of the rows the table shows, which the table gives it with
+	It needs the query of the page of rows its order was loaded with, which the table gives it with
 	`setStatusCellQuery()`.
 -->
 <script lang="ts" module>
@@ -15,11 +15,11 @@
 
 	import type { getOrders as GetOrders } from "./order-list.remote.ts";
 
-	const [getQuery, setQuery] = createContext<() => Parameters<typeof GetOrders>[0]>();
+	const [getQuery, setQuery] = createContext<(id: number) => Parameters<typeof GetOrders>[0]>();
 
 	/**
-	 * Gives the status cells the query of the rows the table shows (the page's, as it called
-	 * `getOrders()` with it), as a function read when a status changes.
+	 * Gives the status cells the query of the page of rows an order was loaded with (as the table
+	 * called `getOrders()` with it), as a function read when a status changes.
 	 */
 	export const setStatusCellQuery = setQuery;
 </script>
@@ -66,7 +66,7 @@
 		if (to === "invoiced") return;
 		try {
 			await setOrderStatus({ id, status: to }).updates(
-				getOrders(query()).withOverride((current) => ({
+				getOrders(query(id)).withOverride((current) => ({
 					...current,
 					rows: current.rows.map((row) => (row.id === id ? { ...row, status: to } : row)),
 				})),

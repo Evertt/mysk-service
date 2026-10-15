@@ -114,7 +114,10 @@ describe("range filters on the materials list, in North", () => {
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([
 					app.page.waitForResponse((r) => isRemote(r.url(), "getMaterials")),
-					app.page.getByRole("button", { name: "Go to next page" }).click(),
+					app.page
+						.locator("thead")
+						.getByRole("button", { name: /^Material/ })
+						.click(),
 				]),
 			);
 			expect(await remoteErrorStatus(response)).toBe(400);

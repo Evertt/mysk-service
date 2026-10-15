@@ -131,7 +131,7 @@ const unitSql = (modules?: string[]): ListSql<typeof units.columns> =>
 	);
 
 const page = (filters: Record<string, unknown[]>, sort: { id: string; desc: boolean }[]) =>
-	({ q: "", filters, sort, group: null, pageIndex: 0, pageSize: 20 }) as never;
+	({ q: "", filters, sort, group: null, pageIndex: 0, pageSize: 50 }) as never;
 
 /** The serial numbers of a page of the list, as `listSql` plans `query`. */
 const serials = async (listSql: ListSql<typeof units.columns>, query: never) => {

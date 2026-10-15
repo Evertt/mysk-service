@@ -30,11 +30,12 @@ sideways behave as they did, pinned columns and the sticky header included.
   measuring waits until the page is painted, cells that look like ones measured before (same
   classes and HTML: a status, a date) aren't measured again, and the hidden cells, measured when
   they were the page's, never are.
-- **Paging freezes.** Turning a page pins the columns' widths as they are (a `<colgroup>` and
-  `table-layout: fixed`, measured from the header cells before the new rows render), so nothing
-  moves; cells too wide for a column are clipped meanwhile. The hidden rows keep learning from the
-  pages, and the next filter, search, sort, page size, grouping, column or density change lays the
-  table out again, with all of it. The widths converge to what the table would pick with every row
+- **More rows freeze.** More rows as the table scrolls (see `scroll-window.svelte.ts`; it used to
+  be turning a page) pin the columns' widths as they are (a `<colgroup>` and
+  `table-layout: fixed`, measured from the header cells before the new rows render: as soon as a
+  server-side table asks for them), so nothing moves; cells too wide for a column are clipped
+  meanwhile. The hidden rows keep learning from the new rows, and the next filter, search, sort,
+  grouping, column or density change lays the table out again, with all of it. The widths converge to what the table would pick with every row
   seen loaded at once.
 - **Known values start right.** No column is configured: a column whose filter has options
   (`meta.filterValues`, which a server-side list's `oneOf` filters mirror) tries each option once,

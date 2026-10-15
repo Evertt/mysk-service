@@ -15,12 +15,18 @@ import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
 import { features } from "./features.ts";
 import NumberCell from "./number-cell.svelte";
-import Pagination from "./pagination.svelte";
 import { setRowBulkActions } from "./row-bulk-actions.svelte.ts";
+import {
+	clientWindow,
+	resetClientWindow,
+	type ScrollWindow,
+	setScrollWindow,
+} from "./scroll-window.svelte.ts";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
+import Footer from "./table-footer.svelte";
 import Toolbar from "./toolbar.svelte";
-import { syncTableWithUrl, type UrlStateOptions } from "./url-sync.svelte.ts";
+import { syncTableWithUrl, tableUrlSync, type UrlStateOptions } from "./url-sync.svelte.ts";
 import ViewOptions from "./view-options.svelte";
 
 /** Shift-, Cmd- or Ctrl-clicking a column header adds it to the sort (see `ColumnHeader`). */
@@ -44,8 +50,8 @@ const hook = createTableHook({
 	// Sorting a column goes ascending, descending, then unsorted.
 	sortDescFirst: false,
 	isMultiSortEvent,
-	// `createAppTable` goes back to the first page itself: TanStack's reset would also undo a page
-	// restored from the URL, and jump to the first page whenever the data is reloaded.
+	// The rows scroll rather than page (see `scroll-window.svelte.ts`), and `createAppTable` starts
+	// them over itself: TanStack's reset would whenever the data is reloaded.
 	autoResetPageIndex: false,
 	defaultColumn: {
 		// Days and moments by their own order, anything else as TanStack picks (see `features.ts`).
@@ -57,7 +63,7 @@ const hook = createTableHook({
 		header: ({ header }) => (header.column.accessorFn ? renderComponent(ColumnHeader) : ""),
 	},
 	groupedColumnMode: false,
-	tableComponents: { Table: DataTable, Toolbar, Pagination, ViewOptions },
+	tableComponents: { Table: DataTable, Toolbar, Footer, ViewOptions },
 	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
 });
@@ -66,7 +72,7 @@ export const { useTableContext, useCellContext, useHeaderContext } = hook;
 
 /**
  * A column helper for a table of `TData` rows, with `select()` for the selection column: a
- * checkbox to select the row, and one in the header to select all the rows of the page.
+ * checkbox to select the row, and one in the header to select all the rows loaded.
  */
 export function createAppColumnHelper<TData extends RowData>() {
 	const helper = hook.createAppColumnHelper<TData>();
@@ -87,18 +93,22 @@ type HookTableOptions<TData extends RowData> = Parameters<typeof hook.createAppT
 
 export type AppTableOptions<TData extends RowData> = HookTableOptions<TData> & {
 	/**
-	 * Keeps the search, filters, sorting and page in the URL (see `url-state.ts`), with a
-	 * `prefix` for its parameters if the page has more than one table; `false` doesn't.
+	 * Keeps the search, filters, sorting, grouping and scroll position in the URL (see
+	 * `url-state.ts`), with a `prefix` for its parameters if the page has more than one table;
+	 * `false` doesn't.
 	 */
 	urlState?: false | UrlStateOptions;
 	/**
-	 * The rows are one page that the server searched, filtered, sorted and paged (see
-	 * `server-table.svelte.ts`): the table only shows them, and `rowCount` says how many match in
-	 * all. The selection is cleared when the rows change, as it can only be of rows the table shows.
-	 * When grouped, the server sorts by the group first, and `<table.Table groups>` says what it
-	 * knows of the page's groups (see `grouping.ts`).
+	 * The rows are those the server searched, filtered and sorted, a page at a time as the table
+	 * scrolls (see `server-table.svelte.ts`): the table only shows them, `rowCount` says how many
+	 * match in all, and `scroll` (`scrollPages()`) loads more. The selection is cleared when the
+	 * search, filters, sorting or grouping change, as it can only be of rows the table shows. When
+	 * grouped, the server sorts by the group first, and `<table.Table groups>` says what it knows
+	 * of the groups (see `grouping.ts`).
 	 */
 	serverSide?: boolean;
+	/** A server-side table's rows as it scrolls (`scrollPages()`); a client-side table makes its own. */
+	scroll?: ScrollWindow;
 };
 
 /** Whether a component is initializing (a table made outside one, e.g. in a test, isn't synced). */
@@ -113,8 +123,8 @@ function inComponent() {
 
 /**
  * Creates a table with the app's features and components (see the hook above), whose state is
- * kept in the URL unless `urlState` is `false`. Searching, filtering and sorting go back to the
- * first page; a page beyond the last (e.g. after rows were deleted) becomes the last.
+ * kept in the URL unless `urlState` is `false`. Its rows scroll (see `scroll-window.svelte.ts`):
+ * searching, filtering, sorting and grouping start them over from the top.
  */
 export function createAppTable<TData extends RowData>(options: AppTableOptions<TData>) {
 	// A copy with its getters (e.g. a reactive `data`) intact.
@@ -126,7 +136,7 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 	// oxlint-disable-next-line prefer-const -- assigned once the handlers below exist
 	let table: ReturnType<typeof hook.createAppTable<TData>>;
 	const firstPage = () => {
-		if (table.atoms.pagination.get().pageIndex !== 0) table.setPageIndex(0);
+		if (!options.serverSide) resetClientWindow(table);
 	};
 	const handlers = {
 		sorting: "onSortingChange",
@@ -164,26 +174,26 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 	table.AppTable = ((internal: never, props: { children: Snippet }) =>
 		AfterMount(internal, { component: AppTable, props })) as unknown as typeof table.AppTable;
 
+	if (options.urlState !== false) syncTableWithUrl(table, options.urlState);
+
+	const scroll =
+		options.scroll ??
+		(options.serverSide ? undefined : clientWindow(table, tableUrlSync(table)?.position));
+	if (scroll) setScrollWindow(table, scroll);
+
 	if (options.serverSide) {
+		// Other rows: no selection. More of the same rows (scrolling, a refresh) keep it.
+		const keyOf = (): unknown => (scroll ? scroll.key : options.data);
+		let rowsKey = keyOf();
 		$effect(() => {
-			void options.data;
+			const key = keyOf();
 			untrack(() => {
+				if (key === rowsKey) return;
+				rowsKey = key;
 				if (Object.keys(table.atoms.rowSelection.get()).length) table.resetRowSelection(true);
 			});
 		});
 	}
 
-	const replaceNext =
-		options.urlState === false ? undefined : syncTableWithUrl(table, options.urlState);
-	$effect(() => {
-		const { pageIndex } = table.atoms.pagination.get();
-		const pages = table.getPageCount();
-		if (pageIndex > 0 && pages >= 0 && pageIndex >= Math.max(pages, 1)) {
-			untrack(() => {
-				replaceNext?.();
-				table.setPageIndex(Math.max(pages - 1, 0));
-			});
-		}
-	});
 	return table;
 }

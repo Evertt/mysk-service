@@ -10,7 +10,10 @@
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import {
+		scrollPages,
+		serverTableLoading,
+	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 	import { extensionBulkActions } from "#lib/extensions/bulk-actions.svelte.ts";
 
@@ -18,20 +21,20 @@
 	import { list as bulkTable } from "../extensions.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
-	import type { getOrderFacets, getOrders } from "./order-list.remote.ts";
+	import { type getOrderFacets, getOrders } from "./order-list.remote.ts";
 	import { ordersList } from "./orders-list.ts";
 	import { setStatusCellQuery } from "./status-cell.svelte";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
-		query,
 		orders,
 		facets,
 	}: {
-		/** The query the page asked for the rows with (`getOrders(query)`). */
-		query: Parameters<typeof getOrders>[0];
-		/** A page of orders, as the URL says, how many match in all, and its groups when grouped. */
+		/**
+		 * The first page of orders, as the URL says, how many match in all, and its groups when
+		 * grouped: the table loads the next as it's scrolled.
+		 */
 		orders: Awaited<ReturnType<typeof getOrders>>;
 		/**
 		 * How many orders have each value of the filters' (the unassigned orders and the new
@@ -40,25 +43,28 @@
 		facets: Awaited<ReturnType<typeof getOrderFacets>>;
 	} = $props();
 
+	const pages = scrollPages({ first: () => orders, fetch: getOrders });
+
 	const table = createAppTable({
 		columns,
 		serverSide: true,
+		scroll: pages,
 		get data() {
-			return orders.rows;
+			return pages.rows;
 		},
 		get rowCount() {
-			return orders.rowCount;
+			return pages.rowCount;
 		},
 		getRowId: (row) => String(row.id),
-		// Newest first, 20 per page: the defaults the server has too.
+		// Newest first: the default the server has too.
 		initialState: { ...ordersList.urlSpec.defaults, columnVisibility: { createdAt: false } },
 	});
 
-	// The status cells change an order's status, showing it at once in the rows of this query.
-	setStatusCellQuery(() => query);
+	// The status cells change an order's status, showing it at once in the page of rows it's on.
+	setStatusCellQuery((id) => pages.queryOf(id));
 
-	// Until the rows for a new search, filter, sort or page are in.
-	const loading = serverTableLoading(table, ordersList, () => orders.key);
+	// Until the rows for a new search, filter or sort are in.
+	const loading = serverTableLoading(table, ordersList, () => pages.key);
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
 	const moduleActions = extensionBulkActions(bulkTable);
@@ -143,12 +149,12 @@
 			emptyTitle={m.orders_empty()}
 			fillViewport
 			loading={loading.current}
-			groups={orders.groups}
+			groups={pages.groups}
 		/>
 		<BulkActionBar
 			{actions}
 			matching={{ where: whereOf(orders.query), key: orders.key, count: orders.rowCount }}
 		/>
-		<table.Pagination />
+		<table.Footer />
 	</div>
 </table.AppTable>

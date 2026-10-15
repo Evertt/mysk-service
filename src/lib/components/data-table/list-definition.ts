@@ -20,7 +20,7 @@
  * 		scheduledFor: { param: "scheduled", sort: true, filter: orNone(dateRange) }, // [null, { from, to }]
  * 		createdAt: { param: "created", sort: true },
  * 	},
- * 	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
+ * 	defaults: { sort: [{ id: "createdAt", desc: true }] },
  * });
  * ```
  *
@@ -49,7 +49,6 @@ import {
 	type RangeGrammar,
 } from "./ranges.ts";
 import {
-	defaultPageSizes,
 	filterValues,
 	noneToken,
 	parseTableUrl,
@@ -209,7 +208,8 @@ export interface ListWhere<C> {
 
 /**
  * A page of rows: the rows query's argument. Canonical (see `toListQuery`): every key present,
- * nothing `undefined`, filters without empty ones.
+ * nothing `undefined`, filters without empty ones. The table scrolls through the pages (see
+ * `scrollPages()` in `server-table.svelte.ts`), loading the next as it nears the end.
  */
 export interface ListQuery<C> extends ListWhere<C> {
 	/** By precedence. */
@@ -229,11 +229,9 @@ export interface ListDef<C extends ListColumns> {
 		sort?: readonly { id: SortId<C>; desc: boolean }[];
 		group?: GroupId<C>;
 		filters?: { [K in FilterId<C>]?: readonly FilterValue<C, K>[] };
-		/** The page size when the URL has none; 20 if not given. */
+		/** How many rows a page has, which the table loads at a time; 50 if not given. */
 		pageSize?: number;
 	};
-	/** The page sizes besides the default one; `defaultPageSizes` if not given. */
-	pageSizes?: readonly number[];
 	/**
 	 * The extension point through which modules add columns to the list (see `module-columns.ts`),
 	 * if they may.
@@ -256,9 +254,8 @@ export interface List<C> {
 	filterKinds: Readonly<Record<string, FilterKind<any>>>;
 	sortIds: readonly string[];
 	groupIds: readonly string[];
-	/** The page sizes the query accepts, the default one among them. */
-	pageSizes: readonly number[];
-	defaultPageSize: number;
+	/** How many rows a page has (the only size the query accepts). */
+	pageSize: number;
 	/** How the table's state maps onto the URL. */
 	urlSpec: TableUrlSpec;
 	/**
@@ -275,7 +272,7 @@ export interface List<C> {
 	point?: ListColumnsPoint;
 }
 
-const defaultPageSize = 20;
+const defaultPageSize = 50;
 
 /** The size of a value as JSON, in bytes. */
 const jsonBytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
@@ -304,7 +301,6 @@ export function toUrlSpec<C extends ListColumns>(def: ListDef<C>): TableUrlSpec 
 		})),
 		defaults: {
 			sorting: (defaults?.sort ?? []).map(({ id, desc }) => ({ id, desc })),
-			pagination: { pageIndex: 0, pageSize: defaults?.pageSize ?? defaultPageSize },
 			...(group ? { grouping: [group] } : {}),
 			...(filters.length
 				? {
@@ -315,7 +311,6 @@ export function toUrlSpec<C extends ListColumns>(def: ListDef<C>): TableUrlSpec 
 					}
 				: {}),
 		},
-		...(def.pageSizes ? { pageSizes: def.pageSizes } : {}),
 	};
 	parseTableUrl(new URLSearchParams(), spec);
 	return spec;
@@ -329,10 +324,9 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 	const filterKinds = Object.fromEntries(
 		columns.flatMap(([id, column]) => (column.filter ? [[id, column.filter]] : [])),
 	);
-	const defaultSize = def.defaults?.pageSize ?? defaultPageSize;
-	const pageSizes = [...new Set([...(def.pageSizes ?? defaultPageSizes), defaultSize])];
+	const pageSize = def.defaults?.pageSize ?? defaultPageSize;
 
-	const shape = { filterKinds, sortIds, groupIds, pageSizes };
+	const shape = { filterKinds, sortIds, groupIds, pageSize };
 	const strict = listSchemas(shape, false);
 	const boundary = def.moduleColumns ? listSchemas(shape, true) : strict;
 	return {
@@ -342,8 +336,7 @@ export function defineList<const C extends ListColumns>(def: ListDef<C>): List<C
 		filterKinds,
 		sortIds,
 		groupIds,
-		pageSizes,
-		defaultPageSize: defaultSize,
+		pageSize,
 		urlSpec: toUrlSpec(def),
 		query: boundary.query as unknown as v.GenericSchema<ListQuery<C>>,
 		where: boundary.where as unknown as v.GenericSchema<ListWhere<C>>,
@@ -370,12 +363,12 @@ function listSchemas(
 		filterKinds,
 		sortIds,
 		groupIds,
-		pageSizes,
+		pageSize,
 	}: {
 		filterKinds: Record<string, FilterKind<any>>;
 		sortIds: string[];
 		groupIds: string[];
-		pageSizes: number[];
+		pageSize: number;
 	},
 	withModuleColumns: boolean,
 ) {
@@ -419,7 +412,7 @@ function listSchemas(
 			),
 			group: v.nullable(v.picklist(groupIds)),
 			pageIndex: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(listLimits.pageIndex)),
-			pageSize: v.picklist(pageSizes),
+			pageSize: v.literal(pageSize),
 		}),
 		v.check((input) => jsonBytes(input) <= listLimits.bytes, m.common_error_generic),
 	);
@@ -490,8 +483,9 @@ function compare(a: unknown, b: unknown): number {
  * The canonical query for a table's state (read from the URL, or the table's own): a query that
  * passes the schema, the same for the states that mean the same, as SvelteKit caches a query by its
  * argument. Where the URL is lenient this ends it: filter values that are not valid are left out,
- * the others are deduped and sorted, empty filters are dropped, the search is trimmed, a page is
- * one the list has and what doesn't fit the limits (`listLimits`) is cut off.
+ * the others are deduped and sorted, empty filters are dropped, the search is trimmed and what
+ * doesn't fit the limits (`listLimits`) is cut off. It's the first page's: `startingAt()` makes
+ * another's.
  */
 export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C> {
 	const filters: Record<string, unknown[]> = {};
@@ -515,16 +509,13 @@ export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C
 		return [{ id, desc }];
 	});
 
-	const { pageIndex, pageSize } = state.pagination;
 	const result = {
 		q: state.globalFilter.trim().slice(0, listLimits.search),
 		filters,
 		sort,
 		group: state.grouping.find((id) => list.groupIds.includes(id)) ?? null,
-		pageIndex: Number.isSafeInteger(pageIndex)
-			? Math.min(Math.max(pageIndex, 0), listLimits.pageIndex)
-			: 0,
-		pageSize: list.pageSizes.includes(pageSize) ? pageSize : list.defaultPageSize,
+		pageIndex: 0,
+		pageSize: list.pageSize,
 	};
 
 	// Too big: drop values from the filter with the most, the last ones first.
@@ -538,6 +529,17 @@ export function toListQuery<C>(list: List<C>, state: TableUrlState): ListQuery<C
 		if (!fullest[1].length) delete filters[fullest[0]];
 	}
 	return result as ListQuery<C>;
+}
+
+/**
+ * The query for the page with the row at `position` (0-based, among all the rows that match), e.g.
+ * where a link says the rows were scrolled to (`parseTablePosition()`).
+ */
+export function startingAt<C>(query: ListQuery<C>, position: number): ListQuery<C> {
+	const pageIndex = Number.isSafeInteger(position)
+		? Math.min(Math.max(Math.floor(position / query.pageSize), 0), listLimits.pageIndex)
+		: 0;
+	return pageIndex === query.pageIndex ? query : { ...query, pageIndex };
 }
 
 /** The part of a query that decides which rows match. */

@@ -12,21 +12,21 @@ import {
 import { type Features, filterFnGrammar } from "./features.ts";
 import { passedMemory, passedOwner, rememberTable } from "./table-memory.svelte.ts";
 import {
+	parseTablePosition,
 	parseTableUrl,
 	searchString,
 	tableUrlKey,
 	type TableUrlSpec,
 	type TableUrlState,
+	writeTablePosition,
 	writeTableUrl,
 } from "./url-state.ts";
 import { type TableColumns, tableViewsKey, viewQuery } from "./views.ts";
 
 /** How a table keeps its state in the URL (see `url-state.ts` for the grammar). */
 export interface UrlStateOptions {
-	/** Put before the table's parameters, for a page with more than one table: `orders.page`. */
+	/** Put before the table's parameters, for a page with more than one table: `orders.sort`. */
 	prefix?: string;
-	/** The page sizes `?size=` accepts, if not the usual ones. */
-	pageSizes?: readonly number[];
 }
 
 type Table<TData extends RowData> = SvelteTable<Features, TData>;
@@ -46,7 +46,6 @@ export function tableUrlSpec<TData extends RowData>(
 	const initial = table.initialState;
 	return {
 		prefix: options.prefix,
-		pageSizes: options.pageSizes,
 		columns: table.getAllLeafColumns().map((column) => {
 			const meta = column.columnDef.meta;
 			return {
@@ -67,7 +66,6 @@ export function tableUrlSpec<TData extends RowData>(
 			globalFilter: initial.globalFilter ?? "",
 			sorting: initial.sorting,
 			columnFilters: initial.columnFilters,
-			pagination: initial.pagination,
 			grouping: initial.grouping ?? [],
 		},
 	};
@@ -79,18 +77,16 @@ function currentState<TData extends RowData>(table: Table<TData>): TableUrlState
 		globalFilter: table.atoms.globalFilter.get() ?? "",
 		sorting: table.atoms.sorting.get(),
 		columnFilters: table.atoms.columnFilters.get(),
-		pagination: table.atoms.pagination.get(),
 		grouping: table.atoms.grouping.get(),
 	};
 }
 
-/** Puts a state from the URL into the table (the page last, as the others go back to page 1). */
+/** Puts a state from the URL into the table. */
 function apply<TData extends RowData>(table: Table<TData>, state: TableUrlState) {
 	table.setSorting(state.sorting);
 	table.setColumnFilters(state.columnFilters);
 	table.setGlobalFilter(state.globalFilter);
 	table.setGrouping(state.grouping);
-	table.setPagination(state.pagination);
 }
 
 /**
@@ -122,6 +118,17 @@ export interface TableUrlSync {
 	 * chosen, or none: kept with the table's memory.
 	 */
 	viewId: number | undefined;
+	/**
+	 * Where the URL said the rows were scrolled to when the table opened (`?row=`, the index of the
+	 * first row in view; see `parseTablePosition`).
+	 */
+	position: number;
+	/**
+	 * Keeps where the rows are scrolled to in the URL (see `scroll-position.svelte.ts`), in the
+	 * history entry the table is on, without a navigation: a link or a reload opens the table
+	 * there, and so does coming back to it.
+	 */
+	keepPosition(position: number): void;
 }
 
 const syncs = new WeakMap<object, TableUrlSync>();
@@ -130,7 +137,7 @@ const syncs = new WeakMap<object, TableUrlSync>();
 export const tableUrlSync = (table: object) => syncs.get(table);
 
 /**
- * Keeps a table's search, filters, sorting and page in the page's URL, both ways: the table starts
+ * Keeps a table's search, filters, sorting and grouping in the page's URL, both ways: the table starts
  * from the URL (also when rendered on the server), its changes go into the URL, and the URL's
  * changes (back and forward, links) into the table.
  *
@@ -186,6 +193,20 @@ export function syncTableWithUrl<TData extends RowData>(
 		},
 		set viewId(id) {
 			viewId = id;
+		},
+		position: parseTablePosition(page.url.searchParams, spec),
+		keepPosition(position) {
+			// Not while the table's own navigations are under way: their URLs are for other rows.
+			if (writing) return;
+			const url = new URL(location.href);
+			if (url.pathname !== pathname) return;
+			const search = searchString(writeTablePosition(url.searchParams, position, spec));
+			if (search === searchString(url.searchParams)) return;
+			// Not SvelteKit's `goto` (even a shallow one, which is a navigation: it would cancel one the
+			// reader started meanwhile, and show the progress bar). Its own history entry stays as it
+			// is (`history.state`), so going back and forward works as before, and `page.url` doesn't
+			// change: it's where the rows are, not what they are.
+			history.replaceState(history.state, "", `${url.pathname}${search}${url.hash}`);
 		},
 	};
 	syncs.set(table, sync);

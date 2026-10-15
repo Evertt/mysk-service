@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { extendList, toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+	import { extendList, whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { EquipmentTable } from "#lib/equipment/components.ts";
 	import { listColumns } from "#lib/equipment/extensions.ts";
@@ -15,8 +14,9 @@
 	// The list with the columns of the tenant's modules (e.g. the next maintenance), whose
 	// parameters the URL may hold.
 	const list = $derived(extendList(equipmentList, await loadListColumns(listColumns)));
-	// The server pages, filters and sorts the units, as the URL says (see the orders page).
-	const query = $derived(toListQuery(list, parseTableUrl(page.url.searchParams, list.urlSpec)));
+	// The server filters, sorts and pages the units, as the URL says (see the orders page).
+	const listQuery = urlListQuery(() => list);
+	const query = $derived(listQuery.current);
 	// Both start at once.
 	const equipment = $derived(getEquipmentList(query));
 	const facets = $derived(getEquipmentFacets(whereOf(query)));

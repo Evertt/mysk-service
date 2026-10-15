@@ -3,12 +3,13 @@
  * same value of the column follow each other, under a header row with the group's value and how
  * many rows it has.
  *
- * Grouping arranges a page rather than replacing pagination: the rows are sorted by the grouped
- * column first (then as the table is sorted), and paged as usual, so a group can start on one page
- * and go on on the next. That works the same for server-side tables, whose server sorts the same
- * way (see `planList`) and says what it knows beyond the page (`PageGroups`): how many rows each
- * group has in all, and the rows just before and after the page. A group header never claims more
- * than that: its count is the group's whole count, and a group cut off by the page says so.
+ * Grouping arranges the rows the table shows rather than replacing the scrolling (see
+ * `scroll-window.svelte.ts`): the rows are sorted by the grouped column first (then as the table is
+ * sorted), and loaded as usual, so a group can go on in rows not loaded yet. That works the same
+ * for server-side tables, whose server sorts the same way (see `planList`) and says what it knows
+ * beyond the rows loaded (`PageGroups`): how many rows each group has in all, and the rows just
+ * before and after them. A group header never claims more than that: its count is the group's
+ * whole count, and a group cut off where the loaded rows end (or start) says so.
  *
  * A column opts in with `enableGrouping: true` (the app's tables default to `false`).
  */
@@ -41,11 +42,11 @@ export interface PageGroup<Row> {
 	key: string;
 	/** Its rows on this page, in order. */
 	rows: Row[];
-	/** How many rows it has in all, on every page. */
+	/** How many rows it has in all, loaded or not. */
 	count: number;
-	/** It started on an earlier page. */
+	/** It started before the rows shown (which a table opened partway down may not have). */
 	continued: boolean;
-	/** It goes on on a later page. */
+	/** It goes on after the rows shown (in rows not loaded yet). */
 	continues: boolean;
 }
 
@@ -103,7 +104,6 @@ interface GroupableColumn {
 interface GroupableTable<Row, Column> {
 	atoms: {
 		grouping: { get(): string[] };
-		pagination: { get(): { pageIndex: number; pageSize: number } };
 	};
 	getColumn(id: string): unknown;
 	getVisibleLeafColumns(): Column[];
@@ -167,10 +167,8 @@ export function groupedPage<Row extends GroupableRow, Column extends GroupableCo
 		if (group) group.push(row);
 		else byKey.set(key, [row]);
 	}
-	const { pageIndex, pageSize } = table.atoms.pagination.get();
-	const start = pageIndex * pageSize;
-	const before = all[start - 1];
-	const after = all[start + rows.length];
+	// The table shows the first rows (see `clientWindow`).
+	const after = all[rows.length];
 	const summed = table
 		.getVisibleLeafColumns()
 		.filter((other) => !other.getIsGrouped() && other.columnDef.meta?.groupSum);
@@ -178,7 +176,6 @@ export function groupedPage<Row extends GroupableRow, Column extends GroupableCo
 		column,
 		groups: pageGroups(rows, keyOf, {
 			counts: Object.fromEntries([...byKey].map(([key, rows]) => [key, rows.length])),
-			previous: before && keyOf(before),
 			next: after && keyOf(after),
 		}),
 		sums: (key) =>
