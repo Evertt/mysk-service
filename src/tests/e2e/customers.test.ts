@@ -13,6 +13,7 @@ import {
 	rows,
 	useApp,
 	value,
+	quiet,
 } from "./app.ts";
 import { priceOf, pricedOrders } from "./contracts-helpers.ts";
 
@@ -335,7 +336,7 @@ describe("in North", () => {
 		await app.go(`/customers/${code}`);
 		await page.getByRole("link", { name: `View all ${orders} orders` }).click();
 		await page.waitForURL((url) => url.search === `?customer=${code}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await expect.poll(() => app.rowCount()).toBe(orders);
 		const customers = await bodyRows().locator("td:nth-child(3)").allInnerTexts();
 		expect(customers.length).toBeGreaterThan(0);
@@ -348,7 +349,7 @@ describe("in North", () => {
 		await page.getByRole("option", { name: "Clear filters" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await expect.poll(() => app.rowCount()).toBe(await countIn("order", north.id));
 	});
 
@@ -478,7 +479,7 @@ describe("in North", () => {
 		const expected = await nextCode("customer", "code", north.id);
 		await page.getByRole("button", { name: "Create customer" }).click();
 		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		code = app.path().split("/").pop()!;
 		expect(code).toBe(expected);
 		await app.toast("Customer created");
@@ -494,7 +495,7 @@ describe("in North", () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Name").inputValue()).toBe("Test Klimaattechniek BV");
 		expect(await page.getByLabel("Country").inputValue()).toBe("Netherlands");
 
@@ -669,7 +670,7 @@ describe("in South", () => {
 		const expected = await nextCode("customer", "code", south.id);
 		await page.getByRole("button", { name: "Create customer" }).click();
 		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(app.path()).toBe(`/customers/${expected}`);
 		await page.getByRole("heading", { level: 1, name: "Test Zuid Installaties BV" }).waitFor();
 		expect(

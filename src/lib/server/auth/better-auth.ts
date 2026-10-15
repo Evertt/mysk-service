@@ -9,6 +9,7 @@ import { sql } from "drizzle-orm";
 
 import { INVITATION_EXPIRES_IN } from "#lib/auth/index.ts";
 import type { MemberRole } from "#lib/auth/index.ts";
+import * as authSchema from "#lib/server/db/auth.schema.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitationMail, sendMail } from "#lib/server/mail/index.ts";
 
@@ -30,7 +31,12 @@ async function initialOrganizationId(userId: string) {
 export const auth = betterAuth({
 	baseURL: origin,
 	secret: BETTER_AUTH_SECRET,
-	database: drizzleAdapter(db, { provider: "sqlite" }),
+	// The schema given, so the adapter doesn't ask `db` for it while the module loads: on Cloudflare
+	// the database is reached only inside a request (`#lib/server/db/durable.ts`).
+	database: drizzleAdapter(db, { provider: "sqlite", schema: authSchema }),
+	// Not at start-up, outside any request, for the same reason; the migrations' spec
+	// (`migrations.spec.ts`) checks the tables against the schema instead.
+	advanced: { database: { validateSchema: false } },
 	// Accounts are created by the seed, `pnpm run org:create` and accepting an invitation
 	// (`/invite/[id]`), not by sign-up.
 	emailAndPassword: { enabled: true, disableSignUp: true },

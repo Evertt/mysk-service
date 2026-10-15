@@ -3,11 +3,12 @@
  * rules themselves are in `../coverage.ts`; the contributions that make coverage count in core
  * are in `./index.ts`.
  */
-import { and, asc, inArray, lte, gte, ne } from "drizzle-orm";
+import { and, asc, lte, gte, ne } from "drizzle-orm";
 
 import type { OrderFacts } from "#lib/orders/extensions.ts";
 import { tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { NumberTarget } from "#lib/server/numbering.ts";
 
@@ -49,7 +50,7 @@ export async function coverageOf(
 		})
 		.from(contractEquipment)
 		.innerJoin(...tenantJoin(contract, contractEquipment.contractId))
-		.where(inArray(contractEquipment.equipmentId, units));
+		.where(inList(contractEquipment.equipmentId, units));
 	const byUnit = Map.groupBy(rows, (row) => row.equipmentId);
 
 	return new Map(
@@ -83,7 +84,7 @@ export function overlappingCoverage(
 		.innerJoin(...tenantJoin(equipment, contractEquipment.equipmentId))
 		.where(
 			and(
-				inArray(contractEquipment.equipmentId, equipmentIds),
+				inList(contractEquipment.equipmentId, equipmentIds),
 				exceptId ? ne(contract.id, exceptId) : undefined,
 				lte(contract.startsOn, period.endsOn),
 				gte(contract.endsOn, period.startsOn),

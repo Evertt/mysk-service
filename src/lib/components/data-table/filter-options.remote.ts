@@ -3,12 +3,13 @@
  * tenant's customers, engineers or units matching a search, the first so many, plus the names of
  * those ticked. Used by the orders and equipment lists, which filter on the server.
  */
-import { and, asc, inArray, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, asc, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
 import { nocase, searchMatch } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -59,7 +60,7 @@ export const getCustomerOptions = forMembers.query(optionsInput, async ({ search
 				.where(and(inTenant(customer), where))
 				.orderBy(nocase(customer.name), asc(customer.id)),
 		[customer.name, customer.code],
-		{ where: inArray(customer.code, selected), count: selected.length },
+		{ where: inList(customer.code, selected), count: selected.length },
 		search,
 	);
 });
@@ -75,7 +76,7 @@ export const getEngineerOptions = forMembers.query(optionsInput, async ({ search
 				.where(and(inTenant(engineer), where))
 				.orderBy(nocase(engineer.name), asc(engineer.id)),
 		[engineer.name],
-		{ where: inArray(engineer.id, ids), count: ids.length },
+		{ where: inList(engineer.id, ids), count: ids.length },
 		search,
 	);
 });
@@ -94,7 +95,7 @@ export const getEquipmentOptions = forMembers.query(optionsInput, async ({ searc
 				.where(and(inTenant(equipment), where))
 				.orderBy(nocase(equipment.manufacturer), nocase(equipment.model), asc(equipment.id)),
 		[equipment.serialNumber, equipment.manufacturer, equipment.model],
-		{ where: inArray(equipment.serialNumber, selected), count: selected.length },
+		{ where: inList(equipment.serialNumber, selected), count: selected.length },
 		search,
 	);
 });

@@ -1,5 +1,5 @@
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
@@ -8,6 +8,7 @@ import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
@@ -29,7 +30,7 @@ export const getCustomers = forMembers.query(async () => {
 	const open = db
 		.select({ customerId: order.customerId, count: count().as("open_count") })
 		.from(order)
-		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)))
+		.where(and(inTenant(order), inList(order.status, openOrderStatuses)))
 		.groupBy(order.customerId)
 		.as("open");
 

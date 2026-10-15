@@ -18,10 +18,12 @@ import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo
 
 import { forgetTables } from "./db.ts";
 import { baseURL } from "./lane.ts";
+import { quiet, trackNetwork } from "./network.ts";
 
 export { baseURL } from "./lane.ts";
 export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
 export { linkInMail, sentMail } from "./mail.ts";
+export { quiet } from "./network.ts";
 export {
 	isRemote,
 	remoteErrorStatus,
@@ -33,10 +35,7 @@ export {
 
 /** Waits until a page is interactive (see the root layout), or settled if it errored. */
 export const hydrated = (page: Page) =>
-	Promise.race([
-		page.locator("html[data-hydrated]").waitFor({ state: "attached" }),
-		page.waitForLoadState("networkidle"),
-	]);
+	Promise.race([page.locator("html[data-hydrated]").waitFor({ state: "attached" }), quiet(page)]);
 
 /**
  * A list's page as a link to its first page (`/orders?page=1`): the list as it is by default,
@@ -160,10 +159,16 @@ export function useApp({
 	user = users.admin,
 	viewport = { width: 1440, height: 1000 },
 	timeZone,
+	serviceWorkers = BROWSER_OPTIONS.serviceWorkers,
 }: {
 	user?: string | null;
 	viewport?: { width: number; height: number };
 	timeZone?: string;
+	/**
+	 * `"allow"` to run with the app's service worker (`src/service-worker/`), in this page and in
+	 * `anotherTab()`: for what depends on it. Blocked by default (see `BROWSER_OPTIONS`).
+	 */
+	serviceWorkers?: "allow" | "block";
 } = {}): App {
 	let browser: Browser;
 	let page: Page;
@@ -172,7 +177,7 @@ export function useApp({
 
 	/** Until a (server-side) table shows the rows for its state: it's `aria-busy` until then. */
 	const settled = async () => {
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await page.locator('[data-slot="data-table"][aria-busy="true"]').waitFor({ state: "detached" });
 	};
 	const app: App = {
@@ -195,13 +200,13 @@ export function useApp({
 			await page.getByLabel("Password").fill(DEMO_PASSWORD);
 			await page.getByRole("button", { name: "Sign in" }).click();
 			await page.waitForURL((url) => url.pathname !== "/login");
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 		},
 		async switchOrganization(name) {
 			await page.locator('[data-sidebar="header"] button').first().click();
 			await page.getByRole("menuitem", { name }).click();
 			await page.waitForURL((url) => url.pathname === "/");
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 		},
 		async submit(target) {
 			const button = await target.elementHandle();
@@ -224,7 +229,7 @@ export function useApp({
 				{ polling: 100 },
 			);
 			await button?.dispose();
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 			return body;
 		},
 		async expectingErrors(steps) {
@@ -232,7 +237,7 @@ export function useApp({
 			try {
 				const result = await steps();
 				// Errors from loading the outcome (e.g. an error page) still count as expected.
-				await page.waitForLoadState("networkidle");
+				await quiet(page);
 				return result;
 			} finally {
 				expecting = false;
@@ -311,8 +316,10 @@ export function useApp({
 			// The page has a context of its own, so a new context with its cookies.
 			const context = await browser.newContext({
 				...BROWSER_OPTIONS,
+				serviceWorkers,
 				storageState: await page.context().storageState(),
 			});
+			trackNetwork(context);
 			return context.newPage();
 		},
 	};
@@ -330,7 +337,13 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({ ...BROWSER_OPTIONS, viewport, timezoneId: timeZone });
+		page = await browser.newPage({
+			...BROWSER_OPTIONS,
+			serviceWorkers,
+			viewport,
+			timezoneId: timeZone,
+		});
+		trackNetwork(page.context());
 		if (timeZone) {
 			await page
 				.context()

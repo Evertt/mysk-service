@@ -472,6 +472,40 @@ and commit it with the change; `pnpm db:migrate` applies it to `local.db` (`pnpm
 over from the migrations and the seed). `src/tests/unit/lib/server/db/migrations.spec.ts` fails while the
 schema has changes no migration makes. Never edit a migration that's been committed: add another.
 
+`pnpm db:generate` writes the migration twice (`scripts/db-generate.ts`): in `drizzle/` for libsql
+(a file, Turso) and in `cloudflare/migrations/` for the Durable Object's plain SQLite on Cloudflare,
+which has none of libsql's own SQL (`ALTER COLUMN`); check and commit both. The spec holds both
+streams to the schema.
+
+**Bound parameters**: a statement binds at most 100 values (`#lib/server/db/parameters.ts`): it's
+Cloudflare's limit, and `db` enforces it everywhere (a statement over it throws, in tests too). So
+a list of values is never bound one by one: `inList(column, values)` and `notInList()` instead of
+drizzle's `inArray()`/`notInArray()` (one JSON parameter; `parameters.spec.ts` refuses the
+latter), and `insertRows(tx, table, rows)` (or `insertBatches()` with `.returning()`) for a
+multi-row insert. The seed, which runs in Node only, is exempt.
+
+## Cloudflare
+
+Besides Node (and Vercel), the app deploys to Cloudflare Workers (`pnpm deploy:cloudflare`; see
+"On Cloudflare" in README.md): `cloudflare/entry.ts` wraps the worker SvelteKit's
+`adapter-cloudflare` writes (`ADAPTER=cloudflare`, `cloudflare/adapter.wrangler.jsonc`) and runs
+every request inside one Durable Object, `AppDatabase`, whose SQLite is the app's database.
+
+- `db` (`src/lib/server/db/index.ts`) is the Durable Object's database inside a request there
+  (`durable.ts`), else libsql's: the app's code is the same for both. Code that runs while a module
+  loads (outside a request) mustn't touch `db`: on Cloudflare there is none then.
+- Transactions there run in the object's `storage.transaction()`, which holds every other request
+  until they're done (as `drizzleQueued` does on libsql): keep outside I/O (mail, `fetch`) out of
+  them, or the whole app waits for it. Nested transactions are part of the outer one (no
+  savepoints).
+- `pnpm check` type-checks `cloudflare/` against the Workers runtime
+  (`cloudflare/worker-configuration.d.ts`; rerun `pnpm types:cloudflare` after changing
+  `wrangler.jsonc`).
+- What changed, for live queries: `recordActivity()` announces each change after its commit
+  (`announceChange()`, `src/lib/server/changes.ts`), and a `query.live` watches the subject types it
+  shows (`watchChanges()`; the schedule's `watchSchedule` is the example). In memory: on Cloudflare
+  one object serves every request; on Node, one process.
+
 ## Activity log
 
 Every mutation logs itself with `recordActivity(tx, …)` (`src/lib/server/activity/log.ts`), inside the

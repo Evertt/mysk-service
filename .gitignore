@@ -39,3 +39,7 @@ project.inlang/cache/
 
 # Agent worktrees
 .claude/worktrees/
+
+# wrangler (Cloudflare): local secrets and state
+.dev.vars
+.wrangler

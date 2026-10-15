@@ -1,5 +1,5 @@
 import { error, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatDate } from "#lib/i18n/index.ts";
@@ -13,6 +13,8 @@ import {
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget, inDays } from "#lib/server/lists/index.ts";
@@ -83,7 +85,7 @@ export const getContract = query(v.string(), async (number) => {
 				},
 				where: and(
 					inTenant(order),
-					inArray(
+					inList(
 						order.equipmentId,
 						units.map((unit) => unit.id),
 					),
@@ -215,7 +217,9 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 			contractId = inserted.id;
 		}
 
-		await tx.insert(contractEquipment).values(
+		await insertRows(
+			tx,
+			contractEquipment,
 			[...new Set(equipmentIds)].map((equipmentId) => ({
 				customerId: fields.customerId,
 				contractId,

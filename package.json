@@ -4,7 +4,8 @@
 	"private": true,
 	"type": "module",
 	"sideEffects": [
-		"*.css"
+		"*.css",
+		"./.svelte-kit/output/**"
 	],
 	"imports": {
 		"#lib/*": "./src/lib/*",
@@ -18,14 +19,18 @@
 		"dev": "vp dev",
 		"build": "vp build",
 		"preview": "vp preview",
+		"build:cloudflare": "ADAPTER=cloudflare vp build",
+		"dev:cloudflare": "ADAPTER=cloudflare vp build && wrangler dev",
+		"deploy:cloudflare": "ADAPTER=cloudflare vp build && wrangler deploy",
+		"types:cloudflare": "wrangler types cloudflare/worker-configuration.d.ts",
 		"prepare": "node scripts/prepare.ts",
 		"generate": "node scripts/generate.ts",
-		"check": "vpr generate && vp check && svelte-check",
+		"check": "vpr generate && vp check && svelte-check && tsc -p cloudflare",
 		"check:watch": "vpr check --watch",
 		"test:unit": "vp test --project 'server-*' --project client",
 		"test:e2e": "vp test run --project e2e",
 		"test": "node scripts/test.ts",
-		"db:generate": "drizzle-kit generate",
+		"db:generate": "node scripts/db-generate.ts",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "auth generate --config src/lib/server/auth/better-auth.ts --output src/lib/server/db/auth.schema.ts --yes",
@@ -50,6 +55,7 @@
 		"@internationalized/date": "^3.12.4",
 		"@lucide/svelte": "^1.52.0",
 		"@sveltejs/adapter-auto": "^8.0.0",
+		"@sveltejs/adapter-cloudflare": "^8.0.0",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/forms": "^0.5.11",
@@ -84,7 +90,8 @@
 		"vite": "catalog:",
 		"vite-plus": "catalog:",
 		"vitest": "catalog:",
-		"vitest-browser-svelte": "^2.1.1"
+		"vitest-browser-svelte": "^2.1.1",
+		"wrangler": "4.151.0"
 	},
 	"devEngines": {
 		"packageManager": {

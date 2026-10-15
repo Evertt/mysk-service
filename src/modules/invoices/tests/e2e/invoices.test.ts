@@ -9,6 +9,7 @@ import {
 	useApp,
 	userNames,
 	value,
+	quiet,
 } from "#e2e/app.ts";
 import { covered, feesDue } from "#e2e/contracts-helpers.ts";
 import { formatCents, formatNumber } from "#lib/i18n/index.ts";
@@ -149,7 +150,7 @@ async function createDraft(organizationId: string) {
 	const expected = await nextNumber(organizationId);
 	await page.getByRole("button", { name: "Create draft" }).click();
 	await page.waitForURL((url) => url.pathname === `/invoices/${expected}`);
-	await page.waitForLoadState("networkidle");
+	await quiet(page);
 	return expected;
 }
 
@@ -198,7 +199,7 @@ describe("in North", () => {
 		expect(await invoice.innerText()).toContain("Not invoiced yet");
 		await invoice.getByRole("link", { name: "New invoice for this customer" }).click();
 		await page.waitForURL((url) => url.pathname === "/invoices/new");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(new URL(page.url()).searchParams.get("customer")).toBe(customer.code);
 	});
 
@@ -517,7 +518,7 @@ describe("in South, which has invoicing but no contracts", () => {
 			await page.getByLabel("Payment term (days)").fill(days);
 			await page.getByRole("button", { name: "Save settings" }).click();
 			await page.waitForURL((url) => url.pathname === "/invoices");
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 		};
 		const before = await value<number>(
 			`select payment_term_days from invoicing_settings where organization_id = ?`,

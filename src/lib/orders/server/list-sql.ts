@@ -3,13 +3,13 @@
  * act on the orders matching its filters (`order-bulk.remote.ts`). A remote file can only export
  * remote functions, so it can't be shared from there.
  */
-import { inArray } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { type NumberRange, numberInRange } from "#lib/components/data-table/ranges.ts";
 import { orderPriorities } from "#lib/models.ts";
 import { idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { anyOf, inDays, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
@@ -65,7 +65,7 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 		number: { sort: order.number },
 		customer: {
 			sort: nocase(customer.name),
-			filter: (codes) => inArray(customer.code, codes),
+			filter: (codes) => inList(customer.code, codes),
 			group: customer.code,
 		},
 		equipment: {
@@ -76,18 +76,18 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 		},
 		type: {
 			sort: order.type,
-			filter: (types) => inArray(order.type, types),
+			filter: (types) => inList(order.type, types),
 			group: order.type,
 		},
 		status: {
 			sort: order.status,
-			filter: (statuses) => inArray(order.status, statuses),
+			filter: (statuses) => inList(order.status, statuses),
 			group: order.status,
 		},
 		// By urgency rather than alphabetically.
 		priority: {
 			sort: rank(order.priority, orderPriorities),
-			filter: (priorities) => inArray(order.priority, priorities),
+			filter: (priorities) => inList(order.priority, priorities),
 			group: order.priority,
 		},
 		engineer: {

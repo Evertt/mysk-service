@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { nextCode, organizations, rows, unbalancedStock, useApp, value } from "#e2e/app.ts";
+import { nextCode, organizations, rows, unbalancedStock, useApp, value, quiet } from "#e2e/app.ts";
 import {
 	movementMark,
 	orderId,
@@ -105,7 +105,7 @@ describe("in North, an order's materials", () => {
 		since = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		number = app.path().split("/").pop()!;
 		expect(number).toBe(expected);
 		await app.toast("Order created");
@@ -145,7 +145,7 @@ describe("in North, an order's materials", () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Description").inputValue()).toContain("(test order)");
 		expect(await page.locator("tbody tr").count()).toBe(2);
 		expect(await page.getByLabel("Time", { exact: true }).inputValue()).toBe("13:30");
@@ -400,7 +400,7 @@ describe("in North, an order's materials", () => {
 			await page.getByLabel("Status").selectOption(status);
 			await page.getByRole("button", { name: "Save order" }).click();
 			await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 		};
 		const moved = (kind: string, sign: number) =>
 			lines.map((line) => ({
@@ -505,7 +505,7 @@ describe("in North, an order's materials", () => {
 		const mark = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		const quote = app.path().split("/").pop()!;
 		const id = await orderId(quote, north.id);
 		expect(await orderLines(id)).toHaveLength(1);

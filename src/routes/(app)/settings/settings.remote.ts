@@ -1,6 +1,6 @@
 import { getRequestEvent } from "$app/server";
 import { invalid } from "@sveltejs/kit";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager, parseRoles } from "#lib/auth/index.ts";
@@ -11,6 +11,7 @@ import { modules } from "#lib/modules/manifests.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
@@ -84,7 +85,7 @@ export const setModules = forManagers.form(
 			if (removed.length) {
 				await tx
 					.delete(organizationModule)
-					.where(and(inTenant(organizationModule), inArray(organizationModule.moduleId, removed)));
+					.where(and(inTenant(organizationModule), inList(organizationModule.moduleId, removed)));
 			}
 			const changes = [
 				...added.map((id) => ({ id, action: "module_enabled" as const })),

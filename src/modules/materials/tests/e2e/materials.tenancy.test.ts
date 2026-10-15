@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { cents, countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { cents, countIn, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 
 const { south } = organizations;
 const app = useApp();
@@ -168,7 +168,7 @@ describe("in South, with materials switched off", () => {
 		// The form as it is makes the order, with no lines and no stock moved.
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		const [{ id, number }] = await created();
 		expect(await value(`select count(*) from order_line where order_id = ?`, [id])).toBe(0);
 		expect(await countIn("stock_movement", south.id)).toBe(movements);

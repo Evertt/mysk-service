@@ -22,8 +22,10 @@
  */
 import type { ActivityAction } from "#lib/models.ts";
 import { requireTenant } from "#lib/server/auth/index.ts";
+import { announceChange } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity, type ActivityChanges } from "#lib/server/db/schema.ts";
+import { afterCommit } from "#lib/server/db/serialize.ts";
 
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {
@@ -124,6 +126,11 @@ export async function recordActivity(
 		parentLabel: parent?.label ?? null,
 		changes,
 		note: note || null,
+	});
+	// Live queries showing records of this type (or its parent's) look again once it's committed.
+	afterCommit(() => {
+		announceChange(organizationId, subject.type);
+		if (parent) announceChange(organizationId, parent.type);
 	});
 	return true;
 }

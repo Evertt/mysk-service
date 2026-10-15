@@ -7,6 +7,7 @@ import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { insertBatches } from "#lib/server/db/parameters.ts";
 
 import { lineNote } from "../activity.ts";
 import { billingFields, lineFields, termsFields } from "../form/invoice-schema.ts";
@@ -72,10 +73,11 @@ export const addToInvoice = form(
 		const draft = await db.transaction(async (tx) => {
 			const draft = await draftById(tx, id);
 			if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
-			const added = await tx
-				.insert(invoiceLine)
-				.values(lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id })))
-				.returning(loggedLine);
+			const rows = lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id }));
+			const added = [];
+			for (const batch of insertBatches(invoiceLine, rows)) {
+				added.push(...(await tx.insert(invoiceLine).values(batch).returning(loggedLine)));
+			}
 			await recordLines(tx, draft, added);
 			return draft;
 		});

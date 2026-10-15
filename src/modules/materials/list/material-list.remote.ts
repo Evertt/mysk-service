@@ -1,8 +1,9 @@
-import { and, countDistinct, inArray } from "drizzle-orm";
+import { and, countDistinct } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import {
 	bulkChange,
 	listTarget,
@@ -48,7 +49,7 @@ export const getMaterials = query(materialsList.query, async (input) => {
 		? await db
 				.select({ materialId: orderLine.materialId, orders: countDistinct(orderLine.orderId) })
 				.from(orderLine)
-				.where(and(inTenant(orderLine), inArray(orderLine.materialId, ids)))
+				.where(and(inTenant(orderLine), inList(orderLine.materialId, ids)))
 				.groupBy(orderLine.materialId)
 		: [];
 	const usageOf = new Map(usage.map((row) => [row.materialId, row.orders]));

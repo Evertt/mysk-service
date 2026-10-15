@@ -259,8 +259,9 @@ describe("idInTenant and idsInTenant", () => {
 			params: [7, "north"],
 		});
 		expect(dialect.sqlToQuery(idsInTenant(customer, [7, 8]))).toMatchObject({
-			sql: '("customer"."id" in (?, ?) and "customer"."organization_id" = ?)',
-			params: [7, 8, "north"],
+			// The ids in one parameter, whatever their number (see `inList()`).
+			sql: '("customer"."id" in (select value from json_each(?)) and "customer"."organization_id" = ?)',
+			params: ["[7,8]", "north"],
 		});
 	});
 

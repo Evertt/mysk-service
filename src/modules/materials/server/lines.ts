@@ -10,6 +10,7 @@ import type { OrderProblem, OrderSaving } from "#lib/orders/extensions.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idsInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
 
 import { fitsUnit, roundQuantity } from "../model.ts";
 import { material, orderLine, stockMovement } from "./schema.ts";
@@ -147,7 +148,9 @@ export async function saveLines(
 					)
 			).map((row) => [row.id, row.unitPrice]),
 		);
-		await tx.insert(orderLine).values(
+		await insertRows(
+			tx,
+			orderLine,
 			lines.map((line) => ({
 				organizationId,
 				orderId: order.id,

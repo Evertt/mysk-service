@@ -18,6 +18,7 @@ status.
 | [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files                |
 | [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)                |
 | [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                        |
+| [cloudflare.md](cloudflare.md)                                   | The app on Cloudflare Workers, its database in one Durable Object; live queries (built)                        |
 
 ## The decisions in short
 

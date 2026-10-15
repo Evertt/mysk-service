@@ -5,7 +5,7 @@
  */
 import { getRequestEvent } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatNumber } from "#lib/i18n/index.ts";
@@ -27,6 +27,7 @@ import {
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
@@ -60,13 +61,13 @@ export const getMyWork = forEngineers.query(async () => {
 			.select(listColumns)
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
-			.where(and(mine, inArray(order.status, ["scheduled", "in_progress"])))
+			.where(and(mine, inList(order.status, ["scheduled", "in_progress"])))
 			.orderBy(asc(order.scheduledFor)),
 		db
 			.select(listColumns)
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
-			.where(and(mine, inArray(order.status, doneOrderStatuses), isNotNull(order.completedAt)))
+			.where(and(mine, inList(order.status, doneOrderStatuses), isNotNull(order.completedAt)))
 			.orderBy(desc(order.completedAt))
 			.limit(10),
 	]);

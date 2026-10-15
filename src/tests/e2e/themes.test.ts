@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, useApp } from "./app.ts";
+import { baseURL, useApp, quiet } from "./app.ts";
 
 const app = useApp();
 
@@ -20,7 +20,7 @@ const setCookies = (cookies: Record<string, string>) =>
 
 const reload = async () => {
 	await app.page.reload();
-	await app.page.waitForLoadState("networkidle");
+	await quiet(app.page);
 };
 
 const choose = async (menu: string | RegExp, item: string) => {

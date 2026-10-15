@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
 
-import { baseURL, organizations, rows, useApp, userNames, users, value } from "./app.ts";
+import { baseURL, organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -79,7 +79,7 @@ describe("in North", () => {
 		await page.getByLabel("City").fill("Activityville");
 		await page.getByRole("button", { name: "Save customer" }).click();
 		await page.waitForURL((url) => url.pathname === "/customers/CUST-0002");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect((await entriesAbout("customer", id, north.id)).slice(before.length)).toEqual([
 			{
 				id: expect.any(Number),
@@ -101,7 +101,7 @@ describe("in North", () => {
 		await app.go("/customers/CUST-0002/edit");
 		await page.getByRole("button", { name: "Save customer" }).click();
 		await page.waitForURL((url) => url.pathname === "/customers/CUST-0002");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await entriesAbout("customer", id, north.id)).toHaveLength(before.length + 1);
 	});
 
@@ -127,7 +127,7 @@ describe("in North", () => {
 		await page.getByLabel("Status").selectOption("scheduled");
 		await page.getByRole("button", { name: "Save order" }).click();
 		await page.waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		// Its lines didn't change, so only the order did.
 		expect(await entriesAbout("order", order.id, north.id)).toMatchObject([
 			{
@@ -156,7 +156,7 @@ describe("in North", () => {
 			.fill(String(line.quantity + 1));
 		await page.getByRole("button", { name: "Save order" }).click();
 		await page.waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect((await entriesAbout("order", order.id, north.id))[1]).toMatchObject({
 			action: "updated",
 			subject_type: "order_line",
@@ -308,7 +308,7 @@ describe("in South", () => {
 		await page.getByLabel("Phone").fill("+31 40 765 4321");
 		await page.getByRole("button", { name: "Create customer" }).click();
 		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		const code = app.path().split("/").pop()!;
 		const id = await value<number>(
 			`select id from customer where code = ? and organization_id = ?`,

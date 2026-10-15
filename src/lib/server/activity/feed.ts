@@ -3,7 +3,7 @@
  * subject's noun, its changes with the names they refer to, and what its link is found by, in the
  * request's language. The queries that use it are in `#lib/components/activity/activity.remote.ts`.
  */
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 
 import {
 	type Change,
@@ -17,6 +17,7 @@ import {
 } from "#lib/activity/index.ts";
 import { inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { activity, customer, engineer, equipment } from "#lib/server/db/schema.ts";
 
 export interface SubjectLink {
@@ -56,17 +57,17 @@ export async function lookUpNames(ids: Map<ReferenceType, Set<string>>): Promise
 			db
 				.select({ id: customer.id, name: customer.name })
 				.from(customer)
-				.where(and(inArray(customer.id, list), inTenant(customer))),
+				.where(and(inList(customer.id, list), inTenant(customer))),
 		engineer: (list: number[]) =>
 			db
 				.select({ id: engineer.id, name: engineer.name })
 				.from(engineer)
-				.where(and(inArray(engineer.id, list), inTenant(engineer))),
+				.where(and(inList(engineer.id, list), inTenant(engineer))),
 		equipment: (list: number[]) =>
 			db
 				.select({ id: equipment.id, name: equipment.serialNumber })
 				.from(equipment)
-				.where(and(inArray(equipment.id, list), inTenant(equipment))),
+				.where(and(inList(equipment.id, list), inTenant(equipment))),
 	} satisfies Record<ReferenceType, (list: number[]) => Promise<{ id: number; name: string }[]>>;
 
 	const names: Names = {};
@@ -102,7 +103,7 @@ export async function subjectStates(keys: Map<string, Set<string>>) {
 				inTenant(activity),
 				or(
 					...[...keys].map(([type, ids]) =>
-						and(eq(activity.subjectType, type), inArray(activity.subjectId, [...ids])),
+						and(eq(activity.subjectType, type), inList(activity.subjectId, [...ids])),
 					),
 				),
 			),

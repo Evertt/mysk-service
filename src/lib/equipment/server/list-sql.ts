@@ -3,12 +3,13 @@
  * matching its filters (both in `equipment-list.remote.ts`). A remote file can only export remote
  * functions, so it can't export these.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
@@ -32,7 +33,7 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 	const openOrders = sql`(select count(*) from ${order} where ${and(
 		inTenant(order),
 		eq(order.equipmentId, equipment.id),
-		inArray(order.status, openOrderStatuses),
+		inList(order.status, openOrderStatuses),
 	)})`;
 	return withModuleColumns({
 		list: equipmentList,
@@ -42,22 +43,22 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 			serialNumber: { sort: equipment.serialNumber },
 			manufacturer: {
 				sort: nocase(equipment.manufacturer),
-				filter: (manufacturers) => inArray(equipment.manufacturer, manufacturers),
+				filter: (manufacturers) => inList(equipment.manufacturer, manufacturers),
 				group: equipment.manufacturer,
 			},
 			category: {
 				sort: equipment.category,
-				filter: (categories) => inArray(equipment.category, categories),
+				filter: (categories) => inList(equipment.category, categories),
 				group: equipment.category,
 			},
 			status: {
 				sort: equipment.status,
-				filter: (statuses) => inArray(equipment.status, statuses),
+				filter: (statuses) => inList(equipment.status, statuses),
 				group: equipment.status,
 			},
 			customer: {
 				sort: nocase(customer.name),
-				filter: (codes) => inArray(customer.code, codes),
+				filter: (codes) => inList(customer.code, codes),
 				group: customer.code,
 			},
 			installedAt: {

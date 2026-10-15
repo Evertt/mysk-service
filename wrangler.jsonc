@@ -1,0 +1,17 @@
+// The app on Cloudflare: a Worker whose requests are answered by one Durable Object with the app's
+// SQLite database (`cloudflare/entry.ts`). `pnpm deploy:cloudflare` builds and deploys it; secrets
+// (`BETTER_AUTH_SECRET`, `OPS_TOKEN`, optionally `SMTP_URL`) are set with `wrangler secret put`, and
+// locally in `.dev.vars` (see `.dev.vars.example`).
+{
+	"name": "fieldworks",
+	"main": "cloudflare/entry.ts",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": { "directory": ".svelte-kit/cloudflare", "binding": "ASSETS" },
+	// The migrations' SQL, which `cloudflare/migrations/migrations.js` imports.
+	"rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+	"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
+	"vars": { "ORIGIN": "https://fieldworks.devign.workers.dev" },
+	"observability": { "enabled": true },
+}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, userNames, users, value } from "./app.ts";
+import { countIn, organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -84,7 +84,7 @@ async function save(button: string) {
 	const { page } = app;
 	await page.getByRole("button", { name: button }).click();
 	await page.waitForURL(/\/engineers\/\d+$/);
-	await page.waitForLoadState("networkidle");
+	await quiet(page);
 	return Number(app.path().split("/").pop());
 }
 
@@ -94,7 +94,7 @@ async function deleteOpen() {
 	await page.getByRole("button", { name: "Delete" }).click();
 	await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 	await page.waitForURL((url) => url.pathname === "/engineers");
-	await page.waitForLoadState("networkidle");
+	await quiet(page);
 }
 
 /** The engineer created in North, who has no orders (so could be deleted). */
