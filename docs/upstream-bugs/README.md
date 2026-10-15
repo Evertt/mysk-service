@@ -158,3 +158,28 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Not minimized.** Next step: a page rendering `await getThing(id)`, and a form on it that
   deletes the thing and `redirect()`s to another page with a slow query; the network panel shows
   `getThing` asked again, before the navigation.
+
+## 8. Svelte/SvelteKit: a component created while a preload fork exists never runs its effects
+
+- **Versions:** svelte 5.57.1, @sveltejs/kit 3.0.0 with `experimental.forkPreloads`, Svelte's
+  `experimental.async`.
+- **What happens:** on the schedule board, dragging a card over the others hovers their links to
+  the orders' pages, and SvelteKit preloads each in a `fork()` (`_preload_data` in
+  `runtime/client/client.js`). The drop moves the card to another cell (a query's
+  `withOverride()`), which creates a new card component there. Every few moves that new card
+  never ran any of its effects: neither its template's updates (its `pending` class stayed, so it
+  kept pulsing) nor a `$effect` in it (not even on mount), while its DOM was inserted. The next move
+  on the board brought it back.
+- **Evidence:** a trace on the deployed app (real mouse drags; Playwright's `dragTo` doesn't hover
+  the links on its way, and never triggered it): the stuck card's `$effect` logged nothing, the
+  set its `pending` comes from no longer held its id, and the element was connected. With the
+  cards' links not preloaded (`data-sveltekit-preload-data="off"`) it didn't happen again; with
+  them preloaded, a few moves did it.
+- **Suspected cause:** effects of a branch created while a fork is pending are taken as the
+  fork's, and dropped when the fork is discarded (the hover moved on), though the branch's DOM was
+  committed with the real update.
+- **Workaround:** the cards' order links aren't preloaded
+  (`src/modules/schedule/board/order-card.svelte`).
+- **Reproduction:** not cut down yet. Likely: a list of items with links preloaded on hover, a
+  state change that moves an item to another list (re-creating it) while a hover preload is
+  pending, and a `$effect` in the item that should log.

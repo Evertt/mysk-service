@@ -92,10 +92,16 @@
 			</Button>
 		{/if}
 	</div>
+	<!--
+		Not preloaded on hover: dragging a card over the others would preload their pages, each in a
+		fork (`forkPreloads`), and a card the move re-created meanwhile never ran its effects, so it
+		kept pulsing (docs/upstream-bugs/README.md, 8).
+	-->
 	<a
 		href={resolve("/(app)/orders/[number]", { number: order.number })}
 		class="truncate font-medium underline-offset-4 hover:underline"
 		draggable="false"
+		data-sveltekit-preload-data="off"
 		title={order.number}
 	>
 		<!-- The prefix is the same on every card; the rest fits a narrow column. -->
