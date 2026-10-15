@@ -43,6 +43,9 @@ const config: KnipConfig = {
 	project: ["src/**/*.{ts,svelte,css,vue}", "scripts/**/*.ts", "cloudflare/*.ts", "*.ts"],
 	// `cloudflare:workers` is the Workers runtime's own module, not a package.
 	ignoreDependencies: ["cloudflare"],
+	// The worker SvelteKit's adapter writes, which exists only after `pnpm build:cloudflare` (not in
+	// CI); typed by `cloudflare/kit-worker.d.ts`.
+	ignoreUnresolved: ["#kit-worker"],
 	ignore: [
 		// shadcn-svelte's components are kept whether or not they are used, and `vite.config.ts`
 		// auto-imports them (`<Card.Root>` without an import), so knip sees no uses of them.
