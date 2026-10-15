@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { cents, organizations, rows, useApp, value } from "./app.ts";
+import { cents, fitsWidth, onPhone, organizations, rows, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -97,6 +97,13 @@ describe("the dashboard's charts", () => {
 		const chart = chartCard("Equipment by status").locator('[data-slot="chart"]');
 		expect(await chart.getAttribute("aria-hidden")).toBe("true");
 		await expect.poll(() => chart.locator(".lc-bars-bar").count()).toBe(4);
+	});
+
+	test("fit a phone's screen, their hidden tables too", async () => {
+		await onPhone(app.page, async () => {
+			await app.go("/");
+			expect(await fitsWidth(app.page)).toBe(true);
+		});
 	});
 
 	test("show South its own numbers only", async () => {
