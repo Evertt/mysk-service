@@ -18,6 +18,7 @@ const generatedBy = (from: string) => `${GENERATED} from ${from}. Don't edit.`;
 const moduleName = (name: string) => `module${name[0].toUpperCase()}${name.slice(1)}`;
 
 const guards = `#lib/server/modules/hooks.ts`;
+const routeGuard = `#lib/modules/route-guard.ts`;
 
 /** The exports of a server file that answer a request, which its stub guards; by the file's kind. */
 const handlers = {
@@ -31,8 +32,9 @@ const handlers = {
  * names: page options that are literals are repeated (Kit then needs no more than the stub to know
  * them), the rest is re-exported. With `guard`, it's a server file (`+page.server.ts`,
  * `+layout.server.ts`, `+server.ts`) of that module: its `load`, `actions` and request handlers
- * refuse the tenants without the module before they run, since Kit runs them without waiting for
- * the `(modules)` group's guard.
+ * refuse the tenants without the module before they run: the `(modules)` group's guard is a
+ * universal load, which doesn't run before them (and Kit runs server loads, form actions and
+ * endpoints without waiting for layouts anyway).
  */
 export function renderScriptStub(options: {
 	/** The module's file, for the header. */
@@ -95,9 +97,10 @@ export function renderScriptStub(options: {
 }
 
 /**
- * The `+layout.server.ts` of a `(modules)` group: refuses the tenants without the module that owns
- * the route (by its route folder, `owners`: route id → module id), so they get the app's own 404
- * page inside the group's layouts.
+ * The `+layout.ts` of a `(modules)` group: refuses the tenants without the module that owns the
+ * route (by its route folder, `owners`: route id → module id), so they get the app's own 404 page
+ * inside the group's layouts. A universal load, so that client-side navigations to a module's page
+ * don't ask the server for its data (see `#lib/modules/route-guard.ts`).
  */
 export function renderGroupGuard(owners: Map<string, string>): string {
 	const entries = [...owners].map(
@@ -106,17 +109,17 @@ export function renderGroupGuard(owners: Map<string, string>): string {
 	return [
 		`// ${generatedBy("the modules' routes")}`,
 		"",
-		`import type { LayoutServerLoadEvent } from "./$types";`,
+		`import type { LayoutLoadEvent } from "./$types";`,
 		"",
-		`import { guardModuleRoute } from "${guards}";`,
+		`import { guardModuleRoute } from "${routeGuard}";`,
 		"",
 		`/** The module that owns each route folder in this group, by its route id. */`,
 		`const owners = {`,
 		...entries,
 		`} as const;`,
 		"",
-		`export const load = ({ route }: LayoutServerLoadEvent) => {`,
-		`\tguardModuleRoute(route.id, owners);`,
+		`export const load = async ({ route }: LayoutLoadEvent) => {`,
+		`\tawait guardModuleRoute(route.id, owners);`,
 		`};`,
 		"",
 	].join("\n");
@@ -156,7 +159,7 @@ export function renderComponentStub(options: {
  * The stubs for the modules' routes, per `(modules)` group under `src/routes` (e.g. `(app)/(modules)`):
  * the files in it, relative to it, with their content. A module's
  * `routes/(app)/contracts/[number]/+page.svelte` is `contracts/[number]/+page.svelte` in
- * `(app)/(modules)`, whose `+layout.server.ts` guards the routes of every module in it.
+ * `(app)/(modules)`, whose `+layout.ts` guards the routes of every module in it.
  */
 export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Map<string, string>> {
 	const groups = new Map<string, { files: Map<string, string>; owners: Map<string, string> }>();
@@ -192,7 +195,7 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 	return new Map(
 		[...groups].map(([group, { files, owners }]) => [
 			group,
-			files.set("+layout.server.ts", renderGroupGuard(owners)),
+			files.set("+layout.ts", renderGroupGuard(owners)),
 		]),
 	);
 }

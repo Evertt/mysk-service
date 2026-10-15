@@ -44,12 +44,17 @@ default `serviceWorker.register`, a module worker, so in `vp dev` too).
   (`swr:visit`), also those the page doesn't ask for itself (opened from a preload, or from
   queries SvelteKit still holds), with the sync indicator until they're in. Changes of the user's
   own still go first: answers stored before one are asked for again whatever their age.
-- **Pages' server data.** A module's pages have a server `load` (the guard that refuses tenants
+- **Pages' server data.** A module's pages had a server `load` (the guard that refuses tenants
   without the module), so each navigation to them fetched `__data.json`: on Vercel a function call
   plus the session's and tenant's lookups on Turso, which no cache answered, hence the skeleton on
-  `/schedule` and the other module pages. The worker keeps it like a query's answer (only plain
-  data: no redirects, error nodes or streamed data). Moving the guard to a universal `load` with a
-  cached query would remove that round trip for everyone; a bigger change, for its own branch.
+  `/schedule` and the other module pages. The guard is now a universal `load` (the `(modules)`
+  group's generated `+layout.ts`, `#lib/modules/route-guard.ts`) that asks the cached
+  `getTenantModules` query, which the worker answers like any other, so no module page's route
+  chain has a server load any more and a client-side navigation to one makes no `__data.json`
+  request (the probe: before, `/schedule/__data.json` on each click; after, only `getSchedule` and
+  `getTenantModules` from the worker). The worker still keeps a page's `__data.json` like a query's
+  answer (only plain data: no redirects, error nodes or streamed data), for a server load that may
+  come back.
 - **With hover preloading (`forkPreloads`).** Hovering a link renders its page ahead, in a fork,
   with its queries. The user isn't waiting yet, so on hover (`swr:hover`) the worker asks again for
   that page's queries and holds the preload's answers until the fresh ones are in: a page hovered

@@ -28,11 +28,11 @@
  *   `(modules)` folder in `src/routes` is the generator's (gitignored): it deletes and rewrites it,
  *   and stops when one holds a file it didn't write. It also removes the stubs its earlier versions
  *   wrote beside the core's route folders;
- * - guards the modules' routes: a `+layout.server.ts` in each `(modules)` group refuses the
- *   tenants without the module that owns the route (`guardModuleRoute()`, with the route folders'
- *   owners), and since Kit runs server loads in parallel, and form actions and endpoints without
- *   layouts, the stub of each server file guards its `load`, `actions` and request handlers itself
- *   (`guarded()`, `guardedActions()`);
+ * - guards the modules' routes: a universal `+layout.ts` in each `(modules)` group refuses the
+ *   tenants without the module that owns the route (`guardModuleRoute()` in
+ *   `#lib/modules/route-guard.ts`, with the route folders' owners), and since that doesn't run
+ *   before server loads, form actions and endpoints, the stub of each server file guards its
+ *   `load`, `actions` and request handlers itself (`guarded()`, `guardedActions()`);
  * - lists the module's message files in `pathPattern`: the core's entries first, then each module's,
  *   in id order;
  * - checks the rules and stops with the full list of what's wrong: a module's folder name is its id

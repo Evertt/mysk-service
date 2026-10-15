@@ -118,12 +118,13 @@ describe("renderGroupGuard", () => {
 				["/(app)/(modules)/other", "other-module"],
 			]),
 		);
-		expect(stub).toContain(`import { guardModuleRoute } from "#lib/server/modules/hooks.ts";`);
+		expect(stub).toContain(`import type { LayoutLoadEvent } from "./$types";`);
+		expect(stub).toContain(`import { guardModuleRoute } from "#lib/modules/route-guard.ts";`);
 		expect(stub).toContain(
 			`const owners = {\n\t"/(app)/(modules)/sample": "sample",\n\t"/(app)/(modules)/other": "other-module",\n} as const;`,
 		);
 		expect(stub).toContain(
-			`export const load = ({ route }: LayoutServerLoadEvent) => {\n\tguardModuleRoute(route.id, owners);\n};`,
+			`export const load = async ({ route }: LayoutLoadEvent) => {\n\tawait guardModuleRoute(route.id, owners);\n};`,
 		);
 	});
 });

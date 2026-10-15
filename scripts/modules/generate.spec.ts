@@ -109,10 +109,12 @@ describe("generateModules", () => {
 			`export const GET = guarded<RequestEvent, ReturnType<typeof moduleGET>>("sample", moduleGET);`,
 		);
 		// One guard for the group, which knows each route folder's module.
-		expect(read(`${group}/+layout.server.ts`)).toContain(
+		expect(read(`${group}/+layout.ts`)).toContain(
 			`const owners = {\n\t"/(app)/(modules)/sample": "sample",\n} as const;`,
 		);
 		expect(has(`${folder}/+layout.server.ts`)).toBe(false);
+		// A universal load: no server load in the chain of a module's page.
+		expect(has(`${group}/+layout.server.ts`)).toBe(false);
 		// Only `+` files get a stub.
 		expect(has(`${folder}/sample.remote.ts`)).toBe(false);
 	});
@@ -126,7 +128,7 @@ describe("generateModules", () => {
 		expect(read("src/routes/(app)/(modules)/sample/+layout.server.ts")).toContain(
 			`export const load = guarded<LayoutServerLoadEvent, ReturnType<typeof moduleLoad>>("sample", moduleLoad);`,
 		);
-		expect(read("src/routes/(app)/(modules)/+layout.server.ts")).toContain("guardModuleRoute(");
+		expect(read("src/routes/(app)/(modules)/+layout.ts")).toContain("guardModuleRoute(");
 	});
 
 	test("puts the routes of every module in a group in one (modules) folder, and others apart", () => {
@@ -134,13 +136,11 @@ describe("generateModules", () => {
 		put("src/modules/other/routes/(app)/other/+page.svelte");
 		put("src/modules/other/routes/reports/+page.svelte");
 		generateModules(root);
-		expect(read("src/routes/(app)/(modules)/+layout.server.ts")).toContain(
+		expect(read("src/routes/(app)/(modules)/+layout.ts")).toContain(
 			`\t"/(app)/(modules)/other": "other",\n\t"/(app)/(modules)/sample": "sample",\n`,
 		);
 		expect(has("src/routes/(app)/(modules)/other/+page.svelte")).toBe(true);
-		expect(read("src/routes/(modules)/+layout.server.ts")).toContain(
-			`\t"/(modules)/reports": "other",\n`,
-		);
+		expect(read("src/routes/(modules)/+layout.ts")).toContain(`\t"/(modules)/reports": "other",\n`);
 		expect(has("src/routes/(modules)/reports/+page.svelte")).toBe(true);
 	});
 

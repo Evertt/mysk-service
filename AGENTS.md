@@ -240,12 +240,17 @@ migration committed.
 - **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
   everywhere a route id goes: `resolve()`, `RouteParams<…>`, the manifest's `route`, its activity
   subjects' `href`s.
-- **The guard**: each `(modules)` group's generated `+layout.server.ts` 404s the tenants without
-  the module that owns the route (`guardModuleRoute()` in `#lib/server/modules/hooks.ts`), so they
-  get the app's own 404 page inside the app layout. Kit runs server loads in parallel, and form
-  actions and endpoints without the layouts, so the stub of each server file (`+page.server.ts`,
-  `+layout.server.ts`, `+server.ts`) also guards its `load`, `actions` and request handlers
-  (`GET`, `POST`, …) before running the module's (`guarded()`, `guardedActions()`).
+- **The guard**: each `(modules)` group's generated `+layout.ts` 404s the tenants without the
+  module that owns the route (`guardModuleRoute()` in `#lib/modules/route-guard.ts`, which asks
+  `getTenantModules`), so they get the app's own 404 page inside the app layout. It is a universal
+  load, so a client-side navigation to a module's page asks the server for no `__data.json` (a
+  cached query instead); on a direct visit it runs on the server, during SSR. It only keeps the
+  pages away: the data is guarded on the server, by the module's remote functions (`moduleRemote()`)
+  and by the stub of each server file (`+page.server.ts`, `+layout.server.ts`, `+server.ts`), which
+  guards its `load`, `actions` and request handlers (`GET`, `POST`, …) before running the module's
+  (`guarded()`, `guardedActions()`), since Kit runs those without the universal layout's load. A
+  server load in a module's routes brings the `__data.json` round trip back, so prefer remote
+  queries.
 - **Slots, bulk actions and list columns are contributed by file**: a component at a slot is
   `src/modules/<id>/slots/<point id>/<name>.svelte` (e.g. `slots/orders.detail.side/coverage.svelte`),
   and a table's bulk actions are the default export of `src/modules/<id>/bulk-actions/<point id>.ts`
@@ -379,9 +384,11 @@ slot options (order, roles), `settings.cards`, and a save hook for other records
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
   asks without knowing the module, from `run()` (a tenant's `collect`), when every module has made
   its data: invoicing's seed prices orders and bills fees through them.
-- The page guard is a layout load, so it also answers a form posted from a module's page (the
-  organization switcher's) in an organization without the module: a refused form is a 404 there, not
-  its own status. Tests that tamper with such a form start from a page that exists.
+- The page guard is a layout load that also runs on the server when a page is rendered there, so it
+  also answers a form posted without JavaScript from a module's page in an organization without the
+  module (the organization switcher on its 404 page, which posts to the page itself): a refused form
+  is a 404 there, not its own status. Tests that tamper with such a form start from a page that
+  exists.
 - A core e2e test of something a module changes (a customer's revenue less what contracts include)
   can't import the module's helpers, and a module's e2e can't import another module's, so
   `src/tests/e2e/contracts-helpers.ts`, which works the contracts' effect on prices and billing out in SQL
