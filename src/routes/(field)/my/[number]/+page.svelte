@@ -15,6 +15,7 @@
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
+	import { refreshOnChanges } from "../live.svelte.ts";
 	import { getMyOrder, startWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
@@ -28,6 +29,10 @@
 	const order = $derived(data.order);
 	const { customer, equipment } = $derived(data.order);
 	const actions = $derived(fieldActions(order.status));
+
+	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
+	// taken off the engineer is a 404 then, as on a reload).
+	refreshOnChanges(() => getMyOrder(params.number).refresh());
 </script>
 
 <svelte:head>

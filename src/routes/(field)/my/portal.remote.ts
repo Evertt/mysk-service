@@ -26,6 +26,7 @@ import {
 	inTenant,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
+import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
@@ -108,6 +109,28 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 		}),
 	]);
 	return { order: found, notes, signoff: signoff ?? null };
+});
+
+/** The records the portal shows: a change to any of them may outdate it. */
+const portalSubjects = ["order", "customer", "equipment"] as const;
+
+/**
+ * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
+ * sent again on each change, so an open portal refreshes when the office assigns, reschedules,
+ * changes or cancels an order. Any change of those types in the tenant, not only the engineer's:
+ * it says only that something changed, and the queries it has the portal refresh are gated again.
+ */
+export const watchMyWork = forEngineers.query.live(async function* () {
+	const { organizationId } = currentTenant();
+	// Watching before the first answer, so a change in between isn't missed.
+	const changes = watchChanges(organizationId, portalSubjects);
+	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	try {
+		yield changedAt(organizationId, portalSubjects);
+		for await (const _ of changes) yield changedAt(organizationId, portalSubjects);
+	} finally {
+		changes.stop();
+	}
 });
 
 type MyOrder = Awaited<ReturnType<typeof findEngineerOrder>>;
