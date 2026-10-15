@@ -4,7 +4,7 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { intlLocale } from "#lib/i18n/index.ts";
+import { intlLocale, labelOrValue } from "#lib/i18n/index.ts";
 import { customerSegments } from "#lib/models.ts";
 
 import { countryName } from "../countries.ts";
@@ -41,6 +41,12 @@ export const columns = column.columns([
 			renderComponent(TwoLineCell, {
 				primary: row.original.city,
 				secondary: countryName(row.original.country),
+				// The city has no filter of its own: it goes in the search box.
+				primaryFilter: { value: row.original.city, label: row.original.city, search: true },
+				secondaryFilter: {
+					value: row.original.country,
+					label: countryName(row.original.country),
+				},
 			}),
 		filterFn: "oneOf",
 		enableGrouping: true,
@@ -64,7 +70,11 @@ export const columns = column.columns([
 		sortFn: (a, b, id) =>
 			customerSegments.indexOf(a.getValue(id)) - customerSegments.indexOf(b.getValue(id)),
 		enableGlobalFilter: false,
-		meta: { label: m.customers_column_segment, filterValues: customerSegments },
+		meta: {
+			label: m.customers_column_segment,
+			filterValues: customerSegments,
+			clickFilter: (segment) => labelOrValue("customerSegment", segment),
+		},
 	}),
 	column.accessor("equipmentCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),

@@ -2,8 +2,9 @@
 	@component
 	An order's status in the orders table, with the badges the tenant's modules put on it. The
 	status is a select that looks like its badge (see `BadgeSelect`), offering the statuses the
-	order can be given by hand (`orderStatusChoices()`; none for an invoiced order, which shows the
-	plain badge). A change shows at once, and goes through the same path as the order form's
+	order can be given by hand (`orderStatusChoices()`; none for an invoiced order). Its arrow opens
+	the list; clicking the rest of the badge filters the table by the status (see
+	`cell-filter.svelte.ts`), and so does an invoiced order's badge. A change shows at once, and goes through the same path as the order form's
 	(`setOrderStatus`), so the modules may refuse it (e.g. for a shortage of stock): then a toast
 	says why, and the badge goes back. The table's rows and its filters' counts refresh with it.
 
@@ -28,6 +29,7 @@
 	import { toast } from "svelte-sonner";
 
 	import BadgeSelect, { type BadgeOption } from "#lib/components/badge-select.svelte";
+	import { cellFilter } from "#lib/components/data-table/cell-filter.svelte.ts";
 	import { orderStatusChoices, type OrderStatus } from "#lib/models.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
@@ -53,6 +55,8 @@
 	} = $props();
 
 	const query = getQuery();
+	// Clicking the badge filters the table by the status; its arrow changes it.
+	const filter = cellFilter(() => ({ value: status, label: statuses[status].label }));
 
 	const option = (value: OrderStatus): BadgeOption<OrderStatus> => ({
 		value,
@@ -84,6 +88,7 @@
 		options={fixed ? [] : orderStatusChoices(status).map(option)}
 		label={m.orders_status_of({ number })}
 		onchange={change}
+		filter={fixed ? undefined : filter}
 	/>
 	<OrderTags {tags} />
 </div>

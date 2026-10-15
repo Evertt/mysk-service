@@ -47,6 +47,12 @@ export const columns = column.columns([
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
 				secondary: label("orderType", row.original.orderType),
+				// The order type, which the hidden `type` column filters by.
+				secondaryFilter: {
+					value: row.original.orderType,
+					label: label("orderType", row.original.orderType),
+					columnId: "type",
+				},
 			}),
 		meta: { label: m.maintenance_column_plan },
 	}),

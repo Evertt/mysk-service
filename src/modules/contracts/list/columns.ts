@@ -8,6 +8,7 @@ import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 import type { getContracts } from "../contracts.remote.ts";
 import { formatTerm } from "../display.ts";
+import { contractLabels } from "../labels.ts";
 import { contractLevels, contractStatus, contractStatuses } from "../model.ts";
 import ContractLink from "../ui/contract-link.svelte";
 import LevelBadge from "../ui/level-badge.svelte";
@@ -44,7 +45,11 @@ export const columns = column.columns([
 		// From basic to premium rather than alphabetically.
 		sortFn: (a, b, id) =>
 			contractLevels.indexOf(a.getValue(id)) - contractLevels.indexOf(b.getValue(id)),
-		meta: { label: m.contracts_level, filterValues: contractLevels },
+		meta: {
+			label: m.contracts_level,
+			filterValues: contractLevels,
+			clickFilter: (level) => contractLabels.labelOrValue("contractLevel", level),
+		},
 	}),
 	// Not stored: follows from the period and today's date.
 	column.accessor((row) => contractStatus(row), {
@@ -54,7 +59,11 @@ export const columns = column.columns([
 		enableGrouping: true,
 		sortFn: (a, b, id) =>
 			contractStatuses.indexOf(a.getValue(id)) - contractStatuses.indexOf(b.getValue(id)),
-		meta: { label: m.contracts_status, filterValues: contractStatuses },
+		meta: {
+			label: m.contracts_status,
+			filterValues: contractStatuses,
+			clickFilter: (status) => contractLabels.labelOrValue("contractStatus", status),
+		},
 	}),
 	column.accessor("startsOn", {
 		id: "period",

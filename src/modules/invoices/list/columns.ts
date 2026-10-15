@@ -8,6 +8,7 @@ import { formatCents } from "#lib/i18n/index.ts";
 
 import { invoiceStates } from "../invoice.ts";
 import type { getInvoices } from "../invoices.remote.ts";
+import { invoicingLabels } from "../labels.ts";
 import InvoiceLink from "../ui/invoice-link.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 
@@ -45,7 +46,11 @@ export const columns = column.columns([
 		// In the order an invoice goes through them rather than alphabetically.
 		sortFn: (a, b, id) =>
 			invoiceStates.indexOf(a.getValue(id)) - invoiceStates.indexOf(b.getValue(id)),
-		meta: { label: m.invoices_column_status, filterValues: invoiceStates },
+		meta: {
+			label: m.invoices_column_status,
+			filterValues: invoiceStates,
+			clickFilter: (state) => invoicingLabels.labelOrValue("invoiceState", state),
+		},
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {
