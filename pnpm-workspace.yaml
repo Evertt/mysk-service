@@ -1,5 +1,7 @@
 allowBuilds:
   esbuild: true
+  # Cloudflare's runtime, for `wrangler dev`: its postinstall checks for its platform binary.
+  workerd: true
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vitest: 5.0.1
