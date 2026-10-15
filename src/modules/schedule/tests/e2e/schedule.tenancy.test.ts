@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, value } from "#e2e/app.ts";
+import { organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 
 import {
 	activeEngineers,
@@ -48,7 +48,7 @@ describe("in South, which doesn't have the schedule", () => {
 
 		const other = await app.anotherTab();
 		await other.goto(new URL("/", page.url()).href);
-		await other.waitForLoadState("networkidle");
+		await quiet(other);
 		await other.locator('[data-sidebar="header"] button').first().click();
 		await other.getByRole("menuitem", { name: south.name }).click();
 		// The tab is at / already, so wait for the switch itself: the header names South.

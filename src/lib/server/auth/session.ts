@@ -1,12 +1,13 @@
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth/index.ts";
 import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
 
 /** The organization a request works in, with the signed-in user's role there. */
@@ -137,7 +138,7 @@ export const idInTenant = (table: TenantTable, id: number): SQL =>
 
 /** `table.id in ids` in the current tenant: the way to load the records of ids from the client. */
 export const idsInTenant = (table: TenantTable, ids: number[]): SQL =>
-	and(inArray(table.id, ids), inTenant(table))!;
+	and(inList(table.id, ids), inTenant(table))!;
 
 /**
  * The arguments of a join on `table` through `foreignKey`, kept in the tenant (ids are global):

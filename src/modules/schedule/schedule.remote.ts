@@ -1,6 +1,6 @@
 import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, asc, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.ts";
@@ -13,6 +13,7 @@ import { date, id } from "#lib/schema.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
@@ -72,7 +73,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(
-				and(inTenant(order), isNull(order.scheduledFor), inArray(order.status, openOrderStatuses)),
+				and(inTenant(order), isNull(order.scheduledFor), inList(order.status, openOrderStatuses)),
 			),
 	]);
 	return { start, engineers, orders, backlog: backlog.sort(byPriorityThenAge) };

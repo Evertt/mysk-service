@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { countIn, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 
 import {
 	activeContract,
@@ -128,14 +128,14 @@ describe("in South, which doesn't have the module", () => {
 			.getByRole("link", { name: "Service contracts" })
 			.click();
 		await page.waitForURL((url) => url.pathname === "/contracts");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await page.getByLabel("Search contracts…").fill(busy.number);
 		// The search reaches the URL after a delay; a click before that loses its navigation to it.
 		await page.waitForURL((url) => url.searchParams.get("q") === busy.number);
 		await app.tableSettled();
 		await page.getByRole("link", { name: busy.number }).first().click();
 		await page.waitForURL((url) => url.pathname === `/contracts/${busy.number}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await app.go("/contracts/new");
 		page.off("request", record);
 		expect(queries.length).toBeGreaterThanOrEqual(2);
@@ -148,7 +148,7 @@ describe("in South, which doesn't have the module", () => {
 
 		const other = await app.anotherTab();
 		await other.goto(new URL("/", page.url()).href);
-		await other.waitForLoadState("networkidle");
+		await quiet(other);
 		await other.locator('[data-sidebar="header"] button').first().click();
 		await other.getByRole("menuitem", { name: south.name }).click();
 		// The tab is at / already, so wait for the switch itself: the header names South.
@@ -330,7 +330,7 @@ describe("in South, with the module enabled", () => {
 		await fillIn();
 		await page.getByRole("button", { name: "Create contract" }).click();
 		await page.waitForURL(/\/contracts\/CTR-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		number = app.path().split("/").pop()!;
 		expect(number).toBe(`CTR-${year}-0001`);
 		const id = await contractId(number, south.id);

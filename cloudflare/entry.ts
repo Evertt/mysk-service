@@ -1,12 +1,16 @@
 /**
- * SPIKE: the Worker's entry. SvelteKit's adapter writes `.svelte-kit/cloudflare/_worker.js`
- * (configured by `adapter.wrangler.jsonc`); this file, which `wrangler.jsonc` deploys, wraps it:
+ * The Worker on Cloudflare (`wrangler.jsonc`). SvelteKit's adapter writes the app's worker to
+ * `.svelte-kit/cloudflare/_worker.js` (configured by `adapter.wrangler.jsonc`); this entry wraps it
+ * and exports the Durable Object it runs in:
  *
- * - The Worker sends every request to its organization's Durable Object (`Tenant`), picked by the
- *   `spike-org` cookie (`/__spike/org/<slug>` sets it): a stand-in for routing by the session's
- *   organization, whose auth tables would have to live outside the objects.
- * - `Tenant` migrates its SQLite database on start, then answers requests by running SvelteKit
- *   inside the object, with its storage in `durableRequests` for `db` (`src/lib/server/db/`).
+ * - The Worker sends every request to the app's one Durable Object, `AppDatabase` (static files
+ *   never reach it: Cloudflare serves them first).
+ * - `AppDatabase` migrates its SQLite database when it starts, then answers each request by running
+ *   SvelteKit inside itself, with its storage in `durableRequests`, where `db` finds it
+ *   (`src/lib/server/db/durable.ts`). So every query is a call into SQLite in the same process.
+ * - `POST /_ops/import` (with `Authorization: Bearer <OPS_TOKEN>`) replaces the database's data
+ *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
+ *   start with the demo data.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -20,91 +24,80 @@ import migrations from "./migrations/migrations.js";
 
 globalThis.durableRequests ??= new AsyncLocalStorage<DurableRequest>();
 
-interface Env {
-	TENANT: DurableObjectNamespace<Tenant>;
-	SPIKE_IMPORT_TOKEN?: string;
+/** The Worker's bindings (`wrangler.jsonc`), as `wrangler types` writes them. */
+type Env = Cloudflare.Env;
+
+/** A table of an export: its columns, and its rows' values in that order. */
+interface ExportedTable {
+	columns: string[];
+	rows: SqlStorageValue[][];
 }
 
-type Table = { columns: string[]; rows: unknown[][] };
+/** The tables an import may fill: the schema's, by name. */
+const tableName = /^[a-z_]+$/;
 
-export class Tenant extends DurableObject<Env> {
+export class AppDatabase extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
-		void ctx.blockConcurrencyWhile(async () => {
-			const started = Date.now();
-			await migrate(drizzle(ctx.storage), migrations);
-			console.log(`migrated in ${Date.now() - started} ms`);
-		});
+		// Before any request: requests wait until the database is up to date.
+		void ctx.blockConcurrencyWhile(() => migrate(drizzle(ctx.storage), migrations));
 	}
 
-	async fetch(request: Request): Promise<Response> {
-		const slug = request.headers.get("x-spike-org") ?? "north";
-		return globalThis.durableRequests!.run({ storage: this.ctx.storage, organizationSlug: slug }, () =>
+	fetch(request: Request): Promise<Response> {
+		return globalThis.durableRequests!.run({ storage: this.ctx.storage }, () =>
 			kit.fetch(request, this.env, this.ctx),
 		);
 	}
 
-	/** A read-only look at the object's data, for checking the spike's writes. */
-	query(statement: string) {
-		if (!/^\s*select\b/i.test(statement)) throw new Error("SELECT only");
-		return this.ctx.storage.sql.exec(statement).toArray();
-	}
+	/** Replaces the data of the tables in `data` with its rows, in one transaction. */
+	import(data: Record<string, ExportedTable>) {
+		const { sql } = this.ctx.storage;
+		const known = new Set(
+			sql
+				.exec<{ name: string }>("select name from sqlite_master where type = 'table'")
+				.toArray()
+				.map((row) => row.name),
+		);
+		const unknown = Object.keys(data).filter(
+			(table) => !tableName.test(table) || !known.has(table),
+		);
+		if (unknown.length) throw new Error(`Not tables of the database: ${unknown.join(", ")}`);
 
-	/** Replaces the object's data with an export (`export-tenant.ts`), in one transaction. */
-	import(data: Record<string, Table>) {
-		const sql = this.ctx.storage.sql;
 		const counts: Record<string, number> = {};
 		this.ctx.storage.transactionSync(() => {
-			sql.exec("PRAGMA defer_foreign_keys = ON");
-			for (const table of Object.keys(data)) sql.exec(`DELETE FROM "${table}"`);
+			// The rows reference each other: check the keys when the transaction commits.
+			sql.exec("pragma defer_foreign_keys = on");
+			for (const table of Object.keys(data)) sql.exec(`delete from "${table}"`);
 			for (const [table, { columns, rows }] of Object.entries(data)) {
-				const list = columns.map((column) => `"${column}"`).join(", ");
+				const names = columns.map((column) => `"${column.replaceAll('"', '""')}"`).join(", ");
 				const marks = columns.map(() => "?").join(", ");
-				for (const row of rows) {
-					sql.exec(`INSERT INTO "${table}" (${list}) VALUES (${marks})`, ...(row as SqlStorageValue[]));
-				}
+				for (const row of rows)
+					sql.exec(`insert into "${table}" (${names}) values (${marks})`, ...row);
 				counts[table] = rows.length;
 			}
 		});
-		return { counts, bytes: this.ctx.storage.sql.databaseSize };
+		return { counts, bytes: sql.databaseSize };
 	}
 }
 
+/** Whether `request` carries the ops token (compared in constant time). */
+function authorized(request: Request, token: string | undefined) {
+	if (!token) return false;
+	const given = new TextEncoder().encode(request.headers.get("authorization") ?? "");
+	const wanted = new TextEncoder().encode(`Bearer ${token}`);
+	return given.byteLength === wanted.byteLength && crypto.subtle.timingSafeEqual(given, wanted);
+}
+
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const url = new URL(request.url);
-		const chosen = url.pathname.match(/^\/__spike\/org\/([a-z]+)$/)?.[1];
-		if (chosen) {
-			return new Response(null, {
-				status: 303,
-				headers: { location: "/login", "set-cookie": `spike-org=${chosen}; Path=/; HttpOnly; SameSite=Lax` },
-			});
-		}
-		const cookie = request.headers.get("cookie")?.match(/(?:^|;\s*)spike-org=([a-z]+)/)?.[1];
-		const slug = url.searchParams.get("spike-org") ?? cookie ?? "north";
-		const stub = env.TENANT.get(env.TENANT.idFromName(slug));
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// One object for the app, kept in western Europe, near its users.
+		const app = env.APP_DATABASE.get(env.APP_DATABASE.idFromName("app"), { locationHint: "weur" });
 
-		if (url.pathname === "/__spike/import" && request.method === "POST") {
-			if (!env.SPIKE_IMPORT_TOKEN || request.headers.get("authorization") !== `Bearer ${env.SPIKE_IMPORT_TOKEN}`) {
-				return new Response("Forbidden", { status: 403 });
-			}
-			return Response.json(await stub.import(await request.json()));
+		if (new URL(request.url).pathname === "/_ops/import") {
+			if (request.method !== "POST") return new Response(null, { status: 405 });
+			if (!authorized(request, env.OPS_TOKEN)) return new Response(null, { status: 403 });
+			return Response.json(await app.import(await request.json()));
 		}
-
-		if (url.pathname === "/__spike/sql") {
-			if (!env.SPIKE_IMPORT_TOKEN || request.headers.get("authorization") !== `Bearer ${env.SPIKE_IMPORT_TOKEN}`) {
-				return new Response("Forbidden", { status: 403 });
-			}
-			return Response.json(await stub.query(url.searchParams.get("q") ?? ""));
-		}
-
-		// Built files and static ones don't need the database.
-		// (Remote functions are under `/_app/remote/`: those do.)
-		if (url.pathname.startsWith("/_app/immutable/") || /\.[a-z0-9]+$/i.test(url.pathname)) {
-			return kit.fetch(request, env, ctx);
-		}
-		const forwarded = new Request(request);
-		forwarded.headers.set("x-spike-org", slug);
-		return stub.fetch(forwarded);
+		return app.fetch(request);
 	},
-};
+} satisfies ExportedHandler<Env>;

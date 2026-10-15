@@ -2,11 +2,12 @@
  * What orders' materials cost: the materials module's answer to `orders.costs` (see
  * `#lib/orders/extensions.ts`), which `priceOrders()` adds to every order's price.
  */
-import { and, asc, inArray, sql, type SQLWrapper } from "drizzle-orm";
+import { and, asc, sql, type SQLWrapper } from "drizzle-orm";
 
 import type { OrderCost, OrderFacts } from "#lib/orders/extensions.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 
 import { formatQuantity } from "../display.ts";
 import { lineTotal } from "../model.ts";
@@ -19,45 +20,31 @@ import { material, orderLine } from "./schema.ts";
 export const lineTotalSql = (line: { quantity: SQLWrapper; unitPrice: SQLWrapper } = orderLine) =>
 	sql<number>`round(${line.quantity} * ${line.unitPrice})`;
 
-/** Ids in batches small enough for SQLite's limit on bound parameters. */
-const CHUNK = 500;
-
-/** Runs `query` for each batch of `ids`, and puts the rows together. */
-async function inChunks<T>(ids: number[], query: (chunk: number[]) => Promise<T[]>) {
-	const rows: T[] = [];
-	for (let i = 0; i < ids.length; i += CHUNK) rows.push(...(await query(ids.slice(i, i + CHUNK))));
-	return rows;
-}
-
 /** The current tenant's order lines added up per order, of the orders with these ids. */
 const totalsOf = (ids: number[]) =>
-	inChunks(ids, (chunk) =>
-		db
-			.select({ orderId: orderLine.orderId, total: sql<number>`sum(${lineTotalSql()})` })
-			.from(orderLine)
-			.where(and(inTenant(orderLine), inArray(orderLine.orderId, chunk)))
-			.groupBy(orderLine.orderId),
-	);
+	db
+		.select({ orderId: orderLine.orderId, total: sql<number>`sum(${lineTotalSql()})` })
+		.from(orderLine)
+		.where(and(inTenant(orderLine), inList(orderLine.orderId, ids)))
+		.groupBy(orderLine.orderId);
 
 /** The current tenant's order lines of the orders with these ids, with their materials. */
 const linesOf = (ids: number[]) =>
-	inChunks(ids, (chunk) =>
-		db
-			.select({
-				id: orderLine.id,
-				orderId: orderLine.orderId,
-				materialId: orderLine.materialId,
-				quantity: orderLine.quantity,
-				unitPrice: orderLine.unitPrice,
-				sku: material.sku,
-				name: material.name,
-				unit: material.unit,
-			})
-			.from(orderLine)
-			.innerJoin(...tenantJoin(material, orderLine.materialId))
-			.where(and(inTenant(orderLine), inArray(orderLine.orderId, chunk)))
-			.orderBy(asc(orderLine.id)),
-	);
+	db
+		.select({
+			id: orderLine.id,
+			orderId: orderLine.orderId,
+			materialId: orderLine.materialId,
+			quantity: orderLine.quantity,
+			unitPrice: orderLine.unitPrice,
+			sku: material.sku,
+			name: material.name,
+			unit: material.unit,
+		})
+		.from(orderLine)
+		.innerJoin(...tenantJoin(material, orderLine.materialId))
+		.where(and(inTenant(orderLine), inList(orderLine.orderId, ids)))
+		.orderBy(asc(orderLine.id));
 
 /**
  * The materials of each of `orders` as a cost: their lines' total (nothing for an order without

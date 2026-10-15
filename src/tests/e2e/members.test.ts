@@ -15,6 +15,7 @@ import {
 	users,
 	userNames,
 	value,
+	quiet,
 } from "./app.ts";
 
 const { north, south } = organizations;
@@ -78,7 +79,7 @@ async function chooseRole(email: string, name: string, role: string) {
 		memberRow(email).getByLabel(`Role of ${name}`).selectOption(role),
 	]);
 	const body = await response.text();
-	await app.page.waitForLoadState("networkidle");
+	await quiet(app.page);
 	return body;
 }
 
@@ -160,7 +161,7 @@ describe("invitations", () => {
 		await page.getByLabel("Repeat the password").fill(robin.password);
 		await page.getByRole("button", { name: "Create account and join" }).click();
 		await page.waitForURL((url) => url.pathname === "/");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.locator('[data-sidebar="header"]').innerText()).toContain(north.name);
 		expect(await page.locator('[data-slot="sidebar-footer"]').innerText()).toContain(robin.name);
 
@@ -391,7 +392,7 @@ describe("other organizations", () => {
 			await hydrated(page);
 			await page.getByRole("button", { name: `Join ${south.name}` }).click();
 			await page.waitForURL((url) => url.pathname === "/");
-			await page.waitForLoadState("networkidle");
+			await quiet(page);
 			expect(await page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
 		} finally {
 			await page.context().close();

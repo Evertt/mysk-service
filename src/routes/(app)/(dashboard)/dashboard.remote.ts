@@ -1,10 +1,11 @@
-import { and, asc, count, eq, gte, inArray, min, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, min, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -28,7 +29,7 @@ export const getDashboard = forMembers.query(async () => {
 			unassigned: sql<number>`sum(${order.engineerId} is null)`,
 		})
 		.from(order)
-		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)));
+		.where(and(inTenant(order), inList(order.status, openOrderStatuses)));
 
 	// Work completed in the last 30 days, priced like everywhere else.
 	const done = await db
@@ -46,7 +47,7 @@ export const getDashboard = forMembers.query(async () => {
 		.where(
 			and(
 				inTenant(order),
-				inArray(order.status, doneOrderStatuses),
+				inList(order.status, doneOrderStatuses),
 				gte(order.completedAt, monthAgo),
 			),
 		);
@@ -131,7 +132,7 @@ export const getCharts = forMembers.query(async () => {
 		.where(
 			and(
 				inTenant(order),
-				inArray(order.status, doneOrderStatuses),
+				inList(order.status, doneOrderStatuses),
 				gte(order.completedAt, start(months[0])),
 			),
 		);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, users, value } from "./app.ts";
+import { organizations, rows, useApp, users, value, quiet } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -48,7 +48,7 @@ describe("organizations", () => {
 
 	test("the switch is remembered across page loads", async () => {
 		await app.page.reload();
-		await app.page.waitForLoadState("networkidle");
+		await quiet(app.page);
 		expect(await header()).toContain(south.name);
 	});
 

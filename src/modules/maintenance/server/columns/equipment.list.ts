@@ -3,10 +3,11 @@
  * `../../columns/equipment.list.ts`): a correlated subquery for the earliest due date of the
  * unit's active plans, in the tenant.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
@@ -30,7 +31,7 @@ export default [
 			value: next,
 			sort: next,
 			nullsLast: true,
-			filter: (values) => inArray(bucket, values),
+			filter: (values) => inList(bucket, values),
 			// Counted under `none` (`noneToken`) when there's no plan.
 			facet: sql`nullif(${bucket}, 'none')`,
 		};

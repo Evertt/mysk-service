@@ -1,5 +1,5 @@
 import { error, invalid } from "@sveltejs/kit";
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
@@ -7,6 +7,7 @@ import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, member, user } from "#lib/server/db/schema.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
@@ -89,6 +90,6 @@ async function accountNames(tx: Transaction, ids: (string | null)[]) {
 	const found = await tx
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
-		.where(inArray(user.id, wanted));
+		.where(inList(user.id, wanted));
 	return new Map(found.map((row) => [row.id, `${row.name} (${row.email})`]));
 }

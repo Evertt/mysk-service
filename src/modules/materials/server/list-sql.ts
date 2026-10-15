@@ -3,10 +3,11 @@
  * matching its filters (both in `material-list.remote.ts`). A remote file can only export remote
  * functions, so it can't be shared from there.
  */
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { between, type ListSql, nocase, rank } from "#lib/server/lists/index.ts";
 
 import { materialsList } from "../list/materials-list.ts";
@@ -33,7 +34,7 @@ export const materialsSql = (): ListSql<typeof materialsList.columns> => {
 			sku: { sort: material.sku },
 			unit: {
 				sort: material.unit,
-				filter: (units) => inArray(material.unit, units),
+				filter: (units) => inList(material.unit, units),
 				group: material.unit,
 			},
 			unitPrice: {
@@ -44,7 +45,7 @@ export const materialsSql = (): ListSql<typeof materialsList.columns> => {
 			// From out of stock to in stock rather than alphabetically.
 			stockLevel: {
 				sort: rank(level, stockLevels),
-				filter: (levels) => inArray(level, levels),
+				filter: (levels) => inList(level, levels),
 				group: level,
 			},
 			// Counted for every material to sort and filter by them (the page's own are counted apart).

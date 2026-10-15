@@ -1,6 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, nextCode, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
+import {
+	countIn,
+	nextCode,
+	organizations,
+	rows,
+	unbalancedStock,
+	useApp,
+	value,
+	quiet,
+} from "./app.ts";
 import {
 	northOnly,
 	orderId,
@@ -232,7 +241,7 @@ describe("in South", () => {
 		const mark = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(app.path()).toBe(`/orders/${expected}`);
 		const [line] = await rows<{ organization_id: string; unit_price: number; price: number }>(
 			`select o.organization_id, l.unit_price, m.unit_price as price from "order" o

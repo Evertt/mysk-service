@@ -6,13 +6,14 @@
  * invoiced; voiding a sent one puts them back. Making the invoice is in `./invoices.ts`, the rules
  * in `../invoice.ts`.
  */
-import { and, asc, eq, inArray, ne, notExists, or } from "drizzle-orm";
+import { and, asc, eq, ne, notExists, or } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
@@ -101,7 +102,7 @@ async function billedReferences(references: string[]) {
 		.where(
 			and(
 				inTenant(invoiceLine),
-				inArray(invoiceLine.source, references),
+				inList(invoiceLine.source, references),
 				ne(invoice.status, "void"),
 			),
 		);
@@ -178,8 +179,8 @@ export async function alreadyBilled(
 				inTenant(invoiceLine),
 				ne(invoice.status, "void"),
 				or(
-					orderIds.length ? inArray(invoiceLine.orderId, orderIds) : undefined,
-					sources.length ? inArray(invoiceLine.source, sources) : undefined,
+					orderIds.length ? inList(invoiceLine.orderId, orderIds) : undefined,
+					sources.length ? inList(invoiceLine.source, sources) : undefined,
 				),
 			),
 		);

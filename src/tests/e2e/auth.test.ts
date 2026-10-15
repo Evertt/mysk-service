@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { BROWSER_OPTIONS, baseURL, hydrated, useApp, userNames, users } from "./app.ts";
+import { BROWSER_OPTIONS, baseURL, hydrated, useApp, userNames, users, quiet } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -70,7 +70,7 @@ describe("signing in", () => {
 		await page.getByLabel("Password").fill(DEMO_PASSWORD);
 		await page.getByRole("button", { name: "Sign in" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.locator('[data-slot="sidebar-footer"]').innerText()).toContain(
 			userNames.admin,
 		);

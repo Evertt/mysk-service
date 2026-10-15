@@ -1,7 +1,7 @@
 /** What the schedule's end-to-end tests share: this week's days, the orders as stored, the board. */
 import type { Locator } from "playwright";
 
-import { type App, rows, value } from "#e2e/app.ts";
+import { type App, rows, value, quiet } from "#e2e/app.ts";
 
 // --- This week, in the local time zone the app and the tests share ---------------------------
 
@@ -109,7 +109,7 @@ export function pageLocators(app: App) {
 			),
 			source.dragTo(target),
 		]);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		return response.text();
 	}
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "./app.ts";
+import { countIn, organizations, rows, useApp, value, quiet } from "./app.ts";
 import { busiest, equipmentPage, unit, unitId } from "./equipment-helpers.ts";
 
 const { north } = organizations;
@@ -61,7 +61,7 @@ describe("in North", () => {
 		const id = await unitId(serial, north.id);
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Model").inputValue()).toBe("TX-1");
 		expect(await page.getByLabel("Installed on").inputValue()).toBe("2026-01-10");
 		const customer = await page.getByLabel("Customer").inputValue();

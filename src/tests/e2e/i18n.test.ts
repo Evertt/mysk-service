@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { hydrated, organizations, useApp, users } from "./app.ts";
+import { hydrated, organizations, useApp, users, quiet } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -51,7 +51,7 @@ describe("in Dutch", () => {
 		await page.getByLabel("Wachtwoord").fill(DEMO_PASSWORD);
 		await page.getByRole("button", { name: "Inloggen" }).click();
 		await page.waitForURL((url) => url.pathname === "/");
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 
 		const sidebar = page.locator('[data-sidebar="content"]');
 		await sidebar.getByRole("link", { name: "Opdrachten" }).waitFor();

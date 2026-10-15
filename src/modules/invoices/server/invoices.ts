@@ -10,6 +10,7 @@ import { formatCents } from "#lib/i18n/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import type { Problem } from "#lib/server/forms.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
@@ -84,9 +85,11 @@ export async function createDraft(input: {
 				vatRate: settings.vatRate,
 			})
 			.returning({ id: invoice.id });
-		await tx
-			.insert(invoiceLine)
-			.values(lines.map((line) => ({ ...line, organizationId, invoiceId: created.id })));
+		await insertRows(
+			tx,
+			invoiceLine,
+			lines.map((line) => ({ ...line, organizationId, invoiceId: created.id })),
+		);
 		const total = lines.reduce((sum, line) => sum + line.amount, 0);
 		await recordActivity(tx, {
 			action: "created",

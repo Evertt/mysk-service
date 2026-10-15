@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { cents, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { cents, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 import { priceOf, pricedOrders } from "#e2e/contracts-helpers.ts";
 
 import {
@@ -273,7 +273,7 @@ describe("in North, contracts count on orders", () => {
 		const before = Math.floor(Date.now() / 1000);
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await app.toast("Order created");
 		const number = app.path().split("/").pop()!;
 
@@ -298,13 +298,13 @@ describe("in North, contracts count on orders", () => {
 
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await page.getByLabel("Status").selectOption("scheduled");
 		await page.getByLabel("Engineer").selectOption({ index: 1 });
 		await page.getByLabel("Scheduled for").fill(new Date().toISOString().slice(0, 10));
 		await page.getByRole("button", { name: "Save order" }).click();
 		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await expect
 			.poll(() => card("Service contract").locator('[data-slot="badge"]').allInnerTexts())
 			.toEqual(["Responded"]);

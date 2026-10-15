@@ -28,7 +28,6 @@ import {
 	type Column,
 	count as countRows,
 	gte,
-	inArray,
 	isNull,
 	lt,
 	lte,
@@ -54,6 +53,7 @@ import { type DateRange, type NumberRange } from "#lib/components/data-table/ran
 import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { formatNumber } from "#lib/i18n/format.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 
 /**
  * The SQL for every column a list's definition sorts, groups or filters by, and nothing else: a
@@ -202,7 +202,7 @@ export function rank(expression: SQLWrapper, values: readonly string[]) {
 export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
 	const some = values.filter((value) => value !== null);
 	return or(
-		...(some.length ? [inArray(expression, some)] : []),
+		...(some.length ? [inList(expression, some)] : []),
 		...(some.length < values.length ? [isNull(expression)] : []),
 	);
 }
@@ -340,7 +340,7 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 				values,
 				rows.map((row) => row.id),
 			);
-			condition = and(condition, kept.length ? inArray(source.id, kept) : sql`0`);
+			condition = and(condition, kept.length ? inList(source.id, kept) : sql`0`);
 		}
 		return condition;
 	}

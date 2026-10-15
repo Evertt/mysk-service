@@ -1,0 +1,4 @@
+# Local secrets for `pnpm dev:cloudflare` (wrangler dev): copy to `.dev.vars`, which isn't committed.
+BETTER_AUTH_SECRET=change-me-to-32-random-characters
+OPS_TOKEN=change-me
+ORIGIN=http://localhost:8787

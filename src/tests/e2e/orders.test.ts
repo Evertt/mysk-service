@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, nextCode, organizations, rows, useApp, value } from "./app.ts";
+import { countIn, nextCode, organizations, rows, useApp, value, quiet } from "./app.ts";
 import { orderId, snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
@@ -50,7 +50,7 @@ describe("in North", () => {
 		const expected = await nextCode("order", "number", north.id);
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		number = app.path().split("/").pop()!;
 		expect(number).toBe(expected);
 		await app.toast("Order created");
@@ -63,7 +63,7 @@ describe("in North", () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Description").inputValue()).toContain("(test order)");
 		expect(await page.getByLabel("Time", { exact: true }).inputValue()).toBe("13:30");
 

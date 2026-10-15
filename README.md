@@ -169,3 +169,39 @@ with a new owner. After that, the owner invites everyone else (see "Members and 
 Back up the database file (and its `-wal` file, if any) like any other data. Don't run
 `pnpm db:seed` or `db:reset` against it: the seed deletes every organization and its data, and puts
 demo data and demo users in their place.
+
+### On Cloudflare
+
+The app also runs on Cloudflare Workers, with its database in a
+[Durable Object](https://developers.cloudflare.com/durable-objects/): one object for the whole
+app, whose SQLite is in the same process as the code, so a query is a function call rather than a
+round trip. `cloudflare/entry.ts` is the Worker; it wraps the worker that SvelteKit's
+`adapter-cloudflare` writes (`ADAPTER=cloudflare`) and runs each request inside the object, which
+migrates its database itself when it starts (`cloudflare/migrations/`).
+
+```sh
+pnpm exec wrangler login                    # once
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
+pnpm exec wrangler secret put OPS_TOKEN      # allows importing data, see below
+pnpm deploy:cloudflare                      # builds with ADAPTER=cloudflare and deploys
+```
+
+Set `ORIGIN` in `wrangler.jsonc` to the Worker's URL (or your domain). `DATABASE_URL` isn't used
+there. To try it locally in Cloudflare's runtime: copy `.dev.vars.example` to `.dev.vars` and run
+`pnpm dev:cloudflare` (wrangler keeps the object's data in `.wrangler/`).
+
+A new object starts empty. Its data comes from a libsql database, through
+`POST /_ops/import`, which replaces the data of every table in the export: to start, make the
+first organization (or the demo data) in a local file and import that; to move from Turso, export
+Turso's.
+
+```sh
+DATABASE_URL=file:start.db pnpm db:migrate
+DATABASE_URL=file:start.db pnpm run org:create -- --org "Acme Service" --slug acme --owner-email ada@acme.example --owner-name "Ada Lovelace"
+node cloudflare/export-database.ts file:start.db > export.json
+curl -X POST https://<worker>/_ops/import -H "Authorization: Bearer $OPS_TOKEN" --data-binary @export.json
+```
+
+Cloudflare keeps 30 days of the object's history (point-in-time recovery). Mail: `SMTP_URL` sends
+through nodemailer, which is untested on Workers; without it, mail is logged
+(`wrangler tail`).

@@ -8,10 +8,11 @@
  * Kept apart from `withModuleColumns()`, which imports the registry, which imports the modules'
  * files, which import `columnSql()` from here: in one file that would be a cycle.
  */
-import { and, inArray, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { and, type SQL, sql, type SQLWrapper } from "drizzle-orm";
 
 import type { ModuleListColumn } from "#lib/components/data-table/module-columns.ts";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 
 import type { ListSql } from "./plan.ts";
 /** A module column's SQL, over the list's joined tables (`ListSql.from`), tenant-scoped. */
@@ -71,7 +72,7 @@ export async function moduleValues<C>(
 	);
 	const rows = (await listSql
 		.from({ id: sql<number>`${listSql.id}`, ...fields })
-		.where(and(listSql.scope(), inArray(listSql.id as SQL, [...ids])))) as ({
+		.where(and(listSql.scope(), inList(listSql.id as SQL, [...ids])))) as ({
 		id: number;
 	} & Record<string, unknown>)[];
 	return new Map(

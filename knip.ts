@@ -32,12 +32,17 @@ const config: KnipConfig = {
 		// The tests of every Vitest project: `src/tests/{unit,e2e}/` and the modules' `tests/{unit,e2e}/`.
 		"src/**/*.{test,spec}.{ts,js}",
 		"scripts/**/*.spec.ts",
+		// The Worker on Cloudflare (`wrangler.jsonc`'s `main`), its migrations' config (run by
+		// drizzle-kit through `scripts/db-generate.ts`) and its export script, run by hand.
+		"cloudflare/{entry,drizzle.config,export-database}.ts",
 		// The service worker experiment's measurements, run by hand (`node scripts/sw-benchmark.ts`).
 		"scripts/sw-{benchmark,check,deploy,files,probe}.ts",
 	],
 	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
 	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)
-	project: ["src/**/*.{ts,svelte,css,vue}", "scripts/**/*.ts", "*.ts"],
+	project: ["src/**/*.{ts,svelte,css,vue}", "scripts/**/*.ts", "cloudflare/*.ts", "*.ts"],
+	// `cloudflare:workers` is the Workers runtime's own module, not a package.
+	ignoreDependencies: ["cloudflare"],
 	ignore: [
 		// shadcn-svelte's components are kept whether or not they are used, and `vite.config.ts`
 		// auto-imports them (`<Card.Root>` without an import), so knip sees no uses of them.

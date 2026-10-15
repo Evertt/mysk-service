@@ -1,4 +1,4 @@
-import { and, count, inArray } from "drizzle-orm";
+import { and, count } from "drizzle-orm";
 import * as v from "valibot";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
@@ -6,6 +6,7 @@ import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import {
 	bulkChange,
@@ -62,8 +63,8 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 				.where(
 					and(
 						inTenant(order),
-						inArray(order.equipmentId, ids),
-						inArray(order.status, openOrderStatuses),
+						inList(order.equipmentId, ids),
+						inList(order.status, openOrderStatuses),
 					),
 				)
 				.groupBy(order.equipmentId)

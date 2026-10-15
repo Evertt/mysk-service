@@ -1,9 +1,10 @@
-// SPIKE: the config SvelteKit's adapter reads, so that it writes its worker to `_worker.js`; the
-// Worker that's deployed is `wrangler.jsonc`'s, whose entry wraps it (`entry.ts`).
+// What SvelteKit's adapter reads (`vite.config.ts`, with `ADAPTER=cloudflare`): it writes the app's
+// worker to `main`. The Worker that's deployed is `wrangler.jsonc`'s, whose entry wraps that one
+// (`entry.ts`), so the adapter needs no option for exporting a Durable Object.
 {
-	"name": "fieldworks-spike",
+	"name": "fieldworks",
 	"main": "../.svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-01",
 	"compatibility_flags": ["nodejs_compat"],
-	"assets": { "directory": "../.svelte-kit/cloudflare", "binding": "ASSETS" }
+	"assets": { "directory": "../.svelte-kit/cloudflare", "binding": "ASSETS" },
 }

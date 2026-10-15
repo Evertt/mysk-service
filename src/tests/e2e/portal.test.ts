@@ -13,6 +13,7 @@ import {
 	useApp,
 	users,
 	value,
+	quiet,
 } from "./app.ts";
 
 const { north, south } = organizations;
@@ -420,7 +421,7 @@ async function signedInPage(email: string) {
 	await page.getByLabel("Password").fill(DEMO_PASSWORD);
 	await page.getByRole("button", { name: "Sign in" }).click();
 	await page.waitForURL((url) => url.pathname !== "/login");
-	await page.waitForLoadState("networkidle");
+	await quiet(page);
 	return { page, requests };
 }
 
@@ -463,6 +464,6 @@ async function captureDelete(office: Page) {
 	});
 	await dialog.getByRole("button", { name: "Delete" }).click();
 	const form = await captured;
-	await office.waitForLoadState("networkidle");
+	await quiet(office);
 	return form;
 }

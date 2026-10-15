@@ -1,0 +1,22 @@
+{
+	// The Worker's entry and its scripts, typed against Cloudflare's runtime
+	// (`worker-configuration.d.ts`, written by `wrangler types`). The app (`src/`) is typed by the
+	// root tsconfig; `pnpm check` runs both.
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["ESNext"],
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"allowJs": true,
+		"checkJs": false,
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true
+	},
+	"include": ["*.ts", "migrations/migrations.js"]
+}

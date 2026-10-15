@@ -6,7 +6,7 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, users } from "./app.ts";
+import { organizations, rows, useApp, users, quiet } from "./app.ts";
 import { tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -56,7 +56,7 @@ async function leaveAndComeBack(page: Page) {
 	await page.waitForURL((url) => url.pathname === "/customers");
 	await page.getByRole("link", { name: "Orders", exact: true }).click();
 	await page.waitForURL((url) => url.pathname === "/orders");
-	await page.waitForLoadState("networkidle");
+	await quiet(page);
 }
 
 describe("in North", () => {
@@ -68,7 +68,7 @@ describe("in North", () => {
 		await toggleColumn(page, "Total");
 		await expect.poll(async () => (await adminMemory(north.id))?.columns).toMatch(/"total":false/);
 		await page.reload();
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await headers(page)).not.toContain("Total");
 		expect(await headers(page)).toContain("Engineer");
 	});
@@ -76,7 +76,7 @@ describe("in North", () => {
 	test("and on another device, but not for another user", async () => {
 		const elsewhere = await admin.anotherTab();
 		await elsewhere.goto(new URL("/orders", admin.page.url()).href);
-		await elsewhere.waitForLoadState("networkidle");
+		await quiet(elsewhere);
 		expect(await headers(elsewhere)).not.toContain("Total");
 		await elsewhere.context().close();
 

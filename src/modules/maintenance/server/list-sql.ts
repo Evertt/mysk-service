@@ -2,12 +2,13 @@
  * The due list in SQL (see `../list/due-list.ts`), shared by its queries and the "Create orders"
  * bulk command, which may act on every plan matching its filters.
  */
-import { and, eq, inArray, lt } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { type ListSql, nocase } from "#lib/server/lists/index.ts";
 
@@ -38,10 +39,10 @@ export const dueSql = (
 		unit: { sort: [nocase(equipment.manufacturer), nocase(equipment.model)] },
 		customer: {
 			sort: nocase(customer.name),
-			filter: (codes) => inArray(customer.code, codes),
+			filter: (codes) => inList(customer.code, codes),
 		},
 		plan: { sort: nocase(maintenancePlan.description) },
-		type: { filter: (types) => inArray(maintenancePlan.orderType, types) },
+		type: { filter: (types) => inList(maintenancePlan.orderType, types) },
 		interval: { sort: maintenancePlan.intervalMonths },
 		nextDue: { sort: maintenancePlan.nextDueOn },
 		lastOrder: { sort: order.number, nullsLast: true },

@@ -3,7 +3,8 @@ import { defineEnvVars } from "@sveltejs/kit/env";
 export const variables = defineEnvVars({
 	DATABASE_URL: {
 		description:
-			"The database: a local file (`file:local.db`) or a Turso database (`libsql://<name>.turso.io`).",
+			"The database: a local file (`file:local.db`) or a Turso database (`libsql://<name>.turso.io`). Not on Cloudflare, where the database is the app's Durable Object's (`cloudflare/entry.ts`).",
+		schema: (value) => value || undefined,
 	},
 	DATABASE_AUTH_TOKEN: {
 		description: "Optional. The access token of a Turso database; a local file needs none.",

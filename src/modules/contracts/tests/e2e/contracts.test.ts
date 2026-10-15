@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { countIn, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { countIn, isRemote, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 
 import {
 	activeContract,
@@ -195,7 +195,7 @@ describe("in North", () => {
 		const expected = await nextNumber(north.id);
 		await page.getByRole("button", { name: "Create contract" }).click();
 		await page.waitForURL(/\/contracts\/CTR-/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		number = app.path().split("/").pop()!;
 		expect(number).toBe(expected);
 		await app.toast("Contract created");
@@ -230,7 +230,7 @@ describe("in North", () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Monthly fee").inputValue()).toBe("123.45");
 		expect(await units().and(page.locator(":checked")).count()).toBe(2);
 
@@ -239,7 +239,7 @@ describe("in North", () => {
 		await units().and(page.locator(":checked")).first().uncheck();
 		await page.getByRole("button", { name: "Save contract" }).click();
 		await page.waitForURL((url) => url.pathname === `/contracts/${number}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		// The page shows once its parts are in, the modules' cards among them.
 		await expect
 			.poll(() => page.locator('h1 ~ [data-slot="badge"]').allInnerTexts())

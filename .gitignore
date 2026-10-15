@@ -40,6 +40,6 @@ project.inlang/cache/
 # Agent worktrees
 .claude/worktrees/
 
-# SPIKE: wrangler dev secrets
+# wrangler (Cloudflare): local secrets and state
 .dev.vars
 .wrangler

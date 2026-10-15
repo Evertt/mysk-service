@@ -15,6 +15,7 @@ import {
 	userNames,
 	users,
 	value,
+	quiet,
 } from "#e2e/app.ts";
 import { formatCents, formatNumber } from "#lib/i18n/format.ts";
 
@@ -274,7 +275,7 @@ describe("in North", () => {
 		await page.waitForURL(
 			(url) => url.pathname === "/materials" && url.search === "?stock=out,low",
 		);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await app.rowCount()).toBe(low);
 		for (const row of await tableRows().allInnerTexts()) {
 			expect(row).toMatch(/Out of stock|Low/);
@@ -423,7 +424,7 @@ describe("in North", () => {
 
 		await tableRows().first().locator("td a").click();
 		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		busy = await material(app.path().split("/").pop()!, north.id);
 		expect(await ordersUsing(busy.id)).toBe(most.orders);
 		await page.getByRole("heading", { name: busy.name }).waitFor();
@@ -517,7 +518,7 @@ describe("in North", () => {
 		const expected = await nextCode("material", "sku", north.id);
 		await page.getByRole("button", { name: "Create material" }).click();
 		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		sku = app.path().split("/").pop()!;
 		expect(sku).toBe(expected);
 		await app.toast("Material created");
@@ -549,7 +550,7 @@ describe("in North", () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();
 		await page.waitForURL(/\/edit$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(await page.getByLabel("Name", { exact: true }).inputValue()).toBe(testName);
 		expect(await page.getByLabel("Unit", { exact: true }).inputValue()).toBe("pcs");
 		expect(Number(await page.getByLabel("Unit price").inputValue())).toBe(12.5);
@@ -559,7 +560,7 @@ describe("in North", () => {
 		await page.getByLabel("Unit price").fill("3.99");
 		await page.getByRole("button", { name: "Save material" }).click();
 		await page.waitForURL((url) => url.pathname === `/materials/${sku}`);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		await app.toast("Material saved");
 		expect(await material(sku, north.id)).toMatchObject({ unit: "m", unit_price: 399, stock: 4 });
 		// The redirect shows the cached material first and refreshes it right after.
@@ -908,7 +909,7 @@ describe("in South", () => {
 		await page.getByLabel("Opening stock").fill("12");
 		await page.getByRole("button", { name: "Create material" }).click();
 		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
-		await page.waitForLoadState("networkidle");
+		await quiet(page);
 		expect(app.path()).toBe(`/materials/${expected}`);
 		expect(await material(expected, south.id)).toMatchObject({
 			name: testName,

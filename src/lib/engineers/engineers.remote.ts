@@ -1,5 +1,5 @@
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.ts";
@@ -8,6 +8,7 @@ import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
@@ -21,7 +22,7 @@ export const getEngineers = forMembers.query(async () => {
 	const open = db
 		.select({ engineerId: order.engineerId, count: count().as("open_count") })
 		.from(order)
-		.where(and(inTenant(order), inArray(order.status, openOrderStatuses)))
+		.where(and(inTenant(order), inList(order.status, openOrderStatuses)))
 		.groupBy(order.engineerId)
 		.as("open");
 
@@ -81,7 +82,7 @@ export const getEngineer = forMembers.query(v.string(), async (param) => {
 				and(
 					inTenant(order),
 					eq(order.engineerId, engineerId),
-					inArray(order.status, openOrderStatuses),
+					inList(order.status, openOrderStatuses),
 				),
 			)
 			.orderBy(sql`${order.scheduledFor} is null`, asc(order.scheduledFor), asc(order.id)),
