@@ -2,7 +2,8 @@ import { globSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
-import adapter from "@sveltejs/adapter-auto";
+import autoAdapter from "@sveltejs/adapter-auto";
+import cloudflareAdapter from "@sveltejs/adapter-cloudflare";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import type { ImportsMap } from "unplugin-auto-import/types";
@@ -170,7 +171,11 @@ export default defineConfig({
 			},
 
 			// A Node server (`node build`), next to its SQLite database file. See "Deploying" in README.md.
-			adapter: adapter(),
+			// SPIKE: `ADAPTER=cloudflare` builds the Durable Objects Worker (see `cloudflare/entry.ts`).
+			adapter:
+				process.env.ADAPTER === "cloudflare"
+					? cloudflareAdapter({ config: "cloudflare/adapter.wrangler.jsonc" })
+					: autoAdapter(),
 			experimental: { remoteFunctions: true, forkPreloads: true },
 		}),
 

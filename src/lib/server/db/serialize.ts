@@ -44,10 +44,10 @@ function createQueue() {
 type Callback = () => void | Promise<void>;
 
 /** The callbacks `afterCommit()` collected in the running (outermost) transaction. */
-const pendingCallbacks = new AsyncLocalStorage<Callback[]>();
+export const pendingCallbacks = new AsyncLocalStorage<Callback[]>();
 
 /** Runs `callback`, logging what it throws: nothing that follows a commit can undo it. */
-async function runCallback(callback: Callback) {
+export async function runCallback(callback: Callback) {
 	try {
 		await callback();
 	} catch (error) {
