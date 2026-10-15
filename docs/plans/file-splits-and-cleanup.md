@@ -1,7 +1,10 @@
 # File splits and cleanup
 
-A review of file size, repetition and legibility, with a plan to fix them. No code has changed
-yet. Two other plans cover nearby work and take precedence where they overlap:
+A review of file size, repetition and legibility, with a plan to fix them. **Status:** done
+(October 2026): batches 0 to 3 below, in the phases of the plans index (`README.md`). The file
+paths are those of the review: the domain folders (`src/lib/<domain>/`) and the modules
+(`src/modules/<id>/`) have moved most of these files since. Two other plans cover nearby work and
+took precedence where they overlapped:
 
 - **(a) feature folders and module plugins**: where module code (contracts, invoicing) lives, and
   how modules hook into core. Any split below that moves module files should land in whatever

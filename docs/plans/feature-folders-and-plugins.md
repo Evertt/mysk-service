@@ -631,9 +631,9 @@ So `labels.ts` imports no module.
   routes 404, the nav lacks it, the slots are empty and its remote queries are refused; and tenant
   isolation. In the seed, North has every module and South only invoices and materials.
 - Core specs test core with made-up modules (`src/tests/unit/lib/modules/fakes.ts`, mocked in as
-  `manifests.gen.ts` or passed as the registry). The plan's core e2e test "with every module
-  switched off" doesn't exist: South has two modules, and a module's absence is covered by each
-  module's own e2e.
+  `manifests.gen.ts` or passed as the registry). Core's e2e has one test file with every module
+  switched off (`src/tests/e2e/without-modules.test.ts`): an owner switches South's off in
+  settings, every core page then loads without a failed part, and they're switched back on.
 - A core e2e test of something a module changes can't import the module's helpers, so
   `src/tests/e2e/contracts-helpers.ts` (the contracts' effect on prices and billing, in SQL) stays
   in core, and the e2e of contracts and invoices import it from there.

@@ -270,7 +270,7 @@ describe("in South", () => {
 		await app.go(`/orders/${shared}`);
 		const table = page.locator("main table").first();
 		expect(cents(await table.locator("tfoot td").last().innerText())).toBe(total);
-		// South has no modules, so nothing adjusts the price.
+		// South has invoices and materials but not contracts, the only module that adjusts prices.
 		expect(await table.locator("tbody tr").filter({ hasText: "Covered by" }).count()).toBe(0);
 
 		await app.go("/orders");

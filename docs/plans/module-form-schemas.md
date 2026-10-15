@@ -1,6 +1,6 @@
 # Module form schemas: typed, validated parts of a core form
 
-**Status:** implemented on branch `module-form-schemas` (October 2026).
+**Status:** built and merged into `main` (October 2026; see "Form slots" in AGENTS.md).
 
 ## Problem
 

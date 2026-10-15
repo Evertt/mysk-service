@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** implemented on branch `materials-module` (October 2026), for review before merging. Decisions 1–6 change what a tenant sees; the user accepted each recommendation (October 2026).
+**Status:** built and merged into `main` (October 2026; the materials module, `src/modules/materials/`). Decisions 1–6 change what a tenant sees; the user accepted each recommendation (October 2026).
 
 **Goal:** The core materials domain becomes the optional module `src/modules/materials/`: tenants can switch it off, existing tenants keep it, and core knows nothing about materials. It's the second "core feature becomes a module" pilot, and the first with tables of its own that core used to read and write: order lines, the stock ledger, and the pricing, forms and pages built on them.
 
