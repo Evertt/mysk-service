@@ -176,16 +176,37 @@ export const bulkSetEngineersActive = forMembers.command(
 			table: engineer,
 			label: engineer.name,
 			columns: { active: engineer.active },
-			change: (each) =>
-				db.transaction(async (tx) => {
-					if (each.active === active) return;
-					await tx.update(engineer).set({ active }).where(idInTenant(engineer, each.id));
-					const subject = { type: "engineer", id: each.id, label: each.label };
-					await recordActivity(tx, { action: "updated", subject, before: each, after: { active } });
-				}),
+			change: (each) => setActive(each, active),
 		});
 		void getEngineers().refresh();
 		return result;
+	},
+);
+
+/** Marks one of the tenant's engineers (as loaded) active or inactive, and logs it. */
+async function setActive(found: { id: number; label: string; active: boolean }, active: boolean) {
+	await db.transaction(async (tx) => {
+		if (found.active === active) return;
+		await tx.update(engineer).set({ active }).where(idInTenant(engineer, found.id));
+		const subject = { type: "engineer", id: found.id, label: found.label };
+		await recordActivity(tx, { action: "updated", subject, before: found, after: { active } });
+	});
+}
+
+/**
+ * Marks one of the tenant's engineers active or inactive, from the status in the engineers list
+ * (see `bulkSetEngineersActive`). A 404 if there's no such engineer.
+ */
+export const setEngineerActive = forMembers.command(
+	v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)), active: v.boolean() }),
+	async ({ id, active }) => {
+		const found = await db.query.engineer.findFirst({
+			columns: { id: true, name: true, active: true },
+			where: idInTenant(engineer, id),
+		});
+		if (!found) error(404, m.engineers_not_found());
+		await setActive({ id: found.id, label: found.name, active: found.active }, active);
+		void getEngineers().refresh();
 	},
 );
 

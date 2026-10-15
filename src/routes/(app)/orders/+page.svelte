@@ -34,4 +34,4 @@
 	{/snippet}
 </PageHeader>
 
-<OrdersTable orders={await orders} facets={await facets} />
+<OrdersTable {query} orders={await orders} facets={await facets} />

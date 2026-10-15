@@ -267,5 +267,6 @@
 				"countPlural=*": "{countText} h"
 			}
 		}
-	]
+	],
+	"common_badge_select_label": "{label}: {value}"
 }

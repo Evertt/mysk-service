@@ -105,5 +105,7 @@
 	"orders_bulk_status_title": "Status van {orders} wijzigen",
 	"orders_bulk_status_description": "Hun materialen gaan uit of terug naar de voorraad, zoals de nieuwe status zegt. Gefactureerde opdrachten blijven zoals ze zijn.",
 	"orders_bulk_delete_title": "{orders} verwijderen?",
-	"orders_bulk_delete_description": "De opdrachten en hun materiaalregels worden definitief verwijderd; de materialen gaan terug naar de voorraad. Gefactureerde opdrachten kun je niet verwijderen."
+	"orders_bulk_delete_description": "De opdrachten en hun materiaalregels worden definitief verwijderd; de materialen gaan terug naar de voorraad. Gefactureerde opdrachten kun je niet verwijderen.",
+	"orders_status_of": "Status van {number}",
+	"orders_status_change_failed": "De status van {number} kon niet worden gewijzigd."
 }
