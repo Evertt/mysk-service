@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, value } from "#e2e/app.ts";
+import { fitsWidth, onPhone, organizations, rows, useApp, value } from "#e2e/app.ts";
 import { advanceDueDate, SOON_DAYS } from "#modules/maintenance/model.ts";
 
 import {
@@ -120,6 +120,13 @@ describe("the due list, in North", () => {
 				),
 			),
 		);
+	});
+
+	test("fits a phone's screen, the toolbar's actions wrapping", async () => {
+		await onPhone(app.page, async () => {
+			await app.go("/maintenance");
+			expect(await fitsWidth(app.page)).toBe(true);
+		});
 	});
 
 	test("finds the plan by its unit's serial number", async () => {
