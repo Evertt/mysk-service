@@ -90,5 +90,10 @@
 	"activity_field_query": "filters",
 	"activity_field_hidden_columns": "verborgen kolommen",
 	"activity_value_yes": "ja",
-	"activity_value_no": "nee"
+	"activity_value_no": "nee",
+	"activity_changed_elsewhere": "Gewijzigd door {name}",
+	"activity_deleted_elsewhere": "Verwijderd door {name}",
+	"activity_changed_elsewhere_description": "Laad de nieuwste versie, zodat jouw wijzigingen die van hen niet ongedaan maken.",
+	"activity_deleted_elsewhere_description": "Het bestaat niet meer.",
+	"activity_changed_elsewhere_reload": "Opnieuw laden"
 }

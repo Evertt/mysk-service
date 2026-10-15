@@ -3,6 +3,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
+	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -62,6 +63,8 @@
 		/>
 	{/snippet}
 </PageHeader>
+
+<ChangedElsewhere type="customer" id={customer.id} />
 
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 	<StatCard

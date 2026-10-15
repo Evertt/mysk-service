@@ -7,10 +7,29 @@ import {
 	formatDateTime,
 	formatNumber,
 	formatTime,
+	formatTimeAgo,
 	intlLocale,
 	numberFormatter,
 } from "#lib/i18n/format.ts";
 import { at, day } from "#unit/temporal-support.ts";
+
+describe("formatTimeAgo", () => {
+	const now = at("2026-10-14 15:30");
+
+	test("says how long ago in whole minutes, hours or days", () => {
+		expect(formatTimeAgo(at("2026-10-14 15:29:30"), now)).toBe("now");
+		expect(formatTimeAgo(at("2026-10-14 15:29"), now)).toBe("1 minute ago");
+		expect(formatTimeAgo(at("2026-10-14 14:31"), now)).toBe("59 minutes ago");
+		expect(formatTimeAgo(at("2026-10-14 12:00"), now)).toBe("3 hours ago");
+		expect(formatTimeAgo(at("2026-10-13 15:00"), now)).toBe("yesterday");
+		expect(formatTimeAgo(at("2026-10-11 15:00"), now)).toBe("3 days ago");
+	});
+
+	test("in Dutch", () => {
+		expect(formatTimeAgo(at("2026-10-14 15:29:30"), now, "nl")).toBe("nu");
+		expect(formatTimeAgo(at("2026-10-14 15:28"), now, "nl")).toBe("2 minuten geleden");
+	});
+});
 
 /** Dutch puts a no-break space after the euro sign; written as a plain space here. */
 const plain = (text: string) => text.replaceAll(" ", " ");

@@ -98,6 +98,27 @@ export const formatStoredMoment = (value: unknown) =>
 /** Formats a time of day, e.g. `09:30`. */
 export const formatTime = dateFormatter({ hour: "2-digit", minute: "2-digit" });
 
+const relativeTime = perLocale(
+	(locale) => new Intl.RelativeTimeFormat(locale, { numeric: "auto" }),
+);
+
+/**
+ * Formats how long ago a moment was, as of `now`, in whole minutes, hours or days: `now` (under a
+ * minute), `1 minute ago`, `3 hours ago`, `yesterday`; in Dutch `nu`, `1 minuut geleden`.
+ */
+export function formatTimeAgo(
+	moment: Temporal.Instant,
+	now: Temporal.Instant = Temporal.Now.instant(),
+	locale?: Locale,
+) {
+	const minutes = Math.floor(now.since(moment).total("minutes"));
+	const format = relativeTime(locale);
+	if (minutes < 1) return format.format(0, "second");
+	if (minutes < 60) return format.format(-minutes, "minute");
+	if (minutes < 60 * 24) return format.format(-Math.floor(minutes / 60), "hour");
+	return format.format(-Math.floor(minutes / 60 / 24), "day");
+}
+
 /**
  * Formats a count or quantity, with at most two decimals, e.g. `2.5` or `1,250`; in Dutch `2,5`
  * or `1.250`.

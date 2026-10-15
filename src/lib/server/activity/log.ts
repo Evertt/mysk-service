@@ -127,10 +127,12 @@ export async function recordActivity(
 		changes,
 		note: note || null,
 	});
-	// Live queries showing records of this type (or its parent's) look again once it's committed.
+	// Live queries showing records of this type (or its parent's), or this record (or its parent),
+	// look again once it's committed.
+	const made = { action, user: { id: user.id, name: user.name } };
 	afterCommit(() => {
-		announceChange(organizationId, subject.type);
-		if (parent) announceChange(organizationId, parent.type);
+		announceChange(organizationId, subject.type, { ...made, id: String(subject.id) });
+		if (parent) announceChange(organizationId, parent.type, { ...made, id: String(parent.id) });
 	});
 	return true;
 }

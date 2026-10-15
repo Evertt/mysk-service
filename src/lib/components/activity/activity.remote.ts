@@ -3,6 +3,7 @@
  * it: entries newest first, each with its subject's noun, its changes and links ready to show, in
  * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
+import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, desc, eq, isNotNull, lt, or, type SQL } from "drizzle-orm";
 import * as v from "valibot";
@@ -12,9 +13,10 @@ import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, type TenantTable } from "#lib/server/auth/index.ts";
+import { watchSubject } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
-import { activity } from "#lib/server/db/schema.ts";
+import { activity, customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -129,3 +131,58 @@ export const getActivityFilters = forMembers.query(async () => {
 		),
 	};
 });
+
+/**
+ * The records whose pages can say that someone else changed them (`watchRecordChanges`), by their
+ * activity subject type, with their table, to check that the record is the tenant's. Add a type
+ * here to give its pages `<ChangedElsewhere>`.
+ */
+const watchedRecords = { order, customer, equipment, engineer } satisfies Record<
+	string,
+	TenantTable
+>;
+
+/** A change to a record that a page has open: what was done, by whom, and when. */
+export interface RecordChange {
+	/** E.g. `updated` or `deleted` (an activity action). */
+	action: string;
+	/** Who did it, as the activity log names them. */
+	name: string;
+	/** Whether it was the signed-in user (on this page or another). */
+	mine: boolean;
+	at: Temporal.Instant;
+}
+
+/**
+ * The changes to a record of the tenant (and to its parts, e.g. an order's lines) as they're
+ * made, for a page that has it open (`<ChangedElsewhere>`): `null` at first, then each change
+ * (the latest of a burst). A 404 if the record isn't the tenant's.
+ */
+export const watchRecordChanges = forMembers.query.live(
+	v.object({
+		type: v.picklist(Object.keys(watchedRecords) as (keyof typeof watchedRecords)[]),
+		id: v.pipe(v.number(), v.integer()),
+	}),
+	async function* ({ type, id }) {
+		const { organizationId, user } = currentTenant();
+		// Watching before checking, so a change in between isn't missed.
+		const changes = watchSubject(organizationId, { type, id: String(id) });
+		getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+		try {
+			const table = watchedRecords[type];
+			const [found] = await db.select({ id: table.id }).from(table).where(idInTenant(table, id));
+			if (!found) error(404, m.common_error_not_found());
+			yield null;
+			for await (const change of changes) {
+				yield {
+					action: change.action ?? "updated",
+					name: change.user?.name ?? "",
+					mine: change.user?.id === user.id,
+					at: Temporal.Instant.fromEpochMilliseconds(change.at),
+				} satisfies RecordChange as RecordChange | null;
+			}
+		} finally {
+			changes.stop();
+		}
+	},
+);

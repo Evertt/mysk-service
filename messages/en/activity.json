@@ -90,5 +90,10 @@
 	"activity_field_query": "filters",
 	"activity_field_hidden_columns": "hidden columns",
 	"activity_value_yes": "yes",
-	"activity_value_no": "no"
+	"activity_value_no": "no",
+	"activity_changed_elsewhere": "Changed by {name}",
+	"activity_deleted_elsewhere": "Deleted by {name}",
+	"activity_changed_elsewhere_description": "Reload to see the latest version, so your changes don't undo theirs.",
+	"activity_deleted_elsewhere_description": "It no longer exists.",
+	"activity_changed_elsewhere_reload": "Reload"
 }

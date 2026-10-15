@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import LockIcon from "@lucide/svelte/icons/lock";
 
+	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { isEditableOrder } from "#lib/models.ts";
@@ -15,6 +16,8 @@
 
 	const { order } = $derived(await getOrder(params.number));
 	const orderHref = $derived(resolve("/(app)/orders/[number]", { number: order.number }));
+	// Counts the reloads of the latest version, which start the form (and its parts) afresh.
+	let loaded = $state(0);
 </script>
 
 <svelte:head>
@@ -31,17 +34,21 @@
 	]}
 />
 
+<ChangedElsewhere type="order" id={order.id} onreload={() => loaded++} />
+
 {#if isEditableOrder(order.status)}
-	<OrderForm
-		form={updateOrder}
-		{order}
-		options={await getOrderFormOptions()}
-		cancelHref={orderHref}
-	>
-		{#snippet parts(fields)}
-			<ExtensionSlot point={formParts} props={{ order: { id: order.id } }} {fields} />
-		{/snippet}
-	</OrderForm>
+	{#key loaded}
+		<OrderForm
+			form={updateOrder}
+			{order}
+			options={await getOrderFormOptions()}
+			cancelHref={orderHref}
+		>
+			{#snippet parts(fields)}
+				<ExtensionSlot point={formParts} props={{ order: { id: order.id } }} {fields} />
+			{/snippet}
+		</OrderForm>
+	{/key}
 {:else}
 	<Empty.Root class="border">
 		<Empty.Header>
