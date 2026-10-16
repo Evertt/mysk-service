@@ -1237,7 +1237,8 @@ These are needed before any of the modules are useful:
 8. **Parts shop**: which products are credit-eligible ("aangewezen producten")? Is the shop SHLTR's own stock
    (our materials module) or a supplier catalogue? Do prices differ per customer or level? What happens after
    "bevestigd": pick, ship, deliver, invoice? Who handles "Op aanvraag"? What does "gereserveerd" mean?
-9. **Order pipeline**: what do "Geaccepteerd" and "Verzonden" mean on the dashboard: a quote accepted by the
+9. **Order pipeline** (for now: the Dutch labels of `quote`, `in_progress` and `completed` become
+   "Nieuw", "In behandeling" and "Afgerond"; the statuses themselves stay): what do "Geaccepteerd" and "Verzonden" mean on the dashboard: a quote accepted by the
    customer, a report sent? Are these quotes, work orders or shop orders? What is "opdracht gecopieerd vanuit
    shltr-installation", a link with another system?
 10. **Work order scope**: one checklist per _unit_ per order (our proposal), or per component as in the mockup?
@@ -1252,8 +1253,9 @@ These are needed before any of the modules are useful:
     (within 5 working days) or only flag it for the planner?
 14. **Components**: does SHLTR really track spare-part-level components (spring set, cables) per door, each with an
     article number? Or is condition per door enough?
-15. **Customer preferences**: is a single preferred day and a single time slot enough, and is priority only
-    Normaal/Hoog? Should the planning respect preferred day and slot (warn or suggest)? Is WhatsApp/Portaal an actual notification channel we must send through?
+15. **Customer preferences** (settled for now: one preferred day and one time slot, on the _site_): should the
+    planning respect preferred day and slot (warn or suggest)? Is WhatsApp/Portaal an actual notification
+    channel we must send through?
 16. **Docks**: is there a Salvo API (events or polling), and per site? Is dock time management a product SHLTR
     sells to customers (customer portal) or an internal monitoring tool? Who is "de dockplanner": a customer
     employee? Should the 60-minute escalation open a work order automatically?
@@ -1261,13 +1263,22 @@ These are needed before any of the modules are useful:
     resolution, and is there history? Is the €0,28/kWh tariff and the 0,375 kg CO₂/kWh factor per site? Is it a
     paid service per customer site? Who acts on alerts, and should alerts become work orders? What is "Focus
     AI", and is it in scope?
-18. **Sites and equipment**: are equipment categories fixed (the 5 of Apparatuur plus docks, HVAC, aerial work
-    platforms) or SHLTR-defined? Must we import the client's existing asset register (tags like `BES-3`,
+18. **Sites and equipment** (settled: SHLTR defines its own equipment categories): must we import the client's existing asset register (tags like `BES-3`,
     `TDTE-13`) and order history from their current system?
 19. **Documents** ("Techniek" and "Facilitair" per unit): in scope? Which file types and sizes?
 20. **Tasks** ("3 taken vervallen vandaag"): is there a task list separate from orders?
 
 ---
+
+### Decided for phase 0
+
+- **Equipment categories are the tenant's own**: a table per tenant that managers edit, not a fixed enum.
+  Each category says which engineer specialty services it (today's `specialtyForCategory`).
+- **Contact preferences and access notes belong to the site**, not the customer: contact channel, one
+  preferred day, one time slot (start and end), priority and notes such as "melden bij receptie expeditie
+  noord". A customer has one or more sites; its equipment is at a site.
+- **Order statuses**: only the Dutch labels change, to SHLTR's words for the three that match ("Nieuw",
+  "In behandeling", "Afgerond"). "Geaccepteerd" and "Verzonden" wait for the client.
 
 ## 6. Suggested build order
 
