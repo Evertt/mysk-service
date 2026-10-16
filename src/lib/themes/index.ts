@@ -22,7 +22,7 @@ export const themeNames = Object.keys(themes) as [ThemeName, ...ThemeName[]];
 export const THEME_COOKIE = "theme";
 
 /** The theme of whoever hasn't chosen one. */
-export const DEFAULT_THEME: ThemeName = "harbor";
+export const DEFAULT_THEME: ThemeName = "lagoon";
 
 /** The theme stored in the cookie, falling back to the default. */
 export const parseTheme = (value: string | undefined): ThemeName =>

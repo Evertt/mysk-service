@@ -10,10 +10,10 @@ import {
 } from "#lib/themes/index.ts";
 
 describe("cookies", () => {
-	test("a known theme is used, anything else falls back to the default (Harbor)", () => {
+	test("a known theme is used, anything else falls back to the default (Lagoon)", () => {
 		expect(parseTheme("neutral")).toBe("neutral");
 		expect(parseTheme("nonsense")).toBe(DEFAULT_THEME);
-		expect(parseTheme(undefined)).toBe("harbor");
+		expect(parseTheme(undefined)).toBe("lagoon");
 	});
 
 	test("the mode follows the system unless chosen", () => {

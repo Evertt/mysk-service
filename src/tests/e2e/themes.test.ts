@@ -41,7 +41,7 @@ describe("on page load", () => {
 	test("an unknown theme falls back to the default", async () => {
 		await setCookies({ theme: "nonsense", mode: "light" });
 		await app.go("/orders");
-		expect(await state()).toMatchObject({ theme: "harbor", dark: false });
+		expect(await state()).toMatchObject({ theme: "lagoon", dark: false });
 	});
 
 	test("system mode follows the operating system before the page is shown", async () => {
