@@ -12,7 +12,12 @@ import {
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 import type { MaterialsDraft } from "#modules/materials/api/seed.ts";
 
-import { type ContractLevel, contractNumberFormat, defaultResponseHours } from "../model.ts";
+import {
+	type ContractLevel,
+	contractNumberFormat,
+	coveredOrderTypes,
+	defaultResponseHours,
+} from "../model.ts";
 import { type ContractMonth, contractMonths, monthlyFee } from "./billing.ts";
 import { contract, contractEquipment } from "./schema.ts";
 
@@ -197,7 +202,7 @@ export function generateCallOuts(
 			customerId: term.customerId,
 			equipmentId: unit.id,
 			engineerId: null,
-			type: "repair" as const,
+			type: "breakdown" as const,
 			status: "quote" as const,
 			priority: "high" as const,
 			description,
@@ -246,7 +251,9 @@ const monthlyFeeText = (term: { number: string; level: ContractLevel }, month: C
  * contracts covering the unit, the ones running when the order was made, the fastest first.
  */
 function coveringTerm(coverage: Map<number, ContractTerm[]>, order: SeedOrder) {
-	if (order.type === "installation" || !order.equipmentId) return undefined;
+	if (!(coveredOrderTypes as readonly string[]).includes(order.type) || !order.equipmentId) {
+		return undefined;
+	}
 	return (coverage.get(order.equipmentId) ?? [])
 		.filter((term) => {
 			const end = new Date(

@@ -1,5 +1,6 @@
 import { getTimeZone } from "#lib/dates.ts";
 import {
+	isCorrectiveWork,
 	isDoneOrder,
 	isOpenOrder,
 	type OrderStatus,
@@ -90,7 +91,8 @@ export const daysBetween = (from: Temporal.Instant, to: Temporal.Instant) =>
 export interface ServiceStats {
 	/** All orders on the unit, of every status. */
 	orders: number;
-	ordersByType: Record<OrderType, number>;
+	/** Per type, in the order they're picked in: the types it has orders of. */
+	ordersByType: { type: OrderType; count: number }[];
 	/** Quoted, scheduled or in progress. */
 	openOrders: number;
 	/** Completed or invoiced. */
@@ -99,27 +101,28 @@ export interface ServiceStats {
 	cost: number;
 	/** When the latest completed or invoiced order was completed. */
 	lastService: Temporal.Instant | null;
-	/** Completed or invoiced repairs. */
+	/** Completed or invoiced repairs: breakdowns and repairs (`correctiveOrderTypes`). */
 	repairs: number;
 	daysSinceLastRepair: number | null;
 	/** The mean time between repairs, in whole days; needs at least two repairs. */
 	daysBetweenRepairs: number | null;
 }
 
-/** The figures of a unit's service history. Repairs count once they are done, when they were. */
+/**
+ * The figures of a unit's service history. Repairs (breakdowns too: corrective work) count once
+ * they are done, when they were.
+ */
 export function serviceStats(orders: HistoryOrder[], now = Temporal.Now.instant()): ServiceStats {
 	const done = orders.filter((order) => isDoneOrder(order.status) && order.completedAt);
 	const completions = (list: HistoryOrder[]) =>
 		list.map((order) => order.completedAt!).sort((a, b) => Temporal.Instant.compare(a, b));
 	const services = completions(done);
-	const repairs = completions(done.filter((order) => order.type === "repair"));
+	const repairs = completions(done.filter((order) => isCorrectiveWork(order.type)));
 	const lastRepair = repairs.at(-1);
 
-	const ordersByType = Object.fromEntries(orderTypes.map((type) => [type, 0])) as Record<
-		OrderType,
-		number
-	>;
-	for (const order of orders) ordersByType[order.type]++;
+	const ordersByType = orderTypes
+		.map((type) => ({ type, count: orders.filter((order) => order.type === type).length }))
+		.filter(({ count }) => count > 0);
 
 	return {
 		orders: orders.length,

@@ -3,23 +3,28 @@
  * (`server/index.ts`) and the pages show it.
  *
  * - **Coverage**: an order is covered when its unit was covered by a contract that was active on
- *   the day the order was created, unless it's an installation: contracts cover servicing a unit,
- *   not installing one. Should several contracts have covered the unit, the one with the fastest
- *   response counts.
+ *   the day the order was created, and it's work a contract covers: servicing the unit
+ *   (breakdowns, repairs, maintenance, inspections), not new work on it, damage, or "other" (see
+ *   `coveredOrderTypes` in `model.ts`). Should several contracts have covered the unit, the one
+ *   with the fastest response counts.
  * - **Price**: what's included costs the customer nothing; it shows as a discount on the order.
  *   Basic includes no work (only the guaranteed response time), standard includes labour, premium
  *   includes labour and materials (every cost the tenant's modules add to an order: today, its
  *   materials).
- * - **Response time (SLA)**: covered repairs are call-outs, to be responded to within the
- *   contract's response time from when the order was created. An order counts as responded to once
+ * - **Response time (SLA)**: covered breakdowns and repairs (corrective work,
+ *   `correctiveOrderTypes`) are call-outs, to be responded to within the contract's response time
+ *   from when the order was created. A breakdown certainly is: the unit stopped working and the
+ *   customer is waiting. A repair is too, as before breakdowns had a type of their own: it puts
+ *   right a fault the customer reported. Maintenance and inspections are planned, and the other
+ *   types aren't covered. An order counts as responded to once
  *   it's scheduled (or further along: in progress, completed, invoiced). Until then it's on track,
  *   at risk once less than a quarter of the response time is left, and overdue from the deadline
- *   on. Cancelled orders and other types of work (maintenance, inspections) have no deadline.
+ *   on. Cancelled orders have no deadline.
  */
-import type { OrderStatus, OrderType } from "#lib/models.ts";
+import { isCorrectiveWork, type OrderStatus, type OrderType } from "#lib/models.ts";
 
 import { contractLabels } from "./labels.ts";
-import { type ContractLevel, contractStatus } from "./model.ts";
+import { type ContractLevel, contractStatus, coveredOrderTypes } from "./model.ts";
 
 /**
  * What each level includes: labour, and the costs the tenant's modules add to an order (its
@@ -41,7 +46,8 @@ const includedLabels: Record<ContractLevel, () => string> = {
 export const includedLabel = (level: ContractLevel) => includedLabels[level]();
 
 /** Whether a contract covers this type of work on a covered unit. */
-export const isCoveredWork = (type: OrderType) => type !== "installation";
+export const isCoveredWork = (type: OrderType) =>
+	(coveredOrderTypes as readonly OrderType[]).includes(type);
 
 /** Of the contracts covering a unit, the one that covered it at `at`, if any: the fastest response wins. */
 export function coveringContract<
@@ -78,12 +84,15 @@ export type SlaState = (typeof slaStates)[number];
 /** At risk once less than this share of the response time is left. */
 const AT_RISK_SHARE = 0.25;
 
-/** Whether this type of work has to be responded to within the contract's response time. */
-const hasResponseTime = (type: OrderType) => type === "repair";
+/**
+ * Whether this type of work has to be responded to within the contract's response time: corrective
+ * work, breakdowns and repairs (see the top of this file).
+ */
+const hasResponseTime = isCorrectiveWork;
 
 /**
  * A covered order's response deadline and where it stands at `now`, or `null` if it has none (not
- * a repair, or cancelled).
+ * a breakdown or repair, or cancelled).
  */
 export function responseDeadline(
 	order: { type: OrderType; status: OrderStatus; createdAt: Temporal.Instant },

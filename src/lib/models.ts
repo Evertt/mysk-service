@@ -35,8 +35,32 @@ export const equipmentStatuses = [
 ] as const;
 export type EquipmentStatus = (typeof equipmentStatuses)[number];
 
-export const orderTypes = ["installation", "maintenance", "repair", "inspection"] as const;
+/**
+ * In the order people pick them: breakdowns (SHLTR's "storing") are half the work, repairs a
+ * quarter. An urgent breakdown ("storing prio") is a breakdown with priority `urgent`.
+ */
+export const orderTypes = [
+	"breakdown",
+	"repair",
+	"maintenance",
+	"inspection",
+	"installation",
+	"survey",
+	"damage",
+	"project",
+	"other",
+] as const;
 export type OrderType = (typeof orderTypes)[number];
+
+/**
+ * Corrective work, putting right what went wrong with a unit: a breakdown it was called out for,
+ * or a repair. A unit's time between repairs counts these, and so does a contract's response time.
+ * Not damage, which an accident or a third party caused, not the unit.
+ */
+export const correctiveOrderTypes = ["breakdown", "repair"] as const satisfies OrderType[];
+
+export const isCorrectiveWork = (type: OrderType) =>
+	(correctiveOrderTypes as readonly OrderType[]).includes(type);
 
 export const orderStatuses = [
 	"quote",

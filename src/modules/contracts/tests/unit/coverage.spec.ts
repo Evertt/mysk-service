@@ -44,12 +44,19 @@ describe("coverage", () => {
 		expect(coveringContract([fast, alsoFast], day("2026-06-01"))).toBe(fast);
 	});
 
-	test("covers servicing a unit, not installing one", () => {
-		expect(isCoveredWork("repair")).toBe(true);
-		expect(isCoveredWork("maintenance")).toBe(true);
-		expect(isCoveredWork("inspection")).toBe(true);
-		expect(isCoveredWork("installation")).toBe(false);
-	});
+	test.each<OrderType>(["breakdown", "repair", "maintenance", "inspection"])(
+		"covers servicing a unit: %s",
+		(type) => {
+			expect(isCoveredWork(type)).toBe(true);
+		},
+	);
+
+	test.each<OrderType>(["installation", "survey", "project", "damage", "other"])(
+		"doesn't cover new work, damage or other work: %s",
+		(type) => {
+			expect(isCoveredWork(type)).toBe(false);
+		},
+	);
 
 	test("names the contract and its level", () => {
 		expect(coveredBy({ number: "CTR-2026-0004", level: "premium" })).toBe(
@@ -93,12 +100,24 @@ describe("response time", () => {
 		expect(responseDeadline(order(), 72, later(1))?.due).toEqual(at("2026-10-10 08:00"));
 	});
 
-	test.each<OrderType>(["maintenance", "inspection", "installation"])(
-		"%s work has no deadline",
-		(type) => {
-			expect(responseDeadline(order({ type }), 4, later(10))).toBeNull();
-		},
-	);
+	test("so is a covered breakdown", () => {
+		expect(responseDeadline(order({ type: "breakdown" }), 4, later(1))).toEqual({
+			due: at("2026-10-07 12:00"),
+			state: "on_track",
+		});
+	});
+
+	test.each<OrderType>([
+		"maintenance",
+		"inspection",
+		"installation",
+		"survey",
+		"damage",
+		"project",
+		"other",
+	])("%s work has no deadline", (type) => {
+		expect(responseDeadline(order({ type }), 4, later(10))).toBeNull();
+	});
 
 	test("a cancelled call-out has no deadline", () => {
 		expect(responseDeadline(order({ status: "cancelled" }), 4, later(10))).toBeNull();

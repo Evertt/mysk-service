@@ -4,6 +4,7 @@ import {
 	equipmentCategories,
 	type EquipmentCategory,
 	type EquipmentStatus,
+	isCorrectiveWork,
 	type OrderPriority,
 	type OrderStatus,
 	type OrderType,
@@ -45,8 +46,8 @@ export function generateEquipment(faker: Faker, customers: { id: number; created
 }
 
 /**
- * Sets the units' status from the orders, in place: equipment with an open repair is out of service
- * (urgent) or needs service, and a few of the others are decommissioned.
+ * Sets the units' status from the orders, in place: equipment with an open breakdown or repair is
+ * out of service (urgent) or needs service, and a few of the others are decommissioned.
  */
 export function updateEquipmentStatus(
 	faker: Faker,
@@ -59,7 +60,7 @@ export function updateEquipmentStatus(
 	}[],
 ) {
 	for (const o of orders) {
-		if (o.type !== "repair" || !o.equipmentId) continue;
+		if (!isCorrectiveWork(o.type) || !o.equipmentId) continue;
 		if (!["quote", "scheduled", "in_progress"].includes(o.status)) continue;
 		const item = equipments[o.equipmentId - 1];
 		if (o.priority === "urgent") item.status = "out_of_service";

@@ -8,8 +8,10 @@ import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
+import { correctiveOrderTypes } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 
 import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
@@ -69,7 +71,7 @@ export const getContractsOverview = query(async () => {
 	const today = Temporal.Now.plainDateISO(getTimeZone());
 	const horizon = today.add({ days: EXPIRING_DAYS });
 
-	// Only repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).
+	// Only breakdowns and repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).
 	const waiting = await db
 		.select({
 			id: order.id,
@@ -86,7 +88,7 @@ export const getContractsOverview = query(async () => {
 		.where(
 			and(
 				inTenant(order),
-				eq(order.type, "repair"),
+				inList(order.type, correctiveOrderTypes),
 				eq(order.status, "quote"),
 				isNotNull(order.equipmentId),
 			),

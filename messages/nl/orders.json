@@ -3,7 +3,7 @@
 	"orders_title": "Opdrachten",
 	"orders_description": "Werkopdrachten voor alle klanten en monteurs.",
 	"orders_new": "Nieuwe opdracht",
-	"orders_new_description": "Maak een offerte of plan werk in voor een klant.",
+	"orders_new_description": "Leg nieuw werk voor een klant vast of plan het in.",
 	"orders_new_page_title": "Nieuwe opdracht · Opdrachten",
 	"orders_page_title": "{number} · Opdrachten",
 	"orders_edit_title": "{number} bewerken",

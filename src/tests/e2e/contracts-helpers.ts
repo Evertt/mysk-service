@@ -14,14 +14,15 @@ const STANDARD_RATE = 8500;
 /**
  * The contract that covered each order, as `src/modules/contracts/coverage.ts` defines it:
  * one covering its unit on the day the order was created (contracts run up to and including their
- * last day), not for an installation, the fastest response first (`n = 1`).
+ * last day), for work a contract covers (`coveredOrderTypes`), the fastest response first (`n = 1`).
  */
 export const covered = `covered as (
 	select o.id as order_id, k.number, k.level, k.response_hours,
 		row_number() over (partition by o.id order by k.response_hours, k.id) as n
 	from "order" o join contract_equipment ce on ce.equipment_id = o.equipment_id
 	join contract k on k.id = ce.contract_id and k.organization_id = o.organization_id
-	where o.type != 'installation' and k.starts_on <= date(o.created_at, 'unixepoch', 'localtime')
+	where o.type in ('breakdown', 'repair', 'maintenance', 'inspection')
+		and k.starts_on <= date(o.created_at, 'unixepoch', 'localtime')
 		and date(o.created_at, 'unixepoch', 'localtime') <= k.ends_on
 )`;
 

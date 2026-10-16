@@ -267,7 +267,7 @@ describe("present", () => {
 		const [entry] = await present([row]);
 		expect(entry.subject.noun).toBe("opdracht");
 		expect(entry.changes).toEqual([
-			{ field: "status", before: "Ingepland", after: "In uitvoering" },
+			{ field: "status", before: "Ingepland", after: "In behandeling" },
 		]);
 	});
 

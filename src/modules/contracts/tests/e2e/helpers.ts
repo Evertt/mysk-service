@@ -63,13 +63,14 @@ export interface CallOut {
 	due: number;
 }
 
-/** North's covered repairs waiting to be scheduled, by deadline. */
+/** North's covered breakdowns and repairs waiting to be scheduled, by deadline. */
 export const callOuts = () =>
 	rows<CallOut>(
 		`with ${covered} select o.number, c.number as contract, c.level, c.response_hours,
 		 o.created_at + c.response_hours * 3600 as due
 		 from "order" o join covered c on c.order_id = o.id and c.n = 1
-		 where o.organization_id = ? and o.type = 'repair' and o.status = 'quote' order by due, o.number`,
+		 where o.organization_id = ? and o.type in ('breakdown', 'repair') and o.status = 'quote'
+		 order by due, o.number`,
 		[north.id],
 	);
 

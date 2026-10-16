@@ -58,7 +58,8 @@ async function expectedStats(id: number) {
 	);
 	const repairs = (
 		await rows<{ at: number }>(
-			`select completed_at as at from "order" o where ${done} and o.type = 'repair'
+			`select completed_at as at from "order" o where ${done}
+			 and o.type in ('breakdown', 'repair')
 			 order by completed_at`,
 			[id],
 		)
@@ -145,14 +146,24 @@ describe("in North", () => {
 			/\s+/g,
 			" ",
 		);
-		for (const [type, label] of [
-			["installation", "Installation"],
-			["maintenance", "Maintenance"],
-			["repair", "Repair"],
-			["inspection", "Inspection"],
-		]) {
-			expect(byType).toContain(`${label} ${expected.byType[type] ?? 0}`);
-		}
+		// The types it has orders of, in the order they're picked in.
+		const labels: Record<string, string> = {
+			breakdown: "Breakdown",
+			repair: "Repair",
+			maintenance: "Maintenance",
+			inspection: "Inspection",
+			installation: "Installation",
+			survey: "Survey",
+			damage: "Damage",
+			project: "Project",
+			other: "Other",
+		};
+		expect(byType.trim()).toBe(
+			Object.keys(labels)
+				.filter((type) => expected.byType[type])
+				.map((type) => `${labels[type]} ${expected.byType[type]}`)
+				.join(" "),
+		);
 		expect(await card("Service cost")).toContain(expected.cost);
 		expect(await card("Last service")).toContain(expected.lastService);
 		const repairs = await card("Since last repair");
@@ -196,7 +207,7 @@ describe("in North", () => {
 		const [open] = await rows<{ number: string; serial: string; unit: number }>(
 			`select o.number, e.serial_number as serial, e.id as unit from "order" o
 			 join equipment e on e.id = o.equipment_id where o.organization_id = ?
-			 and o.type = 'repair' and o.status in ('scheduled', 'in_progress') order by o.id limit 1`,
+			 and o.type = 'breakdown' and o.status in ('scheduled', 'in_progress') order by o.id limit 1`,
 			[north.id],
 		);
 		const item = () => timeline().filter({ has: page.getByRole("link", { name: open.number }) });

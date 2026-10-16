@@ -2,7 +2,7 @@
  * How the activity log (`activity`, written by `recordActivity()` in `#lib/server/activity/log.ts`)
  * reads: a sentence per action, and per subject type its noun, its page and how its fields show,
  * e.g. "Anouk de Vries updated order ORD-2026-00012 · status: Scheduled → In progress", in Dutch
- * "Anouk de Vries heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In uitvoering".
+ * "Anouk de Vries heeft opdracht ORD-2026-00012 bijgewerkt · status: Ingepland → In behandeling".
  *
  * The log stores values (the action, field names, raw values); they're translated here when shown.
  * The texts are in `messages/<locale>/activity.json`. Nouns and labels are message functions, so

@@ -14,7 +14,8 @@ import type { generateCustomers } from "./customers.ts";
 import type { generateEngineers } from "./engineers.ts";
 import type { generateEquipment } from "./equipment.ts";
 
-const repairs: Record<EquipmentCategory, string[]> = {
+/** What a customer calls in about when a unit breaks down, per category. */
+const faults: Record<EquipmentCategory, string[]> = {
 	generator: [
 		"Aggregaat start niet bij proefdraaien",
 		"Aggregaat neemt niet over bij stroomuitval",
@@ -53,8 +54,19 @@ const repairs: Record<EquipmentCategory, string[]> = {
 };
 
 const describe: Record<OrderType, (faker: Faker, category?: EquipmentCategory) => string> = {
-	installation: (faker) =>
-		`Nieuwe installatie plaatsen en in bedrijf stellen${faker.helpers.maybe(() => ", incl. regeling aansluiten") ?? ""}`,
+	breakdown: (faker, category) =>
+		faker.helpers.arrayElement(
+			category
+				? faults[category]
+				: ["Storing, installatie buiten bedrijf", "Storingscode op de regeling"],
+		),
+	repair: (faker) =>
+		faker.helpers.arrayElement([
+			"Versleten lagers vervangen",
+			"Defect onderdeel vervangen na eerdere storing",
+			"Lekkage verhelpen en afdichtingen vernieuwen",
+			"Regelprint vervangen",
+		]),
 	maintenance: (faker) =>
 		faker.helpers.arrayElement([
 			"Periodiek preventief onderhoud",
@@ -62,26 +74,84 @@ const describe: Record<OrderType, (faker: Faker, category?: EquipmentCategory) =
 			"Filters en slijtdelen vervangen",
 			"Smeren en V-snaren spannen",
 		]),
-	repair: (faker, category) =>
-		faker.helpers.arrayElement(
-			category
-				? repairs[category]
-				: ["Storing, installatie buiten bedrijf", "Storingscode op de regeling"],
-		),
 	inspection: (faker) =>
 		faker.helpers.arrayElement([
 			"Wettelijke periodieke keuring",
 			"Keuring voor de verzekeraar",
 			"Inspectie voor het einde van de garantie",
 		]),
+	installation: (faker) =>
+		`Nieuwe installatie plaatsen en in bedrijf stellen${faker.helpers.maybe(() => ", incl. regeling aansluiten") ?? ""}`,
+	survey: (faker) =>
+		faker.helpers.arrayElement([
+			"Opname voor offerte vervanging",
+			"Situatie opnemen en inmeten voor offerte",
+			"Opname voor uitbreiding van de installatie",
+		]),
+	damage: (faker) =>
+		faker.helpers.arrayElement([
+			"Aanrijdschade herstellen",
+			"Schade na vandalisme herstellen",
+			"Waterschade aan de installatie herstellen",
+		]),
+	project: (faker) =>
+		faker.helpers.arrayElement([
+			"Renovatie van de installatie, fase 1",
+			"Regeltechniek vervangen en aansluiten op het gebouwbeheersysteem",
+			"Installatie verplaatsen naar de nieuwe technische ruimte",
+		]),
+	other: (faker) =>
+		faker.helpers.arrayElement([
+			"Advies op locatie",
+			"Metingen op verzoek van de klant",
+			"Ondersteuning bij oplevering van het pand",
+		]),
 };
 
 const laborRange: Record<OrderType, [number, number]> = {
-	installation: [8, 40],
-	maintenance: [2, 6],
+	breakdown: [1, 6],
 	repair: [1, 12],
+	maintenance: [2, 6],
 	inspection: [1, 3],
+	installation: [8, 40],
+	survey: [1, 2],
+	damage: [2, 10],
+	project: [16, 80],
+	other: [1, 4],
 };
+
+/**
+ * How often each type of order comes up: breakdowns about half of them and repairs a fifth, as
+ * at SHLTR (`docs/plans/shltr-domain.md`, §2.10). More maintenance and inspections than SHLTR's
+ * few, so the demo still shows them (and maintenance plans have their orders).
+ */
+const typeWeights: { value: OrderType; weight: number }[] = [
+	{ value: "breakdown", weight: 45 },
+	{ value: "repair", weight: 20 },
+	{ value: "maintenance", weight: 13 },
+	{ value: "inspection", weight: 6 },
+	{ value: "installation", weight: 7 },
+	{ value: "project", weight: 3 },
+	{ value: "survey", weight: 3 },
+	{ value: "damage", weight: 2 },
+	{ value: "other", weight: 1 },
+];
+
+/**
+ * An order's priority, by its type: breakdowns are often high and some urgent (SHLTR's "storing
+ * prio", about one in seven of them), repairs a little less pressing, the rest mostly normal.
+ */
+function pickPriority(faker: Faker, type: OrderType): OrderPriority {
+	if (type === "breakdown")
+		return faker.helpers.weightedArrayElement<OrderPriority>([
+			{ value: "normal", weight: 40 },
+			{ value: "high", weight: 45 },
+			{ value: "urgent", weight: 15 },
+		]);
+	if (type === "repair" || type === "damage")
+		return faker.helpers.arrayElement(["normal", "normal", "high", "urgent"]);
+	return faker.helpers.arrayElement(["low", "normal", "normal", "normal", "high"]);
+}
 
 type Engineer = ReturnType<typeof generateEngineers>[number];
 
@@ -138,12 +208,7 @@ export function generateOrders(
 	const orders = Array.from({ length: count }, () => {
 		const owner = faker.helpers.arrayElement(customers);
 		const owned = equipments.filter((e) => e.customerId === owner.id);
-		const type = faker.helpers.weightedArrayElement<OrderType>([
-			{ value: "maintenance", weight: 5 },
-			{ value: "repair", weight: 4 },
-			{ value: "inspection", weight: 2 },
-			{ value: "installation", weight: 1 },
-		]);
+		const type = faker.helpers.weightedArrayElement(typeWeights);
 		const target =
 			type === "installation" && faker.datatype.boolean(0.3)
 				? undefined
@@ -161,10 +226,7 @@ export function generateOrders(
 			to: now,
 		});
 		const { status, scheduledFor, completedAt } = lifecycle(faker, createdAt);
-		const priority: OrderPriority =
-			type === "repair"
-				? faker.helpers.arrayElement(["normal", "high", "high", "urgent"])
-				: faker.helpers.arrayElement(["low", "normal", "normal", "normal", "high"]);
+		const priority = pickPriority(faker, type);
 		const [minHours, maxHours] = laborRange[type];
 		return {
 			customerId: owner.id,

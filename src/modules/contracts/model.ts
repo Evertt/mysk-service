@@ -3,6 +3,7 @@
  * Kept out of `server/` so client code (filters, badges) can import them.
  */
 import { getTimeZone } from "#lib/dates.ts";
+import type { OrderType } from "#lib/models.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
 
 /** What a contract's number looks like, e.g. `CTR-2026-0007` (see `#lib/numbering.ts`). */
@@ -35,3 +36,18 @@ export function contractStatus(
 	if (Temporal.PlainDate.compare(day, contract.startsOn) < 0) return "upcoming";
 	return Temporal.PlainDate.compare(day, contract.endsOn) <= 0 ? "active" : "expired";
 }
+
+/**
+ * The work a contract covers on a covered unit: servicing it, which keeps it running (maintenance,
+ * inspections) and puts it right when it fails (breakdowns, repairs). Not new work on it: an
+ * installation, a survey for a quote or a project are sold on their own. Not damage either: an
+ * accident or a third party caused it, not wear, so it's billed (and often claimed from whoever
+ * did it). And not "other", which says nothing about what it is: the office picks a type the
+ * contract covers when it is servicing.
+ */
+export const coveredOrderTypes = [
+	"breakdown",
+	"repair",
+	"maintenance",
+	"inspection",
+] as const satisfies OrderType[];
