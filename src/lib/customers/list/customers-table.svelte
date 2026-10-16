@@ -58,6 +58,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.customers_empty()} fillViewport />
 		<BulkActionBar actions={[deleteCustomers]} />
-		<table.Footer />
 	</div>
 </table.AppTable>

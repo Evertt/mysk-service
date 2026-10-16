@@ -101,6 +101,5 @@
 			actions={[createOrdersAction]}
 			matching={{ where: whereOf(plans.query), key: plans.key, count: plans.rowCount }}
 		/>
-		<table.Footer />
 	</div>
 </table.AppTable>

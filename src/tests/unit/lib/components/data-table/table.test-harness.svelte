@@ -111,5 +111,4 @@
 		<FacetedFilter columnId="status" title="Status" options={statusOptions} none />
 	</table.Toolbar>
 	<table.Table emptyTitle="No items found" />
-	<table.Footer />
 </table.AppTable>

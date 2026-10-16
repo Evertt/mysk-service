@@ -155,6 +155,5 @@
 			{actions}
 			matching={{ where: whereOf(orders.query), key: orders.key, count: orders.rowCount }}
 		/>
-		<table.Footer />
 	</div>
 </table.AppTable>

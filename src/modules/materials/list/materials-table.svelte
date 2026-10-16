@@ -82,6 +82,5 @@
 			actions={[deleteMaterials]}
 			matching={{ where: whereOf(materials.query), key: materials.key, count: materials.rowCount }}
 		/>
-		<table.Footer />
 	</div>
 </table.AppTable>

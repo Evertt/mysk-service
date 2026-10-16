@@ -49,6 +49,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
 		<BulkActionBar actions={[deleteContracts]} />
-		<table.Footer />
 	</div>
 </table.AppTable>

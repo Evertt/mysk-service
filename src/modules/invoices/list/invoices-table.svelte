@@ -55,6 +55,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
 		<BulkActionBar actions={[markPaid]} />
-		<table.Footer />
 	</div>
 </table.AppTable>

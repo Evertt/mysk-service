@@ -24,7 +24,6 @@ import {
 } from "./scroll-window.svelte.ts";
 import SelectAllHeader from "./select-all-header.svelte";
 import SelectCell from "./select-cell.svelte";
-import Footer from "./table-footer.svelte";
 import Toolbar from "./toolbar.svelte";
 import { syncTableWithUrl, tableUrlSync, type UrlStateOptions } from "./url-sync.svelte.ts";
 import ViewOptions from "./view-options.svelte";
@@ -63,7 +62,7 @@ const hook = createTableHook({
 		header: ({ header }) => (header.column.accessorFn ? renderComponent(ColumnHeader) : ""),
 	},
 	groupedColumnMode: false,
-	tableComponents: { Table: DataTable, Toolbar, Footer, ViewOptions },
+	tableComponents: { Table: DataTable, Toolbar, ViewOptions },
 	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
 	headerComponents: { ColumnHeader, SelectAllHeader },
 });

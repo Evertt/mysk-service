@@ -50,8 +50,8 @@ describe("in North", () => {
 		try {
 			await app.go(afresh("/equipment"));
 			expect(await bodyRows().count()).toBe(50);
-			const footer = await page.locator('[data-slot="data-table-footer"]').boundingBox();
-			expect(footer!.y + footer!.height).toBeLessThanOrEqual(900);
+			const table = await page.locator('[data-slot="data-table"]').boundingBox();
+			expect(table!.y + table!.height).toBeLessThanOrEqual(900);
 			expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(900);
 
 			const area = page.locator('[data-slot="data-table"] [data-slot="table-container"]');
@@ -68,8 +68,8 @@ describe("in North", () => {
 					{ x: box.x + 8, y: box.y + box.height / 2 },
 				),
 			).toMatch(/^Unit\b/);
-			// And the footer is still in view.
-			expect(await page.locator('[data-slot="data-table-footer"]').boundingBox()).toEqual(footer);
+			// And the table's bottom edge is still in view.
+			expect(await page.locator('[data-slot="data-table"]').boundingBox()).toEqual(table);
 		} finally {
 			await page.setViewportSize({ width: 1440, height: 1000 });
 		}

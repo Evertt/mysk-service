@@ -161,6 +161,5 @@
 			actions={[changeStatus, deleteEquipment]}
 			matching={{ where: whereOf(equipment.query), key: equipment.key, count: equipment.rowCount }}
 		/>
-		<table.Footer />
 	</div>
 </table.AppTable>

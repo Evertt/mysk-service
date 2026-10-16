@@ -67,6 +67,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.engineers_empty()} fillViewport />
 		<BulkActionBar actions={[activate, deactivate]} />
-		<table.Footer />
 	</div>
 </table.AppTable>
