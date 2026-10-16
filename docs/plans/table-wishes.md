@@ -69,6 +69,44 @@ Open:
   from there with rows above it loaded on scrolling up)? Would it work well?
 - Is it a real loss? Filters and sort would still be in the URL; only the position would be gone.
 
+**Status: built on the `infinite-scroll` branch, to try on a preview deploy first** (not merged).
+Every table scrolls instead of paging, and the position idea is in: `?row=121` is the first row
+in view (1-based, among all that match), kept in the URL while scrolling and read when the table
+opens. The code: `scroll-window.svelte.ts` (the window onto the rows, client and server),
+`scroll-position.svelte.ts` (loading more, the position, keeping the view still),
+`scrollPages()` and `urlListQuery()` in `server-table.svelte.ts`.
+
+- **Server-side lists load pages of 50 as the end comes near** (an `IntersectionObserver` on the
+  line under the rows, 600 px ahead), appended; filters, sort and search stay in the URL, and
+  changing them starts over at the top. **Offset paging, not keyset**: each page is the list's
+  query with a `pageIndex`, so `planList()` and `paged()` didn't change (their sorts are
+  arbitrary SQL, ranks and `nulls last`, and some filters are computed in code, which keyset
+  cursors would have to reproduce as row comparisons), grouping keeps its rows around the page,
+  and each page is its own cached remote query: a mutation's `updates(getOrders)` refreshes every
+  loaded page in place, so a refresh drops no rows and moves nothing. The cost of offsets: a row
+  added or removed above the loaded ones between two loads shifts the next page by one (a
+  duplicate is shown once; a skipped row shows after the next refresh).
+- **Client-side tables render the first 50 rows and 50 more as they scroll** (TanStack's first
+  page, growing), rather than virtualizing: the longest has a few hundred rows (invoices), which
+  render fine, and keeping real rows keeps the sticky header, pinned columns, stable widths,
+  grouping and keyboard navigation as they are.
+- **The position**: written with `history.replaceState` (not SvelteKit's `goto`, even shallow:
+  that's a navigation, which would cancel one the reader starts and flash the progress bar), a
+  quarter second after scrolling stops, in the history entry the table is on, so a reload, a
+  shared link and coming back to the list all open it there. A server-side list then starts at
+  the page with that row and loads the rows above it when the reader scrolls up, keeping what's
+  in view in place (the browser's scroll anchoring is off for the table: it would latch onto the
+  line under the rows). Any change of the filters, sort, search or grouping drops it. It works,
+  with caveats worth trying on the preview: the position is a row index, so on a live list it
+  points at another row once rows come and go above it; and in development SvelteKit warns once
+  that `history.replaceState` is used directly.
+- Kept: stable column widths (more rows freeze them, like a page turn did), grouping (counts from
+  the server, "continues in more rows below"), selection ("select all loaded rows", then "select
+  all N matching" while more match than are loaded; more rows keep the selection), the remembered
+  table and saved views (which stored no page; an old `size` is ignored), PageUp/PageDown (a
+  screenful of rows), the dimmed loading state, density, live refreshes. The footer keeps the
+  count.
+
 ## 4. Click a value to filter by it
 
 Clicking a value in a table cell could make it an active filter. E.g. at `/customers`:

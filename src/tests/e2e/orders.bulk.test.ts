@@ -146,14 +146,15 @@ describe("bulk actions on selected orders, in North", () => {
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
-	test("selecting all the matching orders acts on exactly the filtered ones", async () => {
+	test("selecting all the loaded orders acts on exactly the filtered ones", async () => {
 		const { page } = app;
-		// More than fit on a page.
+		// Fewer than a page of rows: all of them load at once.
 		const cancelled = await rows<{ id: number }>(
 			`select id from "order" where organization_id = ? and status = 'cancelled'`,
 			[north.id],
 		);
 		expect(cancelled.length).toBeGreaterThan(20);
+		expect(cancelled.length).toBeLessThanOrEqual(50);
 		const matching = new Set(cancelled.map((o) => o.id));
 		const [engineer] = await rows<{ id: number; name: string }>(
 			`select id, name from engineer where organization_id = ? and active = 1 order by id desc limit 1`,
@@ -167,12 +168,15 @@ describe("bulk actions on selected orders, in North", () => {
 		const before = await engineers();
 
 		await app.go("/orders?status=cancelled&sort=number");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const total = formatNumber(cancelled.length);
-		await bar()
-			.getByRole("button", { name: `Select all ${total} matching` })
-			.click();
-		await bar().getByText(`All ${total} matching selected`).waitFor();
+		// They're all loaded, so selecting them all is all that match: nothing more to offer.
+		await bar().getByText(`${total} selected`, { exact: true }).waitFor();
+		expect(
+			await bar()
+				.getByRole("button", { name: /^Select all \d+ matching$/ })
+				.count(),
+		).toBe(0);
 		await bar().getByRole("button", { name: "Assign engineer" }).click();
 		const dialog = page.getByRole("alertdialog");
 		const field = dialog.getByLabel("Engineer");

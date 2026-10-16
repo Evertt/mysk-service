@@ -91,7 +91,7 @@ describe("range filters on the equipment list, in North", () => {
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([
 					app.page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
-					app.page.getByRole("button", { name: "Go to next page" }).click(),
+					app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
 				]),
 			);
 			expect(await remoteErrorStatus(response)).toBe(400);

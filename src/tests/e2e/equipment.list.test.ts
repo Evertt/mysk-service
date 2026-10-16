@@ -37,11 +37,11 @@ const count = (where: string, args: (string | number)[] = []) =>
 	]);
 
 describe("in North", () => {
-	test("the list shows exactly North's units, 20 per page", async () => {
+	test("the list shows exactly North's units, 50 at a time as it scrolls", async () => {
 		expect(await listedSerials()).toEqual(await serialsIn(north.id));
 		await app.go(afresh("/equipment"));
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
-		expect(await bodyRows().count()).toBe(20);
+		expect(await bodyRows().count()).toBe(50);
 	});
 
 	test("on a laptop screen the list fits it, its rows scrolling under the header", async () => {
@@ -49,15 +49,15 @@ describe("in North", () => {
 		await page.setViewportSize({ width: 1440, height: 900 });
 		try {
 			await app.go(afresh("/equipment"));
-			expect(await bodyRows().count()).toBe(20);
-			const pagination = await page.getByRole("button", { name: "Go to next page" }).boundingBox();
-			expect(pagination!.y + pagination!.height).toBeLessThanOrEqual(900);
+			expect(await bodyRows().count()).toBe(50);
+			const table = await page.locator('[data-slot="data-table"]').boundingBox();
+			expect(table!.y + table!.height).toBeLessThanOrEqual(900);
 			expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(900);
 
 			const area = page.locator('[data-slot="data-table"] [data-slot="table-container"]');
 			const header = page.getByRole("columnheader", { name: "Unit" });
 			const top = (await area.boundingBox())!.y;
-			await area.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+			await area.evaluate((element) => element.scrollTo({ top: element.scrollHeight / 2 }));
 			await expect.poll(() => area.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 			expect((await header.boundingBox())!.y).toBeCloseTo(top, 0);
 			// Nothing covers it: it's what's at its place on the screen.
@@ -68,10 +68,8 @@ describe("in North", () => {
 					{ x: box.x + 8, y: box.y + box.height / 2 },
 				),
 			).toMatch(/^Unit\b/);
-			// And the pagination is still in view.
-			expect(await page.getByRole("button", { name: "Go to next page" }).boundingBox()).toEqual(
-				pagination,
-			);
+			// And the table's bottom edge is still in view.
+			expect(await page.locator('[data-slot="data-table"]').boundingBox()).toEqual(table);
 		} finally {
 			await page.setViewportSize({ width: 1440, height: 1000 });
 		}
@@ -84,7 +82,7 @@ describe("in North", () => {
 		await search.fill(busy.toLowerCase());
 		await expect.poll(() => shownSerials()).toEqual([busy]);
 		await search.fill("");
-		await expect.poll(() => bodyRows().count()).toBe(20);
+		await expect.poll(() => bodyRows().count()).toBe(50);
 	});
 
 	test("filtering by category, status and manufacturer", async () => {
@@ -122,8 +120,7 @@ describe("in North", () => {
 		await reset();
 	});
 
-	test("sorting by warranty, paging, and sorting by open orders", async () => {
-		const { page } = app;
+	test("sorting by warranty, and by open orders", async () => {
 		// The warranty cell's date is followed by its covered/expired badge.
 		const warranties = () =>
 			bodyRows()
@@ -136,18 +133,13 @@ describe("in North", () => {
 
 		await app.sortBy("Warranty", "ascending");
 		const ascending = await warranties();
-		expect(ascending).toHaveLength(20);
+		expect(ascending).toHaveLength(50);
 		expect(ascending).toEqual([...ascending].sort());
 		await app.sortBy("Warranty", "descending");
 		const descending = await warranties();
 		expect(descending).toEqual([...descending].sort().reverse());
 		const first = await bodyRows().first().innerText();
 		expect(first).toMatch(/Covered|Expired/);
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await app.tableSettled();
-		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 2 of/);
-		expect(await bodyRows().first().innerText()).not.toBe(first);
 
 		const busiest = await rows<{ serial: string }>(
 			`with open as (
@@ -160,28 +152,26 @@ describe("in North", () => {
 			[north.id],
 		);
 		await app.sortBy("Open orders", "descending");
-		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 1 of/);
 		const [top] = await shownSerials();
 		expect(busiest.map((row) => row.serial)).toContain(top);
 	});
 
-	test("the server sends one page at a time", async () => {
+	test("the server sends a page at a time, as the table scrolls", async () => {
 		const { page } = app;
 		const total = await countIn("equipment", north.id);
-		const second = await rows<{ serial: string }>(
+		const first = await rows<{ serial: string }>(
 			`select serial_number as serial from equipment where organization_id = ?
-			 order by manufacturer collate nocase, model collate nocase, id limit 20 offset 20`,
+			 order by manufacturer collate nocase, model collate nocase, id limit 100`,
 			[north.id],
 		);
 		await app.go(afresh("/equipment"));
 		const [response] = await Promise.all([
 			page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
-			page.getByRole("button", { name: "Go to next page" }).click(),
+			page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
 		]);
-		// Twenty units came, not all of them.
-		expect((await response.text()).split("serialNumber").length - 1).toBe(20);
-		await app.tableSettled();
-		expect(await shownSerials()).toEqual(second.map((row) => row.serial));
+		// Fifty units came, not all of them.
+		expect((await response.text()).split("serialNumber").length - 1).toBe(50);
+		await expect.poll(() => shownSerials()).toEqual(first.map((row) => row.serial));
 		expect(await app.rowCount()).toBe(total);
 	});
 
@@ -212,8 +202,8 @@ describe("in North", () => {
 			{ filters: { customer: [1] } },
 			{ pageSize: 5000 },
 		])("in the rows' query: %j", async (change) => {
-			const nextPage = () => app.page.getByRole("button", { name: "Go to next page" }).click();
-			expect(await statusOf("getEquipmentList", rowsWith(change), nextPage)).toBe(400);
+			const more = () => app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded();
+			expect(await statusOf("getEquipmentList", rowsWith(change), more)).toBe(400);
 		});
 
 		test("in the filters' counts", async () => {
@@ -251,7 +241,7 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
 	});
 
-	test("grouped by category, each category is counted whole and kept together across pages", async () => {
+	test("grouped by category, each category is counted whole and kept together as more rows load", async () => {
 		const { page } = app;
 		await app.go(afresh("/equipment"));
 		await filter("Status", "Operational");
@@ -271,19 +261,16 @@ describe("in North", () => {
 		const categoryOf = new Map(expected.map((unit) => [unit.serial, unit.category]));
 		const counts: Record<string, number> = {};
 		for (const unit of expected) counts[unit.category] = (counts[unit.category] ?? 0) + 1;
-		// Some category goes on from one page of 20 onto the next.
-		expect(
-			expected.some(
-				(unit, i) => i % 20 === 0 && i > 0 && expected[i - 1].category === unit.category,
-			),
-		).toBe(true);
+		// Some category goes on from the first fifty rows into the next.
+		expect(expected.length).toBeGreaterThan(50);
+		expect(expected[49].category).toBe(expected[50].category);
 
-		const listed: string[] = [];
+		let listed: string[] = [];
 		for (;;) {
 			const shown = await shownRows();
 			const groups = await app.groups();
 			expect(shown[0]).toMatch(/^group:/);
-			// Each group counts its units on every page, under the filter.
+			// Each group counts all its units, loaded or not, under the filter.
 			for (const group of groups) expect(group.count, group.key).toBe(counts[group.key]);
 			// Each unit is under its category, and a category's units are together.
 			let current = "";
@@ -295,25 +282,24 @@ describe("in North", () => {
 			expect(groups.map((group) => group.key)).toEqual([
 				...new Set(units.map((serial) => categoryOf.get(serial))),
 			]);
-			// A category cut off by the page says so.
-			const start = listed.length;
-			const end = start + units.length;
-			expect(groups[0].continued).toBe(start > 0 && expected[start - 1].category === groups[0].key);
+			// The rows load from the first on; a category cut off where they end says so.
+			expect(units).toEqual(expected.slice(0, units.length).map((unit) => unit.serial));
+			expect(groups[0].continued).toBe(false);
 			expect(groups.at(-1)!.continues).toBe(
-				end < expected.length && expected[end].category === groups.at(-1)!.key,
+				units.length < expected.length && expected[units.length].category === groups.at(-1)!.key,
 			);
-			listed.push(...units);
+			listed = units;
 
-			const next = page.getByRole("button", { name: "Go to next page" });
-			if (await next.isDisabled()) break;
-			await next.click();
-			await app.tableSettled();
+			const more = page.locator('[data-slot="data-table-more"]');
+			if (!(await more.count()) || (await more.innerText()).includes("End of the list")) break;
+			await more.scrollIntoViewIfNeeded();
+			await expect.poll(async () => (await shownRows()).length).toBeGreaterThan(shown.length);
 		}
 		expect(listed).toEqual(expected.map((unit) => unit.serial));
 	});
 
-	// A test of its own: the one above goes through every page, which took up half its time under
-	// the load of a full run.
+	// A test of its own: the one above loads every row, which took up half its time under the load
+	// of a full run.
 	test("a reload keeps it grouped, and it can be ungrouped", async () => {
 		const { page } = app;
 		const params = () => new URL(page.url()).searchParams;
@@ -328,14 +314,15 @@ describe("in North", () => {
 		await app.tableSettled();
 	});
 
-	test("selecting all the matching units acts on exactly the filtered ones", async () => {
+	test("selecting all the loaded units acts on exactly the filtered ones", async () => {
 		const { page } = app;
-		// More than fit on a page.
+		// Fewer than a page of rows: all of them load at once.
 		const generators = await rows<{ id: number }>(
 			`select id from equipment where organization_id = ? and category = 'generator'`,
 			[north.id],
 		);
 		expect(generators.length).toBeGreaterThan(20);
+		expect(generators.length).toBeLessThanOrEqual(50);
 		const matching = new Set(generators.map((unit) => unit.id));
 		/** Every unit of every organization with its status. */
 		const statuses = () =>
@@ -347,10 +334,11 @@ describe("in North", () => {
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
 
 		await app.go("/equipment?category=generator&sort=serial");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const total = formatNumber(generators.length);
-		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
-		await bar.getByText(`All ${total} matching selected`).waitFor();
+		// They're all loaded, so selecting them all is all that match: nothing more to offer.
+		await bar.getByText(`${total} selected`, { exact: true }).waitFor();
+		expect(await bar.getByRole("button", { name: /^Select all \d+ matching$/ }).count()).toBe(0);
 		await bar.getByRole("button", { name: "Change status" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await dialog.getByLabel("Status").selectOption({ label: "Out of service" });

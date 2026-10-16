@@ -58,7 +58,7 @@ export async function customersIn(organizationId: string) {
 export function equipmentPage(app: App) {
 	const bodyRows = () => app.page.locator('[data-slot="data-table"] tbody tr');
 
-	/** The serial numbers on the shown page of the list. */
+	/** The serial numbers of the rows shown. */
 	const shownSerials = () =>
 		bodyRows().evaluateAll((trs) =>
 			trs.map((tr) =>
@@ -68,22 +68,11 @@ export function equipmentPage(app: App) {
 			),
 		);
 
-	/** The serial numbers on every page of the list, 100 per page, sorted. */
+	/** The serial numbers of every row of the list, scrolled to its end, sorted. */
 	async function listedSerials() {
-		const { page } = app;
 		await app.go(afresh("/equipment"));
-		await page.getByLabel("Rows per page").click();
-		await page.getByRole("option", { name: "100", exact: true }).click();
-		await app.tableSettled();
-		const found: string[] = [];
-		for (;;) {
-			found.push(...(await shownSerials()));
-			const next = page.getByRole("button", { name: "Go to next page" });
-			if (await next.isDisabled()) break;
-			await next.click();
-			await app.tableSettled();
-		}
-		return found.sort();
+		await app.loadAllRows();
+		return (await shownSerials()).sort();
 	}
 
 	/** The values the form's customer select offers, sorted. */

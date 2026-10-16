@@ -70,7 +70,7 @@ describe("grouping", () => {
 
 		await groupBy("Status");
 		await expect.poll(lastSearch).toBe("?group=status");
-		// By name, the groups in the order they come (statuses can't be sorted), 5 rows per page.
+		// By name, the groups in the order they come (statuses can't be sorted).
 		await expect
 			.poll(shown)
 			.toEqual([
@@ -81,47 +81,40 @@ describe("grouping", () => {
 				"closed | 2",
 				"Chiller repair",
 				"Pump replacement",
+				"draft | 2",
+				"Compressor overhaul",
+				"Elevator inspection",
 			]);
 		// The rows leave the status out: their group shows it.
 		expect(headers()).not.toContain("Status");
 		await expect.element(groupRow("open")).toMatchTextContent(/\b3 rows in this group\b/);
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect.poll(shown).toEqual(["draft | 2", "Compressor overhaul", "Elevator inspection"]);
 
 		await groupBy("None");
 		await expect.poll(lastSearch).toBe("");
 		await expect.poll(headers).toContain("Status");
 	});
 
-	test("a group across pages counts all its rows, and says it goes on", async () => {
-		// Closed (0, 300), draft (100, 400), then open (200, 1000, 5000): over two pages.
-		visit("/items?group=status&sort=amount");
-		render(Harness, { items });
+	test("a group that goes on in rows not shown yet counts all its rows, and says it goes on", async () => {
+		// Forty open, then twenty closed: the first fifty rows end in the closed group.
+		const many: Item[] = Array.from({ length: 60 }, (_, i) => ({
+			...items[0],
+			id: i + 1,
+			name: `Item ${String(i + 1).padStart(2, "0")}`,
+			status: i < 40 ? "open" : "closed",
+		}));
+		visit("/items?group=status");
+		render(Harness, { items: many });
 
-		await expect
-			.poll(shown)
-			.toEqual([
-				"closed | 2",
-				"Chiller repair",
-				"Pump replacement",
-				"draft | 2",
-				"Elevator inspection",
-				"Compressor overhaul",
-				"open | 3 | continues on the next page",
-				"Generator install",
-			]);
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect
-			.poll(shown)
-			.toEqual([
-				"open | 3 | continued from the previous page",
-				"Boiler service",
-				"Air handler check",
-			]);
+		const groups = () => shown().filter((row) => row.includes("|"));
+		await expect.poll(groups).toEqual(["open | 40", "closed | 20 | continues in more rows below"]);
+		expect(shown()).toHaveLength(52);
+
+		document.querySelector("[data-slot=data-table-more]")!.scrollIntoView();
+		await expect.poll(groups).toEqual(["open | 40", "closed | 20"]);
+		expect(shown()).toHaveLength(62);
 	});
 
-	test("a group shows the sum of its amounts, on every page", async () => {
+	test("a group shows the sum of its amounts", async () => {
 		visit("/items?group=status&sort=amount");
 		render(Harness, { items });
 
@@ -140,9 +133,17 @@ describe("grouping", () => {
 		await expect.element(toggle("open")).toHaveAttribute("aria-expanded", "false");
 		await expect
 			.poll(shown)
-			.toEqual(["open | 3", "closed | 2", "Chiller repair", "Pump replacement"]);
+			.toEqual([
+				"open | 3",
+				"closed | 2",
+				"Chiller repair",
+				"Pump replacement",
+				"draft | 2",
+				"Compressor overhaul",
+				"Elevator inspection",
+			]);
 		await toggle("open").click();
-		await expect.poll(shown).toHaveLength(7);
+		await expect.poll(shown).toHaveLength(10);
 	});
 
 	test("or all at once", async () => {
@@ -151,14 +152,24 @@ describe("grouping", () => {
 
 		await openViewMenu();
 		await page.getByRole("menuitem", { name: "Collapse all groups" }).click();
-		await expect.poll(shown).toEqual(["open | 3", "closed | 2"]);
-		// Also those on other pages.
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect.poll(shown).toEqual(["draft | 2"]);
+		await expect.poll(shown).toEqual(["open | 3", "closed | 2", "draft | 2"]);
 
 		await openViewMenu();
 		await page.getByRole("menuitem", { name: "Expand all groups" }).click();
-		await expect.poll(shown).toEqual(["draft | 2", "Compressor overhaul", "Elevator inspection"]);
+		await expect
+			.poll(shown)
+			.toEqual([
+				"open | 3",
+				"Air handler check",
+				"Boiler service",
+				"Generator install",
+				"closed | 2",
+				"Chiller repair",
+				"Pump replacement",
+				"draft | 2",
+				"Compressor overhaul",
+				"Elevator inspection",
+			]);
 	});
 
 	test("a group's header row takes part in the keyboard navigation, Enter and Space toggle it", async () => {
@@ -178,17 +189,16 @@ describe("grouping", () => {
 			"Air handler check",
 		);
 		await userEvent.keyboard("{ArrowUp}{Enter}");
-		await expect
-			.poll(shown)
-			.toEqual(["open | 3", "closed | 2", "Chiller repair", "Pump replacement"]);
+		await expect.poll(shown).toHaveLength(7);
+		expect(shown().slice(0, 2)).toEqual(["open | 3", "closed | 2"]);
 		// Down from a collapsed group goes to the next group.
 		await userEvent.keyboard("{ArrowDown}");
 		expect((document.activeElement as HTMLElement).dataset.group).toBe("closed");
 		await userEvent.keyboard("{ArrowUp} ");
-		await expect.poll(shown).toHaveLength(7);
+		await expect.poll(shown).toHaveLength(10);
 	});
 
-	test("a group's checkbox selects its rows on the page", async () => {
+	test("a group's checkbox selects its rows", async () => {
 		visit("/items?group=status");
 		render(Harness, { items });
 

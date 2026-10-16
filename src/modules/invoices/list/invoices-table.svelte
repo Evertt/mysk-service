@@ -23,7 +23,6 @@
 		initialState: {
 			sorting: [{ id: "number", desc: true }],
 			columnVisibility: { createdAt: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
 
@@ -56,6 +55,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />
 		<BulkActionBar actions={[markPaid]} />
-		<table.Pagination />
 	</div>
 </table.AppTable>

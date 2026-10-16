@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getMaterialFacets, getMaterials } from "#modules/materials/list/material-list.remote.ts";
 	import { materialsList } from "#modules/materials/list/materials-list.ts";
@@ -13,10 +12,9 @@
 
 	const _props: { params: RouteParams<"/(app)/(modules)/materials"> } = $props();
 
-	// The server pages, filters and sorts the materials, as the URL says (see the orders page).
-	const query = $derived(
-		toListQuery(materialsList, parseTableUrl(page.url.searchParams, materialsList.urlSpec)),
-	);
+	// The server filters, sorts and pages the materials, as the URL says (see the orders page).
+	const listQuery = urlListQuery(() => materialsList);
+	const query = $derived(listQuery.current);
 	// Both start at once.
 	const materials = $derived(getMaterials(query));
 	const facets = $derived(getMaterialFacets(whereOf(query)));

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
-	import { toListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getDueFacets, getDuePlans } from "#modules/maintenance/list/due-list.remote.ts";
 	import { dueList } from "#modules/maintenance/list/due-list.ts";
@@ -14,10 +13,9 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/maintenance"> } = $props();
 
-	// The server pages, filters and sorts the plans, as the URL says (see the orders page).
-	const query = $derived(
-		toListQuery(dueList, parseTableUrl(page.url.searchParams, dueList.urlSpec)),
-	);
+	// The server filters, sorts and pages the plans, as the URL says (see the orders page).
+	const listQuery = urlListQuery(() => dueList);
+	const query = $derived(listQuery.current);
 	// Both start at once.
 	const plans = $derived(getDuePlans(query));
 	const facets = $derived(getDueFacets(whereOf(query)));

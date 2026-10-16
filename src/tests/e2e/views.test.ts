@@ -75,9 +75,9 @@ async function act(page: Page, action: string) {
 describe("in North", () => {
 	const filtered = "?segment=enterprise,mid_market&sort=-open-orders";
 
-	test("saving the current view keeps its filters and sorting, but not the page", async () => {
+	test("saving the current view keeps its filters and sorting, but not the position", async () => {
 		const { page } = admin;
-		await admin.go(`/customers${filtered}&page=2`);
+		await admin.go(`/customers${filtered}&row=2`);
 		expect(await menu(page).innerText()).toBe("Saved views");
 
 		await saveView(page, "Big accounts");

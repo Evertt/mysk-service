@@ -64,18 +64,10 @@ async function namesIn(organizationId: string) {
 	return found.map((row) => row.name).sort(byName);
 }
 
-/** The customer names on every page of the list, sorted. */
+/** The customer names in the list, scrolled to its end, sorted. */
 async function listedNames() {
-	const { page } = app;
-	const names: string[] = [];
-	for (;;) {
-		names.push(...(await bodyRows().locator("td:nth-child(2) a").allInnerTexts()));
-		const next = page.getByRole("button", { name: "Go to next page" });
-		if (await next.isDisabled()) break;
-		await next.click();
-	}
-	await page.getByRole("button", { name: "Go to first page" }).click();
-	return names.sort(byName);
+	await app.loadAllRows();
+	return (await bodyRows().locator("td:nth-child(2) a").allInnerTexts()).sort(byName);
 }
 
 /** Opens a faceted filter of the toolbar and picks one of its options. */
@@ -100,22 +92,24 @@ let code: string;
 let target: number;
 
 describe("in North", () => {
-	test("the list shows exactly North's customers, by name, 20 per page", async () => {
+	test("the list shows exactly North's customers, by name, more as it scrolls", async () => {
 		const { page } = app;
 		await app.go("/customers");
 		const total = await countIn("customer", north.id);
+		expect(total).toBeGreaterThan(50);
 		expect(await app.rowCount()).toBe(total);
-		expect(await bodyRows().count()).toBe(20);
-		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toBe(
-			`Page 1 of ${Math.ceil(total / 20)}`,
-		);
-		const firstPage = await bodyRows().locator("td:nth-child(2) a").allInnerTexts();
-		expect(firstPage).toEqual([...firstPage].sort(byName));
+		// A client-side table: the first fifty rendered, the next as the end comes into view.
+		expect(await bodyRows().count()).toBe(50);
+		const first = await bodyRows().locator("td:nth-child(2) a").allInnerTexts();
+		expect(first).toEqual([...first].sort(byName));
 		expect(await listedNames()).toEqual(await namesIn(north.id));
+		expect(await bodyRows().count()).toBe(total);
+		expect(await page.locator('[data-slot="data-table-more"]').innerText()).toBe("End of the list");
 
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		expect(await page.getByText(/^Page \d+ of \d+$/).innerText()).toMatch(/^Page 2 of/);
-		await page.getByRole("button", { name: "Go to first page" }).click();
+		// Another sorting starts at the top again, with the first fifty.
+		await app.sortBy("Customer", "descending");
+		expect(await bodyRows().count()).toBe(50);
+		await app.sortBy("Customer", "ascending");
 	});
 
 	test("searching finds customers by code and phone", async () => {
@@ -137,7 +131,7 @@ describe("in North", () => {
 
 		await page.getByRole("button", { name: "Reset" }).click();
 		expect(await search.inputValue()).toBe("");
-		expect(await bodyRows().count()).toBe(20);
+		expect(await bodyRows().count()).toBe(50);
 	});
 
 	test("filtering by segment and country", async () => {

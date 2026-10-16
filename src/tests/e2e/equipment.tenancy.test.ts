@@ -47,7 +47,6 @@ describe("in South", () => {
 	});
 
 	test("grouped, the categories count South's units only", async () => {
-		const { page } = app;
 		const expected = Object.fromEntries(
 			(
 				await rows<{ category: string; n: number }>(
@@ -56,15 +55,10 @@ describe("in South", () => {
 				)
 			).map((row) => [row.category, row.n]),
 		);
-		await app.go("/equipment?group=category&size=100");
+		await app.go("/equipment?group=category");
+		await app.loadAllRows();
 		const counts: Record<string, number> = {};
-		for (;;) {
-			for (const group of await app.groups()) counts[group.key] = group.count;
-			const next = page.getByRole("button", { name: "Go to next page" });
-			if (await next.isDisabled()) break;
-			await next.click();
-			await app.tableSettled();
-		}
+		for (const group of await app.groups()) counts[group.key] = group.count;
 		expect(counts).toEqual(expected);
 	});
 

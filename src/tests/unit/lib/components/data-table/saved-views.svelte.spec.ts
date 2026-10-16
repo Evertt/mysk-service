@@ -77,10 +77,10 @@ describe("the saved views menu", () => {
 
 	test("lists the user's views and the shared ones, checking the one the table shows", async () => {
 		reset([open, priciest, drafts]);
-		visit("/items?status=open&page=2");
+		visit("/items?status=open&row=2");
 		render(Harness, { items });
 
-		// The page doesn't count: the view shows the table from its first page.
+		// Where it was scrolled to doesn't count.
 		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Open work");
 		await menuButton().click();
 		await expect.element(viewItem("Open work")).toHaveAttribute("aria-checked", "true");
@@ -96,7 +96,8 @@ describe("the saved views menu", () => {
 		await menuButton().click();
 		await viewItem("Priciest first").click();
 
-		expect(lastSearch()).toBe("?sort=-amount&size=10");
+		// Saved when the table had pages: their size is no longer the table's.
+		expect(lastSearch()).toBe("?sort=-amount");
 		expect(visits.at(-1)?.replace).toBe(false);
 		await expect
 			.poll(names)
@@ -104,8 +105,8 @@ describe("the saved views menu", () => {
 		await expect.element(menuButton()).toHaveAccessibleName("Saved views: Priciest first");
 	});
 
-	test("saving sends the table's parameters without the page, and its columns", async () => {
-		visit("/items?status=open,draft&page=2");
+	test("saving sends the table's parameters without the position, and its columns", async () => {
+		visit("/items?status=open,draft&row=2");
 		render(Harness, { items });
 
 		await menuButton().click();

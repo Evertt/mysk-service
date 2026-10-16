@@ -65,7 +65,7 @@ describe("in South", () => {
 		);
 		expect(expected.length).toBeGreaterThan(0);
 		expect(await app.rowCount()).toBe(expected.length);
-		expect(await shownNumbers(app)).toEqual(expected.slice(0, 20).map((row) => row.number));
+		expect(await shownNumbers(app)).toEqual(expected.slice(0, 50).map((row) => row.number));
 	});
 
 	test("the customer filter offers South's customers only", async () => {

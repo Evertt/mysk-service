@@ -18,8 +18,9 @@ orders list in `src/lib/orders/` is the example):
    the joins once in a helper generic over the query (`withOrderJoins`, drizzle's `$dynamic()`
    pattern) and use it for the rows and in `ListSql.from`, so rows, counts, facets and bulk ids can't
    drift apart. Never build a `ListSql` at module scope: `inTenant()` reads the request.
-3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/lists/plan.ts`): `paged()` for the
-   rows, and `count()`, `facets()`, `groupCounts()` and `ids()`, each written once.
+3. **The plan**, `planList(ordersSql(), query)` (`src/lib/server/lists/plan.ts`): `paged()` for a page
+   of rows (the table loads them a page at a time as it scrolls, `scrollPages()` in
+   `server-table.svelte.ts`, and a page reads its query from the URL with `urlListQuery()`), and `count()`, `facets()`, `groupCounts()` and `ids()`, each written once.
 
 Remote queries take `list.query` (the rows) or `list.where` (the filters' counts) as their argument
 and answer with the `query` and `queryKey()` they ran, which the table compares with its state
