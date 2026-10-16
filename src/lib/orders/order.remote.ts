@@ -19,17 +19,22 @@ import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./serve
 import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 
-/** One order with everything on it, plus other orders for the same equipment. */
+/**
+ * One order with everything on it, plus other orders for the same equipment, and the site the work
+ * is at: its unit's, or the customer's only one for an order without a unit.
+ */
 export const getOrder = forMembers.query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
 		where: and(eq(order.number, number), inTenant(order)),
 		with: {
-			customer: true,
-			equipment: true,
+			customer: { with: { sites: true } },
+			equipment: { with: { site: true } },
 			engineer: true,
 		},
 	});
 	if (!found) error(404, m.orders_not_found({ number }));
+	const { sites, ...owner } = found.customer;
+	const site = found.equipment?.site ?? (sites.length === 1 ? sites[0] : null);
 
 	// Earlier and later work on the same unit, for context.
 	const history = found.equipmentId
@@ -52,7 +57,8 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 	]);
 
 	return {
-		order: found,
+		order: { ...found, customer: owner },
+		site,
 		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 		/** From the tenant's modules, e.g. a response time about to be missed. */
 		tags,
@@ -72,6 +78,7 @@ export const getOrderFormOptions = forMembers.query(async () => {
 			.select({
 				id: equipment.id,
 				customerId: equipment.customerId,
+				name: equipment.name,
 				model: equipment.model,
 				manufacturer: equipment.manufacturer,
 				serialNumber: equipment.serialNumber,

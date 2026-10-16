@@ -25,6 +25,8 @@ export const equipmentList = defineList({
 		category: { sort: true, group: true, filter: oneOf(equipmentCategories) },
 		status: { sort: true, group: true, filter: oneOf(equipmentStatuses) },
 		customer: { sort: true, group: true, filter: code },
+		site: { sort: true },
+		location: { sort: true },
 		installedAt: { param: "installed", sort: true, filter: dateRange },
 		warrantyUntil: { param: "warranty", sort: true, filter: dateRange },
 		openOrders: { param: "open-orders", sort: true, filter: numberRange },

@@ -14,7 +14,12 @@ schema has changes no migration makes. Never edit a migration that's been commit
 `pnpm db:generate` writes the migration twice (`scripts/db-generate.ts`): in `drizzle/` for libsql
 (a file, Turso) and in `cloudflare/migrations/` for the Durable Object's plain SQLite on Cloudflare,
 which has none of libsql's own SQL (`ALTER COLUMN`); check and commit both. The spec holds both
-streams to the schema.
+streams to the schema. A change SQLite can only make by rebuilding a table (a new composite foreign
+key, a column made `NOT NULL`) needs the Durable Object's copy written by hand: drizzle-kit turns the
+foreign keys off, which a Durable Object can't, and dropping a table others refer to deletes what
+cascades from it. `cloudflare/migrations/0002_add-customer-sites.sql` is the example (it defers the
+key checks to the commit, copies the rows back after the rename, and puts the cascaded rows back);
+`migrations.spec.ts` runs it with the keys on.
 
 **Bound parameters**: a statement binds at most 100 values (`#lib/server/db/parameters.ts`): it's
 Cloudflare's limit, and `db` enforces it everywhere (a statement over it throws, in tests too). So

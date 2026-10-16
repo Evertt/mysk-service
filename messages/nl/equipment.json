@@ -164,5 +164,19 @@
 	"equipment_bulk_status": "Status wijzigen",
 	"equipment_bulk_status_title": "Status van de geselecteerde apparaten wijzigen",
 	"equipment_bulk_delete_title": "Geselecteerde apparaten verwijderen?",
-	"equipment_bulk_delete_description": "De apparaten worden definitief verwijderd. Apparaten met opdrachten kun je niet verwijderen; voer ze in plaats daarvan af."
+	"equipment_bulk_delete_description": "De apparaten worden definitief verwijderd. Apparaten met opdrachten kun je niet verwijderen; voer ze in plaats daarvan af.",
+	"equipment_site_required": "Kies een vestiging",
+	"equipment_site_unknown": "Kies een vestiging van deze klant",
+	"equipment_site_placeholder": "Kies een vestiging",
+	"equipment_site_choose_customer": "Kies eerst de klant",
+	"equipment_text_max": "Gebruik hoogstens {max} tekens",
+	"equipment_field_name": "Naam",
+	"equipment_field_name_description": "De eigen naam of code van de klant, als die er is.",
+	"equipment_field_site": "Vestiging",
+	"equipment_field_location": "Locatie op de vestiging",
+	"equipment_field_location_description": "Bijv. „Expeditie dock 07”.",
+	"equipment_column_site": "Vestiging",
+	"equipment_column_location": "Locatie",
+	"equipment_detail_site": "Vestiging",
+	"equipment_detail_location": "Locatie"
 }

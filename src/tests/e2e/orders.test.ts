@@ -59,6 +59,23 @@ describe("in North", () => {
 		);
 	});
 
+	test("its page shows the site of its unit, with what to know before going there", async () => {
+		const [site] = await rows<Record<string, string | null>>(
+			`select s.name, s.address, s.postal_code, s.city, s.access_notes from "order" o
+			 join equipment e on e.id = o.equipment_id join customer_site s on s.id = e.site_id
+			 where o.number = ? and o.organization_id = ?`,
+			[number, north.id],
+		);
+		const card = app.page.locator("[data-site]");
+		await card.waitFor();
+		const text = await card.innerText();
+		expect(text).toContain("Site");
+		expect(text).toContain(site.name);
+		expect(text).toContain(site.address);
+		expect(text).toContain(`${site.postal_code} ${site.city}`);
+		if (site.access_notes) expect(text).toContain(site.access_notes);
+	});
+
 	test("editing it saves the changes", async () => {
 		const { page } = app;
 		await page.getByRole("link", { name: "Edit" }).click();

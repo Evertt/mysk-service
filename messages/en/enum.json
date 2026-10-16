@@ -45,5 +45,18 @@
 	"enum_member_role_description_owner": "Everything, including managing owners.",
 	"enum_member_role_description_admin": "Manages settings, members and invitations.",
 	"enum_member_role_description_member": "Works in the office: orders, planning and records.",
-	"enum_member_role_description_engineer": "Works in the field: only their own orders, in the engineer portal."
+	"enum_member_role_description_engineer": "Works in the field: only their own orders, in the engineer portal.",
+	"enum_contact_channel_email": "Email",
+	"enum_contact_channel_phone": "Phone",
+	"enum_contact_channel_whatsapp": "WhatsApp",
+	"enum_contact_channel_portal": "Portal",
+	"enum_weekday_monday": "Monday",
+	"enum_weekday_tuesday": "Tuesday",
+	"enum_weekday_wednesday": "Wednesday",
+	"enum_weekday_thursday": "Thursday",
+	"enum_weekday_friday": "Friday",
+	"enum_weekday_saturday": "Saturday",
+	"enum_weekday_sunday": "Sunday",
+	"enum_site_priority_normal": "Normal",
+	"enum_site_priority_high": "High"
 }

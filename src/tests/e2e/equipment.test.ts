@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vite-plus/test";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { countIn, organizations, rows, useApp, value, quiet } from "./app.ts";
 import { busiest, equipmentPage, unit, unitId } from "./equipment-helpers.ts";
@@ -9,13 +9,54 @@ const { bodyRows, card, shownTimeline } = equipmentPage(app);
 
 const serial = "ZZ-TEST-0001";
 
+/** The choices of the form's site select, as it shows them. */
+const siteChoices = () =>
+	app.page.getByLabel("Site", { exact: true }).locator("option").allInnerTexts();
+
+/** How the site select names a site: by its name, and its town if the name lacks it. */
+const siteLabel =
+	"case when instr(s.name, s.city) > 0 then s.name else s.name || ' (' || s.city || ')' end";
+
+/** A North customer with several sites, and those sites as the form lists them. */
+let multiSite: { id: number; sites: string[]; names: string[] };
+const findMultiSite = async () => {
+	const id = await value<number>(
+		`select customer_id from customer_site where organization_id = ?
+		 group by customer_id having count(*) > 1 order by customer_id limit 1`,
+		[north.id],
+	);
+	const sites = await rows<{ label: string; name: string }>(
+		`select ${siteLabel} as label, name from customer_site s where customer_id = ? order by name, id`,
+		[id],
+	);
+	return { id, sites: sites.map((site) => site.label), names: sites.map((site) => site.name) };
+};
+
+/** A North customer with one site (not `multiSite`), and that site. */
+let oneSite: { id: number; siteId: number; site: string };
+const findOneSite = async () => {
+	const [found] = await rows<{ id: number; siteId: number; site: string }>(
+		`select customer_id as id, min(id) as siteId, min(name) as site from customer_site
+		 where organization_id = ? group by customer_id having count(*) = 1 order by customer_id limit 1`,
+		[north.id],
+	);
+	return found;
+};
+
 describe("in North", () => {
+	beforeAll(async () => {
+		[multiSite, oneSite] = await Promise.all([findMultiSite(), findOneSite()]);
+	});
+
 	test("registering a unit validates it first", async () => {
 		const { page } = app;
 		const before = await countIn("equipment", north.id);
 		await app.go("/equipment/new");
 		await app.submit(page.getByRole("button", { name: "Register equipment" }));
 		expect((await app.issues()).length).toBeGreaterThanOrEqual(5);
+		expect(await app.issues()).toContain("Choose a site");
+		// Without a customer, there's no site to choose.
+		expect(await siteChoices()).toEqual(["Choose the customer first"]);
 
 		// A serial number North already has, in lower case, and a warranty ending before installation.
 		const { serial: busy } = await busiest(north.id);
@@ -23,7 +64,10 @@ describe("in North", () => {
 		await page.getByLabel("Manufacturer").fill("Testco");
 		await page.getByLabel("Model").fill("TX-1");
 		await page.getByLabel("Category").selectOption("chiller");
-		await page.getByLabel("Customer").selectOption({ index: 1 });
+		await page.getByLabel("Customer").selectOption(String(multiSite.id));
+		// The customer's sites to choose from, theirs only.
+		expect((await siteChoices()).slice(1)).toEqual(multiSite.sites);
+		await page.getByLabel("Site", { exact: true }).selectOption({ label: multiSite.sites[1] });
 		await page.getByLabel("Installed on").fill("2026-01-10");
 		await page.getByLabel("Warranty until").fill("2025-01-10");
 		await app.submit(page.getByRole("button", { name: "Register equipment" }));
@@ -49,9 +93,22 @@ describe("in North", () => {
 		await page.getByRole("heading", { name: "Testco TX-1" }).waitFor();
 		await app.toast("Equipment registered");
 		expect(
-			await rows(`select organization_id from equipment where serial_number = ?`, [serial]),
-		).toEqual([{ organization_id: north.id }]);
+			await rows(
+				`select e.organization_id, e.customer_id, s.name as site, e.name, e.location
+				 from equipment e join customer_site s on s.id = e.site_id where e.serial_number = ?`,
+				[serial],
+			),
+		).toEqual([
+			{
+				organization_id: north.id,
+				customer_id: multiSite.id,
+				site: multiSite.names[1],
+				name: null,
+				location: null,
+			},
+		]);
 		expect(await page.getByText("No orders yet").count()).toBe(1);
+		expect(await card("Specifications")).toContain(multiSite.names[1]);
 		expect(await shownTimeline()).toEqual(["warranty", "installation"]);
 		expect(await card("Last service")).toContain("Never");
 	});
@@ -68,16 +125,49 @@ describe("in North", () => {
 
 		await page.getByLabel("Model").fill("TX-2");
 		await page.getByLabel("Status").selectOption("needs_service");
-		await page.getByLabel("Customer").selectOption({ index: 2 });
+		// To a customer with one site: it's chosen at once.
+		await page.getByLabel("Customer").selectOption(String(oneSite.id));
 		const moved = await page.getByLabel("Customer").inputValue();
 		expect(moved).not.toBe(customer);
+		expect(await page.getByLabel("Site", { exact: true }).inputValue()).toBe(
+			String(oneSite.siteId),
+		);
+		await page.getByLabel("Name", { exact: true }).fill("Automatische deur kantine BES-3");
+		await page.getByLabel("Location at the site").fill("Expeditie dock 07");
 		await page.getByRole("button", { name: "Save equipment" }).click();
 		await page.waitForURL((url) => url.pathname === `/equipment/${serial}`);
-		await page.getByRole("heading", { name: "Testco TX-2" }).waitFor();
-		const [saved] = await rows(`select model, status, customer_id from equipment where id = ?`, [
-			id,
-		]);
-		expect(saved).toEqual({ model: "TX-2", status: "needs_service", customer_id: Number(moved) });
+		// Its own name first, its make after it.
+		await page.getByRole("heading", { name: "Automatische deur kantine BES-3" }).waitFor();
+		expect(await page.locator("main").innerText()).toContain("Testco TX-2");
+		expect(await card("Specifications")).toContain("Expeditie dock 07");
+		const [saved] = await rows(
+			`select model, status, customer_id, site_id, name, location from equipment where id = ?`,
+			[id],
+		);
+		expect(saved).toEqual({
+			model: "TX-2",
+			status: "needs_service",
+			customer_id: Number(moved),
+			site_id: oneSite.siteId,
+			name: "Automatische deur kantine BES-3",
+			location: "Expeditie dock 07",
+		});
+	});
+
+	test("the list shows its name, site and location, and finds it by them", async () => {
+		const { page } = app;
+		await app.go(`/equipment?q=${encodeURIComponent("kantine BES-3")}`);
+		await expect.poll(() => bodyRows().count()).toBe(1);
+		const row = await bodyRows().first().innerText();
+		expect(row).toContain("Automatische deur kantine BES-3");
+		expect(row).toContain(`Testco TX-2 · ${serial}`);
+		expect(row).toContain(oneSite.site);
+		expect(row).toContain("Expeditie dock 07");
+		await page.getByLabel("Search equipment…").fill("Expeditie dock 07");
+		await expect
+			.poll(() => bodyRows().allInnerTexts())
+			.toContainEqual(expect.stringContaining(serial));
+		await app.go(`/equipment/${serial}`);
 	});
 
 	test("selected units get another status, and those with orders aren't deleted", async () => {

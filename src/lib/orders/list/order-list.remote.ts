@@ -34,6 +34,7 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 						customer: { id: customer.id, code: customer.code, name: customer.name },
 						equipment: {
 							id: equipment.id,
+							name: equipment.name,
 							model: equipment.model,
 							manufacturer: equipment.manufacturer,
 							serialNumber: equipment.serialNumber,

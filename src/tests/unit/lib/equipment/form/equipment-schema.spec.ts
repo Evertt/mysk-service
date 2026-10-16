@@ -20,6 +20,9 @@ test("a filled-in form becomes a unit", () => {
 		category: "generator",
 		status: "operational",
 		customerId: "7",
+		siteId: "12",
+		name: "  Automatische deur kantine BES-3 ",
+		location: "Expeditie dock 07",
 		installedAt: "2025-05-01",
 		warrantyUntil: "2028-04-30",
 	};
@@ -28,6 +31,8 @@ test("a filled-in form becomes a unit", () => {
 			...form,
 			serialNumber: "GEN-2041-A",
 			customerId: 7,
+			siteId: 12,
+			name: "Automatische deur kantine BES-3",
 			installedAt: day("2025-05-01"),
 			warrantyUntil: day("2028-04-30"),
 		},
@@ -70,4 +75,23 @@ test("the customer and both dates are required", () => {
 		"issues.0",
 		"Enter the end of the warranty",
 	);
+});
+
+describe("site, name and location", () => {
+	test("a unit is at a site", () => {
+		expect(parse(equipmentFields.siteId, "")).toEqual({ issues: ["Choose a site"] });
+		expect(parse(equipmentFields.siteId, "3")).toEqual({ value: 3 });
+	});
+
+	test("its name and location are optional, and nothing when left empty", () => {
+		expect(parse(equipmentFields.name, "  ")).toEqual({ value: null });
+		expect(parse(equipmentFields.location, "")).toEqual({ value: null });
+		expect(parse(equipmentFields.location, " Hal 2 ")).toEqual({ value: "Hal 2" });
+	});
+
+	test("are at most 120 characters", () => {
+		expect(parse(equipmentFields.name, "A".repeat(121))).toEqual({
+			issues: ["Use at most 120 characters"],
+		});
+	});
 });

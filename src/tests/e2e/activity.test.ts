@@ -301,6 +301,8 @@ describe("in South", () => {
 		await app.go("/customers/new");
 		await page.getByLabel("Name").fill("Fleeting Activity BV");
 		await page.getByLabel("Segment").selectOption("small_business");
+		await page.getByLabel("Street address").fill("Kanaalstraat 9");
+		await page.getByLabel("Postal code").fill("5611 CT");
 		await page.getByLabel("City").fill("Eindhoven");
 		await page.getByLabel("Country").selectOption("Netherlands");
 		await page.getByLabel("Contact person").fill("Fleur Kort");

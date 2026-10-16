@@ -1,0 +1,10 @@
+{
+	"en": {
+		"customers": { "customers_equipment_column_site": "Site" },
+		"orders": { "orders_detail_location": "Location" }
+	},
+	"nl": {
+		"customers": { "customers_equipment_column_site": "Vestiging" },
+		"orders": { "orders_detail_location": "Locatie" }
+	}
+}

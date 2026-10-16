@@ -38,6 +38,7 @@ export const getCustomerActivity = forMembers.query(v.string(), async (code) => 
 				hourlyRate: engineer.hourlyRate,
 				equipment: {
 					serialNumber: equipment.serialNumber,
+					name: equipment.name,
 					manufacturer: equipment.manufacturer,
 					model: equipment.model,
 				},

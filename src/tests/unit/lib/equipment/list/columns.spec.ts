@@ -14,13 +14,16 @@ import { day } from "#unit/temporal-support.ts";
 const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): EquipmentRow => ({
 	id: 1,
 	serialNumber,
+	name: null,
 	manufacturer: "Caterpillar",
 	model: "C15",
+	location: null,
 	category: "generator",
 	status: "operational",
 	installedAt: day("2025-05-01"),
 	warrantyUntil: day("2028-04-30"),
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
+	site: { id: 1, name: "Utrecht", city: "Utrecht" },
 	openOrders: 0,
 	moduleValues: {},
 	...fields,
@@ -57,6 +60,31 @@ test("the search finds units by manufacturer and model, serial number and custom
 	for (const search of ["daikin xr9", "chl-9", "bolt"]) {
 		expect(shown(rows, { globalFilter: search }), search).toEqual(["CHL-9"]);
 	}
+});
+
+test("a unit with a name of its own is shown, sorted and found by it", () => {
+	const rows = [
+		unit("GEN-1", { manufacturer: "Daikin" }),
+		unit("DR-3", { name: "Automatische deur kantine BES-3", manufacturer: "Hörmann" }),
+	];
+	expect(shown(rows, { sorting: [{ id: "unit", desc: false }] })).toEqual(["DR-3", "GEN-1"]);
+	expect(shown(rows, { globalFilter: "kantine" })).toEqual(["DR-3"]);
+});
+
+test("units sort by their site and their location there, those without one last", () => {
+	const rows = [
+		unit("GEN-1", { site: { id: 2, name: "Zwolle", city: "Zwolle" }, location: "Dak" }),
+		unit("GEN-2", { site: { id: 1, name: "Ede", city: "Ede" } }),
+		unit("GEN-3", { site: { id: 1, name: "Ede", city: "Ede" }, location: "Ketelhuis" }),
+	];
+	expect(shown(rows, { sorting: [{ id: "site", desc: false }] }).slice(0, 2)).toEqual(
+		expect.arrayContaining(["GEN-2", "GEN-3"]),
+	);
+	expect(shown(rows, { sorting: [{ id: "location", desc: false }] })).toEqual([
+		"GEN-1",
+		"GEN-3",
+		"GEN-2",
+	]);
 });
 
 test("the manufacturer, category and status filters keep the chosen values", () => {

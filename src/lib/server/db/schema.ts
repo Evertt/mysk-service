@@ -12,6 +12,7 @@ import {
 
 import {
 	type ActivityAction,
+	contactChannels,
 	customerSegments,
 	engineerSpecialties,
 	equipmentCategories,
@@ -19,6 +20,8 @@ import {
 	orderPriorities,
 	orderStatuses,
 	orderTypes,
+	sitePriorities,
+	weekdays,
 } from "#lib/models.ts";
 
 import { user } from "./auth.schema.ts";
@@ -46,6 +49,50 @@ export const customer = sqliteTable(
 		uniqueIndex("customer_organization_id").on(table.organizationId, table.id),
 		// The lists' filters search and sort customers by name.
 		index("customer_organization_name").on(table.organizationId, table.name),
+	],
+);
+
+/**
+ * One of a customer's sites (`vestiging`), e.g. their warehouse in Ede: where their equipment is
+ * and the engineers go. How the site likes to be contacted and visited, and how to get in, are the
+ * site's, not the customer's. A customer has at least one.
+ */
+export const customerSite = sqliteTable(
+	"customer_site",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		customerId: integer("customer_id").notNull(),
+		/** E.g. "Ede" or "Hoofdvestiging". */
+		name: text("name").notNull(),
+		/** Street and number; empty for the sites made from a customer's city alone. */
+		address: text("address").notNull().default(""),
+		postalCode: text("postal_code").notNull().default(""),
+		city: text("city").notNull(),
+		country: text("country").notNull(),
+		/** Who to ask for on site, if not the customer's contact. */
+		contactName: text("contact_name"),
+		contactPhone: text("contact_phone"),
+		contactEmail: text("contact_email"),
+		contactChannel: text("contact_channel", { enum: contactChannels }),
+		preferredDay: text("preferred_day", { enum: weekdays }),
+		/** When visits suit the site, as times of day (`07:00`, `15:00`): both or neither. */
+		slotStart: text("slot_start"),
+		slotEnd: text("slot_end"),
+		priority: text("priority", { enum: sitePriorities }).notNull().default("normal"),
+		/** How to get in and what to mind, e.g. "Melden bij receptie expeditie noord." */
+		accessNotes: text("access_notes"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("customer_site_organization_id").on(table.organizationId, table.id),
+		// For equipment, which must be at a site of its own customer.
+		uniqueIndex("customer_site_customer_id").on(table.customerId, table.id),
+		index("customer_site_organization_customer").on(table.organizationId, table.customerId),
+		foreignKey({
+			columns: [table.organizationId, table.customerId],
+			foreignColumns: [customer.organizationId, customer.id],
+		}).onDelete("cascade"),
 	],
 );
 
@@ -89,6 +136,12 @@ export const equipment = sqliteTable(
 		category: text("category", { enum: equipmentCategories }).notNull(),
 		status: text("status", { enum: equipmentStatuses }).notNull(),
 		customerId: integer("customer_id").notNull(),
+		/** The customer's site it's at. */
+		siteId: integer("site_id").notNull(),
+		/** The customer's own name or tag for it, e.g. "Automatische deur kantine BES-3". */
+		name: text("name"),
+		/** Where it is at the site, e.g. "Expeditie dock 07". */
+		location: text("location"),
 		installedAt: day("installed_at").notNull(),
 		warrantyUntil: day("warranty_until").notNull(),
 	},
@@ -104,9 +157,15 @@ export const equipment = sqliteTable(
 		// For the equipment list, which filters by customer and sorts by unit.
 		index("equipment_organization_customer").on(table.organizationId, table.customerId),
 		index("equipment_organization_unit").on(table.organizationId, table.manufacturer, table.model),
+		index("equipment_site").on(table.siteId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
+		}),
+		// A site of the unit's own customer (and so of the tenant).
+		foreignKey({
+			columns: [table.customerId, table.siteId],
+			foreignColumns: [customerSite.customerId, customerSite.id],
 		}),
 	],
 );
@@ -160,8 +219,17 @@ export const order = sqliteTable(
 );
 
 export const customerRelations = relations(customer, ({ many }) => ({
+	sites: many(customerSite),
 	equipment: many(equipment),
 	orders: many(order),
+}));
+
+export const customerSiteRelations = relations(customerSite, ({ one, many }) => ({
+	customer: one(customer, {
+		fields: [customerSite.organizationId, customerSite.customerId],
+		references: [customer.organizationId, customer.id],
+	}),
+	equipment: many(equipment),
 }));
 
 export const engineerRelations = relations(engineer, ({ many }) => ({
@@ -172,6 +240,10 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
 	customer: one(customer, {
 		fields: [equipment.organizationId, equipment.customerId],
 		references: [customer.organizationId, customer.id],
+	}),
+	site: one(customerSite, {
+		fields: [equipment.customerId, equipment.siteId],
+		references: [customerSite.customerId, customerSite.id],
 	}),
 	orders: many(order),
 }));

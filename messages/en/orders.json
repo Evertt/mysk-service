@@ -107,5 +107,7 @@
 	"orders_bulk_delete_title": "Delete {orders}?",
 	"orders_bulk_delete_description": "The orders and their material lines are removed permanently; the materials go back into stock. Invoiced orders can't be deleted.",
 	"orders_status_of": "Change status of {number}",
-	"orders_status_change_failed": "Couldn't change the status of {number}."
+	"orders_status_change_failed": "Couldn't change the status of {number}.",
+	"orders_site": "Site",
+	"orders_detail_location": "Location"
 }

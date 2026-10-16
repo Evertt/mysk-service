@@ -10,14 +10,16 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
+import { refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-import { europeanCountries } from "./countries.ts";
 import { customerFields } from "./form/customer-schema.ts";
+import { siteAddressFields } from "./form/site-schema.ts";
+import { countryProblems, knownCountries } from "./server/countries.ts";
+import { addSite } from "./server/sites.ts";
 
 /** All customers with how many equipment units and open orders they have, by name. */
 export const getCustomers = forMembers.query(async () => {
@@ -48,19 +50,25 @@ export const getCustomers = forMembers.query(async () => {
 });
 
 /**
- * One customer with their equipment and key figures. Their latest orders are
- * `getCustomerActivity` (`[code]/activity.remote.ts`).
+ * One customer with their sites (each with how many units are there), their equipment and key
+ * figures. Their latest orders are `getCustomerActivity` (`[code]/activity.remote.ts`).
  */
 export const getCustomer = forMembers.query(v.string(), async (code) => {
 	const found = await db.query.customer.findFirst({
 		where: and(eq(customer.code, code), inTenant(customer)),
 		with: {
+			sites: { orderBy: (site, { asc }) => [asc(site.name), asc(site.id)] },
 			equipment: {
 				orderBy: (unit, { asc }) => [asc(unit.manufacturer), asc(unit.model)],
 			},
 		},
 	});
 	if (!found) error(404, m.customers_code_not_found({ code }));
+	const unitsAt = Map.groupBy(found.equipment, (unit) => unit.siteId);
+	const sites = found.sites.map((site) => ({
+		...site,
+		equipmentCount: unitsAt.get(site.id)?.length ?? 0,
+	}));
 
 	const orders = await db
 		.select({
@@ -81,7 +89,7 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 	const done = orders.filter((o) => isDoneOrder(o.status));
 	const prices = await priceOrders(done);
 	return {
-		customer: found,
+		customer: { ...found, sites },
 		stats: {
 			orders: orders.length,
 			openOrders: orders.filter((o) => isOpenOrder(o.status)).length,
@@ -92,47 +100,53 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 	};
 });
 
-/** The countries the form offers: those the tenant uses plus the rest of Europe, alphabetically. */
-async function knownCountries() {
-	const used = await db
-		.selectDistinct({ country: customer.country })
-		.from(customer)
-		.where(inTenant(customer));
-	return [...new Set([...europeanCountries, ...used.map((row) => row.country)])].sort((a, b) =>
-		a.localeCompare(b),
-	);
-}
-
-/** The form problem of a country that isn't one of the known ones, if it isn't. */
-async function countryProblems(country: string): Promise<Problem<"country">[]> {
-	if ((await knownCountries()).includes(country)) return [];
-	return [{ field: "country", message: m.customers_country_unknown() }];
-}
-
 /** Everything the customer form needs to choose from. */
 export const getCustomerFormOptions = forMembers.query(async () => {
 	return { countries: await knownCountries() };
 });
 
-export const createCustomer = forMembers.form(v.object(customerFields), async (input, issue) => {
-	const { organizationId } = currentTenant();
-	refuse(issue, await countryProblems(input.country));
+/**
+ * Creates a customer with their first site, at the address entered (in the customer's city and
+ * country, named after the city): a customer always has a site, for their equipment.
+ */
+export const createCustomer = forMembers.form(
+	v.object({ ...customerFields, ...siteAddressFields }),
+	async ({ address, postalCode, ...input }, issue) => {
+		const { organizationId } = currentTenant();
+		refuse(issue, await countryProblems(input.country));
 
-	const code = await db.transaction(async (tx) => {
-		const code = await nextNumber(tx, "customer");
-		const [created] = await tx
-			.insert(customer)
-			.values({ ...input, organizationId, code })
-			.returning({ id: customer.id });
-		await recordActivity(tx, {
-			action: "created",
-			subject: { type: "customer", id: created.id, label: code },
+		const code = await db.transaction(async (tx) => {
+			const code = await nextNumber(tx, "customer");
+			const [created] = await tx
+				.insert(customer)
+				.values({ ...input, organizationId, code })
+				.returning({ id: customer.id });
+			await recordActivity(tx, {
+				action: "created",
+				subject: { type: "customer", id: created.id, label: code },
+			});
+			await addSite(tx, created.id, {
+				name: input.city,
+				address,
+				postalCode,
+				city: input.city,
+				country: input.country,
+				contactName: null,
+				contactPhone: null,
+				contactEmail: null,
+				contactChannel: null,
+				preferredDay: null,
+				slotStart: null,
+				slotEnd: null,
+				priority: "normal",
+				accessNotes: null,
+			});
+			return code;
 		});
-		return code;
-	});
-	void getCustomers().refresh();
-	redirect(303, `/customers/${code}`);
-});
+		void getCustomers().refresh();
+		redirect(303, `/customers/${code}`);
+	},
+);
 
 export const updateCustomer = forMembers.form(
 	v.object({ id: id(), ...customerFields }),

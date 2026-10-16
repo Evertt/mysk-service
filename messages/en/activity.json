@@ -111,5 +111,17 @@
 	"activity_deleted_elsewhere": "Deleted by {name}",
 	"activity_changed_elsewhere_description": "Reload to see the latest version, so your changes don't undo theirs.",
 	"activity_deleted_elsewhere_description": "It no longer exists.",
-	"activity_changed_elsewhere_reload": "Reload"
+	"activity_changed_elsewhere_reload": "Reload",
+	"activity_subject_site": "site",
+	"activity_field_site": "site",
+	"activity_field_location": "location",
+	"activity_field_address": "address",
+	"activity_field_postal_code": "postal code",
+	"activity_field_contact_phone": "phone on site",
+	"activity_field_contact_email": "email on site",
+	"activity_field_contact_channel": "contact by",
+	"activity_field_preferred_day": "preferred day",
+	"activity_field_slot_start": "available from",
+	"activity_field_slot_end": "available until",
+	"activity_field_access_notes": "access notes"
 }

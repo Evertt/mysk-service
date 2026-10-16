@@ -1,0 +1,11 @@
+note: You are running `vp test` as a Vite+ built-in command. If you meant to run the test npm script, use `vpr test` instead.
+Plugin "vitest:mocks:interceptor" defines Vite-specific hooks (configureServer) in a plugin returned from applyToEnvironment. These hooks will be ignored.
+
+ RUN  v5.0.1 /Users/evert/Sites/svadcn-themed/.claude/worktrees/agent-a080b894ba26cb6ff
+
+
+ Test Files  10 passed (10)
+      Tests  105 passed (105)
+   Start at  19:42:01
+   Duration  53.74s (tests 97%, import 2%)
+

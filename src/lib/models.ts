@@ -158,3 +158,25 @@ export const activityActions = [
 ] as const;
 export type CoreActivityAction = (typeof activityActions)[number];
 export type ActivityAction = CoreActivityAction | ModuleAction;
+
+// --- Customer sites ------------------------------------------------------------------------------
+
+/** How a site (`customer_site`) prefers to be contacted, e.g. to agree a visit. */
+export const contactChannels = ["email", "phone", "whatsapp", "portal"] as const;
+export type ContactChannel = (typeof contactChannels)[number];
+
+/** The days of the week, Monday first, e.g. a site's preferred day for visits. */
+export const weekdays = [
+	"monday",
+	"tuesday",
+	"wednesday",
+	"thursday",
+	"friday",
+	"saturday",
+	"sunday",
+] as const;
+export type Weekday = (typeof weekdays)[number];
+
+/** How urgently a site's work is handled, besides each order's own priority. */
+export const sitePriorities = ["normal", "high"] as const;
+export type SitePriority = (typeof sitePriorities)[number];

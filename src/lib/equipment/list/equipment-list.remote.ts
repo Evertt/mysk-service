@@ -7,7 +7,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
 import {
 	bulkChange,
 	listTarget,
@@ -38,13 +38,16 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 					.select({
 						id: equipment.id,
 						serialNumber: equipment.serialNumber,
+						name: equipment.name,
 						manufacturer: equipment.manufacturer,
 						model: equipment.model,
+						location: equipment.location,
 						category: equipment.category,
 						status: equipment.status,
 						installedAt: equipment.installedAt,
 						warrantyUntil: equipment.warrantyUntil,
 						customer: { id: customer.id, code: customer.code, name: customer.name },
+						site: { id: customerSite.id, name: customerSite.name, city: customerSite.city },
 					})
 					.from(equipment)
 					.$dynamic(),

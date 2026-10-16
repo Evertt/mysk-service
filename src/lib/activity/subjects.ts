@@ -126,6 +126,18 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		href: ({ label }) => resolve("/(app)/customers/[code]", { code: label }),
 		fields: { segment: { format: labelled("customerSegment") } },
 	},
+	/**
+	 * One of a customer's sites, by its name, logged with its customer as its parent. It has no
+	 * page of its own: it's on its customer's.
+	 */
+	site: {
+		noun: m.activity_subject_site,
+		fields: {
+			contactChannel: { format: labelled("contactChannel") },
+			preferredDay: { format: labelled("weekday") },
+			priority: { format: labelled("sitePriority") },
+		},
+	},
 	engineer: {
 		noun: m.activity_subject_engineer,
 		href: ({ id }) => resolve("/(app)/engineers/[id]", { id }),
@@ -142,6 +154,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			category: { format: labelled("equipmentCategory") },
 			status: { format: labelled("equipmentStatus") },
 			customerId: { label: m.activity_field_owner, ref: "customer" },
+			siteId: { ref: "site" },
 			installedAt: { format: day },
 			warrantyUntil: { format: day },
 		},

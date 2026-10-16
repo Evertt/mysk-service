@@ -5,6 +5,7 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
@@ -43,13 +44,18 @@ export const columns = column.columns([
 	}),
 	column.accessor(
 		// `undefined` rather than `null`, so new installations sort last (`sortUndefined`).
-		(row) => (row.equipment ? `${row.equipment.manufacturer} ${row.equipment.model}` : undefined),
+		(row) => (row.equipment ? unitTitle(row.equipment) : undefined),
 		{
 			id: "equipment",
 			cell: ({ getValue, row }) =>
 				renderComponent(TwoLineCell, {
 					primary: getValue(),
-					secondary: row.original.equipment?.serialNumber,
+					// The make too, under the customer's own name for it.
+					secondary:
+						row.original.equipment &&
+						(row.original.equipment.name
+							? `${unitModel(row.original.equipment)} · ${row.original.equipment.serialNumber}`
+							: row.original.equipment.serialNumber),
 					href:
 						(row.original.equipment &&
 							resolve("/(app)/equipment/[serial]", {

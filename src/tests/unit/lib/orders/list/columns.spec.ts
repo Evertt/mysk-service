@@ -20,7 +20,13 @@ const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
 	createdAt: at("2026-10-01 00:00"),
 	laborHours: 1,
 	customer: { id: 1, code: "CUS-001", name: "Acme" },
-	equipment: { id: 1, model: "C15", manufacturer: "Caterpillar", serialNumber: "GEN-1" },
+	equipment: {
+		id: 1,
+		name: null,
+		model: "C15",
+		manufacturer: "Caterpillar",
+		serialNumber: "GEN-1",
+	},
 	engineer: { id: 1, name: "Sam", hourlyRate: 6000 },
 	laborTotal: 6000,
 	total: 6000,
@@ -88,7 +94,13 @@ test.each([false, true])(
 		const rows = [
 			order("ORD-001", { equipment: null }),
 			order("ORD-002", {
-				equipment: { id: 2, model: "XR9", manufacturer: "Daikin", serialNumber: "CHL-9" },
+				equipment: {
+					id: 2,
+					name: null,
+					model: "XR9",
+					manufacturer: "Daikin",
+					serialNumber: "CHL-9",
+				},
 			}),
 			order("ORD-003"),
 		];
@@ -109,7 +121,7 @@ test("the search finds orders by number, customer, equipment and engineer", () =
 		order("ORD-001"),
 		order("ORD-002", {
 			customer: { id: 2, code: "CUS-002", name: "Bolt Logistics" },
-			equipment: { id: 2, model: "XR9", manufacturer: "Daikin", serialNumber: "CHL-9" },
+			equipment: { id: 2, name: null, model: "XR9", manufacturer: "Daikin", serialNumber: "CHL-9" },
 			engineer: { id: 2, name: "Priya", hourlyRate: 6000 },
 		}),
 	];

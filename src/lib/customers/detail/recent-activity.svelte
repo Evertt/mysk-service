@@ -8,6 +8,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import { joinValues } from "#lib/components/data-table/url-state.ts";
+	import { unitLine } from "#lib/equipment/index.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 
@@ -52,8 +53,7 @@
 									})}
 									class="truncate text-sm text-muted-foreground underline-offset-4 hover:underline"
 								>
-									{order.equipment.manufacturer}
-									{order.equipment.model} · {order.equipment.serialNumber}
+									{unitLine(order.equipment)}
 								</a>
 							{:else}
 								<span class="text-sm text-muted-foreground">

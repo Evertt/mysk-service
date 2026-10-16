@@ -8,6 +8,7 @@ import {
 	formatNumber,
 	formatTime,
 	formatTimeAgo,
+	formatTimeSlot,
 	intlLocale,
 	numberFormatter,
 } from "#lib/i18n/format.ts";
@@ -91,6 +92,12 @@ describe("formatDateTime", () => {
 test("formatTime shows the time of day on a 24-hour clock in both languages", () => {
 	expect(formatTime(at("2026-10-07 09:30"))).toBe("09:30");
 	expect(formatTime(at("2026-10-07 21:05"), "nl")).toBe("21:05");
+});
+
+test("formatTimeSlot shows two times of day as stored, whatever the user's time zone", () => {
+	// A slot is no moment: the zone doesn't shift it.
+	expect(formatTimeSlot("07:00", "15:00").replace(/\s/g, "")).toBe("07:00–15:00");
+	expect(formatTimeSlot("06:30", "14:00", "nl").replace(/\s/g, "")).toBe("06:30–14:00");
 });
 
 describe("formatNumber", () => {

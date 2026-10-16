@@ -7,7 +7,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -21,7 +21,7 @@ import { removeEquipment } from "./server/equipment.ts";
 export const getEquipment = forMembers.query(v.string(), async (serialNumber) => {
 	const unit = await db.query.equipment.findFirst({
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
-		with: { customer: true },
+		with: { customer: true, site: true },
 	});
 	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
 
@@ -32,22 +32,34 @@ export const getEquipment = forMembers.query(v.string(), async (serialNumber) =>
 	return { unit, orderCount };
 });
 
-/** Everything the equipment form needs to choose from (the tenant's customers). */
+/** Everything the equipment form needs to choose from: the tenant's customers and their sites. */
 export const getEquipmentFormOptions = forMembers.query(async () => {
-	const customers = await db
-		.select({ id: customer.id, code: customer.code, name: customer.name })
-		.from(customer)
-		.where(inTenant(customer))
-		.orderBy(asc(customer.name));
-	return { customers };
+	const [customers, sites] = await Promise.all([
+		db
+			.select({ id: customer.id, code: customer.code, name: customer.name })
+			.from(customer)
+			.where(inTenant(customer))
+			.orderBy(asc(customer.name)),
+		db
+			.select({
+				id: customerSite.id,
+				customerId: customerSite.customerId,
+				name: customerSite.name,
+				city: customerSite.city,
+			})
+			.from(customerSite)
+			.where(inTenant(customerSite))
+			.orderBy(asc(customerSite.name), asc(customerSite.id)),
+	]);
+	return { customers, sites };
 });
 
 type EquipmentInput = v.InferOutput<v.ObjectSchema<typeof equipmentFields, undefined>>;
-type UnitProblem = Problem<"serialNumber" | "customerId" | "warrantyUntil">;
+type UnitProblem = Problem<"serialNumber" | "customerId" | "siteId" | "warrantyUntil">;
 
 /**
  * Checks what the schema can't: a serial number unique within the tenant, a customer of the
- * tenant, and not moving a unit with orders. `existing` must already be checked to be in the tenant.
+ * tenant and a site of that customer, and not moving a unit with orders. `existing` must already be checked to be in the tenant.
  */
 async function checkUnit(
 	existing: typeof equipment.$inferSelect | undefined,
@@ -65,6 +77,19 @@ async function checkUnit(
 		columns: { id: true },
 		where: idInTenant(customer, input.customerId),
 	});
+	// One of the customer's sites (which makes it the tenant's too).
+	const site = owner
+		? await db.query.customerSite.findFirst({
+				columns: { id: true },
+				where: and(
+					idInTenant(customerSite, input.siteId),
+					eq(customerSite.customerId, input.customerId),
+				),
+			})
+		: undefined;
+	if (owner && !site) {
+		problems.push({ field: "siteId", message: m.equipment_site_unknown() });
+	}
 	if (!owner) {
 		problems.push({ field: "customerId", message: m.equipment_customer_unknown() });
 	} else if (existing && existing.customerId !== input.customerId) {

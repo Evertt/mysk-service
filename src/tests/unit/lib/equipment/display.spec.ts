@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { categoryOptions, isUnderWarranty, statusOptions } from "#lib/equipment/display.ts";
+import {
+	categoryOptions,
+	isUnderWarranty,
+	statusOptions,
+	unitLine,
+	unitTitle,
+} from "#lib/equipment/display.ts";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
@@ -27,6 +33,21 @@ describe("isUnderWarranty", () => {
 		const today = Temporal.Now.plainDateISO();
 		expect(isUnderWarranty(today.add({ days: 1 }))).toBe(true);
 		expect(isUnderWarranty(today.subtract({ days: 1 }))).toBe(false);
+	});
+});
+
+describe("a unit's name", () => {
+	const unit = { name: null, manufacturer: "Hörmann", model: "ST 50", serialNumber: "H1234567" };
+	const named = { ...unit, name: "Automatische deur kantine BES-3" };
+
+	test("is the customer's own for it, if it has one, else its make", () => {
+		expect(unitTitle(unit)).toBe("Hörmann ST 50");
+		expect(unitTitle(named)).toBe("Automatische deur kantine BES-3");
+	});
+
+	test("on one line it comes first, before the make and serial number", () => {
+		expect(unitLine(unit)).toBe("Hörmann ST 50 · H1234567");
+		expect(unitLine(named)).toBe("Automatische deur kantine BES-3 · Hörmann ST 50 · H1234567");
 	});
 });
 

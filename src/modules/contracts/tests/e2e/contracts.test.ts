@@ -123,6 +123,7 @@ describe("in North", () => {
 		);
 		await app.go(`/equipment/${encodeURIComponent(unit.serial_number)}/edit`);
 		await page.getByLabel("Customer").selectOption(String(other));
+		await page.getByLabel("Site", { exact: true }).selectOption({ index: 1 });
 		await app.submit(page.getByRole("button", { name: "Save equipment" }));
 		expect(await app.issues()).toContainEqual(expect.stringMatching(/service contract/));
 		expect(await value(`select customer_id from equipment where id = ?`, [unit.id])).toBe(

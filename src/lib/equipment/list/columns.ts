@@ -8,6 +8,7 @@ import { CustomerLink } from "#lib/customers/components.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
+import { unitModel, unitTitle } from "../display.ts";
 import CategoryLabel from "../ui/category-label.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
@@ -20,12 +21,15 @@ const column = createAppColumnHelper<EquipmentRow>();
 
 export const columns = column.columns([
 	column.select(),
-	column.accessor((row) => `${row.manufacturer} ${row.model}`, {
+	column.accessor((row) => unitTitle(row), {
 		id: "unit",
 		cell: ({ getValue, row }) =>
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
-				secondary: row.original.serialNumber,
+				// The make too, under the customer's own name for it.
+				secondary: row.original.name
+					? `${unitModel(row.original)} · ${row.original.serialNumber}`
+					: row.original.serialNumber,
 				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
@@ -76,6 +80,25 @@ export const columns = column.columns([
 		enableGrouping: true,
 		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.equipment_column_customer, filter: "set" },
+	}),
+	column.accessor((row) => row.site.name, {
+		id: "site",
+		cell: ({ row }) =>
+			renderComponent(TwoLineCell, {
+				primary: row.original.site.name,
+				// The town, unless the site is named after it.
+				secondary: row.original.site.name.includes(row.original.site.city)
+					? null
+					: row.original.site.city,
+			}),
+		enableGlobalFilter: false,
+		meta: { label: m.equipment_column_site },
+	}),
+	column.accessor((row) => row.location ?? undefined, {
+		id: "location",
+		sortUndefined: "last",
+		enableGlobalFilter: false,
+		meta: { label: m.equipment_column_location },
 	}),
 	column.accessor("installedAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),

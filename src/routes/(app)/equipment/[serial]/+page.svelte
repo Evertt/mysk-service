@@ -6,6 +6,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { SiteCard } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
 	import {
 		CategoryLabel,
@@ -14,7 +15,7 @@
 	} from "#lib/equipment/components.ts";
 	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
-	import { categories } from "#lib/equipment/index.ts";
+	import { categories, unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDate, label } from "#lib/i18n/index.ts";
@@ -27,7 +28,8 @@
 
 	const unit = $derived(data.unit);
 	const owner = $derived(data.unit.customer);
-	const name = $derived(`${unit.manufacturer} ${unit.model}`);
+	const name = $derived(unitTitle(unit));
+	const site = $derived(data.unit.site);
 </script>
 
 <svelte:head>
@@ -36,7 +38,9 @@
 
 <PageHeader
 	title={name}
-	description="{categories[unit.category].label} · {unit.serialNumber}"
+	description={[categories[unit.category].label, unit.name && unitModel(unit), unit.serialNumber]
+		.filter(Boolean)
+		.join(" · ")}
 	breadcrumbs={[
 		{ label: m.equipment_title(), href: resolve("/(app)/equipment") },
 		{ label: unit.serialNumber },
@@ -77,12 +81,17 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
+					{#if unit.name}
+						<DetailItem label={m.equipment_field_name()} value={unit.name} />
+					{/if}
 					<DetailItem label={m.equipment_field_manufacturer()} value={unit.manufacturer} />
 					<DetailItem label={m.equipment_detail_model()} value={unit.model} />
 					<DetailItem label={m.equipment_field_serial_number()} value={unit.serialNumber} />
 					<DetailItem label={m.equipment_field_category()}>
 						<CategoryLabel category={unit.category} />
 					</DetailItem>
+					<DetailItem label={m.equipment_detail_site()} value={site.name} />
+					<DetailItem label={m.equipment_detail_location()} value={unit.location} />
 					<DetailItem label={m.equipment_column_installed()} value={formatDate(unit.installedAt)} />
 					<DetailItem label={m.equipment_field_warranty()}>
 						<span class="flex flex-wrap items-center gap-2">
@@ -127,6 +136,8 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<SiteCard {site} title={m.equipment_detail_site()} />
 
 		<ExtensionSlot point={detailSide} props={{ serialNumber: unit.serialNumber }} />
 

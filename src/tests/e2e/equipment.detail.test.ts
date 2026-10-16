@@ -196,6 +196,7 @@ describe("in North", () => {
 		await page
 			.getByLabel("Customer")
 			.selectOption(inNorth.find((id) => id !== String(before.customer_id))!);
+		await page.getByLabel("Site", { exact: true }).selectOption({ index: 1 });
 		await app.submit(page.getByRole("button", { name: "Save equipment" }));
 		expect(await app.issues()).toContainEqual(expect.stringContaining("Can't move this unit"));
 		expect(app.path()).toBe(`/equipment/${busy.serial}/edit`);

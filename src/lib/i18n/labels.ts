@@ -9,6 +9,7 @@ import type { MemberRole } from "#lib/auth/index.ts";
  * a label: store the value.
  */
 import type {
+	ContactChannel,
 	CustomerSegment,
 	EngineerSpecialty,
 	EquipmentCategory,
@@ -16,6 +17,8 @@ import type {
 	OrderPriority,
 	OrderStatus,
 	OrderType,
+	SitePriority,
+	Weekday,
 } from "#lib/models.ts";
 
 export type Labels<T extends string> = Record<T, () => string>;
@@ -73,6 +76,25 @@ const coreLabels = {
 		out_of_service: m.enum_equipment_status_out_of_service,
 		decommissioned: m.enum_equipment_status_decommissioned,
 	} satisfies Labels<EquipmentStatus>,
+	contactChannel: {
+		email: m.enum_contact_channel_email,
+		phone: m.enum_contact_channel_phone,
+		whatsapp: m.enum_contact_channel_whatsapp,
+		portal: m.enum_contact_channel_portal,
+	} satisfies Labels<ContactChannel>,
+	weekday: {
+		monday: m.enum_weekday_monday,
+		tuesday: m.enum_weekday_tuesday,
+		wednesday: m.enum_weekday_wednesday,
+		thursday: m.enum_weekday_thursday,
+		friday: m.enum_weekday_friday,
+		saturday: m.enum_weekday_saturday,
+		sunday: m.enum_weekday_sunday,
+	} satisfies Labels<Weekday>,
+	sitePriority: {
+		normal: m.enum_site_priority_normal,
+		high: m.enum_site_priority_high,
+	} satisfies Labels<SitePriority>,
 	/** A unit's name, e.g. `Pieces`. */
 	memberRole: {
 		owner: m.enum_member_role_owner,

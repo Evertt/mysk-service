@@ -75,7 +75,28 @@ export const getMyWork = forEngineers.query(async () => {
 	return { open, recent };
 });
 
-/** One of the engineer's orders, with what they need on site; a 404 for anyone else's. */
+/** What the engineer needs of the site they go to: how to get there and in, and when to come. */
+const siteColumns = {
+	name: true,
+	address: true,
+	postalCode: true,
+	city: true,
+	country: true,
+	contactName: true,
+	contactPhone: true,
+	contactEmail: true,
+	contactChannel: true,
+	preferredDay: true,
+	slotStart: true,
+	slotEnd: true,
+	priority: true,
+	accessNotes: true,
+} as const;
+
+/**
+ * One of the engineer's orders, with what they need on site, and the site: its unit's, or the
+ * customer's only one for an order without a unit. A 404 for anyone else's.
+ */
 export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	const engineer = await currentEngineer();
 	const found = await db.query.order.findFirst({
@@ -83,13 +104,24 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 		with: {
 			customer: {
 				columns: { name: true, contactName: true, phone: true, email: true, city: true },
+				with: { sites: { columns: siteColumns } },
 			},
 			equipment: {
-				columns: { model: true, manufacturer: true, serialNumber: true, category: true },
+				columns: {
+					name: true,
+					model: true,
+					manufacturer: true,
+					serialNumber: true,
+					category: true,
+					location: true,
+				},
+				with: { site: { columns: siteColumns } },
 			},
 		},
 	});
 	if (!found) error(404, m.portal_not_found({ number }));
+	const { sites, ...owner } = found.customer;
+	const site = found.equipment?.site ?? (sites.length === 1 ? sites[0] : null);
 
 	const [notes, signoff] = await Promise.all([
 		db
@@ -108,11 +140,11 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 			where: and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff)),
 		}),
 	]);
-	return { order: found, notes, signoff: signoff ?? null };
+	return { order: { ...found, customer: owner }, site, notes, signoff: signoff ?? null };
 });
 
 /** The records the portal shows: a change to any of them may outdate it. */
-const portalSubjects = ["order", "customer", "equipment"] as const;
+const portalSubjects = ["order", "customer", "site", "equipment"] as const;
 
 /**
  * When the records the portal shows last changed (epoch ms, 0 if not since the server started),

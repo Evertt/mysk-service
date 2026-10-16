@@ -8,7 +8,9 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { SiteCard } from "#lib/customers/components.ts";
 	import { getTimeZone } from "#lib/dates.ts";
+	import { unitModel } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
@@ -93,15 +95,24 @@
 			{#if equipment}
 				<DetailItem
 					label={m.portal_equipment()}
-					value={`${equipment.manufacturer} ${equipment.model}`}
+					value={equipment.name
+						? `${equipment.name} · ${unitModel(equipment)}`
+						: unitModel(equipment)}
 				/>
 				<DetailItem label={m.portal_serial_number()} value={equipment.serialNumber} />
+				{#if equipment.location}
+					<DetailItem label={m.portal_location()} value={equipment.location} />
+				{/if}
 			{:else}
 				<DetailItem label={m.portal_equipment()} value={m.portal_new_installation()} />
 			{/if}
 		</dl>
 	</Card.Content>
 </Card.Root>
+
+{#if data.site}
+	<SiteCard site={data.site} title={m.portal_site()} />
+{/if}
 
 <Card.Root>
 	<Card.Header>

@@ -55,5 +55,7 @@
 	"portal_note_required": "Write a note",
 	"portal_note_too_long": "Keep it under {max} characters",
 	"portal_signer_required": "Enter the name of who signs",
-	"portal_signed_off_note": "Signed off by {name}"
+	"portal_signed_off_note": "Signed off by {name}",
+	"portal_site": "Site",
+	"portal_location": "Location"
 }

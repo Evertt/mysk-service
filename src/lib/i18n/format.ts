@@ -98,6 +98,18 @@ export const formatStoredMoment = (value: unknown) =>
 /** Formats a time of day, e.g. `09:30`. */
 export const formatTime = dateFormatter({ hour: "2-digit", minute: "2-digit" });
 
+/** Times of day as such, in no time zone: on 1 January 1970 in UTC. */
+const timesOfDay = dateFormatter({ hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+
+/**
+ * Formats a slot between two times of day as stored (`HH:MM`, e.g. a site's preferred hours), e.g.
+ * `07:00–15:00`.
+ */
+export function formatTimeSlot(start: string, end: string, locale?: Locale) {
+	const at = (time: string) => new Date(`1970-01-01T${time}:00Z`);
+	return timesOfDay.range(at(start), at(end), locale);
+}
+
 const relativeTime = perLocale(
 	(locale) => new Intl.RelativeTimeFormat(locale, { numeric: "auto" }),
 );

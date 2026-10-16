@@ -111,5 +111,17 @@
 	"activity_deleted_elsewhere": "Verwijderd door {name}",
 	"activity_changed_elsewhere_description": "Laad de nieuwste versie, zodat jouw wijzigingen die van hen niet ongedaan maken.",
 	"activity_deleted_elsewhere_description": "Het bestaat niet meer.",
-	"activity_changed_elsewhere_reload": "Opnieuw laden"
+	"activity_changed_elsewhere_reload": "Opnieuw laden",
+	"activity_subject_site": "vestiging",
+	"activity_field_site": "vestiging",
+	"activity_field_location": "locatie",
+	"activity_field_address": "adres",
+	"activity_field_postal_code": "postcode",
+	"activity_field_contact_phone": "telefoon ter plaatse",
+	"activity_field_contact_email": "e-mail ter plaatse",
+	"activity_field_contact_channel": "contact via",
+	"activity_field_preferred_day": "voorkeursdag",
+	"activity_field_slot_start": "beschikbaar vanaf",
+	"activity_field_slot_end": "beschikbaar tot",
+	"activity_field_access_notes": "toegangsinstructies"
 }

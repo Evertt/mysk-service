@@ -446,12 +446,16 @@ describe("in North", () => {
 		await app.go("/customers/new");
 		await app.submit(page.getByRole("button", { name: "Create customer" }));
 		const issues = await app.issues();
-		expect(issues).toHaveLength(6);
+		// The first site's address too.
+		expect(issues).toHaveLength(8);
+		expect(issues).toContain("Enter the street address");
 		expect(issues.some((issue) => issue.includes("\n"))).toBe(false);
 		expect(app.path()).toBe("/customers/new");
 
 		await page.getByLabel("Name").fill("Test Klimaattechniek BV");
 		await page.getByLabel("Segment").selectOption("mid_market");
+		await page.getByLabel("Street address").fill("Croeselaan 18");
+		await page.getByLabel("Postal code").fill("3521 CB");
 		await page.getByLabel("City").fill("Utrecht");
 		await page.getByLabel("Country").selectOption("Netherlands");
 		await page.getByLabel("Contact person").fill("Femke de Vries");
@@ -482,6 +486,26 @@ describe("in North", () => {
 		expect(await page.getByText("No equipment").count()).toBe(1);
 		expect(await page.getByText("No orders", { exact: true }).count()).toBe(1);
 		expect(await page.locator("h1 ~ [data-slot=badge]").innerText()).toContain("Mid-market");
+		// With their first site, at the address entered, named after their town.
+		expect(
+			await rows(
+				`select organization_id, name, address, postal_code, city, country from customer_site
+				 where customer_id = ?`,
+				[target],
+			),
+		).toEqual([
+			{
+				organization_id: north.id,
+				name: "Utrecht",
+				address: "Croeselaan 18",
+				postal_code: "3521 CB",
+				city: "Utrecht",
+				country: "Netherlands",
+			},
+		]);
+		const sites = page.getByTestId("sites");
+		expect(await sites.innerText()).toContain("Croeselaan 18");
+		expect(await sites.innerText()).toContain("3521 CB Utrecht");
 	});
 
 	test("editing it validates and saves the changes", async () => {
@@ -540,6 +564,8 @@ describe("in North", () => {
 		await app.go("/customers/new");
 		await page.getByLabel("Name").fill("Simultaneous BV");
 		await page.getByLabel("Segment").selectOption("small_business");
+		await page.getByLabel("Street address").fill("Dokterspad 1");
+		await page.getByLabel("Postal code").fill("8011 VZ");
 		await page.getByLabel("City").fill("Zwolle");
 		await page.getByLabel("Country").selectOption("Netherlands");
 		await page.getByLabel("Contact person").fill("Sam Jansen");
@@ -655,6 +681,8 @@ describe("in South", () => {
 		await app.go("/customers/new");
 		await page.getByLabel("Name").fill("Test Zuid Installaties BV");
 		await page.getByLabel("Segment").selectOption("small_business");
+		await page.getByLabel("Street address").fill("Kanaalstraat 4");
+		await page.getByLabel("Postal code").fill("5611 CT");
 		await page.getByLabel("City").fill("Eindhoven");
 		await page.getByLabel("Country").selectOption("Netherlands");
 		await page.getByLabel("Contact person").fill("Joris Bakker");

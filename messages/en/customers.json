@@ -140,5 +140,61 @@
 	"customers_card_email": "Email",
 	"customers_card_phone": "Phone",
 	"customers_card_location": "Location",
-	"customers_bulk_has_equipment": "{name} has equipment"
+	"customers_bulk_has_equipment": "{name} has equipment",
+	"customers_field_address": "Street address",
+	"customers_field_postal_code": "Postal code",
+	"customers_form_first_site": "Their first site is made from this address; add more on the customer's page.",
+	"customers_site_name_required": "Enter a name for the site",
+	"customers_site_address_required": "Enter the street address",
+	"customers_site_postal_code_required": "Enter the postal code",
+	"customers_site_slot_incomplete": "Enter both the start and the end of the time slot",
+	"customers_site_slot_order": "The end comes after the start",
+	"customers_site_not_found": "Site not found",
+	"customers_site_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "This site still has {countText} equipment unit. Move it to another site first.",
+				"countPlural=*": "This site still has {countText} equipment units. Move them to another site first."
+			}
+		}
+	],
+	"customers_site_delete_last": "A customer keeps at least one site. Add another before deleting this one.",
+	"customers_sites_title": "Sites",
+	"customers_sites_description": "Where the equipment of {name} is, and how to visit.",
+	"customers_site_add": "Add site",
+	"customers_site_new_title": "New site",
+	"customers_site_edit_title": "Edit {name}",
+	"customers_site_dialog_description": "Its address, when a visit suits the site, and how to get in.",
+	"customers_site_saved": "Site saved",
+	"customers_site_deleted": "Site deleted",
+	"customers_site_delete_title": "Delete {name}?",
+	"customers_site_delete_description": "The site is removed permanently. A site with equipment can't be deleted.",
+	"customers_site_actions": "Actions for {name}",
+	"customers_site_save": "Save site",
+	"customers_site_field_name": "Name",
+	"customers_site_field_name_description": "E.g. the town, or “Head office”.",
+	"customers_site_field_address": "Address",
+	"customers_site_field_contact": "Contact on site",
+	"customers_site_field_contact_name": "Contact person",
+	"customers_site_field_contact_phone": "Phone on site",
+	"customers_site_field_contact_email": "Email on site",
+	"customers_site_field_channel": "Contact by",
+	"customers_site_field_day": "Preferred day",
+	"customers_site_field_slot": "Time slot",
+	"customers_site_field_slot_start": "Available from",
+	"customers_site_field_slot_end": "Available until",
+	"customers_site_field_priority": "Priority",
+	"customers_site_field_access_notes": "Access notes",
+	"customers_site_field_access_notes_description": "What the engineer needs to know on arrival, e.g. where to report.",
+	"customers_site_no_preference": "No preference",
+	"customers_site_high_priority": "High priority",
+	"customers_site_address_missing": "No street address yet",
+	"customers_site_section_visit": "Visits",
+	"customers_equipment_column_site": "Site"
 }

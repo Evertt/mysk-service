@@ -75,6 +75,22 @@
 					value={customer?.segment ?? "small_business"}
 					options={segmentOptions.map(({ value, label }) => ({ value, label }))}
 				/>
+				{#if !customer}
+					<!-- Their first site's: a customer's sites are on their page after that. -->
+					{@const created = (form as typeof createCustomer).fields}
+					<TextField
+						field={created.address}
+						label={m.customers_field_address()}
+						autocomplete="street-address"
+						description={m.customers_form_first_site()}
+						class="md:col-span-2"
+					/>
+					<TextField
+						field={created.postalCode}
+						label={m.customers_field_postal_code()}
+						autocomplete="postal-code"
+					/>
+				{/if}
 				<TextField
 					field={fields.city}
 					label={m.customers_field_city()}

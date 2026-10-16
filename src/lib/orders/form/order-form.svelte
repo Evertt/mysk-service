@@ -15,6 +15,7 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
+	import { unitLine } from "#lib/equipment/index.ts";
 	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
@@ -56,7 +57,7 @@
 			.filter((unit) => String(unit.customerId) === customerId)
 			.map((unit) => ({
 				value: String(unit.id),
-				label: `${unit.manufacturer} ${unit.model} · ${unit.serialNumber}`,
+				label: unitLine(unit),
 			})),
 	);
 	const engineerOptions = $derived(

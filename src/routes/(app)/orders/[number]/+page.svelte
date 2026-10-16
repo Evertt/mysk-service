@@ -7,7 +7,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { CustomerCard } from "#lib/customers/components.ts";
+	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
 	import { SpecialtyBadge } from "#lib/engineers/components.ts";
 	import {
 		CategoryLabel,
@@ -15,6 +15,7 @@
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
 	} from "#lib/equipment/components.ts";
+	import { unitModel } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { isEditableOrder } from "#lib/models.ts";
@@ -113,6 +114,10 @@
 
 		<CustomerCard {customer} title={m.orders_customer()} />
 
+		{#if data.site}
+			<SiteCard site={data.site} title={m.orders_site()} />
+		{/if}
+
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.orders_equipment()}</Card.Title>
@@ -128,10 +133,13 @@
 			<Card.Content>
 				{#if equipment}
 					<dl class="grid grid-cols-2 gap-4">
-						<DetailItem
-							label={m.orders_detail_model()}
-							value={`${equipment.manufacturer} ${equipment.model}`}
-						/>
+						{#if equipment.name}
+							<DetailItem label={m.orders_detail_name()} value={equipment.name} />
+						{/if}
+						<DetailItem label={m.orders_detail_model()} value={unitModel(equipment)} />
+						{#if equipment.location}
+							<DetailItem label={m.orders_detail_location()} value={equipment.location} />
+						{/if}
 						<DetailItem label={m.orders_detail_category()}>
 							<CategoryLabel category={equipment.category} />
 						</DetailItem>

@@ -14,8 +14,8 @@ import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
 import { nocase, searchMatch } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-/** A unit as the lists show it: manufacturer and model. */
-const unitName = sql<string>`${equipment.manufacturer} || ' ' || ${equipment.model}`;
+/** A unit as the lists show it: its own name first, if it has one, then manufacturer and model. */
+const unitName = sql<string>`coalesce(${equipment.name} || ' · ', '') || ${equipment.manufacturer} || ' ' || ${equipment.model}`;
 
 /** How many matches a search returns. */
 const limit = 20;
@@ -81,7 +81,7 @@ export const getEngineerOptions = forMembers.query(optionsInput, async ({ search
 	);
 });
 
-/** Units by serial number, manufacturer or model; their serial number is the filter's value. */
+/** Units by serial number, name, manufacturer or model; their serial number is the filter's value. */
 export const getEquipmentOptions = forMembers.query(optionsInput, async ({ search, selected }) => {
 	return options(
 		(where) =>
@@ -94,7 +94,7 @@ export const getEquipmentOptions = forMembers.query(optionsInput, async ({ searc
 				.from(equipment)
 				.where(and(inTenant(equipment), where))
 				.orderBy(nocase(equipment.manufacturer), nocase(equipment.model), asc(equipment.id)),
-		[equipment.serialNumber, equipment.manufacturer, equipment.model],
+		[equipment.serialNumber, equipment.name, equipment.manufacturer, equipment.model],
 		{ where: inList(equipment.serialNumber, selected), count: selected.length },
 		search,
 	);

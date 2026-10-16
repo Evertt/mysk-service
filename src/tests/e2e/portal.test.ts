@@ -1,6 +1,8 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
+import { formatTimeSlot } from "#lib/i18n/format.ts";
+
 import {
 	baseURL,
 	fitsWidth,
@@ -58,6 +60,26 @@ const movements = (number: string) =>
 		`select material_id, quantity, kind from stock_movement
 		 where order_number = ? and organization_id = ? order by id`,
 		[number, north.id],
+	);
+
+/** The site an order's work is at: its unit's, or its customer's only one. */
+const siteOfOrder = (id: number) =>
+	rows<{
+		name: string;
+		address: string;
+		postal_code: string;
+		city: string;
+		slot_start: string | null;
+		slot_end: string | null;
+		access_notes: string | null;
+	}>(
+		`select s.name, s.address, s.postal_code, s.city, s.slot_start, s.slot_end, s.access_notes
+		 from "order" o left join equipment e on e.id = o.equipment_id
+		 join customer_site s on s.id = coalesce(e.site_id,
+			(select min(id) from customer_site where customer_id = o.customer_id
+			 group by customer_id having count(*) = 1))
+		 where o.id = ?`,
+		[id],
 	);
 
 /** The order numbers on the cards in a section of the list. */
@@ -127,6 +149,19 @@ describe("the engineer portal", () => {
 			expect(text, field).toContain(details[field]);
 		}
 		if (details.serial_number) expect(text).toContain(details.serial_number);
+		// The site it's at, and what to know before going there.
+		const [at] = await siteOfOrder(job.id);
+		expect(at).toBeDefined();
+		const site = await page.locator("[data-site]").innerText();
+		expect(site).toContain(at.name);
+		expect(site).toContain(at.address);
+		expect(site).toContain(`${at.postal_code} ${at.city}`);
+		expect(site).toContain(
+			at.slot_start && at.slot_end
+				? formatTimeSlot(at.slot_start, at.slot_end, "en")
+				: "No preference",
+		);
+		if (at.access_notes) expect(site).toContain(at.access_notes);
 		expect(await page.getByRole("link", { name: "Call" }).getAttribute("href")).toBe(
 			`tel:${details.phone}`,
 		);

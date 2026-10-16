@@ -71,6 +71,13 @@
       "when": 1792095106707,
       "tag": "0009_add-maintenance-settings",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792164842239,
+      "tag": "0010_add-customer-sites",
+      "breakpoints": true
     }
   ]
 }

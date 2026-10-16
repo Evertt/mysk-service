@@ -8,12 +8,13 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { SegmentBadge } from "#lib/customers/components.ts";
+	import { SegmentBadge, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import { deleteCustomer, getCustomer } from "#lib/customers/remotes.ts";
+	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
+	import { unitModel } from "#lib/equipment/index.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 
 	import type { PageProps } from "./$types";
@@ -21,6 +22,7 @@
 	let { params }: PageProps = $props();
 
 	const data = $derived(await getCustomer(params.code));
+	const options = $derived(await getCustomerFormOptions());
 
 	const customer = $derived(data.customer);
 	const stats = $derived(data.stats);
@@ -30,6 +32,7 @@
 		).length,
 	);
 	const location = $derived(`${customer.city}, ${countryName(customer.country)}`);
+	const siteName = $derived(new Map(customer.sites.map((site) => [site.id, site.name])));
 </script>
 
 <svelte:head>
@@ -95,6 +98,8 @@
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+		<SitesCard {customer} countries={options.countries} />
+
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.customers_column_equipment()}</Card.Title>
@@ -108,6 +113,7 @@
 						<Table.Header>
 							<Table.Row>
 								<Table.Head>{m.customers_equipment_column_model()}</Table.Head>
+								<Table.Head>{m.customers_equipment_column_site()}</Table.Head>
 								<Table.Head>{m.customers_equipment_column_category()}</Table.Head>
 								<Table.Head>{m.customers_equipment_column_installed()}</Table.Head>
 								<Table.Head>{m.customers_equipment_column_status()}</Table.Head>
@@ -122,10 +128,21 @@
 												href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
 												class="font-medium underline-offset-4 hover:underline"
 											>
-												{unit.manufacturer}
-												{unit.model}
+												{unit.name ?? unitModel(unit)}
 											</a>
-											<span class="text-xs text-muted-foreground">{unit.serialNumber}</span>
+											<span class="text-xs text-muted-foreground">
+												{unit.name
+													? `${unitModel(unit)} · ${unit.serialNumber}`
+													: unit.serialNumber}
+											</span>
+										</div>
+									</Table.Cell>
+									<Table.Cell>
+										<div class="flex flex-col">
+											<span>{siteName.get(unit.siteId)}</span>
+											{#if unit.location}
+												<span class="text-xs text-muted-foreground">{unit.location}</span>
+											{/if}
 										</div>
 									</Table.Cell>
 									<Table.Cell>{label("equipmentCategory", unit.category)}</Table.Cell>

@@ -29,6 +29,7 @@ import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { addDays, now } from "./clock.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
 import { generateTenant } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
@@ -93,6 +94,7 @@ await db.transaction(async (tx) => {
 		schema.orderNote,
 		order,
 		equipment,
+		schema.customerSite,
 		engineer,
 		customer,
 		schema.organizationModule,
@@ -106,6 +108,7 @@ await db.transaction(async (tx) => {
 	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
 	const offset = {
 		customer: 0,
+		site: 0,
 		engineer: 0,
 		equipment: 0,
 		order: 0,
@@ -133,6 +136,10 @@ await db.transaction(async (tx) => {
 			tenant.modules.includes(id) && seed.during ? [seed.during] : [],
 		);
 		const data = generateTenant(faker, tenant.size, steps);
+		// The customers' sites, with a faker of their own, so the rest stays as it was before them.
+		const siteFaker = new Faker({ locale: [nl, en] });
+		siteFaker.seed(tenant.seed + 1000);
+		const placed = generateSites(siteFaker, data.customers, data.equipments);
 		// The modules' data follows from the core's, with the same faker, and may add to it.
 		const generated: Record<string, unknown> = {};
 		for (const { id, seed } of moduleSeeds) {
@@ -150,6 +157,13 @@ await db.transaction(async (tx) => {
 				id: c.id + o.customer,
 				createdAt: toMoment(c.createdAt),
 			})),
+			sites: placed.sites.map((s) => ({
+				...s,
+				organizationId,
+				id: s.id + o.site,
+				customerId: s.customerId + o.customer,
+				createdAt: toMoment(s.createdAt),
+			})),
 			engineers: data.engineers.map((e) => ({
 				...e,
 				organizationId,
@@ -163,6 +177,8 @@ await db.transaction(async (tx) => {
 				warrantyUntil: toDay(e.warrantyUntil),
 				id: e.id + o.equipment,
 				customerId: e.customerId + o.customer,
+				siteId: placed.units.get(e.id)!.siteId + o.site,
+				location: placed.units.get(e.id)!.location,
 			})),
 			orders: data.orders.map((r) => ({
 				...r,
@@ -178,6 +194,7 @@ await db.transaction(async (tx) => {
 		};
 
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
+		await insertAll(rows.sites, (chunk) => tx.insert(schema.customerSite).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
 		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
@@ -213,6 +230,7 @@ await db.transaction(async (tx) => {
 			collect: seedCollectors(moduleSeeds, tenant, generated),
 		});
 		offset.customer += rows.customers.length;
+		offset.site += rows.sites.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
 		offset.order += rows.orders.length;

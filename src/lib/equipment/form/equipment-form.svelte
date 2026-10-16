@@ -42,6 +42,19 @@
 	const fields = $derived(form.fields);
 	// What's typed and not saved yet comes back with the page (back button, reload).
 	formSnapshot("equipment", () => form);
+
+	// The site is one of the chosen customer's (also when the snapshot brings one back).
+	let customerId = $derived(fields.customerId.value() ?? (unit ? String(unit.customerId) : ""));
+	const sitesOf = (customer: string) =>
+		options.sites.filter((site) => String(site.customerId) === customer);
+	// Reset when the customer changes: to their only site, if they have one.
+	let siteId = $derived(fields.siteId.value() ?? (unit ? String(unit.siteId) : ""));
+	const siteOptions = $derived(
+		sitesOf(customerId).map((site) => ({
+			value: String(site.id),
+			label: site.name.includes(site.city) ? site.name : `${site.name} (${site.city})`,
+		})),
+	);
 </script>
 
 <form
@@ -82,6 +95,13 @@
 					value={unit?.manufacturer}
 				/>
 				<TextField field={fields.model} label={m.equipment_field_model()} value={unit?.model} />
+				<TextField
+					field={fields.name}
+					label={m.equipment_field_name()}
+					value={unit?.name}
+					autocomplete="off"
+					description={m.equipment_field_name_description()}
+				/>
 				<SelectField
 					field={fields.category}
 					label={m.equipment_field_category()}
@@ -107,13 +127,35 @@
 					field={fields.customerId}
 					label={m.equipment_field_customer()}
 					placeholder={m.equipment_customer_placeholder()}
-					value={unit ? String(unit.customerId) : ""}
+					value={customerId}
 					options={options.customers.map((c) => ({
 						value: String(c.id),
 						label: `${c.name} (${c.code})`,
 					}))}
+					onchange={(value: string) => {
+						customerId = value;
+						const sites = sitesOf(value);
+						siteId = sites.length === 1 ? String(sites[0].id) : "";
+					}}
 					description={orderCount ? m.equipment_customer_locked({ count: orderCount }) : undefined}
 					class="md:col-span-2"
+				/>
+				<SelectField
+					field={fields.siteId}
+					label={m.equipment_field_site()}
+					placeholder={customerId
+						? m.equipment_site_placeholder()
+						: m.equipment_site_choose_customer()}
+					value={siteId}
+					options={siteOptions}
+					onchange={(value: string) => (siteId = value)}
+				/>
+				<TextField
+					field={fields.location}
+					label={m.equipment_field_location()}
+					value={unit?.location}
+					autocomplete="off"
+					description={m.equipment_field_location_description()}
 				/>
 				<TextField
 					field={fields.installedAt}

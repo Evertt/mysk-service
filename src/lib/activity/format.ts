@@ -13,7 +13,7 @@ import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
 /** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
-const referenceTypes = ["customer", "engineer", "equipment"] as const;
+const referenceTypes = ["customer", "engineer", "equipment", "site"] as const;
 export type ReferenceType = (typeof referenceTypes)[number];
 
 /** The names of referenced records by type and id, e.g. `{ engineer: { "3": "Jan de Vries" } }`. */
@@ -58,6 +58,17 @@ const fieldLabels: Record<string, Text> = {
 	completedAt: m.activity_field_completed_at,
 	laborHours: m.activity_field_labor_hours,
 	notes: m.activity_field_notes,
+	siteId: m.activity_field_site,
+	location: m.activity_field_location,
+	address: m.activity_field_address,
+	postalCode: m.activity_field_postal_code,
+	contactPhone: m.activity_field_contact_phone,
+	contactEmail: m.activity_field_contact_email,
+	contactChannel: m.activity_field_contact_channel,
+	preferredDay: m.activity_field_preferred_day,
+	slotStart: m.activity_field_slot_start,
+	slotEnd: m.activity_field_slot_end,
+	accessNotes: m.activity_field_access_notes,
 	role: m.activity_field_role,
 };
 

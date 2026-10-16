@@ -45,5 +45,18 @@
 	"enum_member_role_description_owner": "Alles, ook het beheren van eigenaren.",
 	"enum_member_role_description_admin": "Beheert instellingen, leden en uitnodigingen.",
 	"enum_member_role_description_member": "Werkt op kantoor: opdrachten, planning en stamgegevens.",
-	"enum_member_role_description_engineer": "Werkt in het veld: alleen de eigen opdrachten, in het monteursportaal."
+	"enum_member_role_description_engineer": "Werkt in het veld: alleen de eigen opdrachten, in het monteursportaal.",
+	"enum_contact_channel_email": "E-mail",
+	"enum_contact_channel_phone": "Telefoon",
+	"enum_contact_channel_whatsapp": "WhatsApp",
+	"enum_contact_channel_portal": "Portaal",
+	"enum_weekday_monday": "Maandag",
+	"enum_weekday_tuesday": "Dinsdag",
+	"enum_weekday_wednesday": "Woensdag",
+	"enum_weekday_thursday": "Donderdag",
+	"enum_weekday_friday": "Vrijdag",
+	"enum_weekday_saturday": "Zaterdag",
+	"enum_weekday_sunday": "Zondag",
+	"enum_site_priority_normal": "Normaal",
+	"enum_site_priority_high": "Hoog"
 }

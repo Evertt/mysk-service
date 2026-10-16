@@ -10,19 +10,21 @@ import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
 import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { equipmentList } from "../list/equipment-list.ts";
 
 /**
- * The equipment list's joins: the unit's owner, scoped to the tenant. Written once, for the rows,
- * the counts, the facets and the bulk ids alike, and generic over the query it joins (drizzle's
- * `$dynamic()` pattern), so each keeps its own fields.
+ * The equipment list's joins: the unit's owner and site, scoped to the tenant. Written once, for
+ * the rows, the counts, the facets and the bulk ids alike, and generic over the query it joins
+ * (drizzle's `$dynamic()` pattern), so each keeps its own fields.
  */
 export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
-	query.innerJoin(...tenantJoin(customer, equipment.customerId));
+	query
+		.innerJoin(...tenantJoin(customer, equipment.customerId))
+		.innerJoin(...tenantJoin(customerSite, equipment.siteId));
 
 /**
  * The equipment list's columns in SQL, checked against its definition (`equipmentList`). Call it
@@ -39,7 +41,13 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 		list: equipmentList,
 		from: (fields) => withEquipmentJoins(db.select(fields).from(equipment).$dynamic()),
 		columns: {
-			unit: { sort: [nocase(equipment.manufacturer), nocase(equipment.model)] },
+			// By what the column shows first: the customer's name for it, or its manufacturer.
+			unit: {
+				sort: [
+					nocase(sql`coalesce(${equipment.name}, ${equipment.manufacturer})`),
+					nocase(equipment.model),
+				],
+			},
 			serialNumber: { sort: equipment.serialNumber },
 			manufacturer: {
 				sort: nocase(equipment.manufacturer),
@@ -61,6 +69,8 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 				filter: (codes) => inList(customer.code, codes),
 				group: customer.code,
 			},
+			site: { sort: [nocase(customerSite.name), nocase(customerSite.city)] },
+			location: { sort: nocase(equipment.location) },
 			installedAt: {
 				sort: equipment.installedAt,
 				filter: (ranges) => inDays(equipment.installedAt, ranges),
@@ -79,8 +89,12 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 			equipment.serialNumber,
 			equipment.manufacturer,
 			equipment.model,
+			equipment.name,
+			equipment.location,
 			customer.name,
 			customer.code,
+			customerSite.name,
+			customerSite.city,
 		],
 		id: equipment.id,
 		scope: () => inTenant(equipment),

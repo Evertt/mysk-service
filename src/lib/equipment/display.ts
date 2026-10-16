@@ -65,3 +65,25 @@ export function isUnderWarranty(
 		at instanceof Temporal.Instant ? at.toZonedDateTimeISO(getTimeZone()).toPlainDate() : at;
 	return Temporal.PlainDate.compare(day, warrantyUntil) <= 0;
 }
+
+/** What a unit is, by make: its manufacturer and model, e.g. `Daikin EWAD-410`. */
+export const unitModel = (unit: { manufacturer: string; model: string }) =>
+	`${unit.manufacturer} ${unit.model}`;
+
+/**
+ * What a unit is called: the customer's own name for it if it has one (`Automatische deur kantine
+ * BES-3`), else its manufacturer and model.
+ */
+export const unitTitle = (unit: { name: string | null; manufacturer: string; model: string }) =>
+	unit.name ?? unitModel(unit);
+
+/**
+ * A unit on one line, e.g. in a select: its name first if it has one, then its manufacturer and
+ * model and its serial number, `Deur kantine BES-3 · Hörmann ST 50 · H1234567`.
+ */
+export const unitLine = (unit: {
+	name: string | null;
+	manufacturer: string;
+	model: string;
+	serialNumber: string;
+}) => [unit.name, unitModel(unit), unit.serialNumber].filter(Boolean).join(" · ");

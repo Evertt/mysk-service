@@ -141,6 +141,16 @@ describe("in South", () => {
 		);
 		// Select it like a user would, so the form's own state follows.
 		await customer.selectOption(northCustomer);
+		// And one of its sites, which South's form doesn't know either.
+		const northSite = String(
+			await value(`select min(id) from customer_site where customer_id = ?`, [northCustomer]),
+		);
+		const site = page.getByLabel("Site", { exact: true });
+		await site.evaluate(
+			(select: HTMLSelectElement, id) => select.add(new Option("North site", id)),
+			northSite,
+		);
+		await site.selectOption(northSite);
 		await page.getByLabel("Serial number").fill(own.serial);
 		await page.getByLabel("Manufacturer").fill("Testco");
 		await page.getByLabel("Model").fill("TX-S");
@@ -162,6 +172,7 @@ describe("in South", () => {
 		expect(await unitId(shared, south.id)).toBeUndefined();
 
 		await page.getByLabel("Customer").selectOption({ index: 1 });
+		await page.getByLabel("Site", { exact: true }).selectOption({ index: 1 });
 		await page.getByLabel("Serial number").fill(shared.toLowerCase());
 		await page.getByRole("button", { name: "Register equipment" }).click();
 		await page.waitForURL((url) => url.pathname === `/equipment/${shared}`);
@@ -198,5 +209,46 @@ describe("in South", () => {
 		expect(await unitId(busy.serial, south.id)).toBeUndefined();
 		expect(await unitId(busy.serial, north.id)).toBe(busy.id);
 		expect(await orderCount(busy.id)).toBe(busy.orders);
+	});
+
+	test("a unit can't be put at a North site, nor at another customer's", async () => {
+		const { page } = app;
+		const own = await busiest(south.id);
+		const before = await unit(own.id);
+		const owner = before[0].customer_id as number;
+		const northSite = await value<number>(
+			`select min(id) from customer_site where organization_id = ?`,
+			[north.id],
+		);
+		const otherCustomers = await value<number>(
+			`select min(id) from customer_site where organization_id = ? and customer_id != ?`,
+			[south.id, owner],
+		);
+
+		await app.go(`/equipment/${own.serial}/edit`);
+		const site = page.getByLabel("Site", { exact: true });
+		// Only its own customer's sites to choose from.
+		const offered = await site
+			.locator("option")
+			.evaluateAll((options) =>
+				options.map((option) => (option as HTMLOptionElement).value).filter(Boolean),
+			);
+		const byId = (a: number, b: number) => a - b;
+		expect(offered.map(Number).sort(byId)).toEqual(
+			(await rows<{ id: number }>(`select id from customer_site where customer_id = ?`, [owner]))
+				.map((row) => row.id)
+				.sort(byId),
+		);
+		for (const tampered of [northSite, otherCustomers]) {
+			await site.evaluate(
+				(select: HTMLSelectElement, id) => select.add(new Option("Elsewhere", id)),
+				String(tampered),
+			);
+			await site.selectOption(String(tampered));
+			await app.submit(page.getByRole("button", { name: "Save equipment" }));
+			expect(await app.issues()).toContainEqual("Choose one of the customer's sites");
+			expect(app.path()).toBe(`/equipment/${own.serial}/edit`);
+			expect(await unit(own.id)).toEqual(before);
+		}
 	});
 });

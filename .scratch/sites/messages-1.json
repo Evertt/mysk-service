@@ -1,0 +1,224 @@
+{
+	"en": {
+		"enum": {
+			"enum_contact_channel_email": "Email",
+			"enum_contact_channel_phone": "Phone",
+			"enum_contact_channel_whatsapp": "WhatsApp",
+			"enum_contact_channel_portal": "Portal",
+			"enum_weekday_monday": "Monday",
+			"enum_weekday_tuesday": "Tuesday",
+			"enum_weekday_wednesday": "Wednesday",
+			"enum_weekday_thursday": "Thursday",
+			"enum_weekday_friday": "Friday",
+			"enum_weekday_saturday": "Saturday",
+			"enum_weekday_sunday": "Sunday",
+			"enum_site_priority_normal": "Normal",
+			"enum_site_priority_high": "High"
+		},
+		"activity": {
+			"activity_subject_site": "site",
+			"activity_field_site": "site",
+			"activity_field_location": "location",
+			"activity_field_address": "address",
+			"activity_field_postal_code": "postal code",
+			"activity_field_contact_phone": "phone on site",
+			"activity_field_contact_email": "email on site",
+			"activity_field_contact_channel": "contact by",
+			"activity_field_preferred_day": "preferred day",
+			"activity_field_slot_start": "available from",
+			"activity_field_slot_end": "available until",
+			"activity_field_access_notes": "access notes"
+		},
+		"customers": {
+			"customers_field_address": "Street address",
+			"customers_field_postal_code": "Postal code",
+			"customers_form_first_site": "Their first site is made from this address; add more on the customer's page.",
+			"customers_site_name_required": "Enter a name for the site",
+			"customers_site_address_required": "Enter the street address",
+			"customers_site_postal_code_required": "Enter the postal code",
+			"customers_site_slot_incomplete": "Enter both the start and the end of the time slot",
+			"customers_site_slot_order": "The end comes after the start",
+			"customers_site_not_found": "Site not found",
+			"customers_site_delete_refused": [
+				{
+					"declarations": [
+						"input count",
+						"local countPlural = count: plural",
+						"local countText = count: number"
+					],
+					"selectors": ["countPlural"],
+					"match": {
+						"countPlural=one": "This site still has {countText} equipment unit. Move it to another site first.",
+						"countPlural=*": "This site still has {countText} equipment units. Move them to another site first."
+					}
+				}
+			],
+			"customers_site_delete_last": "A customer keeps at least one site. Add another before deleting this one.",
+			"customers_sites_title": "Sites",
+			"customers_sites_description": "Where the equipment of {name} is, and how to visit.",
+			"customers_site_add": "Add site",
+			"customers_site_new_title": "New site",
+			"customers_site_edit_title": "Edit {name}",
+			"customers_site_dialog_description": "Its address, when a visit suits the site, and how to get in.",
+			"customers_site_saved": "Site saved",
+			"customers_site_deleted": "Site deleted",
+			"customers_site_delete_title": "Delete {name}?",
+			"customers_site_delete_description": "The site is removed permanently. A site with equipment can't be deleted.",
+			"customers_site_actions": "Actions for {name}",
+			"customers_site_save": "Save site",
+			"customers_site_field_name": "Name",
+			"customers_site_field_name_description": "E.g. the town, or “Head office”.",
+			"customers_site_field_address": "Address",
+			"customers_site_field_contact": "Contact on site",
+			"customers_site_field_contact_name": "Contact on site",
+			"customers_site_field_contact_phone": "Phone on site",
+			"customers_site_field_contact_email": "Email on site",
+			"customers_site_field_channel": "Contact by",
+			"customers_site_field_day": "Preferred day",
+			"customers_site_field_slot": "Time slot",
+			"customers_site_field_slot_start": "Available from",
+			"customers_site_field_slot_end": "Available until",
+			"customers_site_field_priority": "Priority",
+			"customers_site_field_access_notes": "Access notes",
+			"customers_site_field_access_notes_description": "What the engineer needs to know on arrival, e.g. where to report.",
+			"customers_site_no_preference": "No preference",
+			"customers_site_high_priority": "High priority",
+			"customers_site_address_missing": "No street address yet",
+			"customers_site_section_visit": "Visits"
+		},
+		"equipment": {
+			"equipment_site_required": "Choose a site",
+			"equipment_site_unknown": "Choose one of the customer's sites",
+			"equipment_site_placeholder": "Choose a site",
+			"equipment_site_choose_customer": "Choose the customer first",
+			"equipment_text_max": "Use at most {max} characters",
+			"equipment_field_name": "Name",
+			"equipment_field_name_description": "The customer's own name or tag for it, if any.",
+			"equipment_field_site": "Site",
+			"equipment_field_location": "Location at the site",
+			"equipment_field_location_description": "E.g. “Expedition dock 07”.",
+			"equipment_column_site": "Site",
+			"equipment_column_location": "Location",
+			"equipment_detail_site": "Site",
+			"equipment_detail_location": "Location"
+		},
+		"orders": {
+			"orders_site": "Site"
+		},
+		"portal": {
+			"portal_site": "Site",
+			"portal_location": "Location"
+		}
+	},
+	"nl": {
+		"enum": {
+			"enum_contact_channel_email": "E-mail",
+			"enum_contact_channel_phone": "Telefoon",
+			"enum_contact_channel_whatsapp": "WhatsApp",
+			"enum_contact_channel_portal": "Portaal",
+			"enum_weekday_monday": "Maandag",
+			"enum_weekday_tuesday": "Dinsdag",
+			"enum_weekday_wednesday": "Woensdag",
+			"enum_weekday_thursday": "Donderdag",
+			"enum_weekday_friday": "Vrijdag",
+			"enum_weekday_saturday": "Zaterdag",
+			"enum_weekday_sunday": "Zondag",
+			"enum_site_priority_normal": "Normaal",
+			"enum_site_priority_high": "Hoog"
+		},
+		"activity": {
+			"activity_subject_site": "vestiging",
+			"activity_field_site": "vestiging",
+			"activity_field_location": "locatie",
+			"activity_field_address": "adres",
+			"activity_field_postal_code": "postcode",
+			"activity_field_contact_phone": "telefoon ter plaatse",
+			"activity_field_contact_email": "e-mail ter plaatse",
+			"activity_field_contact_channel": "contact via",
+			"activity_field_preferred_day": "voorkeursdag",
+			"activity_field_slot_start": "beschikbaar vanaf",
+			"activity_field_slot_end": "beschikbaar tot",
+			"activity_field_access_notes": "toegangsinstructies"
+		},
+		"customers": {
+			"customers_field_address": "Adres",
+			"customers_field_postal_code": "Postcode",
+			"customers_form_first_site": "Hun eerste vestiging krijgt dit adres; meer vestigingen voeg je toe op de klantpagina.",
+			"customers_site_name_required": "Vul een naam voor de vestiging in",
+			"customers_site_address_required": "Vul het adres in",
+			"customers_site_postal_code_required": "Vul de postcode in",
+			"customers_site_slot_incomplete": "Vul zowel het begin als het einde van het tijdvak in",
+			"customers_site_slot_order": "Het einde moet na het begin liggen",
+			"customers_site_not_found": "Vestiging niet gevonden",
+			"customers_site_delete_refused": [
+				{
+					"declarations": [
+						"input count",
+						"local countPlural = count: plural",
+						"local countText = count: number"
+					],
+					"selectors": ["countPlural"],
+					"match": {
+						"countPlural=one": "Op deze vestiging staat nog {countText} apparaat. Verplaats het eerst naar een andere vestiging.",
+						"countPlural=*": "Op deze vestiging staan nog {countText} apparaten. Verplaats ze eerst naar een andere vestiging."
+					}
+				}
+			],
+			"customers_site_delete_last": "Een klant houdt minstens één vestiging. Voeg eerst een andere toe voor je deze verwijdert.",
+			"customers_sites_title": "Vestigingen",
+			"customers_sites_description": "Waar de apparatuur van {name} staat, en hoe je er langskomt.",
+			"customers_site_add": "Vestiging toevoegen",
+			"customers_site_new_title": "Nieuwe vestiging",
+			"customers_site_edit_title": "{name} bewerken",
+			"customers_site_dialog_description": "Het adres, wanneer een bezoek uitkomt en hoe je binnenkomt.",
+			"customers_site_saved": "Vestiging opgeslagen",
+			"customers_site_deleted": "Vestiging verwijderd",
+			"customers_site_delete_title": "{name} verwijderen?",
+			"customers_site_delete_description": "De vestiging wordt definitief verwijderd. Een vestiging met apparatuur kun je niet verwijderen.",
+			"customers_site_actions": "Acties voor {name}",
+			"customers_site_save": "Vestiging opslaan",
+			"customers_site_field_name": "Naam",
+			"customers_site_field_name_description": "Bijv. de plaats, of „Hoofdvestiging”.",
+			"customers_site_field_address": "Adres",
+			"customers_site_field_contact": "Contact ter plaatse",
+			"customers_site_field_contact_name": "Contactpersoon ter plaatse",
+			"customers_site_field_contact_phone": "Telefoon ter plaatse",
+			"customers_site_field_contact_email": "E-mail ter plaatse",
+			"customers_site_field_channel": "Contact via",
+			"customers_site_field_day": "Voorkeursdag",
+			"customers_site_field_slot": "Tijdvak",
+			"customers_site_field_slot_start": "Beschikbaar vanaf",
+			"customers_site_field_slot_end": "Beschikbaar tot",
+			"customers_site_field_priority": "Prioriteit",
+			"customers_site_field_access_notes": "Toegangsinstructies",
+			"customers_site_field_access_notes_description": "Wat de monteur bij aankomst moet weten, bijv. waar je je meldt.",
+			"customers_site_no_preference": "Geen voorkeur",
+			"customers_site_high_priority": "Hoge prioriteit",
+			"customers_site_address_missing": "Nog geen adres",
+			"customers_site_section_visit": "Bezoek"
+		},
+		"equipment": {
+			"equipment_site_required": "Kies een vestiging",
+			"equipment_site_unknown": "Kies een vestiging van deze klant",
+			"equipment_site_placeholder": "Kies een vestiging",
+			"equipment_site_choose_customer": "Kies eerst de klant",
+			"equipment_text_max": "Gebruik hoogstens {max} tekens",
+			"equipment_field_name": "Naam",
+			"equipment_field_name_description": "De eigen naam of code van de klant, als die er is.",
+			"equipment_field_site": "Vestiging",
+			"equipment_field_location": "Locatie op de vestiging",
+			"equipment_field_location_description": "Bijv. „Expeditie dock 07”.",
+			"equipment_column_site": "Vestiging",
+			"equipment_column_location": "Locatie",
+			"equipment_detail_site": "Vestiging",
+			"equipment_detail_location": "Locatie"
+		},
+		"orders": {
+			"orders_site": "Vestiging"
+		},
+		"portal": {
+			"portal_site": "Vestiging",
+			"portal_location": "Locatie"
+		}
+	}
+}

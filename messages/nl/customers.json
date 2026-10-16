@@ -140,5 +140,61 @@
 	"customers_card_email": "E-mailadres",
 	"customers_card_phone": "Telefoon",
 	"customers_card_location": "Locatie",
-	"customers_bulk_has_equipment": "{name} heeft apparatuur"
+	"customers_bulk_has_equipment": "{name} heeft apparatuur",
+	"customers_field_address": "Adres",
+	"customers_field_postal_code": "Postcode",
+	"customers_form_first_site": "Hun eerste vestiging krijgt dit adres; meer vestigingen voeg je toe op de klantpagina.",
+	"customers_site_name_required": "Vul een naam voor de vestiging in",
+	"customers_site_address_required": "Vul het adres in",
+	"customers_site_postal_code_required": "Vul de postcode in",
+	"customers_site_slot_incomplete": "Vul zowel het begin als het einde van het tijdvak in",
+	"customers_site_slot_order": "Het einde moet na het begin liggen",
+	"customers_site_not_found": "Vestiging niet gevonden",
+	"customers_site_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Op deze vestiging staat nog {countText} apparaat. Verplaats het eerst naar een andere vestiging.",
+				"countPlural=*": "Op deze vestiging staan nog {countText} apparaten. Verplaats ze eerst naar een andere vestiging."
+			}
+		}
+	],
+	"customers_site_delete_last": "Een klant houdt minstens één vestiging. Voeg eerst een andere toe voor je deze verwijdert.",
+	"customers_sites_title": "Vestigingen",
+	"customers_sites_description": "Waar de apparatuur van {name} staat, en hoe je er langskomt.",
+	"customers_site_add": "Vestiging toevoegen",
+	"customers_site_new_title": "Nieuwe vestiging",
+	"customers_site_edit_title": "{name} bewerken",
+	"customers_site_dialog_description": "Het adres, wanneer een bezoek uitkomt en hoe je binnenkomt.",
+	"customers_site_saved": "Vestiging opgeslagen",
+	"customers_site_deleted": "Vestiging verwijderd",
+	"customers_site_delete_title": "{name} verwijderen?",
+	"customers_site_delete_description": "De vestiging wordt definitief verwijderd. Een vestiging met apparatuur kun je niet verwijderen.",
+	"customers_site_actions": "Acties voor {name}",
+	"customers_site_save": "Vestiging opslaan",
+	"customers_site_field_name": "Naam",
+	"customers_site_field_name_description": "Bijv. de plaats, of „Hoofdvestiging”.",
+	"customers_site_field_address": "Adres",
+	"customers_site_field_contact": "Contact ter plaatse",
+	"customers_site_field_contact_name": "Contactpersoon",
+	"customers_site_field_contact_phone": "Telefoon ter plaatse",
+	"customers_site_field_contact_email": "E-mail ter plaatse",
+	"customers_site_field_channel": "Contact via",
+	"customers_site_field_day": "Voorkeursdag",
+	"customers_site_field_slot": "Tijdvak",
+	"customers_site_field_slot_start": "Beschikbaar vanaf",
+	"customers_site_field_slot_end": "Beschikbaar tot",
+	"customers_site_field_priority": "Prioriteit",
+	"customers_site_field_access_notes": "Toegangsinstructies",
+	"customers_site_field_access_notes_description": "Wat de monteur bij aankomst moet weten, bijv. waar je je meldt.",
+	"customers_site_no_preference": "Geen voorkeur",
+	"customers_site_high_priority": "Hoge prioriteit",
+	"customers_site_address_missing": "Nog geen adres",
+	"customers_site_section_visit": "Bezoek",
+	"customers_equipment_column_site": "Vestiging"
 }
