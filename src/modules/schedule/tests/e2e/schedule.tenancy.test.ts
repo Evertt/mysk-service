@@ -5,9 +5,12 @@ import { organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 import {
 	activeEngineers,
 	backlogSize,
+	calendarDays,
 	dayKey,
+	monthStart,
 	type Order,
 	orderByNumber,
+	ordersByDay,
 	pageLocators,
 	scheduleSwitches,
 	snapshot,
@@ -17,15 +20,16 @@ import {
 
 const { north, south } = organizations;
 const app = useApp();
-const { board, backlog, cards, cell, operations, settingsCard, drag, openDialog } =
+const { board, month, backlog, cards, cell, operations, settingsCard, drag, openDialog } =
 	pageLocators(app);
 
 /** The last activity entry before this file switched South's schedule on. */
 let since = 0;
 
 describe("in South, which doesn't have the schedule", () => {
-	/** The URL of the board's query, as loaded in North. */
+	/** The URL of the board's query, and of the month's, as loaded in North. */
 	let query: string;
+	let monthQuery: string;
 	/** A North order in the backlog, which the refused requests try to plan. */
 	let victim: Order;
 
@@ -34,14 +38,22 @@ describe("in South, which doesn't have the schedule", () => {
 		// Client-side, so the board loads its week through a remote query.
 		await app.go("/");
 		const record = (request: { url(): string; method(): string }) => {
-			if (/\/_app\/remote\/.*\/getSchedule/.test(request.url())) query = request.url();
+			if (/\/_app\/remote\/.*\/getSchedule\b/.test(request.url())) query = request.url();
+			if (/\/_app\/remote\/.*\/getScheduleMonth/.test(request.url())) monthQuery = request.url();
 		};
 		page.on("request", record);
 		await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Schedule" }).click();
 		await page.waitForURL((url) => url.pathname === "/schedule");
 		await backlog().waitFor();
+		// And the month's, there and back.
+		const view = page.getByRole("navigation", { name: "View" });
+		await view.getByRole("link", { name: "Month" }).click();
+		await month().waitFor();
+		await view.getByRole("link", { name: "Week" }).click();
+		await backlog().waitFor();
 		page.off("request", record);
 		expect(query).toBeDefined();
+		expect(monthQuery).toBeDefined();
 		const card = cards(backlog()).first();
 		victim = await orderByNumber((await card.getAttribute("data-order"))!, north.id);
 		const before = await snapshot(victim.id);
@@ -86,7 +98,12 @@ describe("in South, which doesn't have the schedule", () => {
 				.getByRole("link", { name: "Schedule" })
 				.count(),
 		).toBe(0);
-		for (const path of ["/schedule", `/schedule?week=${dayKey(weekday(0))}`]) {
+		for (const path of [
+			"/schedule",
+			`/schedule?week=${dayKey(weekday(0))}`,
+			"/schedule?view=month",
+			`/schedule?view=day&date=${dayKey(weekday(2))}`,
+		]) {
 			const response = await app.go(path);
 			expect(response?.status(), path).toBe(404);
 			// The app's own 404 page, inside its layout.
@@ -94,11 +111,13 @@ describe("in South, which doesn't have the schedule", () => {
 		}
 	});
 
-	test("North's schedule query is refused", async () => {
-		const response = await app.page.context().request.get(query);
-		const body = await response.text();
-		expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-		expect(body).not.toContain(victim.number);
+	test("North's schedule queries are refused, the week's and the month's", async () => {
+		for (const url of [query, monthQuery]) {
+			const response = await app.page.context().request.get(url);
+			const body = await response.text();
+			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
+			expect(body).not.toContain(victim.number);
+		}
 	});
 });
 
@@ -150,6 +169,36 @@ describe("in South, with the schedule on", () => {
 		).map((row) => row.number);
 		expect(numbers.every((number) => southNumbers.includes(number))).toBe(true);
 		own = await orderByNumber(numbers[0], south.id);
+	});
+
+	test("South's month shows South's orders on its days, and none of North's", async () => {
+		await app.go("/schedule?view=month");
+		await month().waitFor();
+		const days = calendarDays(monthStart());
+		const end = new Date(days[41]);
+		end.setDate(end.getDate() + 1);
+		const souths = await ordersByDay(south.id, days[0], end);
+		const shown = await month()
+			.getByRole("group")
+			.evaluateAll((cells) =>
+				cells.flatMap((cell) =>
+					[...cell.querySelectorAll("[data-order]")].map((entry) => ({
+						day: cell.getAttribute("data-day")!,
+						number: entry.getAttribute("data-order")!,
+					})),
+				),
+			);
+		expect(shown.length).toBeGreaterThan(0);
+		// Each a South order of that day, and as many as South's days list (two of a fuller day).
+		for (const { day, number } of shown) expect(souths.get(day), number).toContain(number);
+		const listed = [...souths.values()].reduce(
+			(sum, numbers) => sum + (numbers.length <= 3 ? numbers.length : 2),
+			0,
+		);
+		expect(shown.length).toBe(listed);
+		// Back to the week's board, where the next tests start.
+		await app.go("/schedule");
+		await backlog().waitFor();
 	});
 
 	test("scheduling North's order by its id is refused", async () => {

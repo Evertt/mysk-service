@@ -19,6 +19,7 @@ import { type Problem, refuse } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 
 import { byPriorityThenAge } from "./board/board.ts";
+import { mondayOf, monthRange } from "./calendar/calendar.ts";
 import { moveFields, scheduleFields } from "./form/schedule-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
 
@@ -36,38 +37,46 @@ const cardColumns = {
 	customer: { id: customer.id, name: customer.name },
 };
 
+/** The tenant's engineers, for the rows and names on the board and the calendar. */
+const engineers = () =>
+	db
+		.select({
+			id: engineer.id,
+			name: engineer.name,
+			specialty: engineer.specialty,
+			active: engineer.active,
+		})
+		.from(engineer)
+		.where(inTenant(engineer))
+		.orderBy(asc(engineer.name));
+
+/** The tenant's orders scheduled on the days `from` to `to` (`yyyy-mm-dd`), except cancelled ones. */
+const scheduledIn = (days: { from: string; to: string }) =>
+	db
+		.select(cardColumns)
+		.from(order)
+		.innerJoin(...tenantJoin(customer, order.customerId))
+		.where(
+			and(
+				inTenant(order),
+				// The days in the user's time zone.
+				inDays(order.scheduledFor, [days]),
+				ne(order.status, "cancelled"),
+			),
+		)
+		.orderBy(asc(order.scheduledFor));
+
 /**
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
  */
 export const getSchedule = query(date(m.schedule_week_required), async (day) => {
-	const start = day.subtract({ days: day.dayOfWeek - 1 });
+	const start = mondayOf(day);
 	const week = { from: start.toString(), to: start.add({ days: 6 }).toString() };
 
-	const [engineers, orders, backlog] = await Promise.all([
-		db
-			.select({
-				id: engineer.id,
-				name: engineer.name,
-				specialty: engineer.specialty,
-				active: engineer.active,
-			})
-			.from(engineer)
-			.where(inTenant(engineer))
-			.orderBy(asc(engineer.name)),
-		db
-			.select(cardColumns)
-			.from(order)
-			.innerJoin(...tenantJoin(customer, order.customerId))
-			.where(
-				and(
-					inTenant(order),
-					// The week's days in the user's time zone.
-					inDays(order.scheduledFor, [week]),
-					ne(order.status, "cancelled"),
-				),
-			)
-			.orderBy(asc(order.scheduledFor)),
+	const [team, orders, backlog] = await Promise.all([
+		engineers(),
+		scheduledIn(week),
 		db
 			.select(cardColumns)
 			.from(order)
@@ -76,7 +85,18 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 				and(inTenant(order), isNull(order.scheduledFor), inList(order.status, openOrderStatuses)),
 			),
 	]);
-	return { start, engineers, orders, backlog: backlog.sort(byPriorityThenAge) };
+	return { start, engineers: team, orders, backlog: backlog.sort(byPriorityThenAge) };
+});
+
+/**
+ * The calendar of the month `day` (`yyyy-mm-dd`) is in: its first day (`month`), the orders
+ * scheduled in its six weeks (except cancelled ones; the days around the month included) and the
+ * tenant's engineers. The server sets the range, so no request loads more than six weeks.
+ */
+export const getScheduleMonth = query(date(m.schedule_date_required), async (day) => {
+	const range = monthRange(day);
+	const [team, orders] = await Promise.all([engineers(), scheduledIn(range)]);
+	return { month: day.with({ day: 1 }), engineers: team, orders };
 });
 
 /** The records the board shows: a change to any of them outdates it. */
@@ -84,8 +104,8 @@ const boardSubjects = ["order", "engineer", "customer"] as const;
 
 /**
  * When the board's records last changed (epoch ms, 0 if not since the server started), sent again
- * on each change, so an open board refreshes `getSchedule` when someone else plans an order, an
- * engineer completes one, or an order comes in.
+ * on each change, so an open board refreshes `getSchedule` (and an open month `getScheduleMonth`)
+ * when someone else plans an order, an engineer completes one, or an order comes in.
  */
 export const watchSchedule = query.live(async function* () {
 	const { organizationId } = currentTenant();

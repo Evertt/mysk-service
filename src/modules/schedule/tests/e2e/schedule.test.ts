@@ -64,7 +64,7 @@ describe("in North", () => {
 			),
 		);
 		expect(ranks).toEqual(ranks.toSorted((a, b) => b - a));
-		expect(await page.getByRole("link", { name: "This week" }).getAttribute("aria-disabled")).toBe(
+		expect(await page.getByRole("link", { name: "Today" }).getAttribute("aria-disabled")).toBe(
 			"true",
 		);
 	});
@@ -148,7 +148,7 @@ describe("in North", () => {
 		await app.go(`/schedule?week=${dayKey(weekday(-4))}`);
 		await cell("Unassigned", weekday(-7)).waitFor();
 
-		await page.getByRole("link", { name: "This week" }).click();
+		await page.getByRole("link", { name: "Today" }).click();
 		await page.waitForURL((url) => url.pathname === "/schedule" && !url.search);
 		await cell("Unassigned", weekday(0)).waitFor();
 	});

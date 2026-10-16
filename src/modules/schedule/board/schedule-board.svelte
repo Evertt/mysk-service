@@ -1,7 +1,7 @@
 <!--
 	@component
-	The dispatch board for a week: a row per engineer (and one for unassigned orders) and a column
-	per day, with the backlog of unscheduled orders beside it. Orders are planned by dragging them
+	The dispatch board for a week (or one day of it, `day`): a row per engineer (and one for
+	unassigned orders) and a column per day, with the backlog of unscheduled orders beside it. Orders are planned by dragging them
 	onto a cell, or with the schedule dialog. Narrow screens get a list per day instead.
 
 	Like a list page, the board fits the viewport on wide screens (that aren't too low, see the
@@ -16,6 +16,7 @@
 	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 
+	import { viewSearch } from "../calendar/calendar.ts";
 	import ScheduleDialog from "../form/schedule-dialog.svelte";
 	import { getSchedule, watchSchedule } from "../schedule.remote.ts";
 	import BacklogCard from "./backlog-card.svelte";
@@ -32,14 +33,24 @@
 	import DayList from "./day-list.svelte";
 	import WeekGrid from "./week-grid.svelte";
 
-	let { schedule, week }: { schedule: Schedule; week: string } = $props();
+	let {
+		schedule,
+		week,
+		day,
+	}: {
+		schedule: Schedule;
+		/** The week's Monday (`yyyy-mm-dd`), as `schedule` was asked for. */
+		week: string;
+		/** The day the board shows, a day of the week; the whole week without. */
+		day?: Temporal.PlainDate;
+	} = $props();
 
 	const today = Temporal.Now.plainDateISO(getTimeZone());
 	// Where the board is shown (`lg`), the page fits the viewport (see `(app)/+layout.svelte`); below
 	// that, the list scrolls with the page. Assumed wide until known, so the board doesn't jump on
 	// load; on a narrower screen the switch happens before anything's scrolled.
 	const wide = new MediaQuery("min-width: 64rem", true);
-	const days = $derived(weekDays(schedule.start));
+	const days = $derived(day ? [day] : weekDays(schedule.start));
 	const engineers = $derived(boardEngineers(schedule.engineers, schedule.orders));
 	// Unassigned work first, next to the backlog: it's what still needs an engineer.
 	const rows: BoardRow[] = $derived([
@@ -113,17 +124,20 @@
 		[...schedule.orders, ...schedule.backlog].find((order) => String(order.id) === dialog.value) ??
 			opened,
 	);
-	const defaultDay = $derived(days.find((day) => day.equals(today)) ?? days[0]);
+	const defaultDay = $derived(days.find((each) => each.equals(today)) ?? days[0]);
 
 	function openDialog(order: ScheduleOrder) {
 		opened = order;
 		dialog.show(String(order.id));
 	}
 
-	/** After planning in the dialog, shows the week the order went to. */
-	function showWeekOf(day: Temporal.PlainDate) {
-		const start = day.subtract({ days: day.dayOfWeek - 1 }).toString();
-		if (start !== week) void dialog.leave(`${resolve("/(app)/(modules)/schedule")}?week=${start}`);
+	/** After planning in the dialog, shows the week (or the day) the order went to. */
+	function showPlanned(planned: Temporal.PlainDate) {
+		const view = day ? "day" : "week";
+		const there = viewSearch(view, planned);
+		if (there !== viewSearch(view, day ?? schedule.start)) {
+			void dialog.leave(`${resolve("/(app)/(modules)/schedule")}${there}`);
+		}
 	}
 </script>
 
@@ -132,7 +146,7 @@
 	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem] lg:desktop:min-h-0 lg:desktop:grid-rows-[minmax(0,1fr)]"
 >
 	<section
-		aria-label={m.schedule_week()}
+		aria-label={day ? m.schedule_day() : m.schedule_week()}
 		class="min-w-0 lg:desktop:flex lg:desktop:max-h-full lg:desktop:flex-col"
 	>
 		<WeekGrid {days} {rows} {cells} {today} {ordersOn} {drag} onschedule={openDialog} />
@@ -149,6 +163,6 @@
 		{week}
 		{defaultDay}
 		bind:open={() => dialog.open, (open) => (dialog.open = open)}
-		onscheduled={showWeekOf}
+		onscheduled={showPlanned}
 	/>
 {/if}

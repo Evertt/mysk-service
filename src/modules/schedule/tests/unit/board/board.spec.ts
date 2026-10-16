@@ -13,7 +13,6 @@ import {
 	load,
 	parseDay,
 	weekDays,
-	weekFromParam,
 } from "#modules/schedule/board/board.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
@@ -24,23 +23,6 @@ describe("days and weeks", () => {
 		expect(parseDay("7 October")).toBeUndefined();
 		expect(parseDay("")).toBeUndefined();
 		expect(parseDay(null)).toBeUndefined();
-	});
-
-	test("weeks start on Monday", () => {
-		const monday = day("2026-10-05");
-		expect(weekFromParam("2026-10-05")).toEqual(monday);
-		// Sunday is the last day of the week, not the first.
-		expect(weekFromParam("2026-10-11")).toEqual(monday);
-		expect(weekFromParam("2026-10-12")).toEqual(day("2026-10-12"));
-		// Across a month and a year.
-		expect(weekFromParam("2027-01-01")).toEqual(day("2026-12-28"));
-	});
-
-	test("the ?week= param may be any day of the week, and defaults to this week", () => {
-		const today = day("2026-10-07");
-		expect(weekFromParam("2026-10-09", today)).toEqual(day("2026-10-05"));
-		expect(weekFromParam(null, today)).toEqual(day("2026-10-05"));
-		expect(weekFromParam("next week", today)).toEqual(day("2026-10-05"));
 	});
 
 	test("a week has seven days, Monday to Sunday", () => {

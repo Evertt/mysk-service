@@ -24,6 +24,44 @@ export const longDay = (date: Date) =>
 /** Timestamps are stored in seconds. */
 export const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
 
+// --- Months ------------------------------------------------------------------------------------
+
+/** The first of the month `offset` months from this one. */
+export const monthStart = (offset = 0) => {
+	const date = new Date();
+	return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+};
+/** The 42 days a month's calendar shows: six weeks from the Monday on or before its first. */
+export const calendarDays = (first: Date) => {
+	const start = new Date(first);
+	start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+	return Array.from({ length: 42 }, (_, i) => {
+		const date = new Date(start);
+		date.setDate(start.getDate() + i);
+		return date;
+	});
+};
+export const monthName = (date: Date) =>
+	new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(date);
+
+/**
+ * The organization's orders on the calendar's days from `from` up to `to` (not included), except
+ * cancelled ones, by their day (`yyyy-mm-dd`) in the local time zone.
+ */
+export async function ordersByDay(organizationId: string, from: Date, to: Date) {
+	const found = await rows<{ number: string; scheduled_for: number }>(
+		`select number, scheduled_for from "order" where organization_id = ? and status != 'cancelled'
+		 and scheduled_for >= ? and scheduled_for < ? order by scheduled_for`,
+		[organizationId, seconds(from), seconds(to)],
+	);
+	const days = new Map<string, string[]>();
+	for (const order of found) {
+		const key = dayKey(new Date(Number(order.scheduled_for) * 1000));
+		days.set(key, [...(days.get(key) ?? []), order.number]);
+	}
+	return days;
+}
+
 // --- Database ----------------------------------------------------------------------------------
 
 export interface Order {
@@ -85,6 +123,9 @@ export const scheduleSwitches = (organizationId: string, since: number) =>
 /** The board, the sidebar and the settings page's card for the schedule, on `app`'s page. */
 export function pageLocators(app: App) {
 	const board = () => app.page.locator('section[aria-label="Week"]');
+	/** The month's view, and its calendar's cell of a day (on wide screens). */
+	const month = () => app.page.locator('section[aria-label="Month"]');
+	const monthCell = (day: Date) => month().getByRole("group", { name: longDay(day), exact: true });
 	const backlog = () => app.page.getByRole("region", { name: "Backlog" });
 	/** The cards on the board (in the view the screen size shows). */
 	const cards = (within: Locator) => within.locator("[data-order]:visible");
@@ -124,5 +165,16 @@ export function pageLocators(app: App) {
 		return dialog;
 	}
 
-	return { board, backlog, cards, cell, operations, settingsCard, drag, openDialog };
+	return {
+		board,
+		month,
+		monthCell,
+		backlog,
+		cards,
+		cell,
+		operations,
+		settingsCard,
+		drag,
+		openDialog,
+	};
 }

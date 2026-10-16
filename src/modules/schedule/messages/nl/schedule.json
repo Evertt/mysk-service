@@ -1,11 +1,10 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"schedule_module_name": "Planning",
-	"schedule_module_description": "Plan per week wie welke opdracht doet, en wanneer.",
+	"schedule_module_description": "Plan per maand, week of dag wie welke opdracht doet, en wanneer.",
 	"schedule_title": "Planning",
 	"schedule_description": "Week {week}, {range}: wie doet wat, en wanneer.",
 	"schedule_previous_week": "Vorige week",
-	"schedule_this_week": "Deze week",
 	"schedule_next_week": "Volgende week",
 	"schedule_week": "Week",
 	"schedule_no_engineer_yet": "Nog geen monteur",
@@ -43,5 +42,33 @@
 	"schedule_field_time": "Tijd",
 	"schedule_scheduled": "{number} ingepland",
 	"schedule_scheduled_for": "{number} ingepland op {date}",
-	"schedule_week_required": "Kies een week"
+	"schedule_week_required": "Kies een week",
+	"schedule_view": "Weergave",
+	"schedule_month": "Maand",
+	"schedule_day": "Dag",
+	"schedule_previous_month": "Vorige maand",
+	"schedule_next_month": "Volgende maand",
+	"schedule_previous_day": "Vorige dag",
+	"schedule_next_day": "Volgende dag",
+	"schedule_month_description": [
+		{
+			"declarations": [
+				"input count",
+				"input month",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{month}: {countText} opdracht gepland.",
+				"countPlural=*": "{month}: {countText} opdrachten gepland."
+			}
+		}
+	],
+	"schedule_day_description": "{day}: wie doet wat, en wanneer.",
+	"schedule_more": "+{count} meer",
+	"schedule_more_on": "Nog {count} op {day}",
+	"schedule_legend": "Soorten opdrachten",
+	"schedule_month_empty": "Niets gepland deze maand.",
+	"schedule_date_required": "Kies een dag"
 }
