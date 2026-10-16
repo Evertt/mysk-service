@@ -6,6 +6,8 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 
+	import { squeeze } from "./squeeze.ts";
+
 	let {
 		label,
 		value,
@@ -26,8 +28,10 @@
 <Card.Root>
 	<Card.Header>
 		<Card.Description>{label}</Card.Description>
-		<Card.Title class="{size === 'large' ? 'text-3xl' : 'text-2xl'} tabular-nums"
-			>{value}</Card.Title
+		<!-- Squeezed to fit a narrow tile, rather than overflow it (a theme's big type). -->
+		<Card.Title
+			class="{size === 'large' ? 'text-3xl' : 'text-2xl'} min-w-0 whitespace-nowrap tabular-nums"
+			{@attach squeeze()}>{value}</Card.Title
 		>
 		{#if action}
 			<Card.Action>{@render action()}</Card.Action>
