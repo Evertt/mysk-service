@@ -11,16 +11,13 @@
 
 	let { tags }: { tags: OrderTag[] } = $props();
 
-	const tones = {
-		warning: { variant: "secondary", icon: CircleAlertIcon },
-		danger: { variant: "destructive", icon: TriangleAlertIcon },
-	} as const;
+	const icons = { warning: CircleAlertIcon, danger: TriangleAlertIcon };
 </script>
 
 {#each tags as tag, i (i)}
-	{@const tone = tones[tag.tone]}
-	<Badge variant={tone.variant} title={tag.detail}>
-		<tone.icon data-icon="inline-start" />
+	{@const Icon = icons[tag.tone]}
+	<Badge variant={tag.tone} title={tag.detail}>
+		<Icon data-icon="inline-start" />
 		{tag.label}
 	</Badge>
 {/each}

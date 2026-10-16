@@ -14,12 +14,10 @@ test("shows each tag as a badge in its tone, with its detail on hover", async ()
 	});
 
 	const overdue = page.getByText("SLA overdue");
-	await expect
-		.element(overdue)
-		.toHaveClass(...badgeVariants({ variant: "destructive" }).split(" "));
+	await expect.element(overdue).toHaveClass(...badgeVariants({ variant: "danger" }).split(" "));
 	await expect.element(overdue).toHaveAttribute("title", "Respond by 7 Oct 2026, 12:00");
 	const atRisk = page.getByText("SLA at risk");
-	await expect.element(atRisk).toHaveClass(...badgeVariants({ variant: "secondary" }).split(" "));
+	await expect.element(atRisk).toHaveClass(...badgeVariants({ variant: "warning" }).split(" "));
 	await expect.element(atRisk).not.toHaveAttribute("title");
 });
 

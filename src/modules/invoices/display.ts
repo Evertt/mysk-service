@@ -5,7 +5,7 @@ import FilePenLineIcon from "@lucide/svelte/icons/file-pen-line";
 import SendIcon from "@lucide/svelte/icons/send";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { numberFormatter } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
@@ -14,15 +14,15 @@ import { invoicingLabels } from "./labels.ts";
 
 interface Display {
 	icon: Component;
-	variant: BadgeVariant;
+	tone: BadgeTone;
 }
 
 const stateDetails: Record<InvoiceState, Display> = {
-	draft: { icon: FilePenLineIcon, variant: "outline" },
-	sent: { icon: SendIcon, variant: "secondary" },
-	overdue: { icon: ClockAlertIcon, variant: "destructive" },
-	paid: { icon: CircleCheckBigIcon, variant: "default" },
-	void: { icon: BanIcon, variant: "ghost" },
+	draft: { icon: FilePenLineIcon, tone: "neutral" },
+	sent: { icon: SendIcon, tone: "info" },
+	overdue: { icon: ClockAlertIcon, tone: "danger" },
+	paid: { icon: CircleCheckBigIcon, tone: "success" },
+	void: { icon: BanIcon, tone: "neutral" },
 };
 
 /** An invoice's status as shown (overdue for sent ones past their due date), translated. */

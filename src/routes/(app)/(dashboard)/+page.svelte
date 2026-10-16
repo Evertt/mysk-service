@@ -65,55 +65,54 @@
 <!-- The cards, packed into columns (`masonry.ts`). The slot's wrapper is `display: contents`, so
 	each of the modules' cards is placed on its own. -->
 <div class={cardGrid} data-dashboard-cards {@attach masonry}>
-	<OrdersPerWeekChart data={charts.ordersPerWeek} />
-	<RevenuePerMonthChart data={charts.revenuePerMonth} />
+	<Card.Root data-wide>
+		<Card.Header>
+			<Card.Title>{m.dashboard_upcoming()}</Card.Title>
+			<Card.Description>{m.dashboard_upcoming_description()}</Card.Description>
+			<Card.Action>
+				<Button variant="outline" size="sm" href={resolve("/(app)/orders")}>
+					{m.dashboard_all_orders()}
+				</Button>
+			</Card.Action>
+		</Card.Header>
+		<Card.Content>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>{m.dashboard_column_order()}</Table.Head>
+						<Table.Head>{m.dashboard_column_customer()}</Table.Head>
+						<Table.Head>{m.dashboard_column_engineer()}</Table.Head>
+						<Table.Head>{m.dashboard_column_priority()}</Table.Head>
+						<Table.Head class="text-right">{m.dashboard_column_scheduled()}</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each data.upcoming as order (order.id)}
+						<Table.Row>
+							<Table.Cell><OrderLink number={order.number} /></Table.Cell>
+							<Table.Cell>
+								<CustomerLink code={order.customer.code} name={order.customer.name} />
+							</Table.Cell>
+							<Table.Cell>
+								{#if order.engineer}
+									<EngineerLink id={order.engineer.id} name={order.engineer.name} />
+								{:else}
+									<span class="text-muted-foreground">{m.common_unassigned()}</span>
+								{/if}
+							</Table.Cell>
+							<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>
+							<Table.Cell class="text-right tabular-nums">
+								{order.scheduledFor && formatDate(order.scheduledFor)}
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
+		</Card.Content>
+	</Card.Root>
 	<EquipmentByStatusChart data={charts.equipmentByStatus} />
+	<RevenuePerMonthChart data={charts.revenuePerMonth} />
+	<OrdersPerWeekChart data={charts.ordersPerWeek} />
 	<ExtensionSlot point={cards} props={{}} />
 	<RecentActivity />
 </div>
-
-<Card.Root>
-	<Card.Header>
-		<Card.Title>{m.dashboard_upcoming()}</Card.Title>
-		<Card.Description>{m.dashboard_upcoming_description()}</Card.Description>
-		<Card.Action>
-			<Button variant="outline" size="sm" href={resolve("/(app)/orders")}>
-				{m.dashboard_all_orders()}
-			</Button>
-		</Card.Action>
-	</Card.Header>
-	<Card.Content>
-		<Table.Root>
-			<Table.Header>
-				<Table.Row>
-					<Table.Head>{m.dashboard_column_order()}</Table.Head>
-					<Table.Head>{m.dashboard_column_customer()}</Table.Head>
-					<Table.Head>{m.dashboard_column_engineer()}</Table.Head>
-					<Table.Head>{m.dashboard_column_priority()}</Table.Head>
-					<Table.Head class="text-right">{m.dashboard_column_scheduled()}</Table.Head>
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
-				{#each data.upcoming as order (order.id)}
-					<Table.Row>
-						<Table.Cell><OrderLink number={order.number} /></Table.Cell>
-						<Table.Cell>
-							<CustomerLink code={order.customer.code} name={order.customer.name} />
-						</Table.Cell>
-						<Table.Cell>
-							{#if order.engineer}
-								<EngineerLink id={order.engineer.id} name={order.engineer.name} />
-							{:else}
-								<span class="text-muted-foreground">{m.common_unassigned()}</span>
-							{/if}
-						</Table.Cell>
-						<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>
-						<Table.Cell class="text-right tabular-nums">
-							{order.scheduledFor && formatDate(order.scheduledFor)}
-						</Table.Cell>
-					</Table.Row>
-				{/each}
-			</Table.Body>
-		</Table.Root>
-	</Card.Content>
-</Card.Root>

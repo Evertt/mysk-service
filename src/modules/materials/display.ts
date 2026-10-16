@@ -3,7 +3,7 @@ import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 
 import { materialLabels } from "./labels.ts";
@@ -19,13 +19,13 @@ export const formatQuantity = (quantity: number, unit: MaterialUnit) =>
 // The stock levels are defined with the units, in `./model.ts`.
 export { lowStockThreshold, type StockLevel, stockLevel, stockLevels } from "./model.ts";
 
-const stockLevelDetails: Record<StockLevel, { icon: Component; variant: BadgeVariant }> = {
-	out: { icon: CircleXIcon, variant: "destructive" },
-	low: { icon: TriangleAlertIcon, variant: "outline" },
-	in_stock: { icon: CircleCheckIcon, variant: "secondary" },
+const stockLevelDetails: Record<StockLevel, { icon: Component; tone: BadgeTone }> = {
+	out: { icon: CircleXIcon, tone: "danger" },
+	low: { icon: TriangleAlertIcon, tone: "warning" },
+	in_stock: { icon: CircleCheckIcon, tone: "success" },
 };
 
-/** Each stock level's translated `label`, icon and badge variant. */
+/** Each stock level's translated `label`, icon and badge tone. */
 export const stockLevelDisplay = materialLabels.withLabels("stockLevel", stockLevelDetails);
 
 /** Options for a faceted filter on the stock level, from worst to best. */

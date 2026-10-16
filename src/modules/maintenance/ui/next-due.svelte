@@ -22,7 +22,7 @@
 	<span class="inline-flex items-center gap-2 whitespace-nowrap tabular-nums">
 		{formatDate(value)}
 		{#if badge && isOverdue(value)}
-			<Badge variant="destructive" data-overdue>{m.maintenance_overdue()}</Badge>
+			<Badge variant="danger" data-overdue>{m.maintenance_overdue()}</Badge>
 		{/if}
 	</span>
 {:else}

@@ -12,6 +12,12 @@
 				outline: "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
 				ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
 				link: "text-primary underline-offset-4 hover:underline",
+				// Tones: a status coloured by what it means (see `BadgeTone`).
+				success: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+				warning: "bg-amber-500/15 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300",
+				info: "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
+				danger: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+				neutral: "bg-muted text-muted-foreground",
 			},
 		},
 		defaultVariants: {
@@ -20,6 +26,12 @@
 	});
 
 	export type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
+
+	/**
+	 * The variants that colour a value by what it means, for statuses and the like: done or fine,
+	 * needing attention, new or planned, critical, and over or out of the picture.
+	 */
+	export type BadgeTone = "success" | "warning" | "info" | "danger" | "neutral";
 </script>
 
 <script lang="ts">

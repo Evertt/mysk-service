@@ -11,7 +11,7 @@
 	const display = $derived(stockLevelDisplay[stockLevel(stock, unit)]);
 </script>
 
-<Badge variant={display.variant}>
+<Badge variant={display.tone}>
 	<display.icon data-icon="inline-start" />
 	{display.label}
 </Badge>
