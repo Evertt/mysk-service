@@ -36,8 +36,10 @@
 		</script>
 		<style>
 			/* The splash screen: from the first paint of a full page load until the root layout has
-			   mounted (`data-hydrated`, see `src/routes/splash.ts`). It fades in only after 200 ms, so
-			   a fast load never sees it; it doesn't catch clicks once it starts to fade. */
+			   mounted (`data-hydrated`, see `src/routes/splash.ts`). Its background covers the page from
+			   the start, so the page never shows before it's interactive; its logo and bar fade in only
+			   after 200 ms, so a fast load sees no more than a blank moment. It doesn't catch clicks
+			   once it starts to fade. */
 			#splash {
 				position: fixed;
 				inset: 0;
@@ -50,9 +52,10 @@
 				background: var(--background, #fff);
 				color: var(--foreground, #0a0a0a);
 				font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-				animation:
-					splash-in 160ms ease-out 200ms both,
-					splash-expire 1ms linear 15s forwards;
+				animation: splash-expire 1ms linear 15s forwards;
+			}
+			#splash > * {
+				animation: splash-in 160ms ease-out 200ms both;
 			}
 			.dark #splash {
 				background: var(--background, #0a0a0a);
@@ -129,10 +132,8 @@
 				}
 			}
 			@media (prefers-reduced-motion: reduce) {
-				#splash {
-					animation:
-						splash-in 0s linear 200ms both,
-						splash-expire 1ms linear 15s forwards;
+				#splash > * {
+					animation: splash-in 0s linear 200ms both;
 				}
 				html[data-hydrated] #splash,
 				html[data-splash-done] #splash {

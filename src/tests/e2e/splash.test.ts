@@ -104,14 +104,28 @@ describe("on a full page load", () => {
 			await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
 			await page.goto(new URL("/orders", baseURL).href, { waitUntil: "commit" });
-			// It fades in (after a moment, so a fast load never sees it) while the app loads…
+			// It covers the page from the first moment it's there, so the page never shows before it's
+			// interactive…
+			await page.waitForFunction(() => !!document.getElementById("splash"), undefined, {
+				polling: 10,
+				timeout: 15_000,
+			});
+			expect(
+				await page.evaluate(() => {
+					const element = document.getElementById("splash")!;
+					const hydrated = "hydrated" in document.documentElement.dataset;
+					return hydrated || getComputedStyle(element).opacity === "1";
+				}),
+			).toBe(true);
+			// …and its logo and bar fade in after a moment (a fast load never sees them), while the
+			// app loads…
 			await page.waitForFunction(
 				() => {
-					const element = document.getElementById("splash");
+					const brand = document.querySelector("#splash .splash-brand");
 					return (
-						!!element &&
+						!!brand &&
 						!("hydrated" in document.documentElement.dataset) &&
-						getComputedStyle(element).opacity === "1"
+						getComputedStyle(brand).opacity === "1"
 					);
 				},
 				undefined,
