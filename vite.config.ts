@@ -191,8 +191,9 @@ export default defineConfig({
 			project: "./project.inlang",
 			outdir: "./src/lib/paraglide",
 			emitTsDeclarations: true,
-			// A chosen language (cookie) wins, then the browser's language, then English.
-			strategy: ["cookie", "preferredLanguage", "baseLocale"],
+			// A chosen language (cookie) wins, then the browser's language, then Dutch (the tenants are
+			// mainly Dutch; `#lib/i18n/fallback-locale.ts`). English stays the base locale.
+			strategy: ["cookie", "preferredLanguage", "custom-dutch", "baseLocale"],
 			// A production build writes a module per message, anything else a module per language, into
 			// the same folder. The end-to-end tests' build asks for the latter (see
 			// src/tests/e2e/global-setup.ts), so it leaves the folder as the component tests' server has
