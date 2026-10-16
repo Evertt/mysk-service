@@ -168,7 +168,8 @@ describe("automatic orders", () => {
 		expect(plan.last_order_id).not.toBeNull();
 		const mails = sentMail(customer.email).slice(before);
 		expect(mails).toHaveLength(1);
-		expect(mails[0].subject).toBe(`Maintenance coming up for unit ${unit.serial_number}`);
+		// The cron's request names no language, so the mail is in the app's fallback, Dutch.
+		expect(mails[0].subject).toBe(`Onderhoud gepland voor apparaat ${unit.serial_number}`);
 		expect(mails[0].text).toContain("Reminder check");
 	});
 
