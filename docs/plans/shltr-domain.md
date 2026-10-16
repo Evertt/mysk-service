@@ -1280,6 +1280,40 @@ These are needed before any of the modules are useful:
 - **Order statuses**: only the Dutch labels change, to SHLTR's words for the three that match ("Nieuw",
   "In behandeling", "Afgerond"). "Geaccepteerd" and "Verzonden" wait for the client.
 
+### What My24Service tells us, and decided after it
+
+SHLTR runs on My24Service today (`/Users/evert/Sites/My24Service`: Django backend, Vue frontend, Flutter
+apps including `shltr_flutter`), which the client's mockup builds on. It's a base, not a spec. What it settles:
+
+- **SHLTR's customers are tenants there** (`product_family = shltr`: riedel, amex, poelgeest, …, with
+  branches), reporting breakdowns by a QR code on the unit; their orders are copied to SHLTR's maintenance
+  tenant (`shltr-installation`) as a "partner". We keep one SHLTR tenant with a **customer portal**, which
+  must therefore cover what those tenants do: report a breakdown (also through a unit's QR code), follow
+  their orders, see their equipment, locations and documents — besides bonus, wallet and shop.
+- **"Geaccepteerd"** is the planner accepting an order a customer entered ("nog niet geaccepteerd" until
+  then, and off the planning board). **"Verzonden"** only exists for quotations and invoices (and a work order
+  mailed to the customer). Decided: orders from the portal get an acceptance step (phase 4).
+- **No checklists, inspections, condition scores, components, bonus, wallet or shop exist there**: those are
+  the mockup's new ideas. Equipment has a free-text state with "replace in N months" history; a maintenance
+  contract has `times_per_year` per unit; materials meet a unit only through order lines.
+- **An order covers several units** (order lines) and can have several engineers; the work order is one PDF per
+  order, signed by engineer and customer (the app requires both). Customers have only loose time fields and
+  remarks; locations (with a QR deep link) sit between customer and unit; documents hang on customers,
+  orders, units, locations and quotations; equipment types are only "Techniek"/"Facilitair".
+
+Decided (the client can still overrule):
+
+- **Order types stay a fixed set** that logic can rely on (coverage, response times, checklists); later a
+  tenant may rename or hide them, never invent new kinds.
+- **An order covers one or more units** (core, before the checklists). Several engineers per order waits.
+- **Checklists**: one per unit per order. The five templates are seeded and the tenant edits its own; a
+  template belongs to equipment categories. An inspection is valid 12 months by default, per category. A
+  rejected point makes the unit "Aandacht"; an expired inspection makes it "Kritiek". Engineer and customer
+  both sign.
+- **Condition per unit**, no component table: "parts used" come from the unit's order lines (phase 2).
+- **Locations as records with a QR code, and a QR code per unit**: after phase 1.
+- **Import from My24** (customers, locations, equipment, materials): a phase of its own when migrating.
+
 ## 6. Suggested build order
 
 **Phase 0: core foundations** (no new module)
