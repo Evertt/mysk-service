@@ -45,15 +45,18 @@ npm run dev -- --open
 
 ## Demo login
 
-Everything except the login page needs a signed-in user. `pnpm run db:seed` creates two demo
-organizations (tenants) and three demo users, all with the password `fieldworks-demo` (set in
+Everything except the login page needs a signed-in user. `pnpm run db:seed` creates three demo
+organizations (tenants) and six demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
-| Name           | Email                         | Organizations                                 |
-| -------------- | ----------------------------- | --------------------------------------------- |
-| Anouk de Vries | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid |
-| Pieter Jansen  | `planner@fieldworks.example`  | member of Fieldworks Noord                    |
-| Erik Visser    | `engineer@fieldworks.example` | engineer in Fieldworks Noord                  |
+| Name             | Email                         | Organizations                                 |
+| ---------------- | ----------------------------- | --------------------------------------------- |
+| Anouk de Vries   | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid |
+| Pieter Jansen    | `planner@fieldworks.example`  | member of Fieldworks Noord                    |
+| Erik Visser      | `engineer@fieldworks.example` | engineer in Fieldworks Noord                  |
+| Marloes Hendriks | `owner@shltr.example`         | owner of SHLTR                                |
+| Jan Weggemans    | `jan@shltr.example`           | member (planner) of SHLTR                     |
+| Lev Hoekstra     | `lev@shltr.example`           | engineer in SHLTR                             |
 
 The demo data is a Dutch field-service company's, so its names, descriptions and notes are in
 Dutch whatever language you use the app in (stored text stays in the language it was written in).
@@ -72,6 +75,17 @@ the orders of the engineer their account is linked to (owners and admins link ac
 engineer's edit page). Erik is linked to Noord's first engineer, with work planned today and in the
 next days. There they start jobs, log hours, materials and notes, and complete a job with the
 customer's signature, which the office sees on the order.
+
+SHLTR is the client's business (see `docs/plans/shltr-domain.md`): it installs, services and
+inspects doors, docks, stairs and airco. Its demo organization has every module, its own equipment
+categories (Branddeuren, Sectionaaldeuren, Docklevellers, …), the customers of its mockup with their
+sites' contact preferences and access notes (Riedel B.V. in Ede with the units of the mockup's
+Apparatuur page, Weggemans Logistiek, Bouwgroep De Vries, Pakhuis 7, Vermeer Logistiek, Van Dijk
+Koeltechniek) among a few dozen made-up ones, a year of orders in its mix of work (half of them
+breakdowns) and the coming weeks planned, its parts shop's fourteen parts as materials, and
+contracts named as it names them ("Full service 24/7", "Onderhoud + keuring", …, in the notes). The
+mockup's planning is this week's and the next weeks'. Its people are in SHLTR only; Lev is linked to
+its first engineer, like Erik in Noord. The data is in `src/lib/server/db/seed/shltr/`.
 
 These are local demo accounts; don't seed them into a real deployment.
 

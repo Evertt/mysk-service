@@ -3,14 +3,14 @@ import type { Faker } from "@faker-js/faker";
 import { type OrderPriority, type OrderStatus, type OrderType } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
 
-import { type SeedCategory, specialtyOf } from "./categories.ts";
+import { type FieldworksCategory, specialtyOf } from "./categories.ts";
 import { addDays, DAY, now } from "./clock.ts";
 import type { generateCustomers } from "./customers.ts";
 import type { generateEngineers } from "./engineers.ts";
 import type { generateEquipment } from "./equipment.ts";
 
 /** What a customer calls in about when a unit breaks down, per category. */
-const faults: Record<SeedCategory, string[]> = {
+const faults: Record<FieldworksCategory, string[]> = {
 	generator: [
 		"Aggregaat start niet bij proefdraaien",
 		"Aggregaat neemt niet over bij stroomuitval",
@@ -48,7 +48,7 @@ const faults: Record<SeedCategory, string[]> = {
 	],
 };
 
-const describe: Record<OrderType, (faker: Faker, category?: SeedCategory) => string> = {
+const describe: Record<OrderType, (faker: Faker, category?: FieldworksCategory) => string> = {
 	breakdown: (faker, category) =>
 		faker.helpers.arrayElement(
 			category
@@ -194,7 +194,7 @@ export function generateOrders(
 	const engineersBySpecialty = Object.groupBy(engineers, (e) => e.specialty);
 
 	/** The engineer for a job: one whose specialty fits the unit, preferably one still working. */
-	function pickEngineer(category: SeedCategory | undefined, active: boolean) {
+	function pickEngineer(category: FieldworksCategory | undefined, active: boolean) {
 		const pool = (category && engineersBySpecialty[specialtyOf(category)]) || engineers;
 		const candidates = active ? pool.filter((e) => e.active) : pool;
 		return faker.helpers.arrayElement(candidates.length ? candidates : engineers);

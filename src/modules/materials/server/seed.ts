@@ -11,6 +11,7 @@ import { toMoment } from "#lib/server/db/seed/temporal.ts";
 import type { MaterialsDraft } from "../api/seed.ts";
 import { material, orderLine, stockMovement } from "./schema.ts";
 import { generateMaterials, generateOrderLines } from "./seed/catalog.ts";
+import { generateShltrPartLines, generateShltrParts } from "./seed/shltr.ts";
 import { generateStockMovements } from "./seed/stock.ts";
 
 /** What the seed makes for a tenant: its materials and lines, and its orders (the draft's). */
@@ -31,13 +32,18 @@ export default defineSeed<MaterialsSeed>({
 
 	during: {
 		// Where the core used to make the catalog: after the equipment, before the orders.
-		afterEquipment({ faker, modules }) {
-			modules.materials = { materials: generateMaterials(faker), orderLines: [] };
+		// SHLTR has its parts shop's instead (`./seed/shltr.ts`).
+		afterEquipment({ faker, modules, profile }) {
+			const materials = profile === "shltr" ? generateShltrParts(faker) : generateMaterials(faker);
+			modules.materials = { materials, orderLines: [] };
 		},
 		// And the lines right after the orders.
-		afterOrders({ faker, modules, orders }) {
+		afterOrders({ faker, modules, orders, profile, equipments }) {
 			const own = draftOf(modules);
-			own.orderLines = generateOrderLines(faker, orders, own.materials);
+			own.orderLines =
+				profile === "shltr"
+					? generateShltrPartLines(faker, orders, own.materials, equipments)
+					: generateOrderLines(faker, orders, own.materials);
 		},
 	},
 

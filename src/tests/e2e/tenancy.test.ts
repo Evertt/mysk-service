@@ -186,7 +186,14 @@ describe("modules", () => {
 		await app.signIn(users.planner);
 		await app.go("/settings");
 		expect(await header()).toContain(north.name);
-		expect(await page.getByText("Owners and admins can change these.").count()).toBe(1);
+		// The modules card says so, and so does the equipment categories card.
+		expect(await page.getByText("Owners and admins can change these.").count()).toBe(2);
+		expect(
+			await page
+				.getByTestId("equipment-categories-summary")
+				.getByText("Owners and admins can change these.")
+				.count(),
+		).toBe(1);
 		expect(await moduleCard(contracts).getByRole("button").count()).toBe(0);
 
 		const modulesBefore = await value(

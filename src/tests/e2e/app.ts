@@ -68,6 +68,10 @@ export const users = {
 	planner: demoUsers[1].email,
 	/** A field engineer in North, who only uses the engineer portal. */
 	engineer: demoUsers[2].email,
+	/** SHLTR's planner, a member of SHLTR only. */
+	shltrPlanner: demoUsers[4].email,
+	/** SHLTR's field engineer, Lev. */
+	shltrEngineer: demoUsers[5].email,
 };
 
 /** The demo users' names, as the app shows them (e.g. in the activity log). */

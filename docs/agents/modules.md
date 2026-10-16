@@ -271,7 +271,10 @@ slot options (order, roles), `settings.cards`, and a save hook for other records
   with where the module's code lives), and may add to the core's draft (contracts adds call-out
   orders); `run()` inserts it. A module that adds nothing to the draft may draw from a faker of its
   own instead, seeded per tenant (`tenant.seed`), so the others' data can't change with it
-  (invoices, maintenance). What a module does at runtime through hooks it does at seed time
+  (invoices, maintenance). The draft's `profile` says whose business the demo tenant is
+  (`fieldworks` for North and South, `shltr` for SHLTR, `src/lib/server/db/seed/shltr/`): a module
+  with demo data of its own for SHLTR picks it by that (materials' parts shop, contracts' names).
+  What a module does at runtime through hooks it does at seed time
   through collectors (`adjustPrices()`, `billableItems()`), which the seed of whoever consumes it
   asks without knowing the module, from `run()` (a tenant's `collect`), when every module has made
   its data: the invoices module's seed prices orders and bills fees through them.

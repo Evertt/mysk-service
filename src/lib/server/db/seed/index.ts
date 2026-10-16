@@ -27,12 +27,13 @@ import { demoOrganizations, demoUsers } from "../demo.ts";
 import { moduleSeeds } from "../module-seeds.gen.ts";
 import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
-import { seedCategories } from "./categories.ts";
+import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { generateShltrTenant } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
-import { generateTenant } from "./tenant.ts";
+import { generateTenant, type TenantSize, type TenantSteps } from "./tenant.ts";
 import { createDemoUsers } from "./users.ts";
 
 const { customer, engineer, equipment, order } = schema;
@@ -56,10 +57,24 @@ async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>)
 // --- Tenants ---------------------------------------------------------------------------------
 
 /**
+ * A Fieldworks tenant's core data (`generateTenant`), and its customers' sites, which come from a
+ * faker of their own, so the rest stays as it was before them.
+ */
+const fieldworksTenant =
+	(size: TenantSize, seed: number) => (faker: Faker, steps: TenantSteps[]) => {
+		const data = generateTenant(faker, size, steps);
+		const siteFaker = new Faker({ locale: [nl, en] });
+		siteFaker.seed(seed + 1000);
+		return { data, placed: generateSites(siteFaker, data.customers, data.equipments) };
+	};
+
+/**
  * The demo organizations. North has all the modules (also the ones added later in
  * `src/modules`); South only invoicing and materials, so the other modules' tests (contracts, the
  * schedule) have a tenant without them. Materials were core until they became a module, and both
- * kept them; their tests switch them off for South to see a tenant without them.
+ * kept them; their tests switch them off for South to see a tenant without them. SHLTR, the
+ * client's business (`shltr/`), has them all, and equipment categories of its own; it comes last,
+ * so the Fieldworks tenants' ids (and the tests that know them) stay as they were.
  */
 const tenants = [
 	{
@@ -67,14 +82,24 @@ const tenants = [
 		slug: "north",
 		modules: [...moduleIds] as string[],
 		seed: 20261005,
-		size: { customers: 60, engineers: 18, orders: 750 },
+		categories: seedCategories,
+		generate: fieldworksTenant({ customers: 60, engineers: 18, orders: 750 }, 20261005),
 	},
 	{
 		...demoOrganizations.south,
 		slug: "south",
 		modules: ["invoices", "materials"] as string[],
 		seed: 20261006,
-		size: { customers: 30, engineers: 10, orders: 320 },
+		categories: seedCategories,
+		generate: fieldworksTenant({ customers: 30, engineers: 10, orders: 320 }, 20261006),
+	},
+	{
+		...demoOrganizations.shltr,
+		slug: "shltr",
+		modules: [...moduleIds] as string[],
+		seed: 20261016,
+		categories: shltrCategories,
+		generate: generateShltrTenant,
 	},
 ];
 
@@ -138,11 +163,7 @@ await db.transaction(async (tx) => {
 		const steps = moduleSeeds.flatMap(({ id, seed }) =>
 			tenant.modules.includes(id) && seed.during ? [seed.during] : [],
 		);
-		const data = generateTenant(faker, tenant.size, steps);
-		// The customers' sites, with a faker of their own, so the rest stays as it was before them.
-		const siteFaker = new Faker({ locale: [nl, en] });
-		siteFaker.seed(tenant.seed + 1000);
-		const placed = generateSites(siteFaker, data.customers, data.equipments);
+		const { data, placed } = tenant.generate(faker, steps);
 		// The modules' data follows from the core's, with the same faker, and may add to it.
 		const generated: Record<string, unknown> = {};
 		for (const { id, seed } of moduleSeeds) {
@@ -153,11 +174,11 @@ await db.transaction(async (tx) => {
 		}
 		const organizationId = tenant.id;
 		const o = { ...offset };
-		// The tenant's categories, in the order of `seedCategories`, and their ids by key.
+		// The tenant's categories, in their order, and their ids by key.
 		const categoryId = (key: string) =>
-			seedCategories.findIndex((category) => category.key === key) + 1 + o.category;
+			tenant.categories.findIndex((category) => category.key === key) + 1 + o.category;
 		const rows = {
-			categories: seedCategories.map(({ name, specialty }, position) => ({
+			categories: tenant.categories.map(({ name, specialty }, position) => ({
 				id: position + 1 + o.category,
 				organizationId,
 				name,

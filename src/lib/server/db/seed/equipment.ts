@@ -8,11 +8,11 @@ import {
 	type OrderType,
 } from "#lib/models.ts";
 
-import { type SeedCategory, seedCategoryKeys } from "./categories.ts";
+import { type FieldworksCategory, seedCategoryKeys } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 
 // Brands common in Dutch installations.
-const manufacturers: Record<SeedCategory, string[]> = {
+const manufacturers: Record<FieldworksCategory, string[]> = {
 	generator: ["Bredenoord", "Kohler SDMO", "Cummins"],
 	chiller: ["Daikin", "Carrier", "Trane"],
 	boiler: ["Remeha", "Intergas", "Nefit Bosch", "Vaillant"],

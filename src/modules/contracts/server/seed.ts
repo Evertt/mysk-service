@@ -50,6 +50,92 @@ const levelsBySegment: Record<(typeof customerSegments)[number], ContractLevel[]
 	small_business: ["basic", "basic", "standard"],
 };
 
+type Owner = TenantDraft["customers"][number];
+
+/** Who has a contract, at which level, and what it says: a demo tenant's own way of contracting. */
+interface ContractPolicy {
+	/** How likely a customer is to have one. */
+	chance(owner: Owner): number;
+	/** The level of the customer's latest term, which `drawn` the seed drew for it. */
+	level?(owner: Owner, drawn: ContractLevel): ContractLevel;
+	/** Whether the customer's contract runs now, whatever the seed drew. */
+	running?(owner: Owner): boolean;
+	/** The response time of a term, which `drawn` the seed drew for it. */
+	responseHours?(owner: Owner, level: ContractLevel, drawn: number, latest: boolean): number;
+	/** A term's notes. */
+	notes(faker: Faker, level: ContractLevel, responseHours: number): string | undefined;
+}
+
+/** The Fieldworks tenants': mostly larger customers, now and then a note. */
+const fieldworksPolicy: ContractPolicy = {
+	chance: (owner) => ({ enterprise: 1, mid_market: 0.85, small_business: 0.1 })[owner.segment],
+	notes: (faker) =>
+		faker.helpers.maybe(() => faker.helpers.arrayElement(contractNotes), { probability: 0.3 }),
+};
+
+/**
+ * SHLTR's contracts, by the names its Connect page gives them (`docs/plans/shltr-domain.md`, §3.1),
+ * on the module's levels: "Full service" is premium (labour and parts included), around the clock
+ * with a 4-hour response, else 8; "Onderhoud + keuring" standard; "Basis onderhoud" basic. The
+ * name opens the contract's notes. The mockup's customers have theirs.
+ */
+const shltrContractNames = {
+	"Full service 24/7": { level: "premium", responseHours: 4 },
+	"Full service": { level: "premium", responseHours: 8 },
+	"Onderhoud + keuring": { level: "standard", responseHours: 24 },
+	"Basis onderhoud": { level: "basic", responseHours: 72 },
+} as const satisfies Record<string, { level: ContractLevel; responseHours: number }>;
+type ShltrContractName = keyof typeof shltrContractNames;
+
+const shltrCustomerContracts: Record<string, ShltrContractName> = {
+	"Riedel B.V.": "Full service 24/7",
+	"Weggemans Logistiek": "Full service",
+	"Bouwgroep De Vries": "Onderhoud + keuring",
+	"Vermeer Logistiek": "Onderhoud + keuring",
+	"Pakhuis 7": "Basis onderhoud",
+	"Van Dijk Koeltechniek": "Full service",
+};
+
+const shltrNotes = [
+	"Inclusief de jaarlijkse keuring volgens NEN-EN 12604/12453.",
+	"Onderdelen uit de onderdelenshop inbegrepen tot € 1.500 per jaar.",
+	"Keuringsrapporten digitaal aanleveren.",
+	"Storingen buiten kantooruren via de storingsdienst.",
+];
+
+/** The SHLTR name of a contract's level and response time. */
+const shltrName = (level: ContractLevel, responseHours: number): ShltrContractName =>
+	level === "premium"
+		? responseHours <= 4
+			? "Full service 24/7"
+			: "Full service"
+		: level === "standard"
+			? "Onderhoud + keuring"
+			: "Basis onderhoud";
+
+const shltrPolicy: ContractPolicy = {
+	chance: (owner) =>
+		owner.name in shltrCustomerContracts
+			? 1
+			: { enterprise: 1, mid_market: 0.7, small_business: 0.15 }[owner.segment],
+	level: (owner, drawn) => {
+		const name = shltrCustomerContracts[owner.name];
+		return name ? shltrContractNames[name].level : drawn;
+	},
+	running: (owner) => owner.name in shltrCustomerContracts,
+	responseHours: (owner, level, drawn, latest) => {
+		const name = shltrCustomerContracts[owner.name];
+		if (latest && name) return shltrContractNames[name].responseHours;
+		return level === "premium" ? drawn : defaultResponseHours[level];
+	},
+	notes: (faker, level, responseHours) => {
+		const extra = faker.helpers.maybe(() => faker.helpers.arrayElement(shltrNotes), {
+			probability: 0.4,
+		});
+		return [`${shltrName(level, responseHours)}.`, extra].filter(Boolean).join(" ");
+	},
+};
+
 /** Moves a date by whole years, keeping the day of the month. */
 const addYears = (date: Date, years: number) =>
 	new Date(date.getFullYear() + years, date.getMonth(), date.getDate());
@@ -66,17 +152,15 @@ export function generateContractTerms(
 	faker: Faker,
 	customers: TenantDraft["customers"],
 	equipments: TenantDraft["equipments"],
+	policy: ContractPolicy = fieldworksPolicy,
 ) {
 	const contractTerms = customers
-		.filter((owner) =>
-			faker.datatype.boolean(
-				{ enterprise: 1, mid_market: 0.85, small_business: 0.1 }[owner.segment],
-			),
-		)
+		.filter((owner) => faker.datatype.boolean(policy.chance(owner)))
 		.flatMap((owner) => {
 			const owned = equipments.filter((e) => e.customerId === owner.id);
-			const lapsed = faker.datatype.boolean(0.15);
-			let level = faker.helpers.arrayElement(levelsBySegment[owner.segment]);
+			const lapsed = faker.datatype.boolean(0.15) && !policy.running?.(owner);
+			const drawn = faker.helpers.arrayElement(levelsBySegment[owner.segment]);
+			let level = policy.level?.(owner, drawn) ?? drawn;
 			let years = faker.helpers.arrayElement([1, 1, 2, 3]);
 			const latestStart = lapsed
 				? faker.date.between({
@@ -104,18 +188,19 @@ export function generateContractTerms(
 					// A volume discount from four units.
 					const fee =
 						covered.length * faker.number.int({ min, max }) * (covered.length >= 4 ? 0.9 : 1);
+					const drawnHours = faker.datatype.boolean(0.15)
+						? faker.helpers.arrayElement(customResponseHours[level])
+						: defaultResponseHours[level];
+					const responseHours =
+						policy.responseHours?.(owner, level, drawnHours, i === 0) ?? drawnHours;
 					terms.push({
 						customerId: owner.id,
 						level,
 						startsOn,
 						endsOn,
 						monthlyFee: Math.round(fee / 5) * 500,
-						responseHours: faker.datatype.boolean(0.15)
-							? faker.helpers.arrayElement(customResponseHours[level])
-							: defaultResponseHours[level],
-						notes: faker.helpers.maybe(() => faker.helpers.arrayElement(contractNotes), {
-							probability: 0.3,
-						}),
+						responseHours,
+						notes: policy.notes(faker, level, responseHours),
 						createdAt: new Date(
 							Math.min(
 								addDays(startsOn, -faker.number.int({ min: 7, max: 45 })).getTime(),
@@ -283,7 +368,12 @@ export default defineSeed<ContractsSeed>({
 
 	// Right after the core's data, with its faker: the terms and the call-outs follow from it.
 	generate(draft, previous) {
-		const terms = generateContractTerms(draft.faker, draft.customers, draft.equipments);
+		const terms = generateContractTerms(
+			draft.faker,
+			draft.customers,
+			draft.equipments,
+			draft.profile === "shltr" ? shltrPolicy : fieldworksPolicy,
+		);
 		const callOuts = generateCallOuts(terms, draft.orders.length, draft.equipments);
 		draft.orders.push(...callOuts);
 		const materials = draft.modules.materials as MaterialsDraft | undefined;
