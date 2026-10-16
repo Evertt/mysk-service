@@ -5,11 +5,11 @@ import { placeCards, stickiness } from "#routes/(app)/(dashboard)/masonry.ts";
 describe("placeCards", () => {
 	test("puts the first row side by side, in order, then each card under the shortest column", () => {
 		expect(placeCards([400, 300, 200, 100, 100], 3, 24)).toEqual([
-			{ column: 0, top: 0 },
-			{ column: 1, top: 0 },
-			{ column: 2, top: 0 },
-			{ column: 2, top: 224 },
-			{ column: 1, top: 324 },
+			{ column: 0, span: 1, top: 0 },
+			{ column: 1, span: 1, top: 0 },
+			{ column: 2, span: 1, top: 0 },
+			{ column: 2, span: 1, top: 224 },
+			{ column: 1, span: 1, top: 324 },
 		]);
 	});
 
@@ -19,9 +19,9 @@ describe("placeCards", () => {
 
 	test("stacks everything in one column", () => {
 		expect(placeCards([10, 20, 30], 1, 5)).toEqual([
-			{ column: 0, top: 0 },
-			{ column: 0, top: 15 },
-			{ column: 0, top: 40 },
+			{ column: 0, span: 1, top: 0 },
+			{ column: 0, span: 1, top: 15 },
+			{ column: 0, span: 1, top: 40 },
 		]);
 	});
 
@@ -38,5 +38,31 @@ describe("placeCards", () => {
 
 	test("ignores a previous column that no longer exists", () => {
 		expect(placeCards([100, 100], 2, 0, [2, 2]).map(({ column }) => column)).toEqual([0, 1]);
+	});
+
+	test("wide cards first: no gaps, the rest beside and under them", () => {
+		// Two wide charts, then three cards, in three columns.
+		const placed = placeCards([300, 300, 200, 100, 100], 3, 0, [], [2, 2, 1, 1, 1]);
+		expect(placed).toEqual([
+			{ column: 0, span: 2, top: 0 },
+			{ column: 0, span: 2, top: 300 },
+			{ column: 2, span: 1, top: 0 },
+			{ column: 2, span: 1, top: 200 },
+			{ column: 2, span: 1, top: 300 },
+		]);
+	});
+
+	test("a wide card further down goes where its columns end closest together", () => {
+		// Bottoms 100, 300, 280: columns 1 and 2 leave a 20px gap, 0 and 1 a 200px one; both start
+		// at 300.
+		const placed = placeCards([100, 300, 280, 50], 3, 0, [], [1, 1, 1, 2]);
+		expect(placed[3]).toEqual({ column: 1, span: 2, top: 300 });
+	});
+
+	test("a wide card takes as many columns as there are, at most", () => {
+		expect(placeCards([100, 50], 1, 0, [], [2, 1])).toEqual([
+			{ column: 0, span: 1, top: 0 },
+			{ column: 0, span: 1, top: 100 },
+		]);
 	});
 });

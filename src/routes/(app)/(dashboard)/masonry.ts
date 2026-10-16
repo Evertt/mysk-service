@@ -9,13 +9,25 @@
  * each, and a card spans as many as it's tall. Until the script runs, and with one column, it's
  * a plain grid.
  *
+ * A wide card (`data-wide`, on the card or on an element around it) spans two columns where there
+ * are two or more. It goes where the two neighbouring columns it takes end closest together, as
+ * high up as it can: so a column can have a gap above it, the less the closer their bottoms are,
+ * and none for cards at the top (so a page puts its wide cards first). Wherever it lands, the
+ * order stays the page's.
+ *
  * Not CSS `columns`, which fills each column top to bottom, so the second card would sit under the
  * first rather than beside it; and not `grid-template-rows: masonry`, which no browser ships yet.
  */
 import type { Attachment } from "svelte/attachments";
 
-/** Where a card goes: its column (from 0) and its top, in px from the container's. */
-export type Placement = { column: number; top: number };
+/**
+ * Where a card goes: its (first) column (from 0), how many it spans, and its top, in px from the
+ * container's.
+ */
+export type Placement = { column: number; span: number; top: number };
+
+/** How many columns a `data-wide` card spans, where there are that many. */
+const wideSpan = 2;
 
 /**
  * How much shorter (px) another column must be before a card leaves the column it was in. A card
@@ -27,25 +39,46 @@ export const stickiness = 64;
 /**
  * Places cards of these `heights` in `columns` columns, `gap` px apart: each under the shortest
  * column (the leftmost of equals), unless it was in a column (`previous`, by index) that's at most
- * `stickiness` px taller than that.
+ * `stickiness` px taller than that. A card spanning several columns (`spans`, by index; one if
+ * not given) goes where its columns end highest, and of those where they end closest together
+ * (the least gap above it), then leftmost; it doesn't keep its previous column.
  */
 export function placeCards(
 	heights: number[],
 	columns: number,
 	gap: number,
 	previous: (number | undefined)[] = [],
+	spans: number[] = [],
 ): Placement[] {
 	const bottoms = Array.from({ length: columns }, () => 0);
 	return heights.map((height, index) => {
-		const shortest = bottoms.indexOf(Math.min(...bottoms));
-		const before = previous[index];
-		const column =
-			before !== undefined && before < columns && bottoms[before] - bottoms[shortest] <= stickiness
-				? before
-				: shortest;
-		const top = bottoms[column];
-		bottoms[column] = top + height + gap;
-		return { column, top };
+		const span = Math.min(Math.max(1, spans[index] ?? 1), columns);
+		let column: number;
+		if (span > 1) {
+			column = 0;
+			let best = { top: Infinity, gaps: Infinity };
+			for (let start = 0; start + span <= columns; start++) {
+				const taken = bottoms.slice(start, start + span);
+				const top = Math.max(...taken);
+				const gaps = taken.reduce((sum, bottom) => sum + top - bottom, 0);
+				if (top < best.top || (top === best.top && gaps < best.gaps)) {
+					best = { top, gaps };
+					column = start;
+				}
+			}
+		} else {
+			const shortest = bottoms.indexOf(Math.min(...bottoms));
+			const before = previous[index];
+			column =
+				before !== undefined &&
+				before < columns &&
+				bottoms[before] - bottoms[shortest] <= stickiness
+					? before
+					: shortest;
+		}
+		const top = Math.max(...bottoms.slice(column, column + span));
+		bottoms.fill(top + height + gap, column, column + span);
+		return { column, span, top };
 	});
 }
 
@@ -104,12 +137,13 @@ export const masonry: Attachment<HTMLElement> = (container) => {
 		// A card's height as it is: the grid aligns them to the start of their area, not stretched.
 		const heights = cards.map((card) => Math.ceil(card.getBoundingClientRect().height));
 		const previous = cards.map((card) => (laidOutIn === columns ? columnOf.get(card) : undefined));
-		const placements = placeCards(heights, columns, gap, previous);
+		const spans = cards.map((card) => (card.hasAttribute("data-wide") ? wideSpan : 1));
+		const placements = placeCards(heights, columns, gap, previous, spans);
 		columnOf = new WeakMap();
-		placements.forEach(({ column, top }, index) => {
+		placements.forEach(({ column, span, top }, index) => {
 			const card = cards[index];
 			columnOf.set(card, column);
-			card.style.gridColumn = `${column + 1}`;
+			card.style.gridColumn = `${column + 1} / span ${span}`;
 			card.style.gridRow = `${top + 1} / span ${Math.max(1, heights[index])}`;
 		});
 		laidOutIn = columns;
