@@ -14,7 +14,7 @@ import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { labelOptions, withLabels } from "#lib/i18n/index.ts";
 import {
 	type OrderPriority,
@@ -27,42 +27,42 @@ import {
 
 interface Display {
 	icon: Component;
-	variant: BadgeVariant;
+	tone: BadgeTone;
 }
 
 /**
  * A status also has a colour for the charts, a CSS variable of the theme: the chart tokens in
  * workflow order (so a theme with a single-hue ramp reads as progress), destructive for cancelled,
- * like its badge.
+ * like its badge's tone.
  */
 interface StatusDisplay extends Display {
 	color: string;
 }
 
 const statusDetails: Record<OrderStatus, StatusDisplay> = {
-	quote: { icon: FileTextIcon, variant: "outline", color: "var(--chart-1)" },
-	scheduled: { icon: CalendarClockIcon, variant: "secondary", color: "var(--chart-2)" },
-	in_progress: { icon: TimerIcon, variant: "default", color: "var(--chart-3)" },
-	completed: { icon: CircleCheckIcon, variant: "secondary", color: "var(--chart-4)" },
-	invoiced: { icon: ReceiptIcon, variant: "outline", color: "var(--chart-5)" },
-	cancelled: { icon: CircleXIcon, variant: "destructive", color: "var(--destructive)" },
+	quote: { icon: FileTextIcon, tone: "info", color: "var(--chart-1)" },
+	scheduled: { icon: CalendarClockIcon, tone: "info", color: "var(--chart-2)" },
+	in_progress: { icon: TimerIcon, tone: "warning", color: "var(--chart-3)" },
+	completed: { icon: CircleCheckIcon, tone: "success", color: "var(--chart-4)" },
+	invoiced: { icon: ReceiptIcon, tone: "neutral", color: "var(--chart-5)" },
+	cancelled: { icon: CircleXIcon, tone: "danger", color: "var(--destructive)" },
 };
 
 const priorityDetails: Record<OrderPriority, Display> = {
-	low: { icon: ArrowDownIcon, variant: "ghost" },
-	normal: { icon: ArrowRightIcon, variant: "outline" },
-	high: { icon: ArrowUpIcon, variant: "secondary" },
-	urgent: { icon: TriangleAlertIcon, variant: "destructive" },
+	low: { icon: ArrowDownIcon, tone: "neutral" },
+	normal: { icon: ArrowRightIcon, tone: "info" },
+	high: { icon: ArrowUpIcon, tone: "warning" },
+	urgent: { icon: TriangleAlertIcon, tone: "danger" },
 };
 
-const typeDetails: Record<OrderType, Omit<Display, "variant">> = {
+const typeDetails: Record<OrderType, Omit<Display, "tone">> = {
 	installation: { icon: PackagePlusIcon },
 	maintenance: { icon: WrenchIcon },
 	repair: { icon: HammerIcon },
 	inspection: { icon: ClipboardCheckIcon },
 };
 
-/** Each value's translated `label`, icon and badge variant (and a status's chart colour). */
+/** Each value's translated `label`, icon and badge tone (and a status's chart colour). */
 export const statuses = withLabels("orderStatus", statusDetails);
 export const priorities = withLabels("orderPriority", priorityDetails);
 export const types = withLabels("orderType", typeDetails);

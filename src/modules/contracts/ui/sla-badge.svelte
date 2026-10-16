@@ -12,7 +12,7 @@
 	const display = $derived(slaStates[state]);
 </script>
 
-<Badge variant={display.variant}>
+<Badge variant={display.tone}>
 	<display.icon data-icon="inline-start" />
 	{display.label}
 </Badge>

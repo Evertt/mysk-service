@@ -62,7 +62,7 @@
 		value,
 		label: statuses[value].label,
 		icon: statuses[value].icon,
-		variant: statuses[value].variant,
+		variant: statuses[value].tone,
 	});
 
 	async function change(to: OrderStatus) {

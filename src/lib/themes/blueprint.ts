@@ -73,7 +73,19 @@ export default defineTheme({
 	},
 	components: {
 		"app-header": { base: "border-dashed border-primary/30" },
-		badge: { base: "text-[0.65rem] tracking-wide uppercase" },
+		// Tones are dashed outlines in their own ink, like annotations on the drawing.
+		badge: {
+			base: "text-[0.65rem] tracking-wide uppercase",
+			variant: {
+				success:
+					"border-dashed border-emerald-600/60 bg-transparent text-emerald-700 dark:border-emerald-300/60 dark:text-emerald-300",
+				warning:
+					"border-dashed border-amber-600/70 bg-transparent text-amber-700 dark:border-amber-300/60 dark:text-amber-300",
+				info: "border-dashed border-primary/60 bg-transparent text-primary",
+				danger: "border-dashed border-destructive/70 bg-transparent text-destructive",
+				neutral: "border-dashed border-muted-foreground/50 bg-transparent text-muted-foreground",
+			},
+		},
 		button: { base: "text-xs tracking-wide uppercase" },
 		card: { base: "border border-dashed border-primary/40 shadow-none ring-0" },
 		"card-title": { base: "text-xs font-semibold tracking-widest text-primary uppercase" },

@@ -49,6 +49,16 @@ test("the theme styles every themed part inside it", async () => {
 	await expect.element(badge).toHaveClass("border-2", "font-bold", "border-dashed");
 });
 
+test("a theme colours a badge's tone its own way", async () => {
+	render(Harness, { name: "lagoon", badgeVariant: "success" });
+
+	const badge = page.getByText("New");
+	await expect
+		.element(badge)
+		.toHaveClass("border-emerald-200", "bg-emerald-50", "text-emerald-700");
+	await expect.element(badge).not.toHaveClass("bg-emerald-500/10");
+});
+
 test("switching themes restyles the components", async () => {
 	const { rerender } = await render(Harness, { name: "brutalist" });
 	await expect.element(button()).toHaveClass("uppercase");

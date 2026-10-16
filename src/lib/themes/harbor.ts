@@ -81,6 +81,14 @@ export default defineTheme({
 			variant: {
 				secondary: "bg-accent text-accent-foreground",
 				outline: "bg-card",
+				// Quiet tints with a hairline in their own hue.
+				success:
+					"border-emerald-600/20 bg-emerald-50 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300",
+				warning:
+					"border-amber-600/25 bg-amber-50 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300",
+				info: "border-sky-600/20 bg-sky-50 text-sky-800 dark:border-sky-400/25 dark:bg-sky-400/10 dark:text-sky-300",
+				danger: "border-destructive/25 bg-destructive/10 text-destructive dark:bg-destructive/20",
+				neutral: "border-border bg-muted text-muted-foreground",
 			},
 		},
 		button: { base: "font-medium", variant: { default: "shadow-sm" } },

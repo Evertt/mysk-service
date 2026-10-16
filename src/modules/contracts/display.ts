@@ -10,7 +10,7 @@ import ShieldPlusIcon from "@lucide/svelte/icons/shield-plus";
 import TimerIcon from "@lucide/svelte/icons/timer";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeTone, BadgeVariant } from "#lib/components/ui/badge/index.ts";
 
 import type { SlaState } from "./coverage.ts";
 import { contractLabels } from "./labels.ts";
@@ -26,27 +26,33 @@ interface Display {
 	variant: BadgeVariant;
 }
 
+/** A value that has a meaning (fine, attention, critical), coloured by it. */
+interface ToneDisplay {
+	icon: Component;
+	tone: BadgeTone;
+}
+
 const levelDetails: Record<ContractLevel, Display> = {
 	basic: { icon: ShieldIcon, variant: "outline" },
 	standard: { icon: ShieldCheckIcon, variant: "outline" },
 	premium: { icon: ShieldPlusIcon, variant: "secondary" },
 };
 
-const statusDetails: Record<ContractStatus, Display> = {
-	upcoming: { icon: CalendarClockIcon, variant: "outline" },
-	active: { icon: CalendarCheckIcon, variant: "default" },
-	expired: { icon: CalendarXIcon, variant: "ghost" },
+const statusDetails: Record<ContractStatus, ToneDisplay> = {
+	upcoming: { icon: CalendarClockIcon, tone: "info" },
+	active: { icon: CalendarCheckIcon, tone: "success" },
+	expired: { icon: CalendarXIcon, tone: "neutral" },
 };
 
 /** Where a covered order's response stands, see `coverage.ts`. */
-const slaStateDetails: Record<SlaState, Display> = {
-	on_track: { icon: TimerIcon, variant: "outline" },
-	at_risk: { icon: ClockAlertIcon, variant: "secondary" },
-	overdue: { icon: AlarmClockOffIcon, variant: "destructive" },
-	responded: { icon: AlarmClockCheckIcon, variant: "ghost" },
+const slaStateDetails: Record<SlaState, ToneDisplay> = {
+	on_track: { icon: TimerIcon, tone: "info" },
+	at_risk: { icon: ClockAlertIcon, tone: "warning" },
+	overdue: { icon: AlarmClockOffIcon, tone: "danger" },
+	responded: { icon: AlarmClockCheckIcon, tone: "success" },
 };
 
-/** Each value's translated `label`, icon and badge variant. */
+/** Each value's translated `label`, icon and badge variant (a level) or tone. */
 export const levels = contractLabels.withLabels("contractLevel", levelDetails);
 export const statuses = contractLabels.withLabels("contractStatus", statusDetails);
 export const slaStates = contractLabels.withLabels("slaState", slaStateDetails);

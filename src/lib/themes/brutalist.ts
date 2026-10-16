@@ -75,6 +75,12 @@ export default defineTheme({
 				outline: "bg-card",
 				ghost: "border-dashed",
 				destructive: "bg-destructive text-white dark:bg-destructive",
+				// Loud flat fills with black type, in both modes.
+				success: "bg-emerald-300 text-black",
+				warning: "bg-amber-300 text-black",
+				info: "bg-sky-300 text-black",
+				danger: "bg-destructive text-white dark:bg-destructive",
+				neutral: "border-dashed bg-muted text-foreground",
 			},
 		},
 		button: {

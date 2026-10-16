@@ -92,6 +92,12 @@ export default defineTheme({
 				secondary: "bg-secondary text-secondary-foreground",
 				outline: "border-transparent bg-accent text-accent-foreground",
 				ghost: "bg-muted",
+				// Sherbet scoops: pastel fills, deeper in the summer night.
+				success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200",
+				warning: "bg-amber-100 text-amber-700 dark:bg-amber-300/20 dark:text-amber-200",
+				info: "bg-sky-100 text-sky-700 dark:bg-sky-400/20 dark:text-sky-200",
+				danger: "bg-rose-100 text-rose-700 dark:bg-rose-400/20 dark:text-rose-200",
+				neutral: "bg-muted text-muted-foreground",
 			},
 		},
 		button: {

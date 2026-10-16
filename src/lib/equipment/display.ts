@@ -7,7 +7,7 @@ import SnowflakeIcon from "@lucide/svelte/icons/snowflake";
 import ZapIcon from "@lucide/svelte/icons/zap";
 import type { Component } from "svelte";
 
-import type { BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { labelOptions, withLabels } from "#lib/i18n/index.ts";
 import {
@@ -39,18 +39,18 @@ export const categoryOptions = labelOptions(
 export const statusOptions = labelOptions("equipmentStatus", equipmentStatuses);
 
 /**
- * A status's badge variant and, for the charts, its colour: a CSS variable of the theme. The
+ * A status's badge tone and, for the charts, its colour: a CSS variable of the theme. The
  * primary colour for units in service, destructive for those out of it (like its badge), and the
  * muted one for decommissioned units, which are out of the picture.
  */
-const statusDetails: Record<EquipmentStatus, { variant: BadgeVariant; color: string }> = {
-	operational: { variant: "secondary", color: "var(--primary)" },
-	needs_service: { variant: "outline", color: "var(--chart-3)" },
-	out_of_service: { variant: "destructive", color: "var(--destructive)" },
-	decommissioned: { variant: "ghost", color: "var(--muted-foreground)" },
+const statusDetails: Record<EquipmentStatus, { tone: BadgeTone; color: string }> = {
+	operational: { tone: "success", color: "var(--primary)" },
+	needs_service: { tone: "warning", color: "var(--chart-3)" },
+	out_of_service: { tone: "danger", color: "var(--destructive)" },
+	decommissioned: { tone: "neutral", color: "var(--muted-foreground)" },
 };
 
-/** Each status's translated `label`, badge variant and chart colour. */
+/** Each status's translated `label`, badge tone and chart colour. */
 export const statuses = withLabels("equipmentStatus", statusDetails);
 
 /**

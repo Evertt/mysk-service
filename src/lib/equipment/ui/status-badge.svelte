@@ -8,4 +8,4 @@
 	const display = $derived(statuses[status]);
 </script>
 
-<Badge variant={display.variant}>{display.label}</Badge>
+<Badge variant={display.tone}>{display.label}</Badge>
