@@ -98,7 +98,17 @@ describe("the month", () => {
 				.getByRole("list", { name: "Order types" })
 				.getByRole("listitem")
 				.allInnerTexts(),
-		).toEqual(["Installation", "Maintenance", "Repair", "Inspection"]);
+		).toEqual([
+			"Breakdown",
+			"Repair",
+			"Maintenance",
+			"Inspection",
+			"Installation",
+			"Survey",
+			"Damage",
+			"Project",
+			"Other",
+		]);
 	});
 
 	test("an order shows its time, customer and type, in its type's colour, and opens its page", async () => {
