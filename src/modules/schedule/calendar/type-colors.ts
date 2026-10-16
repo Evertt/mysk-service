@@ -1,7 +1,7 @@
 /**
  * The colour of each order type on the schedule's calendar, as the client's planning colours its
- * kinds of appointments (a repair sky, maintenance emerald, an inspection violet, a fault rose;
- * an installation, which it doesn't have, amber): a tint for an order's entry, a solid swatch for
+ * kinds of appointments (a breakdown rose, a repair sky, maintenance emerald, an inspection violet;
+ * the types it doesn't have get their own hue): a tint for an order's entry, a solid swatch for
  * the legend and the icon's colour, in light and dark like the Lagoon theme's badges. A new order
  * type needs its colour here (the `Record` says so). Classes written out whole, so Tailwind finds
  * them.
@@ -17,6 +17,36 @@ interface TypeColor {
 }
 
 export const typeColors: Record<OrderType, TypeColor> = {
+	breakdown: {
+		entry:
+			"border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100 dark:hover:bg-rose-400/20",
+		swatch: "bg-rose-500 dark:bg-rose-400",
+		icon: "text-rose-600 dark:text-rose-300",
+	},
+	survey: {
+		entry:
+			"border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100 dark:hover:bg-cyan-400/20",
+		swatch: "bg-cyan-500 dark:bg-cyan-400",
+		icon: "text-cyan-600 dark:text-cyan-300",
+	},
+	damage: {
+		entry:
+			"border-orange-200 bg-orange-50 text-orange-900 hover:bg-orange-100 dark:border-orange-400/30 dark:bg-orange-400/10 dark:text-orange-100 dark:hover:bg-orange-400/20",
+		swatch: "bg-orange-500 dark:bg-orange-400",
+		icon: "text-orange-600 dark:text-orange-300",
+	},
+	project: {
+		entry:
+			"border-indigo-200 bg-indigo-50 text-indigo-900 hover:bg-indigo-100 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-100 dark:hover:bg-indigo-400/20",
+		swatch: "bg-indigo-500 dark:bg-indigo-400",
+		icon: "text-indigo-600 dark:text-indigo-300",
+	},
+	other: {
+		entry:
+			"border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100 dark:border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-100 dark:hover:bg-slate-400/20",
+		swatch: "bg-slate-400 dark:bg-slate-500",
+		icon: "text-slate-500 dark:text-slate-300",
+	},
 	installation: {
 		entry:
 			"border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100 dark:hover:bg-amber-400/20",
