@@ -1307,7 +1307,7 @@ Decided (the client can still overrule):
   tenant may rename or hide them, never invent new kinds.
 - **An order covers one or more units** (core, before the checklists). Several engineers per order waits.
 - **Checklists**: one per unit per order. The five templates are seeded and the tenant edits its own; a
-  template belongs to equipment categories. An inspection is valid 12 months by default, per category. A
+  template belongs to equipment categories. An inspection is valid 12 months by default, set per template (a template is a norm). A
   rejected point makes the unit "Aandacht"; an expired inspection makes it "Kritiek". Engineer and customer
   both sign.
 - **Condition per unit**, no component table: "parts used" come from the unit's order lines (phase 2).
