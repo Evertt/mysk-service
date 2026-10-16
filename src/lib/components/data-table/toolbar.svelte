@@ -14,7 +14,7 @@
 	import FilterMenu from "./filter-menu.svelte";
 	import FilterPill from "./filter-pill.svelte";
 	import { provideTableFilters } from "./filters.svelte.ts";
-	import RowCount from "./row-count.svelte";
+	// import RowCount from "./row-count.svelte";
 	import { useTableContext } from "./table.svelte.ts";
 	import { tableUrlSync } from "./url-sync.svelte.ts";
 	import ViewsMenu from "./views-menu.svelte";
@@ -75,7 +75,7 @@
 	<div
 		class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 sm:shrink-0 sm:flex-nowrap"
 	>
-		<RowCount />
+		<!-- <RowCount /> -->
 		{@render actions?.()}
 		<ViewsMenu />
 		<table.ViewOptions />
