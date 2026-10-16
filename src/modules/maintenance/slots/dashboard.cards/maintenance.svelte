@@ -20,25 +20,28 @@
 		<Card.Title>{m.maintenance_title()}</Card.Title>
 		<Card.Description>{m.maintenance_dashboard_description()}</Card.Description>
 	</Card.Header>
-	<Card.Content class="grid gap-4 sm:grid-cols-2">
-		<StatCard
-			label={m.maintenance_dashboard_overdue()}
-			value={formatNumber(data.overdue)}
-			size="small"
-		>
-			{#snippet action()}
-				<Button variant="outline" size="sm" href="{list}?due=overdue" data-range="overdue">
-					{m.common_view()}
-				</Button>
-			{/snippet}
-		</StatCard>
-		<StatCard label={m.maintenance_dashboard_soon()} value={formatNumber(data.soon)} size="small">
-			{#snippet action()}
-				<!-- The due list's default range: overdue plus the next 30 days. -->
-				<Button variant="outline" size="sm" href={list} data-range="30-days">
-					{m.common_view()}
-				</Button>
-			{/snippet}
-		</StatCard>
+	<!-- The two tiles side by side where the card is wide enough, else one above the other. -->
+	<Card.Content class="@container">
+		<div class="grid gap-4 @sm:grid-cols-2">
+			<StatCard
+				label={m.maintenance_dashboard_overdue()}
+				value={formatNumber(data.overdue)}
+				size="small"
+			>
+				{#snippet action()}
+					<Button variant="outline" size="sm" href="{list}?due=overdue" data-range="overdue">
+						{m.common_view()}
+					</Button>
+				{/snippet}
+			</StatCard>
+			<StatCard label={m.maintenance_dashboard_soon()} value={formatNumber(data.soon)} size="small">
+				{#snippet action()}
+					<!-- The due list's default range: overdue plus the next 30 days. -->
+					<Button variant="outline" size="sm" href={list} data-range="30-days">
+						{m.common_view()}
+					</Button>
+				{/snippet}
+			</StatCard>
+		</div>
 	</Card.Content>
 </Card.Root>

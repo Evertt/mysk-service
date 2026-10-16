@@ -24,22 +24,24 @@
 			>
 		</Card.Action>
 	</Card.Header>
-	<Card.Content>
-		<dl class="grid grid-cols-2 gap-4">
-			<div class="flex flex-col gap-1">
+	<!-- The amounts side by side where they fit, else one above the other. -->
+	<Card.Content class="@container">
+		<dl class="grid grid-cols-1 gap-4 @xs:grid-cols-2">
+			<div class="flex min-w-0 flex-col gap-1">
 				<dt class="text-sm text-muted-foreground">{m.invoices_outstanding()}</dt>
-				<dd class="text-3xl font-semibold tabular-nums">
+				<dd data-amount class="text-2xl font-semibold tabular-nums @md:text-3xl">
 					{formatCents(data.outstanding.total)}
 				</dd>
 				<dd class="text-sm text-muted-foreground">
 					{m.invoices_count({ count: data.outstanding.count })}
 				</dd>
 			</div>
-			<div class="flex flex-col gap-1">
+			<div class="flex min-w-0 flex-col gap-1">
 				<dt class="text-sm text-muted-foreground">{m.invoices_overdue()}</dt>
 				<dd
+					data-amount
 					class={[
-						"text-3xl font-semibold tabular-nums",
+						"text-2xl font-semibold tabular-nums @md:text-3xl",
 						data.overdue.count > 0 && "text-destructive",
 					]}
 				>
@@ -72,13 +74,14 @@
 			</Card.Action>
 		{/if}
 	</Card.Header>
-	<Card.Content>
+	<Card.Content class="@container">
 		{#if data.overdueInvoices.length}
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.invoices_column_invoice()}</Table.Head>
-						<Table.Head>{m.invoices_column_due()}</Table.Head>
+						<!-- Left out where the card is narrow (a phone): they're overdue, oldest first. -->
+						<Table.Head class="hidden @xs:table-cell">{m.invoices_column_due()}</Table.Head>
 						<Table.Head class="text-right">{m.invoices_column_total()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
@@ -88,12 +91,12 @@
 							<Table.Cell>
 								<div class="flex flex-col">
 									<InvoiceLink number={invoice.number} />
-									<span class="max-w-56 truncate text-xs text-muted-foreground">
+									<span class="max-w-40 truncate text-xs text-muted-foreground">
 										{invoice.customer.name}
 									</span>
 								</div>
 							</Table.Cell>
-							<Table.Cell class="tabular-nums">
+							<Table.Cell class="hidden tabular-nums @xs:table-cell">
 								{invoice.dueOn && formatDate(invoice.dueOn)}
 							</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{formatCents(invoice.total)}</Table.Cell>

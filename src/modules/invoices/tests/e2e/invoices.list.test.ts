@@ -68,7 +68,7 @@ describe("in North", () => {
 			list.reduce((sum, i) => sum + i.subtotal + vatOf(i.subtotal, i.vat_rate), 0);
 		await app.go("/");
 		// The card is the invoicing module's part of the dashboard.
-		const amounts = card("Receivables").locator("dd.text-3xl");
+		const amounts = card("Receivables").locator("dd[data-amount]");
 		await expect.poll(() => amounts.count()).toBe(2);
 		expect((await amounts.allInnerTexts()).map(cents)).toEqual([
 			total(sent),

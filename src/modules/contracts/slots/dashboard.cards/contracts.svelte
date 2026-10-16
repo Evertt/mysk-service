@@ -24,14 +24,13 @@
 		<Card.Title>{m.contracts_dashboard_responses()}</Card.Title>
 		<Card.Description>{m.contracts_dashboard_responses_description()}</Card.Description>
 	</Card.Header>
-	<Card.Content>
+	<Card.Content class="@container">
 		{#if data.responses.length}
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.contracts_order()}</Table.Head>
-						<Table.Head>{m.contracts_dashboard_respond_by()}</Table.Head>
-						<Table.Head class="text-right">{m.contracts_status()}</Table.Head>
+						<Table.Head class="text-right">{m.contracts_dashboard_respond_by()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -40,13 +39,18 @@
 							<Table.Cell>
 								<div class="flex flex-col">
 									<OrderLink number={order.number} />
-									<span class="max-w-48 truncate text-xs text-muted-foreground">
+									<span class="max-w-28 truncate text-xs text-muted-foreground @xs:max-w-40">
 										{order.customer.name}
 									</span>
 								</div>
 							</Table.Cell>
-							<Table.Cell class="tabular-nums">{formatDateTime(order.response.due)}</Table.Cell>
-							<Table.Cell class="text-right"><SlaBadge state={order.response.state} /></Table.Cell>
+							<!-- The state under the time, so the card fits a narrow column. -->
+							<Table.Cell class="text-right">
+								<div class="flex flex-col items-end gap-1">
+									<span class="tabular-nums">{formatDateTime(order.response.due)}</span>
+									<SlaBadge state={order.response.state} />
+								</div>
+							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>
@@ -72,25 +76,32 @@
 			</Button>
 		</Card.Action>
 	</Card.Header>
-	<Card.Content>
+	<Card.Content class="@container">
 		{#if data.expiring.length}
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.contracts_contract()}</Table.Head>
-						<Table.Head>{m.contracts_customer()}</Table.Head>
-						<Table.Head>{m.contracts_level()}</Table.Head>
+						<!-- Left out where the card is narrow (a phone). -->
+						<Table.Head class="hidden @xs:table-cell">{m.contracts_level()}</Table.Head>
 						<Table.Head class="text-right">{m.contracts_ends_on()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
 					{#each data.expiring as contract (contract.id)}
 						<Table.Row>
-							<Table.Cell><ContractLink number={contract.number} /></Table.Cell>
+							<!-- The customer under the contract, so the card fits a narrow column. -->
 							<Table.Cell>
-								<CustomerLink code={contract.customer.code} name={contract.customer.name} />
+								<div class="flex flex-col">
+									<ContractLink number={contract.number} />
+									<span class="max-w-36 truncate text-xs @xs:max-w-40">
+										<CustomerLink code={contract.customer.code} name={contract.customer.name} />
+									</span>
+								</div>
 							</Table.Cell>
-							<Table.Cell><LevelBadge level={contract.level} /></Table.Cell>
+							<Table.Cell class="hidden @xs:table-cell"
+								><LevelBadge level={contract.level} /></Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">{formatDate(contract.endsOn)}</Table.Cell>
 						</Table.Row>
 					{/each}
