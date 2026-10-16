@@ -11,6 +11,7 @@
 
 	import ChartTable from "./chart-table.svelte";
 	import type { RevenueInMonth } from "./dashboard-charts.ts";
+	import { settledWidth } from "./settled-width.ts";
 
 	let { data }: { data: RevenueInMonth[] } = $props();
 
@@ -39,7 +40,12 @@
 		<Card.Description>{m.dashboard_revenue_per_month_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
-		<Chart.Container {config} class="aspect-auto h-72 w-full" aria-hidden="true">
+		<Chart.Container
+			{config}
+			class="aspect-auto h-72 w-full"
+			aria-hidden="true"
+			{@attach settledWidth}
+		>
 			<BarChart
 				data={bars}
 				x="month"

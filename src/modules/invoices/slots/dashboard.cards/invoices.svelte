@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { squeeze } from "#lib/components/squeeze.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { getReceivables } from "../../invoicing.remote.ts";
@@ -29,7 +30,11 @@
 		<dl class="grid grid-cols-1 gap-4 @xs:grid-cols-2">
 			<div class="flex min-w-0 flex-col gap-1">
 				<dt class="text-sm text-muted-foreground">{m.invoices_outstanding()}</dt>
-				<dd data-amount class="text-2xl font-semibold tabular-nums @md:text-3xl">
+				<dd
+					data-amount
+					class="text-2xl font-semibold whitespace-nowrap tabular-nums @md:text-3xl"
+					{@attach squeeze()}
+				>
 					{formatCents(data.outstanding.total)}
 				</dd>
 				<dd class="text-sm text-muted-foreground">
@@ -40,8 +45,9 @@
 				<dt class="text-sm text-muted-foreground">{m.invoices_overdue()}</dt>
 				<dd
 					data-amount
+					{@attach squeeze()}
 					class={[
-						"text-2xl font-semibold tabular-nums @md:text-3xl",
+						"text-2xl font-semibold whitespace-nowrap tabular-nums @md:text-3xl",
 						data.overdue.count > 0 && "text-destructive",
 					]}
 				>
@@ -76,7 +82,8 @@
 	</Card.Header>
 	<Card.Content class="@container">
 		{#if data.overdueInvoices.length}
-			<Table.Root>
+			<!-- A little tighter where the column is cramped, before it scrolls. -->
+			<Table.Root {@attach squeeze({ within: "[data-slot=table-container]", min: 0.88 })}>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.invoices_column_invoice()}</Table.Head>
@@ -91,7 +98,7 @@
 							<Table.Cell>
 								<div class="flex flex-col">
 									<InvoiceLink number={invoice.number} />
-									<span class="max-w-40 truncate text-xs text-muted-foreground">
+									<span class="w-0 min-w-full truncate text-xs text-muted-foreground">
 										{invoice.customer.name}
 									</span>
 								</div>

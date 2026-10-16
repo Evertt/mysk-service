@@ -13,6 +13,7 @@
 
 	import ChartTable from "./chart-table.svelte";
 	import type { EquipmentOfStatus } from "./dashboard-charts.ts";
+	import { settledWidth } from "./settled-width.ts";
 
 	let { data }: { data: EquipmentOfStatus[] } = $props();
 
@@ -37,7 +38,12 @@
 		<Card.Description>{m.dashboard_equipment_by_status_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
-		<Chart.Container {config} class="aspect-auto h-48 w-full" aria-hidden="true">
+		<Chart.Container
+			{config}
+			class="aspect-auto h-48 w-full"
+			aria-hidden="true"
+			{@attach settledWidth}
+		>
 			<BarChart
 				{data}
 				orientation="horizontal"

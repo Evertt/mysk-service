@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { squeeze } from "#lib/components/squeeze.ts";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
@@ -26,7 +27,8 @@
 	</Card.Header>
 	<Card.Content class="@container">
 		{#if data.responses.length}
-			<Table.Root>
+			<!-- A little tighter where the column is cramped, before it scrolls. -->
+			<Table.Root {@attach squeeze({ within: "[data-slot=table-container]", min: 0.88 })}>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.contracts_order()}</Table.Head>
@@ -39,7 +41,7 @@
 							<Table.Cell>
 								<div class="flex flex-col">
 									<OrderLink number={order.number} />
-									<span class="max-w-28 truncate text-xs text-muted-foreground @xs:max-w-40">
+									<span class="w-0 min-w-full truncate text-xs text-muted-foreground">
 										{order.customer.name}
 									</span>
 								</div>
@@ -78,7 +80,8 @@
 	</Card.Header>
 	<Card.Content class="@container">
 		{#if data.expiring.length}
-			<Table.Root>
+			<!-- A little tighter where the column is cramped, before it scrolls. -->
+			<Table.Root {@attach squeeze({ within: "[data-slot=table-container]", min: 0.88 })}>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>{m.contracts_contract()}</Table.Head>
@@ -94,7 +97,7 @@
 							<Table.Cell>
 								<div class="flex flex-col">
 									<ContractLink number={contract.number} />
-									<span class="max-w-36 truncate text-xs @xs:max-w-40">
+									<span class="w-0 min-w-full truncate text-xs">
 										<CustomerLink code={contract.customer.code} name={contract.customer.name} />
 									</span>
 								</div>

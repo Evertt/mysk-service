@@ -98,42 +98,74 @@ function unplace(card: HTMLElement) {
 	card.style.removeProperty("grid-row");
 }
 
+/** How long the container's width must stay put before the columns are counted again (ms). */
+const settleDelay = 150;
+
 /**
  * Lays the container's cards out as a masonry, and again whenever one changes height, comes or
  * goes (a module's card loads), or the container changes width (so its number of columns can).
+ *
+ * Light while the window is resized: a change of the container's width only lays the cards out
+ * once it has settled (`settleDelay`), the columns stretching with CSS meanwhile; a card that
+ * changes height (a chart redrawn for its new width) is placed again in the next frame without
+ * counting the columns anew; and only cards coming or going count as changes to the content, not
+ * what happens inside a card (a chart's SVG).
  */
 export const masonry: Attachment<HTMLElement> = (container) => {
 	/** Each card's column in the last layout, and how many columns that layout had. */
 	let columnOf = new WeakMap<Element, number>();
 	let laidOutIn = 0;
 	let cards: HTMLElement[] = [];
+	/** Each card's last placement, as its `grid-column` and `grid-row`, to skip unchanged ones. */
+	const placed = new WeakMap<Element, string>();
 	let frame = 0;
+	let settling: ReturnType<typeof setTimeout> | undefined;
+	let width = container.clientWidth;
 
-	const resizes = new ResizeObserver(() => schedule());
+	const resizes = new ResizeObserver((entries) => {
+		const resized = entries.find((entry) => entry.target === container);
+		if (resized && container.clientWidth !== width) {
+			width = container.clientWidth;
+			clearTimeout(settling);
+			settling = setTimeout(() => schedule(true), settleDelay);
+			return;
+		}
+		// While the width settles, the cards' heights follow it: they're laid out once it has.
+		if (settling === undefined) schedule(false);
+	});
 
 	function track() {
 		const now = cardsIn(container);
-		for (const card of cards) if (!now.includes(card)) resizes.unobserve(card);
-		for (const card of now) if (!cards.includes(card)) resizes.observe(card);
+		const known = new Set(cards);
+		const current = new Set(now);
+		for (const card of cards) if (!current.has(card)) resizes.unobserve(card);
+		for (const card of now) if (!known.has(card)) resizes.observe(card);
 		cards = now;
 	}
 
-	function layout() {
-		frame = 0;
-		track();
-		// The columns CSS makes for the container's width, without the cards' places, which would
-		// add columns of their own (implicit ones) once there are fewer: a card's column, or cards
-		// in the same rows. All in one frame, so the plain grid is never painted.
+	/** The columns CSS makes for the container's width (with the cards' places cleared). */
+	function countColumns() {
+		// Without the cards' places, which would add columns of their own (implicit ones) once
+		// there are fewer: a card's column, or cards in the same rows. All in one frame, so the
+		// plain grid is never painted.
 		cards.forEach(unplace);
-		const style = getComputedStyle(container);
-		const columns = style.gridTemplateColumns.split(" ").filter(Boolean).length;
+		cards.forEach((card) => placed.delete(card));
+		return getComputedStyle(container).gridTemplateColumns.split(" ").filter(Boolean).length;
+	}
+
+	/** Lays the cards out; `recount` when the width (so the number of columns) may have changed. */
+	function layout(recount: boolean) {
+		frame = 0;
+		settling = undefined;
+		track();
+		const columns = recount || !laidOutIn ? countColumns() : laidOutIn;
 		if (columns < 2) {
 			cards.forEach(unplace);
 			delete container.dataset.masonry;
 			laidOutIn = 0;
 			return;
 		}
-		const gap = parseFloat(style.columnGap) || 0;
+		const gap = parseFloat(getComputedStyle(container).columnGap) || 0;
 		// A card's height as it is: the grid aligns them to the start of their area, not stretched.
 		const heights = cards.map((card) => Math.ceil(card.getBoundingClientRect().height));
 		const previous = cards.map((card) => (laidOutIn === columns ? columnOf.get(card) : undefined));
@@ -143,25 +175,42 @@ export const masonry: Attachment<HTMLElement> = (container) => {
 		placements.forEach(({ column, span, top }, index) => {
 			const card = cards[index];
 			columnOf.set(card, column);
-			card.style.gridColumn = `${column + 1} / span ${span}`;
-			card.style.gridRow = `${top + 1} / span ${Math.max(1, heights[index])}`;
+			const gridColumn = `${column + 1} / span ${span}`;
+			const gridRow = `${top + 1} / span ${Math.max(1, heights[index])}`;
+			// Only what changed, so an unchanged layout doesn't make the browser lay out again.
+			if (placed.get(card) === `${gridColumn}|${gridRow}`) return;
+			placed.set(card, `${gridColumn}|${gridRow}`);
+			card.style.gridColumn = gridColumn;
+			card.style.gridRow = gridRow;
 		});
 		laidOutIn = columns;
 		container.dataset.masonry = "";
 	}
 
 	/** Lays out once in the next frame, however many changes come before it. */
-	function schedule() {
-		frame ||= requestAnimationFrame(layout);
+	let recountNext = false;
+	function schedule(recount: boolean) {
+		recountNext ||= recount;
+		frame ||= requestAnimationFrame(() => {
+			const recount = recountNext;
+			recountNext = false;
+			layout(recount);
+		});
 	}
 
-	const mutations = new MutationObserver(schedule);
+	// Cards coming and going: children of the container or of a `display: contents` wrapper (a
+	// slot's), not changes inside a card.
+	const mutations = new MutationObserver((records) => {
+		const inCard = (node: Node) => cards.some((card) => card === node || card.contains(node));
+		if (records.some((record) => !inCard(record.target))) schedule(true);
+	});
 	mutations.observe(container, { childList: true, subtree: true });
 	resizes.observe(container);
-	layout();
+	layout(true);
 
 	return () => {
 		cancelAnimationFrame(frame);
+		clearTimeout(settling);
 		mutations.disconnect();
 		resizes.disconnect();
 		cards.forEach(unplace);
