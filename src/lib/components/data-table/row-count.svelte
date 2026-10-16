@@ -1,7 +1,8 @@
 <!--
 	@component
 	In the table's toolbar: how many rows match (all of them, not just those loaded as the table
-	scrolls), and how many are selected.
+	scrolls), and how many are selected. Hidden from sight for now (screen readers still read it):
+	drop `sr-only` to show it again.
 -->
 <script lang="ts">
 	import { formatNumber } from "#lib/i18n/index.ts";
@@ -14,7 +15,7 @@
 	const filteredCount = $derived(table.getRowCount());
 </script>
 
-<p data-slot="data-table-count" class="text-sm whitespace-nowrap text-muted-foreground">
+<p data-slot="data-table-count" class="sr-only text-sm whitespace-nowrap text-muted-foreground">
 	{#if selectedCount}
 		{m.common_table_rows_selected({
 			selected: formatNumber(selectedCount),
