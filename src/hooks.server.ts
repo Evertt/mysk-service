@@ -8,6 +8,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 
 import { isFieldEngineer } from "#lib/auth/index.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
+import { m } from "#lib/paraglide/messages.js";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
@@ -38,7 +39,9 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 				transformPageChunk: ({ html }) =>
 					html
 						.replace("%paraglide.lang%", locale)
-						.replace("%paraglide.dir%", getTextDirection(locale)),
+						.replace("%paraglide.dir%", getTextDirection(locale))
+						// The splash screen's text for screen readers (`app.html`), before any script runs.
+						.replace("%splash.label%", m.common_app_loading({}, { locale })),
 			},
 		);
 	});

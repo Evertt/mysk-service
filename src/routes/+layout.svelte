@@ -15,14 +15,17 @@
 
 	import "./layout.css";
 	import { takeNewVersion, tookNewVersion } from "./new-version.ts";
+	import { dismissSplash } from "./splash.ts";
 	import { keepTimeZone } from "./time-zone.ts";
 
 	let { children }: LayoutProps = $props();
 
 	// Marks the page as interactive (hydrated), which the end-to-end tests wait for, and after which
 	// components are rendered in the browser (e.g. the data tables read their column widths at once).
+	// It also fades out the splash screen of a full page load (`app.html`).
 	onMount(() => {
 		document.documentElement.dataset.hydrated = "";
+		dismissSplash();
 		keepTimeZone();
 		if (tookNewVersion()) toast.info(m.common_new_version_loaded());
 	});
