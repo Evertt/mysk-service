@@ -58,18 +58,13 @@ F-gas rules). Its customers are companies with logistics or production buildings
   ("gefactureerde netto-omzet exclusief btw … Alleen volledig betaalde facturen") for contracts, service,
   parts, orders and projects [text].
 
-**Recommended reading (A):** the Fieldworks **tenant is SHLTR**, not each customer. Office users are SHLTR's
-planners and office staff, field users are SHLTR's engineers, and a new kind of user, **customer-portal users**
-(contacts of a customer account), see the bonus, wallet and shop, and later perhaps their own Connect, dock and
-energy reports. The partner programme is then computed from SHLTR's invoices to the customer.
+**Decided (A):** the Fieldworks **tenant is SHLTR**, not each customer. Office users are SHLTR's planners and
+office staff, field users are SHLTR's engineers, and a new kind of user, **customer-portal users** (contacts
+of a customer account), see the bonus, wallet and shop, and later perhaps their own Connect, dock and energy
+reports. The partner programme is computed from SHLTR's invoices to the customer.
 
-**Alternative (B), for the client to rule out:** "Installation Suite" is software SHLTR hands to _partner
-installers_ (dealers). Each installer is a tenant, and SHLTR is a supplier above the tenants that supplies the
-catalogue, the bonus figures and orders passed down ("opdracht gecopieerd vanuit shltr-installation"). Under B,
-the parts catalogue and the bonus figures would be cross-tenant data, which Fieldworks doesn't have. Evidence
-for B: the dashboard greets the user as a partner. Evidence against B: the user's @shltr.nl address, `SH-`
-shop order numbers, and every operational page being SHLTR-branded. The mockup doesn't settle it, and it is
-the first question in §5.
+The alternative we considered and ruled out (B): every partner installer as its own tenant, with SHLTR a
+supplier above the tenants. It would have made the catalogue and the bonus figures cross-tenant data.
 
 The mockup's dates are inconsistent: recent orders are June 2026, the planning August 2026, the energy
 simulation September 2026, the bonus "Partner Bonus 2027" with wallet bonus year 2026, and the shop order
@@ -725,21 +720,21 @@ would be platform-level.
 
 **Customer** (`klanten`) T
 
-| Field                                   | Type                                        | Notes                                                                               |
-| --------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| name (`naam`)                           | text                                        |                                                                                     |
-| contactName (`contactpersoon`)          | text                                        |                                                                                     |
-| email                                   | text                                        |                                                                                     |
-| phone (`telefoon`)                      | text                                        |                                                                                     |
-| city (`plaats`)                         | text                                        |                                                                                     |
-| address                                 | text                                        | from the customer card                                                              |
-| contractLabel (`contract`)              | text, nullable                              | really the contracts module                                                         |
-| contactChannel (`voorkeur_kanaal`)      | enum `email`, `phone`, `whatsapp`, `portal` | nullable                                                                            |
-| preferredDay (`voorkeur_dag`)           | enum mon–fri                                | nullable; [infer] maybe a set of days                                               |
-| preferredTimeSlot (`voorkeur_tijdslot`) | text, nullable                              | values unknown, e.g. "08:00–12:00"; [infer] an enum `morning`/`afternoon`/`all_day` |
-| priority (`prioriteit`)                 | enum                                        | values unknown; [infer] `normal`, `high` or A/B/C                                   |
-| notes (`notitie`)                       | text, nullable                              |                                                                                     |
-| partner programme fields                |                                             | see 3.5                                                                             |
+| Field                                   | Type                                        | Notes                                                                                                                                                                                                                                                                  |
+| --------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| name (`naam`)                           | text                                        |                                                                                                                                                                                                                                                                        |
+| contactName (`contactpersoon`)          | text                                        |                                                                                                                                                                                                                                                                        |
+| email                                   | text                                        |                                                                                                                                                                                                                                                                        |
+| phone (`telefoon`)                      | text                                        |                                                                                                                                                                                                                                                                        |
+| city (`plaats`)                         | text                                        |                                                                                                                                                                                                                                                                        |
+| address                                 | text                                        | from the customer card                                                                                                                                                                                                                                                 |
+| contractLabel (`contract`)              | text, nullable                              | [brief] "Full service 24/7", "Full service", "Onderhoud + keuring", "Basis onderhoud": really the contracts module's levels                                                                                                                                            |
+| contactChannel (`voorkeur_kanaal`)      | enum `email`, `phone`, `whatsapp`, `portal` | nullable                                                                                                                                                                                                                                                               |
+| preferredDay (`voorkeur_dag`)           | enum mon–fri                                | nullable; [brief] one day each ("Dinsdag", "Donderdag")                                                                                                                                                                                                                |
+| preferredTimeSlot (`voorkeur_tijdslot`) | start and end time, nullable                | [brief] "07:00-15:00", "06:00-14:00", "09:00-17:00": a window, not a part of day                                                                                                                                                                                       |
+| priority (`prioriteit`)                 | enum `normal`, `high`                       | [brief] "Normaal", "Hoog"                                                                                                                                                                                                                                              |
+| notes (`notitie`)                       | text, nullable                              | [brief] site-access instructions for the engineer: "Werk buiten productietijden; melden bij receptie expeditie noord.", "Serverruimte alleen betreden met begeleiding.", "Docks 05-08 niet blokkeren tussen 10:00 en 13:00." So they belong in the engineer portal too |
+| partner programme fields                |                                             | see 3.5                                                                                                                                                                                                                                                                |
 
 **Site** (`vestiging`) T, new
 
@@ -1224,10 +1219,7 @@ These are needed before any of the modules are useful:
 
 ## 5. Open questions for the client
 
-1. **Who uses the suite?** Is it SHLTR's own operation (office plus engineers), with partners/customers seeing a
-   portal (reading A)? Or do partner installers run it as their own business system (reading B)? Who are
-   "Jan Weggemans" (`Weggemans01`), "Weggemans Logistiek" and "lev"? This decides the tenant and whether the
-   catalogue and bonus data are platform-level.
+1. ~~Who uses the suite?~~ Settled: SHLTR is the tenant, with a customer portal (§1).
 2. **Who is a "partner"**: any accepted B2B customer, or only installers/resellers who buy from SHLTR? Do
    end-customer contacts log in at all?
 3. **Bonus source data**: should we compute Partner Omzet and Bonus Omzet from invoices in the app, or import
@@ -1260,8 +1252,8 @@ These are needed before any of the modules are useful:
     (within 5 working days) or only flag it for the planner?
 14. **Components**: does SHLTR really track spare-part-level components (spring set, cables) per door, each with an
     article number? Or is condition per door enough?
-15. **Customer preferences**: what values for time slot and priority? Should the planning respect preferred day
-    and slot (warn or suggest)? Is WhatsApp/Portaal an actual notification channel we must send through?
+15. **Customer preferences**: is a single preferred day and a single time slot enough, and is priority only
+    Normaal/Hoog? Should the planning respect preferred day and slot (warn or suggest)? Is WhatsApp/Portaal an actual notification channel we must send through?
 16. **Docks**: is there a Salvo API (events or polling), and per site? Is dock time management a product SHLTR
     sells to customers (customer portal) or an internal monitoring tool? Who is "de dockplanner": a customer
     employee? Should the 60-minute escalation open a work order automatically?
