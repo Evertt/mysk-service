@@ -75,7 +75,7 @@ describe("defineLabels", () => {
 test("a label is in the current language", () => {
 	expect(label("orderStatus", "in_progress")).toBe("In progress");
 	inLanguage("nl");
-	expect(label("orderStatus", "in_progress")).toBe("In uitvoering");
+	expect(label("orderStatus", "in_progress")).toBe("In behandeling");
 });
 
 test("an unknown value is shown as it is", () => {

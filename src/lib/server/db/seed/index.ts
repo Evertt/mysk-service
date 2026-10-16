@@ -2,7 +2,7 @@
  * Fills the database with fake, internally consistent data (see `generateTenant`): orders only
  * reference equipment owned by the same customer, get an engineer whose specialty fits the
  * equipment, have a status that matches their dates, and come after the customer joined and the
- * unit was installed. Equipment status reflects the open repair orders on it.
+ * unit was installed. Equipment status reflects the open breakdowns and repairs on it.
  *
  * The demo is a Dutch field-service company's, so its texts are in Dutch: names, descriptions,
  * notes and the invoice lines' texts (stored text is in the language of whoever wrote it). Stored

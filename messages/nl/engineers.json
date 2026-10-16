@@ -75,7 +75,7 @@
 	"engineers_stats_hours": "Geboekte uren, laatste 30 dagen",
 	"engineers_stats_revenue": "Omzet arbeid, laatste 30 dagen",
 	"engineers_open_title": "Open opdrachten",
-	"engineers_open_description": "Geoffreerd, gepland en in uitvoering, eerstvolgende eerst.",
+	"engineers_open_description": "Nieuw, ingepland en in behandeling, eerstvolgende eerst.",
 	"engineers_open_empty_title": "Geen open opdrachten",
 	"engineers_open_empty_description": "{name} heeft niets gepland.",
 	"engineers_recent_title": "Recent werk",

@@ -3,12 +3,17 @@ import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
 import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+import CircleEllipsisIcon from "@lucide/svelte/icons/circle-ellipsis";
 import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
 import FileTextIcon from "@lucide/svelte/icons/file-text";
+import FolderKanbanIcon from "@lucide/svelte/icons/folder-kanban";
 import HammerIcon from "@lucide/svelte/icons/hammer";
 import PackagePlusIcon from "@lucide/svelte/icons/package-plus";
 import ReceiptIcon from "@lucide/svelte/icons/receipt";
+import RulerIcon from "@lucide/svelte/icons/ruler";
+import ShieldAlertIcon from "@lucide/svelte/icons/shield-alert";
+import SirenIcon from "@lucide/svelte/icons/siren";
 import TimerIcon from "@lucide/svelte/icons/timer";
 import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import WrenchIcon from "@lucide/svelte/icons/wrench";
@@ -56,10 +61,15 @@ const priorityDetails: Record<OrderPriority, Display> = {
 };
 
 const typeDetails: Record<OrderType, Omit<Display, "tone">> = {
-	installation: { icon: PackagePlusIcon },
-	maintenance: { icon: WrenchIcon },
+	breakdown: { icon: SirenIcon },
 	repair: { icon: HammerIcon },
+	maintenance: { icon: WrenchIcon },
 	inspection: { icon: ClipboardCheckIcon },
+	installation: { icon: PackagePlusIcon },
+	survey: { icon: RulerIcon },
+	damage: { icon: ShieldAlertIcon },
+	project: { icon: FolderKanbanIcon },
+	other: { icon: CircleEllipsisIcon },
 };
 
 /** Each value's translated `label`, icon and badge tone (and a status's chart colour). */

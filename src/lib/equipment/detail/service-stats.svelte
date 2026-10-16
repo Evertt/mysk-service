@@ -1,12 +1,12 @@
 <!--
 	@component
-	The key figures of a unit's service history: its orders by type, what its service cost, when it
-	was last serviced and how often it needs repairs.
+	The key figures of a unit's service history: its orders by type (the types it has orders of),
+	what its service cost, when it was last serviced and how often it needs repairs (breakdowns
+	included).
 -->
 <script lang="ts">
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { orderTypes } from "#lib/models.ts";
 	import { types } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
@@ -41,13 +41,13 @@
 				aria-label={m.equipment_stats_orders_by_type()}
 				class="flex flex-wrap gap-x-3 gap-y-1 text-sm"
 			>
-				{#each orderTypes as type (type)}
+				{#each stats.ordersByType as { type, count } (type)}
 					{@const display = types[type]}
 					<li class="inline-flex items-center gap-1 text-muted-foreground">
 						<display.icon class="size-3.5" />
 						{display.label}
 						<span class="font-medium text-foreground tabular-nums">
-							{formatNumber(stats.ordersByType[type])}
+							{formatNumber(count)}
 						</span>
 					</li>
 				{/each}

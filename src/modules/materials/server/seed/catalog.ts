@@ -68,10 +68,15 @@ export function generateMaterials(faker: Faker) {
 }
 
 const linesRange: Record<OrderType, [number, number]> = {
-	installation: [3, 8],
-	maintenance: [1, 4],
+	breakdown: [0, 3],
 	repair: [1, 4],
+	maintenance: [1, 4],
 	inspection: [0, 1],
+	installation: [3, 8],
+	survey: [0, 0],
+	damage: [1, 4],
+	project: [4, 10],
+	other: [0, 2],
 };
 
 /** The tenant's orders' material lines, a few per order, by its type; ids from 1. */

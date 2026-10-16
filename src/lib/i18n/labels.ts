@@ -36,10 +36,15 @@ const coreLabels = {
 		urgent: m.enum_order_priority_urgent,
 	} satisfies Labels<OrderPriority>,
 	orderType: {
-		installation: m.enum_order_type_installation,
-		maintenance: m.enum_order_type_maintenance,
+		breakdown: m.enum_order_type_breakdown,
 		repair: m.enum_order_type_repair,
+		maintenance: m.enum_order_type_maintenance,
 		inspection: m.enum_order_type_inspection,
+		installation: m.enum_order_type_installation,
+		survey: m.enum_order_type_survey,
+		damage: m.enum_order_type_damage,
+		project: m.enum_order_type_project,
+		other: m.enum_order_type_other,
 	} satisfies Labels<OrderType>,
 	customerSegment: {
 		enterprise: m.enum_customer_segment_enterprise,

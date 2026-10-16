@@ -160,7 +160,7 @@ describe("in Dutch", () => {
 				{ customer: { "1": "Acme" } },
 			),
 		).toEqual([
-			{ field: "status", before: "Ingepland", after: "In uitvoering" },
+			{ field: "status", before: "Ingepland", after: "In behandeling" },
 			{ field: "klant", before: "—", after: "Acme" },
 			{ field: "actief", before: "ja", after: "nee" },
 		]);

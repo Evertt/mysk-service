@@ -101,7 +101,8 @@ describe("in North", () => {
 			 where ce.contract_id = ?`,
 			[busy.id],
 		);
-		const links = page.locator('main a[href^="/equipment/"]');
+		// The covered equipment's: other cards (a module's plans, say) may link to units too.
+		const links = card("Covered equipment").locator('a[href^="/equipment/"]');
 		expect((await links.allInnerTexts()).toSorted()).toEqual(
 			serials.map((row) => row.serial_number).toSorted(),
 		);

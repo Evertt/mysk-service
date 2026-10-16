@@ -115,7 +115,7 @@ describe("serviceStats", () => {
 	test("a new unit has nothing to show", () => {
 		expect(serviceStats([], now)).toEqual({
 			orders: 0,
-			ordersByType: { installation: 0, maintenance: 0, repair: 0, inspection: 0 },
+			ordersByType: [],
 			openOrders: 0,
 			doneOrders: 0,
 			cost: 0,
@@ -139,7 +139,13 @@ describe("serviceStats", () => {
 		);
 		expect(stats).toMatchObject({
 			orders: 5,
-			ordersByType: { installation: 1, maintenance: 2, repair: 1, inspection: 1 },
+			// The types it has orders of, in the order they're picked in.
+			ordersByType: [
+				{ type: "repair", count: 1 },
+				{ type: "maintenance", count: 2 },
+				{ type: "inspection", count: 1 },
+				{ type: "installation", count: 1 },
+			],
 			openOrders: 2,
 			doneOrders: 2,
 			cost: 20_000,
@@ -181,6 +187,18 @@ describe("serviceStats", () => {
 		);
 		// 1 January to 1 July is 181 days, over two intervals.
 		expect(stats).toMatchObject({ repairs: 3, daysSinceLastRepair: 98, daysBetweenRepairs: 91 });
+	});
+
+	test("breakdowns count as repairs, damage doesn't", () => {
+		const stats = serviceStats(
+			[
+				order({ type: "breakdown", completedAt: at("2026-01-01 00:00") }),
+				order({ type: "repair", completedAt: at("2026-07-01 00:00") }),
+				order({ type: "damage", completedAt: at("2026-09-01 00:00") }),
+			],
+			now,
+		);
+		expect(stats).toMatchObject({ repairs: 2, daysSinceLastRepair: 98, daysBetweenRepairs: 181 });
 	});
 
 	test("a repair completed today was zero days ago", () => {

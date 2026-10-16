@@ -35,10 +35,15 @@ const firstOrders = async (column: string) => {
 
 const labels: Record<string, Record<string, string>> = {
 	type: {
-		installation: "Installation",
-		maintenance: "Maintenance",
+		breakdown: "Breakdown",
 		repair: "Repair",
+		maintenance: "Maintenance",
 		inspection: "Inspection",
+		installation: "Installation",
+		survey: "Survey",
+		damage: "Damage",
+		project: "Project",
+		other: "Other",
 	},
 	priority: { low: "Low", normal: "Normal", high: "High", urgent: "Urgent" },
 	status: {
