@@ -1,6 +1,6 @@
 <!--
 	@component
-	The board on wide screens: engineers × days. The header row and the engineers' column are sticky
+	The board on wide screens: engineers × days (the week's, or a single day's). The header row and the engineers' column are sticky
 	and opaque, above the cells (z-10 to z-30). Scrolling a card into view keeps it clear of them.
 	Cards are dragged between cells (`drag`), or planned with `onschedule`.
 -->
@@ -47,6 +47,9 @@
 		full: "secondary",
 		over: "destructive",
 	} as const;
+
+	// The day view: one day's column.
+	const single = $derived(days.length === 1);
 </script>
 
 <!-- Positioned, so the cards' visually hidden texts (`sr-only`, absolutely positioned) are placed
@@ -54,7 +57,12 @@
 <div
 	class="relative hidden min-h-0 scroll-ps-32 scroll-pt-10 overflow-auto rounded-lg border bg-card lg:block"
 >
-	<div class="grid grid-cols-[8rem_repeat(7,minmax(6rem,1fr))] text-sm">
+	<div
+		class={cn(
+			"grid text-sm",
+			single ? "grid-cols-[8rem_minmax(12rem,1fr)]" : "grid-cols-[8rem_repeat(7,minmax(6rem,1fr))]",
+		)}
+	>
 		<div class="sticky start-0 top-0 z-30 border-e border-b bg-card p-2"></div>
 		{#each days as day, i (day.toString())}
 			{@const isToday = day.equals(today)}
@@ -110,7 +118,11 @@
 					aria-label={m.schedule_cell({ name: row.name, day: formatLongDay(day) })}
 					data-load={level}
 					class={cn(
-						"flex min-h-24 min-w-0 flex-col gap-1 p-1 transition-colors",
+						"min-h-24 min-w-0 gap-1 p-1 transition-colors",
+						// A single day has room for the cards side by side.
+						single
+							? "grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] content-start"
+							: "flex flex-col",
 						r > 0 && "border-t",
 						i > 0 && "border-s",
 						day.equals(today) && "bg-accent/40",
@@ -124,7 +136,10 @@
 					{#if orders.length && row.id !== "unassigned"}
 						<Badge
 							variant={loadVariant[level]}
-							class="h-4 self-end px-1 text-[0.625rem] tabular-nums"
+							class={cn(
+								"h-4 px-1 text-[0.625rem] tabular-nums",
+								single ? "col-span-full justify-self-end" : "self-end",
+							)}
 							title={level === "over" ? m.schedule_over_booked() : undefined}
 						>
 							{m.common_count_orders({ count: orders.length })}

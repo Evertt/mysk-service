@@ -1,11 +1,10 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"schedule_module_name": "Schedule",
-	"schedule_module_description": "Plan who does which order, and when, on a weekly board.",
+	"schedule_module_description": "Plan who does which order, and when, by month, week or day.",
 	"schedule_title": "Schedule",
 	"schedule_description": "Week {week}, {range}: who does what, and when.",
 	"schedule_previous_week": "Previous week",
-	"schedule_this_week": "This week",
 	"schedule_next_week": "Next week",
 	"schedule_week": "Week",
 	"schedule_no_engineer_yet": "No engineer yet",
@@ -43,5 +42,33 @@
 	"schedule_field_time": "Time",
 	"schedule_scheduled": "{number} scheduled",
 	"schedule_scheduled_for": "{number} scheduled for {date}",
-	"schedule_week_required": "Choose a week"
+	"schedule_week_required": "Choose a week",
+	"schedule_view": "View",
+	"schedule_month": "Month",
+	"schedule_day": "Day",
+	"schedule_previous_month": "Previous month",
+	"schedule_next_month": "Next month",
+	"schedule_previous_day": "Previous day",
+	"schedule_next_day": "Next day",
+	"schedule_month_description": [
+		{
+			"declarations": [
+				"input count",
+				"input month",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{month}: {countText} order scheduled.",
+				"countPlural=*": "{month}: {countText} orders scheduled."
+			}
+		}
+	],
+	"schedule_day_description": "{day}: who does what, and when.",
+	"schedule_more": "+{count} more",
+	"schedule_more_on": "{count} more on {day}",
+	"schedule_legend": "Order types",
+	"schedule_month_empty": "Nothing scheduled this month.",
+	"schedule_date_required": "Choose a day"
 }

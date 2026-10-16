@@ -23,15 +23,6 @@ const DAILY_CAPACITY = 3;
 export const parseDay = (value: string | null | undefined) =>
 	isDay(value) ? Temporal.PlainDate.from(value) : undefined;
 
-/** The week (its Monday) a `?week=` search param stands for: that day's, or else this week. */
-export function weekFromParam(
-	param: string | null | undefined,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-) {
-	const day = parseDay(param) ?? today;
-	return day.subtract({ days: day.dayOfWeek - 1 });
-}
-
 /** The seven days of the week starting at `start`. */
 export const weekDays = (start: Temporal.PlainDate) =>
 	Array.from({ length: 7 }, (_, i) => start.add({ days: i }));
