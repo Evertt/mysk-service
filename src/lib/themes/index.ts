@@ -1,6 +1,7 @@
 import blueprint from "./blueprint.ts";
 import brutalist from "./brutalist.ts";
 import harbor from "./harbor.ts";
+import lagoon from "./lagoon.ts";
 import neutral from "./neutral.ts";
 import sorbet from "./sorbet.ts";
 import type { Theme } from "./types.ts";
@@ -9,7 +10,7 @@ import type { Theme } from "./types.ts";
  * The app's themes. Each one is a single file with CSS variables (colours, radius, font) and
  * Tailwind classes per component part. To add one, create the file and register it here.
  */
-export const themes = { neutral, harbor, blueprint, brutalist, sorbet } satisfies Record<
+export const themes = { neutral, harbor, lagoon, blueprint, brutalist, sorbet } satisfies Record<
 	string,
 	Theme
 >;
