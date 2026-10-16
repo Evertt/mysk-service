@@ -184,5 +184,5 @@ Tests run along the way (single files, as the brief asked): the specs of every t
 - Movements are ordered by the order's lines; reading what an order holds from the ledger changed their order until the lines' order was passed along.
 - The seed's materials steps are the first module code that runs inside core's generation; contracts needed `enhances: ["materials"]` only to give its seeded call-outs a material line.
 - No real `requires` came out of it: nothing needs materials to work. The settings page's dependency-prompt e2e stays carried.
-- The dashboard's headline row is a five-column grid; with materials off it has four tiles and a gap.
+- The dashboard's headline row is a five-column grid; with materials off it has four tiles and a gap. _Fixed since:_ its tiles fill the row (`auto-fit`, `statGrid` in `src/routes/(app)/(dashboard)/dashboard-grids.ts`).
 - The `orders.committed` handlers of contracts and invoicing now also run for the portal's changes (whose user can't call their office queries); nothing was logged in the e2e, but a guard like materials' would be tidier.

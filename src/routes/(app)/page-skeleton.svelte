@@ -7,6 +7,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 
+	import { cardGrid, statGrid } from "./(dashboard)/dashboard-grids.ts";
 	import { pageShape } from "./page-skeleton.ts";
 
 	let {
@@ -52,14 +53,15 @@
 		<Own />
 	{:else if shape === "dashboard"}
 		{@render header({})}
-		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+		<div class={statGrid}>
 			{#each { length: 5 }, index (index)}
 				<Skeleton class="h-32" />
 			{/each}
 		</div>
-		<div class="grid gap-6 lg:grid-cols-2">
-			{@render card("h-80")}
-			{@render card("h-80")}
+		<div class={cardGrid}>
+			{#each { length: 3 }, index (index)}
+				{@render card("h-80")}
+			{/each}
 		</div>
 	{:else if shape === "list"}
 		{@render header({ action: true })}

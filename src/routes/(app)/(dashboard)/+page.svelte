@@ -11,8 +11,10 @@
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
 
+	import { cardGrid, statGrid } from "./dashboard-grids.ts";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
 	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
+	import { masonry } from "./masonry.ts";
 	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
 	import RecentActivity from "./recent-activity.svelte";
 	import RevenuePerMonthChart from "./revenue-per-month-chart.svelte";
@@ -36,7 +38,7 @@
 	<p class="text-muted-foreground">{m.dashboard_description()}</p>
 </div>
 
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+<div class={statGrid}>
 	<StatCard
 		label={m.dashboard_open_orders()}
 		value={formatNumber(data.open.total)}
@@ -60,13 +62,15 @@
 	<ExtensionSlot point={stats} props={{}} />
 </div>
 
-<div class="grid items-start gap-6 lg:grid-cols-2">
+<!-- The cards, packed into columns (`masonry.ts`). The slot's wrapper is `display: contents`, so
+	each of the modules' cards is placed on its own. -->
+<div class={cardGrid} data-dashboard-cards {@attach masonry}>
 	<OrdersPerWeekChart data={charts.ordersPerWeek} />
 	<RevenuePerMonthChart data={charts.revenuePerMonth} />
 	<EquipmentByStatusChart data={charts.equipmentByStatus} />
+	<ExtensionSlot point={cards} props={{}} />
+	<RecentActivity />
 </div>
-
-<ExtensionSlot point={cards} props={{}} class="grid items-start gap-6 lg:grid-cols-2" />
 
 <Card.Root>
 	<Card.Header>
@@ -113,5 +117,3 @@
 		</Table.Root>
 	</Card.Content>
 </Card.Root>
-
-<RecentActivity />

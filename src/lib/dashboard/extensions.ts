@@ -8,7 +8,8 @@ import { defineSlot } from "#lib/extensions/define.ts";
 export const stats = defineSlot<Record<string, never>>("dashboard.stats");
 
 /**
- * Cards on the dashboard, below the headline numbers (laid out in two columns). The components
- * load their own data through their module's remote functions.
+ * Cards on the dashboard, below the headline numbers, packed in columns with its own (a masonry:
+ * each card is placed on its own, so a component may render several). The components load their
+ * own data through their module's remote functions.
  */
 export const cards = defineSlot<Record<string, never>>("dashboard.cards");
