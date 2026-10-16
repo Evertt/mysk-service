@@ -306,7 +306,11 @@ describe("in South", () => {
 			.first()
 			.getByRole("checkbox", { name: "Select row" })
 			.click();
-		await page.getByRole("button", { name: "Change status" }).click();
+		// The action bar's: each status badge has a "Change status of …" button too.
+		await page
+			.getByRole("region", { name: "Actions on the selected rows" })
+			.getByRole("button", { name: "Change status" })
+			.click();
 		const dialog = page.getByRole("alertdialog");
 		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
 		// The command goes out with North's ids instead of the selected order's.
