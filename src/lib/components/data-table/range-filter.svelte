@@ -113,7 +113,7 @@
 							<CheckIcon class={cn("size-4", !chosen && "invisible")} />
 							<span class="truncate">{option.label}</span>
 							{#if option.hint}
-								<Command.Shortcut class="shrink-0">{option.hint}</Command.Shortcut>
+								<Command.Shortcut class="shrink-0 tracking-wide">{option.hint}</Command.Shortcut>
 							{/if}
 						</Command.Item>
 					{/each}
