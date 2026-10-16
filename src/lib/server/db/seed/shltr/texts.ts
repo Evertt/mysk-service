@@ -190,7 +190,7 @@ const nouns: Record<Category, string> = {
 
 /** What an order of `type` on a unit of `category` says (`undefined`: an order without a unit). */
 export function describeOrder(faker: Faker, type: OrderType, category?: Category): string {
-	const pick = faker.helpers.arrayElement;
+	const pick = <T>(items: readonly T[]) => faker.helpers.arrayElement(items);
 	if (!category) return pick(without[type] ?? without.other!);
 	switch (type) {
 		case "breakdown":

@@ -14,7 +14,7 @@ import type { EngineerSpecialty, OrderPriority, OrderStatus, OrderType } from "#
 import { formatCode } from "#lib/numbering.ts";
 
 import { specialtyOf } from "../categories.ts";
-import { addDays, DAY, now } from "../clock.ts";
+import { DAY, now } from "../clock.ts";
 import type { ShltrCustomer, ShltrSite } from "./customers.ts";
 import { LEFT_DAYS_AGO } from "./engineers.ts";
 import type { generateShltrEngineers } from "./engineers.ts";
