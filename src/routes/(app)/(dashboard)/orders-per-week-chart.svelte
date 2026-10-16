@@ -13,6 +13,7 @@
 
 	import ChartTable from "./chart-table.svelte";
 	import type { OrdersInWeek } from "./dashboard-charts.ts";
+	import { settledWidth } from "./settled-width.ts";
 
 	let { data }: { data: OrdersInWeek[] } = $props();
 
@@ -62,7 +63,7 @@
 	</Card.Header>
 	<Card.Content>
 		<div class="flex flex-col gap-3" aria-hidden="true">
-			<Chart.Container {config} class="aspect-auto h-64 w-full">
+			<Chart.Container {config} class="aspect-auto h-64 w-full" {@attach settledWidth}>
 				<BarChart
 					data={bars}
 					x="week"
