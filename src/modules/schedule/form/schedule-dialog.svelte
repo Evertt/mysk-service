@@ -10,7 +10,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers/index.ts";
+	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { DEFAULT_TIME, parseDay } from "../board/board.ts";
@@ -40,14 +40,16 @@
 	// When the order is planned now, on the user's clock.
 	const scheduled = $derived(order.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
+	// Those who service the order's units' categories first, first unit first.
 	const engineerOptions = $derived(
-		engineers
-			.filter((engineer) => engineer.active)
-			.map((engineer) => ({
-				value: String(engineer.id),
-				label: engineer.name,
-				group: specialties[engineer.specialty].label,
-			})),
+		fittingFirst(
+			engineers.filter((engineer) => engineer.active),
+			order.specialties,
+		).map((engineer) => ({
+			value: String(engineer.id),
+			label: engineer.name,
+			group: specialties[engineer.specialty].label,
+		})),
 	);
 </script>
 

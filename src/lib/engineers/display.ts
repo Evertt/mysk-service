@@ -53,3 +53,19 @@ export const regionOptions = (others: Iterable<string> = []) =>
 		value,
 		label: regionLabel(value),
 	}));
+
+/**
+ * The engineers with those of the `fitting` specialties first, in that order, then the others; in
+ * the order given otherwise. E.g. an order's: the specialties that service its units' categories,
+ * first unit first (a category with none adds `null`, which fits no one).
+ */
+export function fittingFirst<T extends { specialty: EngineerSpecialty }>(
+	engineers: readonly T[],
+	fitting: readonly (EngineerSpecialty | null)[],
+): T[] {
+	const rank = (specialty: EngineerSpecialty) => {
+		const index = fitting.indexOf(specialty);
+		return index === -1 ? fitting.length : index;
+	};
+	return engineers.toSorted((a, b) => rank(a.specialty) - rank(b.specialty));
+}

@@ -153,6 +153,43 @@ describe("in North", () => {
 		await cell("Unassigned", weekday(0)).waitFor();
 	});
 
+	test("the dialog lists the engineers who service the order's first unit first", async () => {
+		// A backlog order whose first unit's category has a specialty that the alphabetically first
+		// engineer hasn't, so the order of the names alone wouldn't put them first.
+		const [order] = await rows<{ number: string; specialty: string }>(
+			`select o.number, c.specialty from "order" o
+			 join order_unit u on u.order_id = o.id
+			  and u.position = (select min(position) from order_unit where order_id = o.id)
+			 join equipment e on e.id = u.equipment_id
+			 join equipment_category c on c.id = e.category_id
+			 where o.organization_id = ? and o.scheduled_for is null
+			  and o.status in ('quote', 'scheduled', 'in_progress')
+			  and c.specialty != (select specialty from engineer
+			   where organization_id = o.organization_id and active = 1 order by name, id limit 1)
+			  and exists (select 1 from engineer
+			   where organization_id = o.organization_id and specialty = c.specialty and active = 1)
+			 order by o.id limit 1`,
+			[north.id],
+		);
+		expect(order).toBeDefined();
+		const fitting = await rows<{ name: string }>(
+			`select name from engineer where organization_id = ? and specialty = ? and active = 1
+			 order by name, id`,
+			[north.id, order.specialty],
+		);
+
+		const dialog = await openDialog(order.number);
+		const firstGroup = await dialog
+			.getByLabel("Engineer")
+			.locator("optgroup")
+			.first()
+			.locator("option")
+			.allInnerTexts();
+		expect(firstGroup).toEqual(fitting.map((engineer) => engineer.name));
+		await dialog.getByRole("button", { name: "Cancel" }).click();
+		await dialog.waitFor({ state: "hidden" });
+	});
+
 	test("a backlog order is scheduled through the dialog", async () => {
 		const number = (await cards(backlog()).first().getAttribute("data-order"))!;
 		const before = await orderByNumber(number, north.id);

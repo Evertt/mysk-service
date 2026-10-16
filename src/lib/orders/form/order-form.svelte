@@ -14,7 +14,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers/index.ts";
+	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
 	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
@@ -53,20 +53,22 @@
 		options.equipments.filter((unit) => String(unit.customerId) === customerId),
 	);
 	const initialUnits = $derived(order?.units.map((unit) => unit.id) ?? []);
-	// The specialty that services the first unit's category: its engineers come first.
-	const firstUnit = $derived(
-		Number((fields.equipmentIds.value() as string[] | undefined)?.[0] ?? initialUnits[0]),
+	// The specialties that service the chosen units' categories, first unit first: their engineers
+	// come first.
+	const chosenIds = $derived(fields.equipmentIds.value() as string[] | undefined);
+	const chosenUnits = $derived(chosenIds?.length ? chosenIds.map(Number) : initialUnits);
+	const fitting = $derived(
+		chosenUnits.map((id) => customerUnits.find((unit) => unit.id === id)?.specialty ?? null),
 	);
-	const fitting = $derived(customerUnits.find((unit) => unit.id === firstUnit)?.specialty ?? null);
 	const engineerOptions = $derived(
-		options.engineers
-			.filter((engineer) => engineer.active || engineer.id === order?.engineerId)
-			.toSorted((a, b) => Number(b.specialty === fitting) - Number(a.specialty === fitting))
-			.map((engineer) => ({
-				value: String(engineer.id),
-				label: engineer.name,
-				group: specialties[engineer.specialty].label,
-			})),
+		fittingFirst(
+			options.engineers.filter((engineer) => engineer.active || engineer.id === order?.engineerId),
+			fitting,
+		).map((engineer) => ({
+			value: String(engineer.id),
+			label: engineer.name,
+			group: specialties[engineer.specialty].label,
+		})),
 	);
 </script>
 
