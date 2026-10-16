@@ -98,9 +98,13 @@ describe("in South", () => {
 
 	test("North's orders are a 404", async () => {
 		expect(
-			await value(`select group_concat(organization_id) from "order" where number = ?`, [
-				northOnly,
-			]),
+			// North has it and South doesn't (SHLTR numbers its orders the same way, which is beside
+			// the point here).
+			await value(
+				`select group_concat(organization_id) from "order"
+				 where number = ? and organization_id in (?, ?)`,
+				[northOnly, north.id, south.id],
+			),
 		).toBe(north.id);
 		expect((await app.go(`/orders/${northOnly}`))?.status()).toBe(404);
 		expect((await app.go(`/orders/${northOnly}/edit`))?.status()).toBe(404);

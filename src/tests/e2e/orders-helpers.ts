@@ -55,6 +55,9 @@ export const orderLines = (id: number) =>
 		[id],
 	);
 
-/** Numbers that exist only in North (it has 750 orders, South 320), and in both. */
+/**
+ * Numbers that North has and South doesn't (North has 750 orders, South 320), and that both have.
+ * SHLTR, numbering its own orders the same way, has them too.
+ */
 export const northOnly = "ORD-2026-00750";
 export const shared = "ORD-2026-00320";
