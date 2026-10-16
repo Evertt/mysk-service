@@ -126,6 +126,25 @@ const roles = (value: unknown) =>
 		.map((role) => labelOrValue("memberRole", role))
 		.join(", ");
 
+/**
+ * Legacy: before each tenant had categories of its own (`categoryId`), a unit's `category` was one
+ * of these keys. Older entries logged them, and read by the labels the keys had then; any other
+ * value reads as logged.
+ */
+const legacyCategories: Record<string, Text> = {
+	generator: m.activity_legacy_category_generator,
+	chiller: m.activity_legacy_category_chiller,
+	boiler: m.activity_legacy_category_boiler,
+	compressor: m.activity_legacy_category_compressor,
+	pump: m.activity_legacy_category_pump,
+	elevator: m.activity_legacy_category_elevator,
+	air_handler: m.activity_legacy_category_air_handler,
+};
+const legacyCategory = (value: unknown) => {
+	const text = String(value);
+	return Object.hasOwn(legacyCategories, text) ? legacyCategories[text]() : text;
+};
+
 export const coreSubjectTypes: Record<string, SubjectType> = {
 	customer: {
 		noun: m.activity_subject_customer,
@@ -158,6 +177,7 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: label }),
 		fields: {
 			categoryId: { ref: "category" },
+			category: { format: legacyCategory },
 			status: { format: labelled("equipmentStatus") },
 			customerId: { label: m.activity_field_owner, ref: "customer" },
 			siteId: { ref: "site" },
