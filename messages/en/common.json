@@ -114,6 +114,7 @@
 	"common_table_preset_from_today": "Today or later",
 	"common_table_loading": "Loading…",
 	"common_navigation_loading": "Loading page…",
+	"common_app_loading": "Loading Fieldworks…",
 	"common_table_search_customers": "Search customers…",
 	"common_table_search_engineers": "Search engineers…",
 	"common_table_search_equipment": "Search equipment…",
