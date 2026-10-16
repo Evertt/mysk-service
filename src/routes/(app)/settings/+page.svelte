@@ -12,6 +12,10 @@
 	const settings = $derived(await getOrganizationSettings());
 	const categories = $derived(await getEquipmentCategories());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
+	/** Where each module that has such a page is set up. */
+	const setUp = new Map<string, string>(
+		moduleRegistry.flatMap((m) => ("settings" in m ? [[m.id, resolve(m.settings)]] : [])),
+	);
 </script>
 
 <svelte:head>
@@ -38,6 +42,7 @@
 					modules={settings.modules}
 					canManage={settings.canManage}
 					icon={icons.get(module.id)}
+					settingsHref={setUp.get(module.id)}
 				/>
 			{/each}
 		</Card.Content>

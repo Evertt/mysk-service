@@ -66,7 +66,8 @@ path? }` from the form's root, which the form passes to `invalid()` as they are)
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
 self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
-description, `route`, icon, `nav`, `subjects`, `actions`; it is in every tenant's
+description, `route`, icon, `nav`, `subjects`, `actions`, and `settings`, the route of the page
+where it's set up, which its card on the settings page links to while it's on; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under
@@ -243,10 +244,12 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Contracts, invoices, maintenance, materials and the schedule are the modules
-(`src/modules/contracts/`, `src/modules/invoices/`, `src/modules/maintenance/`,
-`src/modules/materials/`, `src/modules/schedule/`: look there for an example of each part; the
-registries list them by id). The schedule is the one without tables of its own: a view of the
+Checklists, contracts, invoices, maintenance, materials and the schedule are the modules
+(`src/modules/checklists/`, `src/modules/contracts/`, `src/modules/invoices/`,
+`src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
+example of each part; the registries list them by id). Checklists holds the tenant's inspection
+templates (points in groups, the equipment categories each is for) so far; the checklists on
+orders and in the engineer portal come next. The schedule is the one without tables of its own: a view of the
 orders, which changes them through a core service and owns only its route, components and messages.
 Maintenance (plans per unit, turned into orders) was the first built from scratch: look there for a
 module's own server-side list with a bulk action (`list/due-list.ts`, `server/list-sql.ts`), a column

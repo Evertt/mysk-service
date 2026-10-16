@@ -99,6 +99,17 @@ test("a refusal of a plain switch shows on the card", async () => {
 		.toHaveTextContent("Choose a module to switch on or off.");
 });
 
+test("a module that's set up on a page of its own links to it while it's on", async () => {
+	const off = render(ModuleCard, { ...card("side", []), settingsHref: "/side/setup" });
+	expect(document.querySelector('a[href="/side/setup"]')).toBeNull();
+	await off.unmount();
+
+	render(ModuleCard, { ...card("side", ["side"]), settingsHref: "/side/setup" });
+	await expect
+		.element(page.getByRole("link", { name: "Set up" }))
+		.toHaveAttribute("href", "/side/setup");
+});
+
 test("an always-on module has no switch", async () => {
 	render(ModuleCard, card("core-ish", []));
 

@@ -27,6 +27,11 @@ import { manifests } from "./manifests.gen.ts";
 interface ModuleParts {
 	/** The route id of the module's section, for `resolve()`. */
 	route: RouteId;
+	/**
+	 * The route id of the page where the module is set up (e.g. checklists' templates), which the
+	 * settings page links to while the module is on.
+	 */
+	settings?: RouteId;
 	icon: Component;
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;

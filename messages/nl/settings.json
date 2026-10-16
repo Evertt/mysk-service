@@ -8,6 +8,7 @@
 	"settings_modules_refused": "Hierdoor missen {modules} wat ze nodig hebben.",
 	"settings_modules_nothing_to_change": "Kies een module om aan of uit te zetten.",
 	"settings_modules_always_on_refused": "{modules} kan niet uit.",
+	"settings_modules_set_up": "Instellen",
 	"settings_modules_always_on": "Altijd aan",
 	"settings_modules_disable_title": "{module} uitschakelen?",
 	"settings_managers_change_these": "Eigenaren en beheerders kunnen deze wijzigen.",

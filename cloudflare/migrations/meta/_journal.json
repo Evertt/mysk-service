@@ -36,6 +36,13 @@
       "when": 1792191100723,
       "tag": "0004_order-units",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792194474949,
+      "tag": "0005_add-checklist-templates",
+      "breakpoints": true
     }
   ]
 }

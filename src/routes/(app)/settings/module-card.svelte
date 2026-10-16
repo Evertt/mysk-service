@@ -21,12 +21,15 @@
 		modules,
 		canManage,
 		icon: Icon,
+		settingsHref,
 	}: {
 		module: Module;
 		/** Every module, to see which are on. */
 		modules: Module[];
 		canManage: boolean;
 		icon?: Component<{ class?: string }>;
+		/** The page where the module is set up, linked to while it's on. */
+		settingsHref?: string;
 	} = $props();
 
 	const form = $derived(setModules.for(module.id));
@@ -72,6 +75,11 @@
 				<Field.FieldError errors={form.fields.allIssues()} />
 			{/if}
 		</div>
+		{#if settingsHref && module.on}
+			<Button href={settingsHref} variant="outline" size="sm">
+				{m.settings_modules_set_up()}
+			</Button>
+		{/if}
 		{#if canManage}
 			{#if module.alwaysOn}
 				<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
