@@ -158,9 +158,10 @@ describe("the dashboard's cards", () => {
 	test("pack into three columns on a wide screen, the modules' cards each on its own", async () => {
 		const boxes = await packedDashboard();
 		expect(boxes.map((box) => box.title)).toEqual([
-			"Orders per week",
-			"Revenue per month",
+			"Upcoming work",
 			"Equipment by status",
+			"Revenue per month",
+			"Orders per week",
 			"Response times at risk",
 			"Contracts ending soon",
 			"Receivables",
@@ -169,10 +170,11 @@ describe("the dashboard's cards", () => {
 			"Recent activity",
 		]);
 		expect(columnsOf(boxes).size).toBe(3);
-		// The first row reads left to right in the page's order.
-		const [first, second, third] = boxes;
+		// The first row reads left to right in the page's order: the upcoming work, two columns
+		// wide, then the equipment beside it.
+		const [first, second] = boxes;
 		expect(first.left).toBeLessThan(second.left);
-		expect(second.left).toBeLessThan(third.left);
+		expect(first.right - first.left).toBeGreaterThan(second.right - second.left);
 		expectApart(boxes);
 	});
 
@@ -191,9 +193,10 @@ describe("the dashboard's cards", () => {
 		await app.switchOrganization(south.name);
 		const boxes = await packedDashboard();
 		expect(boxes.map((box) => box.title)).toEqual([
-			"Orders per week",
-			"Revenue per month",
+			"Upcoming work",
 			"Equipment by status",
+			"Revenue per month",
+			"Orders per week",
 			"Receivables",
 			"Overdue invoices",
 			"Recent activity",
