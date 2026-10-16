@@ -53,11 +53,13 @@ vi.mock("#lib/server/db/index.ts", async () => {
 			(2, 'south', 'C-1', 'Zenith', 'Zed', 'zed@zenith.test', '1', 'Breda', 'NL', 'enterprise');
 		insert into customer_site (id, organization_id, customer_id, name, city, country) values
 			(1, 'north', 1, 'Utrecht', 'Utrecht', 'NL'), (2, 'south', 2, 'Breda', 'Breda', 'NL');
-		insert into equipment (id, organization_id, serial_number, model, manufacturer, category,
+		insert into equipment_category (id, organization_id, name, specialty, position) values
+			(1, 'north', 'Ketel', 'plumbing', 0), (2, 'south', 'Ketel', 'plumbing', 0);
+		insert into equipment (id, organization_id, serial_number, model, manufacturer, category_id,
 			status, customer_id, site_id, installed_at, warranty_until)
 		values
-			(10, 'north', 'SN-10', 'M', 'Make', 'boiler', 'operational', 1, 1, '2020-01-01', '2030-01-01'),
-			(20, 'south', 'SN-20', 'M', 'Make', 'boiler', 'operational', 2, 2, '2020-01-01', '2030-01-01');
+			(10, 'north', 'SN-10', 'M', 'Make', 1, 'operational', 1, 1, '2020-01-01', '2030-01-01'),
+			(20, 'south', 'SN-20', 'M', 'Make', 2, 'operational', 2, 2, '2020-01-01', '2030-01-01');
 	`);
 	return { db: drizzleQueued(client, { schema: { ...schema, ...moduleSchema } }) };
 });

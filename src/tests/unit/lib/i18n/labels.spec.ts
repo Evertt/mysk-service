@@ -13,7 +13,6 @@ import {
 import {
 	customerSegments,
 	engineerSpecialties,
-	equipmentCategories,
 	equipmentStatuses,
 	orderPriorities,
 	orderStatuses,
@@ -33,7 +32,7 @@ const kinds: [LabelKind, readonly string[]][] = [
 	["orderType", orderTypes],
 	["customerSegment", customerSegments],
 	["engineerSpecialty", engineerSpecialties],
-	["equipmentCategory", equipmentCategories],
+
 	["equipmentStatus", equipmentStatuses],
 	["memberRole", memberRoles],
 	["memberRoleDescription", memberRoles],

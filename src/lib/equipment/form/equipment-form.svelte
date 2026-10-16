@@ -11,9 +11,8 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { labelOptions } from "#lib/i18n/index.ts";
-	import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
+	import { equipmentStatuses } from "#lib/models.ts";
 
-	import { categories } from "../display.ts";
 	import type {
 		createEquipment,
 		getEquipment,
@@ -102,15 +101,17 @@
 					autocomplete="off"
 					description={m.equipment_field_name_description()}
 				/>
+				<!-- The tenant's own categories, in their order. -->
 				<SelectField
-					field={fields.category}
+					field={fields.categoryId}
 					label={m.equipment_field_category()}
 					placeholder={m.equipment_category_placeholder()}
-					value={unit?.category}
-					options={equipmentCategories.map((value) => ({
-						value,
-						label: categories[value].label,
+					value={unit ? String(unit.categoryId) : undefined}
+					options={options.categories.map((category) => ({
+						value: String(category.id),
+						label: category.name,
 					}))}
+					description={options.categories.length ? undefined : m.equipment_category_none()}
 				/>
 			</Field.FieldGroup>
 		</Card.Content>

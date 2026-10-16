@@ -35,6 +35,30 @@ describe("in North", () => {
 		expect(await page.getByLabel("Equipment").inputValue()).toBe("");
 	});
 
+	test("a unit's category puts the engineers who service it first", async () => {
+		const { page } = app;
+		await page.getByLabel("Equipment").selectOption({ index: 1 });
+		const unit = Number(await page.getByLabel("Equipment").inputValue());
+		const specialty = await value<string>(
+			`select c.specialty from equipment e join equipment_category c on c.id = e.category_id
+			 where e.id = ?`,
+			[unit],
+		);
+		const fitting = await rows<{ name: string }>(
+			`select name from engineer where organization_id = ? and specialty = ? and active = 1
+			 order by name`,
+			[north.id, specialty],
+		);
+		expect(fitting.length).toBeGreaterThan(0);
+		const firstGroup = await page
+			.getByLabel("Engineer")
+			.locator("optgroup")
+			.first()
+			.locator("option")
+			.allInnerTexts();
+		expect(firstGroup).toEqual(fitting.map((engineer) => engineer.name));
+	});
+
 	test("a new order gets the next number", async () => {
 		const { page } = app;
 		await page.getByLabel("Equipment").selectOption({ index: 1 });

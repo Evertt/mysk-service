@@ -12,7 +12,6 @@ import type {
 	ContactChannel,
 	CustomerSegment,
 	EngineerSpecialty,
-	EquipmentCategory,
 	EquipmentStatus,
 	OrderPriority,
 	OrderStatus,
@@ -61,15 +60,7 @@ const coreLabels = {
 		plumbing: m.enum_engineer_specialty_plumbing,
 		controls: m.enum_engineer_specialty_controls,
 	} satisfies Labels<EngineerSpecialty>,
-	equipmentCategory: {
-		generator: m.enum_equipment_category_generator,
-		chiller: m.enum_equipment_category_chiller,
-		boiler: m.enum_equipment_category_boiler,
-		compressor: m.enum_equipment_category_compressor,
-		pump: m.enum_equipment_category_pump,
-		elevator: m.enum_equipment_category_elevator,
-		air_handler: m.enum_equipment_category_air_handler,
-	} satisfies Labels<EquipmentCategory>,
+
 	equipmentStatus: {
 		operational: m.enum_equipment_status_operational,
 		needs_service: m.enum_equipment_status_needs_service,

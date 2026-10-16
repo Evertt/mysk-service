@@ -15,7 +15,6 @@ import {
 	contactChannels,
 	customerSegments,
 	engineerSpecialties,
-	equipmentCategories,
 	equipmentStatuses,
 	orderPriorities,
 	orderStatuses,
@@ -124,6 +123,34 @@ export const engineer = sqliteTable(
 	],
 );
 
+/**
+ * One of the tenant's own kinds of equipment, e.g. "Sectionaaldeur" or "Koelmachine": managers
+ * name them, put them in order and say which engineer specialty services each (see
+ * `#lib/equipment/categories/`). A category that units have can't be deleted.
+ */
+export const equipmentCategory = sqliteTable(
+	"equipment_category",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		name: text("name").notNull(),
+		/** The specialty of the engineers who service it; none when no specialty fits. */
+		specialty: text("specialty", { enum: engineerSpecialties }),
+		/** Where it comes in the tenant's categories (the form's select, the list's sort), from 0. */
+		position: integer("position").notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("equipment_category_organization_id").on(table.organizationId, table.id),
+		// Unique within a tenant, whatever the case: "Lift" and "lift" are the same category.
+		uniqueIndex("equipment_category_organization_name").on(
+			table.organizationId,
+			sql`lower(${table.name})`,
+		),
+		index("equipment_category_organization_position").on(table.organizationId, table.position),
+	],
+);
+
 /** A machine installed at a customer site. */
 export const equipment = sqliteTable(
 	"equipment",
@@ -133,7 +160,8 @@ export const equipment = sqliteTable(
 		serialNumber: text("serial_number").notNull(),
 		model: text("model").notNull(),
 		manufacturer: text("manufacturer").notNull(),
-		category: text("category", { enum: equipmentCategories }).notNull(),
+		/** One of the tenant's categories. */
+		categoryId: integer("category_id").notNull(),
 		status: text("status", { enum: equipmentStatuses }).notNull(),
 		customerId: integer("customer_id").notNull(),
 		/** The customer's site it's at. */
@@ -158,9 +186,15 @@ export const equipment = sqliteTable(
 		index("equipment_organization_customer").on(table.organizationId, table.customerId),
 		index("equipment_organization_unit").on(table.organizationId, table.manufacturer, table.model),
 		index("equipment_site").on(table.siteId),
+		// Whether a category is in use, and the list's filter by it.
+		index("equipment_organization_category").on(table.organizationId, table.categoryId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
+		}),
+		foreignKey({
+			columns: [table.organizationId, table.categoryId],
+			foreignColumns: [equipmentCategory.organizationId, equipmentCategory.id],
 		}),
 		// A site of the unit's own customer (and so of the tenant).
 		foreignKey({
@@ -236,10 +270,18 @@ export const engineerRelations = relations(engineer, ({ many }) => ({
 	orders: many(order),
 }));
 
+export const equipmentCategoryRelations = relations(equipmentCategory, ({ many }) => ({
+	equipment: many(equipment),
+}));
+
 export const equipmentRelations = relations(equipment, ({ one, many }) => ({
 	customer: one(customer, {
 		fields: [equipment.organizationId, equipment.customerId],
 		references: [customer.organizationId, customer.id],
+	}),
+	category: one(equipmentCategory, {
+		fields: [equipment.organizationId, equipment.categoryId],
+		references: [equipmentCategory.organizationId, equipmentCategory.id],
 	}),
 	site: one(customerSite, {
 		fields: [equipment.customerId, equipment.siteId],

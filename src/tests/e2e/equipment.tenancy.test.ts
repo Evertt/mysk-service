@@ -43,6 +43,16 @@ describe("in South", () => {
 				.map((text) => Number(/(\d+)$/.exec(text.trim())?.[1]))
 				.reduce((sum, n) => sum + n, 0);
 		await expect.poll(counted).toBe(await countIn("equipment", south.id));
+		// South's own categories, none of North's.
+		const southCategories = await rows<{ name: string; n: number }>(
+			`select c.name, count(e.id) as n from equipment_category c
+			 left join equipment e on e.category_id = c.id
+			 where c.organization_id = ? group by c.id order by c.position, c.id`,
+			[south.id],
+		);
+		expect(
+			(await page.getByRole("option").allInnerTexts()).map((text) => text.trim().split(/\s+/)[0]),
+		).toEqual(southCategories.map((category) => category.name));
 		await page.keyboard.press("Escape");
 	});
 
@@ -50,7 +60,8 @@ describe("in South", () => {
 		const expected = Object.fromEntries(
 			(
 				await rows<{ category: string; n: number }>(
-					`select category, count(*) as n from equipment where organization_id = ? group by category`,
+					`select cast(category_id as text) as category, count(*) as n from equipment
+					 where organization_id = ? group by category_id`,
 					[south.id],
 				)
 			).map((row) => [row.category, row.n]),
@@ -154,7 +165,16 @@ describe("in South", () => {
 		await page.getByLabel("Serial number").fill(own.serial);
 		await page.getByLabel("Manufacturer").fill("Testco");
 		await page.getByLabel("Model").fill("TX-S");
-		await page.getByLabel("Category").selectOption("chiller");
+		// And one of North's categories, by its id.
+		const northCategory = String(
+			await value(`select min(id) from equipment_category where organization_id = ?`, [north.id]),
+		);
+		const category = page.getByLabel("Category");
+		await category.evaluate(
+			(select: HTMLSelectElement, id) => select.add(new Option("North category", id)),
+			northCategory,
+		);
+		await category.selectOption(northCategory);
 		await page.getByLabel("Installed on").fill("2026-01-10");
 		await page.getByLabel("Warranty until").fill("2029-01-10");
 		await app.submit(page.getByRole("button", { name: "Register equipment" }));
@@ -162,8 +182,11 @@ describe("in South", () => {
 		const issues = await app.issues();
 		expect(issues).toContainEqual(expect.stringContaining("Unknown customer"));
 		expect(issues).toContainEqual(expect.stringContaining("already has this serial"));
+		expect(issues).toContain("Choose one of your organization's categories");
 		expect(app.path()).toBe("/equipment/new");
 		expect(await countIn("equipment", south.id)).toBe(before);
+		// South's own one, for the next test.
+		await category.selectOption({ label: "Koelmachine" });
 	});
 
 	test("a serial number only North has can be reused, in South", async () => {

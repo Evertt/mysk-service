@@ -8,7 +8,11 @@
 	import { EquipmentTable } from "#lib/equipment/components.ts";
 	import { listColumns } from "#lib/equipment/extensions.ts";
 	import { equipmentList } from "#lib/equipment/index.ts";
-	import { getEquipmentFacets, getEquipmentList } from "#lib/equipment/remotes.ts";
+	import {
+		getEquipmentCategories,
+		getEquipmentFacets,
+		getEquipmentList,
+	} from "#lib/equipment/remotes.ts";
 	import { loadListColumns } from "#lib/extensions/list-columns.ts";
 
 	// The list with the columns of the tenant's modules (e.g. the next maintenance), whose
@@ -20,6 +24,7 @@
 	// Both start at once.
 	const equipment = $derived(getEquipmentList(query));
 	const facets = $derived(getEquipmentFacets(whereOf(query)));
+	const categories = getEquipmentCategories();
 </script>
 
 <svelte:head>
@@ -35,4 +40,9 @@
 	{/snippet}
 </PageHeader>
 
-<EquipmentTable {list} equipment={await equipment} facets={await facets} />
+<EquipmentTable
+	{list}
+	equipment={await equipment}
+	facets={await facets}
+	categories={await categories}
+/>

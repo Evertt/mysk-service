@@ -92,11 +92,19 @@ describe("in North", () => {
 			await expect.poll(() => app.rowCount()).toBe(await countIn("equipment", north.id));
 		};
 
-		await filter("Category", "Chiller");
-		await expect.poll(() => app.rowCount()).toBe(await count(`category = 'chiller'`));
+		// North's own categories, by the names it gave them.
+		await filter("Category", "Koelmachine");
+		await expect
+			.poll(() => app.rowCount())
+			.toBe(
+				await count(
+					`category_id = (select id from equipment_category where organization_id = ? and name = ?)`,
+					[north.id, "Koelmachine"],
+				),
+			);
 		const chillers = await bodyRows().allInnerTexts();
 		expect(chillers.length).toBeGreaterThan(0);
-		expect(chillers.every((row) => row.includes("Chiller"))).toBe(true);
+		expect(chillers.every((row) => row.includes("Koelmachine"))).toBe(true);
 		await reset();
 
 		await filter("Status", "Operational");
@@ -251,11 +259,13 @@ describe("in North", () => {
 		expect(params().get("group")).toBe("category");
 		expect(params().get("status")).toBe("operational");
 
-		// The order the server sorts in: by category first, then by unit, as the list is sorted.
+		// The order the server sorts in: by category first, in North's order of them, then by unit,
+		// as the list is sorted. Grouped by the category's id.
 		const expected = await rows<{ serial: string; category: string }>(
-			`select serial_number as serial, category from equipment
-			 where organization_id = ? and status = 'operational'
-			 order by category, manufacturer collate nocase, model collate nocase, id`,
+			`select e.serial_number as serial, cast(e.category_id as text) as category
+			 from equipment e join equipment_category c on c.id = e.category_id
+			 where e.organization_id = ? and e.status = 'operational'
+			 order by c.position, c.id, e.manufacturer collate nocase, e.model collate nocase, e.id`,
 			[north.id],
 		);
 		const categoryOf = new Map(expected.map((unit) => [unit.serial, unit.category]));
@@ -317,9 +327,13 @@ describe("in North", () => {
 	test("selecting all the loaded units acts on exactly the filtered ones", async () => {
 		const { page } = app;
 		// Fewer than a page of rows: all of them load at once.
-		const generators = await rows<{ id: number }>(
-			`select id from equipment where organization_id = ? and category = 'generator'`,
+		const generator = await value<number>(
+			`select id from equipment_category where organization_id = ? and name = 'Aggregaat'`,
 			[north.id],
+		);
+		const generators = await rows<{ id: number }>(
+			`select id from equipment where organization_id = ? and category_id = ?`,
+			[north.id, generator],
 		);
 		expect(generators.length).toBeGreaterThan(20);
 		expect(generators.length).toBeLessThanOrEqual(50);
@@ -333,7 +347,7 @@ describe("in North", () => {
 		);
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
 
-		await app.go("/equipment?category=generator&sort=serial");
+		await app.go(`/equipment?category=${generator}&sort=serial`);
 		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const total = formatNumber(generators.length);
 		// They're all loaded, so selecting them all is all that match: nothing more to offer.

@@ -10,21 +10,28 @@ import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	customerSite,
+	equipment,
+	equipmentCategory,
+	order,
+} from "#lib/server/db/schema.ts";
 import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { equipmentList } from "../list/equipment-list.ts";
 
 /**
- * The equipment list's joins: the unit's owner and site, scoped to the tenant. Written once, for
+ * The equipment list's joins: the unit's owner, site and category, scoped to the tenant. Written once, for
  * the rows, the counts, the facets and the bulk ids alike, and generic over the query it joins
  * (drizzle's `$dynamic()` pattern), so each keeps its own fields.
  */
 export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
 	query
 		.innerJoin(...tenantJoin(customer, equipment.customerId))
-		.innerJoin(...tenantJoin(customerSite, equipment.siteId));
+		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
+		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId));
 
 /**
  * The equipment list's columns in SQL, checked against its definition (`equipmentList`). Call it
@@ -54,10 +61,11 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 				filter: (manufacturers) => inList(equipment.manufacturer, manufacturers),
 				group: equipment.manufacturer,
 			},
+			// In the tenant's order of its categories, by id in the URL.
 			category: {
-				sort: equipment.category,
-				filter: (categories) => inList(equipment.category, categories),
-				group: equipment.category,
+				sort: [equipmentCategory.position, equipmentCategory.id],
+				filter: (ids) => inList(equipment.categoryId, ids),
+				group: equipment.categoryId,
 			},
 			status: {
 				sort: equipment.status,
@@ -91,6 +99,7 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 			equipment.model,
 			equipment.name,
 			equipment.location,
+			equipmentCategory.name,
 			customer.name,
 			customer.code,
 			customerSite.name,

@@ -10,7 +10,6 @@
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
 	import { SpecialtyBadge } from "#lib/engineers/components.ts";
 	import {
-		CategoryLabel,
 		EquipmentLink,
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
@@ -140,9 +139,7 @@
 						{#if equipment.location}
 							<DetailItem label={m.orders_detail_location()} value={equipment.location} />
 						{/if}
-						<DetailItem label={m.orders_detail_category()}>
-							<CategoryLabel category={equipment.category} />
-						</DetailItem>
+						<DetailItem label={m.orders_detail_category()} value={equipment.category.name} />
 						<DetailItem
 							label={m.orders_detail_installed()}
 							value={formatDate(equipment.installedAt)}

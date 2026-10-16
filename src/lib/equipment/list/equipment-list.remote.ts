@@ -7,7 +7,13 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	customerSite,
+	equipment,
+	equipmentCategory,
+	order,
+} from "#lib/server/db/schema.ts";
 import {
 	bulkChange,
 	listTarget,
@@ -42,7 +48,7 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 						manufacturer: equipment.manufacturer,
 						model: equipment.model,
 						location: equipment.location,
-						category: equipment.category,
+						category: { id: equipmentCategory.id, name: equipmentCategory.name },
 						status: equipment.status,
 						installedAt: equipment.installedAt,
 						warrantyUntil: equipment.warrantyUntil,
@@ -101,7 +107,7 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 export const getEquipmentFacets = forMembers.query(equipmentList.where, async (where) => {
 	const listSql = equipmentSql();
 	const counts = await planList(listSql, where).facets({
-		category: equipment.category,
+		category: equipment.categoryId,
 		status: equipment.status,
 		manufacturer: equipment.manufacturer,
 		// And the tenant's modules' columns, by their ids (the type names the list's own only).

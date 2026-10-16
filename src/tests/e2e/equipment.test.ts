@@ -9,6 +9,19 @@ const { bodyRows, card, shownTimeline } = equipmentPage(app);
 
 const serial = "ZZ-TEST-0001";
 
+/** The choices of the form's category select, without its placeholder. */
+const categoryChoices = async () =>
+	(await app.page.getByLabel("Category").locator("option").allInnerTexts()).slice(1);
+
+/** The names of an organization's categories, in its order. */
+const categoryNames = async (organizationId: string) =>
+	(
+		await rows<{ name: string }>(
+			`select name from equipment_category where organization_id = ? order by position, id`,
+			[organizationId],
+		)
+	).map((row) => row.name);
+
 /** The choices of the form's site select, as it shows them. */
 const siteChoices = () =>
 	app.page.getByLabel("Site", { exact: true }).locator("option").allInnerTexts();
@@ -63,7 +76,9 @@ describe("in North", () => {
 		await page.getByLabel("Serial number").fill(busy.toLowerCase());
 		await page.getByLabel("Manufacturer").fill("Testco");
 		await page.getByLabel("Model").fill("TX-1");
-		await page.getByLabel("Category").selectOption("chiller");
+		// North's own categories, in its order.
+		expect(await categoryChoices()).toEqual(await categoryNames(north.id));
+		await page.getByLabel("Category").selectOption({ label: "Koelmachine" });
 		await page.getByLabel("Customer").selectOption(String(multiSite.id));
 		// The customer's sites to choose from, theirs only.
 		expect((await siteChoices()).slice(1)).toEqual(multiSite.sites);

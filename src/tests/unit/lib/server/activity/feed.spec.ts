@@ -45,6 +45,9 @@ beforeAll(async () => {
 	await db.run(
 		sql`create table equipment (id integer primary key, organization_id text, serial_number text)`,
 	);
+	await db.run(
+		sql`create table equipment_category (id integer primary key, organization_id text, name text)`,
+	);
 	await db.run(sql`create table activity (
 		id integer primary key autoincrement, organization_id text not null, user_id text,
 		user_name text not null, action text not null, subject_type text not null,
@@ -57,7 +60,7 @@ beforeAll(async () => {
 beforeEach(async () => {
 	locals.user = { id: "u1", name: "Jo" };
 	locals.tenant = tenantOf("north");
-	for (const table of ["customer", "engineer", "equipment", "activity"]) {
+	for (const table of ["customer", "engineer", "equipment", "equipment_category", "activity"]) {
 		await db.run(sql.raw(`delete from ${table}`));
 	}
 	await db.run(sql`insert into customer (id, organization_id, name) values
@@ -66,6 +69,8 @@ beforeEach(async () => {
 		(3, 'north', 'Jan de Vries'), (4, 'south', 'Piet')`);
 	await db.run(sql`insert into equipment (id, organization_id, serial_number) values
 		(5, 'north', 'SN-5'), (6, 'south', 'SN-6')`);
+	await db.run(sql`insert into equipment_category (id, organization_id, name) values
+		(7, 'north', 'Koelmachine'), (8, 'south', 'Ketel'), (9, 'north', 'Lift')`);
 });
 
 type Entry = Partial<typeof activity.$inferInsert> &
@@ -87,12 +92,15 @@ describe("lookUpNames", () => {
 				["customer", new Set(["1"])],
 				["engineer", new Set(["3"])],
 				["equipment", new Set(["5"])],
+				["category", new Set(["7", "8"])],
 			]),
 		);
 		expect(names).toEqual({
 			customer: { "1": "Acme" },
 			engineer: { "3": "Jan de Vries" },
 			equipment: { "5": "SN-5" },
+			// South's category isn't North's to see.
+			category: { "7": "Koelmachine" },
 		});
 	});
 
@@ -253,6 +261,29 @@ describe("present", () => {
 			{ field: "engineer", before: "#4", after: "Jan de Vries" },
 			{ field: "customer", before: "—", after: "Acme" },
 			{ field: "status", before: "Scheduled", after: "In progress" },
+		]);
+	});
+
+	test("shows a unit's category by name, and a category's specialty and place", async () => {
+		const unit = await log({
+			subjectType: "equipment",
+			subjectId: "5",
+			subjectLabel: "SN-5",
+			changes: { categoryId: [7, 9] },
+		});
+		const category = await log({
+			subjectType: "equipment_category",
+			subjectId: "7",
+			subjectLabel: "Koelmachine",
+			changes: { specialty: [null, "hvac"], position: [0, 1] },
+		});
+		const [first, second] = await present([unit, category]);
+		expect(first.changes).toEqual([{ field: "category", before: "Koelmachine", after: "Lift" }]);
+		expect(second.subject).toMatchObject({ noun: "equipment category", label: "Koelmachine" });
+		expect(second.changes).toEqual([
+			{ field: "specialty", before: "—", after: "HVAC" },
+			// Counted from 1.
+			{ field: "position", before: "1", after: "2" },
 		]);
 	});
 

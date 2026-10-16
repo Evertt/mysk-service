@@ -95,7 +95,7 @@
 										</a>
 									</Table.Cell>
 									<Table.Cell>{unit.manufacturer} {unit.model}</Table.Cell>
-									<Table.Cell>{label("equipmentCategory", unit.category)}</Table.Cell>
+									<Table.Cell>{unit.category.name}</Table.Cell>
 									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
 								</Table.Row>
 							{/each}

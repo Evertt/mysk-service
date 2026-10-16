@@ -60,9 +60,14 @@
 				label: unitLine(unit),
 			})),
 	);
+	// The specialty that services the chosen unit's category: its engineers come first.
+	const fitting = $derived(
+		options.equipments.find((unit) => String(unit.id) === equipmentId)?.specialty ?? null,
+	);
 	const engineerOptions = $derived(
 		options.engineers
 			.filter((engineer) => engineer.active || engineer.id === order?.engineerId)
+			.toSorted((a, b) => Number(b.specialty === fitting) - Number(a.specialty === fitting))
 			.map((engineer) => ({
 				value: String(engineer.id),
 				label: engineer.name,

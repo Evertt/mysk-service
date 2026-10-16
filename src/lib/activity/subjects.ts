@@ -17,6 +17,7 @@ import { resolve } from "$app/paths";
 import { parseRoles } from "#lib/auth/index.ts";
 import {
 	formatCents,
+	formatNumber,
 	formatStoredDay,
 	formatStoredMoment,
 	hasLabel,
@@ -151,12 +152,22 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		noun: m.activity_subject_equipment,
 		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: label }),
 		fields: {
-			category: { format: labelled("equipmentCategory") },
+			categoryId: { ref: "category" },
 			status: { format: labelled("equipmentStatus") },
 			customerId: { label: m.activity_field_owner, ref: "customer" },
 			siteId: { ref: "site" },
 			installedAt: { format: day },
 			warrantyUntil: { format: day },
+		},
+	},
+	/** One of the tenant's equipment categories, by its name; they're kept on the settings page. */
+	equipment_category: {
+		noun: m.activity_subject_equipment_category,
+		href: () => resolve("/(app)/settings/equipment-categories"),
+		fields: {
+			specialty: { format: labelled("engineerSpecialty") },
+			// From 0 in the database, from 1 as people count.
+			position: { format: (value) => formatNumber(Number(value) + 1) },
 		},
 	},
 	order: {

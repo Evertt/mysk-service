@@ -7,9 +7,9 @@ import { getTimeZone } from "#lib/dates.ts";
 import { isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, equipmentCategory, order } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -28,7 +28,7 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 		where: and(eq(order.number, number), inTenant(order)),
 		with: {
 			customer: { with: { sites: true } },
-			equipment: { with: { site: true } },
+			equipment: { with: { site: true, category: { columns: { name: true } } } },
 			engineer: true,
 		},
 	});
@@ -82,8 +82,11 @@ export const getOrderFormOptions = forMembers.query(async () => {
 				model: equipment.model,
 				manufacturer: equipment.manufacturer,
 				serialNumber: equipment.serialNumber,
+				/** The specialty of the engineers who service its category, if any. */
+				specialty: equipmentCategory.specialty,
 			})
 			.from(equipment)
+			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
 			.where(inTenant(equipment))
 			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
 		db

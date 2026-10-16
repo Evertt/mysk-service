@@ -17,7 +17,7 @@ test("a filled-in form becomes a unit", () => {
 		serialNumber: "gen-2041-a",
 		manufacturer: "Caterpillar",
 		model: "C15",
-		category: "generator",
+		categoryId: "3",
 		status: "operational",
 		customerId: "7",
 		siteId: "12",
@@ -30,6 +30,7 @@ test("a filled-in form becomes a unit", () => {
 		value: {
 			...form,
 			serialNumber: "GEN-2041-A",
+			categoryId: 3,
 			customerId: 7,
 			siteId: 12,
 			name: "Automatische deur kantine BES-3",
@@ -61,7 +62,9 @@ describe("serialNumber", () => {
 });
 
 test("the category and status are chosen from the lists", () => {
-	expect(parse(equipmentFields.category, "toaster")).toEqual({ issues: ["Choose a category"] });
+	// One of the tenant's categories, by id; the server checks it's the tenant's.
+	expect(parse(equipmentFields.categoryId, "")).toEqual({ issues: ["Choose a category"] });
+	expect(parse(equipmentFields.categoryId, "0")).toEqual({ issues: ["Choose a category"] });
 	expect(parse(equipmentFields.status, "broken")).toEqual({ issues: ["Choose a status"] });
 });
 

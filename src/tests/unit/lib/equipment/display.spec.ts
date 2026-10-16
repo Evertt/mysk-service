@@ -1,18 +1,11 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import {
-	categoryOptions,
-	isUnderWarranty,
-	statusOptions,
-	unitLine,
-	unitTitle,
-} from "#lib/equipment/display.ts";
-import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
+import { isUnderWarranty, statusOptions, unitLine, unitTitle } from "#lib/equipment/display.ts";
+import { equipmentStatuses } from "#lib/models.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
 import { describeOptions } from "../display.test-support.ts";
 
-describeOptions("equipment categories", categoryOptions, equipmentCategories);
 // Equipment statuses are shown as plain text.
 describeOptions("equipment statuses", statusOptions, equipmentStatuses, { icons: false });
 

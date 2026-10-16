@@ -67,10 +67,15 @@ describe("range filters on the equipment list, in North", () => {
 		expect(await shownFor(`installed=${lastYear}..&open-orders=..0`)).toBe(
 			await count(`installed_at >= ? and ${openOrders} <= 0`, [lastYear]),
 		);
-		expect(await shownFor("warranty=this-year&category=chiller")).toBe(
-			await count("warranty_until between ? and ? and category = 'chiller'", [
+		const chiller = await value<number>(
+			`select id from equipment_category where organization_id = ? and name = 'Koelmachine'`,
+			[north.id],
+		);
+		expect(await shownFor(`warranty=this-year&category=${chiller}`)).toBe(
+			await count("warranty_until between ? and ? and category_id = ?", [
 				thisYear.from!,
 				thisYear.to!,
+				chiller,
 			]),
 		);
 		// What isn't a range is ignored.

@@ -244,3 +244,131 @@ test("the Durable Object's 0002_add-customer-sites does the same with its foreig
 	expect(await afterSites(client)).toEqual(sitesMade);
 	client.close();
 });
+
+/**
+ * Two tenants' units of the fixed categories there were, with sites, and the records that refer to
+ * the units (an order, a contract's coverage, a maintenance plan).
+ */
+const beforeCategories = `
+	insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 1), ('b', 'B', 'b', 2);
+	insert into customer (id, organization_id, code, name, contact_name, email, phone, city, country, segment, created_at)
+	values (1, 'a', 'C-1', 'Riedel', 'Jan', 'jan@riedel.nl', '0318 123456', 'Ede', 'Netherlands', 'enterprise', 100),
+		(3, 'b', 'C-1', 'Pakhuis', 'Piet', 'piet@pakhuis.be', '+32 9 123 45 67', 'Gent', 'Belgium', 'small_business', 300);
+	insert into customer_site (id, organization_id, customer_id, name, city, country)
+	values (5, 'a', 1, 'Ede', 'Ede', 'Netherlands'), (6, 'b', 3, 'Gent', 'Gent', 'Belgium');
+	insert into equipment (id, organization_id, serial_number, model, manufacturer, category, status, customer_id, site_id, name, location, installed_at, warranty_until)
+	values (10, 'a', 'S-10', 'ST 50', 'Kone', 'elevator', 'operational', 1, 5, 'Lift kantoor', 'Hal', '2024-01-01', '2027-01-01'),
+		(11, 'a', 'S-11', 'SR 60', 'Grundfos', 'pump', 'needs_service', 1, 5, null, null, '2024-01-01', '2027-01-01'),
+		(12, 'a', 'S-12', 'SR 70', 'Wilo', 'pump', 'operational', 1, 5, null, null, '2024-02-01', '2027-02-01'),
+		(30, 'b', 'S-30', 'C15', 'Daikin', 'chiller', 'operational', 3, 6, null, null, '2024-01-01', '2027-01-01');
+	insert into "order" (id, organization_id, number, customer_id, equipment_id, type, status, priority, description)
+	values (100, 'a', 'O-1', 1, 10, 'repair', 'scheduled', 'normal', 'Deur hapert');
+	insert into contract (id, organization_id, number, customer_id, level, starts_on, ends_on, monthly_fee, response_hours)
+	values (200, 'a', 'K-1', 1, 'basic', '2026-01-01', '2026-12-31', 10000, 24);
+	insert into contract_equipment (customer_id, contract_id, equipment_id) values (1, 200, 10);
+	insert into maintenance_plan (id, organization_id, equipment_id, order_type, description, interval_months, next_due_on, anchor_day)
+	values (300, 'a', 11, 'maintenance', 'Jaarlijks', 12, '2026-11-01', 1);
+`;
+
+/** What became of `beforeCategories`: the tenants' categories, their units, and what refers to them. */
+async function afterCategories(client: ReturnType<typeof createClient>) {
+	const all = async (sql: string) => (await client.execute(sql)).rows.map((row) => ({ ...row }));
+	return {
+		categories: await all(
+			"select organization_id, name, specialty, position from equipment_category order by organization_id, position",
+		),
+		units: await all(
+			"select e.id, e.organization_id, c.name as category, e.serial_number, e.status, e.site_id, e.name, e.location from equipment e join equipment_category c on c.id = e.category_id and c.organization_id = e.organization_id order by e.id",
+		),
+		orders: await all('select id, equipment_id from "order"'),
+		coverage: await all("select contract_id, equipment_id from contract_equipment"),
+		plans: await all("select id, equipment_id from maintenance_plan"),
+		leftovers: await all("select name from sqlite_master where name like '__old_%'"),
+		keys: await all("pragma foreign_key_check"),
+	};
+}
+
+const categoriesMade = {
+	// Only the categories each tenant's units had, by their Dutch names, in the old list's order.
+	categories: [
+		{ organization_id: "a", name: "Pomp", specialty: "plumbing", position: 4 },
+		{ organization_id: "a", name: "Lift", specialty: "controls", position: 5 },
+		{ organization_id: "b", name: "Koelmachine", specialty: "hvac", position: 1 },
+	],
+	units: [
+		{
+			id: 10,
+			organization_id: "a",
+			category: "Lift",
+			serial_number: "S-10",
+			status: "operational",
+			site_id: 5,
+			name: "Lift kantoor",
+			location: "Hal",
+		},
+		{
+			id: 11,
+			organization_id: "a",
+			category: "Pomp",
+			serial_number: "S-11",
+			status: "needs_service",
+			site_id: 5,
+			name: null,
+			location: null,
+		},
+		{
+			id: 12,
+			organization_id: "a",
+			category: "Pomp",
+			serial_number: "S-12",
+			status: "operational",
+			site_id: 5,
+			name: null,
+			location: null,
+		},
+		{
+			id: 30,
+			organization_id: "b",
+			category: "Koelmachine",
+			serial_number: "S-30",
+			status: "operational",
+			site_id: 6,
+			name: null,
+			location: null,
+		},
+	],
+	orders: [{ id: 100, equipment_id: 10 }],
+	coverage: [{ contract_id: 200, equipment_id: 10 }],
+	plans: [{ id: 300, equipment_id: 11 }],
+	leftovers: [],
+	keys: [],
+};
+
+test("0011_equipment-categories gives each tenant the categories its units had, and the units theirs", async () => {
+	const before = streamBefore(migrationsFolder, "0011_equipment-categories", "before-categories");
+	const client = createClient({ url: `file:${join(folder, "categories.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeCategories);
+	await migrate(drizzle(client), { migrationsFolder });
+	expect(await afterCategories(client)).toEqual(categoriesMade);
+	client.close();
+});
+
+test("the Durable Object's 0003_equipment-categories does the same with its foreign keys on", async () => {
+	const before = streamBefore(
+		durableFolder,
+		"0003_equipment-categories",
+		"before-categories-durable",
+	);
+	const client = createClient({ url: `file:${join(folder, "categories-durable.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeCategories);
+	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
+	const statements = readFileSync(join(durableFolder, "0003_equipment-categories.sql"), "utf8")
+		.split("--> statement-breakpoint")
+		.map((statement) => statement.trim())
+		.filter(Boolean);
+	await client.batch(statements, "write");
+	expect(await afterCategories(client)).toEqual(categoriesMade);
+	client.close();
+});

@@ -15,7 +15,6 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
-	import { label } from "#lib/i18n/index.ts";
 
 	import type {
 		createContract,
@@ -179,7 +178,7 @@
 								<Field.FieldContent>
 									<Field.FieldLabel for={id}>{unit.manufacturer} {unit.model}</Field.FieldLabel>
 									<Field.FieldDescription>
-										{unit.serialNumber} · {label("equipmentCategory", unit.category)}
+										{unit.serialNumber} · {unit.category}
 									</Field.FieldDescription>
 								</Field.FieldContent>
 								<EquipmentStatusBadge status={unit.status} />

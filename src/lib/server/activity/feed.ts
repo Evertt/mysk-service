@@ -18,7 +18,14 @@ import {
 import { inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { activity, customer, customerSite, engineer, equipment } from "#lib/server/db/schema.ts";
+import {
+	activity,
+	customer,
+	customerSite,
+	engineer,
+	equipment,
+	equipmentCategory,
+} from "#lib/server/db/schema.ts";
 
 export interface SubjectLink {
 	/** E.g. `order`. */
@@ -68,6 +75,11 @@ export async function lookUpNames(ids: Map<ReferenceType, Set<string>>): Promise
 				.select({ id: equipment.id, name: equipment.serialNumber })
 				.from(equipment)
 				.where(and(inList(equipment.id, list), inTenant(equipment))),
+		category: (list: number[]) =>
+			db
+				.select({ id: equipmentCategory.id, name: equipmentCategory.name })
+				.from(equipmentCategory)
+				.where(and(inList(equipmentCategory.id, list), inTenant(equipmentCategory))),
 		site: (list: number[]) =>
 			db
 				.select({ id: customerSite.id, name: customerSite.name })

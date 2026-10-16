@@ -112,7 +112,6 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 					model: true,
 					manufacturer: true,
 					serialNumber: true,
-					category: true,
 					location: true,
 				},
 				with: { site: { columns: siteColumns } },

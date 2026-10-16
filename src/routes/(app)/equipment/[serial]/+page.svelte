@@ -8,14 +8,10 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import {
-		CategoryLabel,
-		StatusBadge as EquipmentStatusBadge,
-		WarrantyBadge,
-	} from "#lib/equipment/components.ts";
+	import { StatusBadge as EquipmentStatusBadge, WarrantyBadge } from "#lib/equipment/components.ts";
 	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
-	import { categories, unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDate, label } from "#lib/i18n/index.ts";
@@ -38,7 +34,7 @@
 
 <PageHeader
 	title={name}
-	description={[categories[unit.category].label, unit.name && unitModel(unit), unit.serialNumber]
+	description={[unit.category.name, unit.name && unitModel(unit), unit.serialNumber]
 		.filter(Boolean)
 		.join(" · ")}
 	breadcrumbs={[
@@ -87,9 +83,7 @@
 					<DetailItem label={m.equipment_field_manufacturer()} value={unit.manufacturer} />
 					<DetailItem label={m.equipment_detail_model()} value={unit.model} />
 					<DetailItem label={m.equipment_field_serial_number()} value={unit.serialNumber} />
-					<DetailItem label={m.equipment_field_category()}>
-						<CategoryLabel category={unit.category} />
-					</DetailItem>
+					<DetailItem label={m.equipment_field_category()} value={unit.category.name} />
 					<DetailItem label={m.equipment_detail_site()} value={site.name} />
 					<DetailItem label={m.equipment_detail_location()} value={unit.location} />
 					<DetailItem label={m.equipment_column_installed()} value={formatDate(unit.installedAt)} />

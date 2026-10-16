@@ -78,6 +78,13 @@
       "when": 1792164842239,
       "tag": "0010_add-customer-sites",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792174204163,
+      "tag": "0011_equipment-categories",
+      "breakpoints": true
     }
   ]
 }

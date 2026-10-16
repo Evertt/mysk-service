@@ -15,7 +15,8 @@
 	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
-	import { categoryOptions, statusOptions } from "../display.ts";
+	import type { getEquipmentCategories } from "../categories/categories.remote.ts";
+	import { statusOptions } from "../display.ts";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
 	import { columns, type EquipmentRow } from "./columns.ts";
 	import { type getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
@@ -27,6 +28,7 @@
 		list: given,
 		equipment,
 		facets,
+		categories,
 	}: {
 		/** The equipment list with the tenant's modules' columns (`extendList()`). */
 		list: List<typeof equipmentList.columns>;
@@ -37,7 +39,14 @@
 		equipment: Awaited<ReturnType<typeof getEquipmentList>>;
 		/** How many units have each value of the filters'. */
 		facets: Awaited<ReturnType<typeof getEquipmentFacets>>;
+		/** The tenant's categories in their order, for the category filter. */
+		categories: Awaited<ReturnType<typeof getEquipmentCategories>>;
 	} = $props();
+
+	// By id, as the URL has them.
+	const categoryOptions = $derived(
+		categories.map((category) => ({ value: String(category.id), label: category.name })),
+	);
 
 	// The tenant's, which don't change while the page is open (switching organization reloads it).
 	const list = untrack(() => given);

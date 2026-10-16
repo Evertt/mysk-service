@@ -6,10 +6,9 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
-import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
+import { equipmentStatuses } from "#lib/models.ts";
 
 import { unitModel, unitTitle } from "../display.ts";
-import CategoryLabel from "../ui/category-label.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
@@ -47,15 +46,13 @@ export const columns = column.columns([
 		enableGrouping: true,
 		meta: { label: m.equipment_column_manufacturer },
 	}),
-	column.accessor("category", {
-		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
-		filterFn: "oneOf",
+	// One of the tenant's categories, shown by name, filtered and grouped by id (`?category=3`).
+	column.accessor((row) => row.category.name, {
+		id: "category",
+		filterFn: (row, _id, ids: string[]) => ids.includes(String(row.original.category.id)),
 		enableGrouping: true,
-		meta: {
-			label: m.equipment_column_category,
-			filterValues: equipmentCategories,
-			clickFilter: (category) => labelOrValue("equipmentCategory", category),
-		},
+		getGroupingValue: (row) => row.category.id,
+		meta: { label: m.equipment_column_category, filter: "set" },
 	}),
 	column.accessor("status", {
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),

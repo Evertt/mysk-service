@@ -1,8 +1,6 @@
 import type { Faker } from "@faker-js/faker";
 
 import {
-	equipmentCategories,
-	type EquipmentCategory,
 	type EquipmentStatus,
 	isCorrectiveWork,
 	type OrderPriority,
@@ -10,10 +8,11 @@ import {
 	type OrderType,
 } from "#lib/models.ts";
 
+import { type SeedCategory, seedCategoryKeys } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 
 // Brands common in Dutch installations.
-const manufacturers: Record<EquipmentCategory, string[]> = {
+const manufacturers: Record<SeedCategory, string[]> = {
 	generator: ["Bredenoord", "Kohler SDMO", "Cummins"],
 	chiller: ["Daikin", "Carrier", "Trane"],
 	boiler: ["Remeha", "Intergas", "Nefit Bosch", "Vaillant"],
@@ -23,12 +22,15 @@ const manufacturers: Record<EquipmentCategory, string[]> = {
 	air_handler: ["Systemair", "Swegon", "Hoval"],
 };
 
-/** One to five units for each customer, installed after the customer joined; ids from 1. */
+/**
+ * One to five units for each customer, installed after the customer joined; ids from 1. Each has
+ * one of the demo categories, by its key (see `seedCategories`).
+ */
 export function generateEquipment(faker: Faker, customers: { id: number; createdAt: Date }[]) {
 	return customers
 		.flatMap((owner) =>
 			Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => {
-				const category = faker.helpers.arrayElement(equipmentCategories);
+				const category = faker.helpers.arrayElement(seedCategoryKeys);
 				const installedAt = faker.date.between({ from: owner.createdAt, to: addDays(now, -60) });
 				return {
 					serialNumber: faker.string.alphanumeric({ length: 10, casing: "upper" }),

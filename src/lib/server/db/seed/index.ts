@@ -27,6 +27,7 @@ import { demoOrganizations, demoUsers } from "../demo.ts";
 import { moduleSeeds } from "../module-seeds.gen.ts";
 import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
+import { seedCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateSites } from "./sites.ts";
@@ -94,6 +95,7 @@ await db.transaction(async (tx) => {
 		schema.orderNote,
 		order,
 		equipment,
+		schema.equipmentCategory,
 		schema.customerSite,
 		engineer,
 		customer,
@@ -107,6 +109,7 @@ await db.transaction(async (tx) => {
 
 	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
 	const offset = {
+		category: 0,
 		customer: 0,
 		site: 0,
 		engineer: 0,
@@ -150,7 +153,17 @@ await db.transaction(async (tx) => {
 		}
 		const organizationId = tenant.id;
 		const o = { ...offset };
+		// The tenant's categories, in the order of `seedCategories`, and their ids by key.
+		const categoryId = (key: string) =>
+			seedCategories.findIndex((category) => category.key === key) + 1 + o.category;
 		const rows = {
+			categories: seedCategories.map(({ name, specialty }, position) => ({
+				id: position + 1 + o.category,
+				organizationId,
+				name,
+				specialty,
+				position,
+			})),
 			customers: data.customers.map((c) => ({
 				...c,
 				organizationId,
@@ -170,9 +183,10 @@ await db.transaction(async (tx) => {
 				id: e.id + o.engineer,
 				hiredAt: toDay(e.hiredAt),
 			})),
-			equipments: data.equipments.map((e) => ({
+			equipments: data.equipments.map(({ category, ...e }) => ({
 				...e,
 				organizationId,
+				categoryId: categoryId(category),
 				installedAt: toDay(e.installedAt),
 				warrantyUntil: toDay(e.warrantyUntil),
 				id: e.id + o.equipment,
@@ -193,6 +207,7 @@ await db.transaction(async (tx) => {
 			})),
 		};
 
+		await tx.insert(schema.equipmentCategory).values(rows.categories);
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
 		await insertAll(rows.sites, (chunk) => tx.insert(schema.customerSite).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
@@ -229,6 +244,7 @@ await db.transaction(async (tx) => {
 			data: generated,
 			collect: seedCollectors(moduleSeeds, tenant, generated),
 		});
+		offset.category += rows.categories.length;
 		offset.customer += rows.customers.length;
 		offset.site += rows.sites.length;
 		offset.engineer += rows.engineers.length;

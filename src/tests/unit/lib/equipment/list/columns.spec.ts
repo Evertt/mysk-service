@@ -18,7 +18,7 @@ const unit = (serialNumber: string, fields: Partial<EquipmentRow> = {}): Equipme
 	manufacturer: "Caterpillar",
 	model: "C15",
 	location: null,
-	category: "generator",
+	category: { id: 1, name: "Aggregaat" },
 	status: "operational",
 	installedAt: day("2025-05-01"),
 	warrantyUntil: day("2028-04-30"),
@@ -87,18 +87,29 @@ test("units sort by their site and their location there, those without one last"
 	]);
 });
 
+const chiller = { id: 2, name: "Koelmachine" };
+
 test("the manufacturer, category and status filters keep the chosen values", () => {
 	const rows = [
 		unit("GEN-1"),
-		unit("CHL-1", { manufacturer: "Daikin", category: "chiller" }),
-		unit("CHL-2", { manufacturer: "Daikin", category: "chiller", status: "needs_service" }),
+		unit("CHL-1", { manufacturer: "Daikin", category: chiller }),
+		unit("CHL-2", { manufacturer: "Daikin", category: chiller, status: "needs_service" }),
 	];
 	const filters = [
 		{ id: "manufacturer", value: ["Daikin"] },
-		{ id: "category", value: ["chiller"] },
+		// By the category's id, as the URL has it.
+		{ id: "category", value: ["2"] },
 		{ id: "status", value: ["needs_service", "out_of_service"] },
 	];
 	expect(shown(rows, { columnFilters: filters })).toEqual(["CHL-2"]);
+});
+
+test("the category shows the tenant's name for it, and groups by its id", () => {
+	const rows = [unit("GEN-1"), unit("CHL-1", { category: chiller })];
+	const [, row] = createAppTable({ columns, data: rows }).getRowModel().rows;
+	expect(row.getValue("category")).toBe("Koelmachine");
+	expect(row.getGroupingValue("category")).toBe(2);
+	expect(shown(rows, { globalFilter: "koelmachine" })).toEqual(["CHL-1"]);
 });
 
 test("the table reads and writes the URL as the equipment list says", () => {

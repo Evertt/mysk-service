@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
+import { equipmentStatuses } from "#lib/models.ts";
 import { date, id, text } from "#lib/schema.ts";
 
 /** An optional, trimmed text; `null` if it's left empty. */
@@ -22,7 +22,8 @@ export const equipmentFields = {
 	),
 	manufacturer: text(m.equipment_manufacturer_required),
 	model: text(m.equipment_model_required),
-	category: v.picklist(equipmentCategories, m.equipment_category_required),
+	/** One of the tenant's categories. */
+	categoryId: id(m.equipment_category_required),
 	status: v.picklist(equipmentStatuses, m.equipment_status_required),
 	/** The customer's own name or tag for it, if any. */
 	name: optionalText(),

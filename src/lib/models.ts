@@ -16,17 +16,6 @@ export const engineerSpecialties = [
 ] as const;
 export type EngineerSpecialty = (typeof engineerSpecialties)[number];
 
-export const equipmentCategories = [
-	"generator",
-	"chiller",
-	"boiler",
-	"compressor",
-	"pump",
-	"elevator",
-	"air_handler",
-] as const;
-export type EquipmentCategory = (typeof equipmentCategories)[number];
-
 export const equipmentStatuses = [
 	"operational",
 	"needs_service",
@@ -115,17 +104,6 @@ export const orderStatusChoices = (status: OrderStatus): readonly OrderStatus[] 
 
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
-
-/** Which engineer specialty services which equipment category. */
-export const specialtyForCategory: Record<EquipmentCategory, EngineerSpecialty> = {
-	generator: "electrical",
-	chiller: "hvac",
-	boiler: "plumbing",
-	compressor: "mechanical",
-	pump: "plumbing",
-	elevator: "controls",
-	air_handler: "hvac",
-};
 
 // --- Activity log ------------------------------------------------------------------------------
 

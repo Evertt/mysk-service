@@ -15,7 +15,7 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, equipment, equipmentCategory, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget, inDays } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
@@ -58,7 +58,12 @@ export const getContracts = query(async () => {
 export const getContract = query(v.string(), async (number) => {
 	const found = await db.query.contract.findFirst({
 		where: and(eq(contract.number, number), inTenant(contract)),
-		with: { customer: true, coverage: { with: { equipment: true } } },
+		with: {
+			customer: true,
+			coverage: {
+				with: { equipment: { with: { category: { columns: { name: true } } } } },
+			},
+		},
 	});
 	if (!found) error(404, m.contracts_not_found_number({ number }));
 
@@ -120,10 +125,11 @@ export const getContractFormOptions = query(async () => {
 				model: equipment.model,
 				manufacturer: equipment.manufacturer,
 				serialNumber: equipment.serialNumber,
-				category: equipment.category,
+				category: equipmentCategory.name,
 				status: equipment.status,
 			})
 			.from(equipment)
+			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
 			.where(inTenant(equipment))
 			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
 	]);

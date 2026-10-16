@@ -1,5 +1,6 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
+import type { SeedCategory } from "#lib/server/db/seed/categories.ts";
 import { addDays, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
@@ -7,9 +8,12 @@ import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 import { type PlanOrderType } from "../model.ts";
 import { maintenancePlan } from "./schema.ts";
 
-/** What a plan looks like per category, in Dutch like the rest of the demo data. */
+/**
+ * What a plan looks like per demo category (by its key, see `seedCategories`), in Dutch like the
+ * rest of the demo data.
+ */
 const kinds: Record<
-	"boiler" | "chiller" | "generator",
+	Extract<SeedCategory, "boiler" | "chiller" | "generator">,
 	{ description: string; type: PlanOrderType; interval: number }[]
 > = {
 	boiler: [

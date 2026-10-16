@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { getEquipmentCategories } from "#lib/equipment/remotes.ts";
 	import { labelOrValue } from "#lib/i18n/index.ts";
 	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
 
@@ -9,6 +10,7 @@
 	import { getOrganizationSettings } from "./settings.remote.ts";
 
 	const settings = $derived(await getOrganizationSettings());
+	const categories = $derived(await getEquipmentCategories());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
 </script>
 
@@ -81,6 +83,38 @@
 					{/each}
 				</Table.Body>
 			</Table.Root>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root data-testid="equipment-categories-summary">
+		<Card.Header>
+			<Card.Title>{m.equipment_categories_title()}</Card.Title>
+			<Card.Description>
+				{m.equipment_categories_description()}
+				{#if !settings.canManage}{m.settings_managers_change_these()}{/if}
+			</Card.Description>
+			{#if settings.canManage}
+				<Card.Action>
+					<Button
+						href={resolve("/(app)/settings/equipment-categories")}
+						variant="outline"
+						size="sm"
+					>
+						{m.equipment_categories_manage()}
+					</Button>
+				</Card.Action>
+			{/if}
+		</Card.Header>
+		<Card.Content>
+			{#if categories.length}
+				<div class="flex flex-wrap gap-2">
+					{#each categories as category (category.id)}
+						<Badge variant="outline">{category.name}</Badge>
+					{/each}
+				</div>
+			{:else}
+				<p class="text-sm text-muted-foreground">{m.equipment_categories_empty()}</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 </div>

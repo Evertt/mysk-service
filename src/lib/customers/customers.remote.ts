@@ -60,6 +60,7 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 			sites: { orderBy: (site, { asc }) => [asc(site.name), asc(site.id)] },
 			equipment: {
 				orderBy: (unit, { asc }) => [asc(unit.manufacturer), asc(unit.model)],
+				with: { category: { columns: { name: true } } },
 			},
 		},
 	});

@@ -7,7 +7,13 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, customerSite, equipment, order } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	customerSite,
+	equipment,
+	equipmentCategory,
+	order,
+} from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -21,7 +27,7 @@ import { removeEquipment } from "./server/equipment.ts";
 export const getEquipment = forMembers.query(v.string(), async (serialNumber) => {
 	const unit = await db.query.equipment.findFirst({
 		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
-		with: { customer: true, site: true },
+		with: { customer: true, site: true, category: { columns: { id: true, name: true } } },
 	});
 	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
 
@@ -32,9 +38,12 @@ export const getEquipment = forMembers.query(v.string(), async (serialNumber) =>
 	return { unit, orderCount };
 });
 
-/** Everything the equipment form needs to choose from: the tenant's customers and their sites. */
+/**
+ * Everything the equipment form needs to choose from: the tenant's customers and their sites, and
+ * its categories in their order.
+ */
 export const getEquipmentFormOptions = forMembers.query(async () => {
-	const [customers, sites] = await Promise.all([
+	const [customers, sites, categories] = await Promise.all([
 		db
 			.select({ id: customer.id, code: customer.code, name: customer.name })
 			.from(customer)
@@ -50,15 +59,23 @@ export const getEquipmentFormOptions = forMembers.query(async () => {
 			.from(customerSite)
 			.where(inTenant(customerSite))
 			.orderBy(asc(customerSite.name), asc(customerSite.id)),
+		db
+			.select({ id: equipmentCategory.id, name: equipmentCategory.name })
+			.from(equipmentCategory)
+			.where(inTenant(equipmentCategory))
+			.orderBy(asc(equipmentCategory.position), asc(equipmentCategory.id)),
 	]);
-	return { customers, sites };
+	return { customers, sites, categories };
 });
 
 type EquipmentInput = v.InferOutput<v.ObjectSchema<typeof equipmentFields, undefined>>;
-type UnitProblem = Problem<"serialNumber" | "customerId" | "siteId" | "warrantyUntil">;
+type UnitProblem = Problem<
+	"serialNumber" | "categoryId" | "customerId" | "siteId" | "warrantyUntil"
+>;
 
 /**
- * Checks what the schema can't: a serial number unique within the tenant, a customer of the
+ * Checks what the schema can't: a serial number unique within the tenant, a category of the
+ * tenant, a customer of the
  * tenant and a site of that customer, and not moving a unit with orders. `existing` must already be checked to be in the tenant.
  */
 async function checkUnit(
@@ -72,6 +89,13 @@ async function checkUnit(
 	});
 	if (sameSerial && sameSerial.id !== existing?.id) {
 		problems.push({ field: "serialNumber", message: m.equipment_serial_taken() });
+	}
+	const category = await db.query.equipmentCategory.findFirst({
+		columns: { id: true },
+		where: idInTenant(equipmentCategory, input.categoryId),
+	});
+	if (!category) {
+		problems.push({ field: "categoryId", message: m.equipment_category_unknown() });
 	}
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },

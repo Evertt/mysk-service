@@ -123,5 +123,7 @@
 	"activity_field_preferred_day": "preferred day",
 	"activity_field_slot_start": "available from",
 	"activity_field_slot_end": "available until",
-	"activity_field_access_notes": "access notes"
+	"activity_field_access_notes": "access notes",
+	"activity_subject_equipment_category": "equipment category",
+	"activity_field_position": "position"
 }
