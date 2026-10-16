@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { countIn, nextCode, organizations, rows, useApp, value, quiet } from "./app.ts";
-import { orderId, snapshot } from "./orders-helpers.ts";
+import { addUnits, formUnits, orderId, orderUnits, snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -27,18 +27,19 @@ describe("in North", () => {
 		expect(options - 1).toBe(await countIn("customer", north.id));
 	});
 
-	test("changing the customer clears the equipment", async () => {
+	test("changing the customer clears the units", async () => {
 		const { page } = app;
 		await page.getByLabel("Customer").selectOption({ index: 2 });
-		await page.getByLabel("Equipment").selectOption({ index: 1 });
+		await addUnits(app, 0);
+		expect(await formUnits(app)).toHaveLength(1);
 		await page.getByLabel("Customer").selectOption({ index: 1 });
-		expect(await page.getByLabel("Equipment").inputValue()).toBe("");
+		expect(await formUnits(app)).toEqual([]);
 	});
 
 	test("a unit's category puts the engineers who service it first", async () => {
 		const { page } = app;
-		await page.getByLabel("Equipment").selectOption({ index: 1 });
-		const unit = Number(await page.getByLabel("Equipment").inputValue());
+		await addUnits(app, 0);
+		const [unit] = await formUnits(app);
 		const specialty = await value<string>(
 			`select c.specialty from equipment e join equipment_category c on c.id = e.category_id
 			 where e.id = ?`,
@@ -61,7 +62,6 @@ describe("in North", () => {
 
 	test("a new order gets the next number", async () => {
 		const { page } = app;
-		await page.getByLabel("Equipment").selectOption({ index: 1 });
 		await page.getByLabel("Type").selectOption("repair");
 		await page.getByLabel("Priority").selectOption("high");
 		await page.getByLabel("Description").fill("Pump leaking at the seal (test order)");
@@ -86,7 +86,8 @@ describe("in North", () => {
 	test("its page shows the site of its unit, with what to know before going there", async () => {
 		const [site] = await rows<Record<string, string | null>>(
 			`select s.name, s.address, s.postal_code, s.city, s.access_notes from "order" o
-			 join equipment e on e.id = o.equipment_id join customer_site s on s.id = e.site_id
+			 join order_unit u on u.order_id = o.id join equipment e on e.id = u.equipment_id
+			 join customer_site s on s.id = e.site_id
 			 where o.number = ? and o.organization_id = ?`,
 			[number, north.id],
 		);

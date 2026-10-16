@@ -12,11 +12,16 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
 
+import { setOrderUnits } from "./units.ts";
+
 /** A new order's fields, without its number and tenant, which `createOrders()` gives it. */
 export interface OrderDraft {
 	customerId: number;
-	/** One of the customer's units, if the order is about one. */
-	equipmentId?: number | null;
+	/**
+	 * The customer's units it's about, by id, in the order they're worked on: none for a new
+	 * installation or a survey (and if not given).
+	 */
+	units?: readonly number[];
 	engineerId?: number | null;
 	type: OrderType;
 	/** `quote` if not given, as the order form starts. */
@@ -33,7 +38,7 @@ export interface OrderDraft {
 interface DraftProblem {
 	/** The draft's index in the batch. */
 	draft: number;
-	field: "customerId" | "equipmentId" | "engineerId";
+	field: "customerId" | "equipmentIds" | "engineerId";
 	message: string;
 }
 
@@ -50,7 +55,7 @@ async function orderDraftProblems(
 	drafts: readonly OrderDraft[],
 ): Promise<DraftProblem[]> {
 	const customerIds = unique(drafts.map((draft) => draft.customerId));
-	const unitIds = unique(drafts.map((draft) => draft.equipmentId));
+	const unitIds = unique(drafts.flatMap((draft) => draft.units ?? []));
 	const engineerIds = unique(drafts.map((draft) => draft.engineerId));
 	const [customers, units, engineers] = await Promise.all([
 		customerIds.length
@@ -75,11 +80,12 @@ async function orderDraftProblems(
 		if (!knownCustomers.has(draft.customerId)) {
 			problems.push({ draft: index, field: "customerId", message: m.orders_unknown_customer() });
 		}
-		if (draft.equipmentId && ownerOf.get(draft.equipmentId) !== draft.customerId) {
+		// Another tenant's unit is no unit of this customer's either.
+		if (draft.units?.some((unit) => ownerOf.get(unit) !== draft.customerId)) {
 			problems.push({
 				draft: index,
-				field: "equipmentId",
-				message: m.orders_equipment_other_customer(),
+				field: "equipmentIds",
+				message: m.orders_units_other_customer(),
 			});
 		}
 		if (draft.engineerId && !knownEngineers.has(draft.engineerId)) {
@@ -92,10 +98,10 @@ async function orderDraftProblems(
 /**
  * Creates orders in the current tenant, in `tx`: checks their references (refusing the lot with
  * `invalid()` if any is wrong, so a form shows why and a bulk command skips the record with the
- * reason), gives each the tenant's next number, inserts them and logs each one's `created`.
- * Returns their ids and numbers, in the drafts' order. What the modules add to an order (e.g. its
- * materials) isn't part of a draft: the order form saves its modules' parts right after, in the same
- * transaction (`saveOrderParts()`); an order made without them has none to save.
+ * reason), gives each the tenant's next number, inserts them with their units and logs each one's
+ * `created`. Returns their ids and numbers, in the drafts' order. What the modules add to an order
+ * (e.g. its materials) isn't part of a draft: the order form saves its modules' parts right after,
+ * in the same transaction (`saveOrderParts()`); an order made without them has none to save.
  *
  * It doesn't emit `orders.committed` (`orderCommitted()`), as core's create never did: that event
  * has the modules refresh their queries about an order on the client's pages, and a new order is on
@@ -112,7 +118,7 @@ export async function createOrders(
 
 	const { organizationId } = currentTenant();
 	const created: { id: number; number: string }[] = [];
-	for (const draft of drafts) {
+	for (const { units = [], ...draft } of drafts) {
 		const values = { status: "quote" as const, priority: "normal" as const, ...draft };
 		// One at a time: each number follows the one inserted before it.
 		const number = await nextNumber(tx, "order");
@@ -120,8 +126,10 @@ export async function createOrders(
 			.insert(order)
 			.values({ ...values, organizationId, number })
 			.returning({ id: order.id });
+		const equipmentIds = [...new Set(units)];
+		await setOrderUnits(tx, { id: inserted.id, customerId: draft.customerId }, equipmentIds);
 		const subject = { type: "order", id: inserted.id, label: number };
-		await recordActivity(tx, { action: "created", subject, after: values });
+		await recordActivity(tx, { action: "created", subject, after: { ...values, equipmentIds } });
 		created.push({ id: inserted.id, number });
 	}
 	return created;

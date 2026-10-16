@@ -12,7 +12,7 @@ import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { NumberTarget } from "#lib/server/numbering.ts";
 
-import { coveringContract, isCoveredWork } from "../coverage.ts";
+import { coveringAllUnits, isCoveredWork } from "../coverage.ts";
 import { contractNumberFormat } from "../model.ts";
 import { contract, contractEquipment } from "./schema.ts";
 
@@ -29,12 +29,15 @@ export type Coverage = Pick<
 	"id" | "number" | "level" | "responseHours" | "startsOn" | "endsOn"
 >;
 
-/** For each covered order (by id), the contract that covered it; see `coverage.ts`. */
+/**
+ * For each covered order (by id), the contract that covered it: one that covered every one of its
+ * units when it was made (see `coverage.ts`).
+ */
 export async function coverageOf(
-	orders: Pick<OrderFacts, "id" | "type" | "equipmentId" | "createdAt">[],
+	orders: Pick<OrderFacts, "id" | "type" | "equipmentIds" | "createdAt">[],
 ): Promise<Map<number, Coverage>> {
-	const covered = orders.filter((order) => order.equipmentId && isCoveredWork(order.type));
-	const units = [...new Set(covered.map((order) => order.equipmentId!))];
+	const covered = orders.filter((order) => order.equipmentIds.length && isCoveredWork(order.type));
+	const units = [...new Set(covered.flatMap((order) => order.equipmentIds))];
 	if (!units.length) return new Map();
 
 	// Coverage has no tenant of its own: it's reached through the tenant's contracts.
@@ -55,7 +58,8 @@ export async function coverageOf(
 
 	return new Map(
 		covered.flatMap((order) => {
-			const found = coveringContract(byUnit.get(order.equipmentId!) ?? [], order.createdAt);
+			const own = order.equipmentIds.flatMap((unit) => byUnit.get(unit) ?? []);
+			const found = coveringAllUnits(own, order.equipmentIds, order.createdAt);
 			if (!found) return [];
 			const { equipmentId: _equipmentId, ...coverage } = found;
 			return [[order.id, coverage]];

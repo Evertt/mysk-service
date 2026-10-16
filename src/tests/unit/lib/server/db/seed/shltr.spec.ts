@@ -86,12 +86,43 @@ describe("SHLTR's demo data", () => {
 		]);
 		for (const [name, open] of Object.entries(counted)) {
 			const unit = riedel.find((u) => u.name === name)!;
-			expect(orders.filter((o) => o.equipmentId === unit.id && isOpen(o.status)).length, name).toBe(
-				open,
-			);
+			expect(
+				orders.filter((o) => o.equipmentIds.includes(unit.id) && isOpen(o.status)).length,
+				name,
+			).toBe(open);
 		}
 		expect(riedel.find((u) => u.name?.endsWith("TDTE-01"))!.status).toBe("out_of_service");
 		expect(riedel.find((u) => u.name === "Sectionaaldeur laaddok 07")!.status).toBe("operational");
+	});
+
+	test("Riedel's and Weggemans' inspections and maintenance take many units at once", () => {
+		const together = (name: string) =>
+			orders.filter(
+				(o) =>
+					o.customerId === customer(name).id &&
+					["inspection", "maintenance"].includes(o.type) &&
+					o.equipmentIds.length > 1,
+			);
+		const riedel = unitsOf("Riedel B.V.");
+		// The yearly inspection of all its doors is one order.
+		const doors = riedel.filter((unit) =>
+			["automatic_door", "fire_door", "high_speed_door", "sectional_door"].includes(unit.category),
+		);
+		const all = together("Riedel B.V.").find((o) =>
+			o.description.startsWith("Jaarlijkse keuring"),
+		)!;
+		expect(new Set(all.equipmentIds)).toEqual(new Set(doors.map((unit) => unit.id)));
+		expect(all.equipmentIds[0]).toBe(
+			riedel.find((u) => u.name === "Automatische deur kantine")!.id,
+		);
+		// Weggemans' docks: doors and levellers, planned.
+		const docks = together("Weggemans Logistiek").find((o) => o.type === "inspection")!;
+		expect(docks.equipmentIds).toHaveLength(16);
+		expect(docks.status).toBe("scheduled");
+		expect(together("Weggemans Logistiek").length).toBeGreaterThan(3);
+		// Most orders are about one unit.
+		const single = orders.filter((o) => o.equipmentIds.length === 1).length;
+		expect(single / orders.length).toBeGreaterThan(0.8);
 	});
 
 	test("its units are in SHLTR's categories, and its engineers' specialties cover them", () => {
@@ -123,8 +154,10 @@ describe("SHLTR's demo data", () => {
 		const staff = new Map(engineers.map((e) => [e.id, e]));
 		let fitting = 0;
 		for (const o of orders) {
-			const unit = o.equipmentId ? units.get(o.equipmentId)! : undefined;
-			if (unit) expect(unit.customerId).toBe(o.customerId);
+			const own = o.equipmentIds.map((id) => units.get(id)!);
+			for (const unit of own) expect(unit.customerId).toBe(o.customerId);
+			expect(new Set(o.equipmentIds).size).toBe(o.equipmentIds.length);
+			const [unit] = own;
 			expect(o.createdAt.getTime()).toBeLessThanOrEqual(now.getTime());
 			if (o.status === "quote") {
 				expect([o.scheduledFor, o.engineerId]).toEqual([null, null]);
@@ -139,9 +172,9 @@ describe("SHLTR's demo data", () => {
 			expect(o.completedAt !== null).toBe(["completed", "invoiced"].includes(o.status));
 			if (unit && staff.get(o.engineerId!)!.specialty === specialtyOf(unit.category)) fitting++;
 		}
-		expect(fitting / orders.filter((o) => o.equipmentId && o.engineerId).length).toBeGreaterThan(
-			0.9,
-		);
+		expect(
+			fitting / orders.filter((o) => o.equipmentIds.length && o.engineerId).length,
+		).toBeGreaterThan(0.9);
 	});
 
 	test("its engineers have one to three jobs a day, now and then four", () => {

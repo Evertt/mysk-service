@@ -8,6 +8,7 @@ import {
 	type OrderPlan,
 	OrderRefused,
 	scheduleOrder as planOrder,
+	withFirstUnit,
 } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -76,14 +77,15 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 
 	const [team, orders, backlog] = await Promise.all([
 		engineers(),
-		scheduledIn(week),
+		scheduledIn(week).then(withFirstUnit),
 		db
 			.select(cardColumns)
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
 			.where(
 				and(inTenant(order), isNull(order.scheduledFor), inList(order.status, openOrderStatuses)),
-			),
+			)
+			.then(withFirstUnit),
 	]);
 	return { start, engineers: team, orders, backlog: backlog.sort(byPriorityThenAge) };
 });
@@ -95,7 +97,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
  */
 export const getScheduleMonth = query(date(m.schedule_date_required), async (day) => {
 	const range = monthRange(day);
-	const [team, orders] = await Promise.all([engineers(), scheduledIn(range)]);
+	const [team, orders] = await Promise.all([engineers(), scheduledIn(range).then(withFirstUnit)]);
 	return { month: day.with({ day: 1 }), engineers: team, orders };
 });
 

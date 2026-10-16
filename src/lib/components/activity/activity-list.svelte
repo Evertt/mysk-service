@@ -66,9 +66,13 @@
 						{#each entry.changes as change (change.field)}
 							<li class="break-words">
 								{change.field}:
-								<span class="text-foreground/80">{change.before}</span>
-								→
-								<span class="text-foreground">{change.after}</span>
+								{#if change.summary}
+									<span class="text-foreground">{change.summary}</span>
+								{:else}
+									<span class="text-foreground/80">{change.before}</span>
+									→
+									<span class="text-foreground">{change.after}</span>
+								{/if}
 							</li>
 						{/each}
 					</ul>

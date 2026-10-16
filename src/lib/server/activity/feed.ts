@@ -3,7 +3,7 @@
  * subject's noun, its changes with the names they refer to, and what its link is found by, in the
  * request's language. The queries that use it are in `#lib/components/activity/activity.remote.ts`.
  */
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 
 import {
 	type Change,
@@ -73,6 +73,15 @@ export async function lookUpNames(ids: Map<ReferenceType, Set<string>>): Promise
 		equipment: (list: number[]) =>
 			db
 				.select({ id: equipment.id, name: equipment.serialNumber })
+				.from(equipment)
+				.where(and(inList(equipment.id, list), inTenant(equipment))),
+		// What it's called (the customer's name for it, else its make), and its serial number.
+		unit: (list: number[]) =>
+			db
+				.select({
+					id: equipment.id,
+					name: sql<string>`coalesce(${equipment.name}, ${equipment.manufacturer} || ' ' || ${equipment.model}) || ' (' || ${equipment.serialNumber} || ')'`,
+				})
 				.from(equipment)
 				.where(and(inList(equipment.id, list), inTenant(equipment))),
 		category: (list: number[]) =>

@@ -195,7 +195,7 @@ describe("in North", () => {
 		);
 		const [used] = await rows<{ id: number; serial_number: string }>(
 			`select e.id, e.serial_number from equipment e where e.customer_id = ?
-			 and exists (select 1 from "order" o where o.equipment_id = e.id) order by e.id limit 1`,
+			 and exists (select 1 from order_unit ou where ou.equipment_id = e.id) order by e.id limit 1`,
 			[customer_id],
 		);
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });

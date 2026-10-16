@@ -12,7 +12,7 @@ import {
 	customerSite,
 	equipment,
 	equipmentCategory,
-	order,
+	orderUnit,
 } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -33,8 +33,8 @@ export const getEquipment = forMembers.query(v.string(), async (serialNumber) =>
 
 	const [{ orderCount }] = await db
 		.select({ orderCount: count() })
-		.from(order)
-		.where(and(eq(order.equipmentId, unit.id), inTenant(order)));
+		.from(orderUnit)
+		.where(and(eq(orderUnit.equipmentId, unit.id), inTenant(orderUnit)));
 	return { unit, orderCount };
 });
 
@@ -119,8 +119,8 @@ async function checkUnit(
 	} else if (existing && existing.customerId !== input.customerId) {
 		const [{ total }] = await db
 			.select({ total: count() })
-			.from(order)
-			.where(and(eq(order.equipmentId, existing.id), inTenant(order)));
+			.from(orderUnit)
+			.where(and(eq(orderUnit.equipmentId, existing.id), inTenant(orderUnit)));
 		if (total) {
 			problems.push({ field: "customerId", message: m.equipment_move_refused({ count: total }) });
 		}

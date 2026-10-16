@@ -1,9 +1,9 @@
 <!--
 	@component
-	Other orders for the same unit as an order, for context.
+	Other orders for the same units as an order (any of them), for context.
 -->
 <script lang="ts">
-	import { formatDate } from "#lib/i18n/index.ts";
+	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 
 	import type { getOrder } from "../order.remote.ts";
 	import OrderLink from "../ui/order-link.svelte";
@@ -11,10 +11,11 @@
 	import TypeLabel from "../ui/type-label.svelte";
 
 	let {
-		serialNumber,
+		units,
 		history,
 	}: {
-		serialNumber: string;
+		/** The order's units: at least one. */
+		units: readonly { serialNumber: string }[];
 		history: Awaited<ReturnType<typeof getOrder>>["history"];
 	} = $props();
 </script>
@@ -23,7 +24,9 @@
 	<Card.Header>
 		<Card.Title>{m.orders_history()}</Card.Title>
 		<Card.Description>
-			{m.orders_history_description({ serial: serialNumber })}
+			{units.length === 1
+				? m.orders_history_description({ serial: units[0].serialNumber })
+				: m.orders_history_units_description({ count: formatNumber(units.length) })}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
@@ -56,7 +59,11 @@
 			<Empty.Root class="p-6">
 				<Empty.Header>
 					<Empty.Title>{m.orders_history_empty_title()}</Empty.Title>
-					<Empty.Description>{m.orders_history_empty_description()}</Empty.Description>
+					<Empty.Description>
+						{units.length === 1
+							? m.orders_history_empty_description()
+							: m.orders_history_empty_units_description()}
+					</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
 		{/if}

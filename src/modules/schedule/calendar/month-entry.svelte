@@ -8,7 +8,7 @@
 	import { resolve } from "$app/paths";
 
 	import { formatTime } from "#lib/i18n/index.ts";
-	import { types } from "#lib/orders/index.ts";
+	import { types, unitsSummary } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { initials, type ScheduleMonthOrder } from "./calendar.ts";
@@ -27,8 +27,10 @@
 
 	const type = $derived(types[order.type]);
 	const color = $derived(typeColors[order.type]);
+	// Its first unit and how many more, e.g. "Deur 07 +14".
+	const units = $derived(unitsSummary(order.unit, order.unitCount));
 	const details = $derived(
-		[order.number, order.customer.name, type.label, order.description, engineer]
+		[order.number, order.customer.name, type.label, units, order.description, engineer]
 			.filter(Boolean)
 			.join(" · "),
 	);
@@ -53,7 +55,14 @@
 	{#if order.scheduledFor}
 		<span class="shrink-0 font-medium tabular-nums">{formatTime(order.scheduledFor)}</span>
 	{/if}
-	<span class="min-w-0 truncate">{order.customer.name} — {type.label}</span>
+	<span class="min-w-0 truncate">
+		{order.customer.name} — {type.label}{#if units && !compact}<span
+				class="text-muted-foreground"
+				data-units
+			>
+				· {units}</span
+			>{/if}
+	</span>
 	{#if engineer}
 		{#if compact}
 			<!-- Initials where they fit; screen readers get the name. -->

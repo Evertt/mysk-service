@@ -2,11 +2,16 @@
  * What a service contract means for an order. The one place that says so; the server applies it
  * (`server/index.ts`) and the pages show it.
  *
- * - **Coverage**: an order is covered when its unit was covered by a contract that was active on
- *   the day the order was created, and it's work a contract covers: servicing the unit
- *   (breakdowns, repairs, maintenance, inspections), not new work on it, damage, or "other" (see
- *   `coveredOrderTypes` in `model.ts`). Should several contracts have covered the unit, the one
- *   with the fastest response counts.
+ * - **Coverage**: an order is covered when its units were covered by a contract that was active on
+ *   the day the order was created, and it's work a contract covers: servicing the units
+ *   (breakdowns, repairs, maintenance, inspections), not new work on them, damage, or "other" (see
+ *   `coveredOrderTypes` in `model.ts`). Should several contracts have covered them, the one with
+ *   the fastest response counts. An order about several units (the yearly inspection of all the
+ *   doors) is covered only by a contract that covers every one of them: with mixed coverage (a
+ *   unit no contract covers, or units that only different contracts cover together) it isn't
+ *   covered at all, and is billed and responded to as uncovered work. An order's price and response
+ *   time are the order's, not its units', so they can't be split between contracts; the office
+ *   splits such an order by contract instead. An order without units is never covered.
  * - **Price**: what's included costs the customer nothing; it shows as a discount on the order.
  *   Basic includes no work (only the guaranteed response time), standard includes labour, premium
  *   includes labour and materials (every cost the tenant's modules add to an order: today, its
@@ -59,6 +64,28 @@ export function coveringContract<
 			(best, contract) => (best && best.responseHours <= contract.responseHours ? best : contract),
 			undefined,
 		);
+}
+
+/**
+ * Of the contracts covering any of an order's `units` (`coverage`: a row per contract and unit it
+ * covers), the one that covered all of them at `at`, if any: the fastest response wins. Mixed
+ * coverage, or no units, is no coverage (see the top of this file).
+ */
+export function coveringAllUnits<
+	T extends {
+		id: number;
+		equipmentId: number;
+		startsOn: Temporal.PlainDate;
+		endsOn: Temporal.PlainDate;
+		responseHours: number;
+	},
+>(coverage: readonly T[], units: readonly number[], at: Temporal.PlainDate | Temporal.Instant) {
+	if (!units.length) return undefined;
+	const candidates = [...Map.groupBy(coverage, (row) => row.id).values()].flatMap((rows) => {
+		const covered = new Set(rows.map((row) => row.equipmentId));
+		return units.every((unit) => covered.has(unit)) ? [rows[0]] : [];
+	});
+	return coveringContract(candidates, at);
 }
 
 /**

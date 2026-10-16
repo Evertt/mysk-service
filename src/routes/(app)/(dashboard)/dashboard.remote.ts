@@ -2,7 +2,7 @@ import { and, asc, count, eq, gte, min, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -37,7 +37,6 @@ export const getDashboard = forMembers.query(async () => {
 			id: order.id,
 			type: order.type,
 			status: order.status,
-			equipmentId: order.equipmentId,
 			createdAt: order.createdAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
@@ -51,7 +50,7 @@ export const getDashboard = forMembers.query(async () => {
 				gte(order.completedAt, monthAgo),
 			),
 		);
-	const prices = await priceOrders(done);
+	const prices = await priceOrders(await withUnitIds(done));
 	const revenue = {
 		total: prices.reduce((sum, price) => sum + price.total, 0),
 		orders: done.length,
@@ -121,7 +120,6 @@ export const getCharts = forMembers.query(async () => {
 			id: order.id,
 			type: order.type,
 			status: order.status,
-			equipmentId: order.equipmentId,
 			createdAt: order.createdAt,
 			completedAt: order.completedAt,
 			laborHours: order.laborHours,
@@ -136,7 +134,7 @@ export const getCharts = forMembers.query(async () => {
 				gte(order.completedAt, start(months[0])),
 			),
 		);
-	const prices = await priceOrders(done);
+	const prices = await priceOrders(await withUnitIds(done));
 	const completed = done.map((row, i) => ({
 		completedAt: row.completedAt!,
 		total: prices[i].total,

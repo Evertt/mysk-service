@@ -118,6 +118,7 @@ await db.transaction(async (tx) => {
 		schema.savedView,
 		schema.orderSignoff,
 		schema.orderNote,
+		schema.orderUnit,
 		order,
 		equipment,
 		schema.equipmentCategory,
@@ -215,7 +216,7 @@ await db.transaction(async (tx) => {
 				siteId: placed.units.get(e.id)!.siteId + o.site,
 				location: placed.units.get(e.id)!.location,
 			})),
-			orders: data.orders.map((r) => ({
+			orders: data.orders.map(({ equipmentIds: _units, ...r }) => ({
 				...r,
 				organizationId,
 				createdAt: toMoment(r.createdAt),
@@ -223,9 +224,18 @@ await db.transaction(async (tx) => {
 				completedAt: toMomentOrNull(r.completedAt),
 				id: r.id + o.order,
 				customerId: r.customerId + o.customer,
-				equipmentId: r.equipmentId && r.equipmentId + o.equipment,
 				engineerId: r.engineerId && r.engineerId + o.engineer,
 			})),
+			// Each order's units, in their order.
+			orderUnits: data.orders.flatMap((r) =>
+				r.equipmentIds.map((unit, position) => ({
+					organizationId,
+					orderId: r.id + o.order,
+					customerId: r.customerId + o.customer,
+					equipmentId: unit + o.equipment,
+					position,
+				})),
+			),
 		};
 
 		await tx.insert(schema.equipmentCategory).values(rows.categories);
@@ -234,6 +244,7 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
 		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
+		await insertAll(rows.orderUnits, (chunk) => tx.insert(schema.orderUnit).values(chunk));
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>

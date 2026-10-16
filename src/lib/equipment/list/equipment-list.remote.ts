@@ -4,7 +4,7 @@ import * as v from "valibot";
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -13,6 +13,7 @@ import {
 	equipment,
 	equipmentCategory,
 	order,
+	orderUnit,
 } from "#lib/server/db/schema.ts";
 import {
 	bulkChange,
@@ -67,16 +68,17 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 	const ids = fetched.map((row) => row.id);
 	const open = ids.length
 		? await db
-				.select({ equipmentId: order.equipmentId, count: count() })
-				.from(order)
+				.select({ equipmentId: orderUnit.equipmentId, count: count() })
+				.from(orderUnit)
+				.innerJoin(...tenantJoin(order, orderUnit.orderId))
 				.where(
 					and(
-						inTenant(order),
-						inList(order.equipmentId, ids),
+						inTenant(orderUnit),
+						inList(orderUnit.equipmentId, ids),
 						inList(order.status, openOrderStatuses),
 					),
 				)
-				.groupBy(order.equipmentId)
+				.groupBy(orderUnit.equipmentId)
 		: [];
 	const openOf = new Map(open.map((row) => [row.equipmentId, row.count]));
 	// What the tenant's modules' columns show for them, e.g. the next maintenance.

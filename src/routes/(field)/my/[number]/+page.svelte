@@ -10,9 +10,9 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { unitModel } from "#lib/equipment/index.ts";
+	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
+	import { formatDateTime, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
@@ -29,7 +29,7 @@
 
 	const data = $derived(await getMyOrder(params.number));
 	const order = $derived(data.order);
-	const { customer, equipment } = $derived(data.order);
+	const { customer } = $derived(data.order);
 	const actions = $derived(fieldActions(order.status));
 
 	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
@@ -91,28 +91,60 @@
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<p class="whitespace-pre-line">{order.description}</p>
-		<dl class="grid grid-cols-2 gap-4">
-			{#if equipment}
+		{#if order.units.length === 1}
+			{@const [unit] = order.units}
+			<dl class="grid grid-cols-2 gap-4">
 				<DetailItem
 					label={m.portal_equipment()}
-					value={equipment.name
-						? `${equipment.name} · ${unitModel(equipment)}`
-						: unitModel(equipment)}
+					value={unit.name ? `${unit.name} · ${unitModel(unit)}` : unitModel(unit)}
 				/>
-				<DetailItem label={m.portal_serial_number()} value={equipment.serialNumber} />
-				{#if equipment.location}
-					<DetailItem label={m.portal_location()} value={equipment.location} />
+				<DetailItem label={m.portal_serial_number()} value={unit.serialNumber} />
+				{#if unit.location}
+					<DetailItem label={m.portal_location()} value={unit.location} />
 				{/if}
-			{:else}
+			</dl>
+		{:else if order.units.length}
+			<!-- In the order they're worked on, with where each one is. -->
+			<div class="flex flex-col gap-2">
+				<h2 class="text-sm font-medium text-muted-foreground">
+					{m.common_count_units({ count: order.units.length })}
+				</h2>
+				<ol class="flex flex-col divide-y rounded-md border" aria-label={m.portal_equipment()}>
+					{#each order.units as unit, index (unit.id)}
+						<li class="flex gap-3 px-3 py-2 text-sm">
+							<span class="w-6 shrink-0 text-right text-muted-foreground tabular-nums">
+								{formatNumber(index + 1)}
+							</span>
+							<div class="flex min-w-0 flex-col">
+								<span class="font-medium">{unitTitle(unit)}</span>
+								<span class="text-muted-foreground">
+									{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category.name]
+										.filter(Boolean)
+										.join(" · ")}
+								</span>
+								{#if unit.location || data.sites.length > 1}
+									<span class="text-muted-foreground">
+										{[data.sites.length > 1 ? unit.site.name : null, unit.location]
+											.filter(Boolean)
+											.join(" · ")}
+									</span>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ol>
+			</div>
+		{:else}
+			<dl class="grid grid-cols-2 gap-4">
 				<DetailItem label={m.portal_equipment()} value={m.portal_new_installation()} />
-			{/if}
-		</dl>
+			</dl>
+		{/if}
 	</Card.Content>
 </Card.Root>
 
-{#if data.site}
-	<SiteCard site={data.site} title={m.portal_site()} />
-{/if}
+{#each data.sites as site (site.id)}
+	<SiteCard {site} title={m.portal_site()} />
+{/each}
 
 <Card.Root>
 	<Card.Header>

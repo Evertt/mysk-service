@@ -125,5 +125,9 @@
 	"activity_field_slot_end": "beschikbaar tot",
 	"activity_field_access_notes": "toegangsinstructies",
 	"activity_subject_equipment_category": "apparatuurcategorie",
-	"activity_field_position": "plaats"
+	"activity_field_position": "plaats",
+	"activity_field_units": "apparaten",
+	"activity_set_added": "{names} toegevoegd",
+	"activity_set_removed": "{names} weggehaald",
+	"activity_set_reordered": "in een andere volgorde gezet"
 }

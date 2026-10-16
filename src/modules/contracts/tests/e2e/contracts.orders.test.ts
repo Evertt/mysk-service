@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { cents, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 import { priceOf, pricedOrders } from "#e2e/contracts-helpers.ts";
+import { addUnits } from "#e2e/orders-helpers.ts";
 
 import {
 	activeContract,
@@ -264,7 +265,7 @@ describe("in North, contracts count on orders", () => {
 		const { page } = app;
 		await app.go("/orders/new");
 		await page.getByLabel("Customer").selectOption(String(premium.customer_id));
-		await page.getByLabel("Equipment").selectOption(String(premium.id));
+		await addUnits(app, { id: premium.id });
 		await page.getByLabel("Type").selectOption("repair");
 		await page.getByLabel("Description").fill("Pressure drops overnight (test call-out)");
 		await page.getByLabel("Labour (hours)").fill("1.5");

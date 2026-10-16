@@ -11,12 +11,12 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { EngineerLink } from "#lib/engineers/components.ts";
-	import { formatCents, formatDate } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { CostItem, OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
 	import { types } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
-	import type { ServiceEvent } from "./service-history.ts";
+	import { type ServiceEvent, unitShare } from "./service-history.ts";
 
 	let { serial }: { serial: string } = $props();
 
@@ -90,6 +90,14 @@
 								</span>
 							</div>
 							<p class="text-sm text-muted-foreground">{order.description}</p>
+							{#if order.units > 1}
+								<p class="text-xs text-muted-foreground" data-cost="share">
+									{m.equipment_history_shared({
+										count: formatNumber(order.units),
+										share: formatCents(unitShare(order)),
+									})}
+								</p>
+							{/if}
 							<dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 								<DetailItem label={m.equipment_history_engineer()}>
 									{#if order.engineer}

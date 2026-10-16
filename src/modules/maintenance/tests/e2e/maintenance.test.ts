@@ -169,7 +169,8 @@ describe("the due list, in North", () => {
 			id: number;
 			number: string;
 			customer_id: number;
-			equipment_id: number;
+			/** Its units' ids, comma-separated: the plan's one. */
+			units: string;
 			type: string;
 			status: string;
 			priority: string;
@@ -177,13 +178,14 @@ describe("the due list, in North", () => {
 			engineer_id: number | null;
 			scheduled_for: number | null;
 		}>(
-			`select id, number, customer_id, equipment_id, type, status, priority, description,
-			 engineer_id, scheduled_for from "order" where organization_id = ? and id > ? order by id`,
+			`select id, number, customer_id, type, status, priority, description, engineer_id,
+			 scheduled_for, (select group_concat(equipment_id) from order_unit where order_id = o.id)
+			 as units from "order" o where organization_id = ? and id > ? order by id`,
 			[north.id, ordersBefore],
 		);
 		expect(created).toHaveLength(2);
 		for (const was of picked) {
-			const order = created.find((o) => o.equipment_id === was.equipment_id)!;
+			const order = created.find((o) => o.units === String(was.equipment_id))!;
 			expect(order).toMatchObject({
 				customer_id: was.customer_id,
 				type: was.order_type,

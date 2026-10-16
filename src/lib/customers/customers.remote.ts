@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
-import { priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -76,7 +76,6 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 			id: order.id,
 			type: order.type,
 			status: order.status,
-			equipmentId: order.equipmentId,
 			createdAt: order.createdAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
@@ -88,7 +87,7 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 
 	// The revenue is priced like everywhere else, e.g. without the work their contracts include.
 	const done = orders.filter((o) => isDoneOrder(o.status));
-	const prices = await priceOrders(done);
+	const prices = await priceOrders(await withUnitIds(done));
 	return {
 		customer: { ...found, sites },
 		stats: {

@@ -2,7 +2,8 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatDate } from "#lib/i18n/index.ts";
+import { formatDate, formatNumber } from "#lib/i18n/index.ts";
+import { onAnyUnit, withUnitIds } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -13,7 +14,6 @@ import {
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer, equipment, equipmentCategory, order } from "#lib/server/db/schema.ts";
 import { refuse, type Problem } from "#lib/server/forms.ts";
@@ -77,36 +77,42 @@ export const getContract = query(v.string(), async (number) => {
 				a.serialNumber.localeCompare(b.serialNumber),
 		);
 
+	// The orders on any of its units (with others too, perhaps).
 	const orders = units.length
-		? await db.query.order.findMany({
-				columns: {
-					id: true,
-					number: true,
-					equipmentId: true,
-					type: true,
-					status: true,
-					description: true,
-					createdAt: true,
-				},
-				where: and(
-					inTenant(order),
-					inList(
-						order.equipmentId,
-						units.map((unit) => unit.id),
-					),
-					// Made during the contract, on its days in the user's time zone.
-					inDays(order.createdAt, [
-						{ from: found.startsOn.toString(), to: found.endsOn.toString() },
-					]),
-				),
-				orderBy: desc(order.createdAt),
-			})
+		? await withUnitIds(
+				await db
+					.select({
+						id: order.id,
+						number: order.number,
+						type: order.type,
+						status: order.status,
+						description: order.description,
+						createdAt: order.createdAt,
+					})
+					.from(order)
+					.where(
+						and(
+							inTenant(order),
+							onAnyUnit(units.map((unit) => unit.id)),
+							// Made during the contract, on its days in the user's time zone.
+							inDays(order.createdAt, [
+								{ from: found.startsOn.toString(), to: found.endsOn.toString() },
+							]),
+						),
+					)
+					.orderBy(desc(order.createdAt)),
+			)
 		: [];
 	const serials = new Map(units.map((unit) => [unit.id, unit.serialNumber]));
 
 	return {
 		contract: { ...rest, equipment: units },
-		orders: orders.map((o) => ({ ...o, serialNumber: serials.get(o.equipmentId!) ?? "" })),
+		orders: orders.map(({ equipmentIds, ...o }) => {
+			// Its units that the contract covers: the first one's serial number, and how many more.
+			const covered = equipmentIds.flatMap((unit) => serials.get(unit) ?? []);
+			const more = covered.length > 1 ? ` +${formatNumber(covered.length - 1)}` : "";
+			return { ...o, serialNumber: `${covered[0] ?? ""}${more}` };
+		}),
 	};
 });
 

@@ -26,7 +26,7 @@ const order = (id: number): OrderFacts => ({
 	id,
 	type: "repair",
 	status: "quote",
-	equipmentId: id,
+	equipmentIds: [id],
 	createdAt: at("2026-10-07 00:00"),
 });
 

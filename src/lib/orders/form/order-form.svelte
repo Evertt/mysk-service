@@ -15,13 +15,13 @@
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
-	import { unitLine } from "#lib/equipment/index.ts";
 	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
 	import { orderFormPreflight } from "./order-schema.ts";
+	import UnitsField from "./units-field.svelte";
 
 	type Options = Awaited<ReturnType<typeof getOrderFormOptions>>;
 	type Order = Awaited<ReturnType<typeof getOrder>>["order"];
@@ -47,23 +47,17 @@
 	// When the order is scheduled for, on the user's clock.
 	const scheduled = $derived(order?.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
-	// Equipment is limited to the chosen customer's units (also when the snapshot brings one back).
+	// The units are the chosen customer's (also when the snapshot brings one back).
 	let customerId = $derived(fields.customerId.value() ?? (order ? String(order.customerId) : ""));
-	// Reset when the customer changes: a select whose value is no longer among its options has no
-	// selection at all, and would then be left out of the submission.
-	let equipmentId = $derived(order?.equipmentId ? String(order.equipmentId) : "");
-	const equipmentOptions = $derived(
-		options.equipments
-			.filter((unit) => String(unit.customerId) === customerId)
-			.map((unit) => ({
-				value: String(unit.id),
-				label: unitLine(unit),
-			})),
+	const customerUnits = $derived(
+		options.equipments.filter((unit) => String(unit.customerId) === customerId),
 	);
-	// The specialty that services the chosen unit's category: its engineers come first.
-	const fitting = $derived(
-		options.equipments.find((unit) => String(unit.id) === equipmentId)?.specialty ?? null,
+	const initialUnits = $derived(order?.units.map((unit) => unit.id) ?? []);
+	// The specialty that services the first unit's category: its engineers come first.
+	const firstUnit = $derived(
+		Number((fields.equipmentIds.value() as string[] | undefined)?.[0] ?? initialUnits[0]),
 	);
+	const fitting = $derived(customerUnits.find((unit) => unit.id === firstUnit)?.specialty ?? null);
 	const engineerOptions = $derived(
 		options.engineers
 			.filter((engineer) => engineer.active || engineer.id === order?.engineerId)
@@ -107,16 +101,9 @@
 					}))}
 					onchange={(value: string) => {
 						customerId = value;
-						equipmentId = "";
+						// Another customer's units can't be on it.
+						fields.equipmentIds.set([]);
 					}}
-				/>
-				<SelectField
-					field={fields.equipmentId}
-					label={m.orders_field_equipment()}
-					placeholder={customerId ? m.orders_equipment_none() : m.orders_equipment_customer_first()}
-					value={equipmentId}
-					options={equipmentOptions}
-					onchange={(value: string) => (equipmentId = value)}
 				/>
 				<SelectField
 					field={fields.type}
@@ -136,6 +123,12 @@
 					value={order?.description}
 					multiline
 					class="md:col-span-2"
+				/>
+				<UnitsField
+					field={fields.equipmentIds}
+					units={customerUnits}
+					initial={initialUnits}
+					disabled={!customerId}
 				/>
 			</Field.FieldGroup>
 		</Card.Content>

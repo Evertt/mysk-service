@@ -17,6 +17,11 @@ import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 const { north } = organizations;
 const app = useApp();
 
+/** What the search finds an order `o` by of its units, any of them (four parameters). */
+const anyUnitLike = `exists (select 1 from order_unit x join equipment u on u.id = x.equipment_id
+	where x.order_id = o.id and (u.manufacturer like ? or u.model like ? or u.serial_number like ?
+	or u.name like ?))`;
+
 describe("in North", () => {
 	test("the list shows North's orders", async () => {
 		await app.go(afresh("/orders"));
@@ -169,13 +174,12 @@ describe("in North", () => {
 		const like = `%${word}%`;
 		const expected = await rows<{ number: string }>(
 			`select o.number from "order" o join customer c on c.id = o.customer_id
-			 left join equipment u on u.id = o.equipment_id left join engineer e on e.id = o.engineer_id
+			 left join engineer e on e.id = o.engineer_id
 			 where o.organization_id = ? and o.status in ('scheduled', 'in_progress')
-			 and (o.number like ? or c.name like ? or c.code like ? or u.manufacturer like ?
-			   or u.model like ? or u.serial_number like ? or e.name like ?)
+			 and (o.number like ? or c.name like ? or c.code like ? or ${anyUnitLike} or e.name like ?)
 			 order by case o.priority when 'low' then 0 when 'normal' then 1 when 'high' then 2 else 3 end desc,
 			   o.scheduled_for is null, o.scheduled_for, o.id`,
-			[north.id, like, like, like, like, like, like, like],
+			[north.id, like, like, like, like, like, like, like, like],
 		);
 		expect(expected.length).toBeGreaterThan(0);
 
@@ -190,11 +194,11 @@ describe("in North", () => {
 		// The status filter counts what the search and the other filters leave.
 		const counts = await rows<{ status: string; n: number }>(
 			`select o.status, count(*) as n from "order" o join customer c on c.id = o.customer_id
-			 left join equipment u on u.id = o.equipment_id left join engineer e on e.id = o.engineer_id
+			 left join engineer e on e.id = o.engineer_id
 			 where o.organization_id = ? and (o.number like ? or c.name like ? or c.code like ?
-			   or u.manufacturer like ? or u.model like ? or u.serial_number like ? or e.name like ?)
+			   or ${anyUnitLike} or e.name like ?)
 			 group by o.status`,
-			[north.id, like, like, like, like, like, like, like],
+			[north.id, like, like, like, like, like, like, like, like],
 		);
 		await app.openFilter("Status");
 		for (const { status, n } of counts) {
@@ -309,7 +313,8 @@ describe("in North", () => {
 
 		// The equipment filter likewise keeps the orders without a unit: the new installations.
 		const installations = await value<number>(
-			`select count(*) from "order" where organization_id = ? and equipment_id is null`,
+			`select count(*) from "order" o where organization_id = ?
+			 and not exists (select 1 from order_unit x where x.order_id = o.id)`,
 			[north.id],
 		);
 		expect(installations).toBeGreaterThan(0);

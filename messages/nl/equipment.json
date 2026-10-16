@@ -211,5 +211,6 @@
 	"equipment_category_delete_title": "{name} verwijderen?",
 	"equipment_category_delete_description": "De categorie verdwijnt uit je categorieën. Apparatuur in deze categorie heeft eerst een andere nodig.",
 	"equipment_category_deleted": "Categorie verwijderd",
-	"equipment_categories_column_actions": "Acties"
+	"equipment_categories_column_actions": "Acties",
+	"equipment_history_shared": "Een van {count} apparaten op deze opdracht; het deel van dit apparaat is {share}"
 }

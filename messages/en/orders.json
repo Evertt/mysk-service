@@ -35,7 +35,6 @@
 	"orders_form_planning": "Planning",
 	"orders_form_planning_description": "Status, schedule and the engineer doing the work.",
 	"orders_field_customer": "Customer",
-	"orders_field_equipment": "Equipment",
 	"orders_field_type": "Type",
 	"orders_field_priority": "Priority",
 	"orders_field_description": "Description",
@@ -45,7 +44,6 @@
 	"orders_field_time": "Time",
 	"orders_field_labor": "Labour (hours)",
 	"orders_choose_customer": "Choose a customer",
-	"orders_equipment_none": "None (new installation)",
 	"orders_equipment_customer_first": "Choose a customer first",
 	"orders_description_required": "Describe the work",
 	"orders_line_item": "Item",
@@ -96,7 +94,6 @@
 	"orders_unknown_engineer": "Unknown engineer",
 	"orders_only_open_scheduled": "Only open orders can be scheduled",
 	"orders_engineer_inactive": "{name} is no longer active",
-	"orders_equipment_other_customer": "This equipment belongs to another customer",
 	"orders_delete_referenced": "Other records still refer to this order, such as an invoice, so it can't be deleted.",
 	"orders_bulk_assign": "Assign engineer",
 	"orders_bulk_assign_title": "Assign {orders}",
@@ -109,5 +106,36 @@
 	"orders_status_of": "Change status of {number}",
 	"orders_status_change_failed": "Couldn't change the status of {number}.",
 	"orders_site": "Site",
-	"orders_detail_location": "Location"
+	"orders_detail_location": "Location",
+	"orders_field_units": "Units",
+	"orders_units": "Units",
+	"orders_units_add": "Add units",
+	"orders_units_search": "Search units…",
+	"orders_units_all_at": "All units at {site} ({count})",
+	"orders_units_clear": "Remove all",
+	"orders_units_none": "None: a new installation or a survey",
+	"orders_unit_move_up": "Move {unit} up",
+	"orders_unit_move_down": "Move {unit} down",
+	"orders_unit_remove": "Remove {unit}",
+	"orders_units_other_customer": "One of the units belongs to another customer",
+	"orders_units_invalid": "Choose units of the customer's",
+	"orders_units_too_many": "An order can be about {max} units at most",
+	"orders_units_summary": "{unit} +{more}",
+	"orders_more_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} more unit",
+				"countPlural=*": "{countText} more units"
+			}
+		}
+	],
+	"orders_warranty_until": "Warranty until {date}",
+	"orders_history_units_description": "Other orders for any of these {count} units.",
+	"orders_history_empty_units_description": "This is the first order for these units."
 }

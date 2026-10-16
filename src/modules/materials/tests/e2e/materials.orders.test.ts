@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { nextCode, organizations, rows, unbalancedStock, useApp, value, quiet } from "#e2e/app.ts";
 import {
+	addUnits,
 	movementMark,
 	orderId,
 	orderLines,
@@ -79,7 +80,7 @@ describe("in North, an order's materials", () => {
 		const { page } = app;
 		await app.go("/orders/new");
 		await page.getByLabel("Customer").selectOption({ index: 1 });
-		await page.getByLabel("Equipment").selectOption({ index: 1 });
+		await addUnits(app, 0);
 		await page.getByLabel("Type").selectOption("repair");
 		await page.getByLabel("Priority").selectOption("high");
 		await page.getByLabel("Description").fill("Pump leaking at the seal (test order)");

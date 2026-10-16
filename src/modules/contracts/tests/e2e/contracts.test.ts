@@ -114,7 +114,7 @@ describe("in North", () => {
 		const [unit] = await rows<{ id: number; serial_number: string; customer_id: number }>(
 			`select e.id, e.serial_number, e.customer_id from equipment e
 			 where e.organization_id = ? and exists (select 1 from contract_equipment ce where ce.equipment_id = e.id)
-			 and not exists (select 1 from "order" o where o.equipment_id = e.id) order by e.id limit 1`,
+			 and not exists (select 1 from order_unit ou where ou.equipment_id = e.id) order by e.id limit 1`,
 			[north.id],
 		);
 		const other = await value<number>(

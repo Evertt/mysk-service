@@ -16,7 +16,7 @@ const count = (where: string, args: (number | string)[] = [], organizationId: st
 	]);
 
 /** A unit's open orders, in SQL. */
-const openOrders = `(select count(*) from "order" o where o.equipment_id = e.id
+const openOrders = `(select count(*) from "order" o join order_unit ou on ou.order_id = o.id where ou.equipment_id = e.id
 	and o.status in ('quote', 'scheduled', 'in_progress'))`;
 
 /** Today, as the database has days: `yyyy-mm-dd`. */

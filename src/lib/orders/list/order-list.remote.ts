@@ -5,8 +5,9 @@ import { pageGroupsOf, planList } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { tagOrders } from "../server/hooks.ts";
-import { ordersSql, withOrderJoins } from "../server/list-sql.ts";
+import { ordersSql, unitFacets, withOrderJoins } from "../server/list-sql.ts";
 import { priceOrders } from "../server/pricing.ts";
+import { unitCount, withUnitIds } from "../server/units.ts";
 import { ordersList } from "./orders-list.ts";
 
 /**
@@ -32,6 +33,7 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 						createdAt: order.createdAt,
 						laborHours: order.laborHours,
 						customer: { id: customer.id, code: customer.code, name: customer.name },
+						/** The first of its units, if it has any. */
 						equipment: {
 							id: equipment.id,
 							name: equipment.name,
@@ -39,6 +41,8 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 							manufacturer: equipment.manufacturer,
 							serialNumber: equipment.serialNumber,
 						},
+						/** How many units it's about, the first one included. */
+						unitCount: unitCount(),
 						engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
 					})
 					.from(order)
@@ -50,9 +54,8 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 	]);
 
 	// The page's orders (only, with the rows around it when grouped) priced and tagged.
-	const facts = rows.map((row) => ({
+	const facts = (await withUnitIds(rows)).map((row) => ({
 		...row,
-		equipmentId: row.equipment?.id ?? null,
 		hourlyRate: row.engineer?.hourlyRate,
 	}));
 	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
@@ -77,16 +80,21 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 });
 
 /**
- * How many orders have each type, status, priority, engineer (by id) and unit (by serial number),
- * for the counts in the list's filters: of those matching the search and the other filters. The
- * unassigned orders and the new installations count under `none`.
+ * How many orders have each type, status, priority, engineer (by id) and unit (by serial number;
+ * an order counts for each of its units), for the counts in the list's filters: of those matching
+ * the search and the other filters. The unassigned orders and the new installations count under
+ * `none`.
  */
 export const getOrderFacets = forMembers.query(ordersList.where, async (where) => {
-	return planList(ordersSql(), where).facets({
-		type: order.type,
-		status: order.status,
-		priority: order.priority,
-		engineer: order.engineerId,
-		equipment: equipment.serialNumber,
-	});
+	const plan = planList(ordersSql(), where);
+	const [facets, equipment] = await Promise.all([
+		plan.facets({
+			type: order.type,
+			status: order.status,
+			priority: order.priority,
+			engineer: order.engineerId,
+		}),
+		unitFacets(plan),
+	]);
+	return { ...facets, equipment };
 });

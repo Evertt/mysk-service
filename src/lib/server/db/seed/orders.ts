@@ -225,7 +225,8 @@ export function generateOrders(
 		const [minHours, maxHours] = laborRange[type];
 		return {
 			customerId: owner.id,
-			equipmentId: target?.id ?? null,
+			// One unit, or none for some of the new installations.
+			equipmentIds: target ? [target.id] : [],
 			engineerId:
 				status === "quote"
 					? null

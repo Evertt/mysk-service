@@ -107,6 +107,45 @@ describe("describeChanges", () => {
 		]);
 	});
 
+	test("names an order's units added and removed, or that they moved", () => {
+		const names = { unit: { "1": "Deur 01 (S-1)", "2": "Deur 02 (S-2)", "3": "Deur 03 (S-3)" } };
+		const [changed] = describeChanges(
+			{
+				equipmentIds: [
+					[1, 2],
+					[2, 3],
+				],
+			},
+			order,
+			names,
+		);
+		expect(changed).toMatchObject({
+			field: "units",
+			summary: "added Deur 03 (S-3); removed Deur 01 (S-1)",
+		});
+		expect(describeChanges({ equipmentIds: [[], [1, 2]] }, order, names)[0].summary).toBe(
+			"added Deur 01 (S-1), Deur 02 (S-2)",
+		);
+		expect(
+			describeChanges(
+				{
+					equipmentIds: [
+						[1, 2],
+						[2, 1],
+					],
+				},
+				order,
+				names,
+			)[0].summary,
+		).toBe("put in another order");
+		// A unit since deleted shows by its id.
+		expect(describeChanges({ equipmentIds: [[], [9]] }, order, names)[0].summary).toBe("added #9");
+		// The ids are looked up as units.
+		expect([...referencedIds({ equipmentIds: [[1], [1, 4]] }, order)]).toEqual([
+			["unit", new Set(["1", "4"])],
+		]);
+	});
+
 	test("reads without changes or a known type", () => {
 		expect(describeChanges(null, order)).toEqual([]);
 		expect(describeChanges({ seats: [1, 2] })).toEqual([
@@ -165,5 +204,10 @@ describe("in Dutch", () => {
 			{ field: "actief", before: "ja", after: "nee" },
 		]);
 		expect(fieldLabel("customerId", equipment.fields?.customerId)).toBe("eigenaar");
+		expect(
+			describeChanges({ equipmentIds: [[1], [2]] }, order, {
+				unit: { "1": "Deur 01", "2": "Deur 02" },
+			}),
+		).toMatchObject([{ field: "apparaten", summary: "Deur 02 toegevoegd; Deur 01 weggehaald" }]);
 	});
 });

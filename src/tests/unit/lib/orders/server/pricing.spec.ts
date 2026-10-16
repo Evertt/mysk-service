@@ -80,7 +80,7 @@ describe("priceOrders", () => {
 		id,
 		type: "repair",
 		status: "completed",
-		equipmentId: id,
+		equipmentIds: [id],
 		createdAt: at("2026-10-01 00:00"),
 		laborHours: 2,
 		hourlyRate: 6_000,

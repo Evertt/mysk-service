@@ -5,7 +5,7 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
-import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+import { unitTitle } from "#lib/equipment/index.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
@@ -14,6 +14,7 @@ import PriorityBadge from "../ui/priority-badge.svelte";
 import TypeLabel from "../ui/type-label.svelte";
 import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";
+import UnitsCell from "./units-cell.svelte";
 
 /** A row of the orders list, a page of which comes from the server (see `ordersList`). */
 export type OrderRow = Awaited<ReturnType<typeof getOrders>>["rows"][number];
@@ -43,29 +44,20 @@ export const columns = column.columns([
 		meta: { label: m.orders_column_customer, filter: "set" },
 	}),
 	column.accessor(
-		// `undefined` rather than `null`, so new installations sort last (`sortUndefined`).
+		// By the first unit; `undefined` rather than `null`, so new installations sort last
+		// (`sortUndefined`).
 		(row) => (row.equipment ? unitTitle(row.equipment) : undefined),
 		{
 			id: "equipment",
-			cell: ({ getValue, row }) =>
-				renderComponent(TwoLineCell, {
-					primary: getValue(),
-					// The make too, under the customer's own name for it.
-					secondary:
-						row.original.equipment &&
-						(row.original.equipment.name
-							? `${unitModel(row.original.equipment)} · ${row.original.equipment.serialNumber}`
-							: row.original.equipment.serialNumber),
-					href:
-						(row.original.equipment &&
-							resolve("/(app)/equipment/[serial]", {
-								serial: row.original.equipment.serialNumber,
-							})) ??
-						undefined,
-					fallback: m.orders_new_installation(),
+			// The first unit, its make under the customer's own name for it, and "+14" for the rest.
+			cell: ({ row }) =>
+				renderComponent(UnitsCell, {
+					first: row.original.equipment,
+					count: row.original.unitCount,
 				}),
 			sortUndefined: "last",
-			// By serial number; `none` keeps the new installations.
+			// By serial number, any of its units' (the server filters: the rows have the first);
+			// `none` keeps the new installations.
 			filterFn: (row, _id, serials: string[]) =>
 				serials.includes(row.original.equipment?.serialNumber ?? noneToken),
 			meta: { label: m.orders_column_equipment, filter: "set" },

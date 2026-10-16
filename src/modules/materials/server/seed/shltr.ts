@@ -84,7 +84,9 @@ export function generateShltrPartLines(
 ): MaterialsDraft["orderLines"] {
 	const bySku = new Map(materials.map((m) => [m.sku, m]));
 	return orders.flatMap((o) => {
-		const category = o.equipmentId ? equipments[o.equipmentId - 1].category : undefined;
+		// The parts of its first unit, for an order about several of a kind.
+		const [unit] = o.equipmentIds;
+		const category = unit === undefined ? undefined : equipments[unit - 1].category;
 		const pool = (category && (o.type === "damage" ? forDamage : fitting)[category]) || [];
 		if (!pool.length) return [];
 		const [min, max] = linesRange[o.type];

@@ -76,6 +76,11 @@ export interface FieldFormat {
 	format?: (value: unknown) => string;
 	/** The field holds the id (or ids) of a record of this type: shows its name. */
 	ref?: ReferenceType;
+	/**
+	 * The field holds a list of ids (with `ref`): a change shows the records added and removed by
+	 * name ("added Deur 07, Deur 08; removed Deur 03"), or that they were put in another order.
+	 */
+	set?: boolean;
 }
 
 export interface SubjectType {
@@ -175,7 +180,10 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		href: ({ label }) => resolve("/(app)/orders/[number]", { number: label }),
 		fields: {
 			customerId: { ref: "customer" },
+			// Its unit, as orders had one at most until they had any number.
 			equipmentId: { ref: "equipment" },
+			// Its units in their order: the log names those added and removed.
+			equipmentIds: { label: m.activity_field_units, ref: "unit", set: true },
 			engineerId: { ref: "engineer" },
 			type: { format: labelled("orderType") },
 			status: { format: labelled("orderStatus") },

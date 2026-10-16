@@ -29,7 +29,14 @@ import {
 import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	order,
+	orderNote,
+	orderSignoff,
+	orderUnit,
+	user,
+} from "#lib/server/db/schema.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
 import { signature } from "./work.ts";
@@ -94,8 +101,9 @@ const siteColumns = {
 } as const;
 
 /**
- * One of the engineer's orders, with what they need on site, and the site: its unit's, or the
- * customer's only one for an order without a unit. A 404 for anyone else's.
+ * One of the engineer's orders, with what they need on site: its units in the order they're worked
+ * on, and the sites they're at (one, usually), or the customer's only one for an order without
+ * units. A 404 for anyone else's.
  */
 export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	const engineer = await currentEngineer();
@@ -104,23 +112,38 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 		with: {
 			customer: {
 				columns: { name: true, contactName: true, phone: true, email: true, city: true },
-				with: { sites: { columns: siteColumns } },
+				with: { sites: { columns: { id: true, ...siteColumns } } },
 			},
-			equipment: {
-				columns: {
-					name: true,
-					model: true,
-					manufacturer: true,
-					serialNumber: true,
-					location: true,
+			units: {
+				columns: {},
+				orderBy: asc(orderUnit.position),
+				with: {
+					equipment: {
+						columns: {
+							id: true,
+							name: true,
+							model: true,
+							manufacturer: true,
+							serialNumber: true,
+							location: true,
+						},
+						with: {
+							site: { columns: { id: true, ...siteColumns } },
+							category: { columns: { name: true } },
+						},
+					},
 				},
-				with: { site: { columns: siteColumns } },
 			},
 		},
 	});
 	if (!found) error(404, m.portal_not_found({ number }));
-	const { sites, ...owner } = found.customer;
-	const site = found.equipment?.site ?? (sites.length === 1 ? sites[0] : null);
+	const { sites: customerSites, ...owner } = found.customer;
+	const units = found.units.map((link) => link.equipment);
+	const sites = units.length
+		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
+		: customerSites.length === 1
+			? customerSites
+			: [];
 
 	const [notes, signoff] = await Promise.all([
 		db
@@ -139,7 +162,12 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 			where: and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff)),
 		}),
 	]);
-	return { order: { ...found, customer: owner }, site, notes, signoff: signoff ?? null };
+	return {
+		order: { ...found, customer: owner, units },
+		sites,
+		notes,
+		signoff: signoff ?? null,
+	};
 });
 
 /** The records the portal shows: a change to any of them may outdate it. */

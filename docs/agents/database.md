@@ -19,7 +19,18 @@ key, a column made `NOT NULL`) needs the Durable Object's copy written by hand: 
 foreign keys off, which a Durable Object can't, and dropping a table others refer to deletes what
 cascades from it. `cloudflare/migrations/0002_add-customer-sites.sql` is the example (it defers the
 key checks to the commit, copies the rows back after the rename, and puts the cascaded rows back);
-`migrations.spec.ts` runs it with the keys on.
+`0004_order-units.sql` rebuilds `order` the same way, and also puts back what a `set null` emptied
+(maintenance plans' last order). `migrations.spec.ts` runs them with the keys on, and checks that
+nothing that refers to the rebuilt table is lost.
+
+A rebuild keeps the table's `AUTOINCREMENT` sequence, in both streams: dropping the table drops its
+row in `sqlite_sequence`, and the new table would count on from its highest id left, giving the ids
+of the newest deleted rows again, whose activity log entries (keyed by subject id) a new record
+would then have. Copy the sequence aside before the drop (`__old_<table>_sequence`), and after the
+rename set the table's row to the greater of it and its `max(id)`; the three rebuilds (`0010`–`0012`,
+`cloudflare/migrations/0002`–`0004`) are the example, and `migrations.spec.ts` checks that a new row
+gets an id above a deleted one's. (Those rebuilds got this after they were committed, before they
+were released anywhere: a released migration is never edited.)
 
 **Bound parameters**: a statement binds at most 100 values (`#lib/server/db/parameters.ts`): it's
 Cloudflare's limit, and `db` enforces it everywhere (a statement over it throws, in tests too). So

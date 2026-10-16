@@ -65,7 +65,7 @@ describe("materialCosts", () => {
 			id,
 			type: "repair",
 			status: "completed",
-			equipmentId: null,
+			equipmentIds: [],
 			createdAt: at("2026-10-01 00:00"),
 		}));
 

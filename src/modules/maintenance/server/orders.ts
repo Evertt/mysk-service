@@ -66,7 +66,8 @@ export function orderPlan(
 		const [created] = await createOrders(tx, [
 			{
 				customerId: unit.customerId,
-				equipmentId: unit.id,
+				// The plan's unit; plans of the same site still make an order each.
+				units: [unit.id],
 				type: plan.orderType,
 				description: plan.description,
 			},

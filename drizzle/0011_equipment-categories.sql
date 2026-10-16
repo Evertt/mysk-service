@@ -47,8 +47,14 @@ CREATE TABLE `__new_equipment` (
 --> statement-breakpoint
 -- Each unit is of its tenant's category that was made from its old one.
 INSERT INTO `__new_equipment`("id", "organization_id", "serial_number", "model", "manufacturer", "category_id", "status", "customer_id", "site_id", "name", "location", "installed_at", "warranty_until") SELECT "id", "organization_id", "serial_number", "model", "manufacturer", (SELECT `equipment_category`."id" FROM `equipment_category` JOIN `__old_category` ON `__old_category`."name" = `equipment_category`."name" WHERE `equipment_category`."organization_id" = `equipment`."organization_id" AND `__old_category`."category" = `equipment`."category"), "status", "customer_id", "site_id", "name", "location", "installed_at", "warranty_until" FROM `equipment`;--> statement-breakpoint
+-- What the table's ids have come to (its highest ever, though that row may be gone), kept for the
+-- new table: an id is never given again, as the activity log knows records by them.
+CREATE TABLE `__old_equipment_sequence` AS SELECT `seq` FROM `sqlite_sequence` WHERE `name` = 'equipment';--> statement-breakpoint
 DROP TABLE `equipment`;--> statement-breakpoint
 ALTER TABLE `__new_equipment` RENAME TO `equipment`;--> statement-breakpoint
+DELETE FROM `sqlite_sequence` WHERE `name` = 'equipment';--> statement-breakpoint
+INSERT INTO `sqlite_sequence`(`name`, `seq`) SELECT 'equipment', max(coalesce((SELECT max(`seq`) FROM `__old_equipment_sequence`), 0), coalesce((SELECT max(`id`) FROM `equipment`), 0));--> statement-breakpoint
+DROP TABLE `__old_equipment_sequence`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 DROP TABLE `__old_category`;--> statement-breakpoint
 CREATE UNIQUE INDEX `equipment_organization_serial_number` ON `equipment` (`organization_id`,`serial_number`);--> statement-breakpoint

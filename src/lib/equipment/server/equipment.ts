@@ -3,7 +3,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { equipment, order } from "#lib/server/db/schema.ts";
+import { equipment, orderUnit } from "#lib/server/db/schema.ts";
 import { deleteAndLog } from "#lib/server/records.ts";
 
 /**
@@ -18,8 +18,8 @@ export async function removeEquipment(id: number) {
 	if (!existing) error(404, m.equipment_not_found());
 	const [{ total }] = await db
 		.select({ total: count() })
-		.from(order)
-		.where(and(eq(order.equipmentId, id), inTenant(order)));
+		.from(orderUnit)
+		.where(and(eq(orderUnit.equipmentId, id), inTenant(orderUnit)));
 	if (total) {
 		invalid(m.equipment_delete_refused({ count: total }));
 	}

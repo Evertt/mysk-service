@@ -149,6 +149,11 @@ interface FixedOrder {
 	/** The unit's name; else the customer's first unit of `category`, else none. */
 	unit?: string;
 	category?: ShltrUnit["category"];
+	/**
+	 * After the unit, the customer's other units of these categories at its site: the order is about
+	 * them all (the yearly inspection of every door), in the customer's order of them.
+	 */
+	together?: ShltrUnit["category"][];
 	type: OrderType;
 	priority: OrderPriority;
 	description: string;
@@ -227,11 +232,48 @@ const fixedOrders = (): FixedOrder[] => [
 	{
 		customer: "Riedel B.V.",
 		unit: "SEC-Sectionaaldeur magazijn laaddok LD-04",
+		// The expedition's other sectional doors, but those the Apparatuur page counts.
+		together: ["sectional_door"],
 		type: "maintenance",
 		priority: "normal",
 		description: "Halfjaarlijks onderhoud sectionaaldeuren expeditie",
 		day: inWeek(2, 1),
 		time: "14:00",
+		laborHours: 3,
+	},
+	// Orders about many units: the yearly inspection of all of Riedel's doors (done), Weggemans'
+	// docks (planned) and the half-yearly maintenance of its Salvo docks (done).
+	{
+		customer: "Riedel B.V.",
+		unit: "Automatische deur kantine",
+		together: ["automatic_door", "fire_door", "high_speed_door", "sectional_door"],
+		type: "inspection",
+		priority: "normal",
+		description: "Jaarlijkse keuring alle deuren (NEN-EN 12604/12453, NEN-EN 16034)",
+		day: workingDay(-60),
+		time: "07:30",
+		laborHours: 8,
+	},
+	{
+		customer: "Weggemans Logistiek",
+		unit: "Sectionaaldeur D-17",
+		together: ["sectional_door", "dock_leveller"],
+		type: "inspection",
+		priority: "normal",
+		description: "Jaarlijkse keuring docks: sectionaaldeuren en levellers",
+		day: inWeek(1, 3),
+		time: "07:30",
+		laborHours: 6,
+	},
+	{
+		customer: "Weggemans Logistiek",
+		unit: "Salvo dock 05",
+		together: ["salvo_dock"],
+		type: "maintenance",
+		priority: "normal",
+		description: "Halfjaarlijks onderhoud Salvo docks",
+		day: workingDay(-30),
+		time: "08:00",
 		laborHours: 3,
 	},
 	{
@@ -347,7 +389,8 @@ const fixedOrders = (): FixedOrder[] => [
 /** An order before it has its engineer, time and status. */
 interface Draft {
 	customer: ShltrCustomer;
-	unit: ShltrUnit | null;
+	/** The units it's about, in their order: none, mostly one. */
+	units: ShltrUnit[];
 	site: ShltrSite;
 	type: OrderType;
 	urgent: boolean;
@@ -425,6 +468,32 @@ export function generateShltrOrders(
 	const siteOf = (customer: ShltrCustomer, unit: ShltrUnit | null) =>
 		unit ? siteById.get(unit.siteId)! : firstSite.get(customer.id)!;
 
+	/**
+	 * `unit` and, after it, the customer's other units of `categories` at its site that are installed
+	 * by `day` and free for it (as `pickUnit` has them), for an order about them all; marks them
+	 * busy if it's recent.
+	 */
+	function together(unit: ShltrUnit, categories: readonly ShltrUnit["category"][], day: number) {
+		const date = dayAt(day);
+		const units = [
+			unit,
+			...(unitsOf.get(unit.customerId) ?? []).filter(
+				(other) =>
+					other.id !== unit.id &&
+					other.siteId === unit.siteId &&
+					categories.includes(other.category) &&
+					other.installedAt.getTime() < date.getTime() &&
+					!(recent(day) && (other.counted || busy.has(other.id))),
+			),
+		];
+		if (recent(day)) for (const other of units) busy.add(other.id);
+		return units;
+	}
+
+	/** Customers whose planned inspections and maintenance take all the units of a kind at once. */
+	const byTheSite = new Set(["Riedel B.V.", "Weggemans Logistiek"]);
+	const plannedTogether: OrderType[] = ["inspection", "maintenance"];
+
 	// --- Drafts: the fixed ones, and per working day as many as the engineers take ---------
 	const drafts: Draft[] = fixedOrders().map((fixed) => {
 		const customer = customers.find((c) => c.name === fixed.customer)!;
@@ -434,7 +503,7 @@ export function generateShltrOrders(
 		if (unit && recent(fixed.day)) busy.add(unit.id);
 		return {
 			customer,
-			unit,
+			units: unit ? together(unit, fixed.together ?? [], fixed.day) : [],
 			site: siteOf(customer, unit),
 			type: fixed.type,
 			urgent: fixed.priority === "urgent",
@@ -477,6 +546,12 @@ export function generateShltrOrders(
 			}
 			const unit = picked ?? null;
 			if (unit && recent(day)) busy.add(unit.id);
+			// Riedel's and Weggemans' planned work takes the site's units of the kind together.
+			const units = !unit
+				? []
+				: byTheSite.has(customer.name) && plannedTogether.includes(type)
+					? together(unit, [unit.category], day)
+					: [unit];
 			const site = siteOf(customer, unit);
 			let planOn = day;
 			// Planned work goes on the site's preferred day, mostly: that day of the same week.
@@ -488,7 +563,7 @@ export function generateShltrOrders(
 			}
 			drafts.push({
 				customer,
-				unit,
+				units,
 				site,
 				type,
 				urgent: drawn === "urgent",
@@ -583,7 +658,8 @@ export function generateShltrOrders(
 					: new Date(now.getTime() - faker.number.int({ min: 1, max: 240 }) * HOUR);
 				return { draft, engineer: null, scheduledFor: null, createdAt };
 			}
-			const specialty = draft.unit ? specialtyOf(draft.unit.category) : "mechanical";
+			const [first] = draft.units;
+			const specialty = first ? specialtyOf(first.category) : "mechanical";
 			const engineer = pickEngineer(specialty, draft.day);
 			const jobs = takenOn(engineer, draft.day);
 			const minutes = draft.time ? minutesOf(draft.time) : pickTime(jobs, draft.site, draft.urgent);
@@ -627,7 +703,7 @@ export function generateShltrOrders(
 		}
 		return {
 			customerId: draft.customer.id,
-			equipmentId: draft.unit?.id ?? null,
+			equipmentIds: draft.units.map((unit) => unit.id),
 			engineerId: engineer?.id ?? null,
 			type: draft.type,
 			status,
@@ -662,12 +738,14 @@ export function updateShltrEquipmentStatus(
 ) {
 	const open = new Set<number>();
 	for (const o of orders) {
-		if (!o.equipmentId || !["quote", "scheduled", "in_progress"].includes(o.status)) continue;
-		open.add(o.equipmentId);
-		if (!["breakdown", "repair"].includes(o.type)) continue;
-		const unit = units[o.equipmentId - 1];
-		if (o.priority === "urgent") unit.status = "out_of_service";
-		else if (unit.status === "operational") unit.status = "needs_service";
+		if (!["quote", "scheduled", "in_progress"].includes(o.status)) continue;
+		for (const id of o.equipmentIds) {
+			open.add(id);
+			if (!["breakdown", "repair"].includes(o.type)) continue;
+			const unit = units[id - 1];
+			if (o.priority === "urgent") unit.status = "out_of_service";
+			else if (unit.status === "operational") unit.status = "needs_service";
+		}
 	}
 	for (const unit of units) {
 		const fixed = fixedStatus.get(unit.id);

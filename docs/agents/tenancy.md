@@ -32,7 +32,8 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/modules/contracts/server/contracts.ts` and `invoiceNumbers` in
   `src/modules/invoices/server/invoices.ts`. An order is created only through
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`, in `#lib/orders/server/index.ts`),
-  which checks each draft's customer, unit and engineer, numbers, inserts and logs it: core's order
+  which checks each draft's customer, units and engineer, numbers, inserts it with its units
+  (`units`, in their order; `setOrderUnits()` in `units.ts` saves an edited order's) and logs it: core's order
   form calls it (and saves its modules' parts with `saveOrderParts()` after it, see below), and so
   do the modules (maintenance's "Create orders"). It doesn't emit `orders.committed`, which is for orders the
   client's pages already show.
@@ -40,8 +41,8 @@ helpers are in `src/lib/server/auth/session.ts`:
   `(organization_id, customer_id)` → `customer (organization_id, id)`, and relations use the same
   column pairs, so the database refuses cross-tenant references and `with:` loads stay in the
   tenant. A new reference gets the same treatment; joins also add `inTenant()` for the joined
-  table. Where a reference must belong to the same customer (an order's equipment, a contract's
-  coverage), the key pairs `customer_id` instead.
+  table. Where a reference must belong to the same customer (an order's units, `order_unit`, a
+  contract's coverage), the key pairs `customer_id` instead.
 
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
   `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record

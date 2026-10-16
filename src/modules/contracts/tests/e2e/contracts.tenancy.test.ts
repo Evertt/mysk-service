@@ -201,7 +201,8 @@ describe("in South, which doesn't have the module", () => {
 		expect(await card("Response times at risk").count()).toBe(0);
 		expect(await card("Contracts ending soon").count()).toBe(0);
 		const [order] = await rows<{ number: string; serial_number: string }>(
-			`select o.number, e.serial_number from "order" o join equipment e on e.id = o.equipment_id
+			`select o.number, e.serial_number from "order" o join order_unit u on u.order_id = o.id
+			 join equipment e on e.id = u.equipment_id
 			 where o.organization_id = ? and o.type = 'repair' order by o.id limit 1`,
 			[south.id],
 		);

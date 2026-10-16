@@ -10,7 +10,7 @@ import { and, asc, eq, ne, notExists, or } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
 import { getTimeZone } from "#lib/dates.ts";
-import { priceOrders } from "#lib/orders/server/index.ts";
+import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -51,7 +51,6 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 			description: order.description,
 			type: order.type,
 			status: order.status,
-			equipmentId: order.equipmentId,
 			createdAt: order.createdAt,
 			completedAt: order.completedAt,
 			laborHours: order.laborHours,
@@ -81,7 +80,7 @@ async function billableOrders(customerId: number): Promise<BillableOrder[]> {
 		)
 		.orderBy(asc(order.completedAt), asc(order.number));
 
-	const prices = await priceOrders(rows);
+	const prices = await priceOrders(await withUnitIds(rows));
 	return rows.map((row, i) => ({
 		id: row.id,
 		number: row.number,

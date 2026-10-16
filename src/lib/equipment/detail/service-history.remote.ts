@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { priceOrders } from "#lib/orders/server/index.ts";
+import { onUnit, priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, equipment, order } from "#lib/server/db/schema.ts";
@@ -37,18 +37,21 @@ export const getServiceHistory = forMembers.query(v.string(), async (serialNumbe
 		})
 		.from(order)
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(and(eq(order.equipmentId, unit.id), inTenant(order)))
+		// Its orders, whether it's their only unit or one of several.
+		.where(and(onUnit(unit.id), inTenant(order)))
 		.orderBy(desc(order.createdAt), desc(order.id));
 
 	// Priced like everywhere else, so a covered order costs here what it does on its own page, with
 	// what each cost is made of (e.g. the materials used).
+	const facts = await withUnitIds(orders);
 	const prices = await priceOrders(
-		orders.map((row) => ({ ...row, equipmentId: unit.id, hourlyRate: row.engineer?.hourlyRate })),
+		facts.map((row) => ({ ...row, hourlyRate: row.engineer?.hourlyRate })),
 		{ items: true },
 	);
-	const history = orders.map(({ engineer, ...row }, i): HistoryOrder => ({
+	const history = facts.map(({ engineer, equipmentIds, ...row }, i): HistoryOrder => ({
 		...row,
 		engineer: engineer && { id: engineer.id, name: engineer.name },
+		units: equipmentIds.length,
 		cost: prices[i],
 	}));
 	const now = Temporal.Now.instant();

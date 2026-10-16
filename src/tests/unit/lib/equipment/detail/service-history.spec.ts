@@ -6,6 +6,7 @@ import {
 	type HistoryOrder,
 	orderDate,
 	serviceStats,
+	unitShare,
 } from "#lib/equipment/detail/service-history.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
@@ -25,6 +26,7 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		createdAt: at("2026-01-01 00:00"),
 		laborHours: 2,
 		engineer: null,
+		units: 1,
 		cost: { costs: [], labor: 0, adjustments: [], total: 10_000 },
 		...fields,
 	};
@@ -151,6 +153,17 @@ describe("serviceStats", () => {
 			cost: 20_000,
 			lastService: at("2025-03-01 00:00"),
 		});
+	});
+
+	test("an order about several units counts for each, at its share of the cost", () => {
+		const together = order({ units: 4, completedAt: at("2025-03-01 00:00") });
+		expect(unitShare(together)).toBe(2_500);
+		expect(unitShare(order({ units: 3 }))).toBe(3_333);
+		const stats = serviceStats(
+			[together, order({ type: "repair", completedAt: at("2025-06-01 00:00") })],
+			now,
+		);
+		expect(stats).toMatchObject({ orders: 2, doneOrders: 2, cost: 12_500 });
 	});
 
 	test("the last service is the latest completion, whatever the order of the orders", () => {

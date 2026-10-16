@@ -125,5 +125,9 @@
 	"activity_field_slot_end": "available until",
 	"activity_field_access_notes": "access notes",
 	"activity_subject_equipment_category": "equipment category",
-	"activity_field_position": "position"
+	"activity_field_position": "position",
+	"activity_field_units": "units",
+	"activity_set_added": "added {names}",
+	"activity_set_removed": "removed {names}",
+	"activity_set_reordered": "put in another order"
 }

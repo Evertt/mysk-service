@@ -7,7 +7,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { createOrders, type OrderDraft } from "#lib/orders/server/creation.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { order } from "#lib/server/db/schema.ts";
+import { order, orderUnit } from "#lib/server/db/schema.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -45,14 +45,20 @@ vi.mock("#lib/server/db/index.ts", async () => {
 		);
 		create table "order" (
 			id integer primary key, organization_id text not null, number text not null,
-			customer_id integer not null, equipment_id integer, engineer_id integer,
+			customer_id integer not null, engineer_id integer,
 			type text not null, status text not null, priority text not null,
 			description text not null, scheduled_for integer, completed_at integer,
 			labor_hours real not null default 0, created_at integer not null default (unixepoch())
 		);
+		create table order_unit (
+			organization_id text not null, order_id integer not null, customer_id integer not null,
+			equipment_id integer not null, position integer not null,
+			primary key (order_id, equipment_id)
+		);
 		insert into customer values (1, 'north'), (2, 'north'), (3, 'south');
 		insert into engineer values (1, 'north'), (2, 'south');
-		insert into equipment values (10, 'north', 1), (11, 'north', 2), (12, 'south', 3);
+		insert into equipment values (10, 'north', 1), (11, 'north', 2), (12, 'south', 3),
+			(13, 'north', 1), (14, 'north', 1);
 	`);
 	return { db: drizzle(client, { schema }) };
 });
@@ -75,18 +81,33 @@ beforeEach(async () => {
 	locals.tenant = tenant("north");
 	logged.mockClear();
 	committed.mockClear();
+	await db.delete(orderUnit);
 	await db.delete(order);
 });
 
 const draft = (fields: Partial<OrderDraft> = {}): OrderDraft => ({
 	customerId: 1,
-	equipmentId: 10,
+	units: [10],
 	type: "maintenance",
 	description: "Annual boiler service",
 	...fields,
 });
 
 const year = new Date().getFullYear();
+
+/** The units on the orders, in the orders' order and theirs. */
+const unitsOnOrders = () =>
+	db
+		.select({
+			number: order.number,
+			organizationId: orderUnit.organizationId,
+			customerId: orderUnit.customerId,
+			unit: orderUnit.equipmentId,
+			position: orderUnit.position,
+		})
+		.from(orderUnit)
+		.innerJoin(order, eq(order.id, orderUnit.orderId))
+		.orderBy(order.id, orderUnit.position);
 
 /** The reasons `createOrders()` refused `drafts` for, or `[]` if it didn't. */
 async function refusal(drafts: OrderDraft[]) {
@@ -102,7 +123,7 @@ async function refusal(drafts: OrderDraft[]) {
 describe("createOrders", () => {
 	test("numbers the orders in sequence, with the order form's defaults", async () => {
 		const created = await db.transaction((tx) =>
-			createOrders(tx, [draft(), draft({ equipmentId: 11, customerId: 2, type: "inspection" })]),
+			createOrders(tx, [draft(), draft({ units: [11], customerId: 2, type: "inspection" })]),
 		);
 		expect(created.map((o) => o.number)).toEqual([`ORD-${year}-00001`, `ORD-${year}-00002`]);
 		const rows = await db
@@ -112,7 +133,6 @@ describe("createOrders", () => {
 				status: order.status,
 				priority: order.priority,
 				customerId: order.customerId,
-				equipmentId: order.equipmentId,
 				type: order.type,
 			})
 			.from(order)
@@ -124,7 +144,6 @@ describe("createOrders", () => {
 				status: "quote",
 				priority: "normal",
 				customerId: 1,
-				equipmentId: 10,
 				type: "maintenance",
 			},
 			{
@@ -133,8 +152,23 @@ describe("createOrders", () => {
 				status: "quote",
 				priority: "normal",
 				customerId: 2,
-				equipmentId: 11,
 				type: "inspection",
+			},
+		]);
+		expect(await unitsOnOrders()).toEqual([
+			{
+				number: `ORD-${year}-00001`,
+				organizationId: "north",
+				customerId: 1,
+				unit: 10,
+				position: 0,
+			},
+			{
+				number: `ORD-${year}-00002`,
+				organizationId: "north",
+				customerId: 2,
+				unit: 11,
+				position: 0,
 			},
 		]);
 		expect(created.map((o) => o.id)).toEqual(
@@ -142,9 +176,25 @@ describe("createOrders", () => {
 		);
 	});
 
+	test("puts several units on an order, in their order and each once", async () => {
+		await db.transaction((tx) => createOrders(tx, [draft({ units: [14, 10, 13, 10] })]));
+		expect((await unitsOnOrders()).map((row) => [row.unit, row.position])).toEqual([
+			[14, 0],
+			[10, 1],
+			[13, 2],
+		]);
+		// Logged with them, by id in their order: the log names them.
+		expect(logged).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "created",
+				after: expect.objectContaining({ equipmentIds: [14, 10, 13] }),
+			}),
+		);
+	});
+
 	test("continues the tenant's numbers, not another tenant's", async () => {
 		locals.tenant = tenant("south");
-		await db.transaction((tx) => createOrders(tx, [draft({ customerId: 3, equipmentId: 12 })]));
+		await db.transaction((tx) => createOrders(tx, [draft({ customerId: 3, units: [12] })]));
 		locals.tenant = tenant("north");
 		const [created] = await db.transaction((tx) => createOrders(tx, [draft()]));
 		expect(created.number).toBe(`ORD-${year}-00001`);
@@ -165,30 +215,30 @@ describe("createOrders", () => {
 	});
 
 	test("refuses another tenant's customer, unit or engineer, and a unit of another customer", async () => {
-		expect(await refusal([draft({ customerId: 3, equipmentId: null })])).toEqual([
-			"Unknown customer",
-		]);
-		expect(await refusal([draft({ equipmentId: 12 })])).toEqual([
-			"This equipment belongs to another customer",
-		]);
-		expect(await refusal([draft({ equipmentId: 11 })])).toEqual([
-			"This equipment belongs to another customer",
-		]);
+		const otherCustomer = "One of the units belongs to another customer";
+		expect(await refusal([draft({ customerId: 3, units: [] })])).toEqual(["Unknown customer"]);
+		expect(await refusal([draft({ units: [12] })])).toEqual([otherCustomer]);
+		expect(await refusal([draft({ units: [11] })])).toEqual([otherCustomer]);
+		// One such unit refuses the order, whatever the others; so does one that doesn't exist.
+		expect(await refusal([draft({ units: [10, 12] })])).toEqual([otherCustomer]);
+		expect(await refusal([draft({ units: [13, 999] })])).toEqual([otherCustomer]);
 		expect(await refusal([draft({ engineerId: 2 })])).toEqual(["Unknown engineer"]);
 		// One bad draft refuses the batch: nothing is created or logged.
-		expect(await refusal([draft(), draft({ customerId: 3, equipmentId: null })])).toEqual([
+		expect(await refusal([draft(), draft({ customerId: 3, units: [] })])).toEqual([
 			"Unknown customer",
 		]);
 		expect(await db.select().from(order)).toEqual([]);
+		expect(await db.select().from(orderUnit)).toEqual([]);
 		expect(logged).not.toHaveBeenCalled();
 		expect(committed).not.toHaveBeenCalled();
 	});
 
-	test("accepts an order without a unit or engineer", async () => {
+	test("accepts an order without units or engineer", async () => {
 		const [created] = await db.transaction((tx) =>
-			createOrders(tx, [draft({ equipmentId: null, engineerId: 1 })]),
+			createOrders(tx, [draft({ units: [], engineerId: 1 }), draft({ units: undefined })]),
 		);
 		const [row] = await db.select().from(order).where(eq(order.id, created.id));
-		expect(row).toMatchObject({ equipmentId: null, engineerId: 1 });
+		expect(row).toMatchObject({ engineerId: 1 });
+		expect(await unitsOnOrders()).toEqual([]);
 	});
 });

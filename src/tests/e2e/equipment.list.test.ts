@@ -152,7 +152,7 @@ describe("in North", () => {
 		const busiest = await rows<{ serial: string }>(
 			`with open as (
 				select e.serial_number as serial, count(*) as n from equipment e
-				join "order" o on o.equipment_id = e.id
+				join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
 				where e.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
 				group by e.id
 			)

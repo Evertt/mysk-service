@@ -54,6 +54,9 @@ CREATE TABLE `__new_equipment` (
 	FOREIGN KEY (`customer_id`,`site_id`) REFERENCES `customer_site`(`customer_id`,`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+-- What the table's ids have come to (its highest ever, though that row may be gone), kept for the
+-- new table: an id is never given again, as the activity log knows records by them.
+CREATE TABLE `__old_equipment_sequence` AS SELECT `seq` FROM `sqlite_sequence` WHERE `name` = 'equipment';--> statement-breakpoint
 DROP TABLE `equipment`;--> statement-breakpoint
 ALTER TABLE `__new_equipment` RENAME TO `equipment`;--> statement-breakpoint
 CREATE UNIQUE INDEX `equipment_organization_serial_number` ON `equipment` (`organization_id`,`serial_number`);--> statement-breakpoint
@@ -65,6 +68,9 @@ CREATE INDEX `equipment_site` ON `equipment` (`site_id`);--> statement-breakpoin
 INSERT INTO `equipment`("id", "organization_id", "serial_number", "model", "manufacturer", "category", "status", "customer_id", "site_id", "name", "location", "installed_at", "warranty_until") SELECT "id", "organization_id", "serial_number", "model", "manufacturer", "category", "status", "customer_id", (SELECT "id" FROM `customer_site` WHERE `customer_site`."organization_id" = `__old_equipment`."organization_id" AND `customer_site`."customer_id" = `__old_equipment`."customer_id"), NULL, NULL, "installed_at", "warranty_until" FROM `__old_equipment`;--> statement-breakpoint
 INSERT INTO `contract_equipment` SELECT * FROM `__old_contract_equipment`;--> statement-breakpoint
 INSERT INTO `maintenance_plan` SELECT * FROM `__old_maintenance_plan`;--> statement-breakpoint
+DELETE FROM `sqlite_sequence` WHERE `name` = 'equipment';--> statement-breakpoint
+INSERT INTO `sqlite_sequence`(`name`, `seq`) SELECT 'equipment', max(coalesce((SELECT max(`seq`) FROM `__old_equipment_sequence`), 0), coalesce((SELECT max(`id`) FROM `equipment`), 0));--> statement-breakpoint
+DROP TABLE `__old_equipment_sequence`;--> statement-breakpoint
 DROP TABLE `__old_equipment`;--> statement-breakpoint
 DROP TABLE `__old_contract_equipment`;--> statement-breakpoint
 DROP TABLE `__old_maintenance_plan`;

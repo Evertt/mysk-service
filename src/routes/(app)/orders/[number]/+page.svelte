@@ -9,12 +9,6 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
 	import { SpecialtyBadge } from "#lib/engineers/components.ts";
-	import {
-		EquipmentLink,
-		StatusBadge as EquipmentStatusBadge,
-		WarrantyBadge,
-	} from "#lib/equipment/components.ts";
-	import { unitModel } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { isEditableOrder } from "#lib/models.ts";
@@ -23,6 +17,7 @@
 		EquipmentHistoryCard,
 		OrderLinesCard,
 		OrderTags,
+		UnitsCard,
 		WorkReport,
 	} from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
@@ -35,7 +30,7 @@
 	const data = $derived(await getOrder(params.number));
 
 	const order = $derived(data.order);
-	const { customer, equipment, engineer } = $derived(data.order);
+	const { customer, engineer } = $derived(data.order);
 </script>
 
 <svelte:head>
@@ -82,8 +77,10 @@
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
 		<OrderLinesCard {order} totals={data.totals} />
 
-		{#if equipment}
-			<EquipmentHistoryCard serialNumber={equipment.serialNumber} history={data.history} />
+		<UnitsCard {order} />
+
+		{#if order.units.length}
+			<EquipmentHistoryCard units={order.units} history={data.history} />
 		{/if}
 	</div>
 
@@ -113,49 +110,9 @@
 
 		<CustomerCard {customer} title={m.orders_customer()} />
 
-		{#if data.site}
-			<SiteCard site={data.site} title={m.orders_site()} />
-		{/if}
-
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.orders_equipment()}</Card.Title>
-				{#if equipment}
-					<Card.Description>
-						<EquipmentLink serialNumber={equipment.serialNumber} />
-					</Card.Description>
-					<Card.Action>
-						<EquipmentStatusBadge status={equipment.status} />
-					</Card.Action>
-				{/if}
-			</Card.Header>
-			<Card.Content>
-				{#if equipment}
-					<dl class="grid grid-cols-2 gap-4">
-						{#if equipment.name}
-							<DetailItem label={m.orders_detail_name()} value={equipment.name} />
-						{/if}
-						<DetailItem label={m.orders_detail_model()} value={unitModel(equipment)} />
-						{#if equipment.location}
-							<DetailItem label={m.orders_detail_location()} value={equipment.location} />
-						{/if}
-						<DetailItem label={m.orders_detail_category()} value={equipment.category.name} />
-						<DetailItem
-							label={m.orders_detail_installed()}
-							value={formatDate(equipment.installedAt)}
-						/>
-						<DetailItem label={m.orders_detail_warranty()}>
-							<span class="flex flex-wrap items-center gap-2">
-								{formatDate(equipment.warrantyUntil)}
-								<WarrantyBadge until={equipment.warrantyUntil} at={order.createdAt} />
-							</span>
-						</DetailItem>
-					</dl>
-				{:else}
-					<p class="text-sm text-muted-foreground">{m.orders_equipment_unregistered()}</p>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+		{#each data.sites as site (site.id)}
+			<SiteCard {site} title={m.orders_site()} />
+		{/each}
 
 		<Card.Root>
 			<Card.Header>

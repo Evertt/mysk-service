@@ -20,7 +20,8 @@ import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
 import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
-import { labelOptions, withLabels } from "#lib/i18n/index.ts";
+import { unitTitle } from "#lib/equipment/index.ts";
+import { formatNumber, labelOptions, withLabels } from "#lib/i18n/index.ts";
 import {
 	type OrderPriority,
 	orderPriorities,
@@ -98,3 +99,16 @@ export const costsLabour = (costs: readonly { label: string }[]) =>
 	costs.length
 		? m.orders_costs_labour({ costs: costs.map((cost) => cost.label).join(", ") })
 		: m.orders_labour();
+
+/**
+ * An order's units in short, e.g. "Deur 07 +14": what its first unit is called, and how many more it
+ * has; `null` for an order without units.
+ */
+export const unitsSummary = (
+	first: { name: string | null; manufacturer: string; model: string } | null,
+	count: number,
+) =>
+	first &&
+	(count > 1
+		? m.orders_units_summary({ unit: unitTitle(first), more: formatNumber(count - 1) })
+		: unitTitle(first));

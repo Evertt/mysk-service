@@ -4,6 +4,7 @@ import type { OrderStatus, OrderType } from "#lib/models.ts";
 import {
 	coveredAmount,
 	coveredBy,
+	coveringAllUnits,
 	coveringContract,
 	isCoveredWork,
 	responseDeadline,
@@ -26,6 +27,27 @@ describe("coverage", () => {
 		expect(coveringContract([year], at("2026-12-31 23:59"))).toBe(year);
 		expect(coveringContract([year], day("2025-12-31"))).toBeUndefined();
 		expect(coveringContract([year], day("2027-01-01"))).toBeUndefined();
+	});
+
+	test("covers an order about several units only by a contract that covers them all", () => {
+		const rows = (id: number, units: number[], responseHours = 24) =>
+			units.map((equipmentId) => ({
+				id,
+				equipmentId,
+				...contract(`CTR-${id}`, "2026-01-01", "2026-12-31", responseHours),
+			}));
+		const coverage = [...rows(1, [10, 11, 12], 48), ...rows(2, [10, 11], 4), ...rows(3, [13])];
+		const on = day("2026-06-01");
+		// All three units: only the first contract has them all, slower though it is.
+		expect(coveringAllUnits(coverage, [10, 11, 12], on)?.number).toBe("CTR-1");
+		// Two that both cover: the fastest.
+		expect(coveringAllUnits(coverage, [11, 10], on)?.number).toBe("CTR-2");
+		// Mixed coverage: units that only different contracts cover together, or one none covers.
+		expect(coveringAllUnits(coverage, [10, 13], on)).toBeUndefined();
+		expect(coveringAllUnits(coverage, [10, 99], on)).toBeUndefined();
+		// No units, no coverage; and only on the contract's days.
+		expect(coveringAllUnits(coverage, [], on)).toBeUndefined();
+		expect(coveringAllUnits(coverage, [13], day("2027-01-02"))).toBeUndefined();
 	});
 
 	test("takes the contract of the time, not today's", () => {

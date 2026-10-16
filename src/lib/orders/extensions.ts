@@ -32,7 +32,8 @@ export interface OrderFacts {
 	id: number;
 	type: OrderType;
 	status: OrderStatus;
-	equipmentId: number | null;
+	/** The units it's about, in their order (`withUnitIds()` adds them to orders); often one. */
+	equipmentIds: readonly number[];
 	createdAt: Temporal.Instant;
 }
 

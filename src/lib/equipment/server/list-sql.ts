@@ -16,6 +16,7 @@ import {
 	equipment,
 	equipmentCategory,
 	order,
+	orderUnit,
 } from "#lib/server/db/schema.ts";
 import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
@@ -39,9 +40,13 @@ export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
  * tenant's modules (`listColumns`) are added to it.
  */
 export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
-	const openOrders = sql`(select count(*) from ${order} where ${and(
-		inTenant(order),
-		eq(order.equipmentId, equipment.id),
+	// The unit's open orders, whether it's their only unit or one of several.
+	const openOrders = sql`(select count(*) from ${orderUnit} inner join ${order} on ${and(
+		eq(order.id, orderUnit.orderId),
+		eq(order.organizationId, orderUnit.organizationId),
+	)} where ${and(
+		inTenant(orderUnit),
+		eq(orderUnit.equipmentId, equipment.id),
 		inList(order.status, openOrderStatuses),
 	)})`;
 	return withModuleColumns({

@@ -10,6 +10,9 @@ const { north } = organizations;
 const app = useApp();
 const { card, customerOptions, shownTimeline, timeline } = equipmentPage(app);
 
+/** That the order `o` is about the unit `?`, one of its units or its only one. */
+const onUnit = `exists (select 1 from order_unit x where x.order_id = o.id and x.equipment_id = ?)`;
+
 /**
  * What a unit's timeline should show, newest first: each order when it was completed, else
  * scheduled, else created; on the same day, the warranty's end above orders and the installation
@@ -23,8 +26,8 @@ async function expectedTimeline(id: number) {
 	// An order's day in the machine's time zone (the test server's), and its moment that day.
 	const orders = await rows<{ number: string; day: string; at: number }>(
 		`select number, date(coalesce(completed_at, scheduled_for, created_at), 'unixepoch',
-		 'localtime') as day, coalesce(completed_at, scheduled_for, created_at) as at from "order"
-		 where equipment_id = ? order by at desc, id desc`,
+		 'localtime') as day, coalesce(completed_at, scheduled_for, created_at) as at from "order" o
+		 where ${onUnit} order by at desc, id desc`,
 		[id],
 	);
 	return [
@@ -47,9 +50,9 @@ const daysBetween = (from: Date, to: Date) => {
  * orders, the cost less what contracts include, like the orders' own pages.
  */
 async function expectedStats(id: number) {
-	const done = `o.equipment_id = ? and o.status in ('completed', 'invoiced')`;
+	const done = `${onUnit} and o.status in ('completed', 'invoiced')`;
 	const cost = (await pricedOrders(north.id, done, [id])).reduce(
-		(sum, order) => sum + priceOf(order).total,
+		(sum, order) => sum + Math.round(priceOf(order).total / order.units),
 		0,
 	);
 	const lastService = await value<number | null>(
@@ -65,7 +68,7 @@ async function expectedStats(id: number) {
 		)
 	).map((row) => new Date(row.at * 1000));
 	const byType = await rows<{ type: string; n: number }>(
-		`select type, count(*) as n from "order" where equipment_id = ? group by type`,
+		`select type, count(*) as n from "order" o where ${onUnit} group by type`,
 		[id],
 	);
 	const now = new Date();
@@ -93,7 +96,7 @@ describe("in North", () => {
 		const [latest] = await rows<{ id: number; number: string; engineer: string | null }>(
 			`select o.id, o.number, g.name as engineer from "order" o
 			 left join engineer g on g.id = o.engineer_id
-			 where o.equipment_id = ? and o.status in ('completed', 'invoiced')
+			 where ${onUnit} and o.status in ('completed', 'invoiced')
 			 and exists (select 1 from order_line l where l.order_id = o.id)
 			 order by o.completed_at desc limit 1`,
 			[busy.id],
@@ -113,14 +116,15 @@ describe("in North", () => {
 		// On the busiest unit with an order that a contract includes something of.
 		const [covering] = await rows<{ id: number; serial: string }>(
 			`with ${covered} select e.id, e.serial_number as serial from equipment e
-			 join "order" o on o.equipment_id = e.id join covered c on c.order_id = o.id and c.n = 1
+			 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
+			 join covered c on c.order_id = o.id and c.n = 1
 			 where e.organization_id = ? and c.level in ('standard', 'premium') and o.labor_hours > 0
-			 group by e.id order by (select count(*) from "order" x where x.equipment_id = e.id) desc, e.id
+			 group by e.id order by (select count(*) from order_unit x where x.equipment_id = e.id) desc, e.id
 			 limit 1`,
 			[north.id],
 		);
 		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
-		const priced = await pricedOrders(north.id, `o.equipment_id = ?`, [covering.id]);
+		const priced = await pricedOrders(north.id, onUnit, [covering.id]);
 		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
 		for (const order of priced) {
 			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
@@ -207,7 +211,8 @@ describe("in North", () => {
 		const { page } = app;
 		const [open] = await rows<{ number: string; serial: string; unit: number }>(
 			`select o.number, e.serial_number as serial, e.id as unit from "order" o
-			 join equipment e on e.id = o.equipment_id where o.organization_id = ?
+			 join order_unit ou on ou.order_id = o.id join equipment e on e.id = ou.equipment_id
+			 where o.organization_id = ?
 			 and o.type = 'breakdown' and o.status in ('scheduled', 'in_progress') order by o.id limit 1`,
 			[north.id],
 		);

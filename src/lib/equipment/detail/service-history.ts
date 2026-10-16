@@ -27,12 +27,21 @@ export interface HistoryOrder {
 	createdAt: Temporal.Instant;
 	laborHours: number;
 	engineer: { id: number; name: string } | null;
+	/** How many units the order is about, this one included: its cost is theirs together. */
+	units: number;
 	/**
 	 * As `priceOrders()` prices it, with the modules' costs and what they're made of (e.g. the
-	 * materials used) and adjustments (e.g. contract coverage). In cents.
+	 * materials used) and adjustments (e.g. contract coverage). In cents. The whole order's.
 	 */
 	cost: { costs: OrderCost[]; labor: number; adjustments: PriceAdjustment[]; total: number };
 }
+
+/**
+ * The unit's share of what an order cost, in cents: all of it if it's the order's only unit, else
+ * as much as each of its units' (the yearly inspection of fifteen doors costs each a fifteenth).
+ */
+export const unitShare = (order: Pick<HistoryOrder, "units" | "cost">) =>
+	Math.round(order.cost.total / Math.max(1, order.units));
 
 /** Something that happened to a unit, on a day (an order's in the user's time zone). */
 export type ServiceEvent =
@@ -97,7 +106,10 @@ export interface ServiceStats {
 	openOrders: number;
 	/** Completed or invoiced. */
 	doneOrders: number;
-	/** What the completed and invoiced orders cost, after adjustments, in cents. */
+	/**
+	 * What the completed and invoiced orders cost, after adjustments, in cents: the unit's share of
+	 * those it's one of several units of (`unitShare`).
+	 */
 	cost: number;
 	/** When the latest completed or invoiced order was completed. */
 	lastService: Temporal.Instant | null;
@@ -109,8 +121,8 @@ export interface ServiceStats {
 }
 
 /**
- * The figures of a unit's service history. Repairs (breakdowns too: corrective work) count once
- * they are done, when they were.
+ * The figures of a unit's service history: an order counts for each of its units. Repairs
+ * (breakdowns too: corrective work) count once they are done, when they were.
  */
 export function serviceStats(orders: HistoryOrder[], now = Temporal.Now.instant()): ServiceStats {
 	const done = orders.filter((order) => isDoneOrder(order.status) && order.completedAt);
@@ -129,7 +141,7 @@ export function serviceStats(orders: HistoryOrder[], now = Temporal.Now.instant(
 		ordersByType,
 		openOrders: orders.filter((order) => isOpenOrder(order.status)).length,
 		doneOrders: done.length,
-		cost: done.reduce((sum, order) => sum + order.cost.total, 0),
+		cost: done.reduce((sum, order) => sum + unitShare(order), 0),
 		lastService: services.at(-1) ?? null,
 		repairs: repairs.length,
 		daysSinceLastRepair: lastRepair ? daysBetween(lastRepair, now) : null,

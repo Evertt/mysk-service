@@ -62,7 +62,7 @@ const movements = (number: string) =>
 		[number, north.id],
 	);
 
-/** The site an order's work is at: its unit's, or its customer's only one. */
+/** The site an order's work is at: its first unit's, or its customer's only one. */
 const siteOfOrder = (id: number) =>
 	rows<{
 		name: string;
@@ -74,7 +74,8 @@ const siteOfOrder = (id: number) =>
 		access_notes: string | null;
 	}>(
 		`select s.name, s.address, s.postal_code, s.city, s.slot_start, s.slot_end, s.access_notes
-		 from "order" o left join equipment e on e.id = o.equipment_id
+		 from "order" o left join order_unit u on u.order_id = o.id and u.position = 0
+		 left join equipment e on e.id = u.equipment_id
 		 join customer_site s on s.id = coalesce(e.site_id,
 			(select min(id) from customer_site where customer_id = o.customer_id
 			 group by customer_id having count(*) = 1))
@@ -141,7 +142,8 @@ describe("the engineer portal", () => {
 		const [details] = await rows<Record<string, string>>(
 			`select c.name, c.contact_name, c.phone, c.city, o.description, e.serial_number
 			 from "order" o join customer c on c.id = o.customer_id
-			 left join equipment e on e.id = o.equipment_id where o.id = ?`,
+			 left join order_unit u on u.order_id = o.id and u.position = 0
+			 left join equipment e on e.id = u.equipment_id where o.id = ?`,
 			[job.id],
 		);
 		const text = await page.locator("main").innerText();

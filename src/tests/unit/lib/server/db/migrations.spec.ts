@@ -223,7 +223,10 @@ test("0010_add-customer-sites gives every customer a site of their own town, wit
 	const client = createClient({ url: `file:${join(folder, "sites.db")}` });
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(beforeSites);
-	await migrate(drizzle(client), { migrationsFolder });
+	// Up to the orders' units, which took their unit's column away.
+	await migrate(drizzle(client), {
+		migrationsFolder: streamBefore(migrationsFolder, "0012_order-units", "sites-until-units"),
+	});
 	expect(await afterSites(client)).toEqual(sitesMade);
 	client.close();
 });
@@ -349,7 +352,9 @@ test("0011_equipment-categories gives each tenant the categories its units had, 
 	const client = createClient({ url: `file:${join(folder, "categories.db")}` });
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(beforeCategories);
-	await migrate(drizzle(client), { migrationsFolder });
+	await migrate(drizzle(client), {
+		migrationsFolder: streamBefore(migrationsFolder, "0012_order-units", "categories-until-units"),
+	});
 	expect(await afterCategories(client)).toEqual(categoriesMade);
 	client.close();
 });
@@ -370,5 +375,251 @@ test("the Durable Object's 0003_equipment-categories does the same with its fore
 		.filter(Boolean);
 	await client.batch(statements, "write");
 	expect(await afterCategories(client)).toEqual(categoriesMade);
+	client.close();
+});
+
+/**
+ * Two tenants' orders, with a unit and without, and every record that refers to an order: its
+ * notes, sign-off, material lines and stock movements, an invoice line, and a maintenance plan's
+ * last order, as they were while an order had one unit at most (`equipment_id`).
+ */
+const beforeUnits = `
+	insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 1), ('b', 'B', 'b', 2);
+	insert into customer (id, organization_id, code, name, contact_name, email, phone, city, country, segment, created_at)
+	values (1, 'a', 'C-1', 'Riedel', 'Jan', 'jan@riedel.nl', '0318 123456', 'Ede', 'Netherlands', 'enterprise', 100),
+		(2, 'a', 'C-2', 'Vermeer', 'Els', 'els@vermeer.nl', '055 123456', 'Apeldoorn', 'Netherlands', 'mid_market', 200),
+		(3, 'b', 'C-1', 'Pakhuis', 'Piet', 'piet@pakhuis.be', '+32 9 123 45 67', 'Gent', 'Belgium', 'small_business', 300);
+	insert into customer_site (id, organization_id, customer_id, name, city, country)
+	values (5, 'a', 1, 'Ede', 'Ede', 'Netherlands'), (6, 'a', 2, 'Apeldoorn', 'Apeldoorn', 'Netherlands'),
+		(7, 'b', 3, 'Gent', 'Gent', 'Belgium');
+	insert into equipment_category (id, organization_id, name, specialty, position)
+	values (1, 'a', 'Deur', 'mechanical', 0), (2, 'b', 'Koelmachine', 'hvac', 0);
+	insert into equipment (id, organization_id, serial_number, model, manufacturer, category_id, status, customer_id, site_id, installed_at, warranty_until)
+	values (10, 'a', 'S-10', 'ST 50', 'Hörmann', 1, 'operational', 1, 5, '2024-01-01', '2027-01-01'),
+		(11, 'a', 'S-11', 'SR 60', 'Gorter', 1, 'operational', 1, 5, '2024-01-01', '2027-01-01'),
+		(12, 'a', 'S-12', 'SR 70', 'Gorter', 1, 'operational', 2, 6, '2024-01-01', '2027-01-01'),
+		(30, 'b', 'S-30', 'C15', 'Daikin', 2, 'operational', 3, 7, '2024-01-01', '2027-01-01');
+	insert into engineer (id, organization_id, name, email, phone, specialty, region, hourly_rate, hired_at)
+	values (40, 'a', 'Lev', 'lev@example.com', '06 1234 5678', 'mechanical', 'Gelderland', 6500, '2020-01-01');
+	insert into "order" (id, organization_id, number, customer_id, equipment_id, engineer_id, type, status, priority, description, scheduled_for, completed_at, labor_hours, created_at)
+	values (100, 'a', 'O-1', 1, 10, 40, 'repair', 'completed', 'high', 'Deur hapert', 1790000000, 1790003600, 2.5, 1789990000),
+		(101, 'a', 'O-2', 1, null, null, 'installation', 'quote', 'normal', 'Nieuwe deur', null, null, 0, 1789990001),
+		(102, 'a', 'O-3', 2, 12, 40, 'maintenance', 'invoiced', 'low', 'Onderhoud', 1790100000, 1790103600, 1, 1789990002),
+		(103, 'b', 'O-1', 3, 30, null, 'inspection', 'scheduled', 'normal', 'Keuring', 1790200000, null, 0, 1789990003);
+	insert into order_note (id, organization_id, order_id, text, created_at) values (110, 'a', 100, 'Veer vervangen', 1790001000);
+	insert into order_signoff (order_id, organization_id, signer_name, signature, signed_at)
+	values (100, 'a', 'Jan', 'data:image/png;base64,AAAA', 1790003600);
+	insert into material (id, organization_id, sku, name, unit, unit_price, stock) values (120, 'a', 'VEER-1', 'Veer', 'piece', 2500, 9);
+	insert into order_line (id, organization_id, order_id, material_id, quantity, unit_price) values (130, 'a', 100, 120, 1, 2500);
+	insert into stock_movement (id, organization_id, material_id, quantity, kind, order_id, order_number, created_at)
+	values (140, 'a', 120, -1, 'consumed', 100, 'O-1', 1790003600);
+	insert into invoice (id, organization_id, number, customer_id, status, payment_term_days, vat_rate, issued_on)
+	values (150, 'a', 'F-1', 2, 'sent', 30, 0.21, '2026-10-01');
+	insert into invoice_line (id, organization_id, invoice_id, description, quantity, unit_price, amount, order_id, source)
+	values (160, 'a', 150, 'Onderhoud O-3', 1, 6500, 6500, 102, 'order');
+	insert into maintenance_plan (id, organization_id, equipment_id, order_type, description, interval_months, next_due_on, anchor_day, last_order_id, last_order_organization_id)
+	values (170, 'a', 11, 'maintenance', 'Jaarlijks', 12, '2027-10-01', 1, 101, 'a'),
+		(171, 'a', 10, 'inspection', 'Keuring', 12, '2027-10-01', 1, null, null);
+`;
+
+/** What became of `beforeUnits`: the orders, their units, and everything that refers to them. */
+async function afterUnits(client: ReturnType<typeof createClient>) {
+	const all = async (sql: string) => (await client.execute(sql)).rows.map((row) => ({ ...row }));
+	return {
+		columns: (await all("pragma table_info('order')")).map((column) => column.name),
+		orders: await all('select * from "order" order by id'),
+		units: await all("select * from order_unit order by order_id, position"),
+		notes: await all("select id, order_id, text from order_note"),
+		signoffs: await all("select order_id, signer_name from order_signoff"),
+		lines: await all("select id, order_id, material_id, quantity from order_line"),
+		movements: await all("select id, order_id, quantity from stock_movement"),
+		invoiceLines: await all("select id, order_id, amount from invoice_line"),
+		plans: await all(
+			"select id, last_order_id, last_order_organization_id from maintenance_plan order by id",
+		),
+		leftovers: await all(
+			"select name from sqlite_master where name like '\\_\\_%' escape '\\' and name != '__drizzle_migrations'",
+		),
+		keys: await all("pragma foreign_key_check"),
+	};
+}
+
+/** One of `beforeUnits`'s orders as it is after the migration: all its columns but the unit's. */
+const migratedOrder = (id: number, fields: Record<string, unknown>) => ({
+	id,
+	organization_id: "a",
+	engineer_id: null,
+	scheduled_for: null,
+	completed_at: null,
+	labor_hours: 0,
+	...fields,
+});
+
+const unitsMade = {
+	columns: [
+		"id",
+		"organization_id",
+		"number",
+		"customer_id",
+		"engineer_id",
+		"type",
+		"status",
+		"priority",
+		"description",
+		"scheduled_for",
+		"completed_at",
+		"labor_hours",
+		"created_at",
+	],
+	orders: [
+		migratedOrder(100, {
+			number: "O-1",
+			customer_id: 1,
+			engineer_id: 40,
+			type: "repair",
+			status: "completed",
+			priority: "high",
+			description: "Deur hapert",
+			scheduled_for: 1790000000,
+			completed_at: 1790003600,
+			labor_hours: 2.5,
+			created_at: 1789990000,
+		}),
+		migratedOrder(101, {
+			number: "O-2",
+			customer_id: 1,
+			type: "installation",
+			status: "quote",
+			priority: "normal",
+			description: "Nieuwe deur",
+			created_at: 1789990001,
+		}),
+		migratedOrder(102, {
+			number: "O-3",
+			customer_id: 2,
+			engineer_id: 40,
+			type: "maintenance",
+			status: "invoiced",
+			priority: "low",
+			description: "Onderhoud",
+			scheduled_for: 1790100000,
+			completed_at: 1790103600,
+			labor_hours: 1,
+			created_at: 1789990002,
+		}),
+		migratedOrder(103, {
+			organization_id: "b",
+			number: "O-1",
+			customer_id: 3,
+			type: "inspection",
+			status: "scheduled",
+			priority: "normal",
+			description: "Keuring",
+			scheduled_for: 1790200000,
+			created_at: 1789990003,
+		}),
+	],
+	// Each order's unit, if it had one, as the first of its units; none for the installation.
+	units: [
+		{ organization_id: "a", order_id: 100, customer_id: 1, equipment_id: 10, position: 0 },
+		{ organization_id: "a", order_id: 102, customer_id: 2, equipment_id: 12, position: 0 },
+		{ organization_id: "b", order_id: 103, customer_id: 3, equipment_id: 30, position: 0 },
+	],
+	notes: [{ id: 110, order_id: 100, text: "Veer vervangen" }],
+	signoffs: [{ order_id: 100, signer_name: "Jan" }],
+	lines: [{ id: 130, order_id: 100, material_id: 120, quantity: 1 }],
+	movements: [{ id: 140, order_id: 100, quantity: -1 }],
+	invoiceLines: [{ id: 160, order_id: 102, amount: 6500 }],
+	plans: [
+		{ id: 170, last_order_id: 101, last_order_organization_id: "a" },
+		{ id: 171, last_order_id: null, last_order_organization_id: null },
+	],
+	leftovers: [],
+	keys: [],
+};
+
+test("0012_order-units makes each order's unit its first, keeping all that refers to orders", async () => {
+	const before = streamBefore(migrationsFolder, "0012_order-units", "before-units");
+	const client = createClient({ url: `file:${join(folder, "units.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeUnits);
+	await migrate(drizzle(client), { migrationsFolder });
+	expect(await afterUnits(client)).toEqual(unitsMade);
+	client.close();
+});
+
+test("the Durable Object's 0004_order-units does the same with its foreign keys on", async () => {
+	const before = streamBefore(durableFolder, "0004_order-units", "before-units-durable");
+	const client = createClient({ url: `file:${join(folder, "units-durable.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeUnits);
+	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
+	const statements = readFileSync(join(durableFolder, "0004_order-units.sql"), "utf8")
+		.split("--> statement-breakpoint")
+		.map((statement) => statement.trim())
+		.filter(Boolean);
+	await client.batch(statements, "write");
+	expect(await afterUnits(client)).toEqual(unitsMade);
+	client.close();
+});
+
+/**
+ * `beforeSites`, and then the newest order and unit (the highest ids yet) made and deleted: the
+ * tables' sequences are above their highest ids now.
+ */
+const beforeSequences = `${beforeSites}
+	insert into equipment (id, organization_id, serial_number, model, manufacturer, category, status, customer_id, installed_at, warranty_until)
+	values (40, 'a', 'S-40', 'SR 70', 'Wilo', 'pump', 'operational', 1, '2024-01-01', '2027-01-01');
+	insert into "order" (id, organization_id, number, customer_id, equipment_id, type, status, priority, description)
+	values (101, 'a', 'O-2', 1, 40, 'repair', 'quote', 'normal', 'Lekt');
+	delete from "order" where id = 101;
+	delete from equipment where id = 40;
+`;
+
+/** The ids a new unit and a new order get, once the migrations made the tables anew. */
+async function nextIds(client: ReturnType<typeof createClient>) {
+	await client.executeMultiple(`
+		insert into equipment (organization_id, serial_number, model, manufacturer, category_id, status, customer_id, site_id, installed_at, warranty_until)
+		select 'a', 'S-NEW', 'X', 'Y', (select min(id) from equipment_category where organization_id = 'a'),
+			'operational', 1, (select min(id) from customer_site where customer_id = 1), '2026-01-01', '2028-01-01';
+		insert into "order" (organization_id, number, customer_id, type, status, priority, description)
+		values ('a', 'O-NEW', 1, 'repair', 'quote', 'normal', 'Nieuw');
+	`);
+	const id = async (sql: string) => (await client.execute(sql)).rows[0].id;
+	return {
+		unit: await id("select id from equipment where serial_number = 'S-NEW'"),
+		order: await id(`select id from "order" where number = 'O-NEW'`),
+		leftovers: (
+			await client.execute(
+				"select name from sqlite_master where name like '\\_\\_old%sequence' escape '\\'",
+			)
+		).rows.map((row) => row.name),
+	};
+}
+
+test("the rebuilds of equipment and orders keep their sequences: deleted ids aren't given again", async () => {
+	const before = streamBefore(migrationsFolder, "0010_add-customer-sites", "before-sequences");
+	const client = createClient({ url: `file:${join(folder, "sequences.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeSequences);
+	await migrate(drizzle(client), { migrationsFolder });
+	expect(await nextIds(client)).toEqual({ unit: 41, order: 102, leftovers: [] });
+	client.close();
+});
+
+test("the Durable Object's rebuilds keep them too, with their foreign keys on", async () => {
+	const before = streamBefore(durableFolder, "0002_add-customer-sites", "before-sequences-durable");
+	const client = createClient({ url: `file:${join(folder, "sequences-durable.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeSequences);
+	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
+	for (const tag of ["0002_add-customer-sites", "0003_equipment-categories", "0004_order-units"]) {
+		const statements = readFileSync(join(durableFolder, `${tag}.sql`), "utf8")
+			.split("--> statement-breakpoint")
+			.map((statement) => statement.trim())
+			.filter(Boolean);
+		await client.batch(statements, "write");
+	}
+	expect(await nextIds(client)).toEqual({ unit: 41, order: 102, leftovers: [] });
 	client.close();
 });

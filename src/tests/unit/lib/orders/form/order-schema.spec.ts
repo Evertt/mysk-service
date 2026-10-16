@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test, vi } from "vite-plus/test";
 
-import { orderFields, orderFormPreflight } from "#lib/orders/form/order-schema.ts";
+import { MAX_ORDER_UNITS, orderFields, orderFormPreflight } from "#lib/orders/form/order-schema.ts";
 import { day } from "#unit/temporal-support.ts";
 
 // A made-up module's part of the order form: gadgets' count.
@@ -21,7 +21,7 @@ const parse = (input: Record<string, unknown>) => {
 
 const form = {
 	customerId: "5",
-	equipmentId: "11",
+	equipmentIds: ["11", "14"],
 	engineerId: "2",
 	type: "repair",
 	status: "scheduled",
@@ -37,7 +37,7 @@ test("a filled-in form becomes an order", () => {
 		value: {
 			...form,
 			customerId: 5,
-			equipmentId: 11,
+			equipmentIds: [11, 14],
 			engineerId: 2,
 			description: "Replace the pump seal",
 			scheduledFor: day("2026-10-20"),
@@ -46,10 +46,23 @@ test("a filled-in form becomes an order", () => {
 });
 
 test("an order for a new installation, not yet assigned or scheduled", () => {
-	const order = { ...form, equipmentId: "", engineerId: "", scheduledFor: "", scheduledTime: "" };
+	const { equipmentIds: _units, ...rest } = form;
+	// No units ticked: no field at all.
+	const order = { ...rest, engineerId: "", scheduledFor: "", scheduledTime: "" };
 	expect(parse(order)).toMatchObject({
-		value: { equipmentId: null, engineerId: null, scheduledFor: null, scheduledTime: null },
+		value: { equipmentIds: [], engineerId: null, scheduledFor: null, scheduledTime: null },
 	});
+});
+
+test("its units are ids, at most as many as an order can have", () => {
+	expect(new Set(parse({ ...form, equipmentIds: ["11", "x"] }).issues)).toEqual(
+		new Set(["Choose units of the customer's"]),
+	);
+	const many = Array.from({ length: MAX_ORDER_UNITS + 1 }, (_, i) => String(i + 1));
+	expect(parse({ ...form, equipmentIds: many })).toEqual({
+		issues: [`An order can be about ${MAX_ORDER_UNITS} units at most`],
+	});
+	expect(parse({ ...form, equipmentIds: many.slice(1) })).toHaveProperty("value");
 });
 
 test("the time it's scheduled for must be a valid time", () => {

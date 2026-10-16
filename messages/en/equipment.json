@@ -211,5 +211,6 @@
 	"equipment_category_delete_title": "Delete {name}?",
 	"equipment_category_delete_description": "It's removed from your categories. Equipment that has it needs another category first.",
 	"equipment_category_deleted": "Category deleted",
-	"equipment_categories_column_actions": "Actions"
+	"equipment_categories_column_actions": "Actions",
+	"equipment_history_shared": "One of {count} units on this order; this unit's share is {share}"
 }

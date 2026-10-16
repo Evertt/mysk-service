@@ -3,12 +3,13 @@
  * order's coverage and response time, the contracts covering a unit, and the dashboard's cards.
  */
 import { error } from "@sveltejs/kit";
-import { and, asc, desc, eq, gt, gte, isNotNull, lt, lte, notExists } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, lt, lte, notExists, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { correctiveOrderTypes } from "#lib/models.ts";
+import { unitCount, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -25,12 +26,12 @@ const EXPIRING_DAYS = 60;
 /** The contract that covered an order and its response deadline, or `null` if none did. */
 export const getOrderCoverage = query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
-		columns: { id: true, type: true, status: true, equipmentId: true, createdAt: true },
+		columns: { id: true, type: true, status: true, createdAt: true },
 		where: and(eq(order.number, number), inTenant(order)),
 	});
 	if (!found) error(404, m.contracts_order_not_found({ number }));
 
-	const coverage = (await coverageOf([found])).get(found.id);
+	const coverage = (await coverageOf(await withUnitIds([found]))).get(found.id);
 	if (!coverage) return null;
 	return {
 		contract: coverage,
@@ -72,27 +73,29 @@ export const getContractsOverview = query(async () => {
 	const horizon = today.add({ days: EXPIRING_DAYS });
 
 	// Only breakdowns and repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).
-	const waiting = await db
-		.select({
-			id: order.id,
-			number: order.number,
-			type: order.type,
-			status: order.status,
-			priority: order.priority,
-			equipmentId: order.equipmentId,
-			createdAt: order.createdAt,
-			customer: { code: customer.code, name: customer.name },
-		})
-		.from(order)
-		.innerJoin(...tenantJoin(customer, order.customerId))
-		.where(
-			and(
-				inTenant(order),
-				inList(order.type, correctiveOrderTypes),
-				eq(order.status, "quote"),
-				isNotNull(order.equipmentId),
+	const waiting = await withUnitIds(
+		await db
+			.select({
+				id: order.id,
+				number: order.number,
+				type: order.type,
+				status: order.status,
+				priority: order.priority,
+				createdAt: order.createdAt,
+				customer: { code: customer.code, name: customer.name },
+			})
+			.from(order)
+			.innerJoin(...tenantJoin(customer, order.customerId))
+			.where(
+				and(
+					inTenant(order),
+					inList(order.type, correctiveOrderTypes),
+					eq(order.status, "quote"),
+					// Only orders about units can be covered.
+					sql`${unitCount()} > 0`,
+				),
 			),
-		);
+	);
 	const coverage = await coverageOf(waiting);
 	const responses = waiting
 		.flatMap((row) => {

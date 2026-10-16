@@ -58,15 +58,17 @@ export function updateEquipmentStatus(
 		type: OrderType;
 		status: OrderStatus;
 		priority: OrderPriority;
-		equipmentId: number | null;
+		equipmentIds: readonly number[];
 	}[],
 ) {
 	for (const o of orders) {
-		if (!isCorrectiveWork(o.type) || !o.equipmentId) continue;
+		if (!isCorrectiveWork(o.type)) continue;
 		if (!["quote", "scheduled", "in_progress"].includes(o.status)) continue;
-		const item = equipments[o.equipmentId - 1];
-		if (o.priority === "urgent") item.status = "out_of_service";
-		else if (item.status === "operational") item.status = "needs_service";
+		for (const unit of o.equipmentIds) {
+			const item = equipments[unit - 1];
+			if (o.priority === "urgent") item.status = "out_of_service";
+			else if (item.status === "operational") item.status = "needs_service";
+		}
 	}
 	for (const item of equipments) {
 		if (item.status === "operational" && faker.datatype.boolean(0.04))

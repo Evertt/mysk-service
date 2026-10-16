@@ -12,13 +12,13 @@ export const unitId = (serial: string, organizationId: string) =>
 		organizationId,
 	]);
 export const orderCount = (id: number) =>
-	value<number>(`select count(*) from "order" where equipment_id = ?`, [id]);
+	value<number>(`select count(*) from order_unit where equipment_id = ?`, [id]);
 
 /** An organization's unit with the most orders. */
 export async function busiest(organizationId: string) {
 	const [found] = await rows<{ id: number; serial: string; orders: number }>(
 		`select e.id, e.serial_number as serial, count(o.id) as orders from equipment e
-		 join "order" o on o.equipment_id = e.id where e.organization_id = ?
+		 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id where e.organization_id = ?
 		 group by e.id order by count(o.id) desc, e.id limit 1`,
 		[organizationId],
 	);
@@ -29,7 +29,7 @@ export async function busiest(organizationId: string) {
 export async function northOnly() {
 	const [found] = await rows<{ id: number; serial: string }>(
 		`select id, serial_number as serial from equipment e where organization_id = ?
-		 and not exists (select 1 from "order" o where o.equipment_id = e.id)
+		 and not exists (select 1 from order_unit ou where ou.equipment_id = e.id)
 		 and serial_number not in (select serial_number from equipment where organization_id = ?)
 		 order by id limit 1`,
 		[north.id, south.id],

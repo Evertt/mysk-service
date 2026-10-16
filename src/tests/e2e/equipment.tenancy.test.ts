@@ -85,7 +85,7 @@ describe("in South", () => {
 		expect((await app.go(`/equipment/${busy.serial}`))?.status()).toBe(404);
 		expect(await timeline().count()).toBe(0);
 		const numbers = await rows<{ number: string }>(
-			`select number from "order" where equipment_id = ?`,
+			`select o.number from "order" o join order_unit ou on ou.order_id = o.id where ou.equipment_id = ?`,
 			[busy.id],
 		);
 		const body = await app.page.locator("body").innerText();

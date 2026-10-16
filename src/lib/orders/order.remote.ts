@@ -1,15 +1,23 @@
 import type { RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, equipmentCategory, order } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	customerSite,
+	engineer,
+	equipment,
+	equipmentCategory,
+	order,
+	orderUnit,
+} from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -18,47 +26,62 @@ import { createOrders } from "./server/creation.ts";
 import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./server/hooks.ts";
 import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
+import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
 
 /**
- * One order with everything on it, plus other orders for the same equipment, and the site the work
- * is at: its unit's, or the customer's only one for an order without a unit.
+ * One order with everything on it: its units in their order, other orders for the same units, and
+ * the sites the work is at: its units' (one, usually), or the customer's only one for an order
+ * without units.
  */
 export const getOrder = forMembers.query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
 		where: and(eq(order.number, number), inTenant(order)),
 		with: {
 			customer: { with: { sites: true } },
-			equipment: { with: { site: true, category: { columns: { name: true } } } },
+			units: {
+				orderBy: asc(orderUnit.position),
+				with: {
+					equipment: { with: { site: true, category: { columns: { name: true } } } },
+				},
+			},
 			engineer: true,
 		},
 	});
 	if (!found) error(404, m.orders_not_found({ number }));
-	const { sites, ...owner } = found.customer;
-	const site = found.equipment?.site ?? (sites.length === 1 ? sites[0] : null);
+	const { sites: customerSites, ...owner } = found.customer;
+	const units = found.units.map((link) => link.equipment);
+	const sites = units.length
+		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
+		: customerSites.length === 1
+			? customerSites
+			: [];
+	const equipmentIds = units.map((unit) => unit.id);
 
-	// Earlier and later work on the same unit, for context.
-	const history = found.equipmentId
-		? await db.query.order.findMany({
-				columns: { id: true, number: true, type: true, status: true, createdAt: true },
-				where: and(
-					eq(order.equipmentId, found.equipmentId),
-					ne(order.id, found.id),
-					inTenant(order),
-				),
-				orderBy: desc(order.createdAt),
-				limit: 8,
-			})
+	// Earlier and later work on the same units, for context.
+	const history = equipmentIds.length
+		? await db
+				.select({
+					id: order.id,
+					number: order.number,
+					type: order.type,
+					status: order.status,
+					createdAt: order.createdAt,
+				})
+				.from(order)
+				.where(and(onAnyUnit(equipmentIds), ne(order.id, found.id), inTenant(order)))
+				.orderBy(desc(order.createdAt))
+				.limit(8)
 		: [];
 
-	const facts = { ...found, hourlyRate: found.engineer?.hourlyRate };
+	const facts = { ...found, equipmentIds, hourlyRate: found.engineer?.hourlyRate };
 	const [[price], [tags]] = await Promise.all([
 		priceOrders([facts], { items: true }),
 		tagOrders([facts]),
 	]);
 
 	return {
-		order: { ...found, customer: owner },
-		site,
+		order: { ...found, customer: owner, units },
+		sites,
 		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 		/** From the tenant's modules, e.g. a response time about to be missed. */
 		tags,
@@ -82,13 +105,23 @@ export const getOrderFormOptions = forMembers.query(async () => {
 				model: equipment.model,
 				manufacturer: equipment.manufacturer,
 				serialNumber: equipment.serialNumber,
+				location: equipment.location,
+				/** The customer's site it's at, to pick the units of a site together. */
+				site: { id: customerSite.id, name: customerSite.name },
 				/** The specialty of the engineers who service its category, if any. */
 				specialty: equipmentCategory.specialty,
 			})
 			.from(equipment)
+			.innerJoin(...tenantJoin(customerSite, equipment.siteId))
 			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
 			.where(inTenant(equipment))
-			.orderBy(asc(equipment.manufacturer), asc(equipment.model)),
+			// By site, then as the customer names them (`Deur 01`, `Deur 02`, …), then by make.
+			.orderBy(
+				asc(customerSite.name),
+				asc(sql`coalesce(${equipment.name}, ${equipment.manufacturer}) collate nocase`),
+				asc(equipment.model),
+				asc(equipment.serialNumber),
+			),
 		db
 			.select({
 				id: engineer.id,
@@ -115,7 +148,8 @@ type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
  * when a module can't save its part (see `refuseParts`).
  */
 async function saveOrder(id: number | null, input: OrderInput) {
-	const { modules, scheduledTime, ...fields } = input;
+	const { modules, scheduledTime, equipmentIds: units, ...fields } = input;
+	const equipmentIds = [...new Set(units)];
 
 	return db.transaction(async (tx) => {
 		const existing = id
@@ -127,6 +161,9 @@ async function saveOrder(id: number | null, input: OrderInput) {
 		if (existing && !isEditableOrder(existing.status)) {
 			invalid(notEditable(existing.number, "changed"));
 		}
+		const unitsBefore = existing
+			? ((await unitIdsOf([existing.id], tx)).get(existing.id) ?? [])
+			: [];
 
 		const values = {
 			...fields,
@@ -144,10 +181,13 @@ async function saveOrder(id: number | null, input: OrderInput) {
 		if (existing) {
 			orderId = existing.id;
 			number = existing.number;
+			// Its units are its customer's: they go before the customer can change.
+			await setOrderUnits(tx, existing, []);
 			await tx.update(order).set(values).where(idInTenant(order, orderId));
+			await setOrderUnits(tx, { id: orderId, customerId: values.customerId }, equipmentIds);
 		} else {
 			// Checked, numbered and logged as created there.
-			[{ id: orderId, number }] = await createOrders(tx, [values]);
+			[{ id: orderId, number }] = await createOrders(tx, [{ ...values, units: equipmentIds }]);
 		}
 
 		// The modules' parts of it, e.g. its materials, and the stock that follows its status.
@@ -165,8 +205,9 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			await recordActivity(tx, {
 				action: "updated",
 				subject,
-				before: existing,
-				after: values,
+				// The units by id, in their order: the log names those added and removed.
+				before: { ...existing, equipmentIds: unitsBefore },
+				after: { ...values, equipmentIds },
 				ignore,
 			});
 		}
@@ -184,24 +225,24 @@ function refuseParts(refused: OrderRefused): never {
 }
 
 interface ReferenceProblem {
-	field: "customerId" | "equipmentId" | "engineerId";
+	field: "customerId" | "equipmentIds" | "engineerId";
 	message: string;
 }
 
 /** Checks that the order's references exist in the current tenant and belong together. */
 async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
 	const problems: ReferenceProblem[] = [];
-	const [found, unit, assignee] = await Promise.all([
+	const [found, units, assignee] = await Promise.all([
 		db.query.customer.findFirst({
 			columns: { id: true },
 			where: idInTenant(customer, input.customerId),
 		}),
-		input.equipmentId
-			? db.query.equipment.findFirst({
-					columns: { customerId: true },
-					where: idInTenant(equipment, input.equipmentId),
-				})
-			: undefined,
+		input.equipmentIds.length
+			? db
+					.select({ id: equipment.id, customerId: equipment.customerId })
+					.from(equipment)
+					.where(idsInTenant(equipment, input.equipmentIds))
+			: [],
 		input.engineerId
 			? db.query.engineer.findFirst({
 					columns: { id: true },
@@ -210,8 +251,10 @@ async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
 			: undefined,
 	]);
 	if (!found) problems.push({ field: "customerId", message: m.orders_unknown_customer() });
-	if (input.equipmentId && unit?.customerId !== input.customerId) {
-		problems.push({ field: "equipmentId", message: m.orders_equipment_other_customer() });
+	// Another tenant's unit isn't found: it's no unit of this customer's either.
+	const ownerOf = new Map(units.map((unit) => [unit.id, unit.customerId]));
+	if (input.equipmentIds.some((unit) => ownerOf.get(unit) !== input.customerId)) {
+		problems.push({ field: "equipmentIds", message: m.orders_units_other_customer() });
 	}
 	if (input.engineerId && !assignee) {
 		problems.push({ field: "engineerId", message: m.orders_unknown_engineer() });

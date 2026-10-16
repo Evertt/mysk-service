@@ -12,8 +12,12 @@ import { getTimeZone, isDay } from "#lib/dates.ts";
 import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
-/** Records whose ids a field can refer to; the feed shows their names instead (see `Names`). */
-const referenceTypes = ["customer", "engineer", "equipment", "site", "category"] as const;
+/**
+ * Records whose ids a field can refer to; the feed shows their names instead (see `Names`). A
+ * `unit` is a unit of equipment by what it's called and its serial number ("Deur 07 (H1234567)"),
+ * where an `equipment` reference shows its serial number alone.
+ */
+const referenceTypes = ["customer", "engineer", "equipment", "unit", "site", "category"] as const;
 export type ReferenceType = (typeof referenceTypes)[number];
 
 /** The names of referenced records by type and id, e.g. `{ engineer: { "3": "Jan de Vries" } }`. */
@@ -130,6 +134,25 @@ export interface Change {
 	field: string;
 	before: string;
 	after: string;
+	/**
+	 * For a list of records (`FieldFormat.set`), what changed in it, shown instead of before and
+	 * after, e.g. "added Deur 07, Deur 08; removed Deur 03".
+	 */
+	summary?: string;
+}
+
+/** A list of records' change: the ones added and removed, by name, or that they moved. */
+function setChange(before: unknown, after: unknown, format: FieldFormat, names: Names) {
+	const [was, is] = [before, after].map((value) => (Array.isArray(value) ? value : []));
+	const key = (value: unknown) => idText(value);
+	const added = is.filter((value) => !was.some((other) => key(other) === key(value)));
+	const removed = was.filter((value) => !is.some((other) => key(other) === key(value)));
+	const named = (values: unknown[]) => values.map((value) => formatValue(value, format, names));
+	const parts = [
+		...(added.length ? [m.activity_set_added({ names: named(added).join(", ") })] : []),
+		...(removed.length ? [m.activity_set_removed({ names: named(removed).join(", ") })] : []),
+	];
+	return parts.length ? parts.join("; ") : m.activity_set_reordered();
 }
 
 /** An update's changes (`{ field: [before, after] }`) as text, in the order they were logged. */
@@ -144,6 +167,7 @@ export function describeChanges(
 			field: fieldLabel(field, format),
 			before: formatValue(before, format, names),
 			after: formatValue(after, format, names),
+			...(format?.set ? { summary: setChange(before, after, format, names) } : {}),
 		};
 	});
 }

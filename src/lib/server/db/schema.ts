@@ -204,7 +204,7 @@ export const equipment = sqliteTable(
 	],
 );
 
-/** A work order for a customer, usually on one of their pieces of equipment. */
+/** A work order for a customer, usually on one or more of their units (`orderUnit`). */
 export const order = sqliteTable(
 	"order",
 	{
@@ -212,8 +212,6 @@ export const order = sqliteTable(
 		organizationId: organizationId(),
 		number: text("number").notNull(),
 		customerId: integer("customer_id").notNull(),
-		/** One of the customer's units, if the order is about one. */
-		equipmentId: integer("equipment_id"),
 		/** Unassigned while the order is a quote. */
 		engineerId: integer("engineer_id"),
 		type: text("type", { enum: orderTypes }).notNull(),
@@ -229,25 +227,60 @@ export const order = sqliteTable(
 		// Unique within a tenant; another tenant may use the same number.
 		uniqueIndex("order_organization_number").on(table.organizationId, table.number),
 		uniqueIndex("order_organization_id").on(table.organizationId, table.id),
+		// For the order's units, which must be its own customer's.
+		uniqueIndex("order_customer_id").on(table.customerId, table.id),
 		// For the orders list, which is newest first by default and filters by these.
 		index("order_organization_created").on(table.organizationId, table.createdAt),
 		index("order_organization_status").on(table.organizationId, table.status),
 		index("order_organization_customer").on(table.organizationId, table.customerId),
 		index("order_organization_engineer").on(table.organizationId, table.engineerId),
-		// A unit's (open) orders, e.g. in the equipment list.
-		index("order_equipment_status").on(table.equipmentId, table.status),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
 		}),
-		// The customer's own unit; a unit with orders therefore can't move to another customer.
-		foreignKey({
-			columns: [table.customerId, table.equipmentId],
-			foreignColumns: [equipment.customerId, equipment.id],
-		}),
 		foreignKey({
 			columns: [table.organizationId, table.engineerId],
 			foreignColumns: [engineer.organizationId, engineer.id],
+		}),
+	],
+);
+
+/**
+ * One of the units an order is about, e.g. one of the fifteen doors of a yearly inspection. An
+ * order has none (a new installation, a survey) or several, in the order they're worked on
+ * (`position`, from 0); a unit is on an order at most once. The unit is the order's customer's, so
+ * a unit on orders can't move to another customer, and an order keeps no units of a customer it no
+ * longer has.
+ */
+export const orderUnit = sqliteTable(
+	"order_unit",
+	{
+		organizationId: organizationId(),
+		orderId: integer("order_id").notNull(),
+		/** The order's customer, whose unit it must be. */
+		customerId: integer("customer_id").notNull(),
+		equipmentId: integer("equipment_id").notNull(),
+		/** Where it comes among the order's units, from 0. */
+		position: integer("position").notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.orderId, table.equipmentId] }),
+		uniqueIndex("order_unit_order_position").on(table.orderId, table.position),
+		// A unit's orders: its service history, its open orders in the equipment list.
+		index("order_unit_equipment").on(table.equipmentId, table.orderId),
+		foreignKey({
+			columns: [table.organizationId, table.orderId],
+			foreignColumns: [order.organizationId, order.id],
+		}).onDelete("cascade"),
+		// The order's own customer…
+		foreignKey({
+			columns: [table.customerId, table.orderId],
+			foreignColumns: [order.customerId, order.id],
+		}).onDelete("cascade"),
+		// …and that customer's unit; a unit with orders can't be deleted.
+		foreignKey({
+			columns: [table.customerId, table.equipmentId],
+			foreignColumns: [equipment.customerId, equipment.id],
 		}),
 	],
 );
@@ -287,21 +320,30 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
 		fields: [equipment.customerId, equipment.siteId],
 		references: [customerSite.customerId, customerSite.id],
 	}),
-	orders: many(order),
+	orderUnits: many(orderUnit),
 }));
 
-export const orderRelations = relations(order, ({ one }) => ({
+export const orderRelations = relations(order, ({ one, many }) => ({
 	customer: one(customer, {
 		fields: [order.organizationId, order.customerId],
 		references: [customer.organizationId, customer.id],
 	}),
-	equipment: one(equipment, {
-		fields: [order.customerId, order.equipmentId],
-		references: [equipment.customerId, equipment.id],
-	}),
+	/** Load them in their order: `orderBy: asc(orderUnit.position)`. */
+	units: many(orderUnit),
 	engineer: one(engineer, {
 		fields: [order.organizationId, order.engineerId],
 		references: [engineer.organizationId, engineer.id],
+	}),
+}));
+
+export const orderUnitRelations = relations(orderUnit, ({ one }) => ({
+	order: one(order, {
+		fields: [orderUnit.organizationId, orderUnit.orderId],
+		references: [order.organizationId, order.id],
+	}),
+	equipment: one(equipment, {
+		fields: [orderUnit.customerId, orderUnit.equipmentId],
+		references: [equipment.customerId, equipment.id],
 	}),
 }));
 

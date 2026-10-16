@@ -35,7 +35,6 @@
 	"orders_form_planning": "Planning",
 	"orders_form_planning_description": "Status, planning en de monteur die het werk doet.",
 	"orders_field_customer": "Klant",
-	"orders_field_equipment": "Apparaat",
 	"orders_field_type": "Type",
 	"orders_field_priority": "Prioriteit",
 	"orders_field_description": "Omschrijving",
@@ -45,7 +44,6 @@
 	"orders_field_time": "Tijd",
 	"orders_field_labor": "Arbeid (uren)",
 	"orders_choose_customer": "Kies een klant",
-	"orders_equipment_none": "Geen (nieuwe installatie)",
 	"orders_equipment_customer_first": "Kies eerst een klant",
 	"orders_description_required": "Omschrijf het werk",
 	"orders_line_item": "Post",
@@ -96,7 +94,6 @@
 	"orders_unknown_engineer": "Onbekende monteur",
 	"orders_only_open_scheduled": "Je kunt alleen open opdrachten inplannen",
 	"orders_engineer_inactive": "{name} is niet meer actief",
-	"orders_equipment_other_customer": "Dit apparaat is van een andere klant",
 	"orders_delete_referenced": "Andere gegevens verwijzen nog naar deze opdracht, zoals een factuur, dus je kunt hem niet verwijderen.",
 	"orders_bulk_assign": "Monteur toewijzen",
 	"orders_bulk_assign_title": "{orders} toewijzen",
@@ -109,5 +106,36 @@
 	"orders_status_of": "Status van {number} wijzigen",
 	"orders_status_change_failed": "De status van {number} kon niet worden gewijzigd.",
 	"orders_site": "Vestiging",
-	"orders_detail_location": "Locatie"
+	"orders_detail_location": "Locatie",
+	"orders_field_units": "Apparaten",
+	"orders_units": "Apparaten",
+	"orders_units_add": "Apparaten toevoegen",
+	"orders_units_search": "Zoek apparaten…",
+	"orders_units_all_at": "Alle apparaten in {site} ({count})",
+	"orders_units_clear": "Alles weghalen",
+	"orders_units_none": "Geen: een nieuwe installatie of een opname",
+	"orders_unit_move_up": "{unit} omhoog",
+	"orders_unit_move_down": "{unit} omlaag",
+	"orders_unit_remove": "{unit} weghalen",
+	"orders_units_other_customer": "Een van de apparaten is van een andere klant",
+	"orders_units_invalid": "Kies apparaten van de klant",
+	"orders_units_too_many": "Een opdracht gaat over hoogstens {max} apparaten",
+	"orders_units_summary": "{unit} +{more}",
+	"orders_more_units": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "nog {countText} apparaat",
+				"countPlural=*": "nog {countText} apparaten"
+			}
+		}
+	],
+	"orders_warranty_until": "Garantie tot {date}",
+	"orders_history_units_description": "Andere opdrachten voor een van deze {count} apparaten.",
+	"orders_history_empty_units_description": "Dit is de eerste opdracht voor deze apparaten."
 }

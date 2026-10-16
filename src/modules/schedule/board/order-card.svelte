@@ -10,7 +10,7 @@
 
 	import { formatDate, formatTime } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
-	import { priorities, statuses, types } from "#lib/orders/index.ts";
+	import { priorities, statuses, types, unitsSummary } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import type { getSchedule } from "../schedule.remote.ts";
@@ -38,6 +38,8 @@
 	const open = $derived(isOpenOrder(order.status));
 	const priority = $derived(priorities[order.priority]);
 	const type = $derived(types[order.type]);
+	// Its first unit and how many more, e.g. "Deur 07 +14".
+	const units = $derived(unitsSummary(order.unit, order.unitCount));
 	// E.g. `ORD-`, shown only to screen readers.
 	const prefix = $derived(/^[A-Z]+-/.exec(order.number)?.[0] ?? "");
 
@@ -108,6 +110,9 @@
 		<span class="sr-only">{prefix}</span>{order.number.slice(prefix.length)}
 	</a>
 	<span class="truncate" title={order.customer.name}>{order.customer.name}</span>
+	{#if units}
+		<span class="truncate text-muted-foreground" title={units} data-units>{units}</span>
+	{/if}
 	<span class="flex items-center gap-1 truncate text-muted-foreground">
 		<type.icon class="size-3 shrink-0" />
 		{type.label}{#if engineer}&ensp;·&ensp;{engineer}{/if}

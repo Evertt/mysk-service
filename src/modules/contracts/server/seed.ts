@@ -285,7 +285,7 @@ export function generateCallOuts(
 			id,
 			number: formatCode("order", id, createdAt.getFullYear()),
 			customerId: term.customerId,
-			equipmentId: unit.id,
+			equipmentIds: [unit.id],
 			engineerId: null,
 			type: "breakdown" as const,
 			status: "quote" as const,
@@ -332,23 +332,28 @@ const monthlyFeeText = (term: { number: string; level: ContractLevel }, month: C
 });
 
 /**
- * The contract that covered an order, as `coveringContract()` in `../coverage.ts` has it: of the
- * contracts covering the unit, the ones running when the order was made, the fastest first.
+ * The contract that covered an order, as `coverageOf()` in `./contracts.ts` has it: of the
+ * contracts covering all of its units, the ones running when the order was made, the fastest first.
  */
 function coveringTerm(coverage: Map<number, ContractTerm[]>, order: SeedOrder) {
-	if (!(coveredOrderTypes as readonly string[]).includes(order.type) || !order.equipmentId) {
+	const [first, ...others] = order.equipmentIds;
+	if (!(coveredOrderTypes as readonly string[]).includes(order.type) || first === undefined) {
 		return undefined;
 	}
-	return (coverage.get(order.equipmentId) ?? [])
-		.filter((term) => {
-			const end = new Date(
-				term.endsOn.getFullYear(),
-				term.endsOn.getMonth(),
-				term.endsOn.getDate() + 1,
-			);
-			return term.startsOn <= order.createdAt && order.createdAt < end;
-		})
-		.sort((a, b) => a.responseHours - b.responseHours)[0];
+	return (
+		(coverage.get(first) ?? [])
+			// Only one that covers all of the order's units.
+			.filter((term) => others.every((unit) => term.equipmentIds.includes(unit)))
+			.filter((term) => {
+				const end = new Date(
+					term.endsOn.getFullYear(),
+					term.endsOn.getMonth(),
+					term.endsOn.getDate() + 1,
+				);
+				return term.startsOn <= order.createdAt && order.createdAt < end;
+			})
+			.sort((a, b) => a.responseHours - b.responseHours)[0]
+	);
 }
 
 /** What `generate()` makes for a tenant. */
