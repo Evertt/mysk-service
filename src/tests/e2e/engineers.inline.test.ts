@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { isRemote, organizations, quiet, rows, useApp, value } from "./app.ts";
+import { afresh, countIn, isRemote, organizations, quiet, rows, useApp, value } from "./app.ts";
 import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -30,7 +30,7 @@ const activityOf = (id: number) =>
 const select = (name: string, label: string) =>
 	app.page
 		.locator('[data-slot="data-table"] tbody tr', { hasText: name })
-		.getByRole("button", { name: `Status of ${name}: ${label}` });
+		.getByRole("button", { name: `Change status of ${name}: ${label}` });
 
 describe("changing whether an engineer is active in the list, in North", () => {
 	let engineer: { id: number; name: string };
@@ -85,5 +85,61 @@ describe("changing whether an engineer is active in the list, in North", () => {
 		await app.toast("Engineer not found");
 		await select(engineer.name, "Active").waitFor();
 		expect([await snapshot(engineer.id), await snapshot(theirs.id)]).toEqual(before);
+	});
+});
+
+describe("filtering the engineers by a value in their row, in North", () => {
+	/** The buttons of a column's values in the rows. */
+	const valuesIn = (columnId: string, name: string) =>
+		app.page
+			.locator(`[data-slot="data-table"] tbody [data-column-id="${columnId}"]`)
+			.getByRole("button", { name, exact: true });
+
+	test("clicking a specialty filters by it, and clicking it again stops", async () => {
+		const { page } = app;
+		const [{ specialty, count }] = await rows<{ specialty: string; count: number }>(
+			`select specialty, count(*) as count from engineer where organization_id = ?
+			 group by specialty order by count desc, specialty limit 1`,
+			[north.id],
+		);
+		const labels: Record<string, string> = {
+			electrical: "Electrical",
+			mechanical: "Mechanical",
+			hvac: "HVAC",
+			plumbing: "Plumbing",
+			controls: "Controls",
+		};
+		const all = await countIn("engineer", north.id);
+		await app.go(afresh("/engineers"));
+
+		await valuesIn("specialty", `Filter by ${labels[specialty]}`).first().click();
+		await page.waitForURL((url) => url.searchParams.get("specialty") === specialty);
+		await expect.poll(() => app.rowCount()).toBe(count);
+		await app.filterPill("Specialty").waitFor();
+
+		await valuesIn("specialty", `Stop filtering by ${labels[specialty]}`).first().click();
+		await page.waitForURL((url) => !url.searchParams.has("specialty"));
+		await expect.poll(() => app.rowCount()).toBe(all);
+	});
+
+	test("clicking the status badge filters by it, while its arrow changes it", async () => {
+		const { page } = app;
+		const active = await value<number>(
+			`select count(*) from engineer where organization_id = ? and active = 1`,
+			[north.id],
+		);
+		const engineer = await activeIn(north.id);
+		await app.go(afresh("/engineers"));
+
+		await valuesIn("status", "Filter by Active").first().click();
+		await page.waitForURL((url) => url.searchParams.get("status") === "active");
+		await expect.poll(() => app.rowCount()).toBe(active);
+
+		await page.getByLabel("Search engineers…").fill(engineer.name);
+		await select(engineer.name, "Active").click();
+		await page.getByRole("option", { name: "Inactive" }).waitFor();
+		await page.keyboard.press("Escape");
+		expect(await isActive(engineer.id)).toBe(1);
+		expect(new URL(page.url()).searchParams.get("status")).toBe("active");
 	});
 });

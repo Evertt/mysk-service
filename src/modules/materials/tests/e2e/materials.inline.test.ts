@@ -38,11 +38,11 @@ describe("in North, changing an order's status in the list", () => {
 
 		await app.go(`/orders?q=${number}`);
 		const row = page.locator('[data-slot="data-table"] tbody tr', { hasText: number });
-		await row.getByRole("button", { name: `Status of ${number}: Quote` }).click();
+		await row.getByRole("button", { name: `Change status of ${number}: Quote` }).click();
 		await page.getByRole("option", { name: "In progress" }).click();
 
 		await app.toast(`Only ${formatNumber(scarce.stock)} pcs of ${scarce.name} in stock`);
-		await row.getByRole("button", { name: `Status of ${number}: Quote` }).waitFor();
+		await row.getByRole("button", { name: `Change status of ${number}: Quote` }).waitFor();
 		expect(await snapshot(id)).toEqual(before);
 		expect(await value(`select status from "order" where id = ?`, [id])).toBe("quote");
 		expect(await orderMovements(number, north.id, mark)).toEqual([]);

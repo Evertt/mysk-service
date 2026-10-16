@@ -296,7 +296,7 @@ describe("in a server-side table", () => {
 	const where = { q: "pump", filters: { status: ["open"] } };
 	const matching = { where, key: "status=open", count: 40 };
 
-	test("with the whole page selected, offers to select all matching rows, and acts on them", async () => {
+	test("with every row loaded selected, offers to select all matching rows, and acts on them", async () => {
 		const run = vi.fn(async () => done({ done: 40 }));
 		render(Harness, { jobs, actions: [close(run)], matching });
 
@@ -304,7 +304,7 @@ describe("in a server-side table", () => {
 		const selectAll = bar().getByRole("button", { name: "Select all 40 matching" });
 		await expect.element(selectAll).not.toBeInTheDocument();
 
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		await selectAll.click();
 		await expect.element(bar().getByText("All 40 matching selected")).toBeVisible();
 		// The shown rows don't decide what it applies to then.
@@ -318,7 +318,7 @@ describe("in a server-side table", () => {
 
 	test("unselecting a row goes back to the selected ones", async () => {
 		render(Harness, { jobs, actions: [close()], matching });
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		await bar().getByRole("button", { name: "Select all 40 matching" }).click();
 		await select("Pump check");
 		await expect.element(bar().getByText("2 selected")).toBeVisible();
@@ -327,7 +327,7 @@ describe("in a server-side table", () => {
 	test("an action that can't act on all matching rows is disabled for them", async () => {
 		const once: BulkAction<Job, any> = { ...close(), matching: false };
 		render(Harness, { jobs, actions: [once], matching });
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		await expect
 			.element(bar().getByRole("button", { name: "Close" }))
 			.not.toHaveAttribute("aria-disabled");

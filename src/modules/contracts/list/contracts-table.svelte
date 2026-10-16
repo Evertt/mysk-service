@@ -22,7 +22,6 @@
 		initialState: {
 			sorting: [{ id: "period", desc: true }],
 			columnVisibility: { createdAt: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
 
@@ -50,6 +49,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />
 		<BulkActionBar actions={[deleteContracts]} />
-		<table.Pagination />
 	</div>
 </table.AppTable>

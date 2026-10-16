@@ -1,12 +1,19 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { parseMode, parseTheme, themeNames, themes, themeStylesheet } from "#lib/themes/index.ts";
+import {
+	DEFAULT_THEME,
+	parseMode,
+	parseTheme,
+	themeNames,
+	themes,
+	themeStylesheet,
+} from "#lib/themes/index.ts";
 
 describe("cookies", () => {
-	test("a known theme is used, anything else falls back to the first", () => {
-		expect(parseTheme("harbor")).toBe("harbor");
-		expect(parseTheme("nonsense")).toBe(themeNames[0]);
-		expect(parseTheme(undefined)).toBe(themeNames[0]);
+	test("a known theme is used, anything else falls back to the default (Harbor)", () => {
+		expect(parseTheme("neutral")).toBe("neutral");
+		expect(parseTheme("nonsense")).toBe(DEFAULT_THEME);
+		expect(parseTheme(undefined)).toBe("harbor");
 	});
 
 	test("the mode follows the system unless chosen", () => {

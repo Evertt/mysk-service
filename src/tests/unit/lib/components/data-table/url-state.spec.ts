@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import {
 	joinValues,
+	parseTablePosition,
 	parseTableUrl,
 	searchString,
 	splitValues,
@@ -9,6 +10,7 @@ import {
 	tableUrlParams,
 	type TableUrlSpec,
 	type TableUrlState,
+	writeTablePosition,
 	writeTableUrl,
 } from "#lib/components/data-table/url-state.ts";
 
@@ -30,7 +32,6 @@ const spec: TableUrlSpec = {
 	],
 	defaults: {
 		sorting: [{ id: "number", desc: true }],
-		pagination: { pageIndex: 0, pageSize: 20 },
 	},
 };
 
@@ -38,7 +39,6 @@ const defaults: TableUrlState = {
 	globalFilter: "",
 	sorting: [{ id: "number", desc: true }],
 	columnFilters: [],
-	pagination: { pageIndex: 0, pageSize: 20 },
 	grouping: [],
 };
 
@@ -51,7 +51,7 @@ describe("parsing", () => {
 		expect(parse("")).toEqual(defaults);
 	});
 
-	test("reads the search, filters, sorting, grouping and page", () => {
+	test("reads the search, filters, sorting and grouping (old links' page and size are ignored)", () => {
 		expect(
 			parse("q=boiler&status=quote,scheduled&sort=-priority,scheduled&group=region&page=3&size=50"),
 		).toEqual({
@@ -61,7 +61,6 @@ describe("parsing", () => {
 				{ id: "scheduledFor", desc: false },
 			],
 			columnFilters: [{ id: "status", value: ["quote", "scheduled"] }],
-			pagination: { pageIndex: 2, pageSize: 50 },
 			grouping: ["region"],
 		});
 	});
@@ -109,15 +108,15 @@ describe("parsing", () => {
 		]);
 	});
 
-	test("malformed pages and sizes are the defaults", () => {
-		for (const page of ["0", "-1", "two", "1.5", "", "99999999999"]) {
-			expect(parse(`page=${page}`).pagination.pageIndex, page).toBe(0);
+	test("reads the position, 1-based in the URL; a malformed one is the top", () => {
+		const position = (search: string, using = spec) =>
+			parseTablePosition(new URLSearchParams(search), using);
+		expect(position("")).toBe(0);
+		expect(position("row=121")).toBe(120);
+		for (const row of ["0", "-1", "two", "1.5", "", "99999999999"]) {
+			expect(position(`row=${row}`), row).toBe(0);
 		}
-		for (const size of ["0", "7", "1000", "lots"]) {
-			expect(parse(`size=${size}`).pagination.pageSize, size).toBe(20);
-		}
-		expect(parse("size=100").pagination.pageSize).toBe(100);
-		expect(parse("size=7", { ...spec, pageSizes: [7, 14] }).pagination.pageSize).toBe(7);
+		expect(position("history.row=5", { ...spec, prefix: "history" })).toBe(4);
 	});
 
 	test("unescapes commas and backslashes in values", () => {
@@ -141,12 +140,18 @@ describe("writing", () => {
 				{ id: "scheduledFor", desc: false },
 			],
 			columnFilters: [{ id: "status", value: ["quote", "scheduled"] }],
-			pagination: { pageIndex: 1, pageSize: 50 },
 			grouping: ["engineerId"],
 		};
 		expect(write(state)).toBe(
-			"?q=boiler+room&status=quote,scheduled&sort=-priority,scheduled&group=engineer&page=2&size=50",
+			"?q=boiler+room&status=quote,scheduled&sort=-priority,scheduled&group=engineer",
 		);
+	});
+
+	test("writes the position, and leaves it out at the top", () => {
+		const position = (row: number, search = "") =>
+			searchString(writeTablePosition(new URLSearchParams(search), row, spec));
+		expect(position(120, "status=quote")).toBe("?status=quote&row=121");
+		expect(position(0, "status=quote&row=121")).toBe("?status=quote");
 	});
 
 	test("grouping by a column that isn't groupable stays out", () => {
@@ -159,7 +164,7 @@ describe("writing", () => {
 
 	test("keeps the page's other parameters and replaces its own", () => {
 		const state = { ...defaults, columnFilters: [{ id: "priority", value: ["high"] }] };
-		expect(write(state, "tab=history&status=quote&page=4")).toBe("?tab=history&priority=high");
+		expect(write(state, "tab=history&status=quote&row=40")).toBe("?tab=history&priority=high");
 	});
 
 	test("escapes commas and backslashes in values", () => {
@@ -202,7 +207,6 @@ describe("round trips", () => {
 				{ id: "priority", value: ["low", "high"] },
 				{ id: "region", value: ["Noord, Oost", "Zuid\\West", "a&b=c"] },
 			],
-			pagination: { pageIndex: 4, pageSize: 10 },
 		},
 		{ ...defaults, grouping: ["region"], sorting: [{ id: "status", desc: true }] },
 	];
@@ -254,25 +258,23 @@ describe("prefixes", () => {
 			"history.q",
 			"history.sort",
 			"history.group",
-			"history.page",
-			"history.size",
+			"history.row",
 			"history.status",
 			"history.priority",
 			"history.region",
 		]);
-		const state = { ...defaults, globalFilter: "x", pagination: { pageIndex: 1, pageSize: 20 } };
-		expect(write(state, "", prefixed)).toBe("?history.q=x&history.page=2");
+		const state = { ...defaults, globalFilter: "x" };
+		expect(write(state, "history.row=3", prefixed)).toBe("?history.q=x");
 	});
 
 	test("two tables on a page leave each other's parameters alone", () => {
-		const search = "status=quote&page=3&history.status=completed&history.sort=scheduled";
+		const search = "status=quote&row=3&history.status=completed&history.sort=scheduled";
 		expect(parse(search).columnFilters).toEqual([{ id: "status", value: ["quote"] }]);
 		expect(parse(search, prefixed)).toMatchObject({
 			columnFilters: [{ id: "status", value: ["completed"] }],
 			sorting: [{ id: "scheduledFor", desc: false }],
-			pagination: { pageIndex: 0 },
 		});
-		expect(write(defaults, search, prefixed)).toBe("?status=quote&page=3");
+		expect(write(defaults, search, prefixed)).toBe("?status=quote&row=3");
 	});
 });
 

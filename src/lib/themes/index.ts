@@ -20,9 +20,12 @@ export const themeNames = Object.keys(themes) as [ThemeName, ...ThemeName[]];
 
 export const THEME_COOKIE = "theme";
 
-/** The theme stored in the cookie, falling back to the first theme. */
+/** The theme of whoever hasn't chosen one. */
+export const DEFAULT_THEME: ThemeName = "harbor";
+
+/** The theme stored in the cookie, falling back to the default. */
 export const parseTheme = (value: string | undefined): ThemeName =>
-	themeNames.find((name) => name === value) ?? themeNames[0];
+	themeNames.find((name) => name === value) ?? DEFAULT_THEME;
 
 /** The light/dark mode preference; `system` follows the operating system. */
 export const modes = ["light", "dark", "system"] as const;

@@ -72,7 +72,7 @@ describe("headers", () => {
 		expect(columnHeader("Status").elements()).toHaveLength(0);
 	});
 
-	test("the selection column has a checkbox to select the page, and the actions column no header", async () => {
+	test("the selection column has a checkbox to select the rows loaded, and the actions column no header", async () => {
 		render(Harness, { items });
 
 		const head = [...document.querySelectorAll("thead th")];
@@ -119,7 +119,7 @@ describe("sorting", () => {
 	test("rows start in the initial sort order", async () => {
 		render(Harness, { items });
 
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 
 	test("clicking a header goes descending, unsorted, then ascending, without a menu", async () => {
@@ -128,23 +128,23 @@ describe("sorting", () => {
 		// Sorted by name ascending to start with.
 		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name sorted ascending");
 		await columnHeader("Name").click();
-		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await expect.poll(names).toEqual(byName.toReversed());
 		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name sorted descending");
 		expect(page.getByRole("menu").elements()).toHaveLength(0);
 
 		await columnHeader("Name").click();
-		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
+		await expect.poll(names).toEqual(items.map((item) => item.name));
 		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
 
 		await columnHeader("Name").click();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 
 	test("clicking another header sorts by that column alone, ascending", async () => {
 		render(Harness, { items });
 
 		await columnHeader("Amount").click();
-		await expect.poll(names).toEqual(byAmount(items.map((item) => item.name)).slice(0, 5));
+		await expect.poll(names).toEqual(byAmount(items.map((item) => item.name)));
 		await expect.element(columnHeader("Amount")).toHaveAccessibleName("Amount sorted ascending");
 		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
 	});
@@ -154,7 +154,7 @@ describe("sorting", () => {
 
 		columnHeader("Name").element().focus();
 		await userEvent.keyboard("{Enter}");
-		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await expect.poll(names).toEqual(byName.toReversed());
 		await userEvent.keyboard(" ");
 		await expect.element(columnHeader("Name")).toHaveAccessibleName("Name");
 	});
@@ -185,15 +185,15 @@ describe("sorting by more than one column", () => {
 
 		// Sorted by name ascending to start with.
 		await addToSort("Name");
-		await expect.poll(names).toEqual(byName.toReversed().slice(0, 5));
+		await expect.poll(names).toEqual(byName.toReversed());
 		await expect.element(columnHeader("Name")).toHaveAccessibleName(/sorted descending/);
 
 		await addToSort("Name");
-		await expect.poll(names).toEqual(items.slice(0, 5).map((item) => item.name));
+		await expect.poll(names).toEqual(items.map((item) => item.name));
 		expect(columnHeader("Name").element().textContent).not.toMatch(/sorted/);
 
 		await addToSort("Name");
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 
 	test("shift-clicking adds a column to the sort, numbered by precedence", async () => {
@@ -202,7 +202,7 @@ describe("sorting by more than one column", () => {
 		await sortBy("Amount", "ascending");
 		await addToSort("Name");
 		// The four at €1.00 by name, after the one at €0.00.
-		await expect.poll(names).toEqual(byAmount(byName).slice(0, 5));
+		await expect.poll(names).toEqual(byAmount(byName));
 		await expect.poll(precedence("Amount")).toBe("1");
 		await expect.poll(precedence("Name")).toBe("2");
 		await expect
@@ -211,7 +211,7 @@ describe("sorting by more than one column", () => {
 
 		// Turned around within the sort, keeping its place.
 		await addToSort("Name");
-		await expect.poll(names).toEqual(byAmount(byName.toReversed()).slice(0, 5));
+		await expect.poll(names).toEqual(byAmount(byName.toReversed()));
 		await expect.poll(precedence("Name")).toBe("2");
 
 		// A plain click takes a column to its next direction and sorts by it alone.
@@ -265,7 +265,7 @@ describe("filtering", () => {
 		await expect.poll(names).toEqual(["Pump replacement"]);
 
 		await page.getByRole("button", { name: "Reset" }).click();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 		await expect.element(page.getByRole("textbox", { name: "Search items…" })).toHaveValue("");
 		await expect.element(page.getByRole("button", { name: "Reset" })).not.toBeInTheDocument();
 	});
@@ -353,7 +353,7 @@ describe("filtering", () => {
 
 		await page.getByRole("option", { name: "Clear filters" }).click();
 		await expect.element(statusPill()).not.toBeInTheDocument();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 
 	test("the pill reopens the filter's values, and its remove button clears it", async () => {
@@ -372,42 +372,61 @@ describe("filtering", () => {
 		await page.getByRole("button", { name: "Remove the Status filter" }).click();
 		await expect.element(statusPill()).not.toBeInTheDocument();
 		await expect.element(page.getByRole("button", { name: "Reset" })).not.toBeInTheDocument();
-		await expect.poll(names).toEqual(byName.slice(0, 5));
+		await expect.poll(names).toEqual(byName);
 	});
 });
 
-describe("pagination", () => {
-	test("shows the row count and pages through the rows", async () => {
+describe("scrolling", () => {
+	/** Many items, more than the table renders at first. */
+	const many = Array.from({ length: 120 }, (_, i) => ({
+		...items[0],
+		id: i + 1,
+		name: `Item ${String(i + 1).padStart(3, "0")}`,
+	}));
+	const shown = () => document.querySelectorAll("tbody tr").length;
+	const more = () => document.querySelector<HTMLElement>("[data-slot=data-table-more]");
+
+	test("shows the row count, and all the rows of a short table, without a line under them", async () => {
 		render(Harness, { items });
 
 		await expect.element(page.getByText("7 rows")).toBeInTheDocument();
-		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
-		await expect.element(page.getByRole("button", { name: "Go to previous page" })).toBeDisabled();
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		await expect.element(page.getByText("Page 2 of 2")).toBeInTheDocument();
-		await expect.poll(names).toEqual(byName.slice(5));
-		await expect.element(page.getByRole("button", { name: "Go to next page" })).toBeDisabled();
-
-		await page.getByRole("button", { name: "Go to previous page" }).click();
-		await expect.element(page.getByText("Page 1 of 2")).toBeInTheDocument();
-	});
-
-	test("more rows per page show more rows on fewer pages", async () => {
-		render(Harness, { items });
-
-		await page.getByRole("button", { name: "Rows per page" }).click();
-		await page.getByRole("option", { name: "10" }).click();
-
-		await expect.element(page.getByText("Page 1 of 1")).toBeInTheDocument();
 		await expect.poll(names).toEqual(byName);
+		expect(more()).toBeNull();
 	});
 
-	test("an empty table still has a page", async () => {
+	test("renders the first rows, and more as the end comes into view, then says it ends", async () => {
+		render(Harness, { items: many });
+
+		await expect.poll(shown).toBe(50);
+		await expect.element(page.getByText("120 rows")).toBeInTheDocument();
+		expect(more()?.textContent?.trim()).toBe("Loading more…");
+
+		more()!.scrollIntoView();
+		await expect.poll(shown).toBe(100);
+		more()!.scrollIntoView();
+		await expect.poll(shown).toBe(120);
+		await expect.poll(() => more()?.textContent?.trim()).toBe("End of the list");
+		expect(names().at(-1)).toBe("Item 120");
+	});
+
+	test("starts over with the first rows when the sorting changes", async () => {
+		render(Harness, { items: many });
+
+		await expect.poll(shown).toBe(50);
+		more()!.scrollIntoView();
+		await expect.poll(shown).toBe(100);
+
+		await columnHeader("Name").click();
+		await expect.poll(() => names()[0]).toBe("Item 120");
+		expect(shown()).toBe(50);
+	});
+
+	test("an empty table shows its empty state", async () => {
 		render(Harness, { items: [] });
 
-		await expect.element(page.getByText("Page 1 of 1")).toBeInTheDocument();
 		await expect.element(page.getByText("No items found")).toBeVisible();
+		await expect.element(page.getByText("0 rows")).toBeInTheDocument();
+		expect(more()).toBeNull();
 	});
 });
 
@@ -422,21 +441,21 @@ describe("row selection", () => {
 			.toHaveAttribute("data-state", "selected");
 		await expect.element(page.getByText("1 of 7 rows selected")).toBeInTheDocument();
 		await expect
-			.element(page.getByRole("checkbox", { name: "Select all rows on this page" }))
+			.element(page.getByRole("checkbox", { name: "Select all loaded rows" }))
 			.toHaveAttribute("aria-checked", "mixed");
 	});
 
-	test("the header checkbox selects every row on the page", async () => {
+	test("the header checkbox selects every row loaded", async () => {
 		render(Harness, { items });
 
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 
-		await expect.element(page.getByText("5 of 7 rows selected")).toBeInTheDocument();
+		await expect.element(page.getByText("7 of 7 rows selected")).toBeInTheDocument();
 		await expect
-			.element(page.getByRole("checkbox", { name: "Select all rows on this page" }))
+			.element(page.getByRole("checkbox", { name: "Select all loaded rows" }))
 			.toBeChecked();
 
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		await expect.element(page.getByText("7 rows")).toBeInTheDocument();
 	});
 });

@@ -101,7 +101,6 @@
 		getRowId: (row) => String(row.id),
 		initialState: {
 			sorting: [{ id: "name", desc: false }],
-			pagination: { pageIndex: 0, pageSize: 5 },
 			...(columnPinning && { columnPinning }),
 		},
 	});
@@ -112,5 +111,4 @@
 		<FacetedFilter columnId="status" title="Status" options={statusOptions} none />
 	</table.Toolbar>
 	<table.Table emptyTitle="No items found" />
-	<table.Pagination pageSizes={[5, 10]} />
 </table.AppTable>

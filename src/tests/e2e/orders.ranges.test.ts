@@ -239,7 +239,7 @@ describe("range filters on the orders' dates, in North", () => {
 
 		// "Select all matching" counts what the filter keeps.
 		await app.go("/orders?total=500..");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
 		const total = formatNumber(over, "en");
 		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
@@ -247,7 +247,7 @@ describe("range filters on the orders' dates, in North", () => {
 		await app.go(afresh("/orders"));
 	});
 
-	test("a bulk action on all the matching orders acts on those in the range only", async () => {
+	test("a bulk action on all the loaded orders acts on those in the range only", async () => {
 		const { page } = app;
 		// Cancelled orders only (as `orders.bulk.test.ts` does), created up to last week: the other
 		// files on this worker pick open orders by their latest activity, which this would change.
@@ -258,8 +258,9 @@ describe("range filters on the orders' dates, in North", () => {
 			 and created_at >= ? and created_at < ?`,
 			[north.id, from, to],
 		);
-		// More than fit on a page.
+		// Fewer than a page of rows: all of them load at once.
 		expect(matching.length).toBeGreaterThan(20);
+		expect(matching.length).toBeLessThanOrEqual(50);
 		const inRange = new Set(matching.map((o) => o.id));
 		const [engineer] = await rows<{ id: number; name: string }>(
 			`select id, name from engineer where organization_id = ? and active = 1 order by id desc limit 1`,
@@ -273,11 +274,10 @@ describe("range filters on the orders' dates, in North", () => {
 		const before = await engineers();
 
 		await app.go("/orders?created=..last-week&status=cancelled");
-		await page.getByRole("checkbox", { name: "Select all rows on this page" }).click();
+		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
 		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
 		const total = formatNumber(matching.length, "en");
-		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
-		await bar.getByText(`All ${total} matching selected`).waitFor();
+		await bar.getByText(`${total} selected`, { exact: true }).waitFor();
 		await bar.getByRole("button", { name: "Assign engineer" }).click();
 		const dialog = page.getByRole("alertdialog");
 		const field = dialog.getByLabel("Engineer");
@@ -318,7 +318,7 @@ describe("range filters on the orders' dates, in North", () => {
 			const [response] = await app.expectingErrors(() =>
 				Promise.all([
 					app.page.waitForResponse((r) => isRemote(r.url(), "getOrders")),
-					app.page.getByRole("button", { name: "Go to next page" }).click(),
+					app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
 				]),
 			);
 			expect(await remoteErrorStatus(response)).toBe(400);
@@ -335,7 +335,7 @@ describe("range filters on the orders' dates, in South", () => {
 		expect(await shownFor("created=last-30-days")).toBe(expected);
 		const numbers = await rows<{ number: string }>(
 			`select number from "order" where organization_id = ? and created_at >= ? and created_at < ?
-			 order by created_at desc, id limit 20`,
+			 order by created_at desc, id limit 50`,
 			[south.id, ...bounds(range)],
 		);
 		expect(await app.page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(

@@ -3,7 +3,7 @@
  * `table-memory.remote.ts`), so it follows them to other devices:
  *
  * - **Their columns**: which hideable columns they show (see `column-visibility.ts`), for good.
- * - **Where they left it**: its parameters (without the page) and the saved view they had open.
+ * - **Where they left it**: its parameters (not where it was scrolled to) and the saved view they had open.
  *   Opening the table's page without parameters brings that back: the view, with any changes
  *   they didn't save in it still shown as such (see `saved-views.svelte`), so leaving the page
  *   never loses them. A link with parameters wins (the columns and the view still come back, the
@@ -16,7 +16,7 @@
  * the memory to the table (as `page.data.tableMemory`), which shows its columns from the first
  * render. The table (`syncTableWithUrl`) then remembers its changes as they happen (see
  * `rememberTable`). Only the URL's parameters, the open view and the columns are remembered:
- * not the page, which a list's data soon moves under.
+ * not where it was scrolled to (`?row=`), which a list's data soon moves under.
  *
  * Stored on the server rather than in the browser so it follows the member, and so the server can
  * redirect before rendering the page, which it couldn't from browser storage.

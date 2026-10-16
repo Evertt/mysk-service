@@ -28,7 +28,6 @@ interface WidthsTable<TData extends RowData> {
 		columnFilters: { get(): unknown };
 		globalFilter: { get(): unknown };
 		grouping: { get(): unknown };
-		pagination: { get(): { pageIndex: number; pageSize: number } };
 	};
 }
 
@@ -186,7 +185,8 @@ function candidatesOf<TData extends RowData>(
 
 /**
  * Stable column widths for a data table (`data-table.svelte`): its columns are as wide as the
- * widest cells it has seen, rather than as the page's, so they don't change from page to page.
+ * widest cells it has seen, rather than as the rows' in view, so they don't change as more rows
+ * come.
  *
  * Per column, the table keeps the cells with the widest contents it has shown (see
  * `column-widths.ts`), measured once they're painted, and renders them in `rows`: hidden rows (in
@@ -195,12 +195,13 @@ function candidatesOf<TData extends RowData>(
  * out as if all that data were on the page. The cells are rendered with the columns' own `cell`s,
  * on rows made for the purpose (TanStack's `constructRow`): they're in none of the table's row
  * models, so selection, counts, grouping and keyboard navigation never see them. A filter, search,
- * sort or page size lays the new rows out with them, and the widths settle on what the table would
+ * sort or grouping lays the new rows out with them, and the widths settle on what the table would
  * pick with everything seen loaded at once.
  *
- * Turning a page doesn't even do that: `frozen` holds the columns' widths from just before, which
- * `data-table.svelte` pins (a `<colgroup>`, `table-layout: fixed`), until anything else changes;
- * the hidden rows learn from the new pages in the meantime.
+ * More rows as the table scrolls (more of the same rows, `scroll.key` unchanged) don't even do that:
+ * `frozen` holds the columns' widths from just before, which `data-table.svelte` pins (a
+ * `<colgroup>`, `table-layout: fixed`), until anything else changes; the hidden rows learn from the
+ * new rows in the meantime.
  *
  * Columns whose values are known up front start right: their filter's options and dates (see
  * `knownValues`) are tried once in hidden rows (also when the server renders the table), in the
@@ -209,13 +210,16 @@ function candidatesOf<TData extends RowData>(
  * The memory starts over when columns are hidden or shown, or the density or language changes,
  * and lasts a visit: `key` (the table's and its owner's, so the rows of one organization or member
  * are never shown to another in the same tab) keeps it in `sessionStorage` (if there is any, and a
- * key; else it lasts as long as the table). Attach `attach` to the `<table>`, whose header
- * cells and cells have `data-column-id` and page rows `data-row-id`, and each hidden cell's
- * `attach` to its `<td>`.
+ * key; else it lasts as long as the table). `scroll` says what the rows are for (`key`, the scroll
+ * window's key, see `scroll-window.svelte.ts`): when it changes, the rows are others; and whether
+ * more are on their way (`growing`), which freezes the widths before they come. Attach
+ * `attach` to the `<table>`, whose header cells and cells have `data-column-id` and rows
+ * `data-row-id`, and each hidden cell's `attach` to its `<td>`.
  */
 export function columnWidths<TData extends RowData>(
 	table: WidthsTable<TData>,
 	key: () => string | undefined,
+	scroll: { key?: () => string | undefined; growing?: () => boolean } = {},
 ) {
 	/** The columns whose cells show data (not the selection or the actions). */
 	const columns = $derived(
@@ -249,7 +253,7 @@ export function columnWidths<TData extends RowData>(
 	}
 
 	let element = $state<HTMLTableElement>();
-	/** The columns' widths while paging (see above), by column id. */
+	/** The columns' widths while more rows come (see above), by column id. */
 	let frozen = $state.raw<Record<string, number>>();
 
 	// In the browser, a table rendered there starts at once; one the server rendered (whose memory
@@ -367,24 +371,26 @@ export function columnWidths<TData extends RowData>(
 		};
 	});
 
-	/** What, besides the page, the layout depends on: a change lays the columns out again. */
+	/** What the layout depends on: a change lays the columns out again. */
 	const layoutKey = $derived(
 		JSON.stringify([
 			table.atoms.sorting.get(),
 			table.atoms.columnFilters.get(),
 			table.atoms.globalFilter.get(),
-			table.atoms.pagination.get().pageSize,
 			table.atoms.grouping.get(),
+			scroll.key?.(),
 			context,
 		]),
 	);
-	let laidOut = { key: "", page: -1 };
-	// Before the next page's rows render, while the columns are as they were.
+	let laidOut = { key: "", rows: -1 };
+	// Before more rows render, while the columns are as they were.
 	$effect.pre(() => {
-		const current = { key: layoutKey, page: table.atoms.pagination.get().pageIndex };
+		const current = { key: layoutKey, rows: table.getRowModel().rows.length };
+		// About to grow: frozen before the new rows render (see above).
+		const growing = scroll.growing?.() ?? false;
 		untrack(() => {
 			if (current.key !== laidOut.key) frozen = undefined;
-			else if (current.page !== laidOut.page && !frozen && element) {
+			else if ((growing || current.rows > laidOut.rows) && laidOut.rows > 0 && !frozen && element) {
 				frozen = headerWidths(element);
 			}
 			laidOut = current;

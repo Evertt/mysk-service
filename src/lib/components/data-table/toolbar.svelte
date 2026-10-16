@@ -11,9 +11,11 @@
 	import XIcon from "@lucide/svelte/icons/x";
 	import type { Snippet } from "svelte";
 
+	import { fadeEdges } from "./fade-edges.ts";
 	import FilterMenu from "./filter-menu.svelte";
 	import FilterPill from "./filter-pill.svelte";
 	import { provideTableFilters } from "./filters.svelte.ts";
+	import RowCount from "./row-count.svelte";
 	import { useTableContext } from "./table.svelte.ts";
 	import { tableUrlSync } from "./url-sync.svelte.ts";
 	import ViewsMenu from "./views-menu.svelte";
@@ -47,8 +49,10 @@
 		<FilterMenu {filters} />
 	{/if}
 	{#if isFiltered}
+		<!-- Its edges fade out while there's more to scroll to that way (see `fade-edges.ts`). -->
 		<div
-			class="relative order-last -my-1 flex min-w-0 flex-1 basis-full [scrollbar-width:thin] items-center gap-2 overflow-x-auto py-1 sm:order-none sm:basis-0"
+			class="relative order-last -my-1 flex min-w-0 flex-1 basis-full [scrollbar-width:thin] items-center gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,transparent,black_var(--fade-start),black_calc(100%-var(--fade-end)),transparent)] py-1 [--fade-end:0px] [--fade-start:0px] data-fade-end:[--fade-end:2rem] data-fade-start:[--fade-start:2rem] sm:order-none sm:basis-0"
+			{@attach fadeEdges}
 		>
 			{#each filters.active as filter (filter.columnId)}
 				<FilterPill {filter} />
@@ -74,6 +78,7 @@
 	<div
 		class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 sm:shrink-0 sm:flex-nowrap"
 	>
+		<RowCount />
 		{@render actions?.()}
 		<ViewsMenu />
 		<table.ViewOptions />

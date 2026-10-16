@@ -33,5 +33,5 @@ export const ordersList = defineList({
 		// What `priceOrders()` makes of it, with the tenant's modules: filtered, not sorted.
 		total: { filter: moneyRange },
 	},
-	defaults: { sort: [{ id: "createdAt", desc: true }], pageSize: 20 },
+	defaults: { sort: [{ id: "createdAt", desc: true }] },
 });

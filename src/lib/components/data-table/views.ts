@@ -1,6 +1,6 @@
 /**
- * Saved views: a table's search, filters, sorting and page size (its URL parameters, see
- * `url-state.ts`, without the page) and its columns saved under a name, to get back to in one
+ * Saved views: a table's search, filters, sorting and grouping (its URL parameters, see
+ * `url-state.ts`, without where it's scrolled to) and its columns saved under a name, to get back to in one
  * click. The parameters are stored as the query string the table writes, so they work for any
  * table that keeps its state in the URL, and are read back through the table's own grammar: a
  * parameter the table no longer knows is ignored, like in a link. The columns are the visibility
@@ -27,19 +27,12 @@ export const canShareViews = (roles: readonly string[]) =>
 export const tableViewsKey = (route: string, prefix?: string) =>
 	prefix ? `${route}#${prefix}` : route;
 
-/** The state on its first page (the default page), as views don't keep the page. */
-function firstPage(state: TableUrlState, spec: TableUrlSpec): TableUrlState {
-	const pageIndex = spec.defaults?.pagination?.pageIndex ?? 0;
-	return { ...state, pagination: { ...state.pagination, pageIndex } };
-}
+/** What a view saves of a table's state: its parameters, e.g. `?status=quote`. */
+export const viewQuery = (state: TableUrlState, spec: TableUrlSpec) => tableUrlKey(state, spec);
 
-/** What a view saves of a table's state: its parameters but the page, e.g. `?status=quote`. */
-export const viewQuery = (state: TableUrlState, spec: TableUrlSpec) =>
-	tableUrlKey(firstPage(state, spec), spec);
-
-/** The table's state a saved query stands for, on the first page. */
+/** The table's state a saved query stands for. */
 export const viewState = (query: string, spec: TableUrlSpec) =>
-	firstPage(parseTableUrl(new URLSearchParams(query), spec), spec);
+	parseTableUrl(new URLSearchParams(query), spec);
 
 /** The state with each filter's values in order, as their order doesn't change the rows. */
 const sortedValues = (state: TableUrlState): TableUrlState => ({
@@ -58,8 +51,8 @@ export interface TableColumns {
 }
 
 /**
- * The views that show the table's current state (whatever its page) and columns, compared as the
- * table reads them: `?status=quote,paid` matches `?status=paid,quote&page=3`, a saved view with
+ * The views that show the table's current state (wherever it's scrolled to) and columns, compared
+ * as the table reads them: `?status=quote,paid` matches `?status=paid,quote&row=30`, a saved view with
  * parameters the table no longer knows still matches what it shows, and so does one saved before
  * views had columns, whatever the columns.
  */

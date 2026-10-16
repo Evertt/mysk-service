@@ -4,7 +4,7 @@ import { day } from "#unit/temporal-support.ts";
 
 import type { Item } from "./table.test-harness.svelte";
 
-/** The work items the table specs show: seven, five to a page. */
+/** The work items the table specs show: seven. */
 export const items: Item[] = [
 	{
 		id: 1,
@@ -25,7 +25,7 @@ export const items: Item[] = [
 /** The items' names, sorted. */
 export const byName = [...items].map((item) => item.name).sort((a, b) => a.localeCompare(b));
 
-/** The names in the rows on the current page, in order. */
+/** The names in the rows shown, in order. */
 export const names = () =>
 	[...document.querySelectorAll<HTMLTableRowElement>("tbody tr")].map(
 		(row) => row.cells[1]?.textContent?.trim() ?? "",

@@ -26,13 +26,11 @@
 		jobs,
 		actions,
 		matching,
-		pageSize = 10,
 	}: {
 		jobs: Job[];
 		actions: BulkAction<Job, any>[];
 		/** As for a server-side table: all the rows that match. */
 		matching?: { where: unknown; key: string; count: number };
-		pageSize?: number;
 	} = $props();
 
 	const column = createAppColumnHelper<Job>();
@@ -52,8 +50,6 @@
 		}),
 	]);
 
-	// The page size, read once.
-	// svelte-ignore state_referenced_locally
 	const table = createAppTable({
 		columns,
 		get data() {
@@ -61,7 +57,6 @@
 		},
 		getRowId: (row) => String(row.id),
 		urlState: false,
-		initialState: { pagination: { pageIndex: 0, pageSize } },
 	});
 </script>
 

@@ -1,13 +1,13 @@
 import { type Attachment, createAttachmentKey } from "svelte/attachments";
 
 /**
- * Keyboard navigation of a data table's rows, in a "row focus" model: each row of the page can
- * take focus, one of them is in the tab order (the last one focused, else the first), and on a
- * focused row
+ * Keyboard navigation of a data table's rows, in a "row focus" model: each row shown can take
+ * focus, one of them is in the tab order (the last one focused, else the first), and on a focused
+ * row
  *
- * - ↑/↓ move to the row above or below, Home/End to the first or last row of the page,
- * - PageUp/PageDown go to the previous or next page (or, on the first or last page, to its first
- *   or last row),
+ * - ↑/↓ move to the row above or below, Home/End to the first or last row loaded (the table loads
+ *   more as the last comes into view, see `scroll-window.svelte.ts`),
+ * - PageUp/PageDown move a screenful of rows up or down,
  * - Enter opens the row's page: it follows the row's first link (that of its identifying column),
  * - Space selects or deselects the row, if the table has a selection column.
  *
@@ -24,21 +24,17 @@ import { type Attachment, createAttachmentKey } from "svelte/attachments";
  * its native table semantics, so screen readers' own table navigation keeps working too.
  */
 
-/** What the navigation needs of the rows on the page (TanStack Table's `Row`). */
+/** What the navigation needs of the rows shown (TanStack Table's `Row`). */
 interface NavigableRow {
 	id: string;
 	getCanSelect(): boolean;
 	toggleSelected(value?: boolean): void;
 }
 
-/** What the navigation needs of the table (TanStack Table's, with pagination and selection). */
+/** What the navigation needs of the table (TanStack Table's, with selection). */
 interface NavigableTable {
 	getRowModel(): { rows: NavigableRow[] };
 	getVisibleLeafColumns(): { id: string }[];
-	getCanPreviousPage(): boolean;
-	getCanNextPage(): boolean;
-	previousPage(): void;
-	nextPage(): void;
 }
 
 /** The column with the selection checkboxes (see `default-pinning.ts`). */
@@ -47,7 +43,7 @@ const SELECT_COLUMN = "select";
 /**
  * Sets up keyboard navigation of a table's rows. Spread `body` on the table body and give each
  * row `tabindex={navigation.tabIndex(row.id)}` and `data-row-id={row.id}`. `rowIds` are those of
- * the rows shown, in order, if not the page's rows (e.g. with group rows, and without collapsed
+ * the rows shown, in order, if not the table's rows (e.g. with group rows, and without collapsed
  * groups' rows).
  */
 export function createRowNavigation(
@@ -57,21 +53,19 @@ export function createRowNavigation(
 	let body: HTMLElement | undefined;
 	/** The id of the last row that had focus (or focus inside it). */
 	let active = $state<string>();
-	/** After paging with the keyboard: the row to focus (by position) once the page's rows change. */
-	let pending: { index: number; before: string } | undefined;
 
 	const ids = () => rowIds?.() ?? table.getRowModel().rows.map((row) => row.id);
 
-	/** The row in the tab order: the active one if it's on this page, else the first. */
+	/** The row in the tab order: the active one if it's still shown, else the first. */
 	const tabbable = $derived.by(() => {
-		const onPage = ids();
-		return active !== undefined && onPage.includes(active) ? active : onPage[0];
+		const shown = ids();
+		return active !== undefined && shown.includes(active) ? active : shown[0];
 	});
 
 	const rowElements = () =>
 		body ? [...body.querySelectorAll<HTMLTableRowElement>(":scope > tr[data-row-id]")] : [];
 
-	/** Focuses the row at `index` (clamped to the page), scrolling it into view if need be. */
+	/** Focuses the row at `index` (clamped to the rows shown), scrolling it into view if need be. */
 	function focusRow(index: number) {
 		const rows = rowElements();
 		const row = rows[Math.max(0, Math.min(index, rows.length - 1))];
@@ -82,28 +76,13 @@ export function createRowNavigation(
 		row.scrollIntoView({ block: "nearest", inline: "nearest" });
 	}
 
-	function goToPage(direction: "previous" | "next", index: number, last: number) {
-		const can = direction === "next" ? table.getCanNextPage() : table.getCanPreviousPage();
-		if (!can) {
-			focusRow(direction === "next" ? last : 0);
-			return;
-		}
-		pending = { index, before: ids().join("\n") };
-		if (direction === "next") table.nextPage();
-		else table.previousPage();
+	/** How many rows fit in the table's scroll area (or the screen), less one: a "page" of them. */
+	function screenful(row: HTMLElement) {
+		const container = body?.closest<HTMLElement>("[data-slot=table-container]");
+		const scrolls = container && /auto|scroll/.test(getComputedStyle(container).overflowY);
+		const height = scrolls ? container.clientHeight : globalThis.innerHeight;
+		return Math.max(1, Math.floor(height / Math.max(row.offsetHeight, 1)) - 1);
 	}
-
-	// Once the other page's rows are in (straight away, or when a server-side table has loaded
-	// them), focus the row in the same position, unless focus has moved on meanwhile.
-	$effect(() => {
-		const now = ids().join("\n");
-		if (!pending || now === pending.before) return;
-		const { index } = pending;
-		pending = undefined;
-		const focused = document.activeElement;
-		if (focused && focused !== document.body && !body?.contains(focused)) return;
-		focusRow(index);
-	});
 
 	function onfocusin(event: FocusEvent) {
 		const row = (event.target as Element).closest<HTMLElement>("tr[data-row-id]");
@@ -135,10 +114,10 @@ export function createRowNavigation(
 				focusRow(rows.length - 1);
 				break;
 			case "PageDown":
-				goToPage("next", index, rows.length - 1);
+				focusRow(index + screenful(element));
 				break;
 			case "PageUp":
-				goToPage("previous", index, rows.length - 1);
+				focusRow(index - screenful(element));
 				break;
 			case "Enter":
 				element.querySelector<HTMLAnchorElement>("a[href]")?.click();

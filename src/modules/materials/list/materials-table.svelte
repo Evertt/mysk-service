@@ -3,13 +3,16 @@
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
-	import { serverTableLoading } from "#lib/components/data-table/server-table.svelte.ts";
+	import {
+		scrollPages,
+		serverTableLoading,
+	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
 	import { stockLevelOptions, unitOptions } from "../display.ts";
 	import { deleteMaterials } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
-	import type { getMaterialFacets, getMaterials } from "./material-list.remote.ts";
+	import { type getMaterialFacets, getMaterials } from "./material-list.remote.ts";
 	import { materialsList } from "./materials-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -18,30 +21,36 @@
 		materials,
 		facets,
 	}: {
-		/** A page of materials, as the URL says, how many match in all, and its groups if grouped. */
+		/**
+		 * The first page of materials, as the URL says, how many match in all, and its groups if
+		 * grouped: the table loads the next as it's scrolled.
+		 */
 		materials: Awaited<ReturnType<typeof getMaterials>>;
 		/** How many materials have each value of the filters'. */
 		facets: Awaited<ReturnType<typeof getMaterialFacets>>;
 	} = $props();
 
+	const pages = scrollPages({ first: () => materials, fetch: getMaterials });
+
 	const table = createAppTable({
 		columns,
 		serverSide: true,
+		scroll: pages,
 		get data() {
-			return materials.rows;
+			return pages.rows;
 		},
 		get rowCount() {
-			return materials.rowCount;
+			return pages.rowCount;
 		},
 		getRowId: (row) => String(row.id),
-		// By name, 20 per page: the defaults the server has too.
+		// By name: the default the server has too.
 		initialState: {
 			...materialsList.urlSpec.defaults,
 			columnVisibility: { sku: false, stockLevel: false },
 		},
 	});
 
-	const loading = serverTableLoading(table, materialsList, () => materials.key);
+	const loading = serverTableLoading(table, materialsList, () => pages.key);
 </script>
 
 <table.AppTable>
@@ -67,12 +76,11 @@
 			emptyTitle={m.materials_empty()}
 			fillViewport
 			loading={loading.current}
-			groups={materials.groups}
+			groups={pages.groups}
 		/>
 		<BulkActionBar
 			actions={[deleteMaterials]}
 			matching={{ where: whereOf(materials.query), key: materials.key, count: materials.rowCount }}
 		/>
-		<table.Pagination />
 	</div>
 </table.AppTable>

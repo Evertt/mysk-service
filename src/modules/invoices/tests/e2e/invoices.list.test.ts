@@ -87,7 +87,8 @@ describe("in North", () => {
 		const [sent, draft] = [await pick("sent"), await pick("draft")];
 		const before = await rows(`select * from invoice where id = ?`, [draft.id]);
 
-		await app.go("/invoices?size=100");
+		await app.go("/invoices?row=1");
+		await app.loadAllRows();
 		for (const { number } of [sent, draft]) {
 			await page.locator("tbody tr", { hasText: number }).getByRole("checkbox").click();
 		}

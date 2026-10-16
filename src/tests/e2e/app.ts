@@ -54,11 +54,10 @@ export async function onPhone<T>(page: Page, steps: () => Promise<T>): Promise<T
 }
 
 /**
- * A list's page as a link to its first page (`/orders?page=1`): the list as it is by default,
- * rather than as the user left it, which a visit without parameters brings back (see
- * `table-memory.svelte.ts`).
+ * A list's page as a link to its top (`/orders?row=1`): the list as it is by default, rather than
+ * as the user left it, which a visit without parameters brings back (see `table-memory.svelte.ts`).
  */
-export const afresh = (path: string) => `${path}?page=1`;
+export const afresh = (path: string) => `${path}?row=1`;
 
 /** The demo organizations: North (Fieldworks Noord) and South (Fieldworks Zuid). */
 export const organizations = demoOrganizations;
@@ -126,10 +125,15 @@ export interface App {
 	 */
 	sortBy(column: string, direction: "ascending" | "descending"): Promise<void>;
 	/**
-	 * Waits until a server-side table shows the rows for its search, filters, sorting and page
-	 * (it's `aria-busy` until they're in), e.g. after clicking a header or typing a search.
+	 * Waits until a server-side table shows the rows for its search, filters and sorting (it's
+	 * `aria-busy` until they're in), e.g. after clicking a header or typing a search.
 	 */
 	tableSettled(): Promise<void>;
+	/**
+	 * Scrolls the table to its end until every row that matches is loaded (the line under the
+	 * rows says the list ends, or there's none: a short list).
+	 */
+	loadAllRows(): Promise<void>;
 	/** Opens the data table's Filter menu and picks a filter by its title, showing its values. */
 	openFilter(title: string): Promise<void>;
 	/** The pill of an active filter in the data table's toolbar, by title; it names the values. */
@@ -153,11 +157,11 @@ interface TableGroup {
 	key: string;
 	/** What it shows, e.g. `Chiller`. */
 	label: string;
-	/** How many rows it has, on every page. */
+	/** How many rows it has, loaded or not. */
 	count: number;
-	/** It started on the previous page. */
+	/** It started before the rows loaded (a table opened partway down). */
 	continued: boolean;
-	/** It goes on on the next page. */
+	/** It goes on in rows not loaded yet. */
 	continues: boolean;
 	/** Its rows are hidden. */
 	collapsed: boolean;
@@ -278,6 +282,16 @@ export function useApp({
 			await settled();
 		},
 		tableSettled: () => settled(),
+		async loadAllRows() {
+			await settled();
+			const more = page.locator('[data-slot="data-table-more"]');
+			const shown = () => page.locator("tbody tr[data-row-id]:not([data-group])").count();
+			while ((await more.count()) && !(await more.innerText()).includes("End of the list")) {
+				const before = await shown();
+				await more.scrollIntoViewIfNeeded();
+				await expect.poll(shown).toBeGreaterThan(before);
+			}
+		},
 		async openFilter(title) {
 			await page.getByRole("button", { name: "Filter", exact: true }).click();
 			// By the filter's title exactly: "Unit" isn't "Unit price". (What's chosen follows it.)
@@ -306,8 +320,8 @@ export function useApp({
 						key: tr.dataset.group!,
 						label: document.getElementById(toggle.getAttribute("aria-labelledby")!)!.innerText,
 						count: Number(tr.querySelector("[data-group-count]")!.textContent!.replace(/\D/g, "")),
-						continued: notes.includes("continued from the previous page"),
-						continues: notes.includes("continues on the next page"),
+						continued: notes.includes("continued from rows above"),
+						continues: notes.includes("continues in more rows below"),
 						collapsed: toggle.getAttribute("aria-expanded") === "false",
 					};
 				}),

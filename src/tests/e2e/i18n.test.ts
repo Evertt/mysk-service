@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { hydrated, organizations, useApp, users, quiet } from "./app.ts";
+import { baseURL, hydrated, organizations, useApp, users, quiet } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -25,6 +25,29 @@ const text = async (locator: ReturnType<typeof app.page.getByText>) =>
 	(await locator.innerText()).replaceAll(" ", " ").trim();
 
 const dutchDate = /^\d{1,2} (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec) \d{4}$/;
+
+describe("the language when none is chosen", () => {
+	/** The language the login page is rendered in, for a request with these headers. */
+	const rendered = async (headers: Record<string, string>) => {
+		const html = await (await fetch(new URL("/login", baseURL), { headers })).text();
+		return /<html[^>]*\slang="([^"]+)"/.exec(html)?.[1];
+	};
+
+	test("is the browser's, if the app has it", async () => {
+		expect(await rendered({ "accept-language": "en-US,en;q=0.9" })).toBe("en");
+		expect(await rendered({ "accept-language": "nl-BE" })).toBe("nl");
+	});
+
+	test("is Dutch for a browser in another language, or none", async () => {
+		expect(await rendered({ "accept-language": "de-DE,fr;q=0.8" })).toBe("nl");
+		expect(await rendered({})).toBe("nl");
+	});
+
+	test("gives way to a chosen language", async () => {
+		const headers = { "accept-language": "de-DE", cookie: "PARAGLIDE_LOCALE=en" };
+		expect(await rendered(headers)).toBe("en");
+	});
+});
 
 describe("in Dutch", () => {
 	test("the login page offers the languages, and switches to Dutch", async () => {

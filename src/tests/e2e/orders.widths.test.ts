@@ -1,7 +1,7 @@
 /**
- * Stable column widths (see `column-widths.svelte.ts`), on the orders list: paging doesn't move
- * the columns, the hidden rows that keep them wide enough are no rows to the user, and a filter
- * lays the columns out again with what the list has shown.
+ * Stable column widths (see `column-widths.svelte.ts`), on the orders list: more rows as it
+ * scrolls don't move the columns, the hidden rows that keep them wide enough are no rows to the
+ * user, and a filter lays the columns out again with what the list has shown.
  */
 import type { Page } from "playwright";
 import { expect, test } from "vite-plus/test";
@@ -26,23 +26,23 @@ const clipped = (page: Page) =>
 			tds.filter((td) => td.scrollWidth > td.clientWidth + 1).map((td) => td.dataset.columnId),
 		);
 
-async function nextPage(page: Page) {
-	const before = await page.locator("[data-slot=table-body] tr").first().innerText();
-	await page.getByRole("button", { name: "Go to next page" }).click();
-	await expect
-		.poll(() => page.locator("[data-slot=table-body] tr").first().innerText())
-		.not.toBe(before);
+/** Scrolls to the end of the rows, and waits for the next ones. */
+async function loadMore(page: Page) {
+	const rows = page.locator("[data-slot=table-body] tr");
+	const before = await rows.count();
+	await page.locator("[data-slot=data-table-more]").scrollIntoViewIfNeeded();
+	await expect.poll(() => rows.count()).toBeGreaterThan(before);
 	await admin.tableSettled();
 }
 
-test("paging keeps the columns' widths", async () => {
+test("more rows as the table scrolls keep the columns' widths", async () => {
 	const { page } = admin;
 	await admin.go("/orders");
 	await admin.tableSettled();
 	const first = await widths(page);
 
-	for (let pageNumber = 2; pageNumber <= 4; pageNumber++) {
-		await nextPage(page);
+	for (let more = 1; more <= 3; more++) {
+		await loadMore(page);
 		expect(await widths(page)).toEqual(first);
 	}
 });
@@ -61,9 +61,9 @@ test("the hidden rows are no rows: not counted, read out or navigated", async ()
 			.locator("[data-slot=data-table-hidden-rows]")
 			.evaluate((tfoot: HTMLElement) => tfoot.offsetHeight),
 	).toBe(0);
-	// The header and the page's 20 rows.
-	expect(await page.getByRole("row").count()).toBe(21);
-	expect(await admin.rowCount()).toBeGreaterThan(20);
+	// The header and the 200 rows loaded.
+	expect(await page.getByRole("row").count()).toBe(201);
+	expect(await admin.rowCount()).toBeGreaterThan(200);
 });
 
 test("a filter lays the columns out again, wide enough for what the list has shown", async () => {
@@ -73,13 +73,13 @@ test("a filter lays the columns out again, wide enough for what the list has sho
 	await expect.poll(() => page.locator("[data-slot=table]").getAttribute("data-frozen")).toBeNull();
 	expect(await clipped(page)).toEqual([]);
 
-	// The pages seen before the filter: their widest cells fit too, without moving the columns.
+	// The rows seen before the filter: their widest cells fit too, without moving the columns.
 	// (A parameter, or the list would come back filtered, see `views.memory.test.ts`.)
-	await admin.go("/orders?page=1");
+	await admin.go("/orders?row=1");
 	await admin.tableSettled();
 	const laidOut = await widths(page);
-	for (let pageNumber = 2; pageNumber <= 4; pageNumber++) {
-		await nextPage(page);
+	for (let more = 1; more <= 3; more++) {
+		await loadMore(page);
 		expect(await clipped(page)).toEqual([]);
 		expect(await widths(page)).toEqual(laidOut);
 	}
@@ -98,7 +98,7 @@ test("another organization's table never starts from the rows the first one kept
 
 	// South's orders list keeps its own, under another key: North's rows aren't laid out in it.
 	await admin.switchOrganization(south.name);
-	await admin.go("/orders?page=1");
+	await admin.go("/orders?row=1");
 	await admin.tableSettled();
 	await expect
 		.poll(async () => (await keys()).filter((key) => !before.includes(key)))

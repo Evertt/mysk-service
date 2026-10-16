@@ -34,7 +34,7 @@ beforeEach(() => {
 
 afterEach(() => window.removeEventListener("click", followLink, { capture: true }));
 
-// Seven items, named in their sort order, on pages of five.
+// Seven items, named in their sort order.
 const items: Item[] = ["A", "B", "C", "D", "E", "F", "G"].map((letter, index) => ({
 	id: index + 1,
 	name: `${letter} item`,
@@ -64,10 +64,10 @@ describe("keyboard navigation", () => {
 	test("one row is in the tab order: the first, then the last one focused", async () => {
 		render(Harness, { items });
 		await expect.element(page.getByRole("table")).toBeVisible();
-		expect(bodyRows().map((row) => row.tabIndex)).toEqual([0, -1, -1, -1, -1]);
+		expect(bodyRows().map((row) => row.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
 
 		await page.getByRole("checkbox", { name: "Select row" }).nth(2).click();
-		expect(bodyRows().map((row) => row.tabIndex)).toEqual([-1, -1, 0, -1, -1]);
+		expect(bodyRows().map((row) => row.tabIndex)).toEqual([-1, -1, 0, -1, -1, -1, -1]);
 	});
 
 	test("the table describes its keys", async () => {
@@ -86,9 +86,9 @@ describe("keyboard navigation", () => {
 		await userEvent.keyboard("{ArrowUp}");
 		expect(focusedRow()).toBe("B item");
 		await userEvent.keyboard("{End}");
-		expect(focusedRow()).toBe("E item");
+		expect(focusedRow()).toBe("G item");
 		await userEvent.keyboard("{ArrowDown}");
-		expect(focusedRow()).toBe("E item");
+		expect(focusedRow()).toBe("G item");
 		await userEvent.keyboard("{Home}");
 		expect(focusedRow()).toBe("A item");
 		await userEvent.keyboard("{ArrowUp}");
@@ -122,19 +122,22 @@ describe("keyboard navigation", () => {
 		expect(second.dataset.state).toBeUndefined();
 	});
 
-	test("PageDown and PageUp go to the next and previous page, at the same row", async () => {
+	test("PageDown and PageUp move a screenful of rows, as far as the ends", async () => {
 		await renderFocused();
-		await userEvent.keyboard("{ArrowDown}{PageDown}");
-		await expect.element(page.getByText("Page 2 of 2")).toBeVisible();
-		await expect.poll(focusedRow).toBe("G item");
+		// A scroll area a few rows high.
+		const area = document.querySelector<HTMLElement>("[data-slot=table-container]")!;
+		const header = document.querySelector("thead")!;
+		area.style.overflowY = "auto";
+		area.style.height = `${header.offsetHeight + 3 * bodyRows()[0]!.offsetHeight}px`;
 
 		await userEvent.keyboard("{PageDown}");
+		expect(focusedRow()).not.toMatch(/^[AB] item$/);
+		await userEvent.keyboard("{PageDown}{PageDown}{PageDown}");
 		expect(focusedRow()).toBe("G item");
 
 		await userEvent.keyboard("{PageUp}");
-		await expect.element(page.getByText("Page 1 of 2")).toBeVisible();
-		await expect.poll(focusedRow).toBe("B item");
-		await userEvent.keyboard("{PageUp}");
+		expect(focusedRow()).not.toMatch(/^[FG] item$/);
+		await userEvent.keyboard("{PageUp}{PageUp}{PageUp}");
 		expect(focusedRow()).toBe("A item");
 	});
 

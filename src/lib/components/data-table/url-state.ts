@@ -1,6 +1,6 @@
 /**
- * A data table's state in the URL: what it's filtered, searched and sorted by, and which page it
- * shows. Pure, so the server can read the same parameters (e.g. a remote query that filters,
+ * A data table's state in the URL: what it's filtered, searched, sorted and grouped by, and where
+ * its rows were scrolled to. Pure, so the server can read the same parameters (e.g. a remote query that filters,
  * sorts and pages in the database) as the table writes.
  *
  * The grammar, for a table whose columns `status`, `priority` and `scheduled` (see `param`) can
@@ -18,8 +18,7 @@
  * | `?sort=`                    | unsorted, when the table is sorted by default                 |
  * | `?group=category`           | rows grouped by category (one column, see `groupable`)        |
  * | `?group=`                   | not grouped, when the table is grouped by default             |
- * | `?page=2`                   | the second page (1-based)                                     |
- * | `?size=50`                  | 50 rows per page                                              |
+ * | `?row=121`                  | scrolled to the 121st row (1-based; see `parseTablePosition`) |
  *
  * - A value with a comma or backslash in it escapes them with a backslash: `Smith\, Jones`.
  * - A range filter (`dateRange`, `numberRange`, `moneyRange`) takes ranges, both ends included,
@@ -31,8 +30,12 @@
  *   URL; an absent parameter means the default.
  * - Unknown columns, values a column doesn't have, and malformed numbers are ignored (the default
  *   applies), never an error. Other parameters on the page are kept as they are.
- * - With a `prefix`, every parameter gets it: `orders.status=quote`, `orders.page=2` (for a page
+ * - With a `prefix`, every parameter gets it: `orders.status=quote`, `orders.sort=number` (for a page
  *   with more than one table).
+ * - The rows scroll rather than page (see `scroll-window.svelte.ts`): `row` is only where they were
+ *   scrolled to, kept up to date while scrolling and read when the table opens. It isn't part of
+ *   the state (`TableUrlState`), and any change of the state drops it: other rows start at the top.
+ *   Links from before the rows scrolled may still say `page` and `size`, which are ignored.
  */
 import { isRangeToken, type RangeGrammar } from "./ranges.ts";
 
@@ -44,8 +47,6 @@ export interface TableUrlState {
 	sorting: { id: string; desc: boolean }[];
 	/** Per filtered column, the values to keep (a `string[]` for a `set` filter). */
 	columnFilters: { id: string; value: unknown }[];
-	/** `pageIndex` is 0-based. */
-	pagination: { pageIndex: number; pageSize: number };
 	/** The column the rows are grouped by, if any: at most one id. */
 	grouping: string[];
 }
@@ -81,12 +82,10 @@ interface TableUrlColumn {
 /** How a table's state maps onto the URL. */
 export interface TableUrlSpec {
 	columns: readonly TableUrlColumn[];
-	/** Put before every parameter, with a dot: `orders` gives `orders.page`. */
+	/** Put before every parameter, with a dot: `orders` gives `orders.sort`. */
 	prefix?: string;
 	/** The table's state when its parameters are absent; left out of the URL when matched. */
 	defaults?: Partial<TableUrlState>;
-	/** The page sizes `size` accepts, besides the default size. */
-	pageSizes?: readonly number[];
 }
 
 /** A URL's parameters, e.g. SvelteKit's `page.url.searchParams` or `URLSearchParams`. */
@@ -95,11 +94,11 @@ export interface SearchParams extends Iterable<[string, string]> {
 	getAll(name: string): string[];
 }
 
-/** The page sizes the tables offer (and `size` accepts), unless they say otherwise. */
-export const defaultPageSizes: readonly number[] = [10, 20, 50, 100];
+/** The parameter that says where the rows were scrolled to (see `parseTablePosition`). */
+const positionParam = "row";
 
 /** The parameters that aren't columns. */
-const reserved = ["q", "sort", "group", "page", "size"];
+const reserved = ["q", "sort", "group", positionParam];
 
 /**
  * A filter's value for rows without one (`?engineer=none`): a column that can be empty offers it
@@ -112,14 +111,12 @@ const emptyState: TableUrlState = {
 	globalFilter: "",
 	sorting: [],
 	columnFilters: [],
-	pagination: { pageIndex: 0, pageSize: 20 },
 	grouping: [],
 };
 
 interface Compiled {
 	key: (name: string) => string;
 	defaults: TableUrlState;
-	pageSizes: readonly number[];
 	/** Sortable columns by their name in the URL, and their names by id. */
 	sortByParam: Map<string, TableUrlColumn>;
 	sortParamById: Map<string, string>;
@@ -168,15 +165,10 @@ function compile(spec: TableUrlSpec): Compiled {
 		}
 	}
 
-	const defaults: TableUrlState = {
-		...emptyState,
-		...spec.defaults,
-		pagination: { ...emptyState.pagination, ...spec.defaults?.pagination },
-	};
+	const defaults: TableUrlState = { ...emptyState, ...spec.defaults };
 	const result: Compiled = {
 		key,
 		defaults,
-		pageSizes: spec.pageSizes ?? defaultPageSizes,
 		sortByParam,
 		sortParamById,
 		groupByParam,
@@ -232,7 +224,7 @@ function accepts(column: TableUrlColumn, value: string) {
 
 /** Reads a table's state from the URL's parameters; what's absent or invalid is the default. */
 export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUrlState {
-	const { key, defaults, pageSizes, sortByParam, groupByParam, filters } = compile(spec);
+	const { key, defaults, sortByParam, groupByParam, filters } = compile(spec);
 
 	const q = params.get(key("q"));
 	const globalFilter = q ?? defaults.globalFilter;
@@ -276,15 +268,29 @@ export function parseTableUrl(params: SearchParams, spec: TableUrlSpec): TableUr
 		if (column) grouping = [column.id];
 	}
 
-	const size = positive(params.get(key("size")));
-	const pageSize =
-		size && (size === defaults.pagination.pageSize || pageSizes.includes(size))
-			? size
-			: defaults.pagination.pageSize;
-	const page = positive(params.get(key("page")));
-	const pageIndex = page ? page - 1 : defaults.pagination.pageIndex;
+	return { globalFilter, sorting, columnFilters, grouping };
+}
 
-	return { globalFilter, sorting, columnFilters, pagination: { pageIndex, pageSize }, grouping };
+/**
+ * Where the URL says the table's rows were scrolled to: the 0-based index of the first row that
+ * was in view, among all the rows that match (`?row=121` is 120), or 0.
+ */
+export function parseTablePosition(params: SearchParams, spec: TableUrlSpec): number {
+	const row = positive(params.get(compile(spec).key(positionParam)));
+	return row ? row - 1 : 0;
+}
+
+/** The URL's parameters with the table's position (see `parseTablePosition`) set, or left out at 0. */
+export function writeTablePosition(
+	params: SearchParams,
+	position: number,
+	spec: TableUrlSpec,
+): URLSearchParams {
+	const next = new URLSearchParams([...params]);
+	const param = compile(spec).key(positionParam);
+	if (position > 0) next.set(param, String(position + 1));
+	else next.delete(param);
+	return next;
 }
 
 const sameSorting = (a: TableUrlState["sorting"], b: TableUrlState["sorting"]) =>
@@ -314,12 +320,6 @@ function ownParams(state: TableUrlState, spec: TableUrlSpec): [string, string][]
 	if (group !== defaults.grouping.find((id) => groupParamById.has(id))) {
 		own.push([key("group"), group ? groupParamById.get(group)! : ""]);
 	}
-	if (state.pagination.pageIndex !== defaults.pagination.pageIndex) {
-		own.push([key("page"), String(state.pagination.pageIndex + 1)]);
-	}
-	if (state.pagination.pageSize !== defaults.pagination.pageSize) {
-		own.push([key("size"), String(state.pagination.pageSize)]);
-	}
 	return own;
 }
 
@@ -331,7 +331,8 @@ export function tableUrlParams(spec: TableUrlSpec): string[] {
 
 /**
  * The URL's parameters with the table's replaced by those for `state`: the others are kept, the
- * table's follow them, and defaults are left out.
+ * table's follow them, and defaults are left out. The position (`row`) goes: other rows start at
+ * the top.
  */
 export function writeTableUrl(
 	params: SearchParams,

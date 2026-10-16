@@ -25,5 +25,5 @@ export const materialsList = defineList({
 		stockLevel: { param: "stock", sort: true, group: true, filter: oneOf(stockLevels) },
 		orderCount: { param: "used", sort: true, filter: numberRange },
 	},
-	defaults: { sort: [{ id: "name", desc: false }], pageSize: 20 },
+	defaults: { sort: [{ id: "name", desc: false }] },
 });

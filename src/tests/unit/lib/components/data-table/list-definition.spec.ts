@@ -17,6 +17,7 @@ import {
 	oneOf,
 	orNone,
 	queryKey,
+	startingAt,
 	toListQuery,
 	toUrlSpec,
 	whereOf,
@@ -75,12 +76,11 @@ describe("toUrlSpec", () => {
 			],
 			defaults: {
 				sorting: [{ id: "createdAt", desc: true }],
-				pagination: { pageIndex: 0, pageSize: 20 },
 			},
 		});
 	});
 
-	test("has the defaults: group, filters and page sizes", () => {
+	test("has the defaults: group and filters", () => {
 		const spec = toUrlSpec({
 			columns: {
 				status: { sort: true, group: true, filter: oneOf(orderStatuses) },
@@ -92,14 +92,11 @@ describe("toUrlSpec", () => {
 				filters: { engineer: [7, 3] },
 				pageSize: 50,
 			},
-			pageSizes: [50, 100],
 		});
-		expect(spec.pageSizes).toEqual([50, 100]);
 		expect(parseTableUrl(new URLSearchParams(), spec)).toEqual({
 			globalFilter: "",
 			sorting: [{ id: "status", desc: true }],
 			columnFilters: [{ id: "engineer", value: ["7", "3"] }],
-			pagination: { pageIndex: 0, pageSize: 50 },
 			grouping: ["status"],
 		});
 	});
@@ -189,7 +186,6 @@ describe("toListQuery", () => {
 				{ id: "number", desc: false },
 			],
 			columnFilters: [],
-			pagination: { pageIndex: 0, pageSize: 20 },
 			grouping: [],
 		};
 		expect(toListQuery(ordersList, state).sort).toStrictEqual([
@@ -213,15 +209,19 @@ describe("toListQuery", () => {
 		expect(toListQuery(ordersList, state).group).toBeNull();
 	});
 
-	test("has a page size the list offers, and a page within reach", () => {
-		expect(fromUrl("size=50&page=3")).toMatchObject({ pageSize: 50, pageIndex: 2 });
-		expect(fromUrl("size=7&page=x")).toMatchObject({ pageSize: 20, pageIndex: 0 });
-		expect(fromUrl("page=999999999").pageIndex).toBe(listLimits.pageIndex);
-		const state: TableUrlState = {
-			...parseTableUrl(new URLSearchParams(), ordersList.urlSpec),
-			pagination: { pageIndex: Number.NaN, pageSize: 3 },
-		};
-		expect(toListQuery(ordersList, state)).toMatchObject({ pageIndex: 0, pageSize: 20 });
+	test("is the first page, of the list's page size, whatever an old link says", () => {
+		expect(fromUrl("size=50&page=3")).toMatchObject({ pageSize: 20, pageIndex: 0 });
+	});
+
+	test("starts at the page with a position's row, within reach", () => {
+		const first = fromUrl("status=quote");
+		expect(startingAt(first, 0)).toBe(first);
+		expect(startingAt(first, 19)).toBe(first);
+		expect(startingAt(first, 20)).toStrictEqual({ ...first, pageIndex: 1 });
+		expect(startingAt(first, 125).pageIndex).toBe(6);
+		expect(startingAt(first, 999_999_999_999).pageIndex).toBe(listLimits.pageIndex);
+		expect(startingAt(first, Number.NaN)).toBe(first);
+		expect(accepts(startingAt(first, 999_999_999_999))).toBe(true);
 	});
 
 	test("is the same query, and the same key, for states that mean the same", () => {
@@ -311,10 +311,6 @@ describe("toListQuery", () => {
 					"engineer",
 					"bogus",
 				].flatMap((filter) => (random(2) ? [{ id: filter, value: tokens() }] : [])),
-				pagination: {
-					pageIndex: random(3) - 1 + random(3) * 100_000,
-					pageSize: pick([1, 10, 20, 50, 77, 100]),
-				},
 				grouping: random(2) ? [pick(["status", "number", "bogus", "customer"])] : [],
 			};
 			const query = toListQuery(ordersList, state);
@@ -337,7 +333,7 @@ describe("the query schema", () => {
 				],
 				group: "status",
 				pageIndex: 4,
-				pageSize: 50,
+				pageSize: 20,
 			}),
 		).toBe(true);
 	});
@@ -392,6 +388,7 @@ describe("the query schema", () => {
 
 	test("rejects pages and page sizes out of range", () => {
 		expect(accepts({ ...canonical, pageSize: 7 })).toBe(false);
+		expect(accepts({ ...canonical, pageSize: 50 })).toBe(false);
 		expect(accepts({ ...canonical, pageSize: 100_000 })).toBe(false);
 		expect(accepts({ ...canonical, pageIndex: -1 })).toBe(false);
 		expect(accepts({ ...canonical, pageIndex: 1.5 })).toBe(false);
@@ -503,7 +500,7 @@ describe("the argument of a remote query", () => {
 	});
 
 	test("is short for a typical state", async () => {
-		const typical = fromUrl("status=quote,scheduled&sort=-priority&page=2");
+		const typical = startingAt(fromUrl("status=quote,scheduled&sort=-priority"), 40);
 		expect(await payloadLength(typical)).toBeLessThan(400);
 	});
 });

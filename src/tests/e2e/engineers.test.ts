@@ -1,6 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
+import {
+	afresh,
+	countIn,
+	organizations,
+	quiet,
+	rows,
+	useApp,
+	userNames,
+	users,
+	value,
+} from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -46,17 +56,10 @@ const names = () => app.page.locator("tbody td a").allInnerTexts();
 const search = () => app.page.getByLabel("Search engineers…");
 const active = () => app.page.getByRole("checkbox", { name: "Active" });
 
-/** Every name in the list, across its pages, sorted. */
+/** Every name in the list, scrolled to its end, sorted. */
 async function allNames() {
-	const { page } = app;
-	const all: string[] = [];
-	const next = page.getByRole("button", { name: "Go to next page" });
-	for (;;) {
-		all.push(...(await names()));
-		if (!(await next.isEnabled())) break;
-		await next.click();
-	}
-	return all.toSorted((a, b) => a.localeCompare(b));
+	await app.loadAllRows();
+	return (await names()).toSorted((a, b) => a.localeCompare(b));
 }
 
 /** Opens a faceted filter and ticks an option. */
@@ -103,18 +106,13 @@ let created: number;
 let busy: Awaited<ReturnType<typeof busiest>>;
 
 describe("in North", () => {
-	test("the list shows North's engineers by name, 10 per page", async () => {
-		const { page } = app;
+	test("the list shows North's engineers by name", async () => {
 		await app.go("/engineers");
 		const total = await countIn("engineer", north.id);
 		expect(await app.rowCount()).toBe(total);
 		const shown = await names();
-		expect(shown).toHaveLength(Math.min(10, total));
+		expect(shown).toHaveLength(Math.min(50, total));
 		expect(shown).toEqual(shown.toSorted((a, b) => a.localeCompare(b)));
-
-		await page.getByRole("button", { name: "Go to next page" }).click();
-		expect(await names()).toHaveLength(Math.min(10, total - 10));
-		await page.getByRole("button", { name: "Go to previous page" }).click();
 		expect(await allNames()).toEqual(await namesIn(north.id));
 	});
 
@@ -196,7 +194,7 @@ describe("in North", () => {
 		expect(groups.length).toBeGreaterThan(1);
 		for (const group of groups) expect(group.count, group.key).toBe(counts[group.key]);
 
-		/** How many of a group's rows show (on this page). */
+		/** How many of a group's rows show. */
 		const rowsOf = (key: string) =>
 			page.locator("tbody tr").evaluateAll((trs: HTMLElement[], key) => {
 				const start = trs.findIndex((tr) => tr.dataset.group === key);
@@ -452,7 +450,7 @@ describe("in North", () => {
 		const activeOf = async () =>
 			Promise.all(picked.map(async ({ id }) => (await engineer(id)).active));
 
-		await app.go("/engineers?size=50");
+		await app.go(afresh("/engineers"));
 		await select();
 		// They're all active: activating would do nothing.
 		await expect
@@ -493,7 +491,7 @@ describe("in North", () => {
 			return page.getByRole("menu");
 		};
 
-		await app.go("/engineers?size=50");
+		await app.go(afresh("/engineers"));
 		let items = await menu();
 		// Active already: activating would do nothing.
 		await items.getByRole("menuitem", { name: "Deactivate", exact: true }).waitFor();

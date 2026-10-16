@@ -19,7 +19,7 @@ import { columnVisibilitySchema, tableKeySchema, viewQuerySchema } from "./views
 export interface TableMemory {
 	/** Which of its hideable columns are shown, if not the defaults. */
 	columns: Record<string, boolean> | null;
-	/** Its parameters as they were left, without the page: `""` or `?…`. */
+	/** Its parameters as they were left, without where it was scrolled to: `""` or `?…`. */
 	query: string;
 	/** The saved view that was open (one the member still sees), if any. */
 	viewId: number | null;

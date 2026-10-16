@@ -25,7 +25,6 @@
 		initialState: {
 			sorting: [{ id: "name", desc: false }],
 			columnVisibility: { createdAt: false, search: false },
-			pagination: { pageIndex: 0, pageSize: 20 },
 		},
 	});
 </script>
@@ -59,6 +58,5 @@
 		</table.Toolbar>
 		<table.Table emptyTitle={m.customers_empty()} fillViewport />
 		<BulkActionBar actions={[deleteCustomers]} />
-		<table.Pagination />
 	</div>
 </table.AppTable>

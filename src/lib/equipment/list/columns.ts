@@ -5,6 +5,7 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
+import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentCategories, equipmentStatuses } from "#lib/models.ts";
 
 import CategoryLabel from "../ui/category-label.svelte";
@@ -46,13 +47,21 @@ export const columns = column.columns([
 		cell: ({ getValue }) => renderComponent(CategoryLabel, { category: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
-		meta: { label: m.equipment_column_category, filterValues: equipmentCategories },
+		meta: {
+			label: m.equipment_column_category,
+			filterValues: equipmentCategories,
+			clickFilter: (category) => labelOrValue("equipmentCategory", category),
+		},
 	}),
 	column.accessor("status", {
 		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
-		meta: { label: m.equipment_column_status, filterValues: equipmentStatuses },
+		meta: {
+			label: m.equipment_column_status,
+			filterValues: equipmentStatuses,
+			clickFilter: (status) => labelOrValue("equipmentStatus", status),
+		},
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
