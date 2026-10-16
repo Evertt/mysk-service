@@ -183,3 +183,18 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Reproduction:** not cut down yet. Likely: a list of items with links preloaded on hover, a
   state change that moves an item to another list (re-creating it) while a hover preload is
   pending, and a `$effect` in the item that should log.
+
+## 9. SvelteKit: `invalidateAll()` leaves a live query's failed reconnect unhandled
+
+- **Versions:** @sveltejs/kit 3.0.0 (remote functions, `query.live`).
+- **What happens:** after a navigation with `invalidateAll` (and when a command's response asks
+  for it), SvelteKit reconnects every live query with `void resource.reconnect()`
+  (`_goto` in `runtime/client/client.js`, `remote_request` in
+  `runtime/client/remote-functions/shared.svelte.js`). `reconnect()` awaits a promise that rejects
+  with "Live query connection was interrupted" when the connection never comes up, e.g. because
+  the page is being left (signing out from the dashboard, whose activity is live). `void` doesn't
+  handle the rejection, so it surfaces as an unhandled rejection (a `pageerror` in the e2e tests,
+  which failed `auth.test.ts` now and then).
+- **Workaround:** `patches/@sveltejs__kit@3.0.0.patch` catches it at both calls.
+- **Reproduction:** a page with a `query.live`, and a form or link that signs out and navigates
+  with `invalidateAll`: now and then the console shows the unhandled rejection.

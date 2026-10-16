@@ -11,6 +11,10 @@ overrides:
   vite@*: "catalog:"
   vitest@*: "catalog:"
 patchedDependencies:
+  # `invalidateAll()` reconnects the live queries with `void resource.reconnect()`, whose promise
+  # rejects when the page is being left (signing out from the live dashboard): an unhandled
+  # rejection. Caught; see docs/upstream-bugs/README.md (9). Drop it once SvelteKit catches it.
+  "@sveltejs/kit@3.0.0": patches/@sveltejs__kit@3.0.0.patch
   "@tanstack/svelte-table@9.2.5": patches/@tanstack__svelte-table@9.2.5.patch
   "svelte-sonner@1.2.1": patches/svelte-sonner@1.2.1.patch
   # Hydration skipped past the end of an async block that holds a `<svelte:boundary>` that failed

@@ -33,6 +33,33 @@ describe("on a full page load", () => {
 		expect(await dutch.text()).toContain("Fieldworks laden…");
 	});
 
+	test("the stylesheets don't hold up the first paint, and are in before the page hydrates", async () => {
+		const html = await (await fetch(new URL("/login", baseURL))).text();
+		// No stylesheet blocks the paint: each is preloaded, and a plain one only without JavaScript.
+		const head = html
+			.slice(0, html.indexOf("</head>"))
+			.replaceAll(/<noscript>.*?<\/noscript>/gs, "");
+		expect(head).not.toMatch(/<link[^>]*rel="stylesheet"/);
+		expect(head).toMatch(/<link[^>]*rel="preload" as="style" data-splash-style/);
+
+		await app.page.goto(new URL("/login", baseURL).href);
+		await hydrated(app.page);
+		expect(
+			await app.page.evaluate(() =>
+				[...document.querySelectorAll<HTMLLinkElement>("link[data-splash-style]")].map(
+					(link) => link.rel === "stylesheet" && !!link.sheet,
+				),
+			),
+		).toEqual(expect.arrayContaining([true]));
+		expect(
+			await app.page.evaluate(() =>
+				[...document.querySelectorAll<HTMLLinkElement>("link[data-splash-style]")].every(
+					(link) => link.rel === "stylesheet" && !!link.sheet,
+				),
+			),
+		).toBe(true);
+	});
+
 	test("it stops catching clicks once the page is interactive, then goes", async () => {
 		await app.page.goto(new URL("/orders", baseURL).href);
 		await hydrated(app.page);

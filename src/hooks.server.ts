@@ -15,6 +15,8 @@ import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { handleTimeZone } from "#lib/server/time-zone.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
+import { deferStylesheets } from "./routes/splash.ts";
+
 /**
  * With `DEV_REMOTE_DELAY_MS` set, holds up each remote function call (and each page's server data,
  * `__data.json`, which a module's pages have) that long: a slow server, to try what navigations do
@@ -37,7 +39,7 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 			{ ...event, request },
 			{
 				transformPageChunk: ({ html }) =>
-					html
+					deferStylesheets(html)
 						.replace("%paraglide.lang%", locale)
 						.replace("%paraglide.dir%", getTextDirection(locale))
 						// The splash screen's text for screen readers (`app.html`), before any script runs.

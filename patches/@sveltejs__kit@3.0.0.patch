@@ -1,0 +1,28 @@
+diff --git a/src/runtime/client/client.js b/src/runtime/client/client.js
+index 344b1021f3189fac14ea51918a8d179ab41a7857..9cee8a5dac051a261d5dfa027aa9561be842b4e1 100644
+--- a/src/runtime/client/client.js
++++ b/src/runtime/client/client.js
+@@ -761,7 +761,8 @@ export async function _goto(url, options = {}, redirect_count = 0, nav_token = {
+ 				}
+ 				for (const [key, { resource }] of cache_entries(live_query_map)) {
+ 					if (live_query_keys?.has(key)) {
+-						void resource.reconnect();
++						// Caught: a connection interrupted by leaving the page rejects it (unhandled).
++						resource.reconnect().catch(() => {});
+ 					}
+ 				}
+ 			});
+diff --git a/src/runtime/client/remote-functions/shared.svelte.js b/src/runtime/client/remote-functions/shared.svelte.js
+index 354da4230d10cd430079f38fb226b2432edbac08..ac935dd2baf0a252e2fd5389a454563ccaf60040 100644
+--- a/src/runtime/client/remote-functions/shared.svelte.js
++++ b/src/runtime/client/remote-functions/shared.svelte.js
+@@ -181,7 +181,8 @@ export async function remote_request(url, init, refreshes) {
+ 			// reconnecting after a hard failure would wipe the error state and
+ 			// restart the stream (see commit 63a3e83 regression).
+ 			if (!data.l[key].e) {
+-				void entry?.resource.reconnect();
++				// Caught: a connection interrupted by leaving the page rejects it (unhandled).
++				entry?.resource.reconnect().catch(() => {});
+ 			}
+ 		}
+ 	}
