@@ -174,11 +174,84 @@
 	"equipment_field_name_description": "The customer's own name or tag for it, if any.",
 	"equipment_field_site": "Site",
 	"equipment_field_location": "Location at the site",
-	"equipment_field_location_description": "E.g. “Expedition dock 07”.",
+	"equipment_field_location_description": "One of the site's locations, e.g. “Dock 03”, or a new one.",
 	"equipment_column_site": "Site",
 	"equipment_column_location": "Location",
 	"equipment_detail_site": "Site",
 	"equipment_detail_location": "Location",
+	"equipment_field_new_location": "New location",
+	"equipment_field_new_location_description": "Its name, e.g. “Dock 03”: it's added to the site's locations.",
+	"equipment_location_add_option": "Add a location…",
+	"equipment_location_none": "No location",
+	"equipment_location_unknown": "Choose one of the site's locations",
+	"equipment_location_name_required": "Enter the location's name",
+	"equipment_location_name_taken": "The site has a location called “{name}” already",
+	"equipment_location_not_found": "Location not found",
+	"equipment_location_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} unit is there: move it to another location first",
+				"countPlural=*": "{countText} units are there: move them to another location first"
+			}
+		}
+	],
+	"equipment_search_locations": "Search locations…",
+	"equipment_locations_title": "Locations",
+	"equipment_locations_of": "Locations at {site}",
+	"equipment_locations_none": "No locations yet: add the places at the site where its equipment is, such as a dock or a hall.",
+	"equipment_location_add": "Add location",
+	"equipment_location_new_title": "New location",
+	"equipment_location_edit_title": "Edit {name}",
+	"equipment_location_dialog_description": "A place at the site where its equipment is, with a QR code of its own.",
+	"equipment_location_field_name": "Name",
+	"equipment_location_field_name_description": "E.g. “Expeditie noord”, “Dock 03” or “Kantoor 1e”.",
+	"equipment_location_field_description": "Description",
+	"equipment_location_field_description_description": "What helps to find it, if anything.",
+	"equipment_location_save": "Save location",
+	"equipment_location_saved": "Location saved",
+	"equipment_location_actions": "Actions for location {name}",
+	"equipment_location_delete_title": "Delete {name}?",
+	"equipment_location_delete_description": "It's removed from the site's locations, and its QR code no longer works.",
+	"equipment_location_deleted": "Location deleted",
+	"equipment_location_units_title": "Equipment here",
+	"equipment_location_units_empty": "No equipment at this location",
+	"equipment_location_details": "Details",
+	"equipment_location_history_title": "Orders",
+	"equipment_location_history_description": "The latest orders on the equipment here.",
+	"equipment_location_history_empty": "No orders on the equipment here yet",
+	"equipment_qr_title": "QR code",
+	"equipment_qr_description": "Scanning it opens this page, or the engineer's open orders here in their portal.",
+	"equipment_qr_label": "QR code of {name}",
+	"equipment_qr_print": "Print label",
+	"equipment_qr_not_found": "This QR code isn't known",
+	"equipment_labels_title": "QR labels of {site}",
+	"equipment_labels_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} label",
+				"countPlural=*": "{countText} labels"
+			}
+		}
+	],
+	"equipment_labels_print": "Print labels",
+	"equipment_labels_print_site": "QR labels",
+	"equipment_labels_back": "Back",
+	"equipment_labels_location": "Location",
+	"equipment_labels_not_found": "Nothing to print here",
+	"equipment_labels_empty_title": "No labels to print",
+	"equipment_labels_empty_description": "The site has no locations or equipment yet.",
 	"equipment_category_name_required": "Name the category",
 	"equipment_category_name_max": "Keep it to {max} characters",
 	"equipment_category_name_taken": "There's a category {name} already",

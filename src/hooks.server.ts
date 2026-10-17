@@ -106,8 +106,12 @@ const isPublic = (pathname: string) =>
 	pathname.startsWith("/_app/") ||
 	pathname.startsWith("/_ops/");
 
-/** The engineer portal, the only part of the app field engineers use. */
-const isPortal = (pathname: string) => pathname === "/my" || pathname.startsWith("/my/");
+/**
+ * The engineer portal, the only part of the app field engineers use, and the QR codes'
+ * links (`/q/<token>`), which lead them into it.
+ */
+const isPortal = (pathname: string) =>
+	pathname === "/my" || pathname.startsWith("/my/") || pathname.startsWith("/q/");
 
 /**
  * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers

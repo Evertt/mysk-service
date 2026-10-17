@@ -1,16 +1,22 @@
 /**
  * The options of the filters on related records in the lists (see `RecordFilter`): the current
- * tenant's customers, engineers or units matching a search, the first so many, plus the names of
- * those ticked. Used by the orders and equipment lists, which filter on the server.
+ * tenant's customers, engineers, locations or units matching a search, the first so many, plus the
+ * names of those ticked. Used by the orders and equipment lists, which filter on the server.
  */
 import { and, asc, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { RecordOptions } from "#lib/components/data-table/server-table.svelte.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, engineer, equipment } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	customerSite,
+	engineer,
+	equipment,
+	equipmentLocation,
+} from "#lib/server/db/schema.ts";
 import { nocase, searchMatch } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -77,6 +83,36 @@ export const getEngineerOptions = forMembers.query(optionsInput, async ({ search
 				.orderBy(nocase(engineer.name), asc(engineer.id)),
 		[engineer.name],
 		{ where: inList(engineer.id, ids), count: ids.length },
+		search,
+	);
+});
+
+/**
+ * Locations by their name, their site's or their customer's; their id is the filter's value
+ * (`?location=12`). The same name is at many sites ("Dock 03"), so each says whose site it's at.
+ */
+export const getLocationOptions = forMembers.query(optionsInput, async ({ search, selected }) => {
+	const ids = selected.map(Number).filter(Number.isSafeInteger);
+	return options(
+		(where) =>
+			db
+				.select({
+					value: equipmentLocation.id,
+					label: equipmentLocation.name,
+					detail: sql<string>`${customer.name} || ' · ' || ${customerSite.name}`,
+				})
+				.from(equipmentLocation)
+				.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
+				.innerJoin(...tenantJoin(customer, customerSite.customerId))
+				.where(and(inTenant(equipmentLocation), where))
+				.orderBy(
+					nocase(equipmentLocation.name),
+					nocase(customer.name),
+					nocase(customerSite.name),
+					asc(equipmentLocation.id),
+				),
+		[equipmentLocation.name, customerSite.name, customer.name],
+		{ where: inList(equipmentLocation.id, ids), count: ids.length },
 		search,
 	);
 });

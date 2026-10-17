@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vite-plus/test";
 
-import { equipmentFields } from "#lib/equipment/form/equipment-schema.ts";
+import { equipmentFields, newLocationToken } from "#lib/equipment/form/equipment-schema.ts";
 import { day } from "#unit/temporal-support.ts";
 
 /** The parsed value, or the messages of all issues. */
@@ -22,7 +22,8 @@ test("a filled-in form becomes a unit", () => {
 		customerId: "7",
 		siteId: "12",
 		name: "  Automatische deur kantine BES-3 ",
-		location: "Expeditie dock 07",
+		locationId: "21",
+		newLocationName: "",
 		installedAt: "2025-05-01",
 		warrantyUntil: "2028-04-30",
 	};
@@ -33,6 +34,8 @@ test("a filled-in form becomes a unit", () => {
 			categoryId: 3,
 			customerId: 7,
 			siteId: 12,
+			locationId: 21,
+			newLocationName: null,
 			name: "Automatische deur kantine BES-3",
 			installedAt: day("2025-05-01"),
 			warrantyUntil: day("2028-04-30"),
@@ -88,8 +91,17 @@ describe("site, name and location", () => {
 
 	test("its name and location are optional, and nothing when left empty", () => {
 		expect(parse(equipmentFields.name, "  ")).toEqual({ value: null });
-		expect(parse(equipmentFields.location, "")).toEqual({ value: null });
-		expect(parse(equipmentFields.location, " Hal 2 ")).toEqual({ value: "Hal 2" });
+		expect(parse(equipmentFields.locationId, "")).toEqual({ value: null });
+		expect(parse(equipmentFields.newLocationName, "  ")).toEqual({ value: null });
+		// The form has the field only while adding a location.
+		expect(parse(equipmentFields.newLocationName, undefined)).toEqual({ value: null });
+	});
+
+	test("its location is one of the site's, by id, or a new one, named", () => {
+		expect(parse(equipmentFields.locationId, "8")).toEqual({ value: 8 });
+		expect(parse(equipmentFields.locationId, newLocationToken)).toEqual({ value: "new" });
+		expect(parse(equipmentFields.newLocationName, " Dock 03 ")).toEqual({ value: "Dock 03" });
+		expect(parse(equipmentFields.locationId, "Dock 03").issues).toContain("Choose one");
 	});
 
 	test("are at most 120 characters", () => {

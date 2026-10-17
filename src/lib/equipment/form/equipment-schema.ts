@@ -12,6 +12,9 @@ const optionalText = () =>
 		v.transform((value) => value || null),
 	);
 
+/** The location field's option for adding a location to the site. */
+export const newLocationToken = "new";
+
 /** The fields of the equipment form, shared by registering and editing a unit. */
 export const equipmentFields = {
 	serialNumber: v.pipe(
@@ -30,8 +33,23 @@ export const equipmentFields = {
 	customerId: id(m.equipment_customer_required),
 	/** One of the customer's sites. */
 	siteId: id(m.equipment_site_required),
-	/** Where it is at the site, if that needs saying. */
-	location: optionalText(),
+	/**
+	 * Where it is at the site, if that needs saying: one of the site's locations, or `new`, a
+	 * location the form adds to the site (named `newLocationName`).
+	 */
+	locationId: v.union(
+		[
+			v.pipe(
+				v.literal(""),
+				v.transform(() => null),
+			),
+			v.literal(newLocationToken),
+			id(),
+		],
+		m.validation_choose_one,
+	),
+	/** The name of the location to add (with `locationId` `new`; the form has it only then). */
+	newLocationName: v.optional(optionalText(), ""),
 	installedAt: date(m.equipment_installed_required),
 	warrantyUntil: date(m.equipment_warranty_required),
 };

@@ -83,12 +83,12 @@ export const getWorkOrder = query(v.string(), async (number) => {
 						manufacturer: true,
 						model: true,
 						serialNumber: true,
-						location: true,
 					},
 					with: {
 						site: {
 							columns: { id: true, name: true, address: true, postalCode: true, city: true },
 						},
+						location: { columns: { name: true } },
 					},
 				},
 			},
@@ -104,7 +104,11 @@ export const getWorkOrder = query(v.string(), async (number) => {
 			.from(orderSignoff)
 			.where(and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff))),
 	]);
-	const unitList = units.map((link) => link.equipment);
+	// Each unit with the name of its location at the site, if it has one.
+	const unitList = units.map(({ equipment: unit }) => ({
+		...unit,
+		location: unit.location?.name ?? null,
+	}));
 	const sites = [...new Map(unitList.map((unit) => [unit.site.id, unit.site])).values()];
 	return {
 		/** Whose work order it is: the tenant's. */

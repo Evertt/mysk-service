@@ -4,6 +4,7 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
@@ -91,11 +92,21 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		meta: { label: m.equipment_column_site },
 	}),
-	column.accessor((row) => row.location ?? undefined, {
+	// One of the site's locations, shown by name and filtered by id (`?location=12`, `none`).
+	column.accessor((row) => row.location?.name, {
 		id: "location",
+		cell: ({ row }) =>
+			renderComponent(TwoLineCell, {
+				primary: row.original.location?.name,
+				href: row.original.location
+					? resolve("/(app)/equipment/locations/[id]", { id: String(row.original.location.id) })
+					: undefined,
+			}),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.equipment_column_location },
+		filterFn: (row, _id, ids: string[]) =>
+			ids.includes(row.original.location ? String(row.original.location.id) : noneToken),
+		meta: { label: m.equipment_column_location, filter: "set" },
 	}),
 	column.accessor("installedAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),

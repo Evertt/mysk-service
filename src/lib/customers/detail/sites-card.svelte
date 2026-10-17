@@ -1,11 +1,12 @@
 <!--
 	@component
 	A customer's sites on their page: each with its address, preferences, time slot and access
-	notes, to edit or delete, and a button to add one.
+	notes, to edit or delete, and a button to add one. Under each, what the page adds (`extra`, e.g.
+	the site's locations).
 -->
 <script lang="ts">
 	import PlusIcon from "@lucide/svelte/icons/plus";
-	import type { ComponentProps } from "svelte";
+	import type { ComponentProps, Snippet } from "svelte";
 
 	import SiteDialog from "../form/site-dialog.svelte";
 	import SiteRow from "./site-row.svelte";
@@ -13,6 +14,7 @@
 	let {
 		customer,
 		countries,
+		extra,
 	}: {
 		customer: {
 			id: number;
@@ -23,6 +25,8 @@
 		};
 		/** The countries to choose from (`getCustomerFormOptions`). */
 		countries: string[];
+		/** Shown under each site. */
+		extra?: Snippet<[{ id: number; name: string }]>;
 	} = $props();
 
 	let adding = $state(false);
@@ -42,7 +46,7 @@
 	<Card.Content>
 		<ul class="divide-y">
 			{#each customer.sites as site (site.id)}
-				<SiteRow {site} {customer} {countries} />
+				<SiteRow {site} {customer} {countries} {extra} />
 			{/each}
 		</ul>
 	</Card.Content>

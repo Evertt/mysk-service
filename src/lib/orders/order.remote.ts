@@ -15,6 +15,7 @@ import {
 	engineer,
 	equipment,
 	equipmentCategory,
+	equipmentLocation,
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
@@ -41,7 +42,13 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 			units: {
 				orderBy: asc(orderUnit.position),
 				with: {
-					equipment: { with: { site: true, category: { columns: { name: true } } } },
+					equipment: {
+						with: {
+							site: true,
+							location: { columns: { name: true } },
+							category: { columns: { name: true } },
+						},
+					},
 				},
 			},
 			engineer: true,
@@ -49,7 +56,11 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 	});
 	if (!found) error(404, m.orders_not_found({ number }));
 	const { sites: customerSites, ...owner } = found.customer;
-	const units = found.units.map((link) => link.equipment);
+	// Each unit with the name of its location at the site, if it has one.
+	const units = found.units.map(({ equipment: unit }) => ({
+		...unit,
+		location: unit.location?.name ?? null,
+	}));
 	const sites = units.length
 		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
 		: customerSites.length === 1
@@ -105,7 +116,8 @@ export const getOrderFormOptions = forMembers.query(async () => {
 				model: equipment.model,
 				manufacturer: equipment.manufacturer,
 				serialNumber: equipment.serialNumber,
-				location: equipment.location,
+				/** The name of its location at the site, if it has one. */
+				location: equipmentLocation.name,
 				/** The customer's site it's at, to pick the units of a site together. */
 				site: { id: customerSite.id, name: customerSite.name },
 				/** The specialty of the engineers who service its category, if any. */
@@ -113,6 +125,7 @@ export const getOrderFormOptions = forMembers.query(async () => {
 			})
 			.from(equipment)
 			.innerJoin(...tenantJoin(customerSite, equipment.siteId))
+			.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
 			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
 			.where(inTenant(equipment))
 			// By site, then as the customer names them (`Deur 01`, `Deur 02`, …), then by make.

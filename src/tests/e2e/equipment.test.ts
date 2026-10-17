@@ -109,7 +109,7 @@ describe("in North", () => {
 		await app.toast("Equipment registered");
 		expect(
 			await rows(
-				`select e.organization_id, e.customer_id, s.name as site, e.name, e.location
+				`select e.organization_id, e.customer_id, s.name as site, e.name, e.location_id as location
 				 from equipment e join customer_site s on s.id = e.site_id where e.serial_number = ?`,
 				[serial],
 			),
@@ -148,7 +148,9 @@ describe("in North", () => {
 			String(oneSite.siteId),
 		);
 		await page.getByLabel("Name", { exact: true }).fill("Automatische deur kantine BES-3");
-		await page.getByLabel("Location at the site").fill("Expeditie dock 07");
+		// A location the site doesn't have yet, added on the spot.
+		await page.getByLabel("Location at the site").selectOption({ label: "Add a location…" });
+		await page.getByLabel("New location").fill("Expeditie dock 07");
 		await page.getByRole("button", { name: "Save equipment" }).click();
 		await page.waitForURL((url) => url.pathname === `/equipment/${serial}`);
 		// Its own name first, its make after it.
@@ -156,7 +158,9 @@ describe("in North", () => {
 		expect(await page.locator("main").innerText()).toContain("Testco TX-2");
 		expect(await card("Specifications")).toContain("Expeditie dock 07");
 		const [saved] = await rows(
-			`select model, status, customer_id, site_id, name, location from equipment where id = ?`,
+			`select e.model, e.status, e.customer_id, e.site_id, e.name, l.name as location
+			 from equipment e left join equipment_location l on l.id = e.location_id
+			 and l.site_id = e.site_id where e.id = ?`,
 			[id],
 		);
 		expect(saved).toEqual({

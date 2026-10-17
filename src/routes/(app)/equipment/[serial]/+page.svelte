@@ -8,7 +8,11 @@
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import { StatusBadge as EquipmentStatusBadge, WarrantyBadge } from "#lib/equipment/components.ts";
+	import {
+		StatusBadge as EquipmentStatusBadge,
+		QrCard,
+		WarrantyBadge,
+	} from "#lib/equipment/components.ts";
 	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
@@ -85,7 +89,13 @@
 					<DetailItem label={m.equipment_field_serial_number()} value={unit.serialNumber} />
 					<DetailItem label={m.equipment_field_category()} value={unit.category.name} />
 					<DetailItem label={m.equipment_detail_site()} value={site.name} />
-					<DetailItem label={m.equipment_detail_location()} value={unit.location} />
+					<DetailItem
+						label={m.equipment_detail_location()}
+						value={unit.location?.name}
+						href={unit.location
+							? resolve("/(app)/equipment/locations/[id]", { id: String(unit.location.id) })
+							: undefined}
+					/>
 					<DetailItem label={m.equipment_column_installed()} value={formatDate(unit.installedAt)} />
 					<DetailItem label={m.equipment_field_warranty()}>
 						<span class="flex flex-wrap items-center gap-2">
@@ -132,6 +142,14 @@
 		</Card.Root>
 
 		<SiteCard {site} title={m.equipment_detail_site()} />
+
+		<QrCard
+			token={unit.qrToken}
+			{name}
+			printHref="{resolve('/(app)/equipment/labels/[site]', {
+				site: String(site.id),
+			})}?unit={encodeURIComponent(unit.serialNumber)}"
+		/>
 
 		<ExtensionSlot point={detailSide} props={{ serialNumber: unit.serialNumber }} />
 

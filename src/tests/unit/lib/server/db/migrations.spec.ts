@@ -613,7 +613,14 @@ test("the Durable Object's rebuilds keep them too, with their foreign keys on", 
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(beforeSequences);
 	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
-	for (const tag of ["0002_add-customer-sites", "0003_equipment-categories", "0004_order-units"]) {
+	for (const tag of [
+		"0002_add-customer-sites",
+		"0003_equipment-categories",
+		"0004_order-units",
+		"0005_add-checklist-templates",
+		"0006_add-checklists",
+		"0007_equipment-locations",
+	]) {
 		const statements = readFileSync(join(durableFolder, `${tag}.sql`), "utf8")
 			.split("--> statement-breakpoint")
 			.map((statement) => statement.trim())
@@ -621,5 +628,146 @@ test("the Durable Object's rebuilds keep them too, with their foreign keys on", 
 		await client.batch(statements, "write");
 	}
 	expect(await nextIds(client)).toEqual({ unit: 41, order: 102, leftovers: [] });
+	client.close();
+});
+
+/**
+ * Two tenants' units at their sites, with the places they had as text (some the same but for case
+ * and spaces, some empty), and the records that refer to the units: an order's unit, a contract's
+ * coverage and a maintenance plan.
+ */
+const beforeLocations = `
+	insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 1), ('b', 'B', 'b', 2);
+	insert into customer (id, organization_id, code, name, contact_name, email, phone, city, country, segment, created_at)
+	values (1, 'a', 'C-1', 'Riedel', 'Jan', 'jan@riedel.nl', '0318 123456', 'Ede', 'Netherlands', 'enterprise', 100),
+		(3, 'b', 'C-1', 'Pakhuis', 'Piet', 'piet@pakhuis.be', '+32 9 123 45 67', 'Gent', 'Belgium', 'small_business', 300);
+	insert into customer_site (id, organization_id, customer_id, name, city, country)
+	values (5, 'a', 1, 'Ede', 'Ede', 'Netherlands'), (6, 'a', 1, 'Arnhem', 'Arnhem', 'Netherlands'),
+		(7, 'b', 3, 'Gent', 'Gent', 'Belgium');
+	insert into equipment_category (id, organization_id, name, specialty, position)
+	values (1, 'a', 'Deur', 'mechanical', 0), (2, 'b', 'Koelmachine', 'hvac', 0);
+	insert into equipment (id, organization_id, serial_number, model, manufacturer, category_id, status, customer_id, site_id, name, location, installed_at, warranty_until)
+	values (10, 'a', 'S-10', 'SPU F42', 'Hörmann', 1, 'operational', 1, 5, 'Deur D-17', 'Dock 03', '2024-01-01', '2027-01-01'),
+		(11, 'a', 'S-11', 'HLS 2', 'Hörmann', 1, 'operational', 1, 5, null, ' dock 03 ', '2024-01-01', '2027-01-01'),
+		(12, 'a', 'S-12', 'SR 60', 'Gorter', 1, 'needs_service', 1, 5, null, 'Expeditie noord', '2024-01-01', '2027-01-01'),
+		(13, 'a', 'S-13', 'SR 30', 'Gorter', 1, 'operational', 1, 5, null, null, '2024-01-01', '2027-01-01'),
+		(14, 'a', 'S-14', 'SR 30', 'Gorter', 1, 'operational', 1, 5, null, '  ', '2024-01-01', '2027-01-01'),
+		(15, 'a', 'S-15', 'SPU F42', 'Hörmann', 1, 'operational', 1, 6, null, 'Dock 03', '2024-01-01', '2027-01-01'),
+		(30, 'b', 'S-30', 'C15', 'Daikin', 2, 'operational', 3, 7, null, 'Kantine', '2024-01-01', '2027-01-01'),
+		(31, 'b', 'S-31', 'C16', 'Daikin', 2, 'operational', 3, 7, null, 'kantine', '2024-01-01', '2027-01-01');
+	insert into "order" (id, organization_id, number, customer_id, type, status, priority, description)
+	values (100, 'a', 'O-1', 1, 'repair', 'scheduled', 'normal', 'Deur hapert');
+	insert into order_unit (organization_id, order_id, customer_id, equipment_id, position)
+	values ('a', 100, 1, 10, 0), ('a', 100, 1, 11, 1);
+	insert into contract (id, organization_id, number, customer_id, level, starts_on, ends_on, monthly_fee, response_hours)
+	values (200, 'a', 'K-1', 1, 'basic', '2026-01-01', '2026-12-31', 10000, 24);
+	insert into contract_equipment (customer_id, contract_id, equipment_id) values (1, 200, 12);
+	insert into maintenance_plan (id, organization_id, equipment_id, order_type, description, interval_months, next_due_on, anchor_day)
+	values (300, 'a', 13, 'maintenance', 'Jaarlijks', 12, '2026-11-01', 1);
+`;
+
+/** What became of `beforeLocations`: the locations, the units at them, and what refers to them. */
+async function afterLocations(client: ReturnType<typeof createClient>) {
+	const all = async (sql: string) => (await client.execute(sql)).rows.map((row) => ({ ...row }));
+	const tokens = await all(
+		"select qr_token as token from equipment union all select qr_token from equipment_location",
+	);
+	return {
+		columns: (await all("pragma table_info('equipment')")).map((column) => column.name),
+		locations: await all(
+			"select organization_id, site_id, name, description, position from equipment_location order by id",
+		),
+		units: await all(
+			"select e.id, e.status, e.site_id, l.name as location from equipment e left join equipment_location l on l.id = e.location_id and l.site_id = e.site_id order by e.id",
+		),
+		// Every unit and location has a token of its own, as the app makes them.
+		tokens: {
+			count: tokens.length,
+			distinct: new Set(tokens.map((row) => row.token)).size,
+			wellFormed: tokens.every((row) => /^[0-9a-f]{24}$/.test(String(row.token))),
+		},
+		orderUnits: await all(
+			"select order_id, equipment_id, position from order_unit order by position",
+		),
+		coverage: await all("select contract_id, equipment_id from contract_equipment"),
+		plans: await all("select id, equipment_id from maintenance_plan"),
+		leftovers: await all(
+			"select name from sqlite_master where name like '\\_\\_%' escape '\\' and name != '__drizzle_migrations'",
+		),
+		keys: await all("pragma foreign_key_check"),
+	};
+}
+
+const locationsMade = {
+	columns: [
+		"id",
+		"organization_id",
+		"serial_number",
+		"model",
+		"manufacturer",
+		"category_id",
+		"status",
+		"customer_id",
+		"site_id",
+		"name",
+		"location_id",
+		"installed_at",
+		"warranty_until",
+		"qr_token",
+	],
+	// One per place at a site, whatever its case and spaces, in alphabetical order.
+	locations: [
+		{ organization_id: "a", site_id: 5, name: "Dock 03", description: null, position: 0 },
+		{ organization_id: "a", site_id: 5, name: "Expeditie noord", description: null, position: 1 },
+		{ organization_id: "a", site_id: 6, name: "Dock 03", description: null, position: 0 },
+		{ organization_id: "b", site_id: 7, name: "Kantine", description: null, position: 0 },
+	],
+	units: [
+		{ id: 10, status: "operational", site_id: 5, location: "Dock 03" },
+		{ id: 11, status: "operational", site_id: 5, location: "Dock 03" },
+		{ id: 12, status: "needs_service", site_id: 5, location: "Expeditie noord" },
+		{ id: 13, status: "operational", site_id: 5, location: null },
+		{ id: 14, status: "operational", site_id: 5, location: null },
+		{ id: 15, status: "operational", site_id: 6, location: "Dock 03" },
+		{ id: 30, status: "operational", site_id: 7, location: "Kantine" },
+		{ id: 31, status: "operational", site_id: 7, location: "Kantine" },
+	],
+	tokens: { count: 12, distinct: 12, wellFormed: true },
+	orderUnits: [
+		{ order_id: 100, equipment_id: 10, position: 0 },
+		{ order_id: 100, equipment_id: 11, position: 1 },
+	],
+	coverage: [{ contract_id: 200, equipment_id: 12 }],
+	plans: [{ id: 300, equipment_id: 13 }],
+	leftovers: [],
+	keys: [],
+};
+
+test("0015_equipment-locations makes the units' places locations, keeping all that refers to units", async () => {
+	const before = streamBefore(migrationsFolder, "0015_equipment-locations", "before-locations");
+	const client = createClient({ url: `file:${join(folder, "locations.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeLocations);
+	await migrate(drizzle(client), { migrationsFolder });
+	expect(await afterLocations(client)).toEqual(locationsMade);
+	client.close();
+});
+
+test("the Durable Object's 0007_equipment-locations does the same with its foreign keys on", async () => {
+	const before = streamBefore(
+		durableFolder,
+		"0007_equipment-locations",
+		"before-locations-durable",
+	);
+	const client = createClient({ url: `file:${join(folder, "locations-durable.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: before });
+	await client.executeMultiple(beforeLocations);
+	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
+	const statements = readFileSync(join(durableFolder, "0007_equipment-locations.sql"), "utf8")
+		.split("--> statement-breakpoint")
+		.map((statement) => statement.trim())
+		.filter(Boolean);
+	await client.batch(statements, "write");
+	expect(await afterLocations(client)).toEqual(locationsMade);
 	client.close();
 });

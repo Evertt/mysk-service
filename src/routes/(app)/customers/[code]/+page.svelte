@@ -13,8 +13,9 @@
 	import { countryName } from "#lib/customers/index.ts";
 	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
+	import { StatusBadge as EquipmentStatusBadge, SiteLocations } from "#lib/equipment/components.ts";
 	import { unitModel } from "#lib/equipment/index.ts";
+	import { getCustomerLocations } from "#lib/equipment/remotes.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 
 	import type { PageProps } from "./$types";
@@ -23,6 +24,10 @@
 
 	const data = $derived(await getCustomer(params.code));
 	const options = $derived(await getCustomerFormOptions());
+	// The locations at each site.
+	const locationsAt = $derived(
+		Map.groupBy(await getCustomerLocations(params.code), (location) => location.siteId),
+	);
 
 	const customer = $derived(data.customer);
 	const stats = $derived(data.stats);
@@ -98,7 +103,11 @@
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
-		<SitesCard {customer} countries={options.countries} />
+		<SitesCard {customer} countries={options.countries}>
+			{#snippet extra(site)}
+				<SiteLocations {site} locations={locationsAt.get(site.id) ?? []} />
+			{/snippet}
+		</SitesCard>
 
 		<Card.Root>
 			<Card.Header>
@@ -141,7 +150,14 @@
 										<div class="flex flex-col">
 											<span>{siteName.get(unit.siteId)}</span>
 											{#if unit.location}
-												<span class="text-xs text-muted-foreground">{unit.location}</span>
+												<a
+													href={resolve("/(app)/equipment/locations/[id]", {
+														id: String(unit.location.id),
+													})}
+													class="text-xs text-muted-foreground underline-offset-4 hover:underline"
+												>
+													{unit.location.name}
+												</a>
 											{/if}
 										</div>
 									</Table.Cell>

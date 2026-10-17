@@ -19,6 +19,7 @@
 		getEquipmentFormOptions,
 		updateEquipment,
 	} from "../equipment.remote.ts";
+	import { newLocationToken } from "./equipment-schema.ts";
 
 	type Options = Awaited<ReturnType<typeof getEquipmentFormOptions>>;
 	type Unit = Awaited<ReturnType<typeof getEquipment>>["unit"];
@@ -54,6 +55,16 @@
 			label: site.name.includes(site.city) ? site.name : `${site.name} (${site.city})`,
 		})),
 	);
+	// The location is one of the chosen site's, or a new one there; none when the site changes.
+	let locationId = $derived(
+		fields.locationId.value() ?? (unit?.locationId ? String(unit.locationId) : ""),
+	);
+	const locationOptions = $derived([
+		...options.locations
+			.filter((location) => String(location.siteId) === siteId)
+			.map((location) => ({ value: String(location.id), label: location.name })),
+		{ value: newLocationToken, label: m.equipment_location_add_option() },
+	]);
 </script>
 
 <form
@@ -137,6 +148,7 @@
 						customerId = value;
 						const sites = sitesOf(value);
 						siteId = sites.length === 1 ? String(sites[0].id) : "";
+						locationId = "";
 					}}
 					description={orderCount ? m.equipment_customer_locked({ count: orderCount }) : undefined}
 					class="md:col-span-2"
@@ -149,15 +161,29 @@
 						: m.equipment_site_choose_customer()}
 					value={siteId}
 					options={siteOptions}
-					onchange={(value: string) => (siteId = value)}
+					onchange={(value: string) => {
+						siteId = value;
+						locationId = "";
+					}}
 				/>
-				<TextField
-					field={fields.location}
+				<SelectField
+					field={fields.locationId}
 					label={m.equipment_field_location()}
-					value={unit?.location}
-					autocomplete="off"
+					placeholder={m.equipment_location_none()}
+					value={locationId}
+					options={siteId ? locationOptions : []}
+					onchange={(value: string) => (locationId = value)}
 					description={m.equipment_field_location_description()}
 				/>
+				{#if locationId === newLocationToken}
+					<TextField
+						field={fields.newLocationName}
+						label={m.equipment_field_new_location()}
+						autocomplete="off"
+						description={m.equipment_field_new_location_description()}
+						class="md:col-span-2"
+					/>
+				{/if}
 				<TextField
 					field={fields.installedAt}
 					label={m.equipment_field_installed()}

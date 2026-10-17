@@ -73,9 +73,15 @@ test("a unit with a name of its own is shown, sorted and found by it", () => {
 
 test("units sort by their site and their location there, those without one last", () => {
 	const rows = [
-		unit("GEN-1", { site: { id: 2, name: "Zwolle", city: "Zwolle" }, location: "Dak" }),
+		unit("GEN-1", {
+			site: { id: 2, name: "Zwolle", city: "Zwolle" },
+			location: { id: 7, name: "Dak" },
+		}),
 		unit("GEN-2", { site: { id: 1, name: "Ede", city: "Ede" } }),
-		unit("GEN-3", { site: { id: 1, name: "Ede", city: "Ede" }, location: "Ketelhuis" }),
+		unit("GEN-3", {
+			site: { id: 1, name: "Ede", city: "Ede" },
+			location: { id: 3, name: "Ketelhuis" },
+		}),
 	];
 	expect(shown(rows, { sorting: [{ id: "site", desc: false }] }).slice(0, 2)).toEqual(
 		expect.arrayContaining(["GEN-2", "GEN-3"]),
@@ -102,6 +108,21 @@ test("the manufacturer, category and status filters keep the chosen values", () 
 		{ id: "status", value: ["needs_service", "out_of_service"] },
 	];
 	expect(shown(rows, { columnFilters: filters })).toEqual(["CHL-2"]);
+});
+
+test("the location filter keeps the units at the locations chosen, by id, or (`none`) at none", () => {
+	const dock = { id: 4, name: "Dock 03" };
+	const rows = [
+		unit("GEN-1", { location: dock }),
+		unit("GEN-2", { location: { id: 5, name: "Hal A" } }),
+		unit("GEN-3"),
+	];
+	const by = (value: string[]) => shown(rows, { columnFilters: [{ id: "location", value }] });
+	expect(by(["4"])).toEqual(["GEN-1"]);
+	expect(by(["none", "5"])).toEqual(["GEN-2", "GEN-3"]);
+	// Shown by name.
+	const [row] = createAppTable({ columns, data: rows }).getRowModel().rows;
+	expect(row.getValue("location")).toBe("Dock 03");
 });
 
 test("the category shows the tenant's name for it, and groups by its id", () => {

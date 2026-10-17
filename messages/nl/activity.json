@@ -120,6 +120,7 @@
 	"activity_deleted_elsewhere_description": "Het bestaat niet meer.",
 	"activity_changed_elsewhere_reload": "Opnieuw laden",
 	"activity_subject_site": "vestiging",
+	"activity_subject_location": "locatie",
 	"activity_field_site": "vestiging",
 	"activity_field_location": "locatie",
 	"activity_field_address": "adres",

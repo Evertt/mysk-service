@@ -151,6 +151,56 @@ export const equipmentCategory = sqliteTable(
 	],
 );
 
+/**
+ * A random, unguessable token for a QR code (`/q/<token>`, see `#lib/equipment/server/qr.ts`):
+ * 24 hex digits (96 bits), unique across tenants. The app makes them itself (`newQrToken()`); the
+ * default is for rows made in SQL (migrations, test fixtures).
+ */
+const qrToken = () =>
+	text("qr_token")
+		.notNull()
+		.default(sql`(lower(hex(randomblob(12))))`);
+
+/**
+ * A named place at a customer's site, e.g. "Expeditie noord", "Dock 03" or "Kantoor 1e": where the
+ * site's units are, with a QR code of its own (on the door, say) that opens it. The site's units
+ * can be at one; a location with units can't be deleted. Its name is unique at its site, whatever
+ * the case.
+ */
+export const equipmentLocation = sqliteTable(
+	"equipment_location",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		/** The customer's site it's at (and so the customer's). */
+		siteId: integer("site_id").notNull(),
+		name: text("name").notNull(),
+		/** What helps to find it, e.g. "Achter de kantine, tweede deur links". */
+		description: text("description"),
+		/** Where it comes among the site's locations, from 0. */
+		position: integer("position").notNull(),
+		qrToken: qrToken(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("equipment_location_organization_id").on(table.organizationId, table.id),
+		// For equipment, which must be at a location of its own site.
+		uniqueIndex("equipment_location_site_id").on(table.siteId, table.id),
+		uniqueIndex("equipment_location_site_name").on(table.siteId, sql`lower(${table.name})`),
+		uniqueIndex("equipment_location_qr_token").on(table.qrToken),
+		index("equipment_location_organization_site").on(
+			table.organizationId,
+			table.siteId,
+			table.position,
+		),
+		// The tenant's site; deleting the site (which has no units then) deletes its locations.
+		foreignKey({
+			columns: [table.organizationId, table.siteId],
+			foreignColumns: [customerSite.organizationId, customerSite.id],
+		}).onDelete("cascade"),
+	],
+);
+
 /** A machine installed at a customer site. */
 export const equipment = sqliteTable(
 	"equipment",
@@ -168,10 +218,12 @@ export const equipment = sqliteTable(
 		siteId: integer("site_id").notNull(),
 		/** The customer's own name or tag for it, e.g. "Automatische deur kantine BES-3". */
 		name: text("name"),
-		/** Where it is at the site, e.g. "Expeditie dock 07". */
-		location: text("location"),
+		/** Where it is at the site, if that needs saying: one of the site's locations. */
+		locationId: integer("location_id"),
 		installedAt: day("installed_at").notNull(),
 		warrantyUntil: day("warranty_until").notNull(),
+		/** Its QR code's (on the unit's label). */
+		qrToken: qrToken(),
 	},
 	(table) => [
 		// Unique within a tenant; another tenant may use the same serialNumber.
@@ -188,6 +240,9 @@ export const equipment = sqliteTable(
 		index("equipment_site").on(table.siteId),
 		// Whether a category is in use, and the list's filter by it.
 		index("equipment_organization_category").on(table.organizationId, table.categoryId),
+		// A location's units (and whether it has any).
+		index("equipment_by_location").on(table.locationId),
+		uniqueIndex("equipment_qr_token").on(table.qrToken),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -200,6 +255,11 @@ export const equipment = sqliteTable(
 		foreignKey({
 			columns: [table.customerId, table.siteId],
 			foreignColumns: [customerSite.customerId, customerSite.id],
+		}),
+		// A location at the unit's own site; one with units can't be deleted.
+		foreignKey({
+			columns: [table.siteId, table.locationId],
+			foreignColumns: [equipmentLocation.siteId, equipmentLocation.id],
 		}),
 	],
 );
@@ -303,6 +363,16 @@ export const customerSiteRelations = relations(customerSite, ({ one, many }) => 
 		references: [customer.organizationId, customer.id],
 	}),
 	equipment: many(equipment),
+	/** Load them in their order: `orderBy: asc(equipmentLocation.position)`. */
+	locations: many(equipmentLocation),
+}));
+
+export const equipmentLocationRelations = relations(equipmentLocation, ({ one, many }) => ({
+	site: one(customerSite, {
+		fields: [equipmentLocation.organizationId, equipmentLocation.siteId],
+		references: [customerSite.organizationId, customerSite.id],
+	}),
+	equipment: many(equipment),
 }));
 
 export const engineerRelations = relations(engineer, ({ many }) => ({
@@ -325,6 +395,10 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
 	site: one(customerSite, {
 		fields: [equipment.customerId, equipment.siteId],
 		references: [customerSite.customerId, customerSite.id],
+	}),
+	location: one(equipmentLocation, {
+		fields: [equipment.siteId, equipment.locationId],
+		references: [equipmentLocation.siteId, equipmentLocation.id],
 	}),
 	orderUnits: many(orderUnit),
 }));

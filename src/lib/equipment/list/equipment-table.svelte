@@ -4,7 +4,10 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
+	import {
+		getCustomerOptions,
+		getLocationOptions,
+	} from "#lib/components/data-table/filter-options.remote.ts";
 	import { type List, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
@@ -127,6 +130,14 @@
 				title={m.equipment_column_customer()}
 				searchLabel={m.common_table_search_customers()}
 				load={getCustomerOptions}
+			/>
+			<RecordFilter
+				columnId="location"
+				title={m.equipment_column_location()}
+				searchLabel={m.equipment_search_locations()}
+				load={getLocationOptions}
+				none={m.equipment_location_none()}
+				counts={facets.location}
 			/>
 			<DateRangeFilter
 				columnId="installedAt"

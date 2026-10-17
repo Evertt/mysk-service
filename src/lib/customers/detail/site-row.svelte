@@ -7,7 +7,7 @@
 	import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import type { ComponentProps } from "svelte";
+	import type { ComponentProps, Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 
 	import { errorMessage } from "#lib/utils.ts";
@@ -22,10 +22,13 @@
 		site,
 		customer,
 		countries,
+		extra,
 	}: {
 		site: Site & { equipmentCount: number };
 		customer: { id: number; city: string; country: string };
 		countries: string[];
+		/** Shown under the site's details, e.g. its locations. */
+		extra?: Snippet<[{ id: number; name: string }]>;
 	} = $props();
 
 	let editing = $state(false);
@@ -71,6 +74,7 @@
 		</DropdownMenu.Root>
 	</div>
 	<SiteDetails {site} />
+	{@render extra?.(site)}
 
 	<SiteDialog {customer} {site} {countries} bind:open={editing} />
 

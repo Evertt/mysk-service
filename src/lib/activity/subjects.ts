@@ -181,9 +181,18 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			status: { format: labelled("equipmentStatus") },
 			customerId: { label: m.activity_field_owner, ref: "customer" },
 			siteId: { ref: "site" },
+			locationId: { ref: "location" },
 			installedAt: { format: day },
 			warrantyUntil: { format: day },
 		},
+	},
+	/**
+	 * A location at one of a customer's sites (`equipment_location`), by its name, logged with the
+	 * site's customer as its parent.
+	 */
+	location: {
+		noun: m.activity_subject_location,
+		href: ({ id }) => resolve("/(app)/equipment/locations/[id]", { id }),
 	},
 	/** One of the tenant's equipment categories, by its name; they're kept on the settings page. */
 	equipment_category: {

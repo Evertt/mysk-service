@@ -17,7 +17,15 @@ import { modules } from "#lib/modules/manifests.ts";
  * `unit` is a unit of equipment by what it's called and its serial number ("Deur 07 (H1234567)"),
  * where an `equipment` reference shows its serial number alone.
  */
-const referenceTypes = ["customer", "engineer", "equipment", "unit", "site", "category"] as const;
+const referenceTypes = [
+	"customer",
+	"engineer",
+	"equipment",
+	"unit",
+	"site",
+	"location",
+	"category",
+] as const;
 export type ReferenceType = (typeof referenceTypes)[number];
 
 /** The names of referenced records by type and id, e.g. `{ engineer: { "3": "Jan de Vries" } }`. */
@@ -66,6 +74,7 @@ const fieldLabels: Record<string, Text> = {
 	notes: m.activity_field_notes,
 	siteId: m.activity_field_site,
 	location: m.activity_field_location,
+	locationId: m.activity_field_location,
 	address: m.activity_field_address,
 	postalCode: m.activity_field_postal_code,
 	contactPhone: m.activity_field_contact_phone,

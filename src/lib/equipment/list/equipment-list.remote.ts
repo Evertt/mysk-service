@@ -12,6 +12,7 @@ import {
 	customerSite,
 	equipment,
 	equipmentCategory,
+	equipmentLocation,
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
@@ -48,7 +49,7 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 						name: equipment.name,
 						manufacturer: equipment.manufacturer,
 						model: equipment.model,
-						location: equipment.location,
+						location: { id: equipmentLocation.id, name: equipmentLocation.name },
 						category: { id: equipmentCategory.id, name: equipmentCategory.name },
 						status: equipment.status,
 						installedAt: equipment.installedAt,
@@ -103,13 +104,15 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 });
 
 /**
- * How many units have each category, status and manufacturer, for the list's filters: of those
+ * How many units have each category, location (by id), status and manufacturer, for the list's
+ * filters: of those
  * matching the search and the other filters.
  */
 export const getEquipmentFacets = forMembers.query(equipmentList.where, async (where) => {
 	const listSql = equipmentSql();
 	const counts = await planList(listSql, where).facets({
 		category: equipment.categoryId,
+		location: equipment.locationId,
 		status: equipment.status,
 		manufacturer: equipment.manufacturer,
 		// And the tenant's modules' columns, by their ids (the type names the list's own only).

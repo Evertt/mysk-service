@@ -15,23 +15,26 @@ import {
 	customerSite,
 	equipment,
 	equipmentCategory,
+	equipmentLocation,
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
-import { between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
+import { anyOf, between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { equipmentList } from "../list/equipment-list.ts";
 
 /**
- * The equipment list's joins: the unit's owner, site and category, scoped to the tenant. Written once, for
- * the rows, the counts, the facets and the bulk ids alike, and generic over the query it joins
- * (drizzle's `$dynamic()` pattern), so each keeps its own fields.
+ * The equipment list's joins: the unit's owner, site, location (if it has one) and category,
+ * scoped to the tenant. Written once, for the rows, the counts, the facets and the bulk ids alike,
+ * and generic over the query it joins (drizzle's `$dynamic()` pattern), so each keeps its own
+ * fields.
  */
 export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
 	query
 		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
+		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
 		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId));
 
 /**
@@ -83,7 +86,11 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 				group: customer.code,
 			},
 			site: { sort: [nocase(customerSite.name), nocase(customerSite.city)] },
-			location: { sort: nocase(equipment.location) },
+			// By name; filtered by id (`?location=12`), `none` for the units without one.
+			location: {
+				sort: nocase(equipmentLocation.name),
+				filter: (ids) => anyOf(equipment.locationId, ids),
+			},
 			installedAt: {
 				sort: equipment.installedAt,
 				filter: (ranges) => inDays(equipment.installedAt, ranges),
@@ -103,7 +110,7 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 			equipment.manufacturer,
 			equipment.model,
 			equipment.name,
-			equipment.location,
+			equipmentLocation.name,
 			equipmentCategory.name,
 			customer.name,
 			customer.code,

@@ -8,7 +8,7 @@ import { and, asc, eq, type SQL } from "drizzle-orm";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { engineer, equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { engineer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
 
 import { checklist, checklistResult } from "./schema.ts";
 
@@ -39,13 +39,15 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 				name: equipment.name,
 				manufacturer: equipment.manufacturer,
 				model: equipment.model,
-				location: equipment.location,
+				/** The name of its location at the site, if it has one. */
+				location: equipmentLocation.name,
 			},
 			position: orderUnit.position,
 		})
 		.from(checklist)
 		.innerJoin(...tenantJoin(order, checklist.orderId))
 		.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
+		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
 		.innerJoin(
 			orderUnit,
 			and(

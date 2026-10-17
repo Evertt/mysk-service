@@ -42,11 +42,18 @@ export const login = forAnyone.form(
 			if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_failed());
 			throw e;
 		}
-		// Field engineers start in their portal; the office app isn't theirs.
+		// Field engineers start in their portal; the office app isn't theirs. A QR code they
+		// scanned (`/q/<token>`) leads them into it.
 		const tenant = await loadTenant(userId, null);
-		if (tenant && isFieldEngineer(tenant.roles) && !safeRedirect(redirectTo).startsWith("/my")) {
+		const target = safeRedirect(redirectTo);
+		if (
+			tenant &&
+			isFieldEngineer(tenant.roles) &&
+			!target.startsWith("/my") &&
+			!target.startsWith("/q/")
+		) {
 			redirect(303, "/my");
 		}
-		redirect(303, safeRedirect(redirectTo));
+		redirect(303, target);
 	},
 );

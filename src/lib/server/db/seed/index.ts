@@ -29,6 +29,7 @@ import * as moduleSchema from "../modules.gen.ts";
 import * as schema from "../schema.ts";
 import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
+import { generateLocations, seedQrToken } from "./locations.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateShltrTenant } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
@@ -121,6 +122,7 @@ await db.transaction(async (tx) => {
 		schema.orderUnit,
 		order,
 		equipment,
+		schema.equipmentLocation,
 		schema.equipmentCategory,
 		schema.customerSite,
 		engineer,
@@ -138,6 +140,7 @@ await db.transaction(async (tx) => {
 		category: 0,
 		customer: 0,
 		site: 0,
+		location: 0,
 		engineer: 0,
 		equipment: 0,
 		order: 0,
@@ -175,6 +178,8 @@ await db.transaction(async (tx) => {
 		}
 		const organizationId = tenant.id;
 		const o = { ...offset };
+		// The places of the units at their sites, as locations.
+		const { locations, locationOf } = generateLocations(placed.units);
 		// The tenant's categories, in their order, and their ids by key.
 		const categoryId = (key: string) =>
 			tenant.categories.findIndex((category) => category.key === key) + 1 + o.category;
@@ -199,6 +204,13 @@ await db.transaction(async (tx) => {
 				customerId: s.customerId + o.customer,
 				createdAt: toMoment(s.createdAt),
 			})),
+			locations: locations.map((l) => ({
+				...l,
+				organizationId,
+				id: l.id + o.location,
+				siteId: l.siteId + o.site,
+				qrToken: seedQrToken(tenant.slug, "location", l.id),
+			})),
 			engineers: data.engineers.map((e) => ({
 				...e,
 				organizationId,
@@ -214,7 +226,8 @@ await db.transaction(async (tx) => {
 				id: e.id + o.equipment,
 				customerId: e.customerId + o.customer,
 				siteId: placed.units.get(e.id)!.siteId + o.site,
-				location: placed.units.get(e.id)!.location,
+				locationId: locationOf.has(e.id) ? locationOf.get(e.id)! + o.location : null,
+				qrToken: seedQrToken(tenant.slug, "unit", e.serialNumber),
 			})),
 			orders: data.orders.map(({ equipmentIds: _units, ...r }) => ({
 				...r,
@@ -241,6 +254,7 @@ await db.transaction(async (tx) => {
 		await tx.insert(schema.equipmentCategory).values(rows.categories);
 		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
 		await insertAll(rows.sites, (chunk) => tx.insert(schema.customerSite).values(chunk));
+		await insertAll(rows.locations, (chunk) => tx.insert(schema.equipmentLocation).values(chunk));
 		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
 		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
@@ -279,6 +293,7 @@ await db.transaction(async (tx) => {
 		offset.category += rows.categories.length;
 		offset.customer += rows.customers.length;
 		offset.site += rows.sites.length;
+		offset.location += rows.locations.length;
 		offset.engineer += rows.engineers.length;
 		offset.equipment += rows.equipments.length;
 		offset.order += rows.orders.length;

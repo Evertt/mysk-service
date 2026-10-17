@@ -25,6 +25,7 @@ import {
 	engineer,
 	equipment,
 	equipmentCategory,
+	equipmentLocation,
 } from "#lib/server/db/schema.ts";
 
 export interface SubjectLink {
@@ -94,6 +95,11 @@ export async function lookUpNames(ids: Map<ReferenceType, Set<string>>): Promise
 				.select({ id: customerSite.id, name: customerSite.name })
 				.from(customerSite)
 				.where(and(inList(customerSite.id, list), inTenant(customerSite))),
+		location: (list: number[]) =>
+			db
+				.select({ id: equipmentLocation.id, name: equipmentLocation.name })
+				.from(equipmentLocation)
+				.where(and(inList(equipmentLocation.id, list), inTenant(equipmentLocation))),
 	} satisfies Record<ReferenceType, (list: number[]) => Promise<{ id: number; name: string }[]>>;
 
 	const names: Names = {};

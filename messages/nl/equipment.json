@@ -174,11 +174,84 @@
 	"equipment_field_name_description": "De eigen naam of code van de klant, als die er is.",
 	"equipment_field_site": "Vestiging",
 	"equipment_field_location": "Locatie op de vestiging",
-	"equipment_field_location_description": "Bijv. „Expeditie dock 07”.",
+	"equipment_field_location_description": "Een van de locaties van de vestiging, bijv. „Dock 03”, of een nieuwe.",
 	"equipment_column_site": "Vestiging",
 	"equipment_column_location": "Locatie",
 	"equipment_detail_site": "Vestiging",
 	"equipment_detail_location": "Locatie",
+	"equipment_field_new_location": "Nieuwe locatie",
+	"equipment_field_new_location_description": "Hoe hij heet, bijv. „Dock 03”: hij komt bij de locaties van de vestiging.",
+	"equipment_location_add_option": "Locatie toevoegen…",
+	"equipment_location_none": "Geen locatie",
+	"equipment_location_unknown": "Kies een van de locaties van de vestiging",
+	"equipment_location_name_required": "Vul de naam van de locatie in",
+	"equipment_location_name_taken": "De vestiging heeft al een locatie „{name}”",
+	"equipment_location_not_found": "Locatie niet gevonden",
+	"equipment_location_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Er staat {countText} apparaat: zet het eerst op een andere locatie",
+				"countPlural=*": "Er staan {countText} apparaten: zet ze eerst op een andere locatie"
+			}
+		}
+	],
+	"equipment_search_locations": "Zoek locaties…",
+	"equipment_locations_title": "Locaties",
+	"equipment_locations_of": "Locaties op {site}",
+	"equipment_locations_none": "Nog geen locaties: voeg de plekken op de vestiging toe waar de apparatuur staat, zoals een dock of een hal.",
+	"equipment_location_add": "Locatie toevoegen",
+	"equipment_location_new_title": "Nieuwe locatie",
+	"equipment_location_edit_title": "{name} bewerken",
+	"equipment_location_dialog_description": "Een plek op de vestiging waar apparatuur staat, met een eigen QR-code.",
+	"equipment_location_field_name": "Naam",
+	"equipment_location_field_name_description": "Bijv. „Expeditie noord”, „Dock 03” of „Kantoor 1e”.",
+	"equipment_location_field_description": "Omschrijving",
+	"equipment_location_field_description_description": "Wat helpt om hem te vinden, als dat nodig is.",
+	"equipment_location_save": "Locatie opslaan",
+	"equipment_location_saved": "Locatie opgeslagen",
+	"equipment_location_actions": "Acties voor locatie {name}",
+	"equipment_location_delete_title": "{name} verwijderen?",
+	"equipment_location_delete_description": "Hij verdwijnt uit de locaties van de vestiging, en zijn QR-code werkt niet meer.",
+	"equipment_location_deleted": "Locatie verwijderd",
+	"equipment_location_units_title": "Apparatuur hier",
+	"equipment_location_units_empty": "Geen apparatuur op deze locatie",
+	"equipment_location_details": "Gegevens",
+	"equipment_location_history_title": "Opdrachten",
+	"equipment_location_history_description": "De laatste opdrachten voor de apparatuur hier.",
+	"equipment_location_history_empty": "Nog geen opdrachten voor de apparatuur hier",
+	"equipment_qr_title": "QR-code",
+	"equipment_qr_description": "Scannen opent deze pagina, of in het monteursportaal de open opdrachten van de monteur hier.",
+	"equipment_qr_label": "QR-code van {name}",
+	"equipment_qr_print": "Label afdrukken",
+	"equipment_qr_not_found": "Deze QR-code kennen we niet",
+	"equipment_labels_title": "QR-labels van {site}",
+	"equipment_labels_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} label",
+				"countPlural=*": "{countText} labels"
+			}
+		}
+	],
+	"equipment_labels_print": "Labels afdrukken",
+	"equipment_labels_print_site": "QR-labels",
+	"equipment_labels_back": "Terug",
+	"equipment_labels_location": "Locatie",
+	"equipment_labels_not_found": "Hier is niets af te drukken",
+	"equipment_labels_empty_title": "Geen labels om af te drukken",
+	"equipment_labels_empty_description": "De vestiging heeft nog geen locaties of apparatuur.",
 	"equipment_category_name_required": "Geef de categorie een naam",
 	"equipment_category_name_max": "Houd het bij {max} tekens",
 	"equipment_category_name_taken": "Er is al een categorie {name}",

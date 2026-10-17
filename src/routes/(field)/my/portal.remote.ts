@@ -125,10 +125,10 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 							model: true,
 							manufacturer: true,
 							serialNumber: true,
-							location: true,
 						},
 						with: {
 							site: { columns: { id: true, ...siteColumns } },
+							location: { columns: { name: true } },
 							category: { columns: { name: true } },
 						},
 					},
@@ -138,7 +138,11 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	});
 	if (!found) error(404, m.portal_not_found({ number }));
 	const { sites: customerSites, ...owner } = found.customer;
-	const units = found.units.map((link) => link.equipment);
+	// Each unit with the name of its location at the site, if it has one.
+	const units = found.units.map(({ equipment: unit }) => ({
+		...unit,
+		location: unit.location?.name ?? null,
+	}));
 	const sites = units.length
 		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
 		: customerSites.length === 1

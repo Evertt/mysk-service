@@ -194,6 +194,9 @@ importers:
       '@libsql/client':
         specifier: ^0.17.4
         version: 0.17.4
+      lean-qr:
+        specifier: 2.7.4
+        version: 2.7.4
       temporal-polyfill:
         specifier: 1.0.5
         version: 1.0.5
@@ -3460,6 +3463,10 @@ packages:
     peerDependencies:
       svelte: ^5.0.0
 
+  lean-qr@2.7.4:
+    resolution: {integrity: sha512-tlMPFfqhAAZN7+j/djRSvl/2+AYT2+7RRuyq8bvcbV8gMiENiscquQ9WTfCSyeEdxsVaEB+tU7e9nFZC63BFnQ==}
+    hasBin: true
+
   libsql@0.5.29:
     resolution: {integrity: sha512-8lMP8iMgiBzzoNbAPQ59qdVcj6UaE/Vnm+fiwX4doX4Narook0a4GPKWBEv+CR8a1OwbfkgL18uBfBjWdF0Fzg==}
     cpu: [x64, arm64, wasm32, arm]
@@ -6673,6 +6680,8 @@ snapshots:
     transitivePeerDependencies:
       - '@sveltejs/kit'
       - zod
+
+  lean-qr@2.7.4: {}
 
   libsql@0.5.29:
     dependencies:

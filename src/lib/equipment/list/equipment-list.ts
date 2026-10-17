@@ -5,6 +5,7 @@ import {
 	id,
 	numberRange,
 	oneOf,
+	orNone,
 } from "#lib/components/data-table/list-definition.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
@@ -16,7 +17,8 @@ import { listColumns } from "../extensions.ts";
  * it. Its state is in the URL, e.g. `?customer=CUST-0001&category=3&sort=-warranty`
  * (`columns.spec.ts` checks that the table reads and writes the same). Customers are filtered (and
  * grouped) by code, manufacturers by name, the tenant's categories by id (and sorted in the
- * tenant's order); the dates by a range of days (`?warranty=before-today`:
+ * tenant's order), locations by id (`?location=none` is the units without one); the dates by a
+ * range of days (`?warranty=before-today`:
  * the units out of warranty) and the open orders by a range (`?open-orders=1..`), see `ranges.ts`.
  */
 export const equipmentList = defineList({
@@ -28,7 +30,7 @@ export const equipmentList = defineList({
 		status: { sort: true, group: true, filter: oneOf(equipmentStatuses) },
 		customer: { sort: true, group: true, filter: code },
 		site: { sort: true },
-		location: { sort: true },
+		location: { sort: true, filter: orNone(id) },
 		installedAt: { param: "installed", sort: true, filter: dateRange },
 		warrantyUntil: { param: "warranty", sort: true, filter: dateRange },
 		openOrders: { param: "open-orders", sort: true, filter: numberRange },
