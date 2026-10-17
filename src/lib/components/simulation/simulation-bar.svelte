@@ -41,18 +41,25 @@
 	const simulation = $derived(await getSimulation(module));
 	let busy = $state(false);
 
-	// While it runs: a tick now and then, while the page is visible.
+	const running = $derived(simulation?.running === true);
+
+	// While it runs: a tick now and then, while the page is visible. On `running` alone, and the
+	// first tick after the effect: a command called in the effect itself writes state the effect
+	// read through the query, and ran it again until Svelte stopped it (effect_update_depth_exceeded).
 	$effect(() => {
-		if (!simulation?.running) return;
+		if (!running) return;
 		const tick = () => {
 			if (document.visibilityState !== "visible") return;
 			tickSimulation(module).catch(() => {
 				// The next tick, or the cron's, tries again.
 			});
 		};
-		tick();
+		const first = setTimeout(tick, 0);
 		const timer = setInterval(tick, tickEvery);
-		return () => clearInterval(timer);
+		return () => {
+			clearTimeout(first);
+			clearInterval(timer);
+		};
 	});
 
 	async function act(work: () => Promise<unknown>, done?: string) {

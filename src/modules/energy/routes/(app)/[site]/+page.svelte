@@ -15,6 +15,8 @@
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
 	import HeroBanner, { type HeroChip } from "#lib/components/hero-banner.svelte";
+	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
+	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { formatCo2, formatFactor, formatKw, formatKwh } from "#modules/energy/display.ts";
 	import { getEnergyOverview, watchEnergy } from "#modules/energy/energy.remote.ts";
@@ -56,6 +58,8 @@
 	const scope = $derived(parseScope(page.url.searchParams.get("scope")));
 	const overview = $derived(await getEnergyOverview({ site: siteId, period }));
 	const site = $derived(overview.site);
+	// The demo's P1 simulation, for an organization that's offered one (else null).
+	const simulation = $derived(await getSimulation("energy"));
 
 	// Live: a batch from the gateway, an alert dealt with or a threshold changed asks again.
 	const changes = watchEnergy();
@@ -105,9 +109,18 @@
 
 	const chips = $derived<HeroChip[]>([
 		{ label: m.energy_hero_module(), id: "module" },
-		live
-			? { label: m.energy_hero_live(), dot: "live", plain: true, id: "state" }
-			: { label: m.energy_hero_stale(), dot: "still", plain: true, id: "state" },
+		simulation
+			? simulation.running
+				? {
+						label: m.simulation_running({ speed: simulation.speed }),
+						dot: "live",
+						plain: true,
+						id: "state",
+					}
+				: { label: m.simulation_paused(), dot: "still", plain: true, id: "state" }
+			: live
+				? { label: m.energy_hero_live(), dot: "live", plain: true, id: "state" }
+				: { label: m.energy_hero_stale(), dot: "still", plain: true, id: "state" },
 		{ label: site.name, id: "site" },
 	]);
 
@@ -190,8 +203,15 @@
 		</p>
 	</HeroBanner>
 
+	<SimulationBar module="energy" label={m.energy_simulation_title()} />
+
 	<div class="flex flex-wrap items-center gap-2">
-		<nav class="flex flex-wrap gap-2" aria-label={m.energy_scope_label()} data-scopes>
+		<nav
+			class="flex flex-wrap gap-2"
+			aria-label={m.energy_scope_label()}
+			data-sveltekit-reset="false"
+			data-scopes
+		>
 			{#each scopes as option (scopeParam(option.scope) ?? "building")}
 				{@const current = sameScope(option.scope, scope)}
 				<Button
@@ -199,7 +219,6 @@
 					variant={current ? "default" : "outline"}
 					href={hrefWith({ scope: option.scope })}
 					aria-current={current ? "page" : undefined}
-					data-sveltekit-reset="false"
 					data-scope={scopeParam(option.scope) ?? "building"}
 				>
 					{#if option.scope.kind === "building"}<Building2Icon data-icon="inline-start" />{/if}

@@ -172,3 +172,147 @@ export function simulateDay(options: {
 	}
 	return { readings, doorEvents };
 }
+
+// --- The live simulation ------------------------------------------------------------------------
+
+/**
+ * How much livelier a speed makes the live simulation: 1 at 1×, about 2.5 at 30×. It widens the
+ * readings' noise, makes surges likelier and bigger, and has doors open more often and stay open
+ * too long more often; the clock stays the real one.
+ */
+export const liveliness = (speed: number) => 1 + Math.log10(Math.max(1, speed)) * 1.05;
+
+/** One draw for one thing, from the run's seed: the same every time. */
+const draw = (seed: number, ...parts: (string | number)[]) =>
+	random(seedOf(seed, ...parts.map(String)))();
+
+/**
+ * The readings of every interval that ends in `(from, to]`, per zone, as the gateway would post
+ * them live: §2.5's working day (as `simulateDay()`'s), its noise widening with the speed, and now
+ * and then a surge, an hour in which a zone draws 15 % to 60 % more (more often and more at a
+ * higher speed), which takes a zone near or over its thresholds: the alerts a demo shows.
+ * Deterministic for a seed, zone, interval and speed.
+ */
+export function simulateReadings(options: {
+	zones: readonly SimulatedZone[];
+	from: Temporal.Instant;
+	to: Temporal.Instant;
+	timeZone: string;
+	seed: number;
+	speed: number;
+}): SimulatedReading[] {
+	const { zones, from, to, timeZone, seed, speed } = options;
+	const lively = liveliness(speed);
+	const quarter = INTERVAL_MINUTES * 60;
+	const fromSeconds = Math.floor(from.epochMilliseconds / 1000);
+	const toSeconds = Math.floor(to.epochMilliseconds / 1000);
+	const readings: SimulatedReading[] = [];
+	// Every interval whose end is after `from` and no later than `to`.
+	for (
+		let start = Math.floor(fromSeconds / quarter) * quarter;
+		start + quarter <= toSeconds;
+		start += quarter
+	) {
+		if (start + quarter <= fromSeconds) continue;
+		const instant = Temporal.Instant.fromEpochMilliseconds(start * 1000);
+		const local = instant.toZonedDateTimeISO(timeZone);
+		const day = local.toPlainDate().toString();
+		const hour = local.hour + (local.minute + INTERVAL_MINUTES / 2) / 60;
+		const surgeKey = `${day}T${local.hour}`;
+		for (const zone of zones) {
+			if (zone.offline || zone.peakKw <= 0) continue;
+			const daily =
+				weekdayFactor(local.dayOfWeek) * (0.95 + draw(seed, day, zone.code, "day") * 0.1);
+			const share = shareAt(zone, hour);
+			const surges =
+				share >= 0.25 && draw(seed, surgeKey, zone.code, "surge") < Math.min(0.5, 0.05 * lively);
+			const surge = surges
+				? Math.min(1.6, 1.15 + draw(seed, surgeKey, zone.code, "size") * 0.18 * lively)
+				: 1;
+			const noise = 1 + (draw(seed, start, zone.code) - 0.5) * 0.07 * lively;
+			const avgKw = round(zone.peakKw * share * daily * noise * surge, 2);
+			const peakKw = round(
+				avgKw * (1.01 + draw(seed, start, zone.code, "peak") * 0.07 * lively),
+				2,
+			);
+			readings.push({ zone: zone.code, start: instant, avgKw, peakKw, kwh: round(avgKw / 4, 3) });
+		}
+	}
+	return readings;
+}
+
+/** A door's latest event: open or closed since `since`. */
+export interface DoorState {
+	open: boolean;
+	since: Temporal.Instant;
+}
+
+/**
+ * How long a door's opening at `openedAt` lasts, in minutes: about its usual time, or, now and
+ * then (more often at a higher speed), its overrun on top: the door left open too long.
+ */
+function openingMinutes(
+	door: SimulatedDoor,
+	openedAt: Temporal.Instant,
+	seed: number,
+	speed: number,
+) {
+	const key = openedAt.epochMilliseconds;
+	const overruns =
+		draw(seed, door.code, key, "overrun") < Math.min(0.5, door.overrunChance * liveliness(speed));
+	const spread = draw(seed, door.code, key, "length");
+	return overruns
+		? door.openMinutes + door.overrunMinutes * (0.7 + spread * 0.6)
+		: Math.max(1, door.openMinutes + spread * 2 - 1);
+}
+
+/** The first moment at or after `at` within the door's hours, in `timeZone`. */
+function withinHours(door: SimulatedDoor, at: Temporal.Instant, timeZone: string) {
+	const local = at.toZonedDateTimeISO(timeZone);
+	const opens = local.startOfDay().add({ hours: door.fromHour });
+	if (Temporal.ZonedDateTime.compare(local, opens) < 0) return opens.toInstant();
+	if (local.hour >= door.toHour) return opens.add({ days: 1 }).toInstant();
+	return at;
+}
+
+const later = (a: Temporal.Instant, b: Temporal.Instant) =>
+	Temporal.Instant.compare(a, b) >= 0 ? a : b;
+
+/**
+ * A door's events in `(from, to]` as its sensor would send them live, going on from its `state`
+ * (its latest event; closed since `from` without one): each opening lasts as `openingMinutes()`
+ * says, the next follows after about its cycle (shorter at a higher speed) within its hours, and
+ * what fell due in a pause before `from` happens just after it. Deterministic for a seed, state
+ * and speed, so a tick that's repeated sends what's in already.
+ */
+export function simulateDoorEvents(options: {
+	door: SimulatedDoor;
+	state: DoorState | null;
+	from: Temporal.Instant;
+	to: Temporal.Instant;
+	timeZone: string;
+	seed: number;
+	speed: number;
+}): SimulatedDoorEvent[] {
+	const { door, from, to, timeZone, seed, speed } = options;
+	// In whole seconds, as moments are stored.
+	const earliest = Temporal.Instant.fromEpochMilliseconds(
+		(Math.floor(from.epochMilliseconds / 1000) + 1) * 1000,
+	);
+	const cycle = Math.max(3, door.cycleMinutes / liveliness(speed));
+	let state = options.state ?? { open: false, since: from };
+	const events: SimulatedDoorEvent[] = [];
+	for (let guard = 0; guard < 100; guard++) {
+		const gap = cycle * (0.7 + draw(seed, door.code, state.since.epochMilliseconds, "gap") * 0.6);
+		const due = state.open
+			? state.since.add({
+					seconds: Math.round(openingMinutes(door, state.since, seed, speed) * 60),
+				})
+			: withinHours(door, state.since.add({ seconds: Math.round(gap * 60) }), timeZone);
+		const at = later(later(due, earliest), state.since.add({ seconds: 1 }));
+		if (Temporal.Instant.compare(at, to) > 0) break;
+		state = { open: !state.open, since: at };
+		events.push({ door: door.code, at, open: state.open });
+	}
+	return events;
+}

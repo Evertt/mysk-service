@@ -393,5 +393,6 @@
 	"energy_signal_over": "grenswaarde overschreden",
 	"energy_signal_near": "binnen 15% van grenswaarde",
 	"energy_signal_door": "te lang open ({minutes})",
-	"energy_signals_none": "Alle actieve zones blijven binnen de ingestelde grenswaarden."
+	"energy_signals_none": "Alle actieve zones blijven binnen de ingestelde grenswaarden.",
+	"energy_simulation_title": "P1 simulatie"
 }

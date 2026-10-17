@@ -393,5 +393,6 @@
 	"energy_signal_over": "threshold exceeded",
 	"energy_signal_near": "within 15% of its threshold",
 	"energy_signal_door": "open too long ({minutes})",
-	"energy_signals_none": "All active zones stay within their thresholds."
+	"energy_signals_none": "All active zones stay within their thresholds.",
+	"energy_simulation_title": "P1 simulation"
 }
