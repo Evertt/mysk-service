@@ -45,12 +45,10 @@
 		value={formatNumber(data.open.total)}
 		detail={m.dashboard_without_engineer({ count: formatNumber(data.open.unassigned ?? 0) })}
 	/>
-	<!-- The orders customers reported in their portal, to accept or reject: opens the list of them.
-		At most the grid's width (`min-w-0`): a grid item's own minimum is its content's, which the
-		number's squeeze changes, and so on without end. -->
+	<!-- The orders customers reported in their portal, to accept or reject: opens the list of them. -->
 	<a
 		href={`${resolve("/(app)/orders")}?status=awaiting_acceptance`}
-		class="block min-w-0 rounded-xl transition-opacity hover:opacity-80"
+		class="rounded-xl transition-opacity hover:opacity-80"
 		data-awaiting-link
 	>
 		<StatCard
