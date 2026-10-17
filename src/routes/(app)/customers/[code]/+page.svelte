@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import BanknoteIcon from "@lucide/svelte/icons/banknote";
+	import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
+	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
+	import WrenchIcon from "@lucide/svelte/icons/wrench";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { PortalAccessCard, SegmentBadge, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
@@ -76,25 +80,39 @@
 
 <ChangedElsewhere type="customer" id={customer.id} />
 
-<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-	<StatCard
+<!-- The customer's key figures, as the SHLTR mockup's customer card has them: icon and label on
+	the left, the figure on the right. -->
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-customer-figures>
+	<StatTile
+		layout="row"
+		tone="brand"
+		icon={ClipboardListIcon}
 		label={m.customers_column_open_orders()}
 		value={formatNumber(stats.openOrders)}
 		detail={m.customers_stats_orders_total({ count: stats.orders })}
 	/>
-	<StatCard
+	<StatTile
+		layout="row"
+		tone="brand"
+		icon={BanknoteIcon}
 		label={m.customers_stats_revenue()}
 		value={formatCents(stats.revenue)}
 		detail={m.customers_stats_revenue_orders({ count: stats.revenueOrders })}
 	/>
-	<StatCard
+	<StatTile
+		layout="row"
+		tone={needsAttention ? "warning" : "brand"}
+		icon={WrenchIcon}
 		label={m.customers_column_equipment()}
 		value={formatNumber(customer.equipment.length)}
 		detail={needsAttention
 			? m.customers_stats_attention({ count: needsAttention })
 			: m.customers_stats_all_working()}
 	/>
-	<StatCard
+	<StatTile
+		layout="row"
+		tone="brand"
+		icon={CalendarDaysIcon}
 		label={m.customers_column_since()}
 		value={String(customer.createdAt.toZonedDateTimeISO(getTimeZone()).year)}
 		detail={stats.lastOrderAt

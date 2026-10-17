@@ -13,6 +13,7 @@ import {
 	nextCode,
 	organizations,
 	rows,
+	statTileNamed,
 	useApp,
 	value,
 	quiet,
@@ -420,8 +421,8 @@ describe("in North", () => {
 		const done = orders.filter((order) => ["completed", "invoiced"].includes(order.status));
 
 		await app.go(`/customers/${covered.customer}`);
-		const revenue = page.locator('[data-slot="card"]', { hasText: "Lifetime revenue" });
-		expect(cents(await revenue.locator('[data-slot="card-title"]').innerText())).toBe(
+		const revenue = statTileNamed(page, "Lifetime revenue");
+		expect(cents(await revenue.locator("[data-stat-value]").innerText())).toBe(
 			done.reduce((sum, order) => sum + priceOf(order).total, 0),
 		);
 		expect(await revenue.innerText()).toContain(`From ${done.length} completed or invoiced`);
