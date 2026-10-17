@@ -8,6 +8,9 @@
  * For Turso, `DATABASE_AUTH_TOKEN` is read from the environment. Both databases must be at the same
  * schema (both fully migrated). The import is one request, so a database of tens of megabytes is
  * fine, much larger ones not (Workers take at most 100 MB per request).
+ *
+ * The tables come parents first (`parentsFirst()`), which the import keeps: it inserts in this order
+ * and deletes in the reverse.
  */
 import { createClient } from "@libsql/client";
 
@@ -23,8 +26,39 @@ const { rows: tables } = await client.execute(
 	"select name from sqlite_master where type = 'table' and name not like 'sqlite\\_%' escape '\\' and name != '__drizzle_migrations'",
 );
 
+/**
+ * `names` with every table after the tables its foreign keys reference (a cycle's tables, which no
+ * order satisfies, last, by name). The import defers the keys, but SQLite looks for a parent's
+ * children when it inserts the parent while any key is unsatisfied: a full scan of each child table
+ * per parent row where the key has no index. In this order no key is unsatisfied, and each check is
+ * one lookup of the parent.
+ */
+async function parentsFirst(names: string[]) {
+	const parents = new Map<string, Set<string>>();
+	for (const name of names) {
+		const { rows } = await client.execute({
+			sql: 'select distinct "table" from pragma_foreign_key_list(?)',
+			args: [name],
+		});
+		const references = rows.map((row) => row.table as string);
+		parents.set(
+			name,
+			new Set(references.filter((table) => table !== name && names.includes(table))),
+		);
+	}
+	const ordered: string[] = [];
+	let ready = names.filter((name) => !parents.get(name)!.size);
+	while (ready.length) {
+		ordered.push(...ready);
+		for (const name of ready) parents.delete(name);
+		for (const references of parents.values()) for (const name of ready) references.delete(name);
+		ready = [...parents.keys()].filter((name) => !parents.get(name)!.size);
+	}
+	return [...ordered, ...[...parents.keys()].sort()];
+}
+
 const data: Record<string, { columns: string[]; rows: unknown[][] }> = {};
-for (const name of tables.map((table) => table.name as string)) {
+for (const name of await parentsFirst(tables.map((table) => table.name as string))) {
 	const result = await client.execute(`select * from "${name}"`);
 	data[name] = {
 		columns: result.columns,

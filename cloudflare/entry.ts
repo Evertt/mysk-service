@@ -75,7 +75,13 @@ export class AppDatabase extends DurableObject<Env> {
 		return response.text();
 	}
 
-	/** Replaces the data of the tables in `data` with its rows, in one transaction. */
+	/**
+	 * Replaces the data of the tables in `data` with its rows, in one transaction: inserted in its
+	 * order and deleted in the reverse, so an export's parents come first (as
+	 * `cloudflare/export-database.ts` writes them; another order makes SQLite rescan the child tables
+	 * for every parent row, Cloudflare's rows read). Answers the rows per table, the database's size,
+	 * and the rows the import read and wrote.
+	 */
 	import(data: Record<string, ExportedTable>) {
 		const { sql } = this.ctx.storage;
 		const known = new Set(
@@ -90,19 +96,24 @@ export class AppDatabase extends DurableObject<Env> {
 		if (unknown.length) throw new Error(`Not tables of the database: ${unknown.join(", ")}`);
 
 		const counts: Record<string, number> = {};
+		const usage = { rowsRead: 0, rowsWritten: 0 };
+		const run = (query: string, ...values: SqlStorageValue[]) => {
+			const cursor = sql.exec(query, ...values);
+			usage.rowsRead += cursor.rowsRead;
+			usage.rowsWritten += cursor.rowsWritten;
+		};
 		this.ctx.storage.transactionSync(() => {
-			// The rows reference each other: check the keys when the transaction commits.
-			sql.exec("pragma defer_foreign_keys = on");
-			for (const table of Object.keys(data)) sql.exec(`delete from "${table}"`);
+			// The rows reference each other (a cycle's, too): check the keys when the transaction commits.
+			run("pragma defer_foreign_keys = on");
+			for (const table of Object.keys(data).reverse()) run(`delete from "${table}"`);
 			for (const [table, { columns, rows }] of Object.entries(data)) {
 				const names = columns.map((column) => `"${column.replaceAll('"', '""')}"`).join(", ");
 				const marks = columns.map(() => "?").join(", ");
-				for (const row of rows)
-					sql.exec(`insert into "${table}" (${names}) values (${marks})`, ...row);
+				for (const row of rows) run(`insert into "${table}" (${names}) values (${marks})`, ...row);
 				counts[table] = rows.length;
 			}
 		});
-		return { counts, bytes: sql.databaseSize };
+		return { counts, bytes: sql.databaseSize, ...usage };
 	}
 }
 
