@@ -14,7 +14,7 @@
 
 	import { getPortalUnit } from "../../client.remote.ts";
 	import { refreshOnChanges } from "../../live.svelte.ts";
-	import OrderCard from "../../order-card.svelte";
+	import OrderList from "../../order-list.svelte";
 	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
 
@@ -49,13 +49,17 @@
 	</Button>
 </div>
 
-<ExtensionSlot point={unitParts} props={{ serialNumber: unit.serialNumber }} />
+<ExtensionSlot
+	point={unitParts}
+	props={{ serialNumber: unit.serialNumber }}
+	class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] items-start gap-6"
+/>
 
 <section class="flex flex-col gap-3" aria-label={m.client_unit_history()}>
 	<h2 class="text-sm font-medium text-muted-foreground">{m.client_unit_history()}</h2>
-	{#each data.orders as order (order.id)}
-		<OrderCard {order} />
+	{#if data.orders.length}
+		<OrderList orders={data.orders} />
 	{:else}
 		<p class="text-sm text-muted-foreground">{m.client_unit_no_orders()}</p>
-	{/each}
+	{/if}
 </section>

@@ -1,8 +1,9 @@
 <!--
 	The parts shop in the customer portal ("Onderdelen Shop"): the catalogue by category, searched by
 	name or article number, each product with its price excluding VAT, its stock and the checklist
-	points it fixes; a banner when some run low; the cart and its checkout with Parts Credit. A link
-	from a checklist's rejected point (`?add=<product>`) puts that product in the cart.
+	points it fixes; a banner when some run low; the cart and its checkout with Parts Credit, beside
+	the catalogue on a wide screen. A link from a checklist's rejected point (`?add=<product>`) puts
+	that product in the cart.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -109,69 +110,82 @@
 	</div>
 {/if}
 
-<div class="flex flex-col gap-3">
-	<InputGroup.Root>
-		<InputGroup.Addon><SearchIcon /></InputGroup.Addon>
-		<InputGroup.Input
-			type="search"
-			placeholder={m.shop_search()}
-			aria-label={m.shop_search()}
-			bind:value={search}
-		/>
-	</InputGroup.Root>
-	<nav class="flex flex-wrap gap-2" aria-label={m.shop_field_category()}>
-		<Button
-			size="sm"
-			variant={category === null ? "default" : "outline"}
-			aria-pressed={category === null}
-			onclick={() => (category = null)}
-		>
-			{m.shop_categories_all()}
-		</Button>
-		{#each shop.categories as each (each.id)}
-			<Button
-				size="sm"
-				variant={category === each.id ? "default" : "outline"}
-				aria-pressed={category === each.id}
-				onclick={() => (category = each.id)}
-				data-category={each.name}
-			>
-				{each.name}
-			</Button>
-		{/each}
-	</nav>
-</div>
-
-{#each byCategory as each (each.id)}
-	<section class="flex flex-col gap-3" aria-label={each.name} data-catalogue-category={each.name}>
-		<h2 class="text-sm font-medium text-muted-foreground">
-			{each.name} <span class="tabular-nums">· {formatNumber(each.products.length)}</span>
-		</h2>
-		<div class="grid gap-3 sm:grid-cols-2">
-			{#each each.products as product (product.id)}
-				<ProductCard
-					{product}
-					quantity={quantityOf(product.id)}
-					onchange={(quantity) => setQuantity(product.id, quantity)}
+<!-- On a wide screen the cart is beside the catalogue, and stays in view while scrolling it. -->
+<div
+	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]"
+>
+	<div class="@container flex min-w-0 flex-col gap-6">
+		<div class="flex flex-col gap-3">
+			<InputGroup.Root>
+				<InputGroup.Addon><SearchIcon /></InputGroup.Addon>
+				<InputGroup.Input
+					type="search"
+					placeholder={m.shop_search()}
+					aria-label={m.shop_search()}
+					bind:value={search}
 				/>
-			{/each}
+			</InputGroup.Root>
+			<nav class="flex flex-wrap gap-2" aria-label={m.shop_field_category()}>
+				<Button
+					size="sm"
+					variant={category === null ? "default" : "outline"}
+					aria-pressed={category === null}
+					onclick={() => (category = null)}
+				>
+					{m.shop_categories_all()}
+				</Button>
+				{#each shop.categories as each (each.id)}
+					<Button
+						size="sm"
+						variant={category === each.id ? "default" : "outline"}
+						aria-pressed={category === each.id}
+						onclick={() => (category = each.id)}
+						data-category={each.name}
+					>
+						{each.name}
+					</Button>
+				{/each}
+			</nav>
 		</div>
-	</section>
-{:else}
-	<Empty.Root class="border" data-catalogue-empty>
-		<Empty.Header>
-			<Empty.Title>{m.shop_catalogue_empty()}</Empty.Title>
-			<Empty.Description>{m.shop_catalogue_empty_description()}</Empty.Description>
-		</Empty.Header>
-	</Empty.Root>
-{/each}
 
-<Checkout
-	{lines}
-	available={shop.available}
-	partner={shop.partner}
-	onremove={(productId) => setQuantity(productId, 0)}
-/>
+		{#each byCategory as each (each.id)}
+			<section
+				class="flex flex-col gap-3"
+				aria-label={each.name}
+				data-catalogue-category={each.name}
+			>
+				<h2 class="text-sm font-medium text-muted-foreground">
+					{each.name} <span class="tabular-nums">· {formatNumber(each.products.length)}</span>
+				</h2>
+				<div class="grid gap-3 @xl:grid-cols-2 @5xl:grid-cols-3">
+					{#each each.products as product (product.id)}
+						<ProductCard
+							{product}
+							quantity={quantityOf(product.id)}
+							onchange={(quantity) => setQuantity(product.id, quantity)}
+						/>
+					{/each}
+				</div>
+			</section>
+		{:else}
+			<Empty.Root class="border" data-catalogue-empty>
+				<Empty.Header>
+					<Empty.Title>{m.shop_catalogue_empty()}</Empty.Title>
+					<Empty.Description>{m.shop_catalogue_empty_description()}</Empty.Description>
+				</Empty.Header>
+			</Empty.Root>
+		{/each}
+	</div>
+
+	<div class="lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto">
+		<Checkout
+			{lines}
+			available={shop.available}
+			partner={shop.partner}
+			onremove={(productId) => setQuantity(productId, 0)}
+		/>
+	</div>
+</div>
 
 {#if count}
 	<a

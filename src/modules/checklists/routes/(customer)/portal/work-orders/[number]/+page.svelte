@@ -39,18 +39,20 @@
 	</Button>
 </div>
 
-<div class="w-full rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0">
+<div
+	class="w-full max-w-4xl rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0"
+>
 	<WorkOrder {data} />
 </div>
 
 <style>
-	/* A4, and only the work order: the portal's header stays off the paper. */
+	/* A4, and only the work order: the portal's navigation and header stay off the paper (see the
+	   portal's layout), and so do its notifications. */
 	@media print {
 		@page {
 			size: A4;
 			margin: 14mm;
 		}
-		:global([data-customer-portal] > header),
 		:global([data-sonner-toaster]) {
 			display: none !important;
 		}

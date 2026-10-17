@@ -2,7 +2,8 @@
 	One of the customer's orders in the portal: what it's about and where it stands (reported, not
 	accepted yet, accepted, planned for a day with the engineer's first name, done, or rejected with
 	the planner's reason), its units, the tenant's modules' cards (`client.order`, e.g. its
-	checklists' results and the work order to print) and, once done, the work order's sign-off.
+	checklists' results and the work order to print) and, once done, the work order's sign-off. On
+	a wide screen the details are beside the rest.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -81,90 +82,97 @@
 	</div>
 {/if}
 
-<Card.Root>
-	<Card.Content>
-		<dl class="grid grid-cols-2 gap-4">
-			{#if order.reportedBy}
-				<DetailItem label={m.client_detail_reported()} value={formatDate(order.createdAt)} />
-				<DetailItem label={m.client_detail_reported_by()} value={order.reportedBy} />
-			{:else}
-				<DetailItem label={m.client_detail_created()} value={formatDate(order.createdAt)} />
-			{/if}
-			<DetailItem
-				label={m.client_detail_priority()}
-				value={label("orderPriority", order.priority)}
-			/>
-			{#if order.decidedAt && status !== "rejected"}
-				<DetailItem label={m.client_detail_accepted()} value={formatDate(order.decidedAt)} />
-			{/if}
-			<DetailItem
-				label={m.client_detail_planned()}
-				value={order.scheduledFor && status !== "rejected" && status !== "cancelled"
-					? formatDateTime(order.scheduledFor)
-					: null}
-			/>
-			<DetailItem label={m.client_detail_engineer()} value={order.engineer} />
-			{#if order.completedAt}
-				<DetailItem label={m.client_detail_completed()} value={formatDate(order.completedAt)} />
-			{/if}
-		</dl>
-	</Card.Content>
-</Card.Root>
-
-{#if order.units.length}
-	<section class="flex flex-col gap-3" aria-label={m.client_units()}>
-		<h2 class="text-sm font-medium text-muted-foreground">{m.client_units()}</h2>
-		{#each order.units as unit (unit.id)}
-			<a
-				href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
-				class="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
-				data-unit={unit.serialNumber}
-			>
-				<span class="flex min-w-0 flex-col">
-					<span class="truncate font-medium">{unitTitle(unit)}</span>
-					<span class="truncate text-xs text-muted-foreground">
-						{unitDetails(unit, unit.site, unit.location)}
-					</span>
-				</span>
-				<UnitStatusBadge status={unit.status} />
-			</a>
-		{/each}
-	</section>
-{/if}
-
-<ExtensionSlot point={orderParts} props={{ number: order.number }} />
-
-{#if data.signoff}
-	<Card.Root data-signoff>
-		<Card.Header>
-			<Card.Title>{m.client_signoff_title()}</Card.Title>
-			<Card.Description>
-				{m.client_signoff_description({ date: formatDateTime(data.signoff.signedAt) })}
-			</Card.Description>
-		</Card.Header>
-		<Card.Content class="grid gap-4 sm:grid-cols-2">
-			<figure class="flex flex-col gap-2">
-				<img
-					src={data.signoff.signature}
-					alt={m.client_signoff_customer({ name: data.signoff.signerName })}
-					class="h-24 w-full rounded-md border bg-white object-contain"
+<!-- On a wide screen its details beside the rest. -->
+<div
+	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_24rem]"
+>
+	<Card.Root class="lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1" data-order-details>
+		<Card.Content>
+			<dl class="grid grid-cols-2 gap-4">
+				{#if order.reportedBy}
+					<DetailItem label={m.client_detail_reported()} value={formatDate(order.createdAt)} />
+					<DetailItem label={m.client_detail_reported_by()} value={order.reportedBy} />
+				{:else}
+					<DetailItem label={m.client_detail_created()} value={formatDate(order.createdAt)} />
+				{/if}
+				<DetailItem
+					label={m.client_detail_priority()}
+					value={label("orderPriority", order.priority)}
 				/>
-				<figcaption class="text-sm">
-					{m.client_signoff_customer({ name: data.signoff.signerName })}
-				</figcaption>
-			</figure>
-			{#if data.signoff.engineerSignature && data.signoff.engineerName}
-				<figure class="flex flex-col gap-2">
-					<img
-						src={data.signoff.engineerSignature}
-						alt={m.client_signoff_engineer({ name: data.signoff.engineerName })}
-						class="h-24 w-full rounded-md border bg-white object-contain"
-					/>
-					<figcaption class="text-sm">
-						{m.client_signoff_engineer({ name: data.signoff.engineerName })}
-					</figcaption>
-				</figure>
-			{/if}
+				{#if order.decidedAt && status !== "rejected"}
+					<DetailItem label={m.client_detail_accepted()} value={formatDate(order.decidedAt)} />
+				{/if}
+				<DetailItem
+					label={m.client_detail_planned()}
+					value={order.scheduledFor && status !== "rejected" && status !== "cancelled"
+						? formatDateTime(order.scheduledFor)
+						: null}
+				/>
+				<DetailItem label={m.client_detail_engineer()} value={order.engineer} />
+				{#if order.completedAt}
+					<DetailItem label={m.client_detail_completed()} value={formatDate(order.completedAt)} />
+				{/if}
+			</dl>
 		</Card.Content>
 	</Card.Root>
-{/if}
+
+	<div class="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
+		{#if order.units.length}
+			<section class="flex flex-col gap-3" aria-label={m.client_units()}>
+				<h2 class="text-sm font-medium text-muted-foreground">{m.client_units()}</h2>
+				{#each order.units as unit (unit.id)}
+					<a
+						href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
+						class="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
+						data-unit={unit.serialNumber}
+					>
+						<span class="flex min-w-0 flex-col">
+							<span class="truncate font-medium">{unitTitle(unit)}</span>
+							<span class="truncate text-xs text-muted-foreground">
+								{unitDetails(unit, unit.site, unit.location)}
+							</span>
+						</span>
+						<UnitStatusBadge status={unit.status} />
+					</a>
+				{/each}
+			</section>
+		{/if}
+
+		<ExtensionSlot point={orderParts} props={{ number: order.number }} />
+
+		{#if data.signoff}
+			<Card.Root data-signoff>
+				<Card.Header>
+					<Card.Title>{m.client_signoff_title()}</Card.Title>
+					<Card.Description>
+						{m.client_signoff_description({ date: formatDateTime(data.signoff.signedAt) })}
+					</Card.Description>
+				</Card.Header>
+				<Card.Content class="grid gap-4 sm:grid-cols-2">
+					<figure class="flex flex-col gap-2">
+						<img
+							src={data.signoff.signature}
+							alt={m.client_signoff_customer({ name: data.signoff.signerName })}
+							class="h-24 w-full rounded-md border bg-white object-contain"
+						/>
+						<figcaption class="text-sm">
+							{m.client_signoff_customer({ name: data.signoff.signerName })}
+						</figcaption>
+					</figure>
+					{#if data.signoff.engineerSignature && data.signoff.engineerName}
+						<figure class="flex flex-col gap-2">
+							<img
+								src={data.signoff.engineerSignature}
+								alt={m.client_signoff_engineer({ name: data.signoff.engineerName })}
+								class="h-24 w-full rounded-md border bg-white object-contain"
+							/>
+							<figcaption class="text-sm">
+								{m.client_signoff_engineer({ name: data.signoff.engineerName })}
+							</figcaption>
+						</figure>
+					{/if}
+				</Card.Content>
+			</Card.Root>
+		{/if}
+	</div>
+</div>

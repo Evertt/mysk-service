@@ -1,6 +1,6 @@
 <!--
 	The customer's orders in the portal, newest first: those still to be done (also not accepted
-	yet), the done ones, or all of them.
+	yet), the done ones, or all of them; cards on a phone, a table on a wide screen.
 -->
 <script lang="ts">
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
@@ -11,7 +11,7 @@
 
 	import { getPortalOrders } from "../client.remote.ts";
 	import { refreshOnChanges } from "../live.svelte.ts";
-	import OrderCard from "../order-card.svelte";
+	import OrderList from "../order-list.svelte";
 
 	const orders = $derived(await getPortalOrders());
 
@@ -53,15 +53,13 @@
 	{/each}
 </div>
 
-<div class="flex flex-col gap-3">
-	{#each shown as order (order.id)}
-		<OrderCard {order} />
-	{:else}
-		<Empty.Root class="border">
-			<Empty.Header>
-				<Empty.Media variant="icon"><ClipboardListIcon /></Empty.Media>
-				<Empty.Title>{m.client_no_orders()}</Empty.Title>
-			</Empty.Header>
-		</Empty.Root>
-	{/each}
-</div>
+{#if shown.length}
+	<OrderList orders={shown} />
+{:else}
+	<Empty.Root class="border">
+		<Empty.Header>
+			<Empty.Media variant="icon"><ClipboardListIcon /></Empty.Media>
+			<Empty.Title>{m.client_no_orders()}</Empty.Title>
+		</Empty.Header>
+	</Empty.Root>
+{/if}

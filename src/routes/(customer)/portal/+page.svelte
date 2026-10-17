@@ -1,7 +1,8 @@
 <!--
 	The customer portal's home: report a breakdown, the customer's open orders (also those not
 	accepted yet, and reports rejected lately), what the tenant's modules add (e.g. units needing
-	attention, `client.home`), and the latest completed work with its work orders.
+	attention, `client.home`), and the latest completed work with its work orders. On a phone in
+	that order; on a wide screen the modules' cards come first, over the orders and the work.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -14,7 +15,7 @@
 
 	import { getPortalHome } from "./client.remote.ts";
 	import { refreshOnChanges } from "./live.svelte.ts";
-	import OrderCard from "./order-card.svelte";
+	import OrderList from "./order-list.svelte";
 
 	const data = $derived(await getPortalHome());
 
@@ -34,39 +35,48 @@
 	</Button>
 </div>
 
-<section class="flex flex-col gap-3" aria-label={m.client_open_orders()}>
-	<h2 class="text-sm font-medium text-muted-foreground">
-		{m.client_open_orders()}
-		<span class="tabular-nums">· {formatNumber(data.open.length)}</span>
-	</h2>
-	{#each data.open as order (order.id)}
-		<OrderCard {order} />
-	{:else}
-		<Empty.Root class="border">
-			<Empty.Header>
-				<Empty.Media variant="icon"><ClipboardCheckIcon /></Empty.Media>
-				<Empty.Title>{m.client_no_open_orders()}</Empty.Title>
-				<Empty.Description>{m.client_no_open_orders_description()}</Empty.Description>
-			</Empty.Header>
-		</Empty.Root>
-	{/each}
-</section>
-
-<ExtensionSlot point={home} props={{}} />
-
-{#if data.done.length}
-	<section class="flex flex-col gap-3" aria-label={m.client_recent_work()}>
-		<div class="flex items-center justify-between gap-2">
-			<h2 class="text-sm font-medium text-muted-foreground">{m.client_recent_work()}</h2>
-			<a
-				href={resolve("/(customer)/portal/orders")}
-				class="text-sm text-muted-foreground underline-offset-4 hover:underline"
-			>
-				{m.client_all_orders()}
-			</a>
-		</div>
-		{#each data.done as order (order.id)}
-			<OrderCard {order} />
-		{/each}
+<!-- On a wide screen a dashboard: what the tenant's modules add (e.g. the partner's bonus and
+	wallet side by side) on top, then the open orders as a table beside the latest completed work. -->
+<div class="grid items-start gap-6 lg:grid-cols-3">
+	<section
+		class={["flex min-w-0 flex-col gap-3", data.done.length ? "lg:col-span-2" : "lg:col-span-3"]}
+		aria-label={m.client_open_orders()}
+	>
+		<h2 class="text-sm font-medium text-muted-foreground">
+			{m.client_open_orders()}
+			<span class="tabular-nums">· {formatNumber(data.open.length)}</span>
+		</h2>
+		{#if data.open.length}
+			<OrderList orders={data.open} />
+		{:else}
+			<Empty.Root class="border">
+				<Empty.Header>
+					<Empty.Media variant="icon"><ClipboardCheckIcon /></Empty.Media>
+					<Empty.Title>{m.client_no_open_orders()}</Empty.Title>
+					<Empty.Description>{m.client_no_open_orders_description()}</Empty.Description>
+				</Empty.Header>
+			</Empty.Root>
+		{/if}
 	</section>
-{/if}
+
+	<ExtensionSlot
+		point={home}
+		props={{}}
+		class="flex min-w-0 flex-col gap-6 lg:order-first lg:col-span-3"
+	/>
+
+	{#if data.done.length}
+		<section class="flex min-w-0 flex-col gap-3" aria-label={m.client_recent_work()}>
+			<div class="flex items-center justify-between gap-2">
+				<h2 class="text-sm font-medium text-muted-foreground">{m.client_recent_work()}</h2>
+				<a
+					href={resolve("/(customer)/portal/orders")}
+					class="text-sm text-muted-foreground underline-offset-4 hover:underline"
+				>
+					{m.client_all_orders()}
+				</a>
+			</div>
+			<OrderList orders={data.done} />
+		</section>
+	{/if}
+</div>
