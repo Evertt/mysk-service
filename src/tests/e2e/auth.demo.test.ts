@@ -159,7 +159,10 @@ describe("with DEMO_SIGN_IN", () => {
 			expect(signsIn(response), String(role)).toBe(false);
 		}
 		// Fields the form hasn't (an email, a user id): SvelteKit refuses them before the handler.
-		for (const unbound of [{ email: "admin@fieldworks.example" }, { userId: "anything" }]) {
+		for (const unbound of [{ email: "admin@fieldworks.example" }, { userId: "anything" }] as Record<
+			string,
+			string
+		>[]) {
 			const response = await post(baseURL, "admin", unbound);
 			expect(response.ok, JSON.stringify(unbound)).toBe(false);
 			expect(response.status, JSON.stringify(unbound)).not.toBe(303);
