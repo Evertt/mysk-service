@@ -69,7 +69,9 @@ function truck(
  * Bezet (not locked, the key with the driver, door open 44:40: amber), DOCK 07 Vrij (the key in
  * the key storage), DOCK 08 Storing (the SCP's key fault, door open 1:27:20: red). The door rules
  * have acted on 06's and 08's open doors already (`doorAlert`), so putting them back makes no
- * notice or order by itself. All last reported at `now`.
+ * notice or order by itself. Each last reported when its state came about (05's and 06's door
+ * opened, 08's fault, 07 quiet for two hours), so a feed's events from the last hour or so still
+ * apply; the simulation counts on from its start (`startedAt`), not from these.
  */
 export function mockupDocks(now: Temporal.Instant): Record<DemoDock, MockupDock> {
 	const ago = (seconds: number) => now.subtract({ seconds });
@@ -80,11 +82,11 @@ export function mockupDocks(now: Temporal.Instant): Record<DemoDock, MockupDock>
 		faultReason: null,
 		keyLocation: "scp",
 		doorAlert: null,
-		lastEventAt: now,
+		lastEventAt: null,
 	};
 	return {
 		"DOCK 05": {
-			facts: { ...base, locked: true, doorOpenSince: ago(1420) },
+			facts: { ...base, locked: true, doorOpenSince: ago(1420), lastEventAt: ago(1420) },
 			session: truck(now, {
 				carrier: "AMEX Transport",
 				plate: "84-BNX-7",
@@ -95,7 +97,13 @@ export function mockupDocks(now: Temporal.Instant): Record<DemoDock, MockupDock>
 			}),
 		},
 		"DOCK 06": {
-			facts: { ...base, doorOpenSince: ago(2680), keyLocation: "driver", doorAlert: "amber" },
+			facts: {
+				...base,
+				doorOpenSince: ago(2680),
+				keyLocation: "driver",
+				doorAlert: "amber",
+				lastEventAt: ago(2680),
+			},
 			session: truck(now, {
 				carrier: "AMEX Transport",
 				plate: "12-VDK-3",
@@ -104,7 +112,10 @@ export function mockupDocks(now: Temporal.Instant): Record<DemoDock, MockupDock>
 				doorOpen: 2680,
 			}),
 		},
-		"DOCK 07": { facts: { ...base, keyLocation: "storage" }, session: null },
+		"DOCK 07": {
+			facts: { ...base, keyLocation: "storage", lastEventAt: ago(2 * 3600) },
+			session: null,
+		},
 		"DOCK 08": {
 			facts: {
 				...base,
@@ -113,6 +124,7 @@ export function mockupDocks(now: Temporal.Instant): Record<DemoDock, MockupDock>
 				faultReason: "Sleutelfout",
 				keyLocation: "driver",
 				doorAlert: "red",
+				lastEventAt: ago(34 * 60),
 			},
 			session: truck(now, {
 				carrier: "AMEX Transport",

@@ -71,10 +71,11 @@ function batches<T>(events: T[]) {
 }
 
 export const docksSimulation: Simulation = {
-	async tick({ from, to, speed }) {
+	async tick(context) {
 		const docks = await demoDocks();
 		if (!docks.length) return;
-		const events = simulateDocks(docks, { from, to, speed });
+		const events = simulateDocks(docks, context);
+		const { to } = context;
 		for (const batch of batches(events)) {
 			const received = await receiveBatch({ events: batch }, to);
 			if ("issues" in received) {

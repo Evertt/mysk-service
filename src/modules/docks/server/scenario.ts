@@ -1,3 +1,5 @@
+import type { SimulationTick } from "#lib/simulation/extensions.ts";
+
 /**
  * The demo's dock scenario, pure: what the Salvo hardware would report at the demo's docks over an
  * interval of real time (`simulateDocks()`), as the feed's events, worked out from each dock's
@@ -99,12 +101,13 @@ const later = (a: Temporal.Instant, b: Temporal.Instant) =>
 	Temporal.Instant.compare(a, b) >= 0 ? a : b;
 
 /**
- * The dock's next step after its facts, at `speed`; `start` stands in for the last event's time of
- * a dock that never reported.
+ * The dock's next step after its facts, at `speed`. Its steps count from its last event, or from
+ * `startedAt` (the simulation's start) if that's later: the starting states (the mockup's, with
+ * events from long ago) stay a while after a reset before they move on.
  */
-export function nextStep(dock: ScenarioDock, speed: number, start: Temporal.Instant): Step {
+export function nextStep(dock: ScenarioDock, speed: number, startedAt: Temporal.Instant): Step {
 	const { facts, session, code } = dock;
-	const since = facts.lastEventAt ?? start;
+	const since = later(facts.lastEventAt ?? startedAt, startedAt);
 	const after = (anchor: Temporal.Instant, minutes: number) =>
 		anchor.add({ milliseconds: Math.round((minutes * 60_000) / speed) });
 	const afterReal = (anchor: Temporal.Instant, minutes: number) =>
@@ -221,13 +224,13 @@ const maxSteps = 200;
  */
 export function simulateDocks(
 	docks: ScenarioDock[],
-	{ from, to, speed }: { from: Temporal.Instant; to: Temporal.Instant; speed: number },
+	{ from, to, speed, startedAt }: Pick<SimulationTick, "from" | "to" | "speed" | "startedAt">,
 ): FeedEvent[] {
 	const events: FeedEvent[] = [];
 	for (const dock of docks) {
 		let state = { ...dock };
 		for (let i = 0; i < maxSteps; i++) {
-			const step = nextStep(state, speed, from);
+			const step = nextStep(state, speed, startedAt);
 			const at = wholeSecond(later(step.due, from));
 			if (Temporal.Instant.compare(at, to) > 0) break;
 			step.events.forEach((each, index) => {

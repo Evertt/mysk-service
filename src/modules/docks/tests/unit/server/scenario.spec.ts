@@ -42,7 +42,7 @@ function run(minutes: number, { speed = 1, every = 1 } = {}) {
 	const events: FeedEvent[] = [];
 	const seen: { at: Temporal.Instant; docks: ScenarioDock[] }[] = [];
 	for (let at = every; at <= minutes; at += every) {
-		const ticked = simulateDocks(docks, { from: t(at - every), to: t(at), speed });
+		const ticked = simulateDocks(docks, { from: t(at - every), to: t(at), speed, startedAt: t(0) });
 		for (const event of ticked) {
 			const time = Temporal.Instant.from(event.at);
 			expect(Temporal.Instant.compare(time, t(at - every))).toBeGreaterThanOrEqual(0);
@@ -81,7 +81,7 @@ describe("the dice", () => {
 
 describe("simulateDocks", () => {
 	test("plans the same events from the same facts", () => {
-		const interval = { from: t(0), to: t(30), speed: 1 };
+		const interval = { from: t(0), to: t(30), speed: 1, startedAt: t(0) };
 		expect(simulateDocks(mockup(), interval)).toEqual(simulateDocks(mockup(), interval));
 	});
 
@@ -90,6 +90,12 @@ describe("simulateDocks", () => {
 		const once = run(45, { every: 45 }).events;
 		expect(once.map(({ type, dock, at }) => [type, dock, at])).toEqual(
 			minutes.map(({ type, dock, at }) => [type, dock, at]),
+		);
+	});
+
+	test("keeps the mockup's states for the first minute after a start, at 1×", () => {
+		expect(simulateDocks(mockup(), { from: t(0), to: t(1), speed: 1, startedAt: t(0) })).toEqual(
+			[],
 		);
 	});
 
@@ -152,7 +158,7 @@ describe("simulateDocks", () => {
 	test("what was due while paused happens from the interval's start on", () => {
 		const docks = mockup();
 		// Ticked first two hours after the mockup's states: DOCK 07's check-in was due long before.
-		const events = simulateDocks(docks, { from: t(120), to: t(121), speed: 1 });
+		const events = simulateDocks(docks, { from: t(120), to: t(121), speed: 1, startedAt: t(0) });
 		const checkIn = events.find((each) => each.type === "check_in" && each.dock === "DOCK 07");
 		expect(checkIn?.at).toBe(t(120).toString());
 	});

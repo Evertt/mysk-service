@@ -4,7 +4,7 @@
 	import type { RouteParams } from "$app/types";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
-	import PageHeader from "#lib/components/page-header.svelte";
+	import PageBanner from "#lib/components/page-banner.svelte";
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
 	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { getDockBoard } from "#modules/docks/board/board.remote.ts";
@@ -19,7 +19,7 @@
 		return Number.isInteger(value) && value > 0 ? value : undefined;
 	});
 	const board = $derived(await getDockBoard(siteId));
-	// The demo's Salvo feed is simulated: the badge says so.
+	// The demo's Salvo feed is simulated: the banner says so.
 	const simulation = $derived(await getSimulation("docks"));
 </script>
 
@@ -28,26 +28,36 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-	<PageHeader
-		title={m.docks_title()}
-		description={board.site
-			? `${board.site.customer.name} — ${board.site.name} · ${m.docks_description()}`
-			: m.docks_description()}
+	<PageBanner
+		eyebrow={m.docks_banner_eyebrow()}
+		title={m.docks_banner_title()}
+		description={m.docks_banner_intro()}
 	>
 		{#snippet badges()}
-			<Badge variant="success" data-feed={simulation ? "simulated" : "live"}>
-				{simulation ? m.simulation_live() : m.docks_live()}
-			</Badge>
+			<span class="inline-flex items-center gap-1.5" data-feed={simulation ? "simulated" : "live"}>
+				<span
+					class="size-1.5 rounded-full bg-emerald-300 {simulation?.running !== false
+						? 'motion-safe:animate-pulse'
+						: ''}"
+					aria-hidden="true"
+				></span>
+				{simulation ? m.simulation_live() : m.docks_banner_live()}
+			</span>
+			{#if board.site}
+				<span class="rounded bg-primary-foreground/15 px-2 py-0.5 normal-case">
+					{m.docks_banner_site({ customer: board.site.customer.name, site: board.site.name })}
+				</span>
+			{/if}
 		{/snippet}
 		{#snippet actions()}
 			{#if board.canManage}
-				<Button variant="outline" href={resolve("/(app)/(modules)/docks/settings")}>
+				<Button variant="secondary" href={resolve("/(app)/(modules)/docks/settings")}>
 					<SettingsIcon data-icon="inline-start" />
 					{m.docks_settings_title()}
 				</Button>
 			{/if}
 		{/snippet}
-	</PageHeader>
+	</PageBanner>
 
 	<SimulationBar module="docks" label={m.docks_simulation_title()} />
 

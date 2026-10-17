@@ -101,7 +101,7 @@ async function reset() {
 async function tick(start: number, minutes: number, speed = 1) {
 	for (let at = start + 1; at <= start + minutes; at++) {
 		freezeNow(t(at));
-		await north(() => docksSimulation.tick({ from: t(at - 1), to: t(at), speed }));
+		await north(() => docksSimulation.tick({ from: t(at - 1), to: t(at), speed, startedAt: t(0) }));
 	}
 }
 
