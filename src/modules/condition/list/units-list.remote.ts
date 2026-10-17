@@ -37,7 +37,7 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 			withRowJoins(
 				db
 					.select({
-						id: listSql.id,
+						id: listSql.rowId,
 						component: {
 							id: component.id,
 							number: component.number,

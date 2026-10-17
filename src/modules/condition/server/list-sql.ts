@@ -80,11 +80,14 @@ export type RowSql = ReturnType<typeof rowSql>;
  */
 export function rowsSql(
 	unit: ConditionSql = conditionSql(),
-): ListSql<typeof conditionList.columns> & { unit: ConditionSql; row: RowSql } {
+): ListSql<typeof conditionList.columns> & { unit: ConditionSql; row: RowSql; rowId: SQL<number> } {
 	const row = rowSql(unit);
+	// A component's row by its id, made negative; a unit's own by the unit's id.
+	const rowId = sql<number>`coalesce(-${component.id}, ${equipment.id})`.mapWith(Number);
 	return {
 		unit,
 		row,
+		rowId,
 		list: conditionList,
 		from: (fields) => withRowJoins(db.select(fields).from(equipment).$dynamic()),
 		columns: {
@@ -130,8 +133,7 @@ export function rowsSql(
 			customer.code,
 			equipmentLocation.name,
 		],
-		// A component's row by its id, made negative; a unit's own by the unit's id.
-		id: sql<number>`coalesce(-${component.id}, ${equipment.id})`,
+		id: rowId,
 		scope: inCare,
 	};
 }

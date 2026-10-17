@@ -157,7 +157,7 @@ export interface RowState {
 
 /** The Connect page's rows of `units`: their components, and those without components themselves. */
 export const rowsOf = (units: UnitState[]): RowState[] =>
-	units.flatMap((unit) =>
+	units.flatMap((unit): RowState[] =>
 		unit.components.length
 			? unit.components.map((part) => ({
 					unit,
@@ -167,7 +167,16 @@ export const rowsOf = (units: UnitState[]): RowState[] =>
 					status: part.status,
 					concern: part.concern,
 				}))
-			: [{ unit, component: null, ...unit }],
+			: [
+					{
+						unit,
+						component: null,
+						score: unit.score,
+						advice: unit.advice,
+						status: unit.status,
+						concern: unit.concern,
+					},
+				],
 	);
 
 /** A unit's components as stored, in their order. */

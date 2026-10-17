@@ -206,7 +206,7 @@ describe("the status in SQL", () => {
 		await db.delete(unitCondition);
 		const listSql = rowsSql();
 		const found = await listSql
-			.from({ id: listSql.id, unit: equipment.id, component: component.id })
+			.from({ id: listSql.rowId, unit: equipment.id, component: component.id })
 			.where(listSql.scope())
 			.orderBy(asc(equipment.id));
 		// Unit 13 is decommissioned, unit 20 another tenant's.
