@@ -197,6 +197,13 @@
       "when": 1792258992434,
       "tag": "0027_add-simulation",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1792263469546,
+      "tag": "0028_add-checklist-completed-by-user",
+      "breakpoints": true
     }
   ]
 }

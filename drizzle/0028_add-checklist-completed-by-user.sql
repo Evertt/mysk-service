@@ -1,0 +1,2 @@
+ALTER TABLE `checklist` ADD `completed_by_user` text REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null;--> statement-breakpoint
+CREATE INDEX `checklist_completed_by_user` ON `checklist` (`completed_by_user`);
