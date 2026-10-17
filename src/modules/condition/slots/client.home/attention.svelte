@@ -3,7 +3,7 @@
 	The condition module's card on the customer portal's home (`client.home`,
 	`#lib/client/extensions.ts`): the customer's units that are critical or need attention, worst
 	first, each with its advice, linking to the unit, and its components with their condition and
-	advice. Nothing while none does.
+	advice; in two columns where there's room. Nothing while none does.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -21,7 +21,7 @@
 
 {#if data.units.length}
 	<section
-		class="flex flex-col gap-3"
+		class="@container flex flex-col gap-3"
 		aria-label={m.condition_client_title()}
 		data-client-attention
 	>
@@ -29,10 +29,13 @@
 			{m.condition_client_title()}
 			<span class="tabular-nums">· {formatNumber(data.total)}</span>
 		</h2>
-		<Card.Root class="py-0">
-			<ul class="flex flex-col divide-y">
+		<!-- In two columns where there's room (a desk's screen). -->
+		<Card.Root class="overflow-hidden py-0">
+			<ul
+				class="flex flex-col divide-y @4xl:-mb-px @4xl:block @4xl:columns-2 @4xl:gap-0 @4xl:divide-y-0 @4xl:[column-rule:1px_solid_var(--border)]"
+			>
 				{#each data.units as unit (unit.id)}
-					<li class="flex flex-col">
+					<li class="flex flex-col @4xl:break-inside-avoid @4xl:border-b">
 						<a
 							href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
 							class="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent"
