@@ -37,7 +37,7 @@ export const tickCap = Temporal.Duration.from({ minutes: 10 });
 export type SimulationRow = typeof simulation.$inferSelect;
 
 /** What a run ticked: per simulation, the interval it covered. */
-export interface SimulationTicked {
+interface SimulationTicked {
 	organizationId: string;
 	moduleId: string;
 	from: Temporal.Instant;

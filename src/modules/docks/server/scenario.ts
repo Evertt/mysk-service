@@ -105,7 +105,7 @@ const later = (a: Temporal.Instant, b: Temporal.Instant) =>
  * `startedAt` (the simulation's start) if that's later: the starting states (the mockup's, with
  * events from long ago) stay a while after a reset before they move on.
  */
-export function nextStep(dock: ScenarioDock, speed: number, startedAt: Temporal.Instant): Step {
+function nextStep(dock: ScenarioDock, speed: number, startedAt: Temporal.Instant): Step {
 	const { facts, session, code } = dock;
 	const since = later(facts.lastEventAt ?? startedAt, startedAt);
 	const after = (anchor: Temporal.Instant, minutes: number) =>

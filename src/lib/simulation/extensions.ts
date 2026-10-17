@@ -43,7 +43,7 @@ export interface Simulation {
 }
 
 /** What the runner asks a module's simulation to do. */
-export type SimulationStep = ({ kind: "tick" } & SimulationTick) | { kind: "reset" };
+type SimulationStep = ({ kind: "tick" } & SimulationTick) | { kind: "reset" };
 
 /**
  * The simulations of the modules: the runner asks one module at a time (`collect()` with that
