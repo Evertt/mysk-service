@@ -1,7 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"checklists_module_name": "Checklists",
-	"checklists_module_description": "Fixed checklists to inspect and service each kind of unit by, per norm.",
+	"checklists_module_name": "Work orders",
+	"checklists_module_description": "A fixed checklist per unit for inspection and maintenance, every year anew, with its history; and the templates they're made from, per norm.",
 	"checklists_templates_title": "Checklist templates",
 	"checklists_templates_description": "The checklists your engineers inspect and service units by, per equipment category.",
 	"checklists_add_template": "Add template",
@@ -253,5 +253,79 @@
 	"checklists_print_serial": "Serial number",
 	"checklists_print_location": "Location",
 	"checklists_print_outcome": "Outcome",
-	"checklists_client_order_description": "What the engineer checked on each unit, and what they found."
+	"checklists_client_order_description": "What the engineer checked on each unit, and what they found.",
+	"checklists_office_order_closed": "{number} is closed: its checklists can't be changed any more.",
+	"checklists_by_office": "{name} (office)",
+	"checklists_the_office": "the office",
+	"checklists_start_no_template": "{unit} has no checklist template: its category has none.",
+	"checklists_start_description": "{kind} {year}",
+	"checklists_component_not_found": "Component not found",
+	"checklists_assets_title": "Digital checkpoint work order",
+	"checklists_assets_intro": "A fixed checklist per asset for inspection and maintenance. Every year starts a new list; earlier work orders are kept.",
+	"checklists_assets_templates": "Templates",
+	"checklists_assets_search": "Search asset…",
+	"checklists_assets_search_label": "Search assets",
+	"checklists_assets_customer_all": "All customers",
+	"checklists_assets_customer_label": "Customer",
+	"checklists_assets_year_label": "This year",
+	"checklists_assets_year_all": "All",
+	"checklists_year_done": "Done",
+	"checklists_year_open": "Open",
+	"checklists_year_none": "Not started",
+	"checklists_year_badge_done": "{year} ✓",
+	"checklists_year_badge_open": "{year} open",
+	"checklists_assets_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} asset",
+				"countPlural=*": "{countText} assets"
+			}
+		}
+	],
+	"checklists_assets_empty_title": "No assets found",
+	"checklists_assets_empty_description": "Units whose category has a checklist template show here. Try another search or filter.",
+	"checklists_assets_loading_more": "Loading more…",
+	"checklists_assets_pick_title": "Pick an asset",
+	"checklists_assets_pick_description": "Its checklist of this year shows here, with its history below.",
+	"checklists_assets_components": "Components of {unit}",
+	"checklists_score": "{score}%",
+	"checklists_no_score": "No score",
+	"checklists_start_created": "{number} made: plan it in the schedule.",
+	"checklists_start_opened": "{number} is open already: here's its checklist.",
+	"checklists_assets_none_this_year": "No work order filled in for {year} yet. Start a new checklist.",
+	"checklists_assets_no_template": "{category} has no checklist template, so there's nothing to start.",
+	"checklists_assets_checklist_title": "Work order {kind} {year}",
+	"checklists_assets_order": "Order {number}",
+	"checklists_assets_other_points": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} other point of this unit is hidden",
+				"countPlural=*": "{countText} other points of this unit are hidden"
+			}
+		}
+	],
+	"checklists_assets_show_unit": "Show the whole unit",
+	"checklists_assets_component_score": "Score from its points",
+	"checklists_finalize": "Complete and record",
+	"checklists_office_fill_note": "You fill it in for the engineer, e.g. from a paper form. Saved as you go.",
+	"checklists_office_closed_note": "{number} is closed: this draft can't be filled in any more.",
+	"checklists_history_title": "History per year",
+	"checklists_history_empty": "No work orders for this asset yet.",
+	"checklists_component_history_empty": "No scores for this component yet.",
+	"checklists_score_source_checklist": "Checklist on {order}",
+	"checklists_score_source_office": "Recorded in the office",
+	"checklists_score_source_unknown": "Checklist",
+	"checklists_assets_component_of": "Component of {unit}"
 }

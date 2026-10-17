@@ -51,7 +51,12 @@ async function insertCondition(
 	tx: Transaction,
 	unit: Unit,
 	input: ConditionInput,
-	by: { source: ConditionSource; orderId?: number; engineerId?: number; component?: Part },
+	by: {
+		source: ConditionSource;
+		orderId?: number;
+		engineerId?: number | null;
+		component?: Part;
+	},
 ) {
 	const tenant = currentTenant();
 	const advice = input.advice.trim() || null;
@@ -184,7 +189,7 @@ async function checkedComponents(tx: Transaction, equipmentId: number) {
 
 /**
  * `checklists.completed`: records the conditions a completed checklist found, in its transaction,
- * on its order, by the engineer who completed it, without advice (which they add after,
+ * on its order, by the engineer who completed it (none when the office did), without advice (which they add after,
  * `adviseFieldCondition()`): the unit's, its score from all the points (`checklistScore()`), and
  * each of its components' whose points it answered, from those points alone. Nothing for a score
  * none of whose points count (all not applicable).

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
@@ -23,6 +24,10 @@
 <PageHeader
 	title={m.checklists_templates_title()}
 	description={m.checklists_templates_description()}
+	breadcrumbs={[
+		{ label: m.checklists_module_name(), href: resolve("/(app)/(modules)/checklists") },
+		{ label: m.checklists_templates_title() },
+	]}
 >
 	{#snippet actions()}
 		{#if data.canManage}

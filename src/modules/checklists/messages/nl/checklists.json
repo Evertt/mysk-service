@@ -1,7 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"checklists_module_name": "Checklists",
-	"checklists_module_description": "Vaste checklists om elk soort apparaat mee te keuren en te onderhouden, per norm.",
+	"checklists_module_name": "Werkbonnen",
+	"checklists_module_description": "Per apparaat een vaste checklist voor keuring en onderhoud, elk jaar opnieuw, met de historie; en de sjablonen waarmee ze gemaakt worden, per norm.",
 	"checklists_templates_title": "Checklistsjablonen",
 	"checklists_templates_description": "De checklists waarmee je monteurs apparaten keuren en onderhouden, per apparatuurcategorie.",
 	"checklists_add_template": "Sjabloon toevoegen",
@@ -253,5 +253,79 @@
 	"checklists_print_serial": "Serienummer",
 	"checklists_print_location": "Locatie",
 	"checklists_print_outcome": "Uitkomst",
-	"checklists_client_order_description": "Wat de monteur per apparaat heeft gecontroleerd, en wat er is gevonden."
+	"checklists_client_order_description": "Wat de monteur per apparaat heeft gecontroleerd, en wat er is gevonden.",
+	"checklists_office_order_closed": "{number} is afgesloten: de checklists kun je niet meer wijzigen.",
+	"checklists_by_office": "{name} (kantoor)",
+	"checklists_the_office": "het kantoor",
+	"checklists_start_no_template": "{unit} heeft geen checklistsjabloon: de categorie heeft er geen.",
+	"checklists_start_description": "{kind} {year}",
+	"checklists_component_not_found": "Onderdeel niet gevonden",
+	"checklists_assets_title": "Digitale checkpoint-werkbon",
+	"checklists_assets_intro": "Per asset een vaste checklist voor keuring en onderhoud. Elk jaar start een nieuwe lijst; eerdere bonnen blijven bewaard.",
+	"checklists_assets_templates": "Sjablonen",
+	"checklists_assets_search": "Zoek asset…",
+	"checklists_assets_search_label": "Assets zoeken",
+	"checklists_assets_customer_all": "Alle klanten",
+	"checklists_assets_customer_label": "Klant",
+	"checklists_assets_year_label": "Dit jaar",
+	"checklists_assets_year_all": "Alle",
+	"checklists_year_done": "Afgerond",
+	"checklists_year_open": "Open",
+	"checklists_year_none": "Nog niet gestart",
+	"checklists_year_badge_done": "{year} ✓",
+	"checklists_year_badge_open": "{year} open",
+	"checklists_assets_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} asset",
+				"countPlural=*": "{countText} assets"
+			}
+		}
+	],
+	"checklists_assets_empty_title": "Geen assets gevonden",
+	"checklists_assets_empty_description": "Hier staan de apparaten waarvan de categorie een checklistsjabloon heeft. Probeer een andere zoekterm of filter.",
+	"checklists_assets_loading_more": "Meer laden…",
+	"checklists_assets_pick_title": "Kies een asset",
+	"checklists_assets_pick_description": "Hier zie je de checklist van dit jaar, met de historie eronder.",
+	"checklists_assets_components": "Onderdelen van {unit}",
+	"checklists_score": "{score}%",
+	"checklists_no_score": "Geen score",
+	"checklists_start_created": "{number} aangemaakt: plan hem in op de planning.",
+	"checklists_start_opened": "{number} staat al open: hier is de checklist.",
+	"checklists_assets_none_this_year": "Voor {year} is nog geen werkbon ingevuld. Start een nieuwe checklist.",
+	"checklists_assets_no_template": "{category} heeft geen checklistsjabloon: er valt niets te starten.",
+	"checklists_assets_checklist_title": "Werkbon {kind} {year}",
+	"checklists_assets_order": "Opdracht {number}",
+	"checklists_assets_other_points": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} ander punt van dit apparaat is verborgen",
+				"countPlural=*": "{countText} andere punten van dit apparaat zijn verborgen"
+			}
+		}
+	],
+	"checklists_assets_show_unit": "Toon het hele apparaat",
+	"checklists_assets_component_score": "Score uit de punten",
+	"checklists_finalize": "Afronden & vastleggen",
+	"checklists_office_fill_note": "Je vult in namens de monteur, bijvoorbeeld van een papieren werkbon. Wordt meteen opgeslagen.",
+	"checklists_office_closed_note": "{number} is afgesloten: dit concept kun je niet meer invullen.",
+	"checklists_history_title": "Historie per jaar",
+	"checklists_history_empty": "Nog geen werkbonnen voor deze asset.",
+	"checklists_component_history_empty": "Nog geen scores voor dit onderdeel.",
+	"checklists_score_source_checklist": "Checklist op {order}",
+	"checklists_score_source_office": "Vastgelegd op kantoor",
+	"checklists_score_source_unknown": "Checklist",
+	"checklists_assets_component_of": "Onderdeel van {unit}"
 }

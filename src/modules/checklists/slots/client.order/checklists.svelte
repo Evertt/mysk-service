@@ -85,7 +85,9 @@
 					<p class="text-xs text-muted-foreground tabular-nums">
 						{#if checklist.status === "completed" && checklist.completedAt}
 							{m.checklists_completed_by({
-								name: checklist.engineer?.split(" ")[0] ?? m.checklists_someone(),
+								name:
+									checklist.engineer?.split(" ")[0] ??
+									(checklist.office ? m.checklists_the_office() : m.checklists_someone()),
 								date: formatDateTime(checklist.completedAt),
 							})}
 						{:else}

@@ -246,3 +246,70 @@ export function inspectionStatus(
 	const expiring = latest.validUntil.subtract({ days: EXPIRING_DAYS });
 	return Temporal.PlainDate.compare(today, expiring) >= 0 ? "expiring" : "valid";
 }
+
+// --- The work orders page: a unit's checklist of this year ------------------------------------
+
+/**
+ * Where a unit stands this year ("2026 ✓", "2026 open"): `done` once a checklist of it was
+ * completed this year, else `open` while a draft of it is on an open order, else `none` (worked out
+ * in SQL, `yearStateSql()` in `server/assets.ts`).
+ */
+export const yearStates = ["done", "open", "none"] as const;
+export type YearState = (typeof yearStates)[number];
+
+/**
+ * A year's first and last moment (exclusive) in `timeZone`: what "completed this year" counts
+ * between.
+ */
+export function yearBounds(year: number, timeZone: string) {
+	const start = Temporal.PlainDate.from({ year, month: 1, day: 1 });
+	return {
+		start: start.toZonedDateTime(timeZone).toInstant(),
+		end: start.add({ years: 1 }).toZonedDateTime(timeZone).toInstant(),
+	};
+}
+
+/** A unit's checklist as the work orders page picks the one it shows. */
+export interface YearChecklist {
+	id: number;
+	status: ChecklistStatus;
+	/** Whether its order is still open (see `isOpenOrder()`): a draft can be filled in then. */
+	open: boolean;
+	/** The year it was completed in, in the user's time zone; none for a draft. */
+	completedYear: number | null;
+}
+
+/**
+ * The checklist of a unit that the work orders page shows for `year`, of its checklists newest
+ * first: the one asked for (`wanted`, e.g. from its history) if it's the unit's; else its newest
+ * draft on an open order; else the newest completed this year; else none (the page offers to start
+ * one).
+ */
+export function shownChecklist<Checklist extends YearChecklist>(
+	checklists: readonly Checklist[],
+	year: number,
+	wanted?: number,
+): Checklist | null {
+	return (
+		checklists.find((checklist) => checklist.id === wanted) ??
+		checklists.find((checklist) => checklist.status === "draft" && checklist.open) ??
+		checklists.find(
+			(checklist) => checklist.status === "completed" && checklist.completedYear === year,
+		) ??
+		null
+	);
+}
+
+/**
+ * A checklist's points narrowed to a component's (those copied from the template points that check
+ * it), in their order, and how many of the others there are, which the page hides.
+ */
+export function componentPoints<Point extends { templateItemId: number | null }>(
+	points: readonly Point[],
+	templateItemIds: readonly number[],
+) {
+	const own = points.filter(
+		(point) => point.templateItemId !== null && templateItemIds.includes(point.templateItemId),
+	);
+	return { points: own, others: points.length - own.length };
+}

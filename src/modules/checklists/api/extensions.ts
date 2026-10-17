@@ -3,6 +3,8 @@
  * `#lib/extensions/define.ts`). A module that only enhances checklists may import this file, and
  * gets what it needs from the slot's props: never from checklists' tables.
  */
+import type { SQL } from "drizzle-orm";
+
 import { defineCollector, defineSaveHook, defineSlot } from "#lib/extensions/define.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 
@@ -76,14 +78,15 @@ export interface ChecklistCompleting {
 		kind: ChecklistKind;
 		orderId: number;
 		equipmentId: number;
-		/** The engineer who completes it. */
-		engineerId: number;
+		/** The engineer who completes it; none when the office completes it on their behalf. */
+		engineerId: number | null;
 	};
 	points: CompletedPoint[];
 }
 
 /**
- * When an engineer completes a checklist ("na elke afgeronde werkbon"), in its transaction: e.g. the
+ * When a checklist is completed ("na elke afgeronde werkbon"), by an engineer in the field or by the
+ * office on their behalf, in its transaction: e.g. the
  * condition module records the unit's condition, its score worked out from the points
  * (`checklistScore()`), and its components'. A module that answers problems refuses the
  * completion, which rolls it back.
@@ -111,4 +114,62 @@ export interface PointArticle extends UnitPoint {
 export const pointArticles = defineCollector<{ points: readonly UnitPoint[] }, PointArticle[]>(
 	"checklists.pointArticles",
 	{ onError: "skip" },
+);
+
+// --- Components, on the work orders page ------------------------------------------------------
+
+/** A part of a unit whose condition is tracked, e.g. the condition module's component. */
+export interface UnitComponent {
+	id: number;
+	equipmentId: number;
+	/** E.g. `OC-1041`: what the page's URL names it by. */
+	number: string;
+	name: string;
+	/** Its latest score (0–100), if it has one. */
+	score: number | null;
+	/** The template points that check it: the points of a checklist that are its. */
+	templateItemIds: number[];
+}
+
+/**
+ * The components of the units asked about, each unit's in their order: the work orders page lists
+ * them under their unit and narrows a checklist to a component's points. The condition module
+ * answers; without it, units have none. A module that fails is left out.
+ */
+export const unitComponents = defineCollector<{ equipmentIds: readonly number[] }, UnitComponent[]>(
+	"checklists.components",
+	{ onError: "skip" },
+);
+
+/** A score a component got, on its own history. */
+export interface ComponentScore {
+	id: number;
+	score: number;
+	at: Temporal.Instant;
+	/** Its checklist's (completed on an order), or the office's correction. */
+	source: "checklist" | "office";
+	/** The order it was recorded on, if any. */
+	order: string | null;
+	/** Who recorded it. */
+	by: string | null;
+}
+
+/**
+ * The scores of the unit's component `componentId`, newest first (none for a component that isn't
+ * the unit's). The condition module answers; a module that fails is left out.
+ */
+export const componentScores = defineCollector<
+	{ equipmentId: number; componentId: number },
+	ComponentScore[]
+>("checklists.componentScores", { onError: "skip" });
+
+/**
+ * What the work orders page's search finds a unit by besides its own fields: its components'
+ * numbers and names, as SQL text over the `equipment` row of the query it goes in (correlated on
+ * `equipment.id` and its tenant), built per request. Asked at once, as the list's SQL is built; a
+ * module that fails fails the list.
+ */
+export const componentSearch = defineCollector<void, SQL<string | null>>(
+	"checklists.componentSearch",
+	{ onError: "fail", now: true },
 );
