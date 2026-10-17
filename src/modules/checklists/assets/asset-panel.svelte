@@ -14,6 +14,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import { toast } from "svelte-sonner";
 
+	import { type ListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { isOpenOrder } from "#lib/models.ts";
 	import { errorMessage } from "#lib/utils.ts";
@@ -21,21 +22,31 @@
 	import ChecklistHistory from "../detail/checklist-history.svelte";
 	import { checklistLabels } from "../labels.ts";
 	import { type ChecklistKind, checklistKinds, shownChecklist } from "../model.ts";
-	import { getAsset, getAssetFacets, getAssets, startOrder } from "./assets.remote.ts";
+	import type { assetList } from "./asset-list.ts";
+	import {
+		getAsset,
+		getAssetFacets,
+		getAssets,
+		getComponentScores,
+		startOrder,
+	} from "./assets.remote.ts";
 	import ComponentHistory from "./component-history.svelte";
 	import OfficeChecklist from "./office-checklist.svelte";
-	import { pageHref } from "./selection.ts";
+	import { pageHref, type PageUpdates } from "./selection.ts";
 
 	let {
 		serialNumber,
 		componentNumber,
 		checklistId,
+		listQuery,
 	}: {
 		serialNumber: string;
 		/** The component selected, by its number; none for the unit as a whole. */
 		componentNumber: string | null;
 		/** The checklist asked for (from its history), if any. */
 		checklistId?: number;
+		/** The list's query beside it, whose rows and counts a change refreshes. */
+		listQuery: ListQuery<typeof assetList.columns>;
 	} = $props();
 
 	const data = $derived(await getAsset(serialNumber));
@@ -56,15 +67,19 @@
 			.join(" · "),
 	);
 
+	/** The queries a change on the page refreshes: those it shows, by their arguments. */
+	const updates = (): PageUpdates => [
+		getAssets(listQuery),
+		getAssetFacets(whereOf(listQuery)),
+		getAsset(serialNumber),
+		...(component ? [getComponentScores({ serialNumber, componentId: component.id })] : []),
+	];
+
 	let starting = $state<ChecklistKind>();
 	async function start(kind: ChecklistKind) {
 		starting = kind;
 		try {
-			const started = await startOrder({ serialNumber, kind }).updates(
-				getAssets,
-				getAssetFacets,
-				getAsset(serialNumber),
-			);
+			const started = await startOrder({ serialNumber, kind }).updates(...updates());
 			toast.success(
 				started.created
 					? m.checklists_start_created({ number: started.number })
@@ -158,7 +173,7 @@
 	{#if shown}
 		<!-- Anew for another checklist, and once it's completed: it shows what's on record then. -->
 		{#key `${shown.id}-${shown.status}`}
-			<OfficeChecklist checklist={shown} {component} />
+			<OfficeChecklist checklist={shown} {component} {updates} />
 		{/key}
 	{/if}
 

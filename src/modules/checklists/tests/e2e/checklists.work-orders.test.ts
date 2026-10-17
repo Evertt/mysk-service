@@ -280,7 +280,8 @@ describe("starting and filling in a unit's inspection", () => {
 		expect(
 			await value(
 				`select count(*) from "order" o join order_unit u on u.order_id = o.id
-				 join equipment e on e.id = u.equipment_id where e.serial_number = ?`,
+				 join equipment e on e.id = u.equipment_id
+				 where e.serial_number = ? and o.type = 'inspection' and o.status = 'quote'`,
 				[serial],
 			),
 		).toBe(1);
@@ -365,6 +366,7 @@ describe("around the page", () => {
 		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
 		await page().locator("main").getByRole("link", { name: "Work orders" }).click();
 		await page().waitForURL((url) => url.pathname === "/checklists");
+		expect(await page().locator("[data-asset-list]").count()).toBe(1);
 	});
 
 	test("on a phone, the list and the asset stack, without scrolling sideways", async () => {

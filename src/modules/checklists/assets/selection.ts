@@ -6,6 +6,14 @@
  */
 import { resolve } from "$app/paths";
 
+import type { officeComplete } from "./assets.remote.ts";
+
+/**
+ * The page's queries a change asks to have refreshed with it (a command's `updates`): the ones it
+ * shows, by their arguments, as the server refreshes only so many of each.
+ */
+export type PageUpdates = Parameters<ReturnType<typeof officeComplete>["updates"]>;
+
 /** The page's link with `changes` to the parameters of `url` (`null` removes one). */
 export function pageHref(url: URL, changes: Record<string, string | null>) {
 	const params = new URLSearchParams(url.searchParams);

@@ -36,15 +36,12 @@
 	} from "../model.ts";
 	import OutcomeBadge from "../ui/outcome-badge.svelte";
 	import {
-		getAsset,
-		getAssetFacets,
-		getAssets,
-		getComponentScores,
 		officeAnswer,
 		officeComplete,
 		officeRemarkForCustomer,
 		officeRemarkOn,
 	} from "./assets.remote.ts";
+	import type { PageUpdates } from "./selection.ts";
 
 	interface Point {
 		id: number;
@@ -58,6 +55,7 @@
 	let {
 		checklist,
 		component,
+		updates,
 	}: {
 		checklist: {
 			id: number;
@@ -76,15 +74,15 @@
 		};
 		/** The component it's narrowed to, if any. */
 		component?: UnitComponent;
+		/** The page's queries a completion changes: the list's badge, the unit's checklists, the scores. */
+		updates: () => PageUpdates;
 	} = $props();
 
 	const draft = checklistDraft(() => checklist, {
 		answer: officeAnswer,
 		remarkOn: officeRemarkOn,
 		remarkForCustomer: officeRemarkForCustomer,
-		// The page shows the new state: the list's badge, the unit's checklists, the scores.
-		complete: (input) =>
-			officeComplete(input).updates(getAssets, getAssetFacets, getAsset, getComponentScores),
+		complete: (input) => officeComplete(input).updates(...updates()),
 	});
 
 	const open = $derived(isOpenOrder(checklist.order.status));

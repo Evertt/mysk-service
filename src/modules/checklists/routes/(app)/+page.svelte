@@ -48,7 +48,10 @@
 	<div class="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
 		<AssetList assets={await assets} facets={await facets} {year} />
 		{#if serialNumber}
-			<AssetPanel {serialNumber} {componentNumber} {checklistId} />
+			<!-- Anew for another unit: its checklist's answers are kept in the panel as they're given. -->
+			{#key serialNumber}
+				<AssetPanel {serialNumber} {componentNumber} {checklistId} listQuery={query} />
+			{/key}
 		{:else}
 			<Empty.Root class="border" data-asset-pick>
 				<Empty.Header>
