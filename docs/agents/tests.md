@@ -44,7 +44,7 @@ core and for each module.
   and the `*.test.ts` of `src/tests/e2e/` and the modules' `tests/e2e/` (the `e2e` project). Nothing
   but tests imports from a `tests/` folder.
 
-- A change to a section's behaviour gets an e2e test in that section's file
+- A change to what a section's pages do gets an e2e test in that section's file
   (`src/tests/e2e/<section>.test.ts`, or `<section>.<aspect>.test.ts` where a long section is split
   by aspect, e.g. `orders.bulk.test.ts`, `orders.tenancy.test.ts`; shared helpers go in
   `<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
@@ -53,10 +53,19 @@ core and for each module.
   hundred lines: the longest file sets the e2e wall-clock time. A module's e2e tests are in its
   own folder (`src/modules/<id>/tests/e2e/<section>.test.ts` and `<section>.<aspect>.test.ts`, with
   the helpers they share in `helpers.ts`, importing `#e2e/app.ts`) and cover a tenant that
-  has the module, one that hasn't (its pages and endpoints are 404s, the sidebar lacks it, the
-  slots are empty, its remote queries are refused) and tenant isolation.
-- Tenant isolation is part of every section's tests: South can't see or change North's records,
-  including by tampering with hidden ids (`app.expectingErrors`).
+  has the module, one that hasn't (one of its pages is a 404 and the sidebar lacks it; that its
+  endpoints, slots and remote functions refuse such a tenant is the generic module-gate spec's)
+  and tenant isolation.
+- What a section's server code decides (its rules and calculations, what its queries and lists
+  return, how they filter and sort, what gets logged, what it refuses) is tested in a server spec
+  (`*.spec.ts` in a `tests/unit/**/server/` folder), which runs it as a tenant on a seeded database
+  in a fraction of an e2e test's time. Its e2e test then only checks that the page shows and sends
+  it; don't test the same rule through the UI again.
+- Tenant isolation is covered for every section and module: South can't see or change North's
+  records, also by tampering with ids. In e2e, one page that's a 404 for the other tenant and one
+  form submitted with a tampered hidden id (`app.expectingErrors`); the rest (each remote function
+  refusing another tenant's ids, lists and queries showing only the tenant's rows) in the
+  section's server spec.
 - Pure helpers (validation, formatting, domain rules, form schemas, table columns) get unit tests
   (`*.spec.ts`) in `tests/unit/`.
 - Shared components get component tests (`*.svelte.spec.ts` in `tests/unit/`, rendered with

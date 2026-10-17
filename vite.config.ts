@@ -283,6 +283,11 @@ export default defineConfig({
 					name: "e2e",
 					environment: "node",
 					include: ["src/tests/e2e/**/*.test.ts", "src/modules/*/tests/e2e/**/*.test.ts"],
+					// Skipped unless asked for (`REPRO_SKELETONS=1`), so not even collected otherwise.
+					exclude: [
+						"**/node_modules/**",
+						...(process.env.REPRO_SKELETONS ? [] : ["src/tests/e2e/skeletons.repro.test.ts"]),
+					],
 					globalSetup: ["src/tests/e2e/global-setup.ts"],
 					setupFiles: ["./src/tests/unit/temporal-setup.ts"],
 					// One app and database per worker. `E2E_DEV=1` has a single dev server, which the

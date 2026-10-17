@@ -117,56 +117,61 @@ describe("on a full page load", () => {
 		}
 	});
 
-	test("on a slow connection and computer, it shows until the page is interactive", async () => {
-		const page = await app.anotherTab();
-		try {
-			const cdp = await page.context().newCDPSession(page);
-			await cdp.send("Network.enable");
-			await cdp.send("Network.emulateNetworkConditions", {
-				offline: false,
-				latency: 150,
-				downloadThroughput: (1_500 * 1024) / 8,
-				uploadThroughput: (750 * 1024) / 8,
-			});
-			await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+	// Throttles the network and CPU for a while: run on demand, with `E2E_SLOW=1`.
+	test.skipIf(!process.env.E2E_SLOW)(
+		"on a slow connection and computer, it shows until the page is interactive",
+		async () => {
+			const page = await app.anotherTab();
+			try {
+				const cdp = await page.context().newCDPSession(page);
+				await cdp.send("Network.enable");
+				await cdp.send("Network.emulateNetworkConditions", {
+					offline: false,
+					latency: 150,
+					downloadThroughput: (1_500 * 1024) / 8,
+					uploadThroughput: (750 * 1024) / 8,
+				});
+				await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
-			await page.goto(new URL("/orders", baseURL).href, { waitUntil: "commit" });
-			// It covers the page from the first moment it's there, so the page never shows before it's
-			// interactive…
-			await page.waitForFunction(() => !!document.getElementById("splash"), undefined, {
-				polling: 10,
-				timeout: 15_000,
-			});
-			expect(
-				await page.evaluate(() => {
-					const element = document.getElementById("splash")!;
-					const hydrated = "hydrated" in document.documentElement.dataset;
-					return hydrated || getComputedStyle(element).opacity === "1";
-				}),
-			).toBe(true);
-			// …and its logo and bar fade in after a moment (a fast load never sees them), while the
-			// app loads…
-			await page.waitForFunction(
-				() => {
-					const brand = document.querySelector("#splash .splash-brand");
-					return (
-						!!brand &&
-						!("hydrated" in document.documentElement.dataset) &&
-						getComputedStyle(brand).opacity === "1"
-					);
-				},
-				undefined,
-				{ polling: 50, timeout: 15_000 },
-			);
-			expect(await page.locator("#app").getAttribute("aria-busy")).toBe("true");
+				await page.goto(new URL("/orders", baseURL).href, { waitUntil: "commit" });
+				// It covers the page from the first moment it's there, so the page never shows before it's
+				// interactive…
+				await page.waitForFunction(() => !!document.getElementById("splash"), undefined, {
+					polling: 10,
+					timeout: 15_000,
+				});
+				expect(
+					await page.evaluate(() => {
+						const element = document.getElementById("splash")!;
+						const hydrated = "hydrated" in document.documentElement.dataset;
+						return hydrated || getComputedStyle(element).opacity === "1";
+					}),
+				).toBe(true);
+				// …and its logo and bar fade in after a moment (a fast load never sees them), while the
+				// app loads…
+				await page.waitForFunction(
+					() => {
+						const brand = document.querySelector("#splash .splash-brand");
+						return (
+							!!brand &&
+							!("hydrated" in document.documentElement.dataset) &&
+							getComputedStyle(brand).opacity === "1"
+						);
+					},
+					undefined,
+					{ polling: 50, timeout: 15_000 },
+				);
+				expect(await page.locator("#app").getAttribute("aria-busy")).toBe("true");
 
-			// …and goes once it's interactive.
-			await page.locator("html[data-hydrated]").waitFor({ state: "attached", timeout: 20_000 });
-			await splash(page).waitFor({ state: "detached" });
-			expect(await splashOpacity(page)).toBeNull();
-			await cdp.detach();
-		} finally {
-			await page.context().close();
-		}
-	}, 45_000);
+				// …and goes once it's interactive.
+				await page.locator("html[data-hydrated]").waitFor({ state: "attached", timeout: 20_000 });
+				await splash(page).waitFor({ state: "detached" });
+				expect(await splashOpacity(page)).toBeNull();
+				await cdp.detach();
+			} finally {
+				await page.context().close();
+			}
+		},
+		45_000,
+	);
 });
