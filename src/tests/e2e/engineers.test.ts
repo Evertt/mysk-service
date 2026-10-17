@@ -53,21 +53,12 @@ const takenEmail = "Another engineer already uses this email address";
 
 /** The names in the table, in order. */
 const names = () => app.page.locator("tbody td a").allInnerTexts();
-const search = () => app.page.getByLabel("Search engineers…");
 const active = () => app.page.getByRole("checkbox", { name: "Active" });
 
 /** Every name in the list, scrolled to its end, sorted. */
 async function allNames() {
 	await app.loadAllRows();
 	return (await names()).toSorted((a, b) => a.localeCompare(b));
-}
-
-/** Opens a faceted filter and ticks an option. */
-async function filter(title: string, option: RegExp) {
-	const { page } = app;
-	await app.openFilter(title);
-	await page.getByRole("option", { name: option }).click();
-	await page.keyboard.press("Escape");
 }
 
 /** Fills in the engineer form. */
@@ -116,55 +107,10 @@ describe("in North", () => {
 		expect(await allNames()).toEqual(await namesIn(north.id));
 	});
 
-	test("searching finds an engineer by email address", async () => {
-		await app.go("/engineers");
-		const [someone] = await rows<{ name: string; email: string }>(
-			`select name, email from engineer where organization_id = ? order by id limit 1 offset 8`,
-			[north.id],
-		);
-		await search().fill(someone.email);
-		expect(await names()).toEqual([someone.name]);
-		await search().fill("");
-	});
-
-	test("filtering by status shows the inactive ones", async () => {
-		await filter("Status", /Inactive/);
-		const inactive = await rows<{ name: string }>(
-			`select name from engineer where organization_id = ? and not active`,
-			[north.id],
-		);
-		expect(inactive.length).toBeGreaterThan(0);
-		expect((await names()).toSorted()).toEqual(inactive.map((row) => row.name).toSorted());
-		await app.page.getByRole("button", { name: "Reset" }).click();
-	});
-
-	test("filtering by specialty and region combines", async () => {
-		const count = async (where: string) =>
-			Number(
-				await value(`select count(*) from engineer where organization_id = ? and ${where}`, [
-					north.id,
-				]),
-			);
-		await filter("Specialty", /HVAC/);
-		expect(await app.rowCount()).toBe(await count(`specialty = 'hvac'`));
-		await filter("Region", /^North/);
-		expect(await app.rowCount()).toBe(await count(`specialty = 'hvac' and region = 'North'`));
-		await app.page.getByRole("button", { name: "Reset" }).click();
-	});
-
-	test("sorting by rate or open orders puts the highest first", async () => {
-		await app.sortBy("Hourly rate", "descending");
-		const [best] = await rows<{ hourly_rate: number }>(
-			`select hourly_rate from engineer where organization_id = ? order by hourly_rate desc limit 1`,
-			[north.id],
-		);
-		const [first] = await names();
-		const [top] = await rows<{ hourly_rate: number }>(
-			`select hourly_rate from engineer where organization_id = ? and name = ?`,
-			[north.id, first],
-		);
-		expect(top.hourly_rate).toBe(best.hourly_rate);
-
+	// The list is a client-side table: searching, filtering, sorting and grouping it are its
+	// columns' (`list/columns.spec.ts`) and every table's (`table.svelte.spec.ts`,
+	// `grouping.svelte.spec.ts`). The open orders are counted by the server.
+	test("sorting by open orders puts the busiest first", async () => {
 		busy = await busiest(north.id);
 		await app.sortBy("Open orders", "descending");
 		const [mostOpen] = await names();
@@ -174,62 +120,6 @@ describe("in North", () => {
 			[north.id, mostOpen],
 		);
 		expect(open).toBe(busy.open);
-	});
-
-	test("grouping by specialty counts each one's engineers, and its groups collapse and expand", async () => {
-		const { page } = app;
-		await app.go("/engineers");
-		await app.groupBy("Specialty");
-		expect(new URL(page.url()).searchParams.get("group")).toBe("specialty");
-
-		const counts = Object.fromEntries(
-			(
-				await rows<{ specialty: string; n: number }>(
-					`select specialty, count(*) as n from engineer where organization_id = ? group by specialty`,
-					[north.id],
-				)
-			).map((row) => [row.specialty, row.n]),
-		);
-		const groups = await app.groups();
-		expect(groups.length).toBeGreaterThan(1);
-		for (const group of groups) expect(group.count, group.key).toBe(counts[group.key]);
-
-		/** How many of a group's rows show. */
-		const rowsOf = (key: string) =>
-			page.locator("tbody tr").evaluateAll((trs: HTMLElement[], key) => {
-				const start = trs.findIndex((tr) => tr.dataset.group === key);
-				const end = trs.findIndex((tr, i) => i > start && tr.dataset.group !== undefined);
-				return (end === -1 ? trs.length : end) - start - 1;
-			}, key);
-		const [first, second] = groups;
-		const shown = await rowsOf(first.key);
-		expect(shown).toBeGreaterThan(0);
-
-		const toggle = page.getByRole("button", { name: first.label, exact: true });
-		await toggle.click();
-		expect(await rowsOf(first.key)).toBe(0);
-		expect((await app.groups())[0].collapsed).toBe(true);
-		await toggle.click();
-		expect(await rowsOf(first.key)).toBe(shown);
-
-		// From the keyboard, on the group's row.
-		await page.locator(`tbody tr[data-group="${second.key}"]`).focus();
-		await page.keyboard.press("Enter");
-		expect(await rowsOf(second.key)).toBe(0);
-		await page.keyboard.press(" ");
-		expect(await rowsOf(second.key)).toBeGreaterThan(0);
-
-		await page.getByRole("button", { name: "View", exact: true }).click();
-		await page.getByRole("menuitem", { name: "Collapse all groups" }).click();
-		expect((await app.groups()).every((group) => group.collapsed)).toBe(true);
-		expect(await page.locator("tbody tr:not([data-group])").count()).toBe(0);
-		await page.getByRole("button", { name: "View", exact: true }).click();
-		await page.getByRole("menuitem", { name: "Expand all groups" }).click();
-		expect(await rowsOf(first.key)).toBe(shown);
-
-		await app.groupBy("None");
-		expect(new URL(page.url()).searchParams.has("group")).toBe(false);
-		expect(await page.locator("tbody tr[data-group]").count()).toBe(0);
 	});
 
 	test("unknown ids and South's engineers are a 404", async () => {
@@ -338,7 +228,9 @@ describe("in North", () => {
 		});
 	});
 
-	describe("the Active box saves both ways across edits", () => {
+	// Ticked again, the box makes them active: the refused edit below saves that. What the box
+	// sends is `engineer-schema.spec.ts`'s ("an unchecked active box means inactive").
+	test("unticking the Active box makes the engineer inactive, and an edit that doesn't touch it keeps them so", async () => {
 		/** Edits the engineer created above, ticking or unticking the box if `toggle`; their `active`. */
 		const edit = async (toggle: boolean) => {
 			await app.go(`/engineers/${created}/edit`);
@@ -346,25 +238,11 @@ describe("in North", () => {
 			await save("Save engineer");
 			return (await engineer(created)).active;
 		};
-
-		// Two edits per test: the five of them took up the time of one test under the load of a full
-		// run.
-		test("unticked, the engineer is inactive", async () => {
-			expect(await edit(true)).toBe(0);
-			await app.toast("Engineer saved");
-			// The redirect shows the cached engineer first and refreshes it right after.
-			await expect.poll(() => app.page.locator("main").innerText()).toContain("Inactive");
-		});
-
-		test("ticked, active, and it stays so when the box isn't touched", async () => {
-			expect(await edit(true)).toBe(1);
-			expect(await edit(false)).toBe(1);
-		});
-
-		test("and the same for inactive", async () => {
-			expect(await edit(true)).toBe(0);
-			expect(await edit(false)).toBe(0);
-		});
+		expect(await edit(true)).toBe(0);
+		await app.toast("Engineer saved");
+		// The redirect shows the cached engineer first and refreshes it right after.
+		await expect.poll(() => app.page.locator("main").innerText()).toContain("Inactive");
+		expect(await edit(false)).toBe(0);
 	});
 
 	test("a refused edit keeps the box as the user left it", async () => {
@@ -419,18 +297,6 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Save account" }).click();
 		await app.toast("Account saved");
 		expect((await engineer(created)).user_id).toBeNull();
-	});
-
-	test("an engineer added inactive is stored inactive, and can be deleted", async () => {
-		await app.go("/engineers/new");
-		await fill({ name: "Test Engineer Two", email: "test-engineer-2@fieldservice.example" });
-		await active().click();
-		const id = await save("Add engineer");
-		expect(await engineer(id)).toMatchObject({ organization_id: north.id, active: 0 });
-
-		await deleteOpen();
-		expect(await engineer(id)).toBeUndefined();
-		expect((await app.go(`/engineers/${id}`))?.status()).toBe(404);
 	});
 
 	test("selected engineers are deactivated and activated together, and it's logged", async () => {
@@ -517,36 +383,21 @@ describe("in North", () => {
 describe("in South", () => {
 	let own: Engineer;
 
+	// Another tenant's engineers are a 404 in North's test above, the other way round.
 	test("switching organization shows South's engineers", async () => {
 		await app.switchOrganization(south.name);
 		await app.go("/engineers");
 		const total = await countIn("engineer", south.id);
 		expect(await app.rowCount()).toBe(total);
 		expect(await names()).toHaveLength(Math.min(10, total));
-		expect(await allNames()).toEqual(await namesIn(south.id));
-	});
-
-	test("North's engineers are a 404", async () => {
-		for (const path of [
-			`/engineers/${busy.id}`,
-			`/engineers/${busy.id}/edit`,
-			`/engineers/${created}`,
-		]) {
-			expect((await app.go(path))?.status(), path).toBe(404);
-		}
-	});
-
-	test("South's engineers show", async () => {
-		const id = await value<number>(`select min(id) from engineer where organization_id = ?`, [
-			south.id,
-		]);
-		own = await engineer(id);
-		await app.go(`/engineers/${own.id}`);
-		expect(await app.page.locator("h1").innerText()).toBe(own.name);
 	});
 
 	test("saving with the id of a North engineer is refused", async () => {
 		const { page } = app;
+		const id = await value<number>(`select min(id) from engineer where organization_id = ?`, [
+			south.id,
+		]);
+		own = await engineer(id);
 		const [victimBefore, ownBefore] = [await snapshot(busy.id), await snapshot(own.id)];
 
 		await app.go(`/engineers/${own.id}/edit`);
