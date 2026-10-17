@@ -1,7 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"dashboard_title": "Dashboard",
-	"dashboard_description": "How service operations are doing right now.",
 	"dashboard_open_orders": "Open orders",
 	"dashboard_without_engineer": "{count} without an engineer",
 	"dashboard_urgent": "Urgent",
@@ -60,5 +59,11 @@
 	"dashboard_column_scheduled": "Scheduled",
 	"dashboard_awaiting_acceptance": "Awaiting acceptance",
 	"dashboard_awaiting_acceptance_description": "Reported by customers in their portal",
-	"dashboard_awaiting_acceptance_show": "Show"
+	"dashboard_awaiting_acceptance_show": "Show",
+	"dashboard_greeting_morning": "Good morning, {name}",
+	"dashboard_greeting_afternoon": "Good afternoon, {name}",
+	"dashboard_greeting_evening": "Good evening, {name}",
+	"dashboard_greeting_line": "Here's what's happening today.",
+	"dashboard_trend_made": "{count} new in the last 7 days ({change})",
+	"dashboard_trend_revenue": "{change} on the 30 days before"
 }

@@ -257,7 +257,7 @@ describe("in South, which doesn't have the module", () => {
 		expect(await card().count()).toBe(0);
 		expect(await app.page.locator("[data-unit-components]").count()).toBe(0);
 		await app.go("/");
-		await app.page.getByRole("heading", { name: "Dashboard" }).waitFor();
+		await app.page.locator("[data-awaiting-link]").waitFor();
 		expect(await app.page.locator("[data-condition-stat]").count()).toBe(0);
 	});
 

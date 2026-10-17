@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, min, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, lt, min, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
@@ -17,10 +17,15 @@ import {
 	revenuePerMonth,
 } from "./dashboard-charts.ts";
 
-/** Headline numbers and upcoming work for the dashboard. */
+/**
+ * Headline numbers and upcoming work for the dashboard, and what the tiles compare with the period
+ * before (`trends`): the orders made in the last 7 days against the 7 before, and the revenue of the
+ * last 30 days against the 30 before.
+ */
 export const getDashboard = forMembers.query(async () => {
 	const now = Temporal.Now.instant();
-	const monthAgo = now.subtract({ hours: 30 * 24 });
+	const daysAgo = (days: number) => now.subtract({ hours: days * 24 });
+	const monthAgo = daysAgo(30);
 
 	const [open] = await db
 		.select({
@@ -36,13 +41,15 @@ export const getDashboard = forMembers.query(async () => {
 		.from(order)
 		.where(and(inTenant(order), eq(order.status, "awaiting_acceptance")));
 
-	// Work completed in the last 30 days, priced like everywhere else.
+	// Work completed in the last 60 days, priced like everywhere else: the last 30 days' is the
+	// tile's, the 30 before its trend's.
 	const done = await db
 		.select({
 			id: order.id,
 			type: order.type,
 			status: order.status,
 			createdAt: order.createdAt,
+			completedAt: order.completedAt,
 			laborHours: order.laborHours,
 			hourlyRate: engineer.hourlyRate,
 		})
@@ -52,14 +59,30 @@ export const getDashboard = forMembers.query(async () => {
 			and(
 				inTenant(order),
 				inList(order.status, doneOrderStatuses),
-				gte(order.completedAt, monthAgo),
+				gte(order.completedAt, daysAgo(60)),
 			),
 		);
 	const prices = await priceOrders(await withUnitIds(done));
-	const revenue = {
-		total: prices.reduce((sum, price) => sum + price.total, 0),
-		orders: done.length,
+	const revenue = { total: 0, orders: 0, previous: 0 };
+	for (const [i, row] of done.entries()) {
+		if (Temporal.Instant.compare(row.completedAt!, monthAgo) >= 0) {
+			revenue.total += prices[i].total;
+			revenue.orders++;
+		} else revenue.previous += prices[i].total;
+	}
+
+	// The orders made in the last 7 days, and in the 7 before.
+	const madeBetween = async (from: Temporal.Instant, to?: Temporal.Instant) => {
+		const [made] = await db
+			.select({ total: count() })
+			.from(order)
+			.where(and(inTenant(order), gte(order.createdAt, from), to && lt(order.createdAt, to)));
+		return made.total;
 	};
+	const [madeThisWeek, madeWeekBefore] = await Promise.all([
+		madeBetween(daysAgo(7)),
+		madeBetween(daysAgo(14), daysAgo(7)),
+	]);
 
 	const [fleet] = await db
 		.select({
@@ -87,7 +110,14 @@ export const getDashboard = forMembers.query(async () => {
 		.limit(6)
 		.then(withFirstUnit);
 
-	return { open, awaiting: awaiting.total, revenue, fleet, upcoming };
+	return {
+		open,
+		awaiting: awaiting.total,
+		revenue,
+		made: { week: madeThisWeek, weekBefore: madeWeekBefore },
+		fleet,
+		upcoming,
+	};
 });
 
 /**

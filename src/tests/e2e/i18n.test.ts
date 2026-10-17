@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { baseURL, hydrated, organizations, useApp, users, quiet } from "./app.ts";
+import { baseURL, hydrated, organizations, quiet, statTile, useApp, users } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -81,16 +81,16 @@ describe("in Dutch", () => {
 		for (const name of ["Dashboard", "Opdrachten", "Planning", "Klanten", "Servicecontracten"]) {
 			expect(await sidebar.getByRole("link", { name }).count(), name).toBe(1);
 		}
-		await page.getByRole("heading", { name: "Dashboard" }).waitFor();
+		await page
+			.getByRole("heading", { level: 1, name: /^(Goedemorgen|Goedemiddag|Goedenavond), / })
+			.waitFor();
 		expect(await page.getByText("Open opdrachten", { exact: true }).count()).toBe(1);
 		expect(await page.title()).toBe("Dashboard");
 	});
 
 	test("amounts, dates and statuses are formatted the Dutch way", async () => {
 		const { page } = app;
-		const revenue = page
-			.locator('[data-slot="card"]', { hasText: "Omzet, laatste 30 dagen" })
-			.locator('[data-slot="card-title"]');
+		const revenue = statTile(page, "Omzet, laatste 30 dagen");
 		expect(await text(revenue)).toMatch(/^€ \d{1,3}(\.\d{3})*,\d{2}$/);
 
 		const upcoming = page.locator('[data-slot="card"]', { hasText: "Komend werk" });
@@ -129,7 +129,9 @@ describe("in Dutch", () => {
 		await choose("English", "en");
 
 		expect(await language()).toEqual({ html: "en", cookie: "en" });
-		await page.getByRole("heading", { name: "Dashboard" }).waitFor();
+		await page
+			.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), / })
+			.waitFor();
 		expect(
 			await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Orders" }).count(),
 		).toBe(1);
