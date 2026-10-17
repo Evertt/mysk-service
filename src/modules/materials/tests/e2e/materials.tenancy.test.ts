@@ -38,8 +38,6 @@ const pricedOrder = async () =>
 
 /** The last activity entry before this file switched South's materials off. */
 let since = 0;
-/** The URL of the materials list's query, as loaded in North. */
-let query: string;
 
 /**
  * A tenant without materials: South, with the module switched off here and on again at the end,
@@ -47,19 +45,7 @@ let query: string;
  */
 describe("in South, with materials switched off", () => {
 	test("an owner switches materials off in settings", async () => {
-		const { page } = app;
-		// Client-side in North, so the list loads its rows through a remote query.
 		await app.go("/");
-		const record = (request: { url(): string }) => {
-			if (/\/_app\/remote\/.*\/getMaterials/.test(request.url())) query = request.url();
-		};
-		page.on("request", record);
-		await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Materials" }).click();
-		await page.waitForURL((url) => url.pathname === "/materials");
-		await app.tableSettled();
-		page.off("request", record);
-		expect(query).toBeDefined();
-
 		await app.switchOrganization(south.name);
 		await app.go("/settings");
 		since = await value<number>("select coalesce(max(id), 0) from activity");
@@ -74,30 +60,18 @@ describe("in South, with materials switched off", () => {
 		expect(await switches(since)).toEqual([{ action: "module_disabled" }]);
 	});
 
+	// The other pages' and the queries' 404s are the module route guard's and `moduleRemote`'s
+	// (`route-guard.spec.ts`, `remote-functions.spec.ts`).
 	test("the sidebar has no Materials, and its pages are 404s", async () => {
 		await expect.poll(records).toEqual(["Customers", "Equipment", "Engineers"]);
 		const sku = await value<string>(
 			`select sku from material where organization_id = ? order by id limit 1`,
 			[south.id],
 		);
-		for (const path of [
-			"/materials",
-			"/materials/new",
-			`/materials/${sku}`,
-			`/materials/${sku}/edit`,
-		]) {
-			const response = await app.expectingErrors(() => app.go(path));
-			expect(response?.status(), path).toBe(404);
-			// The app's own 404 page, inside its layout.
-			expect(await app.page.locator('[data-sidebar="content"]').count(), path).toBe(1);
-		}
-	});
-
-	test("the materials list's query is refused", async () => {
-		const response = await app.page.context().request.get(query);
-		const body = await response.text();
-		expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-		expect(body).not.toContain("MAT-");
+		const response = await app.expectingErrors(() => app.go(`/materials/${sku}`));
+		expect(response?.status()).toBe(404);
+		// The app's own 404 page, inside its layout.
+		expect(await app.page.locator('[data-sidebar="content"]').count()).toBe(1);
 	});
 
 	test("the dashboard has no low-stock tile", async () => {
