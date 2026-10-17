@@ -188,6 +188,18 @@ export const progress = (answers: readonly Answer[]) => ({
 export const rejections = (answers: readonly { result: PointResult | null }[]) =>
 	answers.filter((answer) => answer.result === "nok").length;
 
+/**
+ * A checklist's score, in whole percents: the share of its points found OK among those found OK or
+ * rejected ("passed 4 points and failed 6: 40%"). Not applicable and unanswered points don't count;
+ * none when no point does. The condition module records it as the unit's condition when the
+ * checklist is completed, and the same over a component's own points as the component's.
+ */
+export function checklistScore(answers: readonly { result: PointResult | null }[]): number | null {
+	const ok = answers.filter((answer) => answer.result === "ok").length;
+	const counted = ok + rejections(answers);
+	return counted ? Math.round((100 * ok) / counted) : null;
+}
+
 /** The points with the rejected ones first, each in its own order otherwise. */
 export const rejectedFirst = <Point extends { result: PointResult | null }>(
 	points: readonly Point[],

@@ -202,8 +202,8 @@ export const checklist = sqliteTable(
 
 /**
  * A point of a checklist, copied from its template when the checklist was made: its group, text and
- * place, and what the engineer found (`result`, none until answered) with a remark, which a
- * rejection (`nok`) needs.
+ * place, the template point it came from, and what the engineer found (`result`, none until
+ * answered) with a remark, which a rejection (`nok`) needs.
  */
 export const checklistResult = sqliteTable(
 	"checklist_result",
@@ -211,6 +211,13 @@ export const checklistResult = sqliteTable(
 		id: integer("id").primaryKey({ autoIncrement: true }),
 		organizationId: organizationId(),
 		checklistId: integer("checklist_id").notNull(),
+		/**
+		 * The template point it was copied from, by id without a key: a template's points may be
+		 * deleted while the checklists made with it stay on record (ids aren't reused). What the
+		 * modules link to a point by: the parts shop's products, the condition module's components.
+		 * None for a point copied before this was kept that no template point matched.
+		 */
+		templateItemId: integer("template_item_id"),
 		group: text("group_name").notNull().default(""),
 		text: text("text").notNull(),
 		/** Its place among the checklist's points, from 0, as in the template then. */

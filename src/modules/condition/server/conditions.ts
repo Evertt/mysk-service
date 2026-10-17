@@ -1,17 +1,25 @@
 /**
- * Recording a unit's condition: by a member in the office (on the unit's page), or by an engineer
- * in the portal after the unit's checklist on one of their orders that's in progress. Each is a
- * new record (the latest is the unit's condition), made and logged in a transaction, against the
- * unit. Another tenant's unit, or another engineer's order, is a 404, also by a tampered id.
+ * Recording a unit's condition: worked out from its checklist when an engineer completes it in the
+ * portal (`checklists.completed`, its score from the points), with the engineer's advice added to
+ * it after; or by a member in the office (on the unit's page), as a correction. Each is a new
+ * record (the latest is the unit's condition), made and logged in a transaction, against the unit.
+ * Another tenant's unit, or another engineer's order, is a 404, also by a tampered id.
  */
 import { error } from "@sveltejs/kit";
 import { and, desc, eq } from "drizzle-orm";
 
 import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant, isSystemUser, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	inTenant,
+	isSystemUser,
+	tenantJoin,
+} from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, equipment, order, orderUnit, user } from "#lib/server/db/schema.ts";
+import { type ChecklistCompleting, checklistScore } from "#modules/checklists/api/extensions.ts";
 
 import { conditionLabel } from "../activity.ts";
 import type { ConditionSource } from "../model.ts";
@@ -117,24 +125,80 @@ export async function findFieldUnit(
 }
 
 /**
- * Records the condition of a unit on one of the engineer's orders, while it's in progress (after
- * the unit's checklist, see the checklists' card in the portal): on that order, by them.
+ * `checklists.completed`: records the unit's condition as its completed checklist found it, in the
+ * checklist's transaction: its score from the points (`checklistScore()`), on the checklist's order,
+ * by the engineer who completed it, without advice (which they add after, `adviseFieldCondition()`).
+ * Nothing for a checklist none of whose points count (all not applicable).
  */
-export function recordFieldCondition(
+export async function recordChecklistConditions({ tx, checklist, points }: ChecklistCompleting) {
+	const score = checklistScore(points);
+	if (score === null) return undefined;
+	const [unit] = await tx
+		.select({ id: equipment.id, serialNumber: equipment.serialNumber })
+		.from(equipment)
+		.where(idInTenant(equipment, checklist.equipmentId));
+	if (!unit) return undefined;
+	await insertCondition(
+		tx,
+		unit,
+		{ score, advice: "" },
+		{ source: "checklist", orderId: checklist.orderId, engineerId: checklist.engineerId },
+	);
+	return undefined;
+}
+
+/** The condition its checklist gave the unit on the order (the latest), in `tx`, if any. */
+export async function checklistCondition(
+	tx: Transaction | typeof db,
+	equipmentId: number,
+	orderId: number,
+) {
+	const [found] = await tx
+		.select({ id: unitCondition.id, score: unitCondition.score, advice: unitCondition.advice })
+		.from(unitCondition)
+		.where(
+			and(
+				eq(unitCondition.equipmentId, equipmentId),
+				eq(unitCondition.orderId, orderId),
+				eq(unitCondition.source, "checklist"),
+				inTenant(unitCondition),
+			),
+		)
+		.orderBy(desc(unitCondition.recordedAt), desc(unitCondition.id))
+		.limit(1);
+	return found;
+}
+
+/**
+ * Gives the condition the checklist of a unit on one of the engineer's orders gave it (see
+ * `recordChecklistConditions()`) the engineer's advice (none when empty), while the order is in
+ * progress. Logged as a change of that condition. A 400 when the checklist gave it no score.
+ */
+export function adviseFieldCondition(
 	engineerId: number,
 	number: string,
 	equipmentId: number,
-	input: ConditionInput,
+	advice: string,
 ) {
 	return db.transaction(async (tx) => {
 		const found = await findFieldUnit(tx, engineerId, number, equipmentId);
 		if (!fieldActions(found.order.status).work) {
 			error(400, m.condition_not_in_progress({ number }));
 		}
-		await insertCondition(tx, found.unit, input, {
-			source: "checklist",
-			orderId: found.order.id,
-			engineerId,
+		const recorded = await checklistCondition(tx, found.unit.id, found.order.id);
+		if (!recorded) error(400, m.condition_portal_no_score());
+		const after = { advice: advice.trim() || null };
+		await tx.update(unitCondition).set(after).where(idInTenant(unitCondition, recorded.id));
+		await recordActivity(tx, {
+			action: "updated",
+			subject: {
+				type: "unitCondition",
+				id: recorded.id,
+				label: conditionLabel({ serialNumber: found.unit.serialNumber, score: recorded.score }),
+			},
+			parent: { type: "equipment", id: found.unit.id, label: found.unit.serialNumber },
+			before: { advice: recorded.advice },
+			after,
 		});
 		return found;
 	});

@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from "vit
 import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, order, orderUnit } from "#lib/server/db/schema.ts";
+import type { ChecklistCompleting } from "#modules/checklists/api/extensions.ts";
 import {
 	saveOrderChecklists,
 	saveUnitChecklists,
@@ -30,6 +31,26 @@ import { at, day, freezeNow } from "#unit/temporal-support.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+
+// What the modules are told when a checklist is completed (`checklists.completed`): a stand-in
+// for the condition module, which records the scores, contributing as the tenant's own module.
+const told = vi.hoisted((): ChecklistCompleting[] => []);
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => [
+		{
+			id: "checklists",
+			contributions: [
+				{
+					point: { id: "checklists.completed", kind: "save" },
+					answer: async ({ tx: _tx, ...input }: ChecklistCompleting) => {
+						told.push({ tx: _tx, ...input });
+						return undefined;
+					},
+				},
+			],
+		},
+	],
+}));
 
 // A temporary database made by the app's migrations, with two tenants' customers, units (doors,
 // with a template, and a pump, without), engineers and a template of two groups.
@@ -247,18 +268,23 @@ describe("when an order gets its units", () => {
 			kind: "inspection",
 			status: "draft",
 		});
-		// The points in the template's order, each group's together.
+		// The points in the template's order, each group's together, with the point each came from.
+		const items = await db
+			.select({ id: checklistTemplateItem.id, text: checklistTemplateItem.text })
+			.from(checklistTemplateItem);
+		const itemOf = (text: string) => items.find((item) => item.text === text)!.id;
 		expect(
 			(await pointsOf(made.id)).map((point) => [
 				point.group,
 				point.text,
 				point.position,
 				point.result,
+				point.templateItemId,
 			]),
 		).toEqual([
-			["Mechanisch", "Torsieveren gecontroleerd", 0, null],
-			["Mechanisch", "Kabels zonder rafels", 1, null],
-			["Veiligheid", "Fotocel stopt deur", 2, null],
+			["Mechanisch", "Torsieveren gecontroleerd", 0, null, itemOf("Torsieveren gecontroleerd")],
+			["Mechanisch", "Kabels zonder rafels", 1, null, itemOf("Kabels zonder rafels")],
+			["Veiligheid", "Fotocel stopt deur", 2, null, itemOf("Fotocel stopt deur")],
 		]);
 	});
 
@@ -446,6 +472,30 @@ describe("filling a checklist in, in the field", () => {
 		});
 		// On record: it isn't changed again.
 		expect((await thrown(() => answerPoint(1, points[1].id, "nok")))?.status).toBe(400);
+		// The modules were told, in the transaction that completed it, with its points.
+		expect(told.at(-1)).toMatchObject({
+			checklist: { id: made.id, kind: "inspection", orderId: id, equipmentId: 10, engineerId: 1 },
+			points: points.map((point, i) => ({
+				templateItemId: point.templateItemId,
+				result: (["nok", "ok", "na"] as const)[i],
+			})),
+		});
+	});
+
+	test("a module's problem refuses completing it, rolling it back", async () => {
+		const id = await orderWith([10]);
+		const [made] = await checklistsOf(id);
+		await answerAll(made.id);
+		const refusing = vi
+			.spyOn(await import("#lib/server/extensions.ts"), "save")
+			.mockResolvedValueOnce([{ message: "Nope." }]);
+		expect(await thrown(() => completeChecklist(1, made.id))).toEqual({
+			status: 400,
+			message: "Nope.",
+		});
+		refusing.mockRestore();
+		expect((await checklistsOf(id))[0].status).toBe("draft");
+		expect(await db.select().from(activity)).toEqual([]);
 	});
 
 	test("a maintenance checklist makes no inspection valid", async () => {
