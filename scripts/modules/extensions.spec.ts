@@ -474,8 +474,9 @@ describe("a form's parts", () => {
 		expect(parts).toContain(
 			`import myModuleOrdersFormPart from "#modules/my-module/form-parts/orders.form.ts";`,
 		);
+		// By the key its fields are under: the id in camel case (`formPartKey()`).
 		expect(parts).toContain(
-			`"orders.form": { "materials": materialsOrdersFormPart, "my-module": myModuleOrdersFormPart },`,
+			`"orders.form": { "materials": materialsOrdersFormPart, "myModule": myModuleOrdersFormPart },`,
 		);
 		expect(parts).toContain(`"customers.form": {},`);
 		expect(renderFormParts([], [])).toContain("export const formParts = {};");

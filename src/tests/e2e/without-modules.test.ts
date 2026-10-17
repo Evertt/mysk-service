@@ -12,6 +12,7 @@ const moduleLabels = [
 	"Invoicing",
 	"Maintenance plans",
 	"Materials",
+	"Partner programme",
 	"Schedule",
 ];
 

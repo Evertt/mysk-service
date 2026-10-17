@@ -57,6 +57,13 @@
       "when": 1792197509015,
       "tag": "0007_equipment-locations",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792197922200,
+      "tag": "0008_add-partner-programme",
+      "breakpoints": true
     }
   ]
 }

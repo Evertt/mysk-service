@@ -56,7 +56,9 @@ path? }` from the form's root, which the form passes to `invalid()` as they are)
   object schema of its part as the default export of `form-parts/<point id>.ts`; the generator
   lists the schemas in `src/lib/extensions/form-parts.gen.ts`, and the form makes its `modules`
   field from them with `formPartsSchema("orders.form")` (`#lib/extensions/form-parts.ts`): each
-  module's part optional, under `modules.<id>`, static and exactly typed. So SvelteKit validates
+  module's part optional, under `modules.<id>` (in camel case, `formPartKey()`: SvelteKit refuses
+  field names that need quoting, so `partner-programme`'s is `modules.partnerProgramme`), static
+  and exactly typed. So SvelteKit validates
   the parts with the form on the server, and the browser before submitting (the order form's
   `preflight(preflightParts(schema))`, which reports only the parts' issues). A component gets its
   part's fields as `fields: FormPartFields<typeof part>` (no cast), and the type check holds it to
@@ -249,7 +251,7 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Checklists, contracts, invoices, maintenance, materials and the schedule are the modules
+Checklists, contracts, invoices, maintenance, materials, the partner programme and the schedule are the modules
 (`src/modules/checklists/`, `src/modules/contracts/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
@@ -269,6 +271,12 @@ form, typed and validated by its schema and saved in its transaction (`slots/ord
 `form-parts/orders.form.ts`, `orders.saving`), stat cards on the dashboard
 (`dashboard.stats`), a card on the engineer portal's order page (`portal.order`, with
 `moduleRemote(id, "engineer")`), and seed steps in the middle of the core's generation (`during`).
+The partner programme (`src/modules/partner-programme/`, SHLTR's Partner Bonus and wallet) requires
+invoices: look there for a module that reads another's data through its `api/` (invoices'
+`api/revenue.server.ts`, the paid invoices' lines, also as a subquery for its own server-side list),
+a card on the customer's page (`customers.detail.side`), figures computed from the pure rules in
+`model.ts` and frozen when a year closes, a ledger whose balance is its entries' sum, and a
+hyphenated id's part of the order form (`modules.partnerProgramme`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

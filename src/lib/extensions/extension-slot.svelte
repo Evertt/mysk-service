@@ -28,6 +28,7 @@
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 	import type { FormSlotPoint, SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
+	import { formPartKey } from "#lib/extensions/form-part-key.ts";
 	import { type ModuleId, modules } from "#lib/modules/manifests.ts";
 
 	let {
@@ -39,14 +40,14 @@
 		| { point: SlotPoint<Props>; fields?: undefined }
 		| {
 				point: FormSlotPoint<Props>;
-				/** The form's `modules` field, whose `<module id>` is each module's part. */
+				/** The form's `modules` field, whose `<key>` (`formPartKey()`) is each module's part. */
 				fields: object;
 		  }
 	) & { props: Props; class?: string } = $props();
 
 	/** What a contribution gets besides `props`: at a form slot, its module's part's fields. */
 	const partOf = (module: ModuleId) =>
-		fields ? { fields: (fields as Record<string, unknown>)[module] } : {};
+		fields ? { fields: (fields as Record<string, unknown>)[formPartKey(module)] } : {};
 
 	/** How often each contribution was tried again: each time loads it again, in a new boundary. */
 	const attempts = $state<Record<string, number>>({});

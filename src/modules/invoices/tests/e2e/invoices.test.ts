@@ -643,7 +643,11 @@ describe("in South, which has invoicing but no contracts", () => {
 		let order: { number: string };
 		/** The module's queries that the invoice's page made, opened client-side. */
 		const queries: string[] = [];
-		const row = () => app.page.locator("div.rounded-lg.border", { hasText: "Invoicing" });
+		// By its name alone: the partner programme's row says it requires invoicing.
+		const row = () =>
+			app.page.locator("div.rounded-lg.border", {
+				has: app.page.getByText("Invoicing", { exact: true }),
+			});
 
 		// Split in steps, each with a test's time: together they took most of it under the load of a
 		// full run, and the last one, which switches the module back on for the tests after it (which

@@ -10,12 +10,14 @@
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { SegmentBadge, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
+	import { detailSide } from "#lib/customers/extensions.ts";
 	import { countryName } from "#lib/customers/index.ts";
 	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge, SiteLocations } from "#lib/equipment/components.ts";
 	import { unitModel } from "#lib/equipment/index.ts";
 	import { getCustomerLocations } from "#lib/equipment/remotes.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 
 	import type { PageProps } from "./$types";
@@ -207,6 +209,8 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<ExtensionSlot point={detailSide} props={{ code: customer.code }} />
 
 		<ActivityCard type="customer" id={customer.id} />
 	</div>

@@ -168,6 +168,7 @@ describe("the dashboard's cards", () => {
 			"Receivables",
 			"Overdue invoices",
 			"Maintenance plans",
+			`Partner programme ${new Date().getFullYear()}`,
 			"Recent activity",
 		]);
 		expect(columnsOf(boxes).size).toBe(3);

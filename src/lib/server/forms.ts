@@ -1,5 +1,6 @@
 import { invalid } from "@sveltejs/kit";
 
+import { formPartKey } from "#lib/extensions/form-part-key.ts";
 import { partsOfModulesOff } from "#lib/extensions/form-parts.ts";
 import { modules } from "#lib/modules/manifests.ts";
 
@@ -32,6 +33,7 @@ export function refuse<F extends string>(
 export function refuseOffParts(parts: Readonly<Record<string, unknown>>) {
 	const off = partsOfModulesOff(parts, currentTenant().modules);
 	if (!off.length) return;
-	const label = (id: string) => modules.find((module) => module.id === id)?.label ?? id;
+	const label = (key: string) =>
+		modules.find((module) => formPartKey(module.id) === key)?.label ?? key;
 	invalid(...off.map((id) => m.common_error_module_off({ module: label(id) })));
 }

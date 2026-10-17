@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { describe, expect, test, vi } from "vite-plus/test";
 
+import { formPartKey } from "#lib/extensions/form-part-key.ts";
 import { formPartsSchema, partsOfModulesOff, preflightParts } from "#lib/extensions/form-parts.ts";
 
 // Two made-up modules' parts of the order form: gadgets' count and gizmos' note.
@@ -72,4 +73,12 @@ test("partsOfModulesOff names the modules that submitted a part but aren't on", 
 	expect(partsOfModulesOff(parts, ["gadgets"])).toEqual(["gizmos"]);
 	expect(partsOfModulesOff(parts, ["gadgets", "gizmos"])).toEqual([]);
 	expect(partsOfModulesOff({}, [])).toEqual([]);
+});
+
+test("a module's part is under its id in camel case, which SvelteKit takes as a field name", () => {
+	expect(formPartKey("materials")).toBe("materials");
+	expect(formPartKey("partner-programme")).toBe("partnerProgramme");
+	expect(formPartKey("parts-shop-2")).toBe("partsShop2");
+	expect(partsOfModulesOff({ partnerProgramme: {} }, ["partner-programme"])).toEqual([]);
+	expect(partsOfModulesOff({ partnerProgramme: {} }, [])).toEqual(["partnerProgramme"]);
 });

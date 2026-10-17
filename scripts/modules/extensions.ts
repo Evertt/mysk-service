@@ -10,6 +10,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { formPartKey } from "#lib/extensions/form-part-key.ts";
+
 import { byName, GENERATED, type ModuleFolder } from "./shared.ts";
 
 const kinds = {
@@ -425,7 +427,10 @@ export function renderFormParts(points: ExtensionPoint[], modules: ModuleFolder[
 		.map((point) => {
 			const named = parts
 				.filter((part) => part.point.id === point.id)
-				.map(({ module }) => `${JSON.stringify(module.id)}: ${partName(module, point.id)}`);
+				.map(
+					({ module }) =>
+						`${JSON.stringify(formPartKey(module.id))}: ${partName(module, point.id)}`,
+				);
 			return `${JSON.stringify(point.id)}: ${named.length ? `{ ${named.join(", ")} }` : "{}"},`;
 		});
 	return [
@@ -435,7 +440,7 @@ export function renderFormParts(points: ExtensionPoint[], modules: ModuleFolder[
 				`import ${partName(module, point.id)} from "#modules/${module.id}/${contribution.file}";`,
 		),
 		"",
-		`/** The schemas of the modules' parts of forms, by form slot id and module id. */`,
+		`/** The schemas of the modules' parts of forms, by form slot id and module (its part's key, \`formPartKey()\`). */`,
 		`export const formParts = ${entries.length ? `{\n${entries.map((entry) => `\t${entry}`).join("\n")}\n}` : "{}"};`,
 		"",
 	].join("\n");

@@ -1,0 +1,254 @@
+<!--
+	@component
+	A year's rules, as a manager edits them: the levels (from which Partner Omzet, and the cash and
+	credit percentages), how each revenue category counts for the level, the cash bonus and the
+	credit, and how long the year's credit stays valid.
+-->
+<script lang="ts">
+	import PlusIcon from "@lucide/svelte/icons/plus";
+	import Trash2Icon from "@lucide/svelte/icons/trash-2";
+	import { toast } from "svelte-sonner";
+
+	import NumberField from "#lib/components/form/number-field.svelte";
+	import SubmitButton from "#lib/components/form/submit-button.svelte";
+
+	import { partnerLabels } from "../labels.ts";
+	import { categoryRuleValues, type ProgrammeRules, ruleLimits } from "../model.ts";
+	import { saveYearRules } from "../years.remote.ts";
+
+	let { year, rules }: { year: number; rules: ProgrammeRules } = $props();
+
+	const form = saveYearRules;
+
+	// Kept here so levels can be added and removed; in euros and percentages, as they're typed.
+	const initialTiers = () =>
+		rules.tiers.map((tier) => ({
+			key: crypto.randomUUID(),
+			level: tier.level,
+			threshold: tier.threshold / 100,
+			cashRate: tier.cashRate / 100,
+			creditRate: tier.creditRate / 100,
+		}));
+	let tiers = $state(initialTiers());
+
+	// Inputs take their value from `tiers` (rows can be removed, which shifts the indexes), so only
+	// the name and validation attributes come from the form field.
+	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
+		return attributes;
+	}
+
+	function addTier() {
+		const last = tiers.at(-1);
+		tiers.push({
+			key: crypto.randomUUID(),
+			level: "",
+			threshold: last ? last.threshold * 2 : 50_000,
+			cashRate: last?.cashRate ?? 2.5,
+			creditRate: last?.creditRate ?? 3,
+		});
+	}
+
+	const ruleOptions = $derived(partnerLabels.labelOptions("categoryRule", categoryRuleValues));
+</script>
+
+<form
+	{...form.enhance(async ({ submit }) => {
+		if (await submit()) toast.success(m.partners_rules_saved({ year: String(year) }));
+	})}
+	class="flex flex-col gap-6"
+	data-rules-form
+>
+	<input {...form.fields.year.as("hidden", String(year))} />
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{m.partners_rules_levels()}</Card.Title>
+			<Card.Description>{m.partners_rules_levels_description()}</Card.Description>
+			<Card.Action>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={addTier}
+					disabled={tiers.length >= ruleLimits.tiers.max}
+				>
+					<PlusIcon data-icon="inline-start" />
+					{m.partners_rules_add_level()}
+				</Button>
+			</Card.Action>
+		</Card.Header>
+		<Card.Content>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>{m.partners_column_threshold()}</Table.Head>
+						<Table.Head>{m.partners_column_level()}</Table.Head>
+						<Table.Head>{m.partners_column_cash_rate()}</Table.Head>
+						<Table.Head>{m.partners_column_credit_rate()}</Table.Head>
+						<Table.Head class="w-10"
+							><span class="sr-only">{m.partners_rules_remove_level()}</span></Table.Head
+						>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each tiers as tier, index (tier.key)}
+						{@const fields = form.fields.tiers[index]}
+						<Table.Row data-tier={index}>
+							<Table.Cell>
+								<InputGroup.Root class="min-w-32">
+									<InputGroup.Addon><InputGroup.Text>€</InputGroup.Text></InputGroup.Addon>
+									<InputGroup.Input
+										aria-label={m.partners_column_threshold()}
+										min={0}
+										step={1}
+										class="tabular-nums"
+										{...withoutValue(fields.threshold.as("number"))}
+										value={tier.threshold}
+										oninput={(event) => (tier.threshold = Number(event.currentTarget.value))}
+									/>
+								</InputGroup.Root>
+							</Table.Cell>
+							<Table.Cell>
+								<Input
+									class="min-w-28"
+									aria-label={m.partners_column_level()}
+									{...withoutValue(fields.level.as("text"))}
+									value={tier.level}
+									oninput={(event) => (tier.level = event.currentTarget.value)}
+								/>
+							</Table.Cell>
+							<Table.Cell>
+								<InputGroup.Root class="min-w-24">
+									<InputGroup.Input
+										aria-label={m.partners_column_cash_rate()}
+										min={0}
+										max={100}
+										step={0.01}
+										class="tabular-nums"
+										{...withoutValue(fields.cashRate.as("number"))}
+										value={tier.cashRate}
+										oninput={(event) => (tier.cashRate = Number(event.currentTarget.value))}
+									/>
+									<InputGroup.Addon align="inline-end"
+										><InputGroup.Text>%</InputGroup.Text></InputGroup.Addon
+									>
+								</InputGroup.Root>
+							</Table.Cell>
+							<Table.Cell>
+								<InputGroup.Root class="min-w-24">
+									<InputGroup.Input
+										aria-label={m.partners_column_credit_rate()}
+										min={0}
+										max={100}
+										step={0.01}
+										class="tabular-nums"
+										{...withoutValue(fields.creditRate.as("number"))}
+										value={tier.creditRate}
+										oninput={(event) => (tier.creditRate = Number(event.currentTarget.value))}
+									/>
+									<InputGroup.Addon align="inline-end"
+										><InputGroup.Text>%</InputGroup.Text></InputGroup.Addon
+									>
+								</InputGroup.Root>
+							</Table.Cell>
+							<Table.Cell>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label={m.partners_rules_remove_level()}
+									disabled={tiers.length <= ruleLimits.tiers.min}
+									onclick={() => tiers.splice(index, 1)}
+								>
+									<Trash2Icon />
+								</Button>
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
+			<Field.FieldError errors={form.fields.tiers.allIssues()} />
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{m.partners_field_categories()}</Card.Title>
+			<Card.Description>{m.partners_rules_categories_description()}</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>{m.partners_field_category()}</Table.Head>
+						<Table.Head>{m.partners_column_counts_level()}</Table.Head>
+						<Table.Head>{m.partners_form_cash()}</Table.Head>
+						<Table.Head>{m.partners_form_credit()}</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#each rules.categories as rule, index (rule.category)}
+						{@const fields = form.fields.categories[index]}
+						{@const name = partnerLabels.label("revenueCategory", rule.category)}
+						<Table.Row data-category={rule.category}>
+							<Table.Cell>
+								<input {...fields.category.as("hidden", rule.category)} />
+								{name}
+							</Table.Cell>
+							<Table.Cell>
+								<Checkbox
+									aria-label={m.partners_counts_level_for({ category: name })}
+									name={fields.level.as("checkbox", rule.level).name}
+									checked={rule.level}
+								/>
+							</Table.Cell>
+							<Table.Cell>
+								<NativeSelect.Root
+									class="min-w-36"
+									aria-label={m.partners_counts_cash_for({ category: name })}
+									{...fields.cash.as("select", rule.cash)}
+								>
+									{#each ruleOptions as option (option.value)}
+										<NativeSelect.Option value={option.value}>{option.label}</NativeSelect.Option>
+									{/each}
+								</NativeSelect.Root>
+							</Table.Cell>
+							<Table.Cell>
+								<NativeSelect.Root
+									class="min-w-36"
+									aria-label={m.partners_counts_credit_for({ category: name })}
+									{...fields.credit.as("select", rule.credit)}
+								>
+									{#each ruleOptions as option (option.value)}
+										<NativeSelect.Option value={option.value}>{option.label}</NativeSelect.Option>
+									{/each}
+								</NativeSelect.Root>
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Content>
+			<Field.FieldGroup class="max-w-sm">
+				<NumberField
+					field={form.fields.creditValidYears}
+					label={m.partners_field_credit_valid_years()}
+					description={m.partners_credit_valid_description()}
+					value={rules.creditValidYears}
+					min={ruleLimits.creditValidYears.min}
+					max={ruleLimits.creditValidYears.max}
+					step={1}
+				/>
+			</Field.FieldGroup>
+		</Card.Content>
+	</Card.Root>
+
+	<Field.FieldError errors={form.fields.issues()} />
+	<div>
+		<SubmitButton pending={form.pending}>{m.partners_rules_save()}</SubmitButton>
+	</div>
+</form>

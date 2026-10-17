@@ -23,6 +23,7 @@
 			"./src/modules/invoices/messages/{locale}/invoices.json",
 			"./src/modules/maintenance/messages/{locale}/maintenance.json",
 			"./src/modules/materials/messages/{locale}/materials.json",
+			"./src/modules/partner-programme/messages/{locale}/partners.json",
 			"./src/modules/schedule/messages/{locale}/schedule.json"
 		]
 	},

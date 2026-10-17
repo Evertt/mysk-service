@@ -1,6 +1,6 @@
 /**
  * The parts the modules add to core forms (see `defineFormSlot()` in `./define.ts`): each module's
- * inputs, under the form's `modules.<module id>`, with the schema of its part from
+ * inputs, under the form's `modules.<key>` (its module id in camel case, `formPartKey()`), with the schema of its part from
  * `src/modules/<id>/form-parts/<point id>.ts`, which the generator lists in `form-parts.gen.ts`.
  *
  * A form makes its `modules` field with `formPartsSchema(<its form slot's id>)`: static, so it goes
@@ -14,6 +14,7 @@ import type { RemoteFormFields } from "$app/server";
 import * as v from "valibot";
 
 import type { FormPartSchema } from "./define.ts";
+import { formPartKey } from "./form-part-key.ts";
 import { formParts } from "./form-parts.gen.ts";
 
 type FormParts = typeof formParts;
@@ -82,12 +83,14 @@ export function preflightParts<Schema extends v.GenericSchema>(
 	};
 }
 
-/** The modules that submitted a part of a form (`parts`, its `modules` field) but aren't `enabled`. */
+/**
+ * The parts of a form (`parts`, its `modules` field) submitted by modules that aren't `enabled` (by
+ * their keys, `formPartKey()`).
+ */
 export function partsOfModulesOff(
 	parts: Readonly<Record<string, unknown>>,
 	enabled: readonly string[],
 ): string[] {
-	return Object.keys(parts).filter(
-		(module) => parts[module] !== undefined && !enabled.includes(module),
-	);
+	const keys = enabled.map(formPartKey);
+	return Object.keys(parts).filter((key) => parts[key] !== undefined && !keys.includes(key));
 }
