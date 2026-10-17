@@ -1,7 +1,8 @@
 <!--
-	The partner's Partner Bonus page in the customer portal: this year's level and figures so far
-	with the bonus they'd bring, a closed year's bonus to choose (once), its wallet with its entries,
-	its last closed years, and the programme: its levels, the revenue that counts, the year's cycle
+	The partner's Partner Bonus page in the customer portal: the programme's banner ("Samen groeien.
+	Meer voordeel."), this year's level and figures so far with the bonus they'd bring, a closed
+	year's bonus to choose (once), its wallet (the mockup's dark panel) with its entries, its last
+	closed years, and the programme in tabs: its levels, the revenue that counts, the year's cycle
 	and the conditions; on a wide screen the year beside the wallet, as in SHLTR Connect. For a
 	customer that isn't a partner, only that it isn't.
 -->
@@ -9,6 +10,7 @@
 	import type { RouteParams } from "$app/types";
 	import AwardIcon from "@lucide/svelte/icons/award";
 
+	import PageBanner from "#lib/components/page-banner.svelte";
 	import { formatCents } from "#lib/i18n/index.ts";
 	import ClientChoice from "#modules/partner-programme/client/client-choice.svelte";
 	import { getClientPartner } from "#modules/partner-programme/client/client-partner.remote.ts";
@@ -30,12 +32,11 @@
 	<title>{m.partners_client_title()}</title>
 </svelte:head>
 
-<div class="flex flex-col gap-1">
-	<h1 class="text-2xl font-semibold tracking-tight">{m.partners_client_title()}</h1>
-	<p class="text-sm text-muted-foreground">{m.partners_client_description()}</p>
-</div>
-
 {#if !data.partner}
+	<div class="flex flex-col gap-1">
+		<h1 class="text-2xl font-semibold tracking-tight">{m.partners_client_title()}</h1>
+		<p class="text-sm text-muted-foreground">{m.partners_client_description()}</p>
+	</div>
 	<Empty.Root class="border" data-client-not-partner>
 		<Empty.Header>
 			<Empty.Media variant="icon"><AwardIcon /></Empty.Media>
@@ -44,6 +45,12 @@
 		</Empty.Header>
 	</Empty.Root>
 {:else}
+	<PageBanner
+		eyebrow={m.partners_client_hero_eyebrow({ organization: data.organization })}
+		title={m.partners_client_hero_title()}
+		description={m.partners_client_hero_intro({ organization: data.organization })}
+	/>
+
 	<!-- On a wide screen the year so far (and a closed year's choice) beside the wallet. -->
 	<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
 		<Card.Root class="lg:col-start-1" data-client-bonus>

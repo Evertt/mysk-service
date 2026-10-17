@@ -7,6 +7,10 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+	import HourglassIcon from "@lucide/svelte/icons/hourglass";
+
+	import Callout from "#lib/components/callout.svelte";
 
 	import { getClientPartner } from "../../client/client-partner.remote.ts";
 	import ClientStatus from "../../client/client-status.svelte";
@@ -25,19 +29,18 @@
 				</Card.Header>
 				<Card.Content class="flex flex-col gap-4">
 					{#if data.awaiting}
-						<p
-							class="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
-							data-client-awaiting-choice
-						>
+						<Callout icon={HourglassIcon} data-client-awaiting-choice>
 							{m.partners_client_choice_waiting({ year: String(data.awaiting.year) })}
-						</p>
+						</Callout>
 					{/if}
 					<ClientStatus figures={data.figures} year={data.year} />
 					<Button
 						variant="outline"
+						class="self-start"
 						href={resolve("/(customer)/(modules)/partner-programme/portal")}
 					>
 						{m.partners_client_view_programme()}
+						<ArrowRightIcon data-icon="inline-end" />
 					</Button>
 				</Card.Content>
 			</Card.Root>

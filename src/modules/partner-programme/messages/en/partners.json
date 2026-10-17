@@ -313,5 +313,11 @@
 	"partners_credit_note_created": "Credit note made: issue it from its page",
 	"partners_credit_note_offer": "Pay it out as a credit note, or outside the app.",
 	"partners_credit_note_create": "Create credit note",
-	"partners_credit_note_outside": "Paid out outside the app, or as a credit note an owner or admin makes."
+	"partners_credit_note_outside": "Paid out outside the app, or as a credit note an owner or admin makes.",
+	"partners_client_hero_eyebrow": "{organization} · Partner programme",
+	"partners_client_hero_title": "Growing together. More in return.",
+	"partners_client_hero_intro": "Working with {organization} pays off. Follow your Partner revenue, your Bonus revenue and the parts credit you have to spend in one place.",
+	"partners_client_progress": "Your progress",
+	"partners_client_level": "Partner level",
+	"partners_client_programme_label": "The programme"
 }
