@@ -106,6 +106,19 @@ its first engineer, like Erik in Noord. The data is in `src/lib/server/db/seed/s
 
 These are local demo accounts; don't seed them into a real deployment.
 
+**One-click demo sign-in.** With `DEMO_SIGN_IN=true`, the login page shows "Log in as:" under its
+form, with three buttons that sign in to the SHLTR demo at once, without typing: **Admin** as
+Marloes (SHLTR's owner, to the office dashboard), **Engineer** as Lev (to the engineer portal) and
+**Customer** as Marieke (Riedel's contact, a partner with a wallet, to the customer portal). They
+sign in through better-auth with the demo password, like the form, so the session and its
+organization (SHLTR) are the same as after typing it. The browser sends only the role's name; the
+server maps it to its fixed account and refuses one that isn't there, isn't in SHLTR or hasn't the
+role (`src/routes/login/demo.remote.ts`, `demo-accounts.server.ts`). Without the flag the buttons
+aren't there and the server answers 404 to whatever is posted. The flag is set for staging only
+(`wrangler.jsonc`'s `env.staging.vars`) and in `.env.example` for local development: never set it
+in production (`wrangler.jsonc`'s top-level vars, or a server of your own), where it would let
+anyone in as these users if they existed.
+
 ## Members and invitations
 
 Organization settings → **Members** lists who can sign in to the organization. Owners and admins
@@ -180,6 +193,7 @@ Environment variables (see `.env.example` and `src/env.ts`):
 | `MAIL_FROM`           | no       | The sender, e.g. `Fieldworks <noreply@example.com>`                                      |
 | `CRON_SECRET`         | no       | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself         |
 | `OPS_TOKEN`           | no       | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                  |
+| `DEMO_SIGN_IN`        | no       | `true` for the login page's demo buttons (see "Demo login"); never in production         |
 
 The server assumes it's reached over HTTPS, from a reverse proxy that terminates TLS and passes on
 the `Host` header (form submissions from any other origin are refused). If the proxy sets
@@ -277,7 +291,8 @@ curl -X POST https://<worker>/_ops/import -H "Authorization: Bearer $OPS_TOKEN" 
 CI deploys `main` to the Worker above, and every push to `develop` to staging,
 `fieldworks-staging` (`wrangler.jsonc`'s `staging` environment, https://fieldworks-staging.devign.workers.dev),
 once the checks and tests pass. Staging has a database of its own, which CI fills with the demo
-data (see "Demo login") on every deploy, so what's done there doesn't last. Its auth secret is made
+data (see "Demo login") on every deploy, so what's done there doesn't last; its login page has the
+one-click demo sign-in (`DEMO_SIGN_IN` in its vars), production's hasn't. Its auth secret is made
 on the first deploy; its ops token anew on every deploy, used only by CI.
 
 Cloudflare keeps 30 days of the object's history (point-in-time recovery). Mail: `SMTP_URL` sends
