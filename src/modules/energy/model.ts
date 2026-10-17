@@ -340,6 +340,48 @@ export function doorBreaches(
 	});
 }
 
+// --- The building -------------------------------------------------------------------------------
+
+/**
+ * How high a floor is, from its name as a site names it: `1e verdieping`, `2nd floor` → 1, 2;
+ * `Begane grond`, `Ground floor` → 0; `Kelder`, `Basement` → −1 (`-2`, `Kelder 2` → −2); null for
+ * a name that says nothing about it.
+ */
+export function floorLevel(name: string): number | null {
+	const text = name.toLowerCase();
+	const number = /-?\d+/.exec(text);
+	if (/kelder|basement|souterrain|cellar/.test(text)) {
+		return number ? -Math.abs(Number(number[0])) : -1;
+	}
+	if (/begane|ground|parterre|gelijkvloers/.test(text)) return 0;
+	return number ? Number(number[0]) : null;
+}
+
+/**
+ * Floors as a floor plan draws them, the top floor first: by their level (`floorLevel()`), a floor
+ * whose name says nothing as high as the ground floor, and in their given order among equals.
+ */
+export const floorsTopDown = (floors: readonly string[]) =>
+	floors.toSorted((a, b) => (floorLevel(b) ?? 0) - (floorLevel(a) ?? 0));
+
+/**
+ * About what solar panels of `capacityKw` (kWp) give at `at`, on a clear day in the Netherlands:
+ * nothing at night, a half sine from sunrise to sunset, its top at 13:30 (summer time's noon), the
+ * days longer and the sun higher in summer. An estimate, as there's no feed from the inverters.
+ */
+export function solarEstimateKw(capacityKw: number, at: Temporal.ZonedDateTime) {
+	// The day's length and the sun's height through the year: shortest at the winter solstice.
+	const season = Math.cos(((at.dayOfYear + 10) / 365.25) * 2 * Math.PI);
+	const daylightHours = 12.2 - 4.3 * season;
+	const height = 0.62 - 0.3 * season;
+	const noon = 13.5;
+	const hour = at.hour + at.minute / 60;
+	const from = noon - daylightHours / 2;
+	const position = (hour - from) / daylightHours;
+	if (position <= 0 || position >= 1) return 0;
+	return capacityKw * height * Math.sin(position * Math.PI) ** 1.4;
+}
+
 // --- Savings advice -----------------------------------------------------------------------------
 
 /** §2.5: shifting the peak to 12:00–15:00 lowers it by about `max(4, peak kW × 0.08)` kW. */

@@ -53,6 +53,14 @@ export const toneBadges: Record<ZoneTone, BadgeTone> = {
 	offline: "neutral",
 };
 
+/** A zone's tone as the border of its block on the floor plan. */
+export const toneBorders: Record<ZoneTone, string> = {
+	nominal: "border-emerald-500",
+	elevated: "border-amber-500",
+	peak: "border-rose-500",
+	offline: "border-slate-300 dark:border-slate-600",
+};
+
 /** A zone's tone as a bar or dot. */
 export const toneColours: Record<ZoneTone, string> = {
 	nominal: "bg-emerald-500",

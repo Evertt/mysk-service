@@ -23,7 +23,7 @@ import {
 	reportRanges,
 	siteFigures,
 } from "./server/figures.ts";
-import { energyAlert, energyConsumer, energySite } from "./server/schema.ts";
+import { energyAlert, energyConsumer, energySite, energyZone } from "./server/schema.ts";
 
 const siteId = v.pipe(v.number(), v.integer(), v.minValue(1));
 
@@ -72,7 +72,10 @@ export const getEnergyOverview = query(
 		const site = await loadSite(id);
 		const now = Temporal.Now.instant();
 		const ranges = periodRanges(period, site.timeZone, now);
-		const { zones, doors, previousComplete } = await siteFigures(site, ranges, now);
+		const [{ zones, doors, previousComplete }, consumers] = await Promise.all([
+			siteFigures(site, ranges, now),
+			siteConsumers(site.id),
+		]);
 		return {
 			site,
 			period,
@@ -82,11 +85,27 @@ export const getEnergyOverview = query(
 			previousFrom: ranges.previousFrom,
 			zones,
 			doors,
+			consumers,
 			openAlerts: await openAlertCount(id),
 			canManage: isManager(currentTenant().roles),
 		};
 	},
 );
+
+/** A site's consumers ("installaties"), by zone, in their order. */
+async function siteConsumers(siteId: number) {
+	return db
+		.select({
+			id: energyConsumer.id,
+			zoneId: energyConsumer.zoneId,
+			name: energyConsumer.name,
+			ratedKw: energyConsumer.ratedKw,
+		})
+		.from(energyConsumer)
+		.innerJoin(...tenantJoin(energyZone, energyConsumer.zoneId))
+		.where(and(inTenant(energyConsumer), eq(energyZone.energySiteId, siteId)))
+		.orderBy(asc(energyConsumer.position), asc(energyConsumer.id));
+}
 
 /** A zone of a site by its code: today's figures, its consumers and its doors. */
 export const getEnergyZone = query(

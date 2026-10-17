@@ -35,8 +35,10 @@ export const getClientEnergy = forCustomers.query(v.picklist(periods), async (pe
 	const sites = await Promise.all(
 		own.map(async ({ id }) => {
 			const site = await loadSite(id);
-			const figures = await siteFigures(site, periodRanges(period, site.timeZone, now), now);
+			const ranges = periodRanges(period, site.timeZone, now);
+			const figures = await siteFigures(site, ranges, now);
 			return {
+				from: ranges.from,
 				site: {
 					id: site.id,
 					name: site.name,
@@ -44,6 +46,7 @@ export const getClientEnergy = forCustomers.query(v.picklist(periods), async (pe
 					meterName: site.meterName,
 					tariff: site.tariff,
 					co2Factor: site.co2Factor,
+					timeZone: site.timeZone,
 				},
 				previousComplete: figures.previousComplete,
 				zones: figures.zones,
