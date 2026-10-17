@@ -12,6 +12,7 @@ import m0009 from './0009_add-condition.sql';
 import m0010 from './0010_add-docks.sql';
 import m0011 from './0011_add-customer-portal.sql';
 import m0012 from './0012_add-energy.sql';
+import m0013 from './0013_add-order-type-settings.sql';
 
   export default {
     journal,
@@ -28,7 +29,8 @@ m0008,
 m0009,
 m0010,
 m0011,
-m0012
+m0012,
+m0013
     }
   }
   

@@ -3,14 +3,17 @@
 
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getEquipmentCategories } from "#lib/equipment/remotes.ts";
-	import { labelOrValue } from "#lib/i18n/index.ts";
+	import { label, labelOrValue } from "#lib/i18n/index.ts";
+	import { orderTypes } from "#lib/models.ts";
 	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
+	import { getOrderTypes } from "#lib/orders/remotes.ts";
 
 	import ModuleCard from "./module-card.svelte";
 	import { getOrganizationSettings } from "./settings.remote.ts";
 
 	const settings = $derived(await getOrganizationSettings());
 	const categories = $derived(await getEquipmentCategories());
+	const typeSettings = $derived(await getOrderTypes());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
 	/** Where each module that has such a page is set up. */
 	const setUp = new Map<string, string>(
@@ -120,6 +123,37 @@
 			{:else}
 				<p class="text-sm text-muted-foreground">{m.equipment_categories_empty()}</p>
 			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root data-testid="order-types-summary">
+		<Card.Header>
+			<Card.Title>{m.orders_types_title()}</Card.Title>
+			<Card.Description>
+				{m.orders_types_description()}
+				{#if !settings.canManage}{m.settings_managers_change_these()}{/if}
+			</Card.Description>
+			{#if settings.canManage}
+				<Card.Action>
+					<Button href={resolve("/(app)/settings/order-types")} variant="outline" size="sm">
+						{m.orders_types_manage()}
+					</Button>
+				</Card.Action>
+			{/if}
+		</Card.Header>
+		<Card.Content>
+			<div class="flex flex-wrap gap-2">
+				{#each orderTypes as type (type)}
+					{@const hidden = typeSettings[type]?.hidden}
+					<Badge
+						variant="outline"
+						class={hidden ? "text-muted-foreground line-through" : undefined}
+						title={hidden ? m.orders_types_hidden() : undefined}
+					>
+						{label("orderType", type)}
+					</Badge>
+				{/each}
+			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

@@ -17,9 +17,11 @@
 	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
 	import type { FormPartsFields } from "#lib/extensions/form-parts.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
-	import { manualOrderStatuses, orderPriorities, orderTypes } from "#lib/models.ts";
+	import { manualOrderStatuses, orderPriorities } from "#lib/models.ts";
 
 	import type { createOrder, getOrder, getOrderFormOptions, updateOrder } from "../order.remote.ts";
+	import { getOrderTypes } from "../type-settings/type-settings.remote.ts";
+	import { offeredOrderTypes } from "../types.ts";
 	import { orderFormPreflight } from "./order-schema.ts";
 	import UnitsField from "./units-field.svelte";
 
@@ -42,6 +44,10 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
+	// The types the tenant didn't hide, and the order's own if it did.
+	const types = $derived(offeredOrderTypes(await getOrderTypes(), order?.type));
+	// A new order is maintenance unless the tenant hid that.
+	const defaultType = $derived(types.includes("maintenance") ? "maintenance" : types[0]);
 	// What's typed and not saved yet comes back with the page (back button, reload).
 	formSnapshot("order", () => form);
 	// When the order is scheduled for, on the user's clock.
@@ -110,8 +116,8 @@
 				<SelectField
 					field={fields.type}
 					label={m.orders_field_type()}
-					value={order?.type ?? "maintenance"}
-					options={labelOptions("orderType", orderTypes)}
+					value={order?.type ?? defaultType}
+					options={labelOptions("orderType", types)}
 				/>
 				<SelectField
 					field={fields.priority}

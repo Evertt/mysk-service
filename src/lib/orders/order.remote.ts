@@ -30,7 +30,9 @@ import { createOrders } from "./server/creation.ts";
 import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./server/hooks.ts";
 import { acceptFirst, completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
+import { tenantOrderTypes } from "./server/types.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
+import { offeredOrderTypes } from "./types.ts";
 
 /**
  * One order with everything on it: its units in their order, other orders for the same units, and
@@ -177,7 +179,7 @@ type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
  * form (`modules`, saved through `orders.saving`); returns its number. Throws an `OrderRefused`
  * when a module can't save its part (see `refuseParts`).
  */
-async function saveOrder(id: number | null, input: OrderInput) {
+async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { modules, scheduledTime, equipmentIds: units, ...fields } = input;
 	const equipmentIds = [...new Set(units)];
 
@@ -192,6 +194,10 @@ async function saveOrder(id: number | null, input: OrderInput) {
 			invalid(notEditable(existing.number, "changed"));
 		}
 		if (existing && isAwaitingAcceptance(existing.status)) invalid(acceptFirst(existing.number));
+		// A type the tenant hid is no choice, unless the order has it already.
+		if (!offeredOrderTypes(tenantOrderTypes(), existing?.type).includes(fields.type)) {
+			invalid(issue.type(m.orders_type_hidden_refused()));
+		}
 		const unitsBefore = existing
 			? ((await unitIdsOf([existing.id], tx)).get(existing.id) ?? [])
 			: [];
@@ -306,7 +312,7 @@ async function refuseProblems(issue: OrderIssue, input: OrderInput) {
 
 export const createOrder = forMembers.form(orderSchema, async (input, issue) => {
 	await refuseProblems(issue, input);
-	const number = await saveOrder(null, input).catch((error) => {
+	const number = await saveOrder(null, input, issue).catch((error) => {
 		if (error instanceof OrderRefused) refuseParts(error);
 		throw error;
 	});
@@ -318,7 +324,7 @@ export const updateOrder = forMembers.form(
 	async (data, issue) => {
 		const { id, ...input } = data;
 		await refuseProblems(issue, input);
-		const number = await saveOrder(id, input).catch((error) => {
+		const number = await saveOrder(id, input, issue).catch((error) => {
 			if (error instanceof OrderRefused) refuseParts(error);
 			throw error;
 		});

@@ -24,9 +24,11 @@ import {
 	label,
 	type LabelKind,
 	labelOrValue,
+	languageNames,
 } from "#lib/i18n/index.ts";
 import type { CoreActivityAction } from "#lib/models.ts";
 import { type AppModule, modules } from "#lib/modules/manifests.ts";
+import { locales } from "#lib/paraglide/runtime.js";
 
 import type { ReferenceType } from "./format.ts";
 
@@ -204,6 +206,24 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			specialty: { format: labelled("engineerSpecialty") },
 			// From 0 in the database, from 1 as people count.
 			position: { format: (value) => formatNumber(Number(value) + 1) },
+		},
+	},
+	/**
+	 * One of the order types, by its id, as the tenant set it up on the settings page (its own
+	 * names and whether it's hidden); shown by the name it has now.
+	 */
+	order_type: {
+		noun: m.activity_subject_order_type,
+		label: ({ id }) => labelled("orderType")(id),
+		href: () => resolve("/(app)/settings/order-types"),
+		fields: {
+			...Object.fromEntries(
+				locales.map((locale) => [
+					`name_${locale}`,
+					{ label: () => m.activity_field_type_name({ language: languageNames[locale] }) },
+				]),
+			),
+			hidden: { label: m.activity_field_hidden },
 		},
 	},
 	order: {

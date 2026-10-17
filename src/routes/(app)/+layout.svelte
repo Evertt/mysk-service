@@ -3,9 +3,12 @@
 	The app shell (sidebar and header) for everything behind the login.
 -->
 <script lang="ts">
+	import { browser } from "$app/env";
 	import { type Component, onMount } from "svelte";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+	import { nameOrderTypes } from "#lib/orders/index.ts";
+	import { getOrderTypes } from "#lib/orders/remotes.ts";
 
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
 	import type { LayoutProps } from "./$types";
@@ -17,9 +20,15 @@
 
 	let { children }: LayoutProps = $props();
 
+	// The order types read as the tenant named them: in the browser from this query, from before the
+	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow
+	// a change. (The server reads the request's tenant, see `nameOrderTypesOnServer()`.)
+	const orderTypes = getOrderTypes();
+	if (browser) nameOrderTypes(() => orderTypes.current);
+
 	// Before any office page loads: sends field engineers who navigate here to their portal. Read
 	// once, not as a `$derived`: a refresh of the tenant must not hold up the shell.
-	const tenant = await getCurrentTenant();
+	const [tenant] = await Promise.all([getCurrentTenant(), orderTypes]);
 	const moduleIds = tenant.modules;
 
 	// The service worker that answers queries from its cache (see `swr-worker.ts`).

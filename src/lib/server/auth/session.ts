@@ -6,6 +6,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { isCustomerContact, isFieldEngineer, managerRoles, parseRoles } from "#lib/auth/index.ts";
 import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
+import type { OrderTypeSettings } from "#lib/orders/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -13,6 +14,7 @@ import {
 	member,
 	organization,
 	organizationModule,
+	orderTypeSetting,
 	portalContact,
 	portalContactSite,
 } from "#lib/server/db/schema.ts";
@@ -27,6 +29,12 @@ export interface Tenant {
 	/** The member's roles, see `memberRoles` in `#lib/auth/roles.ts` (a member may have several). */
 	roles: string[];
 	modules: string[];
+	/**
+	 * What the organization changed about the order types (its own names, the hidden ones), as
+	 * stored: `label("orderType", …)` reads the names from here on the server (see
+	 * `#lib/orders/types.ts`). None: all as standard (the daily jobs' tenant).
+	 */
+	orderTypes?: OrderTypeSettings;
 }
 
 /**
@@ -52,10 +60,20 @@ export async function loadTenant(
 		memberships.find((row) => row.organizationId === activeOrganizationId) ?? memberships[0];
 	if (!current) return undefined;
 
-	const modules = await db
-		.select({ id: organizationModule.moduleId })
-		.from(organizationModule)
-		.where(eq(organizationModule.organizationId, current.organizationId));
+	const [modules, typeSettings] = await Promise.all([
+		db
+			.select({ id: organizationModule.moduleId })
+			.from(organizationModule)
+			.where(eq(organizationModule.organizationId, current.organizationId)),
+		db
+			.select({
+				type: orderTypeSetting.type,
+				names: orderTypeSetting.names,
+				hidden: orderTypeSetting.hidden,
+			})
+			.from(orderTypeSetting)
+			.where(eq(orderTypeSetting.organizationId, current.organizationId)),
+	]);
 	return {
 		organizationId: current.organizationId,
 		name: current.name,
@@ -64,6 +82,9 @@ export async function loadTenant(
 		// A row for a module that's no longer there (removed from the app) does nothing, and neither
 		// does one whose requirements are off; the always-on modules need no row.
 		modules: effectiveModules(modules.map((row) => row.id)),
+		orderTypes: Object.fromEntries(
+			typeSettings.map(({ type, names, hidden }) => [type, { names, hidden }]),
+		),
 	};
 }
 

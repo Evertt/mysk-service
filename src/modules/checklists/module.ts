@@ -17,4 +17,6 @@ export default defineModule({
 	// Tells the condition module a unit's inspection status and its completed checklists.
 	enhances: ["condition"],
 	nav: { after: "equipment" },
+	// Inspection and maintenance orders get a checklist per unit.
+	orderTypes: ["inspection", "maintenance"],
 });

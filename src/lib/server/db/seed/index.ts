@@ -111,6 +111,12 @@ const tenants = [
 		categories: shltrCategories,
 		generate: generateShltrTenant,
 		signoffs: shltrSignoffs,
+		// Breakdowns are SHLTR's "storingen", as standard. As a demo of the settings: surveys go by
+		// SHLTR's own Dutch name, and damage, which SHLTR doesn't book as such, is hidden.
+		orderTypes: [
+			{ type: "survey", names: { nl: "Offerte-opname" }, hidden: false },
+			{ type: "damage", names: {}, hidden: true },
+		] as const,
 	},
 ];
 
@@ -141,6 +147,7 @@ await db.transaction(async (tx) => {
 		engineer,
 		customer,
 		schema.organizationModule,
+		schema.orderTypeSetting,
 		schema.invitation,
 		schema.member,
 		schema.organization,
@@ -173,6 +180,15 @@ await db.transaction(async (tx) => {
 			await tx
 				.insert(schema.organizationModule)
 				.values(tenant.modules.map((moduleId) => ({ organizationId: tenant.id, moduleId })));
+		}
+		// The order types the tenant renamed or hid; the others are as standard.
+		if ("orderTypes" in tenant) {
+			const settings = tenant.orderTypes.map((setting) => ({
+				...setting,
+				organizationId: tenant.id,
+			}));
+			await tx.insert(schema.orderTypeSetting).values(settings);
+			count("orderTypeSettings", settings);
 		}
 
 		faker.seed(tenant.seed);

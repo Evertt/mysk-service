@@ -7,7 +7,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatTimeSlot } from "#lib/i18n/format.ts";
 
-import { afresh, countIn, organizations, rows, useApp, users, value } from "./app.ts";
+import { afresh, baseURL, countIn, organizations, rows, useApp, users, value } from "./app.ts";
 
 const { north, shltr } = organizations;
 const app = useApp({ user: users.shltrPlanner });
@@ -78,6 +78,29 @@ describe("SHLTR's planner", () => {
 			).map((row) => row.number),
 		);
 		expect(shown.filter((number) => !numbers.has(number))).toEqual([]);
+	});
+
+	test("the order types go by SHLTR's names, without damage on the form", async () => {
+		const { page } = app;
+		const speak = (locale: "en" | "nl") =>
+			page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
+		await speak("nl");
+		try {
+			await app.go("/orders/new");
+			const options = await page.getByLabel("Type").locator("option").allInnerTexts();
+			expect(options).toEqual(expect.arrayContaining(["Storing", "Offerte-opname"]));
+			expect(options).not.toContain("Offerte opname");
+			expect(options).not.toContain("Schade");
+			// A damage order keeps its type.
+			const damage = await value<string>(
+				`select number from "order" where organization_id = ? and type = 'damage' limit 1`,
+				[shltr.id],
+			);
+			await app.go(`/orders/${damage}`);
+			expect(await page.locator("main").innerText()).toContain("Schade");
+		} finally {
+			await speak("en");
+		}
 	});
 });
 

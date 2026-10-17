@@ -443,6 +443,23 @@ export const organizationModule = sqliteTable(
 );
 
 /**
+ * What a tenant changed about one of the order types, which managers keep on the settings page
+ * (`#lib/orders/types.ts`): its own names, by language, and whether the order form leaves it out.
+ * A type without a row is as standard. Loaded with the tenant, once per request (`loadTenant()`).
+ */
+export const orderTypeSetting = sqliteTable(
+	"order_type_setting",
+	{
+		organizationId: organizationId(),
+		type: text("type", { enum: orderTypes }).notNull(),
+		/** By locale (`{ "nl": "Offerte-opname" }`); a language without a name has the standard one. */
+		names: text("names", { mode: "json" }).$type<Partial<Record<string, string>>>().notNull(),
+		hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+	},
+	(table) => [primaryKey({ columns: [table.organizationId, table.type] })],
+);
+
+/**
  * A token a system outside the app (e.g. the Salvo dock hardware's feed) posts to a module's
  * integration endpoints with (its `(api)` routes, see `#lib/server/auth/integrations.ts`): it says
  * which tenant the data is for. Managers make and revoke them on the module's settings page; the

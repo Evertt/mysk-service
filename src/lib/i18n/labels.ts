@@ -19,8 +19,26 @@ import type {
 	SitePriority,
 	Weekday,
 } from "#lib/models.ts";
+import type { Locale } from "#lib/paraglide/runtime.js";
 
 export type Labels<T extends string> = Record<T, () => string>;
+
+/**
+ * The name a tenant gave a value in the current language, if it gave it one (e.g. its own name for
+ * an order type, see `#lib/orders/types.ts`); `undefined` for the standard label.
+ */
+export type TenantName = (kind: string, value: string) => string | undefined;
+
+let tenantName: TenantName = () => undefined;
+
+/**
+ * Makes `label()` (and everything made with it: `withLabels`, `labelOptions`, `labelOrValue`) show
+ * the tenant's own names first: the request's tenant's on the server, the signed-in one's in the
+ * browser. Called once per runtime; `get` is asked on every label, so it must answer from memory.
+ */
+export function overwriteTenantNames(get: TenantName) {
+	tenantName = get;
+}
 
 const coreLabels = {
 	orderStatus: {
@@ -119,9 +137,12 @@ export function defineLabels<L extends Record<string, Record<string, () => strin
 	const hasLabel = <K extends Kind>(kind: K, value: string): value is Value<K> =>
 		Object.hasOwn(labels[kind], value);
 
-	/** The translated label of an enum value, e.g. `label("orderStatus", "in_progress")` → `In progress`. */
+	/**
+	 * The translated label of an enum value, e.g. `label("orderStatus", "in_progress")` → `In progress`:
+	 * the tenant's own name for it if it gave it one (see `overwriteTenantNames`).
+	 */
 	const label = <K extends Kind>(kind: K, value: Value<K>): string =>
-		(labels[kind] as Labels<string>)[value]();
+		tenantName(kind, value) ?? (labels[kind] as Labels<string>)[value]();
 
 	/**
 	 * The label of a value that may be unknown (e.g. a role stored by an older version): the value
@@ -169,3 +190,16 @@ const withLabel = <T extends object>(entry: T, get: () => string) =>
 export type LabelKind = keyof typeof coreLabels;
 
 export const { hasLabel, label, labelOrValue, withLabels, labelOptions } = defineLabels(coreLabels);
+
+/**
+ * A core value's standard label in `locale` (the current language by default), whatever name the
+ * tenant gave it: e.g. what a tenant's own name for an order type replaces.
+ */
+export const standardLabel = <K extends LabelKind>(
+	kind: K,
+	value: keyof (typeof coreLabels)[K] & string,
+	locale?: Locale,
+): string =>
+	(coreLabels[kind] as Record<string, (inputs?: object, options?: { locale?: Locale }) => string>)[
+		value
+	]({}, { locale });

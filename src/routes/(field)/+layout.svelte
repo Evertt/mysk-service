@@ -3,11 +3,14 @@
 	The engineer portal's shell: a slim header and one column, made for a phone in the field.
 -->
 <script lang="ts">
+	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
+	import { nameOrderTypes } from "#lib/orders/index.ts";
+	import { getOrderTypes } from "#lib/orders/remotes.ts";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
@@ -17,7 +20,13 @@
 
 	let { children }: LayoutProps = $props();
 
-	const me = $derived(await getMe());
+	// The order types read as the tenant named them: in the browser from this query, from before the
+	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow
+	// a change. (The server reads the request's tenant, see `nameOrderTypesOnServer()`.)
+	const orderTypes = getOrderTypes();
+	if (browser) nameOrderTypes(() => orderTypes.current);
+
+	const [me] = $derived(await Promise.all([getMe(), orderTypes]));
 </script>
 
 <div class="flex min-h-svh flex-col bg-background">

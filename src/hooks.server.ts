@@ -8,6 +8,7 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 
 import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
+import { nameOrderTypesOnServer } from "#lib/orders/server/index.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
@@ -16,6 +17,9 @@ import { handleTimeZone } from "#lib/server/time-zone.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
 import { deferStylesheets } from "./routes/splash.ts";
+
+// The order types read as the request's tenant named them, wherever the server shows one.
+nameOrderTypesOnServer();
 
 /**
  * With `DEV_REMOTE_DELAY_MS` set, holds up each remote function call (and each page's server data,

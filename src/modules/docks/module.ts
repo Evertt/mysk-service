@@ -17,4 +17,6 @@ export default defineModule({
 	nav: { after: "equipment" },
 	// A monitored door that's a dock's door shows the dock's state on energy's door card.
 	enhances: ["energy"],
+	// A dock door alert that escalates makes a breakdown order (`server/rules.ts`).
+	orderTypes: ["breakdown"],
 });

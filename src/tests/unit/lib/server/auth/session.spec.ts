@@ -388,6 +388,9 @@ describe("loadTenant", () => {
 			sql`create table member (id text primary key, organization_id text, user_id text, role text, created_at integer)`,
 		);
 		await db.run(sql`create table organization_module (organization_id text, module_id text)`);
+		await db.run(
+			sql`create table order_type_setting (organization_id text, type text, names text, hidden integer)`,
+		);
 		await db.run(sql`insert into organization (id, name, slug) values
 			('north', 'North Facilities', 'north'),
 			('south', 'South Services', 'south'),
@@ -400,6 +403,9 @@ describe("loadTenant", () => {
 			('south', 'base'),
 			('south', 'retired'),
 			('east', 'addon')`);
+		await db.run(sql`insert into order_type_setting (organization_id, type, names, hidden) values
+			('north', 'survey', '{"nl":"Offerte-opname"}', 0),
+			('north', 'damage', '{}', 1)`);
 	});
 
 	test("uses the active organization", async () => {
@@ -409,7 +415,16 @@ describe("loadTenant", () => {
 			slug: "south",
 			roles: ["member"],
 			modules: ["base", "core-ish"],
+			orderTypes: {},
 		});
+	});
+
+	test("loads the organization's order type settings, and no other's", async () => {
+		expect((await loadTenant("jo", "north"))?.orderTypes).toEqual({
+			survey: { names: { nl: "Offerte-opname" }, hidden: false },
+			damage: { names: {}, hidden: true },
+		});
+		expect((await loadTenant("jo", "south"))?.orderTypes).toEqual({});
 	});
 
 	test("ignores a module the app no longer has", async () => {

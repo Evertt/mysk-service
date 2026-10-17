@@ -5,6 +5,7 @@ export { default as UnitsCard } from "./detail/units-card.svelte";
 export { default as WorkReport } from "./detail/work-report.svelte";
 export { default as OrderForm } from "./form/order-form.svelte";
 export { default as OrdersTable } from "./list/orders-table.svelte";
+export { default as OrderTypesCard } from "./type-settings/order-types-card.svelte";
 export { default as CostItem } from "./ui/cost-item.svelte";
 export { default as OrderLink } from "./ui/order-link.svelte";
 export { default as OrderTags } from "./ui/order-tags.svelte";

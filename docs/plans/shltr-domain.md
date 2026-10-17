@@ -1404,5 +1404,11 @@ As of 2026-10-17, unreleased (`main` has none of it):
 | 5b    | Energy: sites, zones, consumers, monitored doors, 15-minute readings through the feed, alerts that become orders, the report, the office's setup pages, a portal page, a simulator                                                                                                                        | `energy`            |
 
 Not built yet: the parts shop and the partner programme's portal pages (phase 4b, design in
-`parts-shop.md`); the real Salvo and P1 integrations; an import from My24Service; renaming or hiding
-order types per tenant; credit notes (for the cash bonus).
+`parts-shop.md`); the real Salvo and P1 integrations; an import from My24Service; credit notes (for
+the cash bonus).
+
+Order types per tenant (core): managers give a type a name of their own per language and hide those
+they don't use from the order form, on the settings page (`/settings/order-types`,
+`#lib/orders/types.ts`); a type a module that's on needs (checklists' and maintenance plans'
+inspection and maintenance, docks' breakdown) and breakdown, which the customer portal reports,
+can't be hidden. The seed renames SHLTR's survey to "Offerte-opname" and hides damage.

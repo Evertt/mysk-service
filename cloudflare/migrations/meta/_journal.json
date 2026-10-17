@@ -92,6 +92,13 @@
       "when": 1792214198006,
       "tag": "0012_add-energy",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792229723842,
+      "tag": "0013_add-order-type-settings",
+      "breakpoints": true
     }
   ]
 }

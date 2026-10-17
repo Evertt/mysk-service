@@ -15,4 +15,6 @@ export default defineModule({
 	// a unit's next visit to the condition module's units.
 	enhances: ["contracts", "condition"],
 	nav: { after: "equipment" },
+	// The orders its plans make (`planOrderTypes`).
+	orderTypes: ["maintenance", "inspection"],
 });

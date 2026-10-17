@@ -5,6 +5,7 @@
 	`portal` in `#lib/modules/manifests.ts`), over one column: made for a phone, fine on a desk.
 -->
 <script lang="ts">
+	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import BuildingIcon from "@lucide/svelte/icons/building-2";
@@ -17,6 +18,8 @@
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { type AppModule, modules } from "#lib/modules/manifests.ts";
+	import { nameOrderTypes } from "#lib/orders/index.ts";
+	import { getOrderTypes } from "#lib/orders/remotes.ts";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import { cn } from "#lib/utils.ts";
 
@@ -26,8 +29,16 @@
 
 	let { children }: LayoutProps = $props();
 
+	// The order types read as the tenant named them: in the browser from this query, from before the
+	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow
+	// a change. (The server reads the request's tenant, see `nameOrderTypesOnServer()`.)
+	const orderTypes = getOrderTypes();
+	if (browser) nameOrderTypes(() => orderTypes.current);
+
 	// Together, not one after the other.
-	const [me, tenantModules] = $derived(await Promise.all([getPortalMe(), getTenantModules()]));
+	const [me, tenantModules] = $derived(
+		await Promise.all([getPortalMe(), getTenantModules(), orderTypes]),
+	);
 
 	interface NavEntry {
 		id: string;

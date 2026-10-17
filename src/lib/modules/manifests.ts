@@ -18,6 +18,7 @@ import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
+import type { OrderType } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import type { CoreNavId } from "#lib/modules/nav.ts";
 
@@ -61,6 +62,12 @@ interface ModuleParts {
 	 * after the portal's own. Its label is a message function, read when shown.
 	 */
 	portal?: { route: RouteId; label: () => string; icon: Component };
+	/**
+	 * The order types the module makes orders of or works with (e.g. maintenance plans'), which a
+	 * tenant can't hide from the order form while the module is on (`requiredOrderTypes()` in
+	 * `#lib/orders/server/types.ts`).
+	 */
+	orderTypes?: readonly OrderType[];
 }
 
 /** A module as the registry has it. */
