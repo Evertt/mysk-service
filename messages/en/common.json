@@ -271,5 +271,8 @@
 			}
 		}
 	],
-	"common_badge_select_label": "{label}: {value}"
+	"common_badge_select_label": "{label}: {value}",
+	"common_error_customers_use_portal": "Customer contacts use the customer portal",
+	"common_error_not_customer": "Your account isn't a customer contact's",
+	"common_error_back_to_portal": "Back to the portal"
 }

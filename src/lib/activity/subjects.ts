@@ -52,6 +52,7 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	resent: m.activity_action_resent,
 	cancelled: m.activity_action_cancelled,
 	accepted: m.activity_action_accepted,
+	rejected: m.activity_action_rejected,
 	shared: m.activity_action_shared,
 	unshared: m.activity_action_unshared,
 	revoked: m.activity_action_revoked,
@@ -237,6 +238,11 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	},
 	/** An invitation to join the organization, by the email address it's for. */
 	invitation: { noun: m.activity_subject_invitation, fields: { role: { format: roles } } },
+	/**
+	 * A customer's contact's access to the customer portal, by the email address it's for; logged
+	 * with their customer as its parent, so it's on the customer's page too.
+	 */
+	portal_contact: { noun: m.activity_subject_portal_contact },
 	/**
 	 * A token a module's integration endpoints take (`integration_token`), by its name, logged with
 	 * its module as the parent. It's managed on the module's settings page.

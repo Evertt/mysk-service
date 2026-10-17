@@ -15,14 +15,16 @@
  *   engineer (`requireMember()`). Almost everything.
  * - `forManagers`: an owner or admin (`requireManager()`), for the organization's settings.
  * - `forEngineers`: the engineer portal, a user linked to an engineer record (`requireEngineer()`).
+ * - `forCustomers`: the customer portal, a customer's contact (`requireCustomer()`), whose handlers
+ *   scope every query to that customer (and its sites they see) as well as the tenant.
  * - `forAnyRole`: any member, field engineers too (`requireTenant()`); the app shell's tenant.
  * - `forUsers`: signed in, with or without an organization (`requireUser()`).
  * - `forAnyone`: public on purpose (signing in, the theme, an invitation's link).
  * - `moduleRemote(id)`: an optional module's (`requireModule(id)`), only in its
  *   `remote-functions.ts`.
  *
- * The handler reads what the gate admitted with `currentTenant()`, `currentUser()` and
- * `currentEngineer()` (`#lib/server/auth`), which don't check a role again.
+ * The handler reads what the gate admitted with `currentTenant()`, `currentUser()`,
+ * `currentEngineer()` and `currentCustomer()` (`#lib/server/auth`), which don't check a role again.
  *
  * `remote-functions.spec.ts` checks that nothing else imports these from `$app/server`, and that
  * each module builds its remote functions from its own set. There's no `prerender`: nothing here is
@@ -33,6 +35,7 @@ import { command, form, query } from "$app/server";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
 import {
+	requireCustomer,
 	requireEngineer,
 	requireManager,
 	requireMember,
@@ -63,7 +66,7 @@ function gated<F>(make: F, gate: Gate): F {
 		const handler = args.pop() as (...handlerArgs: unknown[]) => unknown;
 		const guardedHandler = (...handlerArgs: unknown[]) => {
 			const admitted = gate();
-			// A gate that answers right away (all but the engineer's) leaves the handler's start
+			// A gate that answers right away (all but the engineer's and the customer's) leaves the handler's start
 			// synchronous, as SvelteKit calls it.
 			return admitted instanceof Promise
 				? admitted.then(() => handler(...handlerArgs))
@@ -88,19 +91,21 @@ export function remoteSet(gate: Gate): RemoteSet {
 export const forMembers = remoteSet(requireMember);
 export const forManagers = remoteSet(requireManager);
 export const forEngineers = remoteSet(requireEngineer);
+export const forCustomers = remoteSet(requireCustomer);
 export const forAnyRole = remoteSet(requireTenant);
 export const forUsers = remoteSet(requireUser);
 export const forAnyone = remoteSet(() => {});
 
 /** Who may call a module's remote functions, besides the tenant having the module. */
-type ModuleRole = "member" | "manager" | "engineer";
+type ModuleRole = "member" | "manager" | "engineer" | "customer";
 
 /**
  * The remote function set of an optional module: refused with a 404 for tenants without the
  * module, as if it didn't exist (`requireModule()`), and with a 403 for those who aren't
  * managers when `role` is `"manager"`; with `"engineer"`, for the engineer portal: only users linked
- * to an engineer (`requireEngineer()`). A module calls it once, in its `remote-functions.ts`, with
- * its own id:
+ * to an engineer (`requireEngineer()`); with `"customer"`, for the customer portal: only customers'
+ * contacts (`requireCustomer()`), whose handlers scope what they read to `currentCustomer()`. A
+ * module calls it once, in its `remote-functions.ts`, with its own id:
  *
  * ```ts
  * export const { query, form, command } = moduleRemote("invoices");
@@ -112,6 +117,10 @@ export function moduleRemote(id: ModuleId, role: ModuleRole = "member"): RemoteS
 		if (role === "engineer") {
 			requireModule(id, { anyRole: true });
 			return requireEngineer();
+		}
+		if (role === "customer") {
+			requireModule(id, { anyRole: true });
+			return requireCustomer();
 		}
 		requireModule(id);
 		if (role === "manager") requireManager();

@@ -15,7 +15,7 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 
-import { includedLabel, needsAttention, responseDeadline } from "./coverage.ts";
+import { includedLabel, needsAttention, responseDeadline, waitingStatuses } from "./coverage.ts";
 import { query } from "./remote-functions.ts";
 import { coverageOf } from "./server/contracts.ts";
 import { contract, contractEquipment } from "./server/schema.ts";
@@ -90,7 +90,7 @@ export const getContractsOverview = query(async () => {
 				and(
 					inTenant(order),
 					inList(order.type, correctiveOrderTypes),
-					eq(order.status, "quote"),
+					inList(order.status, waitingStatuses),
 					// Only orders about units can be covered.
 					sql`${unitCount()} > 0`,
 				),

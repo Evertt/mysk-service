@@ -8,7 +8,7 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
-	import { SegmentBadge, SitesCard } from "#lib/customers/components.ts";
+	import { PortalAccessCard, SegmentBadge, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
 	import { countryName } from "#lib/customers/index.ts";
@@ -211,6 +211,8 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
+
+		<PortalAccessCard code={customer.code} />
 
 		<ExtensionSlot point={detailSide} props={{ code: customer.code }} />
 

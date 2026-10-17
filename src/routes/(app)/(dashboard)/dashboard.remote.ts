@@ -30,6 +30,11 @@ export const getDashboard = forMembers.query(async () => {
 		})
 		.from(order)
 		.where(and(inTenant(order), inList(order.status, openOrderStatuses)));
+	// Reported by customers in their portal, waiting for a planner to accept or reject them.
+	const [awaiting] = await db
+		.select({ total: count() })
+		.from(order)
+		.where(and(inTenant(order), eq(order.status, "awaiting_acceptance")));
 
 	// Work completed in the last 30 days, priced like everywhere else.
 	const done = await db
@@ -82,7 +87,7 @@ export const getDashboard = forMembers.query(async () => {
 		.limit(6)
 		.then(withFirstUnit);
 
-	return { open, revenue, fleet, upcoming };
+	return { open, awaiting: awaiting.total, revenue, fleet, upcoming };
 });
 
 /**

@@ -67,7 +67,7 @@
 
 	async function change(to: OrderStatus) {
 		// `orderStatusChoices()` offers only these; the server checks again.
-		if (to === "invoiced") return;
+		if (to === "invoiced" || to === "awaiting_acceptance") return;
 		try {
 			await setOrderStatus({ id, status: to }).updates(
 				getOrders(query(id)).withOverride((current) => ({

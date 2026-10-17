@@ -6,7 +6,15 @@ import { addUnits } from "./orders-helpers.ts";
 const { north, south } = organizations;
 const app = useApp();
 
-const statusValues = ["quote", "scheduled", "in_progress", "completed", "invoiced", "cancelled"];
+const statusValues = [
+	"awaiting_acceptance",
+	"quote",
+	"scheduled",
+	"in_progress",
+	"completed",
+	"invoiced",
+	"cancelled",
+];
 const equipmentStatuses = ["operational", "needs_service", "out_of_service", "decommissioned"];
 
 /** The card of a chart. */
@@ -80,7 +88,16 @@ describe("the dashboard's charts", () => {
 			await chartCard("Orders per week")
 				.locator('[data-slot="chart-table"] thead th')
 				.allInnerTexts(),
-		).toEqual(["Week", "Quote", "Scheduled", "In progress", "Completed", "Invoiced", "Cancelled"]);
+		).toEqual([
+			"Week",
+			"Awaiting acceptance",
+			"Quote",
+			"Scheduled",
+			"In progress",
+			"Completed",
+			"Invoiced",
+			"Cancelled",
+		]);
 		await expectChartsOf(north.id);
 	});
 

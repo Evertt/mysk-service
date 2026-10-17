@@ -27,7 +27,6 @@
 	"enum_engineer_specialty_hvac": "HVAC",
 	"enum_engineer_specialty_plumbing": "Plumbing",
 	"enum_engineer_specialty_controls": "Controls",
-
 	"enum_equipment_status_operational": "Operational",
 	"enum_equipment_status_needs_service": "Needs service",
 	"enum_equipment_status_out_of_service": "Out of service",
@@ -52,5 +51,8 @@
 	"enum_weekday_saturday": "Saturday",
 	"enum_weekday_sunday": "Sunday",
 	"enum_site_priority_normal": "Normal",
-	"enum_site_priority_high": "High"
+	"enum_site_priority_high": "High",
+	"enum_order_status_awaiting_acceptance": "Awaiting acceptance",
+	"enum_member_role_customer": "Customer contact",
+	"enum_member_role_description_customer": "A contact of a customer: reports breakdowns and follows their orders and equipment, in the customer portal."
 }

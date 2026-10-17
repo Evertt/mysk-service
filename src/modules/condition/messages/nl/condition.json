@@ -140,5 +140,6 @@
 	"condition_auto_order_inspection": "Keuring verlopen: inplannen vóór {date}.",
 	"condition_activity_action_recorded": "{user} legde {subject} vast",
 	"condition_activity_subject": "de conditie",
-	"condition_activity_subject_settings": "de instellingen van conditiebeheer"
+	"condition_activity_subject_settings": "de instellingen van conditiebeheer",
+	"condition_client_title": "Apparaten die aandacht nodig hebben"
 }

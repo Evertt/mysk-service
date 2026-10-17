@@ -27,7 +27,6 @@
 	"enum_engineer_specialty_hvac": "Klimaattechniek",
 	"enum_engineer_specialty_plumbing": "Sanitair",
 	"enum_engineer_specialty_controls": "Regeltechniek",
-
 	"enum_equipment_status_operational": "In bedrijf",
 	"enum_equipment_status_needs_service": "Onderhoud nodig",
 	"enum_equipment_status_out_of_service": "Buiten gebruik",
@@ -52,5 +51,8 @@
 	"enum_weekday_saturday": "Zaterdag",
 	"enum_weekday_sunday": "Zondag",
 	"enum_site_priority_normal": "Normaal",
-	"enum_site_priority_high": "Hoog"
+	"enum_site_priority_high": "Hoog",
+	"enum_order_status_awaiting_acceptance": "Nieuw (te accepteren)",
+	"enum_member_role_customer": "Klantcontact",
+	"enum_member_role_description_customer": "Contactpersoon van een klant: meldt storingen en volgt de eigen opdrachten en apparatuur, in het klantportaal."
 }

@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import type { MemberRole } from "#lib/auth/index.ts";
+	import type { TeamRole } from "#lib/auth/index.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
 
@@ -75,7 +75,7 @@
 											class="min-w-max"
 											aria-label={m.settings_role_of({ name: member.name })}
 											size="sm"
-											{...change.fields.role.as("select", member.roles[0] as MemberRole)}
+											{...change.fields.role.as("select", member.roles[0] as TeamRole)}
 											onchange={(event) => event.currentTarget.form?.requestSubmit()}
 										>
 											{#each member.roleOptions as role (role)}

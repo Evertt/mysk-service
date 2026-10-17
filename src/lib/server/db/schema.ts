@@ -529,6 +529,124 @@ export const orderSignoff = sqliteTable(
 	],
 );
 
+// --- Customer portal ------------------------------------------------------------------------------
+// Customers' contacts who sign in to the customer portal (`src/routes/(customer)/portal`), and the
+// orders they report there (see `#lib/server/auth/customer.ts`).
+
+/**
+ * A customer's contact with access to the customer portal: a member of the tenant with the role
+ * `customer`, linked to one of its customers. Made when the office invites them (by email, from
+ * the customer's page), linked to their account when they accept (`userId`); revoking access
+ * removes it with their membership. They see that customer's orders, units and sites: all its
+ * sites, or only those in `portal_contact_site` when `allSites` is off.
+ */
+export const portalContact = sqliteTable(
+	"portal_contact",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		customerId: integer("customer_id").notNull(),
+		/** The address they were invited at, lower case. */
+		email: text("email").notNull(),
+		/** Their account, once they've accepted the invitation. */
+		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+		/** The invitation they were sent, while it's pending (better-auth's, not a foreign key). */
+		invitationId: text("invitation_id"),
+		/** Whether they see all of the customer's sites (also those added later), or only some. */
+		allSites: integer("all_sites", { mode: "boolean" }).notNull().default(true),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("portal_contact_organization_id").on(table.organizationId, table.id),
+		// For their sites, which must be their own customer's.
+		uniqueIndex("portal_contact_customer_id").on(table.customerId, table.id),
+		// A user is at most one customer's contact per tenant, and an address is invited once.
+		uniqueIndex("portal_contact_organization_user").on(table.organizationId, table.userId),
+		uniqueIndex("portal_contact_organization_email").on(table.organizationId, table.email),
+		index("portal_contact_organization_customer").on(table.organizationId, table.customerId),
+		foreignKey({
+			columns: [table.organizationId, table.customerId],
+			foreignColumns: [customer.organizationId, customer.id],
+		}).onDelete("cascade"),
+	],
+);
+
+/** The sites a portal contact without `allSites` sees: their customer's own. */
+export const portalContactSite = sqliteTable(
+	"portal_contact_site",
+	{
+		organizationId: organizationId(),
+		contactId: integer("contact_id").notNull(),
+		/** The contact's customer, whose site it must be. */
+		customerId: integer("customer_id").notNull(),
+		siteId: integer("site_id").notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.contactId, table.siteId] }),
+		index("portal_contact_site_site").on(table.siteId),
+		foreignKey({
+			columns: [table.organizationId, table.contactId],
+			foreignColumns: [portalContact.organizationId, portalContact.id],
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.customerId, table.contactId],
+			foreignColumns: [portalContact.customerId, portalContact.id],
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.customerId, table.siteId],
+			foreignColumns: [customerSite.customerId, customerSite.id],
+		}).onDelete("cascade"),
+	],
+);
+
+/**
+ * An order a customer's contact reported in the customer portal (a breakdown), and the planner's
+ * decision on it: while the order is `awaiting_acceptance` there's none; accepting it sets
+ * `decidedAt`, rejecting it also `rejectionReason`, which the customer reads in their portal.
+ * Orders made in the office have none.
+ */
+export const orderRequest = sqliteTable(
+	"order_request",
+	{
+		orderId: integer("order_id").primaryKey(),
+		organizationId: organizationId(),
+		/** Who reported it; empty once their account is deleted (`reporterName` keeps who it was). */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		reporterName: text("reporter_name").notNull(),
+		decidedAt: moment("decided_at"),
+		/** Who accepted or rejected it; empty once their account is deleted. */
+		decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
+		/** Why it was rejected, for the customer; none when it was accepted. */
+		rejectionReason: text("rejection_reason"),
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.organizationId, table.orderId],
+			foreignColumns: [order.organizationId, order.id],
+		}).onDelete("cascade"),
+	],
+);
+
+export const portalContactRelations = relations(portalContact, ({ one, many }) => ({
+	customer: one(customer, {
+		fields: [portalContact.organizationId, portalContact.customerId],
+		references: [customer.organizationId, customer.id],
+	}),
+	sites: many(portalContactSite),
+	user: one(user, { fields: [portalContact.userId], references: [user.id] }),
+}));
+
+export const portalContactSiteRelations = relations(portalContactSite, ({ one }) => ({
+	contact: one(portalContact, {
+		fields: [portalContactSite.organizationId, portalContactSite.contactId],
+		references: [portalContact.organizationId, portalContact.id],
+	}),
+	site: one(customerSite, {
+		fields: [portalContactSite.customerId, portalContactSite.siteId],
+		references: [customerSite.customerId, customerSite.id],
+	}),
+}));
+
 export const orderNoteRelations = relations(orderNote, ({ one }) => ({
 	order: one(order, {
 		fields: [orderNote.organizationId, orderNote.orderId],

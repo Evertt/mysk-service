@@ -132,6 +132,14 @@ export function responseDeadline(
 	return { due, state: slaState(order.status, due, window, now) };
 }
 
+/**
+ * The statuses of an order not responded to yet: a quote (not planned yet), and a customer's
+ * report from the portal not accepted yet. The response time counts from when the order was made,
+ * so for a report from when the customer reported it, not from its acceptance: the contract
+ * promises the customer a response, and accepting it is part of that.
+ */
+export const waitingStatuses = ["awaiting_acceptance", "quote"] as const satisfies OrderStatus[];
+
 /** Where an order with a deadline of `due`, `window` after it was created, stands. */
 export function slaState(
 	status: OrderStatus,
@@ -139,7 +147,7 @@ export function slaState(
 	window: Temporal.Duration,
 	now: Temporal.Instant,
 ): SlaState {
-	if (status !== "quote") return "responded";
+	if (!(waitingStatuses as readonly OrderStatus[]).includes(status)) return "responded";
 	const left = now.until(due).total("milliseconds");
 	if (left <= 0) return "overdue";
 	return left < window.total("milliseconds") * AT_RISK_SHARE ? "at_risk" : "on_track";

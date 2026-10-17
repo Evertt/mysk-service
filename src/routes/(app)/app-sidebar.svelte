@@ -9,13 +9,17 @@
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+	import { formatNumber } from "#lib/i18n/index.ts";
 	import { type AppModule, modules } from "#lib/modules/manifests.ts";
 	import { type CoreNavId, type NavItem, placeNav } from "#lib/modules/nav.ts";
+	import { watchAwaitingAcceptance } from "#lib/orders/remotes.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
 	import UserMenu from "./user-menu.svelte";
 
 	const tenant = $derived(await getCurrentTenant());
+	// The orders customers reported in their portal that wait for a planner, on Orders' badge.
+	const awaiting = watchAwaitingAcceptance();
 
 	/** The core's entries; the tenant's modules are placed among them (`placeNav()`). */
 	const coreGroups = $derived([
@@ -111,6 +115,14 @@
 										</a>
 									{/snippet}
 								</Sidebar.MenuButton>
+								{#if item.id === "orders" && awaiting.current}
+									<Sidebar.MenuBadge
+										data-awaiting-acceptance
+										title={m.orders_awaiting_badge({ count: formatNumber(awaiting.current) })}
+									>
+										{formatNumber(awaiting.current)}
+									</Sidebar.MenuBadge>
+								{/if}
 							</Sidebar.MenuItem>
 						{/each}
 					</Sidebar.Menu>

@@ -1314,6 +1314,21 @@ Decided (the client can still overrule):
 - **Locations as records with a QR code, and a QR code per unit**: after phase 1.
 - **Import from My24** (customers, locations, equipment, materials): a phase of its own when migrating.
 
+### Decided in phase 4a (the customer portal)
+
+- **Customers' contacts** are members with the role `customer`, each linked to one customer
+  (`portal_contact`), for all of its sites (also later ones) or some. The office invites them from
+  the customer's page (Portal access); they use `/portal` only. Being both a contact and one of
+  SHLTR's people is out of scope.
+- **Acceptance** is a new order status, `awaiting_acceptance` ("Nieuw (te accepteren)"), first in
+  the workflow. Only orders reported in the portal have it; office orders skip it. A planner accepts
+  (→ `quote`, or `scheduled` when planned in the same step) or rejects with a reason (→
+  `cancelled`, the reason for the customer). The customer reads "Opdracht nog niet geaccepteerd",
+  "Opdracht geaccepteerd", then Ingepland, In behandeling, Afgerond, or "Afgewezen".
+- **Response times** count from the report, not from the acceptance.
+- **Photos** with a report wait for file storage (the app has none yet; documents, question 19).
+- A report is about one unit; the unit gives it its site.
+
 ## 6. Suggested build order
 
 **Phase 0: core foundations** (no new module)

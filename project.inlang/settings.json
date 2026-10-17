@@ -17,6 +17,7 @@
 			"./messages/{locale}/engineers.json",
 			"./messages/{locale}/settings.json",
 			"./messages/{locale}/portal.json",
+			"./messages/{locale}/client.json",
 			"./messages/{locale}/activity.json",
 			"./src/modules/checklists/messages/{locale}/checklists.json",
 			"./src/modules/condition/messages/{locale}/condition.json",

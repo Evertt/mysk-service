@@ -9,3 +9,8 @@ import { moduleRemote } from "#lib/server/remote-functions.ts";
 export const { query } = moduleRemote("checklists");
 export const forManagers = moduleRemote("checklists", "manager");
 export const forEngineers = moduleRemote("checklists", "engineer");
+/**
+ * For the customer portal: a customer's contact reads their customer's checklists, inspection
+ * statuses and work orders, at the sites they see (`client/client-checklists.remote.ts`).
+ */
+export const forCustomers = moduleRemote("checklists", "customer");

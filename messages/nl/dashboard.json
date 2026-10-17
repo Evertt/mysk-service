@@ -57,5 +57,8 @@
 	"dashboard_new_installation": "Nieuwe installatie",
 	"dashboard_column_engineer": "Monteur",
 	"dashboard_column_priority": "Prioriteit",
-	"dashboard_column_scheduled": "Gepland"
+	"dashboard_column_scheduled": "Gepland",
+	"dashboard_awaiting_acceptance": "Te accepteren",
+	"dashboard_awaiting_acceptance_description": "Gemeld door klanten in het klantportaal",
+	"dashboard_awaiting_acceptance_show": "Toon"
 }

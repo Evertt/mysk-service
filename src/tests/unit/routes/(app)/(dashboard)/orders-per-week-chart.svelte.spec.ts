@@ -7,6 +7,7 @@ import { day } from "#unit/temporal-support.ts";
 const data = [
 	{
 		week: day("2026-09-28"),
+		awaiting_acceptance: 0,
 		quote: 1,
 		scheduled: 2,
 		in_progress: 0,
@@ -16,6 +17,7 @@ const data = [
 	},
 	{
 		week: day("2026-10-05"),
+		awaiting_acceptance: 3,
 		quote: 11,
 		scheduled: 17,
 		in_progress: 1,
@@ -29,6 +31,7 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 	const { container } = await render(OrdersPerWeekChart, { data });
 
 	expect([...container.querySelectorAll("ul li")].map((item) => item.textContent?.trim())).toEqual([
+		"Awaiting acceptance",
 		"Quote",
 		"Scheduled",
 		"In progress",
@@ -40,6 +43,7 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 	expect(table).toHaveClass("sr-only");
 	expect([...table.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual([
 		"Week",
+		"Awaiting acceptance",
 		"Quote",
 		"Scheduled",
 		"In progress",
@@ -52,8 +56,8 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 			[...row.children].map((cell) => cell.textContent?.trim()),
 		),
 	).toEqual([
-		["28 Sept – 4 Oct 2026", "1", "2", "0", "3", "4", "0"],
-		["5 – 11 Oct 2026", "11", "17", "1", "0", "0", "2"],
+		["28 Sept – 4 Oct 2026", "0", "1", "2", "0", "3", "4", "0"],
+		["5 – 11 Oct 2026", "3", "11", "17", "1", "0", "0", "2"],
 	]);
 });
 
@@ -61,5 +65,5 @@ test("stacks a segment per status with orders, per week", async () => {
 	const { container } = await render(OrdersPerWeekChart, { data });
 
 	// Every status is a series; the chart draws once it has measured its box.
-	await expect.poll(() => container.querySelectorAll(".lc-bars-bar").length).toBe(12);
+	await expect.poll(() => container.querySelectorAll(".lc-bars-bar").length).toBe(14);
 });

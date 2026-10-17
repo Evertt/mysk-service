@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	isCustomerContact,
 	isFieldEngineer,
 	isManager,
 	memberRoles,
 	officeRoles,
 	parseRoles,
+	teamRoles,
 } from "#lib/auth/roles.ts";
 
 describe("isFieldEngineer", () => {
@@ -43,8 +45,33 @@ describe("isManager", () => {
 	});
 });
 
-test("every role but engineer works in the office", () => {
+test("every role but engineer and customer works in the office", () => {
 	expect(memberRoles.filter((role) => !(officeRoles as readonly string[]).includes(role))).toEqual([
 		"engineer",
+		"customer",
 	]);
+});
+
+test("the team's roles are all but the customer's", () => {
+	expect(memberRoles.filter((role) => !(teamRoles as readonly string[]).includes(role))).toEqual([
+		"customer",
+	]);
+});
+
+describe("isCustomerContact", () => {
+	test("is a member whose only role is customer", () => {
+		expect(isCustomerContact(["customer"])).toBe(true);
+	});
+
+	test("isn't someone who is also one of the team, nor anyone else", () => {
+		for (const role of teamRoles) {
+			expect(isCustomerContact(["customer", role]), role).toBe(false);
+			expect(isCustomerContact([role]), role).toBe(false);
+		}
+		expect(isCustomerContact([])).toBe(false);
+	});
+
+	test("isn't a field engineer", () => {
+		expect(isFieldEngineer(["customer"])).toBe(false);
+	});
 });

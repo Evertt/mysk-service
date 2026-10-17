@@ -55,6 +55,12 @@ interface ModuleParts {
 	 * A literal, like `requires`.
 	 */
 	nav?: { after: CoreNavId | ModuleId };
+	/**
+	 * Its page in the customer portal, if it has one (a route of its `routes/(customer)/`, e.g. the
+	 * partner programme's bonus): an entry in the portal's navigation for the tenants that have it,
+	 * after the portal's own. Its label is a message function, read when shown.
+	 */
+	portal?: { route: RouteId; label: () => string; icon: Component };
 }
 
 /** A module as the registry has it. */

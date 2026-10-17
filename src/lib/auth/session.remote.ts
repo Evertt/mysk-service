@@ -3,7 +3,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isFieldEngineer } from "#lib/auth/index.ts";
+import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { auth, currentTenant, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
@@ -21,8 +21,10 @@ export const getCurrentUser = forUsers.query(async () => {
  */
 export const getCurrentTenant = forAnyRole.query(async () => {
 	const tenant = currentTenant();
-	// The app shell awaits this, so field engineers who navigate here go to their portal instead.
+	// The app shell awaits this, so field engineers and customers' contacts who navigate here go to
+	// their portal instead.
 	if (isFieldEngineer(tenant.roles)) redirect(303, "/my");
+	if (isCustomerContact(tenant.roles)) redirect(303, "/portal");
 	const organizations = await db
 		.select({ id: organization.id, name: organization.name })
 		.from(member)
@@ -41,8 +43,8 @@ export const getCurrentTenant = forAnyRole.query(async () => {
 
 /**
  * The modules the current organization has on: what the extension slots show (`ExtensionSlot`),
- * on the office's pages and the engineer portal's alike (unlike `getCurrentTenant`, which sends
- * field engineers to their portal).
+ * on the office's pages and the portals' alike (unlike `getCurrentTenant`, which sends field
+ * engineers and customers' contacts to their portal).
  */
 export const getTenantModules = forAnyRole.query(async () => currentTenant().modules);
 

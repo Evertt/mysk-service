@@ -3,12 +3,19 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
-import { isFieldEngineer, managerRoles, parseRoles } from "#lib/auth/index.ts";
+import { isCustomerContact, isFieldEngineer, managerRoles, parseRoles } from "#lib/auth/index.ts";
 import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { engineer, member, organization, organizationModule } from "#lib/server/db/schema.ts";
+import {
+	engineer,
+	member,
+	organization,
+	organizationModule,
+	portalContact,
+	portalContactSite,
+} from "#lib/server/db/schema.ts";
 
 import { systemTenant, systemUser } from "./system.ts";
 
@@ -88,11 +95,13 @@ export function requireTenant() {
 
 /**
  * The signed-in user and their current tenant, or a 401/403. Refuses field engineers (see
- * `isFieldEngineer`), who only use the engineer portal.
+ * `isFieldEngineer`), who only use the engineer portal, and customer contacts
+ * (`isCustomerContact`), who only use the customer portal.
  */
 export function requireMember() {
 	const tenant = requireTenant();
 	if (isFieldEngineer(tenant.roles)) error(403, m.common_error_engineers_use_portal());
+	if (isCustomerContact(tenant.roles)) error(403, m.common_error_customers_use_portal());
 	return tenant;
 }
 
@@ -118,6 +127,54 @@ export function requireEngineer() {
 	const event = getRequestEvent();
 	let found = engineers.get(event);
 	if (!found) engineers.set(event, (found = findEngineer()));
+	return found;
+}
+
+/** The customer lookups of the requests in progress, so the gate and the handler share one. */
+const customers = new WeakMap<object, ReturnType<typeof findCustomer>>();
+
+/** What a customer contact may see: their customer, and its sites they're limited to, if any. */
+export interface CustomerAccess {
+	/** Their `portal_contact`. */
+	contactId: number;
+	customer: { id: number; code: string; name: string };
+	/** The ids of the customer's sites they see, or `null` for all of them (also those to come). */
+	siteIds: number[] | null;
+}
+
+async function findCustomer() {
+	const tenant = requireTenant();
+	// A customer contact only: an office member or engineer isn't one, even if linked.
+	if (!isCustomerContact(tenant.roles)) error(403, m.common_error_not_customer());
+	const linked = await db.query.portalContact.findFirst({
+		columns: { id: true, allSites: true },
+		where: and(eq(portalContact.userId, tenant.user.id), inTenant(portalContact)),
+		with: { customer: { columns: { id: true, code: true, name: true } } },
+	});
+	if (!linked) error(403, m.common_error_not_customer());
+	const siteIds = linked.allSites
+		? null
+		: (
+				await db
+					.select({ id: portalContactSite.siteId })
+					.from(portalContactSite)
+					.where(and(eq(portalContactSite.contactId, linked.id), inTenant(portalContactSite)))
+			).map((row) => row.id);
+	const access: CustomerAccess = { contactId: linked.id, customer: linked.customer, siteIds };
+	return { ...tenant, ...access };
+}
+
+/**
+ * The signed-in user, their current tenant and the customer their account is a contact of there
+ * (`portal_contact`), with the sites they may see, or a 401/403. The gate of `forCustomers` in
+ * `#lib/server/remote-functions.ts`, the customer portal's remote functions, which scope their
+ * queries to the customer (and its sites, see `#lib/server/auth/customer.ts`) as well as the
+ * tenant. Looked up once per request.
+ */
+export function requireCustomer() {
+	const event = getRequestEvent();
+	let found = customers.get(event);
+	if (!found) customers.set(event, (found = findCustomer()));
 	return found;
 }
 
@@ -194,3 +251,12 @@ export const currentTenant = () => requireTenant();
 
 /** The engineer record of the signed-in user, in a remote function gated by `forEngineers`. */
 export const currentEngineer = async () => (await requireEngineer()).engineer;
+
+/**
+ * The customer the signed-in contact sees, and its sites they're limited to (`siteIds`, `null` for
+ * all), in a remote function gated by `forCustomers`.
+ */
+export const currentCustomer = async (): Promise<CustomerAccess> => {
+	const { contactId, customer, siteIds } = await requireCustomer();
+	return { contactId, customer, siteIds };
+};

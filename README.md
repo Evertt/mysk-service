@@ -46,17 +46,20 @@ npm run dev -- --open
 ## Demo login
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates three demo
-organizations (tenants) and six demo users, all with the password `fieldworks-demo` (set in
+organizations (tenants) and nine demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
-| Name             | Email                         | Organizations                                 |
-| ---------------- | ----------------------------- | --------------------------------------------- |
-| Anouk de Vries   | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid |
-| Pieter Jansen    | `planner@fieldworks.example`  | member of Fieldworks Noord                    |
-| Erik Visser      | `engineer@fieldworks.example` | engineer in Fieldworks Noord                  |
-| Marloes Hendriks | `owner@shltr.example`         | owner of SHLTR                                |
-| Jan Weggemans    | `jan@shltr.example`           | member (planner) of SHLTR                     |
-| Lev Hoekstra     | `lev@shltr.example`           | engineer in SHLTR                             |
+| Name              | Email                         | Organizations                                   |
+| ----------------- | ----------------------------- | ----------------------------------------------- |
+| Anouk de Vries    | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid   |
+| Pieter Jansen     | `planner@fieldworks.example`  | member of Fieldworks Noord                      |
+| Erik Visser       | `engineer@fieldworks.example` | engineer in Fieldworks Noord                    |
+| Marloes Hendriks  | `owner@shltr.example`         | owner of SHLTR                                  |
+| Jan Weggemans     | `jan@shltr.example`           | member (planner) of SHLTR                       |
+| Lev Hoekstra      | `lev@shltr.example`           | engineer in SHLTR                               |
+| Marieke Verhoeven | `facilitair@riedel.example`   | customer contact of Riedel B.V. (SHLTR)         |
+| Rob Weggemans     | `rob@weggemans.example`       | customer contact of Weggemans Logistiek (SHLTR) |
+| Bram de Wit       | `klant@fieldworks.example`    | customer contact of Noord's first customer      |
 
 The demo data is a Dutch field-service company's, so its names, descriptions and notes are in
 Dutch whatever language you use the app in (stored text stays in the language it was written in).
@@ -76,6 +79,19 @@ engineer's edit page). Erik is linked to Noord's first engineer, with work plann
 next days. There they start jobs, log hours, materials and notes, and complete a job with the
 customer's signature, which the office sees on the order.
 
+Marieke, Rob and Bram are customers' contacts: members whose only role is `customer` use the
+customer portal at `/portal` (mobile-first, fine on a desk) instead of the office app, and see only
+their customer's orders, units, sites and locations (all its sites, or some, as the office
+invites them). There they report a breakdown (also by scanning a unit's or a location's QR code,
+`/q/<token>`), follow their orders (not accepted yet, accepted, planned with the engineer's first
+name, done with the work order and its checklists, or rejected with the planner's reason) and see
+their equipment, each unit's inspection status and history, and the units needing attention. A
+reported breakdown awaits acceptance ("Nieuw (te accepteren)") until someone in the office accepts
+it (as a quote, or planned at once) or rejects it, from the order's page; the sidebar's Orders
+badge and the dashboard count them. Owners and admins invite and revoke contacts under **Portal
+access** on the customer's page. Marieke and Rob have reported breakdowns that await acceptance
+(and Marieke one that was accepted and one that was rejected); Bram has none yet.
+
 SHLTR is the client's business (see `docs/plans/shltr-domain.md`): it installs, services and
 inspects doors, docks, stairs and airco. Its demo organization has every module, its own equipment
 categories (Branddeuren, Sectionaaldeuren, Docklevellers, …), the customers of its mockup with their
@@ -94,7 +110,9 @@ These are local demo accounts; don't seed them into a real deployment.
 Organization settings → **Members** lists who can sign in to the organization. Owners and admins
 invite people by email (with a role), resend or cancel pending invitations, change roles and remove
 members; members see the list read-only. Only owners can make someone an owner or change an owner,
-nobody changes or removes themselves, and the last owner stays.
+nobody changes or removes themselves, and the last owner stays. Customers' contacts aren't on it:
+they're invited, listed and revoked under **Portal access** on their customer's page, with the role
+`customer`, for all of the customer's sites or some.
 
 The invitation email links to `/invite/<id>`, valid for 7 days. Someone who has an account signs
 in and joins; someone new sets their name and password there, which creates an account for exactly

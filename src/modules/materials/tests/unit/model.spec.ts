@@ -3,8 +3,12 @@ import { describe, expect, test } from "vite-plus/test";
 import { orderStatuses } from "#lib/models.ts";
 import { fitsUnit, holdsStock, lineTotal, quantityStep } from "#modules/materials/model.ts";
 
-test("orders hold stock from scheduled on, but not as a quote or once cancelled", () => {
-	expect(orderStatuses.filter((status) => !holdsStock(status))).toEqual(["quote", "cancelled"]);
+test("orders hold stock from scheduled on, but not before they're accepted, as a quote or once cancelled", () => {
+	expect(orderStatuses.filter((status) => !holdsStock(status))).toEqual([
+		"awaiting_acceptance",
+		"quote",
+		"cancelled",
+	]);
 	expect(holdsStock("scheduled")).toBe(true);
 	expect(holdsStock("invoiced")).toBe(true);
 });

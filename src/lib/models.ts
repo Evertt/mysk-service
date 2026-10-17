@@ -51,7 +51,16 @@ export const correctiveOrderTypes = ["breakdown", "repair"] as const satisfies O
 export const isCorrectiveWork = (type: OrderType) =>
 	(correctiveOrderTypes as readonly OrderType[]).includes(type);
 
+/**
+ * In workflow order. An order a customer reports in the customer portal starts `awaiting_acceptance`
+ * ("Nieuw (te accepteren)"): it waits for a planner to accept it (it's then a quote, or scheduled if
+ * they plan it at once) or reject it (cancelled, with the reason shown to the customer). Until then
+ * it's no open work: off the planning board and its backlog, holding no stock, and changed by
+ * nothing but accepting, rejecting or deleting it (`acceptance.ts` in `#lib/orders/server/`).
+ * Orders made in the office start as quotes, past acceptance.
+ */
 export const orderStatuses = [
+	"awaiting_acceptance",
 	"quote",
 	"scheduled",
 	"in_progress",
@@ -61,7 +70,7 @@ export const orderStatuses = [
 ] as const;
 export type OrderStatus = (typeof orderStatuses)[number];
 
-/** Orders still to be done: quoted, scheduled or under way. */
+/** Orders still to be done: quoted, scheduled or under way (accepted, so not awaiting acceptance). */
 export const openOrderStatuses = [
 	"quote",
 	"scheduled",
@@ -73,6 +82,18 @@ export const doneOrderStatuses = ["completed", "invoiced"] as const satisfies Or
 
 export const isOpenOrder = (status: OrderStatus) =>
 	(openOrderStatuses as readonly OrderStatus[]).includes(status);
+
+/** Whether an order is a customer's report that a planner hasn't accepted or rejected yet. */
+export const isAwaitingAcceptance = (status: OrderStatus) => status === "awaiting_acceptance";
+
+/**
+ * Orders still to be done as the customer sees them in their portal: also those they reported that
+ * aren't accepted yet.
+ */
+export const pendingOrderStatuses = [
+	"awaiting_acceptance",
+	...openOrderStatuses,
+] as const satisfies OrderStatus[];
 
 export const isDoneOrder = (status: OrderStatus) =>
 	(doneOrderStatuses as readonly OrderStatus[]).includes(status);
@@ -92,15 +113,24 @@ export const manualOrderStatuses = [
 /**
  * Whether an order can still be changed or deleted. Not once it's invoiced: it's on an invoice
  * that has been sent, with its amounts, so its status, lines, hours and engineer stay as they are.
+ * (An order awaiting acceptance can be deleted, but changed only by accepting or rejecting it.)
  */
 export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
 
 /**
  * The statuses an order with `status` can be given by hand (its own among them), e.g. from the
- * status in the orders list: any of `manualOrderStatuses`, none once it's invoiced.
+ * status in the orders list: any of `manualOrderStatuses`; none once it's invoiced, nor while it
+ * awaits acceptance (it's accepted or rejected instead).
  */
 export const orderStatusChoices = (status: OrderStatus): readonly OrderStatus[] =>
-	isEditableOrder(status) ? manualOrderStatuses : [];
+	isEditableOrder(status) && !isAwaitingAcceptance(status) ? manualOrderStatuses : [];
+
+/** How urgent a customer says their breakdown is, in the portal: the order's priority. */
+export const reportUrgencies = [
+	"normal",
+	"high",
+	"urgent",
+] as const satisfies readonly OrderPriority[];
 
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
@@ -130,10 +160,12 @@ export const activityActions = [
 	"resent",
 	"cancelled",
 	"accepted",
+	// The orders customers report in the customer portal (and its access is `revoked`, below).
+	"rejected",
 	// Saved views shared with the organization.
 	"shared",
 	"unshared",
-	// Integration tokens (`#lib/server/auth/integrations.ts`).
+	// Integration tokens (`#lib/server/auth/integrations.ts`), and customers' portal access.
 	"revoked",
 ] as const;
 export type CoreActivityAction = (typeof activityActions)[number];

@@ -72,6 +72,14 @@ export const users = {
 	shltrPlanner: demoUsers[4].email,
 	/** SHLTR's field engineer, Lev. */
 	shltrEngineer: demoUsers[5].email,
+	/** SHLTR's owner, who manages its customers' portal access. */
+	shltrOwner: demoUsers[3].email,
+	/** Riedel's facilities contact, in SHLTR's customer portal (all of Riedel's sites). */
+	riedel: demoUsers[6].email,
+	/** Weggemans' contact, in SHLTR's customer portal. */
+	weggemans: demoUsers[7].email,
+	/** The contact of North's first customer, in North's customer portal. */
+	northCustomer: demoUsers[8].email,
 };
 
 /** The demo users' names, as the app shows them (e.g. in the activity log). */

@@ -11,9 +11,10 @@
 	import { SpecialtyBadge } from "#lib/engineers/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
-	import { isEditableOrder } from "#lib/models.ts";
+	import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import {
+		AcceptanceCard,
 		EquipmentHistoryCard,
 		OrderLinesCard,
 		OrderTags,
@@ -52,15 +53,17 @@
 		<TypeLabel type={order.type} />
 	{/snippet}
 	{#snippet actions()}
-		<!-- An invoiced order stays as it was invoiced. -->
+		<!-- An invoiced order stays as it was invoiced; one awaiting acceptance is accepted first. -->
 		{#if isEditableOrder(order.status)}
-			<Button
-				variant="outline"
-				href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
-			>
-				<PencilIcon data-icon="inline-start" />
-				{m.common_edit()}
-			</Button>
+			{#if !isAwaitingAcceptance(order.status)}
+				<Button
+					variant="outline"
+					href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
+				>
+					<PencilIcon data-icon="inline-start" />
+					{m.common_edit()}
+				</Button>
+			{/if}
 			<DeleteDialog
 				form={deleteOrder}
 				id={String(order.id)}
@@ -75,6 +78,10 @@
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+		{#if data.request}
+			<AcceptanceCard {order} request={data.request} />
+		{/if}
+
 		<OrderLinesCard {order} totals={data.totals} />
 
 		<UnitsCard {order} />

@@ -5,7 +5,12 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, isNull } from "drizzle-orm";
 
-import { isDoneOrder, isEditableOrder, type OrderStatus } from "#lib/models.ts";
+import {
+	isAwaitingAcceptance,
+	isDoneOrder,
+	isEditableOrder,
+	type OrderStatus,
+} from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
@@ -19,6 +24,12 @@ export const notEditable = (number: string, change: "changed" | "deleted") =>
 	change === "changed"
 		? m.orders_invoiced_cant_change({ number })
 		: m.orders_invoiced_cant_delete({ number });
+
+/**
+ * Why an order awaiting acceptance can't be changed: it's accepted or rejected first (see
+ * `./acceptance.ts`), then changed like any other.
+ */
+export const acceptFirst = (number: string) => m.orders_accept_first({ number });
 
 /** When an order with `status` was completed: kept from before, set when it's done, else none. */
 export const completedAt = (
@@ -70,6 +81,7 @@ export async function changeOrderStatus(id: number, status: OrderStatus) {
 			if (!found) error(404, m.orders_not_found_plain());
 			if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
 			if (found.status === status) return;
+			if (isAwaitingAcceptance(found.status)) invalid(acceptFirst(found.number));
 			const values = { status, completedAt: completedAt(status, found) };
 			await tx.update(order).set(values).where(idInTenant(order, id));
 			// Thrown when refused, so the transaction stores nothing of it.
@@ -157,6 +169,7 @@ export async function assignOrder(id: number, engineerId: number | null) {
 		if (!found) error(404, m.orders_not_found_plain());
 		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
 		if (found.engineerId === engineerId) return;
+		if (isAwaitingAcceptance(found.status)) invalid(acceptFirst(found.number));
 		await tx.update(order).set({ engineerId }).where(idInTenant(order, id));
 		const subject = { type: "order", id, label: found.number };
 		await recordActivity(tx, { action: "updated", subject, before: found, after: { engineerId } });

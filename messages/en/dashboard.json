@@ -57,5 +57,8 @@
 	"dashboard_new_installation": "New installation",
 	"dashboard_column_engineer": "Engineer",
 	"dashboard_column_priority": "Priority",
-	"dashboard_column_scheduled": "Scheduled"
+	"dashboard_column_scheduled": "Scheduled",
+	"dashboard_awaiting_acceptance": "Awaiting acceptance",
+	"dashboard_awaiting_acceptance_description": "Reported by customers in their portal",
+	"dashboard_awaiting_acceptance_show": "Show"
 }

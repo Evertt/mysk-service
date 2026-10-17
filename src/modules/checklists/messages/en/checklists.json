@@ -252,5 +252,6 @@
 	"checklists_print_unit": "Unit",
 	"checklists_print_serial": "Serial number",
 	"checklists_print_location": "Location",
-	"checklists_print_outcome": "Outcome"
+	"checklists_print_outcome": "Outcome",
+	"checklists_client_order_description": "What the engineer checked on each unit, and what they found."
 }

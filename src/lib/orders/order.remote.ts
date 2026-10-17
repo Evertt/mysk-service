@@ -1,10 +1,11 @@
 import type { RemoteFormInvalidField } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
-import { isEditableOrder } from "#lib/models.ts";
+import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -17,7 +18,9 @@ import {
 	equipmentCategory,
 	equipmentLocation,
 	order,
+	orderRequest,
 	orderUnit,
+	user,
 } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -25,7 +28,7 @@ import { forMembers } from "#lib/server/remote-functions.ts";
 import { orderFields } from "./form/order-schema.ts";
 import { createOrders } from "./server/creation.ts";
 import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./server/hooks.ts";
-import { completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
+import { acceptFirst, completedAt, notEditable, removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
 
@@ -85,9 +88,21 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 		: [];
 
 	const facts = { ...found, equipmentIds, hourlyRate: found.engineer?.hourlyRate };
-	const [[price], [tags]] = await Promise.all([
+	const decider = alias(user, "decider");
+	const [[price], [tags], [request]] = await Promise.all([
 		priceOrders([facts], { items: true }),
 		tagOrders([facts]),
+		// Reported in the customer portal: by whom, and what a planner decided.
+		db
+			.select({
+				reporterName: orderRequest.reporterName,
+				decidedAt: orderRequest.decidedAt,
+				decidedBy: decider.name,
+				rejectionReason: orderRequest.rejectionReason,
+			})
+			.from(orderRequest)
+			.leftJoin(decider, eq(orderRequest.decidedBy, decider.id))
+			.where(and(eq(orderRequest.orderId, found.id), inTenant(orderRequest))),
 	]);
 
 	return {
@@ -97,6 +112,8 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 		/** From the tenant's modules, e.g. a response time about to be missed. */
 		tags,
 		history,
+		/** If a customer reported it in the portal: who, and the planner's decision. */
+		request: request ?? null,
 	};
 });
 
@@ -174,6 +191,7 @@ async function saveOrder(id: number | null, input: OrderInput) {
 		if (existing && !isEditableOrder(existing.status)) {
 			invalid(notEditable(existing.number, "changed"));
 		}
+		if (existing && isAwaitingAcceptance(existing.status)) invalid(acceptFirst(existing.number));
 		const unitsBefore = existing
 			? ((await unitIdsOf([existing.id], tx)).get(existing.id) ?? [])
 			: [];

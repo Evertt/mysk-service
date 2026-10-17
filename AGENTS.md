@@ -26,8 +26,9 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   compose them.
 - **Optional modules** (a tenant can switch them off): everything in `src/modules/<id>/`. Core never
   imports a module.
-- **`src/routes`** holds `+` files, plus the files of the app shell, dashboard, auth pages and
-  engineer portal, which belong to no domain.
+- **`src/routes`** holds `+` files, plus the files of the app shell, dashboard, auth pages,
+  engineer portal (`(field)/my`) and customer portal (`(customer)/portal`), which belong to no
+  domain.
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
   `themes/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
   server-only: database code and secrets go there.
@@ -44,10 +45,13 @@ Details: `docs/agents/structure.md`.
 Organizations own all business data.
 
 - Make every remote function with a **gated set** from `src/lib/server/remote-functions.ts`:
-  `forMembers` (the office), `forManagers` (settings), `forEngineers` (the portal), `forUsers` (no
-  tenant data), `forAnyone` (public on purpose), or a module's `moduleRemote("<id>")`. Each has
-  `query`, `query.live`, `form` and `command`. The gate runs before the handler, which reads what it
-  admitted with `currentTenant()`, `currentUser()` or `await currentEngineer()`.
+  `forMembers` (the office), `forManagers` (settings), `forEngineers` (the engineer portal),
+  `forCustomers` (the customer portal), `forUsers` (no tenant data), `forAnyone` (public on
+  purpose), or a module's `moduleRemote("<id>")`. Each has `query`, `query.live`, `form` and
+  `command`. The gate runs before the handler, which reads what it admitted with
+  `currentTenant()`, `currentUser()`, `await currentEngineer()` or `await currentCustomer()`; the
+  customer portal's queries are scoped to the customer too (`ofCustomer()`, `customerOrders()`,
+  `atSites()` in `src/lib/server/auth/customer.ts`).
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()`. Ids come
   from the client.

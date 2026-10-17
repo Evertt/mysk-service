@@ -6,7 +6,7 @@ import { redirect } from "@sveltejs/kit";
 import { type Handle, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
-import { isFieldEngineer } from "#lib/auth/index.ts";
+import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
@@ -121,10 +121,19 @@ const isPortal = (pathname: string) =>
 	pathname === "/my" || pathname.startsWith("/my/") || pathname.startsWith("/q/");
 
 /**
+ * The customer portal: the pages of the `(customer)` route group (`/portal`, and the modules' pages
+ * there), the only part of the app customers' contacts use. By route id, so a module's page in the
+ * group (`/(customer)/(modules)/<id>/…`, under the module's own URL) is part of it too.
+ */
+const isCustomerPortal = (routeId: string | null) => routeId?.startsWith("/(customer)/") ?? false;
+
+/**
  * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers
- * from the office app to their portal. This only guards page requests. Remote function calls pass
- * through (their `event.url` is the calling page's, so a redirect here would be wrong): each is
- * gated by the set it's made with (`forMembers`, `forEngineers`, … in
+ * from the office app to their portal, customers' contacts from everything but the customer portal
+ * (and the QR codes' links, which lead them into it) to theirs, and everyone else out of the
+ * customer portal. This only guards page requests. Remote function calls pass through (their
+ * `event.url` is the calling page's, so a redirect here would be wrong): each is gated by the set
+ * it's made with (`forMembers`, `forEngineers`, `forCustomers`, … in
  * `#lib/server/remote-functions.ts`).
  */
 const handleGuard: Handle = ({ event, resolve }) => {
@@ -136,6 +145,13 @@ const handleGuard: Handle = ({ event, resolve }) => {
 			redirect(303, "/");
 		}
 		const { tenant } = event.locals;
+		const routeId = event.route.id;
+		if (tenant && isCustomerContact(tenant.roles)) {
+			const allowed = isCustomerPortal(routeId) || pathname.startsWith("/q/") || isPublic(pathname);
+			if (!allowed) redirect(303, "/portal");
+		} else if (isCustomerPortal(routeId)) {
+			redirect(303, "/");
+		}
 		if (tenant && isFieldEngineer(tenant.roles) && !isPortal(pathname) && !isPublic(pathname)) {
 			redirect(303, "/my");
 		}

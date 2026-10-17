@@ -49,6 +49,7 @@ describe("ordersPerWeek", () => {
 		expect(result).toEqual([
 			{
 				week: day("2026-09-28"),
+				awaiting_acceptance: 0,
 				quote: 0,
 				scheduled: 0,
 				in_progress: 0,
@@ -58,6 +59,7 @@ describe("ordersPerWeek", () => {
 			},
 			{
 				week: day("2026-10-05"),
+				awaiting_acceptance: 0,
 				quote: 2,
 				scheduled: 3,
 				in_progress: 0,

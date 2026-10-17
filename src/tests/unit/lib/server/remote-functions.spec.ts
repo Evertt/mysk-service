@@ -15,8 +15,13 @@ import { join, posix, relative } from "node:path";
 import { error, isHttpError } from "@sveltejs/kit";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { requireEngineer, requireManager, requireModule } from "#lib/server/auth/index.ts";
-import { forAnyone, moduleRemote, remoteSet } from "#lib/server/remote-functions.ts";
+import {
+	requireCustomer,
+	requireEngineer,
+	requireManager,
+	requireModule,
+} from "#lib/server/auth/index.ts";
+import { forAnyone, forCustomers, moduleRemote, remoteSet } from "#lib/server/remote-functions.ts";
 
 /** SvelteKit's functions, as stand-ins that hand back what they were made with. */
 vi.mock("$app/server", () => {
@@ -34,6 +39,7 @@ vi.mock("#lib/server/auth/index.ts", () => ({
 	requireMember: vi.fn(),
 	requireManager: vi.fn(),
 	requireEngineer: vi.fn(),
+	requireCustomer: vi.fn(),
 	requireTenant: vi.fn(),
 	requireUser: vi.fn(),
 	requireModule: vi.fn(),
@@ -176,6 +182,34 @@ describe("moduleRemote", () => {
 
 		vi.mocked(requireEngineer).mockImplementation(() => error(403, "No"));
 		const made = moduleRemote("materials", "engineer").query(handler);
+		expect(await statusOf(() => handlerOf(made)())).toBe(403);
+		expect(handler).toHaveBeenCalledTimes(1);
+	});
+
+	test("the customer set lets any role through the module's gate, then asks for a customer's contact", async () => {
+		vi.mocked(requireCustomer).mockReset();
+		const handler = vi.fn(() => "done");
+		vi.mocked(requireCustomer).mockResolvedValue({} as never);
+		expect(await handlerOf(moduleRemote("checklists", "customer").query(handler))()).toBe("done");
+		expect(requireModule).toHaveBeenCalledWith("checklists", { anyRole: true });
+
+		vi.mocked(requireCustomer).mockImplementation(() => error(403, "No"));
+		const made = moduleRemote("checklists", "customer").query(handler);
+		expect(await statusOf(() => handlerOf(made)())).toBe(403);
+		expect(handler).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("forCustomers", () => {
+	test("asks for a customer's contact before the handler, and refuses everyone else", async () => {
+		vi.mocked(requireCustomer).mockReset();
+		const handler = vi.fn(() => "done");
+		vi.mocked(requireCustomer).mockResolvedValue({} as never);
+		expect(await handlerOf(forCustomers.query(handler))()).toBe("done");
+		expect(requireCustomer).toHaveBeenCalledTimes(1);
+
+		vi.mocked(requireCustomer).mockImplementation(() => error(403, "No"));
+		const made = forCustomers.form(handler);
 		expect(await statusOf(() => handlerOf(made)())).toBe(403);
 		expect(handler).toHaveBeenCalledTimes(1);
 	});

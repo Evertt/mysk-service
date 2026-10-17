@@ -1,15 +1,15 @@
 import { getRequestEvent } from "$app/server";
 import { invalid, redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { invitationState, parseRoles } from "#lib/auth/index.ts";
+import { invitationState, isCustomerContact, parseRoles } from "#lib/auth/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { recordActivityAfter } from "#lib/server/activity/index.ts";
 import { auth, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { invitation, organization, user } from "#lib/server/db/schema.ts";
+import { invitation, organization, portalContact, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forUsers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -69,7 +69,9 @@ async function pendingInvitation(id: string) {
 
 /**
  * Runs better-auth's accept-invitation as `user`, with `headers`' session, and logs it in the
- * invitation's organization (which isn't the user's current one yet).
+ * invitation's organization (which isn't the user's current one yet). A customer contact's
+ * invitation also links their account to the contact it was sent for (`portal_contact`), in the
+ * invitation's organization by its id: the user isn't in it yet, so `inTenant()` can't scope it.
  */
 async function accept(
 	found: { id: string; email: string; organizationId: string },
@@ -83,11 +85,24 @@ async function accept(
 		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_invite_accept_failed());
 		throw e;
 	}
+	await db
+		.update(portalContact)
+		.set({ userId: user.id, invitationId: null })
+		.where(
+			and(
+				eq(portalContact.organizationId, found.organizationId),
+				eq(portalContact.invitationId, found.id),
+			),
+		);
 	await recordActivityAfter(
 		{ action: "accepted", subject: { type: "invitation", id: found.id, label: found.email } },
 		{ organizationId: found.organizationId, user },
 	);
 }
+
+/** Where someone who accepted `found` starts: a customer's contact in the customer portal. */
+const startPage = (found: { role: string | null }) =>
+	isCustomerContact(parseRoles(found.role ?? "member")) ? "/portal" : "/";
 
 /** Accepts the invitation as the signed-in user, who then works in its organization. */
 export const acceptInvitation = forUsers.form(v.object({ id: v.string() }), async ({ id }) => {
@@ -98,7 +113,7 @@ export const acceptInvitation = forUsers.form(v.object({ id: v.string() }), asyn
 	}
 	// Also makes the invitation's organization the active one.
 	await accept(found, signedIn, getRequestEvent().request.headers);
-	redirect(303, "/");
+	redirect(303, startPage(found));
 });
 
 const MIN_PASSWORD = 8;
@@ -157,7 +172,7 @@ export const createAccount = forAnyone.form(
 			.map((setCookie) => setCookie.split(";", 1)[0])
 			.join("; ");
 		await accept(found, created, new Headers({ cookie }));
-		redirect(303, "/");
+		redirect(303, startPage(found));
 	},
 );
 

@@ -24,6 +24,7 @@ export type Labels<T extends string> = Record<T, () => string>;
 
 const coreLabels = {
 	orderStatus: {
+		awaiting_acceptance: m.enum_order_status_awaiting_acceptance,
 		quote: m.enum_order_status_quote,
 		scheduled: m.enum_order_status_scheduled,
 		in_progress: m.enum_order_status_in_progress,
@@ -92,6 +93,7 @@ const coreLabels = {
 		admin: m.enum_member_role_admin,
 		member: m.enum_member_role_member,
 		engineer: m.enum_member_role_engineer,
+		customer: m.enum_member_role_customer,
 	} satisfies Labels<MemberRole>,
 	/** What a role is for, e.g. to explain a choice of role. */
 	memberRoleDescription: {
@@ -99,6 +101,7 @@ const coreLabels = {
 		admin: m.enum_member_role_description_admin,
 		member: m.enum_member_role_description_member,
 		engineer: m.enum_member_role_description_engineer,
+		customer: m.enum_member_role_description_customer,
 	} satisfies Labels<MemberRole>,
 };
 

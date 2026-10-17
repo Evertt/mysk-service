@@ -119,7 +119,10 @@ await db.transaction(async (tx) => {
 		schema.activity,
 		schema.savedView,
 		schema.orderSignoff,
+		schema.orderRequest,
 		schema.orderNote,
+		schema.portalContactSite,
+		schema.portalContact,
 		schema.orderUnit,
 		order,
 		equipment,
@@ -263,7 +266,9 @@ await db.transaction(async (tx) => {
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>
-			u.memberships.some((m) => m.organizationId === tenant.id && m.role !== "engineer"),
+			u.memberships.some(
+				(m) => m.organizationId === tenant.id && m.role !== "engineer" && m.role !== "customer",
+			),
 		);
 		const created = rows.orders
 			.toSorted((a, b) => Temporal.Instant.compare(a.createdAt, b.createdAt))

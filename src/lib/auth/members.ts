@@ -5,7 +5,7 @@
  * language), and covers the ones it doesn't (e.g. changing your own role).
  */
 
-import { isManager, type MemberRole, memberRoles } from "./roles.ts";
+import { isManager, type MemberRole, type TeamRole, teamRoles } from "./roles.ts";
 
 export { type MemberRole, memberRoles } from "./roles.ts";
 
@@ -44,11 +44,12 @@ export function removalRefusal({ actor, target, owners }: MemberChange): string 
 	return null;
 }
 
-/** The roles `actorRoles` may give someone they invite (or promote): owners only by owners. */
-export const assignableRoles = (actorRoles: string[]): MemberRole[] =>
-	isManager(actorRoles)
-		? memberRoles.filter((role) => role !== "owner" || isOwner(actorRoles))
-		: [];
+/**
+ * The roles `actorRoles` may give someone they invite (or promote) on the members page: owners only
+ * by owners, and never `customer` (customer contacts are invited from their customer's page).
+ */
+export const assignableRoles = (actorRoles: string[]): TeamRole[] =>
+	isManager(actorRoles) ? teamRoles.filter((role) => role !== "owner" || isOwner(actorRoles)) : [];
 
 /** Each role as in "invited … as an admin": with its article in English, without in Dutch. */
 const invitedAs: Record<MemberRole, () => string> = {
@@ -56,6 +57,7 @@ const invitedAs: Record<MemberRole, () => string> = {
 	admin: m.auth_invite_as_admin,
 	member: m.auth_invite_as_member,
 	engineer: m.auth_invite_as_engineer,
+	customer: m.auth_invite_as_customer,
 };
 
 /**

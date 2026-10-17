@@ -9,12 +9,12 @@
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 
-	import type { getWorkOrder } from "../checklists.remote.ts";
 	import { checklistLabels } from "../labels.ts";
+	import type { WorkOrder } from "../server/work-order.ts";
 	import OutcomeBadge from "../ui/outcome-badge.svelte";
 	import ChecklistPoints from "./checklist-points.svelte";
 
-	let { data }: { data: Awaited<ReturnType<typeof getWorkOrder>> } = $props();
+	let { data }: { data: WorkOrder } = $props();
 
 	const order = $derived(data.order);
 	const signatures = $derived([

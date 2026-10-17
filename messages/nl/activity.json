@@ -139,5 +139,7 @@
 	"activity_field_units": "apparaten",
 	"activity_set_added": "{names} toegevoegd",
 	"activity_set_removed": "{names} weggehaald",
-	"activity_set_reordered": "in een andere volgorde gezet"
+	"activity_set_reordered": "in een andere volgorde gezet",
+	"activity_action_rejected": "{user} heeft {subject} afgewezen",
+	"activity_subject_portal_contact": "portaaltoegang"
 }

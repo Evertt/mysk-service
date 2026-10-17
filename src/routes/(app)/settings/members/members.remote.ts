@@ -1,7 +1,7 @@
 import { getRequestEvent } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, not, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
@@ -11,10 +11,10 @@ import {
 	isManager,
 	type MemberChange,
 	type MemberRole,
-	memberRoles,
 	parseRoles,
 	removalRefusal,
 	roleChangeRefusal,
+	teamRoles,
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
 import { recordActivityAfter } from "#lib/server/activity/index.ts";
@@ -24,8 +24,16 @@ import { invitation, member, user } from "#lib/server/db/schema.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 /**
- * The organization's members, and for owners and admins its pending invitations, with what the
+ * Whether a member's or an invitation's roles (stored comma-separated, `owner,engineer`) include
+ * `customer`: customers' contacts are on their customer's page (its portal access), not here.
+ */
+const isCustomerRole = (role: typeof member.role | typeof invitation.role) =>
+	sql`(',' || replace(coalesce(${role}, ''), ' ', '') || ',') like '%,customer,%'`;
+
+/**
+ * The organization's team, and for owners and admins its pending invitations, with what the
  * signed-in user may do to each. Members see the list read-only, as on the settings page.
+ * Customers' contacts aren't part of it (see `isCustomerRole`).
  */
 export const getMembers = forMembers.query(async () => {
 	const tenant = currentTenant();
@@ -43,7 +51,7 @@ export const getMembers = forMembers.query(async () => {
 			})
 			.from(member)
 			.innerJoin(user, eq(member.userId, user.id))
-			.where(inTenant(member))
+			.where(and(inTenant(member), not(isCustomerRole(member.role))))
 			.orderBy(asc(user.name)),
 		canManage
 			? db
@@ -58,7 +66,13 @@ export const getMembers = forMembers.query(async () => {
 					})
 					.from(invitation)
 					.leftJoin(inviter, eq(invitation.inviterId, inviter.id))
-					.where(and(inTenant(invitation), eq(invitation.status, "pending")))
+					.where(
+						and(
+							inTenant(invitation),
+							eq(invitation.status, "pending"),
+							not(isCustomerRole(invitation.role)),
+						),
+					)
 					.orderBy(asc(invitation.createdAt))
 			: [],
 	]);
@@ -74,7 +88,7 @@ export const getMembers = forMembers.query(async () => {
 			const roles = parseRoles(m.role);
 			const change: MemberChange = { actor, target: { userId: m.userId, roles }, owners };
 			// The member's role, and the ones the signed-in user may change it to.
-			const roleOptions = memberRoles.filter(
+			const roleOptions = teamRoles.filter(
 				(role) => roles.includes(role) || roleChangeRefusal(change, role) === null,
 			);
 			return {
@@ -99,7 +113,8 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 		.select({ id: member.id, userId: member.userId, role: member.role })
 		.from(member)
 		.where(inTenant(member));
-	const target = members.find((m) => m.id === memberId);
+	// A customer's contact is changed on their customer's page only.
+	const target = members.find((m) => m.id === memberId && !parseRoles(m.role).includes("customer"));
 	if (!target) error(404, m.settings_member_not_found());
 	return {
 		actor: { userId: tenant.user.id, roles: tenant.roles },
@@ -136,7 +151,12 @@ const asRoles = (roles: readonly MemberRole[]) =>
 /** One of the tenant's pending invitations, or a 404. Ids are global, so look up in the tenant. */
 async function findInvitation(id: string) {
 	const found = await db.query.invitation.findFirst({
-		where: and(eq(invitation.id, id), inTenant(invitation), eq(invitation.status, "pending")),
+		where: and(
+			eq(invitation.id, id),
+			inTenant(invitation),
+			eq(invitation.status, "pending"),
+			not(isCustomerRole(invitation.role)),
+		),
 	});
 	if (!found) error(404, m.settings_invitation_not_found());
 	return found;
@@ -157,7 +177,7 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 }
 
 export const changeRole = forManagers.form(
-	v.object({ memberId: v.string(), role: v.picklist(memberRoles) }),
+	v.object({ memberId: v.string(), role: v.picklist(teamRoles) }),
 	async ({ memberId, role }) => {
 		const { organizationId } = currentTenant();
 		const refusal = roleChangeRefusal(await memberChange(memberId), role);
@@ -202,7 +222,7 @@ export const invite = forManagers.form(
 			),
 			{ abortPipeEarly: true },
 		),
-		role: v.picklist(memberRoles, m.settings_role_required),
+		role: v.picklist(teamRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {
 		const tenant = currentTenant();

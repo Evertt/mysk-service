@@ -55,12 +55,14 @@ export const auth = betterAuth({
 		organization({
 			allowUserToCreateOrganization: false,
 			disableOrganizationDeletion: true,
-			// better-auth's roles plus field engineers, who may manage nothing (see `#lib/auth/roles.ts`).
+			// better-auth's roles plus field engineers and customer contacts, who may manage nothing
+			// (see `#lib/auth/roles.ts`).
 			roles: {
 				owner: ownerAc,
 				admin: adminAc,
 				member: memberAc,
 				engineer: memberAc,
+				customer: memberAc,
 			} satisfies Record<MemberRole, unknown>,
 			invitationExpiresIn: INVITATION_EXPIRES_IN,
 			sendInvitationEmail: async ({ id, email, role, organization, inviter, invitation }) => {

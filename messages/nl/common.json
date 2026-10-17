@@ -271,5 +271,8 @@
 			}
 		}
 	],
-	"common_badge_select_label": "{label}: {value}"
+	"common_badge_select_label": "{label}: {value}",
+	"common_error_customers_use_portal": "Klantcontacten werken in het klantportaal",
+	"common_error_not_customer": "Je account is niet van een klantcontact",
+	"common_error_back_to_portal": "Terug naar het portaal"
 }

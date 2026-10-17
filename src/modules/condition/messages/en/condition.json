@@ -140,5 +140,6 @@
 	"condition_auto_order_inspection": "Inspection expired: plan before {date}.",
 	"condition_activity_action_recorded": "{user} recorded {subject}",
 	"condition_activity_subject": "the condition",
-	"condition_activity_subject_settings": "the condition settings"
+	"condition_activity_subject_settings": "the condition settings",
+	"condition_client_title": "Units needing attention"
 }

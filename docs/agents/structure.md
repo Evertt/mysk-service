@@ -5,8 +5,10 @@ The full layout rules; `AGENTS.md` has the summary. `src/tests/unit/lib/domain-b
 Put a module next to the code that uses it, in the nearest folder that contains all of its users,
 with two exceptions: **tests** are never next to their subject (they are in `tests/` folders, see
 `tests.md`), and **`src/routes` holds route files only** (names starting with `+`), plus the files
-of the app shell, the dashboard, the auth pages and the engineer portal, which belong to no core
-domain. Whatever belongs to a core domain lives in that domain's folder.
+of the app shell, the dashboard, the auth pages, the engineer portal (`(field)/my`) and the customer
+portal (`(customer)/portal`), which belong to no core domain. Their extension points are in
+`src/lib/portal/extensions.ts` (the engineer portal's) and `src/lib/client/extensions.ts` (the
+customer portal's). Whatever belongs to a core domain lives in that domain's folder.
 
 - **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`): in
   `src/lib/<domain>/`, in a folder by feature. Its tests are not in it: see `tests.md`.

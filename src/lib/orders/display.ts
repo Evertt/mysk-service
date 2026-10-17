@@ -9,6 +9,7 @@ import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
 import FileTextIcon from "@lucide/svelte/icons/file-text";
 import FolderKanbanIcon from "@lucide/svelte/icons/folder-kanban";
 import HammerIcon from "@lucide/svelte/icons/hammer";
+import InboxIcon from "@lucide/svelte/icons/inbox";
 import PackagePlusIcon from "@lucide/svelte/icons/package-plus";
 import ReceiptIcon from "@lucide/svelte/icons/receipt";
 import RulerIcon from "@lucide/svelte/icons/ruler";
@@ -39,13 +40,14 @@ interface Display {
 /**
  * A status also has a colour for the charts, a CSS variable of the theme: the chart tokens in
  * workflow order (so a theme with a single-hue ramp reads as progress), destructive for cancelled,
- * like its badge's tone.
+ * like its badge's tone, and the muted foreground for orders not accepted yet (before the ramp).
  */
 interface StatusDisplay extends Display {
 	color: string;
 }
 
 const statusDetails: Record<OrderStatus, StatusDisplay> = {
+	awaiting_acceptance: { icon: InboxIcon, tone: "warning", color: "var(--muted-foreground)" },
 	quote: { icon: FileTextIcon, tone: "info", color: "var(--chart-1)" },
 	scheduled: { icon: CalendarClockIcon, tone: "info", color: "var(--chart-2)" },
 	in_progress: { icon: TimerIcon, tone: "warning", color: "var(--chart-3)" },

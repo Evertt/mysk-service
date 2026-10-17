@@ -139,5 +139,7 @@
 	"activity_field_units": "units",
 	"activity_set_added": "added {names}",
 	"activity_set_removed": "removed {names}",
-	"activity_set_reordered": "put in another order"
+	"activity_set_reordered": "put in another order",
+	"activity_action_rejected": "{user} rejected {subject}",
+	"activity_subject_portal_contact": "portal access"
 }

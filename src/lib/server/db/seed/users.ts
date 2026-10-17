@@ -6,6 +6,7 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import { DEMO_PASSWORD, demoUsers } from "../demo.ts";
 import * as schema from "../schema.ts";
 import { now } from "./clock.ts";
+import { linkDemoCustomer } from "./portal.ts";
 import { toDay } from "./temporal.ts";
 
 const { account, engineer, order, session, user } = schema;
@@ -78,7 +79,7 @@ export async function createDemoUsers(tx: Transaction) {
 	await tx.delete(account).where(inArray(account.userId, ids));
 	await tx.delete(user).where(inArray(user.id, ids));
 
-	for (const { memberships, engineerIn, ...demo } of demoUsers) {
+	for (const { memberships, engineerIn, customerIn, ...demo } of demoUsers) {
 		const id = crypto.randomUUID();
 		await tx.insert(user).values({ id, ...demo, emailVerified: true });
 		await tx.insert(schema.member).values(
@@ -98,5 +99,6 @@ export async function createDemoUsers(tx: Transaction) {
 			password: await hashPassword(DEMO_PASSWORD),
 		});
 		if (engineerIn) await linkDemoEngineer(tx, id, engineerIn);
+		if (customerIn) await linkDemoCustomer(tx, { id, ...demo }, customerIn);
 	}
 }

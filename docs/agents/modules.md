@@ -199,6 +199,23 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   retest without the patch after upgrading Svelte). To feel a slow database by hand,
   `DEV_REMOTE_DELAY_MS=<ms> pnpm dev` holds up each remote function call (`delayRemoteCalls` in
   `src/hooks.server.ts`).
+- **The customer portal** (`src/routes/(customer)/portal`, for customers' contacts, see
+  `docs/agents/tenancy.md`): a module adds to its pages through the slots in
+  `src/lib/client/extensions.ts`, `client.home` (the home page, after the open orders: the condition
+  module's units needing attention), `client.order` (`{ number }`, an order's page: checklists'
+  results and the work order to print) and `client.unit` (`{ serialNumber }`, a unit's page: its
+  inspection status). Their components read through the module's set for customers,
+  `moduleRemote(id, "customer")`, whose handlers scope every query with `currentCustomer()` and the
+  helpers of `#lib/server/auth/customer.ts` (checklists' and condition's `client/` folders are the
+  examples). A module's own pages in the portal are its routes in the `(customer)` group:
+  `routes/(customer)/<rest>` is the route `/(customer)/(modules)/<id>/<rest>`, at `/<id>/<rest>`, in
+  the portal's shell and guarded like any module route (checklists'
+  `routes/(customer)/portal/work-orders/[number]`, the printable work order; mind that a path that
+  is also one of the module's `(app)` routes collides). Its manifest's `portal: { route, label,
+icon }` puts one of them in the portal's navigation, after the portal's own entries, for the
+  tenants that have the module: that's where the partner programme's bonus and wallet and a parts
+  shop go. Use remote queries there: a module's server files (`+page.server.ts`, endpoints) are
+  guarded by `requireModule()`, which refuses customers' contacts.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
   `{ number: string; equipmentIds: number[] }`) and its contract page renders

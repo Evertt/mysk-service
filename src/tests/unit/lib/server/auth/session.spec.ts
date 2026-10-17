@@ -4,6 +4,7 @@ import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import {
+	currentCustomer,
 	currentEngineer,
 	currentTenant,
 	currentUser,
@@ -11,6 +12,7 @@ import {
 	idsInTenant,
 	inTenant,
 	loadTenant,
+	requireCustomer,
 	requireEngineer,
 	requireManager,
 	requireMember,
@@ -231,6 +233,98 @@ describe("requireManager", () => {
 	test("refuses anyone else with a 403", () => {
 		Object.assign(locals, { user, tenant });
 		expect(statusOf(requireManager)).toBe(403);
+	});
+});
+
+describe("customers' contacts", () => {
+	const contact = { ...tenant, roles: ["customer"] };
+
+	/** The status of the HTTP error a promise rejects with. */
+	const rejection = async (promise: Promise<unknown>) => {
+		const error = await promise.catch((e) => e);
+		if (isHttpError(error)) return error.status;
+		throw new Error("Expected an HTTP error");
+	};
+
+	beforeAll(async () => {
+		await db.run(sql`create table if not exists customer (
+			id integer primary key, organization_id text, code text, name text
+		)`);
+		await db.run(sql`insert into customer (id, organization_id, code, name) values
+			(1, 'north', 'CUST-0001', 'Riedel'), (2, 'north', 'CUST-0002', 'Vermeer'),
+			(3, 'south', 'CUST-0003', 'Zuid')`);
+		await db.run(sql`create table portal_contact (
+			id integer primary key, organization_id text, customer_id integer, email text,
+			user_id text, invitation_id text, all_sites integer, created_at integer
+		)`);
+		await db.run(sql`create table portal_contact_site (
+			organization_id text, contact_id integer, customer_id integer, site_id integer
+		)`);
+		await db.run(sql`insert into portal_contact (id, organization_id, customer_id, email, user_id, all_sites) values
+			(1, 'north', 1, 'c1@example.com', 'c1', 1),
+			(2, 'north', 2, 'c2@example.com', 'c2', 0),
+			(3, 'south', 3, 'c3@example.com', 'c3', 1)`);
+		await db.run(sql`insert into portal_contact_site values
+			('north', 2, 2, 21), ('north', 2, 2, 22), ('south', 3, 3, 31)`);
+	});
+
+	test("are refused by the office's remote functions with a 403", () => {
+		Object.assign(locals, { user: { id: "c1", name: "Cas" }, tenant: contact });
+		expect(statusOf(requireMember)).toBe(403);
+		expect(statusOf(requireManager)).toBe(403);
+		expect(statusOf(() => requireModule("contracts"))).toBe(403);
+	});
+
+	test("aren't field engineers either", async () => {
+		Object.assign(locals, { user: { id: "c1", name: "Cas" }, tenant: contact });
+		await db.run(sql`create table if not exists engineer (
+			id integer primary key, organization_id text, name text, email text, phone text,
+			specialty text, region text, hourly_rate integer, active integer, hired_at integer,
+			user_id text
+		)`);
+		expect(await rejection(requireEngineer())).toBe(403);
+	});
+
+	test("get their customer, seeing all of its sites", async () => {
+		Object.assign(locals, { user: { id: "c1", name: "Cas" }, tenant: contact });
+		expect(await requireCustomer()).toMatchObject({
+			organizationId: "north",
+			contactId: 1,
+			customer: { id: 1, code: "CUST-0001", name: "Riedel" },
+			siteIds: null,
+		});
+		expect(await currentCustomer()).toEqual({
+			contactId: 1,
+			customer: { id: 1, code: "CUST-0001", name: "Riedel" },
+			siteIds: null,
+		});
+	});
+
+	test("limited to some sites get only those", async () => {
+		Object.assign(locals, { user: { id: "c2", name: "Cor" }, tenant: contact });
+		expect((await currentCustomer()).siteIds?.toSorted()).toEqual([21, 22]);
+	});
+
+	test("are refused unless linked to a customer in this tenant, or with another role", async () => {
+		// c3 is a contact in South only.
+		Object.assign(locals, { user: { id: "c3", name: "Zoë" }, tenant: contact });
+		expect(await rejection(requireCustomer())).toBe(403);
+		nextRequest();
+		// An office member who's linked isn't a customer's contact.
+		Object.assign(locals, { user: { id: "c1", name: "Cas" }, tenant });
+		expect(await rejection(requireCustomer())).toBe(403);
+		nextRequest();
+		delete locals.user;
+		expect(await rejection(requireCustomer())).toBe(401);
+	});
+
+	test("are looked up once per request", async () => {
+		Object.assign(locals, { user: { id: "c1", name: "Cas" }, tenant: contact });
+		const lookup = vi.spyOn(db.query.portalContact, "findFirst");
+		await requireCustomer();
+		await currentCustomer();
+		expect(lookup).toHaveBeenCalledTimes(1);
+		lookup.mockRestore();
 	});
 });
 

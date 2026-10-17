@@ -1,3 +1,4 @@
+export { default as PortalAccessCard } from "./detail/portal-access-card.svelte";
 export { default as RecentActivity } from "./detail/recent-activity.svelte";
 export { default as SitesCard } from "./detail/sites-card.svelte";
 export { default as CustomerForm } from "./form/customer-form.svelte";
