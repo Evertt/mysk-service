@@ -214,7 +214,11 @@ describe("in North, an order's materials", () => {
 		const { status, html } = await page.evaluate(async () => {
 			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
 			const body = new URLSearchParams(
-				[...new FormData(form)].map(([name, value]) => [name, String(value)]),
+				// As a browser sends a file field in such a form: by the file's name.
+				[...new FormData(form)].map(([name, value]) => [
+					name,
+					typeof value === "string" ? value : value.name,
+				]),
 			);
 			const headers = { accept: "text/html" };
 			const response = await fetch(form.action, { method: "POST", body, headers });

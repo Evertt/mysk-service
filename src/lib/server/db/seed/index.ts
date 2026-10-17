@@ -31,7 +31,7 @@ import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
 import { type SeedTenant, seedCollectors } from "./module-seed.ts";
-import { generateShltrTenant } from "./shltr/index.ts";
+import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
 import { generateTenant, type TenantSize, type TenantSteps } from "./tenant.ts";
@@ -83,7 +83,8 @@ const shltrOnly: readonly string[] = ["docks", "energy"];
  * they became a module, and both kept them; their tests switch them off for South to see a tenant
  * without them. SHLTR, the client's business (`shltr/`), has them all, and equipment categories of
  * its own; it comes last, so the Fieldworks tenants' ids (and the tests that know them) stay as
- * they were.
+ * they were. SHLTR's done work is signed off (`signoffs`), so its work orders show signed in the
+ * demo.
  */
 const tenants = [
 	{
@@ -109,6 +110,7 @@ const tenants = [
 		seed: 20261016,
 		categories: shltrCategories,
 		generate: generateShltrTenant,
+		signoffs: shltrSignoffs,
 	},
 ];
 
@@ -260,6 +262,13 @@ await db.transaction(async (tx) => {
 					position,
 				})),
 			),
+			// The work orders' sign-offs, once the modules have added their orders.
+			signoffs: ("signoffs" in tenant ? tenant.signoffs(data) : []).map((s) => ({
+				...s,
+				organizationId,
+				orderId: s.orderId + o.order,
+				signedAt: toMoment(s.signedAt),
+			})),
 		};
 
 		await tx.insert(schema.equipmentCategory).values(rows.categories);
@@ -270,6 +279,7 @@ await db.transaction(async (tx) => {
 		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
 		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
 		await insertAll(rows.orderUnits, (chunk) => tx.insert(schema.orderUnit).values(chunk));
+		await insertAll(rows.signoffs, (chunk) => tx.insert(schema.orderSignoff).values(chunk));
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>

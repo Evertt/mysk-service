@@ -66,8 +66,8 @@ interface DockRun {
 
 /** A stored session as the rules take it. */
 const sessionOf = ({
-	organizationId: _,
-	dockId: __,
+	organizationId: _organizationId,
+	dockId: _dockId,
 	...session
 }: typeof dockSession.$inferSelect): SessionFacts => session;
 

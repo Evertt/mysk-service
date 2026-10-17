@@ -135,7 +135,7 @@ describe("the customer portal", () => {
 		);
 		const shown = await app.page
 			.locator("main [data-unit]")
-			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit")));
+			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit") ?? ""));
 		expect(shown.toSorted()).toEqual(units.map((unit) => unit.serial_number).toSorted());
 
 		// A unit with orders: its page has them, and its inspection status (checklists is on).
@@ -158,14 +158,22 @@ describe("the customer portal", () => {
 			.toBe(Math.min(50, unit.orders));
 	});
 
-	test("a done order shows its checklists' results and the work order to print", async () => {
-		const [done] = await rows<{ number: string }>(
-			`select o.number from "order" o join customer c on c.id = o.customer_id
+	test("a done order shows its sign-off, its checklists' results and the work order to print", async () => {
+		const [done] = await rows<{ number: string; signer_name: string; engineer_name: string }>(
+			`select o.number, s.signer_name, s.engineer_name from "order" o
+			 join customer c on c.id = o.customer_id join order_signoff s on s.order_id = o.id
 			 where c.name = 'Riedel B.V.' and o.status in ('completed', 'invoiced')
 			 and exists (select 1 from checklist k where k.order_id = o.id and k.status = 'completed')
 			 order by o.id limit 1`,
 		);
 		await app.go(`/portal/orders/${done.number}`);
+		// Signed by the engineer and Riedel's contact, as the seed signs SHLTR's done work.
+		const signoff = app.page.locator("[data-signoff]");
+		await signoff.waitFor();
+		expect(await signoff.locator("img").count()).toBe(2);
+		const text = await signoff.innerText();
+		expect(text).toContain(done.signer_name);
+		expect(text).toContain(done.engineer_name);
 		await app.page.locator("[data-client-checklists] [data-checklist]").first().waitFor();
 		await app.page.getByRole("link", { name: "Work order" }).click();
 		await app.page.waitForURL(
@@ -278,6 +286,7 @@ describe("reporting a breakdown", () => {
 			.evaluateAll((options) =>
 				options.map((option) => Number((option as HTMLOptionElement).value)),
 			);
-		expect(offered.toSorted()).toEqual(units.map((unit) => unit.id).toSorted());
+		const byId = (a: number, b: number) => a - b;
+		expect(offered.toSorted(byId)).toEqual(units.map((unit) => unit.id).toSorted(byId));
 	});
 });
