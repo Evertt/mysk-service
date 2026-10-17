@@ -75,7 +75,11 @@ export const checklistTemplateItem = sqliteTable(
 	},
 	(table) => [
 		uniqueIndex("checklist_template_item_organization_id").on(table.organizationId, table.id),
-		index("checklist_template_item_template").on(table.templateId, table.position),
+		index("checklist_template_item_template").on(
+			table.organizationId,
+			table.templateId,
+			table.position,
+		),
 		foreignKey({
 			columns: [table.organizationId, table.templateId],
 			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
@@ -97,7 +101,7 @@ export const checklistTemplateCategory = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.organizationId, table.categoryId] }),
-		index("checklist_template_category_template").on(table.templateId),
+		index("checklist_template_category_template").on(table.templateId, table.organizationId),
 		foreignKey({
 			columns: [table.organizationId, table.templateId],
 			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
@@ -177,6 +181,10 @@ export const checklist = sqliteTable(
 		uniqueIndex("checklist_order_equipment").on(table.orderId, table.equipmentId),
 		// A unit's checklists: its history, its latest inspection.
 		index("checklist_equipment").on(table.equipmentId, table.kind, table.completedAt),
+		// The keys to the order's unit, the template and the engineer.
+		index("checklist_order_unit").on(table.organizationId, table.orderId, table.equipmentId),
+		index("checklist_by_template").on(table.organizationId, table.templateId),
+		index("checklist_completed_by").on(table.organizationId, table.completedBy),
 		foreignKey({
 			columns: [table.organizationId, table.orderId, table.equipmentId],
 			foreignColumns: [orderUnit.organizationId, orderUnit.orderId, orderUnit.equipmentId],
@@ -213,6 +221,7 @@ export const checklistResult = sqliteTable(
 	(table) => [
 		uniqueIndex("checklist_result_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("checklist_result_checklist_position").on(table.checklistId, table.position),
+		index("checklist_result_checklist").on(table.organizationId, table.checklistId),
 		foreignKey({
 			columns: [table.organizationId, table.checklistId],
 			foreignColumns: [checklist.organizationId, checklist.id],

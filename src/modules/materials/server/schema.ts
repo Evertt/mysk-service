@@ -92,7 +92,9 @@ export const stockMovement = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		index("stock_movement_material").on(table.materialId, table.createdAt),
+		index("stock_movement_material").on(table.organizationId, table.materialId, table.createdAt),
+		index("stock_movement_order").on(table.organizationId, table.orderId),
+		index("stock_movement_user").on(table.userId),
 		foreignKey({
 			columns: [table.organizationId, table.materialId],
 			foreignColumns: [material.organizationId, material.id],

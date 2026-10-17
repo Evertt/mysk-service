@@ -50,7 +50,10 @@ export const unitCondition = sqliteTable(
 	(table) => [
 		uniqueIndex("unit_condition_organization_id").on(table.organizationId, table.id),
 		// A unit's latest condition and its history.
-		index("unit_condition_equipment").on(table.equipmentId, table.recordedAt),
+		index("unit_condition_equipment").on(table.organizationId, table.equipmentId, table.recordedAt),
+		index("unit_condition_order").on(table.orderOrganizationId, table.orderId),
+		index("unit_condition_engineer").on(table.organizationId, table.engineerId),
+		index("unit_condition_user").on(table.userId),
 		foreignKey({
 			columns: [table.organizationId, table.equipmentId],
 			foreignColumns: [equipment.organizationId, equipment.id],

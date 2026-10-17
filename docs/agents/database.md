@@ -11,6 +11,12 @@ and commit it with the change; `pnpm db:migrate` applies it to `local.db` (`pnpm
 over from the migrations and the seed). `src/tests/unit/lib/server/db/migrations.spec.ts` fails while the
 schema has changes no migration makes. Never edit a migration that's been committed: add another.
 
+Every foreign key has an index (or the primary key) whose first columns are the key's, in any
+order: deleting a parent row, or inserting one while deferred keys are violated (an import),
+otherwise scans the whole child table for each row. `foreign-key-indexes.spec.ts` (next to
+`migrations.spec.ts`) names the keys without one. Extend an index a query already uses with the
+key's other columns rather than adding a second one.
+
 `pnpm db:generate` writes the migration twice (`scripts/db-generate.ts`): in `drizzle/` for libsql
 (a file, Turso) and in `cloudflare/migrations/` for the Durable Object's plain SQLite on Cloudflare,
 which has none of libsql's own SQL (`ALTER COLUMN`); check and commit both. The spec holds both

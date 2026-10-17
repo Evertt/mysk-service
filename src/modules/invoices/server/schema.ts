@@ -47,7 +47,8 @@ export const invoice = sqliteTable(
 		// Unique within a tenant; another tenant may use the same number.
 		uniqueIndex("invoice_organization_number").on(table.organizationId, table.number),
 		uniqueIndex("invoice_organization_id").on(table.organizationId, table.id),
-		index("invoice_customer").on(table.customerId),
+		// A customer's invoices; with the tenant, also the key to the customer.
+		index("invoice_customer").on(table.customerId, table.organizationId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -80,8 +81,9 @@ export const invoiceLine = sqliteTable(
 		source: text("source"),
 	},
 	(table) => [
-		index("invoice_line_invoice").on(table.invoiceId),
-		index("invoice_line_order").on(table.orderId),
+		// With the tenant, also the keys to the invoice and the order.
+		index("invoice_line_invoice").on(table.invoiceId, table.organizationId),
+		index("invoice_line_order").on(table.orderId, table.organizationId),
 		index("invoice_line_source").on(table.organizationId, table.source),
 		// For the lines of the credit notes that credit it.
 		uniqueIndex("invoice_line_organization_id").on(table.organizationId, table.id),
@@ -133,7 +135,7 @@ export const creditNote = sqliteTable(
 	(table) => [
 		uniqueIndex("credit_note_organization_number").on(table.organizationId, table.number),
 		uniqueIndex("credit_note_organization_id").on(table.organizationId, table.id),
-		index("credit_note_customer").on(table.customerId),
+		index("credit_note_customer").on(table.customerId, table.organizationId),
 		index("credit_note_invoice").on(table.organizationId, table.invoiceId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
@@ -172,7 +174,8 @@ export const creditNoteLine = sqliteTable(
 		source: text("source"),
 	},
 	(table) => [
-		index("credit_note_line_credit_note").on(table.creditNoteId),
+		index("credit_note_line_credit_note").on(table.creditNoteId, table.organizationId),
+		index("credit_note_line_order").on(table.organizationId, table.orderId),
 		index("credit_note_line_invoice_line").on(table.organizationId, table.invoiceLineId),
 		foreignKey({
 			columns: [table.organizationId, table.creditNoteId],

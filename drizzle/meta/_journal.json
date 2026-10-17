@@ -169,6 +169,13 @@
       "when": 1792233861057,
       "tag": "0023_add-parts-shop",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792245496682,
+      "tag": "0024_index-foreign-keys",
+      "breakpoints": true
     }
   ]
 }

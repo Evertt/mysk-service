@@ -60,6 +60,7 @@ export const partnerAccount = sqliteTable(
 	},
 	(table) => [
 		uniqueIndex("partner_account_organization_customer").on(table.organizationId, table.customerId),
+		index("partner_account_accepted_by").on(table.acceptedBy),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -190,6 +191,7 @@ export const walletEntry = sqliteTable(
 	(table) => [
 		uniqueIndex("partner_wallet_entry_organization_id").on(table.organizationId, table.id),
 		index("partner_wallet_entry_customer").on(table.organizationId, table.customerId),
+		index("partner_wallet_entry_bonus_year").on(table.organizationId, table.bonusYearId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],

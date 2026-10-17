@@ -84,6 +84,7 @@ export const energyZone = sqliteTable(
 		uniqueIndex("energy_zone_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_zone_site_id").on(table.energySiteId, table.id),
 		uniqueIndex("energy_zone_site_code").on(table.energySiteId, table.code),
+		index("energy_zone_site").on(table.organizationId, table.energySiteId),
 		foreignKey({
 			columns: [table.organizationId, table.energySiteId],
 			foreignColumns: [energySite.organizationId, energySite.id],
@@ -105,7 +106,8 @@ export const energyConsumer = sqliteTable(
 		position: integer("position").notNull().default(0),
 	},
 	(table) => [
-		index("energy_consumer_zone").on(table.zoneId),
+		index("energy_consumer_zone").on(table.organizationId, table.zoneId),
+		index("energy_consumer_equipment").on(table.equipmentOrganizationId, table.equipmentId),
 		foreignKey({
 			columns: [table.organizationId, table.zoneId],
 			foreignColumns: [energyZone.organizationId, energyZone.id],
@@ -148,6 +150,9 @@ export const energyDoor = sqliteTable(
 	(table) => [
 		uniqueIndex("energy_door_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_door_site_code").on(table.energySiteId, table.code),
+		index("energy_door_site").on(table.organizationId, table.energySiteId),
+		index("energy_door_zone").on(table.energySiteId, table.zoneId),
+		index("energy_door_equipment").on(table.equipmentOrganizationId, table.equipmentId),
 		foreignKey({
 			columns: [table.organizationId, table.energySiteId],
 			foreignColumns: [energySite.organizationId, energySite.id],
@@ -186,6 +191,7 @@ export const energyReading = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.zoneId, table.start] }),
+		index("energy_reading_zone").on(table.organizationId, table.zoneId),
 		foreignKey({
 			columns: [table.organizationId, table.zoneId],
 			foreignColumns: [energyZone.organizationId, energyZone.id],
@@ -204,6 +210,7 @@ export const energyDoorEvent = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.doorId, table.at, table.open] }),
+		index("energy_door_event_door").on(table.organizationId, table.doorId),
 		foreignKey({
 			columns: [table.organizationId, table.doorId],
 			foreignColumns: [energyDoor.organizationId, energyDoor.id],
@@ -223,6 +230,7 @@ export const energyThreshold = sqliteTable(
 		maxKwh: real("max_kwh").notNull(),
 	},
 	(table) => [
+		index("energy_threshold_zone").on(table.organizationId, table.zoneId),
 		foreignKey({
 			columns: [table.organizationId, table.zoneId],
 			foreignColumns: [energyZone.organizationId, energyZone.id],
@@ -261,7 +269,10 @@ export const energyAlert = sqliteTable(
 	(table) => [
 		uniqueIndex("energy_alert_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_alert_key").on(table.organizationId, table.key),
-		index("energy_alert_site").on(table.energySiteId, table.status, table.at),
+		index("energy_alert_site").on(table.organizationId, table.energySiteId, table.status, table.at),
+		index("energy_alert_zone").on(table.organizationId, table.zoneId),
+		index("energy_alert_door").on(table.organizationId, table.doorId),
+		index("energy_alert_order").on(table.orderOrganizationId, table.orderId),
 		foreignKey({
 			columns: [table.organizationId, table.energySiteId],
 			foreignColumns: [energySite.organizationId, energySite.id],
