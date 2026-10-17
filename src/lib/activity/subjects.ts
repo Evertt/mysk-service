@@ -58,6 +58,7 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	shared: m.activity_action_shared,
 	unshared: m.activity_action_unshared,
 	revoked: m.activity_action_revoked,
+	reset: m.activity_action_reset,
 };
 
 /**
@@ -249,6 +250,22 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 		noun: m.activity_subject_module,
 		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,
 		href: () => resolve("/(app)/settings"),
+	},
+	/**
+	 * A module's simulation for a demo (`simulation`), by the module's id; shown by the module's
+	 * name, and found on the module's page.
+	 */
+	simulation: {
+		noun: m.activity_subject_simulation,
+		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,
+		href: ({ id }) => {
+			const route = modules.find((module) => module.id === id)?.route;
+			return route ? resolve(route) : resolve("/(app)/settings");
+		},
+		fields: {
+			running: { label: m.activity_field_running },
+			speed: { label: m.activity_field_speed, format: (value) => `${String(value)}×` },
+		},
 	},
 	/** A member of the organization (`member`), by their name. */
 	member: {

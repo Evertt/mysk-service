@@ -77,6 +77,12 @@ const fieldworksTenant =
 const shltrOnly: readonly string[] = ["docks", "energy", "parts-shop"];
 
 /**
+ * The modules SHLTR's demo simulates (`#lib/server/simulation.ts`): its Salvo docks and its P1
+ * meters, running from the seed on. Real tenants never have a simulation.
+ */
+const shltrSimulations: readonly string[] = ["docks", "energy"];
+
+/**
  * The demo organizations. North has all the modules (also the ones added later in
  * `src/modules`) but SHLTR's own (`shltrOnly`); South only invoicing and materials, so the other
  * modules' tests (contracts, the schedule) have a tenant without them. Materials were core until
@@ -111,6 +117,7 @@ const tenants = [
 		categories: shltrCategories,
 		generate: generateShltrTenant,
 		signoffs: shltrSignoffs,
+		simulations: shltrSimulations,
 		// Breakdowns are SHLTR's "storingen", as standard. As a demo of the settings: surveys go by
 		// SHLTR's own Dutch name, and damage, which SHLTR doesn't book as such, is hidden.
 		orderTypes: [
@@ -146,6 +153,7 @@ await db.transaction(async (tx) => {
 		schema.customerSite,
 		engineer,
 		customer,
+		schema.simulation,
 		schema.organizationModule,
 		schema.orderTypeSetting,
 		schema.invitation,
@@ -180,6 +188,21 @@ await db.transaction(async (tx) => {
 			await tx
 				.insert(schema.organizationModule)
 				.values(tenant.modules.map((moduleId) => ({ organizationId: tenant.id, moduleId })));
+		}
+		// The simulations it's offered, running.
+		if ("simulations" in tenant) {
+			const rows = tenant.simulations
+				.filter((moduleId) => tenant.modules.includes(moduleId))
+				.map((moduleId) => ({
+					organizationId: tenant.id,
+					moduleId,
+					running: true,
+					speed: 1,
+					lastTickAt: toMoment(now),
+					startedAt: toMoment(now),
+				}));
+			if (rows.length) await tx.insert(schema.simulation).values(rows);
+			count("simulations", rows);
 		}
 		// The order types the tenant renamed or hid; the others are as standard.
 		if ("orderTypes" in tenant) {

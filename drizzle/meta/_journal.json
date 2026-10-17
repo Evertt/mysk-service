@@ -176,6 +176,13 @@
       "when": 1792245496682,
       "tag": "0024_index-foreign-keys",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792255538576,
+      "tag": "0025_add-simulation",
+      "breakpoints": true
     }
   ]
 }

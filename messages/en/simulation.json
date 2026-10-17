@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"simulation_title": "Simulation",
+	"simulation_note": "Made-up data for the demo, until the real link replaces it.",
+	"simulation_play": "Start",
+	"simulation_pause": "Pause",
+	"simulation_reset": "Reset simulation",
+	"simulation_reset_done": "The simulation starts over.",
+	"simulation_speed_label": "Simulation speed",
+	"simulation_speed": "{speed}×",
+	"simulation_running": "simulation {speed}×",
+	"simulation_paused": "paused",
+	"simulation_live": "Simulation"
+}
