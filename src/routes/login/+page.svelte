@@ -6,11 +6,19 @@
 	import { page } from "$app/state";
 
 	import PublicShell from "../public-shell.svelte";
+	import { demoSignIn, demoSignInEnabled } from "./demo.remote.ts";
 	import { login } from "./login.remote.ts";
 
 	const { email, _password, redirectTo } = login.fields;
 	const emailId = $props.id();
 	const passwordId = `${emailId}-password`;
+
+	/** The demo's buttons, where `DEMO_SIGN_IN` allows them: each signs in as a SHLTR demo user. */
+	const demoButtons = [
+		{ role: "admin", label: m.auth_demo_admin },
+		{ role: "engineer", label: m.auth_demo_engineer },
+		{ role: "customer", label: m.auth_demo_customer },
+	];
 </script>
 
 <svelte:head>
@@ -58,4 +66,23 @@
 			</form>
 		</Card.Content>
 	</Card.Root>
+
+	{#if await demoSignInEnabled()}
+		<form {...demoSignIn} class="flex flex-col items-center gap-2 text-center">
+			<div class="flex flex-wrap items-center justify-center gap-2">
+				<span class="text-sm text-muted-foreground">{m.auth_demo_sign_in_as()}</span>
+				{#each demoButtons as { role, label } (role)}
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={!!demoSignIn.pending}
+						{...demoSignIn.fields.role.as("submit", role)}
+					>
+						{label()}
+					</Button>
+				{/each}
+			</div>
+			<p class="text-xs text-balance text-muted-foreground">{m.auth_demo_note()}</p>
+		</form>
+	{/if}
 </PublicShell>
