@@ -9,6 +9,7 @@
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 
+	import { completerName } from "../display.ts";
 	import { checklistLabels } from "../labels.ts";
 	import type { WorkOrder } from "../server/work-order.ts";
 	import OutcomeBadge from "../ui/outcome-badge.svelte";
@@ -143,7 +144,7 @@
 					{#if checklist.completedAt}
 						<span class="text-xs text-muted-foreground tabular-nums">
 							{m.checklists_completed_by({
-								name: checklist.engineer ?? m.checklists_someone(),
+								name: completerName(checklist) ?? m.checklists_someone(),
 								date: formatDateTime(checklist.completedAt),
 							})}
 						</span>

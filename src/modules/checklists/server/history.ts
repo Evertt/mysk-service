@@ -8,7 +8,7 @@ import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order, user } from "#lib/server/db/schema.ts";
 import type {
 	ChecklistEntry,
 	HistoryQuery,
@@ -36,7 +36,8 @@ export async function checklistHistory({
 			checklistKind: checklist.kind,
 			remarks: checklist.remarks,
 			completedAt: checklist.completedAt,
-			by: engineer.name,
+			// The engineer, or the office member who completed it on their behalf.
+			by: sql<string | null>`coalesce(${engineer.name}, ${user.name})`,
 			order: order.number,
 			rejections,
 			unit: {
@@ -52,6 +53,7 @@ export async function checklistHistory({
 		.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
 		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.leftJoin(...tenantJoin(engineer, checklist.completedBy))
+		.leftJoin(user, eq(user.id, checklist.completedByUser))
 		.where(
 			and(
 				inTenant(checklist),

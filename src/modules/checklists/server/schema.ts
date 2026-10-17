@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
-import { engineer, equipmentCategory, orderUnit } from "#lib/server/db/schema.ts";
+import { engineer, equipmentCategory, orderUnit, user } from "#lib/server/db/schema.ts";
 
 import {
 	checklistKinds,
@@ -166,8 +166,14 @@ export const checklist = sqliteTable(
 		/** The general remark and advice for the customer ("Algemene opmerking / advies aan klant"). */
 		remarks: text("remarks"),
 		completedAt: moment("completed_at"),
-		/** The engineer who completed it. */
+		/** The engineer who completed it in the field; none when the office completed it. */
 		completedBy: integer("completed_by"),
+		/**
+		 * Who completed it, as a user: the engineer's account in the field, or the office member who
+		 * filled it in on the engineer's behalf (from a paper form brought back), then without an
+		 * engineer. None for a checklist completed before this was kept.
+		 */
+		completedByUser: text("completed_by_user").references(() => user.id, { onDelete: "set null" }),
 		/**
 		 * An inspection's last valid day, from the day it was completed and its validity (see
 		 * `validUntil()` in `../model.ts`): what a unit's inspection status is worked out from.
@@ -185,6 +191,7 @@ export const checklist = sqliteTable(
 		index("checklist_order_unit").on(table.organizationId, table.orderId, table.equipmentId),
 		index("checklist_by_template").on(table.organizationId, table.templateId),
 		index("checklist_completed_by").on(table.organizationId, table.completedBy),
+		index("checklist_completed_by_user").on(table.completedByUser),
 		foreignKey({
 			columns: [table.organizationId, table.orderId, table.equipmentId],
 			foreignColumns: [orderUnit.organizationId, orderUnit.orderId, orderUnit.equipmentId],

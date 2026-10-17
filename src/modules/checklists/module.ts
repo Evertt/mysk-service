@@ -8,8 +8,9 @@ export default defineModule({
 	id: "checklists",
 	label: m.checklists_module_name,
 	description: m.checklists_module_description,
-	route: "/(app)/(modules)/checklists/templates",
-	// Managers set it up from the settings page too: its templates are what it does.
+	// The work orders page ("Werkbonnen"): every unit with its checklist of this year.
+	route: "/(app)/(modules)/checklists",
+	// Managers set it up from the settings page: its templates, which the work orders page links to.
 	settings: "/(app)/(modules)/checklists/templates",
 	icon: ClipboardCheckIcon,
 	subjects: checklistSubjects,

@@ -1,18 +1,32 @@
 /**
- * What an engineer does with the checklists of one of their own orders in the field: answer a
- * point, say what's wrong, write the remark for the customer, and complete a checklist once every
- * point is answered. Only while the order is in progress (`fieldActions().work`) and the checklist
- * a draft; another engineer's (or tenant's) checklist is a 404, also by a tampered id. Each change is
- * saved as it's made, in a transaction; completing is logged against the order.
+ * Filling a checklist in: answer a point, say what's wrong, write the remark for the customer, and
+ * complete it once every point is answered. The same rules for whoever fills it in (`Filler`):
+ *
+ * - an engineer, in the field, the checklists of their own orders while in progress
+ *   (`fieldActions().work`); another engineer's (or tenant's) checklist is a 404, also by a
+ *   tampered id;
+ * - the office, on the engineer's behalf (a paper form brought back), any of the tenant's while its
+ *   order is open (`isOpenOrder()`: not completed, invoiced or cancelled).
+ *
+ * Only a draft: completed, it's on record. Each change is saved as it's made, in a transaction;
+ * completing is logged against the order, and records who completed it: the engineer (none for the
+ * office) and the user, either way.
  */
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
+import { isOpenOrder } from "#lib/models.ts";
 import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	inTenant,
+	isSystemUser,
+	tenantJoin,
+} from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { save } from "#lib/server/extensions.ts";
@@ -22,11 +36,17 @@ import { completionProblems, type PointResult, rejections, validUntil } from "..
 import { checklist, checklistResult } from "./schema.ts";
 
 /**
- * The tenant's checklist `id` on one of the engineer's orders, in `tx`, if they may change it: the
- * order in progress and the checklist a draft. A 404 when it isn't theirs, a 400 saying why not
- * otherwise.
+ * Who fills a checklist in: an engineer (their id), on one of their own orders in the field, or
+ * the office, on any of the tenant's, on the engineer's behalf.
  */
-async function findFieldChecklist(tx: Transaction, engineerId: number, id: number) {
+export type Filler = number | "office";
+
+/**
+ * The tenant's checklist `id`, in `tx`, if `by` may change it: an engineer's on one of their
+ * orders, in progress; the office's on an open order; and a draft. A 404 when it isn't theirs, a
+ * 400 saying why not otherwise.
+ */
+async function findFieldChecklist(tx: Transaction, by: Filler, id: number) {
 	const [found] = await tx
 		.select({
 			id: checklist.id,
@@ -41,9 +61,12 @@ async function findFieldChecklist(tx: Transaction, engineerId: number, id: numbe
 		.from(checklist)
 		.innerJoin(...tenantJoin(order, checklist.orderId))
 		.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
-		.where(and(idInTenant(checklist, id), eq(order.engineerId, engineerId)));
+		.where(and(idInTenant(checklist, id), by === "office" ? undefined : eq(order.engineerId, by)));
 	if (!found) error(404, m.checklists_not_found());
-	if (!fieldActions(found.order.status).work) {
+	if (by === "office" && !isOpenOrder(found.order.status)) {
+		error(400, m.checklists_office_order_closed({ number: found.order.number }));
+	}
+	if (by !== "office" && !fieldActions(found.order.status).work) {
 		error(400, m.checklists_field_not_in_progress({ number: found.order.number }));
 	}
 	if (found.status === "completed") {
@@ -52,30 +75,30 @@ async function findFieldChecklist(tx: Transaction, engineerId: number, id: numbe
 	return found;
 }
 
-/** The tenant's point `id` of a checklist the engineer may change (see `findFieldChecklist()`). */
-async function findFieldPoint(tx: Transaction, engineerId: number, id: number) {
+/** The tenant's point `id` of a checklist `by` may change (see `findFieldChecklist()`). */
+async function findFieldPoint(tx: Transaction, by: Filler, id: number) {
 	const [found] = await tx
 		.select({ id: checklistResult.id, checklistId: checklistResult.checklistId })
 		.from(checklistResult)
 		.where(idInTenant(checklistResult, id));
 	if (!found) error(404, m.checklists_not_found());
-	const owner = await findFieldChecklist(tx, engineerId, found.checklistId);
+	const owner = await findFieldChecklist(tx, by, found.checklistId);
 	return { ...found, number: owner.order.number };
 }
 
-/** Gives a point of one of the engineer's checklists its result; returns the order's number. */
-export function answerPoint(engineerId: number, id: number, result: PointResult | null) {
+/** Gives a point of a checklist `by` may change its result; returns the order's number. */
+export function answerPoint(by: Filler, id: number, result: PointResult | null) {
 	return db.transaction(async (tx) => {
-		const point = await findFieldPoint(tx, engineerId, id);
+		const point = await findFieldPoint(tx, by, id);
 		await tx.update(checklistResult).set({ result }).where(idInTenant(checklistResult, id));
 		return point.number;
 	});
 }
 
-/** Sets the remark on a point of one of the engineer's checklists (none when empty). */
-export function remarkPoint(engineerId: number, id: number, remark: string) {
+/** Sets the remark on a point of a checklist `by` may change (none when empty). */
+export function remarkPoint(by: Filler, id: number, remark: string) {
 	return db.transaction(async (tx) => {
-		const point = await findFieldPoint(tx, engineerId, id);
+		const point = await findFieldPoint(tx, by, id);
 		await tx
 			.update(checklistResult)
 			.set({ remark: remark || null })
@@ -84,10 +107,10 @@ export function remarkPoint(engineerId: number, id: number, remark: string) {
 	});
 }
 
-/** Sets the general remark for the customer on one of the engineer's checklists. */
-export function remarkChecklist(engineerId: number, id: number, remarks: string) {
+/** Sets the general remark for the customer on a checklist `by` may change. */
+export function remarkChecklist(by: Filler, id: number, remarks: string) {
 	return db.transaction(async (tx) => {
-		const found = await findFieldChecklist(tx, engineerId, id);
+		const found = await findFieldChecklist(tx, by, id);
 		await tx
 			.update(checklist)
 			.set({ remarks: remarks || null })
@@ -101,16 +124,16 @@ const rejectionsNote = (count: number) =>
 	count ? m.checklists_rejections({ count }) : m.checklists_approved();
 
 /**
- * Completes one of the engineer's checklists, once every point has a result and every rejection
- * says what's wrong: it's on record then, completed now by them, and an inspection is valid from
- * today (in the user's time zone) for its template's months. Logged against the order, with how
- * many points it rejected; the modules save their part in the same transaction
- * (`checklists.completed`: the condition module records the unit's score). Returns the order's
- * number.
+ * Completes a checklist `by` may change, once every point has a result and every rejection says
+ * what's wrong: it's on record then, completed now by them (the engineer, or none for the office;
+ * the user either way), and an inspection is valid from today (in the user's time zone) for its
+ * template's months. Logged against the order, with how many points it rejected; the modules save
+ * their part in the same transaction (`checklists.completed`: the condition module records the
+ * unit's score). Returns the order's number.
  */
-export function completeChecklist(engineerId: number, id: number) {
+export function completeChecklist(by: Filler, id: number) {
 	return db.transaction(async (tx) => {
-		const found = await findFieldChecklist(tx, engineerId, id);
+		const found = await findFieldChecklist(tx, by, id);
 		const answers = await tx
 			.select({
 				templateItemId: checklistResult.templateItemId,
@@ -124,10 +147,13 @@ export function completeChecklist(engineerId: number, id: number) {
 		if (unexplained) error(400, m.checklists_complete_unexplained({ count: unexplained }));
 		const now = Temporal.Now.instant();
 		const today = now.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+		const engineerId = by === "office" ? null : by;
+		const { user } = currentTenant();
 		const after = {
 			status: "completed" as const,
 			completedAt: now,
 			completedBy: engineerId,
+			completedByUser: isSystemUser(user) ? null : user.id,
 			validUntil: found.kind === "inspection" ? validUntil(today, found.validityMonths) : null,
 		};
 		await tx.update(checklist).set(after).where(idInTenant(checklist, id));

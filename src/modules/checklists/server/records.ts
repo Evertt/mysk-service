@@ -3,12 +3,19 @@
  * completed them and their points in order (`results`). The office's order card, the work order to
  * print, a unit's history and the engineer portal all read them through `checklistRecords()`.
  */
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { engineer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
+import {
+	engineer,
+	equipment,
+	equipmentLocation,
+	order,
+	orderUnit,
+	user,
+} from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 import { pointArticles } from "../api/extensions.ts";
@@ -29,6 +36,8 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 			validUntil: checklist.validUntil,
 			createdAt: checklist.createdAt,
 			engineer: engineer.name,
+			/** The office member who completed it on the engineer's behalf (no engineer then). */
+			office: sql<string | null>`case when ${checklist.completedBy} is null then ${user.name} end`,
 			order: {
 				id: order.id,
 				number: order.number,
@@ -59,6 +68,7 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 			),
 		)
 		.leftJoin(...tenantJoin(engineer, checklist.completedBy))
+		.leftJoin(user, eq(user.id, checklist.completedByUser))
 		.where(and(inTenant(checklist), where))
 		.orderBy(asc(order.id), asc(orderUnit.position));
 	if (!found.length) return [];

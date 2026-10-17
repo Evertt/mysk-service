@@ -107,7 +107,7 @@ describe("an owner, in North", () => {
 		expect((await gaps().innerText()).replace(/\s+/g, " ")).toContain("Compressor Pomp");
 
 		const links = await sidebarLinks();
-		expect(links[links.indexOf("Equipment") + 1]).toBe("Checklists");
+		expect(links[links.indexOf("Equipment") + 1]).toBe("Work orders");
 	});
 
 	test("adds a template, with a name North doesn't have yet, and lands on its page", async () => {

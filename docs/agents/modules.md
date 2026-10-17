@@ -306,6 +306,12 @@ templates (points in groups, the equipment categories each is for) and the check
 inspection and maintenance orders, one per unit (`orders.units`, `orders.saving`), filled in on the
 engineer portal (`portal.order`), shown on an order's and a unit's page, printed as the work order,
 and a unit's inspection status in the equipment list (`server/checklists.ts`, `server/field.ts`).
+Its main page is the office's "Werkbonnen" (`assets/`, `server/assets.ts`): a server-side list of
+units that isn't a table (`scrollPages()` without TanStack), each unit's checklist of this year
+started from there (an order through `createOrders()`, `server/start.ts`) and filled in by the
+office for the engineer (`Filler` in `server/field.ts`, the draft's autosave shared with the portal
+in `detail/checklist-draft.svelte.ts`), with the components the condition module tells it of
+(`checklists.components`, `checklists.componentScores`, `checklists.componentSearch`).
 The schedule is the one without tables of its own: a view of the
 orders, which changes them through a core service and owns only its route, components and messages.
 Maintenance (plans per unit, turned into orders) was the first built from scratch: look there for a

@@ -16,6 +16,7 @@
 	import { orderRejected } from "../../api/extensions.ts";
 	import { getOrderChecklists } from "../../checklists.remote.ts";
 	import ChecklistPoints from "../../detail/checklist-points.svelte";
+	import { completerName } from "../../display.ts";
 	import { checklistLabels } from "../../labels.ts";
 	import { progress } from "../../model.ts";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
@@ -85,7 +86,7 @@
 					<p class="text-xs text-muted-foreground tabular-nums">
 						{#if checklist.status === "completed" && checklist.completedAt}
 							{m.checklists_completed_by({
-								name: checklist.engineer ?? m.checklists_someone(),
+								name: completerName(checklist) ?? m.checklists_someone(),
 								date: formatDateTime(checklist.completedAt),
 							})}
 						{:else}

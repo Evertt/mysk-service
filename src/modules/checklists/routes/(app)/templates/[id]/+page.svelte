@@ -37,6 +37,7 @@
 	title={template.name}
 	description={template.norm ?? m.checklists_no_norm()}
 	breadcrumbs={[
+		{ label: m.checklists_module_name(), href: resolve("/(app)/(modules)/checklists") },
 		{
 			label: m.checklists_templates_title(),
 			href: resolve("/(app)/(modules)/checklists/templates"),
