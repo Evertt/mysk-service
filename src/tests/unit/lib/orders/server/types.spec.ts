@@ -75,7 +75,12 @@ async function refusal(save: Promise<unknown>) {
 		await save;
 	} catch (error) {
 		if (isValidationError(error)) {
-			return error.issues.map((found) => [found.path?.join("."), found.message]);
+			return error.issues.map((found) => [
+				found.path
+					?.map((part) => (typeof part === "object" ? String(part.key) : String(part)))
+					.join("."),
+				found.message,
+			]);
 		}
 		throw error;
 	}

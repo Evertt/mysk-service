@@ -6,26 +6,25 @@
 import { execFileSync } from "node:child_process";
 import { rmSync } from "node:fs";
 
+import { paraglideOptions, paraglideOutdirs } from "./paraglide.ts";
+
 const run = (command: string, args: string[]) => execFileSync(command, args, { stdio: "inherit" });
 
 run("node", ["scripts/modules.ts"]);
 // svelte-check's cache.
 rmSync(".svelte-kit/.svelte-check", { recursive: true, force: true });
 run("svelte-kit", ["sync"]);
+// The messages, as the dev server and the tests have them (scripts/paraglide.ts): with the same
+// options, so neither rewrites what the other wrote.
 run("paraglide-js", [
 	"compile",
 	"--project",
-	"./project.inlang",
+	paraglideOptions.project,
 	"--outdir",
-	"./src/lib/paraglide",
+	paraglideOutdirs["locale-modules"],
 	"--strategy",
-	"cookie",
-	"preferredLanguage",
-	"baseLocale",
+	...paraglideOptions.strategy,
 	"--emit-ts-declarations",
-	// The layout the Vite plugin writes outside production builds (`vite.config.ts`), so the tests'
-	// servers find the messages as they compile them: the CLI's default, a module per message
-	// (~2,900), slowed the next component test run into timeouts.
 	"--output-structure",
 	"locale-modules",
 	"--silent",

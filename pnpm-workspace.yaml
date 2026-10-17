@@ -28,6 +28,11 @@ patchedDependencies:
   # sidebar's breakpoint froze the dashboard's charts for 7 s. Now computed once until a dependency
   # changes (`fresh_deriveds`); see docs/upstream-bugs/README.md (10). Still in 5.57.2.
   svelte@5.57.1: patches/svelte@5.57.1.patch
+  # Reading a module back from `fsModuleCache`, Vitest took its inline source map out with the
+  # regular expression `base64,(.+)`, which overflowed the stack on Paraglide's messages (an 8 MB
+  # map): "Maximum call stack size exceeded" for the server-shared specs on the first run after a
+  # message changed. Now `indexOf`; see docs/upstream-bugs/README.md (11).
+  vitest@5.0.1: patches/vitest@5.0.1.patch
 peerDependencyRules:
   allowAny:
     - vite

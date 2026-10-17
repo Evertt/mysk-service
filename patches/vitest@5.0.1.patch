@@ -1,0 +1,22 @@
+diff --git a/dist/chunks/index.DzobfTyw.js b/dist/chunks/index.DzobfTyw.js
+index 08c3c116fbf8fe4685b45dee57f0f645b1270d81..4605a4a75e73ff9848f2072efd05a6ccf697bee3 100644
+--- a/dist/chunks/index.DzobfTyw.js
++++ b/dist/chunks/index.DzobfTyw.js
+@@ -6548,12 +6548,15 @@ function getCachedResult(result, tmp) {
+ 		moduleType: result.moduleType
+ 	};
+ }
+-const MODULE_RUNNER_SOURCEMAPPING_REGEXP = new RegExp(`//# ${SOURCEMAPPING_URL}=data:application/json;base64,(.+)`);
+ function extractSourceMap(code) {
+ 	const pattern = `//# ${SOURCEMAPPING_URL}=data:application/json;base64,`;
+ 	const lastIndex = code.lastIndexOf(pattern);
+ 	if (lastIndex === -1) return null;
+-	const mapString = MODULE_RUNNER_SOURCEMAPPING_REGEXP.exec(code.slice(lastIndex))?.[1];
++	// The rest of the line (base64 has no line breaks), which the regular expression `base64,(.+)`
++	// took: on a map of several MB (e.g. Paraglide's messages) that overflowed the stack.
++	const mapStart = lastIndex + pattern.length;
++	const mapEnd = code.indexOf("\n", mapStart);
++	const mapString = code.slice(mapStart, mapEnd === -1 ? void 0 : mapEnd);
+ 	if (!mapString) return null;
+ 	const sourceMap = JSON.parse(Buffer.from(mapString, "base64").toString("utf-8"));
+ 	// remove source map mapping added by "inlineSourceMap" to keep the original behaviour of transformRequest

@@ -10,6 +10,19 @@ only in `E2E_DEV=1` runs (one dev server, the files one at a time). `pnpm test` 
 fails once more, afresh (`scripts/test.ts`; CI too): a file that fails twice is a real failure, and
 one that only passes the second time is worth a look in the log. `vp test run` runs them once.
 
+**Paraglide's messages**: every Vite instance compiles them when it starts, into a folder per
+layout (`scripts/paraglide.ts`): the unit and component tests, the dev server and `pnpm generate`
+write `src/lib/paraglide` (a module per language), the production builds, the e2e one included,
+`.svelte-kit/paraglide` (a module per message, as deployed). Writers of one folder agree, so they
+leave it alone: when a build swapped the tests' folder for ~2,900 modules and they swapped it back,
+both broke ("Could not resolve './activity_action_accepted.js'", click timeouts). Keep it that way:
+compile with the options in `scripts/paraglide.ts` and import the messages as `#lib/paraglide/…`.
+The messages module is ~10 MB once transformed: Vitest 5.0.1 overflowed the stack reading it back
+from its module cache (`fsModuleCache`) on the first run after a message changed ("Maximum call
+stack size exceeded" at `messages.js` in ~60 `server-shared` files, passing on the retry).
+`patches/vitest@5.0.1.patch` fixes that; check that an upgraded Vitest still needs it
+(`docs/upstream-bugs/README.md`, 11).
+
 **Where tests go**: all in `tests/` folders, never next to their subject, in the same shape for the
 core and for each module.
 

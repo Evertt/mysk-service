@@ -232,3 +232,26 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   pending. Worth checking with the patch before reporting those.
 - **Test:** `src/tests/e2e/dashboard.test.ts`, "redraw at once when the window grows wide enough
   for the sidebar".
+
+## 11. Vitest: `fsModuleCache` overflows the stack reading back a module with a large source map
+
+- **Versions:** vitest 5.0.1 (with Vite+ 1.0.0), Node 26, `fsModuleCache: true`, three projects
+  (two Node projects that share a Vite config, one browser project).
+- **What happens:** on the first run after Paraglide's `messages/_index.js` changed (any message
+  edit, a lockfile change or a fresh `node_modules`, so a cold cache entry), every file of the
+  `server-shared` project that imports the messages failed with "Maximum call stack size exceeded"
+  (64 of 113 files), thrown in the main process and sent to the worker (`reviveInvokeError`, at
+  `messages.js`'s `export * from './messages/_index.js'`). The next run passed. The module is 2 MB,
+  10 MB transformed, with an inline source map of 8 MB.
+- **Cause:** `extractSourceMap` (`dist/chunks/index.*.js`), called by `ModuleFetcher.getCachedModule`
+  when it reads a module back from the cache, takes the map out with
+  `/\/\/# sourceMappingURL=data:application\/json;base64,(.+)/`: `RegExp.exec` threw the
+  RangeError, again when retried on the same string in that process. The same `exec` on the same
+  cache file passes in a fresh Node process (also with `--regexp-interpret-all` and a small
+  `--stack-size`), and in the warm runs, so it depends on the state of the main process; it
+  failed 4 times out of 4 with a cold cache and all three projects, never with one or two of them.
+- **Workaround:** `patches/vitest@5.0.1.patch` takes the rest of the line with `indexOf("\n")`
+  instead (base64 has no line breaks).
+- **Reproduction:** in this repo without the patch: `rm -rf node_modules/.vitest-cache`, then
+  `vp test run --project 'server-*' --project client`. For the issue, try a module whose inline
+  map is ~8 MB in two projects plus a browser project.

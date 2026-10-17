@@ -42,7 +42,9 @@ describe("a manager's forms", () => {
 		await dialog.getByLabel("Name", { exact: true }).fill("Bakkerij");
 		addedZone = await dialog.locator("form").evaluate((form: HTMLFormElement) => ({
 			action: form.getAttribute("action")!,
-			fields: [...new FormData(form)].map(([name, value]) => [name, String(value)] as const),
+			fields: [...new FormData(form)].map(
+				([name, value]) => [name, typeof value === "string" ? value : value.name] as const,
+			),
 		}));
 		await app.submit(dialog.getByRole("button", { name: "Save" }));
 		await page.locator('[data-setup-zone="Z-T"]').waitFor();

@@ -12,6 +12,12 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright";
 
 import { generateModules, modulesPlugin } from "./scripts/modules.ts";
+import {
+	paraglideOptions,
+	paraglideOutdirs,
+	paraglideOutput,
+	paraglideOutputStructure,
+} from "./scripts/paraglide.ts";
 
 // Links the modules in `src/modules` into the app before anything reads `src/routes` or the
 // registries (SvelteKit's sync, Vitest, the editor), see scripts/modules.ts.
@@ -187,25 +193,26 @@ export default defineConfig({
 			experimental: { remoteFunctions: true, forkPreloads: true },
 		}),
 
+		// Every Vite instance compiles the messages when it starts: a production build a module per
+		// message into `.svelte-kit/paraglide`, anything else (the dev server, each Vitest project) a
+		// module per language into `src/lib/paraglide`, with the options `pnpm generate` uses too. So
+		// the writers of a folder agree, and leave it as they found it: one that swapped the folder's
+		// ~2,900 modules for 6, or back, broke what was reading it (a dev server, the tests, another
+		// build). `paraglideOutput` points `#lib/paraglide/…` at the folder. See scripts/paraglide.ts.
+		paraglideOutput(import.meta.dirname),
 		paraglideVitePlugin({
-			project: "./project.inlang",
-			outdir: "./src/lib/paraglide",
-			emitTsDeclarations: true,
-			// A chosen language (cookie) wins, then the browser's language, then Dutch (the tenants are
-			// mainly Dutch; `#lib/i18n/fallback-locale.ts`). English stays the base locale.
-			strategy: ["cookie", "preferredLanguage", "custom-dutch", "baseLocale"],
-			// A production build writes a module per message, anything else a module per language, into
-			// the same folder. The end-to-end tests' build asks for the latter (see
-			// src/tests/e2e/global-setup.ts), so it leaves the folder as the component tests' server has
-			// it: swapping in ~2,900 modules under them slowed their clicks into timeouts.
-			outputStructure: process.env.PARAGLIDE_OUTPUT_STRUCTURE as
-				| "locale-modules"
-				| "message-modules"
-				| undefined,
+			...paraglideOptions,
+			strategy: [...paraglideOptions.strategy],
+			outputStructure: paraglideOutputStructure(),
+			outdir: paraglideOutdirs[paraglideOutputStructure()],
+			// The type check reads the dev layout's (`pnpm generate` writes them too).
+			emitTsDeclarations: paraglideOutputStructure() === "locale-modules",
 		}),
 	]),
 	test: {
 		expect: { requireAssertions: true },
+		// Keeps the transformed modules on disk between runs. Vitest 5.0.1 overflowed the stack reading
+		// back the messages (`patches/vitest@5.0.1.patch`; docs/agents/tests.md).
 		fsModuleCache: true,
 		projects: [
 			{
