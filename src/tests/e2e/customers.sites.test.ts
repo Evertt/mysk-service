@@ -85,7 +85,9 @@ describe("in North", () => {
 		expect(await row.innerText()).toContain(unit.site);
 	});
 
-	test("adding a site validates it first, its time slot too", async () => {
+	// What a site needs (its time slot's both ends, the end after the start), editing it and the
+	// refusal to delete one with equipment are `site-schema.spec.ts`'s and `sites.spec.ts`'s.
+	test("a new site is the customer's, logged against them", async () => {
 		const { page } = app;
 		await page.getByRole("button", { name: "Add site" }).click();
 		const dialog = page.getByRole("dialog");
@@ -98,30 +100,11 @@ describe("in North", () => {
 		expect(await dialog.getByLabel("City").inputValue()).toBe(owner.city);
 		expect(await dialog.getByLabel("Country").inputValue()).toBe(owner.country);
 
-		await dialog.getByLabel("Available from").fill("07:00");
-		await app.submit(dialog.getByRole("button", { name: "Save site" }));
-		expect(await app.issues()).toEqual([
-			"Enter a name for the site",
-			"Enter the street address",
-			"Enter the postal code",
-			"Enter both the start and the end of the time slot",
-		]);
-
 		await dialog.getByLabel("Name", { exact: true }).fill("Distributiecentrum Ede");
 		await dialog.getByLabel("Street address").fill("Galvanistraat 1");
 		await dialog.getByLabel("Postal code").fill("6716 AE");
 		await dialog.getByLabel("City").fill("Ede");
-		await dialog.getByLabel("Available until").fill("06:00");
-		await app.submit(dialog.getByRole("button", { name: "Save site" }));
-		expect(await app.issues()).toEqual(["The end comes after the start"]);
-		expect(
-			await sitesWhere("s.customer_id = ? and s.name = ?", [customer, "Distributiecentrum Ede"]),
-		).toEqual([]);
-	});
-
-	test("a new site is the customer's, logged against them", async () => {
-		const { page } = app;
-		const dialog = page.getByRole("dialog");
+		await dialog.getByLabel("Available from").fill("07:00");
 		await dialog.getByLabel("Available until").fill("15:00");
 		await dialog.getByLabel("Contact by").selectOption("whatsapp");
 		await dialog.getByLabel("Preferred day").selectOption("tuesday");
@@ -171,56 +154,7 @@ describe("in North", () => {
 		]);
 	});
 
-	test("editing a site saves it, and its card says what's urgent", async () => {
-		const { page } = app;
-		await siteAction("Distributiecentrum Ede", "Edit");
-		const dialog = page.getByRole("dialog");
-		expect(await dialog.getByLabel("Available from").inputValue()).toBe("07:00");
-		await dialog.getByLabel("Priority").selectOption("high");
-		await dialog.getByLabel("Contact person").fill("Ruud Hendriks");
-		await dialog.getByLabel("Phone on site").fill("06 12345678");
-		await dialog.getByLabel("Preferred day").selectOption("");
-		await dialog.getByRole("button", { name: "Save site" }).click();
-		await app.toast("Site saved");
-		await dialog.waitFor({ state: "detached" });
-
-		const [saved] = await site(added);
-		expect(saved).toMatchObject({
-			priority: "high",
-			contact_name: "Ruud Hendriks",
-			contact_phone: "06 12345678",
-			preferred_day: null,
-		});
-		await expect.poll(() => siteRow(added).innerText()).toContain("High priority");
-		expect(await siteRow(added).innerText()).toContain("Ruud Hendriks");
-		const [logged] = await rows<{ changes: string }>(
-			`select changes from activity where subject_type = 'site' and subject_id = ? and action = 'updated'`,
-			[String(added)],
-		);
-		expect(Object.keys(JSON.parse(logged.changes)).sort()).toEqual([
-			"contactName",
-			"contactPhone",
-			"preferredDay",
-			"priority",
-		]);
-	});
-
-	test("a site with equipment can't be deleted", async () => {
-		const { page } = app;
-		const [used] = await sitesWhere(
-			"s.customer_id = ? and (select count(*) from equipment e where e.site_id = s.id) > 0",
-			[customer],
-		);
-		await siteAction(used.name, "Delete");
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		await expect
-			.poll(() => dialog.innerText())
-			.toMatch(/This site still has \d+ equipment units?\. Move (it|them) to another site first\./);
-		expect(await site(used.id)).toHaveLength(1);
-		await dialog.getByRole("button", { name: "Cancel" }).click();
-	});
-
+	// Also the cleanup: the lane's later files find the customer's sites as seeded.
 	test("deleting the site without equipment removes it, and logs it", async () => {
 		const { page } = app;
 		await siteAction("Distributiecentrum Ede", "Delete");
@@ -279,45 +213,6 @@ describe("in South", () => {
 		await page.keyboard.press("Escape");
 	});
 
-	test("deleting with the id of a North site is refused", async () => {
-		const { page } = app;
-		const [ownSite] = await sitesWhere("s.customer_id = ?", [customer]);
-		await siteAction(ownSite.name, "Delete");
-		const dialog = page.getByRole("alertdialog");
-		const hidden = dialog.locator('input[type="hidden"][name^="id/"]');
-		await expect.poll(() => hidden.count()).toBe(1);
-		const result = await app.expectingErrors(async () => {
-			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
-			return app.submit(dialog.getByRole("button", { name: "Delete" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(await site(target)).toEqual(targetBefore);
-		expect(await site(ownSite.id)).toHaveLength(1);
-		await page.keyboard.press("Escape");
-	});
-
-	test("adding a site to a North customer by their id is refused", async () => {
-		const { page } = app;
-		const northCustomer = await value<number>(
-			`select min(id) from customer where organization_id = ?`,
-			[north.id],
-		);
-		const before = await sitesWhere("s.customer_id = ?", [northCustomer]);
-		await page.getByRole("button", { name: "Add site" }).click();
-		const dialog = page.getByRole("dialog");
-		await dialog.getByLabel("Name", { exact: true }).fill("Stolen");
-		await dialog.getByLabel("Street address").fill("Hoofdstraat 1");
-		await dialog.getByLabel("Postal code").fill("5611 AA");
-		const hidden = dialog.locator('input[type="hidden"][name^="customerId/"]');
-		const result = await app.expectingErrors(async () => {
-			await hidden.evaluate(
-				(input: HTMLInputElement, id) => (input.value = String(id)),
-				northCustomer,
-			);
-			return app.submit(dialog.getByRole("button", { name: "Save site" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(await sitesWhere("s.customer_id = ?", [northCustomer])).toEqual(before);
-		expect(await sitesWhere("s.name = ?", ["Stolen"])).toEqual([]);
-	});
+	// Deleting by a North site's id, and adding a site to a North customer by theirs, are
+	// `sites.spec.ts`'s ("another tenant's site or customer is a 404").
 });

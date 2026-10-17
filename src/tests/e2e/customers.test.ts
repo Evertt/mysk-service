@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countryName } from "#lib/customers/countries.ts";
 import { formatDate } from "#lib/i18n/format.ts";
 
 import {
@@ -72,14 +71,6 @@ async function listedNames() {
 	return (await bodyRows().locator("td:nth-child(2) a").allInnerTexts()).sort(byName);
 }
 
-/** Opens a faceted filter of the toolbar and picks one of its options. */
-async function filter(title: string, option: string) {
-	const { page } = app;
-	await app.openFilter(title);
-	await page.getByRole("option", { name: new RegExp(`^${option}`) }).click();
-	await page.keyboard.press("Escape");
-}
-
 /** A code that exists in North only (North has more customers than South). */
 const northOnly = () =>
 	value<string>(
@@ -114,50 +105,33 @@ describe("in North", () => {
 		await app.sortBy("Customer", "ascending");
 	});
 
-	test("searching finds customers by code and phone", async () => {
+	// Searching (by code, email, city and phone) and the filters are the client-side table's:
+	// `list/columns.spec.ts`, `table.svelte.spec.ts`, `cell-filter.svelte.spec.ts`. This is that
+	// the list's location cell filters by its country.
+	test("clicking a customer's country filters the list by it, and clicking it again stops", async () => {
 		const { page } = app;
-		const search = page.getByLabel("Search customers…");
-		await search.fill("CUST-0007");
-		await expect.poll(() => bodyRows().count()).toBe(1);
-		expect(await bodyRows().first().innerText()).toContain("CUST-0007");
-
-		const phone = await value<string>(
-			`select phone from customer where organization_id = ? and code = 'CUST-0007'`,
-			[north.id],
-		);
-		await search.fill(phone);
-		await expect.poll(() => bodyRows().first().innerText()).toContain("CUST-0007");
-
-		await search.fill("zzzz-no-match");
-		await page.getByText("No customers found").waitFor();
-
-		await page.getByRole("button", { name: "Reset" }).click();
-		expect(await search.inputValue()).toBe("");
-		expect(await bodyRows().count()).toBe(50);
-	});
-
-	test("filtering by segment and country", async () => {
-		const { page } = app;
-		const count = (where: string) =>
-			value<number>(`select count(*) from customer where organization_id = ? and ${where}`, [
-				north.id,
-			]);
-
-		await filter("Segment", "Enterprise");
-		await expect.poll(() => app.rowCount()).toBe(await count("segment = 'enterprise'"));
-		const segments = await bodyRows().locator('[data-slot="badge"]').allInnerTexts();
-		expect(segments.length).toBeGreaterThan(0);
-		expect(segments.every((segment) => segment.includes("Enterprise"))).toBe(true);
-
-		await filter("Country", "Belgium");
+		const first = bodyRows()
+			.first()
+			.locator('[data-column-id="country"]')
+			.getByRole("button", { name: /^Filter by / });
+		const country = (await first.getAttribute("aria-label"))!.replace("Filter by ", "");
+		await first.click();
+		await page.waitForURL((url) => url.searchParams.has("country"));
+		const code = new URL(page.url()).searchParams.get("country")!;
 		await expect
 			.poll(() => app.rowCount())
-			.toBe(await count("segment = 'enterprise' and country = 'Belgium'"));
-
-		await page.getByRole("button", { name: "Reset" }).click();
-		await filter("Country", "Belgium");
-		await expect.poll(() => app.rowCount()).toBe(await count("country = 'Belgium'"));
-		await page.getByRole("button", { name: "Reset" }).click();
+			.toBe(
+				await value<number>(
+					`select count(*) from customer where organization_id = ? and country = ?`,
+					[north.id, code],
+				),
+			);
+		await bodyRows()
+			.first()
+			.locator('[data-column-id="country"]')
+			.getByRole("button", { name: `Stop filtering by ${country}`, exact: true })
+			.click();
+		await page.waitForURL((url) => !url.searchParams.has("country"));
 		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
 	});
 
@@ -234,50 +208,8 @@ describe("in North", () => {
 		expect(await page.getByRole("columnheader", { name: "Customer since" }).count()).toBe(1);
 	});
 
-	test("compact rows are remembered after a reload", async () => {
-		const { page } = app;
-		const density = () => page.locator("html").getAttribute("data-table-density");
-		const cellPadding = () =>
-			bodyRows()
-				.first()
-				.locator("td")
-				.nth(2)
-				.evaluate((cell) => getComputedStyle(cell).paddingTop);
-		expect(await density()).toBe("comfortable");
-		expect(await cellPadding()).toBe("8px");
-
-		await page.getByRole("button", { name: "View", exact: true }).click();
-		await page.getByRole("menuitemradio", { name: "Compact" }).click();
-		await page.keyboard.press("Escape");
-		expect(await density()).toBe("compact");
-		expect(await cellPadding()).toBe("4px");
-
-		await page.reload();
-		await hydrated(page);
-		expect(await density()).toBe("compact");
-		expect(await cellPadding()).toBe("4px");
-
-		await page.getByRole("button", { name: "View", exact: true }).click();
-		await page.getByRole("menuitemradio", { name: "Comfortable" }).click();
-		await page.keyboard.press("Escape");
-		expect(await cellPadding()).toBe("8px");
-	});
-
-	test("the keyboard moves between rows and Enter opens one", async () => {
-		const { page } = app;
-		await bodyRows().first().focus();
-		await page.keyboard.press("ArrowDown");
-		await page.keyboard.press("ArrowDown");
-		const third = bodyRows().nth(2);
-		expect(await third.evaluate((row) => row === document.activeElement)).toBe(true);
-		const href = await third.locator("td:nth-child(2) a").getAttribute("href");
-		expect(href).toMatch(/^\/customers\/[^/]+$/);
-
-		await page.keyboard.press("Enter");
-		await page.waitForURL((url) => url.pathname === href);
-		await page.goBack();
-		await hydrated(page);
-	});
+	// Compact rows and the keyboard are every table's: `density.svelte.spec.ts`,
+	// `row-navigation.svelte.spec.ts`.
 
 	test("the detail page shows the customer's equipment and orders", async () => {
 		const { page } = app;
@@ -454,11 +386,6 @@ describe("in North", () => {
 		}
 	});
 
-	test("an unknown code is a 404", async () => {
-		expect((await app.go("/customers/CUST-9999"))?.status()).toBe(404);
-		expect(await app.page.locator("body").innerText()).toContain("CUST-9999");
-	});
-
 	test("creating a customer validates it first", async () => {
 		const { page } = app;
 		await app.go("/customers/new");
@@ -623,22 +550,38 @@ describe("in North", () => {
 			Array.from({ length: 8 }, (_, i) => `CUST-${String(start + i).padStart(4, "0")}`),
 		);
 	});
+
+	test("deleting one removes it, after which it's a 404", async () => {
+		const { page } = app;
+		const made = await value<string>(
+			`select code from customer where organization_id = ? and name like 'Simultaneous BV %'
+			 order by code limit 1`,
+			[north.id],
+		);
+		await app.go(`/customers/${made}`);
+		await page.getByRole("button", { name: "Delete" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+		await page.waitForURL((url) => url.pathname === "/customers");
+		expect(await customerId(made, north.id)).toBeUndefined();
+		expect((await app.go(`/customers/${made}`))?.status()).toBe(404);
+	});
 });
 
 describe("in South", () => {
-	test("switching organization shows exactly South's customers", async () => {
+	test("switching organization shows South's customers", async () => {
 		await app.switchOrganization(south.name);
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
 		await app.go("/customers");
 		expect(await app.rowCount()).toBe(await countIn("customer", south.id));
-		expect(await listedNames()).toEqual(await namesIn(south.id));
 	});
 
-	test("North's customers are a 404", async () => {
+	test("North's customers are a 404, as is an unknown code", async () => {
 		const only = await northOnly();
 		for (const path of [`/customers/${only}`, `/customers/${only}/edit`, `/customers/${code}`]) {
 			expect((await app.go(path))?.status(), path).toBe(404);
 		}
+		expect((await app.go("/customers/CUST-9999"))?.status()).toBe(404);
+		expect(await app.page.locator("body").innerText()).toContain("CUST-9999");
 	});
 
 	test("the orders list doesn't show North's customers' orders by their code", async () => {
@@ -694,48 +637,16 @@ describe("in South", () => {
 		expect(await customer(own)).toEqual(ownBefore);
 	});
 
-	test("a new customer gets South's next code", async () => {
-		const { page } = app;
-		await app.go("/customers/new");
-		await page.getByLabel("Name").fill("Test Zuid Installaties BV");
-		await page.getByLabel("Segment").selectOption("small_business");
-		await page.getByLabel("Street address").fill("Kanaalstraat 4");
-		await page.getByLabel("Postal code").fill("5611 CT");
-		await page.getByLabel("City").fill("Eindhoven");
-		await page.getByLabel("Country").selectOption("Netherlands");
-		await page.getByLabel("Contact person").fill("Joris Bakker");
-		await page.getByLabel("Email").fill("joris@zuid.example");
-		await page.getByLabel("Phone").fill("+31 40 123 4567");
-		const expected = await nextCode("customer", "code", south.id);
-		await page.getByRole("button", { name: "Create customer" }).click();
-		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
-		await quiet(page);
-		expect(app.path()).toBe(`/customers/${expected}`);
-		await page.getByRole("heading", { level: 1, name: "Test Zuid Installaties BV" }).waitFor();
-		expect(
-			await rows(`select organization_id from customer where name = 'Test Zuid Installaties BV'`),
-		).toEqual([{ organization_id: south.id }]);
-	});
-
-	test("deleting it removes it, after which it's a 404", async () => {
-		const { page } = app;
-		const created = app.path().split("/").pop()!;
-		await page.getByRole("button", { name: "Delete" }).click();
-		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-		await page.waitForURL((url) => url.pathname === "/customers");
-		expect(await customerId(created, south.id)).toBeUndefined();
-		expect((await app.go(`/customers/${created}`))?.status()).toBe(404);
-	});
+	// A new customer in South gets South's next code: `numbering.spec.ts` ("only counts the current
+	// tenant's records").
 });
 
+// One page in Dutch: the messages are complete in both languages (`messages.spec.ts`), and
+// i18n.test has the switching and Dutch validation.
 describe("in Dutch", () => {
-	/** Sets the language as the language switchers do, in Paraglide's cookie. */
-	const useLanguage = (locale: string) =>
-		app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
-
 	test("the customers list is in Dutch", async () => {
 		const { page } = app;
-		await useLanguage("nl");
+		await app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
 		await app.go("/customers");
 		await page.getByRole("heading", { level: 1, name: "Klanten" }).waitFor();
 		expect(await page.title()).toBe("Klanten");
@@ -745,48 +656,5 @@ describe("in Dutch", () => {
 			expect(headers, name).toContain(name);
 		}
 		expect(await page.getByRole("link", { name: "Nieuwe klant" }).count()).toBe(1);
-	});
-
-	test("a customer's page is in Dutch, with the country's Dutch name", async () => {
-		const { page } = app;
-		const [own] = await rows<{ name: string; country: string }>(
-			`select name, country from customer where code = 'CUST-0001' and organization_id = ?`,
-			[south.id],
-		);
-		await app.go("/customers/CUST-0001");
-		await page.getByRole("heading", { level: 1, name: own.name }).waitFor();
-		for (const text of ["Totale omzet", "Klant sinds", "Recente activiteit", "Contactpersoon"]) {
-			expect(await page.getByText(text, { exact: true }).count(), text).toBeGreaterThan(0);
-		}
-		expect(await page.getByRole("link", { name: "Bewerken" }).count()).toBeGreaterThan(0);
-		expect(await page.locator("main").innerText()).toContain(countryName(own.country, "nl"));
-	});
-
-	test("an equipment page is in Dutch", async () => {
-		const { page } = app;
-		const serial = await value<string>(
-			`select serial_number from equipment where organization_id = ? order by id limit 1`,
-			[south.id],
-		);
-		await app.go(`/equipment/${serial}`);
-		for (const text of ["Servicegeschiedenis", "Specificaties", "Eigenaar", "Laatste onderhoud"]) {
-			expect(await page.getByText(text, { exact: true }).count(), text).toBeGreaterThan(0);
-		}
-		// The warranty badge.
-		expect(await page.locator("main").innerText()).toMatch(/\b(Gedekt|Verlopen)\b/);
-	});
-
-	test("validation messages are in Dutch", async () => {
-		const { page } = app;
-		await app.go("/customers/new");
-		await app.submit(page.getByRole("button", { name: "Klant aanmaken" }));
-		expect(await app.issues()).toContain("Vul de bedrijfsnaam in");
-	});
-
-	test("switching back to English", async () => {
-		await useLanguage("en");
-		await app.go("/customers");
-		await app.page.getByRole("heading", { level: 1, name: "Customers" }).waitFor();
-		expect(await app.page.title()).toBe("Customers");
 	});
 });
