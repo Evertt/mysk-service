@@ -313,5 +313,11 @@
 	"partners_credit_note_created": "Creditnota gemaakt: verstuur hem vanaf zijn pagina",
 	"partners_credit_note_offer": "Betaal hem uit met een creditnota, of buiten de app.",
 	"partners_credit_note_create": "Creditnota maken",
-	"partners_credit_note_outside": "Uitbetaald buiten de app, of met een creditnota die een eigenaar of beheerder maakt."
+	"partners_credit_note_outside": "Uitbetaald buiten de app, of met een creditnota die een eigenaar of beheerder maakt.",
+	"partners_client_hero_eyebrow": "{organization} · Partnerprogramma",
+	"partners_client_hero_title": "Samen groeien. Meer voordeel.",
+	"partners_client_hero_intro": "Je samenwerking met {organization} levert voordeel op. Volg je Partner Omzet, Bonus Omzet en beschikbare Parts Credit in één overzicht.",
+	"partners_client_progress": "Je voortgang",
+	"partners_client_level": "Partner Level",
+	"partners_client_programme_label": "Het programma"
 }

@@ -8,7 +8,7 @@
  */
 import * as v from "valibot";
 
-import { currentCustomer } from "#lib/server/auth/index.ts";
+import { currentCustomer, currentTenant } from "#lib/server/auth/index.ts";
 
 import { isPartner } from "../api/wallet.server.ts";
 import { yearField } from "../form/wallet-schema.ts";
@@ -22,7 +22,8 @@ import { walletOf } from "../server/wallet.ts";
 /**
  * The contact's customer's place in the programme: for a partner, this year's figures, the rules
  * they follow from, its last closed years (the latest one still waiting for its choice, if any)
- * and its wallet; for a customer that isn't one, `partner: false` alone.
+ * and its wallet, and the programme's organization (the tenant, for the page's banner); for a
+ * customer that isn't one, `partner: false` alone.
  */
 export const getClientPartner = forCustomers.query(async () => {
 	const { customer } = await currentCustomer();
@@ -47,6 +48,7 @@ export const getClientPartner = forCustomers.query(async () => {
 	}));
 	return {
 		partner: true as const,
+		organization: currentTenant().name,
 		year: now.year,
 		rules: rules
 			? {

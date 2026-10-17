@@ -1,7 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"dashboard_title": "Dashboard",
-	"dashboard_description": "Hoe het servicewerk er nu voor staat.",
 	"dashboard_open_orders": "Open opdrachten",
 	"dashboard_without_engineer": "{count} zonder monteur",
 	"dashboard_urgent": "Spoed",
@@ -60,5 +59,11 @@
 	"dashboard_column_scheduled": "Gepland",
 	"dashboard_awaiting_acceptance": "Te accepteren",
 	"dashboard_awaiting_acceptance_description": "Gemeld door klanten in het klantportaal",
-	"dashboard_awaiting_acceptance_show": "Toon"
+	"dashboard_awaiting_acceptance_show": "Toon",
+	"dashboard_greeting_morning": "Goedemorgen, {name}",
+	"dashboard_greeting_afternoon": "Goedemiddag, {name}",
+	"dashboard_greeting_evening": "Goedenavond, {name}",
+	"dashboard_greeting_line": "Hier is wat er vandaag speelt.",
+	"dashboard_trend_made": "{count} nieuw in de laatste 7 dagen ({change})",
+	"dashboard_trend_revenue": "{change} t.o.v. de 30 dagen ervoor"
 }

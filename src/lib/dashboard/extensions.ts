@@ -2,8 +2,9 @@
 import { defineSlot } from "#lib/extensions/define.ts";
 
 /**
- * Stat cards in the dashboard's headline row, after its own (a `StatCard` each, e.g. how many
- * materials run low). The components load their own data through their module's remote functions.
+ * Stat tiles in the dashboard's headline row, after its own (a `StatTile` each, `layout="stacked"`
+ * with an icon, e.g. how many materials run low). The components load their own data through their
+ * module's remote functions.
  */
 export const stats = defineSlot<Record<string, never>>("dashboard.stats");
 

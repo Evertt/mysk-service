@@ -5,8 +5,9 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import ZapIcon from "@lucide/svelte/icons/zap";
 
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { getEnergyStat } from "../../energy.remote.ts";
@@ -15,7 +16,10 @@
 </script>
 
 <div class="contents" data-energy-stat>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={ZapIcon}
+		tone="warning"
 		label={m.energy_dashboard_title()}
 		value={formatNumber(data.open)}
 		detail={m.energy_dashboard_detail({ active: formatNumber(data.active) })}
@@ -25,5 +29,5 @@
 				{m.common_view()}
 			</Button>
 		{/snippet}
-	</StatCard>
+	</StatTile>
 </div>

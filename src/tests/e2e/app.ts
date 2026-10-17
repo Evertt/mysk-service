@@ -42,6 +42,18 @@ export const hydrated = (page: Page) =>
 export const fitsWidth = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
+/** A stat tile (`StatTile`) within `scope`, by its label. */
+export const statTileNamed = (scope: Page | Locator, label: string) =>
+	scope.locator("[data-stat-tile]").filter({
+		has: ("goto" in scope ? scope : scope.page()).locator("[data-stat-label]", {
+			hasText: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
+		}),
+	});
+
+/** A stat tile's value, by the tile's label. */
+export const statTile = (scope: Page | Locator, label: string) =>
+	statTileNamed(scope, label).locator("[data-stat-value]");
+
 /** Runs steps on a phone's screen (`mobileViewport`), then goes back to the screen it was on. */
 export async function onPhone<T>(page: Page, steps: () => Promise<T>): Promise<T> {
 	const before = page.viewportSize();

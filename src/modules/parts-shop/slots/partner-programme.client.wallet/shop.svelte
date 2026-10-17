@@ -12,7 +12,11 @@
 </script>
 
 {#if available > 0}
-	<Button href={resolve("/(customer)/(modules)/parts-shop/portal")} data-spend-credit>
+	<Button
+		href={resolve("/(customer)/(modules)/parts-shop/portal")}
+		class="w-full"
+		data-spend-credit
+	>
 		<ShoppingCartIcon data-icon="inline-start" />
 		{m.shop_spend_credit()}
 	</Button>

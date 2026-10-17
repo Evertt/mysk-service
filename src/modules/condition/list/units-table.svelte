@@ -5,7 +5,12 @@
 	server-side table. The tiles, chips and checkbox set the table's filters, which are in the URL.
 -->
 <script lang="ts">
-	import { untrack } from "svelte";
+	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
+	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+	import ShieldAlertIcon from "@lucide/svelte/icons/shield-alert";
+	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+	import WrenchIcon from "@lucide/svelte/icons/wrench";
+	import { type Component, untrack } from "svelte";
 
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
 	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
@@ -15,7 +20,8 @@
 		serverTableLoading,
 	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-	import StatCard from "#lib/components/stat-card.svelte";
+	import FilterChips from "#lib/components/filter-chips.svelte";
+	import StatTile, { type StatTone } from "#lib/components/stat-tile.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { conditionLabels } from "../labels.ts";
@@ -77,17 +83,38 @@
 	const total = $derived(
 		unitStatuses.reduce((sum, status) => sum + (counts.status[status] ?? 0), 0),
 	);
-	const tiles = $derived<{ status: UnitStatus; label: string }[]>([
-		{ status: "critical", label: m.condition_kpi_critical() },
-		{ status: "attention", label: m.condition_kpi_attention() },
-		{ status: "planned", label: m.condition_kpi_planned() },
-		{ status: "ok", label: m.condition_kpi_ok() },
+	const tiles = $derived<
+		{ status: UnitStatus; label: string; icon: Component<{ class?: string }>; tone: StatTone }[]
+	>([
+		{
+			status: "critical",
+			label: m.condition_kpi_critical(),
+			icon: ShieldAlertIcon,
+			tone: "danger",
+		},
+		{
+			status: "attention",
+			label: m.condition_kpi_attention(),
+			icon: TriangleAlertIcon,
+			tone: "warning",
+		},
+		{
+			status: "planned",
+			label: m.condition_kpi_planned(),
+			icon: CalendarClockIcon,
+			tone: "info",
+		},
+		{ status: "ok", label: m.condition_kpi_ok(), icon: CircleCheckIcon, tone: "success" },
 	]);
 	/** The chips: the customers with the most units, and the chosen one. */
 	const CHIPS = 10;
 	const chips = $derived(
-		counts.customers.filter((chip, i) => i < CHIPS || customers.includes(chip.code)),
+		counts.customers
+			.filter((chip, i) => i < CHIPS || customers.includes(chip.code))
+			.map((chip) => ({ value: chip.code, label: chip.name, count: chip.count })),
 	);
+	/** Every customer's units, for "All customers". */
+	const everyone = $derived(counts.customers.reduce((sum, chip) => sum + chip.count, 0));
 
 	const statusOptions = $derived(conditionLabels.labelOptions("unitStatus", unitStatuses));
 	const bandOptions = $derived([
@@ -100,23 +127,24 @@
 
 <table.AppTable>
 	<div class="flex min-h-0 flex-col gap-4">
-		<div class="grid gap-4 sm:grid-cols-3 xl:grid-cols-5" data-kpis>
+		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5" data-kpis>
 			<div data-kpi="units" class="contents">
-				<StatCard label={m.condition_kpi_units()} value={formatNumber(total)} size="small" />
+				<StatTile label={m.condition_kpi_units()} value={formatNumber(total)} icon={WrenchIcon} />
 			</div>
 			{#each tiles as tile (tile.status)}
 				<div data-kpi={tile.status} class="contents">
-					<StatCard
+					<StatTile
 						label={tile.label}
 						value={formatNumber(counts.status[tile.status] ?? 0)}
-						size="small"
+						icon={tile.icon}
+						tone={tile.tone}
 					>
 						{#snippet action()}
 							<Button
 								variant={statuses.length === 1 && statuses[0] === tile.status
 									? "secondary"
 									: "ghost"}
-								size="sm"
+								size="xs"
 								aria-pressed={statuses.length === 1 && statuses[0] === tile.status}
 								onclick={() =>
 									setFilter(
@@ -127,42 +155,20 @@
 								{m.common_view()}
 							</Button>
 						{/snippet}
-					</StatCard>
+					</StatTile>
 				</div>
 			{/each}
 		</div>
 
 		<div class="flex flex-col gap-3">
-			<div
-				class="flex flex-wrap items-center gap-2"
-				role="group"
-				aria-label={m.condition_customers_label()}
-				data-chips
-			>
-				<Button
-					variant={customers.length ? "outline" : "secondary"}
-					size="sm"
-					class="rounded-full"
-					aria-pressed={!customers.length}
-					onclick={() => setFilter("customer", [])}
-				>
-					{m.condition_customers_all()}
-				</Button>
-				{#each chips as chip (chip.code)}
-					{@const chosen = customers.length === 1 && customers[0] === chip.code}
-					<Button
-						variant={chosen ? "secondary" : "outline"}
-						size="sm"
-						class="rounded-full"
-						aria-pressed={chosen}
-						data-chip={chip.code}
-						onclick={() => setFilter("customer", chosen ? [] : [chip.code])}
-					>
-						{chip.name}
-						<span class="text-muted-foreground tabular-nums">{formatNumber(chip.count)}</span>
-					</Button>
-				{/each}
-			</div>
+			<!-- One customer at a time; several chosen in the Customer filter press none. -->
+			<FilterChips
+				label={m.condition_customers_label()}
+				options={chips}
+				value={customers.length === 0 ? null : customers.length === 1 ? customers[0] : ""}
+				all={{ label: m.condition_customers_all(), count: everyone }}
+				onchange={(code) => setFilter("customer", code ? [code] : [])}
+			/>
 			<Label class="flex w-fit items-center gap-2 text-sm font-normal">
 				<Checkbox
 					checked={onlyAttention}

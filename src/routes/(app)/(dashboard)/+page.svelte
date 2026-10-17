@@ -1,11 +1,24 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import BanknoteIcon from "@lucide/svelte/icons/banknote";
+	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
+	import InboxIcon from "@lucide/svelte/icons/inbox";
+	import SirenIcon from "@lucide/svelte/icons/siren";
+	import WrenchIcon from "@lucide/svelte/icons/wrench";
 
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import { getRecentActivity } from "#lib/components/activity/activity.remote.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
+	import {
+		compare,
+		formatChange,
+		formatShare,
+		type StatTrend,
+	} from "#lib/components/stat-trend.ts";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { cards, stats } from "#lib/dashboard/extensions.ts";
+	import { getTimeZone } from "#lib/dates.ts";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
@@ -22,6 +35,35 @@
 
 	const data = $derived(await getDashboard());
 	const charts = $derived(await getCharts());
+	const user = $derived(await getCurrentUser());
+
+	// "Good morning, Jan", by the hour in the user's time zone (the night is still the evening).
+	const greeting = $derived.by(() => {
+		const name = user.name.split(" ")[0];
+		const hour = Temporal.Now.zonedDateTimeISO(getTimeZone()).hour;
+		if (hour >= 6 && hour < 12) return m.dashboard_greeting_morning({ name });
+		if (hour >= 12 && hour < 18) return m.dashboard_greeting_afternoon({ name });
+		return m.dashboard_greeting_evening({ name });
+	});
+
+	// The tiles' trends: the orders made in the last 7 days against the 7 before (neither good nor
+	// bad news), and the revenue against the 30 days before (none without revenue then).
+	const madeTrend = $derived.by((): StatTrend => {
+		const { direction, tone, change } = compare(data.made.week, data.made.weekBefore, "none");
+		return {
+			direction,
+			tone,
+			text: m.dashboard_trend_made({
+				count: formatNumber(data.made.week),
+				change: formatChange(change),
+			}),
+		};
+	});
+	const revenueTrend = $derived.by((): StatTrend | undefined => {
+		const { direction, tone, share } = compare(data.revenue.total, data.revenue.previous);
+		if (share === null) return undefined;
+		return { direction, tone, text: m.dashboard_trend_revenue({ change: formatShare(share) }) };
+	});
 
 	// Live: when anyone changes something, the numbers, charts and recent activity are asked for
 	// again (once for a burst of changes). The modules' stat cards look after their own.
@@ -35,39 +77,56 @@
 </svelte:head>
 
 <div class="flex flex-col gap-1">
-	<h1 class="text-2xl font-semibold tracking-tight">{m.dashboard_title()}</h1>
-	<p class="text-muted-foreground">{m.dashboard_description()}</p>
+	<h1 class="text-2xl font-semibold tracking-tight">{greeting}</h1>
+	<p class="text-muted-foreground">{m.dashboard_greeting_line()}</p>
 </div>
 
 <div class={statGrid}>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={ClipboardListIcon}
+		tone="brand"
 		label={m.dashboard_open_orders()}
 		value={formatNumber(data.open.total)}
 		detail={m.dashboard_without_engineer({ count: formatNumber(data.open.unassigned ?? 0) })}
+		trend={madeTrend}
 	/>
 	<!-- The orders customers reported in their portal, to accept or reject: opens the list of them. -->
 	<a
 		href={`${resolve("/(app)/orders")}?status=awaiting_acceptance`}
-		class="rounded-xl transition-opacity hover:opacity-80"
+		class="flex rounded-lg transition-opacity *:flex-1 hover:opacity-80"
 		data-awaiting-link
 	>
-		<StatCard
+		<StatTile
+			layout="stacked"
+			icon={InboxIcon}
+			tone="info"
 			label={m.dashboard_awaiting_acceptance()}
 			value={formatNumber(data.awaiting)}
 			detail={m.dashboard_awaiting_acceptance_description()}
 		/>
 	</a>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={SirenIcon}
+		tone="danger"
 		label={m.dashboard_urgent()}
 		value={formatNumber(data.open.urgent ?? 0)}
 		detail={m.dashboard_urgent_description()}
 	/>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={BanknoteIcon}
+		tone="success"
 		label={m.dashboard_revenue()}
 		value={formatCents(data.revenue.total)}
 		detail={m.dashboard_revenue_orders({ count: data.revenue.orders })}
+		trend={revenueTrend}
 	/>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={WrenchIcon}
+		tone="warning"
 		label={m.dashboard_attention()}
 		value={formatNumber(data.fleet.attention ?? 0)}
 		detail={m.dashboard_attention_of({ count: data.fleet.total })}

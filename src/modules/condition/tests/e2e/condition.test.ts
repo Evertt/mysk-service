@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, useApp, users } from "#e2e/app.ts";
+import { fitsWidth, onPhone, organizations, useApp, users } from "#e2e/app.ts";
 
 import {
 	countsOf,
@@ -58,6 +58,27 @@ describe("the Connect page", () => {
 		expect(shown[0]).toBe("critical");
 		const ranks = shown.map((status) => rank[status as keyof typeof rank]);
 		expect(ranks).toEqual(ranks.toSorted((a, b) => a - b));
+	});
+
+	test("opens with its banner and how it works in four steps, and fits a phone", async () => {
+		const { page } = app;
+		const banner = page.locator("[data-page-banner]");
+		expect(await banner.getByRole("heading", { level: 1 }).innerText()).toBe(
+			"Components per customer",
+		);
+		expect(await banner.innerText()).toContain("From the first sign to the completed checklist");
+		expect(await page.locator("[data-steps] li").allInnerTexts()).toEqual([
+			expect.stringContaining("1. Link"),
+			expect.stringContaining("2. Monitor"),
+			expect.stringContaining("3. Plan"),
+			expect.stringContaining("4. Carry out and record"),
+		]);
+		await onPhone(page, async () => {
+			await page.reload();
+			await page.locator("[data-kpis]").waitFor();
+			expect(await fitsWidth(page)).toBe(true);
+		});
+		await app.tableSettled();
 	});
 
 	test("a customer's chip shows its rows, its counts and its activity log", async () => {

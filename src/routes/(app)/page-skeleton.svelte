@@ -55,7 +55,7 @@
 		{@render header({})}
 		<div class={statGrid}>
 			{#each { length: 5 }, index (index)}
-				<Skeleton class="h-32" />
+				<Skeleton class="h-40" />
 			{/each}
 		</div>
 		<div class={cardGrid}>

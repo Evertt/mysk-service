@@ -1,21 +1,13 @@
 import type { Page } from "playwright";
 import { expect, test } from "vite-plus/test";
 
-import { hydrated, organizations, rows, useApp, value } from "./app.ts";
+import { hydrated, organizations, rows, statTile, useApp, value } from "./app.ts";
 
 const { north } = organizations;
 const app = useApp();
 
 /** The number of a stat tile, by its label. */
-const tile = (label: string) =>
-	app.page
-		.locator('[data-slot="card"]')
-		.filter({
-			has: app.page.locator('[data-slot="card-description"]', {
-				hasText: new RegExp(`^${label}$`),
-			}),
-		})
-		.locator('[data-slot="card-title"]');
+const tile = (label: string) => statTile(app.page, label);
 
 /** The entries of the dashboard's "Recent activity", as text. */
 const recentEntries = () =>

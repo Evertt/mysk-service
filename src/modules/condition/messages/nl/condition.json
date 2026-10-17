@@ -3,7 +3,6 @@
 	"condition_module_name": "Onderdelenbeheer",
 	"condition_module_description": "De onderdelen van de apparaten van je klanten: van elk de conditie door de tijd, berekend uit de werkbonnen, de status, het artikel uit de shop en de servicegeschiedenis, en het inplannen van kritieke onderdelen.",
 	"condition_title": "Onderdelenbeheer",
-	"condition_description": "Conditie, keuring en service van alle onderdelen in beheer, en van de apparaten zonder onderdelen, de slechtste eerst.",
 	"condition_status_critical": "Kritiek",
 	"condition_status_attention": "Aandacht",
 	"condition_status_planned": "Gepland",
@@ -195,5 +194,17 @@
 	"condition_activity_subject_component": "het onderdeel",
 	"condition_activity_subject_settings": "de instellingen van onderdelenbeheer",
 	"condition_client_title": "Apparaten die aandacht nodig hebben",
-	"condition_client_components": "Onderdelen"
+	"condition_client_components": "Onderdelen",
+	"condition_banner_eyebrow": "Connect",
+	"condition_banner_title": "Onderdelenbeheer per klant",
+	"condition_banner_intro": "Alle klanten, onderdelen, voorkeuren en activiteiten op één plek. Van signalering tot afgeronde werkbon in één lijn.",
+	"condition_steps_label": "Zo werkt het",
+	"condition_step_link_title": "1. Koppelen",
+	"condition_step_link": "Elk onderdeel is gekoppeld aan apparatuur, locatie en klant, met het artikel uit de Onderdelen Shop.",
+	"condition_step_monitor_title": "2. Monitoren",
+	"condition_step_monitor": "Een conditiescore op basis van de bevindingen uit de werkbonnen, en de keuringen die eraan komen.",
+	"condition_step_plan_title": "3. Plannen",
+	"condition_step_plan": "Het onderhoudsinterval bepaalt de volgende beurt; kritieke onderdelen plan je direct in.",
+	"condition_step_record_title": "4. Uitvoeren & vastleggen",
+	"condition_step_record": "De monteur rondt af op de werkbon; conditie, keuring en activiteitenlog worden bijgewerkt."
 }

@@ -1,6 +1,18 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { cents, fitsWidth, onPhone, organizations, quiet, rows, useApp, value } from "./app.ts";
+import {
+	cents,
+	fitsWidth,
+	onPhone,
+	organizations,
+	quiet,
+	rows,
+	statTile,
+	statTileNamed,
+	userNames,
+	useApp,
+	value,
+} from "./app.ts";
 import { addUnits } from "./orders-helpers.ts";
 
 const { north, south } = organizations;
@@ -81,6 +93,48 @@ async function expectChartsOf(organizationId: string) {
 	);
 }
 
+/** An organization's orders made since `from` days ago and before `to` days ago. */
+const madeBetween = (organizationId: string, from: number, to: number) =>
+	value<number>(
+		`select count(*) from "order" where organization_id = ?
+		 and created_at >= unixepoch('now', ?) and created_at < unixepoch('now', ?)`,
+		[organizationId, `-${from} days`, `-${to} days`],
+	);
+
+describe("the dashboard's greeting and tiles", () => {
+	test("greets the member by first name, for the time of day", async () => {
+		await app.go("/");
+		const heading = app.page.getByRole("heading", { level: 1 });
+		const firstName = userNames.admin.split(" ")[0];
+		expect(await heading.innerText()).toMatch(
+			new RegExp(`^Good (morning|afternoon|evening), ${firstName}$`),
+		);
+		await app.page.getByText("Here's what's happening today.").waitFor();
+	});
+
+	test("compare the orders made and the revenue with the period before", async () => {
+		const [week, weekBefore] = await Promise.all([
+			madeBetween(north.id, 7, 0),
+			madeBetween(north.id, 14, 7),
+		]);
+		const change = week - weekBefore;
+		const trend = statTileNamed(app.page, "Open orders").locator("[data-stat-trend]");
+		expect(await trend.innerText()).toBe(
+			`${week} new in the last 7 days (${change > 0 ? "+" : ""}${change})`,
+		);
+		expect(await trend.getAttribute("data-stat-trend")).toBe(
+			change > 0 ? "up" : change < 0 ? "down" : "flat",
+		);
+		// The seed completes work every week: there was revenue in the 30 days before too.
+		const revenue = statTileNamed(app.page, "Revenue, last 30 days").locator("[data-stat-trend]");
+		expect(await revenue.innerText()).toMatch(/^([+-]\d+|0)% on the 30 days before$/);
+		// A tile without a period before has none.
+		const urgent = statTileNamed(app.page, "Urgent");
+		expect(await urgent.count()).toBe(1);
+		expect(await urgent.locator("[data-stat-trend]").count()).toBe(0);
+	});
+});
+
 describe("the dashboard's charts", () => {
 	test("show North's orders per week, revenue per month and equipment by status", async () => {
 		await app.go("/");
@@ -102,8 +156,7 @@ describe("the dashboard's charts", () => {
 	});
 
 	test("price the revenue like the tile, so the year adds up to at least the last 30 days", async () => {
-		const tile = app.page.locator('[data-slot="card"]', { hasText: "Revenue, last 30 days" });
-		const last30Days = cents(await tile.locator('[data-slot="card-title"]').innerText());
+		const last30Days = cents(await statTile(app.page, "Revenue, last 30 days").innerText());
 		const months = await chartTable("Revenue per month");
 		expect(months.at(-1)![1]).toMatch(/^€[\d,]+\.\d\d$/);
 		const year = months.reduce((sum, row) => sum + cents(row[1]), 0);

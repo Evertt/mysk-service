@@ -3,13 +3,16 @@
 	A partner's card on its customer's page: this year's level, Partner Omzet and Bonus Omzet so far,
 	the way to the next level and the bonus it would bring (not to spend before the year closes), its
 	closed years with the choice between cash and credit (cash paid out as a credit note), and its
-	wallet.
+	wallet. The revenue as key figures, the wallet as the SHLTR mockup's dark panel.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
+	import DarkPanel from "#lib/components/dark-panel.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import KeyFigure from "#lib/components/key-figure.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { formatEuros } from "../display.ts";
@@ -51,28 +54,19 @@
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
 		{#if figures}
-			<dl class="grid grid-cols-2 gap-4">
-				<div class="flex flex-col gap-0.5">
-					<dt class="text-xs text-muted-foreground">{m.partners_partner_revenue()}</dt>
-					<dd class="text-lg font-semibold tabular-nums" data-partner-revenue>
-						{formatEuros(figures.partnerRevenue)}
-					</dd>
-				</div>
-				<div class="flex flex-col gap-0.5">
-					<dt class="text-xs text-muted-foreground">
-						{sameBonusRevenue ? m.partners_bonus_revenue() : m.partners_bonus_revenue_cash()}
-					</dt>
-					<dd class="text-lg font-semibold tabular-nums" data-bonus-revenue>
-						{formatEuros(figures.bonusRevenue.cash)}
-					</dd>
-				</div>
+			<dl class="grid grid-cols-2 gap-3">
+				<KeyFigure label={m.partners_partner_revenue()}>
+					<span data-partner-revenue>{formatEuros(figures.partnerRevenue)}</span>
+				</KeyFigure>
+				<KeyFigure
+					label={sameBonusRevenue ? m.partners_bonus_revenue() : m.partners_bonus_revenue_cash()}
+				>
+					<span data-bonus-revenue>{formatEuros(figures.bonusRevenue.cash)}</span>
+				</KeyFigure>
 				{#if !sameBonusRevenue}
-					<div class="col-span-2 flex flex-col gap-0.5">
-						<dt class="text-xs text-muted-foreground">{m.partners_bonus_revenue_credit()}</dt>
-						<dd class="text-lg font-semibold tabular-nums">
-							{formatEuros(figures.bonusRevenue.credit)}
-						</dd>
-					</div>
+					<KeyFigure label={m.partners_bonus_revenue_credit()} class="col-span-2">
+						{formatEuros(figures.bonusRevenue.credit)}
+					</KeyFigure>
 				{/if}
 			</dl>
 
@@ -173,41 +167,48 @@
 			</section>
 		{/each}
 
-		<section class="flex flex-col gap-3" data-wallet>
-			<div class="flex items-center justify-between gap-2">
-				<h3 class="text-sm font-medium">{m.partners_wallet_title()}</h3>
-				{#if card.canManage}
+		<DarkPanel
+			title={m.partners_wallet_title()}
+			icon={WalletCardsIcon}
+			class="p-4 sm:p-5"
+			lines={[
+				{
+					label: m.partners_wallet_awarded(),
+					value: formatCents(wallet.awarded),
+					attributes: { "data-wallet-awarded": "" },
+				},
+				{
+					label: m.partners_wallet_spent(),
+					value: wallet.spent ? `– ${formatCents(wallet.spent)}` : formatCents(0),
+					attributes: { "data-wallet-spent": "" },
+				},
+				{
+					label: m.partners_wallet_available(),
+					value: formatCents(wallet.available),
+					strong: true,
+					attributes: { "data-wallet-available": "" },
+				},
+				{
+					label: m.partners_wallet_valid_until(),
+					value: wallet.validUntil ? formatDate(wallet.validUntil) : "—",
+				},
+			]}
+			data-wallet
+		>
+			{#if card.canManage}
+				<div class="text-foreground">
 					<WalletEntryDialog code={card.customer.code} validUntil={card.validUntil} />
-				{/if}
-			</div>
-			<dl class="grid grid-cols-2 gap-4">
-				<DetailItem label={m.partners_wallet_awarded()}>
-					<span class="tabular-nums" data-wallet-awarded>{formatCents(wallet.awarded)}</span>
-				</DetailItem>
-				<DetailItem label={m.partners_wallet_spent()}>
-					<span class="tabular-nums" data-wallet-spent>
-						{wallet.spent ? `– ${formatCents(wallet.spent)}` : formatCents(0)}
-					</span>
-				</DetailItem>
-				<DetailItem label={m.partners_wallet_available()}>
-					<span class="font-semibold tabular-nums" data-wallet-available>
-						{formatCents(wallet.available)}
-					</span>
-				</DetailItem>
-				<DetailItem
-					label={m.partners_wallet_valid_until()}
-					value={wallet.validUntil ? formatDate(wallet.validUntil) : null}
-				/>
-			</dl>
+				</div>
+			{/if}
 			{#if wallet.entries.length}
-				<ul class="flex flex-col divide-y text-sm">
+				<ul class="flex flex-col divide-y divide-current/15 text-sm">
 					{#each wallet.entries as entry (entry.id)}
 						<li class="flex items-baseline justify-between gap-3 py-1.5">
 							<span class="min-w-0">
 								<span class="font-medium">{partnerLabels.label("walletEntryKind", entry.kind)}</span
 								>
 								{#if entry.note}
-									<span class="text-muted-foreground"> · {entry.note}</span>
+									<span class="opacity-65"> · {entry.note}</span>
 								{/if}
 							</span>
 							<span class="shrink-0 tabular-nums">{formatCents(entry.amount)}</span>
@@ -215,9 +216,9 @@
 					{/each}
 				</ul>
 			{:else}
-				<p class="text-sm text-muted-foreground">{m.partners_wallet_empty()}</p>
+				<p class="text-sm opacity-65">{m.partners_wallet_empty()}</p>
 			{/if}
-			<p class="text-xs text-muted-foreground">{m.partners_wallet_separate()}</p>
-		</section>
+			<p class="text-xs opacity-65">{m.partners_wallet_separate()}</p>
+		</DarkPanel>
 	</Card.Content>
 </Card.Root>

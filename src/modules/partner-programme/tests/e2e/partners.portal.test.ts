@@ -8,7 +8,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, isRemote, onPhone, organizations, rows, useApp, users } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
-import { formatCents } from "#lib/i18n/index.ts";
+import { formatCents, formatDate } from "#lib/i18n/index.ts";
 import { formatEuros } from "#modules/partner-programme/display.ts";
 
 import { closedYears, figuresFromDatabase, lastYear, thisYear, walletOf } from "./helpers.ts";
@@ -61,6 +61,30 @@ describe("a partner's contact", () => {
 		await page.waitForURL((url) => url.pathname === "/partner-programme/portal");
 		const bonus = page.locator("[data-client-bonus]");
 		await bonus.waitFor();
+		// The programme's banner, in the organization's name.
+		const banner = page.locator("[data-page-banner]");
+		expect(await banner.getByRole("heading", { level: 1 }).innerText()).toBe(
+			"Growing together. More in return.",
+		);
+		expect(await banner.innerText()).toContain(`${shltr.name} · Partner programme`.toUpperCase());
+		// The wallet's dark panel: its figures are the wallet's.
+		const panel = page.getByRole("region", { name: "Wallet" });
+		expect(
+			await panel
+				.locator("dt")
+				.evaluateAll((terms) =>
+					terms.map((term) => [
+						term.textContent!.trim(),
+						term.nextElementSibling!.textContent!.trim(),
+					]),
+				),
+		).toEqual([
+			["Awarded", formatCents(375_000)],
+			["Spent", `– ${formatCents(375_000 - available)}`],
+			["Available now", formatCents(available)],
+			["Valid until", formatDate(Temporal.PlainDate.from(`${thisYear}-12-31`))],
+		]);
+		await panel.getByRole("link", { name: "Spend parts credit" }).waitFor();
 		expect(await bonus.locator("[data-bonus-revenue]").innerText()).toBe(
 			formatEuros(figures.bonusRevenue.cash),
 		);
@@ -70,10 +94,23 @@ describe("a partner's contact", () => {
 		expect(await bonus.innerText()).toContain("Not yet available · after the year closes");
 		if (figures.level)
 			expect(await bonus.locator("[data-level]").innerText()).toBe(figures.level.level);
-		// The levels, the revenue that counts, the year's cycle and the conditions.
+		// The levels, the revenue that counts, the year's cycle and the conditions, in tabs.
+		const programme = page.getByRole("tablist", { name: "The programme" });
+		expect(await programme.getByRole("tab").allInnerTexts()).toEqual([
+			"Levels",
+			"Revenue that counts",
+			"The year's cycle",
+			"Conditions",
+		]);
 		expect(await page.locator("[data-client-tiers] [data-tier]").count()).toBe(8);
+		expect(await page.locator("[data-client-tiers]").isVisible()).toBe(true);
+		expect(await page.locator("[data-client-categories]").isVisible()).toBe(false);
+		await programme.getByRole("tab", { name: "Revenue that counts" }).click();
 		expect(await page.locator("[data-client-categories] tbody tr").count()).toBe(7);
+		await page.locator("[data-client-categories]").waitFor();
+		await programme.getByRole("tab", { name: "The year's cycle" }).click();
 		await page.locator("[data-client-cycle] li").nth(3).waitFor();
+		await programme.getByRole("tab", { name: "Conditions" }).click();
 		await page.locator("[data-client-terms]").getByText("Your choice").waitFor();
 		// Made for a phone: the tables scroll within their cards.
 		expect(await onPhone(page, () => fitsWidth(page))).toBe(true);

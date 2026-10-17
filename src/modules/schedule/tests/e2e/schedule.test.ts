@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, unbalancedStock, useApp, value } from "#e2e/app.ts";
+import {
+	fitsWidth,
+	onPhone,
+	organizations,
+	rows,
+	unbalancedStock,
+	useApp,
+	value,
+} from "#e2e/app.ts";
 
 import {
 	activeEngineers,
@@ -67,6 +75,29 @@ describe("in North", () => {
 		expect(await page.getByRole("link", { name: "Today" }).getAttribute("aria-disabled")).toBe(
 			"true",
 		);
+	});
+
+	test("its band has the title, the week's orders in a pill and the view switch, phone-wide too", async () => {
+		const { page } = app;
+		const band = page.locator("[data-toolbar-band]");
+		expect(await band.getByRole("heading", { level: 1 }).innerText()).toBe("Schedule");
+		// Its full height above the board that fills the screen.
+		expect(await band.evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(
+			true,
+		);
+		const count = await thisWeeksOrders(north.id);
+		expect(await band.locator("[data-band-count]").innerText()).toBe(
+			`${count} order${count === 1 ? "" : "s"}`,
+		);
+		const views = band.getByRole("navigation", { name: "View" });
+		expect(await views.getByRole("link", { name: "Week" }).getAttribute("aria-current")).toBe(
+			"page",
+		);
+		await onPhone(page, async () => {
+			await page.reload();
+			await band.waitFor();
+			expect(await fitsWidth(page)).toBe(true);
+		});
 	});
 
 	test("the row of days stays at the top of the board, above the cards, when it scrolls", async () => {

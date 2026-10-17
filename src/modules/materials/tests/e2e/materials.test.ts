@@ -268,8 +268,8 @@ describe("in North", () => {
 		);
 		expect(low).toBeGreaterThan(0);
 		await app.go("/");
-		const card = page.locator('[data-slot="card"]', { hasText: "Low stock" });
-		expect(await card.locator('[data-slot="card-title"]').innerText()).toBe(String(low));
+		const card = page.locator("[data-stat-tile]", { hasText: "Low stock" });
+		expect(await card.locator("[data-stat-value]").innerText()).toBe(String(low));
 		await card.getByRole("link", { name: "View" }).click();
 		await page.waitForURL(
 			(url) => url.pathname === "/materials" && url.search === "?stock=out,low",

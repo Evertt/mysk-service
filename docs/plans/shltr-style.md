@@ -42,10 +42,34 @@ brand and translucent tints for the badges.
 - Copy, numbers and names: they're mock data (see `shltr-domain.md` for what they tell us).
 - The shadcn defaults the mockup leaves untouched (its tabs and outline buttons): ours already match.
 
+## The shared components
+
+What a theme can't do (below) is built as small components in `src/lib/components/`, after the
+theme's tokens (primary, its foreground, accent, muted), so they work in every theme, light and
+dark:
+
+- `page-banner.svelte`: the teal gradient banner, a label and badges above the title, an intro and
+  actions (Connect, Docks, Werkbonnen, Partner Bonus); Energie's `hero-banner.svelte` is its
+  variant with breadcrumbs and chips.
+- `toolbar-band.svelte`: the solid band with icon, title (the page's `h1`), a count pill, a line
+  and the controls, and a strip under it (Apparatuur's chips); `bandButton` styles a ghost
+  `Button` on it, `segmented-nav.svelte` (`variant="band"`) is the Month / Week / Day switch
+  (Planning, Apparatuur).
+- `stat-tile.svelte`: a figure with a coloured icon, in three layouts: `inline` (Connect, Docks),
+  `stacked` with a detail line and a trend (the dashboard; `stat-trend.ts` compares with the period
+  before), `row` with the figure on the right (Klantkaart).
+- `key-figure.svelte`: the tinted block with the teal left border (Partner Level / Omzet).
+- `dark-panel.svelte`: the SHLTR Wallet's dark panel of lines, one strong in teal, and whatever goes
+  under them (the portal's wallet, the office's partner card).
+- `filter-chips.svelte`: rounded chips with counts, one at a time (Apparatuur's categories,
+  Connect's customers).
+- `callout.svelte`: the teal and amber notices (the shop's wallet and low stock, a bonus waiting
+  for its choice).
+
 ## What a theme can't do
 
-These recur across the mockup's pages but are page composition, not component styling. They're
-worth building as small shared components when the pages that need them are built:
+These recur across the mockup's pages but are page composition, not component styling (built as
+the shared components above, but the grouped tables' tinted badges):
 
 - **Page banner.** Connect, Dock, Energie and Werkbonnen open with a teal gradient banner (`from-teal-600
 to-teal-500`, white text, uppercase pills like `SALVO SYSTEEM · LIVE`) holding the title and a

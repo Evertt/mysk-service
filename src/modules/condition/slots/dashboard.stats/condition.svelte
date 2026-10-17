@@ -5,8 +5,9 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import GaugeIcon from "@lucide/svelte/icons/gauge";
 
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { getConditionOverview } from "../../overview.remote.ts";
@@ -15,7 +16,10 @@
 </script>
 
 <div class="contents" data-condition-stat>
-	<StatCard
+	<StatTile
+		layout="stacked"
+		icon={GaugeIcon}
+		tone="danger"
 		label={m.condition_dashboard_title()}
 		value={formatNumber(data.critical + data.attention)}
 		detail={m.condition_dashboard_detail({
@@ -33,5 +37,5 @@
 				{m.common_view()}
 			</Button>
 		{/snippet}
-	</StatCard>
+	</StatTile>
 </div>

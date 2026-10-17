@@ -2,10 +2,11 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
+	import CalendarDaysIcon from "@lucide/svelte/icons/calendar-days";
 	import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
-	import PageHeader from "#lib/components/page-header.svelte";
+	import ToolbarBand, { bandButton } from "#lib/components/toolbar-band.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatLongDay, formatWeek } from "#modules/schedule/board/board.ts";
@@ -47,13 +48,23 @@
 		day: [m.schedule_previous_day, m.schedule_next_day],
 	};
 
+	/** The orders planned in the period shown: the band's pill. */
+	const planned = $derived.by(() => {
+		const timeZone = getTimeZone();
+		const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(timeZone).toPlainDate();
+		if (month) {
+			return month.orders.filter((order) => inMonth(dayOf(order.scheduledFor!), start)).length;
+		}
+		if (!schedule) return 0;
+		if (view === "week") return schedule.orders.length;
+		return schedule.orders.filter(
+			(order) => order.scheduledFor && dayOf(order.scheduledFor).equals(start),
+		).length;
+	});
+
 	const description = $derived.by(() => {
 		if (month) {
-			const timeZone = getTimeZone();
-			const count = month.orders.filter((order) =>
-				inMonth(order.scheduledFor!.toZonedDateTimeISO(timeZone).toPlainDate(), start),
-			).length;
-			return m.schedule_month_description({ month: formatMonth(start), count });
+			return m.schedule_month_description({ month: formatMonth(start), count: planned });
 		}
 		if (view === "day") return m.schedule_day_description({ day: formatLongDay(start) });
 		return m.schedule_description({
@@ -67,32 +78,39 @@
 	<title>{m.schedule_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.schedule_title()} {description}>
+<ToolbarBand
+	title={m.schedule_title()}
+	icon={CalendarDaysIcon}
+	count={m.common_count_orders({ count: planned })}
+	{description}
+>
 	{#snippet actions()}
-		<ViewSwitch {view} day={start} {today} />
 		<div class="flex items-center gap-2">
 			<Button
 				href={href(shiftPeriod(view, start, -1))}
-				variant="outline"
+				variant="ghost"
 				size="icon"
+				class={bandButton}
 				aria-label={steps[view][0]()}
 			>
 				<ChevronLeftIcon />
 			</Button>
-			<Button href={href()} variant="outline" disabled={isCurrent}>
-				{m.schedule_today()}
-			</Button>
 			<Button
 				href={href(shiftPeriod(view, start, 1))}
-				variant="outline"
+				variant="ghost"
 				size="icon"
+				class={bandButton}
 				aria-label={steps[view][1]()}
 			>
 				<ChevronRightIcon />
 			</Button>
+			<Button href={href()} variant="ghost" class={bandButton} disabled={isCurrent}>
+				{m.schedule_today()}
+			</Button>
 		</div>
+		<ViewSwitch {view} day={start} {today} variant="band" />
 	{/snippet}
-</PageHeader>
+</ToolbarBand>
 
 {#if month}
 	<MonthView schedule={month} />

@@ -3,7 +3,6 @@
 	"condition_module_name": "Components",
 	"condition_module_description": "The components of your customers' units: each one's condition over time, worked out from the checklists, its status, its article in the shop and its service history, and planning the critical ones.",
 	"condition_title": "Components",
-	"condition_description": "Condition, inspection and service of every component in your care, and of the units without components, worst first.",
 	"condition_status_critical": "Critical",
 	"condition_status_attention": "Attention",
 	"condition_status_planned": "Planned",
@@ -195,5 +194,17 @@
 	"condition_activity_subject_component": "the component",
 	"condition_activity_subject_settings": "the condition settings",
 	"condition_client_title": "Units needing attention",
-	"condition_client_components": "Components"
+	"condition_client_components": "Components",
+	"condition_banner_eyebrow": "Connect",
+	"condition_banner_title": "Components per customer",
+	"condition_banner_intro": "Every customer, component, preference and activity in one place. From the first sign to the completed checklist, in one line.",
+	"condition_steps_label": "How it works",
+	"condition_step_link_title": "1. Link",
+	"condition_step_link": "Every component is linked to its unit, location and customer, with its article from the parts shop.",
+	"condition_step_monitor_title": "2. Monitor",
+	"condition_step_monitor": "A condition score from the findings on the checklists, and the inspections that are due.",
+	"condition_step_plan_title": "3. Plan",
+	"condition_step_plan": "The service interval sets the next visit; you plan the critical components straight away.",
+	"condition_step_record_title": "4. Carry out and record",
+	"condition_step_record": "The engineer completes the checklist; the condition, the inspection and the activity log follow."
 }

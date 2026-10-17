@@ -5,8 +5,9 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import ShoppingBagIcon from "@lucide/svelte/icons/shopping-bag";
 
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { getShopOrderCounts } from "../../orders.remote.ts";
@@ -14,7 +15,10 @@
 	const counts = $derived(await getShopOrderCounts());
 </script>
 
-<StatCard
+<StatTile
+	layout="stacked"
+	icon={ShoppingBagIcon}
+	tone="info"
 	label={m.shop_dashboard_open()}
 	value={formatNumber(counts.open)}
 	detail={m.shop_dashboard_to_confirm({ count: counts.placed })}
@@ -24,4 +28,4 @@
 			{m.common_view()}
 		</Button>
 	{/snippet}
-</StatCard>
+</StatTile>
