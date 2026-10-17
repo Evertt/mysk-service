@@ -183,6 +183,29 @@ export interface OrderProblem {
 export const saving = defineSaveHook<OrderSaving, OrderProblem>("orders.saving");
 
 /**
+ * Core is setting one of the tenant's orders' units (`setOrderUnits()`), in `tx`: when it's created
+ * (by the order form or a module, through `createOrders()`) and when the order form saves it. The
+ * units it gets are its units already (in their order) and the order as stored has its new type,
+ * status and customer; the units it loses (`removed`) are still there, and go once every module has
+ * let go of them (a module's rows that refer to them go with them). Units it keeps keep their rows.
+ */
+export interface OrderUnitsSaving {
+	tx: Transaction;
+	order: { id: number };
+	/** The ids of the units it's about now, in their order. */
+	equipmentIds: readonly number[];
+	/** The ids of the units it's losing. */
+	removed: readonly number[];
+}
+
+/**
+ * A module saves its part of an order's units (`OrderUnitsSaving`) in core's transaction, e.g. a
+ * checklist for each unit; or answers why a unit can't be taken off it, and the change is refused.
+ * Its problems are about the order form's `equipmentIds`, unless they say otherwise.
+ */
+export const units = defineSaveHook<OrderUnitsSaving, OrderProblem>("orders.units");
+
+/**
  * Parts of the order form, after the order's own card: a module's inputs, named with the `fields` of
  * its part (under the form's `modules.<module id>`, typed and validated by its
  * `form-parts/orders.form.ts`), are submitted with the order and saved with it (`saving`, as

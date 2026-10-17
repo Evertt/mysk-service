@@ -117,5 +117,140 @@
 	"checklists_activity_subject_template": "checklistsjabloon",
 	"checklists_activity_subject_point": "checklistpunt",
 	"checklists_activity_action_retired": "{user} heeft {subject} buiten gebruik gesteld",
-	"checklists_activity_action_restored": "{user} heeft {subject} teruggezet"
+	"checklists_activity_action_restored": "{user} heeft {subject} teruggezet",
+	"checklists_kind_inspection": "Keuring",
+	"checklists_kind_maintenance": "Onderhoud",
+	"checklists_result_ok": "Goed",
+	"checklists_result_nok": "Afkeur",
+	"checklists_result_na": "N.v.t.",
+	"checklists_result_open": "Niet ingevuld",
+	"checklists_inspection_valid": "Geldig",
+	"checklists_inspection_expiring": "Bijna verlopen",
+	"checklists_inspection_expired": "Verlopen",
+	"checklists_inspection_rejected": "Afgekeurd",
+	"checklists_inspection_none": "Geen keuring",
+	"checklists_status_draft": "Concept",
+	"checklists_status_completed": "afgerond",
+	"checklists_field_status": "status",
+	"checklists_approved": "Goedgekeurd",
+	"checklists_rejected_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} afkeur",
+				"countPlural=*": "{countText} afkeur"
+			}
+		}
+	],
+	"checklists_rejections": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} afkeurpunt",
+				"countPlural=*": "{countText} afkeurpunten"
+			}
+		}
+	],
+	"checklists_activity_subject_checklist": "checklist",
+	"checklists_type_change_refused": "De checklists van {units} zijn al ingevuld: de opdracht blijft een keuring of onderhoud.",
+	"checklists_unit_removal_refused": "De checklists van {units} zijn al ingevuld: die apparaten blijven op de opdracht.",
+	"checklists_delete_refused": "{number} kan niet worden verwijderd: de checklists van {units} zijn ingevuld.",
+	"checklists_complete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"input number",
+				"input units",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{number} kan nog niet worden afgerond: de checklist van {units} is niet afgerond.",
+				"countPlural=*": "{number} kan nog niet worden afgerond: de checklists van {units} zijn niet afgerond."
+			}
+		}
+	],
+	"checklists_not_found": "Checklist niet gevonden",
+	"checklists_order_not_found": "Opdracht {number} niet gevonden",
+	"checklists_field_not_in_progress": "{number} is niet in behandeling: de checklists kun je niet wijzigen.",
+	"checklists_already_completed": "De checklist van {unit} is al afgerond.",
+	"checklists_complete_unanswered": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} punt is nog niet ingevuld.",
+				"countPlural=*": "{countText} punten zijn nog niet ingevuld."
+			}
+		}
+	],
+	"checklists_complete_unexplained": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Bij {countText} afkeurpunt staat niet wat er mis is.",
+				"countPlural=*": "Bij {countText} afkeurpunten staat niet wat er mis is."
+			}
+		}
+	],
+	"checklists_order_title": "Checklists",
+	"checklists_order_description": "De checklist van elk apparaat, afkeurpunten eerst.",
+	"checklists_work_order": "Werkbon",
+	"checklists_work_order_title": "Werkbon {number}",
+	"checklists_print": "Afdrukken",
+	"checklists_completed_by": "Afgerond door {name} op {date}",
+	"checklists_someone": "iemand",
+	"checklists_progress": "{answered}/{total} punten",
+	"checklists_remarks": "Algemene opmerking / advies aan klant",
+	"checklists_remarks_placeholder": "Wat de klant moet weten of doen",
+	"checklists_unit_title": "Keuringen en onderhoud",
+	"checklists_valid_until": "Geldig tot {date}",
+	"checklists_expired_on": "Verlopen op {date}",
+	"checklists_unit_no_inspection": "Nog geen afgeronde keuring.",
+	"checklists_column_inspection": "Keuring",
+	"checklists_portal_title": "Checklists",
+	"checklists_portal_work": "Vul elk punt in; elk antwoord wordt meteen opgeslagen. Rond elke checklist af voordat je de opdracht afrondt.",
+	"checklists_portal_done": "Wat er bij elk apparaat is gevonden.",
+	"checklists_remark_placeholder": "Omschrijf afwijking / benodigd onderdeel…",
+	"checklists_remark_label": "Wat er mis is: {point}",
+	"checklists_remark_required": "Omschrijf wat er mis is, of welk onderdeel nodig is.",
+	"checklists_complete": "Checklist afronden",
+	"checklists_completed_toast": "Checklist van {unit} afgerond",
+	"checklists_save_failed": "Opslaan is niet gelukt. Probeer het opnieuw.",
+	"checklists_saving": "Opslaan…",
+	"checklists_saved_as_you_go": "Wordt meteen opgeslagen.",
+	"checklists_signature_engineer": "Monteur",
+	"checklists_signature_customer": "Klant",
+	"checklists_signature_of": "Handtekening van {name}",
+	"checklists_not_signed": "Niet getekend",
+	"checklists_print_type": "Soort",
+	"checklists_print_status": "Status",
+	"checklists_print_date": "Datum",
+	"checklists_print_engineer": "Monteur",
+	"checklists_print_customer": "Klant",
+	"checklists_print_site": "Vestiging",
+	"checklists_print_unit": "Apparaat",
+	"checklists_print_serial": "Serienummer",
+	"checklists_print_location": "Locatie",
+	"checklists_print_outcome": "Uitkomst"
 }

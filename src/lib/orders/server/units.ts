@@ -12,6 +12,8 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 
+import { saveUnitParts } from "./hooks.ts";
+
 /** What lists show of a unit on an order: what it's called and its serial number. */
 export interface ListedUnit {
 	id: number;
@@ -93,25 +95,61 @@ export async function withFirstUnit<T extends { id: number }>(
  * `order.customerId` is the order's customer as stored: the units must be that customer's (the
  * foreign keys refuse anything else), so an order whose customer changes loses its units first
  * (`setOrderUnits(tx, existing, [])`) and gets the new ones once it has its new customer.
+ *
+ * The units it keeps keep their rows (only their places change), so what the modules keep about
+ * an order's unit stays. The modules save their part of it (`orders.units`, `saveUnitParts()`)
+ * once the new units are in and before the ones it loses go; throws an `OrderRefused` when one
+ * can't let go of a unit, which rolls the transaction back.
  */
 export async function setOrderUnits(
 	tx: Transaction,
 	target: { id: number; customerId: number },
 	unitIds: readonly number[],
 ) {
-	await tx.delete(orderUnit).where(and(eq(orderUnit.orderId, target.id), inTenant(orderUnit)));
+	const wanted = [...new Set(unitIds)];
+	const ofOrder = and(eq(orderUnit.orderId, target.id), inTenant(orderUnit));
+	const current = await tx
+		.select({ equipmentId: orderUnit.equipmentId })
+		.from(orderUnit)
+		.where(ofOrder);
+	const had = new Set(current.map((row) => row.equipmentId));
+	const removed = [...had].filter((id) => !wanted.includes(id));
+	// Out of the way of the new places first (each place is the order's once): below zero.
+	if (current.length) {
+		await tx
+			.update(orderUnit)
+			.set({ position: sql`-1 - ${orderUnit.position}` })
+			.where(ofOrder);
+	}
 	const { organizationId } = currentTenant();
 	await insertRows(
 		tx,
 		orderUnit,
-		[...new Set(unitIds)].map((equipmentId, position) => ({
-			organizationId,
-			orderId: target.id,
-			customerId: target.customerId,
-			equipmentId,
-			position,
-		})),
+		wanted.flatMap((equipmentId, position) =>
+			had.has(equipmentId)
+				? []
+				: [
+						{
+							organizationId,
+							orderId: target.id,
+							customerId: target.customerId,
+							equipmentId,
+							position,
+						},
+					],
+		),
 	);
+	await saveUnitParts({ tx, order: { id: target.id }, equipmentIds: wanted, removed });
+	if (removed.length) {
+		await tx.delete(orderUnit).where(and(ofOrder, inList(orderUnit.equipmentId, removed)));
+	}
+	for (const [position, equipmentId] of wanted.entries()) {
+		if (!had.has(equipmentId)) continue;
+		await tx
+			.update(orderUnit)
+			.set({ position })
+			.where(and(ofOrder, eq(orderUnit.equipmentId, equipmentId)));
+	}
 }
 
 /*

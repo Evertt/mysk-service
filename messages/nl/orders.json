@@ -137,5 +137,6 @@
 	],
 	"orders_warranty_until": "Garantie tot {date}",
 	"orders_history_units_description": "Andere opdrachten voor een van deze {count} apparaten.",
-	"orders_history_empty_units_description": "Dit is de eerste opdracht voor deze apparaten."
+	"orders_history_empty_units_description": "Dit is de eerste opdracht voor deze apparaten.",
+	"orders_report_engineer": "Monteur"
 }

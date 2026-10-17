@@ -117,5 +117,140 @@
 	"checklists_activity_subject_template": "checklist template",
 	"checklists_activity_subject_point": "checklist point",
 	"checklists_activity_action_retired": "{user} retired {subject}",
-	"checklists_activity_action_restored": "{user} restored {subject}"
+	"checklists_activity_action_restored": "{user} restored {subject}",
+	"checklists_kind_inspection": "Inspection",
+	"checklists_kind_maintenance": "Maintenance",
+	"checklists_result_ok": "OK",
+	"checklists_result_nok": "Reject",
+	"checklists_result_na": "N/A",
+	"checklists_result_open": "Not answered",
+	"checklists_inspection_valid": "Valid",
+	"checklists_inspection_expiring": "Expiring",
+	"checklists_inspection_expired": "Expired",
+	"checklists_inspection_rejected": "Rejected",
+	"checklists_inspection_none": "No inspection",
+	"checklists_status_draft": "Draft",
+	"checklists_status_completed": "completed",
+	"checklists_field_status": "status",
+	"checklists_approved": "Approved",
+	"checklists_rejected_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} rejected",
+				"countPlural=*": "{countText} rejected"
+			}
+		}
+	],
+	"checklists_rejections": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} point rejected",
+				"countPlural=*": "{countText} points rejected"
+			}
+		}
+	],
+	"checklists_activity_subject_checklist": "checklist",
+	"checklists_type_change_refused": "The checklists of {units} have answers already: the order stays an inspection or maintenance order.",
+	"checklists_unit_removal_refused": "The checklists of {units} have answers already: those units stay on the order.",
+	"checklists_delete_refused": "{number} can't be deleted: the checklists of {units} are filled in.",
+	"checklists_complete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"input number",
+				"input units",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{number} can't be completed yet: the checklist of {units} isn't completed.",
+				"countPlural=*": "{number} can't be completed yet: the checklists of {units} aren't completed."
+			}
+		}
+	],
+	"checklists_not_found": "Checklist not found",
+	"checklists_order_not_found": "Order {number} not found",
+	"checklists_field_not_in_progress": "{number} isn't in progress: its checklists can't be changed.",
+	"checklists_already_completed": "The checklist of {unit} is completed already.",
+	"checklists_complete_unanswered": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} point has no answer yet.",
+				"countPlural=*": "{countText} points have no answer yet."
+			}
+		}
+	],
+	"checklists_complete_unexplained": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} rejected point doesn't say what's wrong.",
+				"countPlural=*": "{countText} rejected points don't say what's wrong."
+			}
+		}
+	],
+	"checklists_order_title": "Checklists",
+	"checklists_order_description": "Each unit's checklist, rejected points first.",
+	"checklists_work_order": "Work order",
+	"checklists_work_order_title": "Work order {number}",
+	"checklists_print": "Print",
+	"checklists_completed_by": "Completed by {name} on {date}",
+	"checklists_someone": "someone",
+	"checklists_progress": "{answered}/{total} points",
+	"checklists_remarks": "General remark and advice for the customer",
+	"checklists_remarks_placeholder": "What the customer should know or do",
+	"checklists_unit_title": "Inspections and maintenance",
+	"checklists_valid_until": "Valid until {date}",
+	"checklists_expired_on": "Expired on {date}",
+	"checklists_unit_no_inspection": "No completed inspection yet.",
+	"checklists_column_inspection": "Inspection",
+	"checklists_portal_title": "Checklists",
+	"checklists_portal_work": "Answer every point; each answer is saved as you go. Complete each checklist before you complete the job.",
+	"checklists_portal_done": "What was found on each unit.",
+	"checklists_remark_placeholder": "Describe the defect / part needed…",
+	"checklists_remark_label": "What's wrong: {point}",
+	"checklists_remark_required": "Say what's wrong, or which part it needs.",
+	"checklists_complete": "Complete checklist",
+	"checklists_completed_toast": "Checklist of {unit} completed",
+	"checklists_save_failed": "Couldn't save that. Try again.",
+	"checklists_saving": "Saving…",
+	"checklists_saved_as_you_go": "Saved as you go.",
+	"checklists_signature_engineer": "Engineer",
+	"checklists_signature_customer": "Customer",
+	"checklists_signature_of": "Signature of {name}",
+	"checklists_not_signed": "Not signed",
+	"checklists_print_type": "Type",
+	"checklists_print_status": "Status",
+	"checklists_print_date": "Date",
+	"checklists_print_engineer": "Engineer",
+	"checklists_print_customer": "Customer",
+	"checklists_print_site": "Site",
+	"checklists_print_unit": "Unit",
+	"checklists_print_serial": "Serial number",
+	"checklists_print_location": "Location",
+	"checklists_print_outcome": "Outcome"
 }

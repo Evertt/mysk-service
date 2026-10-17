@@ -12,8 +12,10 @@ import {
 	type OrderProblem,
 	type OrderSaving,
 	type OrderTag,
+	type OrderUnitsSaving,
 	saving,
 	tag,
+	units,
 } from "../extensions.ts";
 
 /** The modules' badges for each order, in the same order as `orders`. */
@@ -52,4 +54,19 @@ export class OrderRefused extends Error {
 export async function saveOrderParts(change: OrderSaving, enabled?: readonly string[]) {
 	const problems = await save(saving, change, enabled);
 	if (problems.length) throw new OrderRefused(problems);
+}
+
+/**
+ * Lets the modules save their part of an order's units (`orders.units`), which `setOrderUnits()`
+ * is setting in `change.tx`: after the units it gets are in, before the ones it loses go. Throws
+ * an `OrderRefused` with the problems of a module that can't let go of a unit; a problem without a
+ * path is about the order form's units.
+ */
+export async function saveUnitParts(change: OrderUnitsSaving, enabled?: readonly string[]) {
+	const problems = await save(units, change, enabled);
+	if (problems.length) {
+		throw new OrderRefused(
+			problems.map((problem) => ({ ...problem, path: problem.path ?? ["equipmentIds"] })),
+		);
+	}
 }

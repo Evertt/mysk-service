@@ -1,12 +1,14 @@
 /**
  * The checklists module's domain rules: a template's limits, and the order of its points, whose
- * groups are just a text on each point. Pure and isomorphic.
+ * groups are just a text on each point; and the checklists on orders: which orders have them, when
+ * one can be completed, and a unit's inspection status. Pure and isomorphic.
  *
  * A template's points are in one order (`position`), with each group's points together: the groups
  * come in the order of their first point, and the points of a group in their own order. Moving a
  * point past the edge of its group takes it into the next group; changing its group puts it last
  * in the other.
  */
+import type { OrderStatus, OrderType } from "#lib/models.ts";
 
 /** How many months an inspection by a template stays valid, unless the template says otherwise. */
 export const defaultValidityMonths = 12;
@@ -14,8 +16,18 @@ export const defaultValidityMonths = 12;
 /** How many months a template may say an inspection stays valid. */
 export const validityLimits = { min: 1, max: 120 } as const;
 
-/** The most a template's name, its norm, a group and a point's text may have. */
-export const textLimits = { name: 80, norm: 80, group: 60, text: 240 } as const;
+/**
+ * The most a template's name, its norm, a group and a point's text may have; and a checklist's
+ * remarks: a point's and the general one for the customer.
+ */
+export const textLimits = {
+	name: 80,
+	norm: 80,
+	group: 60,
+	text: 240,
+	remark: 500,
+	remarks: 2000,
+} as const;
 
 /** A point as far as its order goes. */
 export interface PointPlace {
@@ -109,4 +121,116 @@ export function changedPlaces(points: readonly PointPlace[], order: Order): Poin
 			const was = byId.get(place.id);
 			return !was || was.group !== place.group || was.position !== place.position;
 		});
+}
+
+// --- Checklists on orders --------------------------------------------------------------------
+
+/**
+ * What a checklist on an order is: an inspection (keuring), which makes a unit's inspection valid
+ * for its template's months, or a maintenance visit (onderhoud). As the order's type.
+ */
+export const checklistKinds = ["inspection", "maintenance"] as const;
+export type ChecklistKind = (typeof checklistKinds)[number];
+
+/** A draft is being filled in; a completed one is on record and isn't changed again. */
+export const checklistStatuses = ["draft", "completed"] as const;
+export type ChecklistStatus = (typeof checklistStatuses)[number];
+
+/** What the engineer found on a point: OK (Goed), rejected (Afkeur) or not applicable (N.v.t.). */
+export const pointResults = ["ok", "nok", "na"] as const;
+export type PointResult = (typeof pointResults)[number];
+
+/** The kind of checklist each unit of an order of `type` gets; none for other types. */
+export function checklistKind(type: OrderType): ChecklistKind | null {
+	return (checklistKinds as readonly string[]).includes(type) ? (type as ChecklistKind) : null;
+}
+
+/**
+ * Whether an order with `status` gets checklists for its units: while it's to be done. A done or
+ * cancelled order gets none (one completed before the module was on keeps having none).
+ */
+export const getsChecklists = (status: OrderStatus) =>
+	status === "quote" || status === "scheduled" || status === "in_progress";
+
+/** A point's answer as far as completing goes. */
+export interface Answer {
+	result: PointResult | null;
+	remark: string | null;
+}
+
+/** Whether a point is answered as it must be: a result, and with a rejection, what's wrong. */
+export const isAnswered = ({ result, remark }: Answer) =>
+	result !== null && (result !== "nok" || !!remark?.trim());
+
+/**
+ * What keeps a checklist from being completed: points without a result, and rejections that don't
+ * say what's wrong (the remark is required with Afkeur). Both 0: it can be completed.
+ */
+export function completionProblems(answers: readonly Answer[]) {
+	return {
+		unanswered: answers.filter((answer) => answer.result === null).length,
+		unexplained: answers.filter((answer) => answer.result === "nok" && !answer.remark?.trim())
+			.length,
+	};
+}
+
+/** Whether a checklist with these answers can be completed (see `completionProblems()`). */
+export const canComplete = (answers: readonly Answer[]) =>
+	answers.length > 0 && answers.every(isAnswered);
+
+/** How many of the points have a result, of how many: the progress "answered/total". */
+export const progress = (answers: readonly Answer[]) => ({
+	answered: answers.filter((answer) => answer.result !== null).length,
+	total: answers.length,
+});
+
+/** How many points were rejected. */
+export const rejections = (answers: readonly { result: PointResult | null }[]) =>
+	answers.filter((answer) => answer.result === "nok").length;
+
+/** The points with the rejected ones first, each in its own order otherwise. */
+export const rejectedFirst = <Point extends { result: PointResult | null }>(
+	points: readonly Point[],
+) => [
+	...points.filter((point) => point.result === "nok"),
+	...points.filter((point) => point.result !== "nok"),
+];
+
+// --- A unit's inspection status (derived, never stored) -----------------------------------------
+
+/**
+ * Where a unit stands with its inspections, by its latest completed inspection: `valid` until its
+ * validity runs out, `expiring` in the last 30 days of it, `expired` after; `rejected` when that
+ * inspection rejected a point (unless it has expired, which is worse); `none` without one.
+ */
+export const inspectionStatuses = ["valid", "expiring", "expired", "rejected", "none"] as const;
+export type InspectionStatus = (typeof inspectionStatuses)[number];
+
+/** How many days before its end a valid inspection counts as expiring. */
+export const EXPIRING_DAYS = 30;
+
+/**
+ * The last day an inspection completed on `completedOn` is valid, by a template valid for
+ * `months`: the same day that many months on (the month's last day, in a shorter month).
+ */
+export const validUntil = (completedOn: Temporal.PlainDate, months: number) =>
+	completedOn.add({ months });
+
+/** The unit's latest completed inspection, as its status goes by it. */
+export interface LatestInspection {
+	validUntil: Temporal.PlainDate;
+	/** Whether it rejected a point. */
+	rejected: boolean;
+}
+
+/** A unit's inspection status `today`, by its latest completed inspection (none: `none`). */
+export function inspectionStatus(
+	latest: LatestInspection | null,
+	today: Temporal.PlainDate,
+): InspectionStatus {
+	if (!latest) return "none";
+	if (Temporal.PlainDate.compare(today, latest.validUntil) > 0) return "expired";
+	if (latest.rejected) return "rejected";
+	const expiring = latest.validUntil.subtract({ days: EXPIRING_DAYS });
+	return Temporal.PlainDate.compare(today, expiring) >= 0 ? "expiring" : "valid";
 }

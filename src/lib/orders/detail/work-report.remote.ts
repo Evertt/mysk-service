@@ -7,7 +7,7 @@ import { db } from "#lib/server/db/index.ts";
 import { order, orderNote, orderSignoff, user } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
-/** What was recorded on an order in the field: notes and the customer's sign-off. */
+/** What was recorded on an order in the field: notes and the sign-off, the customer's and the engineer's. */
 export const getWorkReport = forMembers.query(v.string(), async (number) => {
 	const found = await db.query.order.findFirst({
 		columns: { id: true },
@@ -31,6 +31,8 @@ export const getWorkReport = forMembers.query(v.string(), async (number) => {
 			.select({
 				signerName: orderSignoff.signerName,
 				signature: orderSignoff.signature,
+				engineerName: orderSignoff.engineerName,
+				engineerSignature: orderSignoff.engineerSignature,
 				signedAt: orderSignoff.signedAt,
 				collectedBy: user.name,
 			})

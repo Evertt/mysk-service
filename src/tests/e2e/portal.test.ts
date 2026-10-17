@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Locator, Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatTimeSlot } from "#lib/i18n/format.ts";
@@ -82,6 +82,18 @@ const siteOfOrder = (id: number) =>
 		 where o.id = ?`,
 		[id],
 	);
+
+/** Draws a squiggle on a signature pad, as a finger would. */
+async function sign(pad: Locator) {
+	await pad.scrollIntoViewIfNeeded();
+	const box = (await pad.boundingBox())!;
+	await app.page.mouse.move(box.x + 20, box.y + box.height / 2);
+	await app.page.mouse.down();
+	for (let i = 1; i <= 10; i++) {
+		await app.page.mouse.move(box.x + 20 + i * 20, box.y + box.height / 2 + (i % 2 ? -25 : 25));
+	}
+	await app.page.mouse.up();
+}
 
 /** The order numbers on the cards in a section of the list. */
 const cardsIn = (section: string) =>
@@ -216,27 +228,40 @@ describe("the engineer portal", () => {
 		expect((await orderByNumber(job.number)).status).toBe("in_progress");
 	});
 
-	test("completing with a drawn signature stores the sign-off", async () => {
+	test("completing needs the engineer's own signature too", async () => {
 		const { page } = app;
-		const box = (await page.locator("canvas").boundingBox())!;
-		await page.mouse.move(box.x + 20, box.y + box.height / 2);
-		await page.mouse.down();
-		for (let i = 1; i <= 10; i++) {
-			await page.mouse.move(box.x + 20 + i * 20, box.y + box.height / 2 + (i % 2 ? -25 : 25));
-		}
-		await page.mouse.up();
+		await sign(page.getByLabel("Signature", { exact: true }));
+		await app.submit(page.getByRole("button", { name: "Complete job" }));
+		expect(await app.issues()).toContain("Sign the work order yourself too");
+		expect((await orderByNumber(job.number)).status).toBe("in_progress");
+	});
+
+	test("completing with both drawn signatures stores the sign-off", async () => {
+		const { page } = app;
+		await sign(page.getByLabel("Engineer's signature"));
+		// The engineer's name, as it goes on the work order.
+		expect(await page.getByLabel("Your name").inputValue()).toBe((await me()).name);
 		await page.getByRole("button", { name: "Complete job" }).click();
 		await app.toast("Job completed");
 
 		const order = await orderByNumber(job.number);
 		expect(order.status).toBe("completed");
 		expect(order.completed_at).not.toBeNull();
-		const [signoff] = await rows<{ signer_name: string; signature: string; user_id: string }>(
-			`select signer_name, signature, user_id from order_signoff where order_id = ?`,
+		const [signoff] = await rows<{
+			signer_name: string;
+			signature: string;
+			engineer_name: string;
+			engineer_signature: string;
+			user_id: string;
+		}>(
+			`select signer_name, signature, engineer_name, engineer_signature, user_id
+			 from order_signoff where order_id = ?`,
 			[job.id],
 		);
 		expect(signoff.signer_name).toBe("Robin Customer");
 		expect(signoff.signature).toMatch(/^data:image\/png;base64,/);
+		expect(signoff.engineer_name).toBe((await me()).name);
+		expect(signoff.engineer_signature).toMatch(/^data:image\/png;base64,/);
 		expect(signoff.user_id).toBe((await me()).user_id);
 		await page.getByText("Signed off").waitFor();
 		expect(await page.getByRole("button", { name: "Save hours" }).count()).toBe(0);

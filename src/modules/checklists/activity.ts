@@ -31,6 +31,20 @@ export const checklistSubjects: Record<string, SubjectType> = {
 			position: { label: m.checklists_field_place, format: place },
 		},
 	},
+	/**
+	 * A unit's checklist on an order, by its template's name and the unit, logged with its order as
+	 * its parent: when the engineer completes it (with what it found as the entry's note).
+	 */
+	checklist: {
+		noun: m.checklists_activity_subject_checklist,
+		fields: {
+			status: {
+				label: m.checklists_field_status,
+				format: (value) =>
+					value === "completed" ? m.checklists_status_completed() : m.checklists_status_draft(),
+			},
+		},
+	},
 	/** A point of a template, by its text, logged with its template as its parent. */
 	checklistTemplateItem: {
 		noun: m.checklists_activity_subject_point,

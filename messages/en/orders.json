@@ -137,5 +137,6 @@
 	],
 	"orders_warranty_until": "Warranty until {date}",
 	"orders_history_units_description": "Other orders for any of these {count} units.",
-	"orders_history_empty_units_description": "This is the first order for these units."
+	"orders_history_empty_units_description": "This is the first order for these units.",
+	"orders_report_engineer": "Engineer"
 }

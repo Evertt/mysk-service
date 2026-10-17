@@ -265,6 +265,12 @@ export const orderUnit = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.orderId, table.equipmentId] }),
+		// What the modules' rows about an order's unit refer to, with the tenant (e.g. a checklist).
+		uniqueIndex("order_unit_organization_order_equipment").on(
+			table.organizationId,
+			table.orderId,
+			table.equipmentId,
+		),
 		uniqueIndex("order_unit_order_position").on(table.orderId, table.position),
 		// A unit's orders: its service history, its open orders in the equipment list.
 		index("order_unit_equipment").on(table.equipmentId, table.orderId),
@@ -387,8 +393,9 @@ export const orderNote = sqliteTable(
 );
 
 /**
- * The customer's sign-off of a completed order: who signed, and their signature as drawn on the
- * engineer's screen (a PNG data URL). One per order; completing it again replaces it.
+ * The sign-off of a completed order, the work order's signatures: who signed for the customer and
+ * their signature as drawn on the engineer's screen (a PNG data URL), and the engineer's own. One
+ * per order; completing it again replaces it.
  */
 export const orderSignoff = sqliteTable(
 	"order_signoff",
@@ -397,6 +404,12 @@ export const orderSignoff = sqliteTable(
 		organizationId: organizationId(),
 		signerName: text("signer_name").notNull(),
 		signature: text("signature").notNull(),
+		/**
+		 * The engineer's own signature on the work order, besides the customer's: their name and
+		 * drawing. None on the sign-offs from before engineers signed too.
+		 */
+		engineerName: text("engineer_name"),
+		engineerSignature: text("engineer_signature"),
 		/** Who collected it; empty once their account is deleted. */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 		signedAt: moment("signed_at").notNull(),

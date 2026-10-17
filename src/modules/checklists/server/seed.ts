@@ -8,7 +8,14 @@ import {
 } from "#lib/server/db/seed/categories.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 
-import { checklistTemplate, checklistTemplateCategory, checklistTemplateItem } from "./schema.ts";
+import {
+	checklist,
+	checklistResult,
+	checklistTemplate,
+	checklistTemplateCategory,
+	checklistTemplateItem,
+} from "./schema.ts";
+import { seedChecklists } from "./seed-checklists.ts";
 
 type ShltrCategory = (typeof shltrCategories)[number]["key"];
 
@@ -24,7 +31,8 @@ interface SeedTemplate<Category> {
 /**
  * SHLTR's templates, the mockup's five verbatim (`docs/plans/shltr-domain.md`, §2.7), with its
  * categories: the doors with springs and cables by the sectional door's, airco by the F-gas
- * checks, docks by the leveller's, stairs by NEN-EN ISO 14122, and the rest by the general one.
+ * checks, docks by the leveller's, stairs by NEN-EN ISO 14122, and the rest by the general one,
+ * a visual check valid for six months (so some of its inspections have expired).
  */
 const shltrTemplates: SeedTemplate<ShltrCategory>[] = [
 	{
@@ -88,6 +96,8 @@ const shltrTemplates: SeedTemplate<ShltrCategory>[] = [
 	{
 		name: "Algemene inspectie",
 		norm: null,
+		// A lighter visual check, every six months.
+		validityMonths: 6,
 		points: [
 			["Algemeen", "Visuele inspectie op schade"],
 			["Algemeen", "Werking volgens specificatie"],
@@ -175,6 +185,8 @@ const categoryName = (key: string) =>
 
 export default defineSeed<TenantDraft["profile"]>({
 	clear: async (tx) => {
+		await tx.delete(checklistResult);
+		await tx.delete(checklist);
 		await tx.delete(checklistTemplateCategory);
 		await tx.delete(checklistTemplateItem);
 		await tx.delete(checklistTemplate);
@@ -227,6 +239,7 @@ export default defineSeed<TenantDraft["profile"]>({
 			await insertAll(links, (chunk) => tx.insert(checklistTemplateCategory).values(chunk));
 			count("checklistTemplates", rows);
 			count("checklistTemplateItems", items);
+			await seedChecklists(tx, tenant, tenant.data === "shltr", insertAll, count);
 		}
 	},
 });

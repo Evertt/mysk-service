@@ -1,6 +1,7 @@
 <!--
 	@component
-	What the engineer recorded on an order in the field: the customer's sign-off and work notes.
+	What the engineer recorded on an order in the field: the sign-off (the customer's signature and,
+	since engineers sign too, the engineer's) and work notes.
 	Nothing while there's neither.
 -->
 <script lang="ts">
@@ -37,6 +38,17 @@
 						alt={m.orders_report_signature({ name: report.signoff.signerName })}
 						class="h-28 w-full rounded-lg border bg-white object-contain"
 					/>
+					{#if report.signoff.engineerName && report.signoff.engineerSignature}
+						<div class="flex flex-col gap-0.5">
+							<span class="text-xs text-muted-foreground">{m.orders_report_engineer()}</span>
+							<span class="text-sm">{report.signoff.engineerName}</span>
+						</div>
+						<img
+							src={report.signoff.engineerSignature}
+							alt={m.orders_report_signature({ name: report.signoff.engineerName })}
+							class="h-28 w-full rounded-lg border bg-white object-contain"
+						/>
+					{/if}
 					{#if report.signoff.collectedBy}
 						<span class="text-xs text-muted-foreground">
 							{m.orders_report_collected_by({ name: report.signoff.collectedBy })}

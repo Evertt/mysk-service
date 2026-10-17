@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { createOrders, type OrderDraft } from "#lib/orders/server/creation.ts";
+import { setOrderUnits } from "#lib/orders/server/units.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderUnit } from "#lib/server/db/schema.ts";
@@ -17,8 +18,10 @@ vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 vi.mock("#lib/server/activity/index.ts", () => ({
 	recordActivity: (_tx: unknown, record: unknown) => logged(record),
 }));
+const unitParts = vi.fn(async (_change: unknown) => {});
 vi.mock("#lib/orders/server/hooks.ts", () => ({
 	orderCommitted: (change: unknown) => committed(change),
+	saveUnitParts: (change: unknown) => unitParts(change),
 }));
 
 // A temporary database with the tables the service touches. Not an in-memory one: libsql gives a
@@ -55,6 +58,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 			equipment_id integer not null, position integer not null,
 			primary key (order_id, equipment_id)
 		);
+		create unique index order_unit_order_position on order_unit (order_id, position);
 		insert into customer values (1, 'north'), (2, 'north'), (3, 'south');
 		insert into engineer values (1, 'north'), (2, 'south');
 		insert into equipment values (10, 'north', 1), (11, 'north', 2), (12, 'south', 3),
@@ -81,6 +85,7 @@ beforeEach(async () => {
 	locals.tenant = tenant("north");
 	logged.mockClear();
 	committed.mockClear();
+	unitParts.mockClear();
 	await db.delete(orderUnit);
 	await db.delete(order);
 });
@@ -240,5 +245,60 @@ describe("createOrders", () => {
 		const [row] = await db.select().from(order).where(eq(order.id, created.id));
 		expect(row).toMatchObject({ engineerId: 1 });
 		expect(await unitsOnOrders()).toEqual([]);
+	});
+});
+
+describe("setOrderUnits", () => {
+	/** The units of the order, in their order, with the rowid each row has. */
+	const unitRows = (orderId: number) =>
+		db.$client
+			.execute({
+				sql: "select rowid, equipment_id, position from order_unit where order_id = ? order by position",
+				args: [orderId],
+			})
+			.then((result) => result.rows.map((row) => [Number(row.equipment_id), Number(row.rowid)]));
+
+	test("keeps the rows of the units it keeps, in their new places", async () => {
+		const [{ id }] = await db.transaction((tx) => createOrders(tx, [draft({ units: [10, 13] })]));
+		const [[, ten], [, thirteen]] = await unitRows(id);
+		await db.transaction((tx) => setOrderUnits(tx, { id, customerId: 1 }, [14, 13, 10]));
+		const after = await unitRows(id);
+		expect(after.map(([unit]) => unit)).toEqual([14, 13, 10]);
+		expect(after[1][1]).toBe(thirteen);
+		expect(after[2][1]).toBe(ten);
+		expect((await unitsOnOrders()).map((row) => row.position)).toEqual([0, 1, 2]);
+	});
+
+	test("lets the modules save their part once the new units are in, before the old ones go", async () => {
+		const [{ id }] = await db.transaction((tx) => createOrders(tx, [draft({ units: [10, 13] })]));
+		expect(unitParts).toHaveBeenLastCalledWith(
+			expect.objectContaining({ order: { id }, equipmentIds: [10, 13], removed: [] }),
+		);
+		const seen: number[][] = [];
+		unitParts.mockImplementationOnce(async (change) => {
+			// In the transaction, which another connection doesn't see into.
+			const { tx } = change as { tx: typeof db };
+			const units = await tx
+				.select({ unit: orderUnit.equipmentId })
+				.from(orderUnit)
+				.where(eq(orderUnit.orderId, id));
+			seen.push(units.map((row) => row.unit).toSorted());
+		});
+		await db.transaction((tx) => setOrderUnits(tx, { id, customerId: 1 }, [14, 13]));
+		expect(unitParts).toHaveBeenLastCalledWith(
+			expect.objectContaining({ equipmentIds: [14, 13], removed: [10] }),
+		);
+		// 14 is in, 10 still there while the modules look.
+		expect(seen).toEqual([[10, 13, 14]]);
+		expect((await unitRows(id)).map(([unit]) => unit)).toEqual([14, 13]);
+	});
+
+	test("changes nothing when a module refuses", async () => {
+		const [{ id }] = await db.transaction((tx) => createOrders(tx, [draft({ units: [10, 13] })]));
+		unitParts.mockRejectedValueOnce(new Error("refused"));
+		await expect(
+			db.transaction((tx) => setOrderUnits(tx, { id, customerId: 1 }, [14])),
+		).rejects.toThrow("refused");
+		expect((await unitRows(id)).map(([unit]) => unit)).toEqual([10, 13]);
 	});
 });

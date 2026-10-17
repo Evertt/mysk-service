@@ -181,8 +181,9 @@ async function saveOrder(id: number | null, input: OrderInput) {
 		if (existing) {
 			orderId = existing.id;
 			number = existing.number;
-			// Its units are its customer's: they go before the customer can change.
-			await setOrderUnits(tx, existing, []);
+			// Its units are its customer's: they go before the customer can change. Otherwise the
+			// units it keeps stay (with what the modules keep about them).
+			if (existing.customerId !== values.customerId) await setOrderUnits(tx, existing, []);
 			await tx.update(order).set(values).where(idInTenant(order, orderId));
 			await setOrderUnits(tx, { id: orderId, customerId: values.customerId }, equipmentIds);
 		} else {

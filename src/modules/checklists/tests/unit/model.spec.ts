@@ -1,14 +1,24 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	canComplete,
 	changedPlaces,
+	checklistKind,
+	completionProblems,
+	getsChecklists,
 	groupPoints,
+	inspectionStatus,
 	moveGroup,
 	movePoint,
 	orderPoints,
 	placePoint,
 	type PointPlace,
+	progress,
+	rejectedFirst,
+	rejections,
+	validUntil,
 } from "#modules/checklists/model.ts";
+import { day } from "#unit/temporal-support.ts";
 
 /** Points from `[group, id]` pairs, in that order, numbered from 0. */
 const points = (...pairs: [string, number][]): PointPlace[] =>
@@ -129,5 +139,83 @@ describe("changedPlaces", () => {
 			{ id: 1, group: "", position: 0 },
 			{ id: 2, group: "", position: 1 },
 		]);
+	});
+});
+
+describe("checklists on orders", () => {
+	test("an inspection or maintenance order's units get them, while it's to be done", () => {
+		expect(checklistKind("inspection")).toBe("inspection");
+		expect(checklistKind("maintenance")).toBe("maintenance");
+		expect(checklistKind("repair")).toBeNull();
+		expect(checklistKind("breakdown")).toBeNull();
+		for (const status of ["quote", "scheduled", "in_progress"] as const) {
+			expect(getsChecklists(status), status).toBe(true);
+		}
+		for (const status of ["completed", "invoiced", "cancelled"] as const) {
+			expect(getsChecklists(status), status).toBe(false);
+		}
+	});
+
+	test("completing needs every point answered, and a remark with each rejection", () => {
+		const answers = [
+			{ result: "ok" as const, remark: null },
+			{ result: "nok" as const, remark: "  " },
+			{ result: null, remark: null },
+		];
+		expect(completionProblems(answers)).toEqual({ unanswered: 1, unexplained: 1 });
+		expect(canComplete(answers)).toBe(false);
+		expect(progress(answers)).toEqual({ answered: 2, total: 3 });
+		const done = [
+			{ result: "ok" as const, remark: null },
+			{ result: "nok" as const, remark: "Draadbreuk bij trommel" },
+			{ result: "na" as const, remark: null },
+		];
+		expect(completionProblems(done)).toEqual({ unanswered: 0, unexplained: 0 });
+		expect(canComplete(done)).toBe(true);
+		expect(rejections(done)).toBe(1);
+		// A checklist without points has nothing to complete.
+		expect(canComplete([])).toBe(false);
+	});
+
+	test("rejected points come first, each in its own order", () => {
+		const points = [
+			{ id: 1, result: "ok" as const },
+			{ id: 2, result: "nok" as const },
+			{ id: 3, result: null },
+			{ id: 4, result: "nok" as const },
+		];
+		expect(rejectedFirst(points).map((point) => point.id)).toEqual([2, 4, 1, 3]);
+	});
+});
+
+describe("a unit's inspection status", () => {
+	const until = day("2027-03-15");
+	const latest = { validUntil: until, rejected: false };
+
+	test("valid until its last day, expiring in the 30 days before it, expired after", () => {
+		expect(inspectionStatus(latest, day("2026-03-15"))).toBe("valid");
+		expect(inspectionStatus(latest, day("2027-02-12"))).toBe("valid");
+		// 30 days before the last valid day: expiring.
+		expect(inspectionStatus(latest, day("2027-02-13"))).toBe("expiring");
+		expect(inspectionStatus(latest, day("2027-03-15"))).toBe("expiring");
+		expect(inspectionStatus(latest, day("2027-03-16"))).toBe("expired");
+	});
+
+	test("rejected when it rejected a point, unless it has expired", () => {
+		const rejected = { ...latest, rejected: true };
+		expect(inspectionStatus(rejected, day("2026-06-01"))).toBe("rejected");
+		expect(inspectionStatus(rejected, day("2027-03-01"))).toBe("rejected");
+		expect(inspectionStatus(rejected, day("2027-03-16"))).toBe("expired");
+	});
+
+	test("none without a completed inspection", () => {
+		expect(inspectionStatus(null, day("2026-10-17"))).toBe("none");
+	});
+
+	test("valid for the template's months from the day it was completed", () => {
+		expect(validUntil(day("2026-10-17"), 12)).toEqual(day("2027-10-17"));
+		expect(validUntil(day("2026-10-17"), 6)).toEqual(day("2027-04-17"));
+		// A shorter month: its last day.
+		expect(validUntil(day("2027-01-31"), 1)).toEqual(day("2027-02-28"));
 	});
 });

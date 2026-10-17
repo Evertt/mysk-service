@@ -57,5 +57,12 @@
 	"portal_signer_required": "Vul de naam in van wie tekent",
 	"portal_signed_off_note": "Afgetekend door {name}",
 	"portal_site": "Vestiging",
-	"portal_location": "Locatie"
+	"portal_location": "Locatie",
+	"portal_engineer_signature": "Jouw handtekening",
+	"portal_engineer_name": "Jouw naam",
+	"portal_engineer_signature_pad": "Handtekening monteur",
+	"portal_engineer_name_required": "Vul je naam in",
+	"portal_engineer_signature_required": "Teken de werkbon ook zelf",
+	"portal_customer_signature": "Handtekening van de klant",
+	"portal_engineer_signed": "Monteur: {name}"
 }

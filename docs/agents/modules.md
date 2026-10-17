@@ -12,7 +12,7 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   server logic through hooks; all only take part for tenants that have the module.
   A hook is an extension point its owner declares (`#lib/extensions/define.ts`): core's in
   `src/lib/<domain>/extensions.ts` (`orders.costs`, `orders.adjustPrices`, `orders.tag`,
-  `orders.committed`, `orders.saving` in `src/lib/orders/extensions.ts`), a module's in its
+  `orders.committed`, `orders.saving`, `orders.units` in `src/lib/orders/extensions.ts`), a module's in its
   `api/extensions.ts`
   (`invoices.billableItems`). A module contributes in its `server/index.ts`:
   `defineServerModule(id, [contribute(adjustPrices, …), …])`, with the point imported from its
@@ -24,9 +24,9 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   refusal wins) and `save()` for a save hook (each module saves its part in the owner's
   transaction, which the input carries, one after another; the first that answers problems stops
   the rest, and the owner refuses the change, rolling the transaction back). Each point has one
-  caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()` and
-  `saveOrderParts()` in `src/lib/orders/server/`, `offeredItems()` in invoices'
-  `server/billable.ts`); a new extension point is added when a module needs it.
+  caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()`,
+  `saveOrderParts()` and `saveUnitParts()` in `src/lib/orders/server/`, `offeredItems()` in
+  invoices' `server/billable.ts`); a new extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`): labour, the costs the modules add (`orders.costs`, e.g.
   materials, with what they're made of when asked for `items`) and their adjustments.
@@ -34,7 +34,12 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   `saveOrderParts()` (`orders.saving`), which throws an `OrderRefused` with the problems of a module
   that refuses (e.g. a shortage of stock; its problems are Standard Schema issues, `{ message,
 path? }` from the form's root, which the form passes to `invalid()` as they are); the caller
-  shows them on the form's fields or as a message.
+  shows them on the form's fields or as a message. An order's units are set only by
+  `setOrderUnits()` (`src/lib/orders/server/units.ts`, from `createOrders()` and the order form):
+  the units it keeps keep their rows, and the modules save their part (`orders.units`,
+  `saveUnitParts()`) once the new units are in and before the ones it loses go, so a module's rows
+  about an order's unit (a checklist, which refers to `order_unit`) can follow, or refuse a unit's
+  removal (an `OrderRefused`, about the form's units unless its problem says otherwise).
 - **Daily jobs** (`jobs.daily`, a `skip` collector in `src/lib/jobs/extensions.ts`): what a
   module does by itself once a day. `runDaily()` (`src/lib/server/jobs/daily.ts`) asks each
   organization's modules that are on, one organization after another, inside one request to
@@ -248,8 +253,11 @@ Checklists, contracts, invoices, maintenance, materials and the schedule are the
 (`src/modules/checklists/`, `src/modules/contracts/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
-templates (points in groups, the equipment categories each is for) so far; the checklists on
-orders and in the engineer portal come next. The schedule is the one without tables of its own: a view of the
+templates (points in groups, the equipment categories each is for) and the checklists on
+inspection and maintenance orders, one per unit (`orders.units`, `orders.saving`), filled in on the
+engineer portal (`portal.order`), shown on an order's and a unit's page, printed as the work order,
+and a unit's inspection status in the equipment list (`server/checklists.ts`, `server/field.ts`).
+The schedule is the one without tables of its own: a view of the
 orders, which changes them through a core service and owns only its route, components and messages.
 Maintenance (plans per unit, turned into orders) was the first built from scratch: look there for a
 module's own server-side list with a bulk action (`list/due-list.ts`, `server/list-sql.ts`), a column

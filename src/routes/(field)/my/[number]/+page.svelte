@@ -18,7 +18,7 @@
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
 	import { refreshOnChanges } from "../live.svelte.ts";
-	import { getMyOrder, startWork } from "../portal.remote.ts";
+	import { getMe, getMyOrder, startWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
@@ -31,6 +31,7 @@
 	const order = $derived(data.order);
 	const { customer } = $derived(data.order);
 	const actions = $derived(fieldActions(order.status));
+	const me = $derived(await getMe());
 
 	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
 	// taken off the engineer is a 404 then, as on a reload).
@@ -195,7 +196,7 @@
 			<Card.Description>{m.portal_complete_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<CompleteForm orderId={order.id} contactName={customer.contactName} />
+			<CompleteForm orderId={order.id} contactName={customer.contactName} engineerName={me.name} />
 		</Card.Content>
 	</Card.Root>
 {:else if data.signoff}
@@ -209,12 +210,23 @@
 				})}
 			</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="flex flex-col gap-3">
 			<img
 				src={data.signoff.signature}
 				alt={m.portal_signature_of({ name: data.signoff.signerName })}
 				class="h-32 w-full rounded-lg border bg-white object-contain"
 			/>
+			<!-- The engineer's own, on sign-offs since engineers sign too. -->
+			{#if data.signoff.engineerName && data.signoff.engineerSignature}
+				<p class="text-sm text-muted-foreground">
+					{m.portal_engineer_signed({ name: data.signoff.engineerName })}
+				</p>
+				<img
+					src={data.signoff.engineerSignature}
+					alt={m.portal_signature_of({ name: data.signoff.engineerName })}
+					class="h-32 w-full rounded-lg border bg-white object-contain"
+				/>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 {/if}

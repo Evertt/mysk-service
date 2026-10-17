@@ -158,7 +158,13 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 			.where(and(eq(orderNote.orderId, found.id), inTenant(orderNote)))
 			.orderBy(asc(orderNote.createdAt), asc(orderNote.id)),
 		db.query.orderSignoff.findFirst({
-			columns: { signerName: true, signature: true, signedAt: true },
+			columns: {
+				signerName: true,
+				signature: true,
+				engineerName: true,
+				engineerSignature: true,
+				signedAt: true,
+			},
 			where: and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff)),
 		}),
 	]);
@@ -296,12 +302,17 @@ export const addNote = forEngineers.form(
 	},
 );
 
-/** Completes a job under way with the customer's sign-off: their name and signature. */
+/**
+ * Completes a job under way with the work order's sign-off: the customer's name and signature, and
+ * the engineer's own. A module may refuse it, e.g. while a checklist isn't completed.
+ */
 export const completeWork = forEngineers.form(
 	v.object({
 		id: id(),
 		signerName: text(m.portal_signer_required),
 		signature: signature(),
+		engineerName: text(m.portal_engineer_name_required),
+		engineerSignature: signature(m.portal_engineer_signature_required),
 	}),
 	async (input) => {
 		const { organizationId, user: signedInUser } = currentTenant();
@@ -317,6 +328,8 @@ export const completeWork = forEngineers.form(
 			const signoff = {
 				signerName: input.signerName,
 				signature: input.signature,
+				engineerName: input.engineerName,
+				engineerSignature: input.engineerSignature,
 				userId: signedInUser.id,
 				signedAt: now,
 			};

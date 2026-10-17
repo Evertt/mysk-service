@@ -79,11 +79,14 @@ export function groupByDay<T extends { scheduledFor: Temporal.Instant | null }>(
 /** A signature as drawn on the canvas: a PNG data URL, at most this long. */
 export const MAX_SIGNATURE_LENGTH = 500_000;
 
-/** The customer's signature, from the signature pad: a PNG image as a data URL. */
-export const signature = () =>
+/**
+ * A signature from the signature pad, the customer's or the engineer's (`required` says who must
+ * sign): a PNG image as a data URL.
+ */
+export const signature = (required = m.portal_signature_required) =>
 	v.pipe(
 		v.string(),
-		v.nonEmpty(m.portal_signature_required),
+		v.nonEmpty(required),
 		v.check(
 			(value) => value === "" || /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(value),
 			m.portal_signature_not_image,

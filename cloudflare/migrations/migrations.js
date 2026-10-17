@@ -5,6 +5,7 @@ import m0002 from './0002_add-customer-sites.sql';
 import m0003 from './0003_equipment-categories.sql';
 import m0004 from './0004_order-units.sql';
 import m0005 from './0005_add-checklist-templates.sql';
+import m0006 from './0006_add-checklists.sql';
 
   export default {
     journal,
@@ -14,7 +15,8 @@ m0001,
 m0002,
 m0003,
 m0004,
-m0005
+m0005,
+m0006
     }
   }
   

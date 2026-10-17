@@ -1,5 +1,5 @@
 /** What the checklists module's end-to-end tests share: templates and points as stored, and the pages' parts. */
-import type { Locator } from "playwright";
+import type { Locator, Page } from "playwright";
 
 import { type App, rows, value } from "#e2e/app.ts";
 
@@ -147,4 +147,86 @@ export function pageLocators(app: App) {
 		pointMenu,
 		tamper,
 	};
+}
+
+// --- Checklists on orders ---------------------------------------------------------------------
+
+export interface ChecklistRow {
+	id: number;
+	order_id: number;
+	equipment_id: number;
+	serial_number: string;
+	name: string;
+	kind: string;
+	status: string;
+	remarks: string | null;
+	completed_at: number | null;
+	completed_by: number | null;
+	valid_until: string | null;
+}
+
+/** An order's checklists, in its units' order. */
+export const checklistsOfOrder = (orderId: number) =>
+	rows<ChecklistRow>(
+		`select c.id, c.order_id, c.equipment_id, e.serial_number, c.name, c.kind, c.status, c.remarks,
+			c.completed_at, c.completed_by, c.valid_until
+		 from checklist c join equipment e on e.id = c.equipment_id
+		 join order_unit u on u.order_id = c.order_id and u.equipment_id = c.equipment_id
+		 where c.order_id = ? order by u.position`,
+		[orderId],
+	);
+
+export interface ResultRow {
+	id: number;
+	group_name: string;
+	text: string;
+	position: number;
+	result: string | null;
+	remark: string | null;
+}
+
+/** A checklist's points, in their order. */
+export const resultsOf = (checklistId: number) =>
+	rows<ResultRow>(
+		`select id, group_name, text, position, result, remark from checklist_result
+		 where checklist_id = ? order by position`,
+		[checklistId],
+	);
+
+/** The id of the engineer `email`'s account is linked to, in `organizationId`. */
+export const engineerOf = (email: string, organizationId: string) =>
+	value<number>(
+		`select e.id from engineer e join user u on u.id = e.user_id
+		 where u.email = ? and e.organization_id = ?`,
+		[email, organizationId],
+	);
+
+/**
+ * Each of an organization's units' inspection status `today` (`yyyy-mm-dd`), worked out in SQL as
+ * the app does: by its latest completed inspection.
+ */
+export const inspectionStatuses = (organizationId: string, today: string, soon: string) =>
+	rows<{ serial_number: string; status: string }>(
+		`select e.serial_number, coalesce((
+			select case when c.valid_until < ? then 'expired'
+				when exists (select 1 from checklist_result r where r.checklist_id = c.id and r.result = 'nok')
+					then 'rejected'
+				when c.valid_until <= ? then 'expiring' else 'valid' end
+			from checklist c where c.equipment_id = e.id and c.kind = 'inspection'
+				and c.status = 'completed' and c.valid_until is not null
+			order by c.completed_at desc, c.id desc limit 1), 'none') as status
+		 from equipment e where e.organization_id = ? order by e.id`,
+		[today, soon, organizationId],
+	);
+
+/** Draws a squiggle on a signature pad, as a finger would. */
+export async function sign(page: Page, pad: Locator) {
+	await pad.scrollIntoViewIfNeeded();
+	const box = (await pad.boundingBox())!;
+	await page.mouse.move(box.x + 20, box.y + box.height / 2);
+	await page.mouse.down();
+	for (let i = 1; i <= 10; i++) {
+		await page.mouse.move(box.x + 20 + i * 20, box.y + box.height / 2 + (i % 2 ? -25 : 25));
+	}
+	await page.mouse.up();
 }

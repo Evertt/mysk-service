@@ -9,10 +9,15 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, organizationId } from "#lib/server/db/columns.ts";
-import { equipmentCategory } from "#lib/server/db/schema.ts";
+import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
+import { engineer, equipmentCategory, orderUnit } from "#lib/server/db/schema.ts";
 
-import { defaultValidityMonths } from "../model.ts";
+import {
+	checklistKinds,
+	checklistStatuses,
+	defaultValidityMonths,
+	pointResults,
+} from "../model.ts";
 
 // These tables reference the core's, never the other way round.
 
@@ -129,3 +134,99 @@ export const checklistTemplateCategoryRelations = relations(
 		}),
 	}),
 );
+
+/**
+ * A unit's checklist on an inspection or maintenance order (the digital work order, "werkbon"):
+ * one per unit of the order (`order_unit`, so the unit must be one of the order's, and it goes when
+ * the unit is taken off the order or the order is deleted), made from the template of the unit's
+ * category when the order gets the unit. Its template's name, norm and validity are copied (and its
+ * points, `checklist_result`), so a later change to the template never rewrites an inspection.
+ * While it's a draft the engineer fills it in; completed, it's on record and isn't changed again.
+ */
+export const checklist = sqliteTable(
+	"checklist",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		orderId: integer("order_id").notNull(),
+		equipmentId: integer("equipment_id").notNull(),
+		/** The template it was made from. Templates are never deleted (they're retired). */
+		templateId: integer("template_id").notNull(),
+		/** The template's name, norm and validity when it was made. */
+		name: text("name").notNull(),
+		norm: text("norm"),
+		validityMonths: integer("validity_months").notNull(),
+		/** As the order's type: an inspection or a maintenance visit. */
+		kind: text("kind", { enum: checklistKinds }).notNull(),
+		status: text("status", { enum: checklistStatuses }).notNull().default("draft"),
+		/** The general remark and advice for the customer ("Algemene opmerking / advies aan klant"). */
+		remarks: text("remarks"),
+		completedAt: moment("completed_at"),
+		/** The engineer who completed it. */
+		completedBy: integer("completed_by"),
+		/**
+		 * An inspection's last valid day, from the day it was completed and its validity (see
+		 * `validUntil()` in `../model.ts`): what a unit's inspection status is worked out from.
+		 */
+		validUntil: day("valid_until"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("checklist_organization_id").on(table.organizationId, table.id),
+		// One per unit per order.
+		uniqueIndex("checklist_order_equipment").on(table.orderId, table.equipmentId),
+		// A unit's checklists: its history, its latest inspection.
+		index("checklist_equipment").on(table.equipmentId, table.kind, table.completedAt),
+		foreignKey({
+			columns: [table.organizationId, table.orderId, table.equipmentId],
+			foreignColumns: [orderUnit.organizationId, orderUnit.orderId, orderUnit.equipmentId],
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.organizationId, table.templateId],
+			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
+		}),
+		foreignKey({
+			columns: [table.organizationId, table.completedBy],
+			foreignColumns: [engineer.organizationId, engineer.id],
+		}),
+	],
+);
+
+/**
+ * A point of a checklist, copied from its template when the checklist was made: its group, text and
+ * place, and what the engineer found (`result`, none until answered) with a remark, which a
+ * rejection (`nok`) needs.
+ */
+export const checklistResult = sqliteTable(
+	"checklist_result",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		checklistId: integer("checklist_id").notNull(),
+		group: text("group_name").notNull().default(""),
+		text: text("text").notNull(),
+		/** Its place among the checklist's points, from 0, as in the template then. */
+		position: integer("position").notNull(),
+		result: text("result", { enum: pointResults }),
+		remark: text("remark"),
+	},
+	(table) => [
+		uniqueIndex("checklist_result_organization_id").on(table.organizationId, table.id),
+		uniqueIndex("checklist_result_checklist_position").on(table.checklistId, table.position),
+		foreignKey({
+			columns: [table.organizationId, table.checklistId],
+			foreignColumns: [checklist.organizationId, checklist.id],
+		}).onDelete("cascade"),
+	],
+);
+
+export const checklistRelations = relations(checklist, ({ many }) => ({
+	results: many(checklistResult),
+}));
+
+export const checklistResultRelations = relations(checklistResult, ({ one }) => ({
+	checklist: one(checklist, {
+		fields: [checklistResult.organizationId, checklistResult.checklistId],
+		references: [checklist.organizationId, checklist.id],
+	}),
+}));

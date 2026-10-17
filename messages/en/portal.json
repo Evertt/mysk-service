@@ -57,5 +57,12 @@
 	"portal_signer_required": "Enter the name of who signs",
 	"portal_signed_off_note": "Signed off by {name}",
 	"portal_site": "Site",
-	"portal_location": "Location"
+	"portal_location": "Location",
+	"portal_engineer_signature": "Your signature",
+	"portal_engineer_name": "Your name",
+	"portal_engineer_signature_pad": "Engineer's signature",
+	"portal_engineer_name_required": "Enter your name",
+	"portal_engineer_signature_required": "Sign the work order yourself too",
+	"portal_customer_signature": "The customer's signature",
+	"portal_engineer_signed": "Engineer: {name}"
 }
