@@ -81,20 +81,7 @@ describe("the live board", () => {
 			salvoEvent("door_open", "DOCK 07", 61),
 		]);
 		expect(result.status).toBe(200);
-		expect(result.body.orders).toHaveLength(1);
-
-		const orders = await escalatedOrders(dock.door_id!);
-		expect(orders).toHaveLength(1);
-		expect(orders[0].description).toContain("DOCK 07");
-		expect(
-			await value<number>(
-				`select equipment_id from order_unit u join "order" o on o.id = u.order_id where o.number = ?`,
-				[orders[0].number],
-			),
-		).toBe(dock.door_id);
-
-		// A heartbeat (an empty batch) runs the rules again: no second order.
-		expect((await postEvents([])).body).toMatchObject({ applied: 0, orders: [] });
+		// The order on the door, and only one (`ingest.spec.ts`'s door rules).
 		expect(await escalatedOrders(dock.door_id!)).toHaveLength(1);
 
 		await card("DOCK 07").locator('[data-door-band="red"]').waitFor();
