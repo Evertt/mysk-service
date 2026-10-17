@@ -6,7 +6,7 @@
  * Another tenant's unit, or another engineer's order, is a 404, also by a tampered id.
  */
 import { error } from "@sveltejs/kit";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -23,7 +23,7 @@ import { type ChecklistCompleting, checklistScore } from "#modules/checklists/ap
 
 import { conditionLabel } from "../activity.ts";
 import type { ConditionSource } from "../model.ts";
-import { unitCondition } from "./schema.ts";
+import { component, componentCheckpoint, unitCondition } from "./schema.ts";
 
 /** What's recorded: the score and the advice (none when empty). */
 export interface ConditionInput {
@@ -37,12 +37,21 @@ interface Unit {
 	serialNumber: string;
 }
 
-/** Records the unit's condition in `tx`, and logs it against the unit. */
+/** A component of the unit, whose condition it is. */
+interface Part {
+	id: number;
+	number: string;
+}
+
+/**
+ * Records the condition of the unit (or of its component `by.component`) in `tx`, and logs it
+ * against the unit.
+ */
 async function insertCondition(
 	tx: Transaction,
 	unit: Unit,
 	input: ConditionInput,
-	by: { source: ConditionSource; orderId?: number; engineerId?: number },
+	by: { source: ConditionSource; orderId?: number; engineerId?: number; component?: Part },
 ) {
 	const tenant = currentTenant();
 	const advice = input.advice.trim() || null;
@@ -51,6 +60,7 @@ async function insertCondition(
 		.values({
 			organizationId: tenant.organizationId,
 			equipmentId: unit.id,
+			componentId: by.component?.id ?? null,
 			score: input.score,
 			advice,
 			source: by.source,
@@ -66,7 +76,11 @@ async function insertCondition(
 		subject: {
 			type: "unitCondition",
 			id: made.id,
-			label: conditionLabel({ serialNumber: unit.serialNumber, score: input.score }),
+			label: conditionLabel({
+				serialNumber: unit.serialNumber,
+				component: by.component?.number,
+				score: input.score,
+			}),
 		},
 		parent: { type: "equipment", id: unit.id, label: unit.serialNumber },
 		// The advice, as it was given.
@@ -75,15 +89,30 @@ async function insertCondition(
 	return made.id;
 }
 
-/** Records the condition of the tenant's unit `serialNumber`, by a member in the office. */
-export function recordOfficeCondition(serialNumber: string, input: ConditionInput) {
+/**
+ * Records the condition of the tenant's unit `serialNumber`, or of its component `componentId`, by
+ * a member in the office. Another tenant's unit, or a component that isn't the unit's, is a 404.
+ */
+export function recordOfficeCondition(
+	serialNumber: string,
+	input: ConditionInput,
+	componentId: number | null = null,
+) {
 	return db.transaction(async (tx) => {
 		const [unit] = await tx
 			.select({ id: equipment.id, serialNumber: equipment.serialNumber })
 			.from(equipment)
 			.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
 		if (!unit) error(404, m.condition_unit_not_found({ serial: serialNumber }));
-		await insertCondition(tx, unit, input, { source: "office" });
+		let part: Part | undefined;
+		if (componentId !== null) {
+			[part] = await tx
+				.select({ id: component.id, number: component.number })
+				.from(component)
+				.where(and(idInTenant(component, componentId), eq(component.equipmentId, unit.id)));
+			if (!part) error(404, m.condition_component_not_found());
+		}
+		await insertCondition(tx, unit, input, { source: "office", component: part });
 		return unit;
 	});
 }
@@ -124,26 +153,65 @@ export async function findFieldUnit(
 	return found;
 }
 
+/** The unit's components with the template points that check each, in `tx`, in their order. */
+async function checkedComponents(tx: Transaction, equipmentId: number) {
+	const parts = await tx
+		.select({ id: component.id, number: component.number })
+		.from(component)
+		.where(and(eq(component.equipmentId, equipmentId), inTenant(component)))
+		.orderBy(asc(component.position), asc(component.id));
+	if (!parts.length) return [];
+	const links = await tx
+		.select({
+			componentId: componentCheckpoint.componentId,
+			templateItemId: componentCheckpoint.templateItemId,
+		})
+		.from(componentCheckpoint)
+		.innerJoin(
+			component,
+			and(
+				eq(component.organizationId, componentCheckpoint.organizationId),
+				eq(component.id, componentCheckpoint.componentId),
+			),
+		)
+		.where(and(eq(component.equipmentId, equipmentId), inTenant(componentCheckpoint)));
+	const byComponent = Map.groupBy(links, (link) => link.componentId);
+	return parts.map((part) => ({
+		...part,
+		items: new Set((byComponent.get(part.id) ?? []).map((link) => link.templateItemId)),
+	}));
+}
+
 /**
- * `checklists.completed`: records the unit's condition as its completed checklist found it, in the
- * checklist's transaction: its score from the points (`checklistScore()`), on the checklist's order,
- * by the engineer who completed it, without advice (which they add after, `adviseFieldCondition()`).
- * Nothing for a checklist none of whose points count (all not applicable).
+ * `checklists.completed`: records the conditions a completed checklist found, in its transaction,
+ * on its order, by the engineer who completed it, without advice (which they add after,
+ * `adviseFieldCondition()`): the unit's, its score from all the points (`checklistScore()`), and
+ * each of its components' whose points it answered, from those points alone. Nothing for a score
+ * none of whose points count (all not applicable).
  */
 export async function recordChecklistConditions({ tx, checklist, points }: ChecklistCompleting) {
-	const score = checklistScore(points);
-	if (score === null) return undefined;
 	const [unit] = await tx
 		.select({ id: equipment.id, serialNumber: equipment.serialNumber })
 		.from(equipment)
 		.where(idInTenant(equipment, checklist.equipmentId));
 	if (!unit) return undefined;
-	await insertCondition(
-		tx,
-		unit,
-		{ score, advice: "" },
-		{ source: "checklist", orderId: checklist.orderId, engineerId: checklist.engineerId },
-	);
+	const by = {
+		source: "checklist" as const,
+		orderId: checklist.orderId,
+		engineerId: checklist.engineerId,
+	};
+	const score = checklistScore(points);
+	if (score !== null) await insertCondition(tx, unit, { score, advice: "" }, by);
+	for (const part of await checkedComponents(tx, unit.id)) {
+		const own = checklistScore(
+			points.filter(
+				(point) => point.templateItemId !== null && part.items.has(point.templateItemId),
+			),
+		);
+		if (own !== null) {
+			await insertCondition(tx, unit, { score: own, advice: "" }, { ...by, component: part });
+		}
+	}
 	return undefined;
 }
 
@@ -161,12 +229,41 @@ export async function checklistCondition(
 				eq(unitCondition.equipmentId, equipmentId),
 				eq(unitCondition.orderId, orderId),
 				eq(unitCondition.source, "checklist"),
+				isNull(unitCondition.componentId),
 				inTenant(unitCondition),
 			),
 		)
 		.orderBy(desc(unitCondition.recordedAt), desc(unitCondition.id))
 		.limit(1);
 	return found;
+}
+
+/** The conditions its checklist on the order gave the unit's components, in their order. */
+export function checklistComponentConditions(equipmentId: number, orderId: number) {
+	return db
+		.select({
+			id: unitCondition.id,
+			number: component.number,
+			name: component.name,
+			score: unitCondition.score,
+		})
+		.from(unitCondition)
+		.innerJoin(
+			component,
+			and(
+				eq(component.organizationId, unitCondition.organizationId),
+				eq(component.id, unitCondition.componentId),
+			),
+		)
+		.where(
+			and(
+				eq(unitCondition.equipmentId, equipmentId),
+				eq(unitCondition.orderId, orderId),
+				eq(unitCondition.source, "checklist"),
+				inTenant(unitCondition),
+			),
+		)
+		.orderBy(asc(component.position), asc(component.id), desc(unitCondition.id));
 }
 
 /**
@@ -204,8 +301,11 @@ export function adviseFieldCondition(
 	});
 }
 
-/** The unit's conditions, newest first, with who recorded each and on which order. */
-export async function conditionsOf(equipmentId: number, where?: { orderId: number }) {
+/**
+ * The conditions of the unit as a whole (or of its component `componentId`), newest first, with
+ * who recorded each and on which order.
+ */
+export async function conditionsOf(equipmentId: number, componentId: number | null = null) {
 	const found = await db
 		.select({
 			id: unitCondition.id,
@@ -224,8 +324,10 @@ export async function conditionsOf(equipmentId: number, where?: { orderId: numbe
 		.where(
 			and(
 				eq(unitCondition.equipmentId, equipmentId),
+				componentId === null
+					? isNull(unitCondition.componentId)
+					: eq(unitCondition.componentId, componentId),
 				inTenant(unitCondition),
-				where ? eq(unitCondition.orderId, where.orderId) : undefined,
 			),
 		)
 		.orderBy(desc(unitCondition.recordedAt), desc(unitCondition.id));

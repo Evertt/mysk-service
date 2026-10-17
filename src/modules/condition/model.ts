@@ -1,9 +1,11 @@
 /**
  * The condition module's domain rules (SHLTR Connect, `docs/plans/shltr-domain.md` §2.3): a unit's
- * condition is a score from 0 to 100 with advice, recorded over time (the latest counts), and its
- * status follows from it, from its inspection (with checklists on) and from its open orders. Pure
+ * condition, and each of its components', is a score from 0 to 100 with advice, recorded over time
+ * (the latest counts), and its status follows from it, from the unit's inspection (with checklists
+ * on) and from its open orders; a unit's status is the worst of its own and its components'. Pure
  * and isomorphic; the same rules are in SQL for the lists (`server/status-sql.ts`).
  */
+import type { NumberFormat } from "#lib/numbering.ts";
 
 /** A unit's status, worst first: the order the Connect page sorts by. */
 export const unitStatuses = ["critical", "attention", "planned", "ok"] as const;
@@ -80,6 +82,58 @@ export function unitStatus(
 	const concern = concernOf(facts, thresholds);
 	return { status: facts.planned ? "planned" : concern, concern };
 }
+
+/** A component's own facts: its latest condition's score and advice (none without one). */
+export interface ComponentFacts {
+	score: number | null;
+	advice: string | null;
+}
+
+/** A status's place, worst first (`unitStatuses`): what the rollup and the sort go by. */
+const statusRank = (status: UnitStatus) => unitStatuses.indexOf(status);
+
+/**
+ * A component's status: by the same rules as a unit's (`unitStatus()`), from its own latest
+ * condition and its unit's inspection and planned work.
+ */
+export const componentStatus = (
+	component: ComponentFacts,
+	unit: UnitFacts,
+	thresholds: Thresholds,
+) => unitStatus({ ...unit, score: component.score, advice: component.advice }, thresholds);
+
+/**
+ * A unit's status with its components': the worst of its own (`unitStatus()`) and theirs
+ * (`componentStatus()`), and the worst of what their states ask for. So a unit is critical while a
+ * component of it is, and planned (whatever's behind it) while its work is in hand.
+ */
+export function rolledUpStatus(
+	unit: UnitFacts,
+	components: readonly ComponentFacts[],
+	thresholds: Thresholds,
+): { status: UnitStatus; concern: Concern } {
+	const all = [
+		unitStatus(unit, thresholds),
+		...components.map((component) => componentStatus(component, unit, thresholds)),
+	];
+	const worst = <T extends UnitStatus>(statuses: T[]) =>
+		statuses.reduce((a, b) => (statusRank(b) < statusRank(a) ? b : a));
+	return {
+		status: worst(all.map((each) => each.status)),
+		concern: worst(all.map((each) => each.concern)),
+	};
+}
+
+// --- Components --------------------------------------------------------------------------------
+
+/** A component's number: `OC-0001`, as the mockup's codes. */
+export const componentNumber: NumberFormat = { prefix: "OC-", digits: 4 };
+
+/** The most a component's name may have. */
+export const COMPONENT_NAME_MAX = 80;
+
+/** How many components a unit may have. */
+export const COMPONENTS_MAX = 50;
 
 /** How a score shows: below the critical threshold, below the attention one, or fine. */
 export type ScoreBand = "low" | "fair" | "good";

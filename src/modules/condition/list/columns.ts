@@ -20,29 +20,36 @@ type ConditionRow = Awaited<ReturnType<typeof getConditionUnits>>["rows"][number
 const column = createAppColumnHelper<ConditionRow>();
 
 export const columns = column.columns([
+	column.accessor((row) => row.component?.name ?? null, {
+		id: "component",
+		cell: ({ row }) => {
+			const part = row.original.component;
+			return part
+				? renderComponent(TwoLineCell, {
+						primary: part.name,
+						secondary: [part.number, part.sku && m.condition_component_article({ sku: part.sku })]
+							.filter(Boolean)
+							.join(" · "),
+					})
+				: // A unit without components: its own row, as a whole.
+					renderComponent(TwoLineCell, {
+						primary: null,
+						fallback: m.condition_component_whole_unit(),
+					});
+		},
+		enableHiding: false,
+		meta: { label: m.condition_column_component },
+	}),
 	column.accessor((row) => unitTitle(row), {
 		id: "unit",
 		cell: ({ getValue, row }) =>
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
-				secondary: row.original.serialNumber,
+				secondary: [row.original.location?.name, row.original.site].filter(Boolean).join(" · "),
 				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
 		meta: { label: m.condition_column_unit },
-	}),
-	column.accessor((row) => row.location?.name ?? row.site, {
-		id: "location",
-		cell: ({ row }) =>
-			renderComponent(TwoLineCell, {
-				primary: row.original.location?.name ?? row.original.site,
-				secondary: row.original.location ? row.original.site : null,
-				href: row.original.location
-					? resolve("/(app)/equipment/locations/[id]", { id: String(row.original.location.id) })
-					: undefined,
-			}),
-		enableGlobalFilter: false,
-		meta: { label: m.condition_column_location },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",

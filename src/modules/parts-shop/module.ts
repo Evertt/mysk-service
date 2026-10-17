@@ -16,8 +16,9 @@ export default defineModule({
 	actions: shopActions,
 	// Its products are materials, with their stock; it's paid for with the partners' credit.
 	requires: ["materials", "partner-programme"],
-	// Suggests the part a rejected checklist point needs.
-	enhances: ["checklists"],
+	// Suggests the part a rejected checklist point needs, and tells the condition module the
+	// points its products fix, which a component with one of them as its article is checked by.
+	enhances: ["checklists", "condition"],
 	nav: { after: "materials" },
 	// The catalogue, the cart and the checkout with Parts Credit, in the customer portal.
 	portal: {

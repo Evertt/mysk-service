@@ -2,7 +2,7 @@
  * The service history of the tenant's units, or a customer's (see `../feed.ts`): the newest
  * orders completed on them, conditions recorded and, with checklists on, checklists completed.
  */
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
@@ -114,6 +114,8 @@ async function recordedConditions(
 		.where(
 			and(
 				inTenant(unitCondition),
+				// The units' own: their components' come with them (a checklist's) or are on their page.
+				isNull(unitCondition.componentId),
 				customerId === null ? undefined : eq(equipment.customerId, customerId),
 			),
 		)

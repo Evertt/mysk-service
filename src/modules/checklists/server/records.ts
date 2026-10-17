@@ -9,7 +9,9 @@ import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
+import { collect } from "#lib/server/extensions.ts";
 
+import { pointArticles } from "../api/extensions.ts";
 import { checklist, checklistResult } from "./schema.ts";
 
 /** The tenant's checklists that `where` picks (a condition on `checklist` or its order), in their orders' unit order. */
@@ -87,5 +89,31 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 	return found.map(({ position: _position, ...row }) => ({
 		...row,
 		results: (byChecklist.get(row.id) ?? []).map(({ checklistId: _id, ...result }) => result),
+	}));
+}
+
+/**
+ * The checklists with the article each rejected point checks on its unit, if a module knows one
+ * (`checklists.pointArticles`, e.g. the condition module's components), as `materialId`: what the
+ * parts shop suggests first. None for the other points.
+ */
+export async function withPointArticles(records: Awaited<ReturnType<typeof checklistRecords>>) {
+	const points = records.flatMap((record) =>
+		record.results.flatMap((result) =>
+			result.result === "nok" && result.templateItemId !== null
+				? [{ equipmentId: record.unit.id, templateItemId: result.templateItemId }]
+				: [],
+		),
+	);
+	const known = points.length ? (await collect(pointArticles, { points })).flat() : [];
+	const articleOf = (equipmentId: number, templateItemId: number | null) =>
+		known.find((each) => each.equipmentId === equipmentId && each.templateItemId === templateItemId)
+			?.materialId ?? null;
+	return records.map((record) => ({
+		...record,
+		results: record.results.map((result) => ({
+			...result,
+			materialId: result.result === "nok" ? articleOf(record.unit.id, result.templateItemId) : null,
+		})),
 	}));
 }

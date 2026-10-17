@@ -6,22 +6,27 @@
  * a few, so its pages show every status too; South doesn't have the module. A faker of its own,
  * seeded per tenant, so the rest of the demo data is the same with or without the module.
  *
+ * SHLTR's units also get the mockup's 14 components (`shltrComponents`, the `onderdelen` of its
+ * database), each with its article where the shop sells one like it, the points of the unit's
+ * template that check it, and the mockup's condition and advice from the office.
+ *
  * With checklists on, each completed checklist gives its unit the condition its points work out to
- * (`checklistScore()`), on its order, when it was completed, as completing it does at runtime
- * (`checklists.completed`). The conditions above stay the unit's latest, as corrections from the
- * office, where the unit has a newer checklist than they'd be: so the demo keeps its 22%.
+ * (`checklistScore()`), and each of the unit's components the same over its own points, on its
+ * order, when it was completed, as completing it does at runtime (`checklists.completed`). The
+ * conditions above stay the latest, as corrections from the office, where the unit has a newer
+ * checklist than they'd be: so the demo keeps its 22%.
  */
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, desc, eq, ne } from "drizzle-orm";
 
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
 import { addDays, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type ModuleSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 import { checklistScore } from "#modules/checklists/api/extensions.ts";
 
-import { conditionSettings, unitCondition } from "./schema.ts";
+import { component, componentCheckpoint, conditionSettings, unitCondition } from "./schema.ts";
 
 /** A unit the mockup names, with how its condition went: oldest first, the last one now. */
 interface FixedCondition {
@@ -109,6 +114,177 @@ const shltrConditions: FixedCondition[] = [
 	},
 ];
 
+/**
+ * A component of the mockup's (`onderdelen`), on the seeded unit that's it, or the closest: the
+ * mockup's "Sectionaaldeur D-07" at "Expeditie noord" is Riedel's "Sectionaaldeur laaddok 07" (where
+ * the 22% is), and its "Dock 06" Weggemans' "Salvo dock 06". Its article is the shop's like it: the
+ * mockup's SKUs (SD-014, LV-008, …) aren't the seeded shop's, which only has SD-001 the same. Its
+ * points are texts of the unit's template.
+ */
+interface SeedComponent {
+	number: string;
+	customer: string;
+	unit: string;
+	/** The unit's location, where the customer has two units of the name. */
+	location?: string;
+	name: string;
+	sku: string | null;
+	points: string[];
+	score: number;
+	advice: string;
+}
+
+const shltrComponents: SeedComponent[] = [
+	{
+		number: "OC-1041",
+		customer: "Riedel B.V.",
+		unit: "Sectionaaldeur laaddok 07",
+		name: "Torsieveerpakket",
+		sku: "SD-001",
+		points: [
+			"Torsieveren op spanning en breuk gecontroleerd",
+			"Veerbreukbeveiliging en kabelbreukbeveiliging getest",
+		],
+		score: 22,
+		advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
+	},
+	{
+		number: "OC-1042",
+		customer: "Riedel B.V.",
+		unit: "Sectionaaldeur laaddok 07",
+		name: "Staaldraadkabels",
+		sku: "SD-002",
+		points: ["Staaldraadkabels vrij van rafels en corrosie"],
+		score: 41,
+		advice: "Draadbreuk zichtbaar bij trommel — kabelset meenemen.",
+	},
+	{
+		number: "OC-1043",
+		customer: "Riedel B.V.",
+		unit: "Sectionaaldeur D-09",
+		name: "Fotocel-beveiliging",
+		sku: "SD-005",
+		points: [
+			"Fotocel / lichtscherm stopt en keert deur",
+			"Onderloopbeveiliging (sluitkantbeveiliging) getest",
+		],
+		score: 68,
+		advice: "Uitlijning controleren tijdens periodiek onderhoud.",
+	},
+	{
+		number: "OC-1044",
+		customer: "Riedel B.V.",
+		unit: "Leveller L-03",
+		name: "Dockleveller hydrauliek",
+		sku: "LV-001",
+		points: ["Oliepeil en slangen zonder lekkage", "Cilinders en veiligheidsventiel getest"],
+		score: 55,
+		advice: "Lekkage bij cilinder — afdichtset plannen.",
+	},
+	{
+		number: "OC-1045",
+		customer: "Riedel B.V.",
+		unit: "Sectionaaldeur D-11",
+		name: "Bodemafdichting",
+		sku: "SD-004",
+		points: ["Bodem-, zij- en bovenafdichting intact"],
+		score: 84,
+		advice: "",
+	},
+	{
+		number: "OC-2011",
+		customer: "Bouwgroep De Vries",
+		unit: "Bordestrap T-A3",
+		name: "Antislip treden",
+		sku: null,
+		points: ["Antislip treden in goede staat"],
+		score: 34,
+		advice: "3 treden vervangen (TR-001) + keuring opnieuw uitvoeren.",
+	},
+	{
+		number: "OC-2012",
+		customer: "Bouwgroep De Vries",
+		unit: "Bordestrap T-A3",
+		name: "Leuningbevestiging",
+		sku: null,
+		points: ["Leuningen en kniesloten stevig", "Boutverbindingen en verankering vast"],
+		score: 62,
+		advice: "Muurbeugels natrekken, 2 stuks los.",
+	},
+	{
+		number: "OC-2013",
+		customer: "Bouwgroep De Vries",
+		unit: "Bordes B-12",
+		name: "Kickplate bordes",
+		sku: null,
+		points: ["Kickplates aanwezig en onbeschadigd"],
+		score: 91,
+		advice: "",
+	},
+	{
+		number: "OC-3007",
+		customer: "Pakhuis 7",
+		unit: "Airco AC-02",
+		location: "Kantoor 1e",
+		name: "HEPA-filterset",
+		sku: null,
+		points: ["Filters gereinigd of vervangen"],
+		score: 28,
+		advice: "Filters dicht — drukval boven norm, direct vervangen (AC-001).",
+	},
+	{
+		number: "OC-3008",
+		customer: "Pakhuis 7",
+		unit: "Airco AC-02",
+		location: "Kantoor 1e",
+		name: "Condensaatpomp",
+		sku: null,
+		points: ["Verdamper en condensafvoer schoon, pomp werkt"],
+		score: 59,
+		advice: "Meenemen bij filterbeurt, pomp maakt geluid.",
+	},
+	{
+		number: "OC-3009",
+		customer: "Pakhuis 7",
+		unit: "Airco AC-05",
+		name: "Koudemiddelcircuit R32",
+		sku: null,
+		points: ["Lekdichtheidscontrole uitgevoerd (F-gassen)", "Drukken en oververhitting gemeten"],
+		score: 47,
+		advice: "Lekdichtheidscontrole verplicht — F-gassen registratie bijwerken.",
+	},
+	{
+		number: "OC-4002",
+		customer: "Weggemans Logistiek",
+		unit: "Sectionaaldeur D-21",
+		name: "Aandrijving 24V",
+		sku: "SD-008",
+		points: ["Aandrijving, eindschakelaars en noodstop werkend"],
+		score: 73,
+		advice: "Noodontgrendeling testen bij volgende beurt.",
+	},
+	{
+		number: "OC-4003",
+		customer: "Weggemans Logistiek",
+		unit: "Salvo dock 06",
+		name: "Wielblokkering (chock)",
+		sku: null,
+		points: ["Wheel-Lok / chock vergrendeling getest"],
+		score: 38,
+		advice: "Vergrendelsensor geeft intermitterend signaal — sensor vervangen.",
+	},
+	{
+		number: "OC-4004",
+		customer: "Weggemans Logistiek",
+		unit: "Sectionaaldeur D-24",
+		name: "Rolscharnieren set",
+		sku: "SD-003",
+		points: ["Rollen, scharnieren en geleiderails gesmeerd"],
+		score: 88,
+		advice: "",
+	},
+];
+
 /** Advice that comes with a fair score, for the made-up ones that need attention. */
 const wear = [
 	"Lichte slijtage aan de geleiders; meenemen bij de eerstvolgende beurt.",
@@ -124,9 +300,15 @@ type Transaction = Parameters<ModuleSeed["run"]>[0]["tx"];
 /** The tenant's units in use with their customer, and the last done order on each. */
 async function unitsOf(tx: Transaction, organizationId: string) {
 	const units = await tx
-		.select({ id: equipment.id, name: equipment.name, customer: customer.name })
+		.select({
+			id: equipment.id,
+			name: equipment.name,
+			customer: customer.name,
+			location: equipmentLocation.name,
+		})
 		.from(equipment)
 		.innerJoin(customer, eq(customer.id, equipment.customerId))
+		.leftJoin(equipmentLocation, eq(equipmentLocation.id, equipment.locationId))
 		.where(
 			and(eq(equipment.organizationId, organizationId), ne(equipment.status, "decommissioned")),
 		)
@@ -177,11 +359,83 @@ async function completedChecklists(tx: Transaction, tenant: { id: string; module
 /** An hour, in milliseconds: how long after a unit's last checklist the office corrects it. */
 const HOUR = 60 * 60 * 1000;
 
+/**
+ * Inserts SHLTR's components on its units (see `shltrComponents`), with their articles (the
+ * tenant's materials by SKU, read like the checklists, as the module only enhances materials) and
+ * points (its templates' by text); answers them with the points that check each.
+ */
+async function seedComponents(
+	tx: Transaction,
+	tenant: { id: string; modules: string[] },
+	units: { id: number; name: string | null; customer: string; location: string | null }[],
+	count: (table: string, rows: unknown[]) => void,
+) {
+	const materials = tenant.modules.includes("materials")
+		? await tx.query.material.findMany({
+				columns: { id: true, sku: true },
+				where: (material, { eq }) => eq(material.organizationId, tenant.id),
+			})
+		: [];
+	const items = tenant.modules.includes("checklists")
+		? await tx.query.checklistTemplateItem.findMany({
+				columns: { id: true, text: true },
+				where: (item, { eq }) => eq(item.organizationId, tenant.id),
+			})
+		: [];
+	const made: { id: number; equipmentId: number; items: Set<number>; seed: SeedComponent }[] = [];
+	const positions = new Map<number, number>();
+	for (const seed of shltrComponents) {
+		// The unit in care of the name, at its location if that one is (the other of the name if not).
+		const named = units.filter(
+			(found) => found.name === seed.unit && found.customer === seed.customer,
+		);
+		const unit = named.find((found) => found.location === seed.location) ?? named[0];
+		if (!unit) continue;
+		const position = positions.get(unit.id) ?? 0;
+		positions.set(unit.id, position + 1);
+		const [row] = await tx
+			.insert(component)
+			.values({
+				organizationId: tenant.id,
+				equipmentId: unit.id,
+				number: seed.number,
+				name: seed.name,
+				materialId: materials.find((material) => material.sku === seed.sku)?.id ?? null,
+				position,
+			})
+			.returning({ id: component.id });
+		const points = seed.points.flatMap(
+			(text) => items.find((item) => item.text === text)?.id ?? [],
+		);
+		if (points.length) {
+			await tx.insert(componentCheckpoint).values(
+				points.map((templateItemId) => ({
+					organizationId: tenant.id,
+					componentId: row.id,
+					templateItemId,
+				})),
+			);
+		}
+		made.push({ id: row.id, equipmentId: unit.id, items: new Set(points), seed });
+	}
+	count("components", made);
+	count(
+		"componentCheckpoints",
+		made.flatMap((each) => [...each.items]),
+	);
+	return made;
+}
+
 export default defineSeed<TenantDraft["profile"]>({
 	clear: async (tx) => {
 		await tx.delete(unitCondition);
+		await tx.delete(componentCheckpoint);
+		await tx.delete(component);
 		await tx.delete(conditionSettings);
 	},
+
+	// The components' articles are the materials', which have to be in.
+	after: ["materials"],
 
 	// Whose business the tenant is, which says which conditions it gets.
 	generate: ({ profile }) => profile,
@@ -193,24 +447,33 @@ export default defineSeed<TenantDraft["profile"]>({
 			const random = new Faker({ locale: [nl, en] });
 			random.seed(tenant.seed + 21);
 			const { units, lastDone } = await unitsOf(tx, organizationId);
+			const parts = tenant.data === "shltr" ? await seedComponents(tx, tenant, units, count) : [];
 
-			// What the completed checklists found, and when each unit's last one was.
+			// What the completed checklists found, of the units and their components, and when each
+			// unit's last one was.
 			const lastChecklist = new Map<number, Temporal.Instant>();
 			for (const found of await completedChecklists(tx, tenant)) {
 				lastChecklist.set(found.equipmentId, found.completedAt!);
-				const score = checklistScore(found.results);
-				if (score === null) continue;
-				rows.push({
+				const recorded = {
 					organizationId,
 					equipmentId: found.equipmentId,
-					score,
 					advice: null,
-					source: "checklist",
+					source: "checklist" as const,
 					orderId: found.orderId,
 					orderOrganizationId: organizationId,
 					engineerId: found.completedBy,
 					recordedAt: found.completedAt!,
-				});
+				};
+				const score = checklistScore(found.results);
+				if (score !== null) rows.push({ ...recorded, score });
+				for (const part of parts.filter((each) => each.equipmentId === found.equipmentId)) {
+					const own = checklistScore(
+						found.results.filter(
+							(result) => result.templateItemId !== null && part.items.has(result.templateItemId),
+						),
+					);
+					if (own !== null) rows.push({ ...recorded, componentId: part.id, score: own });
+				}
 			}
 
 			/**
@@ -223,6 +486,7 @@ export default defineSeed<TenantDraft["profile"]>({
 				daysAgo: number,
 				advice: string,
 				last = daysAgo === 0,
+				componentId: number | null = null,
 			) => {
 				const visit = lastDone.get(unitId);
 				const checked = lastChecklist.get(unitId);
@@ -236,6 +500,7 @@ export default defineSeed<TenantDraft["profile"]>({
 				rows.push({
 					organizationId,
 					equipmentId: unitId,
+					componentId,
 					score,
 					advice: advice || null,
 					source: onVisit ? "checklist" : "office",
@@ -258,6 +523,11 @@ export default defineSeed<TenantDraft["profile"]>({
 						const last = i === named.history.length - 1;
 						add(unit.id, score, daysAgo, last ? named.advice : "", last);
 					});
+				}
+				// The components' conditions as the mockup has them, from the office a day ago (or
+				// after their unit's last checklist).
+				for (const part of parts) {
+					add(part.equipmentId, part.seed.score, 1, part.seed.advice, true, part.id);
 				}
 				// Most of the others are healthy, recorded on their last visit; a few show some wear.
 				// One with a completed checklist has what its checklists found.

@@ -1,6 +1,8 @@
 <!--
 	@component
-	Records a unit's condition in the office: its score and the advice that goes with it.
+	Records a unit's condition in the office, or one of its components' (`component`): its score and
+	the advice that goes with it. A correction: it counts until a newer one, e.g. the next completed
+	checklist's.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
@@ -15,23 +17,36 @@
 
 	let {
 		unit,
+		component,
 		score,
 		open = $bindable(false),
 	}: {
 		unit: { serialNumber: string; title: string };
+		/** The component whose condition it is; none for the unit as a whole. */
+		component?: { id: number; number: string; name: string };
 		/** The latest score, to start from. */
 		score: number | null;
 		open?: boolean;
 	} = $props();
 
-	const form = $derived(recordCondition.for(unit.serialNumber));
+	const form = $derived(
+		recordCondition.for(component ? `${unit.serialNumber}-${component.id}` : unit.serialNumber),
+	);
 </script>
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title>{m.condition_record_title({ unit: unit.title })}</Dialog.Title>
-			<Dialog.Description>{m.condition_record_description()}</Dialog.Description>
+			<Dialog.Title>
+				{component
+					? m.condition_record_component_title({
+							component: `${component.number} ${component.name}`,
+						})
+					: m.condition_record_title({ unit: unit.title })}
+			</Dialog.Title>
+			<Dialog.Description>
+				{component ? m.condition_record_component_description() : m.condition_record_description()}
+			</Dialog.Description>
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ element, submit }) => {
@@ -48,6 +63,7 @@
 			class="flex flex-col gap-6"
 		>
 			<input {...form.fields.serialNumber.as("hidden", unit.serialNumber)} />
+			<input {...form.fields.componentId.as("hidden", component ? String(component.id) : "")} />
 			<Field.FieldGroup>
 				<NumberField
 					field={form.fields.score}

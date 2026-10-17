@@ -13,4 +13,6 @@ export default defineModule({
 	nav: { after: "engineers" },
 	subjects: materialSubjects,
 	actions: materialActions,
+	// Its materials are the articles of the condition module's components.
+	enhances: ["condition"],
 });

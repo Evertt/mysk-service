@@ -45,6 +45,20 @@
 					band={scoreBand(data.recorded.score, data.thresholds)}
 				/>
 				<p class="text-xs text-muted-foreground">{m.condition_portal_computed()}</p>
+				{#if data.components.length}
+					<ul
+						class="flex flex-col gap-1.5 pt-1"
+						aria-label={m.condition_portal_components()}
+						data-field-components
+					>
+						{#each data.components as part (part.id)}
+							<li class="flex items-center justify-between gap-2" data-component={part.number}>
+								<span class="truncate text-sm">{part.name}</span>
+								<ConditionBar score={part.score} band={scoreBand(part.score, data.thresholds)} />
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if data.recorded.advice && !data.canChange}
 					<p class="text-sm">{data.recorded.advice}</p>
 				{/if}

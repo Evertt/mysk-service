@@ -1,4 +1,7 @@
-/** The Connect page's list and its counts: the KPI tiles, the customer chips and the filters' counts. */
+/**
+ * The Connect page's list and its counts: the KPI tiles, the customer chips and the filters' counts.
+ * A row per component of a unit in care, and one per unit in care without components.
+ */
 import { and, sql } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
@@ -9,7 +12,9 @@ import { customer, customerSite, equipment, equipmentLocation } from "#lib/serve
 import { planList } from "#lib/server/lists/index.ts";
 
 import { query } from "../remote-functions.ts";
-import { unitsSql, withUnitJoins } from "../server/list-sql.ts";
+import { articlesById } from "../server/components.ts";
+import { rowsSql, withRowJoins } from "../server/list-sql.ts";
+import { component } from "../server/schema.ts";
 import { thresholdsOf } from "../server/settings.ts";
 import { conditionList } from "./units-list.ts";
 
@@ -17,21 +22,29 @@ import { conditionList } from "./units-list.ts";
 const asDay = (value: string | null) => (value ? Temporal.PlainDate.from(value) : null);
 
 /**
- * A page of the tenant's units in care with their condition, status and what the other modules
- * know of them (their inspection, their next visit), searched, filtered and sorted as the query
- * says (worst first by default), and how many match. With the tenant's thresholds, which colour the
- * scores, and which columns the tenant has (inspection with checklists, next due with maintenance).
+ * A page of the rows (the components of the tenant's units in care, and those units without
+ * components) with their condition and status, their unit's and what the other modules know of it
+ * (its inspection, its next visit), searched, filtered and sorted as the query says (worst first by
+ * default), and how many match. With the tenant's thresholds, which colour the scores, and which
+ * columns the tenant has (inspection with checklists, next due with maintenance).
  */
 export const getConditionUnits = query(conditionList.query, async (input) => {
-	const listSql = unitsSql();
-	const { unit } = listSql;
+	const listSql = rowsSql();
+	const { unit, row } = listSql;
 	const plan = planList(listSql, input);
-	const [rows, rowCount, thresholds] = await Promise.all([
+	const [found, rowCount, thresholds] = await Promise.all([
 		plan.paged(
-			withUnitJoins(
+			withRowJoins(
 				db
 					.select({
-						id: equipment.id,
+						id: listSql.id,
+						component: {
+							id: component.id,
+							number: component.number,
+							name: component.name,
+							materialId: component.materialId,
+						},
+						unitId: equipment.id,
 						serialNumber: equipment.serialNumber,
 						name: equipment.name,
 						manufacturer: equipment.manufacturer,
@@ -39,14 +52,14 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 						customer: { code: customer.code, name: customer.name },
 						site: customerSite.name,
 						location: { id: equipmentLocation.id, name: equipmentLocation.name },
-						score: unit.score,
-						band: unit.band,
-						advice: unit.advice,
+						score: row.score,
+						band: row.band,
+						advice: row.advice,
 						lastService: unit.lastService,
 						nextDue: sql<string | null>`${unit.nextDue ?? sql`null`}`.mapWith(asDay),
 						inspection: sql<string | null>`${unit.inspection ?? sql`null`}`,
-						status: unit.status,
-						concern: unit.concern,
+						status: row.status,
+						concern: row.concern,
 					})
 					.from(equipment)
 					.$dynamic(),
@@ -55,6 +68,20 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 		plan.count(),
 		thresholdsOf(),
 	]);
+	const known = await articlesById(found.flatMap((each) => each.component?.materialId ?? []));
+	const rows = found.map(({ component: part, ...each }) => ({
+		...each,
+		id: Number(each.id),
+		// A unit's own row has none.
+		component: part?.id
+			? {
+					id: part.id,
+					number: part.number!,
+					name: part.name!,
+					sku: part.materialId === null ? null : (known.get(part.materialId)?.sku ?? null),
+				}
+			: null,
+	}));
 	return {
 		rows,
 		rowCount,
@@ -68,14 +95,14 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 });
 
 /**
- * The counts of the units that match the search and the other filters: by status (the KPI
- * tiles), by score band, and by customer (the chips, most units first, with their names).
+ * The counts of the rows that match the search and the other filters: by status (the KPI tiles),
+ * by score band, and by customer (the chips, most rows first, with their names).
  */
 export const getConditionCounts = query(conditionList.where, async (where) => {
-	const listSql = unitsSql();
+	const listSql = rowsSql();
 	const facets = await planList(listSql, where).facets({
-		status: listSql.unit.status,
-		condition: listSql.unit.band,
+		status: listSql.row.status,
+		condition: listSql.row.band,
 		customer: customer.code,
 	});
 	const codes = Object.keys(facets.customer);
@@ -86,7 +113,7 @@ export const getConditionCounts = query(conditionList.where, async (where) => {
 				.where(and(inList(customer.code, codes), inTenant(customer)))
 		: [];
 	const customers = names
-		.map((row) => ({ ...row, count: facets.customer[row.code] ?? 0 }))
+		.map((each) => ({ ...each, count: facets.customer[each.code] ?? 0 }))
 		.toSorted((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 	return { status: facets.status, condition: facets.condition, customers };
 });

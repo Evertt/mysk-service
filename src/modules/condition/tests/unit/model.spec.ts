@@ -1,9 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { formatCode } from "#lib/numbering.ts";
 import {
 	addWorkingDays,
+	componentNumber,
+	componentStatus,
 	concernOf,
 	defaultThresholds,
+	rolledUpStatus,
 	isWorkingDay,
 	scoreBand,
 	type UnitFacts,
@@ -96,6 +100,65 @@ test("thresholds are whole percentages, critical below attention", () => {
 	expect(validThresholds({ critical: 0, attention: 70 })).toBe(false);
 	expect(validThresholds({ critical: 40, attention: 101 })).toBe(false);
 	expect(validThresholds({ critical: 40.5, attention: 70 })).toBe(false);
+});
+
+describe("a component's status and its unit's", () => {
+	const part = (score: number | null, advice: string | null = null) => ({ score, advice });
+
+	test("a component's follows the unit's rules from its own condition", () => {
+		expect(componentStatus(part(22), facts({ score: 90 }), thresholds)).toEqual({
+			status: "critical",
+			concern: "critical",
+		});
+		expect(componentStatus(part(55), facts(), thresholds).status).toBe("attention");
+		expect(componentStatus(part(90, "Kabelset meenemen."), facts(), thresholds).status).toBe(
+			"attention",
+		);
+		// Not the unit's own score or advice.
+		expect(
+			componentStatus(part(90), facts({ score: 10, advice: "Kapot" }), thresholds).status,
+		).toBe("ok");
+		expect(componentStatus(part(null), facts(), thresholds).status).toBe("ok");
+	});
+
+	test("a component's takes its unit's inspection and planned work", () => {
+		expect(componentStatus(part(95), facts({ inspection: "expired" }), thresholds).status).toBe(
+			"critical",
+		);
+		expect(componentStatus(part(95), facts({ inspection: "rejected" }), thresholds).status).toBe(
+			"attention",
+		);
+		expect(componentStatus(part(22), facts({ planned: true }), thresholds)).toEqual({
+			status: "planned",
+			concern: "critical",
+		});
+	});
+
+	test("a unit's is the worst of its own and its components'", () => {
+		expect(rolledUpStatus(facts({ score: 90 }), [], thresholds)).toEqual(
+			unitStatus(facts({ score: 90 }), thresholds),
+		);
+		expect(rolledUpStatus(facts({ score: 90 }), [part(84), part(22)], thresholds)).toEqual({
+			status: "critical",
+			concern: "critical",
+		});
+		expect(rolledUpStatus(facts({ score: 30 }), [part(84), part(95)], thresholds).status).toBe(
+			"critical",
+		);
+		expect(rolledUpStatus(facts({ score: 90 }), [part(60), part(95)], thresholds).status).toBe(
+			"attention",
+		);
+		expect(rolledUpStatus(facts(), [part(null)], thresholds).status).toBe("ok");
+		// Planned while its work is in hand, keeping what's worst behind it.
+		expect(
+			rolledUpStatus(facts({ score: 90, planned: true }), [part(60), part(22)], thresholds),
+		).toEqual({ status: "planned", concern: "critical" });
+	});
+
+	test("components are numbered like the mockup's codes", () => {
+		expect(formatCode(componentNumber, 1)).toBe("OC-0001");
+		expect(formatCode(componentNumber, 1041)).toBe("OC-1041");
+	});
 });
 
 describe("working days", () => {

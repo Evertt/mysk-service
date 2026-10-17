@@ -3,7 +3,7 @@
  * `#lib/extensions/define.ts`). A module that only enhances checklists may import this file, and
  * gets what it needs from the slot's props: never from checklists' tables.
  */
-import { defineSaveHook, defineSlot } from "#lib/extensions/define.ts";
+import { defineCollector, defineSaveHook, defineSlot } from "#lib/extensions/define.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 
 import type { ChecklistKind, PointResult } from "../model.ts";
@@ -37,6 +37,11 @@ export interface RejectedPoint {
 	text: string;
 	/** The unit's title, e.g. "Sectionaaldeur dock 3". */
 	unit: string;
+	/**
+	 * The article the point checks on that unit, if any (`checklists.pointArticles`, e.g. a
+	 * component's): what's suggested first.
+	 */
+	materialId: number | null;
 }
 
 /**
@@ -85,4 +90,25 @@ export interface ChecklistCompleting {
  */
 export const checklistCompleted = defineSaveHook<ChecklistCompleting, { message: string }>(
 	"checklists.completed",
+);
+
+/** A unit's checklist point, as asked about the articles it checks. */
+export interface UnitPoint {
+	equipmentId: number;
+	templateItemId: number;
+}
+
+/** The article (a material) a point of a unit checks: e.g. that of a component of the unit's. */
+export interface PointArticle extends UnitPoint {
+	materialId: number;
+}
+
+/**
+ * The articles the units' points check, e.g. the condition module's components': a rejected point
+ * of a component whose article is in the shop suggests that article first. A module that fails is
+ * left out.
+ */
+export const pointArticles = defineCollector<{ points: readonly UnitPoint[] }, PointArticle[]>(
+	"checklists.pointArticles",
+	{ onError: "skip" },
 );

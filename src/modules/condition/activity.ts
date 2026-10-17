@@ -10,9 +10,19 @@ export const conditionActions = {
 	recorded: m.condition_activity_action_recorded,
 } satisfies Record<string, Sentence>;
 
-/** A condition's label in the log: its unit's serial number and the score. */
-export const conditionLabel = (record: { serialNumber: string; score: number }) =>
-	`${record.serialNumber} · ${record.score}%`;
+/**
+ * A condition's label in the log: its unit's serial number, its component's number (of a
+ * component's condition) and the score.
+ */
+export const conditionLabel = (record: {
+	serialNumber: string;
+	component?: string;
+	score: number;
+}) => [record.serialNumber, record.component, `${record.score}%`].filter(Boolean).join(" · ");
+
+/** A component's label in the log: its unit's serial number, its number and its name. */
+export const componentLabel = (record: { serialNumber: string; number: string; name: string }) =>
+	`${record.serialNumber} · ${record.number} · ${record.name}`;
 
 /** The unit's serial number in a condition's label. */
 const serialOf = (label: string) => label.split(" · ")[0];
@@ -31,6 +41,17 @@ export const conditionSubjects: Record<string, SubjectType> = {
 		fields: {
 			score: { label: m.condition_field_score, format: percent },
 			advice: { label: m.condition_field_advice },
+		},
+	},
+	/** A unit's component, logged with its unit as its parent; it's on the unit's page. */
+	component: {
+		noun: m.condition_activity_subject_component,
+		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: serialOf(label) }),
+		fields: {
+			name: { label: m.condition_field_component_name },
+			article: { label: m.condition_field_article },
+			checkpoints: { label: m.condition_field_checkpoints },
+			position: { label: m.condition_field_position },
 		},
 	},
 	/** The organization's condition settings; they have no label, so they read as their noun. */

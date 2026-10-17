@@ -13,7 +13,9 @@
  *   contract covers the customer's units) or adds to it (the call-outs a contract's response time
  *   is shown on): it can add to the draft, and the rest of the seed takes it from there. Keeping
  *   to this order keeps the demo data the same as it was before the module had a folder of its own.
- * - `run()`, once all the tenants and their core data are in, inserts what `generate()` made.
+ * - `run()`, once all the tenants and their core data are in, inserts what `generate()` made, in
+ *   the registry's order, but after the seeds it says it comes `after` (whose rows it reads: the
+ *   condition module's components look up their articles, the materials module's).
  *
  * What the module does at runtime through hooks (`#lib/server/extensions.ts`), it does at seed time
  * through collectors, which the seed of whoever consumes it asks without knowing the module:
@@ -119,6 +121,11 @@ export interface ModuleSeed<Data = any> {
 	 * orders in `period`. Ids in references are global, as in the database.
 	 */
 	billableItems?(data: Data, period: BillingPeriod): SeedBillableItem[];
+	/**
+	 * The modules whose `run()` this one's comes after, when it reads what they insert (a module it
+	 * only enhances, which the registry's order doesn't put first).
+	 */
+	after?: readonly string[];
 	/** Inserts the module's demo data for the tenants that have it. */
 	run(context: SeedContext<Data>): Promise<void>;
 }
@@ -150,4 +157,26 @@ export function seedCollectors(
 		billableItems: (period) =>
 			own.flatMap(({ id, seed }) => seed.billableItems?.(data[id], period) ?? []),
 	};
+}
+
+/**
+ * The order the `seeds` run in: the registry's, but each right after the last of the seeds it says
+ * it comes `after` (those that come later in the registry).
+ */
+export function runOrder<Seed extends { id: string; seed: Pick<ModuleSeed, "after"> }>(
+	seeds: readonly Seed[],
+): Seed[] {
+	const ordered = [...seeds];
+	for (const each of seeds) {
+		const at = ordered.indexOf(each);
+		const last = Math.max(
+			-1,
+			...(each.seed.after ?? []).map((id) => ordered.findIndex((other) => other.id === id)),
+		);
+		if (last > at) {
+			ordered.splice(at, 1);
+			ordered.splice(last, 0, each);
+		}
+	}
+	return ordered;
 }

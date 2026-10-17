@@ -13,7 +13,12 @@ import { db } from "#lib/server/db/index.ts";
 
 import { advice } from "../form/condition-schema.ts";
 import { forEngineers } from "../remote-functions.ts";
-import { adviseFieldCondition, checklistCondition, findFieldUnit } from "../server/conditions.ts";
+import {
+	adviseFieldCondition,
+	checklistComponentConditions,
+	checklistCondition,
+	findFieldUnit,
+} from "../server/conditions.ts";
 import { thresholdsOf } from "../server/settings.ts";
 
 const unitOnOrder = v.object({
@@ -23,18 +28,23 @@ const unitOnOrder = v.object({
 
 /**
  * The condition the checklist of a unit on one of the engineer's orders gave it (none when none of
- * its points counted), whether they can still give advice (the order in progress), and the
+ * its points counted) and its components', whether they can still give advice (the order in progress), and the
  * thresholds that colour it.
  */
 export const getFieldCondition = forEngineers.query(unitOnOrder, async (input) => {
 	const engineer = await currentEngineer();
 	const found = await findFieldUnit(db, engineer.id, input.number, input.equipmentId);
-	const [recorded, thresholds] = await Promise.all([
+	const [recorded, components, thresholds] = await Promise.all([
 		checklistCondition(db, found.unit.id, found.order.id),
+		checklistComponentConditions(found.unit.id, found.order.id),
 		thresholdsOf(),
 	]);
 	return {
 		recorded: recorded ?? null,
+		// Each component's once, the latest.
+		components: components.filter(
+			(each, i) => components.findIndex((other) => other.number === each.number) === i,
+		),
 		canChange: fieldActions(found.order.status).work,
 		thresholds,
 	};
