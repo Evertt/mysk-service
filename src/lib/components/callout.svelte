@@ -56,7 +56,7 @@
 				<Icon class="size-5" />
 			</div>
 		{:else if Icon}
-			<Icon class={["mt-0.5 size-4 shrink-0", tone === "brand" && "text-primary"]} />
+			<Icon class={cn("mt-0.5 size-4 shrink-0", tone === "brand" && "text-primary")} />
 		{/if}
 		<div class="flex min-w-0 flex-col gap-0.5">
 			{#if title}

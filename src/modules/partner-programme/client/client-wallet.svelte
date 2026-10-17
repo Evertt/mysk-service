@@ -9,7 +9,7 @@
 	import CreditCardIcon from "@lucide/svelte/icons/credit-card";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
-	import DarkPanel from "#lib/components/dark-panel.svelte";
+	import DarkPanel, { type DarkPanelLine } from "#lib/components/dark-panel.svelte";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
@@ -33,7 +33,7 @@
 
 	let { wallet, entries = false }: { wallet: Wallet; entries?: boolean } = $props();
 
-	const lines = $derived([
+	const lines = $derived<DarkPanelLine[]>([
 		{
 			label: m.partners_wallet_awarded(),
 			value: formatCents(wallet.awarded),
