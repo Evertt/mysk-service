@@ -2,7 +2,17 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
 
-import { afresh, countIn, isRemote, organizations, rows, useApp, value } from "./app.ts";
+import {
+	afresh,
+	countIn,
+	fitsWidth,
+	isRemote,
+	onPhone,
+	organizations,
+	rows,
+	useApp,
+	value,
+} from "./app.ts";
 import { busiest, equipmentPage, serialsIn, unit } from "./equipment-helpers.ts";
 import { remoteErrorStatus, tamperWithCommand, tamperWithQuery } from "./remote-functions.ts";
 
@@ -126,6 +136,69 @@ describe("in North", () => {
 		expect(made.length).toBeGreaterThan(0);
 		expect(made.every((row) => row.includes(manufacturer))).toBe(true);
 		await reset();
+	});
+
+	test("the band counts the units listed, and its category chips set the category filter", async () => {
+		const { page } = app;
+		const band = page.locator("[data-toolbar-band]");
+		const pill = band.locator("[data-band-count]");
+		const total = await countIn("equipment", north.id);
+		expect(await band.getByRole("heading", { level: 1 }).innerText()).toBe("Equipment");
+		expect(await pill.innerText()).toBe(`${formatNumber(total)} units`);
+		const chips = band.getByRole("group", { name: "Category" });
+		// "All" and each of North's categories with units, in its order, with their counts.
+		const categories = await rows<{ id: number; name: string; units: number }>(
+			`select c.id, c.name, count(e.id) as units from equipment_category c
+			 join equipment e on e.category_id = c.id
+			 where c.organization_id = ? group by c.id order by c.position, c.id`,
+			[north.id],
+		);
+		/** A chip's label and count, as one line. */
+		const chipText = (text: string) => text.replace(/\s+/g, " ");
+		expect((await chips.getByRole("button").allInnerTexts()).map(chipText)).toEqual([
+			`All ${formatNumber(total)}`,
+			...categories.map((category) => `${category.name} ${formatNumber(category.units)}`),
+		]);
+		expect(await chips.locator('[data-chip="all"]').getAttribute("aria-pressed")).toBe("true");
+
+		// A chip filters by its category alone, in the URL and the filter's pill.
+		const [first, second] = categories;
+		await chips.locator(`[data-chip="${first.id}"]`).click();
+		await expect.poll(() => app.rowCount()).toBe(first.units);
+		expect(new URL(page.url()).searchParams.get("category")).toBe(String(first.id));
+		expect(await app.filterPill("Category").innerText()).toContain(first.name);
+		expect(await pill.innerText()).toBe(`${formatNumber(first.units)} units`);
+		expect(await chips.locator(`[data-chip="${first.id}"]`).getAttribute("aria-pressed")).toBe(
+			"true",
+		);
+		// Another chip takes its place; the chosen one again, or "All", lifts the filter.
+		await chips.locator(`[data-chip="${second.id}"]`).click();
+		await expect.poll(() => app.rowCount()).toBe(second.units);
+		await chips.locator(`[data-chip="${second.id}"]`).click();
+		await expect.poll(() => app.rowCount()).toBe(total);
+		expect(new URL(page.url()).searchParams.get("category")).toBeNull();
+		await chips.locator(`[data-chip="${first.id}"]`).click();
+		await expect.poll(() => app.rowCount()).toBe(first.units);
+		await chips.locator('[data-chip="all"]').click();
+		await expect.poll(() => app.rowCount()).toBe(total);
+
+		// The other filters narrow the chips' counts.
+		await filter("Status", "Operational");
+		await expect.poll(() => app.rowCount()).toBe(await count(`status = 'operational'`));
+		const operational = await count(`status = 'operational' and category_id = ?`, [first.id]);
+		await expect
+			.poll(async () => chipText(await chips.locator(`[data-chip="${first.id}"]`).innerText()))
+			.toBe(`${first.name} ${formatNumber(operational)}`);
+		await page.getByRole("button", { name: "Reset" }).click();
+		await expect.poll(() => app.rowCount()).toBe(total);
+	});
+
+	test("the band and its chips fit a phone's screen", async () => {
+		await onPhone(app.page, async () => {
+			await app.go(afresh("/equipment"));
+			await app.page.locator("[data-toolbar-band] [data-filter-chips]").waitFor();
+			expect(await fitsWidth(app.page)).toBe(true);
+		});
 	});
 
 	test("sorting by warranty, and by open orders", async () => {

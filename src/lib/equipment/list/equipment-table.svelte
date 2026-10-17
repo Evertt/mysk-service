@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from "svelte";
+	import { type Snippet, untrack } from "svelte";
 
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
@@ -21,6 +21,7 @@
 	import type { getEquipmentCategories } from "../categories/categories.remote.ts";
 	import { statusOptions } from "../display.ts";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
+	import CategoryChips from "./category-chips.svelte";
 	import { columns, type EquipmentRow } from "./columns.ts";
 	import { type getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
 	import type { equipmentList } from "./equipment-list.ts";
@@ -32,6 +33,7 @@
 		equipment,
 		facets,
 		categories,
+		header,
 	}: {
 		/** The equipment list with the tenant's modules' columns (`extendList()`). */
 		list: List<typeof equipmentList.columns>;
@@ -42,8 +44,13 @@
 		equipment: Awaited<ReturnType<typeof getEquipmentList>>;
 		/** How many units have each value of the filters'. */
 		facets: Awaited<ReturnType<typeof getEquipmentFacets>>;
-		/** The tenant's categories in their order, for the category filter. */
+		/** The tenant's categories in their order, for the category filter and its chips. */
 		categories: Awaited<ReturnType<typeof getEquipmentCategories>>;
+		/**
+		 * Above the table, in its context: the page's band, given the category chips to show (they
+		 * set the table's filter). Without it, the chips stand on their own.
+		 */
+		header?: Snippet<[chips: Snippet]>;
 	} = $props();
 
 	// By id, as the URL has them.
@@ -104,8 +111,17 @@
 	const loading = serverTableLoading(table, list, () => pages.key);
 </script>
 
+{#snippet chips()}
+	<CategoryChips {categories} counts={facets.category} />
+{/snippet}
+
 <table.AppTable>
 	<div class="flex min-h-0 flex-col gap-4">
+		{#if header}
+			{@render header(chips)}
+		{:else}
+			{@render chips()}
+		{/if}
 		<table.Toolbar searchLabel={m.equipment_search()}>
 			<FacetedFilter
 				columnId="category"
