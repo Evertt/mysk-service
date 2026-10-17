@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
-import { demoAccount, demoOrganizationId, demoRoles } from "#routes/login/demo-accounts.server.ts";
+import { demoAccount, demoOrganizationId, demoRoleOf } from "#routes/demo-accounts.server.ts";
+import { demoRoles } from "#routes/demo-roles.ts";
 
 describe("demoAccount", () => {
 	test("maps each role to its fixed SHLTR demo user and home", () => {
@@ -32,6 +33,19 @@ describe("demoAccount", () => {
 		expect(demoAccount("engineer")!.hasRole(["engineer", "admin"])).toBe(false);
 		expect(demoAccount("customer")!.hasRole(["member"])).toBe(false);
 		expect(demoAccount("customer")!.hasRole(["customer", "owner"])).toBe(false);
+	});
+
+	test("knows the role of each demo account, and of no one else", () => {
+		for (const role of demoRoles) expect(demoRoleOf(demoAccount(role)!.email)).toBe(role);
+		for (const email of [
+			"jan@shltr.example",
+			"admin@fieldworks.example",
+			"OWNER@shltr.example",
+			"",
+			"admin",
+		]) {
+			expect(demoRoleOf(email), email).toBeUndefined();
+		}
 	});
 
 	test("refuses anything else: other names, emails, ids, prototype keys and non-strings", () => {

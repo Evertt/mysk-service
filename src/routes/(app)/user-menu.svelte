@@ -1,7 +1,8 @@
 <!--
 	@component
-	The signed-in user in the sidebar footer, with a menu to choose the language and to sign out.
-	Signing out is a real form, so it also works without JavaScript.
+	The signed-in user in the sidebar footer, with a menu to choose the language and to sign out
+	(and in the SHLTR demo to view it as another role, `view-as.svelte`). Signing out is a real form,
+	so it also works without JavaScript.
 -->
 <script lang="ts">
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
@@ -11,8 +12,12 @@
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { useSidebar } from "#ui/sidebar";
 
+	import { getViewAs } from "../demo.remote.ts";
+	import ViewAs from "../view-as.svelte";
+
 	const sidebar = useSidebar();
-	const user = $derived(await getCurrentUser());
+	// Together, not one after the other.
+	const [user, viewAs] = $derived(await Promise.all([getCurrentUser(), getViewAs()]));
 	const initials = $derived(
 		user.name
 			.split(/\s+/)
@@ -62,6 +67,11 @@
 				<DropdownMenu.Group>
 					<LanguageSwitcher submenu />
 				</DropdownMenu.Group>
+				{#if viewAs}
+					<!-- The SHLTR demo's switch between its roles (with `DEMO_SIGN_IN` only). -->
+					<DropdownMenu.Separator />
+					<ViewAs current={viewAs.current} inMenu />
+				{/if}
 				<DropdownMenu.Separator />
 				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to the
 					session that ends, so the login page loads afresh rather than this page refreshing them

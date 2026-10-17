@@ -50,7 +50,7 @@ export const variables = defineEnvVars({
 	},
 	DEMO_SIGN_IN: {
 		description:
-			"Optional, for local development and staging only, never in production. `true` shows the login page's demo buttons, which sign in as SHLTR's demo users without a password (`src/routes/login/demo.remote.ts`); anything else, or unset, hides them and refuses their sign-in.",
+			"Optional, for local development and staging only, never in production. `true` shows the login page's demo buttons, which sign in as SHLTR's demo users without a password, and the user menus' 'View as' in SHLTR, which switches between them (`src/routes/demo.remote.ts`); anything else, or unset, hides them and refuses their sign-in.",
 		schema: (value) => value === "true",
 	},
 	DEV_REMOTE_DELAY_MS: {

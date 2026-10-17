@@ -113,8 +113,13 @@ Marloes (SHLTR's owner, to the office dashboard), **Engineer** as Lev (to the en
 sign in through better-auth with the demo password, like the form, so the session and its
 organization (SHLTR) are the same as after typing it. The browser sends only the role's name; the
 server maps it to its fixed account and refuses one that isn't there, isn't in SHLTR or hasn't the
-role (`src/routes/login/demo.remote.ts`, `demo-accounts.server.ts`). Without the flag the buttons
-aren't there and the server answers 404 to whatever is posted. The flag is set for staging only
+role (`src/routes/demo.remote.ts`, `demo-accounts.server.ts`). Once in, the user menus (the
+office's, and a button in each portal's header) have **View as** with the same three roles, the
+current one checked, to switch without signing out: it ends the session (its row deleted) and
+signs in as the role chosen, in one request, to that role's home. It's there only for sessions in
+SHLTR, so other tenants' users never see it, and the server refuses it (404) to anyone else.
+Without the flag the buttons and the switch aren't there and the server answers 404 to whatever is
+posted. The flag is set for staging only
 (`wrangler.jsonc`'s `env.staging.vars`) and in `.env.example` for local development: never set it
 in production (`wrangler.jsonc`'s top-level vars, or a server of your own), where it would let
 anyone in as these users if they existed.

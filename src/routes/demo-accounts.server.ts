@@ -1,14 +1,12 @@
 /**
- * The login page's demo sign-in (`demo.remote.ts`): which SHLTR demo user each button signs in as,
- * and whether an account is that user. The client sends only a role's name; the account is fixed
- * here, never taken from the request.
+ * The SHLTR demo's one-click sign-in (`demo.remote.ts`: the login page's buttons and the user
+ * menus' "View as"): which demo user each role signs in as, and whether an account is that user.
+ * The client sends only a role's name; the account is fixed here, never taken from the request.
  */
 import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { demoOrganizations } from "#lib/server/db/demo.ts";
 
-/** The demo buttons, in their order on the page. */
-export const demoRoles = ["admin", "engineer", "customer"] as const;
-type DemoRole = (typeof demoRoles)[number];
+import { type DemoRole, demoRoles } from "./demo-roles.ts";
 
 interface DemoAccount {
 	/** The demo user's email (`demoUsers` in `#lib/server/db/demo.ts`). */
@@ -36,3 +34,7 @@ export const demoAccount = (role: unknown): DemoAccount | undefined =>
 	typeof role === "string" && (demoRoles as readonly string[]).includes(role)
 		? demoAccounts[role as DemoRole]
 		: undefined;
+
+/** The demo role whose account has `email`, or `undefined` for anyone else. */
+export const demoRoleOf = (email: string): DemoRole | undefined =>
+	demoRoles.find((role) => demoAccounts[role].email === email);

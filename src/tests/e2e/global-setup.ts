@@ -98,7 +98,7 @@ export async function startServer(
 				ORIGIN: baseURL,
 				MAIL_OUTBOX: outbox,
 				CRON_SECRET: cronSecret,
-				// The login page's one-click demo sign-in (`src/routes/login/demo.remote.ts`).
+				// The login page's one-click demo sign-in (`src/routes/demo.remote.ts`).
 				DEMO_SIGN_IN: "true",
 				...env,
 			},

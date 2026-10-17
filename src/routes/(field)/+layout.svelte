@@ -16,7 +16,9 @@
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
+	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
+	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import { getMe, signOut } from "./my/portal.remote.ts";
 	import PhoneFrame from "./phone-frame.svelte";
@@ -29,7 +31,7 @@
 	const orderTypes = getOrderTypes();
 	if (browser) nameOrderTypes(() => orderTypes.current);
 
-	const [me] = $derived(await Promise.all([getMe(), orderTypes]));
+	const [me, , viewAs] = $derived(await Promise.all([getMe(), orderTypes, getViewAs()]));
 </script>
 
 <PhoneFrame>
@@ -52,6 +54,10 @@
 				<LanguageSwitcher />
 				<ThemeSwitcher />
 				<ModeSwitcher />
+				{#if viewAs}
+					<!-- In the desktop phone frame its menu opens in the phone's screen (`BitsConfig`). -->
+					<ViewAs current={viewAs.current} />
+				{/if}
 				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to
 					the session that ends, so the login page loads afresh rather than this page refreshing
 					them signed out (which logged errors). -->

@@ -13,7 +13,9 @@
 	import { getOrderTypes } from "#lib/orders/remotes.ts";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 
+	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
+	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import PortalSidebar from "./portal-sidebar.svelte";
 	import { getPortalMe, signOut } from "./portal/client.remote.ts";
@@ -27,7 +29,7 @@
 	if (browser) nameOrderTypes(() => orderTypes.current);
 
 	// Together, not one after the other.
-	const [me] = $derived(await Promise.all([getPortalMe(), orderTypes]));
+	const [me, , viewAs] = $derived(await Promise.all([getPortalMe(), orderTypes, getViewAs()]));
 </script>
 
 <Sidebar.Provider data-customer-portal>
@@ -49,6 +51,9 @@
 			<div class="ml-auto flex shrink-0 items-center gap-1">
 				<LanguageSwitcher />
 				<ModeSwitcher />
+				{#if viewAs}
+					<ViewAs current={viewAs.current} />
+				{/if}
 				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to
 					the session that ends, so the login page loads afresh rather than this page refreshing
 					them signed out (which logged errors). -->
