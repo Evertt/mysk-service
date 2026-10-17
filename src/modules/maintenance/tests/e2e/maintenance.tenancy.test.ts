@@ -98,7 +98,10 @@ describe("in South, which doesn't have the module", () => {
 		await app.page.getByText("Owner").first().waitFor();
 		expect(await card().count()).toBe(0);
 		await app.go("/");
-		await app.page.getByRole("heading", { name: "Dashboard" }).waitFor();
+		// The dashboard greets its member.
+		await app.page
+			.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), / })
+			.waitFor();
 		expect(await app.page.locator("[data-maintenance-overview]").count()).toBe(0);
 	});
 

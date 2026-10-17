@@ -133,7 +133,10 @@ describe("in Dutch", () => {
 			.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), / })
 			.waitFor();
 		expect(
-			await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Orders" }).count(),
+			await page
+				.locator('[data-sidebar="content"]')
+				.getByRole("link", { name: "Orders", exact: true })
+				.count(),
 		).toBe(1);
 	});
 });

@@ -142,9 +142,9 @@ describe("in North, contracts count on orders", () => {
 		expect(done.some((order) => priceOf(order).included > 0)).toBe(true);
 		const expected = done.reduce((sum, order) => sum + priceOf(order).total, 0);
 		const revenue = app.page
-			.getByText("Revenue, last 30 days", { exact: true })
-			.locator("..")
-			.locator('[data-slot="card-title"]');
+			.locator("[data-stat-tile]")
+			.filter({ has: app.page.getByText("Revenue, last 30 days", { exact: true }) })
+			.locator("[data-stat-value]");
 		expect(cents(await revenue.innerText())).toBe(expected);
 	});
 

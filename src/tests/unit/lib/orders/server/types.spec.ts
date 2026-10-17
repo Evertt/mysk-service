@@ -106,8 +106,8 @@ describe("the types that must stay offered", () => {
 
 	test("and those of the modules that are on, with their names", () => {
 		const required = requiredOrderTypes(["checklists", "maintenance", "docks", "invoices"]);
-		expect(required.get("inspection")).toEqual(["Checklists", "Maintenance plans"]);
-		expect(required.get("maintenance")).toEqual(["Checklists", "Maintenance plans"]);
+		expect(required.get("inspection")).toEqual(["Work orders", "Maintenance plans"]);
+		expect(required.get("maintenance")).toEqual(["Work orders", "Maintenance plans"]);
 		expect(required.get("breakdown")).toEqual(["Customer portal", "Docks"]);
 		expect(required.has("survey")).toBe(false);
 	});
