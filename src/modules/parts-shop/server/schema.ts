@@ -131,6 +131,8 @@ export const shopOrder = sqliteTable(
 		uniqueIndex("shop_order_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("shop_order_organization_number").on(table.organizationId, table.number),
 		index("shop_order_customer").on(table.organizationId, table.customerId),
+		index("shop_order_wallet_entry").on(table.organizationId, table.walletEntryId),
+		index("shop_order_placed_by").on(table.placedBy),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -160,6 +162,7 @@ export const shopOrderLine = sqliteTable(
 	},
 	(table) => [
 		index("shop_order_line_order").on(table.organizationId, table.orderId),
+		index("shop_order_line_material").on(table.organizationId, table.materialId),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [shopOrder.organizationId, shopOrder.id],

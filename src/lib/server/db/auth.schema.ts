@@ -135,6 +135,8 @@ export const invitation = sqliteTable(
 	(table) => [
 		index("invitation_organizationId_idx").on(table.organizationId),
 		index("invitation_email_idx").on(table.email),
+		// Not better-auth's own (`pnpm auth:schema` leaves it out): every foreign key has an index.
+		index("invitation_inviterId_idx").on(table.inviterId),
 	],
 );
 

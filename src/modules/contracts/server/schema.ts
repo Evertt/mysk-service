@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	integer,
 	primaryKey,
 	sqliteTable,
@@ -44,6 +45,7 @@ export const contract = sqliteTable(
 		uniqueIndex("contract_organization_number").on(table.organizationId, table.number),
 		// For coverage, which must be of the contract's customer's equipment.
 		uniqueIndex("contract_customer_id").on(table.customerId, table.id),
+		index("contract_customer").on(table.organizationId, table.customerId),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
@@ -65,6 +67,8 @@ export const contractEquipment = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.contractId, table.equipmentId] }),
+		index("contract_equipment_contract").on(table.customerId, table.contractId),
+		index("contract_equipment_equipment").on(table.customerId, table.equipmentId),
 		foreignKey({
 			columns: [table.customerId, table.contractId],
 			foreignColumns: [contract.customerId, contract.id],

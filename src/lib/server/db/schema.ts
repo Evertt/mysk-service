@@ -117,8 +117,8 @@ export const engineer = sqliteTable(
 		// Unique within a tenant; another tenant may use the same email.
 		uniqueIndex("engineer_organization_email").on(table.organizationId, table.email),
 		uniqueIndex("engineer_organization_id").on(table.organizationId, table.id),
-		// A user is at most one engineer per tenant.
-		uniqueIndex("engineer_organization_user").on(table.organizationId, table.userId),
+		// A user is at most one engineer per tenant. The user first: also the key to `user`.
+		uniqueIndex("engineer_user_organization").on(table.userId, table.organizationId),
 		index("engineer_organization_name").on(table.organizationId, table.name),
 	],
 );
@@ -237,11 +237,12 @@ export const equipment = sqliteTable(
 		// For the equipment list, which filters by customer and sorts by unit.
 		index("equipment_organization_customer").on(table.organizationId, table.customerId),
 		index("equipment_organization_unit").on(table.organizationId, table.manufacturer, table.model),
-		index("equipment_site").on(table.siteId),
+		// A site's units; with the customer, also the key to the site.
+		index("equipment_site").on(table.siteId, table.customerId),
 		// Whether a category is in use, and the list's filter by it.
 		index("equipment_organization_category").on(table.organizationId, table.categoryId),
-		// A location's units (and whether it has any).
-		index("equipment_by_location").on(table.locationId),
+		// A location's units (and whether it has any); with the site, also the key to the location.
+		index("equipment_by_location").on(table.locationId, table.siteId),
 		uniqueIndex("equipment_qr_token").on(table.qrToken),
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
@@ -332,8 +333,10 @@ export const orderUnit = sqliteTable(
 			table.equipmentId,
 		),
 		uniqueIndex("order_unit_order_position").on(table.orderId, table.position),
-		// A unit's orders: its service history, its open orders in the equipment list.
-		index("order_unit_equipment").on(table.equipmentId, table.orderId),
+		// A unit's orders: its service history, its open orders in the equipment list. With the
+		// customer (the unit's only one while it's on orders), also the key to the unit.
+		index("order_unit_equipment").on(table.equipmentId, table.customerId, table.orderId),
+		index("order_unit_customer_order").on(table.customerId, table.orderId),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [order.organizationId, order.id],
@@ -489,6 +492,7 @@ export const integrationToken = sqliteTable(
 	(table) => [
 		uniqueIndex("integration_token_hash").on(table.tokenHash),
 		index("integration_token_organization_module").on(table.organizationId, table.moduleId),
+		index("integration_token_created_by").on(table.createdBy),
 	],
 );
 
@@ -508,7 +512,8 @@ export const orderNote = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		index("order_note_order").on(table.orderId, table.createdAt),
+		index("order_note_order").on(table.organizationId, table.orderId, table.createdAt),
+		index("order_note_user").on(table.userId),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [order.organizationId, order.id],
@@ -539,6 +544,8 @@ export const orderSignoff = sqliteTable(
 		signedAt: moment("signed_at").notNull(),
 	},
 	(table) => [
+		index("order_signoff_organization_order").on(table.organizationId, table.orderId),
+		index("order_signoff_user").on(table.userId),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [order.organizationId, order.id],
@@ -577,8 +584,9 @@ export const portalContact = sqliteTable(
 		uniqueIndex("portal_contact_organization_id").on(table.organizationId, table.id),
 		// For their sites, which must be their own customer's.
 		uniqueIndex("portal_contact_customer_id").on(table.customerId, table.id),
-		// A user is at most one customer's contact per tenant, and an address is invited once.
-		uniqueIndex("portal_contact_organization_user").on(table.organizationId, table.userId),
+		// A user is at most one customer's contact per tenant (the user first: also the key to
+		// `user`), and an address is invited once.
+		uniqueIndex("portal_contact_user_organization").on(table.userId, table.organizationId),
 		uniqueIndex("portal_contact_organization_email").on(table.organizationId, table.email),
 		index("portal_contact_organization_customer").on(table.organizationId, table.customerId),
 		foreignKey({
@@ -600,7 +608,10 @@ export const portalContactSite = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.contactId, table.siteId] }),
-		index("portal_contact_site_site").on(table.siteId),
+		// A site's contacts; with the customer, also the key to the site.
+		index("portal_contact_site_site").on(table.siteId, table.customerId),
+		index("portal_contact_site_organization_contact").on(table.organizationId, table.contactId),
+		index("portal_contact_site_customer_contact").on(table.customerId, table.contactId),
 		foreignKey({
 			columns: [table.organizationId, table.contactId],
 			foreignColumns: [portalContact.organizationId, portalContact.id],
@@ -637,6 +648,9 @@ export const orderRequest = sqliteTable(
 		rejectionReason: text("rejection_reason"),
 	},
 	(table) => [
+		index("order_request_organization_order").on(table.organizationId, table.orderId),
+		index("order_request_user").on(table.userId),
+		index("order_request_decided_by").on(table.decidedBy),
 		foreignKey({
 			columns: [table.organizationId, table.orderId],
 			foreignColumns: [order.organizationId, order.id],
@@ -712,10 +726,10 @@ export const savedView = sqliteTable(
 			.$onUpdate(() => Temporal.Now.instant()),
 	},
 	(table) => [
-		// A user's views of a table have different names.
+		// A user's views of a table have different names. The user first: also the key to `user`.
 		uniqueIndex("saved_view_user_table_name").on(
-			table.organizationId,
 			table.userId,
+			table.organizationId,
 			table.tableKey,
 			table.name,
 		),
@@ -753,7 +767,10 @@ export const tableMemory = sqliteTable(
 			.default(sql`(unixepoch())`)
 			.$onUpdate(() => Temporal.Now.instant()),
 	},
-	(table) => [primaryKey({ columns: [table.organizationId, table.userId, table.tableKey] })],
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.userId, table.tableKey] }),
+		index("table_memory_user").on(table.userId),
+	],
 );
 
 // --- Activity log ---------------------------------------------------------------------------------
@@ -796,5 +813,6 @@ export const activity = sqliteTable(
 		index("activity_organization").on(table.organizationId, table.id),
 		index("activity_subject").on(table.organizationId, table.subjectType, table.subjectId),
 		index("activity_parent").on(table.organizationId, table.parentType, table.parentId),
+		index("activity_user").on(table.userId),
 	],
 );

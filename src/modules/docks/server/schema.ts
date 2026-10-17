@@ -54,8 +54,10 @@ export const dockPosition = sqliteTable(
 		uniqueIndex("dock_position_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("dock_position_organization_code").on(table.organizationId, table.code),
 		index("dock_position_site").on(table.organizationId, table.siteId),
-		index("dock_position_door").on(table.doorId),
-		index("dock_position_leveller").on(table.levellerId),
+		// A unit's docks; with their tenant columns, also the keys to the units and the location.
+		index("dock_position_door").on(table.doorId, table.doorOrganizationId),
+		index("dock_position_leveller").on(table.levellerId, table.levellerOrganizationId),
+		index("dock_position_location").on(table.locationOrganizationId, table.locationId),
 		foreignKey({
 			columns: [table.organizationId, table.siteId],
 			foreignColumns: [customerSite.organizationId, customerSite.id],
@@ -177,6 +179,7 @@ export const dockEvent = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.organizationId, table.eventId] }),
 		index("dock_event_received").on(table.organizationId, table.receivedAt),
+		index("dock_event_dock").on(table.organizationId, table.dockId),
 		foreignKey({
 			columns: [table.organizationId, table.dockId],
 			foreignColumns: [dockPosition.organizationId, dockPosition.id],
@@ -202,6 +205,8 @@ export const dockEscalation = sqliteTable(
 	},
 	(table) => [
 		index("dock_escalation_door").on(table.organizationId, table.equipmentId),
+		index("dock_escalation_dock").on(table.organizationId, table.dockId),
+		index("dock_escalation_order").on(table.organizationId, table.orderId),
 		foreignKey({
 			columns: [table.organizationId, table.dockId],
 			foreignColumns: [dockPosition.organizationId, dockPosition.id],

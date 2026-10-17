@@ -56,8 +56,10 @@ export const maintenancePlan = sqliteTable(
 		uniqueIndex("maintenance_plan_organization_id").on(table.organizationId, table.id),
 		// For the due list and the dashboard, which look for the plans due before a day.
 		index("maintenance_plan_organization_next_due").on(table.organizationId, table.nextDueOn),
-		// For a unit's plans (its page, the equipment list's column).
-		index("maintenance_plan_equipment").on(table.equipmentId),
+		// For a unit's plans (its page, the equipment list's column); with the tenant, also the key to
+		// the unit.
+		index("maintenance_plan_equipment").on(table.equipmentId, table.organizationId),
+		index("maintenance_plan_last_order").on(table.lastOrderOrganizationId, table.lastOrderId),
 		foreignKey({
 			columns: [table.organizationId, table.equipmentId],
 			foreignColumns: [equipment.organizationId, equipment.id],
