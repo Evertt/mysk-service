@@ -6,8 +6,9 @@ import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from "vit
 
 import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
-import { activity, order, orderUnit } from "#lib/server/db/schema.ts";
+import { activity, equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import type { ChecklistCompleting } from "#modules/checklists/api/extensions.ts";
+import { yearStateSql } from "#modules/checklists/server/assets.ts";
 import {
 	saveOrderChecklists,
 	saveUnitChecklists,
@@ -522,5 +523,94 @@ describe("filling a checklist in, in the field", () => {
 		await changeOrder(id, "status", "scheduled");
 		expect(await thrown(() => answerPoint(1, point.id, "ok"))).toMatchObject({ status: 400 });
 		expect((await pointsOf(made.id))[0].result).toBeNull();
+	});
+});
+
+describe("filling a checklist in, in the office, for the engineer", () => {
+	test("on any open order, by the same rules: completed by the member, without an engineer", async () => {
+		freezeNow(at("2026-10-17 15:00"));
+		// Not started yet: the office fills in what came back on paper.
+		const id = await orderWith([10], { status: "scheduled" });
+		const [made] = await checklistsOf(id);
+		const points = await pointsOf(made.id);
+		await answerPoint("office", points[0].id, "nok");
+		await answerPoint("office", points[1].id, "ok");
+		await answerPoint("office", points[2].id, "ok");
+		expect(await thrown(() => completeChecklist("office", made.id))).toEqual({
+			status: 400,
+			message: "1 rejected point doesn't say what's wrong.",
+		});
+		await remarkPoint("office", points[0].id, "Kabel gerafeld.");
+		await remarkChecklist("office", made.id, "Kabel vervangen.");
+		await completeChecklist("office", made.id);
+
+		const [done] = await checklistsOf(id);
+		expect(done).toMatchObject({
+			status: "completed",
+			completedBy: null,
+			completedByUser: "u1",
+			remarks: "Kabel vervangen.",
+		});
+		expect(done.validUntil).toEqual(day("2027-10-17"));
+		const [logged] = await db.select().from(activity);
+		expect(logged).toMatchObject({ action: "completed", parentId: String(id) });
+		// The modules are told, without an engineer.
+		expect(told.at(-1)?.checklist).toMatchObject({ id: made.id, engineerId: null });
+		// Final.
+		expect((await thrown(() => answerPoint("office", points[1].id, "nok")))?.status).toBe(400);
+	});
+
+	test("an engineer completing it is recorded as their user too", async () => {
+		const id = await orderWith([10]);
+		const [made] = await checklistsOf(id);
+		await answerAll(made.id);
+		await completeChecklist(1, made.id);
+		expect((await checklistsOf(id))[0]).toMatchObject({ completedBy: 1, completedByUser: "u1" });
+	});
+
+	test("not once its order is closed, nor another tenant's", async () => {
+		const id = await orderWith([10], { status: "quote" });
+		const [made] = await checklistsOf(id);
+		const [point] = await pointsOf(made.id);
+		await answerPoint("office", point.id, "ok");
+		for (const status of ["completed", "invoiced", "cancelled"]) {
+			await changeOrder(id, "status", status);
+			expect(await thrown(() => answerPoint("office", point.id, "na"))).toEqual({
+				status: 400,
+				message: `ORD-${numbered} is closed: its checklists can't be changed any more.`,
+			});
+		}
+		await changeOrder(id, "status", "quote");
+		locals.tenant = tenantOf("south");
+		expect((await thrown(() => answerPoint("office", point.id, "na")))?.status).toBe(404);
+		expect((await thrown(() => completeChecklist("office", made.id)))?.status).toBe(404);
+		locals.tenant = tenantOf("north");
+		expect((await pointsOf(made.id))[0].result).toBe("ok");
+	});
+});
+
+describe("a unit's state this year, in SQL", () => {
+	const states = async (year: number) =>
+		Object.fromEntries(
+			(
+				await db
+					.select({ id: equipment.id, state: yearStateSql(year) })
+					.from(equipment)
+					.where(eq(equipment.organizationId, "north"))
+			).map((row) => [row.id, row.state]),
+		);
+
+	test("done once completed that year, else open with a draft on an open order, else none", async () => {
+		freezeNow(at("2026-10-17 15:00"));
+		const done = await orderWith([10]);
+		await answerAll((await checklistsOf(done))[0].id);
+		await completeChecklist(1, (await checklistsOf(done))[0].id);
+		const open = await orderWith([11], { status: "scheduled" });
+		expect(await states(2026)).toEqual({ 10: "done", 11: "open", 12: "none" });
+		// Another year: what was completed then counts, a draft still open always does.
+		expect(await states(2025)).toEqual({ 10: "none", 11: "open", 12: "none" });
+		// A draft on a cancelled order is no open work.
+		await changeOrder(open, "status", "cancelled");
+		expect((await states(2026))[11]).toBe("none");
 	});
 });

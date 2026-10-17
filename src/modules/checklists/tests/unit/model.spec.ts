@@ -5,6 +5,7 @@ import {
 	changedPlaces,
 	checklistKind,
 	checklistScore,
+	componentPoints,
 	completionProblems,
 	getsChecklists,
 	groupPoints,
@@ -17,7 +18,10 @@ import {
 	progress,
 	rejectedFirst,
 	rejections,
+	shownChecklist,
 	validUntil,
+	yearBounds,
+	type YearChecklist,
 } from "#modules/checklists/model.ts";
 import { day } from "#unit/temporal-support.ts";
 
@@ -240,5 +244,58 @@ describe("a unit's inspection status", () => {
 		expect(validUntil(day("2026-10-17"), 6)).toEqual(day("2027-04-17"));
 		// A shorter month: its last day.
 		expect(validUntil(day("2027-01-31"), 1)).toEqual(day("2027-02-28"));
+	});
+});
+
+describe("the work orders page's checklist of a unit this year", () => {
+	/** Checklists newest first: `[id, status, open, completed year]`. */
+	const checklists = (...rows: [number, "draft" | "completed", boolean, number | null][]) =>
+		rows.map(([id, status, open, completedYear]): YearChecklist => ({
+			id,
+			status,
+			open,
+			completedYear,
+		}));
+
+	test("the open draft first, else the newest completed this year", () => {
+		const list = checklists([4, "completed", false, 2026], [3, "draft", true, null]);
+		expect(shownChecklist(list, 2026)?.id).toBe(3);
+		expect(
+			shownChecklist(checklists([4, "completed", false, 2026], [2, "completed", false, 2026]), 2026)
+				?.id,
+		).toBe(4);
+	});
+
+	test("none for a year without one: a draft on a closed order or last year's doesn't count", () => {
+		const list = checklists([5, "draft", false, null], [1, "completed", false, 2025]);
+		expect(shownChecklist(list, 2026)).toBeNull();
+		expect(shownChecklist([], 2026)).toBeNull();
+	});
+
+	test("the one asked for, if it's the unit's", () => {
+		const list = checklists([3, "draft", true, null], [1, "completed", false, 2025]);
+		expect(shownChecklist(list, 2026, 1)?.id).toBe(1);
+		// Another unit's (or a made-up id): as if none were asked for.
+		expect(shownChecklist(list, 2026, 99)?.id).toBe(3);
+	});
+
+	test("a year's bounds are its first moments, in the time zone", () => {
+		const { start, end } = yearBounds(2026, "Europe/Amsterdam");
+		expect(start.toString()).toBe("2025-12-31T23:00:00Z");
+		expect(end.toString()).toBe("2026-12-31T23:00:00Z");
+	});
+
+	test("a component's points are those copied from the template points that check it", () => {
+		const points = [
+			{ id: 1, templateItemId: 10 },
+			{ id: 2, templateItemId: 11 },
+			{ id: 3, templateItemId: null },
+			{ id: 4, templateItemId: 12 },
+		];
+		expect(componentPoints(points, [12, 10])).toEqual({
+			points: [points[0], points[3]],
+			others: 2,
+		});
+		expect(componentPoints(points, [])).toEqual({ points: [], others: 4 });
 	});
 });
