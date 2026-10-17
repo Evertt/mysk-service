@@ -4,6 +4,7 @@ import {
 	foreignKey,
 	index,
 	integer,
+	primaryKey,
 	sqliteTable,
 	text,
 	uniqueIndex,
@@ -17,11 +18,69 @@ import { conditionSources, defaultThresholds } from "../model.ts";
 // These tables reference the core's, never the other way round.
 
 /**
- * A unit's condition at a moment: a score from 0 to 100 and the advice that goes with it, e.g.
- * "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.", recorded by an engineer after the
- * unit's checklist (on that order) or by a member in the office. Never changed: a newer one takes
- * its place as the unit's condition, and the older ones are its history. Removing the unit
- * removes them.
+ * A component of a unit ("onderdeel"), e.g. the torsion spring set of a sectional door: what
+ * Connect tracks the condition of, numbered per tenant (`OC-0001`), in its unit's order. Its article
+ * is one of the materials module's materials (whose SKU the parts shop sells), by id without a key:
+ * the module only enhances materials, so it can't refer to their table, and an article that's gone
+ * is left out where it's shown. Removing the unit removes its components.
+ */
+export const component = sqliteTable(
+	"component",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		equipmentId: integer("equipment_id").notNull(),
+		/** `OC-0001`. */
+		number: text("number").notNull(),
+		/** E.g. "Torsieveerpakket": the tenant's own text. */
+		name: text("name").notNull(),
+		/** The article: a material's id (see above); none without one. */
+		materialId: integer("material_id"),
+		/** Where it comes among its unit's components, from 0. */
+		position: integer("position").notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("component_organization_id").on(table.organizationId, table.id),
+		uniqueIndex("component_organization_number").on(table.organizationId, table.number),
+		// A unit's components in their order.
+		index("component_equipment").on(table.organizationId, table.equipmentId, table.position),
+		foreignKey({
+			columns: [table.organizationId, table.equipmentId],
+			foreignColumns: [equipment.organizationId, equipment.id],
+		}).onDelete("cascade"),
+	],
+);
+
+/**
+ * A checklist point that checks a component: one of its unit's template's points, by the template
+ * point's id without a key (the module only enhances checklists), like the parts shop's products'
+ * points. A completed checklist's answers to them give the component its score.
+ */
+export const componentCheckpoint = sqliteTable(
+	"component_checkpoint",
+	{
+		organizationId: organizationId(),
+		componentId: integer("component_id").notNull(),
+		templateItemId: integer("template_item_id").notNull(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.componentId, table.templateItemId] }),
+		index("component_checkpoint_item").on(table.organizationId, table.templateItemId),
+		foreignKey({
+			columns: [table.organizationId, table.componentId],
+			foreignColumns: [component.organizationId, component.id],
+		}).onDelete("cascade"),
+	],
+);
+
+/**
+ * A unit's condition at a moment, or one of its components' (`component_id`): a score from 0 to 100
+ * and the advice that goes with it, e.g. "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
+ * worked out from the unit's checklist when an engineer completed it (on that order, by them) or
+ * recorded by a member in the office, as a correction. Never changed but for the advice the
+ * engineer adds to what their checklist gave: a newer one takes its place as the condition, and
+ * the older ones are its history. Removing the unit or the component removes them.
  */
 export const unitCondition = sqliteTable(
 	"unit_condition",
@@ -29,6 +88,8 @@ export const unitCondition = sqliteTable(
 		id: integer("id").primaryKey({ autoIncrement: true }),
 		organizationId: organizationId(),
 		equipmentId: integer("equipment_id").notNull(),
+		/** The component of the unit it's the condition of; none for the unit as a whole. */
+		componentId: integer("component_id"),
 		/** In percent, 0–100. */
 		score: integer("score").notNull(),
 		advice: text("advice"),
@@ -51,12 +112,18 @@ export const unitCondition = sqliteTable(
 		uniqueIndex("unit_condition_organization_id").on(table.organizationId, table.id),
 		// A unit's latest condition and its history.
 		index("unit_condition_equipment").on(table.organizationId, table.equipmentId, table.recordedAt),
+		// A component's latest condition and its history.
+		index("unit_condition_component").on(table.organizationId, table.componentId, table.recordedAt),
 		index("unit_condition_order").on(table.orderOrganizationId, table.orderId),
 		index("unit_condition_engineer").on(table.organizationId, table.engineerId),
 		index("unit_condition_user").on(table.userId),
 		foreignKey({
 			columns: [table.organizationId, table.equipmentId],
 			foreignColumns: [equipment.organizationId, equipment.id],
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.organizationId, table.componentId],
+			foreignColumns: [component.organizationId, component.id],
 		}).onDelete("cascade"),
 		foreignKey({
 			columns: [table.orderOrganizationId, table.orderId],
@@ -95,3 +162,18 @@ export const conditionSettings = sqliteTable("condition_settings", {
 	lastRunAt: moment("last_run_at"),
 	lastRunOrders: integer("last_run_orders"),
 });
+
+export const componentRelations = relations(component, ({ one, many }) => ({
+	equipment: one(equipment, {
+		fields: [component.organizationId, component.equipmentId],
+		references: [equipment.organizationId, equipment.id],
+	}),
+	checkpoints: many(componentCheckpoint),
+}));
+
+export const componentCheckpointRelations = relations(componentCheckpoint, ({ one }) => ({
+	component: one(component, {
+		fields: [componentCheckpoint.organizationId, componentCheckpoint.componentId],
+		references: [component.organizationId, component.id],
+	}),
+}));
