@@ -98,9 +98,10 @@ describe("the simulation bar", () => {
 		await bar().getByRole("button", { name: "30×" }).click();
 		await expect.poll(async () => (await simulation()).speed).toBe(30);
 		await bar().locator('[data-simulation-state="running"]').waitFor();
-		expect(await bar().locator("[data-simulation-state]").textContent()).toContain(
-			"simulation 30×",
-		);
+		// The badge follows the stored speed once the page's query has it.
+		await expect
+			.poll(() => bar().locator("[data-simulation-state]").textContent())
+			.toContain("simulation 30×");
 
 		// The open page ticks it: the docks' events come in as the feed's, and the board follows.
 		await expect
