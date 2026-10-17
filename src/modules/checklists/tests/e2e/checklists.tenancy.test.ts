@@ -85,6 +85,12 @@ describe("in North, which has the module", () => {
 			]),
 		);
 		const before = await shltrState();
+		const shltrLogged = () =>
+			value(
+				`select count(*) from activity where organization_id = ? and subject_type like 'checklist%'`,
+				[shltr.id],
+			);
+		const loggedBefore = await shltrLogged();
 		const ownPoints = await pointRows(own.id);
 
 		expect(
@@ -168,12 +174,8 @@ describe("in North, which has the module", () => {
 		expect(await shltrState()).toEqual(before);
 		expect(await pointRows(own.id)).toEqual(ownPoints);
 		expect((await templateNamed(north.id, "Koelmachine")).name).toBe("Koelmachine");
-		expect(
-			await value(
-				`select count(*) from activity where organization_id = ? and subject_type like 'checklist%'`,
-				[shltr.id],
-			),
-		).toBe(0);
+		// Nothing logged in SHLTR (another file on this worker may have logged its checklists before).
+		expect(await shltrLogged()).toBe(loggedBefore);
 	});
 });
 

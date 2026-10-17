@@ -100,7 +100,8 @@
 
 <section class="flex min-w-0 flex-col gap-6" data-asset-panel={data.unit.serialNumber}>
 	<Card.Root>
-		<Card.Header>
+		<!-- Not the card's header: on a phone the buttons go below the title, not beside it. -->
+		<Card.Content class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 			<div class="flex min-w-0 flex-col gap-1">
 				{#if data.template}
 					<span class="text-xs font-semibold tracking-wide text-primary uppercase" data-template>
@@ -136,7 +137,7 @@
 				{/if}
 			</div>
 			{#if data.template}
-				<Card.Action class="flex flex-wrap gap-2">
+				<div class="flex shrink-0 flex-wrap gap-2">
 					{#each checklistKinds as kind, index (kind)}
 						<Button
 							variant={index === 0 ? "default" : "outline"}
@@ -151,9 +152,9 @@
 							})}
 						</Button>
 					{/each}
-				</Card.Action>
+				</div>
 			{/if}
-		</Card.Header>
+		</Card.Content>
 		{#if !data.template || !shown}
 			<Card.Content>
 				<p

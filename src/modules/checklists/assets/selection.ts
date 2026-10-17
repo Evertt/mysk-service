@@ -15,8 +15,11 @@ import type { officeComplete } from "./assets.remote.ts";
 export type PageUpdates = Parameters<ReturnType<typeof officeComplete>["updates"]>;
 
 /** The page's link with `changes` to the parameters of `url` (`null` removes one). */
-export function pageHref(url: URL, changes: Record<string, string | null>) {
-	const params = new URLSearchParams(url.searchParams);
+export function pageHref(
+	url: { readonly searchParams: Iterable<[string, string]> },
+	changes: Record<string, string | null>,
+) {
+	const params = new URLSearchParams([...url.searchParams]);
 	for (const [name, value] of Object.entries(changes)) {
 		if (value === null) params.delete(name);
 		else params.set(name, value);
