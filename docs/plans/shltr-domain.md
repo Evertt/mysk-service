@@ -1411,6 +1411,11 @@ As of 2026-10-17, unreleased (`main` has none of it):
 Not built yet: the real Salvo and P1 integrations; an import from My24Service. Phase 4b's notes
 are in `parts-shop.md`.
 
+Where the build deviates from the mockup, and what the client's own files (the mockup's source,
+presentations and brochure, received on 2026-10-17) change about it: `shltr-deviations.md`. Among
+them, the client's rule for the condition score: the share of points passed in a keuring (4 of 10
+is 40%).
+
 Order types per tenant (core): managers give a type a name of their own per language and hide those
 they don't use from the order form, on the settings page (`/settings/order-types`,
 `#lib/orders/types.ts`); a type a module that's on needs (checklists' and maintenance plans'
