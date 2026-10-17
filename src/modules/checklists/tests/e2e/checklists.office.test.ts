@@ -128,9 +128,14 @@ describe("a unit's inspections", () => {
 		await app.go("/equipment");
 		await app.sortBy("Inspection", "ascending");
 		const firstRow = page().locator('[data-slot="data-table"] tbody tr').first();
-		expect(await firstRow.locator("[data-inspection]").getAttribute("data-inspection")).toBe(
-			"expired",
-		);
+		const first = await firstRow.locator("[data-inspection]").getAttribute("data-inspection");
+		// Worst first. Other files complete inspections meanwhile, so the worst status there is
+		// is read again, before and after the page.
+		const worst = (list: { status: string }[]) =>
+			["expired", "rejected", "expiring", "valid"].find((status) =>
+				list.some((each) => each.status === status),
+			);
+		expect([worst(all), worst(await statuses())]).toContain(first);
 	});
 });
 
