@@ -51,6 +51,12 @@ from the checklist (#99, #103, #105), on branch `condition-components`.
 
 ### 1. A living demo: Salvo and P1 simulated on staging
 
+**Energy: done** (branch `energy-live-demo`): the seam's `simulation.run` makes Riedel's P1 meters
+and door sensors up through the module's own ingest, every 15-minute interval since the latest
+reading (no zone goes offline but the mockup's external unit), surges over thresholds and doors
+left open too long now and then, livelier at a higher speed; the "P1 simulatie" bar on the site
+page, and "simulatie N× / gepauzeerd" in its banner. Docks: in progress (`docks-live-demo`).
+
 #150, #151, #175, #177. Staging's dock board and energy pages go stale, because the simulators are
 scripts someone has to run (`pnpm docks:simulate`, the energy simulator): zones show "Offline", and
 no dock turns amber or red.
@@ -65,6 +71,13 @@ no dock turns amber or red.
 - Effort: medium.
 
 ### 2. The mockup's illustrations and animations
+
+**Energy: done** (branch `energy-live-demo`): the banner, KPI tiles with icon and change, the floor
+plan (floors stacked, Expeditie & Docks full width, tone-bordered zones with a pulsing dot, the
+legend), selecting a floor or zone on the page with a detail panel and "Signalering", the live
+meter's flowing bar and estimated solar generation, door cards with the rising panel, leak bars,
+snowflake and truck, and the chart with "Nog te meten"; all state-driven, still with reduced
+motion. Docks: in progress.
 
 #158, and the vibe deviations outside the filter: #185, #187, #186 (energy), #163–#164 (docks).
 

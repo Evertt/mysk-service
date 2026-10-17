@@ -351,8 +351,15 @@ key and raised as the system (`server/evaluate.ts`), figures aggregated in SQL p
 worked out with the pure rules of `model.ts` (`server/figures.ts`), an alert made into an order
 through `createOrders()` (`server/alerts.ts`), a printable report (print CSS), a read-only page in
 the customer portal (`routes/(customer)/portal/`, `client/`), a seam for a module that enhances
-it (`api/extensions.ts`, `energy.door`) and a simulator that shares the seed's simulation
-(`node src/modules/energy/server/simulator.ts`). Managers set a site up in the office
+it (`api/extensions.ts`, `energy.door`), a simulator that shares the seed's simulation
+(`node src/modules/energy/server/simulator.ts`) and a module's part in the demo's simulation
+(`simulation.run`, `server/live-simulation.ts`: each tick posts the intervals since the latest
+reading and the doors' events through the module's own ingest, `parseBatch()` and `storeBatch()`,
+as a gateway would; reset posts the seed's yesterday and today again). Its site page is the
+mockup's: a page banner (`#lib/components/hero-banner.svelte`, generic), the floor plan with the
+live meter, door cards with the animated door, and the chart with what's still to measure
+(`overview/`); the selection (`?scope=`) is a link that keeps the scroll position
+(`data-sveltekit-reset="false"`), and the zone pages are linked from it. Managers set a site up in the office
 (`server/setup.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
 customer's sites, from the customer page's card (`customers.detail.side`) or the sites page, and
 its zones, consumers and doors (zone and door codes unique per site, as the gateway names them; a

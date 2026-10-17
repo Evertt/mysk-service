@@ -1564,16 +1564,16 @@ _Added, low impact._
 _Changed, high impact._
 
 - **Mockup:** the page is a 30-day client-side P1 simulation starting 14 Sep 2026: a "P1 simulatie" bar with "Pauzeer"/"Start", reset ("Simulatie resetten"), speed buttons 1×/2×/5×/10×/30×, a clock "ma 14 sep · 08:00", "Dag N van 30 · 10 min per stap" (2 uur in month view), a progress bar, and a badge "simulatie 1×" / "gepauzeerd" in the header. Nothing is real except the alerts table.
-- **Built:** the site page shows stored 15-minute readings per zone and door open/close events posted by a gateway to `/energy/ingest` (`docs/ingest.md`); the page refreshes live when a batch arrives, an open door's minutes count up between batches. No play/pause/speed/reset controls, no simulated clock.
-- **Why:** §4.2 `energy` ("the formulas of §2.5 with real data"); §2.5 calls the mockup "a client-side simulation". Technical: the database is one Durable Object, so readings are aggregated per 15 min.
+- **Built:** the site page shows stored 15-minute readings per zone and door open/close events posted to `/energy/ingest` (`docs/ingest.md`). For the demo's SHLTR, a simulation in the app posts them through that same ingest (`server/live-simulation.ts`): the "P1 simulatie" bar with Start/Pauzeer, reset, 1×/2×/5×/10×/30×, and the banner's "simulatie N×" / "gepauzeerd". The clock is the real one: no simulated clock, day counter or progress bar; a higher speed makes it livelier (wider swings, more surges and door openings) instead of faster.
+- **Why:** §4.2 `energy` ("the formulas of §2.5 with real data"); the demo's data is made up behind the real ingest, so only the source changes when the P1 link comes (`docs/plans/shltr-demo-todo.md` item 1).
 
 #### 176. A demo simulator outside the page
 
 _Added, medium impact._
 
 - **Mockup:** the simulation is the page itself.
-- **Built:** the seed gives Riedel Ede 30 days of history plus today up to seeding; `node src/modules/energy/server/simulator.ts` posts a day of made-up readings to a running app with a demo token, like a gateway would. A zone without a reading in the last 30 minutes shows "Offline" with 0 kW, so a demo without the simulator running goes stale.
-- **Why:** technical (keep the page on real data; §7 "a simulator").
+- **Built:** the seed gives Riedel Ede 30 days of history plus today up to seeding; the demo's simulation then posts every 15-minute interval since the latest reading on every tick (the Worker's minute cron, `/_ops/tick`, the page's bar every 5 s), so the history stays continuous and no zone but the external unit goes "Offline". `node src/modules/energy/server/simulator.ts` still posts a day to a running app with the demo token.
+- **Why:** technical (keep the page on real data; a demo that never goes stale).
 
 #### 177. Real P1 integration
 
@@ -1596,8 +1596,8 @@ _Changed, medium impact._
 _Changed, low impact._
 
 - **Mockup:** a coloured hero "Energie Module" with chip "Riedel Ede", title "Energieprestaties per gebouwzone" and "Vergelijk perioden, speel P1-data af en zoom in tot op zone- en installatieniveau."
-- **Built:** a plain page header with the site's name and "{klant}, {plaats} · laatste meting tot {tijd}", breadcrumbs, and buttons "Alerts", "Grenswaarden", "Energierapport" and (managers) "Instellen".
-- **Why:** consistency with the rest of the app.
+- **Built:** the mockup's teal banner (`#lib/components/hero-banner.svelte`): chips "Energie Module", the simulation's state (or "Live" / "Geen recente metingen" without a simulation) and the site's name, "Energieprestaties per gebouwzone" and its line, then "{klant}, {plaats} · laatste meting tot {tijd}"; breadcrumbs above it, and the buttons "Alerts", "Grenswaarden", "Energierapport" and (managers) "Instellen" in it. No "Exporteer PDF" on the page: "Energierapport" prints (#198).
+- **Why:** the mockup's vibe (`docs/plans/shltr-demo-todo.md` item 2).
 
 #### 180. Office setup of sites, zones, consumers and doors
 
@@ -1628,8 +1628,8 @@ _Changed, low impact._
 _Changed, medium impact._
 
 - **Mockup:** buttons "Hele gebouw", "Begane grond", "1e verdieping", "Kelder"; clicking a zone in the floor plan or a table row selects it on the same page ("Selectie: <zone>"), and every panel follows.
-- **Built:** chips "Hele gebouw", one per floor and one per zone code (URL parameter `scope`); clicking a zone in the building overview opens a separate zone page `/energy/<site>/zones/<code>` instead.
-- **Why:** unknown (consistency with linkable list/detail pages).
+- **Built:** buttons "Hele gebouw" and one per floor, and the floor plan's floor labels and zones, and the comparison's rows, select on the same page (URL parameter `scope`, keeping the scroll position), "Selectie: <naam>"; every panel follows but the floor plan and the live meter, which show the whole building as in the mockup. A selected zone's page (`/energy/<site>/zones/<code>`) is linked from the detail panel.
+- **Why:** the mockup's behaviour; the zone pages stay for links.
 
 #### 184. KPI tiles
 
@@ -1644,15 +1644,15 @@ _Changed, low impact._
 _Changed, medium impact._
 
 - **Mockup:** "Gebouwoverzicht — Riedel Ede" as a stylised floor plan (1e verdieping on top, Begane grond with Expeditie & Docks full-width, Kelder at the bottom), each zone a coloured-bordered button with a pulsing dot, kW and kWh; a legend Nominaal/Verhoogd/Piekbelasting/Offline. The tone is a fixed property of each zone (e.g. Z-R61 always "Piekbelasting").
-- **Built:** "Gebouwoverzicht" groups zone cards per floor (zones without a floor under "Buiten het gebouw"), each with code, name, tone badge, kW, kWh and a bar of its share of its thresholds. The tone is derived: Offline without a reading for 30 minutes, Piekbelasting over its threshold, Verhoogd within 15 % of it, else Nominaal. No legend.
-- **Why:** real data (tone needs a rule; model.ts `zoneTone`).
+- **Built:** "Gebouwoverzicht — Riedel B.V. Ede" as the mockup's floor plan: a dark bar with the site and its total kW, the floors stacked by their level (top floor first; a floor's zones up to three a row, a last one alone the floor's width, so Expeditie & Docks spans the ground floor), each zone a block bordered in its tone with a dot that pulses faster the higher its load (a halo at peak), kW and kWh; zones without a floor outside the building, dashed. The legend Nominaal/Verhoogd/Piekbelasting/Offline. The tone is still derived: Offline without a reading for 30 minutes, Piekbelasting over its threshold, Verhoogd within 15 % of it, else Nominaal.
+- **Why:** the mockup's look; real data (the tone needs a rule; model.ts `zoneTone`).
 
 #### 186. Main meter card
 
 _Changed, low impact._
 
 - **Mockup:** "Live P1-meter · Hoofdaansluiting" with an animated bar, "Piekcontract 320 kW · 1.000.000 kWh/jr" and "Zonnepanelen +18,2 kW opwek" (live generation).
-- **Built:** "Hoofdaansluiting" (the site's meter name), "De hoofdaansluiting, de som van de zonemeters": kW now with a bar of the share of the contracted peak ("N% van het piekcontract van 320 kW"), the period's kWh against the contract's pace, and "Zonnepanelen 18,2 kW" as installed capacity, not live generation.
+- **Built:** "Live P1-meter" beside the plan: the meter's name, the site's kW now with a bar of its share of the contracted peak that flows faster with the load ("N% van het piekcontract"), "Piekcontract 320 kW · 1.000.000 kWh/jr" and "Zonnepanelen +X kW opwek", estimated from the kWp and the time of day and year (no PV feed), said so under it.
 - **Why:** data (no PV production feed; the total is summed from zone meters).
 
 #### 187. Door watch card
@@ -1660,8 +1660,8 @@ _Changed, low impact._
 _Changed, low impact._
 
 - **Mockup:** "Deurbewaking — sectionaal-, koel- en vriescellen", "Live status, openstaanduur en energieverlies per deur", header badges "N deuren open", "Nu X kW verlies", "Vandaag X kWh · € Y"; each door card has an animated door graphic (panel rising, leak bars, snowflake), "+18 °C binnen / 7 °C buiten", "N min open"/"dicht", Verlies nu / Vandaag / Kosten, and "N× geopend vandaag · melding vanaf N min".
-- **Built:** "Deurbewaking" with a card per door: code and kind, name, badge Open/Gesloten/Te lang open, "Open sinds" (counting up) with "(alert na N min)", Verlies nu, Verlies vandaag, Kosten vandaag, a line "{zone} · N keer open vandaag · binnen …, buiten …", a link to the door's unit, and (with Salvo Docks on) the dock's live state. No header summary badges, no animation. Door loss is real open time × loss kW (the mockup used a 0.62 fudge factor).
-- **Why:** real data; docks enhances energy (commit 184bcc0d).
+- **Built:** "Deurbewaking — sectionaal-, koel- en vriescellen" with the header's "N deuren open", "Nu X kW verlies", "Vandaag X kWh · € Y"; per door the mockup's card: icon, name, code · kind · zone, badge Open/Gesloten/Te lang open, the door's picture (the panel rising when it opens, the leak bars, faster once too long open, a snowflake on a cold store's, a truck backing up to an open dock door), "+18 °C binnen", "N min open"/"dicht" (counting up), "buiten", Verlies nu / Vandaag / Kosten, "N× geopend vandaag · melding vanaf N min", the door's unit and (with Salvo Docks on) the dock's live state. All from the sensor's real state; still with reduced motion. Door loss is real open time × loss kW (the mockup used a 0.62 fudge factor).
+- **Why:** the mockup's look on real data; docks enhances energy (commit 184bcc0d).
 
 #### 188. Dock state on dock doors
 
@@ -1676,16 +1676,16 @@ _Added, low impact._
 _Changed, low impact._
 
 - **Mockup:** "Verbruik per uur/per dag · <scope>" with bars "Gemeten" (filled as far as measured), "Nog te meten" (dashed outline for the rest of the day), "Vergelijking" (previous period), the current hour in amber, and a footer Huidig / Vergelijking / Verschil.
-- **Built:** a bar chart "Verbruik per uur" / "Verbruik per dag" of this period beside the previous one; no projection of the rest of the day, no footer totals.
-- **Why:** real data has no future values.
+- **Built:** the mockup's chart: "Verbruik per uur/per dag · <selectie>", "Vandaag (tot HH:MM) versus gisteren", per bucket the comparison's bar beside this period's, filled as far as measured ("Gemeten"), the bucket being measured in amber, the rest outlined dashed ("Nog te meten") at the previous period's value scaled by how this period compares so far, and the footer Huidig / Vergelijking / Verschil. The report and the zone page keep the plain chart of completed periods.
+- **Why:** the mockup's chart; what's still to measure is a projection, as real data has no future values.
 
 #### 190. Detail panel and installations
 
 _Changed, medium impact._
 
 - **Mockup:** "Detail · <selectie>", "Live meetwaarden van de selectie": Actueel, Piek, Verbruik, Zones, and "Installaties" (top 5 of the selection, scaled kW), for building, floor or zone.
-- **Built:** no detail panel on the site page. The zone page shows Actueel vermogen, Verbruik vandaag (t.o.v. gisteren), Piekvermogen, "Van de grenswaarden" (% with state and the thresholds), an hourly chart against yesterday, and "Installaties" with opgesteld vermogen, "Vandaag (schatting)" and a link to the unit. Installations are listed per zone only, not for a floor or the building.
-- **Why:** unknown (zone page instead of in-page selection).
+- **Built:** "Detail · <selectie>" beside the chart for the building, a floor or a zone: Actueel, Piek, Verbruik, Zones, and "Installaties": the selection's top five by their estimated kW now (their zone's live kW by their share of its rated power; a zone has one meter), and for a zone a link to its page, which keeps its own figures and installations.
+- **Why:** the mockup's selection on the page.
 
 #### 191. Comparison per zone
 
@@ -1705,11 +1705,11 @@ _Changed, medium impact._
 
 #### 193. "Signalering" card
 
-_Left out, low impact._
+_Left out, low impact; built since branch `energy-live-demo`._
 
 - **Mockup:** "Signalering": up to four zones "grenswaarde overschreden" / "binnen 15% van grenswaarde", or "Alle actieve zones blijven binnen de ingestelde grenswaarden."
-- **Built:** no such card; near and over states show as zone tones and as "Bijna"/"Actief" alerts.
-- **Why:** unknown (covered by alerts).
+- **Built:** "Signalering" beside the savings advice: up to four of the selection's zones over their thresholds ("grenswaarde overschreden"), doors open too long ("te lang open (N min)") and zones near them ("binnen 15% van grenswaarde"), or "Alle actieve zones blijven binnen de ingestelde grenswaarden."
+- **Why:** the mockup's card.
 
 #### 194. "Near" alerts and kWh alerts are recorded
 

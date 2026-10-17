@@ -107,6 +107,23 @@ The site's page hears of each batch at once (its live query).
 | 422    | `{ "error": "invalid_batch", "message", "issues": ["readings[3].start: …"] }`           |
 | 422    | `{ "error": "unknown_codes", "message", "unknown": { "zones": ["Z-X"], "doors": [] } }` |
 
+## The live simulation
+
+An organization that's offered a simulation of the module (the demo's SHLTR, a `simulation` row;
+see "Simulations for demos" in `docs/agents/modules.md`) has its sites fed without a gateway:
+each tick of the simulation (the Worker's minute cron, `POST /_ops/tick`, and the site page's
+"P1 simulatie" bar every 5 seconds) posts, through this format's checks and the same storing, every
+15-minute interval that has ended since the site's latest reading (at most a day back, so a pause
+leaves no gap and no zone goes offline) and the doors' openings and closings in the tick's interval
+(`server/live-simulation.ts`, the made-up data in `simulation.ts`). Over a day: §2.5's working
+day per zone, now and then an hour's surge that takes a zone near or over its thresholds, and a
+door left open too long; at a higher speed (2× to 30×) the readings swing wider, surges come more
+often and bigger, and the doors open more often and overrun more. The clock stays the real one.
+Reset (managers, from the bar) posts the seed's simulation of yesterday and today again, replacing
+the doors' events since yesterday and the open alerts (the batches raise the day's again); alerts
+that became orders or were resolved stay, as do the thresholds. The external unit (`Z-EXP`) sends
+nothing, as in the mockup: it stays offline.
+
 ## The simulator
 
 `node src/modules/energy/server/simulator.ts` posts a day of SHLTR's Riedel Ede (today up to now,
