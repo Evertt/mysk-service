@@ -1,5 +1,10 @@
 /**
- * The Salvo simulator, for demos in development (`pnpm docks:simulate`): posts realistic event
+ * The app now simulates the demo's docks by itself (the docks' `server/simulation.ts`, driven by
+ * the simulation bar on the board and the minute cron, see `#lib/server/simulation.ts`): this
+ * script stays for local use, e.g. to feed a dev server from outside, through its HTTP endpoint,
+ * as a real Salvo adapter would. Pause the board's simulation first, or the two take turns.
+ *
+ * The Salvo simulator script (`pnpm docks:simulate`): posts realistic event
  * streams for SHLTR's Weggemans docks 05–08 to a running dev server's feed (`POST /docks/ingest`,
  * see `src/modules/docks/docs/salvo-events.md`), so the live board (`/docks`) moves. Each dock goes
  * round its cycle on its own: a truck checks in (the key goes with the driver), the driver locks

@@ -53,6 +53,22 @@ path? }` from the form's root, which the form passes to `invalid()` as they are)
   safe to repeat, makes its changes in transactions of its own, keeps mail out of them, and
   answers counts for the run's report (`{ "maintenance.orders": 3 }`). Maintenance's
   `server/automatic.ts` is the example.
+- **Simulations for demos** (`simulation.run`, a `fail` collector in
+  `src/lib/simulation/extensions.ts`): a module fed from outside makes its data up for an
+  organization with a `simulation` row for it (the seed gives SHLTR its docks' and energy's; real
+  tenants never have one). It contributes `contribute(simulationRun, simulated({ tick, reset }))`:
+  `tick({ from, to, speed })` moves its data on over that interval of real time (the clock stays
+  the real one; `speed`, 1× to 30×, makes more happen in it), through the module's own ingest path
+  as a real feed would; `reset()` puts its data back in the demo's starting states. Both run as
+  the system in the tenant. `runSimulations()` (`src/lib/server/simulation.ts`) ticks every
+  running row over `(last_tick_at, now]`, at most 10 minutes of it, claiming the interval in a
+  transaction first so overlapping callers never tick it twice; it's called by `POST /_ops/tick`
+  (authorized like `/_ops/daily`), on Cloudflare the Worker's minute Cron Trigger, and the
+  `<SimulationBar module="…">` (`src/lib/components/simulation/`) every 5 s while a page with a
+  running simulation is open. The bar's remote functions (`simulation.remote.ts`): the state, live,
+  for members (`null` without a row); play, pause, speed and reset for managers (a 404 without a
+  row), logged on the subject `simulation`. The e2e tests start with the simulations paused
+  (`global-setup.ts`), so the seeded states hold. The docks' `server/simulation.ts` is the example.
 - **Form slots** (`defineFormSlot()`, e.g. the order form's `orders.form`) take a module's inputs
   into a core form. The module gives, besides its components at `slots/<point id>/`, the valibot
   object schema of its part as the default export of `form-parts/<point id>.ts`; the generator
@@ -334,7 +350,11 @@ Docks (`src/modules/docks/`, SHLTR's Salvo dock time management) is the one fed 
 there for an integration endpoint with its tokens (`routes/(api)/ingest/+server.ts`, the payload in
 its `docs/salvo-events.md`), a live board (`query.live` on changes it announces itself with
 `announceChange()`, as telemetry isn't logged), rules that act on time (`server/rules.ts`, after
-every batch and in the daily job) and a simulator for demos (`scripts/docks-simulator.ts`).
+every batch and in the daily job) and a simulation for the demo (`simulation.run`:
+`server/simulation.ts` posts what the pure, stateless `server/scenario.ts` plans through the
+feed's own path, `server/feed.ts`; a reset puts the docks in the mockup's states, `server/demo.ts`;
+`scripts/docks-simulator.ts` still feeds a dev server from outside). Its board is drawn
+(`board/dock-drawing.svelte`, an SVG whose door, beacon, truck and Wheel-Lok follow the live state).
 Energy (`src/modules/energy/`, SHLTR's Energie module: a customer site's zones, consumers and
 monitored doors) is fed from outside too, with aggregates per zone per 15 minutes rather than
 events (`routes/(api)/ingest/+server.ts`, the format in its `docs/ingest.md`, checked by

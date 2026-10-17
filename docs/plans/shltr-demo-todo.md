@@ -64,6 +64,16 @@ no dock turns amber or red.
   store door left open.
 - Effort: medium.
 
+**Docks: done** (branch `docks-live-demo`). A core seam, `simulation.run`
+(`src/lib/simulation/extensions.ts`, the runner `src/lib/server/simulation.ts`, the `simulation`
+table): a module contributes `{ tick, reset }`, ticked over each interval of real time by
+`POST /_ops/tick`, the Worker's minute cron and the `<SimulationBar>` (every 5 s while the page is
+open). The docks' scenario (`src/modules/docks/server/scenario.ts`) goes through the feed's own
+path, so the board, the 40/60-minute rules, the breakdown orders (one open per door) and the
+sessions work as with Salvo; a reset (and the seed) puts DOCK 05–08 in the mockup's states
+(Laden 23:40, Bezet 44:40 amber, Vrij, Storing 1:27:20 red) without making a notice or an order.
+The board's badge reads "Simulatie". **Energy: still to do**, on the same seam (its row is seeded).
+
 ### 2. The mockup's illustrations and animations
 
 #158, and the vibe deviations outside the filter: #185, #187, #186 (energy), #163–#164 (docks).
@@ -75,6 +85,15 @@ no dock turns amber or red.
   snowflake for cold stores; the main meter's live bar.
 - Respect `prefers-reduced-motion`.
 - Effort: medium.
+
+**Docks: done** (#158, #159, #163–#165, #167). The board after the mockup: the teal banner
+(`<PageBanner>`, generic, `src/lib/components/page-banner.svelte`), the KPI row (`<StatTile>`),
+big cards two a row with the drawn dock (`src/modules/docks/board/dock-drawing.svelte`: the door
+rises and lowers, the three-lamp beacon, the truck with its plate driving in and out, the blinking
+Wheel-Lok, the SALVO tag), the tiles, the Salvo Safety System block and the details; timers in
+mm:ss below an hour; the process, signals and components cards. Still different: a free dock has
+no planned time slot (#160, no dock planning), the remark is generated (#162). **Energy: still to
+do.**
 
 ### 3. The mockup's look on every page
 

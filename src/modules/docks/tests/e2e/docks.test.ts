@@ -45,7 +45,7 @@ describe("the live board", () => {
 		expect(await figures.textContent()).toContain("3/4");
 		// Each Salvo dock lists its recent sessions.
 		expect(await card("DOCK 07").locator("[data-dock-sessions] li").count()).toBeGreaterThan(0);
-		await page.getByText("How a dock session goes").waitFor();
+		await page.getByText("How Salvo secures the dock").waitFor();
 	});
 
 	test("the door timer counts up", async () => {

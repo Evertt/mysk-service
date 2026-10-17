@@ -17,6 +17,7 @@ import { createServer } from "node:net";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { createClient } from "@libsql/client";
 import type { TestProject } from "vite-plus/test/node";
 
 export interface Lane {
@@ -173,6 +174,11 @@ export default async function setup(project: TestProject) {
 		});
 	run("node_modules/.bin/drizzle-kit", ["migrate"]);
 	run("node", ["--env-file=.env", "src/lib/server/db/seed/index.ts"]);
+	// The demo's simulations (`#lib/server/simulation.ts`) start paused, so the seeded states hold
+	// while a board is open; a test that needs one running plays it.
+	const seededDb = createClient({ url: `file:${template}` });
+	await seededDb.execute("update simulation set running = 0");
+	seededDb.close();
 	if (!dev) {
 		// A production build, as deployed: Paraglide's messages a module per message, in a folder of
 		// their own, so the build leaves the one the other tests read alone (scripts/paraglide.ts).
