@@ -1,7 +1,8 @@
 /**
- * The energy pages in SHLTR, against the seeded Riedel Ede: the sites, the site's page (KPI
- * tiles, scope chips, the building by floor, door watch, the comparison per zone, the savings
- * advice), a zone's page, at phone width too, and the printable report.
+ * The energy pages in SHLTR, against the seeded Riedel Ede: the sites, the site's page (the hero,
+ * KPI tiles, the floor plan and the live meter, selecting a floor or a zone, door watch, the
+ * comparison per zone, the savings advice), a zone's page from the selection, at phone width too,
+ * and the printable report. The door cards and the chart are in `energy.overview.test.ts`.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -23,7 +24,10 @@ describe("the site's page", () => {
 		await page.waitForURL((url) => url.pathname === "/energy");
 		await page.locator(`[data-energy-site="${siteId}"]`).click();
 		await page.waitForURL((url) => url.pathname === `/energy/${siteId}`);
-		await page.getByRole("heading", { name: "Riedel Ede — Productielocatie" }).waitFor();
+		await page.getByRole("heading", { name: "Energy performance per building zone" }).waitFor();
+		expect(await page.locator('[data-hero-chip="site"]').textContent()).toContain(
+			"Riedel Ede — Productielocatie",
+		);
 
 		expect(await tile("live").textContent()).toBe(kw(await liveKw(siteId)));
 		expect(await tile("consumption").textContent()).toBe(kwh(await kwhToday(siteId)));
@@ -42,6 +46,18 @@ describe("the site's page", () => {
 			await page.locator(`[data-floor="${floor}"]`).waitFor();
 		}
 		expect(await page.locator("[data-floor] [data-zone]").count()).toBe(8);
+		// Stacked as the mockup draws them, the top floor first; Expeditie & Docks full width.
+		expect(
+			await page
+				.locator("[data-floor-select]")
+				.evaluateAll((links) => links.map((link) => (link as HTMLElement).dataset.floorSelect)),
+		).toEqual(["1e verdieping", "Begane grond", "Kelder"]);
+		const ground = await page.locator('[data-floor="Begane grond"]').boundingBox();
+		const dock = await page.locator('[data-zone="Z-DOCK"]').boundingBox();
+		expect(dock!.width).toBeGreaterThan(ground!.width * 0.8);
+		expect(
+			(await page.locator("[data-legend] li").allTextContents()).map((text) => text.trim()),
+		).toEqual(["Nominal", "Elevated", "Peak load", "Offline"]);
 		expect(await page.locator('[data-zone="Z-EXP"]').getAttribute("data-tone")).toBe("offline");
 		expect(await page.locator("[data-main-meter]").textContent()).toContain("Hoofdaansluiting");
 		expect(
@@ -56,15 +72,37 @@ describe("the site's page", () => {
 		await page.locator("[data-energy-chart]").first().waitFor();
 	});
 
-	test("narrows to a floor or a zone with the scope chips", async () => {
+	test("narrows to a floor with its button or on the plan, and to a zone on the plan", async () => {
 		const { page } = app;
 		await page.locator('[data-scope="floor:Kelder"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "floor:Kelder");
 		await expect.poll(() => page.locator("[data-comparison] [data-zone-row]").count()).toBe(1);
 		expect(await page.locator("[data-door]").count()).toBe(0);
+		expect(await page.locator("[data-selection]").textContent()).toContain("Selection: Kelder");
 
-		await page.locator('[data-scope="zone:Z-DOCK"]').click();
+		await page.locator('[data-floor-select="1e verdieping"]').click();
+		await page.waitForURL((url) => url.searchParams.get("scope") === "floor:1e verdieping");
+		await expect.poll(() => page.locator("[data-comparison] [data-zone-row]").count()).toBe(2);
+
+		// A zone on the plan: the page stays where it was, and every panel follows.
+		await page.locator('[data-zone="Z-DOCK"]').scrollIntoViewIfNeeded();
+		const scrolled = await page.evaluate(() => window.scrollY);
+		await page.locator('[data-zone="Z-DOCK"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "zone:Z-DOCK");
+		await expect
+			.poll(() => page.locator('[data-zone="Z-DOCK"]').getAttribute("aria-current"))
+			.toBe("true");
+		expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+		await page
+			.locator("[data-detail-panel] [data-slot='card-title']", {
+				hasText: "Detail · Expeditie & Docks",
+			})
+			.waitFor();
+		expect(
+			await page
+				.locator("[data-installation]")
+				.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.installation)),
+		).toEqual(["Dock-lift & deuren"]);
 		await expect
 			.poll(() =>
 				page
@@ -104,7 +142,9 @@ describe("a zone's page", () => {
 		const { page } = app;
 		const { siteId } = await riedel();
 		await app.go(`/energy/${siteId}`);
+		// Selected on the plan, then its own page from the detail panel.
 		await page.locator('[data-zone="Z-DOCK"]').click();
+		await page.locator("[data-zone-page]").click();
 		await page.waitForURL((url) => url.pathname === `/energy/${siteId}/zones/Z-DOCK`);
 		await page.getByRole("heading", { name: "Z-DOCK · Expeditie & Docks" }).waitFor();
 		const consumer = page.locator('[data-consumer="Dock-lift & deuren"]');

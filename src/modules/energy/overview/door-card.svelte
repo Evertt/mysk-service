@@ -101,6 +101,7 @@
 				<div
 					class="panel absolute inset-x-0 top-0 transition-[height] duration-700 ease-in-out motion-reduce:transition-none"
 					style:height={open ? "12%" : "100%"}
+					data-panel={open ? "up" : "down"}
 				></div>
 				{#if open}
 					<div
@@ -108,6 +109,7 @@
 							"leak absolute inset-y-0 left-1 flex flex-col justify-around",
 							overdue && "fast",
 						]}
+						data-leak
 					>
 						{#each [0, 1, 2] as bar (bar)}
 							<span
@@ -119,6 +121,7 @@
 				{/if}
 				{#if cold}
 					<SnowflakeIcon
+						data-snowflake
 						class={[
 							"absolute top-1.5 right-1.5 size-3.5 transition-colors",
 							open ? "text-sky-300" : "text-slate-500",
@@ -128,7 +131,7 @@
 				{/if}
 			</div>
 			{#if !cold && open}
-				<div class="truck absolute right-4 bottom-7 text-slate-200">
+				<div class="truck absolute right-4 bottom-7 text-slate-200" data-truck>
 					<TruckIcon class="size-5" aria-hidden="true" />
 				</div>
 			{/if}
