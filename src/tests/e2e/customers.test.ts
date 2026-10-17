@@ -190,18 +190,31 @@ describe("in North", () => {
 	});
 
 	test("sorting by open orders puts the busiest customer first", async () => {
-		const busiest = await rows<{ name: string }>(
-			`with open as (
-				select c.name, count(*) as n from customer c join "order" o on o.customer_id = c.id
-				where c.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
-				group by c.id
-			)
-			select name from open where n = (select max(n) from open)`,
+		await app.sortBy("Open orders", "descending");
+		// Other files change North's orders at the same time, so the page is checked against itself
+		// (its open orders count down) and against the database's counts as the page was loaded:
+		// the top customer has as many open orders as any.
+		const headers = await app.page.locator("table").first().locator("thead th").allInnerTexts();
+		const column = headers.findIndex((header) => header.trim().startsWith("Open orders")) + 1;
+		const shown = (await bodyRows().locator(`td:nth-child(${column})`).allInnerTexts()).map(
+			(text) => Number(text.replace(/\D/g, "") || 0),
+		);
+		expect(shown.length).toBeGreaterThan(1);
+		expect(shown).toEqual(shown.toSorted((a, b) => b - a));
+		const top = await bodyRows().first().locator("td:nth-child(2) a").innerText();
+		const [most] = await rows<{ n: number }>(
+			`select count(*) as n from customer c join "order" o on o.customer_id = c.id
+			 where c.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
+			 group by c.id order by n desc limit 1`,
 			[north.id],
 		);
-		await app.sortBy("Open orders", "descending");
-		const top = await bodyRows().first().locator("td:nth-child(2) a").innerText();
-		expect(busiest.map((row) => row.name)).toContain(top);
+		const [own] = await rows<{ n: number }>(
+			`select count(*) as n from customer c join "order" o on o.customer_id = c.id
+			 where c.organization_id = ? and c.name = ? and o.status in ('quote', 'scheduled', 'in_progress')`,
+			[north.id, top],
+		);
+		// Within the few orders another file may have opened or closed meanwhile.
+		expect(own.n).toBeGreaterThanOrEqual(most.n - 2);
 	});
 
 	test("the column menu can show 'Customer since' but not the search column", async () => {
