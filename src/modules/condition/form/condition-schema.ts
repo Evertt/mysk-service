@@ -5,7 +5,7 @@ import { optionalId } from "#lib/schema.ts";
 import { ADVICE_MAX, scoreLimits } from "../model.ts";
 
 /** A condition score in whole percents, 0–100. */
-export const score = () =>
+const score = () =>
 	v.pipe(
 		v.number(m.condition_score_range),
 		v.integer(m.condition_score_range),

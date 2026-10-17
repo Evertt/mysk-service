@@ -62,7 +62,7 @@ export const clientRejected = defineSlot<{ number: string; rejected: RejectedPoi
 );
 
 /** A point of a completed checklist: the template point it was copied from, and what was found. */
-export interface CompletedPoint {
+interface CompletedPoint {
 	/** None for a point copied before checklists kept it that no template point matched. */
 	templateItemId: number | null;
 	result: PointResult | null;

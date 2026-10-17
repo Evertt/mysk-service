@@ -22,7 +22,7 @@ const today = () => Temporal.Now.plainDateISO();
 const EXPIRING_DAYS = 30;
 
 /** A component of a unit in care with its status, as the rules work it out from what's stored. */
-export interface ComponentState {
+interface ComponentState {
 	id: number;
 	number: string;
 	name: string;

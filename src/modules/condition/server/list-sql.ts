@@ -52,10 +52,7 @@ const either = <T>(part: SQL<T>, whole: SQL<T>) =>
 	sql<T>`(case when ${component.id} is null then ${whole} else ${part} end)`;
 
 /** A row's condition and status: its component's, or its unit's on a unit's own row. */
-export function rowSql(
-	unit: ConditionSql = conditionSql(),
-	part: ComponentSql = componentSql(unit),
-) {
+function rowSql(unit: ConditionSql = conditionSql(), part: ComponentSql = componentSql(unit)) {
 	const score = either(part.score, unit.score).mapWith((value: number | null) =>
 		value === null ? null : Number(value),
 	) as SQL<number | null>;
