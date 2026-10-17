@@ -17,6 +17,8 @@ import {
 	doorBreaches,
 	doorLossKwh,
 	firstDayThreshold,
+	floorLevel,
+	floorsTopDown,
 	highestKw,
 	isOffline,
 	liveKw,
@@ -25,6 +27,7 @@ import {
 	openings,
 	openMinutes,
 	peakShiftKw,
+	solarEstimateKw,
 	thresholdRatio,
 	thresholdState,
 	totalKwh,
@@ -296,5 +299,42 @@ describe("savings advice", () => {
 		expect(peakShiftKw(212)).toBeCloseTo(16.96);
 		expect(peakShiftKw(31)).toBe(4);
 		expect(nightModeKwh(1482)).toBeCloseTo(66.69);
+	});
+});
+
+describe("the building", () => {
+	test("reads a floor's level from its name", () => {
+		expect(floorLevel("1e verdieping")).toBe(1);
+		expect(floorLevel("2nd floor")).toBe(2);
+		expect(floorLevel("Begane grond")).toBe(0);
+		expect(floorLevel("Ground floor")).toBe(0);
+		expect(floorLevel("Kelder")).toBe(-1);
+		expect(floorLevel("Kelder 2")).toBe(-2);
+		expect(floorLevel("Mezzanine")).toBeNull();
+	});
+
+	test("stacks the floors as a plan draws them, the top one first", () => {
+		expect(floorsTopDown(["Begane grond", "1e verdieping", "Kelder"])).toEqual([
+			"1e verdieping",
+			"Begane grond",
+			"Kelder",
+		]);
+		// A floor whose name says nothing is as high as the ground floor, in its own order.
+		expect(floorsTopDown(["Kelder", "Hal", "Begane grond"])).toEqual([
+			"Hal",
+			"Begane grond",
+			"Kelder",
+		]);
+	});
+
+	test("estimates the solar panels: nothing at night, the most around midday, more in summer", () => {
+		const at = (text: string) => Temporal.ZonedDateTime.from(`${text}[Europe/Amsterdam]`);
+		expect(solarEstimateKw(18.2, at("2026-10-17T02:00"))).toBe(0);
+		expect(solarEstimateKw(18.2, at("2026-10-17T21:00"))).toBe(0);
+		const noon = solarEstimateKw(18.2, at("2026-10-17T13:30"));
+		expect(noon).toBeGreaterThan(solarEstimateKw(18.2, at("2026-10-17T10:00")));
+		expect(noon).toBeLessThan(18.2);
+		expect(solarEstimateKw(18.2, at("2026-06-21T13:30"))).toBeGreaterThan(noon);
+		expect(solarEstimateKw(18.2, at("2026-12-21T13:30"))).toBeLessThan(noon);
 	});
 });

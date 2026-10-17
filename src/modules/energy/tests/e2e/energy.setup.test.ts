@@ -158,7 +158,7 @@ describe("setting a site up", () => {
 		expect(
 			await page.locator('[data-kpi="consumption"] [data-slot="card-title"]').first().textContent(),
 		).toBe("0 kWh");
-		await page.locator('[data-scope="zone:Z-DOCK"]').click();
+		await page.locator('[data-zone="Z-DOCK"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "zone:Z-DOCK");
 		await expect.poll(() => page.locator("[data-comparison] [data-zone-row]").count()).toBe(1);
 		await page.locator('[data-period="month"]').click();

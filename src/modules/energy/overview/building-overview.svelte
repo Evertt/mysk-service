@@ -1,139 +1,311 @@
 <!--
 	@component
-	The building by floor: each zone's live power, its consumption over the period and its tone
-	(nominaal, verhoogd, piekbelasting, offline), linking to the zone's page; zones without a floor
-	(an external unit) after the floors. Beside it, the main meter: the site's live power against its
-	contracted peak, the period's consumption against the contract's pace, and the solar panels.
+	The building as a floor plan ("Gebouwoverzicht"), after the mockup: the floors stacked, the top
+	one first, each zone a block bordered in its tone (nominaal, verhoogd, piekbelasting, offline)
+	with a dot that pulses with its load, its live power and its consumption over the period; zones
+	without a floor (an external unit) outside the building. A floor's label and a zone select them
+	on the site's page (`hrefOf`), the selection ringed. Beside it the live P1 meter: the site's
+	power against its contracted peak, its bar flowing with the load, the contract and the solar
+	panels' estimated generation now.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
+	import Building2Icon from "@lucide/svelte/icons/building-2";
+	import ZapIcon from "@lucide/svelte/icons/zap";
 
 	import { formatNumber } from "#lib/i18n/index.ts";
 
-	import { formatKw, formatKwh, toneBadges, toneColours } from "../display.ts";
+	import { formatKw, formatKwh, toneColours, toneBorders } from "../display.ts";
 	import { energyLabels } from "../labels.ts";
-	import type { Period } from "../model.ts";
+	import { floorsTopDown, solarEstimateKw, type ZoneTone } from "../model.ts";
 	import type { EnergySite, ZoneFigures } from "../server/figures.ts";
-	import { floorsOf, kpisOf } from "./scope.ts";
+	import { floorsOf, type Scope, scopeParam } from "./scope.ts";
 
-	let { site, zones, period }: { site: EnergySite; zones: ZoneFigures[]; period: Period } =
-		$props();
+	let {
+		site,
+		zones,
+		scope,
+		hrefOf,
+		now,
+	}: {
+		site: EnergySite;
+		/** All the site's zones: the plan shows the building whatever is selected. */
+		zones: ZoneFigures[];
+		scope: Scope;
+		/** The site's page with another selection. */
+		hrefOf: (scope: Scope) => string;
+		now: Temporal.Instant;
+	} = $props();
 
-	const groups = $derived([
-		...floorsOf(zones).map((floor) => ({
+	const floors = $derived(
+		floorsTopDown(floorsOf(zones)).map((floor) => ({
 			floor,
 			zones: zones.filter((zone) => zone.floor === floor),
 		})),
-		...(zones.some((zone) => !zone.floor)
-			? [{ floor: m.energy_no_floor(), zones: zones.filter((zone) => !zone.floor) }]
-			: []),
-	]);
+	);
+	const outside = $derived(zones.filter((zone) => !zone.floor));
+	const tones: ZoneTone[] = ["nominal", "elevated", "peak", "offline"];
 
-	const totals = $derived(kpisOf(zones, [], site));
+	const totalKw = $derived(zones.reduce((total, zone) => total + zone.liveKw, 0));
 	const peakShare = $derived(
-		site.contractedPeakKw > 0 ? (totals.liveKw / site.contractedPeakKw) * 100 : 0,
+		site.contractedPeakKw > 0 ? (totalKw / site.contractedPeakKw) * 100 : 0,
 	);
-	/** The contract's kWh for the period: a day's or this month's share of the year's. */
-	const contractKwh = $derived(
-		(site.contractedKwhPerYear / 365) * (period === "day" ? 1 : (zones[0]?.series.length ?? 30)),
+	const solarKw = $derived(
+		solarEstimateKw(site.pvCapacityKw, now.toZonedDateTimeISO(site.timeZone)),
 	);
-	const zoneHref = (code: string) =>
-		resolve("/(app)/(modules)/energy/[site]/zones/[zone]", { site: String(site.id), zone: code });
+	/** The meter's bar flows faster the closer the load is to the contracted peak. */
+	const flowSeconds = $derived(Math.max(0.8, 4 - (peakShare / 100) * 3));
+
+	/**
+	 * A zone's columns of a floor's six: up to three a row; a last row of one spans the floor (the
+	 * mockup's Expeditie & Docks), of two half of it each.
+	 */
+	function spanOf(index: number, count: number) {
+		if (count <= 3) return 6 / count;
+		const rest = count % 3;
+		const lastRow = index >= count - rest;
+		if (!lastRow || rest === 0) return 2;
+		return rest === 1 ? 6 : 3;
+	}
+	const spans: Record<number, string> = {
+		2: "sm:col-span-2",
+		3: "sm:col-span-3",
+		6: "sm:col-span-6",
+	};
+
+	const selected = (candidate: Scope) => scopeParam(candidate) === scopeParam(scope);
+	/** How fast a zone's dot pulses: the higher its load, the faster. */
+	const pulseOf = (tone: ZoneTone) =>
+		tone === "peak" ? "0.9s" : tone === "elevated" ? "1.6s" : "2.6s";
 </script>
 
-<div class="grid gap-4 lg:grid-cols-[1fr_18rem]">
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.energy_building_title()}</Card.Title>
-			<Card.Description>{m.energy_building_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content class="flex flex-col gap-5">
-			{#each groups as group (group.floor)}
-				<section class="flex flex-col gap-2" aria-label={group.floor} data-floor={group.floor}>
-					<h3 class="text-sm font-medium text-muted-foreground">{group.floor}</h3>
-					<ul class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-						{#each group.zones as zone (zone.id)}
-							<li>
-								<a
-									href={zoneHref(zone.code)}
-									class="flex h-full flex-col gap-2 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-									data-zone={zone.code}
-									data-tone={zone.tone}
-								>
-									<div class="flex items-start justify-between gap-2">
-										<div class="min-w-0">
-											<p class="font-mono text-xs text-muted-foreground">{zone.code}</p>
-											<p class="truncate font-medium">{zone.name}</p>
-										</div>
-										<Badge variant={toneBadges[zone.tone]}>
-											{energyLabels.label("zoneTone", zone.tone)}
-										</Badge>
-									</div>
-									<div class="flex items-end justify-between gap-2 tabular-nums">
-										<span class="text-lg font-semibold" data-live-kw>{formatKw(zone.liveKw)}</span>
-										<span class="text-sm text-muted-foreground">{formatKwh(zone.kwh)}</span>
-									</div>
-									<span
-										class={["h-1 rounded-full", toneColours[zone.tone]]}
-										style:width="{Math.min(100, Math.round(zone.ratio * 100))}%"
-										aria-hidden="true"
-									></span>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/each}
-		</Card.Content>
-	</Card.Root>
+{#snippet zoneBlock(zone: ZoneFigures, span: number)}
+	{@const current = selected({ kind: "zone", code: zone.code })}
+	<a
+		href={hrefOf({ kind: "zone", code: zone.code })}
+		class={[
+			"flex min-w-0 flex-col rounded-md border-2 bg-card p-2 text-left transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+			toneBorders[zone.tone],
+			zone.floor === null && "border-dashed",
+			current && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+			spans[span],
+		]}
+		title="{zone.code} · {energyLabels.label('zoneTone', zone.tone)}"
+		aria-current={current ? "true" : undefined}
+		data-sveltekit-reset="false"
+		data-zone={zone.code}
+		data-tone={zone.tone}
+	>
+		<span class="flex items-center gap-1.5">
+			<span class="relative flex size-2 shrink-0" aria-hidden="true">
+				{#if zone.tone === "peak"}
+					<span class={["halo absolute inline-flex size-full rounded-full", toneColours.peak]}
+					></span>
+				{/if}
+				<span
+					class={["pulse relative inline-flex size-2 rounded-full", toneColours[zone.tone]]}
+					style:--pulse={pulseOf(zone.tone)}
+					data-tone={zone.tone}
+				></span>
+			</span>
+			<span class="truncate text-[0.6875rem] font-semibold text-foreground/80">{zone.name}</span>
+		</span>
+		<span class="mt-1 text-sm font-bold tabular-nums" data-live-kw>{formatKw(zone.liveKw)}</span>
+		<span class="text-[0.625rem] text-muted-foreground tabular-nums">{formatKwh(zone.kwh)}</span>
+		<span class="sr-only">{energyLabels.label("zoneTone", zone.tone)}</span>
+	</a>
+{/snippet}
 
-	<Card.Root data-main-meter>
-		<Card.Header>
-			<Card.Title>{site.meterName}</Card.Title>
-			<Card.Description>{m.energy_meter_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content class="flex flex-col gap-4 text-sm">
-			<div class="flex flex-col gap-1">
-				<div class="flex justify-between gap-2">
-					<span class="text-muted-foreground">{m.energy_meter_live()}</span>
-					<span class="font-medium tabular-nums">{formatKw(totals.liveKw)}</span>
-				</div>
-				<div
-					class="h-2 overflow-hidden rounded-full bg-muted"
-					role="meter"
-					aria-label={m.energy_meter_peak_share()}
-					aria-valuemin={0}
-					aria-valuemax={100}
-					aria-valuenow={Math.round(peakShare)}
+<Card.Root data-building>
+	<Card.Header>
+		<Card.Title
+			>{m.energy_building_heading({ site: `${site.customerName} ${site.siteName}` })}</Card.Title
+		>
+		<Card.Description>{m.energy_building_hint()}</Card.Description>
+		<Card.Action>
+			<ul
+				class="flex flex-wrap justify-end gap-x-3 gap-y-1 text-[0.6875rem] text-muted-foreground"
+				aria-label={m.energy_building_legend()}
+				data-legend
+			>
+				{#each tones as tone (tone)}
+					<li class="inline-flex items-center gap-1">
+						<span class={["size-2 rounded-full", toneColours[tone]]} aria-hidden="true"></span>
+						{energyLabels.label("zoneTone", tone)}
+					</li>
+				{/each}
+			</ul>
+		</Card.Action>
+	</Card.Header>
+	<Card.Content class="flex flex-col gap-3">
+		<div class="overflow-hidden rounded-lg border border-slate-300 dark:border-white/15">
+			<div class="flex items-center gap-2 bg-slate-800 px-4 py-2 text-white dark:bg-slate-950">
+				<Building2Icon class="size-4 shrink-0 text-teal-400" aria-hidden="true" />
+				<span class="truncate text-sm font-semibold">{site.name}</span>
+				<span class="ml-auto shrink-0 text-[0.6875rem] text-slate-300 tabular-nums"
+					>{m.energy_building_total({ kw: formatKw(totalKw) })}</span
 				>
+			</div>
+			<div class="grid bg-muted md:grid-cols-[1fr_12rem]">
+				<div class="flex flex-col">
+					{#each floors as { floor, zones: floorZones } (floor)}
+						{@const current = selected({ kind: "floor", floor })}
+						<section
+							class={[
+								"grid grid-cols-1 gap-3 border-b border-slate-300 p-3 last:border-b-0 sm:grid-cols-6 dark:border-white/10",
+								current ? "bg-accent" : "bg-card/60",
+							]}
+							aria-label={floor}
+							data-floor={floor}
+						>
+							<div class="sm:col-span-6">
+								<a
+									href={hrefOf({ kind: "floor", floor })}
+									class={[
+										"inline-flex h-6 items-center rounded-sm px-2 text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:bg-muted hover:text-foreground",
+										current && "bg-primary/15 text-accent-foreground",
+									]}
+									aria-current={current ? "true" : undefined}
+									data-sveltekit-reset="false"
+									data-floor-select={floor}>{floor}</a
+								>
+							</div>
+							{#each floorZones as zone, index (zone.id)}
+								{@render zoneBlock(zone, spanOf(index, floorZones.length))}
+							{/each}
+						</section>
+					{/each}
+				</div>
+				<aside
+					class="flex flex-col gap-3 border-t border-slate-300 bg-muted/60 p-3 md:border-t-0 md:border-l dark:border-white/10"
+					data-main-meter
+				>
+					<p class="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+						{m.energy_meter_live_title()}
+					</p>
+					<div class="rounded-md border-2 border-primary bg-card p-3">
+						<div class="flex items-center gap-1.5">
+							<ZapIcon class="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+							<span class="truncate text-[0.6875rem] font-semibold">{site.meterName}</span>
+						</div>
+						<p class="mt-1 text-lg font-bold text-primary tabular-nums" data-meter-kw>
+							{formatKw(totalKw)}
+						</p>
+						<div
+							class="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+							role="meter"
+							aria-label={m.energy_meter_peak_share()}
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={Math.round(peakShare)}
+						>
+							<div
+								class={[
+									"h-full rounded-full transition-[width] duration-700 ease-out",
+									peakShare >= 100 ? "bg-rose-600" : "bg-primary",
+									totalKw > 0 && "flowing",
+								]}
+								style:width="{Math.min(100, Math.max(2, peakShare))}%"
+								style:--flow="{flowSeconds}s"
+							></div>
+						</div>
+						<p class="mt-1 text-[0.625rem] text-muted-foreground">
+							{m.energy_meter_contract_peak({
+								share: formatNumber(Math.round(peakShare)),
+								kw: formatKw(site.contractedPeakKw),
+							})}
+						</p>
+					</div>
+					<div class="rounded-md border bg-card p-3 text-[0.625rem] text-muted-foreground">
+						<p class="font-semibold text-foreground">{m.energy_meter_contract_title()}</p>
+						<p>
+							{m.energy_meter_contract_values({
+								kw: formatKw(site.contractedPeakKw),
+								kwh: formatKwh(site.contractedKwhPerYear),
+							})}
+						</p>
+					</div>
 					<div
-						class={["h-full rounded-full", peakShare >= 100 ? "bg-rose-600" : "bg-primary"]}
-						style:width="{Math.min(100, peakShare)}%"
-					></div>
+						class="rounded-md border bg-card p-3 text-[0.625rem] text-muted-foreground"
+						data-solar
+					>
+						<p class="font-semibold text-foreground">{m.energy_meter_pv()}</p>
+						<p class="text-emerald-600 tabular-nums dark:text-emerald-400">
+							{m.energy_meter_pv_now({ kw: formatKw(solarKw) })}
+						</p>
+						<p>{m.energy_meter_pv_estimate({ kwp: formatNumber(site.pvCapacityKw) })}</p>
+					</div>
+				</aside>
+			</div>
+		</div>
+		{#if outside.length}
+			<section
+				class="flex flex-col gap-2"
+				aria-label={m.energy_no_floor()}
+				data-floor={m.energy_no_floor()}
+			>
+				<h3 class="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+					{m.energy_no_floor()}
+				</h3>
+				<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+					{#each outside as zone (zone.id)}
+						{@render zoneBlock(zone, 0)}
+					{/each}
 				</div>
-				<span class="text-xs text-muted-foreground">
-					{m.energy_meter_contract_peak({
-						share: formatNumber(Math.round(peakShare)),
-						kw: formatKw(site.contractedPeakKw),
-					})}
-				</span>
-			</div>
-			<div class="flex flex-col gap-1">
-				<div class="flex justify-between gap-2">
-					<span class="text-muted-foreground">{energyLabels.label("period", period)}</span>
-					<span class="font-medium tabular-nums">{formatKwh(totals.kwh)}</span>
-				</div>
-				<span class="text-xs text-muted-foreground">
-					{m.energy_meter_contract_kwh({
-						kwh: formatKwh(contractKwh),
-						year: formatKwh(site.contractedKwhPerYear),
-					})}
-				</span>
-			</div>
-			<div class="flex justify-between gap-2">
-				<span class="text-muted-foreground">{m.energy_meter_pv()}</span>
-				<span class="font-medium tabular-nums">{formatKw(site.pvCapacityKw)}</span>
-			</div>
-		</Card.Content>
-	</Card.Root>
-</div>
+			</section>
+		{/if}
+	</Card.Content>
+</Card.Root>
+
+<style>
+	.pulse {
+		animation: zone-pulse var(--pulse) ease-in-out infinite;
+	}
+	.pulse[data-tone="offline"] {
+		animation: none;
+	}
+	.halo {
+		animation: zone-halo 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+	}
+	.flowing {
+		background-image: repeating-linear-gradient(
+			-45deg,
+			transparent 0 6px,
+			rgb(255 255 255 / 0.28) 6px 12px
+		);
+		background-size: 17px 100%;
+		animation: meter-flow var(--flow) linear infinite;
+	}
+	@keyframes zone-pulse {
+		0%,
+		100% {
+			opacity: 1;
+			transform: scale(1);
+		}
+		50% {
+			opacity: 0.45;
+			transform: scale(0.75);
+		}
+	}
+	@keyframes zone-halo {
+		75%,
+		100% {
+			opacity: 0;
+			transform: scale(2.4);
+		}
+	}
+	@keyframes meter-flow {
+		to {
+			background-position: 17px 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.pulse,
+		.halo,
+		.flowing {
+			animation: none;
+		}
+		.halo {
+			display: none;
+		}
+	}
+</style>

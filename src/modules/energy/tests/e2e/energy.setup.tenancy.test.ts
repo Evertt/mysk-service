@@ -146,7 +146,7 @@ describe("a member who's no manager", () => {
 			expect(await card.getByRole("link", { name: /^Set up/ }).count()).toBe(0);
 
 			await page.goto(new URL(`/energy/${siteId}`, page.url()).href);
-			await page.getByRole("heading", { name: "Bakkerij Tiel — Tiel" }).waitFor();
+			await page.locator('[data-hero-chip="site"]', { hasText: "Bakkerij Tiel — Tiel" }).waitFor();
 			expect(await page.getByRole("link", { name: "Set up" }).count()).toBe(0);
 			const setup = await page.goto(new URL(`/energy/${siteId}/setup`, page.url()).href);
 			expect(setup?.status()).toBe(403);
@@ -154,7 +154,7 @@ describe("a member who's no manager", () => {
 			// The owner's form, with a code of its own, posted from a page the planner may see: as a
 			// form without JavaScript posts it, to the page with the remote form's action.
 			await page.goto(new URL(`/energy/${siteId}`, page.url()).href);
-			await page.getByRole("heading", { name: "Bakkerij Tiel — Tiel" }).waitFor();
+			await page.locator('[data-hero-chip="site"]', { hasText: "Bakkerij Tiel — Tiel" }).waitFor();
 			const fields = addedZone!.fields.map(([name, field]) =>
 				/^code(\/|$)/.test(name) ? ([name, "Z-PLANNER"] as const) : ([name, field] as const),
 			);

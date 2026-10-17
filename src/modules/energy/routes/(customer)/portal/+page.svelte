@@ -6,16 +6,27 @@
 <script lang="ts">
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
+	import DoorOpenIcon from "@lucide/svelte/icons/door-open";
+	import GaugeIcon from "@lucide/svelte/icons/gauge";
+	import LeafIcon from "@lucide/svelte/icons/leaf";
+	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
+	import ZapIcon from "@lucide/svelte/icons/zap";
 
-	import { formatCents } from "#lib/i18n/index.ts";
+	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { getClientEnergy } from "#modules/energy/client/client-energy.remote.ts";
 	import { formatCo2, formatKw, formatKwh, formatMinutes } from "#modules/energy/display.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
 	import { costCents, type Period, periods } from "#modules/energy/model.ts";
 	import ComparisonTable from "#modules/energy/overview/comparison-table.svelte";
-	import EnergyChart from "#modules/energy/overview/energy-chart.svelte";
+	import ConsumptionChart from "#modules/energy/overview/consumption-chart.svelte";
 	import KpiTile from "#modules/energy/overview/kpi-tile.svelte";
-	import { kpisOf, seriesOf } from "#modules/energy/overview/scope.ts";
+	import {
+		consumptionBars,
+		kpisOf,
+		measuredSoFar,
+		readingsUntil,
+		seriesOf,
+	} from "#modules/energy/overview/scope.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(customer)/(modules)/energy/portal"> } = $props();
@@ -54,6 +65,13 @@
 	{#each data.sites as entry (entry.site.id)}
 		{@const kpis = kpisOf(entry.zones, entry.doors, entry.site, entry.previousComplete)}
 		{@const series = seriesOf(entry.zones)}
+		{@const until = readingsUntil(entry.zones)}
+		{@const measured = measuredSoFar(
+			period === "day" ? "hour" : "day",
+			entry.from,
+			until,
+			entry.site.timeZone,
+		)}
 		<section
 			class="flex flex-col gap-4"
 			aria-label={entry.site.name}
@@ -61,9 +79,16 @@
 		>
 			<h2 class="text-lg font-semibold">{entry.site.name}</h2>
 			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-				<KpiTile kpi="live" label={m.energy_kpi_live()} value={formatKw(kpis.liveKw)} />
+				<KpiTile
+					kpi="live"
+					icon={ZapIcon}
+					tone="text-primary"
+					label={m.energy_kpi_live()}
+					value={formatKw(kpis.liveKw)}
+				/>
 				<KpiTile
 					kpi="consumption"
+					icon={GaugeIcon}
 					label={period === "day" ? m.energy_kpi_today() : m.energy_kpi_month()}
 					value={formatKwh(kpis.kwh)}
 					change={kpis.change}
@@ -72,14 +97,24 @@
 				/>
 				<KpiTile
 					kpi="peak"
+					icon={TrendingUpIcon}
+					tone="text-amber-600 dark:text-amber-400"
 					label={m.energy_kpi_peak()}
 					value={formatKw(kpis.peakKw)}
 					change={kpis.peakChange}
 					{compared}
 				/>
-				<KpiTile kpi="co2" label={m.energy_kpi_co2()} value={formatCo2(kpis.co2Kg)} />
+				<KpiTile
+					kpi="co2"
+					icon={LeafIcon}
+					tone="text-emerald-600 dark:text-emerald-400"
+					label={m.energy_kpi_co2()}
+					value={formatCo2(kpis.co2Kg)}
+				/>
 				<KpiTile
 					kpi="doors"
+					icon={DoorOpenIcon}
+					tone="text-sky-600 dark:text-sky-400"
 					label={m.energy_kpi_doors()}
 					value={formatKwh(kpis.doorLossKwh)}
 					change={kpis.doorLossChange}
@@ -88,13 +123,16 @@
 				/>
 			</div>
 
-			<EnergyChart
+			<ConsumptionChart
 				title={period === "day" ? m.energy_chart_day_title() : m.energy_chart_month_title()}
-				current={series.current}
-				previous={series.previous}
+				description={period === "day"
+					? m.energy_chart_day_until({ time: until ? formatTime(until) : "—" })
+					: m.energy_chart_month_until({ day: formatNumber(Math.max(1, measured.index + 1)) })}
+				bars={consumptionBars(series.current, series.previous, measured)}
 				bucket={period === "day" ? "hour" : "day"}
-				currentLabel={energyLabels.label("period", period)}
-				previousLabel={period === "day" ? m.energy_yesterday() : m.energy_last_month()}
+				current={kpis.kwh}
+				previous={kpis.previousKwh}
+				change={kpis.change}
 			/>
 
 			<ComparisonTable zones={entry.zones} previousComplete={entry.previousComplete} />
