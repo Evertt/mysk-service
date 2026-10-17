@@ -10,6 +10,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import { errorMessage } from "#lib/utils.ts";
 
 	import type { Article, Checkpoint } from "../api/extensions.ts";
 	import { saveComponent } from "../components.remote.ts";
@@ -81,7 +82,12 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ element, submit }) => {
-				if (!(await submit())) return;
+				try {
+					if (!(await submit())) return;
+				} catch (error) {
+					toast.error(errorMessage(error, m.common_error_generic()));
+					return;
+				}
 				if (!editing) element.reset();
 				open = false;
 				toast.success(m.condition_component_saved_toast());

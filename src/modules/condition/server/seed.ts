@@ -117,9 +117,11 @@ const shltrConditions: FixedCondition[] = [
 /**
  * A component of the mockup's (`onderdelen`), on the seeded unit that's it, or the closest: the
  * mockup's "Sectionaaldeur D-07" at "Expeditie noord" is Riedel's "Sectionaaldeur laaddok 07" (where
- * the 22% is), and its "Dock 06" Weggemans' "Salvo dock 06". Its article is the shop's like it: the
- * mockup's SKUs (SD-014, LV-008, …) aren't the seeded shop's, which only has SD-001 the same. Its
- * points are texts of the unit's template.
+ * the 22% is), its "Dock 06" Weggemans' "Salvo dock 06", and Pakhuis 7's "Airco AC-02" at "Kantoor
+ * 1e" is the one at the reception while that one's decommissioned (as seeded). Its article is the
+ * shop's like it: the mockup's SKUs (SD-014, LV-008, …) aren't the seeded shop's, which only has
+ * SD-001 the same; the stairs', the airco's and the chock's have none in the shop. Its points are
+ * texts of the unit's template.
  */
 interface SeedComponent {
 	number: string;

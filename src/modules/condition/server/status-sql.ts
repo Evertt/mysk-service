@@ -39,12 +39,34 @@ const rankOf = (status: SQL) =>
 const concernAt = (rank: SQL) =>
 	sql<Concern>`(case ${rank} when 0 then 'critical' when 1 then 'attention' else 'ok' end)`;
 
-/** `what` of the latest condition `where` picks (a unit's as a whole, or a component's), null without one. */
-const latestWhere = (where: SQL | undefined, what: SQL) =>
+/**
+ * `what` of the latest condition `where` picks (a unit's as a whole, or a component's), null
+ * without one, in the tenant of `tenant` (the unit's, or the component's own).
+ */
+const latestWhere = (
+	where: SQL | undefined,
+	what: SQL,
+	tenant: SQLWrapper = equipment.organizationId,
+) =>
 	sql`(select ${what} from ${unitCondition} where ${and(
 		where,
-		sameTenant(unitCondition.organizationId),
+		eq(unitCondition.organizationId, tenant as typeof equipment.organizationId),
 	)} order by ${desc(unitCondition.recordedAt)}, ${desc(unitCondition.id)} limit 1)`;
+
+/**
+ * `what` of the latest condition of the `component` row the query has, null without one: in the
+ * component's tenant, not its unit's, as SQLite can't look two queries out from a subquery in an
+ * `order by` (a unit's worst component, `automatic.ts`).
+ */
+const latestOfComponent = (what: SQL) =>
+	latestWhere(
+		and(
+			eq(unitCondition.equipmentId, component.equipmentId),
+			sql`${unitCondition.componentId} = ${component.id}`,
+		),
+		what,
+		component.organizationId,
+	);
 
 /** A latest score, as a number. */
 const asScore = (score: SQL) =>
@@ -108,18 +130,10 @@ export function conditionSql() {
 	 * What the unit's components' latest conditions ask for, the worst, by their scores and advice
 	 * alone: the inspection is the unit's, which its own place has already. Null without components.
 	 */
-	const ofComponent = (what: SQL) =>
-		latestWhere(
-			and(
-				eq(unitCondition.equipmentId, equipment.id),
-				sql`${unitCondition.componentId} = ${component.id}`,
-			),
-			what,
-		);
 	const componentsRank = sql<number | null>`(select min(${rankFor(
 		{
-			score: ofComponent(sql`${unitCondition.score}`),
-			advice: ofComponent(sql`${unitCondition.advice}`),
+			score: latestOfComponent(sql`${unitCondition.score}`),
+			advice: latestOfComponent(sql`${unitCondition.advice}`),
 		},
 		false,
 	)}) from ${component} where ${and(
@@ -127,8 +141,6 @@ export function conditionSql() {
 		sameTenant(component.organizationId),
 	)})`;
 
-	/** What its own state asks for, alone (`concernOf()`). */
-	const ownConcern = concernAt(rankFor({ score, advice }, true));
 	/** What its state and its components' ask for, the worst (`rolledUpStatus()`). */
 	const concern = concernAt(
 		sql`min(${rankFor({ score, advice }, true)}, coalesce(${componentsRank}, 3))`,
@@ -148,7 +160,6 @@ export function conditionSql() {
 		nextDue,
 		planned,
 		lastService,
-		ownConcern,
 		concern,
 		status,
 		/** Worst first: by status, then (for planned ones) what's behind it, then the lowest score. */
@@ -167,14 +178,7 @@ export type ConditionSql = ReturnType<typeof conditionSql>;
  */
 export function componentSql(unit: ConditionSql = conditionSql()) {
 	const { planned, rankFor, bandOf } = unit.parts;
-	const latest = (what: SQL) =>
-		latestWhere(
-			and(
-				eq(unitCondition.equipmentId, component.equipmentId),
-				sql`${unitCondition.componentId} = ${component.id}`,
-			),
-			what,
-		);
+	const latest = latestOfComponent;
 	const score = asScore(latest(sql`${unitCondition.score}`));
 	const advice = latest(sql`${unitCondition.advice}`) as SQL<string | null>;
 	const recordedAt = latest(sql`${unitCondition.recordedAt}`).mapWith(unitCondition.recordedAt);

@@ -7,7 +7,7 @@
  * unit. Another tenant's unit or component is a 404, also by a tampered id; an article or a point
  * that isn't the tenant's (or the unit's) is refused.
  */
-import { error } from "@sveltejs/kit";
+import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -98,12 +98,12 @@ async function checked(
 		input.materialId === null
 			? null
 			: (await articlesById([input.materialId])).get(input.materialId);
-	if (article === undefined) error(400, m.condition_component_article_not_found());
+	if (article === undefined) invalid(m.condition_component_article_not_found());
 	const offered = (await collect(checkpoints, { equipmentId, ids: [...kept] })).flat();
 	const allowed = new Set(offered.map((point) => point.id));
 	let checkpointIds = [...new Set(input.checkpointIds)];
 	if (checkpointIds.some((id) => !allowed.has(id))) {
-		error(400, m.condition_component_checkpoint_not_found());
+		invalid(m.condition_component_checkpoint_not_found());
 	}
 	if (fresh && !checkpointIds.length && article) {
 		const shop = (await collect(articleCheckpoints, { materialIds: [article.id] })).flat();
@@ -148,7 +148,7 @@ export function addComponent(serialNumber: string, input: ComponentInput) {
 			})
 			.from(component)
 			.where(and(eq(component.equipmentId, unit.id), inTenant(component)));
-		if (count >= COMPONENTS_MAX) error(400, m.condition_components_max({ max: COMPONENTS_MAX }));
+		if (count >= COMPONENTS_MAX) invalid(m.condition_components_max({ max: COMPONENTS_MAX }));
 		const { article, checkpointIds } = await checked(unit.id, input, { fresh: true });
 		const number = await nextNumber(tx, componentNumbers);
 		const [made] = await tx

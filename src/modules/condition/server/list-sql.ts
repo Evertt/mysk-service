@@ -25,7 +25,7 @@ import {
 } from "./status-sql.ts";
 
 /** The list's joins: the unit's owner, site and location (if any), each in the tenant. */
-export const withUnitJoins = <T extends SQLiteSelect>(query: T) =>
+const withUnitJoins = <T extends SQLiteSelect>(query: T) =>
 	query
 		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.innerJoin(...tenantJoin(customerSite, equipment.siteId))

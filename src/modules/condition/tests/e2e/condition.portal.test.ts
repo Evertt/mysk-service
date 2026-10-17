@@ -1,15 +1,26 @@
 /**
  * The condition in the engineer portal, on a phone: once Lev completes a unit's checklist on one of
  * his inspection orders, the unit has the condition its points work out to (the share found OK of
- * those found OK or rejected, N/A left out), on that order, by him; its card shows it and asks only
- * for his advice, which goes onto that condition. A unit that isn't on the order, or another
- * engineer's order, is refused, also by tampered fields.
+ * those found OK or rejected, N/A left out), and each of its components the same over its own
+ * points, on that order, by him; its card shows them and asks only for his advice, which goes onto
+ * the unit's condition. A unit that isn't on the order, or another engineer's order, is refused,
+ * also by tampered fields.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { mobileViewport, organizations, rows, useApp, users, value } from "#e2e/app.ts";
+import {
+	baseURL,
+	hydrated,
+	mobileViewport,
+	organizations,
+	rows,
+	useApp,
+	users,
+	value,
+} from "#e2e/app.ts";
+import { signedInPage } from "#e2e/portal-helpers.ts";
 
-import { conditionCount, conditionsOf } from "./helpers.ts";
+import { componentConditionsOf, componentsOf, conditionCount, conditionsOf } from "./helpers.ts";
 
 const shltr = organizations.shltr;
 const app = useApp({ user: users.shltrEngineer, viewport: mobileViewport });
@@ -75,7 +86,33 @@ describe("Lev's inspection or maintenance order", () => {
 		await remark.blur();
 		await point(skipped.text).getByRole("button", { name: "N/A" }).click();
 		for (const each of passed) await point(each.text).getByRole("button", { name: "OK" }).click();
-		const before = await conditionCount();
+
+		// Meanwhile the office gives the unit a component checked by the rejected point, the skipped
+		// one and the first passed one.
+		const { page: office } = await signedInPage(app, users.shltrPlanner);
+		let part: { id: number; number: string };
+		try {
+			await office.goto(`${baseURL}/equipment/${unit.serial_number}`);
+			await hydrated(office);
+			await office
+				.locator("[data-unit-components]")
+				.getByRole("button", { name: "Add component" })
+				.click();
+			const dialog = office.getByRole("dialog");
+			await dialog.getByLabel("Name").fill("Veerset proef");
+			for (const each of [rejected, skipped, passed[0]]) {
+				await dialog.getByLabel(each.text, { exact: true }).check();
+			}
+			await dialog.getByRole("button", { name: "Save" }).click();
+			await expect
+				.poll(async () => (await componentsOf(unit.id)).at(-1)?.name)
+				.toBe("Veerset proef");
+			part = (await componentsOf(unit.id)).at(-1)!;
+		} finally {
+			await office.context().close();
+		}
+
+		const before = (await conditionsOf(unit.id)).length;
 		await card(unit.serial_number).getByRole("button", { name: "Complete checklist" }).click();
 		await asked(unit.serial_number)
 			.getByText("The checklist is completed. Any advice on the unit?")
@@ -90,9 +127,27 @@ describe("Lev's inspection or maintenance order", () => {
 			order_id: job.id,
 			engineer_id: lev,
 		});
-		expect(await conditionCount()).toBe(before + 1);
+		expect((await conditionsOf(unit.id)).length).toBe(before + 1);
+		// The component's from its own points: one OK of the two that count.
+		expect(await componentConditionsOf(part.id)).toEqual([
+			expect.objectContaining({
+				score: 50,
+				source: "checklist",
+				order_id: job.id,
+				engineer_id: lev,
+			}),
+		]);
 		// Shown, not asked for.
-		expect(await asked(unit.serial_number).locator(`[data-condition="${score}"]`).count()).toBe(1);
+		expect(
+			await asked(unit.serial_number)
+				.locator(`[data-recorded] > [data-condition="${score}"]`)
+				.count(),
+		).toBe(1);
+		expect(
+			await asked(unit.serial_number)
+				.locator(`[data-component="${part.number}"] [data-condition="50"]`)
+				.count(),
+		).toBe(1);
 		expect(await asked(unit.serial_number).getByLabel("Condition (%)").count()).toBe(0);
 	});
 
