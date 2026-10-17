@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, organizations, rows, useApp, users, value, quiet } from "./app.ts";
+import { organizations, rows, useApp, users, value, quiet } from "./app.ts";
 import { equipmentPage } from "./equipment-helpers.ts";
 import { addUnits, formUnits, orderId, orderUnits, snapshot } from "./orders-helpers.ts";
 import { signedInPage } from "./portal-helpers.ts";
@@ -152,7 +152,6 @@ describe("in North, an order about several units", () => {
 		expect(await app.rowCount()).toBe(withUnit);
 		await app.loadAllRows();
 		expect(await page.locator("tbody tr", { hasText: number }).count()).toBe(1);
-		await app.go(afresh("/orders"));
 	});
 
 	test("it's in the service history of each of its units, at its share of the cost", async () => {

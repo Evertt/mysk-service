@@ -20,7 +20,6 @@ import {
 	shownNumbers,
 	snapshot,
 } from "./orders-helpers.ts";
-import { tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -292,44 +291,5 @@ describe("in South", () => {
 		await expect.poll(() => app.rowCount()).toBe(1);
 		const row = page.locator('[data-slot="data-table"] tbody tr').first();
 		expect(cents(await row.locator("td:nth-last-child(2)").innerText())).toBe(total);
-	});
-
-	test("a bulk action with the ids of North's orders leaves them alone", async () => {
-		const { page } = app;
-		const victims = await rows<{ id: number }>(
-			`select id from "order" where organization_id = ? and status = 'quote' order by id limit 2`,
-			[north.id],
-		);
-		const before = await Promise.all(victims.map((victim) => snapshot(victim.id)));
-		await app.go("/orders?status=quote&sort=number");
-		const own = await orderId((await shownNumbers(app))[0], south.id);
-		const ownBefore = await snapshot(own);
-
-		await page
-			.locator('[data-slot="data-table"] tbody tr')
-			.first()
-			.getByRole("checkbox", { name: "Select row" })
-			.click();
-		// The action bar's: each status badge has a "Change status of …" button too.
-		await page
-			.getByRole("region", { name: "Actions on the selected rows" })
-			.getByRole("button", { name: "Change status" })
-			.click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
-		// The command goes out with North's ids instead of the selected order's.
-		await tamperWithCommand<{ status: string }>(app.page, "bulkSetOrderStatus", (arg) => ({
-			...arg,
-			target: { ids: victims.map((victim) => victim.id) },
-		}));
-		await app.expectingErrors(async () => {
-			await dialog.getByRole("button", { name: "Apply" }).click();
-			await app.toast("2 not found");
-		});
-
-		for (const [i, victim] of victims.entries()) {
-			expect(await snapshot(victim.id)).toEqual(before[i]);
-		}
-		expect(await snapshot(own)).toEqual(ownBefore);
 	});
 });

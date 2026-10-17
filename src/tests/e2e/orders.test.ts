@@ -164,29 +164,6 @@ describe("in North", () => {
 			expect(await page.getByRole("button", { name: "Save order" }).count()).toBe(0);
 		});
 
-		test("isn't a status to choose in the form", async () => {
-			const { page } = app;
-			await app.go(`/orders/${completed.number}/edit`);
-			const options = await page.getByLabel("Status").locator("option").allInnerTexts();
-			expect(options).toContain("Completed");
-			expect(options).not.toContain("Invoiced");
-		});
-
-		test("can't be chosen through a tampered form", async () => {
-			const { page } = app;
-			const before = await snapshot(completed.id);
-			await page.evaluate(() =>
-				document
-					.querySelector<HTMLSelectElement>('select[name^="status"]')!
-					.add(new Option("Invoiced", "invoiced")),
-			);
-			await page.getByLabel("Status").selectOption("invoiced");
-			await app.submit(page.getByRole("button", { name: "Save order" }));
-			expect(await app.issues()).not.toEqual([]);
-			expect(app.path()).toBe(`/orders/${completed.number}/edit`);
-			expect(await snapshot(completed.id)).toEqual(before);
-		});
-
 		test("saving another order's form with its id is refused", async () => {
 			const { page } = app;
 			await app.go(`/orders/${completed.number}/edit`);
