@@ -684,7 +684,9 @@ async function afterLocations(client: ReturnType<typeof createClient>) {
 		tokens: {
 			count: tokens.length,
 			distinct: new Set(tokens.map((row) => row.token)).size,
-			wellFormed: tokens.every((row) => /^[0-9a-f]{24}$/.test(String(row.token))),
+			wellFormed: tokens.every(
+				(row) => typeof row.token === "string" && /^[0-9a-f]{24}$/.test(row.token),
+			),
 		},
 		orderUnits: await all(
 			"select order_id, equipment_id, position from order_unit order by position",

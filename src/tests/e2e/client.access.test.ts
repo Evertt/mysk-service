@@ -123,7 +123,7 @@ describe("portal access", () => {
 			]);
 		const shown = await page
 			.locator("main [data-unit]")
-			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit")));
+			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit") ?? ""));
 		const deventer = await units("Distributiecentrum Deventer");
 		expect(shown.toSorted()).toEqual(deventer.map((unit) => unit.serial_number).toSorted());
 		// A unit at the site they don't see is a 404, as another customer's is.

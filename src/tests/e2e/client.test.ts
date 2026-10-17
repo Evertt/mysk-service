@@ -135,7 +135,7 @@ describe("the customer portal", () => {
 		);
 		const shown = await app.page
 			.locator("main [data-unit]")
-			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit")));
+			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit") ?? ""));
 		expect(shown.toSorted()).toEqual(units.map((unit) => unit.serial_number).toSorted());
 
 		// A unit with orders: its page has them, and its inspection status (checklists is on).
@@ -278,6 +278,7 @@ describe("reporting a breakdown", () => {
 			.evaluateAll((options) =>
 				options.map((option) => Number((option as HTMLOptionElement).value)),
 			);
-		expect(offered.toSorted()).toEqual(units.map((unit) => unit.id).toSorted());
+		const byId = (a: number, b: number) => a - b;
+		expect(offered.toSorted(byId)).toEqual(units.map((unit) => unit.id).toSorted(byId));
 	});
 });

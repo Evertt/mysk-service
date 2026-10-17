@@ -282,7 +282,7 @@ describe("setOrderUnits", () => {
 				.select({ unit: orderUnit.equipmentId })
 				.from(orderUnit)
 				.where(eq(orderUnit.orderId, id));
-			seen.push(units.map((row) => row.unit).toSorted());
+			seen.push(units.map((row) => row.unit).toSorted((a, b) => a - b));
 		});
 		await db.transaction((tx) => setOrderUnits(tx, { id, customerId: 1 }, [14, 13]));
 		expect(unitParts).toHaveBeenLastCalledWith(

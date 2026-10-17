@@ -117,8 +117,9 @@ describe("the daily run", () => {
 			 and o.status = 'quote' and ou.equipment_id in (select value from json_each(?))`,
 			[north.id, JSON.stringify(planned.map((each) => each.id))],
 		);
-		expect(made.map((order) => order.equipment_id).toSorted()).toEqual(
-			planned.map((each) => each.id).toSorted(),
+		const byId = (a: number, b: number) => a - b;
+		expect(made.map((order) => order.equipment_id).toSorted(byId)).toEqual(
+			planned.map((each) => each.id).toSorted(byId),
 		);
 		const ours = made.find((order) => order.equipment_id === unit.id)!;
 		expect(ours.description).toMatch(/15%/);

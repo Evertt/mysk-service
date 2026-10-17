@@ -144,7 +144,11 @@ describe("in South, with materials switched off", () => {
 		const description = "Without materials (test order)";
 		const { status, html } = await page.evaluate(async (id) => {
 			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
-			const fields = [...new FormData(form)].map(([name, value]) => [name, String(value)]);
+			// A file field goes by the file's name, as a browser sends it in such a form.
+			const fields = [...new FormData(form)].map(([name, value]) => [
+				name,
+				typeof value === "string" ? value : value.name,
+			]);
 			const body = new URLSearchParams(fields);
 			// The suffix SvelteKit gives the form's field names: `/<the form's id>`.
 			const suffix = fields[0][0].slice(fields[0][0].indexOf("/"));

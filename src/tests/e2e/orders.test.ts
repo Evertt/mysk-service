@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { countIn, nextCode, organizations, rows, useApp, value, quiet } from "./app.ts";
-import { addUnits, formUnits, orderId, orderUnits, snapshot } from "./orders-helpers.ts";
+import { addUnits, formUnits, orderId, snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
