@@ -1,7 +1,8 @@
 /**
  * The checklist templates, in North: a manager finds them from the settings, adds one, gives it
- * categories and points, reorders, edits and deletes points, retires and restores it; a unit's page
- * shows its template; a member sees them but can't change them.
+ * categories and points, moves and deletes a point, retires and restores it; a unit's page shows
+ * its template; a member sees them but can't change them. What the server does with each change
+ * (placing, moving, logging) is `templates.spec.ts`'s.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
@@ -12,7 +13,6 @@ import {
 	categoriesOf,
 	lastActivityId,
 	pageLocators,
-	pointRows,
 	pointsOf,
 	type Template,
 	templateActivity,
@@ -150,7 +150,7 @@ describe("an owner, in North", () => {
 		expect(await templateRow("Compressor").innerText()).toContain("Pomp");
 	});
 
-	test("adds points in groups, each last in its group", async () => {
+	test("adds points in groups, moves one, and deletes one", async () => {
 		await app.go(`/checklists/templates/${added.id}`);
 		await addPoint("Smering", "Olie ververst");
 		await addPoint("Veiligheid", "Drukschakelaar getest");
@@ -160,19 +160,15 @@ describe("an owner, in North", () => {
 		await dialog().getByLabel("Point", { exact: true }).fill("Filters vervangen");
 		await app.submit(dialog().getByRole("button", { name: "Save point" }));
 		await app.toast("Point saved");
-
-		const expected = [
-			"Smering:Olie ververst",
-			"Smering:Filters vervangen",
-			"Veiligheid:Drukschakelaar getest",
-		];
-		expect(await pointsOf(added.id)).toEqual(expected);
-		await expect.poll(shownPoints).toEqual(expected);
+		await expect
+			.poll(shownPoints)
+			.toEqual([
+				"Smering:Olie ververst",
+				"Smering:Filters vervangen",
+				"Veiligheid:Drukschakelaar getest",
+			]);
 		expect(await pointsCard().innerText()).toContain("3 points");
-	});
 
-	test("moves points within their group and into the next, and moves a group", async () => {
-		const since = await lastActivityId();
 		await move("Move point 2 up");
 		await expect
 			.poll(shownPoints)
@@ -181,86 +177,17 @@ describe("an owner, in North", () => {
 				"Smering:Olie ververst",
 				"Veiligheid:Drukschakelaar getest",
 			]);
-		// The last of its group, down: the first of the next.
-		await move("Move point 2 down");
-		await expect
-			.poll(shownPoints)
-			.toEqual([
-				"Smering:Filters vervangen",
-				"Veiligheid:Olie ververst",
-				"Veiligheid:Drukschakelaar getest",
-			]);
-		await move("Move group Veiligheid up");
-		const expected = [
-			"Veiligheid:Olie ververst",
-			"Veiligheid:Drukschakelaar getest",
-			"Smering:Filters vervangen",
-		];
-		await expect.poll(shownPoints).toEqual(expected);
-		expect(await pointsOf(added.id)).toEqual(expected);
-		expect((await pointRows(added.id)).map((point) => point.position)).toEqual([0, 1, 2]);
 		expect(await page().getByRole("button", { name: "Move point 1 up" }).isDisabled()).toBe(true);
-		expect(await page().getByRole("button", { name: "Move group Smering down" }).isDisabled()).toBe(
-			true,
-		);
+		expect(
+			await page().getByRole("button", { name: "Move group Veiligheid down" }).isDisabled(),
+		).toBe(true);
 
-		const entries = await templateActivity(added.id, since);
-		expect(entries.map((entry) => [entry.action, entry.subject_type, entry.subject_label])).toEqual(
-			[
-				["updated", "checklistTemplateItem", "Filters vervangen"],
-				["updated", "checklistTemplateItem", "Olie ververst"],
-				["updated", "checklistTemplate", "Compressor"],
-			],
-		);
-		expect(entries[0].parent_label).toBe("Compressor");
-		expect(JSON.parse(entries[1].changes!)).toEqual({ group: ["Smering", "Veiligheid"] });
-		expect(JSON.parse(entries[2].changes!)).toEqual({
-			groups: [
-				["Smering", "Veiligheid"],
-				["Veiligheid", "Smering"],
-			],
-		});
-	});
-
-	test("edits a point into another group, and deletes one", async () => {
-		await pointMenu(3, "Edit");
-		expect(await dialog().getByLabel("Point", { exact: true }).inputValue()).toBe(
-			"Filters vervangen",
-		);
-		await dialog().getByLabel("Group").fill("Veiligheid");
-		await dialog().getByLabel("Point", { exact: true }).fill("Filters gereinigd");
-		await app.submit(dialog().getByRole("button", { name: "Save point" }));
-		await app.toast("Point saved");
-		await expect
-			.poll(shownPoints)
-			.toEqual([
-				"Veiligheid:Olie ververst",
-				"Veiligheid:Drukschakelaar getest",
-				"Veiligheid:Filters gereinigd",
-			]);
-
-		const since = await lastActivityId();
 		await pointMenu(1, "Delete");
 		await app.submit(alert().getByRole("button", { name: "Delete" }));
 		await app.toast("Point deleted");
-		const expected = ["Veiligheid:Drukschakelaar getest", "Veiligheid:Filters gereinigd"];
+		const expected = ["Smering:Olie ververst", "Veiligheid:Drukschakelaar getest"];
 		await expect.poll(shownPoints).toEqual(expected);
 		expect(await pointsOf(added.id)).toEqual(expected);
-		expect(await templateActivity(added.id, since)).toMatchObject([
-			{ action: "deleted", subject_label: "Olie ververst", parent_label: "Compressor" },
-		]);
-	});
-
-	test("edits its details", async () => {
-		const since = await lastActivityId();
-		await page().getByRole("button", { name: "Edit", exact: true }).click();
-		await dialog().getByLabel("Inspection valid for (months)").fill("6");
-		await app.submit(dialog().getByRole("button", { name: "Save template" }));
-		await app.toast("Template saved");
-		await page().locator("[data-checklist-details]").getByText("6 months").waitFor();
-		expect((await templateNamed(north.id, "Compressor")).validity_months).toBe(6);
-		const [entry] = await templateActivity(added.id, since);
-		expect(JSON.parse(entry.changes!)).toEqual({ validityMonths: [24, 6] });
 	});
 
 	test("retires it: kept with its points, its categories free, until it's restored", async () => {

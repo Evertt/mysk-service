@@ -1,7 +1,7 @@
 /**
  * The work orders page between tenants: North (which has the module) lists only its own assets and
- * can't open, start or fill in SHLTR's, also by tampered queries and commands; South (which
- * hasn't) has no entry or page, and North's queries are refused.
+ * can't open, start or fill in SHLTR's, also by tampered queries and commands. A tenant without the
+ * module is `checklists.tenancy.test.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -15,18 +15,13 @@ import {
 	value,
 } from "#e2e/app.ts";
 
-import { assetLocators, assetStates, pageLocators, thisYear } from "./helpers.ts";
+import { assetLocators, assetStates, thisYear } from "./helpers.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const shltr = organizations.shltr;
 const app = useApp();
 const page = () => app.page;
 const { list, panel, listed, listCount, searchFor } = assetLocators(app);
-const { sidebarLinks } = pageLocators(app);
-
-/** The URLs of North's remote queries of the page, as loaded in North, to try from South. */
-const queries: Record<string, string> = {};
-const names = ["getAsset", "getAssetFacets", "getAssets"];
 
 /** SHLTR's checklists, their points and its orders as they are, to see they stay so. */
 const shltrState = async () => ({
@@ -63,17 +58,8 @@ const answerOf = (name: string) =>
 describe("in North, which has the module", () => {
 	let own: string;
 
-	test("its page lists only its own assets, loaded by remote queries", async () => {
-		const record = (request: { url(): string }) => {
-			for (const name of names) if (isRemote(request.url(), name)) queries[name] = request.url();
-		};
-		page().on("request", record);
-		await app.go("/activity");
-		await page()
-			.locator('[data-sidebar="content"]')
-			.getByRole("link", { name: "Work orders" })
-			.click();
-		await page().waitForURL((url) => url.pathname === "/checklists");
+	test("its page lists only its own assets", async () => {
+		await app.go("/checklists");
 		const states = await assetStates(north.id);
 		expect(await listCount()).toBe(states.length);
 		const ours = new Set(states.map((row) => row.serial_number));
@@ -85,8 +71,6 @@ describe("in North, which has the module", () => {
 		own = (await listed())[0];
 		await list().locator(`li[data-asset="${own}"] > a`).click();
 		await panel().waitFor();
-		page().off("request", record);
-		expect(Object.keys(queries).toSorted()).toEqual(names);
 	});
 
 	test("SHLTR's unit and its components can't be read, also by a tampered query", async () => {
@@ -158,23 +142,5 @@ describe("in North, which has the module", () => {
 			expect(await answer).toMatch(/"status":404/);
 		});
 		expect(await shltrState()).toEqual(before);
-	});
-});
-
-describe("in South, which doesn't have the module", () => {
-	test("there's no entry, and the page is a 404", async () => {
-		await app.switchOrganization(south.name);
-		expect(await sidebarLinks()).not.toContain("Work orders");
-		const response = await app.go("/checklists");
-		expect(response?.status()).toBe(404);
-	});
-
-	test("North's remote queries are refused", async () => {
-		expect(Object.keys(queries)).toHaveLength(names.length);
-		for (const [name, url] of Object.entries(queries)) {
-			const response = await page().context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), `${name}: ${body}`).toBe(true);
-		}
 	});
 });

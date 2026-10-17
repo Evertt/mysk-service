@@ -42,13 +42,6 @@ export const pointsOf = async (templateId: number) =>
 		)
 	).map((point) => `${point.group_name}:${point.text}`);
 
-export const pointRows = (templateId: number) =>
-	rows<Point>(
-		`select id, template_id, group_name, text, position from checklist_template_item
-		 where template_id = ? order by position, id`,
-		[templateId],
-	);
-
 /** The names of the categories a template is for, by name. */
 export const categoriesOf = async (templateId: number) =>
 	(

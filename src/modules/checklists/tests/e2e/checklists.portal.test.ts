@@ -1,8 +1,8 @@
 /**
  * The checklists in the engineer portal, on a phone: Lev fills in each unit's checklist of one of
  * his inspection orders (each answer saved as he goes), completes them, and only then the order,
- * with his signature and the customer's; another engineer's or tenant's checklist can't be changed
- * by its ids.
+ * with his signature and the customer's; another tenant's checklist can't be changed by its ids
+ * (the rest of who may change which checklist is `checklists.spec.ts`'s).
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -97,72 +97,48 @@ describe("Lev's inspection order", () => {
 		);
 	});
 
-	test("another engineer's checklist, or another tenant's, can't be changed by its ids", async () => {
+	test("another tenant's checklist can't be changed by its ids", async () => {
 		const [first] = await checklistsOfOrder(job.id);
 		const [, , c] = await resultsOf(first.id);
-		const [others] = await rows<{ id: number; checklist_id: number }>(
-			`select r.id, r.checklist_id from checklist_result r join checklist k on k.id = r.checklist_id
-			 join "order" o on o.id = k.order_id
-			 where o.organization_id = ? and o.engineer_id <> ? and k.status = 'draft' limit 1`,
-			[shltr.id, lev],
-		);
 		const [northern] = await rows<{ id: number; checklist_id: number }>(
 			`select r.id, r.checklist_id from checklist_result r where r.organization_id = ? limit 1`,
 			[organizations.north.id],
 		);
-		const before = [await resultsOf(others.checklist_id), await resultsOf(northern.checklist_id)];
-		for (const victim of [others, northern]) {
-			await app.expectingErrors(async () => {
-				await tamperWithCommand<{ id: number }>(page(), "answer", (arg) => ({
-					...arg,
-					id: victim.id,
-				}));
-				await point(first.serial_number, c.text).getByRole("button", { name: "N/A" }).click();
-				await app.toast("Checklist not found");
-			});
-			// Taken back: it wasn't saved.
-			await expect
-				.poll(() =>
-					point(first.serial_number, c.text)
-						.getByRole("button", { name: "N/A" })
-						.getAttribute("aria-pressed"),
-				)
-				.toBe("false");
-			await app.expectingErrors(async () => {
-				await tamperWithCommand<{ id: number }>(page(), "complete", (arg) => ({
-					...arg,
-					id: victim.checklist_id,
-				}));
-				// Its own isn't ready either; the server refuses the other's first.
-				for (const each of await resultsOf(first.id)) {
-					if (each.result) continue;
-					await point(first.serial_number, each.text).getByRole("button", { name: "OK" }).click();
-				}
-				await card(first.serial_number).getByRole("button", { name: "Complete checklist" }).click();
-				await app.toast("Checklist not found");
-			});
-		}
-		expect([await resultsOf(others.checklist_id), await resultsOf(northern.checklist_id)]).toEqual(
-			before,
-		);
-		expect((await checklistsOfOrder(job.id))[0].status).toBe("draft");
+		const before = await resultsOf(northern.checklist_id);
+		await app.expectingErrors(async () => {
+			await tamperWithCommand<{ id: number }>(page(), "answer", (arg) => ({
+				...arg,
+				id: northern.id,
+			}));
+			await point(first.serial_number, c.text).getByRole("button", { name: "N/A" }).click();
+			await app.toast("Checklist not found");
+		});
+		// Taken back: it wasn't saved.
+		await expect
+			.poll(() =>
+				point(first.serial_number, c.text)
+					.getByRole("button", { name: "N/A" })
+					.getAttribute("aria-pressed"),
+			)
+			.toBe("false");
+		expect(await resultsOf(northern.checklist_id)).toEqual(before);
 	});
 
-	test("completing the order is refused while a checklist isn't completed", async () => {
+	test("the order and a checklist complete only once every point is answered, a rejection saying what's wrong", async () => {
 		await sign(page(), page().getByLabel("Engineer's signature"));
 		await page().getByLabel("Signed by").fill("M. Verhoeven");
 		await sign(page(), page().getByLabel("Signature", { exact: true }));
 		await app.submit(page().getByRole("button", { name: "Complete job" }));
 		const issues = (await app.issues()).join(" ");
 		expect(issues).toMatch(new RegExp(`${job.number} can't be completed yet: the checklists? of`));
-		expect(await value(`select status from "order" where id = ?`, [job.id])).toBe("in_progress");
-		expect(await value(`select count(*) from order_signoff where order_id = ?`, [job.id])).toBe(0);
-	});
 
-	test("a checklist completes once every point is answered, a rejection saying what's wrong", async () => {
 		const checklists = await checklistsOfOrder(job.id);
 		const [first] = checklists;
 		const points = await resultsOf(first.id);
+		for (const each of points.slice(0, -1)) {
+			if (each.result) continue;
+			await point(first.serial_number, each.text).getByRole("button", { name: "OK" }).click();
+		}
 		const last = points.at(-1)!;
 		// A rejection without a remark keeps it open.
 		await point(first.serial_number, last.text).getByRole("button", { name: "Reject" }).click();
