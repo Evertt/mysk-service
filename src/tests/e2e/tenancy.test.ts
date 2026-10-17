@@ -27,16 +27,14 @@ const moduleEntries = (moduleId: string, organizationId: string, since: number) 
 	);
 
 describe("organizations", () => {
-	test("the admin starts in North, with North's numbers and modules", async () => {
+	test("the admin starts in North; switching to South shows South's numbers, without its missing modules", async () => {
 		await app.go("/");
 		expect(await header()).toContain(north.name);
 		expect(
 			await app.page.getByText("Open orders", { exact: true }).locator("..").innerText(),
 		).toContain(String(await openOrders(north.id)));
 		expect(await sidebarLink("Service contracts").count()).toBe(1);
-	});
 
-	test("switching to South shows South's numbers, without its missing modules", async () => {
 		await app.switchOrganization(south.name);
 		expect(await header()).toContain(south.name);
 		expect(

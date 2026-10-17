@@ -45,15 +45,7 @@ describe("an organization without modules", () => {
 		expect(await southModules()).toEqual([]);
 	});
 
-	test("the sidebar has none of them", async () => {
-		await app.go("/");
-		const sidebar = app.page.locator('[data-sidebar="content"]');
-		for (const label of moduleLabels) {
-			expect(await sidebar.getByRole("link", { name: label }).count(), label).toBe(0);
-		}
-	});
-
-	test("every core page works, without a part that failed", async () => {
+	test("every core page works, without a part that failed, and the sidebar has none of them", async () => {
 		const ofSouth = (sql: string) => value<string | number>(sql, [south.id]);
 		const order = await ofSouth(`select number from "order" where organization_id = ?`);
 		const customer = await ofSouth(`select code from customer where organization_id = ?`);
@@ -77,6 +69,11 @@ describe("an organization without modules", () => {
 			const response = await app.go(path);
 			expect(response?.status(), path).toBe(200);
 			expect(await app.page.locator("[data-extension-failed]").count(), path).toBe(0);
+			if (path !== "/") continue;
+			const sidebar = app.page.locator('[data-sidebar="content"]');
+			for (const label of moduleLabels) {
+				expect(await sidebar.getByRole("link", { name: label }).count(), label).toBe(0);
+			}
 		}
 	});
 

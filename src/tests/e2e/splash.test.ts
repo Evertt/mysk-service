@@ -20,9 +20,10 @@ const splashOpacity = (page: Page) =>
 	});
 
 describe("on a full page load", () => {
-	test("the server's HTML has the splash, in the request's language", async () => {
-		const response = await app.go("/orders");
-		const html = await response!.text();
+	test("the server's HTML has the splash, in the request's language; the stylesheets don't hold up the first paint, and are in before the page hydrates", async () => {
+		const html = await (
+			await fetch(new URL("/login", baseURL), { headers: { cookie: "PARAGLIDE_LOCALE=en" } })
+		).text();
 		expect(html).toMatch(/<div id="splash" role="status">/);
 		expect(html).toContain("Loading Fieldworks…");
 		expect(html).not.toContain("%splash.label%");
@@ -31,10 +32,7 @@ describe("on a full page load", () => {
 			headers: { cookie: "PARAGLIDE_LOCALE=nl" },
 		});
 		expect(await dutch.text()).toContain("Fieldworks laden…");
-	});
 
-	test("the stylesheets don't hold up the first paint, and are in before the page hydrates", async () => {
-		const html = await (await fetch(new URL("/login", baseURL))).text();
 		// No stylesheet blocks the paint: each is preloaded, and a plain one only without JavaScript.
 		const head = html
 			.slice(0, html.indexOf("</head>"))
