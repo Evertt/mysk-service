@@ -4,6 +4,7 @@ import { countryName } from "#lib/customers/countries.ts";
 import { formatDate } from "#lib/i18n/format.ts";
 
 import {
+	afresh,
 	baseURL,
 	cents,
 	countIn,
@@ -170,7 +171,7 @@ describe("in North", () => {
 				) between ? and ?`,
 				[north.id, min, max],
 			);
-		await app.go("/customers");
+		await app.go(afresh("/customers"));
 		await app.openFilter("Open orders");
 		await page.getByLabel("Minimum", { exact: true }).fill("2");
 		await page.getByRole("button", { name: "Add" }).click();
@@ -190,6 +191,9 @@ describe("in North", () => {
 	});
 
 	test("sorting by open orders puts the busiest customer first", async () => {
+		// The list as it is by default: a visit without parameters would bring back the filter the
+		// test before left (see `table-memory.svelte.ts`).
+		await app.go(afresh("/customers"));
 		await app.sortBy("Open orders", "descending");
 		// Other files change North's orders at the same time, so the page is checked against itself
 		// (its open orders count down) and against the database's counts as the page was loaded:
