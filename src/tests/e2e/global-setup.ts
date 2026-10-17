@@ -73,8 +73,14 @@ function freePort() {
 
 /**
  * Starts the app on a free port with its own database and mail outbox; resolves once it answers.
+ * `env` changes its variables, for a test that needs a server set up otherwise than the lanes'
+ * (`auth.demo.test.ts`'s, without the demo sign-in).
  */
-async function startServer(databaseURL: string, outbox: string) {
+export async function startServer(
+	databaseURL: string,
+	outbox: string,
+	env: Record<string, string> = {},
+) {
 	const port = await freePort();
 	const baseURL = `http://localhost:${port}`;
 	let output = "";
@@ -92,6 +98,9 @@ async function startServer(databaseURL: string, outbox: string) {
 				ORIGIN: baseURL,
 				MAIL_OUTBOX: outbox,
 				CRON_SECRET: cronSecret,
+				// The login page's one-click demo sign-in (`src/routes/login/demo.remote.ts`).
+				DEMO_SIGN_IN: "true",
+				...env,
 			},
 			stdio: ["ignore", "pipe", "pipe"],
 			detached: true,
