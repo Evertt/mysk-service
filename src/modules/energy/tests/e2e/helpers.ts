@@ -1,8 +1,10 @@
 /**
  * What the energy module's end-to-end tests share: the feed (`/energy/ingest`), SHLTR's site as
- * stored, its readings and alerts, and how the pages format kW and kWh.
+ * stored, its readings and alerts, how the pages format kW and kWh, and setting a site up.
  */
-import { baseURL, organizations, rows, value } from "#e2e/app.ts";
+import type { Page } from "playwright";
+
+import { baseURL, hydrated, organizations, rows, value } from "#e2e/app.ts";
 import { DEMO_ENERGY_TOKEN } from "#modules/energy/server/riedel.ts";
 
 /** SHLTR's owner, a manager, and its planner, a member. */
@@ -125,3 +127,37 @@ export const kw = (value: number) => `${value < 100 ? one.format(value) : whole.
 /** kWh as the pages show them. */
 export const kwh = (value: number) =>
 	`${value < 100 ? one.format(value) : whole.format(value)} kWh`;
+
+/** One of SHLTR's customers by its name: its code, and its sites' ids by their names. */
+export async function shltrCustomer(name: string) {
+	const sites = await rows<{ code: string; id: number; name: string }>(
+		`select c.code, s.id, s.name from customer c join customer_site s on s.customer_id = c.id
+		 where c.organization_id = ? and c.name = ? order by s.name`,
+		[shltr.id, name],
+	);
+	return {
+		code: sites[0].code,
+		site: (site: string) => sites.find((each) => each.name === site)!.id,
+	};
+}
+
+/**
+ * Sets up energy monitoring for the customer site `siteId` from the customer's page (`code`) on
+ * `page`, with a contract of `peakKw` and the defaults otherwise: it opens the new site's setup
+ * page. Answers the energy site's id.
+ */
+export async function setUpFromCustomer(
+	page: Page,
+	{ code, siteId, peakKw = 250 }: { code: string; siteId: number; peakKw?: number },
+) {
+	await page.goto(`${baseURL}/customers/${code}`);
+	await hydrated(page);
+	await page.locator(`[data-energy-add-site="${siteId}"]`).click();
+	const dialog = page.getByRole("dialog");
+	await dialog.getByLabel("Contracted peak (kW)").fill(String(peakKw));
+	await dialog.getByLabel("Contracted kWh a year").fill("600000");
+	await dialog.getByRole("button", { name: "Add energy site" }).click();
+	await page.waitForURL((url) => /^\/energy\/\d+\/setup$/.test(url.pathname));
+	await page.locator('[data-setup="zones"]').waitFor();
+	return Number(new URL(page.url()).pathname.split("/")[2]);
+}

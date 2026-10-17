@@ -2,6 +2,7 @@
  * Storing a gateway's batch (`../ingest/format.ts`): in the token's tenant (the request runs as
  * the system there, see `#lib/server/integrations/tokens.ts`), against one of its sites, in one
  * transaction. Readings replace the zone's interval, door events that are in already are skipped,
+ * a zone without thresholds gets its defaults once it has a day of readings (`thresholds.ts`),
  * then the site's thresholds are evaluated (`evaluate.ts`) and the alerts raised; the live queries
  * hear of it once it's committed. Everything is written with `insertRows()` and lists bound as
  * one JSON parameter, so no statement passes Cloudflare's 100 parameters, whatever the batch.
@@ -17,6 +18,7 @@ import { afterCommit } from "#lib/server/db/serialize.ts";
 import type { Batch, IngestResult } from "../ingest/format.ts";
 import { raiseAlerts } from "./evaluate.ts";
 import { energyDoor, energyDoorEvent, energyReading, energySite, energyZone } from "./schema.ts";
+import { setFirstThresholds } from "./thresholds.ts";
 
 /** What storing a batch came to: stored, or why not (an unknown site, or codes it doesn't have). */
 type IngestOutcome =
@@ -150,8 +152,11 @@ export async function storeBatch(
 			if (added.length) await insertRows(tx, energyDoorEvent, added);
 		}
 
+		const zoneIds = [...new Set(readings.map((r) => r.zoneId))];
+		// A zone set up without thresholds gets its defaults once it has a day of readings.
+		await setFirstThresholds(tx, site, zoneIds);
 		const alerts = await raiseAlerts(tx, site, {
-			zoneIds: [...new Set(readings.map((r) => r.zoneId))],
+			zoneIds,
 			starts: readings.map((r) => r.start),
 			now,
 		});

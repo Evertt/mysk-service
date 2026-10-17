@@ -332,9 +332,19 @@ key and raised as the system (`server/evaluate.ts`), figures aggregated in SQL p
 worked out with the pure rules of `model.ts` (`server/figures.ts`), an alert made into an order
 through `createOrders()` (`server/alerts.ts`), a printable report (print CSS), a read-only page in
 the customer portal (`routes/(customer)/portal/`, `client/`), a seam for a module that enhances
-it (`api/extensions.ts`, `energy.door`, for the docks' state beside a dock's door) and a simulator
-that shares the seed's simulation (`node src/modules/energy/server/simulator.ts`). Only SHLTR has
-docks and energy in the demo (`shltrOnly` in the seed).
+it (`api/extensions.ts`, `energy.door`) and a simulator that shares the seed's simulation
+(`node src/modules/energy/server/simulator.ts`). Managers set a site up in the office
+(`server/setup.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
+customer's sites, from the customer page's card (`customers.detail.side`) or the sites page, and
+its zones, consumers and doors (zone and door codes unique per site, as the gateway names them; a
+consumer's or door's unit one of the site's). Measurements aren't deleted with what they measure:
+a zone, door or site with readings, door events or alerts can't be deleted (the refusal says so;
+there's no archive). A new zone has no thresholds until a manager sets them or its first day of
+readings gives it §2.5's defaults, as a nominal zone, in the batch's transaction
+(`firstDayThreshold()` in `model.ts`, `server/thresholds.ts`). Docks enhances energy: its
+`slots/energy.door/` shows the dock whose door the door's unit is (state, Wheel-Lok, plate, live
+through `watchDocks`), linking to the board. Only SHLTR has docks and energy in the demo
+(`shltrOnly` in the seed).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

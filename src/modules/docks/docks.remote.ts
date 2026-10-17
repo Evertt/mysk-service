@@ -1,16 +1,20 @@
 /**
  * A customer's docks, as its page's card shows them, and what managers do with them there: add,
- * edit and delete a dock. And a unit's use as a dock's door or leveller, for its page.
+ * edit and delete a dock. A unit's use as a dock's door or leveller, for its page, and the dock of
+ * a door, for the energy module's door card. And when the docks changed, for whatever shows them
+ * live (the board, the door card).
  */
+import { getRequestEvent } from "$app/server";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
+import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { refuse } from "#lib/server/forms.ts";
 
 import { dockSchema } from "./form/dock-schema.ts";
 import { forManagers, query } from "./remote-functions.ts";
-import { customerDocks, deleteDock, dockUsage, saveDock } from "./server/docks.ts";
+import { customerDocks, deleteDock, doorDock, dockUsage, saveDock } from "./server/docks.ts";
 
 const code = v.pipe(v.string(), v.nonEmpty(), v.maxLength(64));
 
@@ -42,3 +46,27 @@ export const deleteCustomerDock = forManagers.form(
 
 /** How the unit is used as a dock's door or leveller; `null` if it's no dock's. */
 export const getDockUsage = query(code, (serialNumber) => dockUsage(serialNumber));
+
+/** The dock whose door is the unit `unitId`, with its live state; `null` if it's no dock's door. */
+export const getDoorDock = query(v.pipe(v.number(), v.integer(), v.minValue(1)), (unitId) =>
+	doorDock(unitId),
+);
+
+/** The records the docks' live views show: a change to any of them outdates them. */
+const dockSubjects = ["dock", "customer"] as const;
+
+/**
+ * When the docks last changed (epoch ms, 0 if not since the server started), sent again on each
+ * change: events applied, the rules' notices, docks added or edited.
+ */
+export const watchDocks = query.live(async function* () {
+	const { organizationId } = currentTenant();
+	const changes = watchChanges(organizationId, dockSubjects);
+	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	try {
+		yield changedAt(organizationId, dockSubjects);
+		for await (const _ of changes) yield changedAt(organizationId, dockSubjects);
+	} finally {
+		changes.stop();
+	}
+});

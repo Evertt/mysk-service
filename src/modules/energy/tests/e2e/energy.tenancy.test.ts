@@ -45,10 +45,11 @@ describe("SHLTR's integration tokens", () => {
 			expect(token).toMatch(/^fwi_[0-9a-f]{40}$/);
 
 			const listed = await postBatch({}, token, "GET");
-			expect(listed).toMatchObject({
-				status: 200,
-				body: { sites: [{ id: siteId, name: "Riedel Ede — Productielocatie" }] },
-			});
+			expect(listed.status).toBe(200);
+			// Riedel's, and any a file before this one set up.
+			expect(listed.body.sites).toContainEqual(
+				expect.objectContaining({ id: siteId, name: "Riedel Ede — Productielocatie" }),
+			);
 
 			const row = page.locator('[data-token="E2E gateway"]');
 			await row.getByRole("button", { name: "Revoke" }).click();

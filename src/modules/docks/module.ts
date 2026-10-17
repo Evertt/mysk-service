@@ -15,4 +15,6 @@ export default defineModule({
 	subjects: dockSubjects,
 	actions: dockActions,
 	nav: { after: "equipment" },
+	// A monitored door that's a dock's door shows the dock's state on energy's door card.
+	enhances: ["energy"],
 });

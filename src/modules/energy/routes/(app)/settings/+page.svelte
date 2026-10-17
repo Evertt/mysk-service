@@ -46,6 +46,9 @@
 								<Table.Head>{m.energy_column_site()}</Table.Head>
 								<Table.Head>{m.energy_column_zones()}</Table.Head>
 								<Table.Head>{m.energy_column_doors()}</Table.Head>
+								<Table.Head class="w-0"
+									><span class="sr-only">{m.energy_setup_actions()}</span></Table.Head
+								>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -61,6 +64,15 @@
 									</Table.Cell>
 									<Table.Cell class="font-mono text-xs">{site.zones.join(", ")}</Table.Cell>
 									<Table.Cell class="font-mono text-xs">{site.doors.join(", ") || "—"}</Table.Cell>
+									<Table.Cell>
+										<Button
+											variant="outline"
+											size="sm"
+											href={resolve("/(app)/(modules)/energy/[site]/setup", {
+												site: String(site.id),
+											})}>{m.energy_setup_title()}</Button
+										>
+									</Table.Cell>
 								</Table.Row>
 							{/each}
 						</Table.Body>

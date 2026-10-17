@@ -394,3 +394,51 @@ export async function dockUsage(serialNumber: string) {
 		openOrders: orders.map((row) => row.number),
 	};
 }
+
+/**
+ * The dock whose door is the unit `unitId`, with its live state, as a card elsewhere shows it (the
+ * energy module's door, `energy.door`): its code, its site (for the board's link), whether it has
+ * reported, the Wheel-Lok, its SCP and the plate of the truck at it. None if the unit is no dock's
+ * door (a leveller isn't one).
+ */
+export async function doorDock(unitId: number) {
+	const [dock] = await db
+		.select({
+			code: dockPosition.code,
+			siteId: dockPosition.siteId,
+			locked: dockState.locked,
+			scpOnline: dockState.scpOnline,
+			doorOpenSince: dockState.doorOpenSince,
+			sessionId: dockSession.id,
+			plate: dockSession.plate,
+		})
+		.from(dockPosition)
+		.leftJoin(
+			dockState,
+			and(
+				eq(dockState.organizationId, dockPosition.organizationId),
+				eq(dockState.dockId, dockPosition.id),
+			),
+		)
+		.leftJoin(
+			dockSession,
+			and(
+				eq(dockSession.organizationId, dockPosition.organizationId),
+				eq(dockSession.dockId, dockPosition.id),
+				isNull(dockSession.checkedOutAt),
+			),
+		)
+		.where(and(inTenant(dockPosition), eq(dockPosition.doorId, unitId)))
+		.orderBy(asc(dockPosition.code))
+		.limit(1);
+	if (!dock) return null;
+	const { sessionId, locked, scpOnline, ...rest } = dock;
+	return {
+		...rest,
+		// A dock without events has no state yet (no row to join).
+		reported: locked !== null,
+		locked: locked ?? false,
+		scpOnline: scpOnline ?? true,
+		occupied: sessionId !== null,
+	};
+}

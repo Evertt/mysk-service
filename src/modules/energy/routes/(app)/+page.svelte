@@ -7,6 +7,7 @@
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatKw, formatKwh } from "#modules/energy/display.ts";
 	import { getEnergySites } from "#modules/energy/energy.remote.ts";
+	import NewSiteDialog from "#modules/energy/setup/new-site-dialog.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/energy"> } = $props();
@@ -23,6 +24,7 @@
 	<PageHeader title={m.energy_title()} description={m.energy_description()}>
 		{#snippet actions()}
 			{#if data.canManage}
+				<NewSiteDialog />
 				<Button variant="outline" href={resolve("/(app)/(modules)/energy/settings")}>
 					<SettingsIcon data-icon="inline-start" />
 					{m.energy_settings_title()}

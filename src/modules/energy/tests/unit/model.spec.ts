@@ -16,6 +16,7 @@ import {
 	doorAlertKey,
 	doorBreaches,
 	doorLossKwh,
+	firstDayThreshold,
 	highestKw,
 	isOffline,
 	liveKw,
@@ -150,6 +151,28 @@ describe("thresholds", () => {
 			maxKwh: 406,
 		});
 		expect(defaultThreshold({ tone: "offline", peakKw: 0, kwh: 0 }).enabled).toBe(false);
+	});
+
+	test("a new zone's are none until its readings span a day, then the defaults of that last day, as nominal", () => {
+		const quarters = (from: number, count: number, avgKw: number) =>
+			Array.from({ length: count }, (_, i) => reading((from + i) * 15, avgKw));
+		expect(firstDayThreshold([])).toBeNull();
+		// 95 quarters: a day less 15 minutes.
+		expect(firstDayThreshold(quarters(0, 95, 40))).toBeNull();
+		// 96 quarters: the day, 96 × 10 kWh at 40 kW (× 1.3), in any order.
+		expect(firstDayThreshold(quarters(0, 96, 40).toReversed())).toEqual({
+			enabled: true,
+			maxKw: 52,
+			maxKwh: 1248,
+		});
+		// The first reading a week back, a gap, then a day: that last day counts, not the first.
+		expect(firstDayThreshold([reading(-7 * 24 * 60, 500), ...quarters(0, 96, 40)])).toEqual({
+			enabled: true,
+			maxKw: 52,
+			maxKwh: 1248,
+		});
+		// A day without consumption says nothing.
+		expect(firstDayThreshold(quarters(0, 96, 0))).toBeNull();
 	});
 
 	test("the ratio is the larger of power and consumption against their max", () => {

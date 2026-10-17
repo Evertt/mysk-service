@@ -1,16 +1,14 @@
 /**
  * The live board (`/docks`): a site's docks with their live state, open session and recent
  * sessions, the rules' notices of the last day, and the sites that have docks to choose from.
- * `watchDocks` tells an open board when to ask again: whenever the feed applied events, the rules
- * acted or a dock changed.
+ * `watchDocks` (`../docks.remote.ts`) tells an open board when to ask again: whenever the feed
+ * applied events, the rules acted or a dock changed.
  */
-import { getRequestEvent } from "$app/server";
 import { and, asc, desc, eq, gte, isNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
@@ -122,23 +120,4 @@ export const getDockBoard = query(v.optional(v.pipe(v.number(), v.integer())), a
 		})),
 		notices,
 	};
-});
-
-/** The records the board shows: a change to any of them outdates it. */
-const boardSubjects = ["dock", "customer"] as const;
-
-/**
- * When the board's records last changed (epoch ms, 0 if not since the server started), sent again
- * on each change: events applied, the rules' notices, docks added or edited.
- */
-export const watchDocks = query.live(async function* () {
-	const { organizationId } = currentTenant();
-	const changes = watchChanges(organizationId, boardSubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, boardSubjects);
-		for await (const _ of changes) yield changedAt(organizationId, boardSubjects);
-	} finally {
-		changes.stop();
-	}
 });

@@ -65,7 +65,7 @@ export const getEnergySites = query(async () => {
 /** A site with its customer, for the pages that show no figures. */
 export const getEnergySite = query(siteId, (id) => loadSite(id));
 
-/** A site's figures for a period, as of now (see `server/figures.ts`). */
+/** A site's figures for a period, as of now (see `server/figures.ts`), and whether the user sets it up. */
 export const getEnergyOverview = query(
 	v.object({ site: siteId, period: v.picklist(periods) }),
 	async ({ site: id, period }) => {
@@ -83,6 +83,7 @@ export const getEnergyOverview = query(
 			zones,
 			doors,
 			openAlerts: await openAlertCount(id),
+			canManage: isManager(currentTenant().roles),
 		};
 	},
 );
@@ -177,12 +178,21 @@ export const getEnergyReport = query(
 );
 
 /** The records the energy pages show: a change to any of them outdates them. */
-const energySubjects = ["energy_reading", "energy_alert", "energy_threshold", "order"] as const;
+const energySubjects = [
+	"energy_site",
+	"energy_zone",
+	"energy_consumer",
+	"energy_door",
+	"energy_reading",
+	"energy_alert",
+	"energy_threshold",
+	"order",
+] as const;
 
 /**
- * When the tenant's readings, alerts or thresholds last changed (epoch ms, 0 if not since the
- * server started), sent again on each change: a new batch from a gateway, an alert made into an
- * order, a threshold changed.
+ * When the tenant's sites, readings, alerts or thresholds last changed (epoch ms, 0 if not since
+ * the server started), sent again on each change: a new batch from a gateway, an alert made into an
+ * order, a threshold changed, a zone or door set up.
  */
 export const watchEnergy = query.live(async function* () {
 	const { organizationId } = currentTenant();

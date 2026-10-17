@@ -134,6 +134,28 @@ export function defaultThreshold(typical: { tone: ZoneTone; peakKw: number; kwh:
 	} satisfies Threshold;
 }
 
+/** A zone's readings give it default thresholds once they span this long (§2.5's typical day). */
+const TYPICAL_DAY_HOURS = 24;
+
+/**
+ * The default thresholds of a zone that has none yet (one set up in the office), from its readings
+ * (in any order, the zone's first among them): none until they span a day, from the first's start
+ * to the last's end; then §2.5's from that last day's peak and consumption, as a zone that runs
+ * nominally (one without thresholds has no state to say otherwise, so the factor is 1.3). None for
+ * a day without consumption, which says nothing about the zone.
+ */
+export function firstDayThreshold(readings: readonly Reading[]) {
+	if (!readings.length) return null;
+	const sorted = readings.toSorted((a, b) => Temporal.Instant.compare(a.start, b.start));
+	const end = sorted.at(-1)!.start.add({ minutes: INTERVAL_MINUTES });
+	if (end.since(sorted[0].start).total("hours") < TYPICAL_DAY_HOURS) return null;
+	const from = end.subtract({ hours: TYPICAL_DAY_HOURS });
+	const day = sorted.filter((reading) => Temporal.Instant.compare(reading.start, from) >= 0);
+	const kwh = totalKwh(day);
+	if (kwh <= 0) return null;
+	return defaultThreshold({ tone: "nominal", peakKw: highestKw(day), kwh });
+}
+
 /** How a zone's power and today's consumption compare with its thresholds: the larger share. */
 export function thresholdRatio(load: { kw: number; kwh: number }, threshold: Threshold) {
 	const power = threshold.maxKw > 0 ? load.kw / threshold.maxKw : 0;

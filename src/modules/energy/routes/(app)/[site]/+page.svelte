@@ -4,6 +4,7 @@
 	import type { RouteParams } from "$app/types";
 	import BellIcon from "@lucide/svelte/icons/bell";
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
+	import SettingsIcon from "@lucide/svelte/icons/settings";
 	import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
 
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -128,10 +129,22 @@
 				<FileTextIcon data-icon="inline-start" />
 				{m.energy_report_title()}
 			</Button>
+			{#if overview.canManage}
+				<Button variant="outline" href="{siteHref}/setup">
+					<SettingsIcon data-icon="inline-start" />
+					{m.energy_setup_title()}
+				</Button>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
-	<div class="flex flex-col gap-3">
+	<!--
+		The period and the scope are this page again with other search parameters: not preloaded on
+		hover (preloaded as the page arrives under a resting pointer, the charts of the preloading fork
+		broke the next switch's: "Cannot convert a Symbol value to a string" in LayerChart, Svelte
+		5.57 with fork preloads).
+	-->
+	<div class="flex flex-col gap-3" data-sveltekit-preload-data="tap">
 		<nav class="flex flex-wrap gap-2" aria-label={m.energy_period_label()}>
 			{#each periods as option (option)}
 				<Button

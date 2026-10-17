@@ -143,5 +143,6 @@
 	"docks_usage_sessions_today": "Sessions today",
 	"docks_usage_average_open": "Average door open",
 	"docks_usage_last_30_days": "over the last 30 days ({sessions} sessions)",
-	"docks_usage_open_orders": "Open breakdown orders from the door rules"
+	"docks_usage_open_orders": "Open breakdown orders from the door rules",
+	"docks_door_card_link": "{code} on the docks board"
 }

@@ -11,8 +11,9 @@
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
 
+	import { watchDocks } from "../docks.remote.ts";
 	import { dockFigures, formatDuration } from "../model.ts";
-	import { getDockBoard, watchDocks } from "./board.remote.ts";
+	import { getDockBoard } from "./board.remote.ts";
 	import { type DockBoard, dockView } from "./board.ts";
 	import { Clock } from "./clock.svelte.ts";
 	import DockCard from "./dock-card.svelte";

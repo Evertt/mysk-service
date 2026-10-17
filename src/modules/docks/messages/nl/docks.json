@@ -143,5 +143,6 @@
 	"docks_usage_sessions_today": "Sessies vandaag",
 	"docks_usage_average_open": "Gemiddeld deur open",
 	"docks_usage_last_30_days": "over de afgelopen 30 dagen ({sessions} sessies)",
-	"docks_usage_open_orders": "Open storingsopdrachten van de deurregels"
+	"docks_usage_open_orders": "Open storingsopdrachten van de deurregels",
+	"docks_door_card_link": "{code} in het live overzicht van de docks"
 }
