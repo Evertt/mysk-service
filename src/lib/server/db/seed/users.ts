@@ -25,8 +25,8 @@ async function linkDemoEngineer(tx: Transaction, userId: string, organizationId:
 		.limit(1);
 	await tx.update(engineer).set({ userId }).where(eq(engineer.id, first.id));
 
-	const work = await tx
-		.select({ id: order.id })
+	const planned = await tx
+		.select({ id: order.id, type: order.type })
 		.from(order)
 		.innerJoin(engineer, eq(order.engineerId, engineer.id))
 		.where(
@@ -36,8 +36,14 @@ async function linkDemoEngineer(tx: Transaction, userId: string, organizationId:
 				eq(engineer.specialty, first.specialty),
 			),
 		)
-		.orderBy(asc(order.id))
-		.limit(4);
+		.orderBy(asc(order.id));
+	// One of them an inspection, where there's one, second (planned, not yet started): the portal's
+	// checklists need one, whatever the generated orders happen to be.
+	const inspection = planned.find((job) => job.type === "inspection");
+	const others = planned.filter((job) => job !== inspection);
+	const work = (inspection ? [others[0], inspection, ...others.slice(1)] : others)
+		.filter(Boolean)
+		.slice(0, 4);
 	const plan = [
 		{ days: 0, hours: 8, minutes: 0, status: "in_progress" },
 		{ days: 0, hours: 13, minutes: 30, status: "scheduled" },
