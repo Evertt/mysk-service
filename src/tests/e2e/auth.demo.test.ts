@@ -1,6 +1,7 @@
 /**
- * The login page's one-click demo sign-in (`src/routes/login/demo.remote.ts`): on the lanes'
- * servers, which have `DEMO_SIGN_IN=true`, and on one of this file's own without it.
+ * The login page's one-click demo sign-in (`src/routes/demo.remote.ts`; the user menus' "View as"
+ * is `auth.view-as.test.ts`'s): on the lanes' servers, which have `DEMO_SIGN_IN=true`, and on one
+ * of this file's own without it.
  */
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
