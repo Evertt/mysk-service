@@ -56,10 +56,69 @@ index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e1
  				(data[0] === '[' && !isNaN(Number(data.slice(1))))
  			) {
 diff --git a/src/internal/client/reactivity/batch.js b/src/internal/client/reactivity/batch.js
-index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2a297ae83 100644
+index 75ce33b1c56dcf090c289517209baf095724ad89..f2c6574b694dbb37165ae2ca0b05da01c5dace9d 100644
 --- a/src/internal/client/reactivity/batch.js
 +++ b/src/internal/client/reactivity/batch.js
-@@ -94,6 +94,40 @@ var source_stacks = new Set();
+@@ -17,7 +17,8 @@ import {
+ 	ERROR_VALUE,
+ 	MANAGED_EFFECT,
+ 	REACTION_RAN,
+-	DESTROYING
++	DESTROYING,
++	CONNECTED
+ } from '#client/constants';
+ import { async_mode_flag } from '../../flags/index.js';
+ import { deferred, define_property, includes } from '../../shared/utils.js';
+@@ -64,6 +65,48 @@ export let previous_batch = null;
+  */
+ export let batch_values = null;
+ 
++/**
++ * (Patched) The deriveds whose value in a `batch_values` was computed since their dependencies last
++ * changed, by that map. Unlike outside of time travelling, a derived computed while another batch
++ * still has ongoing work stays dirty (so the other batches still traverse it), and without this
++ * every read of it computed it again, and every derived it reads, and so on: with a deep graph
++ * (layerchart's chart state) that was millions of computations, seconds of a frozen tab. A derived
++ * is fresh while it stays connected, so `mark_reactions` reaches it (and forgets it here) when a
++ * dependency changes; `is_dirty` takes a fresh one as clean. Not in a fork, which has its own
++ * (`fork_deriveds`).
++ * @type {WeakMap<Map<Value, any>, Set<Derived>>}
++ */
++const fresh_deriveds = new WeakMap();
++
++/**
++ * (Patched) Marks `derived` fresh in the current `batch_values`, or forgets it there.
++ * @param {Derived} derived
++ * @param {boolean} fresh
++ */
++export function set_fresh_in_batch(derived, fresh) {
++	if (batch_values === null) return;
++	var deriveds = fresh_deriveds.get(batch_values);
++	if (fresh) {
++		if (deriveds === undefined) fresh_deriveds.set(batch_values, (deriveds = new Set()));
++		deriveds.add(derived);
++	} else {
++		deriveds?.delete(derived);
++	}
++}
++
++/**
++ * (Patched) Whether `derived`'s value in the current `batch_values` is up to date.
++ * @param {Derived} derived
++ */
++export function is_fresh_in_batch(derived) {
++	return (
++		batch_values !== null &&
++		!current_batch?.is_fork &&
++		(derived.f & CONNECTED) !== 0 &&
++		fresh_deriveds.get(batch_values)?.has(derived) === true
++	);
++}
++
+ /** @type {Effect | null} */
+ let last_scheduled_effect = null;
+ 
+@@ -94,6 +137,40 @@ var source_stacks = new Set();
  
  let uid = 1;
  
@@ -100,7 +159,7 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2
  export class Batch {
  	id = uid++;
  
-@@ -205,6 +239,18 @@ export class Batch {
+@@ -205,6 +282,18 @@ export class Batch {
  
  	is_fork = false;
  
@@ -119,7 +178,7 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2
  	#decrement_queued = false;
  
  	constructor() {
-@@ -297,6 +343,9 @@ export class Batch {
+@@ -297,6 +386,9 @@ export class Batch {
  			// or because they were scheduled twice)
  			if ((effect.f & DESTROYED) !== 0 || (effect.f & (DIRTY | MAYBE_DIRTY)) === 0) continue;
  
@@ -129,7 +188,7 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2
  			var e = effect;
  			var covered = false;
  
-@@ -500,7 +549,13 @@ export class Batch {
+@@ -500,7 +592,13 @@ export class Batch {
  			var is_branch = (flags & (BRANCH_EFFECT | ROOT_EFFECT)) !== 0;
  			var is_skippable_branch = is_branch && (flags & CLEAN) !== 0;
  
@@ -144,7 +203,7 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2
  
  			if (!skip && effect.fn !== null) {
  				if (is_branch) {
-@@ -769,8 +824,10 @@ export class Batch {
+@@ -769,8 +867,10 @@ export class Batch {
  			} else if (sources.length > 0) {
  				// The microtask queue can contain the batch already scheduled to run right
  				// after this one is finished, so throwing the invariant would be wrong here.
@@ -158,10 +217,19 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..654387b2341ac05c56ac41f4ace72bb2
  
  				// A batch was unskipped in a later batch -> tell prior batches to unskip it, too
 diff --git a/src/internal/client/reactivity/deriveds.js b/src/internal/client/reactivity/deriveds.js
-index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..e84aa8c49a0272d9e0121d06b828438a5b871e8c 100644
+index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..f2bf09ecd821ace7faac38f68dd40a7165c63724 100644
 --- a/src/internal/client/reactivity/deriveds.js
 +++ b/src/internal/client/reactivity/deriveds.js
-@@ -19,6 +19,7 @@ import {
+@@ -12,13 +12,15 @@ import {
+ 	DESTROYED,
+ 	CLEAN,
+ 	REACTION_RAN,
+-	INERT
++	INERT,
++	CONNECTED
+ } from '#client/constants';
+ import {
+ 	active_reaction,
  	active_effect,
  	update_reaction,
  	increment_write_version,
@@ -169,7 +237,16 @@ index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..e84aa8c49a0272d9e0121d06b828438a
  	set_active_effect,
  	push_reaction_value,
  	is_destroying_effect,
-@@ -390,7 +391,12 @@ export function execute_derived(derived) {
+@@ -43,7 +45,7 @@ import { get_error } from '../../shared/dev.js';
+ import { async_mode_flag, tracing_mode_flag } from '../../flags/index.js';
+ import { component_context } from '../context.js';
+ import { UNINITIALIZED } from '../../../constants.js';
+-import { batch_values, current_batch, previous_batch } from './batch.js';
++import { batch_values, current_batch, previous_batch, set_fresh_in_batch } from './batch.js';
+ import { increment_pending, unset_context } from './async.js';
+ import { deferred, includes, noop } from '../../shared/utils.js';
+ import { set_signal_status, update_derived_status } from './status.js';
+@@ -390,7 +392,12 @@ export function execute_derived(derived) {
  export function update_derived(derived) {
  	var value = execute_derived(derived);
  
@@ -183,7 +260,7 @@ index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..e84aa8c49a0272d9e0121d06b828438a
  		derived.wv = increment_write_version();
  
  		// in a fork, we don't update the underlying value, just `batch_values`.
-@@ -419,6 +425,11 @@ export function update_derived(derived) {
+@@ -419,6 +426,11 @@ export function update_derived(derived) {
  		}
  	}
  
@@ -195,11 +272,59 @@ index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..e84aa8c49a0272d9e0121d06b828438a
  	// don't mark derived clean if we're reading it inside a
  	// cleanup function, or it will cache a stale value
  	if (is_destroying_effect) {
+@@ -433,6 +445,12 @@ export function update_derived(derived) {
+ 		if (effect_tracking() || current_batch?.is_fork) {
+ 			batch_values.set(derived, value);
+ 		}
++
++		// (Patched) see `fresh_deriveds` in batch.js
++		set_fresh_in_batch(
++			derived,
++			!current_batch?.is_fork && effect_tracking() && (derived.f & CONNECTED) !== 0
++		);
+ 	} else {
+ 		update_derived_status(derived);
+ 	}
+diff --git a/src/internal/client/reactivity/sources.js b/src/internal/client/reactivity/sources.js
+index 006494f0b54ac7f011ccd4a0a19958986043ab29..a16540f61ab50aaad4d43c3e6e333ab1031a1fe3 100644
+--- a/src/internal/client/reactivity/sources.js
++++ b/src/internal/client/reactivity/sources.js
+@@ -37,7 +37,8 @@ import {
+ 	batch_values,
+ 	eager_block_effects,
+ 	schedule_effect,
+-	legacy_updates
++	legacy_updates,
++	set_fresh_in_batch
+ } from './batch.js';
+ import { proxy } from '../proxy.js';
+ import { execute_derived } from './deriveds.js';
+@@ -393,6 +394,8 @@ function mark_reactions(signal, status, updated_during_traversal) {
+ 			var derived = /** @type {Derived} */ (reaction);
+ 
+ 			batch_values?.delete(derived);
++			// (Patched) see `fresh_deriveds` in batch.js
++			set_fresh_in_batch(derived, false);
+ 			mark_reactions(derived, MAYBE_DIRTY, updated_during_traversal);
+ 		} else if (not_dirty) {
+ 			var effect = /** @type {Effect} */ (reaction);
 diff --git a/src/internal/client/runtime.js b/src/internal/client/runtime.js
-index 27def053008cc438af3186a5d939668c786e871d..231eb97ee738913b54064a0ce7cabacd345e862c 100644
+index 27def053008cc438af3186a5d939668c786e871d..d34b45a61836010883cb075d7dfc862012f59e9a 100644
 --- a/src/internal/client/runtime.js
 +++ b/src/internal/client/runtime.js
-@@ -159,6 +159,30 @@ export function increment_write_version() {
+@@ -50,8 +50,10 @@ import {
+ 	batch_values,
+ 	current_batch,
+ 	flushSync,
++	is_fresh_in_batch,
+ 	previous_batch,
+-	schedule_effect
++	schedule_effect,
++	set_fresh_in_batch
+ } from './reactivity/batch.js';
+ import { handle_error } from './error-handling.js';
+ import { UNINITIALIZED } from '../../constants.js';
+@@ -159,6 +161,36 @@ export function increment_write_version() {
  export function is_dirty(reaction) {
  	var flags = reaction.f;
  
@@ -227,10 +352,26 @@ index 27def053008cc438af3186a5d939668c786e871d..231eb97ee738913b54064a0ce7cabacd
 +		}
 +	}
 +
++	// (Patched) computed while time travelling, and nothing it depends on changed since: see
++	// `fresh_deriveds` in batch.js
++	if ((flags & DERIVED) !== 0 && is_fresh_in_batch(/** @type {Derived} */ (reaction))) {
++		return false;
++	}
++
  	if ((flags & DIRTY) !== 0) {
  		return true;
  	}
-@@ -706,6 +730,12 @@ export function get(signal) {
+@@ -407,6 +439,9 @@ function remove_reaction(signal, dependency) {
+ 			derived.f ^= CONNECTED;
+ 		}
+ 
++		// (Patched) no longer reached by `mark_reactions`: see `fresh_deriveds` in batch.js
++		set_fresh_in_batch(derived, false);
++
+ 		// In a fork it's possible that a derived is executed and gets reactions, then commits, but is
+ 		// never re-executed. This is possible when the derived is only executed once in the context
+ 		// of a new branch which happens before fork.commit() runs. In this case, the derived still has
+@@ -706,6 +741,12 @@ export function get(signal) {
  		}
  	}
  

@@ -198,3 +198,37 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Workaround:** `patches/@sveltejs__kit@3.0.0.patch` catches it at both calls.
 - **Reproduction:** a page with a `query.live`, and a form or link that signs out and navigates
   with `invalidateAll`: now and then the console shows the unhandled rejection.
+
+## 10. Svelte: a derived read while another batch is pending is computed anew on every read
+
+- **Versions:** svelte 5.57.1 and 5.57.2 (same code), with `experimental.async`.
+- **What happens:** on the dashboard, resizing the window from below 768 px to 768 px or wider
+  (where the sidebar comes in) blocked the main thread for 7 s in a production build, 2–3 s per
+  layerchart chart. A resize that doesn't cross the breakpoint took ~70 ms.
+- **Cause:** while another batch is pending, `Batch.apply()` sets `batch_values` ("time
+  travelling"), and then `update_derived` (`reactivity/deriveds.js`) stores the derived's value in
+  `batch_values` but leaves the derived dirty, and `is_dirty` (`runtime.js`) doesn't look there:
+  every `get()` of it computes it again, and `is_dirty` computes every derived it depends on again,
+  so a derived graph is walked as a tree, without reuse. layerchart's chart state is a deep graph
+  of deriveds read through spread and rest props: 17 million derived computations in one flush,
+  against 5,000 for the same redraw without a pending batch. The pending batch: crossing the
+  breakpoint makes the sidebar's content anew (`sidebar.svelte` renders a sheet below it), whose
+  user menu awaits `getCurrentUser()`, a query nothing else had loaded, while the charts'
+  `bind:clientWidth` sets their width in a batch of its own. A preload fork (the pointer on a
+  link) did the same, twice over (two frozen flushes).
+- **Fix (our patch):** `patches/svelte@5.57.1.patch` keeps a set of "fresh" deriveds per
+  `batch_values` (`fresh_deriveds` in `reactivity/batch.js`): `update_derived` adds a connected
+  derived it computed there, `mark_reactions` and `remove_reaction` (disconnecting) take it out,
+  and `is_dirty` takes a fresh one as clean. Not in a fork, which has `fork_deriveds`. After it:
+  13,000 computations, the longest task ~120 ms.
+- **Reproduction:** `svelte-time-travel-derived-recompute/`: `repro.mjs` times the resize against a
+  preview build and, on a build instrumented by `instrument.py`, counts the derived computations
+  and records the pending batches (where they were made). For the issue: a component with a chain
+  of a dozen deriveds that each read the previous one twice, an `await` of a slow promise mounted
+  in a new `{#if}` branch, and a state change elsewhere in the same frame: the chain's
+  computations should grow as 2ⁿ (not tried yet).
+- **Maybe also** #5 (the freeze under a hydrating `pending` boundary) and the `$effect.pending()`
+  freeze on the dashboard: both had layerchart's deriveds in the stack while another batch was
+  pending. Worth checking with the patch before reporting those.
+- **Test:** `src/tests/e2e/dashboard.test.ts`, "redraw at once when the window grows wide enough
+  for the sidebar".
