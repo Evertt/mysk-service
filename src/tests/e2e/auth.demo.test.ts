@@ -46,17 +46,11 @@ async function sessions(email: string) {
 	return { latest: found[0]?.organization, count: found.length };
 }
 
-/**
- * Signs out with the engineer or customer portal's button, back to the login page. Their sign-out
- * logs errors in the browser whoever signed in, with the form as much as with a demo button (the
- * portal's queries, refreshed once the session is gone), so they're expected here.
- */
+/** Signs out with the engineer or customer portal's button, back to the login page. */
 async function signOutOfPortal() {
 	const { page } = app;
-	await app.expectingErrors(async () => {
-		await page.getByRole("button", { name: "Sign out" }).click();
-		await page.waitForURL((url) => url.pathname === "/login");
-	});
+	await page.getByRole("button", { name: "Sign out" }).click();
+	await page.waitForURL((url) => url.pathname === "/login");
 }
 
 describe("with DEMO_SIGN_IN", () => {

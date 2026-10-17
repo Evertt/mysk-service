@@ -63,17 +63,16 @@
 					<LanguageSwitcher submenu />
 				</DropdownMenu.Group>
 				<DropdownMenu.Separator />
-				<form {...signOut}>
+				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to the
+					session that ends, so the login page loads afresh rather than this page refreshing them
+					signed out (which logged errors now and then). -->
+				<form method={signOut.method} action={signOut.action}>
 					<DropdownMenu.Group>
-						<!-- Keep the menu open while signing out, so the form stays mounted and shows progress. -->
+						<!-- Keep the menu open while signing out, so the form stays mounted until the browser leaves. -->
 						<DropdownMenu.Item onSelect={(event) => event.preventDefault()}>
 							{#snippet child({ props })}
 								<button {...props} type="submit" class={[props.class, "w-full"]}>
-									{#if signOut.pending}
-										<Spinner />
-									{:else}
-										<LogOutIcon />
-									{/if}
+									<LogOutIcon />
 									{m.common_sign_out()}
 								</button>
 							{/snippet}
