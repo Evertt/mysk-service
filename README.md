@@ -224,6 +224,19 @@ day does no harm. Without either variable set, nothing can start it.
 The run's day is the server's (UTC on Vercel and Cloudflare), and its mail (customer reminders) is
 in English: the cron's request has no user's time zone or language.
 
+### The demo's simulations
+
+A demo organization can have a module whose real feed isn't connected yet simulated (SHLTR's
+Salvo docks and P1 meters; the seed gives it the rows in `simulation`, real tenants never have
+one). While it runs, the module makes its data up over each interval of real time, through its own
+ingest path. `POST /_ops/tick` (or `GET`), with the same token as the daily jobs, moves every
+running simulation on to now; the bar on the module's page (Start/Pause, speed, reset, for
+managers) does it every few seconds while the page is open, so a cron is only needed to keep it
+going while no one looks.
+
+- **Cloudflare**: the Worker's minute Cron Trigger (`* * * * *`, next to the daily one) does it.
+- **A server of your own**: a crontab line posting to `/_ops/tick` every minute, like the daily one.
+
 ### On Cloudflare
 
 The app also runs on Cloudflare Workers, with its database in a
@@ -236,13 +249,18 @@ migrates its database itself when it starts (`cloudflare/migrations/`).
 ```sh
 pnpm exec wrangler login                    # once
 pnpm exec wrangler secret put BETTER_AUTH_SECRET
-pnpm exec wrangler secret put OPS_TOKEN      # allows importing data (see below) and the daily jobs
+pnpm exec wrangler secret put OPS_TOKEN      # allows importing data (see below), the daily jobs and the simulations' tick
 pnpm deploy:cloudflare                      # builds with ADAPTER=cloudflare and deploys
 ```
 
 Set `ORIGIN` in `wrangler.jsonc` to the Worker's URL (or your domain). `DATABASE_URL` isn't used
 there. To try it locally in Cloudflare's runtime: copy `.dev.vars.example` to `.dev.vars` and run
 `pnpm dev:cloudflare` (wrangler keeps the object's data in `.wrangler/`).
+
+The Worker has two Cron Triggers (`triggers.crons`, in the top level and in `env.staging`):
+`0 4 * * *` runs the daily jobs, `* * * * *` ticks the demo's simulations (see "The demo's
+simulations"); `scheduled()` tells them apart by `controller.cron`, and has the object answer
+`/_ops/daily` or `/_ops/tick` with the `OPS_TOKEN`.
 
 A new object starts empty. Its data comes from a libsql database, through
 `POST /_ops/import`, which replaces the data of every table in the export: to start, make the

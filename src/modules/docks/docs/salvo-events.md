@@ -3,7 +3,10 @@
 How the Salvo dock hardware (or whatever relays it) tells Fieldworks what happens at a tenant's docks.
 The real Salvo integration isn't known yet (open question 16 in `docs/plans/shltr-domain.md`): this is
 the contract the docks module offers, and what an adapter for Salvo's own API or events would post.
-`scripts/docks-simulator.ts` (`pnpm docks:simulate`) posts it for the demo.
+For the demo, the app simulates SHLTR's docks by itself: its simulation (`server/simulation.ts`, on
+the board's simulation bar and the minute cron) hands batches of these events, with ids starting
+`sim-`, to the same code the endpoint runs (`server/feed.ts`), as the system in the tenant.
+`scripts/docks-simulator.ts` (`pnpm docks:simulate`) posts them over HTTP instead, to a dev server.
 
 ## Endpoint
 

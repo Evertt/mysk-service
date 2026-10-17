@@ -341,7 +341,11 @@ Docks (`src/modules/docks/`, SHLTR's Salvo dock time management) is the one fed 
 there for an integration endpoint with its tokens (`routes/(api)/ingest/+server.ts`, the payload in
 its `docs/salvo-events.md`), a live board (`query.live` on changes it announces itself with
 `announceChange()`, as telemetry isn't logged), rules that act on time (`server/rules.ts`, after
-every batch and in the daily job) and a simulator for demos (`scripts/docks-simulator.ts`).
+every batch and in the daily job) and a simulation for the demo (`simulation.run`:
+`server/simulation.ts` posts what the pure, stateless `server/scenario.ts` plans through the
+feed's own path, `server/feed.ts`; a reset puts the docks in the mockup's states, `server/demo.ts`;
+`scripts/docks-simulator.ts` still feeds a dev server from outside). Its board is drawn
+(`board/dock-drawing.svelte`, an SVG whose door, beacon, truck and Wheel-Lok follow the live state).
 Energy (`src/modules/energy/`, SHLTR's Energie module: a customer site's zones, consumers and
 monitored doors) is fed from outside too, with aggregates per zone per 15 minutes rather than
 events (`routes/(api)/ingest/+server.ts`, the format in its `docs/ingest.md`, checked by
