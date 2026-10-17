@@ -36,7 +36,7 @@ import type * as schema from "../schema.ts";
 import type { TenantData, TenantSteps } from "./tenant.ts";
 
 /** A transaction on the seed's database: the core's tables and the modules'. */
-type SeedTransaction = Parameters<
+export type SeedTransaction = Parameters<
 	Parameters<LibSQLDatabase<typeof schema & typeof moduleSchema>["transaction"]>[0]
 >[0];
 

@@ -97,6 +97,21 @@ export const actions = guardedActions("sample", moduleActions satisfies Actions)
 		expect(stub).toContain("export const config = moduleConfig;");
 	});
 
+	test("guards an integration endpoint's handlers with the module's token instead", () => {
+		const exports = routeExports("+server.ts", `export const POST = () => {};`);
+		const stub = renderScriptStub({
+			from: "x/+server.ts",
+			importPath,
+			exports,
+			guard: { id: "sample", kind: "integration" },
+		});
+		expect(stub).toContain(`import { guardedIntegration } from "#lib/server/modules/hooks.ts";`);
+		expect(stub).toContain(
+			`export const POST = guardedIntegration<RequestEvent, ReturnType<typeof modulePOST>>("sample", modulePOST);`,
+		);
+		expect(stub).not.toContain("guarded<");
+	});
+
 	test("guards nothing in a server file that answers no request", () => {
 		const exports = routeExports("+page.server.ts", `export const prerender = true;`);
 		const stub = renderScriptStub({

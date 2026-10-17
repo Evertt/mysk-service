@@ -22,6 +22,17 @@ export function serverFileKind(name: string): "page" | "layout" | "endpoint" | u
 /** The route group in `src/routes` that holds the modules' stubs: the generator's, never the core's. */
 export const MODULES_GROUP = "(modules)";
 
+/**
+ * The leading route group of a module's integration endpoints (`routes/(api)/ingest/+server.ts`
+ * is `/<id>/ingest`): requests from systems outside the app, with a token of the module's instead
+ * of a session (`guardedIntegration()` in `#lib/server/modules/hooks.ts`). It holds `+server.ts`
+ * files only, and `hooks.server.ts` lets requests to its routes through without signing in.
+ */
+export const API_GROUP = "(api)";
+
+/** Whether a route file is in the integration group: its first segment is `(api)`. */
+export const isIntegrationRoute = (file: string) => file.split("/")[0] === API_GROUP;
+
 export const isGroup = (segment: string) => /^\(.*\)$/.test(segment);
 
 /**

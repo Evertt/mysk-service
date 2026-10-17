@@ -3,7 +3,15 @@ import { join, posix, relative } from "node:path";
 
 import { graphProblems } from "./graph.ts";
 import { sectionsOf } from "./messages.ts";
-import { isGroup, MODULES_GROUP, routeFileKind, routePlace } from "./routes.ts";
+import {
+	API_GROUP,
+	isGroup,
+	isIntegrationRoute,
+	MODULES_GROUP,
+	routeFileKind,
+	routePlace,
+	serverFileKind,
+} from "./routes.ts";
 import { byName, isGenerated, isLegacyStubFolder, type ModuleFolder, walk } from "./shared.ts";
 
 const SECTION = /^[a-z][a-z0-9]*$/;
@@ -93,6 +101,13 @@ export function checkModules(
 				problems.push(
 					`${where}/routes/${file}: ${MODULES_GROUP} is the group the generator links the routes ` +
 						`into, so a module's routes can't use it.`,
+				);
+				continue;
+			}
+			if (isIntegrationRoute(file) && serverFileKind(posix.basename(file)) !== "endpoint") {
+				problems.push(
+					`${where}/routes/${file}: ${API_GROUP} holds integration endpoints only (+server.ts), ` +
+						`which take a token instead of a session.`,
 				);
 				continue;
 			}

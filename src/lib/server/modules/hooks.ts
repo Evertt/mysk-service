@@ -3,7 +3,8 @@
  * modules' hooks into core server logic are in `#lib/server/extensions.ts`.
  */
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { requireModule } from "#lib/server/auth/index.ts";
+import { asSystem, requireModule } from "#lib/server/auth/index.ts";
+import { integrationTenant } from "#lib/server/auth/integrations.ts";
 
 /**
  * Refuses the current tenant a module's server code unless it has the module: a 404, as if it
@@ -34,4 +35,22 @@ export function guardedActions<Actions extends Record<string, (event: never) => 
 	return Object.fromEntries(
 		Object.entries(actions).map(([name, action]) => [name, guarded(id, action)]),
 	) as Actions;
+}
+
+/**
+ * A request handler of module `id`'s integration endpoint (a `+server.ts` in its `(api)` routes):
+ * no session, but a token of the module's (`Authorization: Bearer …`, see
+ * `#lib/server/auth/integrations.ts`), which says whose data it is. Refuses a missing, unknown or
+ * revoked token (401) and a tenant without the module (404) before it runs, and runs it as the
+ * system in the token's tenant (`asSystem()`): its queries, transactions and log entries work as
+ * in a member's request.
+ */
+export function guardedIntegration<Event extends { request: Request }, Result>(
+	id: ModuleId,
+	handler: (event: Event) => Result,
+) {
+	return async (event: Event): Promise<Awaited<Result>> => {
+		const tenant = await integrationTenant(event.request, id);
+		return await asSystem(tenant, () => handler(event));
+	};
 }

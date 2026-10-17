@@ -56,6 +56,18 @@ describe("checkModules", () => {
 		expect(problems[3]).toMatch(/\(app\)\/\+hooks\.ts isn't a route file/);
 	});
 
+	test("takes only endpoints in the (api) group, the integrations'", () => {
+		expect(check([module("a", { routeFiles: ["(api)/ingest/+server.ts"] })])).toEqual([]);
+		expect(
+			check([module("a", { routeFiles: ["(api)/+page.svelte", "(api)/x/+page.server.ts"] })]),
+		).toEqual([
+			"src/modules/a/routes/(api)/+page.svelte: (api) holds integration endpoints only (+server.ts), which take a token instead of a session.",
+			expect.stringMatching(
+				/\(api\)\/x\/\+page\.server\.ts: \(api\) holds integration endpoints only/,
+			),
+		]);
+	});
+
 	test("refuses routes in a (modules) group, which is the generator's", () => {
 		expect(
 			check([module("a", { routeFiles: ["(app)/(modules)/a/+page.svelte"] })]).join("\n"),

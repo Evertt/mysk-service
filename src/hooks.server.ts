@@ -107,6 +107,13 @@ const isPublic = (pathname: string) =>
 	pathname.startsWith("/_ops/");
 
 /**
+ * The modules' integration endpoints (their `(api)` routes, e.g. the docks' Salvo feed at
+ * `/docks/ingest`): systems outside the app post to them with a token of the module's instead of a
+ * session, which their route stubs check (`guardedIntegration()`, `#lib/server/modules/hooks.ts`).
+ */
+const isIntegration = (routeId: string | null) => routeId?.startsWith("/(api)/") ?? false;
+
+/**
  * The engineer portal, the only part of the app field engineers use, and the QR codes'
  * links (`/q/<token>`), which lead them into it.
  */
@@ -132,7 +139,7 @@ const handleGuard: Handle = ({ event, resolve }) => {
 		if (tenant && isFieldEngineer(tenant.roles) && !isPortal(pathname) && !isPublic(pathname)) {
 			redirect(303, "/my");
 		}
-	} else if (!isPublic(pathname)) {
+	} else if (!isPublic(pathname) && !isIntegration(event.route.id)) {
 		const target = pathname + search;
 		redirect(303, target === "/" ? "/login" : `/login?redirectTo=${encodeURIComponent(target)}`);
 	}

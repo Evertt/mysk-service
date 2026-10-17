@@ -134,6 +134,18 @@ migration committed.
   files. Every `(modules)` folder
   is the generator's (gitignored; it deletes and rewrites them), so never edit one, and core never
   uses the name.
+- **Integration endpoints** (`routes/(api)/…/+server.ts`, e.g. the docks' `routes/(api)/ingest/+server.ts`
+  at `/docks/ingest`): for systems outside the app, which post with a token of the module's
+  (`Authorization: Bearer …`) instead of a session. The `(api)` group holds `+server.ts` files only
+  (the generator refuses anything else there), `hooks.server.ts` lets requests to `/(api)/` route
+  ids through without signing in, and their stubs guard each handler with `guardedIntegration()`
+  (`#lib/server/modules/hooks.ts`): a missing, unknown or revoked token is a 401, a tenant without
+  the module a 404, and the handler runs as the system in the token's tenant (`asSystem()`), so
+  `inTenant()`, transactions and `recordActivity()` work as in a member's request. Tokens are the
+  core's `integration_token` rows (hash only), made and revoked through
+  `#lib/server/auth/integrations.ts` (`issueIntegrationToken()`, `revokeIntegrationToken()`,
+  `integrationTokens()`) from the module's manager-only remote functions; a seed gives its demo
+  tenant a known one with `seedIntegrationToken()` (`src/lib/server/db/seed/integrations.ts`).
 - **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
   everywhere a route id goes: `resolve()`, `RouteParams<…>`, the manifest's `route`, its activity
   subjects' `href`s.
@@ -253,8 +265,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Checklists, condition, contracts, invoices, maintenance, materials, the partner programme and the schedule are the modules
-(`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/invoices/`,
+Checklists, condition, contracts, docks, invoices, maintenance, materials, the partner programme and the schedule are the modules
+(`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/docks/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
 templates (points in groups, the equipment categories each is for) and the checklists on
@@ -289,6 +301,11 @@ checklists gives the inspection status, maintenance the next visit, as SQL over 
 tenant), and for a contribution to a slot of a module it enhances (the question below a completed
 checklist in the portal, `slots/checklists.field.checklist/`). Checklists and condition enhance
 each other: each adds to the other where the other is on.
+Docks (`src/modules/docks/`, SHLTR's Salvo dock time management) is the one fed from outside: look
+there for an integration endpoint with its tokens (`routes/(api)/ingest/+server.ts`, the payload in
+its `docs/salvo-events.md`), a live board (`query.live` on changes it announces itself with
+`announceChange()`, as telemetry isn't logged), rules that act on time (`server/rules.ts`, after
+every batch and in the daily job) and a simulator for demos (`scripts/docks-simulator.ts`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

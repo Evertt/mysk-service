@@ -8,6 +8,7 @@ import {
 	routeExports,
 	routeFileKind,
 	routePlace,
+	isIntegrationRoute,
 	serverFileKind,
 } from "./routes.ts";
 import { GENERATED, type ModuleFolder } from "./shared.ts";
@@ -25,6 +26,7 @@ const handlers = {
 	page: /^(?:load|actions)$/,
 	layout: /^load$/,
 	endpoint: /^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|fallback)$/,
+	integration: /^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|fallback)$/,
 };
 
 /**
@@ -34,7 +36,9 @@ const handlers = {
  * `+layout.server.ts`, `+server.ts`) of that module: its `load`, `actions` and request handlers
  * refuse the tenants without the module before they run: the `(modules)` group's guard is a
  * universal load, which doesn't run before them (and Kit runs server loads, form actions and
- * endpoints without waiting for layouts anyway).
+ * endpoints without waiting for layouts anyway). An `integration` endpoint (in the module's
+ * `(api)` routes) takes a token instead of a session, and refuses requests without a valid one
+ * (`guardedIntegration()`).
  */
 export function renderScriptStub(options: {
 	/** The module's file, for the header. */
@@ -43,7 +47,7 @@ export function renderScriptStub(options: {
 	importPath: string;
 	exports: RouteExports;
 	/** The id of the module to guard for, and which server file this is. */
-	guard?: { id: string; kind: "page" | "layout" | "endpoint" };
+	guard?: { id: string; kind: "page" | "layout" | "endpoint" | "integration" };
 }): string {
 	const { from, importPath, exports, guard } = options;
 	const { names, literals } = exports;
@@ -61,12 +65,13 @@ export function renderScriptStub(options: {
 				? `${guard!.kind === "page" ? "Page" : "Layout"}ServerLoadEvent`
 				: "RequestEvent";
 
+	const handlerGuard = guard?.kind === "integration" ? "guardedIntegration" : "guarded";
 	const head: string[] = [];
 	const body: string[] = [];
 	if (guarded.length) {
 		const types = [...new Set(guarded.map(typeOf))];
 		const helpers = [
-			...(guarded.some((name) => name !== "actions") ? ["guarded"] : []),
+			...(guarded.some((name) => name !== "actions") ? [handlerGuard] : []),
 			...(guarded.includes("actions") ? ["guardedActions"] : []),
 		];
 		head.push(`import type { ${types.join(", ")} } from "./$types";`, "");
@@ -87,7 +92,7 @@ export function renderScriptStub(options: {
 		body.push(
 			name === "actions"
 				? `export const actions = guardedActions(${id}, ${own} satisfies Actions);`
-				: `export const ${name} = guarded<${typeOf(name)}, ReturnType<typeof ${own}>>(${id}, ${own});`,
+				: `export const ${name} = ${handlerGuard}<${typeOf(name)}, ReturnType<typeof ${own}>>(${id}, ${own});`,
 		);
 	}
 	if (reexported.length) body.push(`export { ${reexported.join(", ")} } from "${importPath}";`);
@@ -173,7 +178,13 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 							from,
 							importPath,
 							exports: routeExports(from, readFileSync(join(root, from), "utf8")),
-							guard: server ? { id: module.id, kind: server } : undefined,
+							guard: server
+								? {
+										id: module.id,
+										kind:
+											server === "endpoint" && isIntegrationRoute(file) ? "integration" : server,
+									}
+								: undefined,
 						})
 					: renderComponentStub({ from, importPath, kind });
 

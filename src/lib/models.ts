@@ -133,6 +133,8 @@ export const activityActions = [
 	// Saved views shared with the organization.
 	"shared",
 	"unshared",
+	// Integration tokens (`#lib/server/auth/integrations.ts`).
+	"revoked",
 ] as const;
 export type CoreActivityAction = (typeof activityActions)[number];
 export type ActivityAction = CoreActivityAction | ModuleAction;

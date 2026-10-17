@@ -8,6 +8,7 @@ const app = useApp();
 /** Every module's sidebar label. */
 const moduleLabels = [
 	"Checklists",
+	"Docks",
 	"Service contracts",
 	"Invoicing",
 	"Maintenance plans",

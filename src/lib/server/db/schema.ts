@@ -442,6 +442,39 @@ export const organizationModule = sqliteTable(
 	(table) => [primaryKey({ columns: [table.organizationId, table.moduleId] })],
 );
 
+/**
+ * A token a system outside the app (e.g. the Salvo dock hardware's feed) posts to a module's
+ * integration endpoints with (its `(api)` routes, see `#lib/server/auth/integrations.ts`): it says
+ * which tenant the data is for. Managers make and revoke them on the module's settings page; the
+ * token itself is shown once and never stored, only its SHA-256 hash and its first characters (to
+ * tell tokens apart). A revoked token stays, so the log can name it.
+ */
+export const integrationToken = sqliteTable(
+	"integration_token",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		organizationId: organizationId(),
+		/** The module whose endpoints it may post to. */
+		moduleId: text("module_id").notNull(),
+		/** What it's for, e.g. "Salvo Barneveld". */
+		name: text("name").notNull(),
+		/** The token's SHA-256, in hex. */
+		tokenHash: text("token_hash").notNull(),
+		/** The token's first characters, e.g. `fwi_3f9a`. */
+		prefix: text("prefix").notNull(),
+		/** Who made it; none once their account is gone. */
+		createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+		/** When it was last used, to the minute. */
+		lastUsedAt: moment("last_used_at"),
+		revokedAt: moment("revoked_at"),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex("integration_token_hash").on(table.tokenHash),
+		index("integration_token_organization_module").on(table.organizationId, table.moduleId),
+	],
+);
+
 // --- Engineer portal ------------------------------------------------------------------------------
 // What engineers record on their orders in the field (see `src/routes/(field)/my`).
 

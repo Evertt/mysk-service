@@ -41,6 +41,7 @@
 	"common_error_engineers_use_portal": "Field engineers use the engineer portal",
 	"common_error_not_linked": "Your account isn't linked to an engineer",
 	"common_error_no_permission": "You don't have permission to do this",
+	"common_error_invalid_token": "Missing, unknown or revoked token",
 	"common_error_module_part": "Couldn't load what {module} adds here.",
 	"common_error_module_off": "{module} is switched off for this organization: reload the page and try again.",
 	"common_try_again": "Try again",

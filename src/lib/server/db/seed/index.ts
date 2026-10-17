@@ -75,13 +75,14 @@ const fieldworksTenant =
  * schedule) have a tenant without them. Materials were core until they became a module, and both
  * kept them; their tests switch them off for South to see a tenant without them. SHLTR, the
  * client's business (`shltr/`), has them all, and equipment categories of its own; it comes last,
- * so the Fieldworks tenants' ids (and the tests that know them) stay as they were.
+ * so the Fieldworks tenants' ids (and the tests that know them) stay as they were. The docks
+ * module (Salvo dock time management) is SHLTR's alone: North doesn't have it either.
  */
 const tenants = [
 	{
 		...demoOrganizations.north,
 		slug: "north",
-		modules: [...moduleIds] as string[],
+		modules: moduleIds.filter((id) => id !== "docks") as string[],
 		seed: 20261005,
 		categories: seedCategories,
 		generate: fieldworksTenant({ customers: 60, engineers: 18, orders: 750 }, 20261005),

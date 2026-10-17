@@ -54,6 +54,7 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	accepted: m.activity_action_accepted,
 	shared: m.activity_action_shared,
 	unshared: m.activity_action_unshared,
+	revoked: m.activity_action_revoked,
 };
 
 /**
@@ -236,6 +237,11 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 	},
 	/** An invitation to join the organization, by the email address it's for. */
 	invitation: { noun: m.activity_subject_invitation, fields: { role: { format: roles } } },
+	/**
+	 * A token a module's integration endpoints take (`integration_token`), by its name, logged with
+	 * its module as the parent. It's managed on the module's settings page.
+	 */
+	integration_token: { noun: m.activity_subject_integration_token },
 	/**
 	 * A data table's saved view, by its name. Only shared views are logged: personal ones concern
 	 * nobody else. Its filters show as their URL parameters, its columns as the hidden ones' ids.
