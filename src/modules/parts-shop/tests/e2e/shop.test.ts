@@ -243,7 +243,8 @@ describe("the office", () => {
 			expect(await dialog.innerText()).toContain(formatCents(placed.total));
 			await dialog.getByRole("button", { name: "Cancel order" }).click();
 			await expect.poll(async () => (await shopOrderOf(number)).status).toBe("cancelled");
-			expect(await page.locator("[data-shop-steps]").count()).toBe(0);
+			// Stored before the page has its answer: the steps go once it's refreshed the order.
+			await page.locator("[data-shop-steps]").waitFor({ state: "detached" });
 
 			// The credit back, piece by piece, as the credit it was taken from (last year's).
 			expect((await walletOf(riedel.id)).at(-1)).toMatchObject({

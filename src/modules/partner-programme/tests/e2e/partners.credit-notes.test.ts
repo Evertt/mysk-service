@@ -1,13 +1,61 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, quiet, rows, useApp, users, value } from "#e2e/app.ts";
+import { fixture, organizations, quiet, rows, useApp, users, value } from "#e2e/app.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { formatEuros } from "#modules/partner-programme/display.ts";
+import { creditValidUntil, figuresFrom } from "#modules/partner-programme/model.ts";
 
-import { figuresFromDatabase, lastYear, partnersOf, thisYear, today } from "./helpers.ts";
+import {
+	figuresFromDatabase,
+	lastYear,
+	nonPartnerOf,
+	partnersOf,
+	rulesOf,
+	thisYear,
+	today,
+} from "./helpers.ts";
 
 const { north, shltr } = organizations;
 const app = useApp();
+
+/**
+ * A partner of this file's own in SHLTR, whose last year is closed with its choice still to make:
+ * a customer that wasn't one, made a partner early last year, closed at BRONZE (Pakhuis 7's
+ * figures as seeded; Pakhuis 7 itself is the portal's, whose contact chooses for it). Written
+ * as a fixture: the app accepts a partner only as of today, and closes a year only for the
+ * partners it had by its end.
+ */
+async function waitingPartner() {
+	const customer = await nonPartnerOf(shltr.id);
+	const rules = await rulesOf(shltr.id, lastYear);
+	const figures = figuresFrom(rules.tiers, 6_410_000, { cash: 5_250_000, credit: 5_250_000 });
+	expect(figures.level).not.toBeNull();
+	await fixture(
+		`insert into partner_account (organization_id, customer_id, accepted_on) values (?, ?, ?)`,
+		[shltr.id, customer.id, `${lastYear}-02-20`],
+	);
+	await fixture(
+		`insert into partner_bonus_year (organization_id, customer_id, year, status, partner_revenue,
+		 bonus_revenue_cash, bonus_revenue_credit, level, cash_rate, credit_rate, cash_amount,
+		 credit_amount, credit_valid_until, finalised_at)
+		 values (?, ?, ?, 'finalised', ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
+		[
+			shltr.id,
+			customer.id,
+			lastYear,
+			figures.partnerRevenue,
+			figures.bonusRevenue.cash,
+			figures.bonusRevenue.credit,
+			figures.level!.level,
+			figures.level!.cashRate,
+			figures.level!.creditRate,
+			figures.bonus.cash,
+			figures.bonus.credit,
+			creditValidUntil(lastYear, rules.creditValidYears).toString(),
+		],
+	);
+	return customer;
+}
 
 /** The partner programme's card on a customer's page. */
 const card = () => app.page.locator("[data-partner-card]");
@@ -90,21 +138,19 @@ describe("in SHLTR, a partner's cash bonus", () => {
 
 	test("chosen, the office makes its credit note: a draft for the cash, linked to the year", async () => {
 		const { page } = app;
-		const [pakhuis] = await rows<{ id: number; code: string }>(
-			`select id, code from customer where organization_id = ? and name = 'Pakhuis 7'`,
-			[shltr.id],
-		);
+		const partner = await waitingPartner();
 		const closed = async () =>
 			(
 				await rows<{ id: number; choice: string | null; cash_amount: number }>(
 					`select id, choice, cash_amount from partner_bonus_year where customer_id = ? and year = ?`,
-					[pakhuis.id, lastYear],
+					[partner.id, lastYear],
 				)
 			)[0];
 		expect((await closed()).choice).toBeNull();
-		const revenue = await figuresFromDatabase(shltr.id, pakhuis.id, thisYear);
+		expect((await closed()).cash_amount).toBeGreaterThan(0);
+		const revenue = await figuresFromDatabase(shltr.id, partner.id, thisYear);
 
-		await app.go(`/customers/${pakhuis.code}`);
+		await app.go(`/customers/${partner.code}`);
 		const year = card().locator(`[data-closed-year="${lastYear}"]`);
 		await year.getByRole("button", { name: /^Cash bonus/ }).click();
 		await app.submit(dialog().getByRole("button", { name: "Choose Cash bonus" }));
@@ -128,7 +174,7 @@ describe("in SHLTR, a partner's cash bonus", () => {
 		);
 		expect(made).toMatchObject({
 			status: "draft",
-			customer_id: pakhuis.id,
+			customer_id: partner.id,
 			invoice_id: null,
 			reason: `Partner Bonus ${lastYear}`,
 		});
@@ -160,8 +206,8 @@ describe("in SHLTR, a partner's cash bonus", () => {
 		).toEqual([{ status: "paid", settled_on: today.toString() }]);
 
 		// A payout isn't a return: this year's revenue is as it was.
-		expect(await figuresFromDatabase(shltr.id, pakhuis.id, thisYear)).toEqual(revenue);
-		await app.go(`/customers/${pakhuis.code}`);
+		expect(await figuresFromDatabase(shltr.id, partner.id, thisYear)).toEqual(revenue);
+		await app.go(`/customers/${partner.code}`);
 		await expect
 			.poll(() => year.locator(`[data-bonus-credit-note="${made.number}"]`).innerText())
 			.toContain(`settled · ${formatCents(-(cash + Math.round((cash * 21) / 100)))}`);

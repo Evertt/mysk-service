@@ -32,6 +32,16 @@ describe("a partner's contact", () => {
 		const { page } = app;
 		const riedel = await customerNamed("Riedel B.V.");
 		const figures = await figuresFromDatabase(shltr.id, riedel.id, thisYear);
+		// The wallet as seeded: awarded € 3.750 for last year, € 1.475 of it spent in the shop. The
+		// shop's tests (on the same worker, maybe before this file) add orders and cancel them.
+		const entries = await walletOf(riedel.id);
+		expect(entries.slice(0, 3)).toMatchObject([
+			{ kind: "award", amount: 375_000, valid_until: `${thisYear}-12-31` },
+			{ kind: "spend", amount: -100_000 },
+			{ kind: "spend", amount: -47_500 },
+		]);
+		// All of it valid this year: what's available is what the entries add up to.
+		const available = entries.reduce((sum, entry) => sum + entry.amount, 0);
 		page.on("request", (request) => {
 			if (isRemote(request.url(), "getClientPartner")) urls.push(request.url());
 		});
@@ -42,9 +52,10 @@ describe("a partner's contact", () => {
 			formatEuros(figures.partnerRevenue),
 		);
 		const wallet = page.locator("[data-client-wallet]");
-		// Awarded € 3.750 for last year, € 1.475 of it spent in the shop.
 		expect(await wallet.locator("[data-wallet-awarded]").innerText()).toBe(formatCents(375_000));
-		expect(await wallet.locator("[data-wallet-available]").innerText()).toBe(formatCents(227_500));
+		expect(await wallet.locator("[data-wallet-available]").innerText()).toBe(
+			formatCents(available),
+		);
 
 		await page.getByRole("link", { name: "View the programme and its conditions" }).click();
 		await page.waitForURL((url) => url.pathname === "/partner-programme/portal");
@@ -66,12 +77,18 @@ describe("a partner's contact", () => {
 		await page.locator("[data-client-terms]").getByText("Your choice").waitFor();
 		// Made for a phone: the tables scroll within their cards.
 		expect(await onPhone(page, () => fitsWidth(page))).toBe(true);
-		// The wallet's entries: the award and the two orders.
+		// The wallet's entries, newest first (the latest dozen): the award and the two orders as
+		// seeded, and whatever the shop's tests added since.
 		expect(
 			await page
 				.locator("[data-client-wallet] [data-wallet-entry]")
 				.evaluateAll((items) => items.map((item) => item.getAttribute("data-wallet-entry"))),
-		).toEqual(["spend", "spend", "award"]);
+		).toEqual(
+			entries
+				.toReversed()
+				.slice(0, 12)
+				.map((entry) => entry.kind),
+		);
 		// Last year is chosen already: nothing to choose.
 		expect(await page.locator("[data-client-choice]").count()).toBe(0);
 		await page.locator(`[data-client-closed-year="${lastYear}"] [data-choice="credit"]`).waitFor();

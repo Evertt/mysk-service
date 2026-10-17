@@ -1,6 +1,6 @@
 /**
- * Read access to the app under test's database, to check what the app stored (and `forgetTables`,
- * the one write).
+ * Read access to the app under test's database, to check what the app stored (and `forgetTables`
+ * and `fixture`, the writes).
  */
 import { createClient, type InValue } from "@libsql/client";
 
@@ -25,6 +25,16 @@ export async function rows<T = Record<string, unknown>>(sql: string, args: InVal
  */
 export async function forgetTables() {
 	await client.execute("delete from table_memory");
+}
+
+/**
+ * Writes a record a test file owns and the app can't make as the test needs it (e.g. a year
+ * closed for a partner the app would only accept today), and returns the rows of its
+ * `returning`. Only for rows no other file reads: everything else changes through the app.
+ */
+export async function fixture<T = Record<string, unknown>>(sql: string, args: InValue[] = []) {
+	const result = await client.execute({ sql, args });
+	return result.rows as unknown as T[];
 }
 
 /** The first column of the first row, e.g. of a `select count(*)`. */

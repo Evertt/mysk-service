@@ -24,12 +24,17 @@ export const partnersOf = (organizationId: string) =>
 		[organizationId],
 	);
 
-/** A tenant's customer that isn't a partner, the first by code. */
+/**
+ * A tenant's customer that isn't a partner, the first by code. Not one with contacts in the
+ * customer portal: the portal's tests have them as they're seeded (North's first customer's
+ * contact is the one that isn't a partner's).
+ */
 export const nonPartnerOf = async (organizationId: string) =>
 	(
 		await rows<{ id: number; code: string; name: string }>(
 			`select id, code, name from customer c where organization_id = ?
 			 and not exists (select 1 from partner_account p where p.customer_id = c.id)
+			 and not exists (select 1 from portal_contact k where k.customer_id = c.id)
 			 order by code limit 1`,
 			[organizationId],
 		)

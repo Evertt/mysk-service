@@ -21,7 +21,7 @@ import { baseURL } from "./lane.ts";
 import { quiet, trackNetwork } from "./network.ts";
 
 export { baseURL } from "./lane.ts";
-export { cents, countIn, nextCode, rows, unbalancedStock, value } from "./db.ts";
+export { cents, countIn, fixture, nextCode, rows, unbalancedStock, value } from "./db.ts";
 export { runDailyJobs } from "./jobs.ts";
 export { linkInMail, sentMail } from "./mail.ts";
 export { quiet } from "./network.ts";
