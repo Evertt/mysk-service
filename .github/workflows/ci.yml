@@ -1,5 +1,5 @@
 # The checks and the whole test suite on every push (a pull request's included), and once they pass
-# the deploy to Cloudflare: main to production, develop to its preview (with the demo data). Agents
+# the deploy to Cloudflare: main to production, develop to staging (with the demo data). Agents
 # run the tests of what they change; this runs everything.
 name: CI
 
@@ -83,17 +83,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  preview:
-    name: Deploy the preview of develop
+  staging:
+    name: Deploy develop to staging
     needs: [check, e2e]
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
-      name: preview
-      url: https://fieldworks-preview.devign.workers.dev
+      name: staging
+      url: https://fieldworks-staging.devign.workers.dev
     concurrency:
-      group: deploy-cloudflare-preview
+      group: deploy-cloudflare-staging
       cancel-in-progress: false
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -108,19 +108,19 @@ jobs:
       - run: vp run build:cloudflare
         env:
           BETTER_AUTH_SECRET: set-on-cloudflare
-      - run: vp exec wrangler deploy --env preview
-      # The preview's own secrets: its auth secret made once (sessions survive the next deploy), an
+      - run: vp exec wrangler deploy --env staging
+      # Staging's own secrets: its auth secret made once (sessions survive the next deploy), an
       # ops token made anew each time, which only this job uses, to import the demo data below.
-      - name: Set the preview's secrets
+      - name: Set staging's secrets
         run: |
-          if ! vp exec wrangler secret list --env preview --format json | grep -q '"BETTER_AUTH_SECRET"'; then
-            openssl rand -base64 32 | vp exec wrangler secret put BETTER_AUTH_SECRET --env preview
+          if ! vp exec wrangler secret list --env staging --format json | grep -q '"BETTER_AUTH_SECRET"'; then
+            openssl rand -base64 32 | vp exec wrangler secret put BETTER_AUTH_SECRET --env staging
           fi
           OPS_TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$OPS_TOKEN"
           echo "OPS_TOKEN=$OPS_TOKEN" >> "$GITHUB_ENV"
-          printf '%s' "$OPS_TOKEN" | vp exec wrangler secret put OPS_TOKEN --env preview
-      # The demo data (README "Demo login"), seeded as locally and imported into the preview's
+          printf '%s' "$OPS_TOKEN" | vp exec wrangler secret put OPS_TOKEN --env staging
+      # The demo data (README "Demo login"), seeded as locally and imported into staging's
       # Durable Object, replacing what was there.
       - name: Load the demo data
         run: |
@@ -130,7 +130,7 @@ jobs:
           node cloudflare/export-database.ts file:local.db > export.json
           for attempt in 1 2 3 4 5 6; do
             status=$(curl -s -o response.json -w '%{http_code}' -X POST \
-              https://fieldworks-preview.devign.workers.dev/_ops/import \
+              https://fieldworks-staging.devign.workers.dev/_ops/import \
               -H "Authorization: Bearer $OPS_TOKEN" -H "Content-Type: application/json" \
               --data-binary @export.json)
             if [ "$status" = "200" ]; then cat response.json; exit 0; fi

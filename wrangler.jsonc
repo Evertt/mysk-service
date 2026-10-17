@@ -18,14 +18,14 @@
 	"triggers": { "crons": ["0 4 * * *"] },
 	"observability": { "enabled": true },
 	"env": {
-		// The preview of `develop` (`wrangler deploy --env preview`, from CI): a Worker of its own,
-		// `fieldworks-preview`, with its own Durable Object and so its own database, which CI fills
+		// Staging, the deploy of `develop` (`wrangler deploy --env staging`, from CI): a Worker of its
+		// own, `fieldworks-staging`, with its own Durable Object and so its own database, which CI fills
 		// with the demo data on every deploy. Bindings and vars aren't inherited, so they're repeated.
-		"preview": {
-			"name": "fieldworks-preview",
+		"staging": {
+			"name": "fieldworks-staging",
 			"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
 			"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
-			"vars": { "ORIGIN": "https://fieldworks-preview.devign.workers.dev" },
+			"vars": { "ORIGIN": "https://fieldworks-staging.devign.workers.dev" },
 			"triggers": { "crons": ["0 4 * * *"] },
 		},
 	},
