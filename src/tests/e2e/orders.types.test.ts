@@ -87,7 +87,7 @@ describe("an owner, in North", () => {
 		await typeRow("project").waitFor();
 		expect(await page().locator("tr[data-order-type]").count()).toBe(9);
 		expect(await typeRow("inspection").innerText()).toContain(
-			"Needed by Checklists, Maintenance plans",
+			"Needed by Work orders, Maintenance plans",
 		);
 		expect(await typeRow("breakdown").innerText()).toContain("Needed by Customer portal");
 		expect(await typeRow("project").innerText()).not.toContain("Needed by");
@@ -209,11 +209,11 @@ describe("an owner, in North", () => {
 	test("can't hide a type a module that's on needs, and says which", async () => {
 		await app.go("/settings/order-types");
 		await edit("Inspection");
-		expect(await dialog().innerText()).toContain("Needed by Checklists, Maintenance plans");
+		expect(await dialog().innerText()).toContain("Needed by Work orders, Maintenance plans");
 		await hide(true);
 		await save();
 		expect(await app.issues()).toContain(
-			"Can't be hidden: needed by Checklists, Maintenance plans",
+			"Can't be hidden: needed by Work orders, Maintenance plans",
 		);
 		await dialog().getByRole("button", { name: "Cancel" }).click();
 

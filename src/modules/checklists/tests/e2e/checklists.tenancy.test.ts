@@ -53,7 +53,10 @@ describe("in North, which has the module", () => {
 		// Client-side, so the pages load their data through remote queries.
 		await app.go("/activity");
 		const sidebar = page().locator('[data-sidebar="content"]');
-		await sidebar.getByRole("link", { name: "Checklists" }).click();
+		// The sidebar's entry is the work orders page, which links to the templates.
+		await sidebar.getByRole("link", { name: "Work orders" }).click();
+		await page().waitForURL((url) => url.pathname === "/checklists");
+		await page().getByRole("link", { name: "Templates" }).click();
 		await page().waitForURL((url) => url.pathname === "/checklists/templates");
 		await page().getByRole("link", { name: "Koelmachine" }).click();
 		await pointsCard().waitFor();
@@ -177,13 +180,17 @@ describe("in North, which has the module", () => {
 describe("in South, which doesn't have the module", () => {
 	test("there's no sidebar entry and no set-up link, and its pages are 404s", async () => {
 		await app.switchOrganization(south.name);
-		expect(await sidebarLinks()).not.toContain("Checklists");
+		expect(await sidebarLinks()).not.toContain("Work orders");
 		await app.go("/settings");
 		await settingsCard().getByRole("button", { name: "Enable" }).waitFor();
 		expect(await settingsCard().getByRole("link", { name: "Set up" }).count()).toBe(0);
 
 		const northTemplate = await templateNamed(north.id, "Koelmachine");
-		for (const path of ["/checklists/templates", `/checklists/templates/${northTemplate.id}`]) {
+		for (const path of [
+			"/checklists",
+			"/checklists/templates",
+			`/checklists/templates/${northTemplate.id}`,
+		]) {
 			const response = await app.go(path);
 			expect(response?.status(), path).toBe(404);
 		}

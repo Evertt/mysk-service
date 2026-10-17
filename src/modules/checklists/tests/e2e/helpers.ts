@@ -230,3 +230,67 @@ export async function sign(page: Page, pad: Locator) {
 	}
 	await page.mouse.up();
 }
+
+// --- The work orders page -----------------------------------------------------------------------
+
+/** This year, on the machine running the tests (the server's and the browser's zone). */
+export const thisYear = Temporal.Now.plainDateISO().year;
+
+/** A year's first moment on the machine, in seconds, as the database stores moments. */
+const yearStart = (year: number) =>
+	Temporal.PlainDate.from({ year, month: 1, day: 1 })
+		.toZonedDateTime(Temporal.Now.timeZoneId())
+		.toInstant().epochMilliseconds / 1000;
+
+/**
+ * An organization's units on the work orders page (in service, with a template), with where each
+ * stands this year, worked out in SQL as the app does: done once a checklist of it was completed
+ * this year, else open with a draft on an open order, else none.
+ */
+export const assetStates = (organizationId: string) =>
+	rows<{ id: number; serial_number: string; customer_id: number; state: string }>(
+		`select e.id, e.serial_number, e.customer_id, case
+			when exists (select 1 from checklist c where c.equipment_id = e.id and c.status = 'completed'
+				and c.completed_at >= ? and c.completed_at < ?) then 'done'
+			when exists (select 1 from checklist c join "order" o on o.id = c.order_id
+				where c.equipment_id = e.id and c.status = 'draft'
+				and o.status in ('quote', 'scheduled', 'in_progress')) then 'open'
+			else 'none' end as state
+		 from equipment e
+		 join checklist_template_category tc on tc.organization_id = e.organization_id
+			and tc.category_id = e.category_id
+		 join checklist_template t on t.id = tc.template_id and t.archived = 0
+		 where e.organization_id = ? and e.status != 'decommissioned' order by e.id`,
+		[yearStart(thisYear), yearStart(thisYear + 1), organizationId],
+	);
+
+/** The page's parts the tests use. */
+export function assetLocators(app: App) {
+	const page = () => app.page;
+	const list = () => page().locator("[data-asset-list]");
+	const panel = () => page().locator("[data-asset-panel]");
+	const checklistCard = () => page().locator("[data-office-checklist]");
+	/** The serial numbers the list shows, in order. */
+	const listed = () =>
+		list()
+			.locator("li[data-asset]")
+			.evaluateAll((items: HTMLElement[]) => items.map((item) => item.dataset.asset!));
+	/** How many assets the list says match. */
+	const listCount = async () =>
+		Number((await list().locator("[data-asset-count]").innerText()).replace(/\D/g, ""));
+	/** Waits until the list says `count` assets match. */
+	const settledAt = (count: number) =>
+		page().waitForFunction(
+			(want) =>
+				document.querySelector("[data-asset-count]")?.textContent?.replace(/\D/g, "") ===
+				String(want),
+			count,
+		);
+	/** Types a search and waits until the list shows its `count` results. */
+	const searchFor = async (text: string, count: number) => {
+		await list().getByRole("searchbox", { name: "Search assets" }).fill(text);
+		await page().waitForURL((url) => (url.searchParams.get("q") ?? "") === text.trim());
+		await settledAt(count);
+	};
+	return { list, panel, checklistCard, listed, listCount, settledAt, searchFor };
+}

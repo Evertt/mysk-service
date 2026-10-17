@@ -184,6 +184,7 @@ _Changed, high impact._
 - **Mockup:** "Werkbonnen" (clipboard-check) → the digital checkpoint work order page.
 - **Built:** "Checklists" (clipboard-check) → `/checklists/templates` ("Checklistsjablonen"). The checklists are filled in on the orders and in the engineer portal (§7, phase 1).
 - **Why:** a checklist is one per unit per order (§5 "What My24Service tells us"), so the sidebar leads to the template setup and not to a work-order screen.
+- **Now:** the sidebar's "Werkbonnen" ("Work orders") opens the work orders page (`/checklists`); the templates are a button on it and the module's settings page.
 
 #### 5. "Partner Bonus" is "Partnerprogramma" (office) and "Partner Bonus" only in the portal
 
@@ -1158,6 +1159,7 @@ _Changed, high impact._
 - **Mockup:** sidebar "Werkbonnen" → page "Digitale checkpoint-werkbon" ("Per asset een vaste checklist voor keuring en onderhoud. Elk jaar start een nieuwe lijst; eerdere bonnen blijven bewaard.") with an asset list on the left and the checklist on the right
 - **Built:** sidebar "Checklists" opens "Checklistsjablonen" (`/checklists/templates`). Checklists live on orders: filled in on the engineer portal, read on the order page (office), printed as "Werkbon {nummer}" (`/checklists/work-orders/<number>`), history on the unit's page, results in the customer portal
 - **Why:** user decision, Doc §5 "Decided": "Checklists: one per unit per order"; Doc §4.2 checklists module
+- **Now:** sidebar "Werkbonnen" → "Digitale checkpoint-werkbon" at `/checklists`, the mockup's two columns: the asset list, and the selected unit's checklist of this year with "Historie per jaar"; checklists stay one per unit per order.
 
 #### 125. Naming: checklist vs werkbon
 
@@ -1166,6 +1168,7 @@ _Changed, medium impact._
 - **Mockup:** the per-asset checklist is the "werkbon" ("Werkbon Keuring 2026")
 - **Built:** the per-unit list is a "Checklist" ("Checklist afronden"); "Werkbon" is the printable document of a whole order, covering all its units' checklists and signatures
 - **Why:** consistency with orders and My24Service ("the work order is one PDF per order", Doc §5)
+- **Now:** the page and its card say "Werkbon Keuring 2026" as the mockup does; elsewhere a unit's list is still a "Checklist" and "Werkbon {nummer}" the printed order.
 
 #### 126. Asset list with search and year badge
 
@@ -1174,6 +1177,7 @@ _Left out, medium impact._
 - **Mockup:** "Zoek asset…" over code/apparatuur/onderdeel; each asset with "2026 ✓" (completed this year) or "2026 open"
 - **Built:** no such list. Nearest: the equipment list's "Keuring" column (Geldig/Bijna verlopen/Verlopen/Afgekeurd/Geen keuring, with "valid until", sortable and filterable)
 - **Why:** checklists hang on orders, not on a yearly per-asset list (Doc §5 Decided)
+- **Now:** the work orders page lists every unit in service with a template, its components under it with their score, with "2026 ✓" / "2026 open" (open: a draft on an open order); "Zoek asset…" searches unit, serial, component and customer on the server, with filters by customer and by this year's state.
 
 #### 127. Per unit (apparaat), not per component
 
@@ -1190,6 +1194,7 @@ _Changed, high impact._
 - **Mockup:** on an asset, buttons "Keuring 2026" / "Onderhoud 2026" start a new checklist at once; "Voor 2026 is nog geen werkbon ingevuld. Start een nieuwe checklist."
 - **Built:** no start button. An order of type Inspectie or Onderhoud (made by the office, or by a maintenance plan's daily job, or by the condition module's auto-planning) gets a checklist for each of its units whose category has a template, while it's Nieuw/Ingepland/In behandeling; the kind follows the order type. "Every year a new list" happens through maintenance plans, not through a yearly reset
 - **Why:** Doc §5 Decided; Doc §6 phase 1 ("A checklist per inspection/maintenance order")
+- **Now:** "Keuring 2026" / "Onderhoud 2026" on the page make an inspection or maintenance order for the unit (Nieuw, unscheduled, no engineer), whose checklist comes by the rule above, or open the unit's open order of that kind; with "Voor 2026 is nog geen werkbon ingevuld. Start een nieuwe checklist."
 
 #### 129. Template choice by category
 
@@ -1230,6 +1235,7 @@ _Changed, high impact._
 - **Mockup:** any user at a desktop page; "Monteur" is a free-text field, default "Lev"
 - **Built:** only the engineer assigned to the order, on the engineer portal (phone layout, large buttons), and only after "Klus starten" (order In behandeling): "{nummer} is niet in behandeling: de checklists kun je niet wijzigen." The engineer is the order's engineer; no free-text field. The office can only read
 - **Why:** Doc §4.1 ("monteur becomes the order's engineerId"); Doc §6 phase 1 ("filled in on the engineer portal")
+- **Now:** office members also fill a draft in on the work orders page, for the engineer (paper forms brought back), on any open order, by the same rules and autosave, with the mockup's progress bar and "Afronden & vastleggen"; it's recorded as "Afgerond door {naam} (kantoor)" (no engineer). Still no free-text monteur field.
 
 #### 134. Answer buttons and remark
 

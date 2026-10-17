@@ -143,6 +143,28 @@ My24Service agrees. But the office should have the mockup's view.
 - The sidebar item becomes "Werkbonnen"; templates move into its settings.
 - Effort: medium.
 
+**Done** (branch `werkbonnen-page`, #4, #124–#126, #128, #133). The checklists module's main route,
+`/checklists`, is the mockup's page: the banner, and on the left every unit in service whose
+category has a template (customer, site, the badge "2026 ✓" / "2026 open"), its components under
+it with their latest score, searched (unit, serial, component, customer), filtered by customer and
+by this year's state, and paged on the server (`assetList`, `server/assets.ts`); on the right the
+selected unit's checklist of this year (the open draft, else the latest completed this year, else
+the start buttons and "Voor 2026 is nog geen werkbon ingevuld") with its order, and "Historie per
+jaar" (the unit page's history, `detail/checklist-history.svelte`). A component narrows the
+checklist to its points with their score, says how many others are hidden, and shows its own
+scores (the condition module answers `checklists.components`, `checklists.componentScores` and
+`checklists.componentSearch`). The selection is in the URL (`?unit=`, `&component=`,
+`&checklist=`). "Keuring 2026" / "Onderhoud 2026" make an inspection or maintenance order through
+`createOrders()` (a quote, unscheduled, no engineer; its checklist by the existing rule), or open
+the unit's open one of that kind (`server/start.ts`). Office members fill a draft in for the
+engineer on any open order, by the portal's rules and autosave (`checklistDraft()`, shared with the
+portal; `server/field.ts` takes the office as a `Filler`); completing records the member
+(`checklist.completed_by_user`, no engineer) and the scores, and shows "Afgerond door {naam}
+(kantoor)". The sidebar item is "Werkbonnen" ("Work orders"); the templates are a button on the
+page and still the module's settings page, managers-only for editing. Still different: no
+"Concept opslaan" or "Annuleren" (autosave, #135), "Afronden & vastleggen" says what's missing
+rather than being disabled (#137), no monteur field (#133) and no print of a unit's history (#144).
+
 ### 6. Critical components plan themselves
 
 #54, #55, and §1.3 of the deviations. The Connect presentation: Kritiek → "Binnen 5 werkdagen
