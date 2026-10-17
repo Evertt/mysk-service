@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"simulation_title": "Simulatie",
+	"simulation_note": "Verzonnen data voor de demo, tot de echte koppeling die vervangt.",
+	"simulation_play": "Start",
+	"simulation_pause": "Pauzeer",
+	"simulation_reset": "Simulatie resetten",
+	"simulation_reset_done": "De simulatie begint opnieuw.",
+	"simulation_speed_label": "Simulatiesnelheid",
+	"simulation_speed": "{speed}×",
+	"simulation_running": "simulatie {speed}×",
+	"simulation_paused": "gepauzeerd",
+	"simulation_live": "Simulatie"
+}

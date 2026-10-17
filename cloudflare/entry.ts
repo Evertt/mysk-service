@@ -11,9 +11,11 @@
  * - `POST /_ops/import` (with `Authorization: Bearer <OPS_TOKEN>`) replaces the database's data
  *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
  *   start with the demo data.
- * - The Cron Trigger (`triggers.crons` in `wrangler.jsonc`) starts the daily jobs: `scheduled()`
- *   has the object answer `POST /_ops/daily` with the `OPS_TOKEN`, like a request from outside, so
- *   the jobs run inside it with its database (`runDaily()`, `src/lib/server/jobs/daily.ts`).
+ * - The Cron Triggers (`triggers.crons` in `wrangler.jsonc`): the daily one starts the daily jobs,
+ *   the one every minute ticks the demo's simulations. `scheduled()` has the object answer
+ *   `POST /_ops/daily` or `POST /_ops/tick` with the `OPS_TOKEN`, like a request from outside, so
+ *   they run inside it with its database (`runDaily()`, `src/lib/server/jobs/daily.ts`;
+ *   `runSimulations()`, `src/lib/server/simulation.ts`).
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -54,12 +56,13 @@ export class AppDatabase extends DurableObject<Env> {
 	}
 
 	/**
-	 * Runs the daily jobs (see `scheduled()` below) through the app's own endpoint, as a cron would
-	 * on Node, and answers what they did (as JSON); throws if the app refused or failed.
+	 * Runs an operation's endpoint (`/_ops/daily`, the daily jobs; `/_ops/tick`, the simulations;
+	 * see `scheduled()` below) as a cron would on Node, and answers what it did (as JSON); throws if
+	 * the app refused or failed.
 	 */
-	async daily(): Promise<string> {
+	async operation(path: "/_ops/daily" | "/_ops/tick"): Promise<string> {
 		const response = await this.fetch(
-			new Request(new URL("/_ops/daily", this.env.ORIGIN), {
+			new Request(new URL(path, this.env.ORIGIN), {
 				method: "POST",
 				// JSON, not a form: SvelteKit refuses a cross-site POST without a content type (CSRF).
 				headers: {
@@ -70,7 +73,7 @@ export class AppDatabase extends DurableObject<Env> {
 			}),
 		);
 		if (!response.ok) {
-			throw new Error(`The daily run failed (${response.status}): ${await response.text()}`);
+			throw new Error(`${path} failed (${response.status}): ${await response.text()}`);
 		}
 		return response.text();
 	}
@@ -125,6 +128,9 @@ function authorized(request: Request, token: string | undefined) {
 	return given.byteLength === wanted.byteLength && crypto.subtle.timingSafeEqual(given, wanted);
 }
 
+/** The Cron Trigger that ticks the simulations (`wrangler.jsonc`); any other runs the daily jobs. */
+const tickCron = "* * * * *";
+
 /** The app's one object, kept in western Europe, near its users. */
 const appDatabase = (env: Env) =>
 	env.APP_DATABASE.get(env.APP_DATABASE.idFromName("app"), { locationHint: "weur" });
@@ -141,12 +147,21 @@ export default {
 		return app.fetch(request);
 	},
 
-	/** The Cron Trigger: the daily jobs, in the object (see `AppDatabase.daily()`). */
-	async scheduled(_controller, env, ctx) {
+	/**
+	 * The Cron Triggers, in the object (see `AppDatabase.operation()`): the simulations' tick every
+	 * minute (`tickCron`), the daily jobs at the other one.
+	 */
+	async scheduled(controller, env, ctx) {
+		const path = controller.cron === tickCron ? "/_ops/tick" : "/_ops/daily";
 		ctx.waitUntil(
 			appDatabase(env)
-				.daily()
-				.then((report) => console.info("The daily run:", report)),
+				.operation(path)
+				.then((report) => {
+					// A minute's tick that ticked nothing isn't worth a line.
+					if (path === "/_ops/daily" || !report.includes('"ticked":[]')) {
+						console.info(`${path}:`, report);
+					}
+				}),
 		);
 	},
 } satisfies ExportedHandler<Env>;

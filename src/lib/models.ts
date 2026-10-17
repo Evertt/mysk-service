@@ -167,6 +167,8 @@ export const activityActions = [
 	"unshared",
 	// Integration tokens (`#lib/server/auth/integrations.ts`), and customers' portal access.
 	"revoked",
+	// A demo's simulation put back in its starting states (`#lib/server/simulation.ts`).
+	"reset",
 ] as const;
 export type CoreActivityAction = (typeof activityActions)[number];
 export type ActivityAction = CoreActivityAction | ModuleAction;

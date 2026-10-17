@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+	check,
 	foreignKey,
 	index,
 	integer,
@@ -22,6 +23,7 @@ import {
 	sitePriorities,
 	weekdays,
 } from "#lib/models.ts";
+import { simulationSpeeds } from "#lib/simulation/extensions.ts";
 
 import { user } from "./auth.schema.ts";
 import { createdAt, day, moment, organizationId } from "./columns.ts";
@@ -443,6 +445,35 @@ export const organizationModule = sqliteTable(
 		enabledAt: createdAt(),
 	},
 	(table) => [primaryKey({ columns: [table.organizationId, table.moduleId] })],
+);
+
+/**
+ * A module's simulation for a demo (`#lib/server/simulation.ts`): a row means the organization is
+ * offered one for that module (the seed gives SHLTR its docks' and energy's; real tenants never
+ * have one). While it runs, the runner has the module move its data on over each interval of real
+ * time since `last_tick_at`, `speed` times as busy.
+ */
+export const simulation = sqliteTable(
+	"simulation",
+	{
+		organizationId: organizationId(),
+		moduleId: text("module_id").notNull(),
+		running: integer("running", { mode: "boolean" }).notNull().default(true),
+		/** One of `simulationSpeeds` (`#lib/simulation/extensions.ts`). */
+		speed: integer("speed").notNull().default(1),
+		/** Up to when the simulation has been ticked: the next tick covers what came after. */
+		lastTickAt: moment("last_tick_at")
+			.notNull()
+			.default(sql`(unixepoch())`),
+		/** When it was last (re)started from its starting states. */
+		startedAt: moment("started_at")
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.moduleId] }),
+		check("simulation_speed", sql.raw(`speed in (${simulationSpeeds.join(", ")})`)),
+	],
 );
 
 /**
