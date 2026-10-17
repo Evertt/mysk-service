@@ -224,5 +224,7 @@ describe("tick", () => {
 			expect(orders.length).toBe(escalations.length);
 			expect(orders.every((each) => each.type === "breakdown")).toBe(true);
 		},
+		// Four hours of minute ticks: a few seconds alone, more beside the whole suite.
+		30_000,
 	);
 });
