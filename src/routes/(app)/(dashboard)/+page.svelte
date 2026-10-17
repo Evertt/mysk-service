@@ -10,6 +10,7 @@
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
+	import { unitsSummary } from "#lib/orders/index.ts";
 
 	import { cardGrid, statGrid } from "./dashboard-grids.ts";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
@@ -81,6 +82,7 @@
 					<Table.Row>
 						<Table.Head>{m.dashboard_column_order()}</Table.Head>
 						<Table.Head>{m.dashboard_column_customer()}</Table.Head>
+						<Table.Head>{m.dashboard_column_equipment()}</Table.Head>
 						<Table.Head>{m.dashboard_column_engineer()}</Table.Head>
 						<Table.Head>{m.dashboard_column_priority()}</Table.Head>
 						<Table.Head class="text-right">{m.dashboard_column_scheduled()}</Table.Head>
@@ -88,10 +90,19 @@
 				</Table.Header>
 				<Table.Body>
 					{#each data.upcoming as order (order.id)}
+						<!-- The first unit and how many more, e.g. "Deur 07 +14". -->
+						{@const units = unitsSummary(order.unit, order.unitCount)}
 						<Table.Row>
 							<Table.Cell><OrderLink number={order.number} /></Table.Cell>
 							<Table.Cell>
 								<CustomerLink code={order.customer.code} name={order.customer.name} />
+							</Table.Cell>
+							<Table.Cell data-units>
+								{#if units}
+									<span class="block max-w-48 truncate" title={units}>{units}</span>
+								{:else}
+									<span class="text-muted-foreground">{m.dashboard_new_installation()}</span>
+								{/if}
 							</Table.Cell>
 							<Table.Cell>
 								{#if order.engineer}

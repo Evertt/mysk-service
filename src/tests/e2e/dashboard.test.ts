@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { cents, fitsWidth, onPhone, organizations, rows, useApp, value } from "./app.ts";
+import { cents, fitsWidth, onPhone, organizations, quiet, rows, useApp, value } from "./app.ts";
+import { addUnits } from "./orders-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -204,5 +205,63 @@ describe("the dashboard's cards", () => {
 		expect(columnsOf(boxes).size).toBe(3);
 		expectApart(boxes);
 		await app.switchOrganization(north.name);
+	});
+});
+
+/** The upcoming work's rows: each order's number and what its units cell reads. */
+async function upcomingWork(): Promise<[string, string][]> {
+	const card = app.page.locator('[data-slot="card"]', { hasText: "Upcoming work" });
+	await card.getByRole("columnheader", { name: "Equipment" }).waitFor();
+	return card
+		.locator("tbody tr")
+		.evaluateAll((trs) =>
+			trs.map((tr): [string, string] => [
+				tr.querySelector("td")!.textContent!.trim(),
+				tr.querySelector("[data-units]")!.textContent!.trim(),
+			]),
+		);
+}
+
+/** What the units cell should read for an order: its first unit, "+N" for the rest. */
+async function unitsOf(number: string) {
+	const units = await rows<{ name: string | null; manufacturer: string; model: string }>(
+		`select e.name, e.manufacturer, e.model from order_unit u
+		 join "order" o on o.id = u.order_id join equipment e on e.id = u.equipment_id
+		 where o.number = ? and o.organization_id = ? order by u.position`,
+		[number, north.id],
+	);
+	if (!units.length) return "New installation";
+	const [first] = units;
+	const title = first.name ?? `${first.manufacturer} ${first.model}`;
+	return units.length > 1 ? `${title} +${units.length - 1}` : title;
+}
+
+describe("the dashboard's upcoming work", () => {
+	test("shows each order's first unit, and how many more it has", async () => {
+		await app.go("/");
+		const shown = await upcomingWork();
+		expect(shown.length).toBeGreaterThan(0);
+		for (const [number, units] of shown) expect(units).toBe(await unitsOf(number));
+
+		// Another of its customer's units on an order with one: "+1".
+		const [other] = await rows<{ number: string; id: number }>(
+			`select o.number, e.id from "order" o join equipment e on e.customer_id = o.customer_id
+			 where o.organization_id = ? and o.number in (${shown.map(() => "?").join(", ")})
+			  and (select count(*) from order_unit where order_id = o.id) = 1
+			  and e.id not in (select equipment_id from order_unit where order_id = o.id)
+			 order by o.number, e.id limit 1`,
+			[north.id, ...shown.map(([number]) => number)],
+		);
+		expect(other).toBeDefined();
+		await app.go(`/orders/${other.number}/edit`);
+		await quiet(app.page);
+		await addUnits(app, other);
+		await app.page.getByRole("button", { name: "Save order" }).click();
+		await app.page.waitForURL((url) => url.pathname === `/orders/${other.number}`);
+
+		await app.go("/");
+		const after = new Map(await upcomingWork());
+		expect(after.get(other.number)).toBe(await unitsOf(other.number));
+		expect(after.get(other.number)).toMatch(/ \+1$/);
 	});
 });

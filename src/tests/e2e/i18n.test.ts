@@ -97,7 +97,8 @@ describe("in Dutch", () => {
 		await upcoming.getByRole("columnheader", { name: "Gepland" }).waitFor();
 		const first = upcoming.getByRole("row").nth(1).getByRole("cell");
 		expect(await text(first.last())).toMatch(dutchDate);
-		expect(await text(first.nth(3))).toMatch(/^(Laag|Normaal|Hoog|Spoed)$/);
+		expect(await text(first.nth(4))).toMatch(/^(Laag|Normaal|Hoog|Spoed)$/);
+		await upcoming.getByRole("columnheader", { name: "Apparaat" }).waitFor();
 	});
 
 	test("a server refusal is translated", async () => {

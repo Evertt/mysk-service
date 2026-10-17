@@ -2,7 +2,7 @@ import { and, asc, count, eq, gte, min, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
+import { priceOrders, withFirstUnit, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -64,6 +64,7 @@ export const getDashboard = forMembers.query(async () => {
 		.from(equipment)
 		.where(inTenant(equipment));
 
+	// With their first unit and how many they have, e.g. "Deur 07 +14".
 	const upcoming = await db
 		.select({
 			id: order.id,
@@ -78,7 +79,8 @@ export const getDashboard = forMembers.query(async () => {
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(and(inTenant(order), eq(order.status, "scheduled"), gte(order.scheduledFor, now)))
 		.orderBy(asc(order.scheduledFor))
-		.limit(6);
+		.limit(6)
+		.then(withFirstUnit);
 
 	return { open, revenue, fleet, upcoming };
 });

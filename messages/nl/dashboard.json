@@ -53,6 +53,8 @@
 	"dashboard_all_orders": "Alle opdrachten",
 	"dashboard_column_order": "Opdracht",
 	"dashboard_column_customer": "Klant",
+	"dashboard_column_equipment": "Apparaat",
+	"dashboard_new_installation": "Nieuwe installatie",
 	"dashboard_column_engineer": "Monteur",
 	"dashboard_column_priority": "Prioriteit",
 	"dashboard_column_scheduled": "Gepland"
