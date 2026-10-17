@@ -282,8 +282,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Checklists, condition, contracts, docks, invoices, maintenance, materials, the partner programme and the schedule are the modules
-(`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/docks/`, `src/modules/invoices/`,
+Checklists, condition, contracts, docks, energy, invoices, maintenance, materials, the partner programme and the schedule are the modules
+(`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/docks/`, `src/modules/energy/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
 templates (points in groups, the equipment categories each is for) and the checklists on
@@ -323,6 +323,18 @@ there for an integration endpoint with its tokens (`routes/(api)/ingest/+server.
 its `docs/salvo-events.md`), a live board (`query.live` on changes it announces itself with
 `announceChange()`, as telemetry isn't logged), rules that act on time (`server/rules.ts`, after
 every batch and in the daily job) and a simulator for demos (`scripts/docks-simulator.ts`).
+Energy (`src/modules/energy/`, SHLTR's Energie module: a customer site's zones, consumers and
+monitored doors) is fed from outside too, with aggregates per zone per 15 minutes rather than
+events (`routes/(api)/ingest/+server.ts`, the format in its `docs/ingest.md`, checked by
+`ingest/format.ts`): look there for a batch stored idempotently in one transaction with
+`insertRows()` (a resent interval replaces its row, `server/ingest.ts`), alerts deduplicated by a
+key and raised as the system (`server/evaluate.ts`), figures aggregated in SQL per period and
+worked out with the pure rules of `model.ts` (`server/figures.ts`), an alert made into an order
+through `createOrders()` (`server/alerts.ts`), a printable report (print CSS), a read-only page in
+the customer portal (`routes/(customer)/portal/`, `client/`), a seam for a module that enhances
+it (`api/extensions.ts`, `energy.door`, for the docks' state beside a dock's door) and a simulator
+that shares the seed's simulation (`node src/modules/energy/server/simulator.ts`). Only SHLTR has
+docks and energy in the demo (`shltrOnly` in the seed).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

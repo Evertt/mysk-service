@@ -37,6 +37,8 @@ const config: KnipConfig = {
 		"cloudflare/{entry,drizzle.config,export-database}.ts",
 		// The service worker experiment's measurements, run by hand (`node scripts/sw-benchmark.ts`).
 		"scripts/sw-{benchmark,check,deploy,files,probe}.ts",
+		// The energy module's simulator, run by hand (`node src/modules/energy/server/simulator.ts`).
+		"src/modules/energy/server/simulator.ts",
 	],
 	// (`.vue` is only here to silence a hint: knip's unplugin-auto-import plugin registers a Vue
 	// compiler, and says so when no project pattern mentions the extension. There are no Vue files.)

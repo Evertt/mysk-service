@@ -141,6 +141,13 @@
       "when": 1792213556957,
       "tag": "0019_add-customer-portal",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792214197567,
+      "tag": "0020_add-energy",
+      "breakpoints": true
     }
   ]
 }

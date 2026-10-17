@@ -70,19 +70,26 @@ const fieldworksTenant =
 	};
 
 /**
+ * The modules only SHLTR has: what its business needs and a field-service company's doesn't
+ * (Salvo's dock time management, the energy module's meters and doors), so North and South are the
+ * tenants without them.
+ */
+const shltrOnly: readonly string[] = ["docks", "energy"];
+
+/**
  * The demo organizations. North has all the modules (also the ones added later in
- * `src/modules`); South only invoicing and materials, so the other modules' tests (contracts, the
- * schedule) have a tenant without them. Materials were core until they became a module, and both
- * kept them; their tests switch them off for South to see a tenant without them. SHLTR, the
- * client's business (`shltr/`), has them all, and equipment categories of its own; it comes last,
- * so the Fieldworks tenants' ids (and the tests that know them) stay as they were. The docks
- * module (Salvo dock time management) is SHLTR's alone: North doesn't have it either.
+ * `src/modules`) but SHLTR's own (`shltrOnly`); South only invoicing and materials, so the other
+ * modules' tests (contracts, the schedule) have a tenant without them. Materials were core until
+ * they became a module, and both kept them; their tests switch them off for South to see a tenant
+ * without them. SHLTR, the client's business (`shltr/`), has them all, and equipment categories of
+ * its own; it comes last, so the Fieldworks tenants' ids (and the tests that know them) stay as
+ * they were.
  */
 const tenants = [
 	{
 		...demoOrganizations.north,
 		slug: "north",
-		modules: moduleIds.filter((id) => id !== "docks") as string[],
+		modules: moduleIds.filter((id) => !shltrOnly.includes(id)) as string[],
 		seed: 20261005,
 		categories: seedCategories,
 		generate: fieldworksTenant({ customers: 60, engineers: 18, orders: 750 }, 20261005),

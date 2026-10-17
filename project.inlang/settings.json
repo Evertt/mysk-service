@@ -23,6 +23,7 @@
 			"./src/modules/condition/messages/{locale}/condition.json",
 			"./src/modules/contracts/messages/{locale}/contracts.json",
 			"./src/modules/docks/messages/{locale}/docks.json",
+			"./src/modules/energy/messages/{locale}/energy.json",
 			"./src/modules/invoices/messages/{locale}/invoices.json",
 			"./src/modules/maintenance/messages/{locale}/maintenance.json",
 			"./src/modules/materials/messages/{locale}/materials.json",
