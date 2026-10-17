@@ -6,7 +6,7 @@
 
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
-	import PageHeader from "#lib/components/page-header.svelte";
+	import PageBanner from "#lib/components/page-banner.svelte";
 	import {
 		getConditionCounts,
 		getConditionUnits,
@@ -14,6 +14,7 @@
 	import { conditionList } from "#modules/condition/list/units-list.ts";
 	import UnitsTable from "#modules/condition/list/units-table.svelte";
 	import FeedCard from "#modules/condition/overview/feed-card.svelte";
+	import ProcessSteps from "#modules/condition/overview/process-steps.svelte";
 	import StatusLegend from "#modules/condition/overview/status-legend.svelte";
 
 	// The props the route passes; this page needs none of them.
@@ -36,18 +37,24 @@
 	<title>{m.condition_title()}</title>
 </svelte:head>
 
-<PageHeader title={m.condition_title()} description={m.condition_description()}>
+<PageBanner
+	eyebrow={m.condition_banner_eyebrow()}
+	title={m.condition_banner_title()}
+	description={m.condition_banner_intro()}
+>
 	{#snippet actions()}
-		<Button variant="outline" onclick={() => (showHistory = true)}>
+		<Button variant="secondary" onclick={() => (showHistory = true)}>
 			<HistoryIcon data-icon="inline-start" />
 			{m.condition_feed_title()}
 		</Button>
-		<Button variant="outline" href={resolve("/(app)/(modules)/condition/settings")}>
+		<Button variant="secondary" href={resolve("/(app)/(modules)/condition/settings")}>
 			<SettingsIcon data-icon="inline-start" />
 			{m.condition_settings()}
 		</Button>
 	{/snippet}
-</PageHeader>
+</PageBanner>
+
+<ProcessSteps />
 
 <StatusLegend thresholds={(await units).thresholds} />
 

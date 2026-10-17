@@ -260,7 +260,7 @@ export function pageLocators(app: App) {
 	/** A KPI tile's number, by its status (or `units`). */
 	const kpi = async (status: "units" | UnitStatus) =>
 		Number(
-			(await page().locator(`[data-kpi="${status}"] [data-slot="card-title"]`).innerText()).replace(
+			(await page().locator(`[data-kpi="${status}"] [data-stat-value]`).innerText()).replace(
 				/\D/g,
 				"",
 			),
