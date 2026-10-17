@@ -255,6 +255,12 @@ node cloudflare/export-database.ts file:start.db > export.json
 curl -X POST https://<worker>/_ops/import -H "Authorization: Bearer $OPS_TOKEN" --data-binary @export.json
 ```
 
+CI deploys `main` to the Worker above, and every push to `develop` to a preview Worker,
+`fieldworks-preview` (`wrangler.jsonc`'s `preview` environment, https://fieldworks-preview.devign.workers.dev),
+once the checks and tests pass. The preview has a database of its own, which CI fills with the demo
+data (see "Demo login") on every deploy, so what's done there doesn't last. Its auth secret is made
+on the first deploy; its ops token anew on every deploy, used only by CI.
+
 Cloudflare keeps 30 days of the object's history (point-in-time recovery). Mail: `SMTP_URL` sends
 through nodemailer, which is untested on Workers; without it, mail is logged
 (`wrangler tail`).
