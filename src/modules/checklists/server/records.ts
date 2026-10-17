@@ -3,13 +3,15 @@
  * completed them and their points in order (`results`). The office's order card, the work order to
  * print, a unit's history and the engineer portal all read them through `checklistRecords()`.
  */
-import { and, asc, eq, type SQL, sql } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
+import { collect } from "#lib/server/extensions.ts";
 
+import { pointArticles } from "../api/extensions.ts";
 import { checklist, checklistResult } from "./schema.ts";
 
 /** The tenant's checklists that `where` picks (a condition on `checklist` or its order), in their orders' unit order. */
@@ -69,16 +71,8 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 			position: checklistResult.position,
 			result: checklistResult.result,
 			remark: checklistResult.remark,
-			/**
-			 * The template point it was copied from (by its template, group and text), none if that's
-			 * gone or changed since: what the parts shop links its products to.
-			 */
-			templateItemId: sql<number | null>`(select i.id from checklist_template_item i
-				join checklist c on c.id = "checklist_result"."checklist_id"
-				and c.organization_id = "checklist_result"."organization_id"
-				where i.organization_id = c.organization_id and i.template_id = c.template_id
-				and i.group_name = "checklist_result"."group_name" and i.text = "checklist_result"."text"
-				order by i.position limit 1)`,
+			/** The template point it was copied from: what the modules link to a point by. */
+			templateItemId: checklistResult.templateItemId,
 		})
 		.from(checklistResult)
 		.where(
@@ -95,5 +89,31 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 	return found.map(({ position: _position, ...row }) => ({
 		...row,
 		results: (byChecklist.get(row.id) ?? []).map(({ checklistId: _id, ...result }) => result),
+	}));
+}
+
+/**
+ * The checklists with the article each rejected point checks on its unit, if a module knows one
+ * (`checklists.pointArticles`, e.g. the condition module's components), as `materialId`: what the
+ * parts shop suggests first. None for the other points.
+ */
+export async function withPointArticles(records: Awaited<ReturnType<typeof checklistRecords>>) {
+	const points = records.flatMap((record) =>
+		record.results.flatMap((result) =>
+			result.result === "nok" && result.templateItemId !== null
+				? [{ equipmentId: record.unit.id, templateItemId: result.templateItemId }]
+				: [],
+		),
+	);
+	const known = points.length ? (await collect(pointArticles, { points })).flat() : [];
+	const articleOf = (equipmentId: number, templateItemId: number | null) =>
+		known.find((each) => each.equipmentId === equipmentId && each.templateItemId === templateItemId)
+			?.materialId ?? null;
+	return records.map((record) => ({
+		...record,
+		results: record.results.map((result) => ({
+			...result,
+			materialId: result.result === "nok" ? articleOf(record.unit.id, result.templateItemId) : null,
+		})),
 	}));
 }

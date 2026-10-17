@@ -15,7 +15,9 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
+import { save } from "#lib/server/extensions.ts";
 
+import { checklistCompleted } from "../api/extensions.ts";
 import { completionProblems, type PointResult, rejections, validUntil } from "../model.ts";
 import { checklist, checklistResult } from "./schema.ts";
 
@@ -32,6 +34,7 @@ async function findFieldChecklist(tx: Transaction, engineerId: number, id: numbe
 			kind: checklist.kind,
 			status: checklist.status,
 			validityMonths: checklist.validityMonths,
+			equipmentId: checklist.equipmentId,
 			order: { id: order.id, number: order.number, status: order.status },
 			unit: { name: equipment.name, manufacturer: equipment.manufacturer, model: equipment.model },
 		})
@@ -101,13 +104,19 @@ const rejectionsNote = (count: number) =>
  * Completes one of the engineer's checklists, once every point has a result and every rejection
  * says what's wrong: it's on record then, completed now by them, and an inspection is valid from
  * today (in the user's time zone) for its template's months. Logged against the order, with how
- * many points it rejected. Returns the order's number.
+ * many points it rejected; the modules save their part in the same transaction
+ * (`checklists.completed`: the condition module records the unit's score). Returns the order's
+ * number.
  */
 export function completeChecklist(engineerId: number, id: number) {
 	return db.transaction(async (tx) => {
 		const found = await findFieldChecklist(tx, engineerId, id);
 		const answers = await tx
-			.select({ result: checklistResult.result, remark: checklistResult.remark })
+			.select({
+				templateItemId: checklistResult.templateItemId,
+				result: checklistResult.result,
+				remark: checklistResult.remark,
+			})
 			.from(checklistResult)
 			.where(and(eq(checklistResult.checklistId, id), inTenant(checklistResult)));
 		const { unanswered, unexplained } = completionProblems(answers);
@@ -131,6 +140,19 @@ export function completeChecklist(engineerId: number, id: number) {
 			// Stored, in the language of whoever completes it.
 			note: rejectionsNote(rejections(answers)),
 		});
+		// The modules' part of it (the condition module's scores), in this transaction.
+		const problems = await save(checklistCompleted, {
+			tx,
+			checklist: {
+				id,
+				kind: found.kind,
+				orderId: found.order.id,
+				equipmentId: found.equipmentId,
+				engineerId,
+			},
+			points: answers.map(({ templateItemId, result }) => ({ templateItemId, result })),
+		});
+		if (problems.length) error(400, problems[0].message);
 		return found.order.number;
 	});
 }

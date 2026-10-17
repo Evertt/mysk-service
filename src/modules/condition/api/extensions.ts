@@ -63,3 +63,59 @@ export interface ChecklistEntry {
 export const history = defineCollector<HistoryQuery, ChecklistEntry[]>("condition.history", {
 	onError: "skip",
 });
+
+/** An article a component can be linked to: one of the tenant's materials. */
+export interface Article {
+	/** The material's id, which a component keeps. */
+	id: number;
+	sku: string;
+	name: string;
+}
+
+/**
+ * The tenant's articles: those with the ids asked for (to show components'), or all of them
+ * (`ids: null`, to choose from), by SKU. The materials module answers; without it, there are none,
+ * and components have no article. A module that fails is left out.
+ */
+export const articles = defineCollector<{ ids: readonly number[] | null }, Article[]>(
+	"condition.articles",
+	{ onError: "skip" },
+);
+
+/** The checklist points an article fixes in the shop: its product's. */
+export interface ArticleCheckpoints {
+	materialId: number;
+	templateItemIds: number[];
+}
+
+/**
+ * The checklist points the articles asked about fix (the parts shop's products' points): what a
+ * component linked to one is checked by, unless it's told otherwise. The parts shop answers;
+ * without it, none. A module that fails is left out.
+ */
+export const articleCheckpoints = defineCollector<
+	{ materialIds: readonly number[] },
+	ArticleCheckpoints[]
+>("condition.articleCheckpoints", { onError: "skip" });
+
+/** A checklist point that can check a component: a point of one of the tenant's templates. */
+export interface Checkpoint {
+	/** The template point's id, which a component keeps. */
+	id: number;
+	/** Its template's name, e.g. "Sectionaaldeur". */
+	template: string;
+	/** Its group, e.g. "Mechanisch"; empty outside one. */
+	group: string;
+	text: string;
+}
+
+/**
+ * The checklist points a unit's components can be checked by: those of the template its checklists
+ * are made with, and those with the ids asked for (a component's, also of a retired template), in
+ * the templates' order. The checklists module answers; without it, there are none. A module that
+ * fails is left out.
+ */
+export const checkpoints = defineCollector<
+	{ equipmentId: number; ids: readonly number[] },
+	Checkpoint[]
+>("condition.checkpoints", { onError: "skip" });

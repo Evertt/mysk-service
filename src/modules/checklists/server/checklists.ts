@@ -72,7 +72,7 @@ async function createChecklists(
 	kind: "inspection" | "maintenance",
 	units: readonly { id: number; categoryId: number }[],
 ) {
-	const points = new Map<number, { group: string; text: string }[]>();
+	const points = new Map<number, { id: number; group: string; text: string }[]>();
 	for (const unit of units) {
 		const template = await offeredTemplate(tx, unit.categoryId);
 		if (!template) continue;
@@ -106,9 +106,10 @@ async function createChecklists(
 		await insertRows(
 			tx,
 			checklistResult,
-			points.get(template.id)!.map(({ group, text }, position) => ({
+			points.get(template.id)!.map(({ id, group, text }, position) => ({
 				organizationId: target.organizationId,
 				checklistId: created.id,
+				templateItemId: id,
 				group,
 				text,
 				position,

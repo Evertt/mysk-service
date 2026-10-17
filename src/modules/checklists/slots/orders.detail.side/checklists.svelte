@@ -33,6 +33,7 @@
 								templateItemId: point.templateItemId,
 								text: point.text,
 								unit: unitTitle(checklist.unit),
+								materialId: point.materialId,
 							},
 						]
 					: [],

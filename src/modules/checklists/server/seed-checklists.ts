@@ -165,6 +165,7 @@ export async function seedChecklists(
 
 	const checklists: (typeof checklist.$inferInsert)[] = [];
 	const answers: {
+		templateItemId: number;
 		group: string;
 		text: string;
 		result: PointResult | null;
@@ -176,7 +177,8 @@ export async function seedChecklists(
 		for (const unit of unitsOf.get(row.id) ?? []) {
 			const template = templateOf.get(unit.categoryId);
 			if (!template) continue;
-			const points = (pointsOf.get(template.id) ?? []).map(({ group, text }) => ({
+			const points = (pointsOf.get(template.id) ?? []).map(({ id, group, text }) => ({
+				templateItemId: id,
 				group,
 				text,
 				...(completed ? findResult(random, group) : { result: null, remark: null }),

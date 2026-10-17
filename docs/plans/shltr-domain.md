@@ -1315,6 +1315,8 @@ Decided (the client can still overrule):
   rejected point makes the unit "Aandacht"; an expired inspection makes it "Kritiek". Engineer and customer
   both sign.
 - **Condition per unit**, no component table: "parts used" come from the unit's order lines (phase 2).
+  Overruled on 2026-10-17 by the client's own files (`shltr-deviations.md` §1.1–1.2): see "Decided
+  after the client's files" below.
 - **Locations as records with a QR code, and a QR code per unit**: after phase 1.
 - **Import from My24** (customers, locations, equipment, materials): a phase of its own when migrating.
 
@@ -1332,6 +1334,26 @@ Decided (the client can still overrule):
 - **Response times** count from the report, not from the acceptance.
 - **Photos** with a report wait for file storage (the app has none yet; documents, question 19).
 - A report is about one unit; the unit gives it its site.
+
+### Decided after the client's files (2026-10-17)
+
+- **The condition score is computed from the checklist**: the share of points found OK (Goed)
+  among those found OK or rejected (Afkeur), N.v.t. and unanswered left out, rounded to a whole
+  percent; none when no point counts. Every completed checklist, inspection or maintenance ("na
+  elke afgeronde werkbon"), records it for the unit, on its order, by its engineer, who adds advice
+  in the portal (no score to type). An office entry stays, as a correction, and counts while it's the
+  latest.
+- **Components (onderdelen) under each unit**, numbered `OC-0001`: a name, an article (a material,
+  whose SKU the shop sells; only with materials on), the checklist points that check it (by default
+  its article's shop points), its order. A completed checklist scores each component over its own
+  points; the unit keeps its score over all points. A component's status follows the unit's rules
+  (its own condition, the unit's inspection and planned work); a unit's is the worst of its own and
+  its components'. Their own interval and inspection (question 2 of the deviations) wait: they take
+  their unit's.
+- **The Connect page lists components**, and the units without any, a row each; its KPI counts the
+  rows ("Onderdelen in beheer"). The module is "Onderdelenbeheer" (en "Components").
+- **A rejected point of a component with a shop article suggests that article first** ("Benodigd
+  onderdeel").
 
 ## 6. Suggested build order
 
@@ -1397,24 +1419,32 @@ well.
 
 As of 2026-10-17, unreleased (`main` has none of it):
 
-| Phase | What                                                                                                                                                                                                                                                                                                      | Where                             |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| 0     | Customer sites with preferences and access notes; equipment name, site and location; the tenant's own equipment categories; order types breakdown, survey, damage, project, other; the schedule's month and day views; the Lagoon theme as default; a SHLTR demo organization                             | core, `schedule`                  |
-| 1     | Orders with one or more units; locations as records with QR codes and label sheets; checklist templates (the mockup's five for SHLTR) and checklists per unit on inspection and maintenance orders, filled in on the engineer portal, signed by engineer and customer, with each unit's inspection status | core, `checklists`                |
-| 2     | SHLTR Connect: each unit's condition and status (Kritiek, Aandacht, Gepland, In orde), the Connect page, the service history per customer                                                                                                                                                                 | `condition`                       |
-| 3     | The partner programme, office side: tiers and revenue rules per year, figures from paid invoices, order classification, year close and the cash-or-credit choice, the wallet ledger                                                                                                                       | `partner-programme`               |
-| 4a    | The customer portal: contacts per customer (and sites), breakdown reports (also by QR code), their orders, work orders and units; the planner's acceptance of portal orders                                                                                                                               | core                              |
-| 4b    | The partner bonus and wallet in the portal with the customer's own choice; the parts shop: products on materials with their checklist points, the portal's catalogue, cart and checkout with Parts Credit, office orders, stock reservations                                                              | `partner-programme`, `parts-shop` |
-| 5a    | Salvo Docks: docks per site, an event feed with integration tokens, the live board, the 40/60-minute rules, a simulator                                                                                                                                                                                   | `docks`                           |
-| 5b    | Energy: sites, zones, consumers, monitored doors, 15-minute readings through the feed, alerts that become orders, the report, the office's setup pages, a portal page, a simulator                                                                                                                        | `energy`                          |
+| Phase | What                                                                                                                                                                                                                                                                                                          | Where                             |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 0     | Customer sites with preferences and access notes; equipment name, site and location; the tenant's own equipment categories; order types breakdown, survey, damage, project, other; the schedule's month and day views; the Lagoon theme as default; a SHLTR demo organization                                 | core, `schedule`                  |
+| 1     | Orders with one or more units; locations as records with QR codes and label sheets; checklist templates (the mockup's five for SHLTR) and checklists per unit on inspection and maintenance orders, filled in on the engineer portal, signed by engineer and customer, with each unit's inspection status     | core, `checklists`                |
+| 2     | SHLTR Connect: each unit's condition and status (Kritiek, Aandacht, Gepland, In orde), the Connect page, the service history per customer; the score computed from each completed checklist; components under each unit with their articles, checkpoints, conditions and statuses (the mockup's 14 for SHLTR) | `condition`                       |
+| 3     | The partner programme, office side: tiers and revenue rules per year, figures from paid invoices, order classification, year close and the cash-or-credit choice, the wallet ledger                                                                                                                           | `partner-programme`               |
+| 4a    | The customer portal: contacts per customer (and sites), breakdown reports (also by QR code), their orders, work orders and units; the planner's acceptance of portal orders                                                                                                                                   | core                              |
+| 4b    | The partner bonus and wallet in the portal with the customer's own choice; the parts shop: products on materials with their checklist points, the portal's catalogue, cart and checkout with Parts Credit, office orders, stock reservations                                                                  | `partner-programme`, `parts-shop` |
+| 5a    | Salvo Docks: docks per site, an event feed with integration tokens, the live board, the 40/60-minute rules, a simulator                                                                                                                                                                                       | `docks`                           |
+| 5b    | Energy: sites, zones, consumers, monitored doors, 15-minute readings through the feed, alerts that become orders, the report, the office's setup pages, a portal page, a simulator                                                                                                                            | `energy`                          |
 
 Not built yet: the real Salvo and P1 integrations; an import from My24Service. Phase 4b's notes
 are in `parts-shop.md`.
 
 Where the build deviates from the mockup, and what the client's own files (the mockup's source,
-presentations and brochure, received on 2026-10-17) change about it: `shltr-deviations.md`. Among
-them, the client's rule for the condition score: the share of points passed in a keuring (4 of 10
-is 40%).
+presentations and brochure, received on 2026-10-17) change about it: `shltr-deviations.md`. Its
+§1.1 and §1.2 are built: the client's rule for the condition score (the share of points passed in a
+keuring, 4 of 10 is 40%), recorded when a checklist is completed (`checklistScore()` in the
+checklists module's `model.ts`, told to the condition module through `checklists.completed`), and a
+register of components under each unit (`component`, `component_checkpoint`, a condition of a
+component in `unit_condition.component_id`): managed on the unit's page ("Onderdelen"), listed on
+the Connect page (a row per component, and per unit without), rolled up into the unit's status
+(`rolledUpStatus()` in `condition/model.ts`, the same in `server/status-sql.ts`), shown in the
+customer portal's home, and linked to the shop's articles (materials answer `condition.articles`,
+the shop `condition.articleCheckpoints`, checklists `condition.checkpoints`; condition answers
+`checklists.pointArticles` for the "Benodigd onderdeel" suggestion).
 
 Order types per tenant (core): managers give a type a name of their own per language and hide those
 they don't use from the order form, on the settings page (`/settings/order-types`,

@@ -176,6 +176,20 @@
       "when": 1792245496682,
       "tag": "0024_index-foreign-keys",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792249572195,
+      "tag": "0025_add-checklist-template-item",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792250844010,
+      "tag": "0026_add-components",
+      "breakpoints": true
     }
   ]
 }

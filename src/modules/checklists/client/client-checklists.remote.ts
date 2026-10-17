@@ -20,7 +20,7 @@ import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
 import { forCustomers } from "../remote-functions.ts";
-import { checklistRecords } from "../server/records.ts";
+import { checklistRecords, withPointArticles } from "../server/records.ts";
 import { checklist } from "../server/schema.ts";
 import { unitInspection } from "../server/unit-inspection.ts";
 import { loadWorkOrder } from "../server/work-order.ts";
@@ -36,8 +36,8 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
 		.from(order)
 		.where(and(eq(order.number, number), customerOrders(access)));
 	if (!found) error(404, m.checklists_order_not_found({ number }));
-	const checklists = await checklistRecords(
-		and(eq(checklist.orderId, found.id), atSites(access, equipment.siteId)),
+	const checklists = await withPointArticles(
+		await checklistRecords(and(eq(checklist.orderId, found.id), atSites(access, equipment.siteId))),
 	);
 	return { status: found.status, checklists };
 });

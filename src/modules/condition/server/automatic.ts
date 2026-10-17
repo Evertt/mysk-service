@@ -19,9 +19,9 @@ import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 
 import { addWorkingDays, PLAN_WITHIN_WORKING_DAYS } from "../model.ts";
 import { inCare } from "./list-sql.ts";
-import { conditionSettings } from "./schema.ts";
+import { component, conditionSettings } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
-import { conditionSql } from "./status-sql.ts";
+import { componentSql, conditionSql } from "./status-sql.ts";
 
 /** Whether the unit has an open order (quoted, scheduled or under way), in SQL. */
 const hasOpenOrder = () =>
@@ -33,9 +33,31 @@ const hasOpenOrder = () =>
 		inList(order.status, [...openOrderStatuses]),
 	)})`;
 
-/** The tenant's critical units in care without an open order, with what makes them critical. */
+/** A unit's critical component, the lowest scored: what makes a unit critical but for itself. */
+interface CriticalComponent {
+	number: string;
+	name: string;
+	score: number;
+	advice: string | null;
+}
+
+/**
+ * The tenant's critical units in care without an open order, with what makes them critical (their
+ * own condition, their worst component's, or their inspection).
+ */
 async function criticalUnits(tx: Transaction | typeof db, id?: number) {
 	const unit = conditionSql();
+	const part = componentSql(unit);
+	const worstComponent = sql`(select json_object('number', ${component.number}, 'name', ${
+		component.name
+	}, 'score', ${part.score}, 'advice', ${part.advice}) from ${component} where ${eq(
+		component.equipmentId,
+		equipment.id,
+	)} and ${eq(component.organizationId, equipment.organizationId)} and ${part.score} < ${
+		unit.parts.critical
+	} order by ${part.score}, ${component.position} limit 1)`.mapWith(
+		(text: string | null): CriticalComponent | null => (text ? JSON.parse(text) : null),
+	);
 	return tx
 		.select({
 			id: equipment.id,
@@ -43,6 +65,7 @@ async function criticalUnits(tx: Transaction | typeof db, id?: number) {
 			score: unit.score,
 			band: unit.band,
 			advice: unit.advice,
+			component: worstComponent,
 		})
 		.from(equipment)
 		.where(
@@ -57,20 +80,37 @@ async function criticalUnits(tx: Transaction | typeof db, id?: number) {
 
 /** The order's description: why the unit is critical, and the day it's to be done by. */
 function describe(
-	unit: { score: number | null; band: string; advice: string | null },
+	unit: {
+		score: number | null;
+		band: string;
+		advice: string | null;
+		component: CriticalComponent | null;
+	},
 	by: Temporal.PlainDate,
 ) {
 	const date = formatDate(by);
-	// Its score is below the critical threshold, or else its inspection has expired.
-	return unit.score !== null && unit.band === "low"
-		? m
-				.condition_auto_order_score({
-					score: `${formatNumber(unit.score)}%`,
-					date,
-					advice: unit.advice ?? "",
-				})
-				.trim()
-		: m.condition_auto_order_inspection({ date });
+	// Its score is below the critical threshold, or a component's is, or else its inspection has
+	// expired.
+	if (unit.score !== null && unit.band === "low") {
+		return m
+			.condition_auto_order_score({
+				score: `${formatNumber(unit.score)}%`,
+				date,
+				advice: unit.advice ?? "",
+			})
+			.trim();
+	}
+	if (unit.component) {
+		return m
+			.condition_auto_order_component({
+				component: `${unit.component.number} ${unit.component.name}`,
+				score: `${formatNumber(unit.component.score)}%`,
+				date,
+				advice: unit.component.advice ?? "",
+			})
+			.trim();
+	}
+	return m.condition_auto_order_inspection({ date });
 }
 
 /**

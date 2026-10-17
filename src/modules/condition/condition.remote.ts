@@ -1,6 +1,6 @@
 /**
- * A unit's condition, for its card on the unit's page: its latest condition, its history and its
- * status, and recording a new one in the office.
+ * A unit's condition, for its card on the unit's page: its latest condition as a whole, its history
+ * and its status (with its components'), and recording a new one in the office.
  */
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
@@ -11,6 +11,7 @@ import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
+import { getUnitComponents } from "./components.remote.ts";
 import { conditionSchema } from "./form/condition-schema.ts";
 import { form, query } from "./remote-functions.ts";
 import { conditionsOf, recordOfficeCondition } from "./server/conditions.ts";
@@ -43,8 +44,15 @@ export const getUnitCondition = query(v.string(), async (serialNumber) => {
 	};
 });
 
-/** Records a unit's condition in the office; refreshes its card. */
-export const recordCondition = form(conditionSchema, async ({ serialNumber, ...input }) => {
-	await recordOfficeCondition(serialNumber, input);
-	void getUnitCondition(serialNumber).refresh();
-});
+/**
+ * Records a unit's condition in the office, or one of its components' (`componentId`); refreshes
+ * its cards.
+ */
+export const recordCondition = form(
+	conditionSchema,
+	async ({ serialNumber, componentId, ...input }) => {
+		await recordOfficeCondition(serialNumber, input, componentId ?? null);
+		void getUnitCondition(serialNumber).refresh();
+		if (componentId) void getUnitComponents(serialNumber).refresh();
+	},
+);

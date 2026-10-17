@@ -4,6 +4,7 @@ import {
 	canComplete,
 	changedPlaces,
 	checklistKind,
+	checklistScore,
 	completionProblems,
 	getsChecklists,
 	groupPoints,
@@ -185,6 +186,28 @@ describe("checklists on orders", () => {
 			{ id: 4, result: "nok" as const },
 		];
 		expect(rejectedFirst(points).map((point) => point.id)).toEqual([2, 4, 1, 3]);
+	});
+
+	test("a checklist's score is the share of OK among the points found OK or rejected", () => {
+		const found = (ok: number, nok: number, na = 0, open = 0) => [
+			...Array.from({ length: ok }, () => ({ result: "ok" as const })),
+			...Array.from({ length: nok }, () => ({ result: "nok" as const })),
+			...Array.from({ length: na }, () => ({ result: "na" as const })),
+			...Array.from({ length: open }, () => ({ result: null })),
+		];
+		// The client's example: passed 4 points and failed 6.
+		expect(checklistScore(found(4, 6))).toBe(40);
+		expect(checklistScore(found(9, 0))).toBe(100);
+		expect(checklistScore(found(0, 3))).toBe(0);
+		// N.v.t. and unanswered points don't count.
+		expect(checklistScore(found(4, 6, 5, 2))).toBe(40);
+		// Rounded to a whole percent: 2 of 3 is 67%, 1 of 3 is 33%, 1 of 8 is 13%.
+		expect(checklistScore(found(2, 1))).toBe(67);
+		expect(checklistScore(found(1, 2))).toBe(33);
+		expect(checklistScore(found(1, 7))).toBe(13);
+		// None when no point counts.
+		expect(checklistScore(found(0, 0, 3))).toBeNull();
+		expect(checklistScore([])).toBeNull();
 	});
 });
 

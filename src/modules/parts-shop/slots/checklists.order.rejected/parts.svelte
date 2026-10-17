@@ -20,7 +20,11 @@
 	const ids = $derived(
 		[...new Set(rejected.map((point) => point.templateItemId))].sort((a, b) => a - b),
 	);
-	const data = $derived(await getSuggestedParts({ number, ids }));
+	/** The articles the points check (their components'), suggested first. */
+	const articles = $derived(
+		[...new Set(rejected.flatMap((point) => point.materialId ?? []))].sort((a, b) => a - b),
+	);
+	const data = $derived(await getSuggestedParts({ number, ids, articles }));
 	const parts = $derived(data.parts);
 </script>
 
@@ -33,7 +37,10 @@
 		<Card.Content class="flex flex-col divide-y">
 			{#each parts as part (part.id)}
 				{@const form = addSuggestedPart.for(`${number}:${part.id}`)}
-				{@const points = rejected.filter((point) => part.points.includes(point.templateItemId))}
+				{@const points = rejected.filter(
+					(point) =>
+						point.materialId === part.materialId || part.points.includes(point.templateItemId),
+				)}
 				<article
 					class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
 					data-suggested-part={part.sku}

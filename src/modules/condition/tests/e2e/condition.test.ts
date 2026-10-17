@@ -1,35 +1,50 @@
 /**
- * The Connect page in SHLTR, as seeded: the KPI tiles count the units in care by status as the
- * database has them, the customer chips and "only units that need attention" filter the list,
- * which is worst first; the legend says what the statuses mean, and the activity log shows what
- * happened to the chosen customer's units, also on its page. The dashboard's tile links here.
+ * The Connect page (Components) in SHLTR, as seeded: a row per component of a unit in care and one
+ * per unit without components; the KPI tiles count the rows by status as the database has them,
+ * the customer chips and "only what needs attention" filter the list, which is worst first; the
+ * legend says what the statuses mean, and the activity log shows what happened to the chosen
+ * customer's units, also on its page. The dashboard's tile counts the units (their components'
+ * conditions taken in) and links here.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, useApp, users } from "#e2e/app.ts";
 
-import { countsOf, pageLocators, rank, type UnitState, unitStates } from "./helpers.ts";
+import {
+	countsOf,
+	pageLocators,
+	rank,
+	type RowState,
+	rowsOf,
+	type UnitState,
+	unitStates,
+} from "./helpers.ts";
 
 const shltr = organizations.shltr;
 const app = useApp({ user: users.shltrPlanner });
 const { kpis, shownStatuses, sidebarLinks } = pageLocators(app);
 
 let units: UnitState[];
+let rows: RowState[];
 
 describe("the Connect page", () => {
-	test("is in the sidebar after Equipment, and its tiles count the units by status", async () => {
+	test("is in the sidebar after Equipment, and its tiles count the rows by status", async () => {
 		units = await unitStates(shltr.id);
-		const counts = countsOf(units);
+		rows = rowsOf(units);
+		const counts = countsOf(rows);
+		// The mockup's components are there, and the units without components too.
+		expect(rows.filter((row) => row.component).length).toBe(14);
+		expect(rows.length).toBe(units.filter((unit) => !unit.components.length).length + 14);
 		// The seed shows every status.
 		for (const status of ["critical", "attention", "planned", "ok"] as const) {
 			expect(counts[status], status).toBeGreaterThan(0);
 		}
 		await app.go("/");
 		const links = await sidebarLinks();
-		expect(links.slice(links.indexOf("Equipment") + 1)).toContain("Connect");
+		expect(links.slice(links.indexOf("Equipment") + 1)).toContain("Components");
 		await app.page
 			.locator('[data-sidebar="content"]')
-			.getByRole("link", { name: "Connect" })
+			.getByRole("link", { name: "Components" })
 			.click();
 		await app.page.waitForURL((url) => url.pathname === "/condition");
 		await app.tableSettled();
@@ -37,7 +52,7 @@ describe("the Connect page", () => {
 		expect(await app.rowCount()).toBe(counts.units);
 	});
 
-	test("lists the units worst first, the critical ones on top", async () => {
+	test("lists the rows worst first, the critical ones on top", async () => {
 		const shown = await shownStatuses();
 		expect(shown.length).toBeGreaterThan(0);
 		expect(shown[0]).toBe("critical");
@@ -45,21 +60,25 @@ describe("the Connect page", () => {
 		expect(ranks).toEqual(ranks.toSorted((a, b) => a - b));
 	});
 
-	test("a customer's chip shows its units, its counts and its activity log", async () => {
+	test("a customer's chip shows its rows, its counts and its activity log", async () => {
 		const { page } = app;
 		const riedel = units.find((unit) => unit.customerName === "Riedel B.V.")!;
-		const theirs = units.filter((unit) => unit.customer === riedel.customer);
+		const theirs = rows.filter((row) => row.unit.customer === riedel.customer);
 		await page.locator(`[data-chip="${riedel.customer}"]`).click();
 		await page.waitForURL((url) => url.searchParams.get("customer") === riedel.customer);
 		await app.tableSettled();
 		await expect.poll(() => kpis()).toEqual(countsOf(theirs));
 		expect(await app.rowCount()).toBe(theirs.length);
-		// Dock 07's door, its torsion springs worn: the mockup's row.
-		const door = page.locator("tbody tr", { hasText: "Sectionaaldeur laaddok 07" });
-		expect(await door.locator("[data-condition]").getAttribute("data-condition")).toBe("22");
-		expect(await door.innerText()).toContain(
-			"Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
-		);
+		// Dock 07's door's torsion spring set, worn: the mockup's row, with its article.
+		const springs = page.locator("tbody tr", { hasText: "Torsieveerpakket" });
+		expect(await springs.locator("[data-condition]").getAttribute("data-condition")).toBe("22");
+		const text = await springs.innerText();
+		expect(text).toContain("OC-1041 · art. SD-001");
+		expect(text).toContain("Sectionaaldeur laaddok 07");
+		expect(text).toContain("Veerpakket vervangen (SD-001) — cyclusteller boven 90%.");
+		expect(await springs.locator("[data-status]").getAttribute("data-status")).toBe("critical");
+		// A unit without components is a row of its own, as a whole.
+		expect(await page.locator("tbody tr", { hasText: "Whole unit" }).count()).toBeGreaterThan(0);
 
 		await page.getByRole("button", { name: "Activity log" }).click();
 		const log = page.getByRole("dialog").locator("[data-service-history]");
@@ -69,22 +88,22 @@ describe("the Connect page", () => {
 		await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 	});
 
-	test("only the units that need attention, when asked", async () => {
+	test("only what needs attention, when asked", async () => {
 		const { page } = app;
 		await page.getByRole("button", { name: "All customers" }).click();
 		await page.waitForURL((url) => !url.searchParams.has("customer"));
-		await page.getByRole("checkbox", { name: "Only units that need attention" }).click();
+		await page.getByRole("checkbox", { name: "Only what needs attention" }).click();
 		await page.waitForURL(
 			(url) =>
 				url.searchParams.get("status")?.split(",").toSorted().join() === "attention,critical",
 		);
 		await app.tableSettled();
-		const counts = countsOf(units);
+		const counts = countsOf(rows);
 		expect(await app.rowCount()).toBe(counts.critical + counts.attention);
 		expect(new Set(await shownStatuses())).toEqual(new Set(["critical", "attention"]));
 		// The tiles still count every status.
 		expect(await kpis()).toEqual(counts);
-		await page.getByRole("checkbox", { name: "Only units that need attention" }).click();
+		await page.getByRole("checkbox", { name: "Only what needs attention" }).click();
 		await page.waitForURL((url) => !url.searchParams.has("status"));
 	});
 
@@ -95,7 +114,7 @@ describe("the Connect page", () => {
 			.evaluateAll((cells: HTMLElement[]) => cells.map((cell) => Number(cell.dataset.condition)));
 		expect(scores.length).toBeGreaterThan(0);
 		expect(scores).toEqual(scores.toSorted((a, b) => a - b));
-		expect(scores[0]).toBe(Math.min(...units.flatMap((unit) => unit.score ?? [])));
+		expect(scores[0]).toBe(Math.min(...rows.flatMap((row) => row.score ?? [])));
 	});
 
 	test("says what the statuses mean", async () => {
@@ -125,6 +144,7 @@ describe("elsewhere", () => {
 
 	test("the dashboard's tile counts the units that need attention, and links to them", async () => {
 		const { page } = app;
+		// The units, their components' conditions taken in.
 		const counts = countsOf(units);
 		await app.go("/");
 		const tile = page.locator("[data-condition-stat]");
@@ -135,6 +155,8 @@ describe("elsewhere", () => {
 		await tile.getByRole("link", { name: "View" }).click();
 		await page.waitForURL((url) => url.pathname === "/condition");
 		await app.tableSettled();
-		expect(await app.rowCount()).toBe(counts.critical + counts.attention);
+		// The rows that do: the components that do, and the units without components that do.
+		const rowCounts = countsOf(rows);
+		expect(await app.rowCount()).toBe(rowCounts.critical + rowCounts.attention);
 	});
 });

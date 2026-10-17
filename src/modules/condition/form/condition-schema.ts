@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { optionalId } from "#lib/schema.ts";
+
 import { ADVICE_MAX, scoreLimits } from "../model.ts";
 
 /** A condition score in whole percents, 0–100. */
@@ -22,9 +24,13 @@ export const advice = () =>
 		"",
 	);
 
-/** A unit's condition recorded in the office: the fields of its dialog, with the unit's serial number. */
+/**
+ * A unit's condition recorded in the office, or one of its components' (`componentId`, empty for
+ * the unit as a whole): the fields of its dialog, with the unit's serial number.
+ */
 export const conditionSchema = v.object({
 	serialNumber: v.pipe(v.string(), v.nonEmpty()),
+	componentId: v.optional(optionalId(), ""),
 	score: score(),
 	advice: advice(),
 });

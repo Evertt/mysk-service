@@ -30,7 +30,7 @@ import * as schema from "../schema.ts";
 import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
-import { type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { runOrder, type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
@@ -339,7 +339,7 @@ await db.transaction(async (tx) => {
 		for (const [table, list] of Object.entries(rows)) count(table, list);
 	}
 
-	for (const { id, seed } of moduleSeeds) {
+	for (const { id, seed } of runOrder(moduleSeeds)) {
 		const having = seeded
 			.filter((tenant) => tenant.modules.includes(id))
 			.map((tenant) => ({ ...tenant, data: tenant.data[id] }));

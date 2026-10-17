@@ -12,7 +12,7 @@ import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
 import { query } from "./remote-functions.ts";
-import { checklistRecords } from "./server/records.ts";
+import { checklistRecords, withPointArticles } from "./server/records.ts";
 import { checklist } from "./server/schema.ts";
 import { unitInspection } from "./server/unit-inspection.ts";
 import { loadWorkOrder } from "./server/work-order.ts";
@@ -29,7 +29,9 @@ async function orderId(number: string) {
 
 /** The checklists of the tenant's order `number`, one per unit that has one, in the units' order. */
 export const getOrderChecklists = query(v.string(), async (number) => ({
-	checklists: await checklistRecords(eq(checklist.orderId, await orderId(number))),
+	checklists: await withPointArticles(
+		await checklistRecords(eq(checklist.orderId, await orderId(number))),
+	),
 }));
 
 /**
