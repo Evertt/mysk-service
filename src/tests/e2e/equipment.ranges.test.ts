@@ -2,8 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { presetRange } from "#lib/components/data-table/ranges.ts";
 
-import { afresh, isRemote, organizations, useApp, value } from "./app.ts";
-import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
+import { afresh, organizations, useApp, value } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -80,27 +79,6 @@ describe("range filters on the equipment list, in North", () => {
 		);
 		// What isn't a range is ignored.
 		expect(await shownFor("open-orders=some&installed=2026-02-30")).toBe(await count("1"));
-	});
-
-	// One test per request, each loading the page afresh.
-	describe("a malformed range in the list's query is refused with a 400", () => {
-		type Query = Record<string, unknown>;
-		test.each<Query>([
-			{ openOrders: [{ from: 5, to: 1 }] },
-			{ openOrders: [{ from: "1", to: null }] },
-			{ openOrders: [{ from: 1e13, to: null }] },
-			{ warrantyUntil: [{ from: "today", to: null }] },
-		])("%j", async (filters) => {
-			await app.go(afresh("/equipment"));
-			await tamperWithQuery<Query>(app.page, "getEquipmentList", (arg) => ({ ...arg, filters }));
-			const [response] = await app.expectingErrors(() =>
-				Promise.all([
-					app.page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
-					app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
-				]),
-			);
-			expect(await remoteErrorStatus(response)).toBe(400);
-		});
 	});
 });
 

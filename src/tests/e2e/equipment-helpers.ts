@@ -1,7 +1,7 @@
 /**
  * What the equipment tests share: reading units as stored, and the list's and a unit's page.
  */
-import { afresh, type App, organizations, rows, value } from "./app.ts";
+import { type App, organizations, rows, value } from "./app.ts";
 
 const { north, south } = organizations;
 
@@ -37,15 +37,6 @@ export async function northOnly() {
 	return found;
 }
 
-/** The serial numbers of an organization's units, sorted. */
-export async function serialsIn(organizationId: string) {
-	const found = await rows<{ serial: string }>(
-		`select serial_number as serial from equipment where organization_id = ?`,
-		[organizationId],
-	);
-	return found.map((row) => row.serial).sort();
-}
-
 /** The ids of an organization's customers, sorted. */
 export async function customersIn(organizationId: string) {
 	const found = await rows<{ id: number }>(`select id from customer where organization_id = ?`, [
@@ -67,13 +58,6 @@ export function equipmentPage(app: App) {
 				),
 			),
 		);
-
-	/** The serial numbers of every row of the list, scrolled to its end, sorted. */
-	async function listedSerials() {
-		await app.go(afresh("/equipment"));
-		await app.loadAllRows();
-		return (await shownSerials()).sort();
-	}
 
 	/** The values the form's customer select offers, sorted. */
 	const customerOptions = () =>
@@ -112,7 +96,6 @@ export function equipmentPage(app: App) {
 	return {
 		bodyRows,
 		shownSerials,
-		listedSerials,
 		customerOptions,
 		timeline,
 		shownTimeline,

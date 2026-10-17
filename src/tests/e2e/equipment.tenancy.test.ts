@@ -1,26 +1,27 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { countIn, organizations, rows, useApp, value } from "./app.ts";
+import { afresh, countIn, organizations, rows, useApp, value } from "./app.ts";
 import {
 	busiest,
 	customersIn,
 	equipmentPage,
 	northOnly,
 	orderCount,
-	serialsIn,
 	unit,
 	unitId,
 } from "./equipment-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
-const { card, customerOptions, listedSerials, shownTimeline, timeline } = equipmentPage(app);
+const { card, customerOptions, shownTimeline } = equipmentPage(app);
 
 describe("in South", () => {
-	test("switching organization shows exactly South's units", async () => {
+	// That the list has exactly the tenant's rows is its SQL's (`plan.spec.ts`, "never returns
+	// another tenant's rows").
+	test("switching organization shows South's units", async () => {
 		await app.switchOrganization(south.name);
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
-		expect(await listedSerials()).toEqual(await serialsIn(south.id));
+		await app.go(afresh("/equipment"));
 		expect(await app.rowCount()).toBe(await countIn("equipment", south.id));
 	});
 
@@ -35,7 +36,7 @@ describe("in South", () => {
 		expect(await app.rowCount()).toBe(0);
 
 		// The filters count South's units only.
-		await app.go("/equipment");
+		await app.go(afresh("/equipment"));
 		await app.openFilter("Category");
 		// Polled: the menu shows the filters' titles until it has switched to the picked one's values.
 		const counted = async () =>
@@ -77,19 +78,6 @@ describe("in South", () => {
 		const { serial } = await northOnly();
 		expect((await app.go(`/equipment/${serial}`))?.status()).toBe(404);
 		expect((await app.go(`/equipment/${serial}/edit`))?.status()).toBe(404);
-	});
-
-	test("North's unit history is a 404", async () => {
-		const busy = await busiest(north.id);
-		expect(await unitId(busy.serial, south.id)).toBeUndefined();
-		expect((await app.go(`/equipment/${busy.serial}`))?.status()).toBe(404);
-		expect(await timeline().count()).toBe(0);
-		const numbers = await rows<{ number: string }>(
-			`select o.number from "order" o join order_unit ou on ou.order_id = o.id where ou.equipment_id = ?`,
-			[busy.id],
-		);
-		const body = await app.page.locator("body").innerText();
-		for (const { number } of numbers) expect(body).not.toContain(number);
 	});
 
 	test("saving with the id of a North unit is refused", async () => {

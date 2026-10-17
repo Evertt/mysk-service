@@ -112,39 +112,10 @@ describe("in North", () => {
 		for (const { sku } of materials) expect(shown).toContain(sku);
 		expect(await item.locator('a[href^="/materials/"]').count()).toBe(materials.length);
 
-		// Every order costs what it does on its own page: less what a contract includes, which shows.
-		// On the busiest unit with an order that a contract includes something of.
-		const [covering] = await rows<{ id: number; serial: string }>(
-			`with ${covered} select e.id, e.serial_number as serial from equipment e
-			 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
-			 join covered c on c.order_id = o.id and c.n = 1
-			 where e.organization_id = ? and c.level in ('standard', 'premium') and o.labor_hours > 0
-			 group by e.id order by (select count(*) from order_unit x where x.equipment_id = e.id) desc, e.id
-			 limit 1`,
-			[north.id],
-		);
-		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
-		const priced = await pricedOrders(north.id, onUnit, [covering.id]);
-		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
-		for (const order of priced) {
-			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
-			const { total, included } = priceOf(order);
-			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(total);
-			const adjustments = entry.locator('[data-cost="adjustment"]');
-			if (included) {
-				expect(cents(await adjustments.innerText())).toBe(-included);
-				expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
-			} else expect(await adjustments.count()).toBe(0);
-		}
-	});
-
-	test("the summary counts its orders by type, their cost and the time between repairs", async () => {
-		const { page } = app;
-		const busy = await busiest(north.id);
-		await app.go(`/equipment/${busy.serial}`);
+		// The summary shows its numbers (`service-history.spec.ts` counts them): its orders by type,
+		// their cost and the time between repairs.
 		const expected = await expectedStats(busy.id);
 		expect(expected.betweenRepairs).not.toBeNull();
-
 		expect(await card("Orders")).toMatch(new RegExp(`^Orders ${expected.orders} `));
 		const byType = (await page.getByRole("list", { name: "Orders by type" }).innerText()).replace(
 			/\s+/g,
@@ -173,11 +144,37 @@ describe("in North", () => {
 		const repairs = await card("Since last repair");
 		expect(repairs).toContain(expected.sinceRepair!);
 		expect(repairs).toContain(`Mean time between repairs: ${expected.betweenRepairs} day`);
+
+		// Every order costs what it does on its own page: less what a contract includes, which shows.
+		// On the busiest unit with an order that a contract includes something of.
+		const [covering] = await rows<{ id: number; serial: string }>(
+			`with ${covered} select e.id, e.serial_number as serial from equipment e
+			 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
+			 join covered c on c.order_id = o.id and c.n = 1
+			 where e.organization_id = ? and c.level in ('standard', 'premium') and o.labor_hours > 0
+			 group by e.id order by (select count(*) from order_unit x where x.equipment_id = e.id) desc, e.id
+			 limit 1`,
+			[north.id],
+		);
+		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
+		const priced = await pricedOrders(north.id, onUnit, [covering.id]);
+		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
+		for (const order of priced) {
+			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
+			const { total, included } = priceOf(order);
+			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(total);
+			const adjustments = entry.locator('[data-cost="adjustment"]');
+			if (included) {
+				expect(cents(await adjustments.innerText())).toBe(-included);
+				expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
+			} else expect(await adjustments.count()).toBe(0);
+		}
 	});
 
 	test("deleting a unit with orders is refused", async () => {
 		const { page } = app;
 		const busy = await busiest(north.id);
+		await app.go(`/equipment/${busy.serial}`);
 		await page.getByRole("button", { name: "Delete" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await app.submit(dialog.getByRole("button", { name: "Delete" }));
