@@ -1,19 +1,88 @@
 /**
  * The energy pages in SHLTR, against the seeded Riedel Ede: the sites, the site's page (the hero,
  * KPI tiles, the floor plan and the live meter, selecting a floor or a zone, door watch, the
- * comparison per zone, the savings advice), a zone's page from the selection, at phone width too,
- * and the printable report. The door cards and the chart are in `energy.overview.test.ts`.
+ * comparison per zone, the savings advice, the consumption chart), a zone's page from the
+ * selection, at phone width too, the printable report, and the door cards in the state their
+ * sensors sent (which bars of the chart are measured is `scope.spec.ts`'s).
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, useApp } from "#e2e/app.ts";
 
-import { kw, kwh, kwhToday, liveKw, riedel, shltrOwner } from "./helpers.ts";
+import { kw, kwh, kwhToday, liveKw, postBatch, riedel, shltrOwner } from "./helpers.ts";
 
 const app = useApp({ user: shltrOwner });
 
+const card = (code: string) => app.page.locator(`[data-door="${code}"]`);
+const ago = (seconds: number) => Temporal.Now.instant().subtract({ seconds }).toString();
+
 const tile = (kpi: string) =>
 	app.page.locator(`[data-kpi="${kpi}"] [data-slot="card-title"]`).first();
+
+// First in the file: after the other tests' visits to the site's page, the freezer's door no
+// longer shows the opening posted here.
+describe("the door cards", () => {
+	test("show each door as its sensor last told: shut, open, open too long", async () => {
+		const { page } = app;
+		const { siteId } = await riedel();
+		// The dock door shut a minute ago; the cold store just opened; the freezer opened 10
+		// minutes ago (it alerts at 4).
+		const posted = await postBatch({
+			site: siteId,
+			readings: [],
+			doorEvents: [
+				{ door: "D-05", at: ago(180), state: "open" },
+				{ door: "D-05", at: ago(60), state: "closed" },
+				{ door: "D-KO1", at: ago(120), state: "closed" },
+				{ door: "D-KO1", at: ago(30), state: "open" },
+				{ door: "D-VR1", at: ago(660), state: "closed" },
+				{ door: "D-VR1", at: ago(600), state: "open" },
+			],
+		});
+		expect(posted.status).toBe(200);
+
+		await app.go(`/energy/${siteId}`);
+		await card("D-05").waitFor();
+		expect(await card("D-05").getAttribute("data-door-state")).toBe("closed");
+		expect(await card("D-05").locator("[data-panel]").getAttribute("data-panel")).toBe("down");
+		expect(await card("D-05").locator("[data-leak], [data-truck]").count()).toBe(0);
+		expect(await card("D-05").locator("[data-open-minutes]").textContent()).toBe("shut");
+
+		expect(await card("D-KO1").getAttribute("data-door-state")).toBe("open");
+		expect(await card("D-KO1").locator("[data-panel]").getAttribute("data-panel")).toBe("up");
+		expect(await card("D-KO1").locator("[data-leak] span").count()).toBe(3);
+		expect(await card("D-KO1").locator("[data-snowflake]").count()).toBe(1);
+		expect(await card("D-KO1").getByText("Open", { exact: true }).count()).toBe(1);
+
+		expect(await card("D-VR1").getAttribute("data-door-state")).toBe("overdue");
+		expect(await card("D-VR1").getByText("Open too long").count()).toBe(1);
+		expect(await card("D-VR1").locator("[data-open-minutes]").textContent()).toMatch(
+			/^1\d min open$/,
+		);
+		expect(await card("D-VR1").textContent()).toContain("alert from 4 min");
+		expect(await card("D-VR1").textContent()).toMatch(/22 °C inside/);
+
+		// The header counts the open doors on the page.
+		const open = await page
+			.locator('[data-door-state="open"], [data-door-state="overdue"]')
+			.count();
+		expect(await page.locator("[data-doors-open]").textContent()).toBe(
+			`${open} door${open === 1 ? "" : "s"} open`,
+		);
+	});
+
+	test("an open dock door has the truck backing up to it", async () => {
+		const { siteId } = await riedel();
+		await postBatch({
+			site: siteId,
+			readings: [],
+			doorEvents: [{ door: "D-06", at: ago(30), state: "open" }],
+		});
+		await app.go(`/energy/${siteId}`);
+		await card("D-06").locator("[data-truck]").waitFor();
+		expect(await card("D-06").locator("[data-snowflake]").count()).toBe(0);
+	});
+});
 
 describe("the site's page", () => {
 	test("is reached from the sidebar through the sites, and shows the KPI tiles", async () => {
@@ -72,7 +141,7 @@ describe("the site's page", () => {
 		await page.locator("[data-energy-chart]").first().waitFor();
 	});
 
-	test("narrows to a floor with its button or on the plan, and to a zone on the plan", async () => {
+	test("narrows to a floor with its button or on the plan, and to a zone on the plan, by day or month", async () => {
 		const { page } = app;
 		await page.locator('[data-scope="floor:Kelder"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "floor:Kelder");
@@ -113,18 +182,19 @@ describe("the site's page", () => {
 		expect(
 			await page.locator("[data-comparison] [data-zone-row]").getAttribute("data-zone-row"),
 		).toBe("Z-DOCK");
-	});
 
-	test("compares this month with last month", async () => {
-		const { page } = app;
+		// This month against last month, the scope staying, the chart per day.
 		await page.locator('[data-period="month"]').click();
 		await page.waitForURL((url) => url.searchParams.get("period") === "month");
 		await page.locator('[data-kpi="consumption"]').getByText("Consumption this month").waitFor();
-		// The scope stays.
 		expect(new URL(page.url()).searchParams.get("scope")).toBe("zone:Z-DOCK");
-		await page
-			.locator('[data-energy-chart] [data-slot="card-title"]', { hasText: "Consumption per day" })
+		const chart = page.locator("[data-consumption-chart]");
+		await chart
+			.locator('[data-slot="card-title"]', { hasText: "Consumption per day · Expeditie & Docks" })
 			.waitFor();
+		const days = Temporal.Now.plainDateISO("Europe/Amsterdam").daysInMonth;
+		expect(await chart.locator("[data-bar]").count()).toBe(days);
+		expect(await chart.locator('[data-bar-state="current"]').count()).toBe(1);
 	});
 
 	test("fits a phone's screen", async () => {
@@ -206,5 +276,22 @@ describe("the report", () => {
 			app.go(`/energy/${siteId}/report?from=2026-01-01&to=2026-10-01`),
 		);
 		expect(response?.status()).toBe(400);
+	});
+});
+
+describe("the consumption chart", () => {
+	test("shows today's hours, the rest still to measure, and today's total", async () => {
+		const { page } = app;
+		const { siteId } = await riedel();
+		await app.go(`/energy/${siteId}`);
+		const chart = page.locator("[data-consumption-chart]");
+		await chart.waitFor();
+		expect(await chart.locator("[data-bar]").count()).toBe(24);
+		expect(await chart.getByText("Still to measure").count()).toBe(1);
+		// Under it, today so far against yesterday to the same moment.
+		expect(await chart.locator('[data-total="current"]').textContent()).toBe(
+			kwh(await kwhToday(siteId)),
+		);
+		expect(await chart.locator('[data-total="change"]').textContent()).toMatch(/%|—/);
 	});
 });

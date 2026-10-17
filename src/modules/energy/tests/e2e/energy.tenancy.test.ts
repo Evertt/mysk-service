@@ -1,32 +1,26 @@
 /**
  * The energy module and tenancy: SHLTR's managers make and revoke the feed's tokens, a planner
- * can't, and only changes nothing of the thresholds; a token feeds only its own tenant's site and
- * codes; North and South, which don't have the module, get 404s for its pages and remote queries,
- * and no tile on the dashboard.
+ * can't, nor set a site up, and only reads the thresholds; a token feeds only its own tenant's site
+ * and codes; North, which doesn't have the module, gets 404s for its pages and no tile on the
+ * dashboard. That its remote queries refuse such a tenant is `remote-functions.spec.ts`'s, and
+ * what the feed refuses `ingest.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { baseURL, organizations, rows, useApp, value } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
 import { lastQuarter, postBatch, readingOf, riedel, shltrOwner, shltrPlanner } from "./helpers.ts";
 
-const { north, south, shltr } = organizations;
-// North's and South's admin: neither tenant has the module.
+const { shltr } = organizations;
+// North's admin: North doesn't have the module.
 const app = useApp();
-
-/** The URL of SHLTR's overview query, as its owner's page asked for it, to try from elsewhere. */
-let overviewQuery = "";
 
 describe("SHLTR's integration tokens", () => {
 	test("a manager makes one, which the feed then takes, and revokes it", async () => {
 		const { page } = await signedInPage(app, shltrOwner);
 		const { siteId } = await riedel();
 		try {
-			page.on("request", (request) => {
-				if (isRemote(request.url(), "getEnergyOverview")) overviewQuery = request.url();
-			});
-			// Client-side, so the page loads its data through its remote query.
 			await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Energy" }).click();
 			await page.locator(`[data-energy-site="${siteId}"]`).click();
 			await page.locator("[data-kpi]").first().waitFor();
@@ -60,14 +54,31 @@ describe("SHLTR's integration tokens", () => {
 		}
 	});
 
-	test("a planner, who's no manager, can't manage them nor change the thresholds", async () => {
+	test("a planner, who's no manager, can't manage them nor set a site up or change its thresholds", async () => {
 		const { page } = await signedInPage(app, shltrPlanner);
 		const { siteId } = await riedel();
+		const [customer] = await rows<{ code: string; site_id: number }>(
+			`select c.code, s.site_id from energy_site s join customer_site cs on cs.id = s.site_id
+			 join customer c on c.id = cs.customer_id where s.id = ?`,
+			[siteId],
+		);
 		try {
 			await page.goto(`${baseURL}/energy`);
 			await page.locator(`[data-energy-site="${siteId}"]`).waitFor();
 			expect(await page.getByRole("link", { name: "Energy settings" }).count()).toBe(0);
 			expect((await page.goto(`${baseURL}/energy/settings`))?.status()).toBe(403);
+
+			// The customer's card and the site's page offer no setup, and its page is a 403 (that the
+			// managers' forms refuse a planner is `remote-functions.spec.ts`'s).
+			await page.goto(`${baseURL}/customers/${customer.code}`);
+			const card = page.locator(`[data-energy-card-site="${customer.site_id}"]`);
+			await card.getByRole("link").first().waitFor();
+			expect(await page.locator("[data-energy-add-site]").count()).toBe(0);
+			expect(await card.getByRole("link", { name: /^Set up/ }).count()).toBe(0);
+			await page.goto(`${baseURL}/energy/${siteId}`);
+			await page.locator('[data-hero-chip="site"]').waitFor();
+			expect(await page.getByRole("link", { name: "Set up" }).count()).toBe(0);
+			expect((await page.goto(`${baseURL}/energy/${siteId}/setup`))?.status()).toBe(403);
 
 			await page.goto(`${baseURL}/energy/${siteId}/thresholds`);
 			await page.locator("[data-managers-only]").waitFor();
@@ -80,13 +91,6 @@ describe("SHLTR's integration tokens", () => {
 });
 
 describe("the feed", () => {
-	test("refuses a request without a valid token", async () => {
-		const { siteId } = await riedel();
-		const batch = { site: siteId, readings: [readingOf("Z-R61", lastQuarter(), 10)] };
-		expect((await postBatch(batch, null)).status).toBe(401);
-		expect((await postBatch(batch, "fwi_0000")).status).toBe(401);
-	});
-
 	test("takes only its tenant's site and codes, and stores nothing of a refused batch", async () => {
 		const { siteId } = await riedel();
 		const before = await value(`select count(*) from energy_reading`);
@@ -117,39 +121,15 @@ describe("the feed", () => {
 	});
 });
 
-describe("in North and South, which don't have the module", () => {
-	test("its pages are 404s and the sidebar lacks it", async () => {
+describe("in North, which doesn't have the module", () => {
+	test("its pages are 404s, the sidebar lacks it, and the dashboard has no tile of it", async () => {
 		const { page } = app;
 		const { siteId } = await riedel();
-		for (const tenant of [north, south]) {
-			await app.go("/");
-			if (tenant === south) await app.switchOrganization(tenant.name);
-			const sidebar = page.locator('[data-sidebar="content"]');
-			await sidebar.getByRole("link", { name: "Dashboard" }).waitFor();
-			expect(await sidebar.getByRole("link", { name: "Energy" }).count()).toBe(0);
-			expect(await page.locator("[data-energy-stat]").count()).toBe(0);
-			for (const path of [
-				"/energy",
-				`/energy/${siteId}`,
-				`/energy/${siteId}/report`,
-				"/energy/settings",
-			]) {
-				expect((await app.expectingErrors(() => app.go(path)))?.status()).toBe(404);
-			}
-		}
-	});
-
-	test("its remote queries are refused", async () => {
-		const { page } = app;
-		expect(overviewQuery).not.toBe("");
 		await app.go("/");
-		const status = await app.expectingErrors(() =>
-			page.evaluate(async (href) => {
-				const response = await fetch(href);
-				const body = (await response.json()) as { type: string; error?: { status?: number } };
-				return body.type === "error" ? body.error?.status : response.status;
-			}, overviewQuery),
-		);
-		expect(status).toBe(404);
+		const sidebar = page.locator('[data-sidebar="content"]');
+		await sidebar.getByRole("link", { name: "Dashboard" }).waitFor();
+		expect(await sidebar.getByRole("link", { name: "Energy" }).count()).toBe(0);
+		expect(await page.locator("[data-energy-stat]").count()).toBe(0);
+		expect((await app.expectingErrors(() => app.go(`/energy/${siteId}`)))?.status()).toBe(404);
 	});
 });

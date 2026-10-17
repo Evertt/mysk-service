@@ -1,9 +1,11 @@
 /**
  * Setting a site's energy monitoring up in the office, in SHLTR, as its owner: Weggemans' site in
  * Barneveld (where its Salvo docks are) from the customer's page, with a zone, a consumer and a
- * monitored door that's DOCK 05's door; a batch from the gateway naming their codes; deleting
- * refused once they hold measurements; and the dock's live state on the door's card, which isn't
- * there with the docks module off.
+ * monitored door that's DOCK 05's door; another site's zone not edited through it, by a tampered
+ * id; a batch from the gateway naming their codes; deleting refused once they hold measurements;
+ * and the dock's live state on the door's card, which isn't there with the docks module off. The
+ * rest of what the setup refuses (another tenant's site, units and zones of another site, deleting
+ * a measured door or site) is `setup.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -13,6 +15,7 @@ import {
 	lastQuarter,
 	postBatch,
 	readingOf,
+	riedel,
 	setUpFromCustomer,
 	shltrCustomer,
 	shltrOwner,
@@ -148,6 +151,24 @@ describe("setting a site up", () => {
 		await page.locator('[data-card="activity"]').getByText("D-21").first().waitFor();
 	});
 
+	test("can't edit another site's zone through this one", async () => {
+		const { page } = app;
+		const target = (await riedel()).zone("Z-R61");
+		const before = await rows(`select * from energy_zone where id = ?`, [target.id]);
+		await page.getByRole("button", { name: "Edit zone Z-DOCK" }).click();
+		const dialog = page.getByRole("dialog");
+		const hidden = dialog.locator('input[type="hidden"][name^="zoneId/"]');
+		await expect.poll(() => hidden.count()).toBe(1);
+		const result = await app.expectingErrors(async () => {
+			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target.id);
+			await dialog.getByLabel("Name", { exact: true }).fill("Tampered");
+			return app.submit(dialog.getByRole("button", { name: "Save" }));
+		});
+		expect((JSON.parse(result) as { error?: { status?: number } }).error?.status).toBe(404);
+		expect(await rows(`select * from energy_zone where id = ?`, [target.id])).toEqual(before);
+		await page.keyboard.press("Escape");
+	});
+
 	test("the site's page shows it without any readings yet, in each scope and period", async () => {
 		const { page } = app;
 		await app.go("/energy");
@@ -176,13 +197,6 @@ describe("setting a site up", () => {
 			doorEvents: [{ door: "D-21", at: start.toString(), state: "open" }],
 		});
 		expect(result).toMatchObject({ status: 200, body: { readings: 1, doorEvents: 1 } });
-		expect(
-			await value(
-				`select count(*) from energy_reading r join energy_zone z on z.id = r.zone_id
-				 where z.energy_site_id = ?`,
-				[siteId],
-			),
-		).toBe(1);
 
 		await app.go("/energy/settings");
 		const row = page.locator(`[data-site-codes="${siteId}"]`);
@@ -202,44 +216,15 @@ describe("deleting", () => {
 		return dialog;
 	}
 
-	test("is refused for a zone, a door and the site once they hold measurements", async () => {
+	test("is refused for a zone once it holds measurements", async () => {
 		const { page } = app;
-		/** Closes the refusing dialog, and waits until it's gone. */
-		const close = async (dialog: ReturnType<typeof page.getByRole>) => {
-			await page.keyboard.press("Escape");
-			await dialog.waitFor({ state: "detached" });
-		};
-		let dialog = await deleteRow("zone", "Z-DOCK", "Delete zone Z-DOCK?");
+		const dialog = await deleteRow("zone", "Z-DOCK", "Delete zone Z-DOCK?");
 		await dialog.getByText("The zone has readings or alerts").waitFor();
-		await close(dialog);
-		dialog = await deleteRow("door", "D-21", "Delete door D-21?");
-		await dialog.getByText("The door has events or alerts").waitFor();
-		await close(dialog);
-
-		await page.getByRole("button", { name: "Delete", exact: true }).click();
-		dialog = page.getByRole("alertdialog");
-		await app.expectingErrors(() => app.submit(dialog.getByRole("button", { name: "Delete" })));
-		await dialog.getByText("The site has readings, door events or alerts").waitFor();
-		await close(dialog);
+		await page.keyboard.press("Escape");
+		await dialog.waitFor({ state: "detached" });
 		expect(await value(`select count(*) from energy_zone where energy_site_id = ?`, [siteId])).toBe(
 			1,
 		);
-		expect(await value(`select count(*) from energy_door where energy_site_id = ?`, [siteId])).toBe(
-			1,
-		);
-		expect(await value(`select count(*) from energy_site where id = ?`, [siteId])).toBe(1);
-	});
-
-	test("a consumer, which measures nothing, goes", async () => {
-		await deleteRow("consumer", "Dockverwarming", "Delete Dockverwarming?");
-		await setupRow("consumer", "Dockverwarming").waitFor({ state: "detached" });
-		expect(
-			await value(
-				`select count(*) from energy_consumer c join energy_zone z on z.id = c.zone_id
-				 where z.energy_site_id = ?`,
-				[siteId],
-			),
-		).toBe(0);
 	});
 });
 

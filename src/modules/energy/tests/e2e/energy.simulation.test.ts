@@ -3,7 +3,8 @@
  * `server/live-simulation.ts`): a manager plays it from the bar, its ticks post the intervals
  * since the latest reading through the ingest (no gap, no zone offline), reset puts yesterday and
  * today back as the seed has them, and pausing stops it; a planner sees its state but can't drive
- * it; a tenant offered no simulation gets no bar; South can't drive SHLTR's.
+ * it; a tenant offered no simulation gets no bar. That another tenant can't drive SHLTR's is
+ * `remote-functions.spec.ts`'s and `simulation.spec.ts`'s.
  */
 import type { InValue } from "@libsql/client";
 import { describe, expect, test } from "vite-plus/test";
@@ -170,28 +171,5 @@ describe("SHLTR's P1 simulation", () => {
 			);
 			await page.context().close();
 		}
-	});
-});
-
-describe("South", () => {
-	test("can't drive SHLTR's simulation, nor tick it", async () => {
-		await app.switchOrganization("Fieldworks Zuid");
-		await app.go("/");
-		const before = await rows(`select * from simulation where organization_id = ?`, [shltr.id]);
-		await app.expectingErrors(async () => {
-			const played = await callCommand(app.page, commands.playSimulation, [
-				{ module: 1, running: 2 },
-				"energy",
-				true,
-			]);
-			expect(played).toMatchObject({ type: "error", error: { status: 404 } });
-			const ticked = await callCommand(app.page, commands.tickSimulation, ["energy"]);
-			expect(ticked).toMatchObject({ type: "error", error: { status: 404 } });
-			const reset = await callCommand(app.page, commands.resetSimulationState, ["energy"]);
-			expect(reset).toMatchObject({ type: "error", error: { status: 404 } });
-		});
-		expect(await rows(`select * from simulation where organization_id = ?`, [shltr.id])).toEqual(
-			before,
-		);
 	});
 });
