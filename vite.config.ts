@@ -79,22 +79,37 @@ const serverSpecs = {
 	],
 };
 
+/** The Node specs, with their source without comments (so a comment that explains a mock counts for nothing). */
+const nodeSpecs = globSync(serverSpecs.include, { exclude: serverSpecs.exclude }).map((file) => ({
+	file,
+	code: readFileSync(file, "utf8")
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/(^|[^:])\/\/.*$/gm, "$1"),
+}));
+
 /**
- * The Node specs that need modules of their own: those that replace a module with `vi.mock()` (or
- * friends). Most specs share their worker's modules (the `server-shared` project), but a mock
- * reaches only what imports the mocked module after it's registered: in a shared worker an earlier
- * file has already imported those against the real one, so the mock would miss, and it would
- * leak into the next file. Found from the source, so a new spec lands in the right project; comments
- * are left out first, so one that explains why it doesn't mock stays shared.
+ * The Node specs that run the app's server code as a tenant on a seeded copy of the demo database
+ * (the `server-harness` project): those that import the server spec harness
+ * (`src/tests/unit/lib/server/harness/`, see docs/agents/tests.md). Each file gets a database of
+ * its own, so they don't share modules either. Found from the source, like the isolated ones.
  */
-const isolatedServerSpecs = globSync(serverSpecs.include, { exclude: serverSpecs.exclude }).filter(
-	(file) =>
-		/\bvi\.(mock|doMock|unmock|resetModules)\(/.test(
-			readFileSync(file, "utf8")
-				.replace(/\/\*[\s\S]*?\*\//g, "")
-				.replace(/(^|[^:])\/\/.*$/gm, "$1"),
-		),
-);
+const harnessServerSpecs = nodeSpecs
+	.filter(({ code }) => code.includes("#unit/lib/server/harness/"))
+	.map(({ file }) => file);
+
+/**
+ * The other Node specs that need modules of their own: those that replace a module with
+ * `vi.mock()` (or friends). Most specs share their worker's modules (the `server-shared` project),
+ * but a mock reaches only what imports the mocked module after it's registered: in a shared worker
+ * an earlier file has already imported those against the real one, so the mock would miss, and it
+ * would leak into the next file. Found from the source, so a new spec lands in the right project.
+ */
+const isolatedServerSpecs = nodeSpecs
+	.filter(
+		({ file, code }) =>
+			/\bvi\.(mock|doMock|unmock|resetModules)\(/.test(code) && !harnessServerSpecs.includes(file),
+	)
+	.map(({ file }) => file);
 
 export default defineConfig({
 	run: {
@@ -260,7 +275,7 @@ export default defineConfig({
 				test: {
 					name: "server-shared",
 					...serverSpecs,
-					exclude: [...serverSpecs.exclude, ...isolatedServerSpecs],
+					exclude: [...serverSpecs.exclude, ...isolatedServerSpecs, ...harnessServerSpecs],
 					// The files share their worker's modules, evaluated once, instead of each importing
 					// them anew: about a third off these files' run.
 					isolate: false,
@@ -274,6 +289,18 @@ export default defineConfig({
 			{
 				extends: "./vite.config.ts",
 				test: { name: "server-isolated", ...serverSpecs, include: isolatedServerSpecs },
+			},
+
+			{
+				extends: "./vite.config.ts",
+				test: {
+					name: "server-harness",
+					...serverSpecs,
+					include: harnessServerSpecs,
+					// The seeded demo database, made once per run, and a copy of it for each file.
+					globalSetup: ["src/tests/unit/lib/server/harness/global-setup.ts"],
+					setupFiles: [...serverSpecs.setupFiles, "./src/tests/unit/lib/server/harness/setup.ts"],
+				},
 			},
 
 			{
