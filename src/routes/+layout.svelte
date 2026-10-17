@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from "$app/env";
 	import { beforeNavigate } from "$app/navigation";
-	import { navigating, updated } from "$app/state";
+	import { navigating, page, updated } from "$app/state";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -11,6 +11,7 @@
 	import { getMode, getTheme } from "#lib/themes/theme.remote.ts";
 
 	import type { LayoutProps } from "./$types";
+	import AppToaster from "./app-toaster.svelte";
 	import { watchActivity, whenIdle } from "./idle.ts";
 
 	import "./layout.css";
@@ -60,12 +61,10 @@
 		class="navigation-progress fixed inset-x-0 top-0 z-100"
 	/>
 	{@render children()}
-	<Toaster
-		richColors
-		closeButton
-		containerAriaLabel={m.common_notifications()}
-		closeButtonAriaLabel={m.common_close_notification()}
-	/>
+	<!-- The engineer portal shows its own, in its phone (see its layout). -->
+	{#if !page.route.id?.startsWith("/(field)/")}
+		<AppToaster />
+	{/if}
 </ThemeProvider>
 
 <style>
