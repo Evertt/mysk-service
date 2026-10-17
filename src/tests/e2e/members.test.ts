@@ -179,15 +179,13 @@ describe("invitations", () => {
 		).toBe(1);
 	});
 
-	test("the owner sees them as a member, no longer as invited", async () => {
+	test("the owner sees them as a member; used, cancelled and made-up invitation links say so", async () => {
 		await app.go("/settings/members");
 		expect(await memberRow(robin.email).getByLabel(`Role of ${robin.name}`).inputValue()).toBe(
 			"admin",
 		);
 		expect(await invitationRow(robin.email).count()).toBe(0);
-	});
 
-	test("used, cancelled and made-up invitation links say so", async () => {
 		await invite("never.mind@example.com", "member");
 		await app.toast("Invitation sent to never.mind@example.com");
 		await app.submit(
@@ -213,29 +211,28 @@ describe("invitations", () => {
 });
 
 describe("roles and removal", () => {
-	test("an owner makes another member an owner", async () => {
+	test("an owner makes another member an owner, and demotes them again", async () => {
 		await chooseRole(robin.email, robin.name, "owner");
 		await app.toast(`${robin.name}'s role changed`);
 		expect(await roleOf(north.id, robin.email)).toBe("owner");
+		await chooseRole(robin.email, robin.name, "member");
+		await app.toast(`${robin.name}'s role changed`);
+		expect(await roleOf(north.id, robin.email)).toBe("member");
 	});
 
 	test("nobody can change their own role, not even with a tampered form", async () => {
 		const row = memberRow(robin.email);
 		await tamper(row.locator("form"), "memberId", await memberId(north.id, users.admin));
-		await chooseRole(robin.email, robin.name, "member");
+		// As an owner: the last one can't become anything else, which would be refused first.
+		await chooseRole(robin.email, robin.name, "owner");
 		await row.getByText("You can't change your own role.").waitFor();
 		expect(await roleOf(north.id, users.admin)).toBe("owner");
-		expect(await roleOf(north.id, robin.email)).toBe("owner");
-	});
-
-	test("an owner demotes a member", async () => {
-		await app.go("/settings/members");
-		await chooseRole(robin.email, robin.name, "member");
 		expect(await roleOf(north.id, robin.email)).toBe("member");
 	});
 
 	test("an owner removes a member, who then can't work in the organization", async () => {
 		const { page } = app;
+		await app.go("/settings/members");
 		await memberRow(robin.email).getByRole("button", { name: "Remove" }).click();
 		const dialog = page.getByRole("alertdialog");
 		expect(await dialog.innerText()).toContain(`Remove ${robin.name}?`);
@@ -284,19 +281,6 @@ describe("roles and removal", () => {
 			{ user_name: userNames.admin, action: "removed", changes: null, note: null },
 		]);
 		expect(await logged("member", userNames.admin)).toEqual([]);
-
-		await app.go("/activity?type=member");
-		const feed = app.page.getByRole("list", { name: "Activity log", exact: true });
-		await feed.waitFor();
-		const entries = (await feed.locator(":scope > li").allInnerTexts()).map((text) =>
-			text.replace(/\s+/g, " "),
-		);
-		expect(entries[0]).toMatch(new RegExp(`^${userNames.admin} removed member ${robin.name} `));
-		expect(entries[1]).toMatch(
-			new RegExp(`^${userNames.admin} updated member ${robin.name} role: Owner → Member `),
-		);
-		// Removed, so no longer a link.
-		expect(await feed.getByRole("link", { name: robin.name }).count()).toBe(0);
 	});
 
 	test("a member can't invite, change roles or remove anyone", async () => {

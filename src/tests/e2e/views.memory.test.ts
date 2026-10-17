@@ -85,7 +85,7 @@ describe("in North", () => {
 		expect(await memoryOf(users.planner, north.id)).toBeUndefined();
 	});
 
-	test("the list comes back as it was left, with the open view's unsaved changes", async () => {
+	test("the list comes back as it was left, with the open view's unsaved changes, unless a link or No view says otherwise", async () => {
 		const { page } = admin;
 		await admin.go("/orders?status=quote");
 		await menu(page).click();
@@ -120,10 +120,8 @@ describe("in North", () => {
 		await expect
 			.poll(() => menu(page).getAttribute("aria-label"))
 			.toBe("Saved views: Quotes, with unsaved changes");
-	});
 
-	test("a link with parameters wins", async () => {
-		const { page } = admin;
+		// A link with parameters wins.
 		await admin.go("/orders?priority=urgent");
 		await admin.tableSettled();
 		expect(search(page)).toBe("?priority=urgent");
@@ -135,10 +133,8 @@ describe("in North", () => {
 		await expect.poll(async () => (await adminMemory(north.id))?.query).toBe("?priority=urgent");
 		await leaveAndComeBack(page);
 		expect(search(page)).toBe("?priority=urgent");
-	});
 
-	test("No view goes back to the defaults, and forgets the list", async () => {
-		const { page } = admin;
+		// No view goes back to the defaults, and forgets the list.
 		await menu(page).click();
 		await page.getByRole("menuitemradio", { name: /^Quotes/ }).click();
 		await page.waitForURL((url) => url.search === "?status=quote");
