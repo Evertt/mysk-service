@@ -120,6 +120,32 @@ weren't built:
 - Put them on the pages the mockup has them on.
 - Effort: medium, then small per page.
 
+**Done** (branch `mockup-look`). The pieces are in `src/lib/components/` (see
+[shltr-style.md](shltr-style.md), "The shared components"), and on these pages:
+
+- Dashboard: "Goedemorgen / Goedemiddag / Goedenavond, {voornaam}" and "Hier is wat er vandaag
+  speelt."; every tile (the modules' too) a stacked `StatTile` with a coloured icon. Two tiles
+  have a trend against the period before, from real data: Open opdrachten ("N nieuw in de laatste
+  7 dagen (+3)", the orders made against the 7 days before) and Omzet, laatste 30 dagen ("+18%
+  t.o.v. de 30 dagen ervoor"). The others are a state now (spoed, te accepteren, apparatuur met
+  aandacht, lage voorraad, alerts, shopbestellingen): nothing records what they were a week ago,
+  so they have none.
+- Planning and Apparatuur: the toolbar band (icon, title, a pill with the orders planned or the
+  units listed, previous / next / today and the white-on-teal Maand / Week / Dag); Apparatuur's
+  band has the "SOORT" chips with counts under it, which set the category filter (the faceted
+  filters stay).
+- Connect: the teal banner ("Connect", "Onderdelenbeheer per klant" and the mockup's intro, without
+  the SHLTR brand, as modules carry none), the four process cards (step 3 says what's built: the
+  interval plans the next visit, critical components are planned by hand; expired inspections get
+  no priority yet, #54), the KPI tiles with icons and the customer chips.
+- Partner Bonus (portal): the banner ("{organisatie} · Partnerprogramma", "Samen groeien. Meer
+  voordeel."), the key-figure tiles, the expected cash and credit, the dark Wallet panel (also on
+  the portal's home and the office's partner card), and the programme in the mockup's four tabs.
+  No "Shop met Parts Credit" in the banner: the shop's button is the wallet's (a module's slot).
+- Shop (portal): the wallet card ("SHLTR Wallet · beschikbaar Parts Credit", the amount, "Geldig
+  t/m", "Bekijk programma") and the amber low-stock call-out.
+- Klantkaart: the four key figures as tiles with an icon, the figure on the right.
+
 ### 4. All three sides one click away on staging
 
 #5, #6, #31, #32, #203, #225. The client's files confirm the shop, the bonus and the wallet are the
