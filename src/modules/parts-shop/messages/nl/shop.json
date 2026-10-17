@@ -5,7 +5,6 @@
 	"shop_portal_label": "Onderdelen Shop",
 	"shop_portal_title": "Onderdelen Shop",
 	"shop_portal_description": "Bestel vervangingsonderdelen voor sectionaaldeuren en levellers.",
-	"shop_portal_credit": "Beschikbare Parts Credit: {available}",
 	"shop_action_placed": "plaatste",
 	"shop_activity_subject_order": "shopbestelling",
 	"shop_activity_subject_product": "shopartikel",
@@ -233,5 +232,8 @@
 				"countPlural=*": "{countText} artikelen in je winkelwagen"
 			}
 		}
-	]
+	],
+	"shop_portal_wallet": "SHLTR Wallet · beschikbaar Parts Credit",
+	"shop_portal_wallet_valid": "Geldig t/m {date}",
+	"shop_portal_wallet_programme": "Bekijk programma"
 }

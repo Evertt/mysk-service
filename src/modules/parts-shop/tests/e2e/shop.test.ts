@@ -80,6 +80,13 @@ describe("a partner's contact in the shop", () => {
 		expect(await page.locator("[data-low-stock-banner]").innerText()).toContain(
 			`${low} product${low === 1 ? "" : "s"} with low stock`,
 		);
+		// The wallet heads the shop: what's available, until when, and the way to the programme.
+		const wallet = page.locator("[data-shop-credit]");
+		expect(await wallet.innerText()).toContain("Wallet · parts credit available");
+		expect(await wallet.innerText()).toMatch(/Valid until \d{1,2} \w{3} \d{4}/);
+		expect(
+			await wallet.getByRole("link", { name: "View the programme" }).getAttribute("href"),
+		).toBe("/partner-programme/portal");
 		// On request: no price, not to add.
 		expect(await card("SD-007").innerText()).toContain("Price on request");
 		expect(await card("SD-007").getByRole("button", { name: "On request" }).isDisabled()).toBe(

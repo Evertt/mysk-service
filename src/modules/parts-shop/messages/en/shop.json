@@ -5,7 +5,6 @@
 	"shop_portal_label": "Parts shop",
 	"shop_portal_title": "Parts shop",
 	"shop_portal_description": "Order replacement parts for sectional doors and levellers.",
-	"shop_portal_credit": "Parts credit available: {available}",
 	"shop_action_placed": "placed",
 	"shop_activity_subject_order": "shop order",
 	"shop_activity_subject_product": "shop product",
@@ -233,5 +232,8 @@
 				"countPlural=*": "{countText} items in your cart"
 			}
 		}
-	]
+	],
+	"shop_portal_wallet": "Wallet · parts credit available",
+	"shop_portal_wallet_valid": "Valid until {date}",
+	"shop_portal_wallet_programme": "View the programme"
 }

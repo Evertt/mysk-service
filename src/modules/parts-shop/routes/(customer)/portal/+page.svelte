@@ -9,11 +9,14 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 	import { untrack } from "svelte";
 
-	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
+	import Callout from "#lib/components/callout.svelte";
+	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import Checkout from "#modules/parts-shop/client/checkout.svelte";
 	import { getClientShop } from "#modules/parts-shop/client/client-shop.remote.ts";
 	import ProductCard from "#modules/parts-shop/client/product-card.svelte";
@@ -93,21 +96,33 @@
 	</Button>
 </div>
 
+<!-- The partner's wallet, as the SHLTR mockup heads its shop: what's available, until when, and the
+	way to the programme. -->
 {#if shop.partner}
-	<p class="text-sm" data-shop-credit>
-		{m.shop_portal_credit({ available: formatCents(shop.available) })}
-	</p>
+	<Callout icon={WalletCardsIcon} iconTile data-shop-credit>
+		<span class="text-xs font-medium text-primary">{m.shop_portal_wallet()}</span>
+		<span class="text-xl font-semibold tabular-nums">{formatCents(shop.available)}</span>
+		{#snippet actions()}
+			{#if shop.validUntil}
+				<span class="text-xs text-muted-foreground">
+					{m.shop_portal_wallet_valid({ date: formatDate(shop.validUntil) })}
+				</span>
+			{/if}
+			<a
+				href={resolve("/(customer)/(modules)/partner-programme/portal")}
+				class="inline-flex items-center gap-1 text-xs font-semibold text-primary underline-offset-4 hover:underline"
+			>
+				{m.shop_portal_wallet_programme()}
+				<ArrowRightIcon class="size-3.5" />
+			</a>
+		{/snippet}
+	</Callout>
 {/if}
 
 {#if shop.low}
-	<div
-		class="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
-		role="status"
-		data-low-stock-banner
-	>
-		<TriangleAlertIcon class="mt-0.5 size-4 shrink-0" />
+	<Callout tone="warning" icon={TriangleAlertIcon} role="status" data-low-stock-banner>
 		{m.shop_low_banner({ count: shop.low })}
-	</div>
+	</Callout>
 {/if}
 
 <!-- On a wide screen the cart is beside the catalogue, and stays in view while scrolling it. -->

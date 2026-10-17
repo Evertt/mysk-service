@@ -18,10 +18,14 @@ import { catalogue, lowCount, withCheckpoints } from "../server/catalogue.ts";
 import { placeShopOrder, shopOrderDetail, shopOrderRows } from "../server/orders.ts";
 import { shopOrder } from "../server/schema.ts";
 
-/** The credit the contact's customer can spend today: none if it isn't a partner. */
+/**
+ * The credit the contact's customer can spend today, and until when the first of it is valid: none
+ * if it isn't a partner.
+ */
 async function creditOf(customerId: number) {
-	if (!(await isPartner(customerId))) return { partner: false, available: 0 };
-	return { partner: true, available: (await walletToday(customerId)).available };
+	if (!(await isPartner(customerId))) return { partner: false, available: 0, validUntil: null };
+	const { available, validUntil } = await walletToday(customerId);
+	return { partner: true, available, validUntil };
 }
 
 /**
