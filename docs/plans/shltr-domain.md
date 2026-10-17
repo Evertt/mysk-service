@@ -1388,3 +1388,21 @@ No portal yet: the office can show customers their status.
 
 Both depend on integrations the client must name (questions 16 and 17), so they're last even though they demo
 well.
+
+## 7. What's built (on `develop`)
+
+As of 2026-10-17, unreleased (`main` has none of it):
+
+| Phase | What                                                                                                                                                                                                                                                                                                      | Where               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| 0     | Customer sites with preferences and access notes; equipment name, site and location; the tenant's own equipment categories; order types breakdown, survey, damage, project, other; the schedule's month and day views; the Lagoon theme as default; a SHLTR demo organization                             | core, `schedule`    |
+| 1     | Orders with one or more units; locations as records with QR codes and label sheets; checklist templates (the mockup's five for SHLTR) and checklists per unit on inspection and maintenance orders, filled in on the engineer portal, signed by engineer and customer, with each unit's inspection status | core, `checklists`  |
+| 2     | SHLTR Connect: each unit's condition and status (Kritiek, Aandacht, Gepland, In orde), the Connect page, the service history per customer                                                                                                                                                                 | `condition`         |
+| 3     | The partner programme, office side: tiers and revenue rules per year, figures from paid invoices, order classification, year close and the cash-or-credit choice, the wallet ledger                                                                                                                       | `partner-programme` |
+| 4a    | The customer portal: contacts per customer (and sites), breakdown reports (also by QR code), their orders, work orders and units; the planner's acceptance of portal orders                                                                                                                               | core                |
+| 5a    | Salvo Docks: docks per site, an event feed with integration tokens, the live board, the 40/60-minute rules, a simulator                                                                                                                                                                                   | `docks`             |
+| 5b    | Energy: sites, zones, consumers, monitored doors, 15-minute readings through the feed, alerts that become orders, the report, the office's setup pages, a portal page, a simulator                                                                                                                        | `energy`            |
+
+Not built yet: the parts shop and the partner programme's portal pages (phase 4b, design in
+`parts-shop.md`); the real Salvo and P1 integrations; an import from My24Service; renaming or hiding
+order types per tenant; credit notes (for the cash bonus).
