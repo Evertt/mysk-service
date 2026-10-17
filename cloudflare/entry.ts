@@ -142,7 +142,14 @@ export default {
 		if (new URL(request.url).pathname === "/_ops/import") {
 			if (request.method !== "POST") return new Response(null, { status: 405 });
 			if (!authorized(request, env.OPS_TOKEN)) return new Response(null, { status: 403 });
-			return Response.json(await app.import(await request.json()));
+			try {
+				return Response.json(await app.import(await request.json()));
+			} catch (error) {
+				// Its reason in the answer, for whoever imports (CI prints it), not Cloudflare's bare 1101.
+				return new Response(error instanceof Error ? error.message : String(error), {
+					status: 500,
+				});
+			}
 		}
 		return app.fetch(request);
 	},

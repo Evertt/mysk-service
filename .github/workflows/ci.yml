@@ -131,12 +131,14 @@ jobs:
           sed -i -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\"|" .env
           vp run db:reset
           node cloudflare/export-database.ts file:local.db > export.json
-          for attempt in 1 2 3 4 5 6; do
+          # Right after a deploy the object may still run the last version for a while (which
+          # refuses the new schema's tables): try for up to two minutes.
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             status=$(curl -s -o response.json -w '%{http_code}' -X POST \
               https://fieldworks-staging.devign.workers.dev/_ops/import \
               -H "Authorization: Bearer $OPS_TOKEN" -H "Content-Type: application/json" \
               --data-binary @export.json)
             if [ "$status" = "200" ]; then cat response.json; exit 0; fi
-            echo "Import answered $status, trying again"; sleep 10
+            echo "Import answered $status ($(head -c 300 response.json)), trying again"; sleep 10
           done
           cat response.json; exit 1
