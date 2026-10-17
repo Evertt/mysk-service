@@ -4,7 +4,8 @@
  * goes into the wallet as an award, valid until the year's date; cash is the amount to pay out,
  * recorded on the year, which the office pays out as a standalone credit note of the invoicing
  * module's (`payBonusByCreditNote()`, through its `api/credit-notes.server.ts`), or outside the app.
- * The office makes the choice for now; a customer portal will call `chooseBonus()` the same way.
+ * A manager makes the choice in the office, or the partner itself in the customer portal, both
+ * through `chooseBonus()`.
  */
 import { error, invalid } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -222,8 +223,8 @@ export async function payBonusByCreditNote(customerId: number, year: number) {
 /**
  * Records the partner's choice for a closed year, once and for good: credit goes into its wallet
  * (an award valid until the year's date), cash is recorded as the amount to pay out. Refused for a
- * year that isn't closed, that was chosen for already, or that has no bonus. The seam for the
- * customer portal, which will let the partner choose itself.
+ * year that isn't closed, that was chosen for already, or that has no bonus. The office's card and
+ * the customer portal (the partner's own choice) both call it.
  */
 export async function chooseBonus(customerId: number, year: number, choice: BonusForm) {
 	await db.transaction(async (tx) => {

@@ -28,6 +28,7 @@
 			"./src/modules/maintenance/messages/{locale}/maintenance.json",
 			"./src/modules/materials/messages/{locale}/materials.json",
 			"./src/modules/partner-programme/messages/{locale}/partners.json",
+			"./src/modules/parts-shop/messages/{locale}/shop.json",
 			"./src/modules/schedule/messages/{locale}/schedule.json"
 		]
 	},

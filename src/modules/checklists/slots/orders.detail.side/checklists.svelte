@@ -10,8 +10,10 @@
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
 	import { unitTitle } from "#lib/equipment/index.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 
+	import { orderRejected } from "../../api/extensions.ts";
 	import { getOrderChecklists } from "../../checklists.remote.ts";
 	import ChecklistPoints from "../../detail/checklist-points.svelte";
 	import { checklistLabels } from "../../labels.ts";
@@ -21,6 +23,22 @@
 	let { number }: { number: string } = $props();
 
 	const data = $derived(await getOrderChecklists(number));
+	/** The checklists' rejected points, for the modules that suggest what they need. */
+	const rejected = $derived(
+		data.checklists.flatMap((checklist) =>
+			checklist.results.flatMap((point) =>
+				point.result === "nok" && point.templateItemId !== null
+					? [
+							{
+								templateItemId: point.templateItemId,
+								text: point.text,
+								unit: unitTitle(checklist.unit),
+							},
+						]
+					: [],
+			),
+		),
+	);
 </script>
 
 {#if data.checklists.length}
@@ -83,4 +101,7 @@
 			{/each}
 		</Card.Content>
 	</Card.Root>
+	{#if rejected.length}
+		<ExtensionSlot point={orderRejected} props={{ number, rejected }} />
+	{/if}
 {/if}

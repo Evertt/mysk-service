@@ -35,7 +35,7 @@ export default defineSeed<MaterialsSeed>({
 		// SHLTR has its parts shop's instead (`./seed/shltr.ts`).
 		afterEquipment({ faker, modules, profile }) {
 			const materials = profile === "shltr" ? generateShltrParts(faker) : generateMaterials(faker);
-			modules.materials = { materials, orderLines: [] };
+			modules.materials = { materials, orderLines: [], movements: [] };
 		},
 		// And the lines right after the orders.
 		afterOrders({ faker, modules, orders, profile, equipments }) {

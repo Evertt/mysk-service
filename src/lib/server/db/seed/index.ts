@@ -71,10 +71,10 @@ const fieldworksTenant =
 
 /**
  * The modules only SHLTR has: what its business needs and a field-service company's doesn't
- * (Salvo's dock time management, the energy module's meters and doors), so North and South are the
- * tenants without them.
+ * (Salvo's dock time management, the energy module's meters and doors, the parts shop for its
+ * partners), so North and South are the tenants without them.
  */
-const shltrOnly: readonly string[] = ["docks", "energy"];
+const shltrOnly: readonly string[] = ["docks", "energy", "parts-shop"];
 
 /**
  * The demo organizations. North has all the modules (also the ones added later in

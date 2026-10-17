@@ -14,8 +14,9 @@ export default defineModule({
 	icon: ClipboardCheckIcon,
 	subjects: checklistSubjects,
 	actions: checklistActions,
-	// Tells the condition module a unit's inspection status and its completed checklists.
-	enhances: ["condition"],
+	// Tells the condition module a unit's inspection status and its completed checklists, and the
+	// parts shop the points its products fix.
+	enhances: ["condition", "parts-shop"],
 	nav: { after: "equipment" },
 	// Inspection and maintenance orders get a checklist per unit.
 	orderTypes: ["inspection", "maintenance"],

@@ -5,6 +5,7 @@ import {
 	bonusShare,
 	completeCategories,
 	countsForLevel,
+	creditTaken,
 	creditValidUntil,
 	defaultCategoryRules,
 	defaultTiers,
@@ -13,6 +14,7 @@ import {
 	lineCategory,
 	type ProgrammeRules,
 	type RevenueLine,
+	type WalletEntry,
 	walletSummary,
 	yearFigures,
 } from "#modules/partner-programme/model.ts";
@@ -237,5 +239,64 @@ describe("the wallet", () => {
 
 	test("never shows a balance below zero", () => {
 		expect(walletSummary([spend(10)], day("2026-01-01")).balance).toBe(0);
+	});
+});
+
+describe("the wallet's replay", () => {
+	const entries: WalletEntry[] = [
+		{ id: 1, kind: "award", amount: euros(1_000), validUntil: day("2026-12-31"), bonusYearId: 11 },
+		{ id: 2, kind: "award", amount: euros(500), validUntil: day("2025-12-31"), bonusYearId: 10 },
+		{ id: 3, kind: "spend", amount: -euros(700), validUntil: null, on: day("2025-06-01") },
+	];
+	/** A reversal of each piece the entry `id` took, as cancelling a shop order writes them. */
+	const reversalsOf = (ledger: WalletEntry[], id: number): WalletEntry[] =>
+		creditTaken(ledger, id).map((piece) => ({ kind: "reversal", ...piece }));
+
+	test("says which credit a spend took, the credit that expires first first", () => {
+		expect(creditTaken(entries, 3)).toEqual([
+			{ amount: euros(500), validUntil: day("2025-12-31"), bonusYearId: 10 },
+			{ amount: euros(200), validUntil: day("2026-12-31"), bonusYearId: 11 },
+		]);
+		expect(creditTaken(entries, 1)).toEqual([]);
+		expect(creditTaken(entries, 99)).toEqual([]);
+	});
+
+	test("gives a spend back piece by piece, as if it hadn't been spent", () => {
+		const after = [...entries, ...reversalsOf(entries, 3)];
+		expect(walletSummary(after, day("2025-06-02"))).toEqual(
+			walletSummary(entries.slice(0, 2), day("2025-06-02")),
+		);
+		expect(walletSummary(after, day("2025-06-02"))).toMatchObject({
+			awarded: euros(1_500),
+			spent: 0,
+			available: euros(1_500),
+		});
+	});
+
+	test("gives credit back expired that has expired since, for the job to expire again", () => {
+		// Spent in June 2025, all of the credit valid until its end; cancelled in February 2026.
+		const after = [...entries, ...reversalsOf(entries, 3)];
+		const summary = walletSummary(after, day("2026-02-01"));
+		expect(summary.available).toBe(euros(1_000));
+		expect(summary.expired).toEqual([
+			{ amount: euros(500), validUntil: day("2025-12-31"), bonusYearId: 10 },
+		]);
+		const expired = [
+			...after,
+			{ kind: "expiry" as const, amount: -euros(500), validUntil: day("2025-12-31") },
+		];
+		expect(walletSummary(expired, day("2026-02-01"))).toMatchObject({
+			balance: euros(1_000),
+			available: euros(1_000),
+			expired: [],
+		});
+	});
+
+	test("keeps credit given back beyond what was taken as credit of its own", () => {
+		const after: WalletEntry[] = [
+			...entries,
+			{ kind: "reversal", amount: euros(800), validUntil: day("2026-12-31"), bonusYearId: 11 },
+		];
+		expect(walletSummary(after, day("2025-06-02")).available).toBe(euros(1_600));
 	});
 });

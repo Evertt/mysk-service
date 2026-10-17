@@ -40,9 +40,17 @@ async function walletEntries(customerIds: readonly number[], tx: Transaction | t
 	return byCustomer;
 }
 
+/** A partner's wallet entries, in the order they were made. */
+export const ledgerOf = async (customerId: number, tx: Transaction | typeof db = db) =>
+	(await walletEntries([customerId], tx)).get(customerId)!;
+
 /** A partner's wallet on `today`: what it holds, and its latest entries (newest first). */
-export async function walletOf(customerId: number, today: Temporal.PlainDate) {
-	const entries = (await walletEntries([customerId])).get(customerId)!;
+export async function walletOf(
+	customerId: number,
+	today: Temporal.PlainDate,
+	tx: Transaction | typeof db = db,
+) {
+	const entries = (await walletEntries([customerId], tx)).get(customerId)!;
 	return { ...walletSummary(entries, today), entries: entries.toReversed().slice(0, 12) };
 }
 

@@ -80,6 +80,8 @@ export const users = {
 	weggemans: demoUsers[7].email,
 	/** The contact of North's first customer, in North's customer portal. */
 	northCustomer: demoUsers[8].email,
+	/** Pakhuis 7's contact, in SHLTR's customer portal: its last bonus year waits for its choice. */
+	pakhuis: demoUsers[9].email,
 };
 
 /** The demo users' names, as the app shows them (e.g. in the activity log). */

@@ -162,6 +162,13 @@
       "when": 1792232704607,
       "tag": "0022_add-credit-notes",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792233861057,
+      "tag": "0023_add-parts-shop",
+      "breakpoints": true
     }
   ]
 }

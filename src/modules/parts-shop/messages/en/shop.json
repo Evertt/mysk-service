@@ -1,0 +1,237 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"shop_module_name": "Parts shop",
+	"shop_module_description": "Partners order replacement parts in the customer portal and pay with their parts credit.",
+	"shop_portal_label": "Parts shop",
+	"shop_portal_title": "Parts shop",
+	"shop_portal_description": "Order replacement parts for sectional doors and levellers.",
+	"shop_portal_credit": "Parts credit available: {available}",
+	"shop_action_placed": "placed",
+	"shop_activity_subject_order": "shop order",
+	"shop_activity_subject_product": "shop product",
+	"shop_activity_subject_category": "shop category",
+	"shop_unit_set": "per set",
+	"shop_unit_piece": "per piece",
+	"shop_unit_pair": "per pair",
+	"shop_stock_in_stock": "In stock",
+	"shop_stock_low": "Low stock",
+	"shop_stock_on_request": "On request",
+	"shop_status_placed": "Placed",
+	"shop_status_confirmed": "Confirmed",
+	"shop_status_shipped": "Shipped",
+	"shop_status_delivered": "Delivered",
+	"shop_status_cancelled": "Cancelled",
+	"shop_step_confirm": "Confirm",
+	"shop_step_ship": "Ship",
+	"shop_step_deliver": "Mark delivered",
+	"shop_step_cancel": "Cancel order",
+	"shop_step_done": "{number}: {status}",
+	"shop_step_refused": "{number} can't take that step now.",
+	"shop_yes": "Yes",
+	"shop_no": "No",
+	"shop_field_status": "Status",
+	"shop_field_total": "Total",
+	"shop_field_name": "Name",
+	"shop_field_category": "Category",
+	"shop_field_description": "Description",
+	"shop_field_unit": "Sold",
+	"shop_field_popular": "Popular",
+	"shop_field_credit_eligible": "Payable with parts credit",
+	"shop_field_credit_eligible_description": "One of the products the parts credit may be spent on.",
+	"shop_field_on_request": "On request",
+	"shop_field_on_request_description": "Shown, but not to order in the shop: the price is on request.",
+	"shop_field_in_shop": "In the shop",
+	"shop_field_checkpoints": "Checklist points",
+	"shop_field_checkpoints_description": "A rejected point suggests this part.",
+	"shop_field_placed_by": "Placed by",
+	"shop_field_payment": "Paid with",
+	"shop_field_credit_paid": "Parts credit",
+	"shop_field_vat": "VAT",
+	"shop_payment_parts_credit": "Parts credit",
+	"shop_category_required": "Choose a category",
+	"shop_category_name_required": "Name the category",
+	"shop_category_taken": "There's a category {name} already.",
+	"shop_category_in_use": "{name} still has products: move them first.",
+	"shop_category_not_found": "Category not found",
+	"shop_category_choose": "Choose a category",
+	"shop_category_new": "New category",
+	"shop_category_add": "Add",
+	"shop_category_added": "Category added",
+	"shop_category_saved": "Category saved",
+	"shop_categories_title": "Shop categories",
+	"shop_categories_description": "The catalogue's categories, in the order the portal shows them.",
+	"shop_categories_none": "No categories yet",
+	"shop_categories_none_description": "A product goes in a category: owners and admins add them first.",
+	"shop_categories_managers": "Only owners and admins change the categories.",
+	"shop_categories_all": "All",
+	"shop_material_not_found": "Material not found",
+	"shop_product_not_found": "Product not found",
+	"shop_product_title": "{sku} · {name}",
+	"shop_product_description": "How it's offered in the customer portal's shop. Its price and stock are the material's.",
+	"shop_product_saved": "{sku} saved",
+	"shop_products_title": "Shop products",
+	"shop_add_to_shop": "Add to shop",
+	"shop_not_in_shop": "Not in the shop",
+	"shop_credit_eligible": "Parts credit",
+	"shop_popular": "Popular",
+	"shop_column_sku": "SKU",
+	"shop_column_product": "Product",
+	"shop_column_price": "Price",
+	"shop_column_stock": "Stock",
+	"shop_column_shop": "In the shop",
+	"shop_column_number": "Order",
+	"shop_column_customer": "Customer",
+	"shop_column_placed": "Placed",
+	"shop_column_quantity": "Quantity",
+	"shop_column_amount": "Amount",
+	"shop_orders_title": "Shop orders",
+	"shop_orders_description": "Partners' orders from the parts shop, paid with their parts credit.",
+	"shop_orders_view": "Which orders",
+	"shop_orders_open": "Open",
+	"shop_orders_all": "All",
+	"shop_orders_none_open": "No open orders",
+	"shop_orders_none": "No orders yet",
+	"shop_orders_none_description": "Partners order in the customer portal.",
+	"shop_order_description": "Ordered by {customer}",
+	"shop_order_lines": "Products",
+	"shop_order_details": "Order",
+	"shop_order_not_found": "Order {number} not found",
+	"shop_prices_excl_vat": "Prices excluding VAT, as ordered.",
+	"shop_total_excl_vat": "Total excl. VAT",
+	"shop_cancel_title": "Cancel {number}?",
+	"shop_cancel_description": "{total} of parts credit goes back into the partner's wallet (credit that has expired since stays expired), and the parts go back into stock.",
+	"shop_cancel_confirm": "Cancel order",
+	"shop_cancelled": "{number} cancelled",
+	"shop_dashboard_open": "Open shop orders",
+	"shop_spend_note": "Order {number}",
+	"shop_reversal_note": "Order {number} cancelled",
+	"shop_spend_credit": "Spend parts credit",
+	"shop_search": "Search by name or article number…",
+	"shop_checkpoints": "Checklist points",
+	"shop_price_on_request": "Price on request",
+	"shop_excl_vat": "excl. VAT",
+	"shop_price_excl_vat": "{price} excl. VAT",
+	"shop_not_eligible": "Not with parts credit",
+	"shop_cart_add": "Add",
+	"shop_cart_less": "One {name} less",
+	"shop_cart_more": "One {name} more",
+	"shop_cart_remove": "Remove {name}",
+	"shop_cart_remove_short": "Remove",
+	"shop_cart_empty": "Your cart is empty.",
+	"shop_catalogue_empty": "Nothing found",
+	"shop_catalogue_empty_description": "Try another name or article number.",
+	"shop_checkout_title": "Check out with parts credit",
+	"shop_checkout_description": "Only parts credit is accepted: no mixed payment, no invoice.",
+	"shop_checkout_available": "Available balance",
+	"shop_checkout_order": "Order",
+	"shop_checkout_after": "Balance after the order",
+	"shop_checkout_vat": "Prices excluding VAT; no VAT is charged on an order paid with parts credit.",
+	"shop_checkout_short": "Your available parts credit isn't enough for this order.",
+	"shop_checkout_not_partner": "Only partners pay with parts credit: your company isn't in the partner programme.",
+	"shop_checkout_pay": "Pay with parts credit",
+	"shop_checkout_empty": "Your cart is empty.",
+	"shop_checkout_unknown": "A product in your cart isn't in the shop.",
+	"shop_checkout_quantity": "Order {name} from 1 to 99 at a time.",
+	"shop_checkout_on_request": "{name} is on request: ask us for it.",
+	"shop_checkout_not_eligible": "{name} can't be paid with parts credit.",
+	"shop_checkout_stock": "Only {stock} of {name} in stock.",
+	"shop_checkout_balance": "The order comes to {total}, but only {available} of parts credit is available.",
+	"shop_placed_title": "Order {number} is placed",
+	"shop_placed_credit": "{total} of parts credit reserved",
+	"shop_client_orders_title": "Your shop orders",
+	"shop_client_orders_none": "No orders yet",
+	"shop_client_orders_none_description": "What you order in the shop shows here.",
+	"shop_client_order_placed": "Placed {date} by {name}",
+	"shop_someone": "someone",
+	"shop_paid_with_credit": "Paid with parts credit",
+	"shop_suggested_title": "Part needed",
+	"shop_suggested_description": "The parts that fix the checklists' rejected points.",
+	"shop_client_suggested_description": "The parts that fix the rejected points, from our shop.",
+	"shop_suggested_add": "Add to order",
+	"shop_suggested_added": "{name} added to {number}",
+	"shop_order_in_shop": "Order in the shop",
+	"shop_products_description": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} material in the customer portal's shop. Its price and stock are the material's.",
+				"countPlural=*": "{countText} materials in the customer portal's shop. Their price and stock are the materials'."
+			}
+		}
+	],
+	"shop_checkpoint_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} point",
+				"countPlural=*": "{countText} points"
+			}
+		}
+	],
+	"shop_category_products": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} product",
+				"countPlural=*": "{countText} products"
+			}
+		}
+	],
+	"shop_dashboard_to_confirm": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} to confirm",
+				"countPlural=*": "{countText} to confirm"
+			}
+		}
+	],
+	"shop_low_banner": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} product with low stock: order in time to avoid delays.",
+				"countPlural=*": "{countText} products with low stock: order in time to avoid delays."
+			}
+		}
+	],
+	"shop_cart_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} item in your cart",
+				"countPlural=*": "{countText} items in your cart"
+			}
+		}
+	]
+}

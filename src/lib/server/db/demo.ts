@@ -131,4 +131,11 @@ export const demoUsers: DemoUser[] = [
 		memberships: [{ organizationId: "org-north", role: "customer" }],
 		customerIn: { organizationId: "org-north" },
 	},
+	{
+		// Pakhuis 7's contact, whose company's last bonus year waits for its choice in the portal.
+		name: "Sanne Bakker",
+		email: "inkoop@pakhuis7.example",
+		memberships: [{ organizationId: "org-shltr", role: "customer" }],
+		customerIn: { organizationId: "org-shltr", customer: "Pakhuis 7" },
+	},
 ];

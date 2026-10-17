@@ -51,6 +51,10 @@
 	"materials_needed": "Nodig voor open opdrachten",
 	"materials_needed_taken": "Al uit de voorraad genomen",
 	"materials_usage": "Gebruik",
+	"materials_movement_kind_reservation": "Gereserveerd voor bestelling",
+	"materials_movement_kind_release": "Vrijgegeven van bestelling",
+	"materials_order_not_found": "Opdracht {number} niet gevonden",
+	"materials_order_unchangeable": "De materialen van {number} kunnen nu niet worden gewijzigd.",
 	"materials_usage_description": [
 		{
 			"declarations": [

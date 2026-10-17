@@ -214,7 +214,7 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   is also one of the module's `(app)` routes collides). Its manifest's `portal: { route, label,
 icon }` puts one of them in the portal's navigation, after the portal's own entries, for the
   tenants that have the module: that's where the partner programme's bonus and wallet and a parts
-  shop go. Use remote queries there: a module's server files (`+page.server.ts`, endpoints) are
+  shop are (`/partner-programme/portal`, `/parts-shop/portal`). Use remote queries there: a module's server files (`+page.server.ts`, endpoints) are
   guarded by `requireModule()`, which refuses customers' contacts.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
   them like core does: contracts declares `contracts.detail.side` (props
@@ -282,7 +282,7 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Checklists, condition, contracts, docks, energy, invoices, maintenance, materials, the partner programme and the schedule are the modules
+Checklists, condition, contracts, docks, energy, invoices, maintenance, materials, the partner programme, the parts shop and the schedule are the modules
 (`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/docks/`, `src/modules/energy/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
@@ -346,8 +346,20 @@ there's no archive). A new zone has no thresholds until a manager sets them or i
 readings gives it §2.5's defaults, as a nominal zone, in the batch's transaction
 (`firstDayThreshold()` in `model.ts`, `server/thresholds.ts`). Docks enhances energy: its
 `slots/energy.door/` shows the dock whose door the door's unit is (state, Wheel-Lok, plate, live
-through `watchDocks`), linking to the board. Only SHLTR has docks and energy in the demo
-(`shltrOnly` in the seed).
+through `watchDocks`), linking to the board. Only SHLTR has docks, energy and the parts shop in
+the demo (`shltrOnly` in the seed).
+The parts shop (`src/modules/parts-shop/`, SHLTR's Onderdelen Shop) requires materials and the
+partner programme and enhances checklists (which enhances it back): look there for a module that
+writes another's records only through the services in its `api/` (the programme's
+`api/wallet.server.ts`: `spendCredit()` and `giveBackCredit()`; materials' `api/stock.server.ts`:
+`reserveStock()` and `releaseStock()`, and `api/lines.server.ts`: `addOrderLine()`), all in one
+transaction with its own order (`server/orders.ts`), refers to their tables from its own through
+their `api/tables.server.ts` (free of SvelteKit, for the seed), owns a collector another module
+answers (`parts-shop.checkpoints`, the checklist points its products fix, by id without a key),
+fills slots of a module it requires and of one it enhances (`partner-programme.client.wallet`,
+`checklists.order.rejected`, `checklists.client.rejected`), has pages in both the office and the
+customer portal, and seeds data that changes another module's draft (the programme's spends that
+are its orders, `orderSpends`, and the materials' reservations, `movements`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

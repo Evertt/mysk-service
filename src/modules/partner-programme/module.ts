@@ -16,4 +16,10 @@ export default defineModule({
 	actions: partnerActions,
 	// Its figures are the partners' paid invoices.
 	requires: ["invoices"],
+	// A partner's own bonus, wallet and choice, in the customer portal.
+	portal: {
+		route: "/(customer)/(modules)/partner-programme/portal",
+		label: m.partners_portal_label,
+		icon: AwardIcon,
+	},
 });

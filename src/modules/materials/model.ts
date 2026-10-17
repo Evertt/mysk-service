@@ -62,7 +62,9 @@ export const holdsStock = (status: OrderStatus) =>
 
 /**
  * Why a material's stock changed: its opening balance, a delivery, a count that found a different
- * amount, or an order line taking it (consumption) or giving it back (return).
+ * amount, an order line taking it (consumption) or giving it back (return), or another module
+ * setting it aside for an order of its own (reservation, e.g. a parts shop's order) and letting it
+ * go again (release, when that's cancelled).
  */
 export const stockMovementKinds = [
 	"opening_balance",
@@ -70,6 +72,8 @@ export const stockMovementKinds = [
 	"adjustment",
 	"consumption",
 	"return",
+	"reservation",
+	"release",
 ] as const;
 export type StockMovementKind = (typeof stockMovementKinds)[number];
 

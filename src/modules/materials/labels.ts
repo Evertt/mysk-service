@@ -27,5 +27,7 @@ export const materialLabels = defineLabels({
 		adjustment: m.materials_movement_kind_adjustment,
 		consumption: m.materials_movement_kind_consumption,
 		return: m.materials_movement_kind_return,
+		reservation: m.materials_movement_kind_reservation,
+		release: m.materials_movement_kind_release,
 	} satisfies Labels<StockMovementKind>,
 });

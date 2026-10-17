@@ -52,9 +52,16 @@ export function generateStockMovements(
 			createdAt: random.date.between({ from: addDays(now, -120), to: addDays(now, -1) }),
 		}));
 
+	// What the modules that require materials set aside (the parts shop's orders), as they made it.
+	const others = data.movements.map((movement) => ({
+		...movement,
+		orderId: null,
+		orderNumber: null,
+	}));
+
 	const opening = data.materials
 		.map((m) => {
-			const change = [...consumption, ...receipts]
+			const change = [...consumption, ...receipts, ...others]
 				.filter((movement) => movement.materialId === m.id)
 				.reduce((sum, movement) => sum + movement.quantity, 0);
 			return {
@@ -69,7 +76,7 @@ export function generateStockMovements(
 		})
 		.filter((movement) => movement.quantity !== 0);
 
-	return [...opening, ...consumption, ...receipts].toSorted(
+	return [...opening, ...consumption, ...receipts, ...others].toSorted(
 		(a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
 	);
 }

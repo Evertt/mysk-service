@@ -1,12 +1,14 @@
 /**
  * The partner programme's demo data. SHLTR (`docs/plans/shltr-domain.md`, §2.9): its eight levels
  * for last year and this one, a dozen partners, classifications on their projects, and last year
- * closed with the choices made (one still waiting), as SHLTR's administration closed it (frozen
+ * closed with the choices made (two still waiting), as SHLTR's administration closed it (frozen
  * figures: the app only invoices from late last year). Riedel B.V. chose credit: € 3.750 in its
- * wallet, € 1.475 of it spent; this year three large projects (completed, invoiced and paid, for
- * the level only) take it to about PLATINUM, the plan's worked example. Weggemans Logistiek chose
- * cash, paid out as a credit note of the invoicing module's (`seedCreditNote()`, settled since
- * where two weeks have passed); the others who chose cash were paid outside the app. Vermeer Logistiek still has
+ * wallet, € 1.475 of it spent (with the parts shop on, its two orders); this year three large
+ * projects (completed, invoiced and paid, for the level only) take it to about PLATINUM, the plan's
+ * worked example. Weggemans Logistiek chose cash, paid out as a credit note of the invoicing
+ * module's (`seedCreditNote()`, settled since where two weeks have passed); the others who chose
+ * cash were paid outside the app. Pakhuis 7 still has to choose: its contact chooses in the
+ * customer portal. Vermeer Logistiek still has
  * credit of the year before last, past its date: the daily job expires it. North has a simple
  * programme (three levels) with six partners and last year still to close; South doesn't have the
  * module. With a faker of its own: the projects it adds to SHLTR's orders are fixed, so the rest of
@@ -20,6 +22,7 @@ import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 import { seedCreditNote } from "#modules/invoices/api/seed.ts";
 
+import type { PartnersDraft, SeedSpend } from "../api/seed.ts";
 import {
 	bonusLineSource,
 	creditValidUntil,
@@ -63,8 +66,8 @@ interface SeedPartner {
 	closed?: { revenue: number; bonusRevenue: number; choice: "cash" | "credit" | null };
 	/** Credit of the year before last, and what was spent of it (cents). */
 	older?: { credit: number; spent: number };
-	/** What was spent of last year's credit, with what for. */
-	spends?: { amount: number; note: string; on: Date }[];
+	/** What was spent of last year's credit, with what for (and the shop order it paid, if one). */
+	spends?: SeedSpend[];
 	/** Last year's cash bonus was paid out as a credit note (the invoicing module's), refunded since. */
 	creditNote?: boolean;
 }
@@ -159,12 +162,14 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 			spends: [
 				{
 					amount: 100_000,
-					note: "Veerset en kabels SD-005 (bestelling SH-2026-007)",
+					note: `Veerpakketten en scharnierbanden (bestelling SH-${thisYear}-007)`,
+					order: `SH-${thisYear}-007`,
 					on: dayOf(thisYear, 4, 9),
 				},
 				{
 					amount: 47_500,
-					note: "Filterset airco kantoor Ede (bestelling SH-2026-011)",
+					note: `Veerpakket, lipscharnier en rolscharnieren (bestelling SH-${thisYear}-011)`,
+					order: `SH-${thisYear}-011`,
 					on: dayOf(thisYear, 8, 21),
 				},
 			],
@@ -191,7 +196,7 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 		partners.push({
 			customerId: pakhuis,
 			acceptedOn: new Date(lastYear, 1, 20),
-			// Closed, the choice still to make.
+			// Closed, the choice still to make: its contact makes it in the customer portal.
 			closed: { revenue: 6_410_000, bonusRevenue: 5_250_000, choice: null },
 		});
 	}
@@ -275,6 +280,16 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 			});
 		}
 	}
+	// The spends that are the parts shop's orders (the objects themselves: its seed sets their
+	// amounts and notes, with the shop on).
+	const shop: PartnersDraft = {
+		orderSpends: partners.flatMap((partner) =>
+			(partner.spends ?? []).flatMap((spend) =>
+				spend.order ? [{ customerId: partner.customerId, spend }] : [],
+			),
+		),
+	};
+	draft.modules["partner-programme"] = shop;
 	return { tiers: defaultTiers, partners, classifications };
 }
 

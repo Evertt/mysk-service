@@ -1,0 +1,237 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"shop_module_name": "Onderdelen Shop",
+	"shop_module_description": "Partners bestellen vervangingsonderdelen in het klantportaal en betalen met hun Parts Credit.",
+	"shop_portal_label": "Onderdelen Shop",
+	"shop_portal_title": "Onderdelen Shop",
+	"shop_portal_description": "Bestel vervangingsonderdelen voor sectionaaldeuren en levellers.",
+	"shop_portal_credit": "Beschikbare Parts Credit: {available}",
+	"shop_action_placed": "plaatste",
+	"shop_activity_subject_order": "shopbestelling",
+	"shop_activity_subject_product": "shopartikel",
+	"shop_activity_subject_category": "shopcategorie",
+	"shop_unit_set": "per set",
+	"shop_unit_piece": "per stuk",
+	"shop_unit_pair": "per paar",
+	"shop_stock_in_stock": "Op voorraad",
+	"shop_stock_low": "Laag voorraad",
+	"shop_stock_on_request": "Op aanvraag",
+	"shop_status_placed": "Geplaatst",
+	"shop_status_confirmed": "Bevestigd",
+	"shop_status_shipped": "Verzonden",
+	"shop_status_delivered": "Geleverd",
+	"shop_status_cancelled": "Geannuleerd",
+	"shop_step_confirm": "Bevestigen",
+	"shop_step_ship": "Verzenden",
+	"shop_step_deliver": "Geleverd melden",
+	"shop_step_cancel": "Bestelling annuleren",
+	"shop_step_done": "{number}: {status}",
+	"shop_step_refused": "{number} kan die stap nu niet zetten.",
+	"shop_yes": "Ja",
+	"shop_no": "Nee",
+	"shop_field_status": "Status",
+	"shop_field_total": "Totaal",
+	"shop_field_name": "Naam",
+	"shop_field_category": "Categorie",
+	"shop_field_description": "Omschrijving",
+	"shop_field_unit": "Verkocht",
+	"shop_field_popular": "Populair",
+	"shop_field_credit_eligible": "Te betalen met Parts Credit",
+	"shop_field_credit_eligible_description": "Een van de aangewezen producten waaraan Parts Credit besteed mag worden.",
+	"shop_field_on_request": "Op aanvraag",
+	"shop_field_on_request_description": "Zichtbaar, maar niet te bestellen in de shop: prijs op aanvraag.",
+	"shop_field_in_shop": "In de shop",
+	"shop_field_checkpoints": "Checkpoint-punten",
+	"shop_field_checkpoints_description": "Een afgekeurd punt stelt dit onderdeel voor.",
+	"shop_field_placed_by": "Geplaatst door",
+	"shop_field_payment": "Betaald met",
+	"shop_field_credit_paid": "Parts Credit",
+	"shop_field_vat": "Btw",
+	"shop_payment_parts_credit": "Parts Credit",
+	"shop_category_required": "Kies een categorie",
+	"shop_category_name_required": "Geef de categorie een naam",
+	"shop_category_taken": "Er is al een categorie {name}.",
+	"shop_category_in_use": "{name} heeft nog artikelen: verplaats die eerst.",
+	"shop_category_not_found": "Categorie niet gevonden",
+	"shop_category_choose": "Kies een categorie",
+	"shop_category_new": "Nieuwe categorie",
+	"shop_category_add": "Toevoegen",
+	"shop_category_added": "Categorie toegevoegd",
+	"shop_category_saved": "Categorie opgeslagen",
+	"shop_categories_title": "Shopcategorieën",
+	"shop_categories_description": "De categorieën van de catalogus, in de volgorde van het portaal.",
+	"shop_categories_none": "Nog geen categorieën",
+	"shop_categories_none_description": "Een artikel hoort in een categorie: eigenaren en beheerders voegen die eerst toe.",
+	"shop_categories_managers": "Alleen eigenaren en beheerders wijzigen de categorieën.",
+	"shop_categories_all": "Alles",
+	"shop_material_not_found": "Materiaal niet gevonden",
+	"shop_product_not_found": "Artikel niet gevonden",
+	"shop_product_title": "{sku} · {name}",
+	"shop_product_description": "Hoe het in de shop van het klantportaal staat. Prijs en voorraad zijn die van het materiaal.",
+	"shop_product_saved": "{sku} opgeslagen",
+	"shop_products_title": "Shopartikelen",
+	"shop_add_to_shop": "In de shop",
+	"shop_not_in_shop": "Niet in de shop",
+	"shop_credit_eligible": "Parts Credit geschikt",
+	"shop_popular": "Populair",
+	"shop_column_sku": "Artikelnr.",
+	"shop_column_product": "Artikel",
+	"shop_column_price": "Prijs",
+	"shop_column_stock": "Voorraad",
+	"shop_column_shop": "In de shop",
+	"shop_column_number": "Bestelling",
+	"shop_column_customer": "Klant",
+	"shop_column_placed": "Geplaatst",
+	"shop_column_quantity": "Aantal",
+	"shop_column_amount": "Bedrag",
+	"shop_orders_title": "Shopbestellingen",
+	"shop_orders_description": "Bestellingen van partners in de Onderdelen Shop, betaald met hun Parts Credit.",
+	"shop_orders_view": "Welke bestellingen",
+	"shop_orders_open": "Open",
+	"shop_orders_all": "Alle",
+	"shop_orders_none_open": "Geen open bestellingen",
+	"shop_orders_none": "Nog geen bestellingen",
+	"shop_orders_none_description": "Partners bestellen in het klantportaal.",
+	"shop_order_description": "Besteld door {customer}",
+	"shop_order_lines": "Artikelen",
+	"shop_order_details": "Bestelling",
+	"shop_order_not_found": "Bestelling {number} niet gevonden",
+	"shop_prices_excl_vat": "Prijzen excl. btw, zoals besteld.",
+	"shop_total_excl_vat": "Totaal excl. btw",
+	"shop_cancel_title": "{number} annuleren?",
+	"shop_cancel_description": "{total} Parts Credit gaat terug in de wallet van de partner (credit dat inmiddels is verlopen, blijft verlopen), en de onderdelen gaan terug op voorraad.",
+	"shop_cancel_confirm": "Bestelling annuleren",
+	"shop_cancelled": "{number} geannuleerd",
+	"shop_dashboard_open": "Open shopbestellingen",
+	"shop_spend_note": "Bestelling {number}",
+	"shop_reversal_note": "Bestelling {number} geannuleerd",
+	"shop_spend_credit": "Besteed Parts Credit",
+	"shop_search": "Zoek op naam of artikelnummer…",
+	"shop_checkpoints": "Checkpoint-punten",
+	"shop_price_on_request": "Prijs op aanvraag",
+	"shop_excl_vat": "excl. btw",
+	"shop_price_excl_vat": "{price} excl. btw",
+	"shop_not_eligible": "Niet met Parts Credit",
+	"shop_cart_add": "Toevoegen",
+	"shop_cart_less": "Eén {name} minder",
+	"shop_cart_more": "Eén {name} meer",
+	"shop_cart_remove": "{name} verwijderen",
+	"shop_cart_remove_short": "Verwijderen",
+	"shop_cart_empty": "Je winkelwagen is leeg.",
+	"shop_catalogue_empty": "Niets gevonden",
+	"shop_catalogue_empty_description": "Probeer een andere naam of een ander artikelnummer.",
+	"shop_checkout_title": "Afrekenen met Parts Credit",
+	"shop_checkout_description": "Alleen Parts Credit wordt geaccepteerd: geen gemengde betaling, geen factuur.",
+	"shop_checkout_available": "Beschikbaar saldo",
+	"shop_checkout_order": "Bestelling",
+	"shop_checkout_after": "Saldo na bestelling",
+	"shop_checkout_vat": "Prijzen excl. btw; over een bestelling met Parts Credit wordt geen btw berekend.",
+	"shop_checkout_short": "Je beschikbare Parts Credit is onvoldoende voor deze bestelling.",
+	"shop_checkout_not_partner": "Alleen partners betalen met Parts Credit: je bedrijf doet niet mee aan het partnerprogramma.",
+	"shop_checkout_pay": "Betaal met Parts Credit",
+	"shop_checkout_empty": "Je winkelwagen is leeg.",
+	"shop_checkout_unknown": "Een artikel in je winkelwagen staat niet in de shop.",
+	"shop_checkout_quantity": "Bestel {name} per 1 tot 99 tegelijk.",
+	"shop_checkout_on_request": "{name} is op aanvraag: vraag ons ernaar.",
+	"shop_checkout_not_eligible": "{name} is niet met Parts Credit te betalen.",
+	"shop_checkout_stock": "Nog maar {stock} van {name} op voorraad.",
+	"shop_checkout_balance": "De bestelling komt op {total}, maar er is maar {available} Parts Credit beschikbaar.",
+	"shop_placed_title": "Bestelling {number} is geplaatst",
+	"shop_placed_credit": "{total} Parts Credit gereserveerd",
+	"shop_client_orders_title": "Je bestellingen",
+	"shop_client_orders_none": "Nog geen bestellingen",
+	"shop_client_orders_none_description": "Wat je in de shop bestelt, zie je hier.",
+	"shop_client_order_placed": "Geplaatst {date} door {name}",
+	"shop_someone": "iemand",
+	"shop_paid_with_credit": "Betaald met Parts Credit",
+	"shop_suggested_title": "Benodigd onderdeel",
+	"shop_suggested_description": "De onderdelen voor de afgekeurde punten van de checklists.",
+	"shop_client_suggested_description": "De onderdelen voor de afgekeurde punten, uit onze shop.",
+	"shop_suggested_add": "Toevoegen aan opdracht",
+	"shop_suggested_added": "{name} toegevoegd aan {number}",
+	"shop_order_in_shop": "Bestel in de shop",
+	"shop_products_description": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} materiaal in de shop van het klantportaal. Prijs en voorraad zijn die van het materiaal.",
+				"countPlural=*": "{countText} materialen in de shop van het klantportaal. Prijs en voorraad zijn die van de materialen."
+			}
+		}
+	],
+	"shop_checkpoint_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} punt",
+				"countPlural=*": "{countText} punten"
+			}
+		}
+	],
+	"shop_category_products": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} artikel",
+				"countPlural=*": "{countText} artikelen"
+			}
+		}
+	],
+	"shop_dashboard_to_confirm": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} te bevestigen",
+				"countPlural=*": "{countText} te bevestigen"
+			}
+		}
+	],
+	"shop_low_banner": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} artikel met laag voorraad: bestel op tijd om vertraging te voorkomen.",
+				"countPlural=*": "{countText} artikelen met laag voorraad: bestel op tijd om vertraging te voorkomen."
+			}
+		}
+	],
+	"shop_cart_count": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} artikel in je winkelwagen",
+				"countPlural=*": "{countText} artikelen in je winkelwagen"
+			}
+		}
+	]
+}

@@ -322,12 +322,17 @@ export const ruleLimits = {
 
 /** An entry of a partner's wallet, as the ledger has it. */
 export interface WalletEntry {
+	/** The entry's id, to ask what it took (`creditTaken()`). */
+	id?: number;
 	kind: WalletEntryKind;
 	/** Signed, in cents. */
 	amount: number;
-	/** For credit that comes in (an award, a reversal, an adjustment up): its last valid day. */
+	/**
+	 * For credit that comes in (an award, a reversal, an adjustment up): its last valid day. A
+	 * reversal gives back to the credit it was taken from: the one with this date and bonus year.
+	 */
 	validUntil: Temporal.PlainDate | null;
-	/** The closed year an award is for. */
+	/** The closed year an award is for (and a reversal of credit taken from it). */
 	bonusYearId?: number | null;
 	/** The day it was made: what goes out then takes only credit still valid that day. */
 	on?: Temporal.PlainDate | null;
@@ -341,6 +346,16 @@ interface WalletLot {
 	bonusYearId: number | null;
 }
 
+/**
+ * A piece of the credit an amount going out took: how much, of which credit (its last valid day
+ * and the year it was awarded for). Giving it back (`reversal`) gives back each piece as it was.
+ */
+export interface CreditPiece {
+	amount: number;
+	validUntil: Temporal.PlainDate | null;
+	bonusYearId: number | null;
+}
+
 const byExpiry = (a: WalletLot, b: WalletLot) =>
 	a.validUntil && b.validUntil
 		? Temporal.PlainDate.compare(a.validUntil, b.validUntil)
@@ -350,24 +365,47 @@ const byExpiry = (a: WalletLot, b: WalletLot) =>
 				? 1
 				: 0;
 
+const sameDay = (a: Temporal.PlainDate | null, b: Temporal.PlainDate | null) =>
+	a === null || b === null ? a === b : a.equals(b);
+
 /**
- * The credit in a wallet, by what came in (entries in the order they were made): each amount that
- * went out (a spend, an expiry, an adjustment down) is taken from the credit that expires first
- * (of the credit still valid on the day it was made). An expiry takes from the credit past its date.
+ * The wallet's ledger replayed (entries in the order they were made): the credit that came in, and
+ * what each amount that went out (a spend, an expiry, an adjustment down) took of it, by entry id.
+ * What goes out is taken from the credit that expires first (of the credit still valid on the day
+ * it was made); an expiry takes from the credit past its date. A reversal gives back to the credit
+ * it names (its date and bonus year) what was taken of it, so that credit is as it was before: also
+ * past its date, if it's expired meanwhile; what it gives beyond that comes in as credit of its own.
  */
-function walletLots(entries: readonly WalletEntry[]): WalletLot[] {
+function replayWallet(entries: readonly WalletEntry[]) {
 	const lots: WalletLot[] = [];
+	const taken = new Map<number, CreditPiece[]>();
 	for (const entry of entries) {
 		if (entry.amount > 0) {
-			lots.push({
-				amount: entry.amount,
-				remaining: entry.amount,
-				validUntil: entry.validUntil,
-				bonusYearId: entry.bonusYearId ?? null,
-			});
+			let left = entry.amount;
+			if (entry.kind === "reversal") {
+				const bonusYearId = entry.bonusYearId ?? null;
+				for (const lot of lots) {
+					if (lot.bonusYearId !== bonusYearId || !sameDay(lot.validUntil, entry.validUntil)) {
+						continue;
+					}
+					const back = Math.min(lot.amount - lot.remaining, left);
+					lot.remaining += back;
+					left -= back;
+					if (!left) break;
+				}
+			}
+			if (left) {
+				lots.push({
+					amount: left,
+					remaining: left,
+					validUntil: entry.validUntil,
+					bonusYearId: entry.bonusYearId ?? null,
+				});
+			}
 			continue;
 		}
 		let left = -entry.amount;
+		const pieces: CreditPiece[] = [];
 		const from = lots
 			.filter((lot) => lot.remaining > 0)
 			.filter((lot) =>
@@ -381,14 +419,23 @@ function walletLots(entries: readonly WalletEntry[]): WalletLot[] {
 			)
 			.sort(byExpiry);
 		for (const lot of from) {
-			const taken = Math.min(lot.remaining, left);
-			lot.remaining -= taken;
-			left -= taken;
+			const amount = Math.min(lot.remaining, left);
+			lot.remaining -= amount;
+			left -= amount;
+			pieces.push({ amount, validUntil: lot.validUntil, bonusYearId: lot.bonusYearId });
 			if (!left) break;
 		}
+		if (entry.id !== undefined) taken.set(entry.id, pieces);
 	}
-	return lots;
+	return { lots, taken };
 }
+
+/**
+ * What the entry `id` (a spend) took of the wallet's credit, piece by piece, oldest-expiring
+ * first: what a reversal gives back, a piece at a time. None for an entry that took nothing.
+ */
+export const creditTaken = (entries: readonly WalletEntry[], id: number): CreditPiece[] =>
+	replayWallet(entries).taken.get(id) ?? [];
 
 /** What a wallet holds on `today`. In cents. */
 export interface WalletSummary {
@@ -414,7 +461,7 @@ export function walletSummary(
 	entries: readonly WalletEntry[],
 	today: Temporal.PlainDate,
 ): WalletSummary {
-	const lots = walletLots(entries);
+	const { lots } = replayWallet(entries);
 	const valid = lots.filter((lot) => validOn(lot, today));
 	const available = valid.reduce((sum, lot) => sum + lot.remaining, 0);
 	const awarded = valid.reduce((sum, lot) => sum + lot.amount, 0);

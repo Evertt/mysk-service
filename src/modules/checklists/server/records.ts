@@ -3,7 +3,7 @@
  * completed them and their points in order (`results`). The office's order card, the work order to
  * print, a unit's history and the engineer portal all read them through `checklistRecords()`.
  */
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -69,6 +69,16 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 			position: checklistResult.position,
 			result: checklistResult.result,
 			remark: checklistResult.remark,
+			/**
+			 * The template point it was copied from (by its template, group and text), none if that's
+			 * gone or changed since: what the parts shop links its products to.
+			 */
+			templateItemId: sql<number | null>`(select i.id from checklist_template_item i
+				join checklist c on c.id = "checklist_result"."checklist_id"
+				and c.organization_id = "checklist_result"."organization_id"
+				where i.organization_id = c.organization_id and i.template_id = c.template_id
+				and i.group_name = "checklist_result"."group_name" and i.text = "checklist_result"."text"
+				order by i.position limit 1)`,
 		})
 		.from(checklistResult)
 		.where(

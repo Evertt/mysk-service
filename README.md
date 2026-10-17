@@ -46,7 +46,7 @@ npm run dev -- --open
 ## Demo login
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates three demo
-organizations (tenants) and nine demo users, all with the password `fieldworks-demo` (set in
+organizations (tenants) and ten demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
 | Name              | Email                         | Organizations                                   |
@@ -60,6 +60,7 @@ organizations (tenants) and nine demo users, all with the password `fieldworks-d
 | Marieke Verhoeven | `facilitair@riedel.example`   | customer contact of Riedel B.V. (SHLTR)         |
 | Rob Weggemans     | `rob@weggemans.example`       | customer contact of Weggemans Logistiek (SHLTR) |
 | Bram de Wit       | `klant@fieldworks.example`    | customer contact of Noord's first customer      |
+| Sanne Bakker      | `inkoop@pakhuis7.example`     | customer contact of Pakhuis 7 (SHLTR)           |
 
 The demo data is a Dutch field-service company's, so its names, descriptions and notes are in
 Dutch whatever language you use the app in (stored text stays in the language it was written in).
