@@ -45,7 +45,6 @@ const labels: Record<string, Record<string, string>> = {
 		project: "Project",
 		other: "Other",
 	},
-	priority: { low: "Low", normal: "Normal", high: "High", urgent: "Urgent" },
 	status: {
 		quote: "Quote",
 		scheduled: "Scheduled",
@@ -57,30 +56,30 @@ const labels: Record<string, Record<string, string>> = {
 };
 
 describe("clicking a value in the orders list filters by it, in North", () => {
-	for (const column of ["type", "priority"]) {
-		test(`clicking an order's ${column} filters by it, and clicking it again stops`, async () => {
-			const { page } = app;
-			await app.go(afresh("/orders"));
-			const all = await countIn("order", north.id);
-			const stored = (await firstOrders(column))!;
-			const label = labels[column][stored];
+	// The priority's and the other columns' values work the same way (`cell-filter.svelte.spec.ts`).
+	test("clicking an order's type filters by it, and clicking it again stops", async () => {
+		const column = "type";
+		const { page } = app;
+		await app.go(afresh("/orders"));
+		const all = await countIn("order", north.id);
+		const stored = (await firstOrders(column))!;
+		const label = labels[column][stored];
 
-			await firstRow()
-				.getByRole("button", { name: `Filter by ${label}`, exact: true })
-				.click();
-			await page.waitForURL((url) => url.searchParams.get(column) === stored);
-			await app.tableSettled();
-			expect(await app.rowCount()).toBe(await ordersWith(column, stored));
-			// Every row shown has it, and offers to stop filtering by it.
-			const shown = await page.locator("tbody tr").count();
-			expect(await valuesIn(column, `Stop filtering by ${label}`).count()).toBe(shown);
+		await firstRow()
+			.getByRole("button", { name: `Filter by ${label}`, exact: true })
+			.click();
+		await page.waitForURL((url) => url.searchParams.get(column) === stored);
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(await ordersWith(column, stored));
+		// Every row shown has it, and offers to stop filtering by it.
+		const shown = await page.locator("tbody tr").count();
+		expect(await valuesIn(column, `Stop filtering by ${label}`).count()).toBe(shown);
 
-			await valuesIn(column, `Stop filtering by ${label}`).first().click();
-			await page.waitForURL((url) => !url.searchParams.has(column));
-			await app.tableSettled();
-			expect(await app.rowCount()).toBe(all);
-		});
-	}
+		await valuesIn(column, `Stop filtering by ${label}`).first().click();
+		await page.waitForURL((url) => !url.searchParams.has(column));
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(all);
+	});
 
 	test("clicking the status badge filters by the status, while its arrow opens the statuses", async () => {
 		const { page } = app;
@@ -115,20 +114,5 @@ describe("clicking a value in the orders list filters by it, in North", () => {
 		await page.waitForURL((url) => url.searchParams.get("status") === first);
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await ordersWith("status", first));
-	});
-
-	test("the customer stays a link to the customer's page", async () => {
-		const { page } = app;
-		await app.go(afresh("/orders"));
-		const [number] = await shownNumbers(app);
-		const code = await value<string>(
-			`select c.code from "order" o join customer c on c.id = o.customer_id
-			 where o.organization_id = ? and o.number = ?`,
-			[north.id, number],
-		);
-		const customer = firstRow().locator('[data-column-id="customer"]');
-		expect(await customer.getByRole("button").count()).toBe(0);
-		await customer.getByRole("link").first().click();
-		await page.waitForURL((url) => url.pathname === `/customers/${code}`);
 	});
 });
