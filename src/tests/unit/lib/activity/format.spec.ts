@@ -45,6 +45,17 @@ describe("formatValue", () => {
 		expect(formatValue("on_hold", order.fields?.status)).toBe("On hold");
 	});
 
+	test("shows a unit's category as logged before the tenants' own categories by its old label", () => {
+		const { category } = equipment.fields ?? {};
+		expect(formatValue("chiller", category)).toBe("Chiller");
+		expect(formatValue("air_handler", category)).toBe("Air handler");
+		expect(describeChanges({ category: ["generator", "pump"] }, equipment)).toEqual([
+			{ field: "category", before: "Generator", after: "Pump" },
+		]);
+		// Anything else reads as logged.
+		expect(formatValue("Rolluiken", category)).toBe("Rolluiken");
+	});
+
 	test("shows money (in cents), dates and moments", () => {
 		expect(formatValue(123456, engineer.fields?.hourlyRate)).toBe(formatCents(123456));
 		const warranty = day("2026-10-07");
@@ -209,5 +220,12 @@ describe("in Dutch", () => {
 				unit: { "1": "Deur 01", "2": "Deur 02" },
 			}),
 		).toMatchObject([{ field: "apparaten", summary: "Deur 02 toegevoegd; Deur 01 weggehaald" }]);
+	});
+
+	test("reads a unit's category as logged before the tenants' own categories in Dutch", () => {
+		overwriteGetLocale(() => "nl");
+		expect(describeChanges({ category: ["chiller", "air_handler"] }, equipment)).toEqual([
+			{ field: "categorie", before: "Koelmachine", after: "Luchtbehandelingskast" },
+		]);
 	});
 });

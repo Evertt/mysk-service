@@ -53,6 +53,8 @@
 	"dashboard_all_orders": "All orders",
 	"dashboard_column_order": "Order",
 	"dashboard_column_customer": "Customer",
+	"dashboard_column_equipment": "Equipment",
+	"dashboard_new_installation": "New installation",
 	"dashboard_column_engineer": "Engineer",
 	"dashboard_column_priority": "Priority",
 	"dashboard_column_scheduled": "Scheduled"

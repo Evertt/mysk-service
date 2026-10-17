@@ -3,7 +3,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
-import { openOrderStatuses } from "#lib/models.ts";
+import { type EngineerSpecialty, openOrderStatuses } from "#lib/models.ts";
 import {
 	type OrderPlan,
 	OrderRefused,
@@ -15,7 +15,14 @@ import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, engineer, order } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	engineer,
+	equipment,
+	equipmentCategory,
+	order,
+	orderUnit,
+} from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 
@@ -51,6 +58,29 @@ const engineers = () =>
 		.where(inTenant(engineer))
 		.orderBy(asc(engineer.name));
 
+/**
+ * The orders with the specialties that service their units' categories (`specialties`, first unit
+ * first, `null` for a category without one): whose engineers the schedule dialog lists first.
+ */
+async function withSpecialties<T extends { id: number }>(orders: T[]) {
+	const specialties = new Map(orders.map((row) => [row.id, [] as (EngineerSpecialty | null)[]]));
+	if (orders.length) {
+		const units = await db
+			.select({ orderId: orderUnit.orderId, specialty: equipmentCategory.specialty })
+			.from(orderUnit)
+			.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
+			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
+			.where(and(inList(orderUnit.orderId, [...specialties.keys()]), inTenant(orderUnit)))
+			.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
+		for (const unit of units) specialties.get(unit.orderId)?.push(unit.specialty);
+	}
+	return orders.map((row) => ({ ...row, specialties: specialties.get(row.id) ?? [] }));
+}
+
+/** What the board shows of its orders: their first unit, and whose engineers fit them. */
+const forBoard = async <T extends { id: number }>(orders: T[]) =>
+	withSpecialties(await withFirstUnit(orders));
+
 /** The tenant's orders scheduled on the days `from` to `to` (`yyyy-mm-dd`), except cancelled ones. */
 const scheduledIn = (days: { from: string; to: string }) =>
 	db
@@ -77,7 +107,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 
 	const [team, orders, backlog] = await Promise.all([
 		engineers(),
-		scheduledIn(week).then(withFirstUnit),
+		scheduledIn(week).then(forBoard),
 		db
 			.select(cardColumns)
 			.from(order)
@@ -85,7 +115,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 			.where(
 				and(inTenant(order), isNull(order.scheduledFor), inList(order.status, openOrderStatuses)),
 			)
-			.then(withFirstUnit),
+			.then(forBoard),
 	]);
 	return { start, engineers: team, orders, backlog: backlog.sort(byPriorityThenAge) };
 });
