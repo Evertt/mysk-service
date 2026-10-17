@@ -20,6 +20,8 @@ Where I'd have chosen differently with these files from the start. The rest of t
 
 ### 1.1 Connect tracks a unit's parts, not the unit
 
+**Done** (2026-10-17): components under each unit, with their article, checkpoints, condition and status, on the unit's page and the Connect page; their own interval and inspection still follow the unit (question 2). See `shltr-domain.md` §7.
+
 Impact high, effort large. Deviations [#99](#99-components-became-units-no-component-register), [#100](#100-article-number--link-to-the-parts-shop-per-row), [#127](#127-per-unit-apparaat-not-per-component), [#113](#113-table-columns), [#101](#101-every-unit-is-in-care).
 
 - **The files:** The Connect presentation: "Connect bundelt alle onderdelen van een klant op één plek. Elk onderdeel heeft een conditiescore, een onderhoudsinterval, een keuringsstatus en een gekoppeld artikelnummer uit de Onderdelen Shop." Its examples are parts of a unit ("Torsieveerpakket D-07 — conditie 22%, keuring verlopen (SD-001)"), and the mockup's database has an `onderdelen` table (code, unit, location, article number, condition, interval, inspection, status, advice) with the work orders hanging on a part.
@@ -27,6 +29,8 @@ Impact high, effort large. Deviations [#99](#99-components-became-units-no-compo
 - **I'd change:** A component register under each unit: code, name, the shop's article (a material), its own interval, condition, inspection and advice. Connect lists components, the unit takes the worst of its components, and a rejected point or critical component points at its article in the shop.
 
 ### 1.2 The condition score comes from the inspection checklist
+
+**Done** (2026-10-17): every completed checklist (inspection or maintenance) records the share of Goed among Goed and Afkeur as the unit's score, and each component's over its own points; the office's entry stays as a correction. See `shltr-domain.md` §7.
 
 Impact high, effort small. Deviations [#103](#103-condition-score-entered-not-computed), [#140](#140-condition-after-completion), [#105](#105-status-rules), [#108](#108-only-a-maintenance-checklists-rejection-doesnt-flag-the-unit).
 

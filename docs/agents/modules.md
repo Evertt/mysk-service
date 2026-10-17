@@ -311,16 +311,25 @@ table with a foreign key (`api/schema.server.ts`) and seeds with its help (`api/
 a card on the customer's page (`customers.detail.side`), figures computed from the pure rules in
 `model.ts` and frozen when a year closes, a ledger whose balance is its entries' sum, and a
 hyphenated id's part of the order form (`modules.partnerProgramme`).
-Condition (SHLTR Connect) keeps each unit's condition over time (`unit_condition`) and works out
-its status in SQL (`server/status-sql.ts`, and `unitStatus()` in `model.ts` for the same rules in
-code): look there for a module that owns points other modules answer (`api/extensions.ts`:
-checklists gives the inspection status, maintenance the next visit, as SQL over `equipment`,
-`condition.signals`; checklists its completed checklists for the service history,
-`condition.history`), for SQL repeated in one statement that binds no parameters (`literal()`,
-`inLiterals()` in `#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own
-tenant), and for a contribution to a slot of a module it enhances (the question below a completed
-checklist in the portal, `slots/checklists.field.checklist/`). Checklists and condition enhance
-each other: each adds to the other where the other is on.
+Condition (SHLTR Connect, "Onderdelenbeheer") keeps each unit's condition over time, and its
+components' (`unit_condition`, `component`, `component_checkpoint`), and works out their status in
+SQL (`server/status-sql.ts`, and `rolledUpStatus()`/`componentStatus()` in `model.ts` for the same
+rules in code; a unit takes its worst component's): look there for a module that owns points other
+modules answer (`api/extensions.ts`: checklists gives the inspection status, maintenance the next
+visit, as SQL over `equipment`, `condition.signals`; checklists its completed checklists for the
+service history, `condition.history`, and a unit's template points, `condition.checkpoints`;
+materials the articles, `condition.articles`; the parts shop the points an article's product fixes,
+`condition.articleCheckpoints`), for records that refer to another module's by id without a key (a
+component's article and points, as it only enhances materials and checklists), for SQL repeated in
+one statement that binds no parameters (`literal()`, `inLiterals()` in
+`#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own tenant), for a
+server-side list whose rows are a left join (a row per component, and per unit without), and for a
+contribution to a slot and a save hook of a module it enhances (the advice below a completed
+checklist in the portal, `slots/checklists.field.checklist/`; the scores a completed checklist gives
+the unit and its components, `checklists.completed`, with checklists' `checklistScore()`). Its seed
+reads the tables of the modules it enhances through the seed's transaction (`tx.query`), and comes
+`after` materials (`ModuleSeed.after`). Checklists and condition enhance each other: each adds to
+the other where the other is on.
 Docks (`src/modules/docks/`, SHLTR's Salvo dock time management) is the one fed from outside: look
 there for an integration endpoint with its tokens (`routes/(api)/ingest/+server.ts`, the payload in
 its `docs/salvo-events.md`), a live board (`query.live` on changes it announces itself with
