@@ -3,7 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { shltrCategories, specialtyOf } from "#lib/server/db/seed/categories.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
-import { generateShltrTenant } from "#lib/server/db/seed/shltr/index.ts";
+import { generateShltrTenant, shltrSignoffs } from "#lib/server/db/seed/shltr/index.ts";
 
 /** SHLTR's demo data, as the seed makes it (with its seed). */
 function generate() {
@@ -198,5 +198,31 @@ describe("SHLTR's demo data", () => {
 		while ([0, 6].includes(inDays(next).getDay())) next++;
 		const later = ahead.filter((o) => o.scheduledFor! >= inDays(next + 1));
 		expect(later.filter((o) => o.type === "breakdown")).toEqual([]);
+	});
+
+	test("its done work is signed off by the engineer and the customer's contact, when it was done", () => {
+		const signoffs = shltrSignoffs(data);
+		const done = orders.filter(
+			(o) => ["completed", "invoiced"].includes(o.status) && o.engineerId !== null,
+		);
+		expect(signoffs.map((s) => s.orderId)).toEqual(done.map((o) => o.id));
+		for (const signoff of signoffs) {
+			const order = orders.find((o) => o.id === signoff.orderId)!;
+			expect(signoff.signedAt).toEqual(order.completedAt);
+			expect(signoff.signerName).toBe(
+				customers.find((c) => c.id === order.customerId)!.contactName,
+			);
+			expect(signoff.engineerName).toBe(engineers.find((e) => e.id === order.engineerId)!.name);
+			expect(signoff.signature).toMatch(/^data:image\/svg\+xml;base64,/);
+		}
+		// A person signs the same way each time, and differently from someone else.
+		const byName = new Map<string, Set<string>>();
+		for (const { signerName, signature, engineerName, engineerSignature } of signoffs) {
+			byName.set(signerName, (byName.get(signerName) ?? new Set()).add(signature));
+			byName.set(engineerName, (byName.get(engineerName) ?? new Set()).add(engineerSignature));
+		}
+		expect([...byName.values()].every((signatures) => signatures.size === 1)).toBe(true);
+		expect(new Set([...byName.values()].map((s) => [...s][0])).size).toBe(byName.size);
+		expect(shltrSignoffs(generate().data)).toEqual(signoffs);
 	});
 });

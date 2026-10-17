@@ -15,6 +15,7 @@ import { generateShltrCustomers } from "./customers.ts";
 import { generateShltrEngineers } from "./engineers.ts";
 import { generateShltrEquipment } from "./equipment.ts";
 import { generateShltrOrders, updateShltrEquipmentStatus } from "./orders.ts";
+import { generateShltrSignoffs } from "./signoffs.ts";
 
 /** How many customers SHLTR has besides the six the mockup names. */
 const MADE_UP_CUSTOMERS = 36;
@@ -57,3 +58,10 @@ export function generateShltrTenant(faker: Faker, steps: TenantSteps[] = []) {
 	};
 	return { data, placed };
 }
+
+/**
+ * The sign-offs of SHLTR's done orders (`./signoffs.ts`), once its modules have added theirs
+ * (the partner programme's projects for Riedel): by order id as generated.
+ */
+export const shltrSignoffs = (data: TenantData) =>
+	generateShltrSignoffs(data.orders, data.customers, data.engineers);
