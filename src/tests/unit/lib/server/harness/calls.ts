@@ -30,7 +30,7 @@ import { isHttpError, isRedirect, isValidationError } from "@sveltejs/kit";
 import { inRequest, type RequestFlags, type RequestState } from "./request.ts";
 
 /** A form's or a schema's issue, as SvelteKit sends it to the client. */
-export interface Issue {
+interface Issue {
 	/** The field's name, e.g. `customerId` or `units[0].id` (empty for the whole form). */
 	name: string;
 	path: (string | number)[];

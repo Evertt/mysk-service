@@ -34,10 +34,21 @@ proportions.
    cached `storageState` per user and lane), so `useApp()` and `signedInPage()` start signed in;
    the UI sign-in stays in `auth.test`. Saves ~250–300 s summed. Also: choose each file's main
    actor in `useApp({ user })` (several sign in as North's admin and then work as SHLTR's people).
-4. **A shared harness for server specs** (~3–4 h): call a remote function, gate included, as a
-   tenant on a seeded copy of the demo database, with the `$app/server` stand-ins of
-   `remote-functions.spec.ts` and a faked request event; plus one generic module-gate spec (every
-   module's remote functions refuse a tenant without the module).
+4. **A shared harness for server specs** (done, 2026-10-17): `src/tests/unit/lib/server/harness/`,
+   described in "Server specs" in `docs/agents/tests.md`. The `server-harness` project seeds the
+   demo database once per run (migrate 0.5 s + seed 2.2 s) and copies it per file (~10 ms); `as()`
+   runs code in SvelteKit's own request store as a demo user (or the system), and `call()` /
+   `submit()` run SvelteKit's real `query`/`form`/`command`, schema and gate included, answering
+   as the client would (data, a status, form issues, a redirect, what was refreshed). Rather than
+   stand-ins for `$app/server`, which would skip the schema: those are only in the generic
+   module-gate spec (`src/tests/unit/module-gate.spec.ts`), which finds every module's remote
+   functions and server routes by glob and checks that a tenant without the module gets a 404
+   before their handlers run, and the core sets' role refusals. The two examples, ported from
+   `orders.tenancy` (11 e2e tests, ~50–60 s) and `orders.list` (its server-side checks), are
+   `src/tests/unit/lib/orders/server/tenancy.spec.ts` (11 tests) and `list.spec.ts` (11 tests),
+   ~0.17 s each in tests, ~2–4 s per file with its imports. Not covered: better-auth's `auth.api`
+   effects (members, invitations), what a client asks a command to refresh, a live query past its
+   first value.
 5. **Move the server logic into specs** (~230 tests): tenancy refusals of tampered ids, list
    filtering and sorting, rules and calculations, what gets logged. Write the missing specs first
    (invoices and credit notes, contracts, maintenance plans and orders, condition components and

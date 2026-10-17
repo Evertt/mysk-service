@@ -16,7 +16,7 @@ import { customer, engineer, member, portalContact, user } from "#lib/server/db/
 export type Organization = keyof typeof demoOrganizations;
 
 /** A member's role (see `memberRoles` in `#lib/auth/roles.ts`). */
-export type Role = "owner" | "admin" | "member" | "engineer" | "customer";
+type Role = "owner" | "admin" | "member" | "engineer" | "customer";
 
 /** Someone to run server code as (`as()` in `request.ts`). */
 export interface Actor {
