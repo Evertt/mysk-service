@@ -36,10 +36,11 @@
 </div>
 
 <!-- On a wide screen a dashboard: what the tenant's modules add (e.g. the partner's bonus and
-	wallet side by side) on top, then the open orders as a table beside the latest completed work. -->
-<div class="grid items-start gap-6 lg:grid-cols-3">
+	wallet side by side) on top, then the open orders and the latest completed work as tables, side
+	by side on a very wide one. -->
+<div class="grid items-start gap-6 2xl:grid-cols-3">
 	<section
-		class={["flex min-w-0 flex-col gap-3", data.done.length ? "lg:col-span-2" : "lg:col-span-3"]}
+		class={["flex min-w-0 flex-col gap-3", data.done.length ? "2xl:col-span-2" : "2xl:col-span-3"]}
 		aria-label={m.client_open_orders()}
 	>
 		<h2 class="text-sm font-medium text-muted-foreground">
@@ -62,7 +63,7 @@
 	<ExtensionSlot
 		point={home}
 		props={{}}
-		class="flex min-w-0 flex-col gap-6 lg:order-first lg:col-span-3"
+		class="flex min-w-0 flex-col gap-6 lg:order-first 2xl:col-span-3"
 	/>
 
 	{#if data.done.length}

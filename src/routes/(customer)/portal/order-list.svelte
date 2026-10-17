@@ -18,7 +18,7 @@
 
 <div class="order-list">
 	<div class="order-table">
-		<div class="order-heads" aria-hidden="true">
+		<div class="order-heads" aria-hidden="true" data-order-heads>
 			<span>{m.client_column_number()}</span>
 			<span>{m.client_column_order()}</span>
 			<span>{m.client_column_status()}</span>
