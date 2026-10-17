@@ -164,11 +164,8 @@ describe("the dashboard's charts", () => {
 		expect(last30Days).toBeGreaterThan(0);
 	});
 
-	test("draw the charts, hidden from assistive technology: a bar per equipment status", async () => {
-		const chart = chartCard("Equipment by status").locator('[data-slot="chart"]');
-		expect(await chart.getAttribute("aria-hidden")).toBe("true");
-		await expect.poll(() => chart.locator(".lc-bars-bar").count()).toBe(4);
-	});
+	// That a chart is hidden from assistive technology, with a bar per status, is
+	// `equipment-by-status-chart.svelte.spec.ts`'s.
 
 	test("fit a phone's screen, their hidden tables too", async () => {
 		await onPhone(app.page, async () => {
@@ -304,22 +301,8 @@ describe("the dashboard's cards", () => {
 		}
 	});
 
-	test("pack South's, which has fewer modules, the same way", async () => {
-		await app.switchOrganization(south.name);
-		const boxes = await packedDashboard();
-		expect(boxes.map((box) => box.title)).toEqual([
-			"Upcoming work",
-			"Equipment by status",
-			"Revenue per month",
-			"Orders per week",
-			"Receivables",
-			"Overdue invoices",
-			"Recent activity",
-		]);
-		expect(columnsOf(boxes).size).toBe(3);
-		expectApart(boxes);
-		await app.switchOrganization(north.name);
-	});
+	// That South, with fewer modules, lacks their cards is the modules' tests' (an empty slot on
+	// the dashboard); the packing is the same as North's above.
 });
 
 /** The upcoming work's rows: each order's number and what its units cell reads. */

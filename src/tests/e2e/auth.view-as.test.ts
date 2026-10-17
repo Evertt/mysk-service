@@ -196,16 +196,12 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		await switchTo("portal", "Customer", "Admin");
 	});
 
-	test("from the office to the customer portal", async () => {
-		await switchTo("office", "Admin", "Customer");
-	});
-
-	test("from the customer portal to the engineer portal", async () => {
-		await switchTo("portal", "Customer", "Engineer");
-	});
-
+	// The office's switch to the customer portal, and the customer portal's to the engineer portal,
+	// are the same forms as the ones above with another role (the roles' homes and users are
+	// `demo-accounts.spec.ts`'s).
 	test("from the engineer portal on a phone to the office", async () => {
 		const { page } = app;
+		await switchTo("office", "Admin", "Engineer");
 		await onPhone(page, async () => {
 			expect(
 				await page.locator("[data-phone-overlays]").evaluate((e) => getComputedStyle(e).display),
