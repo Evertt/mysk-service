@@ -7,7 +7,7 @@ import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { numberFormatter } from "#lib/i18n/format.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
-export type TrendDirection = "up" | "down" | "flat";
+type TrendDirection = "up" | "down" | "flat";
 
 /** A tile's trend line: its text, its arrow and its colour. */
 export interface StatTrend {
