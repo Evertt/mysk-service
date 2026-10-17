@@ -82,6 +82,7 @@
 	"docks_notices_title": "Meldingen",
 	"docks_no_notices": "Geen meldingen in het afgelopen etmaal.",
 	"docks_live": "Live",
+	"docks_simulation_title": "Salvo simulatie",
 	"docks_card_title": "Docks",
 	"docks_card_description": "De dockposities van deze klant en hun live status.",
 	"docks_card_empty": "Geen docks op de vestigingen van deze klant.",

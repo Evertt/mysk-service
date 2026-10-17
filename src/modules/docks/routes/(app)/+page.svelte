@@ -5,6 +5,8 @@
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
+	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { getDockBoard } from "#modules/docks/board/board.remote.ts";
 	import DockBoard from "#modules/docks/board/dock-board.svelte";
 
@@ -17,6 +19,8 @@
 		return Number.isInteger(value) && value > 0 ? value : undefined;
 	});
 	const board = $derived(await getDockBoard(siteId));
+	// The demo's Salvo feed is simulated: the badge says so.
+	const simulation = $derived(await getSimulation("docks"));
 </script>
 
 <svelte:head>
@@ -31,7 +35,9 @@
 			: m.docks_description()}
 	>
 		{#snippet badges()}
-			<Badge variant="success">{m.docks_live()}</Badge>
+			<Badge variant="success" data-feed={simulation ? "simulated" : "live"}>
+				{simulation ? m.simulation_live() : m.docks_live()}
+			</Badge>
 		{/snippet}
 		{#snippet actions()}
 			{#if board.canManage}
@@ -42,6 +48,8 @@
 			{/if}
 		{/snippet}
 	</PageHeader>
+
+	<SimulationBar module="docks" label={m.docks_simulation_title()} />
 
 	{#if board.site}
 		<DockBoard {board} {siteId} />

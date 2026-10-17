@@ -1,8 +1,7 @@
 import type { RequestHandler } from "@sveltejs/kit";
 
-import { parseBatch } from "#modules/docks/server/events.ts";
-import { applyBatch, UnknownDocks } from "#modules/docks/server/ingest.ts";
-import { checkDoors } from "#modules/docks/server/rules.ts";
+import { receiveBatch } from "#modules/docks/server/feed.ts";
+import { UnknownDocks } from "#modules/docks/server/ingest.ts";
 
 /**
  * The Salvo event feed (`POST /docks/ingest`, see `docs/salvo-events.md`): a JSON batch of events,
@@ -21,16 +20,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch {
 		return Response.json({ error: "invalid_json" }, { status: 400 });
 	}
-	const now = Temporal.Now.instant();
-	const parsed = parseBatch(body, now);
-	if ("issues" in parsed) {
-		return Response.json({ error: "invalid_batch", issues: parsed.issues }, { status: 422 });
-	}
 	try {
-		const result = await applyBatch(parsed.events, now);
-		// After the batch's commit, in transactions of their own (see `rules.ts`).
-		const checked = await checkDoors(Temporal.Now.instant());
-		return Response.json({ ...result, orders: checked.orders });
+		const received = await receiveBatch(body);
+		if ("issues" in received) {
+			return Response.json({ error: "invalid_batch", issues: received.issues }, { status: 422 });
+		}
+		return Response.json(received);
 	} catch (error) {
 		if (error instanceof UnknownDocks) {
 			return Response.json({ error: "unknown_docks", docks: error.codes }, { status: 422 });

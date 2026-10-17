@@ -41,7 +41,7 @@ export class UnknownDocks extends Error {
 /** The live state of a dock as stored, or a new dock's. */
 type StoredState = typeof dockState.$inferSelect;
 
-const factsOf = (row: StoredState | undefined): DockFacts =>
+export const factsOf = (row: StoredState | null | undefined): DockFacts =>
 	row
 		? {
 				locked: row.locked,
@@ -65,7 +65,7 @@ interface DockRun {
 }
 
 /** A stored session as the rules take it. */
-const sessionOf = ({
+export const sessionOf = ({
 	organizationId: _organizationId,
 	dockId: _dockId,
 	...session

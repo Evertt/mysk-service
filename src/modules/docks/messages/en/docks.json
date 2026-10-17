@@ -82,6 +82,7 @@
 	"docks_notices_title": "Notices",
 	"docks_no_notices": "No notices in the last day.",
 	"docks_live": "Live",
+	"docks_simulation_title": "Salvo simulation",
 	"docks_card_title": "Docks",
 	"docks_card_description": "This customer's dock positions and their live state.",
 	"docks_card_empty": "No docks at this customer's sites.",
