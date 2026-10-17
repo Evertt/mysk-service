@@ -6,6 +6,9 @@
  * In memory, so it reaches the live queries this process (or isolate) serves. In a Durable Object
  * per organization (the Cloudflare spike, `cloudflare/entry.ts`) that's all of the organization's;
  * on a server with several instances it would need a broker between them.
+ *
+ * A live query that reads the database again after a change reads it through `inThisRequest()`
+ * (`#lib/server/db/index.ts`): on Cloudflare its generator resumes outside the object's request.
  */
 
 /** A change as it's announced: the record (an activity subject's type and id) and who changed it. */

@@ -12,7 +12,7 @@ import * as v from "valibot";
 import { id, optionalDate, optionalId, optionalTime, text } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { watchChanges } from "#lib/server/changes.ts";
-import { db } from "#lib/server/db/index.ts";
+import { db, inThisRequest } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -49,9 +49,10 @@ export const watchAwaitingAcceptance = forMembers.query.live(async function* () 
 	// Watching before the first answer, so a change in between isn't missed.
 	const changes = watchChanges(organizationId, ["order"]);
 	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	const again = inThisRequest();
 	try {
 		yield await awaitingCount(organizationId);
-		for await (const _ of changes) yield await awaitingCount(organizationId);
+		for await (const _ of changes) yield await again(() => awaitingCount(organizationId));
 	} finally {
 		changes.stop();
 	}

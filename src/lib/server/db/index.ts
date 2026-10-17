@@ -56,5 +56,18 @@ export const db = new Proxy({} as ReturnType<typeof libsqlDb>, {
 	},
 });
 
+/**
+ * A runner that keeps the database of the request it's made in, for a live query that reads it
+ * again after each change: its generator is resumed by the stream that sends its answers, outside
+ * the Durable Object's request, where `db` would find no storage (and fall back to libsql, which
+ * Cloudflare hasn't). Make it while the request runs, then `yield await again(() => read())`. On
+ * Node it just runs the work.
+ */
+export function inThisRequest() {
+	const requests = globalThis.durableRequests;
+	const request = requests?.getStore();
+	return <T>(work: () => T): T => (request ? requests!.run(request, work) : work());
+}
+
 /** A transaction on the app's database, as `db.transaction` passes it to its callback. */
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];

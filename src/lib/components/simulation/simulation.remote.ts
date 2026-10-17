@@ -12,6 +12,7 @@ import { isManager } from "#lib/auth/index.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { watchChanges } from "#lib/server/changes.ts";
+import { inThisRequest } from "#lib/server/db/index.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 import {
 	changeSimulation,
@@ -43,9 +44,10 @@ export const getSimulation = forMembers.query.live(moduleId, async function* (id
 	if (!modules.includes(id)) error(404, m.common_error_not_found());
 	const changes = watchChanges(organizationId, ["simulation"]);
 	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	const again = inThisRequest();
 	try {
 		yield view(await simulationOf(id));
-		for await (const _ of changes) yield view(await simulationOf(id));
+		for await (const _ of changes) yield view(await again(() => simulationOf(id)));
 	} finally {
 		changes.stop();
 	}
