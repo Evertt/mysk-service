@@ -1,0 +1,168 @@
+# SHLTR on staging: what's left before the client says "yes"
+
+The aim: send the client the staging link (https://fieldworks-staging.devign.workers.dev) and have
+him recognise what he meant. That doesn't mean copying his pages exactly. It means building the
+system the way he most likely intended it, and giving it the vibe of his mockup: the banners, the
+illustrations, the animations. Where the real thing needs a connector we don't have yet (Salvo,
+P1), a simulation shows what it will look like.
+
+Numbers (#n) are the deviations in [shltr-deviations.md](shltr-deviations.md).
+
+## The deviations this starts from
+
+34 deviations: every _changed_ one with high impact, every _left out_ one with medium impact and
+an unknown reason, and everything _not yet_ built.
+
+**Changed, high impact (18):**
+
+- Shell: #4 Werkbonnen became Checklists (templates), #5 Partner Bonus only in the portal, #6 the
+  one shell split into three.
+- Dashboard: #31 the bonus card is an overview of all partners, #32 no Wallet panel.
+- Apparatuur: #61 "Staat" became two statuses.
+- Connect: #99 units instead of components, #103 the condition score is entered, not computed, #105
+  the status rules.
+- Werkbonnen: #124 no Werkbonnen page, #128 no "Keuring 2026" start button, #133 only the
+  engineer fills it in, on the portal.
+- Docks: #150 a Salvo feed instead of static data.
+- Energie: #175 stored readings instead of the in-page simulation, #195 alerts become orders, not a
+  Focus AI batch.
+- Shop and bonus: #203 the shop is in the customer portal, #225 so is the bonus page, #231 the
+  figures come from the app's own invoices.
+
+**Left out, medium impact, reason unknown (5):**
+
+- #19 global search, #20 the notification bell, #37 the dashboard's "Snel naar", #65 refresh and
+  export on the equipment list, #158 the dock illustration.
+
+**Not yet (11):**
+
+- Planning: #54 expired inspections get no priority, #55 preferred day and time slot not used.
+- Apparatuur: #74 no import of the client's register.
+- Klantkaart: #81 the order types chart, #82 the building facts, #83 the documents.
+- Docks: #151 the real Salvo link, #173 docks in the customer portal.
+- Energie: #177 the real P1 link.
+- Shop: #224 prices per customer, delivery, on-request handling.
+- Partner Bonus: #247 returns after the award, exclusions, suspension for overdue invoices.
+
+## The work, in order of what it does for the client's reaction
+
+**In progress:** components under each unit, with their articles, and the condition score computed
+from the checklist (#99, #103, #105), on branch `condition-components`.
+
+### 1. A living demo: Salvo and P1 simulated on staging
+
+#150, #151, #175, #177. Staging's dock board and energy pages go stale, because the simulators are
+scripts someone has to run (`pnpm docks:simulate`, the energy simulator): zones show "Offline", and
+no dock turns amber or red.
+
+- Run both simulators inside the Worker for the demo organization: a Cron Trigger (or the Durable
+  Object's alarm) every minute posts Salvo events and P1 readings through the same ingest
+  endpoints a real gateway would use. So when the real connectors come, only the source changes.
+- A simulation bar on the dock board and the energy page, like the mockup's, shown only for a demo
+  organization: play/pause, speed (1×–30×), reset, and a badge "Simulatie". The scenarios should
+  show every state: a dock past 40 and 60 minutes, an SCP fault, a zone over its threshold, a cold
+  store door left open.
+- Effort: medium.
+
+### 2. The mockup's illustrations and animations
+
+#158, and the vibe deviations outside the filter: #185, #187, #186 (energy), #163–#164 (docks).
+
+- Dock cards with the drawn dock: a sectional door that opens and closes, a three-lamp beacon, the
+  truck driving in and out, the Wheel-Lok indicator blinking, all driven by the live state.
+- Energy: the building as a floor plan (floors stacked, Expeditie & Docks full width), zones as
+  coloured blocks with a pulsing dot; door cards with the animated door, leak bars and the
+  snowflake for cold stores; the main meter's live bar.
+- Respect `prefers-reduced-motion`.
+- Effort: medium.
+
+### 3. The mockup's look on every page
+
+#92, #93, #26, #29, #30, #226, #179. The Lagoon theme copies the colours. The page compositions
+weren't built:
+
+- Shared components: the teal gradient page banner (Connect, Docks, Energie, Werkbonnen, Partner
+  Bonus), the teal toolbar band (Planning, Apparatuur), stat tiles with a coloured icon and a
+  trend line, key-figure tiles with the teal left border, the dark Wallet panel, filter chips
+  with counts, and call-out notices.
+- Put them on the pages the mockup has them on.
+- Effort: medium, then small per page.
+
+### 4. All three sides one click away on staging
+
+#5, #6, #31, #32, #203, #225. The client's files confirm the shop, the bonus and the wallet are the
+customer's (decision A). On staging, though, he'd sign in as the office and never see them.
+
+- On a demo organization, the sign-in page offers "Kantoor", "Monteur" and "Klant (Riedel)".
+- Office users get a "Bekijk als klant" switch that opens the portal as one of a customer's
+  contacts, read-only. Engineers get the same for the engineer portal.
+- Effort: small to medium (it must not become a way around the tenancy gates).
+
+### 5. A Werkbonnen page in the office
+
+#4, #124, #128, #133. Checklists stay one per unit per order: that's how the work really runs, and
+My24Service agrees. But the office should have the mockup's view.
+
+- A "Werkbonnen" page: every unit with its checklists by year ("2026 ✓" / "2026 open"), search by
+  unit or component, and the checklist with its history beside it.
+- "Keuring 2026" and "Onderhoud 2026" buttons that make an inspection or maintenance order for that
+  unit, ready to plan.
+- The office can complete a checklist on the engineer's behalf (for paper forms brought back).
+- The sidebar item becomes "Werkbonnen"; templates move into its settings.
+- Effort: medium.
+
+### 6. Critical components plan themselves
+
+#54, #55, and §1.3 of the deviations. The Connect presentation: Kritiek → "Binnen 5 werkdagen
+inplannen, onderdeel direct reserveren"; "Kritieke en geplande onderdelen vullen automatisch de
+agenda."
+
+- Automatic planning on by default for SHLTR. The order carries the component's article as a
+  material line, which reserves its stock.
+- Gepland means scheduled, with an engineer and the parts reserved.
+- The planning's backlog puts expired inspections and critical components first. Its plan dialog
+  proposes the site's preferred day and time slot.
+- #61: the equipment list's status column shows the Connect status (Kritiek / Aandacht / Gepland /
+  In orde) when the module is on.
+- Effort: medium.
+
+### 7. The notification bell and global search
+
+#20, #19. The platform video is full of notifications.
+
+- A bell with what needs someone, live: orders reported in the portal, energy alerts, docks past 40
+  and 60 minutes, components turning critical, shop orders to confirm. Each one links to its page
+  and can be marked read.
+- The header search ("Zoeken…") finds customers, units, components, orders and shop products as
+  you type.
+- Effort: medium.
+
+### 8. The dashboard and the Klantkaart as the mockup has them
+
+#37, #81, #82, #173, and #26–#30.
+
+- Dashboard: "Goedemorgen, Jan", KPI tiles with an icon and a trend against the previous period,
+  and "Snel naar" (the shop's stock, the last opened customer, what's due today).
+- Klantkaart: the order types donut, the building facts per site (floor area, parking spaces,
+  workplaces), the four key figures as tiles.
+- Customer portal: the customer's own docks, read-only, as energy already has.
+- Effort: small to medium.
+
+### 9. His names and his programme
+
+§1.4, §1.6 and §1.7 of the deviations. He wrote the brochure, so he'll read every number.
+
+- A product name per organization for the app and its portal: "SHLTR Connect".
+- Partner Bonus as brochure v10 has it: the four revenue categories that all count, its worked
+  example (€ 200.000 → € 7.600 or € 9.600), and its 15 conditions word for word.
+- The cash-bonus credit note warns while the partner has overdue invoices.
+- Effort: small.
+
+## Later, or once the client answers
+
+- #83 documents, which needs file storage (R2): a large job, and his presentation gives it a
+  chapter of its own, so it comes next after this list.
+- #74 importing his register and order history from My24Service: needs access to his data.
+- #151, #177 the real Salvo and P1 links: need their APIs (questions in shltr-deviations.md §5).
+- #224 shop prices per customer and fulfilment, #247 the programme's finer rules, #65 export, #195
+  bundling alerts: open questions, or of little visible value.
