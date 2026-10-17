@@ -1,12 +1,13 @@
 <!--
 	@component
 	The month, week and day switch above the schedule: links, so each view has its URL. Another view
-	shows today if the current period has it, else the period's first day.
+	shows today if the current period has it, else the period's first day. On the page's band, in
+	the band's colours (`SegmentedNav`).
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { cn } from "#lib/utils.ts";
+	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 
 	import { focusDay, type ScheduleView, scheduleViews, viewSearch } from "./calendar.ts";
 
@@ -14,11 +15,13 @@
 		view,
 		day,
 		today,
+		variant = "default",
 	}: {
 		view: ScheduleView;
 		/** A day of the period shown. */
 		day: Temporal.PlainDate;
 		today: Temporal.PlainDate;
+		variant?: "default" | "band";
 	} = $props();
 
 	const labels: Record<ScheduleView, () => string> = {
@@ -27,24 +30,13 @@
 		day: m.schedule_day,
 	};
 	const focus = $derived(focusDay(view, day, today));
+	const items = $derived(
+		scheduleViews.map((each) => ({
+			label: labels[each](),
+			href: `${resolve("/(app)/(modules)/schedule")}${viewSearch(each, focus)}`,
+			current: each === view,
+		})),
+	);
 </script>
 
-<nav
-	aria-label={m.schedule_view()}
-	class="inline-flex rounded-md border bg-background p-0.5 shadow-xs"
->
-	{#each scheduleViews as each (each)}
-		<a
-			href={`${resolve("/(app)/(modules)/schedule")}${viewSearch(each, focus)}`}
-			aria-current={each === view ? "page" : undefined}
-			class={cn(
-				"rounded-sm px-3 py-1 text-sm font-medium transition-colors",
-				each === view
-					? "bg-primary text-primary-foreground"
-					: "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-			)}
-		>
-			{labels[each]()}
-		</a>
-	{/each}
-</nav>
+<SegmentedNav label={m.schedule_view()} {items} {variant} />

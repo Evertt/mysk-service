@@ -1,19 +1,22 @@
 <!--
 	@component
-	What the schedule shows while it loads: its header with the week's
+	What the schedule shows while it loads: its band with the week's
 	buttons, the week's grid of engineers by day, and the backlog beside it; below `lg`, where the
 	board is a list of days, a few days.
 -->
 <div class="flex flex-col gap-6 lg:desktop:h-full">
-	<div class="flex flex-wrap items-end justify-between gap-4">
+	<div
+		class="flex flex-col gap-3 rounded-lg border px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between"
+	>
 		<div class="flex flex-col gap-2">
-			<Skeleton class="h-8 w-40" />
+			<Skeleton class="h-7 w-48" />
 			<Skeleton class="h-5 w-72 max-w-full" />
 		</div>
 		<div class="flex items-center gap-2">
 			<Skeleton class="size-9" />
-			<Skeleton class="h-9 w-24" />
 			<Skeleton class="size-9" />
+			<Skeleton class="h-9 w-20" />
+			<Skeleton class="h-9 w-44" />
 		</div>
 	</div>
 	<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
