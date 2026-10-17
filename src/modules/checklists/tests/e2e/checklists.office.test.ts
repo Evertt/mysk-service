@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, hydrated, organizations, rows, useApp, users, value } from "#e2e/app.ts";
+import { afresh, baseURL, hydrated, organizations, rows, useApp, users, value } from "#e2e/app.ts";
 import { addUnits, formUnits, orderUnits } from "#e2e/orders-helpers.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 import { EXPIRING_DAYS } from "#modules/checklists/model.ts";
@@ -68,8 +68,19 @@ describe("a done inspection with rejected points", () => {
 		const text = await workOrder.innerText();
 		expect(text).toContain(`Work order ${order.number}`);
 		for (const checklist of checklists) expect(text).toContain(checklist.serial_number);
-		// The seed's orders were signed on paper: none here.
-		expect(await workOrder.getByText("Not signed").count()).toBe(2);
+		// The seed signs SHLTR's done work with an engineer off, by the engineer and the customer's
+		// contact: their names under their signatures, or room for both.
+		const [signoff] = await rows<{ signer_name: string; engineer_name: string }>(
+			`select signer_name, engineer_name from order_signoff where order_id = ?
+			 and engineer_signature is not null`,
+			[order.id],
+		);
+		expect(signoff, "the seed signed the order off").toBeDefined();
+		expect(await workOrder.getByText("Not signed").count()).toBe(0);
+		expect(await workOrder.locator("[data-signatures] img").count()).toBe(2);
+		const signatures = await workOrder.locator("[data-signatures]").innerText();
+		expect(signatures).toContain(signoff.signer_name);
+		expect(signatures).toContain(signoff.engineer_name);
 		// Each point under its group, in the template's order.
 		const [first] = checklists;
 		const sectionText = await workOrder
@@ -125,7 +136,8 @@ describe("a unit's inspections", () => {
 					.count(),
 			).toBeGreaterThan(0);
 		}
-		await app.go("/equipment");
+		// The list as it is by default, not with the filter visited last (`table-memory.svelte.ts`).
+		await app.go(afresh("/equipment"));
 		await app.sortBy("Inspection", "ascending");
 		const firstRow = page().locator('[data-slot="data-table"] tbody tr').first();
 		const first = await firstRow.locator("[data-inspection]").getAttribute("data-inspection");

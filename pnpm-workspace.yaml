@@ -23,6 +23,10 @@ patchedDependencies:
   # Also: the dev-only "Batch has scheduled effects" invariant warns instead of throwing; thrown
   # mid-commit it froze the page (a module skeleton coming in during the sign-in navigation, see
   # "Skeletons" in AGENTS.md). Production builds skip that check.
+  # Also: a derived computed while another batch is pending (a preload fork, an update awaiting a
+  # query) stays dirty, and was computed anew on every read, with all it reads: a resize across the
+  # sidebar's breakpoint froze the dashboard's charts for 7 s. Now computed once until a dependency
+  # changes (`fresh_deriveds`); see docs/upstream-bugs/README.md (10). Still in 5.57.2.
   svelte@5.57.1: patches/svelte@5.57.1.patch
 peerDependencyRules:
   allowAny:

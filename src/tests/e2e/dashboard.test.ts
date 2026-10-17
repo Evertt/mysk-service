@@ -208,6 +208,49 @@ describe("the dashboard's cards", () => {
 		});
 	});
 
+	// Growing past the phone's width brings the sidebar in, and the charts redraw for their new
+	// width at the same time. With another update pending then (the sidebar's menus awaiting the
+	// user, a link's preload), Svelte computed the charts' state anew on every read, and the tab
+	// froze for seven seconds (patched, see docs/upstream-bugs/README.md, 10).
+	test("redraw at once when the window grows wide enough for the sidebar", async () => {
+		const before = app.page.viewportSize();
+		try {
+			await app.page.setViewportSize({ width: 760, height: 900 });
+			// Back to the dashboard from another page, in the app: the query only the sidebar's menus
+			// read isn't loaded then (not in the server's render, nor shown in the narrow one), and the
+			// pointer rests on a link it preloads.
+			await packedDashboard();
+			await app.page.getByRole("link", { name: "All orders" }).click();
+			await app.page.waitForURL((url) => url.pathname === "/orders");
+			await app.page.goBack();
+			await expect
+				.poll(() => app.page.locator("[data-dashboard-cards][data-masonry]").count())
+				.toBe(1);
+			await quiet(app.page);
+			const sidebar = app.page.locator('[data-slot="sidebar-container"]');
+			await expect.poll(() => sidebar.count()).toBe(0);
+			await app.page.evaluate(() => {
+				const tasks: number[] = [];
+				Object.assign(window, { longTasks: tasks });
+				new PerformanceObserver((list) => {
+					for (const entry of list.getEntries()) tasks.push(entry.duration);
+				}).observe({ type: "longtask" });
+			});
+			await app.page.setViewportSize({ width: 900, height: 900 });
+			// Past the charts' and the masonry's settling (150 ms), until the page answers again.
+			const longest = await app.page.evaluate(async () => {
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				await new Promise(requestAnimationFrame);
+				return Math.max(0, ...(window as unknown as { longTasks: number[] }).longTasks);
+			});
+			await expect.poll(() => sidebar.isVisible()).toBe(true);
+			// About 100 ms on a laptop, seven seconds with the bug; room for a busy test machine.
+			expect(longest).toBeLessThan(1000);
+		} finally {
+			if (before) await app.page.setViewportSize(before);
+		}
+	});
+
 	test("pack South's, which has fewer modules, the same way", async () => {
 		await app.switchOrganization(south.name);
 		const boxes = await packedDashboard();
