@@ -101,7 +101,7 @@
 	"partners_choose": "{form}: {amount}",
 	"partners_choose_title": "Choose the {form} for {year}?",
 	"partners_choose_credit_description": "{amount} goes into the partner's wallet, to spend on parts until the end of next year. The choice can't be changed.",
-	"partners_choose_cash_description": "{amount} is to be paid out to the partner (outside the app: there are no credit notes yet). The choice can't be changed.",
+	"partners_choose_cash_description": "{amount} is to be paid out to the partner, as a credit note or outside the app. The choice can't be changed.",
 	"partners_choose_confirm": "Choose {form}",
 	"partners_chosen": "{form} chosen",
 	"partners_wallet_title": "Wallet",
@@ -245,5 +245,21 @@
 				"countPlural=*": "The figures of {countText} partners are frozen as they are now. This can't be undone."
 			}
 		}
-	]
+	],
+	"partners_action_credited": "{user} paid out {subject} as a credit note",
+	"partners_credit_note_no_cash": "Only a cash bonus that was chosen is paid out as a credit note",
+	"partners_credit_note_exists": "Credit note {number} pays it out already",
+	"partners_credit_note_reason": "Partner Bonus {year}",
+	"partners_credit_note_line": "Cash Bonus {year}",
+	"partners_credit_note_detail": "{level}, on {revenue} Bonus Omzet",
+	"partners_credit_note_note": "{number}, {amount} before VAT",
+	"partners_credit_note_draft": "draft",
+	"partners_credit_note_sent": "sent",
+	"partners_credit_note_settled": "settled",
+	"partners_credit_note_void": "void",
+	"partners_credit_note_paid_with": "Paid out with credit note",
+	"partners_credit_note_created": "Credit note made: issue it from its page",
+	"partners_credit_note_offer": "Pay it out as a credit note, or outside the app.",
+	"partners_credit_note_create": "Create credit note",
+	"partners_credit_note_outside": "Paid out outside the app, or as a credit note an owner or admin makes."
 }

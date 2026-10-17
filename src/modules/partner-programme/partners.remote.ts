@@ -12,7 +12,7 @@ import { db } from "#lib/server/db/index.ts";
 import { walletEntrySchema, yearField } from "./form/wallet-schema.ts";
 import { bonusForms, creditValidUntil, isClosable } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
-import { chooseBonus, closedYearsOf, closeYear } from "./server/close.ts";
+import { chooseBonus, closedYearsOf, closeYear, payBonusByCreditNote } from "./server/close.ts";
 import { acceptPartner as accept, customerByCode, figuresOf, today } from "./server/partners.ts";
 import { rulesFor } from "./server/rules.ts";
 import { addEntry, walletOf } from "./server/wallet.ts";
@@ -81,6 +81,20 @@ export const choosePartnerBonus = forManagers.form(
 		const found = await customerByCode(input.code);
 		await chooseBonus(found.id, input.year, input.choice);
 		void getPartnerCard(input.code).refresh();
+	},
+);
+
+/**
+ * Pays out the partner's cash bonus for a closed year as a draft credit note (the invoicing
+ * module's), linked to the year. Answers its number, for the card to link to.
+ */
+export const createBonusCreditNote = forManagers.form(
+	v.object({ code, year: yearField }),
+	async (input) => {
+		const found = await customerByCode(input.code);
+		const made = await payBonusByCreditNote(found.id, input.year);
+		void getPartnerCard(input.code).refresh();
+		return { number: made.number };
 	},
 );
 

@@ -148,7 +148,27 @@ export function lineCategory(line: {
 	return "regular_orders";
 }
 
-/** A line of a partner's paid revenue, as the programme sees it. In cents, excluding VAT. */
+/**
+ * The reference on the line of the credit note a cash bonus is paid out with, e.g.
+ * `partner-programme:bonus:12` for the bonus year with id 12.
+ */
+export const bonusLineSource = (bonusYearId: number) => `partner-programme:bonus:${bonusYearId}`;
+
+/** What every bonus line's reference starts with. */
+export const bonusSourcePrefix = "partner-programme:";
+
+/**
+ * Whether a line of the revenue is the programme's own payout (a cash bonus's credit note): that
+ * isn't a return or a correction of what the partner bought, so it doesn't count against its
+ * revenue. Every other credit note's line does, in the category of the line it credits.
+ */
+export const isBonusPayout = (line: { source: string | null }) =>
+	!!line.source?.startsWith(bonusSourcePrefix);
+
+/**
+ * A line of a partner's paid revenue, as the programme sees it. In cents, excluding VAT; negative
+ * for a settled credit note's (`paidInvoiceLines()` in invoicing's `api/revenue.server.ts`).
+ */
 export interface RevenueLine {
 	amount: number;
 	category: RevenueCategory;

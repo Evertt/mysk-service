@@ -1,11 +1,14 @@
 /**
- * The partners' revenue in a year: the lines of their invoices paid in it (the invoicing module's
- * `paidInvoiceLines()`, excluding VAT), each with its category and its order's classification
- * (`lineCategory()` in `../model.ts`). Computed whenever it's asked, never stored while the year
- * runs. In TypeScript for a partner's figures, and in SQL (the Partner Omzet only) for the
- * partners list, which sorts and filters by it, and the dashboard.
+ * The partners' revenue in a year: the lines of their invoices paid in it less those of their
+ * credit notes settled in it (the invoicing module's `paidInvoiceLines()`, excluding VAT, §2.9's
+ * "returns, credit notes … deducted"), each with its category and its order's classification
+ * (`lineCategory()` in `../model.ts`); a credit note's line counts in the category of the line it
+ * credits. The programme's own payouts (a cash bonus's credit note, `isBonusPayout()`) aren't in
+ * it. Computed whenever it's asked, never stored while the year runs. In TypeScript for a
+ * partner's figures, and in SQL (the Partner Omzet only) for the partners list, which sorts and
+ * filters by it, and the dashboard.
  */
-import { and, eq, isNull, ne, or, sql, type SQLWrapper } from "drizzle-orm";
+import { and, eq, isNull, ne, notLike, or, sql, type SQLWrapper } from "drizzle-orm";
 
 import { idsInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -14,7 +17,9 @@ import { order } from "#lib/server/db/schema.ts";
 import { paidInvoiceLines } from "#modules/invoices/api/revenue.server.ts";
 
 import {
+	bonusSourcePrefix,
 	defaultCategories,
+	isBonusPayout,
 	lineCategory,
 	type ProgrammeRules,
 	type RevenueLine,
@@ -29,7 +34,9 @@ export async function revenueLines(
 ): Promise<Map<number, RevenueLine[]>> {
 	const byCustomer = new Map<number, RevenueLine[]>(customerIds.map((id) => [id, []]));
 	if (!customerIds.length) return byCustomer;
-	const lines = await paidInvoiceLines({ ...yearSpan(year), customerIds });
+	const lines = (await paidInvoiceLines({ ...yearSpan(year), customerIds })).filter(
+		(line) => !isBonusPayout(line),
+	);
 	const orderIds = [...new Set(lines.flatMap((line) => (line.orderId ? [line.orderId] : [])))];
 	const orders = orderIds.length
 		? await db
@@ -75,7 +82,8 @@ const defaultCategorySql = (type: SQLWrapper) =>
 /**
  * Each of the tenant's customers' Partner Omzet in `year` under `rules`, as a subquery
  * (`customerId`, `partnerRevenue`) to join: what `countsForLevel()` counts of their lines, in SQL
- * (`lineCategory()` and the default categories alike). Customers without paid invoices aren't in it.
+ * (`lineCategory()` and the default categories alike), credit notes taken off. Customers without
+ * paid invoices or settled credit notes aren't in it.
  */
 export function partnerRevenueSql(rules: ProgrammeRules) {
 	const lines = paidInvoiceLines(yearSpan(rules.year)).as("paid_line");
@@ -89,6 +97,8 @@ export function partnerRevenueSql(rules: ProgrammeRules) {
 	const counts = and(
 		inList(category, levelCategories),
 		or(isNull(orderClassification.eligibility), ne(orderClassification.eligibility, "excluded")),
+		// Not the programme's own payouts (`isBonusPayout()`).
+		or(isNull(lines.source), notLike(lines.source, `${bonusSourcePrefix}%`)),
 	);
 	return db
 		.select({

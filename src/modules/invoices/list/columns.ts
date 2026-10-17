@@ -11,6 +11,7 @@ import type { getInvoices } from "../invoices.remote.ts";
 import { invoicingLabels } from "../labels.ts";
 import InvoiceLink from "../ui/invoice-link.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
+import CreditedCell from "./credited-cell.svelte";
 
 export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
 
@@ -74,6 +75,16 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		filterFn: "inMoneyRange",
 		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
+	}),
+	// What its issued credit notes took off; the total stays what the invoice billed.
+	column.accessor("credited", {
+		cell: ({ getValue }) => renderComponent(CreditedCell, { value: getValue() }),
+		enableGlobalFilter: false,
+		meta: {
+			label: m.invoices_column_credited,
+			align: "end",
+			groupSum: (sum) => formatCents(sum),
+		},
 	}),
 	column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),

@@ -18,6 +18,7 @@ import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
 import { invoiceState, invoiceTotals } from "../invoice.ts";
 import { invoiceNumberFormat } from "../model.ts";
 import { alreadyBilled, linesFor } from "./billable.ts";
+import { creditSummary, creditsOf } from "./credit-notes.ts";
 import { invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
 
@@ -117,9 +118,23 @@ export async function loadInvoice(
 		},
 	});
 	if (!found) error(404, m.invoices_number_not_found({ number }));
+	const totals = invoiceTotals(found.lines, found.vatRate);
+	const credits = await creditsOf(db, [found.id]);
 	return {
 		invoice: { ...found, state: invoiceState(found, today) },
-		totals: invoiceTotals(found.lines, found.vatRate),
+		totals,
+		/** Its credit notes, oldest first, and what's left of it to pay and to credit. */
+		credits: {
+			notes: credits.map(({ id, number, status, issuedOn, settledOn, totals }) => ({
+				id,
+				number,
+				status,
+				issuedOn,
+				settledOn,
+				total: totals.total,
+			})),
+			...creditSummary(totals, credits),
+		},
 	};
 }
 

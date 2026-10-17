@@ -101,7 +101,7 @@
 	"partners_choose": "{form}: {amount}",
 	"partners_choose_title": "Kiezen voor {form} over {year}?",
 	"partners_choose_credit_description": "{amount} komt in de wallet van de partner, te besteden aan onderdelen tot het einde van volgend jaar. De keuze is onherroepelijk.",
-	"partners_choose_cash_description": "{amount} wordt aan de partner uitbetaald (buiten de app: creditnota's zijn er nog niet). De keuze is onherroepelijk.",
+	"partners_choose_cash_description": "{amount} wordt aan de partner uitbetaald, met een creditnota of buiten de app. De keuze is onherroepelijk.",
 	"partners_choose_confirm": "Kies {form}",
 	"partners_chosen": "{form} gekozen",
 	"partners_wallet_title": "Wallet",
@@ -245,5 +245,21 @@
 				"countPlural=*": "De cijfers van {countText} partners worden vastgelegd zoals ze nu zijn. Dit is onherroepelijk."
 			}
 		}
-	]
+	],
+	"partners_action_credited": "{user} heeft {subject} uitbetaald met een creditnota",
+	"partners_credit_note_no_cash": "Alleen een gekozen Cash Bonus wordt uitbetaald met een creditnota",
+	"partners_credit_note_exists": "Creditnota {number} betaalt hem al uit",
+	"partners_credit_note_reason": "Partner Bonus {year}",
+	"partners_credit_note_line": "Cash Bonus {year}",
+	"partners_credit_note_detail": "{level}, over {revenue} Bonus Omzet",
+	"partners_credit_note_note": "{number}, {amount} exclusief btw",
+	"partners_credit_note_draft": "concept",
+	"partners_credit_note_sent": "verstuurd",
+	"partners_credit_note_settled": "verrekend",
+	"partners_credit_note_void": "geannuleerd",
+	"partners_credit_note_paid_with": "Uitbetaald met creditnota",
+	"partners_credit_note_created": "Creditnota gemaakt: verstuur hem vanaf zijn pagina",
+	"partners_credit_note_offer": "Betaal hem uit met een creditnota, of buiten de app.",
+	"partners_credit_note_create": "Creditnota maken",
+	"partners_credit_note_outside": "Uitbetaald buiten de app, of met een creditnota die een eigenaar of beheerder maakt."
 }

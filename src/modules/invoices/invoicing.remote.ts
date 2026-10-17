@@ -13,6 +13,7 @@ import { customer, order } from "#lib/server/db/schema.ts";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
 import { query } from "./remote-functions.ts";
+import { creditsByInvoice, creditSummary, listCreditNotes } from "./server/credit-notes.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";
 
 /** How many overdue invoices the dashboard lists. */
@@ -83,9 +84,15 @@ export const getReceivables = query(async () => {
 		.innerJoin(...tenantJoin(customer, invoice.customerId))
 		.leftJoin(subtotals, eq(subtotals.invoiceId, invoice.id))
 		.where(and(inTenant(invoice), eq(invoice.status, "sent")));
+	// What's left of each to pay, after its issued credit notes (a sent invoice credited in full is
+	// paid by them, so none is left at nothing).
+	const credits = await creditsByInvoice();
 	const priced = sent.map(({ subtotal, ...row }) => ({
 		...row,
-		total: invoiceTotals([{ amount: subtotal }], row.vatRate).total,
+		total: creditSummary(
+			invoiceTotals([{ amount: subtotal }], row.vatRate),
+			credits.get(row.id) ?? [],
+		).remaining,
 	}));
 	const overdue = priced
 		.filter((row) => isOverdue(row, today))
@@ -98,10 +105,20 @@ export const getReceivables = query(async () => {
 		.from(invoice)
 		.where(and(inTenant(invoice), eq(invoice.status, "draft")));
 
+	// What the tenant owes customers: sent credit notes that aren't offset against a sent invoice
+	// (standalone ones and those against paid invoices), to refund.
+	const refunds = (await listCreditNotes()).filter(
+		(credit) =>
+			credit.status === "sent" &&
+			!(credit.invoice && sent.some((row) => row.number === credit.invoice)),
+	);
+
 	const sum = (rows: { total: number }[]) => rows.reduce((total, row) => total + row.total, 0);
 	return {
 		outstanding: { count: priced.length, total: sum(priced) },
 		overdue: { count: overdue.length, total: sum(overdue) },
+		/** As a positive amount. */
+		refunds: { count: refunds.length, total: -sum(refunds) },
 		drafts: drafts.n,
 		/** The most overdue. */
 		overdueInvoices: overdue.slice(0, OVERDUE_LISTED),

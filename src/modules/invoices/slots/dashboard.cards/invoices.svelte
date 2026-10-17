@@ -1,7 +1,8 @@
 <!--
 	@component
 	The invoicing module's cards on the dashboard (`dashboard.cards`, `#lib/dashboard/extensions.ts`):
-	what customers owe and how much of it is overdue, and the most overdue invoices.
+	what customers owe (less what's credited) and how much of it is overdue, what's to refund on
+	credit notes, and the most overdue invoices.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -59,8 +60,20 @@
 			</div>
 		</dl>
 	</Card.Content>
-	<Card.Footer class="text-sm text-muted-foreground">
-		{m.invoices_drafts_waiting({ count: data.drafts })}
+	<Card.Footer class="flex flex-col items-start gap-1 text-sm text-muted-foreground">
+		<span>{m.invoices_drafts_waiting({ count: data.drafts })}</span>
+		{#if data.refunds.count}
+			<a
+				data-refunds
+				class="underline-offset-4 hover:underline"
+				href="{resolve('/(app)/(modules)/invoices/credit-notes')}?status=sent"
+			>
+				{m.invoices_credit_refunds({
+					count: data.refunds.count,
+					amount: formatCents(data.refunds.total),
+				})}
+			</a>
+		{/if}
 	</Card.Footer>
 </Card.Root>
 

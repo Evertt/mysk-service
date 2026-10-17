@@ -1,0 +1,96 @@
+import { resolve } from "$app/paths";
+import { renderComponent } from "@tanstack/svelte-table";
+
+import RowActions from "#lib/components/data-table/row-actions.svelte";
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
+import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { formatCents } from "#lib/i18n/index.ts";
+
+import { creditNoteStates } from "../credit-note.ts";
+import type { getCreditNotes } from "../credit-notes.remote.ts";
+import { invoicingLabels } from "../labels.ts";
+import CreditNoteLink from "../ui/credit-note-link.svelte";
+import CreditStatusBadge from "../ui/credit-status-badge.svelte";
+
+export type CreditNoteRow = Awaited<ReturnType<typeof getCreditNotes>>[number];
+
+const column = createAppColumnHelper<CreditNoteRow>();
+
+export const creditNoteColumns = column.columns([
+	column.accessor("number", {
+		cell: ({ getValue }) => renderComponent(CreditNoteLink, { number: getValue() }),
+		enableHiding: false,
+		meta: { label: m.invoices_credit_column_credit_note },
+	}),
+	column.accessor((row) => row.customer.name, {
+		id: "customer",
+		cell: ({ row }) =>
+			renderComponent(TwoLineCell, {
+				primary: row.original.customer.name,
+				secondary: row.original.customer.code,
+				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
+			}),
+		// By the customer's code, e.g. `?customer=CUST-0001`.
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		enableGrouping: true,
+		getGroupingValue: (row) => row.customer.code,
+		meta: { label: m.invoices_column_customer, filter: "set" },
+	}),
+	// The invoice it credits, or none for a standalone one.
+	column.accessor((row) => row.invoice ?? "", {
+		id: "invoice",
+		cell: ({ row }) =>
+			renderComponent(TwoLineCell, {
+				primary: row.original.invoice,
+				href: row.original.invoice
+					? resolve("/(app)/(modules)/invoices/[number]", { number: row.original.invoice })
+					: undefined,
+				fallback: m.invoices_credit_standalone(),
+			}),
+		meta: { label: m.invoices_column_invoice },
+	}),
+	column.accessor("reason", {
+		meta: { label: m.invoices_credit_column_reason },
+	}),
+	column.accessor("status", {
+		cell: ({ getValue }) => renderComponent(CreditStatusBadge, { state: getValue() }),
+		filterFn: "oneOf",
+		enableGrouping: true,
+		sortFn: (a, b, id) =>
+			creditNoteStates.indexOf(a.getValue(id)) - creditNoteStates.indexOf(b.getValue(id)),
+		meta: {
+			label: m.invoices_column_status,
+			filterValues: creditNoteStates,
+			clickFilter: (state) => invoicingLabels.labelOrValue("creditNoteState", state),
+		},
+	}),
+	// Drafts have no dates yet; `undefined` sorts them last.
+	column.accessor((row) => row.issuedOn ?? undefined, {
+		id: "issuedOn",
+		cell: ({ cell }) => renderComponent(cell.DateCell),
+		sortUndefined: "last",
+		enableGlobalFilter: false,
+		meta: { label: m.invoices_column_issued, param: "issued" },
+	}),
+	column.accessor("total", {
+		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
+		enableGlobalFilter: false,
+		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
+	}),
+	column.accessor("createdAt", {
+		cell: ({ cell }) => renderComponent(cell.DateCell),
+		enableGlobalFilter: false,
+		meta: { label: m.invoices_column_created, param: "created" },
+	}),
+	column.display({
+		id: "actions",
+		cell: ({ row }) =>
+			renderComponent(RowActions, {
+				label: row.original.number,
+				href: resolve("/(app)/(modules)/invoices/credit-notes/[number]", {
+					number: row.original.number,
+				}),
+				copy: [{ label: m.invoices_credit_copy_number(), value: row.original.number }],
+			}),
+	}),
+]);

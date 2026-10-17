@@ -1404,11 +1404,20 @@ As of 2026-10-17, unreleased (`main` has none of it):
 | 5b    | Energy: sites, zones, consumers, monitored doors, 15-minute readings through the feed, alerts that become orders, the report, the office's setup pages, a portal page, a simulator                                                                                                                        | `energy`            |
 
 Not built yet: the parts shop and the partner programme's portal pages (phase 4b, design in
-`parts-shop.md`); the real Salvo and P1 integrations; an import from My24Service; credit notes (for
-the cash bonus).
+`parts-shop.md`); the real Salvo and P1 integrations; an import from My24Service.
 
 Order types per tenant (core): managers give a type a name of their own per language and hide those
 they don't use from the order form, on the settings page (`/settings/order-types`,
 `#lib/orders/types.ts`); a type a module that's on needs (checklists' and maintenance plans'
 inspection and maintenance, docks' breakdown) and breakdown, which the customer portal reports,
 can't be hidden. The seed renames SHLTR's survey to "Offerte-opname" and hides damage.
+
+Credit notes (`invoices`): a table of their own (`credit_note`, `CN-2026-0001`), against a sent or
+paid invoice (some or all of its lines, never more than is left after earlier ones) or standalone;
+draft → sent → settled (refunded, or offset when the invoice is paid; a sent invoice credited in
+full is paid by its credit notes), with their own PDF ("Creditnota"). An invoice shows its credit
+notes and what's left to pay, the receivables count what's left and what's to refund. The
+programme's revenue is paid invoices less settled credit notes, by the day they're settled
+(§2.9), but not the cash bonus's own payout: the office pays a chosen cash bonus out as a
+standalone credit note ("Partner Bonus 2025") from the partner's card, linked to the year, or
+outside the app as before. Rules in `src/modules/invoices/credit-note.ts`.

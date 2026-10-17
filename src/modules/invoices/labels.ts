@@ -1,6 +1,7 @@
 /** The translated names of the invoicing module's enum values, see `#lib/i18n/labels.ts`. */
 import { defineLabels, type Labels } from "#lib/i18n/index.ts";
 
+import type { CreditNoteState } from "./credit-note.ts";
 import type { InvoiceState } from "./invoice.ts";
 
 export const invoicingLabels = defineLabels({
@@ -11,4 +12,11 @@ export const invoicingLabels = defineLabels({
 		paid: m.invoices_state_paid,
 		void: m.invoices_state_void,
 	} satisfies Labels<InvoiceState>,
+	/** A credit note's: paid reads as settled (refunded, or offset against its invoice). */
+	creditNoteState: {
+		draft: m.invoices_state_draft,
+		sent: m.invoices_state_sent,
+		paid: m.invoices_credit_state_settled,
+		void: m.invoices_state_void,
+	} satisfies Labels<CreditNoteState>,
 });

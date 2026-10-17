@@ -1,17 +1,29 @@
 import { rmSync } from "node:fs";
 
 import { and, eq } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { defaultCategoryRules, defaultTiers } from "#modules/partner-programme/model.ts";
+import { paidInvoiceLines } from "#modules/invoices/api/revenue.server.ts";
+import { creditNote } from "#modules/invoices/api/schema.server.ts";
+import {
+	bonusLineSource,
+	defaultCategoryRules,
+	defaultTiers,
+} from "#modules/partner-programme/model.ts";
 import { saveClassification } from "#modules/partner-programme/server/classification.ts";
-import { chooseBonus, closeYear } from "#modules/partner-programme/server/close.ts";
+import {
+	chooseBonus,
+	closedYearsOf,
+	closeYear,
+	payBonusByCreditNote,
+} from "#modules/partner-programme/server/close.ts";
 import { figuresOf } from "#modules/partner-programme/server/partners.ts";
 import { partnerRevenueSql } from "#modules/partner-programme/server/revenue.ts";
 import { rulesFor } from "#modules/partner-programme/server/rules.ts";
 import {
+	bonusCreditNote,
 	bonusYear,
 	orderClassification,
 	programmeYear,
@@ -109,6 +121,7 @@ const south = <T>(work: () => Promise<T>) => asSystem(tenant("south"), work);
 const euros = (amount: number) => amount * 100;
 
 beforeEach(async () => {
+	await db.delete(bonusCreditNote);
 	await db.delete(walletEntry);
 	await db.delete(bonusYear);
 	await db.delete(orderClassification);
@@ -276,5 +289,133 @@ describe("the wallet", () => {
 			["award", euros(100)],
 			["expiry", -euros(100)],
 		]);
+	});
+});
+
+describe("credit notes", () => {
+	/** The credit notes these tests add, removed after them. */
+	const ids = [901, 902, 903, 904, 905, 906];
+	const year = last;
+
+	beforeAll(async () => {
+		await db.$client.executeMultiple(`
+			insert into credit_note (id, organization_id, number, customer_id, invoice_id, status,
+				vat_rate, reason, issued_on, settled_on)
+			values
+				(901, 'north', 'CN-1', 1, 1, 'paid', 21, 'Returned', '${year}-05-01', '${year}-06-01'),
+				(902, 'north', 'CN-2', 1, null, 'paid', 21, 'Partner Bonus', '${year}-06-01', '${year}-06-15'),
+				(903, 'north', 'CN-3', 1, 1, 'sent', 21, 'Not settled', '${year}-07-01', null),
+				(904, 'north', 'CN-4', 1, 1, 'void', 21, 'Voided', '${year}-07-01', null),
+				(905, 'north', 'CN-5', 1, 4, 'paid', 21, 'Next year', '${year}-12-28', '${year + 1}-01-10'),
+				(906, 'south', 'CN-1', 2, 5, 'paid', 21, 'South', '${year}-04-01', '${year}-04-02');
+			insert into credit_note_line (organization_id, credit_note_id, description, quantity,
+				unit_price, amount, order_id, source)
+			values
+				('north', 901, 'Breakdown', 1, -1000000, -1000000, 101, null),
+				('north', 902, 'Cash Bonus', 1, -5000000, -5000000, null, '${bonusLineSource(1)}'),
+				('north', 903, 'Breakdown', 1, -2000000, -2000000, 101, null),
+				('north', 904, 'Breakdown', 1, -2000000, -2000000, 101, null),
+				('north', 905, 'Next year', 1, -1000000, -1000000, 101, null),
+				('south', 906, 'South', 1, -99999900, -99999900, 200, null);
+		`);
+	});
+	afterAll(async () => {
+		await db.$client.executeMultiple(`
+			delete from credit_note_line where credit_note_id in (${ids.join(",")});
+			delete from credit_note where id in (${ids.join(",")});
+		`);
+	});
+
+	test("are taken off the revenue by the day they're settled, in the credited line's category", async () => {
+		const lines = await north(() =>
+			paidInvoiceLines({
+				from: new Temporal.PlainDate(year, 1, 1),
+				until: new Temporal.PlainDate(year, 12, 31),
+			}),
+		);
+		// The settled ones of the year: not the one still sent, the void one or next year's.
+		expect(
+			lines.filter((line) => line.creditNoteId).map((line) => [line.creditNoteId, line.amount]),
+		).toEqual([
+			[901, -1_000_000],
+			[902, -5_000_000],
+		]);
+		expect(lines.find((line) => line.creditNoteId === 901)).toMatchObject({
+			customerId: 1,
+			invoiceId: 1,
+			orderId: 101,
+			paidOn: new Temporal.PlainDate(year, 6, 1),
+		});
+
+		const figures = await north(async () => {
+			const rules = (await rulesFor(last))!;
+			return (await figuresOf(rules, [1])).get(1)!;
+		});
+		// The breakdown's € 10.000 back is off both; the bonus paid out as a credit note is neither.
+		expect(figures.partnerRevenue).toBe(euros(195_000));
+		expect(figures.bonusRevenue).toEqual({ cash: euros(75_000), credit: euros(75_000) });
+		expect(figures.level?.level).toBe("GOLD+");
+	});
+
+	test("are taken off the Partner Omzet in SQL alike", async () => {
+		const rows = await north(async () =>
+			db.select().from(partnerRevenueSql((await rulesFor(last))!)),
+		);
+		expect(rows).toEqual([{ customerId: 1, partnerRevenue: euros(195_000) }]);
+	});
+
+	test("pay out a cash bonus: a draft for the cash, linked to the year, once", async () => {
+		await north(() => closeYear(last));
+		// Not before the partner chose cash.
+		await expect(north(() => payBonusByCreditNote(1, last))).rejects.toBeDefined();
+		await north(() => chooseBonus(1, last, "cash"));
+		const [closed] = await db
+			.select()
+			.from(bonusYear)
+			.where(and(eq(bonusYear.customerId, 1), eq(bonusYear.year, last)));
+		expect(closed.cashAmount).toBeGreaterThan(0);
+
+		// South can't pay out North's.
+		await expect(south(() => payBonusByCreditNote(1, last))).rejects.toBeDefined();
+		const made = await north(() => payBonusByCreditNote(1, last));
+		// The tenant's next number (the ones above aren't in the series' format).
+		expect(made.number).toBe(`CN-${current}-0001`);
+		const [stored] = await db.select().from(creditNote).where(eq(creditNote.id, made.id));
+		expect(stored).toMatchObject({
+			organizationId: "north",
+			customerId: 1,
+			invoiceId: null,
+			status: "draft",
+			vatRate: 21,
+			reason: `Partner Bonus ${last}`,
+		});
+		const lines = await db.$client.execute({
+			sql: `select amount, source from credit_note_line where credit_note_id = ?`,
+			args: [made.id],
+		});
+		expect(lines.rows.map((line) => [line.amount, line.source])).toEqual([
+			[-closed.cashAmount, bonusLineSource(closed.id)],
+		]);
+		expect(await db.select().from(bonusCreditNote)).toMatchObject([
+			{ organizationId: "north", bonusYearId: closed.id, creditNoteId: made.id },
+		]);
+		const years = await north(() => closedYearsOf(1));
+		expect(years[0].creditNote).toMatchObject({
+			number: made.number,
+			status: "draft",
+			total: -(closed.cashAmount + Math.round((closed.cashAmount * 21) / 100)),
+		});
+		// Once: while that one isn't void.
+		await expect(north(() => payBonusByCreditNote(1, last))).rejects.toBeDefined();
+		const logged = await db.$client.execute(
+			`select count(*) as n from activity where subject_type = 'partner_bonus_year' and action = 'credited'`,
+		);
+		expect(logged.rows[0].n).toBe(1);
+		// Invoicing's tables, cleared without its services (a module writes only its own tables).
+		await db.delete(bonusCreditNote);
+		await db.$client.executeMultiple(`
+			delete from credit_note_line where credit_note_id = ${made.id};
+			delete from credit_note where id = ${made.id};
+		`);
 	});
 });

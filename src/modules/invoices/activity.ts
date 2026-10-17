@@ -24,6 +24,8 @@ export const invoicingActions = {
 	issued: m.invoices_action_issued,
 	paid: m.invoices_action_paid,
 	voided: m.invoices_action_voided,
+	/** A credit note refunded, or offset against its invoice. */
+	settled: m.invoices_action_settled,
 } satisfies Record<string, Sentence>;
 
 export const invoicingSubjects: Record<string, SubjectType> = {
@@ -42,6 +44,23 @@ export const invoicingSubjects: Record<string, SubjectType> = {
 	},
 	/** A line on an invoice, by its description; logged against its invoice. */
 	invoice_line: { noun: m.invoices_activity_subject_line },
+	/** A credit note; logged against the invoice it credits too. */
+	credit_note: {
+		noun: m.invoices_activity_subject_credit_note,
+		href: ({ label }) =>
+			resolve("/(app)/(modules)/invoices/credit-notes/[number]", { number: label }),
+		fields: {
+			status: {
+				format: (value) => invoicingLabels.labelOrValue("creditNoteState", String(value)),
+			},
+			reason: { label: m.invoices_activity_field_reason },
+			vatRate,
+			issuedOn: { label: m.invoices_activity_field_issued_on, format: day },
+			settledOn: { label: m.invoices_activity_field_settled_on, format: day },
+		},
+	},
+	/** A line on a credit note, by its description; logged against its credit note. */
+	credit_note_line: { noun: m.invoices_activity_subject_credit_note_line },
 	/** The organization's invoicing settings; they have no label, so they read as their noun. */
 	invoicing_settings: {
 		noun: m.invoices_activity_subject_settings,

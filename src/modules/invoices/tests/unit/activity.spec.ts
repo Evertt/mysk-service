@@ -7,13 +7,23 @@ import { invoicingActions, invoicingSubjects, lineNote } from "#modules/invoices
 const englishByDefault = getLocale;
 afterEach(() => overwriteGetLocale(englishByDefault));
 
-const { invoice, invoice_line: line, invoicing_settings: settings } = invoicingSubjects;
+const {
+	invoice,
+	invoice_line: line,
+	invoicing_settings: settings,
+	credit_note: credit,
+} = invoicingSubjects;
 
 describe("invoicingActions", () => {
 	const inputs = { user: "Avery", subject: "invoice INV-1" };
 
 	test("has a sentence for every verb it adds", () => {
-		expect(Object.keys(invoicingActions).toSorted()).toEqual(["issued", "paid", "voided"]);
+		expect(Object.keys(invoicingActions).toSorted()).toEqual([
+			"issued",
+			"paid",
+			"settled",
+			"voided",
+		]);
 		for (const sentence of Object.values(invoicingActions)) {
 			expect(sentence(inputs)).toMatch(/^Avery .+invoice INV-1/);
 		}
@@ -33,6 +43,19 @@ describe("invoicingSubjects", () => {
 		expect(invoice.href?.({ id: "3", label: "INV-2026-00003" })).toBe("/invoices/INV-2026-00003");
 		expect(settings.href?.({ id: "org", label: "" })).toBe("/invoices/settings");
 		expect(line.href).toBeUndefined();
+		expect(credit.href?.({ id: "4", label: "CN-2026-0004" })).toBe(
+			"/invoices/credit-notes/CN-2026-0004",
+		);
+	});
+
+	test("reads a credit note's status, paid as settled", () => {
+		expect(describeChanges({ status: ["sent", "paid"] }, credit)).toEqual([
+			{ field: "status", before: "Sent", after: "Settled" },
+		]);
+		overwriteGetLocale(() => "nl");
+		expect(invoicingActions.settled({ user: "Avery", subject: "creditnota CN-1" })).toBe(
+			"Avery heeft creditnota CN-1 verrekend",
+		);
 	});
 
 	test("reads an invoice's fields", () => {

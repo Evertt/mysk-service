@@ -12,6 +12,7 @@ import { newInvoiceFields } from "./form/invoice-schema.ts";
 import { invoiceState, invoiceTotals, lineAmount } from "./invoice.ts";
 import { form, query } from "./remote-functions.ts";
 import { billableFor } from "./server/billable.ts";
+import { creditsByInvoice, creditSummary } from "./server/credit-notes.ts";
 import { createDraft, loadInvoice } from "./server/invoices.ts";
 import { invoice, invoiceLine } from "./server/schema.ts";
 
@@ -49,11 +50,19 @@ export const getInvoices = query(async () => {
 		.orderBy(desc(invoice.id));
 
 	const today = Temporal.Now.plainDateISO(getTimeZone());
-	return rows.map(({ subtotal, ...row }) => ({
-		...row,
-		state: invoiceState(row, today),
-		...invoiceTotals([{ amount: subtotal }], row.vatRate),
-	}));
+	const credits = await creditsByInvoice();
+	return rows.map(({ subtotal, ...row }) => {
+		const totals = invoiceTotals([{ amount: subtotal }], row.vatRate);
+		const { credited, remaining } = creditSummary(totals, credits.get(row.id) ?? []);
+		return {
+			...row,
+			state: invoiceState(row, today),
+			...totals,
+			/** What its issued credit notes took off (negative), and what's left to pay. */
+			credited,
+			remaining,
+		};
+	});
 });
 
 /** One invoice with its customer, lines and totals, and the organization that sends it. */

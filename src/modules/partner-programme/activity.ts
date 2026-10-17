@@ -18,6 +18,8 @@ const customerPage = ({ label }: { label: string }) =>
 export const partnerActions = {
 	finalised: m.partners_action_finalised,
 	chosen: m.partners_action_chosen,
+	/** A cash bonus paid out as a credit note. */
+	credited: m.partners_action_credited,
 } satisfies Record<string, Sentence>;
 
 export const partnerSubjects: Record<string, SubjectType> = {

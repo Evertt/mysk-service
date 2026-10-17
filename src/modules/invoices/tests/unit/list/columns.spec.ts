@@ -20,6 +20,8 @@ const invoice = (number: string, fields: Partial<InvoiceRow> = {}): InvoiceRow =
 	subtotal: 10_000,
 	vat: 2100,
 	total: 12_100,
+	credited: 0,
+	remaining: 12_100,
 	...fields,
 });
 

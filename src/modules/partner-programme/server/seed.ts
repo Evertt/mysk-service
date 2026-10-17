@@ -4,7 +4,9 @@
  * closed with the choices made (one still waiting), as SHLTR's administration closed it (frozen
  * figures: the app only invoices from late last year). Riedel B.V. chose credit: € 3.750 in its
  * wallet, € 1.475 of it spent; this year three large projects (completed, invoiced and paid, for
- * the level only) take it to about PLATINUM, the plan's worked example. Vermeer Logistiek still has
+ * the level only) take it to about PLATINUM, the plan's worked example. Weggemans Logistiek chose
+ * cash, paid out as a credit note of the invoicing module's (`seedCreditNote()`, settled since
+ * where two weeks have passed); the others who chose cash were paid outside the app. Vermeer Logistiek still has
  * credit of the year before last, past its date: the daily job expires it. North has a simple
  * programme (three levels) with six partners and last year still to close; South doesn't have the
  * module. With a faker of its own: the projects it adds to SHLTR's orders are fixed, so the rest of
@@ -16,8 +18,10 @@ import { formatCode } from "#lib/numbering.ts";
 import { DAY, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
+import { seedCreditNote } from "#modules/invoices/api/seed.ts";
 
 import {
+	bonusLineSource,
 	creditValidUntil,
 	defaultCategoryRules,
 	defaultTiers,
@@ -27,6 +31,7 @@ import {
 	type Tier,
 } from "../model.ts";
 import {
+	bonusCreditNote,
 	bonusYear,
 	orderClassification,
 	partnerAccount,
@@ -60,6 +65,8 @@ interface SeedPartner {
 	older?: { credit: number; spent: number };
 	/** What was spent of last year's credit, with what for. */
 	spends?: { amount: number; note: string; on: Date }[];
+	/** Last year's cash bonus was paid out as a credit note (the invoicing module's), refunded since. */
+	creditNote?: boolean;
 }
 
 /** What `generate()` makes for a tenant. */
@@ -168,6 +175,7 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 			customerId: weggemans,
 			acceptedOn: new Date(lastYear - 1, 8, 16),
 			closed: { revenue: 12_150_000, bonusRevenue: 9_480_000, choice: "cash" },
+			creditNote: true,
 		});
 	}
 	if (vermeer) {
@@ -290,6 +298,7 @@ function northPartners(draft: TenantDraft): PartnersSeed {
 
 export default defineSeed<PartnersSeed>({
 	clear: async (tx) => {
+		await tx.delete(bonusCreditNote);
 		await tx.delete(walletEntry);
 		await tx.delete(bonusYear);
 		await tx.delete(orderClassification);
@@ -339,6 +348,7 @@ export default defineSeed<PartnersSeed>({
 
 			// The closed years, and the wallets that follow from their choices.
 			const entries: (typeof walletEntry.$inferInsert)[] = [];
+			const payouts: (typeof bonusCreditNote.$inferInsert)[] = [];
 			let closedYears = 0;
 			for (const partner of partners) {
 				const customer = customerId(partner.customerId);
@@ -415,6 +425,34 @@ export default defineSeed<PartnersSeed>({
 					})
 					.returning({ id: bonusYear.id });
 				closedYears++;
+				if (choice === "cash" && partner.creditNote && figures.level && figures.bonus.cash) {
+					// Paid out as a credit note the day after the choice, refunded two weeks later.
+					const issued = new Date(chosenAt.getTime() + DAY);
+					const settled = new Date(issued.getTime() + 14 * DAY);
+					const payout = await seedCreditNote(tx, {
+						organizationId,
+						customerId: customer,
+						reason: `Partner Bonus ${lastYear}`,
+						status: settled < now ? "paid" : "sent",
+						issuedOn: toDay(issued),
+						settledOn: settled < now ? toDay(settled) : null,
+						createdAt: toMoment(issued),
+						lines: [
+							{
+								description: `Cash Bonus ${lastYear}`,
+								detail: figures.level.level,
+								amount: figures.bonus.cash,
+								source: bonusLineSource(closed.id),
+							},
+						],
+					});
+					payouts.push({
+						organizationId,
+						bonusYearId: closed.id,
+						creditNoteId: payout.id,
+						createdAt: toMoment(issued),
+					});
+				}
 				if (choice !== "credit" || !figures.bonus.credit) continue;
 				entries.push({
 					organizationId,
@@ -438,8 +476,10 @@ export default defineSeed<PartnersSeed>({
 				}
 			}
 			await insertAll(entries, (chunk) => tx.insert(walletEntry).values(chunk));
+			await insertAll(payouts, (chunk) => tx.insert(bonusCreditNote).values(chunk));
 			count("partnerBonusYears", Array.from({ length: closedYears }));
 			count("walletEntries", entries);
+			count("partnerBonusCreditNotes", payouts);
 		}
 	},
 });

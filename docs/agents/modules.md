@@ -304,7 +304,10 @@ form, typed and validated by its schema and saved in its transaction (`slots/ord
 `moduleRemote(id, "engineer")`), and seed steps in the middle of the core's generation (`during`).
 The partner programme (`src/modules/partner-programme/`, SHLTR's Partner Bonus and wallet) requires
 invoices: look there for a module that reads another's data through its `api/` (invoices'
-`api/revenue.server.ts`, the paid invoices' lines, also as a subquery for its own server-side list),
+`api/revenue.server.ts`, the paid invoices' lines less the settled credit notes', also as a
+subquery for its own server-side list), changes it through its services (`api/credit-notes.server.ts`:
+a cash bonus paid out as a standalone credit note, in the programme's transaction), refers to its
+table with a foreign key (`api/schema.server.ts`) and seeds with its help (`api/seed.ts`),
 a card on the customer's page (`customers.detail.side`), figures computed from the pure rules in
 `model.ts` and frozen when a year closes, a ledger whose balance is its entries' sum, and a
 hyphenated id's part of the order form (`modules.partnerProgramme`).

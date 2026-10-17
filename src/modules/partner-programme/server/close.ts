@@ -2,8 +2,9 @@
  * Closing a year (`partner_bonus_year`): its figures for each partner are frozen as they are, with
  * the level and the bonus in both forms, and the partner then chooses one of them, once. Credit
  * goes into the wallet as an award, valid until the year's date; cash is the amount to pay out,
- * recorded on the year (paid outside the app: invoicing has no credit notes yet). The office makes
- * the choice for now; a customer portal will call `chooseBonus()` the same way.
+ * recorded on the year, which the office pays out as a standalone credit note of the invoicing
+ * module's (`payBonusByCreditNote()`, through its `api/credit-notes.server.ts`), or outside the app.
+ * The office makes the choice for now; a customer portal will call `chooseBonus()` the same way.
  */
 import { error, invalid } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -13,13 +14,15 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { createCreditNote, creditNotesOf } from "#modules/invoices/api/credit-notes.server.ts";
+import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
 import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
-import { type BonusForm, creditValidUntil, isClosable } from "../model.ts";
+import { type BonusForm, bonusLineSource, creditValidUntil, isClosable } from "../model.ts";
 import { customerSubject, figuresOf, partnersOf, today } from "./partners.ts";
 import { rulesFor } from "./rules.ts";
-import { bonusYear } from "./schema.ts";
+import { bonusCreditNote, bonusYear } from "./schema.ts";
 import { addEntry } from "./wallet.ts";
 
 /** The closed years of the tenant's partners in `year`, by customer id. */
@@ -117,13 +120,103 @@ export async function closeYear(year: number, customerId?: number): Promise<numb
 	});
 }
 
-/** A partner's closed years, latest first. */
+/**
+ * A partner's closed years, latest first, each with the credit note its cash bonus is paid out
+ * with (where it stands), if there is one.
+ */
 export async function closedYearsOf(customerId: number) {
-	return db
-		.select()
+	const rows = await db
+		.select({ year: bonusYear, creditNoteId: bonusCreditNote.creditNoteId })
 		.from(bonusYear)
+		.leftJoin(
+			bonusCreditNote,
+			and(eq(bonusCreditNote.bonusYearId, bonusYear.id), inTenant(bonusCreditNote)),
+		)
 		.where(and(inTenant(bonusYear), eq(bonusYear.customerId, customerId)))
 		.orderBy(desc(bonusYear.year));
+	const notes = await creditNotesOf(rows.flatMap((row) => row.creditNoteId ?? []));
+	return rows.map((row) => ({
+		...row.year,
+		creditNote: (row.creditNoteId && notes.get(row.creditNoteId)) || null,
+	}));
+}
+
+/**
+ * Pays out a partner's cash bonus for a closed year as a standalone credit note (a draft, for the
+ * office to issue): for the cash amount, the reason "Partner Bonus {year}", its line referring to
+ * the year (`bonusLineSource()`, so the payout isn't taken off the partner's revenue), linked to the
+ * year. Refused unless cash was chosen, or while a credit note that isn't void pays it already.
+ * Answers the credit note's number.
+ */
+export async function payBonusByCreditNote(customerId: number, year: number) {
+	return db.transaction(async (tx) => {
+		const [row] = await tx
+			.select({
+				closed: bonusYear,
+				code: customer.code,
+				linked: bonusCreditNote.creditNoteId,
+			})
+			.from(bonusYear)
+			.innerJoin(...tenantJoin(customer, bonusYear.customerId))
+			.leftJoin(
+				bonusCreditNote,
+				and(eq(bonusCreditNote.bonusYearId, bonusYear.id), inTenant(bonusCreditNote)),
+			)
+			.where(
+				and(inTenant(bonusYear), eq(bonusYear.customerId, customerId), eq(bonusYear.year, year)),
+			);
+		if (!row) error(404, m.partners_year_not_closed({ year: String(year) }));
+		const { closed, code } = row;
+		if (closed.choice !== "cash" || !closed.cashAmount) invalid(m.partners_credit_note_no_cash());
+		if (row.linked) {
+			const [linked] = await tx
+				.select({ status: creditNote.status, number: creditNote.number })
+				.from(creditNote)
+				.where(and(eq(creditNote.id, row.linked), inTenant(creditNote)));
+			if (linked && linked.status !== "void") {
+				invalid(m.partners_credit_note_exists({ number: linked.number }));
+			}
+		}
+		const holder = { id: customerId, code };
+		const yearLabel = String(year);
+		const made = await createCreditNote(tx, {
+			customerId,
+			// Stored, so in the language of whoever made it, like the lines.
+			reason: m.partners_credit_note_reason({ year: yearLabel }),
+			lines: [
+				{
+					description: m.partners_credit_note_line({ year: yearLabel }),
+					detail: closed.level
+						? m.partners_credit_note_detail({
+								level: closed.level,
+								revenue: formatEuros(closed.bonusRevenueCash),
+							})
+						: null,
+					amount: closed.cashAmount,
+					source: bonusLineSource(closed.id),
+				},
+			],
+			parent: customerSubject(holder),
+		});
+		const organizationId = currentTenant().organizationId;
+		await tx
+			.insert(bonusCreditNote)
+			.values({ organizationId, bonusYearId: closed.id, creditNoteId: made.id })
+			.onConflictDoUpdate({
+				target: [bonusCreditNote.organizationId, bonusCreditNote.bonusYearId],
+				set: { creditNoteId: made.id, createdAt: Temporal.Now.instant() },
+			});
+		await recordActivity(tx, {
+			action: "credited",
+			subject: yearSubject(closed, code),
+			parent: customerSubject(holder),
+			note: m.partners_credit_note_note({
+				number: made.number,
+				amount: formatCents(closed.cashAmount),
+			}),
+		});
+		return made;
+	});
 }
 
 /**

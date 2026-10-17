@@ -12,14 +12,18 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 
+import { holdsCredit } from "./credit-note.ts";
+import { getCreditNotes } from "./credit-notes.remote.ts";
 import { canChange } from "./invoice.ts";
 import { getInvoices } from "./invoices.remote.ts";
 import type { InvoiceStatus } from "./model.ts";
 import { command, form } from "./remote-functions.ts";
-import { refreshInvoice } from "./server/invoice-refresh.ts";
+import { creditsOf } from "./server/credit-notes.ts";
+import { refreshCreditNote, refreshInvoice } from "./server/invoice-refresh.ts";
 import { invoiceById, invoiceSubject } from "./server/invoices.ts";
 import { invoice } from "./server/schema.ts";
 import { settingsOf } from "./server/settings.ts";
+import { recordPayment } from "./server/settlement.ts";
 
 /** What an invoice is, as in "… is a draft". */
 const statusLabel: Record<InvoiceStatus, () => string> = {
@@ -105,24 +109,22 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 });
 
 /**
- * Records that one of the tenant's sent invoices was paid, today; refuses any other. The invoice's
- * page and the list's bulk action share it.
+ * Records that one of the tenant's sent invoices was paid, today, settling its sent credit notes
+ * (`recordPayment()`); refuses any other. The invoice's page and the list's bulk action share it.
  */
 function payInvoice(id: number) {
 	return db.transaction(async (tx) => {
 		const found = await changing(tx, id, "paid");
-		await tx
-			.update(invoice)
-			.set({ status: "paid", paidOn: Temporal.Now.plainDateISO(getTimeZone()) })
-			.where(idInTenant(invoice, found.id));
-		await recordActivity(tx, { action: "paid", subject: invoiceSubject(found) });
-		return found;
+		const settled = await recordPayment(tx, found, Temporal.Now.plainDateISO(getTimeZone()));
+		return { ...found, settled };
 	});
 }
 
 /** Records that a sent invoice was paid, today. */
 export const markPaid = form(v.object({ id: id() }), async ({ id }) => {
-	refreshInvoice(await payInvoice(id));
+	const paid = await payInvoice(id);
+	refreshInvoice(paid);
+	for (const credit of paid.settled) refreshCreditNote(credit);
 });
 
 /** Marks the selected invoices paid, today: the sent ones (see `canChange`). */
@@ -133,6 +135,7 @@ export const bulkMarkPaid = command(idsTarget, async (target) => {
 		change: (each) => payInvoice(each.id),
 	});
 	void getInvoices().refresh();
+	void getCreditNotes().refresh();
 	return result;
 });
 
@@ -143,6 +146,15 @@ export const bulkMarkPaid = command(idsTarget, async (target) => {
 export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "void");
+		const credits = (await creditsOf(tx, [found.id])).filter((each) => holdsCredit(each.status));
+		if (credits.length) {
+			invalid(
+				m.invoices_void_has_credit_notes({
+					number: found.number,
+					credits: credits.map((each) => each.number).join(", "),
+				}),
+			);
+		}
 		const orderIds = orderIdsOf(found);
 		if (found.status === "sent" && orderIds.length) {
 			// Only those still invoiced go back.

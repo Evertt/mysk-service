@@ -2,7 +2,8 @@
 	@component
 	A partner's card on its customer's page: this year's level, Partner Omzet and Bonus Omzet so far,
 	the way to the next level and the bonus it would bring (not to spend before the year closes), its
-	closed years with the choice between cash and credit, and its wallet.
+	closed years with the choice between cash and credit (cash paid out as a credit note), and its
+	wallet.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -16,6 +17,7 @@
 	import { closePartnerYear, type getPartnerCard } from "../partners.remote.ts";
 	import LevelBadge from "../ui/level-badge.svelte";
 	import LevelProgress from "../ui/level-progress.svelte";
+	import BonusCreditNote from "./bonus-credit-note.svelte";
 	import ChoiceDialog from "./choice-dialog.svelte";
 	import WalletEntryDialog from "./wallet-entry-dialog.svelte";
 
@@ -138,6 +140,14 @@
 							),
 						})}
 					</p>
+					{#if closed.choice === "cash"}
+						<BonusCreditNote
+							code={card.customer.code}
+							year={closed.year}
+							creditNote={closed.creditNote}
+							canManage={card.canManage}
+						/>
+					{/if}
 				{:else if closed.cashAmount || closed.creditAmount}
 					{#if card.canManage}
 						<div class="flex flex-wrap gap-2">

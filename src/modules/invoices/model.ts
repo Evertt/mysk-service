@@ -14,3 +14,9 @@ export const invoiceNumberFormat: NumberFormat = { prefix: "INV-", digits: 5, ye
  */
 export const invoiceStatuses = ["draft", "sent", "paid", "void"] as const;
 export type InvoiceStatus = (typeof invoiceStatuses)[number];
+
+/**
+ * What a credit note's number looks like, e.g. `CN-2026-0007`: a series of its own, sequential per
+ * organization across years like the invoices' (see `#lib/numbering.ts`).
+ */
+export const creditNoteNumberFormat: NumberFormat = { prefix: "CN-", digits: 4, yearly: true };

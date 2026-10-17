@@ -9,6 +9,7 @@ import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { numberFormatter } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
+import { type CreditNoteState, creditNoteStates } from "./credit-note.ts";
 import { type InvoiceState, invoiceStates } from "./invoice.ts";
 import { invoicingLabels } from "./labels.ts";
 
@@ -33,6 +34,23 @@ export const stateOptions = invoicingLabels.labelOptions(
 	"invoiceState",
 	invoiceStates,
 	stateDetails,
+);
+
+const creditStateDetails: Record<CreditNoteState, Display> = {
+	draft: stateDetails.draft,
+	sent: stateDetails.sent,
+	paid: stateDetails.paid,
+	void: stateDetails.void,
+};
+
+/** A credit note's status as shown (paid as settled), translated. */
+export const creditStates = invoicingLabels.withLabels("creditNoteState", creditStateDetails);
+
+/** Options for the credit notes' faceted filter, in order. */
+export const creditStateOptions = invoicingLabels.labelOptions(
+	"creditNoteState",
+	creditNoteStates,
+	creditStateDetails,
 );
 
 const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });

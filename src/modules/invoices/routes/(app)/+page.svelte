@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
 	import PlusIcon from "@lucide/svelte/icons/plus";
+	import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -18,6 +19,10 @@
 
 <PageHeader title={m.invoices_title()} description={m.invoices_description()}>
 	{#snippet actions()}
+		<Button variant="outline" href={resolve("/(app)/(modules)/invoices/credit-notes")}>
+			<ReceiptTextIcon data-icon="inline-start" />
+			{m.invoices_credit_notes()}
+		</Button>
 		<Button variant="outline" href={resolve("/(app)/(modules)/invoices/settings")}>
 			<SettingsIcon data-icon="inline-start" />
 			{m.invoices_settings()}

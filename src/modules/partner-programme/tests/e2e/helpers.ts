@@ -58,7 +58,8 @@ export async function rulesOf(organizationId: string, year: number) {
 
 /**
  * A partner's figures for a year, worked out from the database: the lines of its invoices paid in
- * the year, with their orders' types and classifications, under the year's rules as stored.
+ * the year less those of its credit notes settled in it (but the programme's own payouts), with
+ * their orders' types and classifications, under the year's rules as stored.
  */
 export async function figuresFromDatabase(
 	organizationId: string,
@@ -74,11 +75,19 @@ export async function figuresFromDatabase(
 		share: number | null;
 	}>(
 		`select l.amount, l.source, o.type, c.category, c.eligibility, c.share
-		 from invoice_line l join invoice i on i.id = l.invoice_id
+		 from (
+			select l.amount, l.source, l.order_id from invoice_line l join invoice i on i.id = l.invoice_id
+			where i.organization_id = ?1 and i.customer_id = ?2 and i.status = 'paid'
+			and i.paid_on between ?3 and ?4
+			union all
+			select l.amount, l.source, l.order_id from credit_note_line l
+			join credit_note n on n.id = l.credit_note_id
+			where n.organization_id = ?1 and n.customer_id = ?2 and n.status = 'paid'
+			and n.settled_on between ?3 and ?4
+			and (l.source is null or l.source not like 'partner-programme:%')
+		 ) l
 		 left join "order" o on o.id = l.order_id
-		 left join partner_order_classification c on c.order_id = l.order_id
-		 where i.organization_id = ? and i.customer_id = ? and i.status = 'paid'
-		 and i.paid_on between ? and ?`,
+		 left join partner_order_classification c on c.order_id = l.order_id`,
 		[organizationId, customerId, `${year}-01-01`, `${year}-12-31`],
 	);
 	const rules = await rulesOf(organizationId, year);

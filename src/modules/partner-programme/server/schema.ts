@@ -10,6 +10,7 @@ import {
 
 import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
 import { customer, order, user } from "#lib/server/db/schema.ts";
+import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
 import {
 	bonusForms,
@@ -130,6 +131,37 @@ export const bonusYear = sqliteTable(
 		foreignKey({
 			columns: [table.organizationId, table.customerId],
 			foreignColumns: [customer.organizationId, customer.id],
+		}),
+	],
+);
+
+/**
+ * The credit note a partner's cash bonus for a closed year is paid out with: the invoicing module's,
+ * standalone, made by the office once the partner chose cash (see `payBonusByCreditNote()` in
+ * `./close.ts`). A year without one is paid outside the app, as before. One per year; a voided
+ * credit note's row is pointed at the one that replaces it.
+ */
+export const bonusCreditNote = sqliteTable(
+	"partner_bonus_credit_note",
+	{
+		organizationId: organizationId(),
+		bonusYearId: integer("bonus_year_id").notNull(),
+		creditNoteId: integer("credit_note_id").notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.bonusYearId] }),
+		uniqueIndex("partner_bonus_credit_note_credit_note").on(
+			table.organizationId,
+			table.creditNoteId,
+		),
+		foreignKey({
+			columns: [table.organizationId, table.bonusYearId],
+			foreignColumns: [bonusYear.organizationId, bonusYear.id],
+		}),
+		foreignKey({
+			columns: [table.organizationId, table.creditNoteId],
+			foreignColumns: [creditNote.organizationId, creditNote.id],
 		}),
 	],
 );

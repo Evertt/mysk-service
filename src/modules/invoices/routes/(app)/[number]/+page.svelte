@@ -14,6 +14,7 @@
 	import ConfirmDialog from "#modules/invoices/detail/confirm-dialog.svelte";
 	import DraftEditor from "#modules/invoices/detail/draft-editor.svelte";
 	import { removeLine } from "#modules/invoices/detail/draft.remote.ts";
+	import InvoiceCredits from "#modules/invoices/detail/invoice-credits.svelte";
 	import InvoiceDocument from "#modules/invoices/detail/invoice-document.svelte";
 	import { issueInvoice, markPaid, voidInvoice } from "#modules/invoices/invoice-status.remote.ts";
 	import { canChange, isEditable } from "#modules/invoices/invoice.ts";
@@ -140,6 +141,9 @@
 					</dl>
 				</Card.Content>
 			</Card.Root>
+			{#if invoice.status !== "void" || data.credits.notes.length}
+				<InvoiceCredits {data} />
+			{/if}
 		{/if}
 		<ActivityCard type="invoice" id={invoice.id} />
 	</div>

@@ -10,9 +10,10 @@ import {
 import { fromDay, toDay, toMoment, toMomentOrNull } from "#lib/server/db/seed/temporal.ts";
 import type { TenantData } from "#lib/server/db/seed/tenant.ts";
 
+import { type CreditLineDraft, typedCreditLine } from "../credit-note.ts";
 import { itemLine, type LineDraft, orderLines } from "../invoice.ts";
-import { invoiceNumberFormat } from "../model.ts";
-import { invoice, invoiceLine, invoicingSettings } from "./schema.ts";
+import { creditNoteNumberFormat, invoiceNumberFormat } from "../model.ts";
+import { creditNote, creditNoteLine, invoice, invoiceLine, invoicingSettings } from "./schema.ts";
 
 /** From when the demo tenants bill contract fees through the app (see the invoicing settings). */
 const billFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1);
@@ -26,7 +27,7 @@ type InvoicedData = Pick<TenantData, "engineers" | "orders">;
  * `billFrom` on (so only this month's are still to bill). Older ones are paid; of the last two
  * months', some are still open, and past their due date overdue. A few were voided and issued
  * again, and two customers have a
- * draft for their completed orders. Priced like `priceOrders()` does, and billed like invoicing
+ * draft for their completed orders; a few credit notes follow (`generateCredits()`). Priced like `priceOrders()` does, and billed like invoicing
  * does, which the seed can't call: through the tenant's modules' collectors (see `module-seed.ts`).
  * With a faker of its own, so the rest of the data is the same with or without it.
  */
@@ -132,7 +133,7 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 			.flatMap((o) => orderLines(o, price(o), detailOf(o))),
 	}));
 
-	return [...issued, ...drafts].map((invoice, i) => ({
+	const invoices = [...issued, ...drafts].map((invoice, i) => ({
 		...invoice,
 		id: i + 1,
 		number: formatCode(
@@ -143,10 +144,119 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 		paymentTermDays: 30,
 		vatRate: 21,
 	}));
+	// After the invoices, with the faker where they left it: they stay the same.
+	return { invoices, credits: generateCredits(invoices, random, today) };
+}
+
+/** An invoice as `generateInvoices()` makes it, as far as its credit notes need it. */
+interface SeedInvoice {
+	id: number;
+	customerId: number;
+	status: "draft" | "sent" | "paid" | "void";
+	issuedOn: Date | null;
+	paidOn: Date | null;
+	lines: LineDraft[];
+}
+
+/** A credit note of the demo, with its lines; an invoice's line by its place on the invoice. */
+interface SeedCredit {
+	customerId: number;
+	/** The invoice it credits (the draft's id), none if standalone. */
+	invoiceId: number | null;
+	reason: string;
+	status: "draft" | "sent" | "paid";
+	issuedOn: Date | null;
+	settledOn: Date | null;
+	createdAt: Date;
+	lines: (CreditLineDraft & { lineIndex: number | null })[];
+}
+
+/**
+ * A few credit notes (see `../credit-note.ts`): part of an order's line on a paid invoice (a
+ * returned part, refunded a week after the payment), part of one on a sent invoice (a correction,
+ * taken off what's left to pay) and a goodwill credit on its own, still to refund. Only for what's
+ * there: a tenant without paid or sent invoices gets fewer.
+ */
+function generateCredits(invoices: SeedInvoice[], random: Faker, today: Date): SeedCredit[] {
+	const notAfterToday = (day: Date) => (day > today ? today : day);
+	/** The first order line of the invoice worth crediting part of, by its place. */
+	const orderLine = (invoice: SeedInvoice) =>
+		invoice.lines.findIndex((line) => line.orderId && line.amount >= 20_000);
+	/** `share` of a line, in whole euros, as the credit (negative). */
+	const partOf = (invoice: SeedInvoice, lineIndex: number, share: number, detail: string) => {
+		const line = invoice.lines[lineIndex];
+		const amount = -Math.round((line.amount * share) / 100) * 100;
+		return {
+			description: line.description,
+			detail,
+			quantity: 1,
+			unitPrice: amount,
+			amount,
+			invoiceLineId: null,
+			orderId: line.orderId,
+			source: line.source,
+			lineIndex,
+		};
+	};
+
+	const credits: SeedCredit[] = [];
+	const paid = invoices.filter(
+		(invoice) =>
+			invoice.status === "paid" && invoice.paidOn! < addDays(today, -14) && orderLine(invoice) >= 0,
+	);
+	if (paid.length) {
+		const returned = random.helpers.arrayElement(paid.slice(-12));
+		credits.push({
+			customerId: returned.customerId,
+			invoiceId: returned.id,
+			reason: "Onderdeel geretourneerd",
+			status: "paid",
+			issuedOn: notAfterToday(addDays(returned.paidOn!, 3)),
+			settledOn: notAfterToday(addDays(returned.paidOn!, 10)),
+			createdAt: notAfterToday(addDays(returned.paidOn!, 3)),
+			lines: [partOf(returned, orderLine(returned), 0.3, "Retour: ongebruikt onderdeel")],
+		});
+	}
+	const sent = invoices.filter((invoice) => invoice.status === "sent" && orderLine(invoice) >= 0);
+	if (sent.length) {
+		const corrected = random.helpers.arrayElement(sent);
+		credits.push({
+			customerId: corrected.customerId,
+			invoiceId: corrected.id,
+			reason: "Correctie: minder arbeidsuren dan gefactureerd",
+			status: "sent",
+			issuedOn: notAfterToday(addDays(corrected.issuedOn!, 5)),
+			settledOn: null,
+			createdAt: notAfterToday(addDays(corrected.issuedOn!, 5)),
+			lines: [partOf(corrected, orderLine(corrected), 0.2, "Een uur arbeid minder")],
+		});
+	}
+	const customers = [...new Set(invoices.map((invoice) => invoice.customerId))];
+	if (customers.length) {
+		const issuedOn = addDays(today, -5);
+		credits.push({
+			customerId: random.helpers.arrayElement(customers),
+			invoiceId: null,
+			reason: "Coulance na herhaalde storing",
+			status: "sent",
+			issuedOn,
+			settledOn: null,
+			createdAt: issuedOn,
+			lines: [
+				{
+					...typedCreditLine({ description: "Coulancebedrag", quantity: 1, unitPrice: 15_000 }),
+					lineIndex: null,
+				},
+			],
+		});
+	}
+	return credits.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }
 
 export default defineSeed<InvoicedData>({
 	clear: async (tx) => {
+		await tx.delete(creditNoteLine);
+		await tx.delete(creditNote);
 		await tx.delete(invoiceLine);
 		await tx.delete(invoice);
 		await tx.delete(invoicingSettings);
@@ -157,10 +267,13 @@ export default defineSeed<InvoicedData>({
 	generate: ({ engineers, orders }) => ({ engineers, orders }),
 
 	async run({ tx, tenants, insertAll, count }) {
-		// Ids are global, so each tenant's invoices follow the ones before.
+		// Ids are global, so each tenant's invoices (and their lines, and the credit notes) follow
+		// the ones before.
 		let offset = 0;
+		let lineOffset = 0;
+		let creditOffset = 0;
 		for (const tenant of tenants) {
-			const invoices = generateInvoices(tenant.data, tenant.seed, tenant.collect);
+			const { invoices, credits } = generateInvoices(tenant.data, tenant.seed, tenant.collect);
 			const invoiceRows = invoices.map(({ lines: _lines, ...row }) => ({
 				...row,
 				organizationId: tenant.id,
@@ -172,11 +285,48 @@ export default defineSeed<InvoicedData>({
 				voidedAt: toMomentOrNull(row.voidedAt),
 				createdAt: toMoment(row.createdAt),
 			}));
-			const lineRows = invoices.flatMap((row) =>
-				row.lines.map((line) => ({
+			const lineRows = invoices
+				.flatMap((row) =>
+					row.lines.map((line) => ({
+						...line,
+						organizationId: tenant.id,
+						invoiceId: row.id + offset,
+						orderId: line.orderId && tenant.orderIds[line.orderId - 1],
+					})),
+				)
+				.map((row, i) => ({ ...row, id: lineOffset + i + 1 }));
+			/** The id of an invoice's line, by the invoice's draft id and the line's place on it. */
+			const lineIds = new Map<string, number>();
+			let next = lineOffset;
+			for (const row of invoices) {
+				for (const [i] of row.lines.entries()) lineIds.set(`${row.id}:${i}`, ++next);
+			}
+			const creditRows = credits.map((credit, i) => ({
+				id: creditOffset + i + 1,
+				organizationId: tenant.id,
+				number: formatCode(
+					creditNoteNumberFormat,
+					i + 1,
+					(credit.issuedOn ?? credit.createdAt).getFullYear(),
+				),
+				customerId: tenant.customerIds[credit.customerId - 1],
+				invoiceId: credit.invoiceId && credit.invoiceId + offset,
+				status: credit.status,
+				vatRate: 21,
+				reason: credit.reason,
+				issuedOn: credit.issuedOn && toDay(credit.issuedOn),
+				settledOn: credit.settledOn && toDay(credit.settledOn),
+				createdAt: toMoment(credit.createdAt),
+			}));
+			const creditLineRows = credits.flatMap((credit, i) =>
+				credit.lines.map(({ lineIndex, ...line }) => ({
 					...line,
 					organizationId: tenant.id,
-					invoiceId: row.id + offset,
+					creditNoteId: creditOffset + i + 1,
+					invoiceLineId:
+						credit.invoiceId && lineIndex !== null
+							? lineIds.get(`${credit.invoiceId}:${lineIndex}`)!
+							: null,
 					orderId: line.orderId && tenant.orderIds[line.orderId - 1],
 				})),
 			);
@@ -186,10 +336,16 @@ export default defineSeed<InvoicedData>({
 			await insertAll(invoiceRows, (chunk) => tx.insert(invoice).values(chunk));
 			await insertAll(lineRows, (chunk) => tx.insert(invoiceLine).values(chunk));
 			await insertAll(settings, (chunk) => tx.insert(invoicingSettings).values(chunk));
+			await insertAll(creditRows, (chunk) => tx.insert(creditNote).values(chunk));
+			await insertAll(creditLineRows, (chunk) => tx.insert(creditNoteLine).values(chunk));
 			count("invoices", invoiceRows);
 			count("invoiceLines", lineRows);
 			count("invoicingSettings", settings);
+			count("creditNotes", creditRows);
+			count("creditNoteLines", creditLineRows);
 			offset += invoiceRows.length;
+			lineOffset += lineRows.length;
+			creditOffset += creditRows.length;
 		}
 	},
 });

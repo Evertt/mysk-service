@@ -1,7 +1,9 @@
 /**
  * An invoice as a PDF (A4), laid out like its page (`invoice-document.svelte`): who it's from and
  * for, its dates, lines and totals. Uses PDF's standard Helvetica, so nothing is embedded. Made
- * per request, in the request's language (the lines are as they were billed).
+ * per request, in the request's language (the lines are as they were billed). A credit note
+ * (`credit`) is the same document headed "Credit note" ("Creditnota"), with its negative amounts,
+ * the invoice it credits and its reason, and what it credits instead of what to pay.
  */
 import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
@@ -37,6 +39,8 @@ export interface PdfInvoice {
 		amount: number;
 	}[];
 	totals: { subtotal: number; vat: number; total: number };
+	/** For a credit note: why, the invoice it credits (none if standalone) and when it was settled. */
+	credit?: { reason: string; invoice: string | null; settledOn: Temporal.PlainDate | null };
 }
 
 const A4 = { width: 595.28, height: 841.89 };
@@ -49,8 +53,13 @@ const rule = rgb(0.85, 0.86, 0.88);
 const columns = { quantity: 370, unitPrice: 455, amount: A4.width - MARGIN };
 
 export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
+	const { credit } = invoice;
 	const pdf = await PDFDocument.create();
-	pdf.setTitle(m.invoices_invoice_number({ number: invoice.number }));
+	pdf.setTitle(
+		credit
+			? m.invoices_credit_number({ number: invoice.number })
+			: m.invoices_invoice_number({ number: invoice.number }),
+	);
 	pdf.setAuthor(invoice.organization);
 	pdf.setCreator("Fieldworks");
 	const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -122,10 +131,8 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 		if (y - needed >= MARGIN) return;
 		page = pdf.addPage([A4.width, A4.height]);
 		y = A4.height - MARGIN;
-		const continued = m.invoices_pdf_continued({
-			organization: invoice.organization,
-			number: invoice.number,
-		});
+		const of = { organization: invoice.organization, number: invoice.number };
+		const continued = credit ? m.invoices_pdf_credit_continued(of) : m.invoices_pdf_continued(of);
 		text(continued, MARGIN, { size: 9, color: muted });
 		y -= 28;
 		tableHeader();
@@ -133,14 +140,17 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 
 	// --- Header ---------------------------------------------------------------------------------
 	text(invoice.organization, MARGIN, { size: 18, font: bold });
-	text(m.invoices_pdf_heading(), A4.width - MARGIN, { size: 18, font: bold, align: "right" });
+	const heading = credit ? m.invoices_pdf_credit_heading() : m.invoices_pdf_heading();
+	text(heading, A4.width - MARGIN, { size: 18, font: bold, align: "right" });
 	y -= 20;
 	text(invoice.number, A4.width - MARGIN, { size: 11, align: "right" });
 	// Its status, unless it's simply sent.
 	const label =
 		invoice.state === "sent"
 			? ""
-			: invoicingLabels.label("invoiceState", invoice.state).toUpperCase();
+			: credit && invoice.state !== "overdue"
+				? invoicingLabels.label("creditNoteState", invoice.state).toUpperCase()
+				: invoicingLabels.label("invoiceState", invoice.state).toUpperCase();
 	if (label) {
 		y -= 16;
 		text(label, A4.width - MARGIN, { size: 11, font: bold, color: muted, align: "right" });
@@ -165,21 +175,32 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	const bottom = y;
 
 	y = top;
-	const dates: [string, string][] = [
-		[
-			m.invoices_column_issued(),
-			invoice.issuedOn ? formatDate(invoice.issuedOn) : m.invoices_not_yet(),
-		],
-		[
-			m.invoices_column_due(),
-			invoice.dueOn
-				? formatDate(invoice.dueOn)
-				: m.invoices_due_after_issuing({ count: invoice.paymentTermDays }),
-		],
-		...(invoice.paidOn
-			? [[m.invoices_paid(), formatDate(invoice.paidOn)] as [string, string]]
-			: []),
+	const issued: [string, string] = [
+		m.invoices_column_issued(),
+		invoice.issuedOn ? formatDate(invoice.issuedOn) : m.invoices_not_yet(),
 	];
+	const dates: [string, string][] = credit
+		? [
+				issued,
+				...(credit.invoice
+					? [[m.invoices_credit_credits(), credit.invoice] as [string, string]]
+					: []),
+				...(credit.settledOn
+					? [[m.invoices_credit_state_settled(), formatDate(credit.settledOn)] as [string, string]]
+					: []),
+			]
+		: [
+				issued,
+				[
+					m.invoices_column_due(),
+					invoice.dueOn
+						? formatDate(invoice.dueOn)
+						: m.invoices_due_after_issuing({ count: invoice.paymentTermDays }),
+				],
+				...(invoice.paidOn
+					? [[m.invoices_paid(), formatDate(invoice.paidOn)] as [string, string]]
+					: []),
+			];
 	for (const [name, value] of dates) {
 		text(name, A4.width - MARGIN - 150, { size: 9, color: muted });
 		text(value, A4.width - MARGIN, { align: "right" });
@@ -229,18 +250,30 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 
 	// --- Notes and payment ----------------------------------------------------------------------
 	y -= 16;
-	const closing = [
-		...(invoice.notes ? invoice.notes.split("\n") : []),
-		...(invoice.dueOn && invoice.state !== "void"
-			? [
-					m.invoices_please_pay({
-						amount: formatCents(invoice.totals.total),
-						date: formatDate(invoice.dueOn),
-						number: invoice.number,
-					}),
-				]
-			: []),
-	];
+	const closing = credit
+		? [
+				m.invoices_credit_reason_line({ reason: credit.reason }),
+				...(invoice.state === "void"
+					? []
+					: [
+							m.invoices_credit_closing({
+								amount: formatCents(-invoice.totals.total),
+								number: invoice.number,
+							}),
+						]),
+			]
+		: [
+				...(invoice.notes ? invoice.notes.split("\n") : []),
+				...(invoice.dueOn && invoice.state !== "void"
+					? [
+							m.invoices_please_pay({
+								amount: formatCents(invoice.totals.total),
+								date: formatDate(invoice.dueOn),
+								number: invoice.number,
+							}),
+						]
+					: []),
+			];
 	for (const paragraph of closing) {
 		for (const part of wrap(paragraph, A4.width - 2 * MARGIN, 9)) {
 			ensure(14);
