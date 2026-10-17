@@ -55,7 +55,7 @@
 	<StatusBadge status={order.status} />
 </div>
 
-<Card.Root data-client-order-lines>
+<Card.Root class="w-full max-w-3xl" data-client-order-lines>
 	<Card.Content class="flex flex-col gap-3">
 		<ul class="flex flex-col divide-y text-sm">
 			{#each order.lines as line (line.id)}
