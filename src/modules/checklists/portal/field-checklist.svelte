@@ -4,7 +4,8 @@
 	three big buttons each (Goed, Afkeur, N.v.t.), the remark a rejection needs, the general remark for
 	the customer, and "Complete" once every point is answered. Each answer is saved as it's given, in
 	the order given; one that fails to save is taken back and said so. Completed, or when the order
-	isn't in progress, it shows what was found.
+	isn't in progress, it shows what was found. Below it, what the modules that enhance checklists
+	ask about the unit (`checklists.field.checklist`), e.g. its condition once the checklist is done.
 -->
 <script lang="ts">
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
@@ -14,9 +15,11 @@
 	import { toast } from "svelte-sonner";
 
 	import { unitTitle } from "#lib/equipment/index.ts";
+	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
+	import { fieldChecklist } from "../api/extensions.ts";
 	import ChecklistPoints from "../detail/checklist-points.svelte";
 	import { checklistLabels } from "../labels.ts";
 	import {
@@ -51,7 +54,9 @@
 			remarks: string | null;
 			completedAt: Temporal.Instant | null;
 			engineer: string | null;
+			order: { number: string };
 			unit: {
+				id: number;
 				name: string | null;
 				manufacturer: string;
 				model: string;
@@ -307,5 +312,14 @@
 				</p>
 			</div>
 		{/if}
+		<ExtensionSlot
+			point={fieldChecklist}
+			props={{
+				number: checklist.order.number,
+				equipmentId: checklist.unit.id,
+				completed: checklist.status === "completed",
+				canChange,
+			}}
+		/>
 	</Card.Content>
 </Card.Root>

@@ -1,0 +1,46 @@
+/** How the activity log reads for the condition module's records (see `#lib/activity/subjects.ts`). */
+import { resolve } from "$app/paths";
+
+// Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
+import type { Sentence, SubjectType } from "#lib/activity/index.ts";
+import { formatNumber } from "#lib/i18n/index.ts";
+
+/** Recording a unit's condition, as a sentence. */
+export const conditionActions = {
+	recorded: m.condition_activity_action_recorded,
+} satisfies Record<string, Sentence>;
+
+/** A condition's label in the log: its unit's serial number and the score. */
+export const conditionLabel = (record: { serialNumber: string; score: number }) =>
+	`${record.serialNumber} · ${record.score}%`;
+
+/** The unit's serial number in a condition's label. */
+const serialOf = (label: string) => label.split(" · ")[0];
+
+/** A setting that's on or off. */
+const onOff = (value: unknown) => (value ? m.condition_on() : m.condition_off());
+
+/** A score in percent. */
+const percent = (value: unknown) => `${formatNumber(Number(value))}%`;
+
+export const conditionSubjects: Record<string, SubjectType> = {
+	/** A unit's condition, logged with its unit as its parent; it's on the unit's page. */
+	unitCondition: {
+		noun: m.condition_activity_subject,
+		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: serialOf(label) }),
+		fields: {
+			score: { label: m.condition_field_score, format: percent },
+			advice: { label: m.condition_field_advice },
+		},
+	},
+	/** The organization's condition settings; they have no label, so they read as their noun. */
+	condition_settings: {
+		noun: m.condition_activity_subject_settings,
+		href: () => resolve("/(app)/(modules)/condition/settings"),
+		fields: {
+			criticalBelow: { label: m.condition_critical_below, format: percent },
+			attentionBelow: { label: m.condition_attention_below, format: percent },
+			autoPlan: { label: m.condition_auto_plan, format: onOff },
+		},
+	},
+};

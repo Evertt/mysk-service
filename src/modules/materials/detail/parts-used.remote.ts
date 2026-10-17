@@ -1,0 +1,42 @@
+/**
+ * The parts used on a unit ("Onderdelen"): the materials on the lines of its done orders, whether
+ * it's their only unit or one of several, added up per material, the most recently used first.
+ */
+import { error } from "@sveltejs/kit";
+import { and, desc, eq, max, sql, sum } from "drizzle-orm";
+import * as v from "valibot";
+
+import { doneOrderStatuses } from "#lib/models.ts";
+import { onUnit } from "#lib/orders/server/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
+import { equipment, order } from "#lib/server/db/schema.ts";
+
+import { query } from "../remote-functions.ts";
+import { material, orderLine } from "../server/schema.ts";
+
+/** The tenant's unit `serialNumber`'s parts, per material: how much, on how many orders, last when. */
+export const getPartsUsed = query(v.string(), async (serialNumber) => {
+	const [unit] = await db
+		.select({ id: equipment.id })
+		.from(equipment)
+		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
+	if (!unit) error(404, m.materials_equipment_not_found({ serial: serialNumber }));
+	const lastUsed = max(order.completedAt).mapWith(order.completedAt);
+	return db
+		.select({
+			sku: material.sku,
+			name: material.name,
+			unit: material.unit,
+			quantity: sum(orderLine.quantity).mapWith(Number),
+			orders: sql<number>`count(distinct ${order.id})`.mapWith(Number),
+			lastUsed,
+		})
+		.from(orderLine)
+		.innerJoin(...tenantJoin(order, orderLine.orderId))
+		.innerJoin(...tenantJoin(material, orderLine.materialId))
+		.where(and(inTenant(orderLine), onUnit(unit.id), inList(order.status, [...doneOrderStatuses])))
+		.groupBy(material.id)
+		.orderBy(desc(lastUsed), material.name);
+});

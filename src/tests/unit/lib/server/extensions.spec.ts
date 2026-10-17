@@ -11,6 +11,7 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import { drizzleQueued } from "#lib/server/db/serialize.ts";
 import {
 	collect,
+	collectNow,
 	contribute,
 	defineServerModule,
 	emit,
@@ -43,6 +44,8 @@ afterEach(() => vi.restoreAllMocks());
 const point = defineCollector<number, string>("test.point", { onError: "fail" });
 const skipping = defineCollector<number, string>("test.skipping", { onError: "skip" });
 const failing = defineCollector<number, string>("test.failing", { onError: "fail" });
+const immediate = defineCollector<number, string>("test.immediate", { onError: "fail", now: true });
+const lenient = defineCollector<number, string>("test.lenient", { onError: "skip", now: true });
 const voting = defineVote<number>("test.voting");
 const happened = defineEvent<string>("test.happened");
 const saving = defineSaveHook<{ saved: string[]; refuse: string[] }, string>("test.saving");
@@ -62,6 +65,8 @@ registry.modules = [
 	fake("a", [
 		contribute(point, async (n) => `a:${n}`),
 		contribute(skipping, async (n) => `a:${n}`),
+		contribute(immediate, (n) => `a:${n}`),
+		contribute(lenient, (n) => `a:${n}`),
 		contribute(failing, async (n) => `a:${n}`),
 		contribute(voting, async () => undefined),
 		contribute(happened, (what) => void told.push(`a ${what}`)),
@@ -72,6 +77,11 @@ registry.modules = [
 	]),
 	fake("b", [
 		contribute(skipping, broken("b")),
+		contribute(immediate, () => {
+			throw new Error("b is broken");
+		}),
+		// Not at once: a mistake the type check refuses, so it's cast here.
+		contribute(lenient, (async () => "b") as unknown as (n: number) => string),
 		contribute(failing, broken("b")),
 		contribute(voting, async (n) => (n > 0 ? "b refuses" : undefined)),
 		contribute(offered, async (n) => `b:${n}`),
@@ -80,6 +90,7 @@ registry.modules = [
 	]),
 	fake("c", [
 		contribute(point, async (n) => `c:${n}`),
+		contribute(immediate, (n) => `c:${n}`),
 		contribute(voting, async () => undefined),
 		contribute(happened, async (what) => void told.push(`c ${what}`)),
 		contribute(saving, async ({ saved, refuse }) => {
@@ -91,6 +102,17 @@ registry.modules = [
 
 test("collect asks the modules that are on, in registry order", async () => {
 	expect(await collect(point, 1, ["c", "a"])).toEqual(["a:1", "c:1"]);
+});
+
+test("collectNow answers at once, in registry order", () => {
+	expect(collectNow(immediate, 1, ["c", "a"])).toEqual(["a:1", "c:1"]);
+	expect(() => collectNow(immediate, 1, ["a", "b"])).toThrow("b is broken");
+});
+
+test("an immediate skip collector leaves out a module that answers with a promise", () => {
+	const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+	expect(collectNow(lenient, 1, ["a", "b"])).toEqual(["a:1"]);
+	expect(String(errors.mock.calls[0])).toContain("with a promise");
 });
 
 test("a skip collector leaves out a module that throws, and logs it", async () => {

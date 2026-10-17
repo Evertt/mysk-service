@@ -1,28 +1,22 @@
 /**
  * The SQL of the maintenance module's column in the equipment list (see
- * `../../columns/equipment.list.ts`): a correlated subquery for the earliest due date of the
- * unit's active plans, in the tenant.
+ * `../../columns/equipment.list.ts`): the earliest due date of the unit's active plans
+ * (`../next-due-sql.ts`).
  */
-import { and, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { equipment } from "#lib/server/db/schema.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
 import { nextMaintenance } from "../../columns/equipment.list.ts";
 import { SOON_DAYS } from "../../model.ts";
+import { nextDueSql } from "../next-due-sql.ts";
 import { maintenancePlan } from "../schema.ts";
 
 export default [
 	columnSql(nextMaintenance, () => {
-		const next =
-			sql<Temporal.PlainDate | null>`(select min(${maintenancePlan.nextDueOn}) from ${maintenancePlan} where ${and(
-				eq(maintenancePlan.equipmentId, equipment.id),
-				eq(maintenancePlan.paused, false),
-				inTenant(maintenancePlan),
-			)})`.mapWith(maintenancePlan.nextDueOn);
+		const next = nextDueSql().mapWith(maintenancePlan.nextDueOn);
 		const today = Temporal.Now.plainDateISO(getTimeZone());
 		// The filter's values; `later` for a unit whose next visit is further off (in none of them).
 		// Days as `yyyy-mm-dd` compare as text.

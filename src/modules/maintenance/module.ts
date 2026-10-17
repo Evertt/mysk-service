@@ -11,7 +11,8 @@ export default defineModule({
 	route: "/(app)/(modules)/maintenance",
 	icon: CalendarSyncIcon,
 	subjects: maintenanceSubjects,
-	// Adds the plans of a contract's covered units to its page, when the tenant has contracts.
-	enhances: ["contracts"],
+	// Adds the plans of a contract's covered units to its page, when the tenant has contracts, and
+	// a unit's next visit to the condition module's units.
+	enhances: ["contracts", "condition"],
 	nav: { after: "equipment" },
 });

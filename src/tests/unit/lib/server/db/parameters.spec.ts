@@ -13,6 +13,8 @@ import {
 	insertBatches,
 	insertRows,
 	inList,
+	inLiterals,
+	literal,
 	maxParameters,
 	notInList,
 	TooManyParameters,
@@ -89,6 +91,30 @@ describe("statements within the parameter limit", () => {
 			.from(thing)
 			.where(notInList(thing.id, [1, 2]));
 		expect(rest.map((row) => row.id)).toEqual([3, 4, 5]);
+	});
+
+	it("writes the code's constants in, binding nothing", async () => {
+		await db.transaction((tx) => insertRows(tx as never, thing, rows(9)));
+		// Far more than the limit would bind as parameters.
+		const repeated = sql.join(
+			Array.from({ length: maxParameters + 10 }, () => sql`(${thing.size} = ${literal(3)})`),
+			sql` or `,
+		);
+		const found = await db
+			.select({ id: thing.id })
+			.from(thing)
+			.where(sql`${repeated} and ${inLiterals(thing.code, ["T4", "T5", "T-x_1:2. 3"])}`);
+		expect(found.map((row) => row.id)).toEqual([4]);
+		expect(await db.select().from(thing).where(inLiterals(thing.code, []))).toEqual([]);
+		expect(
+			await db
+				.select()
+				.from(thing)
+				.where(sql`${literal(true)}`),
+		).toHaveLength(9);
+		expect(() => literal("it's")).toThrow("Not a literal");
+		expect(() => literal("a'; drop table thing; --")).toThrow("Not a literal");
+		expect(() => literal(Number.NaN)).toThrow("Not a literal");
 	});
 
 	it("compares the values as the column stores them", async () => {

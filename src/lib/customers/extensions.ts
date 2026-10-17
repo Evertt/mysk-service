@@ -7,3 +7,9 @@ import { defineSlot } from "#lib/extensions/define.ts";
  * code, checked in the tenant there), and render nothing when they have nothing to say.
  */
 export const detailSide = defineSlot<{ code: string }>("customers.detail.side");
+
+/**
+ * Cards in the main column of a customer's page, below its recent activity, e.g. the service
+ * history of its units. Like the side column's: by the customer's code, loading their own data.
+ */
+export const detailMain = defineSlot<{ code: string }>("customers.detail.main");

@@ -19,6 +19,7 @@
 			"./messages/{locale}/portal.json",
 			"./messages/{locale}/activity.json",
 			"./src/modules/checklists/messages/{locale}/checklists.json",
+			"./src/modules/condition/messages/{locale}/condition.json",
 			"./src/modules/contracts/messages/{locale}/contracts.json",
 			"./src/modules/invoices/messages/{locale}/invoices.json",
 			"./src/modules/maintenance/messages/{locale}/maintenance.json",

@@ -14,5 +14,7 @@ export default defineModule({
 	icon: ClipboardCheckIcon,
 	subjects: checklistSubjects,
 	actions: checklistActions,
+	// Tells the condition module a unit's inspection status and its completed checklists.
+	enhances: ["condition"],
 	nav: { after: "equipment" },
 });

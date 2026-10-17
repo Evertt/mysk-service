@@ -37,7 +37,9 @@ Cloudflare's limit, and `db` enforces it everywhere (a statement over it throws,
 a list of values is never bound one by one: `inList(column, values)` and `notInList()` instead of
 drizzle's `inArray()`/`notInArray()` (one JSON parameter; `parameters.spec.ts` refuses the
 latter), and `insertRows(tx, table, rows)` (or `insertBatches()` with `.returning()`) for a
-multi-row insert. The seed, which runs in Node only, is exempt.
+multi-row insert. The seed, which runs in Node only, is exempt. An expression a statement repeats
+many times (the condition module's unit status, in a list's select, sort and filter) writes the
+code's own constants in with `literal()` and `inLiterals()` instead of binding them; never input.
 
 ## Cloudflare
 

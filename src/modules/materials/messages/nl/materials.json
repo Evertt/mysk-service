@@ -207,5 +207,24 @@
 	"materials_activity_field_quantity": "aantal",
 	"materials_order_line_amount": "Bedrag",
 	"materials_order_line_quantity": "Aantal",
-	"materials_portal_not_found": "Opdracht {number} niet gevonden"
+	"materials_portal_not_found": "Opdracht {number} niet gevonden",
+	"materials_equipment_not_found": "Apparaat {serial} niet gevonden",
+	"materials_parts_title": "Onderdelen",
+	"materials_parts_description": "De materialen op de afgeronde opdrachten van dit apparaat.",
+	"materials_parts_empty": "Nog geen materialen gebruikt op dit apparaat.",
+	"materials_parts_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "op 1 opdracht",
+				"countPlural=*": "op {countText} opdrachten"
+			}
+		}
+	],
+	"materials_parts_last_used": "laatst {date}"
 }

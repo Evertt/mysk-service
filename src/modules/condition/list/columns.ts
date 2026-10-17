@@ -1,0 +1,105 @@
+import { resolve } from "$app/paths";
+import { renderComponent } from "@tanstack/svelte-table";
+
+import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
+import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { CustomerLink } from "#lib/customers/components.ts";
+import { unitTitle } from "#lib/equipment/index.ts";
+
+import { conditionLabels } from "../labels.ts";
+import { type Concern, type ScoreBand, type UnitStatus, unitStatuses } from "../model.ts";
+import ConditionBar from "../ui/condition-bar.svelte";
+import InspectionBadge from "../ui/inspection-badge.svelte";
+import StatusBadge from "../ui/status-badge.svelte";
+import type { getConditionUnits } from "./units-list.remote.ts";
+import { scoreBands } from "./units-list.ts";
+
+/** A row of the Connect page's list, a page of which comes from the server (see `conditionList`). */
+type ConditionRow = Awaited<ReturnType<typeof getConditionUnits>>["rows"][number];
+
+const column = createAppColumnHelper<ConditionRow>();
+
+export const columns = column.columns([
+	column.accessor((row) => unitTitle(row), {
+		id: "unit",
+		cell: ({ getValue, row }) =>
+			renderComponent(TwoLineCell, {
+				primary: getValue(),
+				secondary: row.original.serialNumber,
+				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
+			}),
+		enableHiding: false,
+		meta: { label: m.condition_column_unit },
+	}),
+	column.accessor((row) => row.location?.name ?? row.site, {
+		id: "location",
+		cell: ({ row }) =>
+			renderComponent(TwoLineCell, {
+				primary: row.original.location?.name ?? row.original.site,
+				secondary: row.original.location ? row.original.site : null,
+				href: row.original.location
+					? resolve("/(app)/equipment/locations/[id]", { id: String(row.original.location.id) })
+					: undefined,
+			}),
+		enableGlobalFilter: false,
+		meta: { label: m.condition_column_location },
+	}),
+	column.accessor((row) => row.customer.name, {
+		id: "customer",
+		cell: ({ row }) =>
+			renderComponent(CustomerLink, {
+				name: row.original.customer.name,
+				code: row.original.customer.code,
+			}),
+		// By the customer's code, e.g. `?customer=RIE-001`.
+		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
+		meta: { label: m.condition_column_customer, filter: "set" },
+	}),
+	column.accessor("score", {
+		id: "condition",
+		cell: ({ getValue, row }) =>
+			renderComponent(ConditionBar, {
+				score: getValue(),
+				band: row.original.band === "none" ? null : (row.original.band as ScoreBand),
+			}),
+		sortUndefined: "last",
+		enableGlobalFilter: false,
+		filterFn: "oneOf",
+		meta: { label: m.condition_column_condition, filter: "set", filterValues: scoreBands },
+	}),
+	column.accessor("lastService", {
+		cell: ({ cell }) => renderComponent(cell.DateCell),
+		enableGlobalFilter: false,
+		meta: { label: m.condition_column_last_service, param: "last-service" },
+	}),
+	column.accessor("nextDue", {
+		cell: ({ cell }) => renderComponent(cell.DateCell),
+		enableGlobalFilter: false,
+		meta: { label: m.condition_column_next_due, param: "next-due" },
+	}),
+	column.accessor("inspection", {
+		cell: ({ getValue }) => renderComponent(InspectionBadge, { status: getValue() }),
+		enableGlobalFilter: false,
+		meta: { label: m.condition_column_inspection },
+	}),
+	column.accessor("status", {
+		cell: ({ getValue, row }) =>
+			renderComponent(StatusBadge, {
+				status: getValue(),
+				concern: row.original.concern as Concern,
+			}),
+		enableGlobalFilter: false,
+		filterFn: "oneOf",
+		meta: {
+			label: m.condition_column_status,
+			filterValues: unitStatuses,
+			clickFilter: (status) => conditionLabels.label("unitStatus", status as UnitStatus),
+		},
+	}),
+	column.accessor("advice", {
+		cell: ({ getValue }) => getValue() ?? "",
+		enableSorting: false,
+		enableGlobalFilter: false,
+		meta: { label: m.condition_column_advice },
+	}),
+]);

@@ -54,6 +54,32 @@ export function inList<T>(column: SQLWrapper, values: readonly T[]): SQL {
 	return sql`${column} in (select value from json_each(${json}))`;
 }
 
+/** What `literal()` takes: text of letters, digits and `-_:. ` (an enum's value, a day). */
+const plainText = /^[\w\-:. ]*$/;
+
+/**
+ * A constant of the code's own (an enum's value, a day, a threshold) written into the statement
+ * rather than bound: for SQL that repeats an expression many times over in one statement (a unit's
+ * status, made of correlated subqueries, in a list's select, sort and filter), which would bind it
+ * each time and soon pass `maxParameters`. Never for input: it refuses anything but plain text,
+ * finite numbers and booleans.
+ */
+export function literal(value: string | number | boolean): SQL {
+	if (typeof value === "boolean") return sql.raw(value ? "1" : "0");
+	if (typeof value === "number") {
+		if (!Number.isFinite(value)) throw new Error(`Not a literal: ${value}`);
+		return sql.raw(String(value));
+	}
+	if (!plainText.test(value)) throw new Error(`Not a literal: ${JSON.stringify(value)}`);
+	return sql.raw(`'${value}'`);
+}
+
+/** `expression` is one of the constants `values`, written in (see `literal()`). */
+export function inLiterals(expression: SQLWrapper, values: readonly (string | number)[]): SQL {
+	if (!values.length) return sql`0`;
+	return sql`${expression} in (${sql.join(values.map(literal), sql`, `)})`;
+}
+
 /** `column` is none of `values` (none: true); see `inList()`. */
 export function notInList<T>(column: SQLWrapper, values: readonly T[]): SQL {
 	if (!values.length) return sql`1`;

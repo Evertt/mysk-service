@@ -10,7 +10,7 @@
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { SegmentBadge, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
-	import { detailSide } from "#lib/customers/extensions.ts";
+	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
 	import { countryName } from "#lib/customers/index.ts";
 	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
@@ -182,6 +182,8 @@
 		</Card.Root>
 
 		<RecentActivity code={customer.code} />
+
+		<ExtensionSlot point={detailMain} props={{ code: customer.code }} />
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">

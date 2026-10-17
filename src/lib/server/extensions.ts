@@ -15,6 +15,9 @@
  *   say about. The answers come back in registry order. When a contributor throws, the point's
  *   `onError` decides: `fail` fails the request (a broken price must not quietly become a wrong
  *   total), `skip` logs it with the module's id and leaves its answer out (an order's badges).
+ * - Immediate collector (`collectNow()`, a collector declared with `now: true`): the same, but each
+ *   contributor answers at once, without awaiting anything, for an owner that can't wait (the SQL
+ *   of a list's column, built while the list's query is). Usually SQL, built per request.
  * - Event after commit (`emit()`): each contributor is called in registry order once the change is
  *   committed, in the same request (see `afterCommit()` in `#lib/server/db/serialize.ts`). Errors
  *   are logged with the module's id, never thrown: the change is made.
@@ -35,6 +38,7 @@
 import type {
 	CollectorPoint,
 	EventPoint,
+	ImmediateCollectorPoint,
 	SaveHookPoint,
 	VotePoint,
 } from "#lib/extensions/define.ts";
@@ -62,6 +66,11 @@ export interface ServerModule {
 	contributions: Contribution[];
 }
 
+/** A module's answer to an immediate collector: its part of the answer about `input`, at once. */
+export function contribute<In, Out>(
+	point: ImmediateCollectorPoint<In, Out>,
+	answer: (input: In) => Out,
+): Contribution;
 /** A module's answer to a collector: its part of the answer about `input`. */
 export function contribute<In, Out>(
 	point: CollectorPoint<In, Out>,
@@ -142,6 +151,34 @@ export async function collect<In, Out>(
 		if (result.status === "fulfilled") return [result.value];
 		console.error(`Module ${contributions[i].id} failed at ${point.id}:`, result.reason);
 		return [];
+	});
+}
+
+/**
+ * Every answer of the modules that are on (by default the current tenant's) to the immediate
+ * collector `point` about `input`, at once, in registry order. A module that throws, or answers
+ * with a promise (which an immediate collector's contributor mustn't), fails the call for a `fail`
+ * point, and is logged and left out for a `skip` one.
+ */
+export function collectNow<In, Out>(
+	point: ImmediateCollectorPoint<In, Out>,
+	input: In,
+	enabled: readonly string[] = requireTenant().modules,
+): Out[] {
+	return contributionsTo<(input: In) => Out>(point, enabled).flatMap(({ id, answer }) => {
+		try {
+			const out = answer(input);
+			if (out instanceof Promise) {
+				throw new Error(
+					`Module ${id} answered ${point.id} with a promise: it takes answers at once`,
+				);
+			}
+			return [out];
+		} catch (error) {
+			if (point.onError === "fail") throw error;
+			console.error(`Module ${id} failed at ${point.id}:`, error);
+			return [];
+		}
 	});
 }
 

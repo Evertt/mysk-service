@@ -21,6 +21,9 @@ import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+// The modules' hooks, which a module's column SQL may ask (`collectNow()`), import their remote
+// functions: none are needed here.
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
 
 // An in-memory database instead of the app's, which needs `DATABASE_URL`.
 vi.mock("#lib/server/db/index.ts", async () => {

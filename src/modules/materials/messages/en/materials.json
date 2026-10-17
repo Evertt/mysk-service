@@ -207,5 +207,24 @@
 	"materials_activity_field_quantity": "quantity",
 	"materials_order_line_amount": "Amount",
 	"materials_order_line_quantity": "Quantity",
-	"materials_portal_not_found": "Order {number} not found"
+	"materials_portal_not_found": "Order {number} not found",
+	"materials_equipment_not_found": "Unit {serial} not found",
+	"materials_parts_title": "Parts used",
+	"materials_parts_description": "The materials on this unit's completed orders.",
+	"materials_parts_empty": "No materials used on this unit yet.",
+	"materials_parts_orders": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "on 1 order",
+				"countPlural=*": "on {countText} orders"
+			}
+		}
+	],
+	"materials_parts_last_used": "last {date}"
 }

@@ -51,6 +51,15 @@ export interface CollectorPoint<In, Out> extends Typed<{ input: In; output: Out 
 	readonly onError: OnError;
 }
 
+/**
+ * A collector whose contributors answer at once, without awaiting anything: for an owner that
+ * can't wait, such as the SQL of a list's column, which is built while the list's query is (see
+ * `collectNow()` in `#lib/server/extensions.ts`). Its answers are usually SQL, built per request.
+ */
+export interface ImmediateCollectorPoint<In, Out> extends CollectorPoint<In, Out> {
+	readonly now: true;
+}
+
 /** Every contributor is told, once the change it's about has committed. */
 export interface EventPoint<Payload> extends Typed<{ payload: Payload }> {
 	readonly id: string;
@@ -76,11 +85,26 @@ export interface SaveHookPoint<In, Problem> extends Typed<{ input: In; problem: 
 	readonly kind: "save";
 }
 
-/** Declares a collector: contributors answer with `Out` about `In`. */
-export const defineCollector = <In, Out>(
+/**
+ * Declares a collector: contributors answer with `Out` about `In`. With `now: true`, they answer
+ * at once (an `ImmediateCollectorPoint`, asked with `collectNow()`).
+ */
+export function defineCollector<In, Out>(
 	id: string,
-	{ onError }: { onError: OnError },
-): CollectorPoint<In, Out> => ({ id, kind: "collector", onError });
+	options: { onError: OnError; now: true },
+): ImmediateCollectorPoint<In, Out>;
+export function defineCollector<In, Out>(
+	id: string,
+	options: { onError: OnError },
+): CollectorPoint<In, Out>;
+export function defineCollector<In, Out>(
+	id: string,
+	{ onError, now }: { onError: OnError; now?: true },
+): CollectorPoint<In, Out> {
+	if (!now) return { id, kind: "collector", onError };
+	const point: ImmediateCollectorPoint<In, Out> = { id, kind: "collector", onError, now };
+	return point;
+}
 
 /** Declares an event, told `Payload` after commit. */
 export const defineEvent = <Payload>(id: string): EventPoint<Payload> => ({ id, kind: "event" });

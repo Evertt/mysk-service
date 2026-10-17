@@ -19,7 +19,9 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   owner. The owner calls it through the kernel (`src/lib/server/extensions.ts`), for the modules
   that are on, in registry order: `collect()` for a collector (asked in parallel about a batch;
   the point's `onError` says whether an error fails the request, `fail`, or is logged and left
-  out, `skip`), `emit()` for an event after commit (via `afterCommit()` in
+  out, `skip`), `collectNow()` for an immediate collector (`defineCollector(id, { onError, now:
+true })`, whose contributors answer at once, without awaiting: for an owner that can't wait, like
+  a list column's SQL; the condition module's `condition.signals`), `emit()` for an event after commit (via `afterCommit()` in
   `src/lib/server/db/serialize.ts`; errors are logged, not thrown), `vote()` for a vote (any
   refusal wins) and `save()` for a save hook (each module saves its part in the owner's
   transaction, which the input carries, one after another; the first that answers problems stops
@@ -251,8 +253,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
 
-Checklists, contracts, invoices, maintenance, materials, the partner programme and the schedule are the modules
-(`src/modules/checklists/`, `src/modules/contracts/`, `src/modules/invoices/`,
+Checklists, condition, contracts, invoices, maintenance, materials, the partner programme and the schedule are the modules
+(`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/invoices/`,
 `src/modules/maintenance/`, `src/modules/materials/`, `src/modules/schedule/`: look there for an
 example of each part; the registries list them by id). Checklists holds the tenant's inspection
 templates (points in groups, the equipment categories each is for) and the checklists on
@@ -277,6 +279,16 @@ invoices: look there for a module that reads another's data through its `api/` (
 a card on the customer's page (`customers.detail.side`), figures computed from the pure rules in
 `model.ts` and frozen when a year closes, a ledger whose balance is its entries' sum, and a
 hyphenated id's part of the order form (`modules.partnerProgramme`).
+Condition (SHLTR Connect) keeps each unit's condition over time (`unit_condition`) and works out
+its status in SQL (`server/status-sql.ts`, and `unitStatus()` in `model.ts` for the same rules in
+code): look there for a module that owns points other modules answer (`api/extensions.ts`:
+checklists gives the inspection status, maintenance the next visit, as SQL over `equipment`,
+`condition.signals`; checklists its completed checklists for the service history,
+`condition.history`), for SQL repeated in one statement that binds no parameters (`literal()`,
+`inLiterals()` in `#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own
+tenant), and for a contribution to a slot of a module it enhances (the question below a completed
+checklist in the portal, `slots/checklists.field.checklist/`). Checklists and condition enhance
+each other: each adds to the other where the other is on.
 Extension points are added with the first module that needs them. Not there yet: several `nav`
 entries per module, grouping by a module's column, module columns in other lists than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,

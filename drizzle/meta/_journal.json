@@ -120,6 +120,13 @@
       "when": 1792197921220,
       "tag": "0016_add-partner-programme",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1792199519495,
+      "tag": "0017_add-condition",
+      "breakpoints": true
     }
   ]
 }
