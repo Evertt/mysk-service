@@ -4,6 +4,9 @@
  * the payload its type takes; nothing else. `parseBatch()` answers the events or the issues, by
  * path, for the endpoint's 422. The feed is for machines, so its issues are in English.
  */
+// Its module-scope durations need Temporal as the module loads, which SvelteKit's build does (analysing
+// the routes) without the hooks that install the polyfill, and Node before 26 has none of its own.
+import "temporal-polyfill/global";
 import * as v from "valibot";
 
 import { dockCodePattern, type DockEvent, keyLocations } from "../model.ts";

@@ -17,6 +17,9 @@
  * works as for a real feed. A manager's play, pause, speed and reset are logged (subject
  * `simulation`, by the module's id); the ticks aren't: they're the clock.
  */
+// Its module-scope durations need Temporal as the module loads, which SvelteKit's build does (analysing
+// the routes) without the hooks that install the polyfill, and Node before 26 has none of its own.
+import "temporal-polyfill/global";
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
