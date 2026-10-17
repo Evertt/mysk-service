@@ -333,9 +333,13 @@ describe("credit notes", () => {
 				until: new Temporal.PlainDate(year, 12, 31),
 			}),
 		);
-		// The settled ones of the year: not the one still sent, the void one or next year's.
+		// The settled ones of the year: not the one still sent, the void one or next year's (in no
+		// particular order: the figures add them up).
 		expect(
-			lines.filter((line) => line.creditNoteId).map((line) => [line.creditNoteId, line.amount]),
+			lines
+				.filter((line) => line.creditNoteId)
+				.map((line) => [line.creditNoteId, line.amount])
+				.toSorted(([a], [b]) => Number(a) - Number(b)),
 		).toEqual([
 			[901, -1_000_000],
 			[902, -5_000_000],
