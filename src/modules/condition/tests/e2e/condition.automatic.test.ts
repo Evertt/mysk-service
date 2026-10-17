@@ -1,7 +1,7 @@
 /**
- * The condition settings and the daily job in North: the thresholds (critical below attention),
- * and "Plan critical units automatically", off at first; on, the daily run makes a maintenance
- * order for each critical unit in care without an open order, once.
+ * The condition settings and the daily job in North: "Plan critical units automatically", off at
+ * first; on, the daily run makes a maintenance order for each critical unit in care without an
+ * open order, once. That critical stays below attention is `schemas.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -40,7 +40,7 @@ describe("the settings", () => {
 		expect(reports[north.id]?.["condition.orders"]).toBeUndefined();
 	});
 
-	test("refuse critical at or above attention", async () => {
+	test("a manager turns automatic planning on", async () => {
 		const { page } = app;
 		await app.go("/condition");
 		await page.getByRole("link", { name: "Settings" }).click();
@@ -48,19 +48,6 @@ describe("the settings", () => {
 		expect(await autoPlan().isChecked()).toBe(false);
 		expect(await page.getByLabel("Critical below (%)").inputValue()).toBe("40");
 		expect(await page.getByLabel("Attention below (%)").inputValue()).toBe("70");
-		await page.getByLabel("Critical below (%)").fill("80");
-		await app.submit(save());
-		expect(await app.issues()).toContain("Critical must be below attention.");
-		expect(
-			await rows(`select critical_below from condition_settings where organization_id = ?`, [
-				north.id,
-			]),
-		).toEqual([{ critical_below: 40 }]);
-	});
-
-	test("a manager turns automatic planning on", async () => {
-		const { page } = app;
-		await page.getByLabel("Critical below (%)").fill("40");
 		await autoPlan().click();
 		await app.submit(save());
 		await page.waitForURL((url) => url.pathname === "/condition");

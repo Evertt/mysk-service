@@ -53,10 +53,8 @@ describe("the equipment list", () => {
 });
 
 describe("a unit's card", () => {
-	let unit: { id: number; serial_number: string };
-
-	test("says there's no condition yet", async () => {
-		[unit] = await rows<{ id: number; serial_number: string }>(
+	test("records a condition, which makes the unit critical and is logged, and a newer one in its place", async () => {
+		const [unit] = await rows<{ id: number; serial_number: string }>(
 			`select e.id, e.serial_number from equipment e where e.organization_id = ?
 			 and e.status = 'operational'
 			 and not exists (select 1 from checklist k where k.equipment_id = e.id)
@@ -69,21 +67,10 @@ describe("a unit's card", () => {
 		expect(unit, "North has a unit without a condition").toBeDefined();
 		await app.go(`/equipment/${unit.serial_number}`);
 		await card().getByText("No condition recorded yet.").waitFor();
-	});
 
-	test("refuses a score over 100", async () => {
 		await card().getByRole("button", { name: "Record condition" }).click();
-		const score = dialog().getByLabel("Condition (%)");
-		// The browser holds the input to 0–100 itself; the server, too.
-		expect(await score.getAttribute("max")).toBe("100");
-		await score.evaluate((input) => input.removeAttribute("max"));
-		await score.fill("120");
-		await app.submit(dialog().getByRole("button", { name: "Save condition" }));
-		expect(await app.issues()).toContain("A score from 0 to 100.");
-		expect(await conditionsOf(unit.id)).toEqual([]);
-	});
-
-	test("records a condition, which makes the unit critical, and logs it", async () => {
+		// The browser holds the input to 0–100 (the server too: `schemas.spec.ts`).
+		expect(await dialog().getByLabel("Condition (%)").getAttribute("max")).toBe("100");
 		await dialog().getByLabel("Condition (%)").fill("30");
 		await dialog().getByLabel("Advice").fill("Veerpakket vervangen (SD-001).");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
@@ -119,9 +106,8 @@ describe("a unit's card", () => {
 			parent_id: String(unit.id),
 			note: "Veerpakket vervangen (SD-001).",
 		});
-	});
 
-	test("a newer condition takes its place, the older one stays in its history", async () => {
+		// A newer one takes its place; the older one stays in its history.
 		await card().getByRole("button", { name: "Record condition" }).click();
 		await dialog().getByLabel("Condition (%)").fill("85");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
