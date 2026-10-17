@@ -142,6 +142,7 @@
 		}
 		.order-description {
 			-webkit-line-clamp: 1;
+			line-clamp: 1;
 			color: var(--muted-foreground);
 		}
 		.order-status,
