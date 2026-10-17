@@ -41,18 +41,23 @@
 	const simulation = $derived(await getSimulation(module));
 	let busy = $state(false);
 
-	// While it runs: a tick now and then, while the page is visible.
+	// While it runs: a tick now and then, while the page is visible. Out of the effect's own run
+	// (a command keeps state of its own, which the effect mustn't read).
+	const running = $derived(simulation?.running ?? false);
 	$effect(() => {
-		if (!simulation?.running) return;
+		if (!running) return;
 		const tick = () => {
 			if (document.visibilityState !== "visible") return;
 			tickSimulation(module).catch(() => {
 				// The next tick, or the cron's, tries again.
 			});
 		};
-		tick();
+		const first = setTimeout(tick, 0);
 		const timer = setInterval(tick, tickEvery);
-		return () => clearInterval(timer);
+		return () => {
+			clearTimeout(first);
+			clearInterval(timer);
+		};
 	});
 
 	async function act(work: () => Promise<unknown>, done?: string) {

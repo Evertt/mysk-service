@@ -15,12 +15,20 @@ import { defineCollector } from "#lib/extensions/define.ts";
 export const simulationSpeeds = [1, 2, 5, 10, 30] as const;
 export type SimulationSpeed = (typeof simulationSpeeds)[number];
 
-/** What a tick is told: the interval of real time it covers, `(from, to]`, and the speed. */
+/**
+ * What a tick is told: the interval of real time it covers, `(from, to]`, the speed, and when the
+ * simulation last started from its starting states (the seed, or a reset).
+ */
 export interface SimulationTick {
 	from: Temporal.Instant;
 	to: Temporal.Instant;
 	/** One of `simulationSpeeds`: at 5, five times as much happens in the interval as at 1. */
 	speed: number;
+	/**
+	 * When it was (re)started: what the starting states show (a truck that "arrived" before it)
+	 * goes on from here, so they stay on the screen a while after a reset.
+	 */
+	startedAt: Temporal.Instant;
 }
 
 /**

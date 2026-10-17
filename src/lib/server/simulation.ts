@@ -90,7 +90,7 @@ async function claimInterval(moduleId: string, now: Temporal.Instant) {
 			.update(simulation)
 			.set({ lastTickAt: now })
 			.where(and(inTenant(simulation), eq(simulation.moduleId, moduleId)));
-		return { from, to: now, speed: row.speed };
+		return { from, to: now, speed: row.speed, startedAt: row.startedAt };
 	});
 }
 
