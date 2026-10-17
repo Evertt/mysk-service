@@ -3,7 +3,6 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 import {
 	baseURL,
 	countIn,
-	isRemote,
 	organizations,
 	rows,
 	useApp,
@@ -641,66 +640,33 @@ describe("in South, which has invoicing but no contracts", () => {
 	describe("with the module switched off", () => {
 		/** An order on South's draft. */
 		let order: { number: string };
-		/** The module's queries that the invoice's page made, opened client-side. */
-		const queries: string[] = [];
 		// By its name alone: the partner programme's row says it requires invoicing.
 		const row = () =>
 			app.page.locator("div.rounded-lg.border", {
 				has: app.page.getByText("Invoicing", { exact: true }),
 			});
 
-		// Split in steps, each with a test's time: together they took most of it under the load of a
-		// full run, and the last one, which switches the module back on for the tests after it (which
-		// share the database), has to run even if one before ran out of time.
-		test("opened client-side, the invoice's page loads its data through remote queries", async () => {
+		// Split in steps, each with a test's time: the last one, which switches the module back on for
+		// the tests after it (which share the database), has to run even if one before ran out of time.
+		// The other pages' and the module's queries' 404s are the module route guard's and
+		// `moduleRemote`'s (`route-guard.spec.ts`, `remote-functions.spec.ts`).
+		test("its pages and PDFs are 404s", async () => {
 			const { page } = app;
 			[order] = await rows<{ number: string }>(
 				`select o.number from "order" o join invoice_line l on l.order_id = o.id
 				 join invoice i on i.id = l.invoice_id where i.number = ? and i.organization_id = ? limit 1`,
 				[number, south.id],
 			);
-			await app.go(`/orders/${order.number}`);
-			expect(await card("Invoice").innerText()).toContain(`On draft invoice ${number}`);
-			const record = (request: { url(): string }) => {
-				const names = ["getInvoice", "getBillable", "getSubjectActivity"];
-				if (names.some((name) => isRemote(request.url(), name))) queries.push(request.url());
-			};
-			page.on("request", record);
-			await card("Invoice").getByRole("link", { name: number }).click();
-			await page.waitForURL((url) => url.pathname === `/invoices/${number}`);
-			await card("Activity").getByRole("list", { name: "Activity log", exact: true }).waitFor();
-			page.off("request", record);
-			const names = queries.map((url) => new URL(url).pathname.split("/").pop());
-			expect(names).toEqual(expect.arrayContaining(["getInvoice", "getSubjectActivity"]));
-		});
-
-		test("its pages, PDFs and queries are 404s", async () => {
-			const { page } = app;
 			await app.go("/settings");
 			await row().getByRole("button", { name: "Disable" }).click();
 			await row().getByText("Disabled").waitFor();
 			expect(await sidebar()).not.toContain("Invoicing");
 
-			for (const path of [
-				"/invoices",
-				"/invoices/new",
-				"/invoices/settings",
-				`/invoices/${number}`,
-			]) {
-				expect((await app.go(path))?.status(), path).toBe(404);
-			}
+			expect((await app.go(`/invoices/${number}`))?.status()).toBe(404);
 			const pdf = await page
 				.context()
 				.request.get(new URL(`/invoices/${number}/pdf`, baseURL).href);
 			expect(pdf.status()).toBe(404);
-			// The module's own queries and the invoice's activity: refused too.
-			expect(queries).not.toEqual([]);
-			for (const url of queries) {
-				const response = await page.context().request.get(url);
-				const body = await response.text();
-				expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-				expect(body).not.toContain(number);
-			}
 		});
 
 		test("and nothing of it shows on the core's pages", async () => {

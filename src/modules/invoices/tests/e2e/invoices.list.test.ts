@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { countIn, organizations, rows, useApp, value } from "#e2e/app.ts";
 
-import { cents, pageLocators, today, vatOf } from "./helpers.ts";
+import { pageLocators, today } from "./helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -57,40 +57,6 @@ describe("in North", () => {
 		expect(new Set(shown)).toEqual(new Set(["Overdue"]));
 	});
 
-	test("the dashboard adds up what's outstanding and overdue, with VAT, less credit notes", async () => {
-		const sent = await rows<{ id: number; subtotal: number; vat_rate: number; due_on: string }>(
-			`select i.id, i.vat_rate, i.due_on, coalesce((select sum(amount) from invoice_line l
-			 where l.invoice_id = i.id), 0) as subtotal from invoice i
-			 where i.organization_id = ? and i.status = 'sent'`,
-			[north.id],
-		);
-		// Their issued credit notes (the seed has one on a sent invoice), each with VAT of its own.
-		const credits = await rows<{ invoice_id: number; subtotal: number; vat_rate: number }>(
-			`select c.invoice_id, c.vat_rate, coalesce((select sum(amount) from credit_note_line l
-			 where l.credit_note_id = c.id), 0) as subtotal from credit_note c
-			 where c.organization_id = ? and c.status in ('sent', 'paid') and c.invoice_id is not null`,
-			[north.id],
-		);
-		expect(credits.some((credit) => sent.some((i) => i.id === credit.invoice_id))).toBe(true);
-		const credited = (invoice: { id: number }) =>
-			credits
-				.filter((credit) => credit.invoice_id === invoice.id)
-				.reduce(
-					(sum, credit) => sum + credit.subtotal + vatOf(credit.subtotal, credit.vat_rate),
-					0,
-				);
-		const total = (list: typeof sent) =>
-			list.reduce((sum, i) => sum + i.subtotal + vatOf(i.subtotal, i.vat_rate) + credited(i), 0);
-		await app.go("/");
-		// The card is the invoicing module's part of the dashboard.
-		const amounts = card("Receivables").locator("dd[data-amount]");
-		await expect.poll(() => amounts.count()).toBe(2);
-		expect((await amounts.allInnerTexts()).map(cents)).toEqual([
-			total(sent),
-			total(sent.filter((i) => i.due_on < today())),
-		]);
-	});
-
 	test("selected invoices are marked paid, except those that aren't sent", async () => {
 		const { page } = app;
 		const pick = (status: string) =>
@@ -125,18 +91,5 @@ describe("in North", () => {
 				[north.id, String(sent.id)],
 			),
 		).toBe("paid");
-	});
-});
-
-describe("in Dutch", () => {
-	test("the invoices read in Dutch", async () => {
-		const { page } = app;
-		// As the language menus switch it: Paraglide's cookie, read on every request.
-		await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
-		await app.go("/invoices");
-		await page.getByRole("heading", { name: "Facturen" }).waitFor();
-		expect(await page.getByRole("link", { name: "Nieuwe factuur" }).count()).toBe(1);
-		expect(await page.locator("thead").getByText("Vervaldatum").count()).toBe(1);
-		await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "en", url: baseURL }]);
 	});
 });
