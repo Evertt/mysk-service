@@ -174,7 +174,7 @@ export function signalsOf(
 }
 
 /** How far the readings are into a period: the bucket they're in and how much of it they cover. */
-export interface MeasuredSoFar {
+interface MeasuredSoFar {
 	/** The bucket (an hour of the day, a day of the month) the readings end in; −1 before the first. */
 	index: number;
 	/** The share of that bucket they cover, 0 to 1. */

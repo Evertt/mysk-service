@@ -233,7 +233,7 @@ const laterOf = (a: Temporal.Instant, b: Temporal.Instant) =>
 	Temporal.Instant.compare(a, b) >= 0 ? a : b;
 
 /** Moves the tenant's sites on over `(from, to]` (see above). */
-export async function tickEnergy({ from, to, speed }: SimulationTick) {
+async function tickEnergy({ from, to, speed }: SimulationTick) {
 	for (const site of await simulatedSites()) {
 		const fillFrom = laterOf(site.readingsUntil ?? from, to.subtract({ hours: FILL_HOURS }));
 		const readings = simulateReadings({
@@ -263,7 +263,7 @@ export async function tickEnergy({ from, to, speed }: SimulationTick) {
 }
 
 /** Puts yesterday and today back as the seed has them (see above). */
-export async function resetEnergy() {
+async function resetEnergy() {
 	const now = Temporal.Now.instant();
 	for (const site of await simulatedSites()) {
 		const today = now.toZonedDateTimeISO(site.timeZone).toPlainDate();

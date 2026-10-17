@@ -180,7 +180,7 @@ export function simulateDay(options: {
  * readings' noise, makes surges likelier and bigger, and has doors open more often and stay open
  * too long more often; the clock stays the real one.
  */
-export const liveliness = (speed: number) => 1 + Math.log10(Math.max(1, speed)) * 1.05;
+const liveliness = (speed: number) => 1 + Math.log10(Math.max(1, speed)) * 1.05;
 
 /** One draw for one thing, from the run's seed: the same every time. */
 const draw = (seed: number, ...parts: (string | number)[]) =>
