@@ -52,7 +52,10 @@
 				<LanguageSwitcher />
 				<ThemeSwitcher />
 				<ModeSwitcher />
-				<form {...signOut}>
+				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to
+					the session that ends, so the login page loads afresh rather than this page refreshing
+					them signed out (which logged errors). -->
+				<form method={signOut.method} action={signOut.action}>
 					<Button type="submit" variant="ghost" size="icon-sm" aria-label={m.common_sign_out()}>
 						<LogOutIcon />
 					</Button>
