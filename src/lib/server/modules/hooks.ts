@@ -2,6 +2,10 @@
  * The guards of the optional modules' server route files (see docs/agents/modules.md). The
  * modules' hooks into core server logic are in `#lib/server/extensions.ts`.
  */
+// Before the module route a stub imports next: an integration endpoint (`(api)`) may use Temporal
+// as its module loads, which SvelteKit's build does (analysing the routes) without the hooks that
+// install the polyfill, and Node before 26 has no Temporal of its own.
+import "temporal-polyfill/global";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { asSystem, requireModule } from "#lib/server/auth/index.ts";
 import { integrationTenant } from "#lib/server/auth/integrations.ts";
