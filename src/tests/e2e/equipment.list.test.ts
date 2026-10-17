@@ -146,6 +146,10 @@ describe("in North", () => {
 		expect(await band.getByRole("heading", { level: 1 }).innerText()).toBe("Equipment");
 		expect(await pill.innerText()).toBe(`${formatNumber(total)} units`);
 		const chips = band.getByRole("group", { name: "Category" });
+		// The band keeps its height above the table that fills the screen: nothing of it cut off.
+		expect(await band.evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(
+			true,
+		);
 		// "All" and each of North's categories with units, in its order, with their counts.
 		const categories = await rows<{ id: number; name: string; units: number }>(
 			`select c.id, c.name, count(e.id) as units from equipment_category c

@@ -81,6 +81,10 @@ describe("in North", () => {
 		const { page } = app;
 		const band = page.locator("[data-toolbar-band]");
 		expect(await band.getByRole("heading", { level: 1 }).innerText()).toBe("Schedule");
+		// Its full height above the board that fills the screen.
+		expect(await band.evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(
+			true,
+		);
 		const count = await thisWeeksOrders(north.id);
 		expect(await band.locator("[data-band-count]").innerText()).toBe(
 			`${count} order${count === 1 ? "" : "s"}`,

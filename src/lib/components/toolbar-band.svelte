@@ -44,7 +44,7 @@
 	} = $props();
 </script>
 
-<section class={cn("overflow-hidden rounded-lg border", className)} data-toolbar-band>
+<section class={cn("shrink-0 overflow-hidden rounded-lg border", className)} data-toolbar-band>
 	<header
 		class="flex flex-col gap-3 bg-primary px-4 py-4 text-primary-foreground sm:px-6 md:flex-row md:items-center md:justify-between dark:bg-[color-mix(in_oklch,var(--primary),black_50%)] dark:text-white"
 	>
