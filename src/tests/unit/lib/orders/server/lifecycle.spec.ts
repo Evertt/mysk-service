@@ -756,6 +756,16 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		};
 		return to[verb];
 	};
+	// The statuses as an engineer's refusal names them, in English.
+	const statusNames: Record<OrderStatus, string> = {
+		awaiting_acceptance: "awaiting acceptance",
+		quote: "quote",
+		scheduled: "scheduled",
+		in_progress: "in progress",
+		completed: "completed",
+		invoiced: "invoiced",
+		cancelled: "cancelled",
+	};
 	// Why each verb refuses an order with `status`, in English.
 	const refusedWith = (verb: string, number: string, status: OrderStatus) => {
 		if (verb === "set") {
@@ -769,7 +779,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		}
 		return status === "scheduled"
 			? "Start the job first"
-			: expect.stringMatching(/^This order is [a-z ]+; it can't be changed here$/);
+			: `This order is ${statusNames[status]}; it can't be changed here`;
 	};
 	const move = (verb: string, id: number, status: OrderStatus) => {
 		const day = Temporal.PlainDate.from("2026-11-03");
@@ -797,6 +807,12 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 				if (moves) {
 					expect(refused).toEqual([]);
 					expect((await stored(id)).status).toBe(movesTo(verb, status));
+					// The planner's move keeps the status, but not the time: 3 November, 09:00 in Amsterdam.
+					if (verb === "plan") {
+						expect((await stored(id)).scheduledFor).toEqual(
+							Temporal.Instant.from("2026-11-03T08:00:00Z"),
+						);
+					}
 				} else {
 					expect(refused).toEqual([refusedWith(verb, number, status)]);
 					expect((await stored(id)).status).toBe(status);
@@ -805,7 +821,8 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		}
 	}
 
-	// Invoicing refuses nothing: it moves those of an invoice's orders it moves, and leaves the rest.
+	// Invoicing refuses no order for its status: it moves those of an invoice's orders it moves, and
+	// leaves the rest (a module can still refuse one, see above).
 	const invoicing = { invoice: ["completed", "invoiced"], uninvoice: ["invoiced", "completed"] };
 	for (const [verb, [from, to]] of Object.entries(invoicing) as [
 		"invoice" | "uninvoice",
