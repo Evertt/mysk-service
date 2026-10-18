@@ -836,3 +836,65 @@ test("the Durable Object's 0007_equipment-locations does the same with its forei
 	expect(await afterLocations(client)).toEqual(locationsMade);
 	client.close();
 });
+
+/**
+ * Two tenants' zone alerts from when consumption was per hour: of a day, open ones of several
+ * hours and a resolved one; of the day before, an open one beside the day's own alert; one made
+ * into an order; and a power alert. The other tenant has an hourly one too.
+ */
+const beforeDailyEnergy = `
+	insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 1), ('b', 'B', 'b', 2);
+	insert into customer (id, organization_id, code, name, contact_name, email, phone, city, country, segment)
+	values (1, 'a', 'C-1', 'Acme', 'Ann', 'ann@acme.test', '1', 'Ede', 'NL', 'enterprise'),
+		(2, 'b', 'C-1', 'Zenith', 'Zed', 'zed@zenith.test', '1', 'Breda', 'NL', 'enterprise');
+	insert into customer_site (id, organization_id, customer_id, name, city, country)
+	values (1, 'a', 1, 'Ede', 'Ede', 'NL'), (2, 'b', 2, 'Breda', 'Breda', 'NL');
+	insert into energy_site (id, organization_id, site_id, name, meter_name, contracted_peak_kw, contracted_kwh_per_year)
+	values (1, 'a', 1, 'Acme Ede', 'Main', 320, 1000000), (2, 'b', 2, 'Zenith Breda', 'Main', 100, 100000);
+	insert into energy_zone (id, organization_id, energy_site_id, code, name, floor)
+	values (1, 'a', 1, 'Z-A', 'Hall A', 'Ground'), (3, 'b', 2, 'Z-S', 'South hall', 'Ground');
+	insert into energy_alert (id, organization_id, energy_site_id, zone_id, key, metric, severity, threshold, measured, at, status, done_at)
+	values (1, 'a', 1, 1, 'zone:1:2026-10-17T10', 'energy', 'near', 100, 90, 1000, 'open', null),
+		(2, 'a', 1, 1, 'zone:1:2026-10-17T11', 'energy', 'active', 100, 120, 2000, 'open', null),
+		(3, 'a', 1, 1, 'zone:1:2026-10-17T09', 'energy', 'near', 100, 85, 500, 'done', 5),
+		(4, 'a', 1, 1, 'zone:1:2026-10-16T15', 'energy', 'active', 100, 130, 300, 'open', null),
+		(5, 'a', 1, 1, 'zone:1:2026-10-16', 'energy', 'active', 100, 110, 200, 'done', 6),
+		(6, 'a', 1, 1, 'zone:1:2026-10-17T12', 'power', 'active', 100, 130, 3000, 'open', null),
+		(7, 'a', 1, 1, 'zone:1:2026-10-15T08', 'energy', 'active', 100, 140, 100, 'order', null),
+		(8, 'b', 2, 3, 'zone:3:2026-10-17T10', 'energy', 'near', 100, 90, 1000, 'open', null);
+`;
+
+test.each(streams)(
+	"in %s, a day's open hourly consumption alerts become the day's, and give a power alert's key up",
+	async (name, stream) => {
+		const { tag } = readJournal(stream).entries.find((entry) =>
+			entry.tag.endsWith("_hourly-energy-alerts"),
+		)!;
+		const before = streamBefore(stream, tag, `before-daily-energy-${name.replace(/\W/g, "")}`);
+		const client = createClient({
+			url: `file:${join(folder, `daily-energy-${name.replace(/\W/g, "")}.db`)}`,
+		});
+		await migrate(drizzle(client), { migrationsFolder: before });
+		await client.executeMultiple(beforeDailyEnergy);
+		await migrate(drizzle(client), { migrationsFolder: stream });
+		const { rows } = await client.execute(
+			// Closed by the migration: done since now, not since the seconds they were done at before.
+			"select id, key, status, done_at > 6 as closed from energy_alert order by id",
+		);
+		const closed = { status: "done", closed: 1 };
+		expect(rows.map((row) => ({ ...row }))).toEqual([
+			// The day's latest goes on as the day's alert; the earlier ones are done, as was the
+			// resolved one.
+			{ id: 1, key: "zone:1:2026-10-17T10:energy", ...closed },
+			{ id: 2, key: "zone:1:2026-10-17", status: "open", closed: null },
+			{ id: 3, key: "zone:1:2026-10-17T09:energy", status: "done", closed: 0 },
+			// A day with an alert of its own already keeps it.
+			{ id: 4, key: "zone:1:2026-10-16T15:energy", ...closed },
+			{ id: 5, key: "zone:1:2026-10-16", status: "done", closed: 0 },
+			{ id: 6, key: "zone:1:2026-10-17T12", status: "open", closed: null },
+			{ id: 7, key: "zone:1:2026-10-15T08:energy", status: "order", closed: null },
+			{ id: 8, key: "zone:3:2026-10-17", status: "open", closed: null },
+		]);
+		client.close();
+	},
+);

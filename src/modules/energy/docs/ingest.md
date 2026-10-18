@@ -89,7 +89,9 @@ After each batch the site's thresholds are checked (`docs/plans/shltr-domain.md`
   once per zone per hour (`zone:<id>:<yyyy-mm-dd>T<hh>`, the worst interval of the hour), its
   consumption once per zone per day (`zone:<id>:<yyyy-mm-dd>`, the day's latest interval): a day
   over its kWh is one alert, not one each hour that's left. A near alert that's still open becomes
-  active when the zone goes over within its hour (power) or day (consumption).
+  active when the zone goes over within its hour (power) or day (consumption); while it's open, a
+  consumption alert follows the day's kWh as it grows (its latest interval's). An alert only follows
+  breaches of its own metric.
 - every door of the site: an opening that lasted (or, still open, has lasted until now) its
   threshold's minutes raises an alert, once per opening; while the alert is open, it follows the
   opening (the longest it was open).

@@ -155,6 +155,13 @@
       "when": 1792322430191,
       "tag": "0021_dock-last-event-in-ms",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1792343152579,
+      "tag": "0022_hourly-energy-alerts",
+      "breakpoints": true
     }
   ]
 }

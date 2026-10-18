@@ -1,6 +1,7 @@
 import { hashPassword } from "better-auth/crypto";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
+import type { OrderType } from "#lib/models.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 
 import { DEMO_PASSWORD, demoUsers } from "../demo.ts";
@@ -9,12 +10,43 @@ import { now } from "./clock.ts";
 import { linkDemoCustomer } from "./portal.ts";
 import { toDay } from "./temporal.ts";
 
-const { account, engineer, order, session, user } = schema;
+const { account, engineer, order, orderUnit, session, user } = schema;
+
+/** The demo engineer's jobs: a job under way and another one today, then one on each of two days. */
+const demoEngineerPlan = [
+	{ days: 0, hours: 8, minutes: 0, status: "in_progress" },
+	{ days: 0, hours: 13, minutes: 30, status: "scheduled" },
+	{ days: 1, hours: 9, minutes: 0, status: "scheduled" },
+	{ days: 3, hours: 10, minutes: 30, status: "scheduled" },
+] as const;
+
+/** A scheduled order the demo engineer may be given: its type, and how many units it's about. */
+interface PlannedJob {
+	id: number;
+	type: OrderType;
+	units: number;
+}
+
+/**
+ * Which of the scheduled orders (`planned`, as they were made) the demo engineer gets, each with
+ * its place in `demoEngineerPlan`. One of them an inspection, where there's one, second (planned,
+ * not yet started): the portal's checklists need one, whatever the generated orders happen to be.
+ * The others are of one unit: an order of several is planned work the seed fixed (SHLTR's
+ * inspection of Weggemans' docks, Lev's to fill in on the portal), which stays planned.
+ */
+export function demoEngineerWork(planned: readonly PlannedJob[]) {
+	const inspection = planned.find((job) => job.type === "inspection");
+	const others = planned.filter((job) => job !== inspection && job.units < 2);
+	return (inspection ? [others[0], inspection, ...others.slice(1)] : others)
+		.filter(Boolean)
+		.slice(0, demoEngineerPlan.length)
+		.map((job, i) => ({ ...job, ...demoEngineerPlan[i] }));
+}
 
 /**
  * Links a demo field engineer's account to their organization's first engineer, and plans some of
- * the organization's scheduled work (of engineers with the same specialty) for them: a job under
- * way and another one today, then a few on the next days, so the engineer portal has work to show.
+ * the organization's scheduled work (of engineers with the same specialty) for them (see
+ * `demoEngineerWork`), so the engineer portal has work to show.
  */
 async function linkDemoEngineer(tx: Transaction, userId: string, organizationId: string) {
 	const [first] = await tx
@@ -26,7 +58,11 @@ async function linkDemoEngineer(tx: Transaction, userId: string, organizationId:
 	await tx.update(engineer).set({ userId }).where(eq(engineer.id, first.id));
 
 	const planned = await tx
-		.select({ id: order.id, type: order.type })
+		.select({
+			id: order.id,
+			type: order.type,
+			units: sql<number>`(select count(*) from ${orderUnit} where ${orderUnit.orderId} = ${order.id})`,
+		})
 		.from(order)
 		.innerJoin(engineer, eq(order.engineerId, engineer.id))
 		.where(
@@ -37,21 +73,7 @@ async function linkDemoEngineer(tx: Transaction, userId: string, organizationId:
 			),
 		)
 		.orderBy(asc(order.id));
-	// One of them an inspection, where there's one, second (planned, not yet started): the portal's
-	// checklists need one, whatever the generated orders happen to be.
-	const inspection = planned.find((job) => job.type === "inspection");
-	const others = planned.filter((job) => job !== inspection);
-	const work = (inspection ? [others[0], inspection, ...others.slice(1)] : others)
-		.filter(Boolean)
-		.slice(0, 4);
-	const plan = [
-		{ days: 0, hours: 8, minutes: 0, status: "in_progress" },
-		{ days: 0, hours: 13, minutes: 30, status: "scheduled" },
-		{ days: 1, hours: 9, minutes: 0, status: "scheduled" },
-		{ days: 3, hours: 10, minutes: 30, status: "scheduled" },
-	] as const;
-	for (const [i, { id }] of work.entries()) {
-		const { days, hours, minutes, status } = plan[i];
+	for (const { id, days, hours, minutes, status } of demoEngineerWork(planned)) {
 		const scheduledFor = toDay(now)
 			.add({ days })
 			.toZonedDateTime({

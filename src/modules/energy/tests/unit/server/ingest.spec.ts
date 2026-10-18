@@ -2,9 +2,10 @@
  * Storing a gateway's batch (`server/ingest.ts`) and the alerts it raises (`server/evaluate.ts`),
  * against a database made by the app's migrations: readings replace their interval, door events
  * are stored once, a zone's alert is raised once per hour for its power and once per day for its
- * consumption (and grows from near to over), a door's once per opening, only for the last day; a batch can name only its tenant's site and codes; and
- * the energy module's integration tokens only feed their own tenant, and only while it has the
- * module.
+ * consumption (and grows from near to over, the consumption one with the day's kWh), a door's once
+ * per opening, only for the last day, and an alert follows only breaches of its own metric; a batch
+ * can name only its tenant's site and codes; and the energy module's integration tokens only feed
+ * their own tenant, and only while it has the module.
  */
 import { rmSync } from "node:fs";
 
@@ -250,6 +251,50 @@ describe("storing a batch", () => {
 			["zone:1:2026-10-17", "active"],
 			["zone:1:2026-10-18", "near"],
 		]);
+	});
+
+	test("a zone's consumption alert follows the day's kWh while it's open, as one alert", async () => {
+		await maxKwh(100);
+		// 10:00 to 12:30: 110 kWh, over.
+		await ingest({ readings: steady(0, 11) }, t(165));
+		const [over] = await alerts();
+		expect(over).toMatchObject({ severity: "active", measured: 110, at: t(150) });
+		// The day's next intervals: still the one alert, with the kWh up to the latest of them.
+		await ingest({ readings: steady(165, 2) }, t(195));
+		await ingest({ readings: steady(195, 3) }, t(240));
+		expect(await alerts()).toEqual([
+			expect.objectContaining({ id: over.id, severity: "active", measured: 160, at: t(225) }),
+		]);
+		// And the next one on its own.
+		await ingest({ readings: [reading("Z-A", 240, 40)] }, t(255));
+		expect((await alerts()).map((a) => [a.measured, a.at])).toEqual([[170, t(240)]]);
+		// Logged once, when it was raised.
+		const logged = await db.select().from(activity);
+		expect(logged.map((entry) => [entry.action, entry.subjectId])).toEqual([
+			["created", String(over.id)],
+		]);
+		// Once it's dealt with it stays as it was.
+		await db.update(energyAlert).set({ status: "done" });
+		await ingest({ readings: steady(255, 1) }, t(270));
+		expect((await alerts()).map((a) => [a.status, a.measured])).toEqual([["done", 170]]);
+	});
+
+	test("a power breach leaves a consumption alert under its hour's key as it was", async () => {
+		// A consumption alert from when they were per hour (`zoneDayAlertKey`).
+		await db.insert(energyAlert).values({
+			organizationId: "north",
+			energySiteId: 1,
+			zoneId: 1,
+			key: "zone:1:2026-10-17T10",
+			metric: "energy",
+			severity: "near",
+			threshold: 100,
+			measured: 90,
+			at: t(0),
+		});
+		const before = await alerts();
+		await ingest({ readings: [reading("Z-A", 15, 130)] });
+		expect(await alerts()).toEqual(before);
 	});
 
 	test("a zone over its power and its day's kWh: an alert per hour of power, one of the day's", async () => {
