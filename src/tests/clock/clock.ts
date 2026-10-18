@@ -22,7 +22,7 @@ import { pathToFileURL } from "node:url";
 import type { BrowserContext } from "playwright";
 import { Temporal as Polyfill } from "temporal-polyfill";
 
-/** How far the clock is moved, in milliseconds, once `TEST_NOW` is read: for the processes started later. */
+/** Where the first process to read `TEST_NOW` notes its offset (ms) for the ones it starts. */
 const OFFSET = "TEST_NOW_OFFSET_MS";
 
 type Env = Record<string, string | undefined>;
@@ -34,7 +34,7 @@ type Env = Record<string, string | undefined>;
 export function parseTestNow(
 	value: string,
 	timeZone: string,
-	now: number = Date.now(),
+	now: number = realNow(),
 ): Polyfill.Instant {
 	const text = value.trim();
 	try {
