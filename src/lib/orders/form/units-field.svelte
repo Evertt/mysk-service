@@ -19,6 +19,8 @@
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
+	import { chosenUnitIds } from "./chosen-units.ts";
+
 	interface Unit {
 		id: number;
 		name: string | null;
@@ -47,9 +49,7 @@
 	const id = $props.id();
 
 	/** The chosen units' ids in their order: the form's, or the order's until it has any. */
-	const chosen = $derived(
-		((field.value() as string[] | undefined) ?? initial.map(String)).map(Number),
-	);
+	const chosen = $derived(chosenUnitIds(field.value() as string[] | undefined, initial));
 	const byId = $derived(new Map(units.map((unit) => [unit.id, unit])));
 	/** The chosen ones that are the customer's (another customer's go with a change of customer). */
 	const listed = $derived(chosen.flatMap((unitId) => byId.get(unitId) ?? []));

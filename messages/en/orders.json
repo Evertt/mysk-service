@@ -183,6 +183,5 @@
 	"orders_type_name_max": "At most {max} characters",
 	"orders_type_name_taken": "Another type is already called {name}",
 	"orders_type_hide_required": "Can't be hidden: needed by {needs}",
-	"orders_type_hide_last": "At least one type must stay in the order form",
 	"orders_type_hidden_refused": "This type is hidden: choose another one"
 }

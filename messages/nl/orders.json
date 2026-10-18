@@ -183,6 +183,5 @@
 	"orders_type_name_max": "Hooguit {max} tekens",
 	"orders_type_name_taken": "Een ander type heet al {name}",
 	"orders_type_hide_required": "Kan niet verborgen worden: nodig voor {needs}",
-	"orders_type_hide_last": "Er moet minstens één type in het opdrachtformulier blijven",
 	"orders_type_hidden_refused": "Dit type is verborgen: kies een ander"
 }

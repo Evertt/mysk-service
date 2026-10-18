@@ -301,6 +301,12 @@ describe("planList on a URL's parameters", () => {
 			expect((await page("q=_")).ids).toEqual([5]);
 			expect((await page("q=0%25_v")).ids).toEqual([5]);
 		});
+
+		test("finds the words in different columns, but no word across two", async () => {
+			expect((await page("q=chiller c-1 cold")).ids).toEqual([2]);
+			// "Chiller" then "C-1": not one text.
+			expect((await page("q=rc-1")).total).toBe(0);
+		});
 	});
 
 	describe("counting for the filters", () => {
@@ -374,6 +380,12 @@ test("anyOf is nothing for no values", () => {
 test("searchMatch is nothing for an empty search", () => {
 	expect(searchMatch([item.name], " ")).toBeUndefined();
 	expect(searchMatch([], "boiler")).toBeUndefined();
+});
+
+test("searchMatch binds each word once, whatever the columns it searches", () => {
+	const where = searchMatch([item.name, item.code, item.kind, label.text], "a b c d e f g h i j");
+	const query = db.select({ id: item.id }).from(item).where(where);
+	expect(query.toSQL().params).toHaveLength(10);
 });
 
 describe("planList on typed queries", () => {
