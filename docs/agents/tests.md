@@ -30,6 +30,8 @@ core and for each module.
   `src/lib/orders/display.ts` is tested by `src/tests/unit/lib/orders/display.spec.ts`, and a spec of
   the whole project sits at its root (`src/tests/unit/import-extensions.spec.ts`). `src/tests/e2e/`
   holds the end-to-end tests, their helpers (`app.ts`, `<section>-helpers.ts`) and the global setup.
+  `src/tests/clock/` is the test clock of both (`TEST_NOW`, see "Testing at another date"), imported
+  as `#clock/clock.ts`.
 - A module's: `src/modules/<id>/tests/unit/` mirrors the module's own folders
   (`server/billing.ts` is tested by `tests/unit/server/billing.spec.ts`), and
   `src/modules/<id>/tests/e2e/` holds its end-to-end tests. Nothing in a module's `tests/` is the
@@ -141,3 +143,43 @@ roles, switching organizations), which needs a real session: spec the refusals b
 and leave its effects to e2e. Nor what the client asked a command to refresh (`requested()` finds
 nothing), a live query's later values, rendering a page, or `handleGuard`'s redirects. The module-gate
 spec calls gated handlers past SvelteKit's validation, with the stand-ins of `stand-ins.ts`.
+
+## Testing at another date
+
+Some tests passed on most days and failed on a weekend, a month's last or first day, 1 January,
+the day the clocks change or the 31st after a 30-day month: the seed makes its data relative to
+when it runs, and the app and the tests read "today". `TEST_NOW` runs everything at another
+moment, from which the clock runs on:
+
+```sh
+TEST_NOW=2027-01-01 pnpm test --project e2e src/tests/e2e/schedule.calendar.test.ts
+TEST_NOW=2027-03-28T02:30 pnpm exec vp test run --project 'server-*' src/tests/unit/lib/server/db/seed
+```
+
+- `2027-01-01` is that day at this moment's time of day, `2027-01-01T07:45` that time on it (both
+  in the time zone the tests run in: the machine's, or `TZ`'s, which is the app's), and
+  `2027-01-01T06:45Z` or `…+01:00` that instant.
+- It works for the e2e tests and the Node projects (`server-*`): the global setups, the test
+  workers, and the processes they start (the seed, the build, the app's servers) run at it, and so
+  do the e2e browser contexts. Not for the component tests (`client`). Through `pnpm test` (both
+  of its runs start at `TEST_NOW`), `vp test run` and `pnpm test:e2e`, but not `vp run test`
+  (`vpr test`): Vite Task gives a script only the common variables.
+- What moves (`src/tests/clock/clock.ts`): `Date` and `Temporal.Now` in each Node process
+  (`installTestClock()`, which the global setups and the first setup file call, and which
+  `NODE_OPTIONS` loads into each Node process they start), SQLite's clock (`'now'`, `unixepoch()`,
+  …) in the statements sent through `@libsql/client` and in the test databases' column defaults
+  (`shiftSchemaDefaults()`), and the browser's `Date` and `Temporal.Now`. Make every browser
+  context with `newContext(browser, options)` (`app.ts`), as `useApp`, `anotherTab` and
+  `signedInPage` do, so its pages run at `TEST_NOW` too. Without the variable nothing is touched.
+- A test that needs a case on any day reads it from the database, or the seed makes one whatever
+  the day (`src/tests/unit/lib/server/db/seed/shltr.spec.ts` checks that for a week, months' and a
+  year's ends and a leap day).
+
+The **Dates** workflow (`.github/workflows/dates.yml`) runs the e2e tests (in six shards, as CI)
+and the server specs at the risky dates from its own date (`scripts/test-dates.ts`): the next
+Saturday and Sunday, this month's last day and the next one's first, the next 1 January, the next
+clock change in Europe/Amsterdam and the 29th to 31st of the next month after one of 30 days, each
+at 10:00 in Europe/Amsterdam (`TZ`), with the date in the job's name. Weekly on Monday, off the
+push path; by hand under Actions → Dates → Run workflow (or `gh workflow run dates.yml -f
+dates="2027-01-01, 2027-03-28T02:30"`), with the `TEST_NOW`s to run at, or none for the risky
+dates.

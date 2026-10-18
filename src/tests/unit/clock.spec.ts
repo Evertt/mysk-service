@@ -225,7 +225,7 @@ async function database(ddl: string) {
 			const reader = createClient({ url });
 			const [row] = (await reader.execute("select sql from sqlite_master where name = 't'")).rows;
 			reader.close();
-			return String(row.sql);
+			return row.sql as string;
 		},
 		remove: () => rmSync(folder, { recursive: true, force: true }),
 	};

@@ -233,10 +233,10 @@ export async function shiftSchemaDefaults(url: string, env: Env = process.env) {
 		const tables = await client.execute(
 			"select name, sql from sqlite_master where type = 'table' and sql like '%unixepoch(%'",
 		);
-		const changes = tables.rows.flatMap(({ name, sql }) => {
-			const moved = shiftSql(String(sql), offset);
-			return shifted.test(String(sql)) || moved === sql ? [] : [{ name: String(name), moved }];
-		});
+		const changes = (tables.rows as unknown as { name: string; sql: string }[])
+			.filter(({ sql }) => !shifted.test(sql))
+			.map(({ name, sql }) => ({ name, moved: shiftSql(sql, offset), sql }))
+			.filter(({ moved, sql }) => moved !== sql);
 		if (!changes.length) return;
 		await client.execute("pragma writable_schema = on");
 		for (const { name, moved } of changes) {
