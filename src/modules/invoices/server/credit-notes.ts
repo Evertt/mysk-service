@@ -27,6 +27,7 @@ import {
 	holdsCredit,
 	isIssued,
 	remainingOf,
+	settlementOf,
 } from "../credit-note.ts";
 import { canChange, invoiceTotals } from "../invoice.ts";
 import { creditNoteNumberFormat, type InvoiceStatus } from "../model.ts";
@@ -306,7 +307,10 @@ export async function loadCreditNote(number: string) {
 	return { creditNote: found, totals: invoiceTotals(found.lines, found.vatRate) };
 }
 
-/** The tenant's credit notes with their customer, invoice and totals, latest first. */
+/**
+ * The tenant's credit notes with their customer, invoice, totals and how a sent one is still to be
+ * settled (`settlementOf()`), latest first.
+ */
 export async function listCreditNotes() {
 	const lines = db
 		.select({
@@ -329,6 +333,7 @@ export async function listCreditNotes() {
 			createdAt: creditNote.createdAt,
 			customer: { id: customer.id, code: customer.code, name: customer.name },
 			invoice: sql<string | null>`${invoice.number}`,
+			invoiceStatus: sql<InvoiceStatus | null>`${invoice.status}`,
 			subtotal: sql<number>`coalesce(${lines.subtotal}, 0)`,
 		})
 		.from(creditNote)
@@ -337,7 +342,11 @@ export async function listCreditNotes() {
 		.leftJoin(lines, eq(lines.creditNoteId, creditNote.id))
 		.where(inTenant(creditNote))
 		.orderBy(desc(creditNote.id));
-	return rows.map(({ subtotal, ...row }) => ({ ...row, ...creditTotals(subtotal, row.vatRate) }));
+	return rows.map(({ subtotal, invoiceStatus, ...row }) => ({
+		...row,
+		settlement: settlementOf(row.status, invoiceStatus),
+		...creditTotals(subtotal, row.vatRate),
+	}));
 }
 
 /** The tenant's credit note by id (e.g. from a form), with its lines; or a 404. */

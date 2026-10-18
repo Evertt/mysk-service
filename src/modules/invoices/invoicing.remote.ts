@@ -107,12 +107,9 @@ export const getReceivables = query(async () => {
 		.where(and(inTenant(invoice), eq(invoice.status, "draft")));
 
 	// What the tenant owes customers: sent credit notes that aren't offset against a sent invoice
-	// (standalone ones and those against paid invoices), to refund.
-	const refunds = (await listCreditNotes()).filter(
-		(credit) =>
-			credit.status === "sent" &&
-			!(credit.invoice && sent.some((row) => row.number === credit.invoice)),
-	);
+	// (standalone ones and those against paid invoices), to refund. The card links to just these
+	// on the credit notes' list (`?settlement=refund`).
+	const refunds = (await listCreditNotes()).filter((credit) => credit.settlement === "refund");
 
 	const sum = (rows: { total: number }[]) => rows.reduce((total, row) => total + row.total, 0);
 	return {

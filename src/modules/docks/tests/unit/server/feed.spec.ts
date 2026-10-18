@@ -2,7 +2,7 @@
  * The Salvo feed's endpoint (`POST /docks/ingest`, its route stub with the token guard) and its
  * tokens on the seeded demo database: what it answers for a batch it applies, one naming a dock
  * the token's tenant doesn't have (nothing applied), one that isn't valid, a body that isn't JSON
- * and a missing, unknown or revoked token; a manager makes a token (only its hash is stored) and
+ * or is too large, and a missing, unknown or revoked token; a manager makes a token (only its hash is stored) and
  * revokes it, which a planner may not. What a batch does to the docks is `ingest.spec.ts`'s. The
  * server side of `docks.tenancy.test.ts`, which keeps the settings page.
  */
@@ -12,6 +12,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { issueIntegrationToken } from "#lib/server/auth/integrations.ts";
 import { demoDockToken } from "#modules/docks/server/demo.ts";
+import { maxBatch, maxBodyBytes } from "#modules/docks/server/events.ts";
 import {
 	createDockToken,
 	getDockSettings,
@@ -43,7 +44,7 @@ const salvoEvent = (type: string, dock: string) => ({
 
 /** What the endpoint answers `body` with, sent with `token` (SHLTR's demo token unless asked). */
 async function post(
-	body: string | object,
+	body: string | object | ReadableStream<Uint8Array>,
 	{ token = demoDockToken as string | null, type = "application/json" } = {},
 ) {
 	const request = new Request("http://localhost/docks/ingest", {
@@ -52,7 +53,9 @@ async function post(
 			"content-type": type,
 			...(token ? { authorization: `Bearer ${token}` } : {}),
 		},
-		body: typeof body === "string" ? body : JSON.stringify(body),
+		...(body instanceof ReadableStream
+			? { body, duplex: "half" }
+			: { body: typeof body === "string" ? body : JSON.stringify(body) }),
 	});
 	try {
 		const response = await signedOut(() => POST({ request } as RequestEvent<never, never>));
@@ -102,6 +105,43 @@ describe("the feed", () => {
 			body: { error: "unsupported_media_type" },
 		});
 		expect(await post("{ events", {})).toEqual({ status: 400, body: { error: "invalid_json" } });
+	});
+
+	test(`refuses a body larger than ${maxBatch} events take with a 413, reading no more of it`, async () => {
+		const padding = "x".repeat(maxBodyBytes);
+		expect(await post({ events: [{ ...salvoEvent("lock", "DOCK 06"), padding }] })).toEqual({
+			status: 413,
+			body: { error: "too_large" },
+		});
+		// Sent in chunks, without a length: read no further than the limit.
+		let pulled = 0;
+		const endless = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				pulled++;
+				controller.enqueue(new Uint8Array(64 * 1024).fill(32));
+			},
+		});
+		expect(await post(endless)).toEqual({ status: 413, body: { error: "too_large" } });
+		expect(pulled).toBeLessThanOrEqual(Math.ceil(maxBodyBytes / (64 * 1024)) + 1);
+	});
+
+	test(`takes a batch of ${maxBatch} events at their longest`, async () => {
+		const longest = (i: number) => ({
+			...salvoEvent("check_in", "DOCK 06"),
+			id: `spec-longest-${Date.now().toString(36)}-${i}`.padEnd(100, "-"),
+			payload: {
+				carrier: "é".repeat(100),
+				plate: "é".repeat(20),
+				reference: "é".repeat(50),
+			},
+		});
+		const body = JSON.stringify(
+			{ events: Array.from({ length: maxBatch }, (_, i) => longest(i)) },
+			null,
+			"\t",
+		).replaceAll("é", "\\u00e9");
+		expect(new TextEncoder().encode(body).byteLength).toBeLessThan(maxBodyBytes);
+		expect((await post(body)).status).toBe(200);
 	});
 
 	test("refuses a missing or unknown token, or the energy feed's, with a 401", async () => {

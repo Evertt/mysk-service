@@ -66,7 +66,7 @@
 			<a
 				data-refunds
 				class="underline-offset-4 hover:underline"
-				href="{resolve('/(app)/(modules)/invoices/credit-notes')}?status=sent"
+				href="{resolve('/(app)/(modules)/invoices/credit-notes')}?settlement=refund"
 			>
 				{m.invoices_credit_refunds({
 					count: data.refunds.count,

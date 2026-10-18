@@ -4,7 +4,7 @@
  * `watchDocks` (`../docks.remote.ts`) tells an open board when to ask again: whenever the feed
  * applied events, the rules acted or a dock changed.
  */
-import { and, asc, desc, eq, gte, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
@@ -19,6 +19,30 @@ import { dockPosition, dockSession, dockState } from "../server/schema.ts";
 
 /** How many of each dock's sessions the board lists. */
 const recentSessions = 5;
+
+/**
+ * The latest `recentSessions` sessions of each of the tenant's docks `ids`, newest first, in one
+ * query: each dock's sessions numbered by when they checked in (`row_number()` per dock).
+ */
+function latestSessions(ids: number[]) {
+	const numbered = db
+		.select({
+			id: dockSession.id,
+			rank: sql<number>`row_number() over (
+				partition by ${dockSession.dockId}
+				order by ${dockSession.checkedInAt} desc, ${dockSession.id} desc
+			)`.as("rank"),
+		})
+		.from(dockSession)
+		.where(and(inTenant(dockSession), inList(dockSession.dockId, ids)))
+		.as("numbered");
+	return db
+		.select({ dockId: dockSession.dockId, session: sessionColumns })
+		.from(dockSession)
+		.innerJoin(numbered, eq(numbered.id, dockSession.id))
+		.where(and(inTenant(dockSession), lte(numbered.rank, recentSessions)))
+		.orderBy(asc(dockSession.dockId), asc(numbered.rank));
+}
 
 /**
  * The board of the tenant's site `siteId`, or of the first site with docks. The docks come with
@@ -70,16 +94,7 @@ export const getDockBoard = query(v.optional(v.pipe(v.number(), v.integer())), a
 						),
 					)
 			: [],
-		Promise.all(
-			ids.map((id) =>
-				db
-					.select(sessionColumns)
-					.from(dockSession)
-					.where(and(inTenant(dockSession), eq(dockSession.dockId, id)))
-					.orderBy(desc(dockSession.checkedInAt))
-					.limit(recentSessions),
-			),
-		),
+		ids.length ? latestSessions(ids) : [],
 		ids.length
 			? db
 					.select({
@@ -111,12 +126,12 @@ export const getDockBoard = query(v.optional(v.pipe(v.number(), v.integer())), a
 		sites,
 		site,
 		canManage,
-		docks: docks.map((dock, i) => ({
+		docks: docks.map((dock) => ({
 			...dock,
 			// A dock without events has no state yet (no row to join).
 			reported: dock.locked !== null,
 			session: open.find((session) => session.dockId === dock.id) ?? null,
-			sessions: recent[i],
+			sessions: recent.filter((row) => row.dockId === dock.id).map((row) => row.session),
 		})),
 		notices,
 	};

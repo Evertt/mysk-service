@@ -41,6 +41,25 @@ export const holdsCredit = (status: InvoiceStatus) => status !== "void";
 /** Whether a credit note changes what's owed: once it's issued (sent or settled). */
 export const isIssued = (status: InvoiceStatus) => status === "sent" || status === "paid";
 
+/**
+ * How a sent credit note is still to be settled: refunded by the office (a standalone one, or one
+ * against a paid invoice), or offset against the sent invoice it credits (settled with its payment).
+ */
+export const creditSettlements = ["refund", "offset"] as const;
+export type CreditSettlement = (typeof creditSettlements)[number];
+
+/**
+ * How a credit note in `status` is still to be settled, against an invoice in `invoiceStatus`
+ * (`null` for a standalone one); none unless it's sent.
+ */
+export function settlementOf(
+	status: InvoiceStatus,
+	invoiceStatus: InvoiceStatus | null,
+): CreditSettlement | null {
+	if (status !== "sent") return null;
+	return invoiceStatus === "sent" ? "offset" : "refund";
+}
+
 // --- Crediting an invoice ----------------------------------------------------------------------
 
 /** A line of an invoice, with what the credit notes that hold credit took off it already. */

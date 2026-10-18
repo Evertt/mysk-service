@@ -6,7 +6,7 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { formatCents } from "#lib/i18n/index.ts";
 
-import { creditNoteStates } from "../credit-note.ts";
+import { creditNoteStates, creditSettlements } from "../credit-note.ts";
 import type { getCreditNotes } from "../credit-notes.remote.ts";
 import { invoicingLabels } from "../labels.ts";
 import CreditNoteLink from "../ui/credit-note-link.svelte";
@@ -62,6 +62,21 @@ export const creditNoteColumns = column.columns([
 			label: m.invoices_column_status,
 			filterValues: creditNoteStates,
 			clickFilter: (state) => invoicingLabels.labelOrValue("creditNoteState", state),
+		},
+	}),
+	// How a sent one is still to be settled: refunded, or offset against its (sent) invoice. Hidden
+	// unless asked for; the dashboard links to the ones to refund (`?settlement=refund`).
+	column.accessor("settlement", {
+		cell: ({ getValue }) => {
+			const settlement = getValue();
+			return settlement ? invoicingLabels.label("creditSettlement", settlement) : "";
+		},
+		filterFn: "oneOf",
+		enableGlobalFilter: false,
+		meta: {
+			label: m.invoices_credit_column_settlement,
+			filterValues: creditSettlements,
+			clickFilter: (settlement) => invoicingLabels.labelOrValue("creditSettlement", settlement),
 		},
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
