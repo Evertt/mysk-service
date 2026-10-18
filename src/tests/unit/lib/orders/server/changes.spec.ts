@@ -9,7 +9,11 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { setOrderStatus } from "#lib/orders/list/order-status.remote.ts";
 import { createOrder, deleteOrder, updateOrder } from "#lib/orders/order.remote.ts";
-import { saveOrderType } from "#lib/orders/type-settings/type-settings.remote.ts";
+import {
+	getOrderTypeSetup,
+	getOrderTypes,
+	saveOrderType,
+} from "#lib/orders/type-settings/type-settings.remote.ts";
 import { demoUsers } from "#lib/server/db/demo.ts";
 import {
 	as,
@@ -162,7 +166,11 @@ describe("an order type the tenant hides", () => {
 		expect(kept).toMatchObject({ status: 303, location: `/orders/${project}` });
 	});
 
-	test("can't be set by a member", async () => {
+	test("can't be set by a member, whose settings page is a 403, but who reads the names", async () => {
+		await as(north.member, async () => {
+			expect(await call(getOrderTypeSetup)).toMatchObject({ status: 403 });
+			expect(await call(getOrderTypes)).toMatchObject({ status: 200 });
+		});
 		const before = await rows(`select * from order_type_setting where organization_id = ?`, [
 			northId,
 		]);
