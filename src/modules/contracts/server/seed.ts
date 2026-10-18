@@ -253,8 +253,15 @@ export function generateCallOuts(
 	orderCount: number,
 	equipments: TenantDraft["equipments"],
 ) {
+	// Running since before its call-out came in (at most its response time and two hours ago), so
+	// the call-out is its, not the term's before it (which may respond faster or slower): just after
+	// a new year, when many terms start, too.
 	const running = contractTerms
-		.filter((c) => c.startsOn <= now && now < addDays(c.endsOn, 1))
+		.filter(
+			(c) =>
+				c.startsOn.getTime() <= now.getTime() - (c.responseHours + 2) * 60 * 60 * 1000 &&
+				now < addDays(c.endsOn, 1),
+		)
 		.sort((a, b) => a.responseHours - b.responseHours || a.id - b.id);
 	const waiting =
 		running.length >= 3
