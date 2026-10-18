@@ -1,7 +1,7 @@
 /**
  * The engineer portal's remote functions on the seeded demo database, as North's field engineer
  * (Erik) uses them: their work is their own orders only; completing needs their own signature
- * too; and another engineer's order, or South's, is a 404 to read and to change, also by its id in
+ * too, which is in their own name, logged once it's in; and another engineer's order, or South's, is a 404 to read and to change, also by its id in
  * the forms of their own order. The server side of `src/tests/e2e/portal.test.ts`, which keeps the
  * job's story, a page's 404 and one tampered form.
  */
@@ -90,7 +90,6 @@ describe("an engineer's work", () => {
 				id: String(own.id),
 				signerName: "Robin Customer",
 				signature: drawn,
-				engineerName: "Erik",
 				engineerSignature: "",
 			}),
 		);
@@ -102,6 +101,39 @@ describe("an engineer's work", () => {
 			}),
 		);
 		expect(await snapshot(own.id)).toEqual(before);
+	});
+
+	test("is signed off in their own name, whatever name the form sends", async () => {
+		const answer = await as(erik, () =>
+			submit(completeWork, {
+				id: String(own.id),
+				signerName: "Robin Customer",
+				signature: drawn,
+				engineerName: "Someone Else",
+				engineerSignature: drawn,
+			}),
+		);
+		expect(answer).toMatchObject({ status: 200 });
+		const name = await value<string>(`select name from engineer where id = ?`, [mine]);
+		expect(
+			await rows(`select signer_name, engineer_name from order_signoff where order_id = ?`, [
+				own.id,
+			]),
+		).toEqual([{ signer_name: "Robin Customer", engineer_name: name }]);
+		// Logged once the sign-off is in, with who signed for the customer.
+		expect(
+			await rows(
+				`select action, changes, note from activity where subject_type = 'order'
+				 and subject_id = ? order by id desc limit 1`,
+				[String(own.id)],
+			),
+		).toEqual([
+			{
+				action: "completed",
+				changes: JSON.stringify({ status: ["in_progress", "completed"] }),
+				note: "Signed off by Robin Customer",
+			},
+		]);
 	});
 });
 
@@ -129,7 +161,6 @@ describe("another engineer's order, or South's", () => {
 						id,
 						signerName: "Robin Customer",
 						signature: drawn,
-						engineerName: "Erik",
 						engineerSignature: drawn,
 					}),
 				]) {

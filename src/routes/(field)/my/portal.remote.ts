@@ -209,20 +209,26 @@ const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: fou
 
 /**
  * Changes the status of an order (in the transaction), with what the modules' parts of it follow
- * (e.g. its stock), and logs it as `action`. Refused with a module's message.
+ * (e.g. its stock) and the rest of the change (`also`, e.g. the sign-off), and then logs it as
+ * `action`. Refused with a module's message.
  */
 async function setStatus(
 	tx: Transaction,
 	found: MyOrder,
 	status: OrderStatus,
 	action: "work_started" | "completed",
-	{ completedAt, note }: { completedAt?: Temporal.Instant; note?: string } = {},
+	{
+		completedAt,
+		note,
+		also,
+	}: { completedAt?: Temporal.Instant; note?: string; also?: () => Promise<void> } = {},
 ) {
 	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
 	await saveOrderParts({ tx, order: found, status }).catch((error) => {
 		if (error instanceof OrderRefused) invalid(error.message);
 		throw error;
 	});
+	await also?.();
 	await recordActivity(tx, {
 		action,
 		subject: subjectOf(found),
@@ -308,14 +314,15 @@ export const addNote = forEngineers.form(
 
 /**
  * Completes a job under way with the work order's sign-off: the customer's name and signature, and
- * the engineer's own. A module may refuse it, e.g. while a checklist isn't completed.
+ * the engineer's own signature, in their name as the tenant knows them (not one the form could
+ * send). A module may refuse it, e.g. while a checklist isn't completed. Logged with who signed
+ * for the customer, once the sign-off is in.
  */
 export const completeWork = forEngineers.form(
 	v.object({
 		id: id(),
 		signerName: text(m.portal_signer_required),
 		signature: signature(),
-		engineerName: text(m.portal_engineer_name_required),
 		engineerSignature: signature(m.portal_engineer_signature_required),
 	}),
 	async (input) => {
@@ -324,23 +331,25 @@ export const completeWork = forEngineers.form(
 		const number = await db.transaction(async (tx) => {
 			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
 			const now = Temporal.Now.instant();
-			await setStatus(tx, found, "completed", "completed", {
-				completedAt: now,
-				// Stored, in the language of whoever completes it.
-				note: m.portal_signed_off_note({ name: input.signerName }),
-			});
 			const signoff = {
 				signerName: input.signerName,
 				signature: input.signature,
-				engineerName: input.engineerName,
+				engineerName: engineer.name,
 				engineerSignature: input.engineerSignature,
 				userId: signedInUser.id,
 				signedAt: now,
 			};
-			await tx
-				.insert(orderSignoff)
-				.values({ orderId: found.id, organizationId, ...signoff })
-				.onConflictDoUpdate({ target: orderSignoff.orderId, set: signoff });
+			await setStatus(tx, found, "completed", "completed", {
+				completedAt: now,
+				// Stored, in the language of whoever completes it.
+				note: m.portal_signed_off_note({ name: input.signerName }),
+				also: async () => {
+					await tx
+						.insert(orderSignoff)
+						.values({ orderId: found.id, organizationId, ...signoff })
+						.onConflictDoUpdate({ target: orderSignoff.orderId, set: signoff });
+				},
+			});
 			return found.number;
 		});
 		refreshMyOrder(number);

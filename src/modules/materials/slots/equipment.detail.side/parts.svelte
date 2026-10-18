@@ -2,7 +2,7 @@
 	@component
 	The materials module's card on a unit of equipment's page (`equipment.detail.side`,
 	`#lib/equipment/extensions.ts`): the parts used on the unit ("Onderdelen"), per material, from
-	the lines of its completed orders.
+	the lines of its completed orders, marked as shared when an order of them was for several units.
 -->
 <script lang="ts">
 	import { formatDate } from "#lib/i18n/index.ts";
@@ -36,6 +36,12 @@
 									? ` · ${m.materials_parts_last_used({ date: formatDate(part.lastUsed) })}`
 									: ""}
 							</span>
+							<!-- Its lines count on each of the order's units: not this unit's alone. -->
+							{#if part.units > 1}
+								<span class="text-xs text-muted-foreground" data-shared>
+									{m.materials_parts_shared({ count: part.units })}
+								</span>
+							{/if}
 						</div>
 					</li>
 				{/each}

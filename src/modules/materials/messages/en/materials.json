@@ -230,5 +230,19 @@
 			}
 		}
 	],
-	"materials_parts_last_used": "last {date}"
+	"materials_parts_last_used": "last {date}",
+	"materials_parts_shared": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "on an order for 1 unit",
+				"countPlural=*": "on an order for {countText} units"
+			}
+		}
+	]
 }

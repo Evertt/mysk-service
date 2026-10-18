@@ -1,12 +1,14 @@
 <!--
 	@component
-	Completes a job with the work order's sign-off: the engineer's name and signature, then the name
-	of who signs for the customer and their signature. Both are required.
+	Completes a job with the work order's sign-off: the engineer's signature, under their name as the
+	office knows them (shown, not sent), then the name of who signs for the customer and their
+	signature. Both signatures are required.
 -->
 <script lang="ts">
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 	import { toast } from "svelte-sonner";
 
+	import FormField from "#lib/components/form/form-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
@@ -33,12 +35,16 @@
 	<input {...fields.id.as("hidden", String(orderId))} />
 	<fieldset class="flex flex-col gap-4" data-signature="engineer">
 		<legend class="mb-2 text-sm font-semibold">{m.portal_engineer_signature()}</legend>
-		<TextField
-			field={fields.engineerName}
+		<!-- Not submitted: the server signs in the engineer's own name. -->
+		<FormField
 			label={m.portal_engineer_name()}
-			value={engineerName}
-			autocomplete="name"
-		/>
+			issues={undefined}
+			description={m.portal_engineer_name_description()}
+		>
+			{#snippet children({ id })}
+				<Input {id} value={engineerName} readonly />
+			{/snippet}
+		</FormField>
 		<SignaturePad
 			bind:value={engineerSignature}
 			label={m.portal_engineer_signature_pad()}
