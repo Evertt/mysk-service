@@ -512,12 +512,22 @@ describe("a credit note another module made, in North", () => {
 		return creditOf(made.number, northId);
 	}
 
-	test("keeps its lines as they were made: none added or removed", async () => {
+	test("keeps its lines and its reason as they were made: none added or removed", async () => {
 		const stored = await madeElsewhere("Bonus 2025");
 		const [line] = await creditLinesOf(stored.id);
 		const before = await creditSnapshot(stored.id);
 		const refused = `${stored.number} was made by another module, so its lines can't be changed`;
 		await as(north.owner, async () => {
+			expect(
+				await submit(updateCreditReason, { id: String(stored.id), reason: "Changed" }),
+			).toMatchObject({
+				status: 400,
+				issues: [
+					{
+						message: `${stored.number} was made by another module, so its reason can't be changed`,
+					},
+				],
+			});
 			expect(
 				await submit(addCreditLine, {
 					id: String(stored.id),
@@ -534,7 +544,7 @@ describe("a credit note another module made, in North", () => {
 		expect(await creditSnapshot(stored.id)).toEqual(before);
 		expect(
 			(await activityAbout("credit_note", stored.id, northId)).filter(
-				(entry) => entry.subject_type === "credit_note_line",
+				(entry) => entry.subject_type === "credit_note_line" || entry.action === "updated",
 			),
 		).toEqual([]);
 	});
@@ -542,13 +552,13 @@ describe("a credit note another module made, in North", () => {
 	test("is still issued and settled, or voided", async () => {
 		const { id, number } = await madeElsewhere("Bonus 2025");
 		await as(north.owner, async () => {
-			expect(await submit(updateCreditReason, { id: String(id), reason: "Bonus" })).toMatchObject({
-				status: 200,
-			});
 			expect(await submit(issueCreditNote, { id: String(id) })).toMatchObject({ status: 200 });
 			expect(await submit(settleCreditNote, { id: String(id) })).toMatchObject({ status: 200 });
 		});
-		expect(await creditOf(number, northId)).toMatchObject({ status: "paid", reason: "Bonus" });
+		expect(await creditOf(number, northId)).toMatchObject({
+			status: "paid",
+			reason: "Bonus 2025",
+		});
 
 		const other = await madeElsewhere("Bonus 2024");
 		expect(

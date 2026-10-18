@@ -324,4 +324,35 @@ describe("the customer portal", () => {
 		).toBe(0);
 		expect(await as(north.customer, () => data(getClientPartner))).toEqual({ partner: false });
 	});
+
+	test("offers the oldest closed year still waiting for its choice, past the latest three", async () => {
+		const riedel = await value<number>(
+			`select customer_id from portal_contact k join user u on u.id = k.user_id where u.email = ?`,
+			[shltr.customer.email],
+		);
+		// Riedel's last year is chosen; the four before it closed too, the two oldest unchosen.
+		const years = [1, 2, 3, 4].map((back) => lastYear - back);
+		for (const year of years) {
+			const chosen = year > lastYear - 3;
+			await rows(
+				`insert into partner_bonus_year (organization_id, customer_id, year, status,
+				 partner_revenue, bonus_revenue_cash, bonus_revenue_credit, level, cash_rate, credit_rate,
+				 cash_amount, credit_amount, credit_valid_until, finalised_at, choice, chosen_at)
+				 values (?, ?, ?, 'finalised', 5000000, 5000000, 5000000, 'BRONZE', 250, 300, 125000,
+				 150000, ?, 0, ?, ?)`,
+				[shltrId, riedel, year, `${year + 1}-12-31`, chosen ? "cash" : null, chosen ? 0 : null],
+			);
+		}
+		try {
+			const portal = await as(shltr.customer, () => data(getClientPartner));
+			if (!portal.partner) throw new Error("Riedel is a partner");
+			expect(portal.closed.map((closed) => closed.year)).toEqual([lastYear, ...years.slice(0, 2)]);
+			expect(portal.awaiting).toMatchObject({ year: lastYear - 4, cashAmount: 125000 });
+		} finally {
+			await rows(`delete from partner_bonus_year where customer_id = ? and year < ?`, [
+				riedel,
+				lastYear,
+			]);
+		}
+	});
 });

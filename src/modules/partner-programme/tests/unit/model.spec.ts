@@ -120,6 +120,14 @@ describe("a year's figures", () => {
 		expect(figures.progress?.remaining).toBe(euros(1_000));
 	});
 
+	test("never show the next level as reached before it is", () => {
+		// €49,999.50 of €50,000: no level yet, so not 100 % along.
+		const figures = yearFigures(shltr, [{ ...line(0), amount: 4_999_950 }]);
+		expect(figures.level).toBeNull();
+		expect(figures.progress).toMatchObject({ percent: 99, remaining: 50 });
+		expect(yearFigures(shltr, [line(37_499)]).progress?.percent).toBe(74);
+	});
+
 	test("have no next level at the top", () => {
 		expect(yearFigures(shltr, [line(600_000)]).progress).toBeNull();
 	});

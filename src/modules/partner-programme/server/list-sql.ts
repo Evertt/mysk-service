@@ -16,7 +16,14 @@ import { type ProgrammeRules, sortedTiers } from "../model.ts";
 import { partnerRevenueSql } from "./revenue.ts";
 import { partnerAccount, walletEntry } from "./schema.ts";
 
-/** Each of the tenant's wallets' balance (`customerId`, `balance`), as a subquery to join. */
+/**
+ * Each of the tenant's wallets' balance (`customerId`, `balance`), as a subquery to join. The
+ * balance, not what's `available` as the partner's card shows it (`walletSummary()`): the two
+ * differ by credit past its date that the daily job hasn't expired yet (from the day after its date
+ * until the job's next run, also for a spend given back to credit that expired since), and which
+ * credit is past its date depends on which credit each spend took, which only replaying the ledger
+ * in order tells (`replayWallet()` in `../model.ts`), not a sum the list can sort by.
+ */
 const walletBalanceSql = () =>
 	db
 		.select({

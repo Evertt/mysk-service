@@ -1,6 +1,6 @@
 /**
  * What's done on a credit note's page: issuing, settling and voiding it, and changing a draft (its
- * lines, unless another module made it, and its reason). See `../credit-note.ts` for the rules.
+ * lines and its reason, unless another module made it). See `../credit-note.ts` for the rules.
  */
 import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
@@ -114,10 +114,13 @@ export const removeCreditLine = form(v.object({ id: id() }), async ({ id }) => {
 	refreshCreditNote(draft);
 });
 
-/** Changes a draft credit note's reason. */
+/** Changes a draft credit note's reason: not another module's, whose reason is that module's too. */
 export const updateCreditReason = form(v.object({ id: id(), ...reasonFields }), async (input) => {
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
+		if (isMadeElsewhere(draft)) {
+			invalid(m.invoices_credit_reason_elsewhere({ number: draft.number }));
+		}
 		const after = { reason: input.reason };
 		await tx.update(creditNote).set(after).where(idInTenant(creditNote, draft.id));
 		await recordActivity(tx, {

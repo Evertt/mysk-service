@@ -21,7 +21,8 @@
  *   day, as they were offset against it. Nothing is left of a paid invoice: a credit note against
  *   it, or a standalone one, is settled when the office refunds it.
  * - **Another module's** standalone credit note (`isMadeElsewhere()`) keeps the lines it was made
- *   with: they're that module's figures (the partner programme's bonus, frozen with its year).
+ *   with, and its reason: they're that module's figures (the partner programme's bonus, frozen
+ *   with its year).
  */
 import { invoiceTotals, lineAmount, type InvoiceTotals } from "./invoice.ts";
 import type { InvoiceStatus } from "./model.ts";
@@ -181,8 +182,9 @@ export const typedCreditLine = (line: {
 /**
  * Whether another module made a standalone credit note (the partner programme's cash bonus,
  * through `api/credit-notes.server.ts`): a line of it refers to that module's record (`source`).
- * Its lines are that module's figures, so they aren't added to or removed here; it's issued,
- * settled or voided like any other. One against an invoice keeps its lines' references (a
+ * Its lines are that module's figures and its reason that module's words, so neither changes here
+ * (no line added or removed, the reason as it was made); it's issued, settled or voided like any
+ * other. One against an invoice keeps its lines' references (a
  * contract's fee), and is the office's.
  */
 export const isMadeElsewhere = (credit: {
