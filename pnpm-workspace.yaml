@@ -27,6 +27,10 @@ patchedDependencies:
   # query) stays dirty, and was computed anew on every read, with all it reads: a resize across the
   # sidebar's breakpoint froze the dashboard's charts for 7 s. Now computed once until a dependency
   # changes (`fresh_deriveds`); see docs/upstream-bugs/README.md (10). Still in 5.57.2.
+  # Also: rebasing a fork (a hover preload) on a committed batch left marks in the fork's skipped
+  # branches, and nothing under them ran again: a record page froze after a command refreshed its
+  # query while a link on it was preloaded. Reset as `#process` does; see
+  # docs/upstream-bugs/README.md (12). Still in 5.57.2.
   svelte@5.57.1: patches/svelte@5.57.1.patch
   # Reading a module back from `fsModuleCache`, Vitest took its inline source map out with the
   # regular expression `base64,(.+)`, which overflowed the stack on Paraglide's messages (an 8 MB

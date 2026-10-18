@@ -110,19 +110,7 @@ describe("in North", () => {
 			`select id, amount from invoice_line where invoice_id = ? and amount >= 10000 order by id limit 1`,
 			[paid.id],
 		);
-		// More than the line is refused: by the server too, past the input's max, which the page shows.
-		const before = await countIn("credit_note", north.id);
-		await page
-			.locator(`[data-line="${line.id}"]`)
-			.getByRole("spinbutton")
-			.evaluate((input) => input.removeAttribute("max"));
-		await chooseCredit(new Map([[line.id, String(line.amount / 100 + 1)]]), "Returned part");
-		await app.submit(page.getByRole("button", { name: "Create draft" }));
-		expect(await app.issues()).toContainEqual(
-			expect.stringContaining(`at most ${formatCents(line.amount)} is left to credit`),
-		);
-		expect(await countIn("credit_note", north.id)).toBe(before);
-
+		// In one submit (that more than is left is refused is the server spec's).
 		await chooseCredit(new Map([[line.id, "25.00"]]), "Returned part");
 		partial = await createDraft(north.id);
 		await expect.poll(badges).toEqual(["Draft"]);
@@ -130,6 +118,10 @@ describe("in North", () => {
 	});
 
 	test("issued and settled: refunded, and the invoice's page lists it", async () => {
+		// Without a reload, while a link on the page is preloaded: committing the issue's refresh
+		// then left the page frozen under the preload's fork, and "Mark settled" didn't open
+		// (docs/upstream-bugs/README.md, 12).
+		await card("Activity").getByRole("link", { name: "View all" }).hover();
 		await confirm("Issue");
 		await app.toast("Credit note issued");
 		await expect.poll(badges).toEqual(["Sent"]);

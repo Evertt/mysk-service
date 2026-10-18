@@ -255,3 +255,31 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Reproduction:** in this repo without the patch: `rm -rf node_modules/.vitest-cache`, then
   `vp test run --project 'server-*' --project client`. For the issue, try a module whose inline
   map is ~8 MB in two projects plus a browser project.
+
+## 12. Svelte: rebasing a fork leaves marks in its skipped branches, and the page stops updating
+
+- **Versions:** svelte 5.57.1 and 5.57.2 (same code), with `experimental.async`; SvelteKit 3.0.0
+  with `experimental.forkPreloads`.
+- **What happens:** on a credit note's page, the pointer rested on the Activity card's "View all"
+  link, so SvelteKit preloaded `/activity` in a `fork()`, in which the credit note's page is a
+  skipped branch (the page the fork replaces). Issuing the credit note refreshed
+  `getCreditNote()`; the page showed it, then nothing on it updated any more: "Mark settled" and
+  "Void" didn't open their dialogs (their handlers ran, their effects didn't) until a reload.
+  The sidebar, outside the page, still worked.
+- **Cause:** when that batch committed, `Batch.#commit()` rebased the fork: it scheduled an effect
+  of the page in the fork (one that read both the fork's `params` and the refreshed query), and
+  `batch.#resolve()` marked the path from it to the root (clearing `CLEAN` on the branches on the
+  way). `batch.#traverse()` puts those marks back as it goes, but doesn't enter the batch's
+  skipped branches, so the marks inside the page's branch stayed. Every later batch's `#resolve()`
+  then met a marked branch, took its root as already collected ("covered"), and ran nothing under
+  it: 10 effects scheduled by the click, 0 run. `#process()` resets a deferred batch's skipped
+  branches after its traversal (`reset_branch`); the rebase didn't.
+- **Fix (our patch):** `patches/svelte@5.57.1.patch` resets the batch's skipped branches after the
+  rebase's traversal, as `#process()` does.
+- **Reproduction:** `src/modules/invoices/tests/e2e/credit-notes.test.ts` without the patch, where
+  the draft's "Create draft" click leaves the pointer over the credit note page's "View all":
+  "issued and settled" timed out at "Mark settled" every time; with the page's preloads off
+  (`data-sveltekit-preload-data="off"`), it passed. For the issue: a page `[id]` rendering
+  `$derived(await getThing(params.id))` and a button that toggles some state, a link to another
+  route preloaded in a `fork()` (kept, not committed), then a refresh of `getThing`: the button
+  stops working.
