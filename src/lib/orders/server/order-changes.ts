@@ -58,43 +58,12 @@ function refuseRefused(error: unknown): never {
 }
 
 /**
- * Gives one of the tenant's orders another status, as saving it in the order form would: not an
- * invoiced one; its completion date set or cleared; the modules' parts following it (e.g. its
- * materials taken from or returned to stock, refused if there isn't enough). A 404 if there's no
- * such order.
- */
-export async function changeOrderStatus(id: number, status: OrderStatus) {
-	await db
-		.transaction(async (tx) => {
-			const found = await tx.query.order.findFirst({ where: idInTenant(order, id) });
-			if (!found) error(404, m.orders_not_found_plain());
-			if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
-			if (found.status === status) return;
-			if (isAwaitingAcceptance(found.status)) invalid(acceptFirst(found.number));
-			const values = { status, completedAt: completedAt(status, found) };
-			await tx.update(order).set(values).where(idInTenant(order, id));
-			// Thrown when refused, so the transaction stores nothing of it.
-			await saveOrderParts({ tx, order: found, status });
-			const subject = { type: "order", id, label: found.number };
-			const ignore = ["completedAt"];
-			await recordActivity(tx, {
-				action: "updated",
-				subject,
-				before: found,
-				after: values,
-				ignore,
-			});
-		})
-		.catch(refuseRefused);
-}
-
-/**
  * Gives the tenant's `orders` (as loaded: their status is what it was) another status in the
  * transaction `tx`, for an optional module that moves orders along with its own records, such as
  * invoicing: the completion date is set or cleared as `completedAt()` does, and one `updated`
  * entry per order is logged, with `note` (stored, so in the language of whoever makes the change)
  * saying why. It makes no checks: the caller has them (an order's editability stays with
- * `changeOrderStatus()`). Nor does it ask the modules about their parts (`orders.saving`): the
+ * `transitionOrder()`). Nor does it ask the modules about their parts (`orders.saving`): the
  * statuses it moves between, completed and invoiced, are the same to them (both hold stock).
  */
 export async function setOrdersStatus(
@@ -132,7 +101,7 @@ export async function setOrdersStatus(
 
 /**
  * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another
- * tenant's (or don't exist), or inactive. Scheduling (`scheduleOrder()`) and bulk assigning
+ * tenant's (or don't exist), or inactive. Planning (`transitionOrder()`'s `plan`) and bulk assigning
  * share it.
  */
 export async function assigneeProblem(
