@@ -1,5 +1,6 @@
 /**
- * Contracts on the server, on the seeded demo database: the list, one contract, the form's
+ * Contracts on the server, on the seeded demo database: the list, one contract (and the orders it
+ * covers, not those on its units with others, nor work it doesn't cover), the form's
  * options, creating, editing and deleting one (the checks the schema can't make: the tenant's
  * customer, its own units, a period that runs forwards, no unit covered twice at once), the
  * numbers, what's logged, a covered unit staying with its customer, and that South (with the module
@@ -9,6 +10,7 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getEquipment, updateEquipment } from "#lib/equipment/equipment.remote.ts";
+import { createOrder } from "#lib/orders/order.remote.ts";
 import {
 	bulkDeleteContracts,
 	createContract,
@@ -157,6 +159,84 @@ describe("North's contracts", () => {
 			).map((row) => row.id);
 		expect(ids(customers)).toEqual(await own("customer"));
 		expect(ids(equipments)).toEqual(await own("equipment"));
+	});
+});
+
+describe("a contract's orders", () => {
+	/** A North contract active today covering two or more units, and a unit of its customer's it doesn't cover. */
+	let term: { number: string; customer: number; covered: number[]; other: number };
+	/** The orders made for this test, by what they are: their numbers. */
+	const made: Record<"covered" | "mixed" | "installation", string> = {
+		covered: "",
+		mixed: "",
+		installation: "",
+	};
+
+	const newOrder = async (type: string, equipmentIds: number[], description: string) => {
+		const created = await as(north.member, () =>
+			submit(createOrder, {
+				customerId: String(term.customer),
+				equipmentIds: equipmentIds.map(String),
+				engineerId: "",
+				type,
+				status: "quote",
+				priority: "normal",
+				description,
+				scheduledFor: "",
+				scheduledTime: "",
+				laborHours: 2,
+			}),
+		);
+		expect(created).toMatchObject({ status: 303 });
+		return created.location!.split("/").pop()!;
+	};
+
+	beforeAll(async () => {
+		const [found] = await rows<{ number: string; customer: number; id: number }>(
+			`select k.number, k.customer_id as customer, k.id from contract k where k.organization_id = ?
+			 and k.starts_on <= ? and k.ends_on >= ?
+			 and (select count(*) from contract_equipment ce where ce.contract_id = k.id) >= 2
+			 and exists (select 1 from equipment e where e.customer_id = k.customer_id
+			   and e.id not in (select equipment_id from contract_equipment where contract_id = k.id))
+			 order by k.id limit 1`,
+			[northId, today.toString(), today.toString()],
+		);
+		const covered = (await coverageOf(found.id)).slice(0, 2);
+		const other = await value<number>(
+			`select id from equipment where customer_id = ? and id not in
+			 (select equipment_id from contract_equipment where contract_id = ?) order by id limit 1`,
+			[found.customer, found.id],
+		);
+		term = { number: found.number, customer: found.customer, covered, other };
+		made.covered = await newOrder("inspection", covered, "Inspection of the covered doors (test)");
+		made.mixed = await newOrder(
+			"inspection",
+			[...covered, other],
+			"Inspection of covered and uncovered doors (test)",
+		);
+		made.installation = await newOrder("installation", [covered[0]], "New door (test)");
+	});
+
+	test("are the ones it covers, as their coverage says, with their first unit and how many", async () => {
+		const { orders } = await as(north.member, () => data(getContract, term.number));
+		const numbers = orders.map((order) => order.number);
+		expect(numbers).toContain(made.covered);
+		expect(orders.find((order) => order.number === made.covered)).toMatchObject({
+			unit: { id: term.covered[0] },
+			unitCount: 2,
+		});
+		for (const order of orders) {
+			const coverage = await as(north.member, () => data(getOrderCoverage, order.number));
+			expect(coverage?.contract.number, order.number).toBe(term.number);
+		}
+	});
+
+	test("leave out an order on uncovered units too, and work it doesn't cover", async () => {
+		const { orders } = await as(north.member, () => data(getContract, term.number));
+		const numbers = orders.map((order) => order.number);
+		expect(numbers).not.toContain(made.mixed);
+		expect(numbers).not.toContain(made.installation);
+		expect(await as(north.member, () => data(getOrderCoverage, made.mixed))).toBeNull();
 	});
 });
 

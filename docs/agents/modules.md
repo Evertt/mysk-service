@@ -12,7 +12,8 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
   server logic through hooks; all only take part for tenants that have the module.
   A hook is an extension point its owner declares (`#lib/extensions/define.ts`): core's in
   `src/lib/<domain>/extensions.ts` (`orders.costs`, `orders.adjustPrices`, `orders.tag`,
-  `orders.committed`, `orders.saving`, `orders.units` in `src/lib/orders/extensions.ts`), a module's in its
+  `orders.committed`, `orders.saving`, `orders.units` in `src/lib/orders/extensions.ts`,
+  `customers.removingSite` in `src/lib/customers/extensions.ts`), a module's in its
   `api/extensions.ts`
   (`invoices.billableItems`). A module contributes in its `server/index.ts`:
   `defineServerModule(id, [contribute(adjustPrices, …), …])`, with the point imported from its
@@ -23,12 +24,15 @@ Read before you add or change a module (`src/modules/<id>/`), an extension point
 true })`, whose contributors answer at once, without awaiting: for an owner that can't wait, like
   a list column's SQL; the condition module's `condition.signals`), `emit()` for an event after commit (via `afterCommit()` in
   `src/lib/server/db/serialize.ts`; errors are logged, not thrown), `vote()` for a vote (any
-  refusal wins) and `save()` for a save hook (each module saves its part in the owner's
+  refusal wins; the docks and energy refuse a customer site's removal while they have records
+  there, `customers.removingSite`, which would cascade unlogged; the input carries the owner's
+  transaction to read in) and `save()` for a save hook (each module saves its part in the owner's
   transaction, which the input carries, one after another; the first that answers problems stops
   the rest, and the owner refuses the change, rolling the transaction back). Each point has one
   caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()`,
-  `saveOrderParts()` and `saveUnitParts()` in `src/lib/orders/server/`, `offeredItems()` in
-  invoices' `server/billable.ts`); a new extension point is added when a module needs it.
+  `saveOrderParts()` and `saveUnitParts()` in `src/lib/orders/server/`, `removeSite()` in
+  `src/lib/customers/server/sites.ts`, `offeredItems()` in invoices' `server/billable.ts`); a new
+  extension point is added when a module needs it.
   Anything that shows or adds up order totals prices them with `priceOrders()`
   (`src/lib/orders/server/pricing.ts`): labour, the costs the modules add (`orders.costs`, e.g.
   materials, with what they're made of when asked for `items`) and their adjustments.

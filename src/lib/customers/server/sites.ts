@@ -2,6 +2,7 @@
  * Changing the tenant's customer sites, each in a transaction that also logs it
  * (`recordActivity`). A site is logged against its customer too (`parent`), so it shows on the
  * customer's activity card. A customer always keeps one site: its equipment has to be somewhere.
+ * The modules have a say in a site's removal (`removingSite`, `#lib/customers/extensions.ts`).
  */
 import { error, invalid } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
@@ -10,7 +11,9 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
+import { vote } from "#lib/server/extensions.ts";
 
+import { removingSite } from "../extensions.ts";
 import type { SiteInput } from "../form/site-schema.ts";
 
 /** A site's customer, as the activity log and the pages know it. */
@@ -86,8 +89,9 @@ export function updateSite(id: number, input: SiteInput) {
 }
 
 /**
- * Deletes the tenant's site `id`; refuses one with equipment, and a customer's last site. Returns
- * its customer's code.
+ * Deletes the tenant's site `id`; refuses one with equipment, a customer's last site, and one a
+ * module refuses (`removingSite`: it has records there, which would go with it). Returns its
+ * customer's code.
  */
 export function removeSite(id: number) {
 	return db.transaction(async (tx) => {
@@ -102,6 +106,8 @@ export function removeSite(id: number) {
 			.where(and(eq(customerSite.customerId, owner.id), inTenant(customerSite)));
 		if (units.n) invalid(m.customers_site_delete_refused({ count: units.n }));
 		if (sites.n <= 1) invalid(m.customers_site_delete_last());
+		const refusals = await vote(removingSite, { tx, site: { id, customerId: owner.id } });
+		if (refusals.length) invalid(...refusals);
 		await tx.delete(customerSite).where(idInTenant(customerSite, id));
 		await recordActivity(tx, { action: "deleted", ...subjects(site, owner) });
 		return owner.code;

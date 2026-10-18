@@ -73,10 +73,10 @@
 	"contracts_no_equipment_title": "No equipment covered",
 	"contracts_no_equipment_description": "The units this contract covered have been removed.",
 	"contracts_orders": "Orders under this contract",
-	"contracts_orders_description": "Work on the covered equipment between {from} and {until}.",
+	"contracts_orders_description": "Covered work on its equipment between {from} and {until}.",
 	"contracts_no_orders_title": "No orders",
 	"contracts_no_orders_upcoming": "The contract hasn't started yet.",
-	"contracts_no_orders_description": "No work on the covered equipment during the contract.",
+	"contracts_no_orders_description": "No covered work on its equipment during the contract.",
 	"contracts_terms": "Terms",
 	"contracts_within_hours": [
 		{

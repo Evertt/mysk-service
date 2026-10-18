@@ -4,11 +4,13 @@ import { isHttpError, isValidationError } from "@sveltejs/kit";
 import { asc, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import { removingSite } from "#lib/customers/extensions.ts";
 import type { SiteInput } from "#lib/customers/form/site-schema.ts";
 import { createSite, removeSite, updateSite } from "#lib/customers/server/sites.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customerSite } from "#lib/server/db/schema.ts";
+import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -16,6 +18,11 @@ const logged = vi.fn();
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 vi.mock("#lib/server/activity/index.ts", () => ({
 	recordActivity: (_tx: unknown, record: unknown) => logged(record),
+}));
+// Made-up modules `a` and `b` instead of the ones in `src/modules`.
+const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => registry.modules,
 }));
 
 // A temporary database with the tables the service touches. Not an in-memory one: libsql gives a
@@ -66,12 +73,12 @@ afterAll(() => {
 	rmSync(folder, { recursive: true, force: true });
 });
 
-const tenant = (organizationId: string): Tenant => ({
+const tenant = (organizationId: string, modules: string[] = []): Tenant => ({
 	organizationId,
 	name: organizationId,
 	slug: organizationId,
 	roles: ["member"],
-	modules: [],
+	modules,
 });
 
 const input = (fields: Partial<SiteInput> = {}): SiteInput => ({
@@ -96,6 +103,7 @@ beforeEach(async () => {
 	locals.user = { id: "u1", name: "Jo" };
 	locals.tenant = tenant("north");
 	logged.mockClear();
+	registry.modules = [];
 	await db.run(sql`delete from equipment`);
 	await db.run(sql`delete from customer_site`);
 	await db.run(sql`insert into customer_site (id, organization_id, customer_id, name, city, country)
@@ -198,6 +206,40 @@ describe("removeSite", () => {
 			"A customer keeps at least one site. Add another before deleting this one.",
 		]);
 		expect(logged).not.toHaveBeenCalled();
+	});
+
+	test("asks the tenant's modules in its transaction, and keeps a site one of them refuses", async () => {
+		locals.tenant = tenant("north", ["a", "b"]);
+		const asked = vi.fn();
+		registry.modules = [
+			defineServerModule("a" as never, [
+				contribute(removingSite, async ({ tx, site }) => {
+					asked(site);
+					// What it has at the site, read in core's transaction: here, the site itself.
+					const [row] = await tx
+						.select({ id: customerSite.id })
+						.from(customerSite)
+						.where(sql`id = ${site.id}`);
+					return row ? "This site has 2 docks. Delete them first." : undefined;
+				}),
+			]),
+			defineServerModule("b" as never, [contribute(removingSite, async () => undefined)]),
+		];
+		expect(await failure(() => removeSite(11))).toEqual([
+			"This site has 2 docks. Delete them first.",
+		]);
+		expect(asked).toHaveBeenCalledWith({ id: 11, customerId: 1 });
+		expect(await sites()).toHaveLength(4);
+		expect(logged).not.toHaveBeenCalled();
+	});
+
+	test("a module that's off isn't asked", async () => {
+		locals.tenant = tenant("north", ["b"]);
+		registry.modules = [
+			defineServerModule("a" as never, [contribute(removingSite, async () => "Refused")]),
+		];
+		expect(await removeSite(11)).toBe("CUST-0001");
+		expect((await sites()).map((site) => site.id)).toEqual([10, 20, 30]);
 	});
 
 	test("another tenant's site is a 404", async () => {
