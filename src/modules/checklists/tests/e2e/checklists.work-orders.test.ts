@@ -29,7 +29,10 @@ const checklistsOfUnit = (serial: string) =>
 		[serial, shltr.id],
 	);
 
-/** A unit with components, with no open draft and a checklist completed this year. */
+/**
+ * A component, with points, of a unit that has a checklist this year: completed this year (without
+ * an open draft), else a draft on an open order (early in the year, when none was completed yet).
+ */
 const withComponents = async () =>
 	(
 		await rows<{ serial: string; number: string; id: number }>(
@@ -37,8 +40,13 @@ const withComponents = async () =>
 			 join equipment e on e.id = k.equipment_id
 			 where k.organization_id = ? and exists (select 1 from component_checkpoint cc
 				where cc.component_id = k.id)
-			 order by k.number`,
-			[shltr.id],
+			 order by case
+				when exists (select 1 from checklist c where c.equipment_id = e.id and c.status = 'draft')
+					then 1
+				when exists (select 1 from checklist c where c.equipment_id = e.id and c.status = 'completed'
+					and strftime('%Y', c.completed_at, 'unixepoch', 'localtime') = ?) then 0
+				else 2 end, k.number`,
+			[shltr.id, String(thisYear)],
 		)
 	).find(Boolean)!;
 
