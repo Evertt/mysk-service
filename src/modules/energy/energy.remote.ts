@@ -18,12 +18,15 @@ import { periods } from "./model.ts";
 import { query } from "./remote-functions.ts";
 import {
 	loadSite,
+	loadSites,
 	openAlertCount,
+	openAlertCounts,
 	periodRanges,
 	reportRanges,
 	siteFigures,
+	sitesFigures,
 } from "./server/figures.ts";
-import { energyAlert, energyConsumer, energySite, energyZone } from "./server/schema.ts";
+import { energyAlert, energyConsumer, energyZone } from "./server/schema.ts";
 
 const siteId = v.pipe(v.number(), v.integer(), v.minValue(1));
 
@@ -32,22 +35,21 @@ const siteId = v.pipe(v.number(), v.integer(), v.minValue(1));
  * whether the user may change the module's settings.
  */
 export const getEnergySites = query(async () => {
-	const sites = await db
-		.select({ id: energySite.id })
-		.from(energySite)
-		.where(inTenant(energySite))
-		.orderBy(asc(energySite.name));
+	const sites = await loadSites();
 	const now = Temporal.Now.instant();
-	const figures = await Promise.all(
-		sites.map(async ({ id }) => {
-			const site = await loadSite(id);
-			const { zones, doors } = await siteFigures(
-				site,
-				periodRanges("day", site.timeZone, now),
-				now,
-			);
+	// All sites' figures at once, each today in its own time zone (see `sitesFigures()`).
+	const [figures, openAlerts] = await Promise.all([
+		sitesFigures(
+			sites.map((site) => ({ site, ranges: periodRanges("day", site.timeZone, now) })),
+			now,
+		),
+		openAlertCounts(sites.map((site) => site.id)),
+	]);
+	return {
+		sites: sites.map((site, index) => {
+			const { zones, doors } = figures[index];
 			return {
-				id,
+				id: site.id,
 				name: site.name,
 				customerName: site.customerName,
 				city: site.city,
@@ -55,11 +57,11 @@ export const getEnergySites = query(async () => {
 				doors: doors.length,
 				liveKw: zones.reduce((total, zone) => total + zone.liveKw, 0),
 				kwhToday: zones.reduce((total, zone) => total + zone.kwh, 0),
-				openAlerts: await openAlertCount(id),
+				openAlerts: openAlerts.get(site.id) ?? 0,
 			};
 		}),
-	);
-	return { sites: figures, canManage: isManager(currentTenant().roles) };
+		canManage: isManager(currentTenant().roles),
+	};
 });
 
 /** A site with its customer, for the pages that show no figures. */
@@ -146,18 +148,23 @@ export const getEnergyZone = query(
 /** The longest range a report covers. */
 const MAX_REPORT_DAYS = 92;
 
-/** The report's figures: days `from` to `to` (`yyyy-mm-dd`) against as many days before them. */
+/**
+ * The report's figures: days `from` to `to` (`yyyy-mm-dd`) against as many days before them. Without
+ * them, this month so far by the site's calendar (its time zone's, not the user's): from its 1st,
+ * to its today.
+ */
 export const getEnergyReport = query(
 	v.object({
 		site: siteId,
-		from: v.pipe(v.string(), v.isoDate()),
-		to: v.pipe(v.string(), v.isoDate()),
+		from: v.optional(v.pipe(v.string(), v.isoDate())),
+		to: v.optional(v.pipe(v.string(), v.isoDate())),
 	}),
 	async (input) => {
 		const site = await loadSite(input.site);
 		const now = Temporal.Now.instant();
-		const first = Temporal.PlainDate.from(input.from);
-		const last = Temporal.PlainDate.from(input.to);
+		const today = now.toZonedDateTimeISO(site.timeZone).toPlainDate();
+		const first = input.from ? Temporal.PlainDate.from(input.from) : today.with({ day: 1 });
+		const last = input.to ? Temporal.PlainDate.from(input.to) : today;
 		const days = first.until(last).days + 1;
 		if (days < 1 || days > MAX_REPORT_DAYS) error(400, m.energy_report_range_invalid());
 		const ranges = reportRanges(first, last, site.timeZone, now);

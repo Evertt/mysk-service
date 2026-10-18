@@ -182,11 +182,14 @@ export async function updateEnergySite(id: number, input: EnergySiteInput) {
 /** Whether `query` (a select of one column) finds a row. */
 const exists = async (query: Promise<unknown[]>) => (await query).length > 0;
 
-/** Whether the energy site has readings, door events or alerts. */
-async function siteMeasured(id: number) {
+/**
+ * Whether the energy site has readings, door events or alerts. Asked in the deleting transaction:
+ * transactions take turns, so no batch is stored between the answer and the delete.
+ */
+async function siteMeasured(tx: Transaction, id: number) {
 	const [readings, events, alerts] = await Promise.all([
 		exists(
-			db
+			tx
 				.select({ zoneId: energyReading.zoneId })
 				.from(energyReading)
 				.innerJoin(...tenantJoin(energyZone, energyReading.zoneId))
@@ -194,7 +197,7 @@ async function siteMeasured(id: number) {
 				.limit(1),
 		),
 		exists(
-			db
+			tx
 				.select({ doorId: energyDoorEvent.doorId })
 				.from(energyDoorEvent)
 				.innerJoin(...tenantJoin(energyDoor, energyDoorEvent.doorId))
@@ -202,7 +205,7 @@ async function siteMeasured(id: number) {
 				.limit(1),
 		),
 		exists(
-			db
+			tx
 				.select({ id: energyAlert.id })
 				.from(energyAlert)
 				.where(and(inTenant(energyAlert), eq(energyAlert.energySiteId, id)))
@@ -218,15 +221,15 @@ async function siteMeasured(id: number) {
  */
 export async function deleteEnergySite(id: number): Promise<Problem<never>[]> {
 	const site = await siteRow(id);
-	if (await siteMeasured(id)) return [{ message: m.energy_setup_site_measured() }];
-	await db.transaction(async (tx) => {
+	return db.transaction(async (tx) => {
+		if (await siteMeasured(tx, id)) return [{ message: m.energy_setup_site_measured() }];
 		await tx.delete(energySite).where(idInTenant(energySite, id));
 		await recordActivity(tx, {
 			action: "deleted",
 			subject: { type: "energy_site", id, label: site.name },
 		});
+		return [];
 	});
-	return [];
 }
 
 /** The site's setup: its settings, zones, consumers and doors, and the units they can be. */
@@ -416,40 +419,45 @@ export async function deleteZone(siteId: number, zoneId: number): Promise<Proble
 	const site = await siteRow(siteId);
 	const zone = await zoneOf(site.id, zoneId);
 	if (!zone) error(404, m.energy_zone_not_found());
-	const [readings, events, alerts] = await Promise.all([
-		exists(
-			db
-				.select({ zoneId: energyReading.zoneId })
-				.from(energyReading)
-				.where(and(inTenant(energyReading), eq(energyReading.zoneId, zone.id)))
-				.limit(1),
-		),
-		exists(
-			db
-				.select({ doorId: energyDoorEvent.doorId })
-				.from(energyDoorEvent)
-				.innerJoin(...tenantJoin(energyDoor, energyDoorEvent.doorId))
-				.where(and(inTenant(energyDoorEvent), eq(energyDoor.zoneId, zone.id)))
-				.limit(1),
-		),
-		exists(
-			db
-				.select({ id: energyAlert.id })
-				.from(energyAlert)
-				.where(and(inTenant(energyAlert), eq(energyAlert.zoneId, zone.id)))
-				.limit(1),
-		),
-	]);
-	if (readings || events || alerts) return [{ message: m.energy_setup_zone_measured() }];
-	await db.transaction(async (tx) => {
+	return db.transaction(async (tx) => {
+		if (await zoneMeasured(tx, zone.id)) return [{ message: m.energy_setup_zone_measured() }];
 		await tx.delete(energyZone).where(idInTenant(energyZone, zone.id));
 		await recordActivity(tx, {
 			action: "deleted",
 			subject: { type: "energy_zone", id: zone.id, label: zone.code },
 			parent: siteSubject(site),
 		});
+		return [];
 	});
-	return [];
+}
+
+/** Whether the zone has readings or alerts, or its doors events (asked as `siteMeasured()` is). */
+async function zoneMeasured(tx: Transaction, zoneId: number) {
+	const [readings, events, alerts] = await Promise.all([
+		exists(
+			tx
+				.select({ zoneId: energyReading.zoneId })
+				.from(energyReading)
+				.where(and(inTenant(energyReading), eq(energyReading.zoneId, zoneId)))
+				.limit(1),
+		),
+		exists(
+			tx
+				.select({ doorId: energyDoorEvent.doorId })
+				.from(energyDoorEvent)
+				.innerJoin(...tenantJoin(energyDoor, energyDoorEvent.doorId))
+				.where(and(inTenant(energyDoorEvent), eq(energyDoor.zoneId, zoneId)))
+				.limit(1),
+		),
+		exists(
+			tx
+				.select({ id: energyAlert.id })
+				.from(energyAlert)
+				.where(and(inTenant(energyAlert), eq(energyAlert.zoneId, zoneId)))
+				.limit(1),
+		),
+	]);
+	return readings || events || alerts;
 }
 
 /** The consumer `consumerId` of the energy site `siteId` (in one of its zones), with its zone's code. */
@@ -624,30 +632,35 @@ export async function deleteDoor(siteId: number, doorId: number): Promise<Proble
 	const found = await doorOf(site.id, doorId);
 	if (!found) error(404, m.energy_setup_door_not_found());
 	const { door } = found;
-	const [events, alerts] = await Promise.all([
-		exists(
-			db
-				.select({ doorId: energyDoorEvent.doorId })
-				.from(energyDoorEvent)
-				.where(and(inTenant(energyDoorEvent), eq(energyDoorEvent.doorId, door.id)))
-				.limit(1),
-		),
-		exists(
-			db
-				.select({ id: energyAlert.id })
-				.from(energyAlert)
-				.where(and(inTenant(energyAlert), eq(energyAlert.doorId, door.id)))
-				.limit(1),
-		),
-	]);
-	if (events || alerts) return [{ message: m.energy_setup_door_measured() }];
-	await db.transaction(async (tx) => {
+	return db.transaction(async (tx) => {
+		if (await doorMeasured(tx, door.id)) return [{ message: m.energy_setup_door_measured() }];
 		await tx.delete(energyDoor).where(idInTenant(energyDoor, door.id));
 		await recordActivity(tx, {
 			action: "deleted",
 			subject: { type: "energy_door", id: door.id, label: door.code },
 			parent: siteSubject(site),
 		});
+		return [];
 	});
-	return [];
+}
+
+/** Whether the door has events or alerts (asked as `siteMeasured()` is). */
+async function doorMeasured(tx: Transaction, doorId: number) {
+	const [events, alerts] = await Promise.all([
+		exists(
+			tx
+				.select({ doorId: energyDoorEvent.doorId })
+				.from(energyDoorEvent)
+				.where(and(inTenant(energyDoorEvent), eq(energyDoorEvent.doorId, doorId)))
+				.limit(1),
+		),
+		exists(
+			tx
+				.select({ id: energyAlert.id })
+				.from(energyAlert)
+				.where(and(inTenant(energyAlert), eq(energyAlert.doorId, doorId)))
+				.limit(1),
+		),
+	]);
+	return events || alerts;
 }

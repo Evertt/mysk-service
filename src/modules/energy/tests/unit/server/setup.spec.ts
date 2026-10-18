@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { parseBatch } from "#modules/energy/ingest/format.ts";
 import { storeBatch } from "#modules/energy/server/ingest.ts";
@@ -395,6 +395,41 @@ describe("deleting", () => {
 		expect(
 			(await entries()).some((entry) => entry.action === "deleted" && entry.type !== "energy_door"),
 		).toBe(false);
+	});
+
+	test("is refused when a batch is stored just before the deleting transaction", async () => {
+		const { siteId, zoneId } = await plant();
+		await north(() => saveDoor(siteId, { ...door, zoneId }));
+		const [saved] = await db.select().from(energyDoor);
+		const at = Temporal.Instant.from("2026-10-17T08:00:00Z");
+		const reading = { organizationId: "north", zoneId, start: at, avgKw: 4, peakKw: 5, kwh: 1 };
+		const event = { organizationId: "north", doorId: saved.id, at, open: true };
+		// Stores `measure` in a transaction of its own that takes its turn right before the next one,
+		// as a batch the gateway sent meanwhile would.
+		const storedFirst = (measure: (tx: Transaction) => Promise<unknown>) => {
+			const transaction = db.transaction.bind(db);
+			vi.spyOn(db, "transaction").mockImplementationOnce(async (work) => {
+				await transaction(measure);
+				return transaction(work);
+			});
+		};
+
+		storedFirst((tx) => tx.insert(energyDoorEvent).values(event));
+		expect(await north(() => deleteDoor(siteId, saved.id))).toEqual([
+			{ message: expect.stringContaining("The door has events or alerts") },
+		]);
+		await db.delete(energyDoorEvent);
+		storedFirst((tx) => tx.insert(energyReading).values(reading));
+		expect(await north(() => deleteZone(siteId, zoneId))).toEqual([
+			{ message: expect.stringContaining("The zone has readings or alerts") },
+		]);
+		await db.delete(energyReading);
+		storedFirst((tx) => tx.insert(energyReading).values(reading));
+		expect(await north(() => deleteEnergySite(siteId))).toEqual([
+			{ message: expect.stringContaining("The site has readings") },
+		]);
+		expect(await db.select().from(energyReading)).toHaveLength(1);
+		expect((await entries()).some((entry) => entry.action === "deleted")).toBe(false);
 	});
 });
 
