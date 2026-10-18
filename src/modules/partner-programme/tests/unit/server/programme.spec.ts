@@ -7,10 +7,12 @@ import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { paidInvoiceLines } from "#modules/invoices/api/revenue.server.ts";
 import { creditNote } from "#modules/invoices/api/schema.server.ts";
+import { giveBackCredit } from "#modules/partner-programme/api/wallet.server.ts";
 import {
 	bonusLineSource,
 	defaultCategoryRules,
 	defaultTiers,
+	walletSummary,
 } from "#modules/partner-programme/model.ts";
 import { saveClassification } from "#modules/partner-programme/server/classification.ts";
 import {
@@ -29,7 +31,13 @@ import {
 	programmeYear,
 	walletEntry,
 } from "#modules/partner-programme/server/schema.ts";
-import { addEntry, expireCredit } from "#modules/partner-programme/server/wallet.ts";
+import {
+	addEntry,
+	expireCredit,
+	ledgerOf,
+	type NewEntry,
+	outstandingCredit,
+} from "#modules/partner-programme/server/wallet.ts";
 
 // No request: the system makes the changes (`asSystem()`), so nothing may ask for one.
 vi.mock("$app/server", () => ({
@@ -289,6 +297,56 @@ describe("the wallet", () => {
 			["award", euros(100)],
 			["expiry", -euros(100)],
 		]);
+	});
+
+	test("keeps what's left of each credit with its entries: spent, given back, expired", async () => {
+		const add = (entry: NewEntry) =>
+			north(() => db.transaction((tx) => addEntry(tx, holder, entry, today)));
+		const stored = async () =>
+			(
+				await db
+					.select()
+					.from(walletEntry)
+					.where(eq(walletEntry.customerId, 3))
+					.orderBy(walletEntry.id)
+			).map((entry) => [entry.kind, entry.amount, entry.remaining]);
+		await add({ kind: "award", amount: euros(100), validUntil: today.add({ days: 5 }) });
+		await add({ kind: "adjustment", amount: euros(50), validUntil: today.add({ days: 1 }) });
+		await add({ kind: "adjustment", amount: euros(10), validUntil: null });
+		// The credit that expires first first: all of the adjustment's, then of the award.
+		const spend = await add({ kind: "spend", amount: -euros(70) });
+		expect(await stored()).toEqual([
+			["award", euros(100), euros(80)],
+			["adjustment", euros(50), 0],
+			["adjustment", euros(10), euros(10)],
+			["spend", -euros(70), 0],
+		]);
+		// Given back piece by piece, to the credit it was taken from.
+		expect(
+			await north(() => db.transaction((tx) => giveBackCredit(tx, holder, spend, "Cancelled"))),
+		).toBe(euros(70));
+		expect((await stored()).slice(0, 3)).toEqual([
+			["award", euros(100), euros(100)],
+			["adjustment", euros(50), euros(50)],
+			["adjustment", euros(10), euros(10)],
+		]);
+		expect((await stored()).slice(4)).toEqual([
+			["reversal", euros(50), 0],
+			["reversal", euros(20), 0],
+		]);
+		// The daily job, two days on: the adjustment past its date expires.
+		const later = today.add({ days: 2 });
+		await north(() => expireCredit({ today: later }));
+		expect((await stored()).slice(1, 2)).toEqual([["adjustment", euros(50), 0]]);
+		expect((await stored()).at(-1)).toEqual(["expiry", -euros(50), 0]);
+		// What's left of the credit still valid is what the wallet has available, also in SQL.
+		const ledger = await north(() => ledgerOf(holder.id));
+		expect(walletSummary(ledger, later).available).toBe(euros(110));
+		expect(await north(() => outstandingCredit(later))).toBe(euros(110));
+		// Before the job runs, the credit past its date isn't available either.
+		await add({ kind: "adjustment", amount: euros(5), validUntil: today.subtract({ days: 1 }) });
+		expect(await north(() => outstandingCredit(today))).toBe(euros(110));
+		expect(walletSummary(await north(() => ledgerOf(holder.id)), today).available).toBe(euros(110));
 	});
 });
 

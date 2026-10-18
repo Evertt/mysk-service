@@ -20,12 +20,14 @@ export const getPartnersYear = query(async () => {
 });
 
 /**
- * A page of the tenant's partners with this year's Partner Omzet, level and progress, and their
- * wallet's balance, searched, sorted and filtered as the query says, and how many match.
+ * A page of the tenant's partners with this year's Partner Omzet, level and progress, and the
+ * credit in their wallet they can spend today (as their card has it), searched, sorted and
+ * filtered as the query says, and how many match.
  */
 export const getPartners = query(partnersList.query, async (input) => {
-	const rules = await rulesFor(today().year);
-	const listSql = partnersSql(rules);
+	const now = today();
+	const rules = await rulesFor(now.year);
+	const listSql = partnersSql(rules, now);
 	const plan = planList(listSql, input);
 	const { joins } = listSql;
 	const [rows, rowCount] = await Promise.all([

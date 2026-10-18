@@ -184,6 +184,12 @@ export const walletEntry = sqliteTable(
 		amount: integer("amount").notNull(),
 		/** For credit that comes in, and for an expiry the date the expired credit was valid until. */
 		validUntil: day("valid_until"),
+		/**
+		 * What's left of the credit it brought in (`creditLeft()`): what came in less what's been
+		 * taken of it since; zero for what goes out. Kept by `addEntry()` with each entry, so the
+		 * credit available on a day is a sum (`walletAvailableSql()`).
+		 */
+		remaining: integer("remaining").notNull().default(0),
 		/** What it's for, e.g. the parts it was spent on; stored in the language of whoever made it. */
 		note: text("note"),
 		createdAt: createdAt(),

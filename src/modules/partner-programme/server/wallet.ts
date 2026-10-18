@@ -1,21 +1,22 @@
 /**
  * A partner's wallet (`partner_wallet_entry`): its ledger, what it holds (`walletSummary()`), the
  * entries the office adds by hand, and the daily job that expires credit past its date. Every
- * entry is logged against the customer.
+ * entry is logged against the customer, and keeps what's left of the credit it brought in
+ * (`remaining`), so SQL adds up what's available (`creditAvailableOn()`).
  */
 import { invalid } from "@sveltejs/kit";
-import { and, asc } from "drizzle-orm";
+import { and, asc, gte, isNull, or, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
 
-import { type WalletEntryKind, walletSummary } from "../model.ts";
+import { creditLeft, type WalletEntryKind, walletSummary } from "../model.ts";
 import { customerSubject } from "./partners.ts";
 import { walletEntry } from "./schema.ts";
 
@@ -24,8 +25,31 @@ type LedgerEntry = typeof walletEntry.$inferSelect & { on: Temporal.PlainDate };
 
 const withDay = (row: typeof walletEntry.$inferSelect): LedgerEntry => ({
 	...row,
-	on: row.createdAt.toZonedDateTimeISO(getTimeZone()).toPlainDate(),
+	on: dayOf(row.createdAt),
 });
+
+/** The day of a moment an entry was made, in the user's zone (outside a request, the runtime's). */
+const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+
+/**
+ * Of the entries' credit, the part that can be spent on `today` (the credit still valid), as a
+ * condition: what's left of it (`remaining`) adds up to what `walletSummary()` says is available.
+ */
+export const creditAvailableOn = (today: Temporal.PlainDate) =>
+	or(isNull(walletEntry.validUntil), gte(walletEntry.validUntil, today))!;
+
+/**
+ * Stores what's left of each credit of a partner's ledger (all its entries, in order) as replaying
+ * it says (`creditLeft()`), where it changed: after each entry, in its transaction.
+ */
+async function keepCreditLeft(tx: Transaction, entries: readonly LedgerEntry[]) {
+	const left = creditLeft(entries);
+	for (const entry of entries) {
+		const remaining = left.get(entry.id) ?? 0;
+		if (remaining === entry.remaining) continue;
+		await tx.update(walletEntry).set({ remaining }).where(idInTenant(walletEntry, entry.id));
+	}
+}
 
 /** The customers' wallet entries, in the order they were made, by customer id. */
 async function walletEntries(customerIds: readonly number[], tx: Transaction | typeof db = db) {
@@ -72,7 +96,8 @@ export interface NewEntry {
 /**
  * Adds an entry to a partner's wallet in `tx`, and logs it against the customer. What goes out
  * must be there: an amount taken (other than an expiry, which takes what's past its date) is
- * refused beyond what's available on `today`, so the balance never goes below zero.
+ * refused beyond what's available on `today`, so the balance never goes below zero. Keeps what's
+ * left of each credit after it (`keepCreditLeft()`): which credit it took, or gave back to.
  */
 export async function addEntry(
 	tx: Transaction,
@@ -80,8 +105,8 @@ export async function addEntry(
 	entry: NewEntry,
 	today: Temporal.PlainDate,
 ) {
+	const entries = (await walletEntries([holder.id], tx)).get(holder.id)!;
 	if (entry.amount < 0 && entry.kind !== "expiry") {
-		const entries = (await walletEntries([holder.id], tx)).get(holder.id)!;
 		const { available } = walletSummary(entries, today);
 		if (-entry.amount > available) {
 			invalid(m.partners_wallet_not_enough({ available: formatCents(available) }));
@@ -98,7 +123,8 @@ export async function addEntry(
 			bonusYearId: entry.bonusYearId ?? null,
 			note: entry.note ?? null,
 		})
-		.returning({ id: walletEntry.id });
+		.returning();
+	await keepCreditLeft(tx, [...entries, withDay(added)]);
 	await recordActivity(tx, {
 		action: "created",
 		subject: { type: "partner_wallet_entry", id: added.id, label: holder.code },
@@ -149,18 +175,9 @@ export async function expireCredit({ today }: DailyRun): Promise<DailyReport> {
 
 /** The tenant's wallets' credit that can be spent on `today`, added up. */
 export async function outstandingCredit(today: Temporal.PlainDate) {
-	const rows = await db
-		.select()
+	const [row] = await db
+		.select({ total: sql<number>`coalesce(sum(${walletEntry.remaining}), 0)` })
 		.from(walletEntry)
-		.where(inTenant(walletEntry))
-		.orderBy(asc(walletEntry.customerId), asc(walletEntry.id));
-	const byCustomer = new Map<number, LedgerEntry[]>();
-	for (const row of rows) {
-		const entries = byCustomer.get(row.customerId);
-		if (entries) entries.push(withDay(row));
-		else byCustomer.set(row.customerId, [withDay(row)]);
-	}
-	let total = 0;
-	for (const entries of byCustomer.values()) total += walletSummary(entries, today).available;
-	return total;
+		.where(and(inTenant(walletEntry), creditAvailableOn(today)));
+	return row.total;
 }

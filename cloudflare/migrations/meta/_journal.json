@@ -162,6 +162,13 @@
       "when": 1792343152579,
       "tag": "0022_hourly-energy-alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792343620146,
+      "tag": "0023_wallet-credit-remaining",
+      "breakpoints": true
     }
   ]
 }

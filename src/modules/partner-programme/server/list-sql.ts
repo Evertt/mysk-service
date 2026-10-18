@@ -1,7 +1,7 @@
 /**
  * The partners list in SQL (see `../list/partners-list.ts`): each partner with its Partner Omzet
- * in the year (`partnerRevenueSql()`) and its wallet's balance, both as subqueries joined in, so
- * the list sorts and filters by them in the database.
+ * in the year (`partnerRevenueSql()`) and the credit in its wallet it can spend today, both as
+ * subqueries joined in, so the list sorts and filters by them in the database.
  */
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
@@ -15,35 +15,35 @@ import { partnersList } from "../list/partners-list.ts";
 import { type ProgrammeRules, sortedTiers } from "../model.ts";
 import { partnerRevenueSql } from "./revenue.ts";
 import { partnerAccount, walletEntry } from "./schema.ts";
+import { creditAvailableOn } from "./wallet.ts";
 
 /**
- * Each of the tenant's wallets' balance (`customerId`, `balance`), as a subquery to join. The
- * balance, not what's `available` as the partner's card shows it (`walletSummary()`): the two
- * differ by credit past its date that the daily job hasn't expired yet (from the day after its date
- * until the job's next run, also for a spend given back to credit that expired since), and which
- * credit is past its date depends on which credit each spend took, which only replaying the ledger
- * in order tells (`replayWallet()` in `../model.ts`), not a sum the list can sort by.
+ * Each of the tenant's wallets' credit that can be spent on `today` (`customerId`, `available`),
+ * as a subquery to join: what's left of each credit still valid (`remaining`, which every entry
+ * keeps by replaying the ledger), so the same as `available` on the partner's card
+ * (`walletSummary()`), also for credit past its date before the daily job expires it.
  */
-const walletBalanceSql = () =>
+const walletAvailableSql = (today: Temporal.PlainDate) =>
 	db
 		.select({
 			customerId: walletEntry.customerId,
-			balance: sql<number>`max(0, sum(${walletEntry.amount}))`.as("wallet_balance"),
+			available: sql<number>`sum(${walletEntry.remaining})`.as("wallet_available"),
 		})
 		.from(walletEntry)
-		.where(inTenant(walletEntry))
+		.where(and(inTenant(walletEntry), creditAvailableOn(today)))
 		.groupBy(walletEntry.customerId)
 		.as("wallet");
 
 /**
  * The partners' joins: the customer, the Partner Omzet in the rules' year (none without rules:
- * then it's zero for all) and the wallet. Written once, for the rows, the counts and the facets.
+ * then it's zero for all) and the wallet's credit available on `today`. Written once, for the
+ * rows, the counts and the facets.
  */
-export function partnerJoins(rules: ProgrammeRules | undefined) {
+export function partnerJoins(rules: ProgrammeRules | undefined, today: Temporal.PlainDate) {
 	const revenue = rules ? partnerRevenueSql(rules) : undefined;
-	const wallet = walletBalanceSql();
+	const wallet = walletAvailableSql(today);
 	const revenueOf = revenue ? sql<number>`coalesce(${revenue.partnerRevenue}, 0)` : sql<number>`0`;
-	const balanceOf = sql<number>`coalesce(${wallet.balance}, 0)`;
+	const availableOf = sql<number>`coalesce(${wallet.available}, 0)`;
 	const join = <T extends SQLiteSelect>(query: T) => {
 		const withCustomer = query.innerJoin(...tenantJoin(customer, partnerAccount.customerId));
 		const withRevenue = revenue
@@ -51,7 +51,7 @@ export function partnerJoins(rules: ProgrammeRules | undefined) {
 			: withCustomer;
 		return withRevenue.leftJoin(wallet, eq(wallet.customerId, partnerAccount.customerId));
 	};
-	return { join, revenue: revenueOf, wallet: balanceOf };
+	return { join, revenue: revenueOf, wallet: availableOf };
 }
 
 /** The Partner Omzet of the levels named (`null` below the first), as a condition. */
@@ -76,13 +76,14 @@ function inLevels(
 }
 
 /**
- * The partners list's columns in SQL, for the rules' year, with the joins its rows are selected
- * through. Call it for each request.
+ * The partners list's columns in SQL, for the rules' year and the wallets on `today`, with the
+ * joins its rows are selected through. Call it for each request.
  */
 export function partnersSql(
 	rules: ProgrammeRules | undefined,
+	today: Temporal.PlainDate,
 ): ListSql<typeof partnersList.columns> & { joins: ReturnType<typeof partnerJoins> } {
-	const joins = partnerJoins(rules);
+	const joins = partnerJoins(rules, today);
 	return {
 		joins,
 		list: partnersList,

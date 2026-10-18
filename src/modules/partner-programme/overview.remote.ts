@@ -17,7 +17,7 @@ import { outstandingCredit } from "./server/wallet.ts";
 export const getProgrammeOverview = query(async () => {
 	const now = today();
 	const rules = await rulesFor(now.year);
-	const joins = partnerJoins(rules);
+	const joins = partnerJoins(rules, now);
 	const partners = await joins
 		.join(db.select({ revenue: joins.revenue }).from(partnerAccount).$dynamic())
 		.where(inTenant(partnerAccount));

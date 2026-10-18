@@ -16,6 +16,7 @@
  */
 import { en, Faker, nl } from "@faker-js/faker";
 
+import { getTimeZone } from "#lib/dates.ts";
 import { formatCode } from "#lib/numbering.ts";
 import { DAY, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
@@ -25,6 +26,7 @@ import { seedCreditNote } from "#modules/invoices/api/seed.ts";
 import type { PartnersDraft, SeedSpend } from "../api/seed.ts";
 import {
 	bonusLineSource,
+	creditLeft,
 	creditValidUntil,
 	defaultCategoryRules,
 	defaultTiers,
@@ -48,6 +50,27 @@ const northTiers: Tier[] = [
 	{ threshold: 500_000, level: "ZILVER", cashRate: 300, creditRate: 350 },
 	{ threshold: 1_500_000, level: "GOUD", cashRate: 400, creditRate: 500 },
 ];
+
+/** Each partner's entries (in order) with what's left of its credit, as `addEntry()` keeps it. */
+function keepCreditLeft(entries: readonly (typeof walletEntry.$inferInsert)[]) {
+	const ledgers = new Map<number, (typeof walletEntry.$inferInsert)[]>();
+	for (const entry of entries) {
+		ledgers.set(entry.customerId, [...(ledgers.get(entry.customerId) ?? []), entry]);
+	}
+	for (const ledger of ledgers.values()) {
+		const left = creditLeft(
+			ledger.map((entry, id) => ({
+				id,
+				kind: entry.kind,
+				amount: entry.amount,
+				validUntil: entry.validUntil ?? null,
+				bonusYearId: entry.bonusYearId ?? null,
+				on: entry.createdAt!.toZonedDateTimeISO(getTimeZone()).toPlainDate(),
+			})),
+		);
+		ledger.forEach((entry, id) => (entry.remaining = left.get(id)));
+	}
+}
 
 const thisYear = now.getFullYear();
 const lastYear = thisYear - 1;
@@ -503,6 +526,7 @@ export default defineSeed<PartnersSeed>({
 					});
 				}
 			}
+			keepCreditLeft(entries);
 			await insertAll(entries, (chunk) => tx.insert(walletEntry).values(chunk));
 			await insertAll(payouts, (chunk) => tx.insert(bonusCreditNote).values(chunk));
 			count("partnerBonusYears", Array.from({ length: closedYears }));

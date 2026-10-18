@@ -343,6 +343,8 @@ export interface WalletEntry {
 
 /** Credit that came in, and what's left of it. */
 interface WalletLot {
+	/** The entry it came in with. */
+	id: number | undefined;
 	amount: number;
 	remaining: number;
 	validUntil: Temporal.PlainDate | null;
@@ -399,6 +401,7 @@ function replayWallet(entries: readonly WalletEntry[]) {
 			}
 			if (left) {
 				lots.push({
+					id: entry.id,
 					amount: left,
 					remaining: left,
 					validUntil: entry.validUntil,
@@ -439,6 +442,22 @@ function replayWallet(entries: readonly WalletEntry[]) {
  */
 export const creditTaken = (entries: readonly WalletEntry[], id: number): CreditPiece[] =>
 	replayWallet(entries).taken.get(id) ?? [];
+
+/**
+ * What's left of the credit each entry brought in, by the entry's id: an award's, an adjustment
+ * up's, and a reversal's beyond what it gave back to the credit it names. Zero for an entry that
+ * brought none in (what goes out, a reversal that gave all back). Stored with the entries
+ * (`remaining`, written by `addEntry()`), so SQL adds up what's available as `walletSummary()`
+ * does.
+ */
+export function creditLeft(entries: readonly WalletEntry[]): Map<number, number> {
+	const left = new Map<number, number>();
+	for (const entry of entries) if (entry.id !== undefined) left.set(entry.id, 0);
+	for (const lot of replayWallet(entries).lots) {
+		if (lot.id !== undefined) left.set(lot.id, lot.remaining);
+	}
+	return left;
+}
 
 /** What a wallet holds on `today`. In cents. */
 export interface WalletSummary {

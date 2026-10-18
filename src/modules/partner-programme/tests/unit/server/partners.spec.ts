@@ -9,14 +9,19 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
+import { db } from "#lib/server/db/index.ts";
+import { giveBackCredit } from "#modules/partner-programme/api/wallet.server.ts";
 import { getOrderClassification } from "#modules/partner-programme/classification.remote.ts";
 import { getClientPartner } from "#modules/partner-programme/client/client-partner.remote.ts";
 import { closeProgrammeYear } from "#modules/partner-programme/close.remote.ts";
+import { partnersList } from "#modules/partner-programme/list/partners-list.ts";
+import { getPartners } from "#modules/partner-programme/list/partners.remote.ts";
 import {
 	acceptPartner,
 	choosePartnerBonus,
 	getPartnerCard,
 } from "#modules/partner-programme/partners.remote.ts";
+import { expireCredit } from "#modules/partner-programme/server/wallet.ts";
 import {
 	addProgrammeYear,
 	getYearRules,
@@ -24,6 +29,7 @@ import {
 } from "#modules/partner-programme/years.remote.ts";
 import {
 	as,
+	asSystem,
 	call,
 	data,
 	north,
@@ -354,5 +360,98 @@ describe("the customer portal", () => {
 				lastYear,
 			]);
 		}
+	});
+});
+
+describe("the partners list's wallet", () => {
+	type Query = Parameters<typeof getPartners>[0];
+	const byWallet: Query = {
+		q: "",
+		filters: {},
+		sort: [{ id: "wallet", desc: true }],
+		group: null,
+		pageIndex: 0,
+		pageSize: partnersList.pageSize,
+	};
+
+	/** Each partner's credit as the list has it (in its order, by the wallet) and as its card has it. */
+	const walletsOf = (actor: typeof north.owner) =>
+		as(actor, async () => {
+			const { rows: listed, rowCount } = await data(getPartners, byWallet);
+			expect(rowCount).toBe(listed.length);
+			const cards = [];
+			for (const row of listed) {
+				const card = await data(getPartnerCard, row.customer.code);
+				cards.push([row.customer.code, card.partner ? card.wallet.available : null]);
+			}
+			return { list: listed.map((row) => [row.customer.code, row.wallet]), cards };
+		});
+
+	/** Each of a tenant's wallets' balance (the sum of its entries), by the customer's code. */
+	const balancesOf = async (organization: string) =>
+		new Map(
+			(
+				await rows<{ code: string; balance: number }>(
+					`select c.code, sum(w.amount) as balance from partner_wallet_entry w
+					 join customer c on c.id = w.customer_id where w.organization_id = ? group by c.code`,
+					[organization],
+				)
+			).map((row) => [row.code, row.balance]),
+		);
+
+	/** Vermeer Logistiek: credit of the year before last, past its date, still in its wallet. */
+	const vermeer = async () =>
+		(
+			await rows<{ id: number; code: string }>(
+				`select id, code from customer where organization_id = ? and name like 'Vermeer%'`,
+				[shltrId],
+			)
+		)[0];
+
+	test("is the credit available today, as each partner's card has it, and sorts by it", async () => {
+		for (const actor of [north.owner, shltr.owner]) {
+			const { list, cards } = await walletsOf(actor);
+			expect(list.length).toBeGreaterThan(0);
+			expect(list).toEqual(cards);
+			const figures = list.map(([, wallet]) => Number(wallet));
+			expect(figures).toEqual(figures.toSorted((a, b) => b - a));
+		}
+		// Not the balance: the credit past its date that the daily job hasn't expired yet isn't.
+		const { code } = await vermeer();
+		const { list } = await walletsOf(shltr.owner);
+		const listed = list.find(([each]) => each === code)![1];
+		expect((await balancesOf(shltrId)).get(code)! - Number(listed)).toBe(40_000);
+	});
+
+	test("stays the card's when a spend comes back to credit that expired since, and after the job", async () => {
+		const { id, code } = await vermeer();
+		const before = (await walletsOf(shltr.owner)).list.find(([each]) => each === code)![1];
+		// Its spend of the year before last's credit, given back (an order cancelled): to that credit,
+		// which expired last year.
+		const spend = await value<number>(
+			`select id from partner_wallet_entry where customer_id = ? and kind = 'spend' order by id limit 1`,
+			[id],
+		);
+		await as(shltr.owner, () =>
+			db.transaction((tx) => giveBackCredit(tx, { id, code }, spend, "Cancelled")),
+		);
+		expect(
+			await rows(
+				`select kind, amount, valid_until from partner_wallet_entry where customer_id = ? and kind = 'reversal'`,
+				[id],
+			),
+		).toEqual([{ kind: "reversal", amount: 80_000, valid_until: `${lastYear}-12-31` }]);
+		const after = await walletsOf(shltr.owner);
+		expect(after.list).toEqual(after.cards);
+		expect(after.list.find(([each]) => each === code)![1]).toBe(before);
+		expect((await balancesOf(shltrId)).get(code)! - Number(before)).toBe(120_000);
+
+		// The daily job expires all of it; the list and the cards stay as they were.
+		expect(await asSystem("shltr", () => expireCredit({ today }))).toEqual({
+			"partner-programme.expired": 1,
+		});
+		const expired = await walletsOf(shltr.owner);
+		expect(expired).toEqual(after);
+		expect((await balancesOf(shltrId)).get(code)).toBe(before);
 	});
 });
