@@ -8,7 +8,7 @@
  * point past the edge of its group takes it into the next group; changing its group puts it last
  * in the other.
  */
-import type { OrderStatus, OrderType } from "#lib/models.ts";
+import { isOpenOrder, type OrderStatus, type OrderType } from "#lib/models.ts";
 
 /** How many months an inspection by a template stays valid, unless the template says otherwise. */
 export const defaultValidityMonths = 12;
@@ -149,8 +149,7 @@ export function checklistKind(type: OrderType): ChecklistKind | null {
  * Whether an order with `status` gets checklists for its units: while it's to be done. A done or
  * cancelled order gets none (one completed before the module was on keeps having none).
  */
-export const getsChecklists = (status: OrderStatus) =>
-	status === "quote" || status === "scheduled" || status === "in_progress";
+export const getsChecklists = (status: OrderStatus) => isOpenOrder(status);
 
 /** A point's answer as far as completing goes. */
 export interface Answer {

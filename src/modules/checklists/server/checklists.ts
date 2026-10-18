@@ -12,6 +12,7 @@
 import { and, asc, eq, isNotNull, or, sql } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
+import { isDoneOrder } from "#lib/models.ts";
 import type { OrderProblem, OrderSaving, OrderUnitsSaving } from "#lib/orders/extensions.ts";
 import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
@@ -271,13 +272,14 @@ export const saveUnitChecklists = ({ tx, order, removed }: OrderUnitsSaving) =>
 
 /**
  * `orders.saving`: an order that's deleted takes its checklists along, unless one is on record; and
- * one is completed (or invoiced) only once every one of its checklists is completed. A change of
+ * one becomes done (completed or invoiced) only once every one of its checklists is completed. A change of
  * status alone makes no checklists: they come with the units (`orders.units`), which the order form
  * sets on every save, so its type is followed there too.
  */
 export async function saveOrderChecklists({
 	tx,
 	order: target,
+	from,
 	status,
 }: OrderSaving): Promise<OrderProblem[] | undefined> {
 	if (status === null) {
@@ -294,7 +296,9 @@ export async function saveOrderChecklists({
 			{ message: m.checklists_delete_refused({ number: target.number, units: names(titles) }) },
 		];
 	}
-	if (status !== "completed" && status !== "invoiced") return undefined;
+	// Only becoming done needs its checklists completed: moving between completed and invoiced (an
+	// invoice issued or voided) isn't completing it, e.g. one completed while the module was off.
+	if (!isDoneOrder(status) || (from !== null && isDoneOrder(from))) return undefined;
 	const open = await tx
 		.select({
 			name: equipment.name,

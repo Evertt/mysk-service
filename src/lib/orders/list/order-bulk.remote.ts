@@ -11,13 +11,9 @@ import { engineer, order } from "#lib/server/db/schema.ts";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
+import { transitionOrder } from "../server/lifecycle.ts";
 import { ordersSql } from "../server/list-sql.ts";
-import {
-	assignOrder,
-	assigneeProblem,
-	changeOrderStatus,
-	removeOrder,
-} from "../server/order-changes.ts";
+import { assignOrder, assigneeProblem, removeOrder } from "../server/order-changes.ts";
 import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 import { ordersList } from "./orders-list.ts";
 
@@ -65,11 +61,12 @@ export const bulkSetOrderStatus = forMembers.command(
 			columns: { status: order.status },
 			list: ordersSql,
 			change: async (o) => {
+				// `transitionOrder()` would leave it as it is, but say nothing of it.
 				if (o.status === status) {
 					const named = label("orderStatus", status).toLowerCase();
 					invalid(m.orders_bulk_status_unchanged({ number: o.label, status: named }));
 				}
-				await changeOrderStatus(o.id, status);
+				await db.transaction((tx) => transitionOrder(tx, { verb: "set", id: o.id, to: status }));
 			},
 		});
 		await refreshRequested(getOrders, getOrderFacets);

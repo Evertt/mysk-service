@@ -1,12 +1,11 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { label } from "#lib/i18n/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 
-import { type FieldAction, fieldActions } from "../field.ts";
+import { type FieldAction, fieldActions, fieldRefusal } from "../lifecycle.ts";
 
 /**
  * One of the engineer's (`engineerId`) orders, in a transaction, if they may do `action` with it
@@ -24,12 +23,6 @@ export async function findEngineerOrder(
 		where: and(idInTenant(order, orderId), eq(order.engineerId, engineerId)),
 	});
 	if (!found) error(404, m.portal_not_found_plain());
-	if (!fieldActions(found.status)[action]) {
-		invalid(
-			found.status === "scheduled"
-				? m.portal_start_first()
-				: m.portal_cant_change({ status: label("orderStatus", found.status).toLowerCase() }),
-		);
-	}
+	if (!fieldActions(found.status)[action]) invalid(fieldRefusal(found.status));
 	return found;
 }

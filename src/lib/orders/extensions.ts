@@ -149,6 +149,8 @@ export interface OrderSaving {
 	/** The transaction core changes the order in: a module saves its part in it too. */
 	tx: Transaction;
 	order: { id: number; number: string };
+	/** Its status before the change; `null` for a new order. */
+	from: OrderStatus | null;
 	/** Its status once changed; `null` while it's being deleted (before its row goes). */
 	status: OrderStatus | null;
 	/**
@@ -160,7 +162,7 @@ export interface OrderSaving {
 }
 
 /** The modules' parts of the order form, by module id, as validated by their schemas. */
-type OrderFormParts = FormPartsOutput<"orders.form">;
+export type OrderFormParts = FormPartsOutput<"orders.form">;
 
 /**
  * Why a module can't save its part of an order, as a Standard Schema issue, which the order form

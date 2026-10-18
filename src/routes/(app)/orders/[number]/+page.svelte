@@ -11,7 +11,6 @@
 	import { SpecialtyBadge } from "#lib/engineers/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
-	import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import {
 		AcceptanceCard,
@@ -22,6 +21,7 @@
 		WorkReport,
 	} from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
+	import { mayDeleteOrder, mayEditOrder } from "#lib/orders/index.ts";
 	import { deleteOrder, getOrder } from "#lib/orders/remotes.ts";
 
 	import type { PageProps } from "./$types";
@@ -54,16 +54,16 @@
 	{/snippet}
 	{#snippet actions()}
 		<!-- An invoiced order stays as it was invoiced; one awaiting acceptance is accepted first. -->
-		{#if isEditableOrder(order.status)}
-			{#if !isAwaitingAcceptance(order.status)}
-				<Button
-					variant="outline"
-					href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
-				>
-					<PencilIcon data-icon="inline-start" />
-					{m.common_edit()}
-				</Button>
-			{/if}
+		{#if mayEditOrder(order.status)}
+			<Button
+				variant="outline"
+				href={resolve("/(app)/orders/[number]/edit", { number: order.number })}
+			>
+				<PencilIcon data-icon="inline-start" />
+				{m.common_edit()}
+			</Button>
+		{/if}
+		{#if mayDeleteOrder(order.status)}
 			<DeleteDialog
 				form={deleteOrder}
 				id={String(order.id)}

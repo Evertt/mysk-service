@@ -19,6 +19,7 @@
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, desc, eq, ne } from "drizzle-orm";
 
+import { doneOrderStatuses } from "#lib/models.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
 import { addDays, DAY, now } from "#lib/server/db/seed/clock.ts";
@@ -325,10 +326,7 @@ async function unitsOf(tx: Transaction, organizationId: string) {
 		.from(orderUnit)
 		.innerJoin(order, eq(order.id, orderUnit.orderId))
 		.where(
-			and(
-				eq(orderUnit.organizationId, organizationId),
-				inList(order.status, ["completed", "invoiced"]),
-			),
+			and(eq(orderUnit.organizationId, organizationId), inList(order.status, doneOrderStatuses)),
 		)
 		.orderBy(desc(order.completedAt));
 	const lastDone = new Map<number, (typeof done)[number]>();

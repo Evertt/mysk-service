@@ -129,7 +129,7 @@ function bindingsOf(file: SourceFile): Map<string, string> {
 /**
  * Writes of a module to a table that isn't its own: `.insert(X)`, `.update(X)` or `.delete(X)`
  * where `X` comes from the core's schema or another module. The table's owner offers a service
- * for the change instead (e.g. `setOrdersStatus()`); reading its tables is fine.
+ * for the change instead (e.g. `transitionOrder()`); reading its tables is fine.
  */
 export function foreignWrites(files: SourceFile[], _graph: ModuleGraph): string[] {
 	return files.flatMap((file) => {

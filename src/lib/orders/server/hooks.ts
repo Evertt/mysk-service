@@ -1,3 +1,5 @@
+import { invalid } from "@sveltejs/kit";
+
 import { collect, emit, save } from "#lib/server/extensions.ts";
 
 /**
@@ -42,6 +44,22 @@ export class OrderRefused extends Error {
 	constructor(readonly problems: OrderProblem[]) {
 		super(problems.map((problem) => problem.message).join(" "));
 	}
+}
+
+/** Refuses with what a module said when it refused its part of a change; rethrows anything else. */
+export function refuseRefused(thrown: unknown): never {
+	if (thrown instanceof OrderRefused) invalid(thrown.message);
+	throw thrown;
+}
+
+/**
+ * Refuses the order form with the problems of a module that couldn't save its part, each on the
+ * field of the form it names (a part's fields are under `modules.<its id>`), or for the whole form:
+ * they're validation issues as they are. Rethrows anything else.
+ */
+export function refuseParts(thrown: unknown): never {
+	if (thrown instanceof OrderRefused) invalid(...thrown.problems);
+	throw thrown;
 }
 
 /**

@@ -2,7 +2,7 @@
 	@component
 	An order's status in the orders table, with the badges the tenant's modules put on it. The
 	status is a select that looks like its badge (see `BadgeSelect`), offering the statuses the
-	order can be given by hand (`orderStatusChoices()`; none for an invoiced order). Its arrow opens
+	order can be given by hand (`statusChoices()`; none for an invoiced order). Its arrow opens
 	the list; clicking the rest of the badge filters the table by the status (see
 	`cell-filter.svelte.ts`), and so does an invoiced order's badge. A change shows at once, and goes through the same path as the order form's
 	(`setOrderStatus`), so the modules may refuse it (e.g. for a shortage of stock): then a toast
@@ -30,11 +30,12 @@
 
 	import BadgeSelect, { type BadgeOption } from "#lib/components/badge-select.svelte";
 	import { cellFilter } from "#lib/components/data-table/cell-filter.svelte.ts";
-	import { orderStatusChoices, type OrderStatus } from "#lib/models.ts";
+	import type { OrderStatus } from "#lib/models.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
 	import { statuses } from "../display.ts";
 	import type { OrderTag } from "../extensions.ts";
+	import { statusChoices } from "../lifecycle.ts";
 	import OrderTags from "../ui/order-tags.svelte";
 	import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 	import { setOrderStatus } from "./order-status.remote.ts";
@@ -66,7 +67,7 @@
 	});
 
 	async function change(to: OrderStatus) {
-		// `orderStatusChoices()` offers only these; the server checks again.
+		// `statusChoices()` offers only these; the server checks again.
 		if (to === "invoiced" || to === "awaiting_acceptance") return;
 		try {
 			await setOrderStatus({ id, status: to }).updates(
@@ -85,7 +86,7 @@
 <div class="flex flex-wrap items-center gap-1">
 	<BadgeSelect
 		current={option(status)}
-		options={fixed ? [] : orderStatusChoices(status).map(option)}
+		options={fixed ? [] : statusChoices(status).map(option)}
 		label={m.orders_status_of({ number })}
 		onchange={change}
 		filter={fixed ? undefined : filter}
