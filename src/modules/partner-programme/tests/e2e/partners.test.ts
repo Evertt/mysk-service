@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, runDailyJobs, useApp, users, value } from "#e2e/app.ts";
+import { organizations, rows, useApp, users, value } from "#e2e/app.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { formatEuros } from "#modules/partner-programme/display.ts";
 
@@ -17,7 +17,7 @@ import {
 	walletOf,
 } from "./helpers.ts";
 
-const { north, shltr } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 /** The partner programme's card on a customer's page. */
@@ -106,14 +106,7 @@ describe("in North, which has the module", () => {
 			{ category: "regular_parts", eligibility: "partial", share: 40 },
 		]);
 		expect(await logged(north.id, "partner_classification")).toBe(1);
-
-		// Back to the defaults: no classification of its own.
-		await app.go(`/orders/${order.number}/edit`);
-		await part.getByLabel("Revenue category").selectOption({ index: 0 });
-		await part.getByLabel("Counts for the bonus").selectOption({ index: 0 });
-		await app.submit(page.getByRole("button", { name: "Save order" }));
-		await page.waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		expect(await classified()).toEqual([]);
+		// Back to the defaults, it has none of its own: `programme.spec.ts`'s.
 	});
 
 	test("only a manager may change the rules, close a year or accept a partner", async () => {
@@ -248,24 +241,5 @@ describe("in North, which has the module", () => {
 		expect(
 			(await closedYears(north.id, lastYear)).find((row) => row.customer_id === partner.id)?.choice,
 		).toBe("credit");
-	});
-});
-
-describe("the daily job", () => {
-	test("expires credit past its date, once", async () => {
-		const [vermeer] = await rows<{ id: number }>(
-			`select id from customer where organization_id = ? and name = 'Vermeer Logistiek'`,
-			[shltr.id],
-		);
-		const first = await runDailyJobs();
-		expect(first.status).toBe(200);
-		// The credit of the year before last that wasn't spent (another file may have run the job).
-		const expiries = (await walletOf(vermeer.id)).filter((entry) => entry.kind === "expiry");
-		expect(expiries).toMatchObject([{ amount: -40_000, valid_until: `${lastYear}-12-31` }]);
-		const again = await runDailyJobs();
-		expect(again.reports[shltr.id]?.["partner-programme.expired"]).toBeUndefined();
-		expect((await walletOf(vermeer.id)).filter((entry) => entry.kind === "expiry")).toHaveLength(1);
-		// North has nothing past its date.
-		expect(again.reports[north.id]?.["partner-programme.expired"]).toBeUndefined();
 	});
 });

@@ -1,12 +1,12 @@
 /**
  * The partner programme in the customer portal: Riedel's contact reads its Partner Bonus page and
  * wallet (also on the portal's home), Pakhuis 7' contact chooses its closed year's bonus once and
- * for good, a contact whose customer isn't a partner sees neither bonus nor credit, and the
- * portal's remote functions are no office member's.
+ * for good, and a contact whose customer isn't a partner sees neither bonus nor credit. That the
+ * portal's remote functions are no office member's is `remote-functions.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { fitsWidth, isRemote, onPhone, organizations, rows, useApp, users } from "#e2e/app.ts";
+import { fitsWidth, onPhone, organizations, rows, useApp, users } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 import { formatEuros } from "#modules/partner-programme/display.ts";
@@ -24,9 +24,6 @@ const customerNamed = async (name: string) =>
 		)
 	)[0];
 
-/** The portal's remote query URLs Riedel's contact loaded, to try from elsewhere. */
-const urls: string[] = [];
-
 describe("a partner's contact", () => {
 	test("reads this year's bonus and the wallet on the home page and the Partner bonus page", async () => {
 		const { page } = app;
@@ -42,9 +39,6 @@ describe("a partner's contact", () => {
 		]);
 		// All of it valid this year: what's available is what the entries add up to.
 		const available = entries.reduce((sum, entry) => sum + entry.amount, 0);
-		page.on("request", (request) => {
-			if (isRemote(request.url(), "getClientPartner")) urls.push(request.url());
-		});
 		await app.go("/portal");
 		const home = page.locator("[data-client-home-bonus]");
 		await home.waitFor();
@@ -129,14 +123,11 @@ describe("a partner's contact", () => {
 		// Last year is chosen already: nothing to choose.
 		expect(await page.locator("[data-client-choice]").count()).toBe(0);
 		await page.locator(`[data-client-closed-year="${lastYear}"] [data-choice="credit"]`).waitFor();
-		// From the portal's navigation too.
-		// Client-side from a page without the home's card, so the page loads its data with a remote
-		// query of its own.
+		// From the portal's navigation too, client-side from a page without the home's card.
 		await app.go("/portal/orders");
 		await page.getByRole("navigation").getByRole("link", { name: "Partner bonus" }).click();
 		await page.waitForURL((url) => url.pathname === "/partner-programme/portal");
 		await page.locator("[data-client-bonus]").waitFor();
-		expect(urls.length).toBeGreaterThan(0);
 	});
 
 	test("chooses its closed year's bonus once, after a step that says it's for good", async () => {
@@ -233,23 +224,6 @@ describe("a contact whose customer isn't a partner", () => {
 			await page.getByRole("navigation").getByRole("link", { name: "Partner bonus" }).click();
 			await page.locator("[data-client-not-partner]").waitFor();
 			expect(await page.locator("[data-client-bonus], [data-client-wallet]").count()).toBe(0);
-		} finally {
-			await page.context().close();
-		}
-	});
-});
-
-describe("the portal's remote functions", () => {
-	test("are no office member's", async () => {
-		expect(urls.length).toBeGreaterThan(0);
-		const { page } = await signedInPage(app, users.shltrPlanner);
-		try {
-			const status = await page.evaluate(async (href) => {
-				const response = await fetch(href);
-				const body = (await response.json()) as { type: string; error?: { status?: number } };
-				return body.type === "error" ? body.error?.status : response.status;
-			}, urls[0]);
-			expect(status).toBe(403);
 		} finally {
 			await page.context().close();
 		}

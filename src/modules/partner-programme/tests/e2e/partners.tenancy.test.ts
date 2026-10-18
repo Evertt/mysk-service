@@ -16,38 +16,7 @@ import { partnersOf } from "./helpers.ts";
 const { north, south, shltr } = organizations;
 const app = useApp();
 
-/** The URLs of North's remote queries, as loaded in North, to try again from South. */
-const queries: Record<string, string> = {};
-
 describe("in North, which has the module", () => {
-	test("its pages load their data with remote queries", async () => {
-		const { page } = app;
-		const record = (request: { url(): string }) => {
-			for (const name of ["getPartners", "getPartnerCard", "getProgrammeYears"]) {
-				if (isRemote(request.url(), name)) queries[name] = request.url();
-			}
-		};
-		page.on("request", record);
-		// Client-side, so the pages load their data through remote queries.
-		await app.go("/activity");
-		const sidebar = page.locator('[data-sidebar="content"]');
-		await sidebar.getByRole("link", { name: "Partner programme" }).click();
-		await page.waitForURL((url) => url.pathname === "/partner-programme");
-		await app.tableSettled();
-		await page.getByRole("link", { name: "Programme years" }).click();
-		await page.waitForURL((url) => url.pathname === "/partner-programme/years");
-		await page.goBack();
-		await app.tableSettled();
-		await page.locator('[data-slot="data-table"] tbody tr a[href^="/customers/"]').first().click();
-		await page.locator("[data-partner-card]").waitFor();
-		page.off("request", record);
-		expect(Object.keys(queries).toSorted()).toEqual([
-			"getPartnerCard",
-			"getPartners",
-			"getProgrammeYears",
-		]);
-	});
-
 	test("a customer is looked up in the tenant: a code it doesn't have is a 404", async () => {
 		const { page } = app;
 		const [partner] = await partnersOf(north.id);
@@ -98,10 +67,10 @@ describe("in South, which doesn't have the module", () => {
 		await sidebar.getByRole("link", { name: "Dashboard" }).waitFor();
 		expect(await sidebar.getByRole("link", { name: "Partner programme" }).count()).toBe(0);
 		expect(await page.locator("[data-partner-overview]").count()).toBe(0);
+		// The other pages' and the module's queries' 404s are the module route guard's and
+		// `moduleRemote`'s (`route-guard.spec.ts`, `remote-functions.spec.ts`).
 		const response = await app.expectingErrors(() => app.go("/partner-programme"));
 		expect(response?.status()).toBe(404);
-		const years = await app.expectingErrors(() => app.go("/partner-programme/years"));
-		expect(years?.status()).toBe(404);
 		const [customer] = await rows<{ code: string }>(
 			`select code from customer where organization_id = ? order by code limit 1`,
 			[south.id],
@@ -109,19 +78,5 @@ describe("in South, which doesn't have the module", () => {
 		await app.go(`/customers/${customer.code}`);
 		await page.getByRole("heading", { level: 1 }).waitFor();
 		expect(await page.locator("[data-partner-card]").count()).toBe(0);
-	});
-
-	test("its remote queries are refused", async () => {
-		const { page } = app;
-		for (const url of Object.values(queries)) {
-			const status = await app.expectingErrors(() =>
-				page.evaluate(async (href) => {
-					const response = await fetch(href);
-					const body = (await response.json()) as { type: string; error?: { status?: number } };
-					return body.type === "error" ? body.error?.status : response.status;
-				}, url),
-			);
-			expect(status).toBe(404);
-		}
 	});
 });

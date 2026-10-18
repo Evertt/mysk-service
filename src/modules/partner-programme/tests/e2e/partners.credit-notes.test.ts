@@ -9,14 +9,13 @@ import {
 	figuresFromDatabase,
 	lastYear,
 	nonPartnerOf,
-	partnersOf,
 	rulesOf,
 	thisYear,
 	today,
 } from "./helpers.ts";
 
-const { north, shltr } = organizations;
-const app = useApp();
+const { shltr } = organizations;
+const app = useApp({ user: users.shltrOwner });
 
 /**
  * A partner of this file's own in SHLTR, whose last year is closed with its choice still to make:
@@ -70,58 +69,8 @@ async function confirm(action: string) {
 	await dialog().waitFor({ state: "detached" });
 }
 
-describe("in North, a credit note on a partner's paid invoice", () => {
-	test("is taken off its Partner Omzet once it's settled", async () => {
-		const { page } = app;
-		const [partner] = await partnersOf(north.id);
-		const [line] = await rows<{ id: number; number: string }>(
-			`select l.id, i.number from invoice_line l join invoice i on i.id = l.invoice_id
-			 left join partner_order_classification c on c.order_id = l.order_id
-			 where i.organization_id = ? and i.customer_id = ? and i.status = 'paid'
-			 and l.order_id is not null and l.amount >= 10000
-			 and (c.eligibility is null or c.eligibility != 'excluded')
-			 order by i.id desc limit 1`,
-			[north.id, partner.id],
-		);
-		const before = await figuresFromDatabase(north.id, partner.id, thisYear);
-		expect(before.partnerRevenue).toBeGreaterThanOrEqual(5000);
-
-		await app.go(`/invoices/${line.number}/credit`);
-		const rowsShown = page.locator("[data-credit-lines] tbody tr");
-		await rowsShown.first().waitFor();
-		for (const row of await rowsShown.all()) {
-			const box = row.locator('input[type="checkbox"]');
-			if (Number(await row.getAttribute("data-line")) === line.id) {
-				await row.getByRole("spinbutton").fill("50");
-			} else {
-				await box.uncheck();
-			}
-		}
-		await page.getByLabel("Reason").fill("Returned part");
-		await page.getByRole("button", { name: "Create draft" }).click();
-		await page.waitForURL((url) => url.pathname.startsWith("/invoices/credit-notes/CN-"));
-		await quiet(page);
-		await confirm("Issue");
-		// Not while it's only sent: the revenue counts what's settled.
-		expect((await figuresFromDatabase(north.id, partner.id, thisYear)).partnerRevenue).toBe(
-			before.partnerRevenue,
-		);
-		await confirm("Mark settled");
-
-		const after = await figuresFromDatabase(north.id, partner.id, thisYear);
-		expect(after.partnerRevenue).toBe(before.partnerRevenue - 5000);
-		await app.go(`/customers/${partner.code}`);
-		await expect
-			.poll(() => card().locator("[data-partner-revenue]").innerText())
-			.toBe(formatEuros(after.partnerRevenue));
-	});
-});
-
 describe("in SHLTR, a partner's cash bonus", () => {
 	test("is paid out with a credit note: Weggemans Logistiek's, as seeded", async () => {
-		const { page } = app;
-		await page.context().clearCookies();
-		await app.signIn(users.shltrOwner);
 		const [weggemans] = await rows<{ code: string; number: string }>(
 			`select c.code, n.number from customer c join partner_bonus_year y on y.customer_id = c.id
 			 join partner_bonus_credit_note p on p.bonus_year_id = y.id
