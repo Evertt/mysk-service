@@ -25,6 +25,12 @@ describe("fieldLabel", () => {
 		expect(fieldLabel("city")).toBe("city");
 	});
 
+	test("labels who signed a completed order off, in both languages", () => {
+		expect(fieldLabel("signedBy")).toBe("signed off by");
+		overwriteGetLocale(() => "nl");
+		expect(fieldLabel("signedBy")).toBe("afgetekend door");
+	});
+
 	test("prefers the subject type's label", () => {
 		expect(fieldLabel("customerId", equipment.fields?.customerId)).toBe("owner");
 	});

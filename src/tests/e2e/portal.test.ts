@@ -277,7 +277,7 @@ describe("the engineer portal", () => {
 			await log.waitFor();
 			const shown = await log.locator(":scope > li").allInnerTexts();
 			expect(shown[0]).toMatch(new RegExp(`^${name} completed order ${job.number}`));
-			expect(shown[0]).toContain("Signed off by Robin Customer");
+			expect(shown[0]).toMatch(/signed off by:\s*—\s*→\s*Robin Customer/);
 			expect(shown[1]).toMatch(new RegExp(`^${name} added a note to order ${job.number}`));
 		} finally {
 			await office.context().close();
@@ -333,8 +333,8 @@ describe("the engineer portal", () => {
 			{
 				action: "completed",
 				subject_type: "order",
-				changes: { status: ["in_progress", "completed"] },
-				note: "Signed off by Robin Customer",
+				changes: { status: ["in_progress", "completed"], signedBy: [null, "Robin Customer"] },
+				note: null,
 			},
 		]);
 	});

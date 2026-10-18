@@ -104,6 +104,7 @@
 	"activity_field_description": "omschrijving",
 	"activity_field_scheduled_for": "ingepland op",
 	"activity_field_completed_at": "afgerond",
+	"activity_field_signed_by": "afgetekend door",
 	"activity_field_labor_hours": "arbeid",
 	"activity_field_notes": "notities",
 	"activity_field_role": "rol",

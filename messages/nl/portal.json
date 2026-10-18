@@ -55,7 +55,6 @@
 	"portal_note_required": "Schrijf een notitie",
 	"portal_note_too_long": "Houd het onder de {max} tekens",
 	"portal_signer_required": "Vul de naam in van wie tekent",
-	"portal_signed_off_note": "Afgetekend door {name}",
 	"portal_site": "Vestiging",
 	"portal_location": "Locatie",
 	"portal_address": "Adres",

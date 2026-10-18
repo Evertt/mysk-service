@@ -120,7 +120,7 @@ describe("an engineer's work", () => {
 				own.id,
 			]),
 		).toEqual([{ signer_name: "Robin Customer", engineer_name: name }]);
-		// Logged once the sign-off is in, with who signed for the customer.
+		// Logged once the sign-off is in, with who signed for the customer as a change of its own.
 		expect(
 			await rows(
 				`select action, changes, note from activity where subject_type = 'order'
@@ -130,8 +130,11 @@ describe("an engineer's work", () => {
 		).toEqual([
 			{
 				action: "completed",
-				changes: JSON.stringify({ status: ["in_progress", "completed"] }),
-				note: "Signed off by Robin Customer",
+				changes: JSON.stringify({
+					status: ["in_progress", "completed"],
+					signedBy: [null, "Robin Customer"],
+				}),
+				note: null,
 			},
 		]);
 	});
