@@ -64,21 +64,6 @@ async function addDuePlan(description: string) {
 }
 
 describe("automatic orders", () => {
-	test("the daily run needs the cron's token", async () => {
-		const orders = await countIn("order", north.id);
-		expect((await runDailyJobs(null)).status).toBe(403);
-		expect((await runDailyJobs("wrong")).status).toBe(403);
-		expect(await countIn("order", north.id)).toBe(orders);
-	});
-
-	test("are off at first: the run makes no orders", async () => {
-		const orders = await countIn("order", north.id);
-		const { status, reports } = await runDailyJobs();
-		expect(status).toBe(200);
-		expect(reports[north.id]).toEqual({});
-		expect(await countIn("order", north.id)).toBe(orders);
-	});
-
 	test("a manager turns them on, on the module's settings page", async () => {
 		const { page } = app;
 		await app.go("/maintenance");
@@ -173,20 +158,15 @@ describe("automatic orders", () => {
 		expect(mails[0].text).toContain("Reminder check");
 	});
 
-	test("turned off again, the run makes no orders", async () => {
+	// That a run then makes no orders is `automatic.spec.ts`'s; turned off, they make none for the
+	// files after this one on its database.
+	test("turned off again", async () => {
 		const { page } = app;
 		await app.go("/maintenance/settings");
 		await autoCreate().click();
 		await app.submit(save());
 		await page.waitForURL((url) => url.pathname === "/maintenance");
 		expect((await settingsOf(north.id)).auto_create).toBe(0);
-
-		const unit = await addDuePlan("Not automatic");
-		const orders = await countIn("order", north.id);
-		expect((await runDailyJobs()).reports[north.id]).toEqual({});
-		expect(await countIn("order", north.id)).toBe(orders);
-		const [plan] = await plansOf(unit.id);
-		expect(plan.last_order_id).toBeNull();
 	});
 
 	test("only a manager may change the settings", async () => {
