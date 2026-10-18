@@ -66,7 +66,6 @@ describe("in North", () => {
 				[north.id, status],
 			).then(([row]) => row);
 		const [sent, draft] = [await pick("sent"), await pick("draft")];
-		const before = await rows(`select * from invoice where id = ?`, [draft.id]);
 
 		await app.go("/invoices?row=1");
 		await app.loadAllRows();
@@ -78,18 +77,10 @@ describe("in North", () => {
 		const dialog = page.getByRole("alertdialog");
 		await dialog.getByText("Applies to 1 of the 2 selected; the others are skipped.").waitFor();
 		await dialog.getByRole("button", { name: "Mark paid" }).click();
-
+		// What it did and why it skipped the draft: the server's (`invoices.spec.ts`).
 		await app.toast("1 marked paid, 1 skipped", `${draft.number} is a draft`);
-		expect(
-			await rows(`select status, paid_on is not null as paid from invoice where id = ?`, [sent.id]),
-		).toEqual([{ status: "paid", paid: 1 }]);
-		expect(await rows(`select * from invoice where id = ?`, [draft.id])).toEqual(before);
-		expect(
-			await value(
-				`select action from activity where organization_id = ? and subject_type = 'invoice'
-				 and subject_id = ? order by id desc limit 1`,
-				[north.id, String(sent.id)],
-			),
-		).toBe("paid");
+		await expect
+			.poll(() => page.locator("tbody tr", { hasText: sent.number }).innerText())
+			.toContain("Paid");
 	});
 });
