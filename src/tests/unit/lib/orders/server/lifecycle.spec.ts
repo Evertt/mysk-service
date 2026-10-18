@@ -15,7 +15,7 @@ import type { OrderStatus } from "#lib/models.ts";
 import { transitionOrder } from "#lib/orders/server/lifecycle.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { order, orderRequest } from "#lib/server/db/schema.ts";
+import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -53,7 +53,10 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	await client.executeMultiple(`
 		create table engineer (
 			id integer primary key, organization_id text not null, name text not null,
-			active integer not null default 1, user_id text
+			email text not null default '', phone text not null default '',
+			specialty text not null default 'mechanical', region text not null default '',
+			hourly_rate integer not null default 0, active integer not null default 1,
+			hired_at text not null default '2020-01-01', user_id text
 		);
 		create table "order" (
 			id integer primary key, organization_id text not null, number text not null,
@@ -66,8 +69,14 @@ vi.mock("#lib/server/db/index.ts", async () => {
 			order_id integer primary key, organization_id text not null, user_id text,
 			reporter_name text not null, decided_at integer, decided_by text, rejection_reason text
 		);
-		insert into engineer values (1, 'north', 'Eli', 1, 'e1'), (2, 'south', 'Sam', 1, null),
-			(3, 'north', 'Ina', 0, null);
+		create table order_signoff (
+			order_id integer primary key, organization_id text not null, signer_name text not null,
+			signature text not null, engineer_name text, engineer_signature text, user_id text,
+			signed_at integer not null
+		);
+		insert into engineer (id, organization_id, name, active, user_id) values
+			(1, 'north', 'Eli', 1, 'e1'), (2, 'south', 'Sam', 1, null), (3, 'north', 'Ina', 0, null),
+			(4, 'north', 'Noa', 1, 'e4');
 	`);
 	return { db: drizzle(client, { schema }) };
 });
@@ -93,6 +102,7 @@ beforeEach(async () => {
 	logged.mockClear();
 	parts.mockClear();
 	parts.mockImplementation(async () => {});
+	await db.delete(orderSignoff);
 	await db.delete(orderRequest);
 	await db.delete(order);
 });
@@ -105,7 +115,12 @@ async function orderIn(
 	{
 		organizationId = "north",
 		completedAt = null as Temporal.Instant | null,
-	}: { organizationId?: string; completedAt?: Temporal.Instant | null } = {},
+		engineerId = null as number | null,
+	}: {
+		organizationId?: string;
+		completedAt?: Temporal.Instant | null;
+		engineerId?: number | null;
+	} = {},
 ) {
 	const number = `O-${++numbers}`;
 	const [created] = await db
@@ -119,6 +134,7 @@ async function orderIn(
 			priority: "normal",
 			description: "Deur klemt",
 			completedAt,
+			engineerId,
 		})
 		.returning({ id: order.id, number: order.number });
 	return created;
@@ -422,5 +438,99 @@ describe("reject: a planner rejects a customer's report", () => {
 				db.transaction((tx) => transitionOrder(tx, { verb: "reject", id, reason: "Nee" })),
 			),
 		).toEqual([`Order ${number} isn't awaiting acceptance any more.`]);
+	});
+});
+
+/** Makes the requests the engineer's: Eli de Vries's account, linked to engineer 1 (Eli). */
+function asEngineer(userId = "e1", name = "Eli de Vries") {
+	locals.user = { id: userId, name };
+	locals.tenant = tenant("north", ["engineer"]);
+}
+
+describe("start: the engineer starts a scheduled job", () => {
+	test("it's then in progress, with the modules following; logged as work started", async () => {
+		const { id, number } = await orderIn("scheduled", { engineerId: 1 });
+		asEngineer();
+		expect(await db.transaction((tx) => transitionOrder(tx, { verb: "start", id }))).toEqual({
+			id,
+			number,
+		});
+		expect(await stored(id)).toMatchObject({ status: "in_progress", completedAt: null });
+		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "in_progress" }));
+		expect(logged).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "work_started", after: { status: "in_progress" } }),
+		);
+	});
+
+	test("another engineer's order is a 404, and stays as it was", async () => {
+		const { id } = await orderIn("scheduled", { engineerId: 4 });
+		asEngineer();
+		expect(
+			await refusal(() => db.transaction((tx) => transitionOrder(tx, { verb: "start", id }))),
+		).toBe(404);
+		expect((await stored(id)).status).toBe("scheduled");
+	});
+
+	test("a job under way can't be started again", async () => {
+		const { id } = await orderIn("in_progress", { engineerId: 1 });
+		asEngineer();
+		expect(
+			await refusal(() => db.transaction((tx) => transitionOrder(tx, { verb: "start", id }))),
+		).toEqual(["This order is in progress; it can't be changed here"]);
+	});
+});
+
+const signoff = {
+	signerName: "Mo Visser",
+	signature: "data:image/png;base64,mo",
+	engineerSignature: "data:image/png;base64,eli",
+};
+
+const storedSignoff = async (orderId: number) =>
+	(await db.select().from(orderSignoff).where(eq(orderSignoff.orderId, orderId)))[0];
+
+describe("complete: the engineer completes the job under way, with the sign-off", () => {
+	test("it's completed when it's signed, the sign-off stored, logged as completed with the signer", async () => {
+		const { id } = await orderIn("in_progress", { engineerId: 1 });
+		asEngineer();
+		await db.transaction((tx) => transitionOrder(tx, { verb: "complete", id, signoff }));
+		const after = await stored(id);
+		expect(after.status).toBe("completed");
+		expect(await storedSignoff(id)).toMatchObject({
+			organizationId: "north",
+			signerName: "Mo Visser",
+			engineerName: "Eli",
+			engineerSignature: "data:image/png;base64,eli",
+			userId: "e1",
+			signedAt: after.completedAt,
+		});
+		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "completed" }));
+		expect(logged).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "completed",
+				after: expect.objectContaining({ status: "completed", signedBy: "Mo Visser" }),
+			}),
+		);
+	});
+
+	test("a job that isn't started yet is started first", async () => {
+		const { id } = await orderIn("scheduled", { engineerId: 1 });
+		asEngineer();
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "complete", id, signoff })),
+			),
+		).toEqual(["Start the job first"]);
+		expect(await storedSignoff(id)).toBeUndefined();
+	});
+
+	test("is completed at the moment it's signed, whatever date it had", async () => {
+		const stale = Temporal.Instant.from("2026-09-01T08:00:00Z");
+		const { id } = await orderIn("in_progress", { engineerId: 1, completedAt: stale });
+		asEngineer();
+		await db.transaction((tx) => transitionOrder(tx, { verb: "complete", id, signoff }));
+		const after = await stored(id);
+		expect(after.completedAt).not.toEqual(stale);
+		expect(after.completedAt).toEqual((await storedSignoff(id)).signedAt);
 	});
 });

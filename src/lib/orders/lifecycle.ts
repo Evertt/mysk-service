@@ -2,6 +2,7 @@
  * An order's lifecycle: which status can follow which, for whom. The server's moves
  * (`#lib/orders/server/lifecycle.ts`) and the pages' buttons go by these same rules.
  */
+import { label } from "#lib/i18n/index.ts";
 import {
 	type CoreActivityAction,
 	isAwaitingAcceptance,
@@ -24,6 +25,12 @@ export const notEditable = (number: string, change: "changed" | "deleted") =>
  */
 export const acceptFirst = (number: string) => m.orders_accept_first({ number });
 
+/** Why an engineer can't do what they asked with one of their orders in its status. */
+const fieldRefusal = (status: OrderStatus) =>
+	status === "scheduled"
+		? m.portal_start_first()
+		: m.portal_cant_change({ status: label("orderStatus", status).toLowerCase() });
+
 /** Who moves an order from one status to another. */
 type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing";
 
@@ -38,9 +45,9 @@ export interface TransitionRule {
 	refusal?: (order: { number: string; status: OrderStatus }) => string;
 	/**
 	 * The completion date: "follows" the status (kept while done, set when it becomes done,
-	 * cleared otherwise; the default), or is left "untouched".
+	 * cleared otherwise; the default), is the move's moment ("at"), or is left "untouched".
 	 */
-	completedAt?: "follows" | "untouched";
+	completedAt?: "follows" | "at" | "untouched";
 	/** A move to the status it has: "skip" does nothing (the default); "move" still makes it. */
 	same?: "skip" | "move";
 }
@@ -93,9 +100,23 @@ export const orderTransitions = {
 		completedAt: "untouched",
 	},
 	/** The engineer starts a scheduled job. */
-	start: { by: "engineer", from: ["scheduled"], to: ["in_progress"] },
+	start: {
+		by: "engineer",
+		from: ["scheduled"],
+		to: ["in_progress"],
+		action: "work_started",
+		refusal: ({ status }) => fieldRefusal(status),
+		completedAt: "untouched",
+	},
 	/** The engineer completes the job under way, with the customer's sign-off. */
-	complete: { by: "engineer", from: ["in_progress"], to: ["completed"] },
+	complete: {
+		by: "engineer",
+		from: ["in_progress"],
+		to: ["completed"],
+		action: "completed",
+		refusal: ({ status }) => fieldRefusal(status),
+		completedAt: "at",
+	},
 } as const satisfies Record<string, TransitionRule>;
 
 /** A way an order's status changes (see `orderTransitions`). */
