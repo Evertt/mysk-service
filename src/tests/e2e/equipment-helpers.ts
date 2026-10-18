@@ -52,13 +52,16 @@ export function equipmentPage(app: App) {
 	const timeline = () =>
 		app.page.getByRole("list", { name: "Service history" }).locator(":scope > li");
 
-	/** The shown timeline: order numbers, and `installation` and `warranty` for those events. */
+	/**
+	 * The shown timeline: order numbers, and `installation` and `warranty` for those events (`null`
+	 * for an order whose link isn't there yet, as while the page hydrates).
+	 */
 	const shownTimeline = () =>
 		timeline().evaluateAll((items) =>
 			items.map((item) =>
 				item.getAttribute("data-event") === "order"
-					? item.querySelector('a[href^="/orders/"]')!.textContent!.trim()
-					: item.getAttribute("data-event")!,
+					? (item.querySelector('a[href^="/orders/"]')?.textContent?.trim() ?? null)
+					: item.getAttribute("data-event"),
 			),
 		);
 

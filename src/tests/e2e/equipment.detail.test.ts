@@ -91,12 +91,23 @@ async function expectedStats(id: number) {
 	};
 }
 
+/**
+ * Opens a unit's page once it's hydrated and shows its timeline: `go()` may be back before, once
+ * the network is quiet, and hydrating renders the timeline again, its orders' links gone for a
+ * moment (seen with the CPU 20 times slower).
+ */
+async function openUnit(unit: { id: number; serial: string }) {
+	await app.go(`/equipment/${unit.serial}`);
+	await app.page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+	const events = await expectedTimeline(unit.id);
+	await expect.poll(shownTimeline).toEqual(events);
+}
+
 describe("in North", () => {
 	test("the detail page shows the unit's service history, newest first", async () => {
 		const { page } = app;
 		const busy = await busiest(north.id);
-		await app.go(`/equipment/${busy.serial}`);
-		expect(await shownTimeline()).toEqual(await expectedTimeline(busy.id));
+		await openUnit(busy);
 
 		// An order shows its engineer, its materials and what it cost.
 		const [latest] = await rows<{ id: number; number: string; engineer: string | null }>(
@@ -163,7 +174,7 @@ describe("in North", () => {
 			 limit 1`,
 			[north.id],
 		);
-		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
+		if (covering.id !== busy.id) await openUnit(covering);
 		const [order] = (await pricedOrders(north.id, onUnit, [covering.id])).filter(
 			(each) => priceOf(each).included > 0,
 		);
