@@ -5,7 +5,7 @@
 	(in a table's cell).
 -->
 <script lang="ts">
-	import { formatEuros } from "../display.ts";
+	import { formatProgress } from "../display.ts";
 	import type { Progress } from "../model.ts";
 
 	let {
@@ -16,6 +16,7 @@
 </script>
 
 {#if progress}
+	{@const amounts = formatProgress(revenue, progress)}
 	<div class="flex min-w-0 flex-col gap-1.5" data-progress>
 		{#if !compact}
 			<div class="text-sm font-medium">
@@ -26,10 +27,7 @@
 			class="flex items-baseline justify-between gap-2 text-xs text-muted-foreground tabular-nums"
 		>
 			<span>
-				{m.partners_progress_of({
-					revenue: formatEuros(revenue),
-					threshold: formatEuros(progress.next.threshold),
-				})}
+				{m.partners_progress_of({ revenue: amounts.revenue, threshold: amounts.threshold })}
 			</span>
 			<span>{progress.percent}%</span>
 		</div>
@@ -49,7 +47,7 @@
 		{#if !compact}
 			<div class="text-xs text-muted-foreground">
 				{m.partners_progress_remaining({
-					remaining: formatEuros(progress.remaining),
+					remaining: amounts.remaining,
 					level: progress.next.level,
 				})}
 			</div>

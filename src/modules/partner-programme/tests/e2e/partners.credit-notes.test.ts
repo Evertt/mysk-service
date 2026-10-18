@@ -148,10 +148,13 @@ describe("in SHLTR, a partner's cash bonus", () => {
 		await shown.getByRole("link", { name: made.number }).click();
 		await page.waitForURL((url) => url.pathname === `/invoices/credit-notes/${made.number}`);
 		await quiet(page);
-		// Its line is the programme's: the draft offers no line to add or remove (that the server
-		// refuses them is the invoicing module's `credit-notes.spec.ts`).
-		await page.locator("[data-lines-elsewhere]").waitFor();
-		expect(await page.getByRole("button", { name: /^(Add|Remove) line$/ }).count()).toBe(0);
+		// Its line and reason are the programme's: the draft offers no line to add or remove, nor
+		// its reason to change (that the server refuses them is the invoicing module's
+		// `credit-notes.spec.ts`).
+		await page.locator("[data-made-elsewhere]").waitFor();
+		expect(
+			await page.getByRole("button", { name: /^(Add line|Remove line|Save reason)$/ }).count(),
+		).toBe(0);
 		await confirm("Issue");
 		await confirm("Mark settled");
 		expect(

@@ -32,7 +32,7 @@
 	const data = $derived(await getCreditNote(params.number));
 	const credit = $derived(data.creditNote);
 	const editable = $derived(isEditable(credit.status));
-	// Another module's keeps its lines; it's still issued, settled or voided here.
+	// Another module's keeps its lines (and reason); it's still issued, settled or voided here.
 	const linesEditable = $derived(editable && !isMadeElsewhere(credit));
 	// One against a sent invoice is settled when the invoice is paid, not by hand.
 	const offset = $derived(credit.invoice?.status === "sent");

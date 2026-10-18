@@ -3,7 +3,7 @@ import { numberFormatter } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { partnerLabels } from "./labels.ts";
-import type { CategoryRule, Tier } from "./model.ts";
+import type { CategoryRule, Progress, Tier } from "./model.ts";
 
 const euros = numberFormatter({ style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
@@ -11,6 +11,17 @@ const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
 /** An amount in cents in whole euros, as the programme's figures read: `€200,000`, `€ 200.000`. */
 export const formatEuros = (cents: number, locale?: Locale) =>
 	euros(Math.round(cents / 100), locale);
+
+/**
+ * The way to the next level in whole euros: the revenue rounded down and what's left rounded up, so
+ * it never reads as the threshold reached before `levelFor` gives the level (€49,999.50 is "€49,999
+ * of €50,000" and "€1 to go", not "€50,000 of €50,000").
+ */
+export const formatProgress = (revenue: number, progress: Progress, locale?: Locale) => ({
+	revenue: euros(Math.floor(revenue / 100), locale),
+	threshold: formatEuros(progress.next.threshold, locale),
+	remaining: euros(Math.ceil(progress.remaining / 100), locale),
+});
 
 /** A rate in basis points, e.g. `380` → `3.8%`; in Dutch `3,8%`. */
 export const formatRate = (rate: number, locale?: Locale) => percent(rate / 10_000, locale);

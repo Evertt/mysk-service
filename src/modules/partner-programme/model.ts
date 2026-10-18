@@ -233,7 +233,10 @@ function nextTierFor(tiers: readonly Tier[], revenue: number): Tier | null {
 /** `amount` at `rate` (bp), in whole cents. */
 export const atRate = (amount: number, rate: number) => Math.round((amount * rate) / 10_000);
 
-/** The way to the next level: how far along (a whole percentage) and how much is left. */
+/**
+ * The way to the next level: how far along (a whole percentage, rounded down, so never 100 short of
+ * it, as `levelFor` counts) and how much is left (in cents).
+ */
 export interface Progress {
 	next: Tier;
 	percent: number;
@@ -259,7 +262,7 @@ export function progressFor(tiers: readonly Tier[], revenue: number): Progress |
 	if (!next) return null;
 	return {
 		next,
-		percent: Math.round((revenue / next.threshold) * 100),
+		percent: Math.floor((revenue * 100) / next.threshold),
 		remaining: next.threshold - revenue,
 	};
 }

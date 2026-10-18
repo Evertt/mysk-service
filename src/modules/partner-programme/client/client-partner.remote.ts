@@ -21,7 +21,7 @@ import { walletOf } from "../server/wallet.ts";
 
 /**
  * The contact's customer's place in the programme: for a partner, this year's figures, the rules
- * they follow from, its last closed years (the latest one still waiting for its choice, if any)
+ * they follow from, its last closed years (and the oldest still waiting for its choice, if any)
  * and its wallet, and the programme's organization (the tenant, for the page's banner); for a
  * customer that isn't one, `partner: false` alone.
  */
@@ -31,7 +31,7 @@ export const getClientPartner = forCustomers.query(async () => {
 	const now = today();
 	const rules = await rulesFor(now.year);
 	const figures = rules ? (await figuresOf(rules, [customer.id])).get(customer.id)! : null;
-	const closed = (await closedYearsOf(customer.id)).slice(0, 3).map((year) => ({
+	const years = (await closedYearsOf(customer.id)).map((year) => ({
 		year: year.year,
 		level: year.level,
 		partnerRevenue: year.partnerRevenue,
@@ -60,10 +60,15 @@ export const getClientPartner = forCustomers.query(async () => {
 		figures,
 		/** Where this year's credit would be valid until, if it's chosen. */
 		validUntil: rules ? creditValidUntil(now.year, rules.creditValidYears) : null,
-		closed,
-		/** The latest closed year with a bonus still to choose. */
+		/** The latest three closed years. */
+		closed: years.slice(0, 3),
+		/**
+		 * The oldest closed year with a bonus still to choose, of all of them (as the office's card
+		 * offers each): once it's chosen, the next one.
+		 */
 		awaiting:
-			closed.find((year) => !year.choice && (year.cashAmount > 0 || year.creditAmount > 0)) ?? null,
+			years.findLast((year) => !year.choice && (year.cashAmount > 0 || year.creditAmount > 0)) ??
+			null,
 		wallet: await walletOf(customer.id, now),
 	};
 });
