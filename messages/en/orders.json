@@ -101,6 +101,7 @@
 	"orders_bulk_status": "Change status",
 	"orders_bulk_status_title": "Change the status of {orders}",
 	"orders_bulk_status_description": "Their materials are taken from or returned to stock, as the new status says. Invoiced orders stay as they are.",
+	"orders_bulk_status_unchanged": "{number} is already {status}",
 	"orders_bulk_delete_title": "Delete {orders}?",
 	"orders_bulk_delete_description": "The orders and their material lines are removed permanently; the materials go back into stock. Invoiced orders can't be deleted.",
 	"orders_status_of": "Change status of {number}",
