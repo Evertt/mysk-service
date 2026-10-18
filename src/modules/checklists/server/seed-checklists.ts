@@ -10,10 +10,13 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { now } from "#lib/server/db/seed/clock.ts";
 import type { ModuleSeed, SeedTenant } from "#lib/server/db/seed/module-seed.ts";
+import { toDay } from "#lib/server/db/seed/temporal.ts";
 
 import {
 	checklistKind,
+	EXPIRING_DAYS,
 	getsChecklists,
 	orderPoints,
 	type PointResult,
@@ -85,6 +88,11 @@ function findResult(random: Faker, group: string): { result: PointResult; remark
 	if (roll > 0.95) return { result: "na", remark: null };
 	return { result: "ok", remark: null };
 }
+
+/** Whether an inspection valid until `ends` is expiring `today`: ends within `EXPIRING_DAYS`. */
+const expiresSoon = (ends: Temporal.PlainDate, today: Temporal.PlainDate) =>
+	Temporal.PlainDate.compare(ends, today) >= 0 &&
+	Temporal.PlainDate.compare(ends, today.add({ days: EXPIRING_DAYS })) <= 0;
 
 /** The tenant's checklists on its orders (see above), in `tx`; counted for the summary. */
 export async function seedChecklists(
@@ -171,20 +179,32 @@ export async function seedChecklists(
 		result: PointResult | null;
 		remark: string | null;
 	}[][] = [];
+	const today = toDay(now);
 	for (const row of picked) {
 		const kind = checklistKind(row.type)!;
 		const completed = !getsChecklists(row.status);
+		const completedOn = row.completedAt?.toZonedDateTimeISO("Europe/Amsterdam").toPlainDate();
 		for (const unit of unitsOf.get(row.id) ?? []) {
 			const template = templateOf.get(unit.categoryId);
 			if (!template) continue;
+			const ends =
+				completed && kind === "inspection" && completedOn
+					? validUntil(completedOn, template.validityMonths)
+					: null;
+			// An inspection that runs out within the month passed, so the demo has units "expiring"
+			// (a rejected one would be "rejected" until then).
+			const approved = !!ends && expiresSoon(ends, today);
 			const points = (pointsOf.get(template.id) ?? []).map(({ id, group, text }) => ({
 				templateItemId: id,
 				group,
 				text,
-				...(completed ? findResult(random, group) : { result: null, remark: null }),
+				...(approved
+					? { result: "ok" as const, remark: null }
+					: completed
+						? findResult(random, group)
+						: { result: null, remark: null }),
 			}));
 			const rejected = points.some((point) => point.result === "nok");
-			const completedOn = row.completedAt?.toZonedDateTimeISO("Europe/Amsterdam").toPlainDate();
 			checklists.push({
 				organizationId,
 				orderId: row.id,
@@ -198,10 +218,7 @@ export async function seedChecklists(
 				remarks: completed && rejected ? random.helpers.arrayElement(advice) : null,
 				completedAt: completed ? row.completedAt : null,
 				completedBy: completed ? row.engineerId : null,
-				validUntil:
-					completed && kind === "inspection" && completedOn
-						? validUntil(completedOn, template.validityMonths)
-						: null,
+				validUntil: ends,
 			});
 			answers.push(points);
 		}
