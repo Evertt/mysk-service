@@ -1,26 +1,26 @@
+/**
+ * The schedule and tenants: a board left open in North refuses a drag once the user switched to
+ * South, which hasn't the module; South switches it on, can't schedule North's order by its id
+ * (one tampered form), and switches it off again. That South's board and month show its own
+ * records only, and its dialog refuses North's or inactive engineers, is the module's
+ * `tests/unit/server/schedule.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
 
 import {
-	activeEngineers,
-	backlogSize,
-	calendarDays,
-	monthStart,
 	type Order,
 	orderByNumber,
-	ordersByDay,
 	pageLocators,
 	scheduleSwitches,
 	snapshot,
-	thisWeeksOrders,
 	weekday,
 } from "./helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
-const { board, month, backlog, cards, cell, operations, settingsCard, drag, openDialog } =
-	pageLocators(app);
+const { backlog, cards, cell, operations, settingsCard, drag, openDialog } = pageLocators(app);
 
 /** The last activity entry before this file switched South's schedule on. */
 let since = 0;
@@ -94,68 +94,14 @@ describe("switching the schedule on in South", () => {
 });
 
 describe("in South, with the schedule on", () => {
-	let own: Order;
-
-	test("switching organization shows South's engineers and orders only", async () => {
-		await app.go("/schedule");
-		const southEngineers = await activeEngineers(south.id);
-		const rowLinks = await board()
-			.locator('a[href^="/engineers/"]:visible')
-			.evaluateAll((links) =>
-				links.map((link) => Number(link.getAttribute("href")!.split("/").pop())),
-			);
-		const southIds = (
-			await rows<{ id: number }>(`select id from engineer where organization_id = ?`, [south.id])
-		).map((row) => row.id);
-		expect(rowLinks.length).toBeGreaterThanOrEqual(southEngineers.length);
-		expect(rowLinks.every((id) => southIds.includes(id))).toBe(true);
-		expect(await cards(board()).count()).toBe(await thisWeeksOrders(south.id));
-		expect(await cards(backlog()).count()).toBe(await backlogSize(south.id));
-		const numbers = await cards(backlog()).evaluateAll((els) =>
-			els.map((el) => el.getAttribute("data-order")!),
-		);
-		const southNumbers = (
-			await rows<{ number: string }>(
-				`select number from "order" where organization_id = ? and scheduled_for is null`,
-				[south.id],
-			)
-		).map((row) => row.number);
-		expect(numbers.every((number) => southNumbers.includes(number))).toBe(true);
-		own = await orderByNumber(numbers[0], south.id);
-	});
-
-	test("South's month shows South's orders on its days, and none of North's", async () => {
-		await app.go("/schedule?view=month");
-		await month().waitFor();
-		const days = calendarDays(monthStart());
-		const end = new Date(days[41]);
-		end.setDate(end.getDate() + 1);
-		const souths = await ordersByDay(south.id, days[0], end);
-		const shown = await month()
-			.getByRole("group")
-			.evaluateAll((cells) =>
-				cells.flatMap((cell) =>
-					[...cell.querySelectorAll("[data-order]")].map((entry) => ({
-						day: cell.getAttribute("data-day")!,
-						number: entry.getAttribute("data-order")!,
-					})),
-				),
-			);
-		expect(shown.length).toBeGreaterThan(0);
-		// Each a South order of that day, and as many as South's days list (two of a fuller day).
-		for (const { day, number } of shown) expect(souths.get(day), number).toContain(number);
-		const listed = [...souths.values()].reduce(
-			(sum, numbers) => sum + (numbers.length <= 3 ? numbers.length : 2),
-			0,
-		);
-		expect(shown.length).toBe(listed);
-		// Back to the week's board, where the next tests start.
-		await app.go("/schedule");
-		await backlog().waitFor();
-	});
-
 	test("scheduling North's order by its id is refused", async () => {
 		const { page } = app;
+		await app.go("/schedule");
+		await backlog().waitFor();
+		const own = await orderByNumber(
+			(await cards(backlog()).first().getAttribute("data-order"))!,
+			south.id,
+		);
 		const victim = (
 			await rows<Order>(
 				`select id, number, status, engineer_id, scheduled_for from "order"
@@ -177,37 +123,6 @@ describe("in South, with the schedule on", () => {
 		expect(await snapshot(victim.id)).toEqual(victimBefore);
 		expect(await snapshot(own.id)).toEqual(ownBefore);
 		await page.keyboard.press("Escape");
-	});
-
-	test("North's engineers and inactive engineers can't be assigned", async () => {
-		const { page } = app;
-		const before = await snapshot(own.id);
-		const northEngineer = String(
-			await value(`select min(id) from engineer where organization_id = ?`, [north.id]),
-		);
-		const [inactive] = await rows<{ id: number; name: string }>(
-			`select id, name from engineer where organization_id = ? and active = 0 limit 1`,
-			[south.id],
-		);
-
-		await app.go("/schedule");
-		for (const [id, message] of [
-			[northEngineer, "Unknown engineer"],
-			[String(inactive.id), `${inactive.name} is no longer active`],
-		]) {
-			const dialog = await openDialog(own.number);
-			await page.evaluate((id) => {
-				document
-					.querySelector<HTMLSelectElement>('[role="dialog"] select')!
-					.add(new Option("Someone else", id));
-			}, id);
-			await dialog.getByLabel("Engineer").selectOption(id);
-			await app.submit(dialog.getByRole("button", { name: "Schedule" }));
-			expect(await app.issues()).toContain(message);
-			expect(await snapshot(own.id)).toEqual(before);
-			await page.keyboard.press("Escape");
-			await dialog.waitFor({ state: "hidden" });
-		}
 	});
 
 	test("switching it off again hides it, and keeps the orders' plans", async () => {

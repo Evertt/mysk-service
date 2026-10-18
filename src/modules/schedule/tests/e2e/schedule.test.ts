@@ -1,14 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import {
-	fitsWidth,
-	onPhone,
-	organizations,
-	rows,
-	unbalancedStock,
-	useApp,
-	value,
-} from "#e2e/app.ts";
+import { fitsWidth, onPhone, organizations, rows, useApp, value } from "#e2e/app.ts";
 
 import {
 	activeEngineers,
@@ -20,7 +12,6 @@ import {
 	pageLocators,
 	scheduledAt,
 	seconds,
-	snapshot,
 	thisWeeksOrders,
 	weekday,
 } from "./helpers.ts";
@@ -225,20 +216,8 @@ describe("in North", () => {
 		planned = await orderByNumber(number, north.id);
 		expect(planned).toMatchObject({ status: "scheduled", engineer_id: engineer.id });
 		expect(scheduledAt(planned)).toEqual(weekday(2, 13, 30));
-		// Scheduled, the quote's lines take their materials from stock.
-		const consumed = await rows(
-			`select material_id, -quantity as quantity from stock_movement
-			 where order_id = ? and kind = 'consumption' order by material_id`,
-			[planned.id],
-		);
-		expect(consumed).toEqual(
-			await rows(
-				`select material_id, quantity from order_line where order_id = ? order by material_id`,
-				[planned.id],
-			),
-		);
-		expect(consumed.length).toBeGreaterThan(0);
-		expect(await unbalancedStock(north.id)).toEqual([]);
+		// That it takes its materials from stock, and what planning refuses (an order that isn't
+		// open, another tenant's, an inactive engineer), is `scheduling.spec.ts`'s.
 		await cell(engineer.name, weekday(2)).locator(`[data-order="${number}"]`).waitFor();
 		expect(await backlog().locator(`[data-order="${number}"]`).count()).toBe(0);
 	});
@@ -295,28 +274,6 @@ describe("in North", () => {
 		// Without an engineer, a quote stays a quote.
 		expect(moved).toMatchObject({ status: "quote", engineer_id: null });
 		expect(scheduledAt(moved)).toEqual(weekday(3, 9));
-	});
-
-	test("orders that aren't open can't be scheduled", async () => {
-		const { page } = app;
-		const done = (
-			await rows<Order>(
-				`select id, number, status, engineer_id, scheduled_for from "order"
-				 where organization_id = ? and status = 'completed' limit 1`,
-				[north.id],
-			)
-		)[0];
-		const before = await snapshot(done.id);
-
-		const dialog = await openDialog(planned.number);
-		await page.evaluate((id) => {
-			document.querySelector<HTMLInputElement>('[role="dialog"] input[name^="id"]')!.value =
-				String(id);
-		}, done.id);
-		await app.submit(dialog.getByRole("button", { name: "Schedule" }));
-		expect(await app.issues()).toContain("Only open orders can be scheduled");
-		expect(await snapshot(done.id)).toEqual(before);
-		await page.keyboard.press("Escape");
 	});
 
 	test("planned for another week, the board goes there, and back to this week without the dialog", async () => {
