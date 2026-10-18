@@ -11,10 +11,10 @@ import { afterAll, describe, expect, test } from "vite-plus/test";
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
 import {
-	BROWSER_OPTIONS,
 	baseURL,
 	hydrated,
 	linkInMail,
+	newContext,
 	organizations,
 	rows,
 	sentMail,
@@ -58,10 +58,7 @@ const invitations = (email: string) =>
 
 /** A signed-out browser of someone else, e.g. the invited person's. */
 async function otherBrowser() {
-	const context = await app.page
-		.context()
-		.browser()!
-		.newContext({ ...BROWSER_OPTIONS });
+	const context = await newContext(app.page.context().browser()!);
 	return context.newPage();
 }
 

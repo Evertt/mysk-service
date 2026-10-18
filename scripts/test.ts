@@ -6,11 +6,15 @@
  * retried test would start from where its failed first try left the page. It's for failures that
  * aren't the app's: a module skeleton that comes in while a navigation is pending can freeze the
  * page (a Svelte 5.57 bug, see "Skeletons" in docs/agents/modules.md). A file that fails again fails the run.
+ *
+ * With `TEST_NOW` (docs/agents/tests.md, "Testing at another date"), both runs start at that moment.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+
+import { parseTestNow } from "#clock/clock.ts";
 
 const args = process.argv.slice(2);
 const dir = mkdtempSync(join(tmpdir(), "vitest-"));
@@ -62,6 +66,25 @@ function rerunOptions(args: string[]) {
 	return options;
 }
 
+/** Says when the tests run, with `TEST_NOW`; exits if it names no moment. */
+function announceTestNow(value: string | undefined) {
+	if (!value) return;
+	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	try {
+		const at = new Date(parseTestNow(value, zone).epochMilliseconds);
+		const shown = at.toLocaleString("en-GB", {
+			timeZone: zone,
+			dateStyle: "full",
+			timeStyle: "short",
+		});
+		console.log(`Running at TEST_NOW=${value}: ${shown} (${zone}).\n`);
+	} catch (error) {
+		console.error((error as Error).message);
+		process.exit(1);
+	}
+}
+
+announceTestNow(process.env.TEST_NOW);
 let passed = false;
 try {
 	passed = run();

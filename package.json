@@ -15,6 +15,7 @@
 		"#lib/*": "./src/lib/*",
 		"#modules/*": "./src/modules/*",
 		"#routes/*": "./src/routes/*",
+		"#clock/*": "./src/tests/clock/*",
 		"#e2e/*": "./src/tests/e2e/*",
 		"#unit/*": "./src/tests/unit/*",
 		"#ui/*": "./src/lib/components/ui/*/index.ts"

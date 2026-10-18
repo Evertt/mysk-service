@@ -10,6 +10,9 @@
  *
  * With `E2E_DEV=1`, it uses a single dev server instead (and the files run one at a time): slower,
  * but with Svelte's dev-only checks, e.g. the hydration mismatch warnings, for debugging.
+ *
+ * With `TEST_NOW`, all of it runs at that moment (`src/tests/clock/clock.ts`): this process, and
+ * the seed, the build and the servers it starts.
  */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -21,6 +24,7 @@ import { join } from "node:path";
 import { createClient } from "@libsql/client";
 import type { TestProject } from "vite-plus/test/node";
 
+import { installTestClock, shiftSchemaDefaults } from "#clock/clock.ts";
 import { DEMO_PASSWORD, demoUsers } from "#lib/server/db/demo.ts";
 
 import { checkSessions } from "./sessions.ts";
@@ -157,6 +161,8 @@ async function waitUntilUp(url: string, server: ChildProcess, output: () => stri
 }
 
 export default async function setup(project: TestProject) {
+	// Before anything starts a process, which then runs at `TEST_NOW` too.
+	await installTestClock();
 	const folder = mkdtempSync(join(tmpdir(), "fieldworks-e2e-"));
 	const removeFolder = () => rmSync(folder, { recursive: true, force: true, maxRetries: 3 });
 
@@ -189,6 +195,7 @@ export default async function setup(project: TestProject) {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	run("node_modules/.bin/drizzle-kit", ["migrate"]);
+	await shiftSchemaDefaults(`file:${template}`);
 	run("node", ["--env-file=.env", "src/lib/server/db/seed/index.ts"]);
 	// The demo's simulations (`#lib/server/simulation.ts`) start paused, so the seeded states hold
 	// while a board is open; a test that needs one running plays it.

@@ -6,7 +6,7 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { BROWSER_OPTIONS, baseURL, hydrated, quiet, useApp } from "./app.ts";
+import { baseURL, hydrated, newContext, quiet, useApp } from "./app.ts";
 
 const app = useApp();
 
@@ -95,14 +95,10 @@ describe("on a full page load", () => {
 	});
 
 	test("without JavaScript, it isn't shown", async () => {
-		const context = await app.page
-			.context()
-			.browser()!
-			.newContext({
-				...BROWSER_OPTIONS,
-				javaScriptEnabled: false,
-				storageState: await app.page.context().storageState(),
-			});
+		const context = await newContext(app.page.context().browser()!, {
+			javaScriptEnabled: false,
+			storageState: await app.page.context().storageState(),
+		});
 		try {
 			const page = await context.newPage();
 			for (const path of ["/orders", "/login"]) {
