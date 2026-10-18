@@ -242,6 +242,7 @@
 	"energy_setup_site_delete_description": "De zones, installaties, deuren en grenswaarden gaan mee. Een locatie met metingen of alerts kan niet worden verwijderd.",
 	"energy_setup_site_measured": "De locatie heeft metingen, deurevents of alerts, die verloren zouden gaan: ze kan niet worden verwijderd.",
 	"energy_site_delete_refused": "Het energieverbruik van deze vestiging wordt gemeten als {name}. Verwijder eerst die energielocatie.",
+	"energy_site_delete_refused_off": "Deze vestiging heeft nog energiegegevens. Schakel Energie in en verwijder eerst de energielocatie.",
 	"energy_setup_name": "Naam",
 	"energy_setup_name_hint": "Laat leeg voor de naam van de klant en de locatie.",
 	"energy_setup_name_required": "Vul een naam in",

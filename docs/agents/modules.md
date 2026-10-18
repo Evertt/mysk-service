@@ -26,7 +26,10 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   `src/lib/server/db/serialize.ts`; errors are logged, not thrown), `vote()` for a vote (any
   refusal wins; the docks and energy refuse a customer site's removal while they have records
   there, `customers.removingSite`, which would cascade unlogged; the input carries the owner's
-  transaction to read in) and `save()` for a save hook (each module saves its part in the owner's
+  transaction to read in. A vote declared with `defineVote(id, { alsoOff: true })` asks the
+  modules the tenant has off too, and tells each voter whether its module is on (`{ on }`, its
+  second argument): `customers.removingSite` does, so a module that's off still keeps its records,
+  and says to switch it on first) and `save()` for a save hook (each module saves its part in the owner's
   transaction, which the input carries, one after another; the first that answers problems stops
   the rest, and the owner refuses the change, rolling the transaction back). Each point has one
   caller in its owner's domain (`priceOrders()`, `tagOrders()`, `orderCommitted()`,

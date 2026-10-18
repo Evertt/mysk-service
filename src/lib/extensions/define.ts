@@ -73,6 +73,8 @@ export interface EventPoint<Payload> extends Typed<{ payload: Payload }> {
 export interface VotePoint<In> extends Typed<{ input: In }> {
 	readonly id: string;
 	readonly kind: "vote";
+	/** Whether the modules the tenant has switched off are asked too (see `defineVote()`). */
+	readonly alsoOff: boolean;
 }
 
 /**
@@ -109,8 +111,15 @@ export function defineCollector<In, Out>(
 /** Declares an event, told `Payload` after commit. */
 export const defineEvent = <Payload>(id: string): EventPoint<Payload> => ({ id, kind: "event" });
 
-/** Declares a vote about `In`. */
-export const defineVote = <In>(id: string): VotePoint<In> => ({ id, kind: "vote" });
+/**
+ * Declares a vote about `In`. With `alsoOff: true` the modules the tenant has switched off are
+ * asked too, each told whether it's on: for a change that would take a module's records with it,
+ * which a module that's off still keeps (a customer site's removal would cascade to its docks).
+ */
+export const defineVote = <In>(
+	id: string,
+	{ alsoOff = false }: { alsoOff?: boolean } = {},
+): VotePoint<In> => ({ id, kind: "vote", alsoOff });
 
 /** Declares a save hook: contributors save their part of `In`, or answer `Problem`s. */
 export const defineSaveHook = <In, Problem>(id: string): SaveHookPoint<In, Problem> => ({

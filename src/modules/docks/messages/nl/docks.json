@@ -96,6 +96,20 @@
 			}
 		}
 	],
+	"docks_site_delete_refused_off": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Deze vestiging heeft nog {countText} dock. Schakel Docks in en verwijder het eerst op de kaart Docks.",
+				"countPlural=*": "Deze vestiging heeft nog {countText} docks. Schakel Docks in en verwijder ze eerst op de kaart Docks."
+			}
+		}
+	],
 	"docks_saved": "{code} opgeslagen",
 	"docks_form_site": "Vestiging",
 	"docks_form_code": "Code",

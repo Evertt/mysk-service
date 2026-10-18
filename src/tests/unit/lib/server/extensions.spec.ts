@@ -140,6 +140,22 @@ test("vote returns every refusal", async () => {
 	expect(await vote(voting, 1, ["a", "c"])).toEqual([]);
 });
 
+test("a vote with alsoOff asks the modules that are off too, telling each whether it's on", async () => {
+	const keeping = defineVote<number>("test.keeping", { alsoOff: true });
+	const before = registry.modules;
+	registry.modules = [
+		fake("a", [contribute(keeping, async (n, { on }) => `a ${on ? "on" : "off"}:${n}`)]),
+		fake("b", [contribute(keeping, async () => undefined)]),
+		fake("c", [contribute(keeping, async (n, { on }) => `c ${on ? "on" : "off"}:${n}`)]),
+	];
+	try {
+		expect(await vote(keeping, 1, ["c"])).toEqual(["a off:1", "c on:1"]);
+		expect(await vote(keeping, 1, [])).toEqual(["a off:1", "c off:1"]);
+	} finally {
+		registry.modules = before;
+	}
+});
+
 test("save lets the modules that are on save their part, one after another", async () => {
 	const input = { saved: [] as string[], refuse: [] as string[] };
 	expect(await save(saving, input, ["c", "b", "a"])).toEqual([]);

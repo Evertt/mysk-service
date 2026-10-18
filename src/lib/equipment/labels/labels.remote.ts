@@ -11,7 +11,8 @@ import { forMembers } from "#lib/server/remote-functions.ts";
 /**
  * The QR labels of one of the tenant's sites, to print on a sheet: its locations' and its units'
  * (each with its name, serial number and location), in the locations' order. Only one location's
- * (with its units') with `location`, or one unit's with `unit` (a serial number).
+ * (with its units') with `location`, or one unit's with `unit` (a serial number); with both, the
+ * unit's, a 404 when it isn't at that location.
  */
 export const getLabelSheet = forMembers.query(
 	v.object({
@@ -69,17 +70,18 @@ export const getLabelSheet = forMembers.query(
 					serialNumber === undefined ? undefined : eq(equipment.serialNumber, serialNumber),
 				),
 			)
-			// By location, in the site's order (those without one last), then by name.
+			// By location, in the site's order (those without one last), then as the customer names
+			// them, else by make, as the location's page does.
 			.orderBy(
 				asc(sql`${equipmentLocation.position} is null`),
 				asc(equipmentLocation.position),
-				asc(equipment.name),
-				asc(equipment.manufacturer),
+				asc(sql`coalesce(${equipment.name}, ${equipment.manufacturer}) collate nocase`),
+				asc(equipment.model),
 				asc(equipment.serialNumber),
 			);
-		if ((locationId !== undefined && !locations.length) || (serialNumber && !units.length)) {
-			error(404, m.equipment_labels_not_found());
-		}
+		// One unit's (only when it's at `location`, if that's given too), or one location's.
+		const missing = serialNumber ? !units.length : locationId !== undefined && !locations.length;
+		if (missing) error(404, m.equipment_labels_not_found());
 		return { site, locations, units };
 	},
 );

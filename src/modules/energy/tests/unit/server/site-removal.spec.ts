@@ -1,14 +1,23 @@
 /**
  * Deleting a customer's site whose energy is monitored (`server/site-removal.ts`, at core's
  * `customers.removingSite`) on the seeded demo database: the sites card's delete is refused,
- * naming the energy site, and the site keeps its energy site and readings, unlogged; once the
+ * naming the energy site (or, while SHLTR has energy off, saying to switch it on), and the site
+ * keeps its energy site and readings, unlogged; once the
  * energy site is gone the site can go. Riedel's seeded site (with its months of readings) also has
  * equipment, which core refuses first, so these use a site of their own.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { deleteCustomerSite } from "#lib/customers/detail/sites.remote.ts";
-import { as, organizationId, rows, shltr, submit, value } from "#unit/lib/server/harness/index.ts";
+import {
+	as,
+	organizationId,
+	rows,
+	shltr,
+	submit,
+	value,
+	withoutModule,
+} from "#unit/lib/server/harness/index.ts";
 
 const shltrId = organizationId("shltr");
 
@@ -55,6 +64,21 @@ describe("deleting a site whose energy is monitored", () => {
 				[shltrId, String(site)],
 			),
 		).toBe(0);
+	});
+
+	test("is refused while energy is off too, saying to switch it on", async () => {
+		const site = await monitoredSite("Riedel Ede — Cross-dock");
+		expect(await withoutModule("shltr", "energy", () => deleteSite(site))).toMatchObject({
+			status: 400,
+			issues: [
+				{
+					message:
+						"This site still has energy data. Switch Energy on and delete its energy site first.",
+				},
+			],
+		});
+		expect(await value(`select count(*) from customer_site where id = ?`, [site])).toBe(1);
+		expect(await value(`select count(*) from energy_site where site_id = ?`, [site])).toBe(1);
 	});
 
 	test("goes once its energy site is gone", async () => {

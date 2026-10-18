@@ -83,7 +83,12 @@ export const getLocation = forMembers.query(id(), async (locationId) => {
 		.from(equipment)
 		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
 		.where(and(eq(equipment.locationId, location.id), inTenant(equipment)))
-		.orderBy(asc(equipment.name), asc(equipment.manufacturer), asc(equipment.model));
+		// As the customer names them, else by make, as the order form and the equipment list do.
+		.orderBy(
+			asc(sql`coalesce(${equipment.name}, ${equipment.manufacturer}) collate nocase`),
+			asc(equipment.model),
+			asc(equipment.serialNumber),
+		);
 
 	// The orders on any of them, with which of them each is about.
 	const ordersOn = await db

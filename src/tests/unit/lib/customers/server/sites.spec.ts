@@ -233,10 +233,35 @@ describe("removeSite", () => {
 		expect(logged).not.toHaveBeenCalled();
 	});
 
-	test("a module that's off isn't asked", async () => {
+	test("asks a module that's off too, telling it so, and keeps a site it refuses", async () => {
 		locals.tenant = tenant("north", ["b"]);
+		const asked = vi.fn();
 		registry.modules = [
-			defineServerModule("a" as never, [contribute(removingSite, async () => "Refused")]),
+			defineServerModule("a" as never, [
+				contribute(removingSite, async ({ site }, { on }) => {
+					asked(site.id, on);
+					return on ? "Delete its docks first." : "Switch A on and delete its docks first.";
+				}),
+			]),
+			defineServerModule("b" as never, [
+				contribute(removingSite, async ({ site }, { on }) => void asked(site.id, on)),
+			]),
+		];
+		expect(await failure(() => removeSite(11))).toEqual([
+			"Switch A on and delete its docks first.",
+		]);
+		expect(asked.mock.calls).toEqual([
+			[11, false],
+			[11, true],
+		]);
+		expect(await sites()).toHaveLength(4);
+		expect(logged).not.toHaveBeenCalled();
+	});
+
+	test("goes when the modules that are off have nothing there either", async () => {
+		locals.tenant = tenant("north", []);
+		registry.modules = [
+			defineServerModule("a" as never, [contribute(removingSite, async () => undefined)]),
 		];
 		expect(await removeSite(11)).toBe("CUST-0001");
 		expect((await sites()).map((site) => site.id)).toEqual([10, 20, 30]);

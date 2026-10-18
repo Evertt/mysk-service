@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { listedUnitsOf, priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
+import { listedUnitsOf, priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
@@ -46,11 +46,15 @@ export const getCustomerActivity = forMembers.query(v.string(), async (code) => 
 			.limit(RECENT),
 	]);
 
-	// Priced like everywhere else, so a covered order costs here what it does on its own page.
-	const [prices, units] = await Promise.all([
-		withUnitIds(orders).then((facts) => priceOrders(facts)),
-		listedUnitsOf(orders.map((row) => row.id)),
-	]);
+	// Their units, read once: what the rows show, and their ids for the pricing. Priced like
+	// everywhere else, so a covered order costs here what it does on its own page.
+	const units = await listedUnitsOf(orders.map((row) => row.id));
+	const prices = await priceOrders(
+		orders.map((row) => ({
+			...row,
+			equipmentIds: (units.get(row.id) ?? []).map((unit) => unit.id),
+		})),
+	);
 	return {
 		total,
 		orders: orders.map(({ laborHours: _hours, hourlyRate: _rate, ...row }, i) => {
