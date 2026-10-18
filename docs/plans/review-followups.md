@@ -1,28 +1,19 @@
 # Review follow-ups (develop vs main, 2026-10-18)
 
-The second-pass review of `develop` found 32 issues; all are fixed (merged 2026-10-18). Below:
-what was decided for some, what came up while fixing, and the lower ones the slice reviews noted,
-still to look at. Each says where, what's wrong, and how it shows. Verify against the code before
-fixing: lines drift.
-
-## Fixed
-
-All 19 that were still to fix after the first 13 are fixed and merged on develop (2026-10-18),
-each with a test that failed before; #3 by ticking the simulations every 15 minutes, a tick
-covering 20, and the cron asking nothing of the app while none runs (production and staging);
-#12 by marking an order of several units as shared on a unit's "Parts used" card; #15 by
-lowering `MAX_SIGNATURE_LENGTH` to 200,000 (no deploy uses adapter-node today, see below).
+What's still open after the review of `develop`: points that came up while fixing its findings,
+and the lower ones its slice reviews noted. Each says where, what's wrong, and how it shows.
+Verify against the code before fixing: lines drift.
 
 ## Noted while fixing
 
 - README's "Deploying" section still describes adapter-node and `node build`; the app builds with
   adapter-auto (Vercel) or adapter-cloudflare since 64009fff.
 - `searchMatch()` in `src/lib/server/lists/plan.ts` binds each search word once per column; the
-  Connect list now joins its columns into one expression (#18), but every list with many search
-  columns has the same budget.
+  Connect list now joins its columns into one expression, but every list with many search columns
+  has the same budget.
 - `completeWork`'s activity entry names the signer in its note only, not as a field in `after`.
-- #13 (`order-form.svelte`, all units cleared) has no test: the order form has no component-test
-  harness.
+- `order-form.svelte`'s fix for clearing all units (ranking engineers by the units still chosen)
+  has no test: the order form has no component-test harness.
 
 ## Lower, noted by the slice reviews
 
