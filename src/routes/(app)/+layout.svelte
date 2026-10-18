@@ -53,7 +53,12 @@
 	<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->
 	<Sidebar.Inset class="min-w-0 desktop:has-data-fill-viewport:overflow-y-auto">
 		<AppHeader />
-		<div class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6">
+		<!-- Shrinks to the screen's height, but not below what its table needs at least (a table that
+			fills the viewport counts as only its minimum height), so the page scrolls instead and keeps
+			its padding under the table. -->
+		<div
+			class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6 desktop:has-[[data-slot=data-table][data-fill-viewport]]:min-h-auto"
+		>
 			{@render children()}
 			<NavigationSkeleton group="/(app)" class="p-4 md:p-6">
 				{#snippet skeleton(routeId)}

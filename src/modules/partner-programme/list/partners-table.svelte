@@ -54,7 +54,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex min-h-0 flex-col gap-4">
+	<div class="flex min-h-0 flex-1 flex-col gap-4">
 		<table.Toolbar searchLabel={m.partners_search()}>
 			<FacetedFilter
 				columnId="level"

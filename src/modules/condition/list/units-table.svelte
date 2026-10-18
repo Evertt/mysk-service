@@ -126,7 +126,7 @@
 </script>
 
 <table.AppTable>
-	<div class="flex min-h-0 flex-col gap-4">
+	<div class="flex min-h-0 flex-1 flex-col gap-4">
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5" data-kpis>
 			<div data-kpi="units" class="contents">
 				<StatTile label={m.condition_kpi_units()} value={formatNumber(total)} icon={WrenchIcon} />

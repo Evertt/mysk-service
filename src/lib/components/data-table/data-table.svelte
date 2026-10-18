@@ -151,8 +151,12 @@
 		"*:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:[overflow-anchor:none]",
 		compact.area,
 		// The rows scroll inside the table only when it fills the viewport; otherwise the table
-		// container scrolls sideways only.
-		fillViewport && "desktop:min-h-48 desktop:*:data-[slot=table-container]:overflow-y-auto",
+		// container scrolls sideways only. Filling it, the table takes the room the page leaves it, at
+		// least half the screen: its rows don't count towards the page's height (size containment),
+		// only that minimum, so where there's less room the page grows by it (see the app layout)
+		// and keeps its padding under the table.
+		fillViewport &&
+			"desktop:min-h-[60vh] desktop:flex-1 desktop:contain-size desktop:*:data-[slot=table-container]:overflow-y-auto",
 		theme.classes("data-table"),
 	)}
 	{@attach overflowTracker}
