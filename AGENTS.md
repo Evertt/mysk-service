@@ -59,7 +59,8 @@ Organizations own all business data.
   same transaction. Orders are created only through `createOrders(tx, drafts)`.
 - References between tenant tables are composite foreign keys that include the tenant.
 - Every section's tests cover isolation: South can't see or change North's records, also by
-  tampering with ids.
+  tampering with ids. In e2e one page and one tampered form per section; the rest in its server
+  spec (`docs/agents/tests.md`).
 
 Details and the shared server helpers: `docs/agents/tenancy.md`.
 
