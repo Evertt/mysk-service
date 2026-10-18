@@ -1,5 +1,5 @@
 /** What the partner programme's end-to-end tests share: its records as stored, and figures from them. */
-import { rows, value } from "#e2e/app.ts";
+import { rows } from "#e2e/app.ts";
 import type { OrderType } from "#lib/models.ts";
 import {
 	type CategoryRule,
@@ -131,12 +131,4 @@ export const walletOf = (customerId: number) =>
 	rows<{ kind: string; amount: number; valid_until: string | null; note: string | null }>(
 		`select kind, amount, valid_until, note from partner_wallet_entry where customer_id = ? order by id`,
 		[customerId],
-	);
-
-/** How many activity entries a subject type has in a tenant. */
-export const logged = (organizationId: string, subjectType: string, action?: string) =>
-	value<number>(
-		`select count(*) from activity where organization_id = ? and subject_type = ?
-		 and (? is null or action = ?)`,
-		[organizationId, subjectType, action ?? null, action ?? null],
 	);

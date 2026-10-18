@@ -1,3 +1,9 @@
+/**
+ * The partner programme and tenants: North's order form, its classification query tampered to
+ * another tenant's order, gets a 404 and shows the rest of the form; South, without the module, has
+ * none of its pages and cards. That a customer's card is looked up in the tenant is
+ * `tests/unit/server/partners.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 // The remote functions' helpers through `app.ts`: a module may import no other `remote-functions.ts`
@@ -11,28 +17,10 @@ import {
 	useApp,
 } from "#e2e/app.ts";
 
-import { partnersOf } from "./helpers.ts";
-
 const { north, south, shltr } = organizations;
 const app = useApp();
 
 describe("in North, which has the module", () => {
-	test("a customer is looked up in the tenant: a code it doesn't have is a 404", async () => {
-		const { page } = app;
-		const [partner] = await partnersOf(north.id);
-		await app.go("/partner-programme");
-		await app.tableSettled();
-		await tamperWithQuery<string>(page, "getPartnerCard", () => "CUST-9999");
-		const [response] = await app.expectingErrors(() =>
-			Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "getPartnerCard")),
-				page.locator(`a[href="/customers/${partner.code}"]`).first().click(),
-			]),
-		);
-		expect(await remoteErrorStatus(response)).toBe(404);
-		expect(await page.locator("[data-partner-card]").count()).toBe(0);
-	});
-
 	test("another tenant's order has no classification to read", async () => {
 		const { page } = app;
 		const [order] = await rows<{ number: string }>(
