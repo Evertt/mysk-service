@@ -103,7 +103,6 @@ describe("the types the order form offers", () => {
 
 describe("what's refused", () => {
 	const none = new Map();
-	const shown = { names: {}, hidden: false };
 	const hidden = { names: {}, hidden: true };
 
 	test("nothing for a new name or hiding a type nothing needs", () => {
@@ -122,16 +121,6 @@ describe("what's refused", () => {
 		expect(
 			orderTypeProblems({}, "inspection", { names: { en: "Check" }, hidden: false }, required),
 		).toEqual([]);
-	});
-
-	test("hiding the last type shown", () => {
-		const allButOther = Object.fromEntries(
-			orderTypes.filter((type) => type !== "other").map((type) => [type, hidden]),
-		);
-		expect(orderTypeProblems(allButOther, "other", hidden, none)).toEqual([
-			{ field: "hidden", reason: "last" },
-		]);
-		expect(orderTypeProblems(allButOther, "other", shown, none)).toEqual([]);
 	});
 
 	test("a name another type has in that language, whatever the case", () => {

@@ -79,14 +79,14 @@ export function effectiveOrderTypes(
 /** Why a change to a type's settings is refused, and the field it's about. */
 export type OrderTypeProblem =
 	| { field: "hidden"; reason: "required"; by: string[] }
-	| { field: "hidden"; reason: "last" }
 	| { field: "names"; locale: Locale; reason: "taken"; name: string; other: OrderType };
 
 /**
  * What's wrong with giving `type` the setting `next`, with the tenant's other settings as they are
  * (`settings`) and the types something needs offered (`required`: what needs each, by name): a type
- * that's needed can't be hidden, nor the last visible one, and no two types may read the same in a
- * language (whatever the case), so they can be told apart.
+ * that's needed can't be hidden, and no two types may read the same in a language (whatever the
+ * case), so they can be told apart. The form always offers a type: breakdowns are always needed
+ * (`requiredOrderTypes()`).
  */
 export function orderTypeProblems(
 	settings: OrderTypeSettings,
@@ -96,13 +96,8 @@ export function orderTypeProblems(
 ): OrderTypeProblem[] {
 	const problems: OrderTypeProblem[] = [];
 	const after: OrderTypeSettings = { ...settings, [type]: next };
-	if (next.hidden) {
-		const by = required.get(type);
-		if (by?.length) problems.push({ field: "hidden", reason: "required", by });
-		else if (orderTypes.every((other) => after[other]?.hidden)) {
-			problems.push({ field: "hidden", reason: "last" });
-		}
-	}
+	const by = next.hidden ? required.get(type) : undefined;
+	if (by?.length) problems.push({ field: "hidden", reason: "required", by });
 	for (const locale of locales) {
 		const name = typeName(after, type, locale);
 		const other = orderTypes.find(

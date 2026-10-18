@@ -102,7 +102,6 @@ function refusal(problem: OrderTypeProblem, issue: TypeIssue) {
 	if (problem.reason === "required") {
 		return issue.hidden(m.orders_type_hide_required({ needs: problem.by.join(", ") }));
 	}
-	if (problem.reason === "last") return issue.hidden(m.orders_type_hide_last());
 	return issue.names[problem.locale](m.orders_type_name_taken({ name: problem.name }));
 }
 

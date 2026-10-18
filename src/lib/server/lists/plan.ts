@@ -255,11 +255,22 @@ export function between(expression: SQLWrapper, ranges: readonly (NumberRange | 
 /**
  * A search's condition: each word of `text` is in one of `columns`, in any case (for letters
  * without accents: SQLite's `like`). `undefined` for an empty search.
+ *
+ * The columns are searched as one text, a value a line, so each word (up to ten) binds once,
+ * however many columns there are: a word per column would bind ten per column of the 100 a
+ * statement may. A word has no white space, so it's never found across two of the values.
  */
 export function searchMatch(columns: readonly SQLWrapper[], text: string) {
 	const words = text.trim().split(/\s+/).filter(Boolean).slice(0, 10);
 	if (!words.length || !columns.length) return undefined;
-	return and(...words.map((word) => or(...columns.map((column) => contains(column, word)))));
+	const searched =
+		columns.length === 1
+			? columns[0]
+			: sql`(${sql.join(
+					columns.map((column) => sql`coalesce(${column}, '')`),
+					sql` || char(10) || `,
+				)})`;
+	return and(...words.map((word) => contains(searched, word)));
 }
 
 /** A column of a list's SQL, whatever the list's types: what the planner reads. */
