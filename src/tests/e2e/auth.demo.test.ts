@@ -59,29 +59,32 @@ describe("with DEMO_SIGN_IN", () => {
 		const { page } = app;
 		await app.go("/login");
 		expect(await page.getByText("Log in as:").isVisible()).toBe(true);
-		for (const name of ["Admin", "Engineer", "Customer"]) {
-			expect(await page.getByRole("button", { name, exact: true }).isVisible(), name).toBe(true);
-		}
+		const demo = page.locator("form").filter({ hasText: "Log in as:" });
+		expect((await demo.getByRole("button").allInnerTexts()).map((name) => name.trim())).toEqual([
+			"Planner",
+			"Engineer",
+			"Customer",
+		]);
 		expect(await page.getByText("The SHLTR demo").isVisible()).toBe(true);
-		const admin = page.getByRole("button", { name: "Admin", exact: true });
-		action = (await page.locator("form").filter({ has: admin }).getAttribute("action"))!;
-		roleField = (await admin.getAttribute("name"))!;
+		const planner = page.getByRole("button", { name: "Planner", exact: true });
+		action = (await page.locator("form").filter({ has: planner }).getAttribute("action"))!;
+		roleField = (await planner.getAttribute("name"))!;
 		expect(action).toMatch(/^\?\/remote=/);
 		expect(roleField).toMatch(/^role\//);
-		expect(await admin.getAttribute("value")).toBe("admin");
+		expect(await planner.getAttribute("value")).toBe("planner");
 	});
 
-	test("Admin signs in as SHLTR's owner, on the office dashboard", async () => {
+	test("Planner signs in as SHLTR's planner, on the office dashboard", async () => {
 		const { page } = app;
-		const before = await sessions("owner@shltr.example");
-		await page.getByRole("button", { name: "Admin", exact: true }).click();
+		const before = await sessions("jan@shltr.example");
+		await page.getByRole("button", { name: "Planner", exact: true }).click();
 		await page.waitForURL((url) => url.pathname === "/");
 		await app.go("/");
 		expect(await page.locator('[data-slot="sidebar-footer"]').innerText()).toContain(
-			"Marloes Hendriks",
+			"Jan Weggemans",
 		);
 		expect(await page.locator('[data-sidebar="header"]').innerText()).toContain(shltr.name);
-		expect(await sessions("owner@shltr.example")).toEqual({
+		expect(await sessions("jan@shltr.example")).toEqual({
 			latest: shltr.id,
 			count: before.count + 1,
 		});
@@ -138,9 +141,12 @@ describe("with DEMO_SIGN_IN", () => {
 	test("anything but a demo role is refused, and signs no one in", async () => {
 		const before = await rows("select id from session");
 		for (const role of [
+			// No owner or admin any more, whatever it's called.
 			"owner",
-			"planner",
+			"admin",
 			"Admin",
+			"Planner",
+			"member",
 			"owner@shltr.example",
 			"admin@fieldworks.example",
 			"org-shltr",
@@ -158,7 +164,7 @@ describe("with DEMO_SIGN_IN", () => {
 			string,
 			string
 		>[]) {
-			const response = await post(baseURL, "admin", unbound);
+			const response = await post(baseURL, "planner", unbound);
 			expect(response.ok, JSON.stringify(unbound)).toBe(false);
 			expect(response.status, JSON.stringify(unbound)).not.toBe(303);
 			expect(signsIn(response), JSON.stringify(unbound)).toBe(false);
@@ -168,14 +174,14 @@ describe("with DEMO_SIGN_IN", () => {
 
 	test("an email posted with the role is ignored: the role's own account signs in", async () => {
 		const other = await sessions("admin@fieldworks.example");
-		const owner = await sessions("owner@shltr.example");
+		const planner = await sessions("jan@shltr.example");
 		const email = roleField.replace(/^role/, "email");
-		const response = await post(baseURL, "admin", { [email]: "admin@fieldworks.example" });
+		const response = await post(baseURL, "planner", { [email]: "admin@fieldworks.example" });
 		expect(response.status).toBe(303);
 		expect(await sessions("admin@fieldworks.example")).toEqual(other);
-		expect(await sessions("owner@shltr.example")).toEqual({
+		expect(await sessions("jan@shltr.example")).toEqual({
 			latest: shltr.id,
-			count: owner.count + 1,
+			count: planner.count + 1,
 		});
 	});
 
@@ -183,7 +189,7 @@ describe("with DEMO_SIGN_IN", () => {
 		const response = await fetch(new URL(`/login${action}`, baseURL), {
 			method: "POST",
 			headers: { origin: "https://evil.example", accept: "text/html" },
-			body: new URLSearchParams({ [roleField]: "admin" }),
+			body: new URLSearchParams({ [roleField]: "planner" }),
 			redirect: "manual",
 		});
 		expect(response.status).toBe(403);
@@ -216,13 +222,13 @@ describe("without DEMO_SIGN_IN", () => {
 
 	test("the demo form is a 404, whatever is posted", async () => {
 		const before = await rows("select id from session");
-		for (const role of ["admin", "engineer", "customer", "owner", "", undefined]) {
+		for (const role of ["planner", "engineer", "customer", "admin", "owner", "", undefined]) {
 			const response = await post(server.baseURL, role);
 			expect(response.status, String(role)).toBe(404);
 			expect(signsIn(response), String(role)).toBe(false);
 		}
 		// An unbound field is refused by SvelteKit before the handler, as on any server.
-		const unbound = await post(server.baseURL, "admin", { email: "owner@shltr.example" });
+		const unbound = await post(server.baseURL, "planner", { email: "owner@shltr.example" });
 		expect(unbound.ok).toBe(false);
 		expect(signsIn(unbound)).toBe(false);
 		expect(await rows("select id from session")).toEqual(before);

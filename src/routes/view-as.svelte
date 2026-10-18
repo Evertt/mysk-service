@@ -1,8 +1,8 @@
 <!--
 	@component
-	"View as" in the SHLTR demo (`viewAs` in `demo.remote.ts`): Admin, Engineer and Customer, the one
-	signed in marked, each signing in as that role's demo user in place of the current one and going
-	to its home. With `inMenu`, a group to put in another dropdown menu (the office's user menu);
+	"View as" in the SHLTR demo (`viewAs` in `demo.remote.ts`): Planner, Engineer and Customer, the
+	one signed in marked, each signing in as that role's demo user in place of the current one and
+	going to its home. With `inMenu`, a group to put in another dropdown menu (the office's user menu);
 	else an icon button with its own menu, for a portal's header. Render it only where `getViewAs()`
 	answers (with the demo's flag on, in its organization).
 

@@ -40,9 +40,10 @@ async function checkedAccount(role: unknown) {
 
 /**
  * Signs in as `account` through better-auth with the seed's demo password, so the session, its
- * cookie and its organization are as after signing in with the form; then goes to its home.
+ * cookie and its organization are as after signing in with the form. A 404 where it can't (its
+ * password isn't the demo's any more), which leaves the request's own session as it was.
  */
-async function signInAs(account: { email: string; home: string }): Promise<never> {
+async function signInAs(account: { email: string }) {
 	try {
 		// Sets the session cookie through the `sveltekitCookies` plugin.
 		await auth.api.signInEmail({
@@ -50,20 +51,21 @@ async function signInAs(account: { email: string; home: string }): Promise<never
 			headers: getRequestEvent().request.headers,
 		});
 	} catch (e) {
-		// Its password isn't the demo's any more.
 		if (isAPIError(e) && e.statusCode < 500) error(404, m.auth_demo_unavailable());
 		throw e;
 	}
-	redirect(303, account.home);
 }
 
 /**
- * Signs in as the demo user of the role posted (`admin`, `engineer` or `customer`). Unchecked: the
- * flag comes first, so without it whatever is posted is a 404, and the role is checked here.
+ * Signs in as the demo user of the role posted (`planner`, `engineer` or `customer`), then goes to
+ * its home. Unchecked: the flag comes first, so without it whatever is posted is a 404, and the
+ * role is checked here.
  */
 export const demoSignIn = forAnyone.form("unchecked", async (data: { role: string }) => {
 	if (!DEMO_SIGN_IN) error(404, m.common_error_not_found());
-	await signInAs(await checkedAccount(data.role));
+	const account = await checkedAccount(data.role);
+	await signInAs(account);
+	redirect(303, account.home);
 });
 
 /**
@@ -86,14 +88,19 @@ export const getViewAs = forAnyone.query(() => {
 });
 
 /**
- * Views the demo as the role posted: ends the current session (better-auth's sign-out deletes its
- * row and cookie) and signs in as the role's demo user, in one request, then goes to the role's
- * home. A 404 without the flag or outside the demo's organization, whatever is posted; the role is
- * checked, and the account, before the current session ends.
+ * Views the demo as the role posted: signs in as the role's demo user, then ends the session it was
+ * posted from, in one request, and goes to the role's home. A 404 without the flag or outside the
+ * demo's organization, whatever is posted; the role is checked, and the account. The old session
+ * ends only once the sign-in worked: where it can't (a demo password was changed), the clicker
+ * stays signed in as before.
  */
 export const viewAs = forAnyone.form("unchecked", async (data: { role: string }) => {
 	if (!inDemo()) error(404, m.common_error_not_found());
 	const account = await checkedAccount(data.role);
-	await auth.api.signOut({ headers: getRequestEvent().request.headers });
+	const { token } = getRequestEvent().locals.session!;
 	await signInAs(account);
+	// Its row only, as better-auth's sign-out deletes it: the cookie is the new session's now, which
+	// `signOut` (or `revokeSession`, refreshing the old one's) would overwrite.
+	await (await auth.$context).internalAdapter.deleteSession(token);
+	redirect(303, account.home);
 });

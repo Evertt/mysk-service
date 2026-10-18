@@ -4,22 +4,33 @@
  * to each other role, ending the old session; only for SHLTR's sessions, only with
  * `DEMO_SIGN_IN` (the lanes' servers have it, one of this file's own hasn't).
  */
+import { hashPassword } from "better-auth/crypto";
 import type { BrowserContext, Locator } from "playwright";
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoOrganizations } from "#lib/server/db/demo.ts";
 
-import { baseURL, hydrated, newContext, onPhone, quiet, rows, useApp, users } from "./app.ts";
+import {
+	baseURL,
+	fixture,
+	hydrated,
+	newContext,
+	onPhone,
+	quiet,
+	rows,
+	useApp,
+	users,
+} from "./app.ts";
 import { startServer } from "./global-setup.ts";
 import { lane } from "./lane.ts";
 
-const app = useApp({ user: users.shltrOwner });
+const app = useApp({ user: users.shltrPlanner });
 
 const shltr = demoOrganizations.shltr;
 
 /** Each role's home and demo user, as the switch's items name them. */
 const roles = {
-	Admin: { path: "/", email: users.shltrOwner, name: "Marloes Hendriks" },
+	Planner: { path: "/", email: users.shltrPlanner, name: "Jan Weggemans" },
 	Engineer: { path: "/my", email: users.shltrEngineer, name: "Lev Hoekstra" },
 	Customer: { path: "/portal", email: users.riedel, name: "Marieke Verhoeven" },
 };
@@ -72,7 +83,7 @@ async function items(menu: Locator) {
 /** Who the page shows signed in: the sidebar's footer in the office, the header in a portal. */
 async function shownUser(role: Role) {
 	const { page } = app;
-	return role === "Admin"
+	return role === "Planner"
 		? page.locator('[data-slot="sidebar-footer"]').innerText()
 		: page.locator("header").first().innerText();
 }
@@ -86,7 +97,10 @@ async function switchTo(side: Side, from: Role, to: Role, menu?: Locator) {
 	const before = await session();
 	expect(before.row?.email).toBe(roles[from].email);
 	menu ??= await openMenu(side);
-	expect(await items(menu)).toEqual({ names: ["Admin", "Engineer", "Customer"], checked: [from] });
+	expect(await items(menu)).toEqual({
+		names: ["Planner", "Engineer", "Customer"],
+		checked: [from],
+	});
 	await Promise.all([
 		page.waitForURL((url) => url.pathname === roles[to].path),
 		menu.getByRole("menuitemradio", { name: to }).click(),
@@ -95,7 +109,7 @@ async function switchTo(side: Side, from: Role, to: Role, menu?: Locator) {
 	await quiet(page);
 
 	// The office's sidebar (where it shows who's signed in) is a closed sheet on a phone.
-	if (to !== "Admin" || page.viewportSize()!.width >= 1024) {
+	if (to !== "Planner" || page.viewportSize()!.width >= 1024) {
 		expect(await shownUser(to)).toContain(roles[to].name);
 	}
 	const after = await session();
@@ -148,12 +162,12 @@ const signsIn = (response: Response) =>
 		.some((cookie) => /session_token=[^;]/.test(cookie) && !/max-age=0/i.test(cookie));
 
 describe("with DEMO_SIGN_IN, in SHLTR", () => {
-	test("the office's user menu has View as above Sign out, Admin checked", async () => {
+	test("the office's user menu has View as above Sign out, Planner checked", async () => {
 		const { page } = app;
 		const menu = await openMenu("office");
 		expect(await items(menu)).toEqual({
-			names: ["Admin", "Engineer", "Customer"],
-			checked: ["Admin"],
+			names: ["Planner", "Engineer", "Customer"],
+			checked: ["Planner"],
 		});
 		const texts = await menu.innerText();
 		expect(texts.indexOf("View as")).toBeGreaterThan(-1);
@@ -170,7 +184,7 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 	});
 
 	test("from the office to the engineer portal, as Lev", async () => {
-		await switchTo("office", "Admin", "Engineer");
+		await switchTo("office", "Planner", "Engineer");
 		expect(await app.page.locator("header").first().innerText()).toContain(shltr.name);
 	});
 
@@ -192,8 +206,8 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		expect(await page.locator("header").first().innerText()).toContain("Riedel B.V.");
 	});
 
-	test("from the customer portal to the office, as Marloes", async () => {
-		await switchTo("portal", "Customer", "Admin");
+	test("from the customer portal to the office, as Jan", async () => {
+		await switchTo("portal", "Customer", "Planner");
 	});
 
 	// The office's switch to the customer portal, and the customer portal's to the engineer portal,
@@ -201,21 +215,21 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 	// `demo-accounts.spec.ts`'s).
 	test("from the engineer portal on a phone to the office", async () => {
 		const { page } = app;
-		await switchTo("office", "Admin", "Engineer");
+		await switchTo("office", "Planner", "Engineer");
 		await onPhone(page, async () => {
 			expect(
 				await page.locator("[data-phone-overlays]").evaluate((e) => getComputedStyle(e).display),
 			).toBe("contents");
-			await switchTo("portal", "Engineer", "Admin");
+			await switchTo("portal", "Engineer", "Planner");
 		});
-		expect(await shownUser("Admin")).toContain(roles.Admin.name);
+		expect(await shownUser("Planner")).toContain(roles.Planner.name);
 	});
 
 	test("its current role only closes the menu", async () => {
 		const { page } = app;
 		const before = await session();
 		const menu = await openMenu("office");
-		await menu.getByRole("menuitemradio", { name: "Admin" }).click();
+		await menu.getByRole("menuitemradio", { name: "Planner" }).click();
 		await menu.waitFor({ state: "detached" });
 		await quiet(page);
 		expect(app.path()).toBe("/");
@@ -227,9 +241,12 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		const own = await session();
 		const before = await rows("select id from session order by id");
 		for (const role of [
+			// No owner or admin any more, whatever it's called.
 			"owner",
-			"planner",
+			"admin",
 			"Admin",
+			"Planner",
+			"member",
 			"owner@shltr.example",
 			"admin@fieldworks.example",
 			"org-shltr",
@@ -260,9 +277,41 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		expect((await session()).row).toEqual(own.row);
 	});
 
+	test("to an account whose password changed, a 404 that leaves the session as it was", async () => {
+		const cookie = await cookieHeader();
+		const own = await session();
+		const before = await rows("select id from session order by id");
+		const credential = `user_id = (select id from user where email = ?) and provider_id = 'credential'`;
+		const [{ password }] = await rows<{ password: string }>(
+			`select password from account where ${credential}`,
+			[users.shltrEngineer],
+		);
+		await fixture(`update account set password = ? where ${credential}`, [
+			await hashPassword("not-the-demo-password"),
+			users.shltrEngineer,
+		]);
+		try {
+			const response = await post(baseURL, cookie, "engineer");
+			expect(response.status).toBe(404);
+			// Neither a new session's cookie nor the old one's cleared.
+			expect(response.headers.getSetCookie().filter((c) => c.includes("session_token="))).toEqual(
+				[],
+			);
+		} finally {
+			await fixture(`update account set password = ? where ${credential}`, [
+				password,
+				users.shltrEngineer,
+			]);
+		}
+		expect(await rows("select id from session order by id")).toEqual(before);
+		expect(await session()).toEqual(own);
+		await app.go("/");
+		expect(await shownUser("Planner")).toContain(roles.Planner.name);
+	});
+
 	test("signed out, the switch is a 404", async () => {
 		const before = await rows("select id from session order by id");
-		for (const role of ["admin", "engineer", "customer"]) {
+		for (const role of ["planner", "engineer", "customer"]) {
 			const response = await post(baseURL, null, role);
 			expect(response.status, role).toBe(404);
 			expect(signsIn(response), role).toBe(false);
@@ -278,13 +327,13 @@ describe("other tenants' users", () => {
 		await app.signIn(users.admin);
 		const menu = await openMenu("office");
 		expect(await menu.getByRole("menuitem", { name: "Sign out" }).isVisible()).toBe(true);
-		expect(await menu.getByRole("menuitemradio").allInnerTexts()).not.toContain("Admin");
+		expect(await menu.getByRole("menuitemradio").allInnerTexts()).not.toContain("Planner");
 		expect(await menu.innerText()).not.toContain("View as");
 		await page.keyboard.press("Escape");
 
 		const own = await session();
 		const before = await rows("select id from session order by id");
-		for (const role of ["admin", "engineer", "customer"]) {
+		for (const role of ["planner", "engineer", "customer"]) {
 			const response = await post(baseURL, await cookieHeader(), role);
 			expect(response.status, role).toBe(404);
 			expect(signsIn(response), role).toBe(false);
@@ -314,9 +363,19 @@ describe("other tenants' users", () => {
 		await app.signIn(users.weggemans);
 		expect(app.path()).toBe("/portal");
 		const menu = await openMenu("portal");
-		expect(await items(menu)).toEqual({ names: ["Admin", "Engineer", "Customer"], checked: [] });
+		expect(await items(menu)).toEqual({ names: ["Planner", "Engineer", "Customer"], checked: [] });
 		await page.keyboard.press("Escape");
 		await signOut("portal");
+	});
+
+	test("SHLTR's owner too, who is no role of the demo's", async () => {
+		const { page } = app;
+		await app.signIn(users.shltrOwner);
+		const menu = await openMenu("office");
+		expect(await items(menu)).toEqual({ names: ["Planner", "Engineer", "Customer"], checked: [] });
+		await page.keyboard.press("Escape");
+		await menu.waitFor({ state: "detached" });
+		await signOut("office");
 	});
 });
 
@@ -382,7 +441,7 @@ describe("without DEMO_SIGN_IN", () => {
 		const own = await session(context);
 		expect(own.row).toEqual({ email: users.shltrOwner, organization: shltr.id });
 		const before = await rows("select id from session order by id");
-		for (const role of ["admin", "engineer", "customer", "owner", "", undefined]) {
+		for (const role of ["planner", "engineer", "customer", "admin", "owner", "", undefined]) {
 			const response = await post(server.baseURL, await cookieHeader(context), role);
 			expect(response.status, String(role)).toBe(404);
 			expect(signsIn(response), String(role)).toBe(false);
