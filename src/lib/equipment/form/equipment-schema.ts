@@ -3,12 +3,14 @@ import * as v from "valibot";
 import { equipmentStatuses } from "#lib/models.ts";
 import { date, id, text } from "#lib/schema.ts";
 
-/** An optional, trimmed text; `null` if it's left empty. */
-const optionalText = () =>
+import { locationNameMax } from "../locations/location-schema.ts";
+
+/** An optional, trimmed text of at most `max` characters; `null` if it's left empty. */
+const optionalText = (max = 120) =>
 	v.pipe(
 		v.string(),
 		v.trim(),
-		v.maxLength(120, (issue) => m.equipment_text_max({ max: issue.requirement })),
+		v.maxLength(max, (issue) => m.equipment_text_max({ max: issue.requirement })),
 		v.transform((value) => value || null),
 	);
 
@@ -48,8 +50,11 @@ export const equipmentFields = {
 		],
 		m.validation_choose_one,
 	),
-	/** The name of the location to add (with `locationId` `new`; the form has it only then). */
-	newLocationName: v.optional(optionalText(), ""),
+	/**
+	 * The name of the location to add (with `locationId` `new`; the form has it only then), as long
+	 * as the location form takes it.
+	 */
+	newLocationName: v.optional(optionalText(locationNameMax), ""),
 	installedAt: date(m.equipment_installed_required),
 	warrantyUntil: date(m.equipment_warranty_required),
 };

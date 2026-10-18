@@ -57,7 +57,10 @@ async function findCategory(tx: Transaction | typeof db, id: number) {
 	return found;
 }
 
-/** Refuses `name` if another of the tenant's categories (than `except`) has it, in any case. */
+/**
+ * Refuses `name` if another of the tenant's categories (than `except`) has it, in any case.
+ * Compared with SQLite's `lower()`, as the unique index compares them: it lowers ASCII letters only.
+ */
 async function refuseTakenName(tx: Transaction, name: string, issue: NameIssue, except?: number) {
 	const [taken] = await tx
 		.select({ name: equipmentCategory.name })
@@ -65,7 +68,7 @@ async function refuseTakenName(tx: Transaction, name: string, issue: NameIssue, 
 		.where(
 			and(
 				inTenant(equipmentCategory),
-				eq(sql`lower(${equipmentCategory.name})`, name.toLowerCase()),
+				eq(sql`lower(${equipmentCategory.name})`, sql`lower(${name})`),
 				except === undefined ? undefined : ne(equipmentCategory.id, except),
 			),
 		);

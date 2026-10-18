@@ -11,11 +11,14 @@ const optionalText = (max: number) =>
 		v.transform((value) => value || null),
 	);
 
+/** The longest a location's name may be, here and where the equipment form adds a location. */
+export const locationNameMax = 80;
+
 /** The fields of the location form, shared by adding and editing a location. */
 const locationFields = {
 	name: v.pipe(
 		text(m.equipment_location_name_required),
-		v.maxLength(80, (issue) => m.equipment_text_max({ max: issue.requirement })),
+		v.maxLength(locationNameMax, (issue) => m.equipment_text_max({ max: issue.requirement })),
 	),
 	/** What helps to find it, if anything. */
 	description: optionalText(200),

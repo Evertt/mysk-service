@@ -165,6 +165,17 @@ describe("createCategory", () => {
 		await createCategory(input({ name: "Ketel" }), nameIssue);
 		expect((await categoriesOf("north")).map((c) => c.name)).toContain("Ketel");
 	});
+
+	test("takes a name with a letter beyond ASCII as the unique index takes it", async () => {
+		// SQLite's `lower()`, which the index uses, leaves "É" as it is: the check must too.
+		await createCategory(input({ name: "Één" }), nameIssue);
+		expect(await failure(() => createCategory(input({ name: "ÉéN" }), nameIssue))).toEqual([
+			"There's a category Één already",
+		]);
+		expect(await failure(() => updateCategory(11, input({ name: "ÉéN" }), nameIssue))).toEqual([
+			"There's a category Één already",
+		]);
+	});
 });
 
 describe("updateCategory", () => {
