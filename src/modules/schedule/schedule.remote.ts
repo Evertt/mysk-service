@@ -97,11 +97,22 @@ const scheduledIn = (days: { from: string; to: string }) =>
 		)
 		.orderBy(asc(order.scheduledFor));
 
+/** The records the board shows: a change to any of them outdates it. */
+const boardSubjects = ["order", "engineer", "customer"] as const;
+
+/**
+ * When the board's records last changed (see `watchSchedule`), read before them: a board or month
+ * whose live query opens on a later change than its data's asks for it again.
+ */
+const readAt = () => changedAt(currentTenant().organizationId, boardSubjects);
+
 /**
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
- * scheduled in it (except cancelled ones), and the backlog of open orders without a date.
+ * scheduled in it (except cancelled ones), and the backlog of open orders without a date, and when
+ * the board's records had last changed as it was read (`changedAt`).
  */
 export const getSchedule = query(date(m.schedule_week_required), async (day) => {
+	const changed = readAt();
 	const start = mondayOf(day);
 	const week = { from: start.toString(), to: start.add({ days: 6 }).toString() };
 
@@ -117,7 +128,13 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 			)
 			.then(forBoard),
 	]);
-	return { start, engineers: team, orders, backlog: backlog.sort(byPriorityThenAge) };
+	return {
+		start,
+		engineers: team,
+		orders,
+		backlog: backlog.sort(byPriorityThenAge),
+		changedAt: changed,
+	};
 });
 
 /**
@@ -126,13 +143,11 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
  * tenant's engineers. The server sets the range, so no request loads more than six weeks.
  */
 export const getScheduleMonth = query(date(m.schedule_date_required), async (day) => {
+	const changed = readAt();
 	const range = monthRange(day);
 	const [team, orders] = await Promise.all([engineers(), scheduledIn(range).then(withFirstUnit)]);
-	return { month: day.with({ day: 1 }), engineers: team, orders };
+	return { month: day.with({ day: 1 }), engineers: team, orders, changedAt: changed };
 });
-
-/** The records the board shows: a change to any of them outdates it. */
-const boardSubjects = ["order", "engineer", "customer"] as const;
 
 /**
  * When the board's records last changed (epoch ms, 0 if not since the server started), sent again

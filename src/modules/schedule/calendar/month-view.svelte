@@ -5,6 +5,8 @@
 	again when someone changes an order, an engineer or a customer (`watchSchedule`).
 -->
 <script lang="ts">
+	import { untrack } from "svelte";
+
 	import { getTimeZone } from "#lib/dates.ts";
 
 	import { getScheduleMonth, watchSchedule } from "../schedule.remote.ts";
@@ -19,12 +21,15 @@
 	const days = $derived(groupByDay(schedule.orders));
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
 
+	// Its first answer too, if it's later than the month's (`changedAt`): see the board's.
 	const changes = watchSchedule();
 	let seen: number | undefined;
 	$effect(() => {
 		const changed = changes.current;
 		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) {
+		const news =
+			seen === undefined ? changed > untrack(() => schedule.changedAt) : changed !== seen;
+		if (news) {
 			void getScheduleMonth(schedule.month.toString()).refresh();
 		}
 		seen = changed;

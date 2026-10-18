@@ -10,6 +10,7 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import { untrack } from "svelte";
 	import { MediaQuery } from "svelte/reactivity";
 
 	import { historyDialog } from "#lib/components/history-dialog.svelte.ts";
@@ -85,14 +86,18 @@
 	// again (`watchSchedule`). Not while a move of its own is on its way: that brings the week back
 	// itself, and a refresh that started before it could answer from before it, putting the order
 	// back where it came from. So it waits for the moves (`settled`), and asks again if one started
-	// while it asked.
+	// while it asked. The live query's first answer is a change too if it's later than the week's
+	// (`changedAt`): one made after the board asked for the week (the service worker may answer it
+	// from its cache) and before the live query opened.
 	const changes = watchSchedule();
 	let seen: number | undefined;
 	let outdated = false;
 	$effect(() => {
 		const changed = changes.current;
 		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) {
+		const news =
+			seen === undefined ? changed > untrack(() => schedule.changedAt) : changed !== seen;
+		if (news) {
 			outdated = true;
 			if (!drag.busy) void refresh();
 		}
