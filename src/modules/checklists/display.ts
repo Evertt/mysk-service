@@ -37,8 +37,16 @@ export function outcome(checklist: {
 
 /**
  * Who completed a checklist, as the pages name them: the engineer, or the office member who filled
- * it in on their behalf, e.g. "Anna de Vries (office)"; none when it isn't known.
+ * it in on their behalf, e.g. "Anna de Vries (office)", or "the office" where it doesn't say who
+ * (`office: true`, as customers read it); none when it isn't known.
  */
-export const completerName = (checklist: { engineer: string | null; office: string | null }) =>
+export const completerName = (checklist: {
+	engineer: string | null;
+	office: string | boolean | null;
+}) =>
 	checklist.engineer ??
-	(checklist.office ? m.checklists_by_office({ name: checklist.office }) : null);
+	(checklist.office === true
+		? m.checklists_the_office()
+		: checklist.office
+			? m.checklists_by_office({ name: checklist.office })
+			: null);

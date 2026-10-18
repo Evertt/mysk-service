@@ -74,6 +74,12 @@ const asScore = (score: SQL) =>
 		number | null
 	>;
 
+/**
+ * The latest score of the `component` row the query has, null without one: its condition's
+ * (`componentSql()`), and the score the work orders page shows with it (`componentsOfUnits()`).
+ */
+export const componentScoreSql = () => asScore(latestOfComponent(sql`${unitCondition.score}`));
+
 /** The SQL of a unit's condition and status (see above). */
 export function conditionSql() {
 	const signals = collectNow(unitSignals, undefined);
@@ -179,7 +185,7 @@ export type ConditionSql = ReturnType<typeof conditionSql>;
 export function componentSql(unit: ConditionSql = conditionSql()) {
 	const { planned, rankFor, bandOf } = unit.parts;
 	const latest = latestOfComponent;
-	const score = asScore(latest(sql`${unitCondition.score}`));
+	const score = componentScoreSql();
 	const advice = latest(sql`${unitCondition.advice}`) as SQL<string | null>;
 	const recordedAt = latest(sql`${unitCondition.recordedAt}`).mapWith(unitCondition.recordedAt);
 	const concern = concernAt(rankFor({ score, advice }, true));

@@ -24,7 +24,10 @@ export function inspectionSql(today = Temporal.Now.plainDateISO(getTimeZone())) 
 		eq(checklistResult.checklistId, checklist.id),
 		sql`${checklistResult.result} = 'nok'`,
 	)}) then 'rejected' when ${checklist.validUntil} <= ${literal(today.add({ days: EXPIRING_DAYS }).toString())} then 'expiring' else 'valid' end)`;
-	/** `what` of the unit's latest completed inspection, null without one. */
+	/**
+	 * `what` of the unit's latest completed inspection with its last valid day (as
+	 * `unitInspection()` takes it), null without one.
+	 */
 	const latest = (what: SQL) =>
 		sql`(select ${what} from ${checklist} where ${and(
 			eq(checklist.equipmentId, equipment.id),

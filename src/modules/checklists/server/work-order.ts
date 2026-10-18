@@ -115,4 +115,14 @@ export async function loadWorkOrder(where: SQL, sees: (siteId: number) => boolea
 	};
 }
 
-export type WorkOrder = NonNullable<Awaited<ReturnType<typeof loadWorkOrder>>>;
+type Loaded = NonNullable<Awaited<ReturnType<typeof loadWorkOrder>>>;
+
+/**
+ * A work order as the page prints it: the office's, or a customer's, whose checklists say of the
+ * office only that it completed them (`office: true`).
+ */
+export type WorkOrder = Omit<Loaded, "checklists"> & {
+	checklists: (Omit<Loaded["checklists"][number], "office"> & {
+		office: string | boolean | null;
+	})[];
+};

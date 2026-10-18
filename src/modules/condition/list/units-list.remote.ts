@@ -2,14 +2,12 @@
  * The Connect page's list and its counts: the KPI tiles, the customer chips and the filters' counts.
  * A row per component of a unit in care, and one per unit in care without components.
  */
-import { and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
-import { planList } from "#lib/server/lists/index.ts";
+import { customerFacet, planList } from "#lib/server/lists/index.ts";
 
 import { query } from "../remote-functions.ts";
 import { articlesById } from "../server/components.ts";
@@ -105,15 +103,8 @@ export const getConditionCounts = query(conditionList.where, async (where) => {
 		condition: listSql.row.band,
 		customer: customer.code,
 	});
-	const codes = Object.keys(facets.customer);
-	const names = codes.length
-		? await db
-				.select({ code: customer.code, name: customer.name })
-				.from(customer)
-				.where(and(inList(customer.code, codes), inTenant(customer)))
-		: [];
-	const customers = names
-		.map((each) => ({ ...each, count: facets.customer[each.code] ?? 0 }))
-		.toSorted((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+	const customers = (await customerFacet(facets.customer)).toSorted(
+		(a, b) => b.count - a.count || a.name.localeCompare(b.name),
+	);
 	return { status: facets.status, condition: facets.condition, customers };
 });

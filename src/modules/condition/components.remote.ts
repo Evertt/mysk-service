@@ -10,7 +10,6 @@ import * as v from "valibot";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
@@ -26,10 +25,11 @@ import {
 	addComponent,
 	articlesById,
 	changeComponent,
+	checkpointsOf,
 	moveComponent as moveOne,
 	removeComponent as removeOne,
 } from "./server/components.ts";
-import { component, componentCheckpoint } from "./server/schema.ts";
+import { component } from "./server/schema.ts";
 import { thresholdsOf } from "./server/settings.ts";
 import { componentSql, conditionSql } from "./server/status-sql.ts";
 
@@ -75,28 +75,12 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 		)
 		.where(and(eq(component.equipmentId, unit.id), inTenant(component)))
 		.orderBy(asc(component.position), asc(component.id));
-	const links = rows.length
-		? await db
-				.select({
-					componentId: componentCheckpoint.componentId,
-					templateItemId: componentCheckpoint.templateItemId,
-				})
-				.from(componentCheckpoint)
-				.where(
-					and(
-						inList(
-							componentCheckpoint.componentId,
-							rows.map((row) => row.id),
-						),
-						inTenant(componentCheckpoint),
-					),
-				)
-		: [];
+	const points = await checkpointsOf(rows.map((row) => row.id));
 	const { modules } = currentTenant();
 	const [offered, choices, thresholds] = await Promise.all([
 		collect(checkpoints, {
 			equipmentId: unit.id,
-			ids: [...new Set(links.map((link) => link.templateItemId))],
+			ids: [...new Set([...points.values()].flat())],
 		}),
 		collect(articles, { ids: null }),
 		thresholdsOf(),
@@ -111,7 +95,6 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 	]);
 	const hasChecklists = modules.includes("checklists");
 	const pointIds = new Set(offered.flat().map((point) => point.id));
-	const byComponent = Map.groupBy(links, (link) => link.componentId);
 	return {
 		unit: { id: unit.id, serialNumber: unit.serialNumber, title: unitTitle(unit) },
 		components: rows.map((row) => ({
@@ -119,9 +102,7 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 			article: row.materialId === null ? null : (linked.get(row.materialId) ?? null),
 			// Those of its points that are still a template's; all it has while checklists is off,
 			// which offers none (and saving leaves them as they are, `changeComponent()`).
-			checkpointIds: (byComponent.get(row.id) ?? [])
-				.map((link) => link.templateItemId)
-				.filter((id) => !hasChecklists || pointIds.has(id)),
+			checkpointIds: (points.get(row.id) ?? []).filter((id) => !hasChecklists || pointIds.has(id)),
 		})),
 		checkpoints: offered.flat(),
 		articles: articleList,
