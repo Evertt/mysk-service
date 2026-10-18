@@ -1,11 +1,17 @@
+/**
+ * The docks and tenants: SHLTR's manager makes a feed token on the settings page, which the feed
+ * takes until it's revoked; North, without the module, has none of its pages and cards. What the
+ * feed answers (a dock the tenant hasn't, a batch that isn't valid, a missing or revoked token),
+ * how a token is stored, and that a planner may not manage them, is `tests/unit/server/feed.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { organizations, rows, useApp } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
-import { dockOf, postEvents, salvoEvent, shltrOwner, shltrPlanner } from "./helpers.ts";
+import { postEvents, shltrOwner } from "./helpers.ts";
 
-const { north, shltr } = organizations;
+const { north } = organizations;
 // North's admin: North doesn't have the module.
 const app = useApp();
 
@@ -26,13 +32,6 @@ describe("SHLTR's integration tokens", () => {
 			await shown.waitFor();
 			const token = (await shown.textContent())!.trim();
 			expect(token).toMatch(/^fwi_[0-9a-f]{40}$/);
-			const [stored] = await rows<{ token_hash: string; prefix: string }>(
-				`select token_hash, prefix from integration_token where organization_id = ? and name = 'E2E feed'`,
-				[shltr.id],
-			);
-			expect(stored.token_hash).not.toContain(token.slice(4));
-			expect(token.startsWith(stored.prefix)).toBe(true);
-
 			expect((await postEvents([], token)).status).toBe(200);
 
 			const row = page.locator('[data-token="E2E feed"]');
@@ -43,45 +42,6 @@ describe("SHLTR's integration tokens", () => {
 		} finally {
 			await page.context().close();
 		}
-	});
-
-	test("a planner, who's no manager, can't manage them", async () => {
-		const { page } = await signedInPage(app, shltrPlanner);
-		try {
-			await page.goto(`${baseURL}/docks`);
-			await page.locator('[data-dock="DOCK 05"]').waitFor();
-			expect(await page.getByRole("link", { name: "Salvo feed" }).count()).toBe(0);
-			const response = await page.goto(`${baseURL}/docks/settings`);
-			expect(response?.status()).toBe(403);
-			expect(
-				await value<number>(
-					`select count(*) from integration_token where organization_id = ? and revoked_at is null`,
-					[shltr.id],
-				),
-			).toBeGreaterThan(0);
-		} finally {
-			await page.context().close();
-		}
-	});
-});
-
-describe("the feed", () => {
-	test("refuses a dock its token's tenant doesn't have, and applies nothing of the batch", async () => {
-		const before = await dockOf(shltr.id, "DOCK 06");
-		const result = await postEvents([
-			salvoEvent("unlock", "DOCK 06"),
-			salvoEvent("lock", "DOCK 99"),
-		]);
-		expect(result).toMatchObject({
-			status: 422,
-			body: { error: "unknown_docks", docks: ["DOCK 99"] },
-		});
-		expect(await dockOf(shltr.id, "DOCK 06")).toEqual(before);
-	});
-
-	test("refuses a batch that isn't valid", async () => {
-		const result = await postEvents([{ ...salvoEvent("lock", "DOCK 06"), extra: true }]);
-		expect(result).toMatchObject({ status: 422, body: { error: "invalid_batch" } });
 	});
 });
 

@@ -1,6 +1,13 @@
+/**
+ * The partner programme's pages in North: the partners list and the dashboard's card, a partner's
+ * figures on its customer page, accepting a customer, an order's classification in the order form,
+ * a year's rules and closing last year with a partner's choice of credit. What accepting, saving
+ * the rules and the managers' forms store, refuse (a planner) and log is
+ * `tests/unit/server/partners.spec.ts`'s; the figures, closing and the wallet `programme.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, users, value } from "#e2e/app.ts";
+import { organizations, rows, useApp } from "#e2e/app.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { formatEuros } from "#modules/partner-programme/display.ts";
 
@@ -8,12 +15,9 @@ import {
 	closedYears,
 	figuresFromDatabase,
 	lastYear,
-	logged,
 	nonPartnerOf,
 	partnersOf,
-	rulesOf,
 	thisYear,
-	today,
 	walletOf,
 } from "./helpers.ts";
 
@@ -72,14 +76,8 @@ describe("in North, which has the module", () => {
 		await app.go(`/customers/${customer.code}`);
 		await app.submit(card().getByRole("button", { name: "Accept as partner" }));
 		await app.toast(`${customer.name} is a partner now.`);
-		const [account] = await rows<{ accepted_on: string; accepted_by: string }>(
-			`select accepted_on, accepted_by from partner_account where customer_id = ?`,
-			[customer.id],
-		);
-		const admin = await value<string>(`select id from user where email = ?`, [users.admin]);
-		expect(account).toEqual({ accepted_on: today.toString(), accepted_by: admin });
 		await card().getByText(`Partner bonus ${thisYear}`).waitFor();
-		expect(await logged(north.id, "partner", "accepted")).toBe(1);
+		expect(await card().getByRole("button", { name: "Accept as partner" }).count()).toBe(0);
 	});
 
 	test("classifies an order's revenue in the order form", async () => {
@@ -105,68 +103,7 @@ describe("in North, which has the module", () => {
 		expect(await classified()).toEqual([
 			{ category: "regular_parts", eligibility: "partial", share: 40 },
 		]);
-		expect(await logged(north.id, "partner_classification")).toBe(1);
-		// Back to the defaults, it has none of its own: `programme.spec.ts`'s.
-	});
-
-	test("only a manager may change the rules, close a year or accept a partner", async () => {
-		const { page } = app;
-		/** A form on the page as a browser without JavaScript would submit it. */
-		const formOf = (form: ReturnType<typeof page.locator>) =>
-			form.evaluate((element: HTMLFormElement) => ({
-				action: element.action,
-				fields: [...new FormData(element)].map(([name, value]) => [name, value as string]),
-			}));
-		const post = (form: { action: string; fields: string[][] }) =>
-			app.expectingErrors(() =>
-				page.evaluate(async ({ action, fields }) => {
-					const body = new URLSearchParams(fields);
-					const response = await fetch(action, {
-						method: "POST",
-						body,
-						headers: { accept: "text/html" },
-					});
-					return response.status;
-				}, form),
-			);
-
-		await app.go(`/partner-programme/years/${lastYear}`);
-		const rules = await formOf(page.locator("[data-rules-form]"));
-		await app.go(`/partner-programme/years/${lastYear}/close`);
-		await page.getByRole("button", { name: `Close ${lastYear}` }).click();
-		const close = await formOf(dialog().locator("form"));
-		await dialog().getByRole("button", { name: "Cancel" }).click();
-		const customer = await nonPartnerOf(north.id);
-		await app.go(`/customers/${customer.code}`);
-		const accept = await formOf(card().locator("form"));
-		const before = await rulesOf(north.id, lastYear);
-
-		await page.context().clearCookies();
-		await app.signIn(users.planner);
-		// The rules to read, the partners' cards without a manager's buttons.
-		await app.go(`/partner-programme/years/${lastYear}`);
-		await page.getByText("Only owners and admins change the rules.").waitFor();
-		expect(await page.getByRole("button", { name: "Save rules" }).count()).toBe(0);
-		await app.go(`/partner-programme/years/${lastYear}/close`);
-		await page.locator("[data-close-preview]").waitFor();
-		expect(await page.getByRole("button", { name: `Close ${lastYear}` }).count()).toBe(0);
-		const [partner] = await partnersOf(north.id);
-		await app.go(`/customers/${partner.code}`);
-		await card().waitFor();
-		expect(await card().getByRole("button", { name: "Add to wallet" }).count()).toBe(0);
-		await app.go(`/customers/${customer.code}`);
-		await page.getByText(customer.name).first().waitFor();
-		expect(await card().count()).toBe(0);
-
-		expect(await post(rules)).toBe(403);
-		expect(await post(close)).toBe(403);
-		expect(await post(accept)).toBe(403);
-		expect(await rulesOf(north.id, lastYear)).toEqual(before);
-		expect(await closedYears(north.id, lastYear)).toEqual([]);
-		expect(await nonPartnerOf(north.id)).toEqual(customer);
-
-		await page.context().clearCookies();
-		await app.signIn(users.admin);
+		// What's logged, and that back to the defaults it has none of its own: `programme.spec.ts`'s.
 	});
 
 	test("edits a year's rules", async () => {
@@ -181,12 +118,15 @@ describe("in North, which has the module", () => {
 			.selectOption({ label: "By agreement" });
 		await app.submit(form.getByRole("button", { name: "Save rules" }));
 		await app.toast(`The rules of ${lastYear} are saved`);
-		const rules = await rulesOf(north.id, lastYear);
-		expect(rules.tiers[0]).toMatchObject({ threshold: 10_000, cashRate: 275 });
-		expect(rules.categories.find((rule) => rule.category === "tenders")?.cash).toBe("by_agreement");
-		expect(await logged(north.id, "partner_programme_year", "updated")).toBe(1);
-		// This year's are as they were.
-		expect((await rulesOf(north.id, thisYear)).tiers[0].threshold).toBe(100_000);
+		// Shown as saved: the form's euros and percentages, back from cents and basis points.
+		await app.go(`/partner-programme/years/${lastYear}`);
+		expect(
+			await page
+				.locator("[data-rules-form]")
+				.getByLabel("Cash bonus", { exact: true })
+				.first()
+				.inputValue(),
+		).toBe("2.75");
 	});
 
 	test("closes last year after a preview, and records a partner's choice of credit", async () => {
@@ -209,10 +149,6 @@ describe("in North, which has the module", () => {
 		expect(closed.map((row) => row.customer_id).toSorted((a, b) => a - b)).toEqual(
 			partners.map((partner) => partner.id).toSorted((a, b) => a - b),
 		);
-		const first = closed.find((row) => row.customer_id === partners[0].id)!;
-		expect(first.partner_revenue).toBe(expected.partnerRevenue);
-		expect(first.credit_amount).toBe(expected.bonus.credit);
-		expect(await logged(north.id, "partner_bonus_year", "finalised")).toBe(partners.length);
 
 		// The partner with the most credit chooses it: it goes into its wallet.
 		const best = closed.toSorted((a, b) => b.credit_amount - a.credit_amount)[0];

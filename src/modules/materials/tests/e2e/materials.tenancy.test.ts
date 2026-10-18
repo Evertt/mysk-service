@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { cents, countIn, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
+import { cents, organizations, rows, useApp, value } from "#e2e/app.ts";
 
 const { south } = organizations;
 const app = useApp();
@@ -80,88 +80,12 @@ describe("in South, with materials switched off", () => {
 		expect(await app.page.getByText("Low stock").count()).toBe(0);
 	});
 
-	test("an order costs its labour, on its page and in the list", async () => {
-		const order = await pricedOrder();
-		await app.go(`/orders/${order.number}`);
-		await priceCard().waitFor();
-		expect(await priceCard().locator('[data-slot="card-title"]').innerText()).toBe("Labour");
-		expect(await priceCard().getByText("Materials").count()).toBe(0);
-		expect(cents(await priceCard().locator("tfoot td").last().innerText())).toBe(order.labor);
-
-		await app.go("/orders");
-		await app.page.getByLabel("Search orders…").fill(order.number);
-		await app.tableSettled();
-		await expect.poll(() => app.rowCount()).toBe(1);
-		const row = app.page.locator('[data-slot="data-table"] tbody tr').first();
-		expect(cents(await row.locator("td:nth-last-child(2)").innerText())).toBe(order.labor);
-	});
-
-	test("the order form has no materials, and a tampered part of it stores none", async () => {
-		const { page } = app;
-		const movements = await countIn("stock_movement", south.id);
-		const materialId = await value<number>(
-			`select id from material where organization_id = ? order by id limit 1`,
-			[south.id],
-		);
+	// That a tampered form's materials are refused, and its order's labour priced alone, is
+	// `tests/unit/server/orders.spec.ts`'s.
+	test("the order form has no materials", async () => {
 		await app.go("/orders/new");
-		expect(await page.getByRole("button", { name: "Add material" }).count()).toBe(0);
-		await page.getByLabel("Customer").selectOption({ index: 1 });
-		await page.getByLabel("Type").selectOption("repair");
-		await page.getByLabel("Description").fill("Without materials (test order)");
-		await page.getByLabel("Status").selectOption("scheduled");
-		await page.getByLabel("Engineer").selectOption({ index: 1 });
-		await page.getByLabel("Labour (hours)").fill("2");
-		// What the materials' part would submit, were it there (named for this form, as its own
-		// fields are), posted the way a browser without JavaScript would: the form's schema knows the
-		// part, but South hasn't the module, so the form is refused with a message, and nothing is
-		// stored.
-		const description = "Without materials (test order)";
-		const { status, html } = await page.evaluate(async (id) => {
-			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
-			// A file field goes by the file's name, as a browser sends it in such a form.
-			const fields = [...new FormData(form)].map(([name, value]) => [
-				name,
-				typeof value === "string" ? value : value.name,
-			]);
-			const body = new URLSearchParams(fields);
-			// The suffix SvelteKit gives the form's field names: `/<the form's id>`.
-			const suffix = fields[0][0].slice(fields[0][0].indexOf("/"));
-			body.append(`modules.materials.lines[0].materialId${suffix}`, String(id));
-			body.append(`n:modules.materials.lines[0].quantity${suffix}`, "1");
-			const headers = { accept: "text/html" };
-			const response = await fetch(form.action, { method: "POST", body, headers });
-			return { status: response.status, html: await response.text() };
-		}, materialId);
-		expect(status).toBe(200);
-		expect(html).toContain(
-			"Materials is switched off for this organization: reload the page and try again.",
-		);
-		const created = () =>
-			rows<{ id: number; number: string }>(
-				`select id, number from "order" where organization_id = ? and description = ?`,
-				[south.id, description],
-			);
-		expect(await created()).toEqual([]);
-
-		// The form as it is makes the order, with no lines and no stock moved.
-		await page.getByRole("button", { name: "Create order" }).click();
-		await page.waitForURL(/\/orders\/ORD-/);
-		await quiet(page);
-		const [{ id, number }] = await created();
-		expect(await value(`select count(*) from order_line where order_id = ?`, [id])).toBe(0);
-		expect(await countIn("stock_movement", south.id)).toBe(movements);
-
-		// Cancelling and deleting it move no stock either.
-		await app.go(`/orders/${number}/edit`);
-		await page.getByLabel("Status").selectOption("cancelled");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.getByRole("button", { name: "Delete" }).click();
-		await page.waitForURL((url) => url.pathname === "/orders");
-		expect(await value(`select count(*) from "order" where id = ?`, [id])).toBe(0);
-		expect(await countIn("stock_movement", south.id)).toBe(movements);
+		await app.page.getByLabel("Customer").waitFor();
+		expect(await app.page.getByRole("button", { name: "Add material" }).count()).toBe(0);
 	});
 });
 

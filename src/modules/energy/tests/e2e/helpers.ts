@@ -38,26 +38,6 @@ export async function postBatch(
 	return { status: response.status, body: json };
 }
 
-/**
- * Calls the remote command at `url` (as a page of the app asked for it) from `page`, with the
- * argument in devalue's flat JSON (`["energy"]`, `[{ "module": 1, "running": 2 }, "energy", true]`),
- * as someone tampering with the app would; answers the command's outcome.
- */
-export async function callCommand(page: Page, url: string, flat: unknown[]) {
-	const payload = Buffer.from(JSON.stringify(flat)).toString("base64url");
-	return page.evaluate(
-		async ({ url, payload }) => {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ payload, refreshes: [] }),
-			});
-			return (await response.json()) as { type: string; error?: { status?: number } };
-		},
-		{ url, payload },
-	);
-}
-
 /** SHLTR's energy site (Riedel Ede) and its zones and doors by code. */
 export async function riedel() {
 	const siteId = Number(

@@ -3,13 +3,14 @@
  * Barneveld (where its Salvo docks are) from the customer's page, with a zone, a consumer and a
  * monitored door that's DOCK 05's door; another site's zone not edited through it, by a tampered
  * id; a batch from the gateway naming their codes; deleting refused once they hold measurements;
- * and the dock's live state on the door's card, which isn't there with the docks module off. The
- * rest of what the setup refuses (another tenant's site, units and zones of another site, deleting
- * a measured door or site) is `setup.spec.ts`'s.
+ * and the dock's live state on the door's card (that a unit that's no dock's door, or a tenant
+ * without docks, has none is the docks module's `customer-docks.spec.ts`'s). The rest of what the
+ * setup refuses (another tenant's site, units and zones of another site, deleting a measured door
+ * or site) is `setup.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, quiet, rows, useApp, value } from "#e2e/app.ts";
+import { organizations, rows, useApp, value } from "#e2e/app.ts";
 
 import {
 	lastQuarter,
@@ -274,43 +275,5 @@ describe("the dock on the door's card", () => {
 			(url) => url.pathname === "/docks" && url.searchParams.get("site") === String(dock.site_id),
 		);
 		await page.locator('[data-dock="DOCK 05"]').waitFor();
-	});
-
-	test("isn't on a door whose unit is no dock's door: Riedel's freezer door", async () => {
-		const { page } = app;
-		const riedel = Number(
-			await value(`select id from energy_site where organization_id = ? order by id limit 1`, [
-				shltr.id,
-			]),
-		);
-		await app.go(`/energy/${riedel}`);
-		// The freezer's door is linked to one of Riedel's units, which docks don't have.
-		await page.locator('[data-door="D-VR1"]').getByRole("link").waitFor();
-		await page.locator('[data-door="D-05"]').waitFor();
-		await quiet(page);
-		expect(await page.locator("[data-door-dock]").count()).toBe(0);
-	});
-
-	test("isn't there with the docks module off, and is back when it's on", async () => {
-		const { page } = app;
-		const docksCard = page.locator('[data-module="docks"]');
-		await app.go("/settings");
-		await app.submit(docksCard.getByRole("button", { name: "Disable" }));
-		await docksCard.getByText("Disabled").waitFor();
-		try {
-			await app.go(`/energy/${siteId}`);
-			await page
-				.locator('[data-door="D-21"]')
-				.getByRole("link", { name: "Sectionaaldeur D-21" })
-				.waitFor();
-			await quiet(page);
-			expect(await page.locator("[data-door-dock]").count()).toBe(0);
-		} finally {
-			await app.go("/settings");
-			await app.submit(docksCard.getByRole("button", { name: "Enable" }));
-			await docksCard.getByText(/Enabled since/).waitFor();
-		}
-		await app.go(`/energy/${siteId}`);
-		await page.locator('[data-door="D-21"] [data-door-dock="DOCK 05"]').waitFor();
 	});
 });

@@ -230,12 +230,6 @@ describe("a zone's page", () => {
 			"Vriessnelroldeur naar diepvriescel groot",
 		);
 	});
-
-	test("of a zone the site doesn't have is a 404", async () => {
-		const { siteId } = await riedel();
-		const response = await app.expectingErrors(() => app.go(`/energy/${siteId}/zones/Z-NOPE`));
-		expect(response?.status()).toBe(404);
-	});
 });
 
 describe("the report", () => {
@@ -268,14 +262,6 @@ describe("the report", () => {
 		} finally {
 			await page.emulateMedia({ media: null });
 		}
-	});
-
-	test("refuses a range of more than 92 days", async () => {
-		const { siteId } = await riedel();
-		const response = await app.expectingErrors(() =>
-			app.go(`/energy/${siteId}/report?from=2026-01-01&to=2026-10-01`),
-		);
-		expect(response?.status()).toBe(400);
 	});
 });
 

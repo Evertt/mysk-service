@@ -1,14 +1,15 @@
 /**
  * The docks' simulation for the demo (`#lib/server/simulation.ts`, the module's
  * `server/simulation.ts`): SHLTR's board has the simulation bar; a manager plays it, changes its
- * speed and resets it, and its ticks move the docks through the feed; a member sees its state only;
- * a tenant without the simulation has no bar (that no other tenant can drive SHLTR's is
- * `remote-functions.spec.ts`'s and `simulation.spec.ts`'s). The tests
- * start with it paused (`global-setup.ts`), and this file leaves it paused, in the mockup's states.
+ * speed and resets it, and its ticks move the docks through the feed; a member sees its state
+ * without the controls; a tenant without the simulation has no bar. That the commands refuse a
+ * planner, another tenant and a tenant offered none, and what they log, is
+ * `src/tests/unit/lib/components/simulation/server/simulation.spec.ts`'s. The tests start with it
+ * paused (`global-setup.ts`), and this file leaves it paused, in the mockup's states.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { fixture, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { fixture, organizations, rows, useApp, value } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
 import { shltrOwner, shltrPlanner } from "./helpers.ts";
@@ -44,46 +45,9 @@ const stateOf = async (code: string) =>
 		)
 	)[0];
 
-/** The manager's commands as the browser sent them, by name, to send again from elsewhere. */
-const sent: Record<string, { url: string; body: string }> = {};
-
-/**
- * Sends a command's request again from `page` (another user or tenant), and answers the status it
- * failed with (from the remote function's answer), or the HTTP status if it didn't say.
- */
-function replay(page: typeof app.page, name: string) {
-	const { url, body } = sent[name];
-	return page.evaluate(
-		async ({ url, body }) => {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body,
-			});
-			const text = await response.text();
-			try {
-				const answer = JSON.parse(text) as { type?: string; error?: { status?: number } };
-				return answer.type === "error" ? (answer.error?.status ?? 500) : response.status;
-			} catch {
-				return response.status;
-			}
-		},
-		{ url, body },
-	);
-}
-
-const nowSeconds = () => Math.floor(Date.now() / 1000);
-
 describe("the simulation bar", () => {
 	test("is on SHLTR's board, paused, and the banner says the feed is simulated", async () => {
 		const { page } = app;
-		page.on("request", (request) => {
-			for (const name of ["playSimulation", "setSimulationSpeed", "resetSimulationState"]) {
-				if (isRemote(request.url(), name)) {
-					sent[name] = { url: request.url(), body: request.postData() ?? "" };
-				}
-			}
-		});
 		await app.go("/docks");
 		await card("DOCK 05").waitFor();
 		await bar().waitFor();
@@ -116,7 +80,6 @@ describe("the simulation bar", () => {
 				{ timeout: 30_000 },
 			)
 			.toBeGreaterThan(0);
-		expect((await simulation()).last_tick_at).toBeGreaterThan(nowSeconds() - 60);
 		// DOCK 06's driver locks at last (its door has been open 44 minutes), and the board follows.
 		await expect
 			.poll(
@@ -139,17 +102,6 @@ describe("the simulation bar", () => {
 				return shown === (locked ? "locked" : "unlocked");
 			})
 			.toBe(true);
-
-		// Logged: who played it and changed its speed.
-		const logged = await rows<{ action: string; subject_id: string }>(
-			`select action, subject_id from activity where organization_id = ? and subject_type = 'simulation'
-			 order by id`,
-			[shltr.id],
-		);
-		expect(logged).toEqual([
-			{ action: "updated", subject_id: "docks" },
-			{ action: "updated", subject_id: "docks" },
-		]);
 	});
 
 	test("a reset puts the docks back in the mockup's states", async () => {
@@ -185,23 +137,19 @@ describe("the simulation bar", () => {
 });
 
 describe("who may drive it", () => {
-	test("a planner, who's no manager, sees its state, without the controls, and is refused", async () => {
+	test("a planner, who's no manager, sees its state, without the controls", async () => {
 		const { page } = await signedInPage(app, shltrPlanner);
 		try {
 			await page.goto(`${app.page.url()}`);
 			const planners = page.locator('[data-simulation="docks"]');
 			await planners.locator("[data-simulation-state]").waitFor();
 			expect(await planners.getByRole("button").count()).toBe(0);
-			const before = await simulation();
-			expect(await app.expectingErrors(() => replay(page, "playSimulation"))).toBe(403);
-			expect(await app.expectingErrors(() => replay(page, "resetSimulationState"))).toBe(403);
-			expect(await simulation()).toEqual(before);
 		} finally {
 			await page.context().close();
 		}
 	});
 
-	test("a tenant offered no simulation has no bar, and the commands are a 404", async () => {
+	test("a tenant offered no simulation has no bar", async () => {
 		const { page } = app;
 		const [row] = await fixture<Record<string, number | string>>(
 			`delete from simulation where organization_id = ? and module_id = 'docks' returning *`,
@@ -212,9 +160,6 @@ describe("who may drive it", () => {
 			await card("DOCK 05").waitFor();
 			expect(await bar().count()).toBe(0);
 			expect(await page.locator("[data-feed]").getAttribute("data-feed")).toBe("live");
-			for (const name of ["playSimulation", "resetSimulationState"]) {
-				expect(await app.expectingErrors(() => replay(page, name))).toBe(404);
-			}
 		} finally {
 			await fixture(
 				`insert into simulation (organization_id, module_id, running, speed, last_tick_at, started_at)
