@@ -534,3 +534,64 @@ describe("complete: the engineer completes the job under way, with the sign-off"
 		expect(after.completedAt).toEqual((await storedSignoff(id)).signedAt);
 	});
 });
+
+describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
+	const loaded = async (id: number) => {
+		const [found] = await db
+			.select({ id: order.id, number: order.number, status: order.status })
+			.from(order)
+			.where(eq(order.id, id));
+		return found;
+	};
+
+	test("issuing makes its completed orders invoiced, each logged with the note; no module asked", async () => {
+		const done = Temporal.Instant.from("2026-10-01T10:00:00Z");
+		const first = await orderIn("completed", { completedAt: done });
+		const second = await orderIn("completed", { completedAt: done });
+		const orders = [await loaded(first.id), await loaded(second.id)];
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "invoice", orders, note: "Invoiced by F-2026-0001" }),
+		);
+		expect(await stored(first.id)).toMatchObject({ status: "invoiced", completedAt: done });
+		expect(await stored(second.id)).toMatchObject({ status: "invoiced", completedAt: done });
+		expect(logged.mock.calls.map(([record]) => record)).toEqual([
+			expect.objectContaining({
+				action: "updated",
+				subject: { type: "order", id: first.id, label: first.number },
+				after: expect.objectContaining({ status: "invoiced" }),
+				note: "Invoiced by F-2026-0001",
+			}),
+			expect.objectContaining({ subject: { type: "order", id: second.id, label: second.number } }),
+		]);
+		// Completed and invoiced hold the same for every module (until the modules are asked, Q8).
+		expect(parts).not.toHaveBeenCalled();
+	});
+
+	test("voiding makes its orders that are still invoiced completed again, and leaves the rest", async () => {
+		const invoiced = await orderIn("invoiced", {
+			completedAt: Temporal.Instant.from("2026-10-01T10:00:00Z"),
+		});
+		const reopened = await orderIn("scheduled");
+		const orders = [await loaded(invoiced.id), await loaded(reopened.id)];
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "uninvoice", orders, note: "Voided F-2026-0001" }),
+		);
+		expect((await stored(invoiced.id)).status).toBe("completed");
+		expect((await stored(reopened.id)).status).toBe("scheduled");
+		expect(logged.mock.calls.map(([record]) => record.subject.id)).toEqual([invoiced.id]);
+	});
+
+	test("an order invoiced without a completion date gets one", async () => {
+		const { id } = await orderIn("completed");
+		const orders = [await loaded(id)];
+		await db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" }));
+		expect((await stored(id)).completedAt).not.toBeNull();
+	});
+
+	test("doesn't move another tenant's order, also when its id is passed", async () => {
+		const { id } = await orderIn("completed", { organizationId: "south" });
+		const orders = [await loaded(id)];
+		await db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" }));
+		expect((await stored(id)).status).toBe("completed");
+	});
+});

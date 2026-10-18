@@ -4,12 +4,18 @@
  * activity entry, always in the caller's transaction.
  */
 import { error, invalid } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { isDoneOrder, type ManualOrderStatus, type OrderStatus } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentEngineer, currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import {
+	currentEngineer,
+	currentTenant,
+	idInTenant,
+	idsInTenant,
+	inTenant,
+} from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
 
@@ -29,7 +35,18 @@ export type OrderTransition =
 			id: number;
 			/** The work order's sign-off: the customer's name and signature, and the engineer's. */
 			signoff: { signerName: string; signature: string; engineerSignature: string };
-	  };
+	  }
+	| InvoicingTransition;
+
+/** A move of one order (all but invoicing's). */
+type SingleTransition = Exclude<OrderTransition, InvoicingTransition>;
+
+/** Invoicing's move of an invoice's orders, as loaded (their status is what it was). */
+type InvoicingTransition = ({ verb: "invoice" } | { verb: "uninvoice" }) & {
+	orders: readonly { id: number; number: string; status: OrderStatus }[];
+	/** Why, stored with each order's entry (in the language of whoever makes the change). */
+	note: string;
+};
 
 /** Who does one of the tenant's orders (or nobody), on which day and at what time. */
 export interface OrderPlan {
@@ -43,8 +60,20 @@ export interface OrderPlan {
 /** Moves one of the current tenant's orders, in `tx`. Resolves to the order it moved. */
 export async function transitionOrder(
 	tx: Transaction,
+	transition: SingleTransition,
+): Promise<{ id: number; number: string }>;
+/** Moves the current tenant's orders of an invoice, in `tx`. */
+export async function transitionOrder(
+	tx: Transaction,
+	transition: InvoicingTransition,
+): Promise<void>;
+export async function transitionOrder(
+	tx: Transaction,
 	transition: OrderTransition,
-): Promise<{ id: number; number: string }> {
+): Promise<{ id: number; number: string } | void> {
+	if (transition.verb === "invoice" || transition.verb === "uninvoice") {
+		return moveInvoiced(tx, transition);
+	}
 	const rule: TransitionRule = orderTransitions[transition.verb];
 	const found = await tx.query.order.findFirst({ where: await scope(transition) });
 	if (!found) {
@@ -88,7 +117,7 @@ export async function transitionOrder(
  * The status `transition` moves an order with `from` to, and the other columns it sets with it;
  * refuses a plan's engineer that can't be assigned.
  */
-async function target(tx: Transaction, transition: OrderTransition, from: OrderStatus) {
+async function target(tx: Transaction, transition: SingleTransition, from: OrderStatus) {
 	switch (transition.verb) {
 		case "set":
 			return { status: transition.to, columns: {} };
@@ -115,6 +144,38 @@ async function target(tx: Transaction, transition: OrderTransition, from: OrderS
 			const unknown: never = transition;
 			throw new Error(`Unknown transition: ${JSON.stringify(unknown)}`);
 		}
+	}
+}
+
+/**
+ * Moves those of an invoice's orders that the verb moves from their status, with one entry each:
+ * they stay done, so they keep their completion date (and get one if they had none).
+ */
+async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
+	const rule: TransitionRule = orderTransitions[transition.verb];
+	const moving = transition.orders.filter((each) => can(transition.verb, each.status));
+	if (!moving.length) return;
+	const [status] = rule.to;
+	const where = idsInTenant(
+		order,
+		moving.map((each) => each.id),
+	);
+	await tx.update(order).set({ status }).where(where);
+	await tx
+		.update(order)
+		.set({ completedAt: Temporal.Now.instant() })
+		.where(and(where, isNull(order.completedAt)));
+	for (const moved of moving) {
+		if (rule.asksModules !== false) {
+			await saveOrderParts({ tx, order: moved, status }).catch(refuseRefused);
+		}
+		await recordActivity(tx, {
+			action: rule.action!,
+			subject: { type: "order", id: moved.id, label: moved.number },
+			before: moved,
+			after: { status },
+			note: transition.note,
+		});
 	}
 }
 
@@ -157,7 +218,7 @@ async function signOff(
 }
 
 /** The order `transition` moves, as its actor may see it: the tenant's; the engineer's own. */
-async function scope(transition: OrderTransition) {
+async function scope(transition: SingleTransition) {
 	const own = idInTenant(order, transition.id);
 	if (orderTransitions[transition.verb].by !== "engineer") return own;
 	return and(own, eq(order.engineerId, (await currentEngineer()).id));
