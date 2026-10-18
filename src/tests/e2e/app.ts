@@ -197,7 +197,11 @@ export interface App {
 	groupBy(column: string): Promise<void>;
 	/** The data table's group rows on the page, in order. */
 	groups(): Promise<TableGroup[]>;
-	/** Waits for a toast with these texts (e.g. its title and description), and closes it. */
+	/**
+	 * Waits for a toast with these texts (e.g. its title and description), and closes it. A toast
+	 * shows for 4 s, which waiting for the network to go quiet (`quiet()`, `expectingErrors()`) can
+	 * outlast under load: then wait for it alongside the step that brings it up (`Promise.all`).
+	 */
 	toast(...texts: string[]): Promise<void>;
 	/**
 	 * Opens another tab in the same session, e.g. to do two things at once or to change the

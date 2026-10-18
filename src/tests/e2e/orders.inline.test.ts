@@ -139,14 +139,16 @@ describe("changing an order's status in the list, in North", () => {
 			...arg,
 			id: invoiced.id,
 		}));
+		// The toast is waited for from the click on: it shows for 4 s, and the network going quiet
+		// (`expectingErrors()`) can take longer under load, after which a wait for it would never end.
 		const [response] = await app.expectingErrors(() =>
 			Promise.all([
 				page.waitForResponse((r) => isRemote(r.url(), "setOrderStatus")),
+				app.toast(`${invoiced.number} is invoiced`),
 				page.getByRole("option", { name: "Cancelled" }).click(),
 			]),
 		);
 		expect(await remoteErrorStatus(response)).toBe(400);
-		await app.toast(`${invoiced.number} is invoiced`);
 		await select(quote.number, "Quote").waitFor();
 		expect([await snapshot(quote.id), await snapshot(invoiced.id)]).toEqual(before);
 	});
