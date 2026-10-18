@@ -1,9 +1,13 @@
+/**
+ * The engineers list's status cell: choosing Inactive (and back, by keyboard) changes the engineer
+ * and logs it, and its badge filters. That `setEngineerActive` doesn't find another tenant's
+ * engineer is `engineers/server/engineers.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, isRemote, organizations, quiet, rows, useApp, value } from "./app.ts";
-import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";
+import { afresh, organizations, quiet, rows, useApp, value } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 /** An active engineer of an organization's (the last by name). */
@@ -16,8 +20,6 @@ const activeIn = async (organizationId: string) =>
 		)
 	)[0];
 const isActive = (id: number) => value<number>(`select active from engineer where id = ?`, [id]);
-/** The engineer as stored, to check that a refused request changed nothing. */
-const snapshot = (id: number) => rows(`select * from engineer where id = ?`, [id]);
 /** The activity logged for an engineer, newest first. */
 const activityOf = (id: number) =>
 	rows<{ action: string; changes: string | null }>(
@@ -64,27 +66,6 @@ describe("changing whether an engineer is active in the list, in North", () => {
 		await expect.poll(() => isActive(engineer.id)).toBe(1);
 		// Its answer, with the refreshed rows, is in.
 		await quiet(page);
-	});
-
-	test("South's engineer can't be changed by tampering with the id", async () => {
-		const { page } = app;
-		const theirs = await activeIn(south.id);
-		const before = [await snapshot(engineer.id), await snapshot(theirs.id)];
-		await select(engineer.name, "Active").click();
-		await tamperWithCommand<{ id: number }>(page, "setEngineerActive", (arg) => ({
-			...arg,
-			id: theirs.id,
-		}));
-		const [response] = await app.expectingErrors(() =>
-			Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "setEngineerActive")),
-				page.getByRole("option", { name: "Inactive" }).click(),
-			]),
-		);
-		expect(await remoteErrorStatus(response)).toBe(404);
-		await app.toast("Engineer not found");
-		await select(engineer.name, "Active").waitFor();
-		expect([await snapshot(engineer.id), await snapshot(theirs.id)]).toEqual(before);
 	});
 });
 

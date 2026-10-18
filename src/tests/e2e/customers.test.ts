@@ -1,23 +1,26 @@
+/**
+ * The customers' pages: the list, a customer's page and its delete dialog, the form (creating,
+ * editing, what's typed and not saved), deleting, South's list, North's customer a 404 and the
+ * edit form with a North customer's id refused, and the list in Dutch. What the customers' remote
+ * functions answer (the list's open orders, the revenue and latest orders as priced, the refusal to
+ * delete a customer with equipment or orders, consecutive codes, another tenant's codes and ids)
+ * is `customers/server/customers.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
-
-import { formatDate } from "#lib/i18n/format.ts";
 
 import {
 	afresh,
 	baseURL,
-	cents,
 	countIn,
 	fitsWidth,
 	hydrated,
 	nextCode,
 	organizations,
 	rows,
-	statTileNamed,
 	useApp,
 	value,
 	quiet,
 } from "./app.ts";
-import { priceOf, pricedOrders } from "./contracts-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -56,21 +59,6 @@ async function latestOrders(customerId: number) {
 	return found.map((row) => row.number);
 }
 
-/** The names of an organization's customers, sorted. */
-async function namesIn(organizationId: string) {
-	const found = await rows<{ name: string }>(
-		`select name from customer where organization_id = ?`,
-		[organizationId],
-	);
-	return found.map((row) => row.name).sort(byName);
-}
-
-/** The customer names in the list, scrolled to its end, sorted. */
-async function listedNames() {
-	await app.loadAllRows();
-	return (await bodyRows().locator("td:nth-child(2) a").allInnerTexts()).sort(byName);
-}
-
 /** A code that exists in North only (North has more customers than South). */
 const northOnly = () =>
 	value<string>(
@@ -79,13 +67,13 @@ const northOnly = () =>
 		[north.id, south.id],
 	);
 
-/** The customer created in North: it has no equipment or orders, so an unscoped delete would
- * remove it, which makes it the target of the tampering in South. */
+/** The customer created in North. */
 let code: string;
 let target: number;
 
 describe("in North", () => {
-	test("the list shows exactly North's customers, by name, more as it scrolls", async () => {
+	// That it's exactly North's customers, with their open orders, is `customers.spec.ts`'s.
+	test("the list shows North's customers, by name, more as it scrolls", async () => {
 		const { page } = app;
 		await app.go("/customers");
 		const total = await countIn("customer", north.id);
@@ -95,7 +83,7 @@ describe("in North", () => {
 		expect(await bodyRows().count()).toBe(50);
 		const first = await bodyRows().locator("td:nth-child(2) a").allInnerTexts();
 		expect(first).toEqual([...first].sort(byName));
-		expect(await listedNames()).toEqual(await namesIn(north.id));
+		await app.loadAllRows();
 		expect(await bodyRows().count()).toBe(total);
 		expect(await page.locator('[data-slot="data-table-more"]').innerText()).toBe("End of the list");
 
@@ -137,14 +125,14 @@ describe("in North", () => {
 
 	test("filtering by a range of open orders, from the Filter menu and from a link", async () => {
 		const { page } = app;
-		/** North's customers with open orders from `min` up to `max`. */
-		const withOpen = (min: number, max = 1e9) =>
+		/** North's customers with at least `min` open orders. */
+		const withOpen = (min: number) =>
 			value<number>(
 				`select count(*) from customer c where c.organization_id = ? and (
 					select count(*) from "order" o where o.customer_id = c.id
 					and o.status in ('quote', 'scheduled', 'in_progress')
-				) between ? and ?`,
-				[north.id, min, max],
+				) >= ?`,
+				[north.id, min],
 			);
 		await app.go(afresh("/customers"));
 		await app.openFilter("Open orders");
@@ -156,44 +144,8 @@ describe("in North", () => {
 		expect(expected).toBeGreaterThan(0);
 		await expect.poll(() => app.rowCount()).toBe(expected);
 		expect(await app.filterPill("Open orders").innerText()).toContain("At least 2");
-
-		// From a link, with both ends; one that isn't a range is ignored.
-		await app.go("/customers?open-orders=0..1");
-		await expect.poll(() => app.rowCount()).toBe(await withOpen(0, 1));
-		await app.go("/customers?open-orders=many");
-		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
+		// A link's ranges are the client-side table's (`ranges.spec.ts`, `url-state.spec.ts`).
 		await app.go("/customers");
-	});
-
-	test("sorting by open orders puts the busiest customer first", async () => {
-		// The list as it is by default: a visit without parameters would bring back the filter the
-		// test before left (see `table-memory.svelte.ts`).
-		await app.go(afresh("/customers"));
-		await app.sortBy("Open orders", "descending");
-		// Other files change North's orders at the same time, so the page is checked against itself
-		// (its open orders count down) and against the database's counts as the page was loaded:
-		// the top customer has as many open orders as any.
-		const headers = await app.page.locator("table").first().locator("thead th").allInnerTexts();
-		const column = headers.findIndex((header) => header.trim().startsWith("Open orders")) + 1;
-		const shown = (await bodyRows().locator(`td:nth-child(${column})`).allInnerTexts()).map(
-			(text) => Number(text.replace(/\D/g, "") || 0),
-		);
-		expect(shown.length).toBeGreaterThan(1);
-		expect(shown).toEqual(shown.toSorted((a, b) => b - a));
-		const top = await bodyRows().first().locator("td:nth-child(2) a").innerText();
-		const [most] = await rows<{ n: number }>(
-			`select count(*) as n from customer c join "order" o on o.customer_id = c.id
-			 where c.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
-			 group by c.id order by n desc limit 1`,
-			[north.id],
-		);
-		const [own] = await rows<{ n: number }>(
-			`select count(*) as n from customer c join "order" o on o.customer_id = c.id
-			 where c.organization_id = ? and c.name = ? and o.status in ('quote', 'scheduled', 'in_progress')`,
-			[north.id, top],
-		);
-		// Within the few orders another file may have opened or closed meanwhile.
-		expect(own.n).toBeGreaterThanOrEqual(most.n - 2);
 	});
 
 	test("the column menu can show 'Customer since' but not the search column", async () => {
@@ -233,26 +185,6 @@ describe("in North", () => {
 		).toBe(`/orders?customer=${code}`);
 		expect(await page.locator('a[href^="mailto:"]').count()).toBe(1);
 		expect(await page.locator('a[href^="tel:"]').count()).toBe(1);
-	});
-
-	test("deleting a customer with equipment and orders is refused", async () => {
-		const { page } = app;
-		const code = await busyCustomer();
-		const id = await customerId(code, north.id);
-		const units = await value<number>(`select count(*) from equipment where customer_id = ?`, [id]);
-		const orders = await value<number>(`select count(*) from "order" where customer_id = ?`, [id]);
-
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		const refusal = await dialog.locator('[data-slot="field-error"]').innerText();
-		expect(refusal).toContain(`${units} equipment unit`);
-		expect(refusal).toContain(`${orders} order`);
-		expect(app.path()).toBe(`/customers/${code}`);
-		expect(await customerId(code, north.id)).toBe(id);
-		await dialog.getByRole("button", { name: "Cancel" }).click();
-		await dialog.waitFor({ state: "hidden" });
-		expect(app.path()).toBe(`/customers/${code}`);
 	});
 
 	test("going back closes the delete dialog, and going forward opens it again", async () => {
@@ -296,82 +228,6 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.pathname === "/orders" && url.search === "");
 		await quiet(page);
 		await expect.poll(() => app.rowCount()).toBe(await countIn("order", north.id));
-	});
-
-	test("completing an order shows in the customer's recent activity", async () => {
-		const { page } = app;
-		const [open] = await rows<{ number: string; code: string }>(
-			`with recent as (
-				select o.*, row_number() over (
-					partition by o.customer_id order by o.created_at desc, o.id desc
-				) as position from "order" o where o.organization_id = ?
-			)
-			select r.number, c.code from recent r join customer c on c.id = r.customer_id
-			where r.position <= 10 and r.status in ('scheduled', 'in_progress') order by r.id limit 1`,
-			[north.id],
-		);
-		const row = () =>
-			page
-				.getByRole("list", { name: "Recent activity" })
-				.locator("li")
-				.filter({ has: page.getByRole("link", { name: open.number }) });
-		await app.go(`/customers/${open.code}`);
-		expect(await row().locator('[data-slot="badge"]').innerText()).not.toContain("Completed");
-
-		await app.go(`/orders/${open.number}/edit`);
-		await page.getByLabel("Status").selectOption("completed");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${open.number}`);
-		expect(
-			await value(`select status from "order" where number = ? and organization_id = ?`, [
-				open.number,
-				north.id,
-			]),
-		).toBe("completed");
-
-		await app.go(`/customers/${open.code}`);
-		const shown = await row().innerText();
-		expect(shown).toContain("Completed");
-		expect(shown).toContain(`Completed ${formatDate(new Date())}`);
-	});
-
-	test("revenue and recent activity cost what the orders' own pages say, less what contracts include", async () => {
-		const { page } = app;
-		// A customer with a contract-covered, done order among their ten latest.
-		const [covered] = await pricedOrders(
-			north.id,
-			`c.level = 'premium' and o.status in ('completed', 'invoiced')
-			 and o.labor_hours > 0 and o.id in (select r.id from "order" r
-			 where r.customer_id = o.customer_id order by r.created_at desc, r.id desc limit 10)`,
-		);
-		expect(covered).toBeDefined();
-		const orders = await pricedOrders(
-			north.id,
-			`o.customer_id = (select id from customer where code = ? and organization_id = ?)`,
-			[covered.customer, north.id],
-		);
-		const done = orders.filter((order) => ["completed", "invoiced"].includes(order.status));
-
-		await app.go(`/customers/${covered.customer}`);
-		const revenue = statTileNamed(page, "Lifetime revenue");
-		expect(cents(await revenue.locator("[data-stat-value]").innerText())).toBe(
-			done.reduce((sum, order) => sum + priceOf(order).total, 0),
-		);
-		expect(await revenue.innerText()).toContain(`From ${done.length} completed or invoiced`);
-
-		const listed = await activity();
-		expect(listed).toContain(covered.number);
-		for (const number of listed) {
-			const order = orders.find((candidate) => candidate.number === number)!;
-			const row = page
-				.getByRole("list", { name: "Recent activity" })
-				.locator(":scope > li")
-				.filter({ has: page.getByRole("link", { name: number }) });
-			expect(cents(await row.locator('[data-cost="total"]').innerText())).toBe(
-				priceOf(order).total,
-			);
-		}
-		expect(priceOf(covered).total).toBe(0);
 	});
 
 	test("the detail page fits a phone screen", async () => {
@@ -504,60 +360,9 @@ describe("in North", () => {
 		expect(await page.getByLabel("Name").inputValue()).toBe("");
 	});
 
-	test("customers created at the same moment get consecutive codes", async () => {
-		const { page } = app;
-		await app.go("/customers/new");
-		await page.getByLabel("Name").fill("Simultaneous BV");
-		await page.getByLabel("Segment").selectOption("small_business");
-		await page.getByLabel("Street address").fill("Dokterspad 1");
-		await page.getByLabel("Postal code").fill("8011 VZ");
-		await page.getByLabel("City").fill("Zwolle");
-		await page.getByLabel("Country").selectOption("Netherlands");
-		await page.getByLabel("Contact person").fill("Sam Jansen");
-		await page.getByLabel("Email").fill("sam@simultaneous.example");
-		await page.getByLabel("Phone").fill("+31 38 123 4567");
-		const first = await nextCode("customer", "code", north.id);
-
-		// Submitted all at once, the way a browser without JavaScript would, so they overlap.
-		const form = page.locator("form", {
-			has: page.getByRole("button", { name: "Create customer" }),
-		});
-		const outcomes = await form.evaluate(async (form: HTMLFormElement) => {
-			const fields = [...new FormData(form)] as [string, string][];
-			const submit = (i: number) =>
-				fetch(form.action, {
-					method: "POST",
-					headers: { accept: "text/html" },
-					redirect: "manual",
-					body: new URLSearchParams(
-						fields.map(([name, value]) => [
-							name,
-							name.startsWith("name") ? `${value} ${i}` : value,
-						]),
-					),
-				}).then((response) => (response.type === "opaqueredirect" ? "created" : response.status));
-			return Promise.all(Array.from({ length: 8 }, (_, i) => submit(i + 1)));
-		});
-		expect(outcomes).toEqual(Array(8).fill("created"));
-
-		const stored = await rows<{ code: string }>(
-			`select code from customer where organization_id = ? and name like 'Simultaneous BV %'
-			 order by code`,
-			[north.id],
-		);
-		const start = Number(first.slice(5));
-		expect(stored.map((row) => row.code)).toEqual(
-			Array.from({ length: 8 }, (_, i) => `CUST-${String(start + i).padStart(4, "0")}`),
-		);
-	});
-
 	test("deleting one removes it, after which it's a 404", async () => {
 		const { page } = app;
-		const made = await value<string>(
-			`select code from customer where organization_id = ? and name like 'Simultaneous BV %'
-			 order by code limit 1`,
-			[north.id],
-		);
+		const made = code;
 		await app.go(`/customers/${made}`);
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
@@ -577,63 +382,30 @@ describe("in South", () => {
 
 	test("North's customers are a 404, as is an unknown code", async () => {
 		const only = await northOnly();
-		for (const path of [`/customers/${only}`, `/customers/${only}/edit`, `/customers/${code}`]) {
+		for (const path of [`/customers/${only}`, `/customers/${only}/edit`]) {
 			expect((await app.go(path))?.status(), path).toBe(404);
 		}
 		expect((await app.go("/customers/CUST-9999"))?.status()).toBe(404);
 		expect(await app.page.locator("body").innerText()).toContain("CUST-9999");
 	});
 
-	test("the orders list doesn't show North's customers' orders by their code", async () => {
-		const only = await northOnly();
-		await app.go(`/orders?customer=${only}`);
-		expect(await app.rowCount()).toBe(0);
-	});
-
-	test("a code both have shows South's customer", async () => {
-		const [own] = await customer(await customerId("CUST-0001", south.id));
-		await app.go("/customers/CUST-0001");
-		expect(await app.page.locator("h1").innerText()).toBe(own.name);
-		expect(await activity()).toEqual(await latestOrders(own.id as number));
-		await app.go("/customers/CUST-0001/edit");
-		expect(await app.page.getByLabel("Name").inputValue()).toBe(own.name);
-	});
-
 	test("saving with the id of a North customer is refused", async () => {
 		const { page } = app;
 		const own = await customerId("CUST-0001", south.id);
-		const [targetBefore, ownBefore] = [await customer(target), await customer(own)];
+		const victim = await customerId(await northOnly(), north.id);
+		const [victimBefore, ownBefore] = [await customer(victim), await customer(own)];
 
+		await app.go("/customers/CUST-0001/edit");
 		const hidden = page.locator('form input[type="hidden"][name^="id/"]');
 		expect(await hidden.count()).toBe(1);
 		const result = await app.expectingErrors(async () => {
-			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
+			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), victim);
 			await page.getByLabel("City").fill("Tampered");
 			return app.submit(page.getByRole("button", { name: "Save customer" }));
 		});
 		expect(result).toMatch(/"status":404/);
 		expect(app.path()).toBe("/customers/CUST-0001/edit");
-		expect(await customer(target)).toEqual(targetBefore);
-		expect(await customer(own)).toEqual(ownBefore);
-	});
-
-	test("deleting with the id of a North customer is refused", async () => {
-		const { page } = app;
-		const own = await customerId("CUST-0001", south.id);
-		const [targetBefore, ownBefore] = [await customer(target), await customer(own)];
-
-		await app.go("/customers/CUST-0001");
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		const hidden = dialog.locator('input[type="hidden"][name^="id/"]');
-		await expect.poll(() => hidden.count()).toBe(1);
-		const result = await app.expectingErrors(async () => {
-			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
-			return app.submit(dialog.getByRole("button", { name: "Delete" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(app.path()).toBe("/customers/CUST-0001");
-		expect(await customer(target)).toEqual(targetBefore);
+		expect(await customer(victim)).toEqual(victimBefore);
 		expect(await customer(own)).toEqual(ownBefore);
 	});
 

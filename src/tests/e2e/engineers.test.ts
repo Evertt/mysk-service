@@ -1,3 +1,10 @@
+/**
+ * The engineers' pages: the list, an engineer's page, the form (adding, the Active box, a refused
+ * edit), linking an account, the bulk and row actions, South's list and the edit form with a North
+ * engineer's id refused. What the engineers' remote functions answer (the open orders, refusing to
+ * delete one with orders, unique email addresses per tenant, the accounts offered, another
+ * tenant's ids) is `engineers/server/engineers.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import {
@@ -29,14 +36,6 @@ const engineer = async (id: number) =>
 	(await rows<Engineer>(`select * from engineer where id = ?`, [id]))[0];
 /** An engineer as stored, to check that a refused request changed nothing. */
 const snapshot = (id: number) => rows(`select * from engineer where id = ?`, [id]);
-const namesIn = async (organizationId: string) =>
-	(
-		await rows<{ name: string }>(`select name from engineer where organization_id = ?`, [
-			organizationId,
-		])
-	)
-		.map((row) => row.name)
-		.toSorted((a, b) => a.localeCompare(b));
 const openStatuses = `('quote', 'scheduled', 'in_progress')`;
 /** The engineer of an organization with the most open orders. */
 const busiest = async (organizationId: string) =>
@@ -54,12 +53,6 @@ const takenEmail = "Another engineer already uses this email address";
 /** The names in the table, in order. */
 const names = () => app.page.locator("tbody td a").allInnerTexts();
 const active = () => app.page.getByRole("checkbox", { name: "Active" });
-
-/** Every name in the list, scrolled to its end, sorted. */
-async function allNames() {
-	await app.loadAllRows();
-	return (await names()).toSorted((a, b) => a.localeCompare(b));
-}
 
 /** Fills in the engineer form. */
 async function fill(fields: { name: string; email: string; region?: string }) {
@@ -82,15 +75,6 @@ async function save(button: string) {
 	return Number(app.path().split("/").pop());
 }
 
-/** Deletes the engineer whose page is open. */
-async function deleteOpen() {
-	const { page } = app;
-	await page.getByRole("button", { name: "Delete" }).click();
-	await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-	await page.waitForURL((url) => url.pathname === "/engineers");
-	await quiet(page);
-}
-
 /** The engineer created in North, who has no orders (so could be deleted). */
 let created: number;
 /** North's engineer with the most open orders. */
@@ -104,22 +88,6 @@ describe("in North", () => {
 		const shown = await names();
 		expect(shown).toHaveLength(Math.min(50, total));
 		expect(shown).toEqual(shown.toSorted((a, b) => a.localeCompare(b)));
-		expect(await allNames()).toEqual(await namesIn(north.id));
-	});
-
-	// The list is a client-side table: searching, filtering, sorting and grouping it are its
-	// columns' (`list/columns.spec.ts`) and every table's (`table.svelte.spec.ts`,
-	// `grouping.svelte.spec.ts`). The open orders are counted by the server.
-	test("sorting by open orders puts the busiest first", async () => {
-		busy = await busiest(north.id);
-		await app.sortBy("Open orders", "descending");
-		const [mostOpen] = await names();
-		const [{ open }] = await rows<{ open: number }>(
-			`select count(*) as open from "order" o join engineer e on e.id = o.engineer_id
-			 where e.organization_id = ? and e.name = ? and o.status in ${openStatuses}`,
-			[north.id, mostOpen],
-		);
-		expect(open).toBe(busy.open);
 	});
 
 	test("unknown ids and South's engineers are a 404", async () => {
@@ -133,6 +101,7 @@ describe("in North", () => {
 
 	test("an engineer's page shows their open orders and recent work", async () => {
 		const { page } = app;
+		busy = await busiest(north.id);
 		const { id, name } = busy;
 		const { email } = await engineer(id);
 		await app.go(`/engineers/${id}`);
@@ -161,23 +130,6 @@ describe("in North", () => {
 		);
 	});
 
-	test("an engineer with orders can't be deleted", async () => {
-		const { page } = app;
-		const before = await snapshot(busy.id);
-		const assigned = Number(
-			await value(`select count(*) from "order" where engineer_id = ?`, [busy.id]),
-		);
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		expect(await dialog.locator('[data-slot="field-error"]').innerText()).toContain(
-			`${busy.name} can't be deleted while ${assigned} orders are assigned to them`,
-		);
-		expect(app.path()).toBe(`/engineers/${busy.id}`);
-		expect(await snapshot(busy.id)).toEqual(before);
-		await dialog.getByRole("button", { name: "Cancel" }).click();
-	});
-
 	test("adding an engineer validates the form first", async () => {
 		const { page } = app;
 		const before = await countIn("engineer", north.id);
@@ -187,17 +139,9 @@ describe("in North", () => {
 		await app.submit(page.getByRole("button", { name: "Add engineer" }));
 		expect(await app.issues()).not.toEqual([]);
 
-		await fill({ name: "Test Engineer", email: "not-an-email" });
-		// Skip the browser's own email check to reach the server's.
-		await page
-			.locator("form")
-			.last()
-			.evaluate((form: HTMLFormElement) => (form.noValidate = true));
-		await app.submit(page.getByRole("button", { name: "Add engineer" }));
-		expect(await app.issues()).toEqual(["Enter a valid email address"]);
-
-		// Email addresses are unique per organization, ignoring case.
-		await page.getByLabel("Email").fill(existing.email.toUpperCase());
+		// Email addresses are unique per organization, ignoring case (and per tenant:
+		// `engineers.spec.ts`); the server's refusal shows on its field.
+		await fill({ name: "Test Engineer", email: existing.email.toUpperCase() });
 		await app.submit(page.getByRole("button", { name: "Add engineer" }));
 		expect(await app.issues()).toEqual([takenEmail]);
 		expect(app.path()).toBe("/engineers/new");
@@ -280,19 +224,7 @@ describe("in North", () => {
 		expect((await engineer(created)).user_id).toBe(await userId(users.planner));
 		await page.getByText(`Signs in as ${userNames.planner}`).waitFor();
 
-		// Eli's engineer can't take Pat's account too.
-		const eli = await value<number>(
-			`select id from engineer where user_id = ? and organization_id = ?`,
-			[await userId(users.engineer), north.id],
-		);
-		await app.go(`/engineers/${eli}/edit`);
-		expect(
-			(await account().locator("option").allInnerTexts()).some((o) =>
-				o.includes(userNames.planner),
-			),
-		).toBe(false);
-
-		await app.go(`/engineers/${created}/edit`);
+		// Which accounts another engineer is then offered is `engineers.spec.ts`'s.
 		await account().selectOption("");
 		await page.getByRole("button", { name: "Save account" }).click();
 		await app.toast("Account saved");
@@ -414,83 +346,5 @@ describe("in South", () => {
 		expect(app.path()).toBe(`/engineers/${own.id}/edit`);
 		expect(await snapshot(busy.id)).toEqual(victimBefore);
 		expect(await snapshot(own.id)).toEqual(ownBefore);
-	});
-
-	test("deleting with the id of a North engineer is refused", async () => {
-		const { page } = app;
-		// One without orders, who could be deleted in North.
-		const [victimBefore, ownBefore] = [await snapshot(created), await snapshot(own.id)];
-		expect(victimBefore).toHaveLength(1);
-
-		await app.go(`/engineers/${own.id}`);
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.waitFor();
-		const result = await app.expectingErrors(async () => {
-			await page.evaluate((id) => {
-				document.querySelector<HTMLInputElement>('[role="alertdialog"] input[name^="id"]')!.value =
-					String(id);
-			}, created);
-			return app.submit(dialog.getByRole("button", { name: "Delete" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(app.path()).toBe(`/engineers/${own.id}`);
-		expect(await snapshot(created)).toEqual(victimBefore);
-		expect(await snapshot(own.id)).toEqual(ownBefore);
-	});
-
-	test("linking an account with the id of a North engineer is refused", async () => {
-		const { page } = app;
-		const [victimBefore, ownBefore] = [await snapshot(busy.id), await snapshot(own.id)];
-		await app.go(`/engineers/${own.id}/edit`);
-		const save = page.getByRole("button", { name: "Save account" });
-		// Only South's members to choose from (not linked to another of its engineers): the admin,
-		// not North's engineer. Another file on this worker may have made North's planner one.
-		const southMembers = await rows<{ name: string }>(
-			`select user.name from member join user on user.id = member.user_id
-			 where member.organization_id = ? and user.id not in
-			   (select user_id from engineer where organization_id = ? and id <> ? and user_id is not null)
-			 order by user.name`,
-			[south.id, south.id, own.id],
-		);
-		expect(southMembers.map((member) => member.name)).toContain(userNames.admin);
-		const options = await page.getByLabel("User account").locator("option").allInnerTexts();
-		expect(options.filter((option) => option !== "No account")).toEqual(
-			southMembers.map((member) => expect.stringContaining(member.name)),
-		);
-		await page.getByLabel("User account").selectOption({ index: 1 });
-		const result = await app.expectingErrors(async () => {
-			await save.evaluate((button, id) => {
-				button.closest("form")!.querySelector<HTMLInputElement>('input[name^="id"]')!.value =
-					String(id);
-			}, busy.id);
-			return app.submit(save);
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(await snapshot(busy.id)).toEqual(victimBefore);
-		expect(await snapshot(own.id)).toEqual(ownBefore);
-	});
-
-	test("email addresses are unique within South only", async () => {
-		const { page } = app;
-		const northEmail = (await engineer(busy.id)).email;
-		await app.go("/engineers/new");
-		await fill({ name: "Test South Engineer", email: own.email });
-		await app.submit(page.getByRole("button", { name: "Add engineer" }));
-		expect(await app.issues()).toEqual([takenEmail]);
-
-		await page.getByLabel("Email").fill(northEmail);
-		const id = await save("Add engineer");
-		expect(await engineer(id)).toMatchObject({
-			organization_id: south.id,
-			name: "Test South Engineer",
-			email: northEmail,
-		});
-		await app.go("/engineers");
-		expect(await allNames()).toContain("Test South Engineer");
-
-		await app.go(`/engineers/${id}`);
-		await deleteOpen();
-		expect(await engineer(id)).toBeUndefined();
 	});
 });
