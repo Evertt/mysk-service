@@ -51,7 +51,10 @@ core and for each module.
   by aspect, e.g. `orders.bulk.test.ts`, `orders.tenancy.test.ts`; shared helpers go in
   `<section>-helpers.ts`), written like the existing ones: tests are sequential steps sharing
   one signed-in page from `useApp()`, changes go through the UI, checks read the database with
-  `rows()`/`value()`. Split a file by its independent `describe` blocks when it passes a few
+  `rows()`/`value()`. A toast is checked with `app.toast(text)`, which finds one the step showed
+  even after it went (the contexts record toasts, `src/tests/e2e/toasts.ts`): don't wait for a
+  toast on the screen after `quiet()` or `submit()`, it may be gone by then. Split a file by its
+  independent `describe` blocks when it passes a few
   hundred lines: the longest file sets the e2e wall-clock time. A module's e2e tests are in its
   own folder (`src/modules/<id>/tests/e2e/<section>.test.ts` and `<section>.<aspect>.test.ts`, with
   the helpers they share in `helpers.ts`, importing `#e2e/app.ts`) and cover a tenant that
