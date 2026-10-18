@@ -107,22 +107,26 @@ its first engineer, like Erik in Noord. The data is in `src/lib/server/db/seed/s
 These are local demo accounts; don't seed them into a real deployment.
 
 **One-click demo sign-in.** With `DEMO_SIGN_IN=true`, the login page shows "Log in as:" under its
-form, with three buttons that sign in to the SHLTR demo at once, without typing: **Admin** as
-Marloes (SHLTR's owner, to the office dashboard), **Engineer** as Lev (to the engineer portal) and
-**Customer** as Marieke (Riedel's contact, a partner with a wallet, to the customer portal). They
-sign in through better-auth with the demo password, like the form, so the session and its
-organization (SHLTR) are the same as after typing it. The browser sends only the role's name; the
-server maps it to its fixed account and refuses one that isn't there, isn't in SHLTR or hasn't the
-role (`src/routes/demo.remote.ts`, `demo-accounts.server.ts`). Once in, the user menus (the
-office's, and a button in each portal's header) have **View as** with the same three roles, the
-current one checked, to switch without signing out: it ends the session (its row deleted) and
-signs in as the role chosen, in one request, to that role's home. It's there only for sessions in
-SHLTR, so other tenants' users never see it, and the server refuses it (404) to anyone else.
-Without the flag the buttons and the switch aren't there and the server answers 404 to whatever is
-posted. The flag is set for staging only
-(`wrangler.jsonc`'s `env.staging.vars`) and in `.env.example` for local development: never set it
-in production (`wrangler.jsonc`'s top-level vars, or a Vercel project's environment variables),
-where it would let anyone in as these users if they existed.
+form, with three buttons that sign in to the SHLTR demo at once, without typing: **Planner** as
+Jan (SHLTR's planner, a member who manages nothing, to the office dashboard), **Engineer** as Lev
+(to the engineer portal) and **Customer** as Marieke (Riedel's contact, a partner with a wallet, to
+the customer portal). None is an owner or admin: anyone who opens staging can use them, and
+shouldn't be able to change SHLTR's members, invitations or settings (Marloes, its owner, signs in
+with her password). They sign in through better-auth with the demo password, like the form, so the
+session and its organization (SHLTR) are the same as after typing it. The browser sends only the
+role's name; the server maps it to its fixed account and refuses one that isn't there, isn't in
+SHLTR or hasn't the role (`src/routes/demo.remote.ts`, `demo-accounts.server.ts`). Once in, the
+user menus (the office's, and a button in each portal's header) have **View as** with the same
+three roles, the current one checked, to switch without signing out: it signs in as the role
+chosen and then ends the old session (its row deleted), in one request, to that role's home; if the
+sign-in fails (a demo password was changed), it answers 404 and the old session stays. It's there
+only for sessions in SHLTR, so other tenants' users never see it, and the server refuses it (404) to
+anyone else. Without the flag the buttons and the switch aren't there and the server answers 404 to
+whatever is posted. The flag is set for staging (`wrangler.jsonc`'s `env.staging.vars`) and by the
+end-to-end tests' servers; for local development, set `DEMO_SIGN_IN=true` in your `.env` before
+`pnpm dev` (`.env.example` has it commented out, so a `.env` copied from it leaves it off). Never
+set it in production (`wrangler.jsonc`'s top-level vars, or a Vercel project's environment
+variables), where it would let anyone in as these users if they existed.
 
 ## Members and invitations
 

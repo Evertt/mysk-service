@@ -3,7 +3,7 @@
  * menus' "View as"): which demo user each role signs in as, and whether an account is that user.
  * The client sends only a role's name; the account is fixed here, never taken from the request.
  */
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
+import { isCustomerContact, isFieldEngineer, isManager } from "#lib/auth/index.ts";
 import { demoOrganizations } from "#lib/server/db/demo.ts";
 
 import { type DemoRole, demoRoles } from "./demo-roles.ts";
@@ -21,8 +21,13 @@ interface DemoAccount {
 export const demoOrganizationId = demoOrganizations.shltr.id;
 
 const demoAccounts: Record<DemoRole, DemoAccount> = {
-	// Marloes Hendriks, SHLTR's owner.
-	admin: { email: "owner@shltr.example", hasRole: (roles) => roles.includes("owner"), home: "/" },
+	// Jan Weggemans, SHLTR's planner: in the office, managing nothing (no owner or admin, see
+	// `demo-roles.ts`).
+	planner: {
+		email: "jan@shltr.example",
+		hasRole: (roles) => roles.includes("member") && !isManager(roles),
+		home: "/",
+	},
 	// Lev Hoekstra, SHLTR's field engineer.
 	engineer: { email: "lev@shltr.example", hasRole: isFieldEngineer, home: "/my" },
 	// Marieke Verhoeven, Riedel's facilities contact (a partner with a wallet).

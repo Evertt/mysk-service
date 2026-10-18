@@ -7,10 +7,18 @@ on:
   push:
   workflow_dispatch:
 
-# A newer push to the same branch cancels the run it makes obsolete.
+# The token reads the repository (checkout) and nothing else: no job comments, pushes or tags, and
+# the deploys use Cloudflare's token (secrets), not GitHub's.
+permissions:
+  contents: read
+
+# A newer push to a feature branch cancels the run it makes obsolete. On main and develop it waits
+# instead (a newer one waiting replaces the older one waiting), so it never cancels a deploy midway:
+# production's, or staging's between `wrangler deploy` and loading the demo data. The deploy jobs'
+# own groups only keep two runs' deploys apart; they don't stop this cancel.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 jobs:
   check:

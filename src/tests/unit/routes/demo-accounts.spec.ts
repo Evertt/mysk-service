@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { isManager } from "#lib/auth/index.ts";
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 import { demoAccount, demoOrganizationId, demoRoleOf } from "#routes/demo-accounts.server.ts";
 import { demoRoles } from "#routes/demo-roles.ts";
@@ -9,7 +10,7 @@ describe("demoAccount", () => {
 		expect(
 			demoRoles.map((role) => [role, demoAccount(role)?.email, demoAccount(role)?.home]),
 		).toEqual([
-			["admin", "owner@shltr.example", "/"],
+			["planner", "jan@shltr.example", "/"],
 			["engineer", "lev@shltr.example", "/my"],
 			["customer", "facilitair@riedel.example", "/portal"],
 		]);
@@ -27,8 +28,23 @@ describe("demoAccount", () => {
 		}
 	});
 
+	test("none is an owner or admin: the sign-in is passwordless", () => {
+		for (const role of demoRoles) {
+			const account = demoAccount(role)!;
+			const seeded = demoUsers.find((user) => user.email === account.email)!;
+			expect(isManager(seeded.memberships.map((m) => m.role)), role).toBe(false);
+			expect(account.hasRole(["owner"]) || account.hasRole(["admin"]), role).toBe(false);
+		}
+	});
+
 	test("checks the role of the account", () => {
-		expect(demoAccount("admin")!.hasRole(["member"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["member"])).toBe(true);
+		expect(demoAccount("planner")!.hasRole(["owner"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["admin"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["member", "admin"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["owner", "member"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["engineer"])).toBe(false);
+		expect(demoAccount("planner")!.hasRole(["customer"])).toBe(false);
 		expect(demoAccount("engineer")!.hasRole(["owner"])).toBe(false);
 		expect(demoAccount("engineer")!.hasRole(["engineer", "admin"])).toBe(false);
 		expect(demoAccount("customer")!.hasRole(["member"])).toBe(false);
@@ -38,9 +54,9 @@ describe("demoAccount", () => {
 	test("knows the role of each demo account, and of no one else", () => {
 		for (const role of demoRoles) expect(demoRoleOf(demoAccount(role)!.email)).toBe(role);
 		for (const email of [
-			"jan@shltr.example",
+			"owner@shltr.example",
 			"admin@fieldworks.example",
-			"OWNER@shltr.example",
+			"JAN@shltr.example",
 			"",
 			"admin",
 		]) {
@@ -51,8 +67,9 @@ describe("demoAccount", () => {
 	test("refuses anything else: other names, emails, ids, prototype keys and non-strings", () => {
 		for (const role of [
 			"owner",
-			"Admin",
-			"planner",
+			"admin",
+			"Planner",
+			"member",
 			"owner@shltr.example",
 			"admin@fieldworks.example",
 			"",
