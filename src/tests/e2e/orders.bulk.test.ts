@@ -2,9 +2,8 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
 
-import { isRemote, organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
-import { orderId, shownNumbers, snapshot } from "./orders-helpers.ts";
-import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";
+import { organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
+import { orderId, snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -190,31 +189,87 @@ describe("bulk actions on selected orders, in North", () => {
 			before.map((o) => (matching.has(o.id) ? { ...o, engineer_id: engineer.id } : o)),
 		);
 	});
+});
 
-	test("a bulk action with a malformed target is refused with a 400", async () => {
+/** Opens the row menu of an order on the shown page. */
+const openMenu = async (number: string) => {
+	await app.page.getByRole("button", { name: `Actions for ${number}` }).click();
+	return app.page.getByRole("menu");
+};
+
+/** An active engineer of North's other than `not`. */
+const anotherEngineer = async (not: number | null) => {
+	const [engineer] = await rows<{ id: number; name: string }>(
+		`select id, name from engineer where organization_id = ? and active = 1 and id != ?
+		 order by id desc limit 1`,
+		[north.id, not ?? 0],
+	);
+	return engineer;
+};
+
+// Deleting from a row's menu asks first, naming the row (`bulk-action-bar.svelte.spec.ts`), and
+// deletes as the bulk action above does.
+describe("the bulk actions on a single order, from its row's menu, in North", () => {
+	test("assigning an engineer to one order updates it alone and logs it", async () => {
 		const { page } = app;
-		const [quote] = await rows<{ id: number }>(
-			`select id from "order" where organization_id = ? and status = 'quote' order by number limit 1`,
+		const [order, neighbour] = await rows<{
+			id: number;
+			number: string;
+			engineer_id: number | null;
+		}>(
+			`select id, number, engineer_id from "order" where organization_id = ? and status = 'quote'
+			 order by number limit 2`,
 			[north.id],
 		);
-		const before = await snapshot(quote.id);
+		const engineer = await anotherEngineer(order.engineer_id);
+		const neighbourBefore = await snapshot(neighbour.id);
+
 		await app.go("/orders?status=quote&sort=number");
-		await select((await shownNumbers(app))[0]);
-		await bar().getByRole("button", { name: "Change status" }).click();
+		const menu = await openMenu(order.number);
+		// The status is changed right in its cell, not from the menu.
+		await menu.getByRole("menuitem", { name: "Assign engineer" }).waitFor();
+		expect(await menu.getByRole("menuitem", { name: "Change status" }).count()).toBe(0);
+		await menu.getByRole("menuitem", { name: "Assign engineer" }).click();
 		const dialog = page.getByRole("alertdialog");
-		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
-		// The command goes out with a filter that doesn't exist, instead of the selected order.
-		await tamperWithCommand<{ status: string }>(page, "bulkSetOrderStatus", (arg) => ({
-			...arg,
-			target: { matching: { q: "", filters: { status: ["bogus"] } } },
-		}));
-		const [response] = await app.expectingErrors(() =>
-			Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "bulkSetOrderStatus")),
-				dialog.getByRole("button", { name: "Apply" }).click(),
-			]),
+		await dialog.getByText(`Assign engineer: ${order.number}`).waitFor();
+		const field = dialog.getByLabel("Engineer");
+		await field.locator("option", { hasText: engineer.name }).waitFor({ state: "attached" });
+		await field.selectOption({ label: engineer.name });
+		await dialog.getByRole("button", { name: "Apply" }).click();
+		await app.toast(`${order.number} updated`);
+
+		expect(await value(`select engineer_id from "order" where id = ?`, [order.id])).toBe(
+			engineer.id,
 		);
-		expect(await remoteErrorStatus(response)).toBe(400);
-		expect(await snapshot(quote.id)).toEqual(before);
+		const [logged] = await rows<{ action: string; changes: string }>(
+			`select action, changes from activity where organization_id = ? and subject_type = 'order'
+			 and subject_id = ? order by id desc limit 1`,
+			[north.id, String(order.id)],
+		);
+		expect(logged.action).toBe("updated");
+		expect(JSON.parse(logged.changes)).toEqual({ engineerId: [order.engineer_id, engineer.id] });
+		expect(await snapshot(neighbour.id)).toEqual(neighbourBefore);
+		await expect
+			.poll(() => page.locator("tbody tr", { hasText: order.number }).innerText())
+			.toContain(engineer.name);
+		// No selection was made or left.
+		expect(await page.getByRole("region", { name: "Actions on the selected rows" }).count()).toBe(
+			0,
+		);
+	});
+
+	test("an invoiced order's menu offers none of the actions that don't apply to it", async () => {
+		const number = await value<string>(
+			`select number from "order" where organization_id = ? and status = 'invoiced'
+			 order by number limit 1`,
+			[north.id],
+		);
+		await app.go(`/orders?status=invoiced&sort=number`);
+		const menu = await openMenu(number);
+		await menu.getByRole("menuitem", { name: "Open" }).waitFor();
+		for (const name of ["Assign engineer", "Change status", "Delete"]) {
+			expect(await menu.getByRole("menuitem", { name }).count(), name).toBe(0);
+		}
+		await app.page.keyboard.press("Escape");
 	});
 });

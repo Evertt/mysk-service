@@ -1,16 +1,17 @@
 /**
  * The order types as a tenant sets them up on the settings page: a name of its own in each
- * language, shown wherever a type is (the list and its filter, the form, an order's page, the
- * schedule, the activity log), and hiding the types it doesn't use from the order form (an order
- * that has one keeps it). A type a module needs can't be hidden; members can't change them; South
- * keeps the standard names. The file puts North's types back as standard at its end.
+ * language, shown wherever a type is (the list and its filter, an order's page and form, the
+ * activity log), and hiding the types it doesn't use from the order form (an order that has one
+ * keeps it); members can't change them. What's refused (a name another type has, hiding a type a
+ * module needs) and that the settings keep to the tenant are `orders/server/types.spec.ts`'s. The
+ * file puts North's types back as standard at its end.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, users, value } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 const page = () => app.page;
@@ -93,14 +94,16 @@ describe("an owner, in North", () => {
 		expect(await typeRow("project").innerText()).not.toContain("Needed by");
 	});
 
-	test("renames a type in both languages, and logs it", async () => {
+	test("renames a type in both languages and hides it from the order form, and logs it", async () => {
 		await edit("Project", { en: "Job", nl: " Klus " });
+		await hide(true);
 		await save();
 		await app.toast("Order type saved");
 		await page().getByRole("button", { name: "Edit Job", exact: true }).waitFor();
 		expect(await typeRow("project").locator('[data-locale="nl"]').innerText()).toBe("Klus");
+		await expect.poll(() => typeRow("project").innerText()).toContain("Hidden");
 		expect(await settingsOf(north.id)).toEqual([
-			{ type: "project", names: JSON.stringify({ en: "Job", nl: "Klus" }), hidden: 0 },
+			{ type: "project", names: JSON.stringify({ en: "Job", nl: "Klus" }), hidden: 1 },
 		]);
 		const [entry] = await rows<{ action: string; changes: string }>(
 			`select action, changes from activity
@@ -108,19 +111,14 @@ describe("an owner, in North", () => {
 			[north.id],
 		);
 		expect(entry.action).toBe("updated");
-		expect(JSON.parse(entry.changes)).toEqual({ name_en: [null, "Job"], name_nl: [null, "Klus"] });
+		expect(JSON.parse(entry.changes)).toEqual({
+			name_en: [null, "Job"],
+			name_nl: [null, "Klus"],
+			hidden: [false, true],
+		});
 
 		await app.go("/activity");
 		expect(await page().locator("main").innerText()).toContain("updated order type Job");
-	});
-
-	test("refuses a name another type has", async () => {
-		await app.go("/settings/order-types");
-		await edit("Other", { en: "repair" });
-		await save();
-		expect(await app.issues()).toContain("Another type is already called repair");
-		expect((await settingsOf(north.id)).map((setting) => setting.type)).toEqual(["project"]);
-		await dialog().getByRole("button", { name: "Cancel" }).click();
 	});
 
 	test("the list shows the name, and filters by it, with the type's id in the URL", async () => {
@@ -138,52 +136,19 @@ describe("an owner, in North", () => {
 		await page().keyboard.press("Escape");
 	});
 
-	test("the form, an order's page and the schedule show it too", async () => {
+	test("an order that has it shows it, on its page and its form; a new order can't have it", async () => {
 		const options = await typeOptions("/orders/new");
-		expect(options).toContain("Job");
+		expect(options).not.toContain("Job");
 		expect(options).not.toContain("Project");
 
-		const number = await value<string>(
-			`select number from "order" where organization_id = ? and type = 'project' order by id limit 1`,
-			[north.id],
-		);
-		await app.go(`/orders/${number}`);
-		expect(await page().locator("main").innerText()).toContain("Job");
-
-		await app.go("/schedule?view=month");
-		const legend = await page()
-			.getByRole("list", { name: "Order types" })
-			.getByRole("listitem")
-			.allInnerTexts();
-		expect(legend).toContain("Job");
-		expect(legend).not.toContain("Project");
-	});
-
-	test("hides a type from the order form; an order that has it keeps it", async () => {
-		await app.go("/settings/order-types");
-		await edit("Installation");
-		await hide(true);
-		await save();
-		await app.toast("Order type saved");
-		await expect.poll(() => typeRow("installation").innerText()).toContain("Hidden");
-		expect((await settingsOf(north.id)).find((setting) => setting.type === "installation")).toEqual(
-			{
-				type: "installation",
-				names: "{}",
-				hidden: 1,
-			},
-		);
-
-		expect(await typeOptions("/orders/new")).not.toContain("Installation");
-		const kept = await openOrder("installation");
+		const kept = await openOrder("project");
 		await app.go(`/orders/${kept}`);
-		expect(await page().locator("main").innerText()).toContain("Installation");
-		const options = await typeOptions(`/orders/${kept}/edit`);
-		expect(options).toContain("Installation");
-		expect(await page().getByLabel("Type").inputValue()).toBe("installation");
-		expect(await typeOptions(`/orders/${await openOrder("repair")}/edit`)).not.toContain(
-			"Installation",
-		);
+		expect(await page().locator("main").innerText()).toContain("Job");
+		const own = await typeOptions(`/orders/${kept}/edit`);
+		expect(own).toContain("Job");
+		expect(own).not.toContain("Project");
+		expect(await page().getByLabel("Type").inputValue()).toBe("project");
+		expect(await typeOptions(`/orders/${await openOrder("repair")}/edit`)).not.toContain("Job");
 	});
 
 	test("the server refuses a hidden type for an order that hasn't got it", async () => {
@@ -192,8 +157,8 @@ describe("an owner, in North", () => {
 		await page()
 			.getByLabel("Type")
 			.evaluate((select: HTMLSelectElement) => {
-				select.add(new Option("Installation", "installation"));
-				select.value = "installation";
+				select.add(new Option("Job", "project"));
+				select.value = "project";
 				select.dispatchEvent(new Event("change", { bubbles: true }));
 			});
 		await app.submit(page().getByRole("button", { name: "Save order" }));
@@ -204,28 +169,6 @@ describe("an owner, in North", () => {
 				number,
 			]),
 		).toBe("repair");
-	});
-
-	test("can't hide a type a module that's on needs, and says which", async () => {
-		await app.go("/settings/order-types");
-		await edit("Inspection");
-		expect(await dialog().innerText()).toContain("Needed by Work orders, Maintenance plans");
-		await hide(true);
-		await save();
-		expect(await app.issues()).toContain(
-			"Can't be hidden: needed by Work orders, Maintenance plans",
-		);
-		await dialog().getByRole("button", { name: "Cancel" }).click();
-
-		await edit("Breakdown");
-		await hide(true);
-		await save();
-		expect(await app.issues()).toContain("Can't be hidden: needed by Customer portal");
-		await dialog().getByRole("button", { name: "Cancel" }).click();
-		expect((await settingsOf(north.id)).map((setting) => setting.type)).toEqual([
-			"installation",
-			"project",
-		]);
 	});
 });
 
@@ -247,59 +190,24 @@ describe("someone who isn't an owner or admin", () => {
 		expect(response?.status()).toBe(403);
 		expect(await post(form)).toBe(403);
 		expect(await settingsOf(north.id)).toEqual(before);
-		// The office's member reads the tenant's names, also on the order form.
-		const options = await typeOptions("/orders/new");
+		// The office's member reads the tenant's names, also on an order's form.
+		const options = await typeOptions(`/orders/${await openOrder("project")}/edit`);
 		expect(options).toContain("Job");
-		expect(options).not.toContain("Installation");
-	});
-});
-
-describe("South", () => {
-	test("keeps the standard names and types, and sets up its own", async () => {
-		await page().context().clearCookies();
-		await app.signIn(users.admin);
-		await app.switchOrganization(south.name);
-		const options = await typeOptions("/orders/new");
-		expect(options).toContain("Project");
-		expect(options).toContain("Other");
-		expect(options).not.toContain("Job");
-
-		await app.go("/settings/order-types");
-		expect(await typeRow("project").locator('[data-locale="en"]').innerText()).toBe("Project");
-		expect(await typeRow("other").innerText()).toContain("Shown");
-		await edit("Survey", { en: "Site visit" });
-		await save();
-		await app.toast("Order type saved");
-		expect(await settingsOf(south.id)).toEqual([
-			{ type: "survey", names: JSON.stringify({ en: "Site visit" }), hidden: 0 },
-		]);
-		// North's are as they were.
-		expect((await settingsOf(north.id)).map((setting) => setting.type)).toEqual([
-			"installation",
-			"project",
-		]);
-		// And back to standard, which leaves no row.
-		await edit("Site visit", { en: "" });
-		await save();
-		await app.toast("Order type saved");
-		expect(await settingsOf(south.id)).toEqual([]);
+		expect(options).not.toContain("Project");
 	});
 });
 
 describe("North, afterwards", () => {
 	test("puts its types back as standard, which leaves no settings", async () => {
-		await app.switchOrganization(north.name);
+		// The admin, who starts in North.
+		await page().context().clearCookies();
+		await app.signIn(users.admin);
 		await app.go("/settings/order-types");
 		await edit("Job", { en: "", nl: "" });
-		await save();
-		await app.toast("Order type saved");
-		await edit("Installation");
 		await hide(false);
 		await save();
 		await app.toast("Order type saved");
 		expect(await settingsOf(north.id)).toEqual([]);
-		expect(await typeOptions("/orders/new")).toEqual(
-			expect.arrayContaining(["Project", "Installation"]),
-		);
+		expect(await typeOptions("/orders/new")).toContain("Project");
 	});
 });

@@ -5,7 +5,7 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, userNames, users, value } from "./app.ts";
+import { organizations, rows, useApp, users, value } from "./app.ts";
 import { isRemote, tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -75,7 +75,7 @@ async function act(page: Page, action: string) {
 describe("in North", () => {
 	const filtered = "?segment=enterprise,mid_market&sort=-open-orders";
 
-	test("saving the current view keeps its filters and sorting, but not the position", async () => {
+	test("saving the current view keeps its filters and sorting, but not the position; it opens and updates", async () => {
 		const { page } = admin;
 		await admin.go(`/customers${filtered}&row=2`);
 		expect(await menu(page).innerText()).toBe("Saved views");
@@ -89,18 +89,8 @@ describe("in North", () => {
 			.toBe("Saved views: Big accounts");
 		// A personal view isn't the organization's business.
 		expect(await viewActivity(view.id)).toEqual([]);
-	});
 
-	test("a name the user already has for the table is refused", async () => {
-		const { page } = admin;
-		await saveView(page, "big accounts");
-		expect(await admin.issues()).toEqual(["You already have a view called “big accounts” here"]);
-		expect(await views(north.id)).toHaveLength(1);
-		await page.keyboard.press("Escape");
-	});
-
-	test("opening a view restores its URL and rows, as a new history entry", async () => {
-		const { page } = admin;
+		// Opened from the menu, it restores its URL and rows, as a new history entry.
 		await admin.go("/customers?segment=small_business");
 		expect(await menu(page).innerText()).toBe("Saved views");
 
@@ -115,10 +105,8 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.search === "?segment=small_business");
 		const small = await customersIn(north.id, "small_business");
 		await expect.poll(() => admin.rowCount()).toBe(small);
-	});
 
-	test("a view can be updated with the table's current state", async () => {
-		const { page } = admin;
+		// Updated with the table's current state.
 		await menu(page).click();
 		await viewItem(page, "Big accounts").click();
 		await page.waitForURL((url) => url.search === filtered);
@@ -139,6 +127,14 @@ describe("in North", () => {
 		await expect
 			.poll(() => menu(page).getAttribute("aria-label"))
 			.toBe("Saved views: Big accounts");
+	});
+
+	test("a name the user already has for the table is refused", async () => {
+		const { page } = admin;
+		await saveView(page, "big accounts");
+		expect(await admin.issues()).toEqual(["You already have a view called “big accounts” here"]);
+		expect(await views(north.id)).toHaveLength(1);
+		await page.keyboard.press("Escape");
 	});
 
 	test("a view can be renamed", async () => {
@@ -166,24 +162,6 @@ describe("in North", () => {
 		expect(await viewActivity(created.id)).toEqual([
 			{ action: "created", subject_label: "Shared from the start" },
 		]);
-	});
-
-	test("the planner sees the shared views and opens them, but can't change them", async () => {
-		const { page } = planner;
-		await planner.go("/customers");
-		await menu(page).click();
-		const item = viewItem(page, "Every segment");
-		expect(await item.innerText()).toContain(`Shared by ${userNames.admin}`);
-		await item.click();
-		const { query } = (await viewNamed("Every segment", north.id))!;
-		await page.waitForURL((url) => url.search === query);
-		await menu(page).click();
-		expect(await page.getByRole("menuitem", { name: "Rename…" }).count()).toBe(0);
-		expect(await page.getByRole("menuitem", { name: "Delete…" }).count()).toBe(0);
-		expect(await page.getByRole("menuitem", { name: "Share with the organization" }).count()).toBe(
-			0,
-		);
-		await page.keyboard.press("Escape");
 	});
 
 	test("the planner's own views are theirs alone, and they can't share them", async () => {

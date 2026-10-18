@@ -3,6 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
 import { baseURL, hydrated, organizations, quiet, statTile, useApp, users } from "./app.ts";
+import { shared } from "./orders-helpers.ts";
 
 const app = useApp({ user: null });
 
@@ -119,6 +120,37 @@ describe("in Dutch", () => {
 			return response.text();
 		});
 		expect(body).toContain("Je bent geen lid van die organisatie");
+	});
+
+	test("the orders list is in Dutch", async () => {
+		const { page } = app;
+		await app.go("/orders");
+		await page.getByRole("heading", { name: "Opdrachten" }).waitFor();
+		expect(await page.title()).toBe("Opdrachten");
+		expect(await page.getByRole("link", { name: "Nieuwe opdracht" }).count()).toBe(1);
+		expect(await page.getByPlaceholder("Opdrachten zoeken…").count()).toBe(1);
+		for (const name of ["Klant", "Apparaat", "Prioriteit", "Monteur"]) {
+			expect(await page.getByRole("columnheader", { name }).count(), name).toBe(1);
+		}
+	});
+
+	test("an order's page is in Dutch", async () => {
+		const { page } = app;
+		await app.go(`/orders/${shared}`);
+		expect(await page.title()).toBe(`${shared} · Opdrachten`);
+		const main = await page.locator("main").innerText();
+		for (const text of ["Materialen en arbeid", "Arbeid", "Totaal", "Planning", "Aangemaakt"]) {
+			expect(main, text).toContain(text);
+		}
+	});
+
+	test("the order form's validation is in Dutch", async () => {
+		const { page } = app;
+		await app.go("/orders/new");
+		await app.submit(page.getByRole("button", { name: "Opdracht aanmaken" }));
+		expect(await app.issues()).toEqual(
+			expect.arrayContaining(["Kies een klant", "Omschrijf het werk"]),
+		);
 	});
 
 	test("the user menu switches back to English", async () => {

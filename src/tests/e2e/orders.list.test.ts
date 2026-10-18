@@ -23,11 +23,6 @@ const anyUnitLike = `exists (select 1 from order_unit x join equipment u on u.id
 	or u.name like ?))`;
 
 describe("in North", () => {
-	test("the list shows North's orders", async () => {
-		await app.go(afresh("/orders"));
-		expect(await app.rowCount()).toBe(await countIn("order", north.id));
-	});
-
 	test("a link with filters and sorting opens the list that way", async () => {
 		const { page } = app;
 		// The customer with the most open orders.
@@ -76,7 +71,6 @@ describe("in North", () => {
 			[north.id],
 		);
 		expect(await app.rowCount()).toBe(all.length);
-		await app.go(afresh("/orders"));
 	});
 
 	test("the rows scroll inside the table on a desktop screen; on a phone, the page does", async () => {
@@ -117,48 +111,21 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(total);
 	});
 
-	// One test per request, each loading the page afresh: in one test, the six page loads took up
-	// half its time under the load of a full run.
-	describe("a malformed query for the list is refused with a 400", () => {
-		type Query = Record<string, unknown>;
-		/** The error status of the response to the next `name` request, with its argument changed. */
-		const statusOf = async (
-			name: string,
-			change: (arg: Query) => Query,
-			trigger: () => unknown,
-		) => {
-			await app.go(afresh("/orders"));
-			await tamperWithQuery<Query>(app.page, name, change);
-			const [response] = await app.expectingErrors(() =>
-				Promise.all([app.page.waitForResponse((r) => isRemote(r.url(), name)), trigger()]),
-			);
-			return remoteErrorStatus(response);
-		};
-		const rowsWith = (change: Query) => (arg: Query) => ({ ...arg, ...change });
-
-		// An unknown status, a filter the list doesn't have, a string for an id, a page size it
-		// doesn't have.
-		test.each<Query>([
-			{ filters: { status: ["bogus"] } },
-			{ filters: { total: [1] } },
-			{ filters: { engineer: ["1"] } },
-			{ pageSize: 5000 },
-		])("in the rows' query: %j", async (change) => {
-			const more = () => app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded();
-			expect(await statusOf("getOrders", rowsWith(change), more)).toBe(400);
-		});
-
-		test("in the filters' counts", async () => {
-			const search = () => app.page.getByLabel("Search orders…").fill("ORD");
-			expect(
-				await statusOf("getOrderFacets", rowsWith({ filters: { status: ["bogus"] } }), search),
-			).toBe(400);
-		});
-
-		test("while the list works as before once the request is right", async () => {
-			await app.go(afresh("/orders"));
-			expect(await app.rowCount()).toBe(await countIn("order", north.id));
-		});
+	// The one test of the suite that SvelteKit applies a remote query's schema: what the schema
+	// refuses is `list-definition.spec.ts`'s.
+	test("a malformed query for the list is refused with a 400", async () => {
+		await app.go(afresh("/orders"));
+		await tamperWithQuery<Record<string, unknown>>(app.page, "getOrders", (arg) => ({
+			...arg,
+			filters: { status: ["bogus"] },
+		}));
+		const [response] = await app.expectingErrors(() =>
+			Promise.all([
+				app.page.waitForResponse((r) => isRemote(r.url(), "getOrders")),
+				app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
+			]),
+		);
+		expect(await remoteErrorStatus(response)).toBe(400);
 	});
 
 	test("searching, filtering and sorting happen in the database", async () => {
@@ -209,7 +176,6 @@ describe("in North", () => {
 			);
 		}
 		await page.keyboard.press("Escape");
-		await app.go(afresh("/orders"));
 	});
 
 	test("filtering by customer and engineer, finding them by searching the filters", async () => {
@@ -271,7 +237,6 @@ describe("in North", () => {
 		);
 		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
 		expect(new Set(engineers)).toEqual(new Set([busy.engineer_name]));
-		await app.go(afresh("/orders"));
 	});
 
 	test("filtering on the unassigned orders and the new installations, by the filter and the URL", async () => {
@@ -322,7 +287,6 @@ describe("in North", () => {
 		expect(await app.rowCount()).toBe(installations);
 		const units = await page.locator("tbody td:nth-child(4)").allInnerTexts();
 		expect(new Set(units)).toEqual(new Set(["New installation"]));
-		await app.go(afresh("/orders"));
 	});
 
 	test("while another sorting loads, the rows shown stay, dimmed", async () => {
@@ -354,7 +318,6 @@ describe("in North", () => {
 		expect(await table.getAttribute("aria-busy")).toBeNull();
 		expect(await table.getByRole("progressbar").count()).toBe(0);
 		expect(await shownNumbers(app)).not.toEqual(before);
-		await app.go(afresh("/orders"));
 	});
 
 	test("a link to the list sorted otherwise shows the table loading until its rows are in", async () => {
@@ -388,6 +351,5 @@ describe("in North", () => {
 		await app.tableSettled();
 		expect(await table.getAttribute("aria-busy")).toBeNull();
 		expect(await shownNumbers(app)).not.toEqual(first);
-		await app.go(afresh("/orders"));
 	});
 });

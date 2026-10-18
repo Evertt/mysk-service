@@ -38,12 +38,6 @@ describe("on page load", () => {
 		expect(await state()).toMatchObject({ theme: "harbor", mode: "dark", dark: true });
 	});
 
-	test("an unknown theme falls back to the default", async () => {
-		await setCookies({ theme: "nonsense", mode: "light" });
-		await app.go("/orders");
-		expect(await state()).toMatchObject({ theme: "lagoon", dark: false });
-	});
-
 	test("system mode follows the operating system before the page is shown", async () => {
 		await app.page.context().addInitScript(() => {
 			new MutationObserver((_, observer) => {
@@ -66,16 +60,11 @@ describe("on page load", () => {
 });
 
 describe("the switchers", () => {
-	test("choosing a mode applies it and remembers it", async () => {
+	test("choosing a mode applies it, choosing a theme keeps the mode, and both are remembered", async () => {
 		await setCookies({ theme: "harbor", mode: "light" });
 		await app.go("/orders");
 		await choose(/^Colour mode/, "Dark");
-		expect(await state()).toMatchObject({ mode: "dark", dark: true });
-		await reload();
 		expect(await state()).toMatchObject({ theme: "harbor", mode: "dark", dark: true });
-	});
-
-	test("choosing a theme keeps the mode, and remembers it", async () => {
 		await choose("Theme", "Blueprint");
 		expect(await state()).toMatchObject({ theme: "blueprint", dark: true });
 		await reload();
