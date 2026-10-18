@@ -12,6 +12,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { getClientAttention } from "#modules/condition/client/client-condition.remote.ts";
 import {
+	findArticles,
 	getUnitComponents,
 	moveComponent,
 	removeComponent,
@@ -343,6 +344,51 @@ describe("a unit's components, in SHLTR's office", () => {
 			name: "Torsieveerpakket",
 			score: 22,
 			advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
+		});
+	});
+});
+
+describe("the articles a component can be linked to", () => {
+	test("are found by SKU or name, the first so many, with the points their shop products fix", async () => {
+		const found = await as(jan, () => data(findArticles, "sd-002"));
+		const shop = await rows<{ id: number }>(
+			`select k.template_item_id as id from shop_product_checkpoint k
+			 join shop_product p on p.id = k.product_id where p.material_id = ? order by k.template_item_id`,
+			[await materialOf("SD-002")],
+		);
+		expect(shop.length).toBeGreaterThan(0);
+		expect(found.more).toBe(false);
+		expect(found.articles).toHaveLength(1);
+		expect(found.articles[0]).toMatchObject({ sku: "SD-002", name: "Kabelset compleet" });
+		expect(found.articles[0].checkpointIds.toSorted((a, b) => a - b)).toEqual(
+			shop.map((row) => row.id),
+		);
+
+		// An empty search: the first 20 by SKU, and whether there are more.
+		const materials = await rows<{ sku: string }>(
+			`select sku from material where organization_id = ? order by sku`,
+			[shltrId],
+		);
+		const all = await as(jan, () => data(findArticles, ""));
+		expect(all.articles.map((article) => article.sku)).toEqual(
+			materials.slice(0, 20).map((row) => row.sku),
+		);
+		expect(all.more).toBe(materials.length > 20);
+	});
+
+	test("are the tenant's own, and none while it hasn't materials", async () => {
+		const own = new Set(
+			(
+				await rows<{ id: number }>(`select id from material where organization_id = ?`, [northId])
+			).map((row) => row.id),
+		);
+		const theirs = await as(north.member, () => data(findArticles, ""));
+		for (const article of theirs.articles) expect(own.has(article.id), article.sku).toBe(true);
+		await withoutModule("shltr", "materials", async () => {
+			expect(await as(jan, () => data(findArticles, "SD-002"))).toEqual({
+				articles: [],
+				more: false,
+			});
 		});
 	});
 });

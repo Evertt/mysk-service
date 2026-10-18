@@ -1,26 +1,26 @@
 <!--
 	@component
 	Adds a component to a unit, or changes one: its name, its article (one of the tenant's materials,
-	with the materials module on, by SKU) and the points of the unit's checklist that check it,
+	with the materials module on, found by SKU or name) and the points of the unit's checklist that check it,
 	grouped (with the checklists module on; without, it sends none and the server keeps the
 	component's). Choosing an article checks the points its shop product fixes.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { errorMessage } from "#lib/utils.ts";
 
 	import type { Article, Checkpoint } from "../api/extensions.ts";
 	import { saveComponent } from "../components.remote.ts";
+	import ArticleField from "./article-field.svelte";
 
 	interface Editing {
 		id: number;
 		number: string;
 		name: string;
-		materialId: number | null;
+		article: Article | null;
 		checkpointIds: number[];
 	}
 
@@ -28,8 +28,6 @@
 		open = $bindable(false),
 		unit,
 		editing,
-		articles,
-		articleCheckpoints,
 		checkpoints,
 		hasArticles,
 		hasCheckpoints,
@@ -38,9 +36,6 @@
 		unit: { serialNumber: string; title: string };
 		/** The component being changed; none for a new one. */
 		editing: Editing | null;
-		articles: Article[];
-		/** The points each article's shop product fixes, by its id. */
-		articleCheckpoints: Record<number, number[]>;
 		checkpoints: Checkpoint[];
 		/** Whether the tenant has materials, whose articles a component can have. */
 		hasArticles: boolean;
@@ -49,12 +44,6 @@
 	} = $props();
 
 	const form = $derived(saveComponent.for(editing ? `component-${editing.id}` : "component-new"));
-	const articleOptions = $derived(
-		articles.map((article) => ({
-			value: String(article.id),
-			label: `${article.sku} · ${article.name}`,
-		})),
-	);
 	/** The points by template, then group, as the checklists module orders them. */
 	const byTemplate = $derived(
 		[...Map.groupBy(checkpoints, (point) => point.template)].map(([template, points]) => ({
@@ -68,8 +57,8 @@
 	const offered = $derived(new Set(checkpoints.map((point) => point.id)));
 
 	/** A chosen article checks the points its shop product fixes (those the unit has). */
-	function chooseArticle(value: string) {
-		const points = articleCheckpoints[Number(value)]?.filter((id) => offered.has(id));
+	function chooseArticle(article: { checkpointIds: number[] } | null) {
+		const points = article?.checkpointIds.filter((id) => offered.has(id));
 		if (points?.length) form.fields.checkpointIds.set(points.map(String));
 	}
 </script>
@@ -108,14 +97,12 @@
 					value={editing?.name ?? ""}
 				/>
 				{#if hasArticles}
-					<SelectField
+					<ArticleField
 						field={form.fields.materialId}
 						label={m.condition_field_article()}
 						description={m.condition_component_article_description()}
-						options={articleOptions}
-						placeholder={m.condition_component_article_none()}
-						value={editing?.materialId ? String(editing.materialId) : ""}
-						onchange={chooseArticle}
+						article={editing?.article ?? null}
+						onchoose={chooseArticle}
 					/>
 				{/if}
 				{#if hasCheckpoints}

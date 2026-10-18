@@ -73,14 +73,18 @@ export interface Article {
 }
 
 /**
- * The tenant's articles: those with the ids asked for (to show components'), or all of them
- * (`ids: null`, to choose from), by SKU. The materials module answers; without it, there are none,
- * and components have no article. A module that fails is left out.
+ * Which articles: those with `ids` (to show components'), or the first `limit` whose SKU or name
+ * has every word of `search` (any, for an empty one), to choose from in the component dialog.
  */
-export const articles = defineCollector<{ ids: readonly number[] | null }, Article[]>(
-	"condition.articles",
-	{ onError: "skip" },
-);
+export type ArticleQuery = { ids: readonly number[] } | { search: string; limit: number };
+
+/**
+ * The tenant's articles asked for (`ArticleQuery`), by SKU. The materials module answers; without
+ * it, there are none, and components have no article. A module that fails is left out.
+ */
+export const articles = defineCollector<ArticleQuery, Article[]>("condition.articles", {
+	onError: "skip",
+});
 
 /** The checklist points an article fixes in the shop: its product's. */
 export interface ArticleCheckpoints {

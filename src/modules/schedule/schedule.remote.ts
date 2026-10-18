@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { type EngineerSpecialty, openOrderStatuses } from "#lib/models.ts";
 import {
+	type ListedUnit,
 	type OrderPlan,
 	OrderRefused,
 	scheduleOrder as planOrder,
@@ -59,27 +60,48 @@ const engineers = () =>
 		.orderBy(asc(engineer.name));
 
 /**
- * The orders with the specialties that service their units' categories (`specialties`, first unit
- * first, `null` for a category without one): whose engineers the schedule dialog lists first.
+ * What the board shows of its orders: their first unit and how many they have (as `withFirstUnit()`
+ * has them, for the card), and the specialties that service their units' categories
+ * (`specialties`, first unit first, `null` for a category without one): whose engineers the
+ * schedule dialog lists first. One query for both.
  */
-async function withSpecialties<T extends { id: number }>(orders: T[]) {
-	const specialties = new Map(orders.map((row) => [row.id, [] as (EngineerSpecialty | null)[]]));
+async function forBoard<T extends { id: number }>(orders: T[]) {
+	const units = new Map(
+		orders.map((row) => [
+			row.id,
+			[] as { unit: ListedUnit; specialty: EngineerSpecialty | null }[],
+		]),
+	);
 	if (orders.length) {
-		const units = await db
-			.select({ orderId: orderUnit.orderId, specialty: equipmentCategory.specialty })
+		const rows = await db
+			.select({
+				orderId: orderUnit.orderId,
+				specialty: equipmentCategory.specialty,
+				id: equipment.id,
+				serialNumber: equipment.serialNumber,
+				name: equipment.name,
+				manufacturer: equipment.manufacturer,
+				model: equipment.model,
+			})
 			.from(orderUnit)
 			.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
 			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-			.where(and(inList(orderUnit.orderId, [...specialties.keys()]), inTenant(orderUnit)))
+			.where(and(inList(orderUnit.orderId, [...units.keys()]), inTenant(orderUnit)))
 			.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
-		for (const unit of units) specialties.get(unit.orderId)?.push(unit.specialty);
+		for (const { orderId, specialty, ...unit } of rows) {
+			units.get(orderId)?.push({ unit, specialty });
+		}
 	}
-	return orders.map((row) => ({ ...row, specialties: specialties.get(row.id) ?? [] }));
+	return orders.map((row) => {
+		const own = units.get(row.id) ?? [];
+		return {
+			...row,
+			unit: own[0]?.unit ?? null,
+			unitCount: own.length,
+			specialties: own.map((each) => each.specialty),
+		};
+	});
 }
-
-/** What the board shows of its orders: their first unit, and whose engineers fit them. */
-const forBoard = async <T extends { id: number }>(orders: T[]) =>
-	withSpecialties(await withFirstUnit(orders));
 
 /** The tenant's orders scheduled on the days `from` to `to` (`yyyy-mm-dd`), except cancelled ones. */
 const scheduledIn = (days: { from: string; to: string }) =>
@@ -102,9 +124,15 @@ const boardSubjects = ["order", "engineer", "customer"] as const;
 
 /**
  * When the board's records last changed (see `watchSchedule`), read before them: a board or month
- * whose live query opens on a later change than its data's asks for it again.
+ * whose live query opens on a later change than its data's asks for it again. Changes are timed
+ * in milliseconds, so one announced in this millisecond leaves it a millisecond earlier: another
+ * change in the same millisecond, after the read, still counts as later (`>` on the client). That
+ * asks once too many when there's none, which takes reading in the millisecond of a change.
  */
-const readAt = () => changedAt(currentTenant().organizationId, boardSubjects);
+function readAt() {
+	const changed = changedAt(currentTenant().organizationId, boardSubjects);
+	return changed && changed >= Date.now() ? changed - 1 : changed;
+}
 
 /**
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders

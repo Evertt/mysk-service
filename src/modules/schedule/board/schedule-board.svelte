@@ -52,7 +52,7 @@
 	// load; on a narrower screen the switch happens before anything's scrolled.
 	const wide = new MediaQuery("min-width: 64rem", true);
 	const days = $derived(day ? [day] : weekDays(schedule.start));
-	const engineers = $derived(boardEngineers(schedule.engineers, schedule.orders));
+	const engineers = $derived(boardEngineers(schedule.engineers, schedule.orders, days));
 	// Unassigned work first, next to the backlog: it's what still needs an engineer.
 	const rows: BoardRow[] = $derived([
 		{
