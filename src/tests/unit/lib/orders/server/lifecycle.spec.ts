@@ -2,7 +2,8 @@
  * Moving an order from one status to another (`transitionOrder()`), by each verb of the
  * transition table: what it stores, the completion date, whether the modules are asked, the one
  * activity entry, its refusals and the tenant's scope. On a small database of the tables it
- * touches, with the modules' save hook and the activity log recorded rather than run.
+ * touches, with a made-up module that records what it's asked to save (and refuses when told to),
+ * and the activity log recorded rather than run.
  */
 import { rmSync } from "node:fs";
 
@@ -12,27 +13,27 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 
 import { overwriteGetTimeZone } from "#lib/dates.ts";
 import type { OrderStatus } from "#lib/models.ts";
+import type { ModuleId } from "#lib/modules/ids.ts";
+import { type OrderProblem, saving } from "#lib/orders/extensions.ts";
 import { beginOrderChange, transitionOrder } from "#lib/orders/server/lifecycle.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
+import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
-const parts = vi.fn(async (_change: unknown) => {});
+/** What the made-up module saves of each change, and the problems it answers (none: it saves). */
+const parts = vi.fn(async (_change: unknown): Promise<OrderProblem[] | undefined> => undefined);
+// The made-up module instead of the ones in `src/modules` (see `hooks.spec.ts`).
+const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
+vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
+	generatedServerModules: () => registry.modules,
+}));
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 vi.mock("#lib/server/activity/index.ts", () => ({
 	recordActivity: (_tx: unknown, record: unknown) => logged(record),
-}));
-vi.mock("#lib/orders/server/hooks.ts", () => ({
-	OrderRefused: class extends Error {
-		constructor(readonly problems: { message: string }[]) {
-			super(problems.map((problem) => problem.message).join(" "));
-		}
-	},
-	saveOrderParts: (change: unknown) => parts(change),
-	saveUnitParts: async () => {},
 }));
 
 // A temporary database with the tables the moves touch (see `acceptance.spec.ts`).
@@ -81,6 +82,10 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	return { db: drizzle(client, { schema }) };
 });
 
+registry.modules = [
+	defineServerModule("spy" as ModuleId, [contribute(saving, (change) => parts(change))]),
+];
+
 afterAll(() => {
 	db.$client.close();
 	rmSync(folder, { recursive: true, force: true });
@@ -91,7 +96,7 @@ const tenant = (organizationId: string, roles = ["member"]): Tenant => ({
 	name: organizationId,
 	slug: organizationId,
 	roles,
-	modules: [],
+	modules: ["spy"],
 });
 
 overwriteGetTimeZone(() => "Europe/Amsterdam");
@@ -101,7 +106,7 @@ beforeEach(async () => {
 	locals.tenant = tenant("north");
 	logged.mockClear();
 	parts.mockClear();
-	parts.mockImplementation(async () => {});
+	parts.mockImplementation(async () => undefined);
 	await db.delete(orderSignoff);
 	await db.delete(orderRequest);
 	await db.delete(order);
@@ -243,10 +248,7 @@ describe("set: what follows", () => {
 	});
 
 	test("a module's refusal refuses the move with its message, and stores none of it", async () => {
-		const { OrderRefused } = await import("#lib/orders/server/hooks.ts");
-		parts.mockImplementation(async () => {
-			throw new OrderRefused([{ message: "Not enough Scharnier in stock." }]);
-		});
+		parts.mockImplementation(async () => [{ message: "Not enough Scharnier in stock." }]);
 		const { id } = await orderIn("quote");
 		expect(
 			await refusal(() =>
@@ -598,12 +600,11 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 	});
 
 	test("a module's refusal stops the invoice, saying which order, and moves none of them", async () => {
-		const { OrderRefused } = await import("#lib/orders/server/hooks.ts");
 		const first = await orderIn("completed");
 		const second = await orderIn("completed");
 		parts.mockImplementation(async (change) => {
 			const { order: moving } = change as { order: { id: number } };
-			if (moving.id === second.id) throw new OrderRefused([{ message: "A checklist is open." }]);
+			return moving.id === second.id ? [{ message: "A checklist is open." }] : undefined;
 		});
 		const orders = [await loaded(first.id), await loaded(second.id)];
 		expect(
@@ -699,15 +700,12 @@ describe("the order form's change (beginOrderChange)", () => {
 	});
 
 	test("a module's refusal refuses the form with its problems, each on its field", async () => {
-		const { OrderRefused } = await import("#lib/orders/server/hooks.ts");
-		parts.mockImplementation(async () => {
-			throw new OrderRefused([
-				{
-					message: "Not enough Scharnier in stock.",
-					path: ["modules", "materials", "lines", 0, "quantity"],
-				},
-			] as never);
-		});
+		parts.mockImplementation(async () => [
+			{
+				message: "Not enough Scharnier in stock.",
+				path: ["modules", "materials", "lines", 0, "quantity"],
+			},
+		]);
 		const { id, number } = await orderIn("quote");
 		let issues: unknown;
 		try {
