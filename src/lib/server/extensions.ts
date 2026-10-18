@@ -103,7 +103,7 @@ export function contribute<In, Problem>(
 	point: SaveHookPoint<In, Problem>,
 	save: (input: In) => Promise<Problem[] | undefined>,
 ): Contribution;
-export function contribute(point: AnyPoint, answer: (input: never) => unknown): Contribution {
+export function contribute(point: AnyPoint, answer: (...args: never[]) => unknown): Contribution {
 	return { point, answer };
 }
 
