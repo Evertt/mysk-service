@@ -281,8 +281,9 @@ export const zoneAlertKey = (zoneId: number, hour: string) => `zone:${zoneId}:${
 
 /**
  * The key of a zone's consumption alert: one per zone per (local) day, `yyyy-mm-dd`, as its max
- * kWh is per day. They used to be per hour, a new one each hour of a day over its kWh: the open
- * ones of those keep their hour's key, which a consumption breach no longer matches.
+ * kWh is per day. They used to be per hour, a new one each hour of a day over its kWh, under a
+ * power alert's key: migration `hourly-energy-alerts` made each day's latest open one the day's,
+ * closed the others and gave their keys up.
  */
 export const zoneDayAlertKey = (zoneId: number, day: string) => `zone:${zoneId}:${day}`;
 

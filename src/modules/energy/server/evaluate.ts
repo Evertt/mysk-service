@@ -4,8 +4,10 @@
  * it), and every door of the site by its openings, still-open ones up to now (`../model.ts`). A
  * breach becomes an alert once per key (a zone's power per local hour, its consumption per local
  * day, a door per opening); a door's alert that's still open follows its opening as it goes on (the
- * longest it was open), a zone's grows from near to active within its hour or day. Only the last day's breaches raise alerts: a gateway catching up
- * on last week raises none about it, while a door that's still open (since last week) does.
+ * longest it was open), a zone's power alert grows from near to active within its hour, and its
+ * consumption alert follows the day's kWh as it grows (near to active with it). Only the last day's
+ * breaches raise alerts: a gateway catching up on last week raises none about it, while a door
+ * that's still open (since last week) does.
  */
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 
@@ -167,6 +169,7 @@ export async function raiseAlerts(
 		.select({
 			id: energyAlert.id,
 			key: energyAlert.key,
+			metric: energyAlert.metric,
 			severity: energyAlert.severity,
 			measured: energyAlert.measured,
 			status: energyAlert.status,
@@ -183,15 +186,18 @@ export async function raiseAlerts(
 		);
 	const byKey = new Map(existing.map((alert) => [alert.key, alert]));
 
-	// An open alert follows its breach: a door open for longer, a zone from near to over (within its
-	// hour for power, its day for consumption).
+	// An open alert of the breach's metric follows it: a door open for longer, a zone's power from
+	// near to over within its hour, its consumption as the day's kWh grows (its latest interval's).
+	// Not logged, as it's the same alert. One of another metric under the key (a consumption alert
+	// from when they were per hour, `zoneDayAlertKey`) is left as it is.
 	for (const breach of breaches) {
 		const alert = byKey.get(breach.key);
-		if (!alert || alert.status !== "open") continue;
+		if (!alert || alert.status !== "open" || alert.metric !== breach.metric) continue;
 		const worse =
 			breach.metric === "door"
 				? breach.measured > alert.measured + 0.5
-				: alert.severity === "near" && breach.severity === "active";
+				: (alert.severity === "near" && breach.severity === "active") ||
+					(breach.metric === "energy" && breach.measured > alert.measured);
 		if (!worse) continue;
 		await tx
 			.update(energyAlert)
@@ -199,7 +205,6 @@ export async function raiseAlerts(
 				severity: breach.severity,
 				measured: breach.measured,
 				threshold: breach.threshold,
-				metric: breach.metric,
 				at: breach.at,
 			})
 			.where(and(eq(energyAlert.id, alert.id), inTenant(energyAlert)));

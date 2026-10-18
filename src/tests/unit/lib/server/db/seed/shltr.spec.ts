@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vite-plus/test";
 import { shltrCategories, specialtyOf } from "#lib/server/db/seed/categories.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
 import { generateShltrTenant, shltrSignoffs } from "#lib/server/db/seed/shltr/index.ts";
+import { demoEngineerWork } from "#lib/server/db/seed/users.ts";
 
 /** SHLTR's demo data, as the seed makes it (with its seed). */
 function generate() {
@@ -296,8 +297,29 @@ describe("SHLTR's demo data, whatever the day", () => {
 
 	// The portal's checklists specs fill in one of several units (each category has a template).
 	test.each(days)("gives Lev a planned inspection of several units on %s", async (day) => {
-		const { orders, engineers } = await generateOn(day);
+		const generated = await generateOn(day);
+		const { engineers } = generated;
 		const lev = engineers.find((engineer) => engineer.name === "Lev Hoekstra")!;
+		// The seed's last step, as it takes it on the database (`createDemoUsers`): his account's
+		// engineer gets some of the scheduled work of his specialty, by when it was made.
+		const specialtyOf = new Map(engineers.map((engineer) => [engineer.id, engineer.specialty]));
+		const given = new Map(
+			demoEngineerWork(
+				generated.orders
+					.filter(
+						(o) =>
+							o.status === "scheduled" &&
+							o.engineerId !== null &&
+							specialtyOf.get(o.engineerId) === lev.specialty,
+					)
+					.toSorted((a, b) => a.id - b.id)
+					.map((o) => ({ id: o.id, type: o.type, units: o.equipmentIds.length })),
+			).map((job) => [job.id, job]),
+		);
+		expect(given.size).toBeGreaterThan(0);
+		const orders = generated.orders.map((o) =>
+			given.has(o.id) ? { ...o, engineerId: lev.id, status: given.get(o.id)!.status } : o,
+		);
 		const planned = orders.filter(
 			(o) =>
 				o.engineerId === lev.id &&
@@ -306,5 +328,19 @@ describe("SHLTR's demo data, whatever the day", () => {
 				o.equipmentIds.length > 1,
 		);
 		expect(planned.length).toBeGreaterThan(0);
+	});
+
+	test("the demo engineer's job under way is never one of several units", () => {
+		// An inspection made before the one of several units, which would otherwise be the first of
+		// the rest.
+		const work = demoEngineerWork([
+			{ id: 1, type: "inspection", units: 1 },
+			{ id: 2, type: "inspection", units: 4 },
+			{ id: 3, type: "repair", units: 1 },
+		]);
+		expect(work.map((job) => [job.id, job.status])).toEqual([
+			[3, "in_progress"],
+			[1, "scheduled"],
+		]);
 	});
 });
