@@ -74,7 +74,8 @@ A batch can be sent again (after a timeout, say) without harm:
 
 - a reading replaces the zone's reading of that interval (a corrected one counts);
 - a door event that's in already is skipped;
-- an alert is raised once per key: a zone's once per local hour, a door's once per opening.
+- an alert is raised once per key: a zone's power once per local hour, its consumption once per
+  local day, a door's once per opening.
 
 Each batch is one transaction: all of it is stored, or none.
 
@@ -83,10 +84,12 @@ Each batch is one transaction: all of it is stored, or none.
 After each batch the site's thresholds are checked (`docs/plans/shltr-domain.md` §2.5):
 
 - each zone that got readings, interval by interval: its average power against its max kW, and the
-  day's consumption up to the interval against its max kWh (per day, in the site's time zone). The
-  larger share counts: at 100 % the zone is over (an `active` alert), at 85 % near (a `near` one).
-  Once per zone per hour, the worst interval of the hour; a near alert that's still open becomes
-  active when the zone goes over within its hour.
+  day's consumption up to the interval against its max kWh (per day, in the site's time zone). At
+  100 % the zone is over (an `active` alert), at 85 % near (a `near` one). Its power raises an alert
+  once per zone per hour (`zone:<id>:<yyyy-mm-dd>T<hh>`, the worst interval of the hour), its
+  consumption once per zone per day (`zone:<id>:<yyyy-mm-dd>`, the day's latest interval): a day
+  over its kWh is one alert, not one each hour that's left. A near alert that's still open becomes
+  active when the zone goes over within its hour (power) or day (consumption).
 - every door of the site: an opening that lasted (or, still open, has lasted until now) its
   threshold's minutes raises an alert, once per opening; while the alert is open, it follows the
   opening (the longest it was open).

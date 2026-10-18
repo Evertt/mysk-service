@@ -1,8 +1,8 @@
 /**
  * Storing a gateway's batch (`server/ingest.ts`) and the alerts it raises (`server/evaluate.ts`),
  * against a database made by the app's migrations: readings replace their interval, door events
- * are stored once, a zone's alert is raised once per hour (and grows from near to over), a door's
- * once per opening, only for the last day; a batch can name only its tenant's site and codes; and
+ * are stored once, a zone's alert is raised once per hour for its power and once per day for its
+ * consumption (and grows from near to over), a door's once per opening, only for the last day; a batch can name only its tenant's site and codes; and
  * the energy module's integration tokens only feed their own tenant, and only while it has the
  * module.
  */
@@ -21,7 +21,12 @@ import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { parseBatch } from "#modules/energy/ingest/format.ts";
 import { storeBatch } from "#modules/energy/server/ingest.ts";
-import { energyAlert, energyDoorEvent, energyReading } from "#modules/energy/server/schema.ts";
+import {
+	energyAlert,
+	energyDoorEvent,
+	energyReading,
+	energyThreshold,
+} from "#modules/energy/server/schema.ts";
 
 // No request: the system makes the changes (`asSystem()`), so nothing may ask for one.
 vi.mock("$app/server", () => ({
@@ -122,6 +127,7 @@ beforeEach(async () => {
 	await db.delete(energyAlert);
 	await db.delete(energyDoorEvent);
 	await db.delete(energyReading);
+	await db.update(energyThreshold).set({ maxKwh: 10_000 }).where(eq(energyThreshold.zoneId, 1));
 	// The core's tables in SQL: a module writes only its own through drizzle (boundaries.spec.ts).
 	await db.$client.executeMultiple(`delete from activity; delete from integration_token;`);
 });
@@ -202,7 +208,7 @@ describe("storing a batch", () => {
 		expect(rows.map((row) => row.avgKw)).toEqual([30]);
 	});
 
-	test("a zone's alert is once per hour, and grows from near to over within it", async () => {
+	test("a zone's power alert is once per hour, and grows from near to over within it", async () => {
 		await ingest({ readings: [reading("Z-A", 0, 90)] });
 		expect((await alerts()).map((a) => [a.key, a.severity])).toEqual([
 			["zone:1:2026-10-17T10", "near"],
@@ -216,6 +222,45 @@ describe("storing a batch", () => {
 		expect((await alerts()).map((a) => a.key)).toEqual([
 			"zone:1:2026-10-17T10",
 			"zone:1:2026-10-17T11",
+		]);
+	});
+
+	/** Z-A's readings at 40 kW (10 kWh each, its power well below its max) from `minutes`. */
+	const steady = (minutes: number, count: number) =>
+		Array.from({ length: count }, (_, i) => reading("Z-A", minutes + i * 15, 40));
+	const maxKwh = (kwh: number) =>
+		db.update(energyThreshold).set({ maxKwh: kwh }).where(eq(energyThreshold.zoneId, 1));
+
+	test("a zone's consumption alert is once per day, and grows from near to over within it", async () => {
+		await maxKwh(100);
+		// 10:00 to 12:15: 90 kWh, near.
+		await ingest({ readings: steady(0, 9) });
+		expect((await alerts()).map((a) => [a.key, a.metric, a.severity, a.measured])).toEqual([
+			["zone:1:2026-10-17", "energy", "near", 90],
+		]);
+		// Over from 12:30 and on through 14:45: still the day's one alert, now over.
+		await ingest({ readings: steady(135, 11) }, t(300));
+		expect((await alerts()).map((a) => [a.key, a.severity, a.measured, a.at])).toEqual([
+			["zone:1:2026-10-17", "active", 200, t(285)],
+		]);
+		// The next day has an alert of its own.
+		const tomorrow = 24 * 60;
+		await ingest({ readings: steady(tomorrow, 9) }, t(tomorrow + 150));
+		expect((await alerts()).map((a) => [a.key, a.severity])).toEqual([
+			["zone:1:2026-10-17", "active"],
+			["zone:1:2026-10-18", "near"],
+		]);
+	});
+
+	test("a zone over its power and its day's kWh: an alert per hour of power, one of the day's", async () => {
+		await maxKwh(100);
+		// 120 kW, 30 kWh a quarter: over its max kW from 10:00, and its day's kWh from 10:45.
+		const readings = [0, 15, 30, 45, 60, 75].map((minutes) => reading("Z-A", minutes, 120));
+		expect(await ingest({ readings })).toMatchObject({ stored: { alerts: 3 } });
+		expect((await alerts()).map((a) => [a.key, a.metric, a.severity, a.measured])).toEqual([
+			["zone:1:2026-10-17T10", "power", "active", 120],
+			["zone:1:2026-10-17", "energy", "active", 180],
+			["zone:1:2026-10-17T11", "power", "active", 120],
 		]);
 	});
 

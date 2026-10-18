@@ -240,7 +240,8 @@ export const energyThreshold = sqliteTable(
 
 /**
  * A breach of a zone's thresholds, or a door open too long (`energie_meldingen`), raised by the
- * ingest: at most one per `key` (a zone per hour, a door per opening). Its recommendation follows
+ * ingest: at most one per `key` (a zone's power per hour, its consumption per day, a door per
+ * opening; `../model.ts`). Its recommendation follows
  * from what it's about and is shown in the reader's language. Made into an order, then dealt with.
  */
 export const energyAlert = sqliteTable(

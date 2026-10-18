@@ -248,11 +248,12 @@ export const isOverdue = (minutesOpen: number, thresholdMinutes: number) =>
 
 /**
  * A zone's interval as the evaluation reads it: its average power and the zone's consumption that
- * day up to its end, with the hour it's in (the site's local hour, `yyyy-mm-ddThh`), which keys
- * the alert.
+ * day up to its end, with the day and the hour it's in (the site's local ones, `yyyy-mm-dd` and
+ * `yyyy-mm-ddThh`), which key the alerts.
  */
 export interface ZoneInterval {
 	start: Temporal.Instant;
+	day: string;
 	hour: string;
 	kw: number;
 	kwhToday: number;
@@ -260,7 +261,10 @@ export interface ZoneInterval {
 
 /** A breach of a threshold, before it's an alert. */
 export interface Breach {
-	/** What dedupes it: at most one alert per zone and hour, and per door opening. */
+	/**
+	 * What dedupes it: at most one alert per zone and hour for its power, per zone and day for its
+	 * consumption, and per door opening.
+	 */
 	key: string;
 	metric: AlertMetric;
 	severity: AlertSeverity;
@@ -269,8 +273,18 @@ export interface Breach {
 	at: Temporal.Instant;
 }
 
-/** The key of a zone's alert: one per zone per (local) hour (§2.5's zone, day, hour). */
+/**
+ * The key of a zone's power alert: one per zone per (local) hour (§2.5's zone, day, hour); `hour`
+ * is `yyyy-mm-ddThh`.
+ */
 export const zoneAlertKey = (zoneId: number, hour: string) => `zone:${zoneId}:${hour}`;
+
+/**
+ * The key of a zone's consumption alert: one per zone per (local) day, `yyyy-mm-dd`, as its max
+ * kWh is per day. They used to be per hour, a new one each hour of a day over its kWh: the open
+ * ones of those keep their hour's key, which a consumption breach no longer matches.
+ */
+export const zoneDayAlertKey = (zoneId: number, day: string) => `zone:${zoneId}:${day}`;
 
 /** The key of a door's alert: one per opening (§2.5's door, day, opening cycle). */
 export const doorAlertKey = (doorId: number, openedAt: Temporal.Instant) =>
@@ -280,8 +294,10 @@ const severityOf = (state: ThresholdState): AlertSeverity | null =>
 	state === "active" ? "active" : state === "near" ? "near" : null;
 
 /**
- * A zone's breaches over intervals: per hour the worst interval that's over (`active`) or near its
- * thresholds, as one breach of the metric that's furthest; nothing while the thresholds are off.
+ * A zone's breaches over intervals, its power and its consumption apart: per hour the interval
+ * whose power is furthest over (`active`) or near its max kW, and per day the one whose consumption
+ * so far is furthest over or near its max kWh (the day's latest, as it only grows); nothing while
+ * the thresholds are off.
  */
 export function zoneBreaches(
 	zoneId: number,
@@ -290,26 +306,30 @@ export function zoneBreaches(
 ): Breach[] {
 	if (!threshold.enabled) return [];
 	const worst = new Map<string, { ratio: number; breach: Breach }>();
-	for (const interval of intervals) {
-		const { ratio, metric } = thresholdRatio(
-			{ kw: interval.kw, kwh: interval.kwhToday },
-			threshold,
-		);
+	const consider = (key: string, ratio: number, breach: Omit<Breach, "key" | "severity">) => {
 		const severity = severityOf(thresholdState(ratio, true));
-		if (!severity) continue;
-		const seen = worst.get(interval.hour);
-		if (seen && seen.ratio >= ratio) continue;
-		worst.set(interval.hour, {
-			ratio,
-			breach: {
-				key: zoneAlertKey(zoneId, interval.hour),
-				metric,
-				severity,
-				threshold: metric === "power" ? threshold.maxKw : threshold.maxKwh,
-				measured: metric === "power" ? interval.kw : interval.kwhToday,
+		if (!severity) return;
+		const seen = worst.get(key);
+		if (seen && seen.ratio >= ratio) return;
+		worst.set(key, { ratio, breach: { key, severity, ...breach } });
+	};
+	for (const interval of intervals) {
+		if (threshold.maxKw > 0) {
+			consider(zoneAlertKey(zoneId, interval.hour), interval.kw / threshold.maxKw, {
+				metric: "power",
+				threshold: threshold.maxKw,
+				measured: interval.kw,
 				at: interval.start,
-			},
-		});
+			});
+		}
+		if (threshold.maxKwh > 0) {
+			consider(zoneDayAlertKey(zoneId, interval.day), interval.kwhToday / threshold.maxKwh, {
+				metric: "energy",
+				threshold: threshold.maxKwh,
+				measured: interval.kwhToday,
+				at: interval.start,
+			});
+		}
 	}
 	return [...worst.values()].map(({ breach }) => breach);
 }

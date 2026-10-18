@@ -1726,8 +1726,8 @@ _Left out, low impact; built since branch `energy-live-demo`._
 _Added, low impact._
 
 - **Mockup:** only breaches create a row in `energie_meldingen` (`ernst: actief`), for kW ("vermogen") or doors ("deur").
-- **Built:** alerts also for "near" (≥ 85 %, badge "Bijna"), and for consumption today over the kWh threshold (metric "Verbruik"), besides power and doors. Still at most one per zone per hour and per door opening.
-- **Why:** §3.4 [infer] "near was meant too", "energy (kWh)".
+- **Built:** alerts also for "near" (≥ 85 %, badge "Bijna"), and for consumption today over the kWh threshold (metric "Verbruik"), besides power and doors. At most one per zone per hour for power (§2.5's key), per zone per day for consumption (key zone, day), and per door opening.
+- **Why:** §3.4 [infer] "near was meant too", "energy (kWh)". The kWh threshold is per day: keyed per hour, a zone over it raised a new alert every hour that was left of the day.
 
 #### 195. Alerts become orders instead of a Focus AI batch
 
