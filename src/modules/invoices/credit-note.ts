@@ -15,11 +15,13 @@
  *   whole still credits something.
  * - **Status**: as an invoice's (`canChange()`): a draft is issued (sent), then settled (`paid`:
  *   refunded, or offset against its invoice) or voided. It's never overdue.
- * - **What's left to pay** of an invoice is its total less its issued credit notes' totals.
+ * - **What's left to pay** of a sent invoice is its total less its issued credit notes' totals.
  *   Once nothing is left (all of it credited), the invoice is settled by them: marked paid, with
  *   them, when the last is issued. A sent invoice that's paid settles its sent credit notes the same
- *   day, as they were offset against it. A credit note against a paid invoice, or a standalone one,
- *   is settled when the office refunds it.
+ *   day, as they were offset against it. Nothing is left of a paid invoice: a credit note against
+ *   it, or a standalone one, is settled when the office refunds it.
+ * - **Another module's** standalone credit note (`isMadeElsewhere()`) keeps the lines it was made
+ *   with: they're that module's figures (the partner programme's bonus, frozen with its year).
  */
 import { invoiceTotals, lineAmount, type InvoiceTotals } from "./invoice.ts";
 import type { InvoiceStatus } from "./model.ts";
@@ -157,6 +159,18 @@ export const typedCreditLine = (line: {
 	source: line.source ?? null,
 });
 
+/**
+ * Whether another module made a standalone credit note (the partner programme's cash bonus,
+ * through `api/credit-notes.server.ts`): a line of it refers to that module's record (`source`).
+ * Its lines are that module's figures, so they aren't added to or removed here; it's issued,
+ * settled or voided like any other. One against an invoice keeps its lines' references (a
+ * contract's fee), and is the office's.
+ */
+export const isMadeElsewhere = (credit: {
+	invoiceId: number | null;
+	lines: readonly { source: string | null }[];
+}) => credit.invoiceId === null && credit.lines.some((line) => line.source !== null);
+
 // --- What's left to pay ------------------------------------------------------------------------
 
 /** A credit note's totals, from its lines' subtotal (negative) at its VAT rate. */
@@ -164,10 +178,17 @@ export const creditTotals = (subtotal: number, vatRate: number) =>
 	invoiceTotals([{ amount: subtotal }], vatRate);
 
 /**
- * What's left to pay of an invoice whose issued credit notes have `credits` (their totals,
- * negative): its total less theirs, never below zero, and nothing once its subtotal is all credited.
+ * What's left to pay of an invoice of `status` whose issued credit notes have `credits` (their
+ * totals, negative): its total less theirs, never below zero, and nothing once its subtotal is all
+ * credited. Nothing of a paid invoice (a credit note against it is refunded: the credit note's to
+ * settle) or a void one.
  */
-export function remainingOf(totals: InvoiceTotals, credits: readonly InvoiceTotals[]) {
+export function remainingOf(
+	totals: InvoiceTotals,
+	credits: readonly InvoiceTotals[],
+	status: InvoiceStatus,
+) {
+	if (status === "paid" || status === "void") return 0;
 	const subtotal = credits.reduce((sum, credit) => sum + credit.subtotal, totals.subtotal);
 	if (subtotal <= 0) return 0;
 	return Math.max(

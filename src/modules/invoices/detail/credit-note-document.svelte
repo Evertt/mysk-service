@@ -1,8 +1,8 @@
 <!--
 	@component
 	A credit note as the customer gets it: who it's from and for, the invoice it credits, its reason,
-	lines and totals (negative); what the PDF shows too. On a draft (`editable`), each line can be
-	removed.
+	lines and totals (negative); what the PDF shows too. While its lines can change (`editable`: a
+	draft's, unless another module made it), each line can be removed.
 -->
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";

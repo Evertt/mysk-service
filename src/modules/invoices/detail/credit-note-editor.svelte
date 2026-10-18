@@ -1,7 +1,8 @@
 <!--
 	@component
 	What can be changed on a draft credit note: its reason, and on a standalone one more lines typed
-	in (what each credits, as a positive price). One against an invoice credits that invoice's lines.
+	in (what each credits, as a positive price). One against an invoice credits that invoice's lines;
+	another module's keeps the lines it was made with.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
@@ -11,6 +12,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
+	import { isMadeElsewhere } from "../credit-note.ts";
 	import type { getCreditNote } from "../credit-notes.remote.ts";
 	import { addCreditLine, updateCreditReason } from "./credit-note.remote.ts";
 
@@ -42,7 +44,14 @@
 	</Card.Content>
 </Card.Root>
 
-{#if !credit.invoice}
+{#if isMadeElsewhere(credit)}
+	<Card.Root data-lines-elsewhere>
+		<Card.Header>
+			<Card.Title>{m.invoices_credit_lines_elsewhere_title()}</Card.Title>
+			<Card.Description>{m.invoices_credit_lines_elsewhere_description()}</Card.Description>
+		</Card.Header>
+	</Card.Root>
+{:else if !credit.invoice}
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{m.invoices_add_line_title()}</Card.Title>

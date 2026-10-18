@@ -799,7 +799,11 @@ describe("the lists and the dashboard, in North", () => {
 				...invoice,
 				total: totals.total,
 				credited,
-				remaining: left <= 0 ? 0 : Math.max(0, totals.total + credited),
+				// Nothing of a paid or void invoice, whatever its credit notes.
+				remaining:
+					invoice.status === "paid" || invoice.status === "void" || left <= 0
+						? 0
+						: Math.max(0, totals.total + credited),
 			};
 		});
 	}

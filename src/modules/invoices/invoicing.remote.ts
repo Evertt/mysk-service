@@ -92,6 +92,7 @@ export const getReceivables = query(async () => {
 		total: creditSummary(
 			invoiceTotals([{ amount: subtotal }], row.vatRate),
 			credits.get(row.id) ?? [],
+			row.status,
 		).remaining,
 	}));
 	const overdue = priced

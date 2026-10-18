@@ -47,7 +47,7 @@ export const getCreditNote = query(v.string(), async (number) => {
 		});
 		if (found) {
 			const totals = invoiceTotals(found.lines, found.vatRate);
-			remaining = creditSummary(totals, await creditsOf(db, [found.id])).remaining;
+			remaining = creditSummary(totals, await creditsOf(db, [found.id]), found.status).remaining;
 		}
 	}
 	return { ...loaded, organization: tenant.name, remaining };
@@ -65,7 +65,7 @@ export const getCreditable = query(v.string(), async (number) => {
 	if (!found) error(404, m.invoices_number_not_found({ number }));
 	const lines = await creditableLines(db, found.id);
 	const totals = invoiceTotals(lines, found.vatRate);
-	const summary = creditSummary(totals, await creditsOf(db, [found.id]));
+	const summary = creditSummary(totals, await creditsOf(db, [found.id]), found.status);
 	return {
 		invoice: {
 			id: found.id,

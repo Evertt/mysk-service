@@ -152,6 +152,36 @@
 	"partners_rules_categories_description": "Per categorie: of het meetelt voor het level, en voor elke bonusvorm. Volgens afspraak: zoals de opdracht is geclassificeerd.",
 	"partners_rules_save": "Regels opslaan",
 	"partners_rules_saved": "De regels van {year} zijn opgeslagen",
+	"partners_rules_closed": [
+		{
+			"declarations": [
+				"input count",
+				"input year",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{year} is voor {countText} partner afgesloten, dus de regels kun je niet meer wijzigen.",
+				"countPlural=*": "{year} is voor {countText} partners afgesloten, dus de regels kun je niet meer wijzigen."
+			}
+		}
+	],
+	"partners_rules_closed_later": [
+		{
+			"declarations": [
+				"input count",
+				"input year",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{year} volgt deze regels en is voor {countText} partner afgesloten, dus je kunt ze niet meer wijzigen.",
+				"countPlural=*": "{year} volgt deze regels en is voor {countText} partners afgesloten, dus je kunt ze niet meer wijzigen."
+			}
+		}
+	],
 	"partners_column_threshold": "Partner Omzet vanaf",
 	"partners_column_cash_rate": "Cash Bonus",
 	"partners_column_credit_rate": "Parts Credit",
