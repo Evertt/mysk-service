@@ -28,12 +28,7 @@ export { cents, countIn, fixture, nextCode, rows, unbalancedStock, value } from 
 export { runDailyJobs } from "./jobs.ts";
 export { linkInMail, sentMail } from "./mail.ts";
 export { quiet } from "./network.ts";
-export {
-	isRemote,
-	remoteErrorStatus,
-	tamperWithCommand,
-	tamperWithQuery,
-} from "./remote-functions.ts";
+export { isRemote, remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 
 // --- Browser ---------------------------------------------------------------------------------
 
@@ -46,7 +41,7 @@ export const fitsWidth = (page: Page) =>
 	page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
 /** A stat tile (`StatTile`) within `scope`, by its label. */
-export const statTileNamed = (scope: Page | Locator, label: string) =>
+const statTileNamed = (scope: Page | Locator, label: string) =>
 	scope.locator("[data-stat-tile]").filter({
 		has: ("goto" in scope ? scope : scope.page()).locator("[data-stat-label]", {
 			hasText: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
