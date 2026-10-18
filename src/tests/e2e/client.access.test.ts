@@ -1,8 +1,9 @@
 /**
  * Portal access, on a customer's page: an owner invites a contact of the customer for some of its
  * sites, who creates their account from the mail and then sees only those sites in the customer
- * portal; the contact isn't on the members page; a member can't invite; revoking takes the access
- * away. Logged on the customer.
+ * portal; revoking takes the access away. Logged on the customer. What the invitation refuses, a
+ * planner's part and the members page without the contacts are
+ * `customers/server/portal-access.spec.ts`'s.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
@@ -20,7 +21,6 @@ import {
 	users,
 	value,
 } from "./app.ts";
-import { signedInPage } from "./portal-helpers.ts";
 
 const { shltr } = organizations;
 const app = useApp({ user: users.shltrOwner });
@@ -76,25 +76,6 @@ describe("portal access", () => {
 		expect(sentMail(contact.email).at(-1)!.text).toContain("a customer contact");
 	});
 
-	test("inviting someone who's invited already, or one of the team, is refused", async () => {
-		const card = app.page.locator("[data-portal-access]");
-		for (const [email, message] of [
-			[contact.email, `${contact.email} has been invited already.`],
-			[users.shltrPlanner, `${users.shltrPlanner} is a member of the organization already.`],
-		]) {
-			await card.getByLabel("Invite a contact by email").fill(email);
-			await app.submit(card.getByRole("button", { name: "Send invitation" }));
-			expect(await app.issues()).toContain(message);
-		}
-		expect(await access()).toHaveLength(1);
-	});
-
-	test("the members page doesn't have customers' contacts or their invitations", async () => {
-		await app.go("/settings/members");
-		expect(await app.page.locator(`[data-invitation="${contact.email}"]`).count()).toBe(0);
-		expect(await app.page.locator("main").innerText()).not.toContain(contact.email);
-	});
-
 	test("the contact creates their account and sees only their sites in the portal", async () => {
 		const context = await app.page
 			.context()
@@ -147,21 +128,6 @@ describe("portal access", () => {
 		expect(logged).toEqual([
 			{ action: "sent", subject_type: "invitation", user_name: "Marloes Hendriks" },
 		]);
-	});
-
-	test("a member sees who has access, but can't invite or revoke", async () => {
-		const { code } = await vermeer();
-		const { page } = await signedInPage(app, users.shltrPlanner);
-		try {
-			await page.goto(`${baseURL}/customers/${code}`);
-			await hydrated(page);
-			const card = page.locator("[data-portal-access]");
-			await card.locator(`[data-portal-contact="${contact.email}"]`).waitFor();
-			expect(await card.getByRole("button", { name: "Send invitation" }).count()).toBe(0);
-			expect(await card.getByRole("button", { name: "Revoke" }).count()).toBe(0);
-		} finally {
-			await page.context().close();
-		}
 	});
 
 	test("revoking takes the access away, and logs it", async () => {

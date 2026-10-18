@@ -16,7 +16,7 @@ import {
 } from "./app.ts";
 import { signedInPage } from "./portal-helpers.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp({ user: users.engineer, viewport: mobileViewport });
 
 interface Order {
@@ -219,17 +219,11 @@ describe("the engineer portal", () => {
 		await page.getByText("Replaced the gasket").waitFor();
 	});
 
-	test("completing needs the engineer's own signature too", async () => {
+	// That it needs the engineer's own signature too is `routes/(field)/my/portal.spec.ts`'s.
+	test("completing with both drawn signatures stores the sign-off", async () => {
 		const { page } = app;
 		await page.getByLabel("Signed by").fill("Robin Customer");
 		await sign(page.getByLabel("Signature", { exact: true }));
-		await app.submit(page.getByRole("button", { name: "Complete job" }));
-		expect(await app.issues()).toContain("Sign the work order yourself too");
-		expect((await orderByNumber(job.number)).status).toBe("in_progress");
-	});
-
-	test("completing with both drawn signatures stores the sign-off", async () => {
-		const { page } = app;
 		await sign(page.getByLabel("Engineer's signature"));
 		// The engineer's name, as it goes on the work order.
 		expect(await page.getByLabel("Your name").inputValue()).toBe((await me()).name);
@@ -353,7 +347,7 @@ describe("what a field engineer can't do", () => {
 	});
 
 	describe("another engineer's order is a 404, also by a tampered id", () => {
-		/** An order in progress of another North engineer, one of South's, and one of their own. */
+		/** An order in progress of another North engineer, and one of their own. */
 		const orders = async () => {
 			const mine = await me();
 			const [others] = await rows<Order>(
@@ -365,11 +359,7 @@ describe("what a field engineer can't do", () => {
 				`select id, number from "order" where engineer_id = ? and status = 'in_progress' limit 1`,
 				[mine.id],
 			);
-			const [southern] = await rows<Order>(
-				`select id, number from "order" where organization_id = ? and status = 'in_progress' limit 1`,
-				[south.id],
-			);
-			return { others, own, southern };
+			return { others, own };
 		};
 
 		test("by its page", async () => {
@@ -377,34 +367,24 @@ describe("what a field engineer can't do", () => {
 			expect((await app.go(`/my/${others.number}`))?.status()).toBe(404);
 		});
 
-		// One test per order: the four submissions, each followed by a page load, took up half a
-		// test's time under the load of a full run.
-		test.each(["others", "southern"] as const)(
-			"by the id in the forms of their own order (%s)",
-			async (whose) => {
-				const { page } = app;
-				const { own, [whose]: victim } = await orders();
-				const before = [await snapshot(victim.id), await snapshot(own.id)];
-				await app.go(`/my/${own.number}`);
-				for (const [form, button] of [
-					["Add a note", "Add note"],
-					["Hours", "Save hours"],
-				]) {
-					await page.getByLabel(form).fill("1");
-					const result = await app.expectingErrors(async () => {
-						await page.getByRole("button", { name: button }).evaluate((element, id) => {
-							element
-								.closest("form")!
-								.querySelector<HTMLInputElement>('input[type="hidden"][name^="id"]')!.value =
-								String(id);
-						}, victim.id);
-						return app.submit(page.getByRole("button", { name: button }));
-					});
-					expect(result, button).toMatch(/"status":404/);
-					await app.go(`/my/${own.number}`);
-				}
-				expect([await snapshot(victim.id), await snapshot(own.id)]).toEqual(before);
-			},
-		);
+		// The other forms, and South's orders, are `routes/(field)/my/portal.spec.ts`'s.
+		test("by the id in the note form of their own order", async () => {
+			const { page } = app;
+			const { own, others: victim } = await orders();
+			const before = [await snapshot(victim.id), await snapshot(own.id)];
+			await app.go(`/my/${own.number}`);
+			await page.getByLabel("Add a note").fill("1");
+			const result = await app.expectingErrors(async () => {
+				await page.getByRole("button", { name: "Add note" }).evaluate((element, id) => {
+					element
+						.closest("form")!
+						.querySelector<HTMLInputElement>('input[type="hidden"][name^="id"]')!.value =
+						String(id);
+				}, victim.id);
+				return app.submit(page.getByRole("button", { name: "Add note" }));
+			});
+			expect(result).toMatch(/"status":404/);
+			expect([await snapshot(victim.id), await snapshot(own.id)]).toEqual(before);
+		});
 	});
 });
