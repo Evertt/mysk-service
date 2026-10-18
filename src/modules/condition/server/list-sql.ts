@@ -71,6 +71,27 @@ function rowSql(unit: ConditionSql = conditionSql(), part: ComponentSql = compon
 export type RowSql = ReturnType<typeof rowSql>;
 
 /**
+ * What the search box searches, as one text: a row's values, a line each. A search binds each of
+ * its words (up to ten) once per searched column: as nine columns, a full search bound 90 values,
+ * 98 of the 100 a statement may bind with the scope, filters and page; as one, 10, whatever it
+ * searches. A word has no white space, so it's never found across two of the values.
+ */
+const searched = sql`(${sql.join(
+	[
+		component.name,
+		component.number,
+		equipment.serialNumber,
+		equipment.name,
+		equipment.manufacturer,
+		equipment.model,
+		customer.name,
+		customer.code,
+		equipmentLocation.name,
+	].map((column) => sql`coalesce(${column}, '')`),
+	sql` || char(10) || `,
+)})`;
+
+/**
  * The list's columns in SQL, checked against its definition, with the units' condition (`unit`)
  * and the rows' (`row`), built once for the request, so the rows' query can select the same. Call
  * it per request.
@@ -119,17 +140,7 @@ export function rowsSql(
 				filter: (statuses) => inList(row.status, statuses),
 			},
 		},
-		search: [
-			component.name,
-			component.number,
-			equipment.serialNumber,
-			equipment.name,
-			equipment.manufacturer,
-			equipment.model,
-			customer.name,
-			customer.code,
-			equipmentLocation.name,
-		],
+		search: [searched],
 		id: rowId,
 		scope: inCare,
 	};

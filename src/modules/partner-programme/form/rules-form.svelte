@@ -20,8 +20,17 @@
 
 	const form = saveYearRules;
 
-	// Kept here so levels can be added and removed; in euros and percentages, as they're typed.
-	const initialTiers = () =>
+	/** A level as it's typed: in euros and percentages, a number empty while its field is. */
+	interface TypedTier {
+		key: string;
+		level: string;
+		threshold: number | null;
+		cashRate: number | null;
+		creditRate: number | null;
+	}
+
+	// Kept here so levels can be added and removed.
+	const initialTiers = (): TypedTier[] =>
 		rules.tiers.map((tier) => ({
 			key: crypto.randomUUID(),
 			level: tier.level,
@@ -32,7 +41,9 @@
 	let tiers = $state(initialTiers());
 
 	// Inputs take their value from `tiers` (rows can be removed, which shifts the indexes), so only
-	// the name and validation attributes come from the form field.
+	// the name and validation attributes come from the form field. The numbers are bound
+	// (`bind:value`), which keeps what's typed: an empty field stays empty (the form refuses it on
+	// save), and "3." on the way to "3.5" isn't written back as a number.
 	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
 		return attributes;
 	}
@@ -42,7 +53,7 @@
 		tiers.push({
 			key: crypto.randomUUID(),
 			level: "",
-			threshold: last ? last.threshold * 2 : 50_000,
+			threshold: last?.threshold == null ? 50_000 : last.threshold * 2,
 			cashRate: last?.cashRate ?? 2.5,
 			creditRate: last?.creditRate ?? 3,
 		});
@@ -103,8 +114,7 @@
 										step={1}
 										class="tabular-nums"
 										{...withoutValue(fields.threshold.as("number"))}
-										value={tier.threshold}
-										oninput={(event) => (tier.threshold = Number(event.currentTarget.value))}
+										bind:value={tier.threshold}
 									/>
 								</InputGroup.Root>
 							</Table.Cell>
@@ -126,8 +136,7 @@
 										step={0.01}
 										class="tabular-nums"
 										{...withoutValue(fields.cashRate.as("number"))}
-										value={tier.cashRate}
-										oninput={(event) => (tier.cashRate = Number(event.currentTarget.value))}
+										bind:value={tier.cashRate}
 									/>
 									<InputGroup.Addon align="inline-end"
 										><InputGroup.Text>%</InputGroup.Text></InputGroup.Addon
@@ -143,8 +152,7 @@
 										step={0.01}
 										class="tabular-nums"
 										{...withoutValue(fields.creditRate.as("number"))}
-										value={tier.creditRate}
-										oninput={(event) => (tier.creditRate = Number(event.currentTarget.value))}
+										bind:value={tier.creditRate}
 									/>
 									<InputGroup.Addon align="inline-end"
 										><InputGroup.Text>%</InputGroup.Text></InputGroup.Addon
