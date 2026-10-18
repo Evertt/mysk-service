@@ -241,6 +241,30 @@ describe("storing a batch", () => {
 		]);
 	});
 
+	test("a door open for days raises its alert once, with any batch", async () => {
+		// Opened Friday 10:00 and not yet overdue when its event came in; the next batches come in
+		// over a day later, and on Monday.
+		await ingest({ doorEvents: [door(0, "open")] }, t(5));
+		expect(await alerts()).toEqual([]);
+		await ingest({ readings: [reading("Z-A", 30 * 60, 1)] }, t(30 * 60 + 20));
+		const [alert] = await alerts();
+		expect(alert).toMatchObject({ metric: "door", doorId: 1, at: t(0), measured: 30 * 60 + 20 });
+		const monday = 3 * 24 * 60;
+		await ingest({ readings: [reading("Z-A", monday, 1)] }, t(monday + 20));
+		expect(await alerts()).toEqual([
+			expect.objectContaining({ id: alert.id, at: t(0), measured: monday + 20 }),
+		]);
+	});
+
+	test("a door open for days that has closed raises its alert once it's in", async () => {
+		await ingest({ doorEvents: [door(0, "open")] }, t(5));
+		const monday = 3 * 24 * 60;
+		await ingest({ doorEvents: [door(monday, "closed")] }, t(monday + 1));
+		expect(await alerts()).toEqual([
+			expect.objectContaining({ metric: "door", at: t(0), measured: monday }),
+		]);
+	});
+
 	test("raises nothing about breaches older than a day", async () => {
 		const outcome = await ingest(
 			{ readings: [reading("Z-A", 0, 500)], doorEvents: [door(0, "open"), door(30, "closed")] },

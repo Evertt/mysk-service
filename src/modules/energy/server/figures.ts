@@ -16,6 +16,7 @@ import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
 import {
 	doorLossKwh,
 	type DoorKind,
+	INTERVAL_MINUTES,
 	isOffline,
 	isOverdue,
 	minutesOpenBetween,
@@ -28,10 +29,10 @@ import {
 	type ZoneTone,
 	zoneTone,
 } from "../model.ts";
+import { doorEvents } from "./door-events.ts";
 import {
 	energyAlert,
 	energyDoor,
-	energyDoorEvent,
 	energyReading,
 	energySite,
 	energyThreshold,
@@ -75,10 +76,13 @@ interface Ranges {
 	to: Temporal.Instant;
 	/**
 	 * The period before it, from its start (its chart: bucket N against this period's bucket N),
-	 * to the same moment in it as now is in this one (its sums).
+	 * to the same moment in it as now is in this one (its door losses; its readings' sums go only
+	 * as far as this period's readings have come in, see `siteFigures()`).
 	 */
 	previousFrom: Temporal.Instant;
 	previousTo: Temporal.Instant;
+	/** The moment in the period before that a moment in this one compares with. */
+	previousAt: (at: Temporal.Instant) => Temporal.Instant;
 	/** Today's start at the site, for the thresholds, which are per day. */
 	today: Temporal.Instant;
 	/** How a chart's buckets go: hours of the day, or days. */
@@ -100,15 +104,17 @@ const earlier = (a: Temporal.Instant, b: Temporal.Instant) =>
  * a day last month hasn't (the 31st after a month of 30 days) compares with the whole of it.
  */
 export function periodRanges(period: Period, timeZone: string, now: Temporal.Instant): Ranges {
-	const local = now.toZonedDateTimeISO(timeZone);
-	const day = local.toPlainDate();
+	const day = now.toZonedDateTimeISO(timeZone).toPlainDate();
 	const today = startOf(day, timeZone);
 	if (period === "day") {
+		const previousAt = (at: Temporal.Instant) =>
+			earlier(at.toZonedDateTimeISO(timeZone).subtract({ days: 1 }).toInstant(), today);
 		return {
 			from: today,
 			to: now,
 			previousFrom: startOf(day.subtract({ days: 1 }), timeZone),
-			previousTo: earlier(local.subtract({ days: 1 }).toInstant(), today),
+			previousTo: previousAt(now),
+			previousAt,
 			today,
 			bucket: "hour",
 			buckets: 24,
@@ -117,14 +123,18 @@ export function periodRanges(period: Period, timeZone: string, now: Temporal.Ins
 	const first = day.with({ day: 1 });
 	const from = startOf(first, timeZone);
 	const before = first.subtract({ months: 1 });
+	const previousAt = (at: Temporal.Instant) => {
+		const local = at.toZonedDateTimeISO(timeZone);
+		return local.day <= before.daysInMonth
+			? earlier(local.subtract({ months: 1 }).toInstant(), from)
+			: from;
+	};
 	return {
 		from,
 		to: now,
 		previousFrom: startOf(before, timeZone),
-		previousTo:
-			day.day <= before.daysInMonth
-				? earlier(local.subtract({ months: 1 }).toInstant(), from)
-				: from,
+		previousTo: previousAt(now),
+		previousAt,
 		today,
 		bucket: "day",
 		buckets: first.daysInMonth,
@@ -143,11 +153,13 @@ export function reportRanges(
 	const end = startOf(last.add({ days: 1 }), timeZone);
 	const to = earlier(end, now);
 	const previousFrom = startOf(first.subtract({ days }), timeZone);
+	const previousAt = (at: Temporal.Instant) => earlier(previousFrom.add(at.since(from)), from);
 	return {
 		from,
 		to,
 		previousFrom,
-		previousTo: earlier(previousFrom.add(to.since(from)), from),
+		previousTo: previousAt(to),
+		previousAt,
 		today: startOf(now.toZonedDateTimeISO(timeZone).toPlainDate(), timeZone),
 		bucket: days === 1 ? "hour" : "day",
 		buckets: days === 1 ? 24 : days,
@@ -234,9 +246,26 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 		.where(and(inTenant(energyZone), eq(energyZone.energySiteId, site.id)))
 		.orderBy(asc(energyZone.position), asc(energyZone.id));
 	const zoneIds = zones.map((zone) => zone.id);
-	const { from, to, previousFrom, previousTo, today } = ranges;
+	const { from, to, previousFrom, today } = ranges;
 	const start = energyReading.start;
 	const inZones = and(inTenant(energyReading), inList(energyReading.zoneId, zoneIds));
+	const until = earlier(to, now);
+
+	// This period's sums hold the intervals that have ended and come in: the previous period's go
+	// as far into it as those go into this one, not to now (at 00:10 there's no reading of today
+	// yet, and a gateway that sends every hour is up to an hour behind), for a like comparison.
+	const [{ last }] = await db
+		.select({ last: sql<number | null>`max(${start})` })
+		.from(energyReading)
+		.where(and(inZones, gte(start, from), lt(start, until)));
+	const readTo =
+		last === null
+			? from
+			: earlier(
+					Temporal.Instant.fromEpochMilliseconds(last * 1000).add({ minutes: INTERVAL_MINUTES }),
+					until,
+				);
+	const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
 
 	const [sums, hourly, latest, [first]] = await Promise.all([
 		db
@@ -249,7 +278,7 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 				kwhToday: sql<number>`coalesce(sum(case when ${start} >= ${seconds(today)} then ${energyReading.kwh} end), 0)`,
 			})
 			.from(energyReading)
-			.where(and(inZones, gte(start, previousFrom), lt(start, earlier(to, now))))
+			.where(and(inZones, gte(start, previousFrom), lt(start, until)))
 			.groupBy(energyReading.zoneId),
 		// kWh per zone per hour (UTC): the buckets are made of them in the site's zone.
 		db
@@ -358,21 +387,13 @@ async function doorFigures(
 		.where(and(inTenant(energyDoor), eq(energyDoor.energySiteId, site.id)))
 		.orderBy(asc(energyDoor.code));
 	if (!doors.length) return [];
-	// A day before the previous period, to pair an opening that started before it.
-	const events = await db
-		.select({ doorId: energyDoorEvent.doorId, at: energyDoorEvent.at, open: energyDoorEvent.open })
-		.from(energyDoorEvent)
-		.where(
-			and(
-				inTenant(energyDoorEvent),
-				inList(
-					energyDoorEvent.doorId,
-					doors.map((door) => door.id),
-				),
-				gte(energyDoorEvent.at, ranges.previousFrom.subtract({ hours: 24 })),
-				lt(energyDoorEvent.at, now),
-			),
-		);
+	// With the opening a door was in when the previous period began, however long ago it opened.
+	const events = await doorEvents(
+		db,
+		doors.map((door) => door.id),
+		ranges.previousFrom,
+		now,
+	);
 	const end = earlier(ranges.to, now);
 	return doors.map((door) => {
 		const own = openings(events.filter((event) => event.doorId === door.id));

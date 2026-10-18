@@ -4,12 +4,12 @@
  * at the site's customer, through the core's `createOrders()`), and resolved ("Afhandelen").
  */
 import { error } from "@sveltejs/kit";
-import { and, desc, eq, type SQL } from "drizzle-orm";
+import { and, desc, eq, ne, type SQL } from "drizzle-orm";
 
 import { createOrders, type OrderDraft } from "#lib/orders/server/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customerSite, order } from "#lib/server/db/schema.ts";
 
 import { alertDetail, recommendation } from "../display.ts";
@@ -101,10 +101,15 @@ export async function orderAlert(id: number) {
 	};
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
+		// Still open, checked in the transaction before the order is made: a double click's second,
+		// or an alert resolved since it was loaded, makes none.
+		if (!(await claim(tx, id, eq(energyAlert.status, "open"), { status: "order" }))) {
+			error(409, m.energy_alert_not_open());
+		}
 		const [created] = await createOrders(tx, [draft]);
 		await tx
 			.update(energyAlert)
-			.set({ status: "order", orderId: created.id, orderOrganizationId: organizationId })
+			.set({ orderId: created.id, orderOrganizationId: organizationId })
 			.where(idInTenant(energyAlert, id));
 		await recordActivity(tx, { action: "alert_ordered", ...logged(alert), note: created.number });
 		return created.number;
@@ -116,10 +121,28 @@ export async function resolveAlert(id: number) {
 	const alert = await loadAlert(id);
 	if (alert.status === "done") error(409, m.energy_alert_done_already());
 	await db.transaction(async (tx) => {
-		await tx
-			.update(energyAlert)
-			.set({ status: "done", doneAt: Temporal.Now.instant() })
-			.where(idInTenant(energyAlert, id));
+		const done = { status: "done" as const, doneAt: Temporal.Now.instant() };
+		if (!(await claim(tx, id, ne(energyAlert.status, "done"), done))) {
+			error(409, m.energy_alert_done_already());
+		}
 		await recordActivity(tx, { action: "alert_resolved", ...logged(alert) });
 	});
+}
+
+/**
+ * Sets alert `id` to `changes` in `tx` if its status is still as `expected` (as it was loaded,
+ * which another request may have changed since). Answers whether it was.
+ */
+async function claim(
+	tx: Transaction,
+	id: number,
+	expected: SQL,
+	changes: Partial<typeof energyAlert.$inferInsert>,
+) {
+	const claimed = await tx
+		.update(energyAlert)
+		.set(changes)
+		.where(and(idInTenant(energyAlert, id), expected))
+		.returning({ id: energyAlert.id });
+	return claimed.length > 0;
 }

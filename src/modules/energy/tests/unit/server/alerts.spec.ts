@@ -154,6 +154,60 @@ describe("a door's alert", () => {
 	});
 });
 
+describe("an alert dealt with twice at once", () => {
+	/** A new open alert of the Laboratorium, as a batch raises it. */
+	async function openAlert(key: string) {
+		const { siteId, zone } = await riedel();
+		const now = Math.floor(Date.now() / 1000);
+		const [{ id }] = await rows<{ id: number }>(
+			`insert into energy_alert (organization_id, energy_site_id, zone_id, key, metric, severity,
+				threshold, measured, at, created_at)
+			 values (?, ?, ?, ?, 'power', 'active', 100, 120, ?, ?) returning id`,
+			[shltrId, siteId, zone("Z-LAB").id, key, now - 600, now],
+		);
+		return id;
+	}
+	const orders = () =>
+		value<number>(`select count(*) from "order" where organization_id = ?`, [shltrId]);
+
+	test("becomes one order: a double click's second is refused", async () => {
+		const id = await openAlert("spec-twice");
+		const before = await orders();
+		const answers = await as(shltr.member, () =>
+			Promise.all([call(makeAlertOrder, id), call(makeAlertOrder, id)]),
+		);
+		expect(answers.map((answer) => answer.status)).toEqual([200, 409]);
+		expect(await orders()).toBe(before + 1);
+		expect(await orderOf(id)).toMatchObject({
+			number: (answers[0].data as { number: string }).number,
+		});
+		expect(await logged(id, "alert_ordered")).toBe(1);
+	});
+
+	test("resolved meanwhile, becomes no order and stays done", async () => {
+		const id = await openAlert("spec-resolved");
+		const before = await orders();
+		const [resolved, ordered] = await as(shltr.member, () =>
+			Promise.all([call(resolveEnergyAlert, id), call(makeAlertOrder, id)]),
+		);
+		expect(resolved).toMatchObject({ status: 200 });
+		expect(ordered).toMatchObject({ status: 409 });
+		expect(await orders()).toBe(before);
+		expect(await alertsOf(await riedel().then((site) => site.siteId))).toContainEqual(
+			expect.objectContaining({ id, status: "done", order_id: null }),
+		);
+	});
+
+	test("is resolved once", async () => {
+		const id = await openAlert("spec-resolved-twice");
+		const answers = await as(shltr.member, () =>
+			Promise.all([call(resolveEnergyAlert, id), call(resolveEnergyAlert, id)]),
+		);
+		expect(answers.map((answer) => answer.status)).toEqual([200, 409]);
+		expect(await logged(id, "alert_resolved")).toBe(1);
+	});
+});
+
 describe("a zone's thresholds", () => {
 	test("a manager changes them; logged", async () => {
 		const { siteId, zone } = await riedel();
