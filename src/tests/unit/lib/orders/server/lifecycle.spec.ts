@@ -544,7 +544,7 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 		return found;
 	};
 
-	test("issuing makes its completed orders invoiced, each logged with the note; no module asked", async () => {
+	test("issuing makes its completed orders invoiced, each logged with the note", async () => {
 		const done = Temporal.Instant.from("2026-10-01T10:00:00Z");
 		const first = await orderIn("completed", { completedAt: done });
 		const second = await orderIn("completed", { completedAt: done });
@@ -563,8 +563,17 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 			}),
 			expect.objectContaining({ subject: { type: "order", id: second.id, label: second.number } }),
 		]);
-		// Completed and invoiced hold the same for every module (until the modules are asked, Q8).
-		expect(parts).not.toHaveBeenCalled();
+		// The modules follow each order, as they do every move.
+		expect(parts.mock.calls.map(([change]) => change)).toEqual([
+			expect.objectContaining({
+				order: expect.objectContaining({ id: first.id }),
+				status: "invoiced",
+			}),
+			expect.objectContaining({
+				order: expect.objectContaining({ id: second.id }),
+				status: "invoiced",
+			}),
+		]);
 	});
 
 	test("voiding makes its orders that are still invoiced completed again, and leaves the rest", async () => {
@@ -586,6 +595,24 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 		const orders = [await loaded(id)];
 		await db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" }));
 		expect((await stored(id)).completedAt).not.toBeNull();
+	});
+
+	test("a module's refusal stops the invoice, saying which order, and moves none of them", async () => {
+		const { OrderRefused } = await import("#lib/orders/server/hooks.ts");
+		const first = await orderIn("completed");
+		const second = await orderIn("completed");
+		parts.mockImplementation(async (change) => {
+			const { order: moving } = change as { order: { id: number } };
+			if (moving.id === second.id) throw new OrderRefused([{ message: "A checklist is open." }]);
+		});
+		const orders = [await loaded(first.id), await loaded(second.id)];
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" })),
+			),
+		).toEqual([`${second.number}: A checklist is open.`]);
+		expect((await stored(first.id)).status).toBe("completed");
+		expect((await stored(second.id)).status).toBe("completed");
 	});
 
 	test("doesn't move another tenant's order, also when its id is passed", async () => {

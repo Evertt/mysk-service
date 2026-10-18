@@ -227,9 +227,13 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 		.set({ completedAt: Temporal.Now.instant() })
 		.where(and(where, isNull(order.completedAt)));
 	for (const moved of moving) {
-		if (rule.asksModules !== false) {
-			await saveOrderParts({ tx, order: moved, status }).catch(refuseRefused);
-		}
+		// One of several orders: the refusal says which.
+		await saveOrderParts({ tx, order: moved, status }).catch((thrown: unknown) => {
+			if (thrown instanceof OrderRefused) {
+				invalid(m.orders_move_refused_for({ number: moved.number, reason: thrown.message }));
+			}
+			throw thrown;
+		});
 		await recordActivity(tx, {
 			action: rule.action!,
 			subject: { type: "order", id: moved.id, label: moved.number },

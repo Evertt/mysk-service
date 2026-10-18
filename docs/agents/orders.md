@@ -9,7 +9,7 @@ Which status may follow which, and for whom, is one table: `orderTransitions` in
 `src/lib/orders/lifecycle.ts`, a row per verb. `set` is the office giving a status by hand (the
 form, the list's status, bulk); `plan` the planner's; `accept` and `reject` a customer's report;
 `start` and `complete` the engineer's; `invoice` and `uninvoice` invoicing's. A row says who makes
-the move, from which statuses and to which, the activity entry's action, its refusal, and three
+the move, from which statuses and to which, the activity entry's action, its refusal, and two
 choices with defaults:
 
 - `completedAt`: `"follows"` the status (kept while done, set when it becomes done, cleared
@@ -17,7 +17,6 @@ choices with defaults:
   sign-off), or `"untouched"`.
 - `same`: a move to the status it has does nothing (`"skip"`), or is still made (`"move"`, the
   planner's, which changes the engineer and the time).
-- `asksModules: false`: the move doesn't ask the modules (`orders.saving`).
 
 The pages ask the rules derived from the table (`mayEditOrder`, `mayDeleteOrder`, `statusChoices`,
 `fieldActions`, `plannedStatus`, `can`) rather than testing statuses themselves, so a button and
@@ -28,10 +27,11 @@ the server agree. Core's status sets stay in `src/lib/models.ts` (`openOrderStat
 Every status change goes through `transitionOrder(tx, { verb, … })`
 (`src/lib/orders/server/lifecycle.ts`), in the caller's transaction. It finds the order in the
 verb's scope (the tenant's; for the engineer's verbs, their own), checks the row, makes one update,
-asks the modules (`saveOrderParts()`) unless the row says not to, makes the verb's own writes (the
-order request's decision, the sign-off), and logs one entry. Refusals are thrown: a 404, or
-`invalid()` with the row's message, a module's (an `OrderRefused`'s message), or, for the planner,
-the engineer's problem at the field `engineerId`. A command turns them into a 400 itself, as the
+asks the modules (`saveOrderParts()`, every move: invoicing's too, for each order), makes the verb's
+own writes (the order request's decision, the sign-off), and logs one entry. Refusals are thrown: a
+404, or `invalid()` with the row's message, a module's (an `OrderRefused`'s message, after the
+order's number for invoicing's, which moves several), or, for the planner, the engineer's problem
+at the field `engineerId`. A command turns them into a 400 itself, as the
 list's status cell does. The caller still emits `orders.committed` and refreshes its queries.
 
 The order form saves its own fields and units, so it takes a handle instead:

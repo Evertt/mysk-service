@@ -50,8 +50,6 @@ export interface TransitionRule {
 	completedAt?: "follows" | "at" | "untouched";
 	/** A move to the status it has: "skip" does nothing (the default); "move" still makes it. */
 	same?: "skip" | "move";
-	/** Removed by the behaviour commit (Q8 of the plan): every transition then asks the modules. */
-	asksModules?: false;
 }
 
 /**
@@ -107,8 +105,6 @@ export const orderTransitions = {
 		from: ["completed"],
 		to: ["invoiced"],
 		action: "updated",
-		// Completed and invoiced orders hold the same for every module (e.g. their stock).
-		asksModules: false,
 	},
 	/** Voiding a sent invoice makes its orders that are still invoiced completed again. */
 	uninvoice: {
@@ -116,7 +112,6 @@ export const orderTransitions = {
 		from: ["invoiced"],
 		to: ["completed"],
 		action: "updated",
-		asksModules: false,
 	},
 	/** The engineer starts a scheduled job. */
 	start: {
