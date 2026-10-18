@@ -91,7 +91,7 @@ export async function transitionOrder(
 	const completedAt = completion(rule.completedAt ?? "follows", status, found.completedAt, at);
 	const values = { ...columns, status, ...(completedAt !== undefined && { completedAt }) };
 	await tx.update(order).set(values).where(idInTenant(order, found.id));
-	await saveOrderParts({ tx, order: found, status }).catch(refuseRefused);
+	await saveOrderParts({ tx, order: found, from: found.status, status }).catch(refuseRefused);
 	if (transition.verb === "accept") await decide(tx, found.id, null);
 	if (transition.verb === "reject") await decide(tx, found.id, transition.reason);
 	if (transition.verb === "complete") await signOff(tx, found.id, transition.signoff, at);
@@ -185,7 +185,8 @@ export async function beginOrderChange(
 		before,
 		columns,
 		async finish(saved, { form, before: beforeExtra, after }) {
-			await saveOrderParts({ tx, order: saved, status: to, form }).catch(refuseParts);
+			const from = before?.status ?? null;
+			await saveOrderParts({ tx, order: saved, from, status: to, form }).catch(refuseParts);
 			if (!before) return;
 			await recordActivity(tx, {
 				action: "updated",
@@ -219,12 +220,19 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 		.where(and(where, isNull(order.completedAt)));
 	for (const moved of moving) {
 		// One of several orders: the refusal says which.
-		await saveOrderParts({ tx, order: moved, status }).catch((thrown: unknown) => {
-			if (thrown instanceof OrderRefused) {
-				invalid(m.orders_move_refused_for({ number: moved.number, reason: thrown.message }));
-			}
-			throw thrown;
-		});
+		await saveOrderParts({ tx, order: moved, from: moved.status, status }).catch(
+			(thrown: unknown) => {
+				if (thrown instanceof OrderRefused) {
+					const { message } = thrown;
+					invalid(
+						message.includes(moved.number)
+							? message
+							: m.orders_move_refused_for({ number: moved.number, reason: message }),
+					);
+				}
+				throw thrown;
+			},
+		);
 		await recordActivity(tx, {
 			action: rule.action,
 			subject: { type: "order", id: moved.id, label: moved.number },

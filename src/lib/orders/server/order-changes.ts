@@ -28,7 +28,9 @@ export async function removeOrder(id: number) {
 		});
 		if (!found) error(404, m.orders_not_found_plain());
 		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "deleted"));
-		await saveOrderParts({ tx, order: found, status: null }).catch(refuseRefused);
+		await saveOrderParts({ tx, order: found, from: found.status, status: null }).catch(
+			refuseRefused,
+		);
 		await tx.delete(order).where(idInTenant(order, found.id));
 		await recordActivity(tx, {
 			action: "deleted",

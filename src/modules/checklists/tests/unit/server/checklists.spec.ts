@@ -505,10 +505,14 @@ describe("changing an order's type", () => {
 });
 
 describe("saving an order's status", () => {
-	const saving = (id: number, status: "completed" | "in_progress" | null) =>
+	const saving = (
+		id: number,
+		status: "completed" | "invoiced" | "in_progress" | null,
+		from?: "completed" | "invoiced",
+	) =>
 		db.transaction(async (tx) => {
 			const [found] = await tx.select().from(order).where(eq(order.id, id));
-			return saveOrderChecklists({ tx, order: found, status });
+			return saveOrderChecklists({ tx, order: found, from: from ?? found.status, status });
 		});
 
 	test("refuses completing it while a checklist isn't completed, naming the units", async () => {
@@ -529,6 +533,13 @@ describe("saving an order's status", () => {
 		await completeChecklist(1, second.id);
 		expect(await saving(id, "completed")).toBeUndefined();
 		expect(await saving(id, "in_progress")).toBeUndefined();
+	});
+
+	test("lets a done order move between completed and invoiced with a checklist still open", async () => {
+		// Completed while the module was off, say: issuing or voiding its invoice isn't completing it.
+		const id = await orderWith([10]);
+		expect(await saving(id, "invoiced", "completed")).toBeUndefined();
+		expect(await saving(id, "completed", "invoiced")).toBeUndefined();
 	});
 
 	test("lets an order without checklists be completed", async () => {

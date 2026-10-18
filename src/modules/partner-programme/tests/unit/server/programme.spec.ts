@@ -181,6 +181,7 @@ describe("a partner's figures", () => {
 					saveClassification({
 						tx,
 						order: { id: 100, number: "O-100" },
+						from: "completed",
 						status: "invoiced",
 						form: { partnerProgramme: part } as never,
 					}),

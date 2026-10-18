@@ -27,7 +27,9 @@ the server agree. Core's status sets stay in `src/lib/models.ts` (`openOrderStat
 Every status change goes through `transitionOrder(tx, { verb, … })`
 (`src/lib/orders/server/lifecycle.ts`), in the caller's transaction. It finds the order in the
 verb's scope (the tenant's; for the engineer's verbs, their own), checks the row, makes one update,
-asks the modules (`saveOrderParts()`, every move: invoicing's too, for each order), makes the verb's
+asks the modules (`saveOrderParts()`, every move: invoicing's too, for each order; they get the
+status it moves `from` and the one it moves to, so a rule about becoming done, like checklists',
+leaves an invoice's issuing and voiding alone), makes the verb's
 own writes (the order request's decision, the sign-off), and logs one entry. Refusals are thrown: a
 404, or `invalid()` with the row's message, a module's (an `OrderRefused`'s message, after the
 order's number for invoicing's, which moves several), or, for the planner, the engineer's problem

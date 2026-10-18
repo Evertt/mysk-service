@@ -149,6 +149,8 @@ export interface OrderSaving {
 	/** The transaction core changes the order in: a module saves its part in it too. */
 	tx: Transaction;
 	order: { id: number; number: string };
+	/** Its status before the change; `null` for a new order. */
+	from: OrderStatus | null;
 	/** Its status once changed; `null` while it's being deleted (before its row goes). */
 	status: OrderStatus | null;
 	/**

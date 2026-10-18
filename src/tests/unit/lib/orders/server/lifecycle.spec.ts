@@ -616,6 +616,17 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 		expect((await stored(second.id)).status).toBe("completed");
 	});
 
+	test("a refusal that names the order already isn't prefixed with it again", async () => {
+		const { id, number } = await orderIn("completed");
+		parts.mockImplementation(async () => [{ message: `${number} has an open checklist.` }]);
+		const orders = [await loaded(id)];
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" })),
+			),
+		).toEqual([`${number} has an open checklist.`]);
+	});
+
 	test("doesn't move another tenant's order, also when its id is passed", async () => {
 		const { id } = await orderIn("completed", { organizationId: "south" });
 		const orders = [await loaded(id)];
@@ -825,5 +836,43 @@ describe("another tenant's (or engineer's) order is a 404 for every verb", () =>
 		).toBe(404);
 		expect((await stored(id)).status).toBe("in_progress");
 		expect(await storedSignoff(id)).toBeUndefined();
+	});
+});
+
+describe("the modules learn the status an order moves from", () => {
+	test("a move, an invoice's orders, an edited order and a new one", async () => {
+		const moved = await orderIn("scheduled");
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "set", id: moved.id, to: "in_progress" }),
+		);
+		const invoiced = await orderIn("completed");
+		const [invoicedRow] = await db
+			.select({ id: order.id, number: order.number, status: order.status })
+			.from(order)
+			.where(eq(order.id, invoiced.id));
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "invoice", orders: [invoicedRow], note: "F-1" }),
+		);
+		const edited = await orderIn("quote");
+		const created = await orderIn("quote");
+		await db.transaction(async (tx) => {
+			const change = await beginOrderChange(tx, edited.id, "scheduled");
+			await change.finish(edited, { form: {}, after: change.columns });
+		});
+		await db.transaction(async (tx) => {
+			const change = await beginOrderChange(tx, null, "quote");
+			await change.finish(created, { form: {}, after: {} });
+		});
+		expect(
+			parts.mock.calls.map(([change]) => {
+				const { from, status } = change as { from: OrderStatus | null; status: OrderStatus };
+				return { from, status };
+			}),
+		).toEqual([
+			{ from: "scheduled", status: "in_progress" },
+			{ from: "completed", status: "invoiced" },
+			{ from: "quote", status: "scheduled" },
+			{ from: null, status: "quote" },
+		]);
 	});
 });
