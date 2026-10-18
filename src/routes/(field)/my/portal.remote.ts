@@ -8,6 +8,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
 import { findEngineerOrder, orderCommitted, transitionOrder } from "#lib/orders/server/index.ts";
@@ -197,10 +198,7 @@ export const watchMyWork = forEngineers.query.live(async function* () {
 	}
 });
 
-type MyOrder = Awaited<ReturnType<typeof findEngineerOrder>>;
-
 /** How an order shows in the activity log. */
-const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
 
 /**
  * Refreshes what the portal shows of an order after a change, the modules' cards on it too (they
@@ -232,7 +230,7 @@ export const logHours = forEngineers.form(
 			await tx.update(order).set(after).where(idInTenant(order, found.id));
 			await recordActivity(tx, {
 				action: "updated",
-				subject: subjectOf(found),
+				subject: orderSubject(found),
 				before: found,
 				after,
 			});
@@ -264,7 +262,7 @@ export const addNote = forEngineers.form(
 			});
 			await recordActivity(tx, {
 				action: "note_added",
-				subject: subjectOf(found),
+				subject: orderSubject(found),
 				note: input.text,
 			});
 			return found.number;

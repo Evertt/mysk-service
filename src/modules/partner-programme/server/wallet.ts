@@ -7,6 +7,7 @@
 import { invalid } from "@sveltejs/kit";
 import { and, asc, gte, isNull, or, sql } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
@@ -17,7 +18,6 @@ import { inList } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
 
 import { creditLeft, type WalletEntryKind, walletSummary } from "../model.ts";
-import { customerSubject } from "./partners.ts";
 import { walletEntry } from "./schema.ts";
 
 /** A wallet entry as stored, with the day it was made (`on`, in the user's zone). */

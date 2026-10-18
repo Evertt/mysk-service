@@ -79,24 +79,31 @@ export type ChangeType = LoggedType | ModuleLiveType;
   svelte-check or the boundaries spec dislikes, the two type aliases move to a type-only
   `src/lib/activity/types.ts`.
 
-### Builders: `src/lib/activity/page-keys.ts` (browser-safe, no `resolve()`)
+### Builders: `src/lib/activity/page-subjects.ts` (browser-safe, no `resolve()`)
 
 ```ts
-/** The page-keyed types: the field their label is, which is also their page's URL parameter. */
-export const pageKeys = { order: "number", customer: "code", equipment: "serial" } as const;
-
-export const orderSubject = (o: { id: number; number: string }) =>
-	({ type: "order", id: o.id, label: o.number }) satisfies Subject;
-export const customerSubject = (c: { id: number; code: string }) =>
-	({ type: "customer", id: c.id, label: c.code }) satisfies Subject;
-export const equipmentSubject = (e: { id: number; serialNumber: string }) =>
-	({ type: "equipment", id: e.id, label: e.serialNumber }) satisfies Subject;
+export const orderSubject = (order: { id: number; number: string }) => ({
+	type: "order" as const,
+	id: order.id,
+	label: order.number,
+});
+export const customerSubject = (customer: { id: number; code: string }) => ({
+	type: "customer" as const,
+	id: customer.id,
+	label: customer.code,
+});
+export const equipmentSubject = (unit: { id: number; serialNumber: string }) => ({
+	type: "equipment" as const,
+	id: unit.id,
+	label: unit.serialNumber,
+});
 ```
 
 - The parameter types follow the real column names (`serialNumber` for equipment).
-- `subjects.ts` builds the three hrefs from `pageKeys`:
-  `resolve("/(app)/orders/[number]", { [pageKeys.order]: label })`. A type test checks each
-  `pageKeys` value against its route's parameter name, so renaming one without the other fails.
+- No `pageKeys` map (changed while building): `resolve()`'s typed parameters already check the
+  route parameter's name in `subjects.ts`'s hrefs, so the rule that can break silently is the
+  label's field, which lives only in the builders. A spec checks that each builder's subject
+  links to its record's page through `coreSubjectTypes[subject.type].href`.
 - Exported through `#lib/activity` for core and modules (modules may import core).
 
 ### Server: `src/lib/server/live.ts`
@@ -245,10 +252,9 @@ No ports or adapters.
   `$state` stand-in, as `clock.svelte.spec.ts`): the first answer is ignored; with a read time, a
   later first answer refreshes and an equal one doesn't; a getter giving none, then a query;
   switching query forgets the last answer; `refresh` isn't tracked.
-- **Subjects:** a spec that each builder's label is what its type's href reads (via `pageKeys`),
-  and type tests (`expectTypeOf` / `@ts-expect-error`): `recordActivity` refuses
-  `"energy_reading"`, `announceChange` accepts it, an unknown type fails, a builder needs its key
-  field, each `pageKeys` value is its route's parameter.
+- **Subjects:** a spec that each builder's subject links to its record's page, and type tests
+  (`@ts-expect-error`, run by svelte-check): `recordActivity` refuses `"energy_reading"`,
+  `announceChange` accepts it, an unknown type fails.
 - **Kept:** `harness.spec.ts:196` (end to end), `activity.spec.ts:279-312` (the 404 and the
   `RecordChange` mapping, plus: `watchActivity` ignores `energy_reading`), `simulation.spec.ts`,
   `schedule.spec.ts:171-185` reduced to the board's types and read time; the e2e live files
@@ -257,8 +263,9 @@ No ports or adapters.
 
 ## Migration strategy
 
-Single switchover per part, in three commits that each pass the gate: the types first (they only
-tighten), then the builders, then the live helpers with all callers. No old and new side by side
+Single switchover per part, in commits that each pass the gate: the builders first (built while
+the types were being tightened, they take over the literals the tighter types would flag), then
+the types, then the live helpers with all callers, then the client helper. No old and new side by side
 beyond a commit: every caller is in this repository.
 
 ## Implementation steps
@@ -273,7 +280,7 @@ beyond a commit: every caller is in this repository.
      portals' `portalSubjects`).
    - Type tests. Check `pnpm run check` and the boundaries spec.
 2. **Builders** (~20 call sites).
-   - `page-keys.ts`, exported from `#lib/activity`; `subjects.ts`'s three hrefs from `pageKeys`.
+   - `page-subjects.ts`, exported from `#lib/activity`.
    - Replace the inline order/customer/equipment literals (about 31; find them by
      `type: "order"`, `"customer"`, `"equipment"`) and the four local helpers; the composite helpers
      in `customers/server/sites.ts`, `equipment/server/locations.ts` and

@@ -8,6 +8,7 @@
 import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -88,7 +89,7 @@ async function insertCondition(
 				score: input.score,
 			}),
 		},
-		parent: { type: "equipment", id: unit.id, label: unit.serialNumber },
+		parent: equipmentSubject(unit),
 		// The advice, as it was given.
 		note: advice,
 	});
@@ -284,7 +285,7 @@ export function adviseFieldCondition(
 				id: recorded.id,
 				label: conditionLabel({ serialNumber: found.unit.serialNumber, score: recorded.score }),
 			},
-			parent: { type: "equipment", id: found.unit.id, label: found.unit.serialNumber },
+			parent: equipmentSubject(found.unit),
 			before: { advice: recorded.advice },
 			after,
 		});

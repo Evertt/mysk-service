@@ -15,6 +15,7 @@
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { isOpenOrder } from "#lib/models.ts";
@@ -160,7 +161,7 @@ export function completeChecklist(by: Filler, id: number) {
 		await recordActivity(tx, {
 			action: "completed",
 			subject: { type: "checklist", id, label: `${found.name} · ${unitTitle(found.unit)}` },
-			parent: { type: "order", id: found.order.id, label: found.order.number },
+			parent: orderSubject(found.order),
 			before: { status: found.status },
 			after: { status: after.status },
 			// Stored, in the language of whoever completes it.

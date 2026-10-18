@@ -8,7 +8,7 @@
  *   await tx.update(customer).set(input).where(idInTenant(customer, id));
  *   await recordActivity(tx, {
  *     action: "updated",
- *     subject: { type: "customer", id, label: existing.code },
+ *     subject: customerSubject(existing),
  *     before: existing, // the row as loaded
  *     after: input, // what the update sets: only these fields are compared
  *   });

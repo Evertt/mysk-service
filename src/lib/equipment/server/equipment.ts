@@ -1,6 +1,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, orderUnit } from "#lib/server/db/schema.ts";
@@ -25,7 +26,7 @@ export async function removeEquipment(id: number) {
 	}
 	await deleteAndLog(
 		equipment,
-		{ type: "equipment", id, label: existing.serialNumber },
+		equipmentSubject({ id, serialNumber: existing.serialNumber }),
 		m.equipment_delete_referenced(),
 	);
 }

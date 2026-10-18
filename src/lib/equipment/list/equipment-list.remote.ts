@@ -1,6 +1,7 @@
 import { and, count } from "drizzle-orm";
 import * as v from "valibot";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -139,7 +140,7 @@ export const bulkSetEquipmentStatus = forMembers.command(
 				db.transaction(async (tx) => {
 					if (unit.status === status) return;
 					await tx.update(equipment).set({ status }).where(idInTenant(equipment, unit.id));
-					const subject = { type: "equipment", id: unit.id, label: unit.label };
+					const subject = equipmentSubject({ id: unit.id, serialNumber: unit.label });
 					await recordActivity(tx, { action: "updated", subject, before: unit, after: { status } });
 				}),
 		});

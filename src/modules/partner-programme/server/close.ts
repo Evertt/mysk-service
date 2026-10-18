@@ -10,6 +10,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -21,7 +22,7 @@ import { creditNote } from "#modules/invoices/api/schema.server.ts";
 import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
 import { type BonusForm, bonusLineSource, creditValidUntil, isClosable } from "../model.ts";
-import { customerSubject, figuresOf, partnersOf, today } from "./partners.ts";
+import { figuresOf, partnersOf, today } from "./partners.ts";
 import { rulesFor } from "./rules.ts";
 import { bonusCreditNote, bonusYear } from "./schema.ts";
 import { addEntry } from "./wallet.ts";
