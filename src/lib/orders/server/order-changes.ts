@@ -58,48 +58,6 @@ function refuseRefused(error: unknown): never {
 }
 
 /**
- * Gives the tenant's `orders` (as loaded: their status is what it was) another status in the
- * transaction `tx`, for an optional module that moves orders along with its own records, such as
- * invoicing: the completion date is set or cleared as `completedAt()` does, and one `updated`
- * entry per order is logged, with `note` (stored, so in the language of whoever makes the change)
- * saying why. It makes no checks: the caller has them (an order's editability stays with
- * `transitionOrder()`). Nor does it ask the modules about their parts (`orders.saving`): the
- * statuses it moves between, completed and invoiced, are the same to them (both hold stock).
- */
-export async function setOrdersStatus(
-	tx: Transaction,
-	orders: { id: number; number: string; status: OrderStatus }[],
-	status: OrderStatus,
-	note?: string,
-) {
-	if (!orders.length) return;
-	const where = idsInTenant(
-		order,
-		orders.map((o) => o.id),
-	);
-	// An order that has a completion date keeps it while it stays done.
-	await tx
-		.update(order)
-		.set(isDoneOrder(status) ? { status } : { status, completedAt: null })
-		.where(where);
-	if (isDoneOrder(status)) {
-		await tx
-			.update(order)
-			.set({ completedAt: completedAt(status) })
-			.where(and(where, isNull(order.completedAt)));
-	}
-	for (const changed of orders) {
-		await recordActivity(tx, {
-			action: "updated",
-			subject: { type: "order", id: changed.id, label: changed.number },
-			before: changed,
-			after: { status },
-			note,
-		});
-	}
-}
-
-/**
  * Why an engineer can't be assigned the current tenant's orders, if they can't: they're another
  * tenant's (or don't exist), or inactive. Planning (`transitionOrder()`'s `plan`) and bulk assigning
  * share it.
