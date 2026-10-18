@@ -234,7 +234,10 @@ export function generateContractTerms(
 		.map((terms) => terms.reduce((a, b) => (b.startsOn > a.startsOn ? b : a)))
 		.filter((c) => c.startsOn <= now && c.endsOn >= today)
 		.sort((a, b) => a.endsOn.getTime() - b.endsOn.getTime() || a.id - b.id);
-	if (latestTerms.length && latestTerms[0].endsOn >= addDays(today, 60)) {
+	// In calendar days: over the clocks' change in spring, 60 days of 24 hours end an hour into the
+	// 60th day, so a term ending that day (not in the next 60) passed for one that ends in them.
+	const in60Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+	if (latestTerms.length && latestTerms[0].endsOn >= in60Days) {
 		latestTerms[0].endsOn = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
 	}
 
@@ -253,8 +256,15 @@ export function generateCallOuts(
 	orderCount: number,
 	equipments: TenantDraft["equipments"],
 ) {
+	// Running since before its call-out came in (at most its response time and two hours ago), so
+	// the call-out is its, not the term's before it (which may respond faster or slower): just after
+	// a new year, when many terms start, too.
 	const running = contractTerms
-		.filter((c) => c.startsOn <= now && now < addDays(c.endsOn, 1))
+		.filter(
+			(c) =>
+				c.startsOn.getTime() <= now.getTime() - (c.responseHours + 2) * 60 * 60 * 1000 &&
+				now < addDays(c.endsOn, 1),
+		)
 		.sort((a, b) => a.responseHours - b.responseHours || a.id - b.id);
 	const waiting =
 		running.length >= 3

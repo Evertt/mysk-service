@@ -17,6 +17,9 @@ const app = useApp({ user: users.shltrPlanner });
 const page = () => app.page;
 const { list, panel, checklistCard, listed, listCount, settledAt, searchFor } = assetLocators(app);
 
+/** How many assets the list loads at a time. */
+const PAGE = 40;
+
 /** A unit's checklists, newest first by id. */
 const checklistsOfUnit = (serial: string) =>
 	rows<{ id: number; status: string; kind: string; order_id: number; completed_at: number | null }>(
@@ -26,7 +29,10 @@ const checklistsOfUnit = (serial: string) =>
 		[serial, shltr.id],
 	);
 
-/** A unit with components, with no open draft and a checklist completed this year. */
+/**
+ * A component, with points, of a unit that has a checklist this year: completed this year (without
+ * an open draft), else a draft on an open order (early in the year, when none was completed yet).
+ */
 const withComponents = async () =>
 	(
 		await rows<{ serial: string; number: string; id: number }>(
@@ -34,8 +40,13 @@ const withComponents = async () =>
 			 join equipment e on e.id = k.equipment_id
 			 where k.organization_id = ? and exists (select 1 from component_checkpoint cc
 				where cc.component_id = k.id)
-			 order by k.number`,
-			[shltr.id],
+			 order by case
+				when exists (select 1 from checklist c where c.equipment_id = e.id and c.status = 'draft')
+					then 1
+				when exists (select 1 from checklist c where c.equipment_id = e.id and c.status = 'completed'
+					and strftime('%Y', c.completed_at, 'unixepoch', 'localtime') = ?) then 0
+				else 2 end, k.number`,
+			[shltr.id, String(thisYear)],
 		)
 	).find(Boolean)!;
 
@@ -78,7 +89,7 @@ describe("the list of assets", () => {
 
 	test("loads more as it scrolls", async () => {
 		const first = (await listed()).length;
-		expect(first).toBe(40);
+		expect(first).toBe(PAGE);
 		await list()
 			.locator("[data-asset-scroll]")
 			.evaluate((element) => {
@@ -113,7 +124,11 @@ describe("the list of assets", () => {
 		await page().waitForURL((url) => url.searchParams.get("year") === "open");
 		const open = states.filter((row) => row.state === "open");
 		await settledAt(open.length);
-		expect((await listed()).toSorted()).toEqual(open.map((row) => row.serial_number).toSorted());
+		// Its first page, all of them open (early in the year, when little is done yet, there are
+		// more than a page of them).
+		const shown = await listed();
+		expect(shown).toHaveLength(Math.min(open.length, PAGE));
+		expect(open.map((row) => row.serial_number)).toEqual(expect.arrayContaining(shown));
 		await list().locator('[data-chip="all"]').click();
 		await settledAt(states.length);
 
@@ -184,7 +199,8 @@ describe("an asset", () => {
 			[id],
 		);
 		const own = all.filter((point) => items.includes(point.template_item_id!));
-		expect(await card.locator("li[data-point]").count()).toBe(own.length);
+		// (A completed checklist's points are a list, a draft's the fields to answer them.)
+		expect(await card.locator("[data-point]").count()).toBe(own.length);
 		expect(await card.locator("[data-other-points]").innerText()).toMatch(
 			new RegExp(`^${all.length - own.length} other points? of this unit (is|are) hidden$`),
 		);

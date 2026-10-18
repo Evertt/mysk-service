@@ -58,6 +58,18 @@ const dayOf = (year: number, month: number, date: number) => {
 	return day > now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : day;
 };
 
+/**
+ * A moment of last year's closing, this year, as it goes: finalised mid January, chosen in
+ * February, a cash bonus paid out the day after and refunded two weeks later, all by March. Before
+ * then, squeezed into the year's days so far, so the demo has it done whatever the day.
+ */
+function closing(planned: Date) {
+	const start = new Date(thisYear, 0, 1).getTime();
+	const done = new Date(thisYear, 2, 1).getTime();
+	const squeeze = Math.min(1, (0.9 * (now.getTime() - start)) / (done - start));
+	return new Date(start + (planned.getTime() - start) * squeeze);
+}
+
 /** A partner as `generate()` picks it: its customer (draft id) and its story. */
 interface SeedPartner {
 	customerId: number;
@@ -417,7 +429,8 @@ export default defineSeed<PartnersSeed>({
 				const { revenue, bonusRevenue, choice } = partner.closed;
 				const figures = figuresFrom(tiers, revenue, { cash: bonusRevenue, credit: bonusRevenue });
 				const validUntil = creditValidUntil(lastYear, 1);
-				const chosenAt = new Date(thisYear, 1, 3 + closedYears, 10);
+				const chosen = new Date(thisYear, 1, 3 + closedYears, 10);
+				const chosenAt = closing(chosen);
 				const [closed] = await tx
 					.insert(bonusYear)
 					.values({
@@ -434,7 +447,7 @@ export default defineSeed<PartnersSeed>({
 						cashAmount: figures.bonus.cash,
 						creditAmount: figures.bonus.credit,
 						creditValidUntil: validUntil,
-						finalisedAt: toMoment(new Date(thisYear, 0, 15, 10)),
+						finalisedAt: toMoment(closing(new Date(thisYear, 0, 15, 10))),
 						choice: figures.level ? choice : null,
 						chosenAt: figures.level && choice ? toMoment(chosenAt) : null,
 					})
@@ -442,8 +455,8 @@ export default defineSeed<PartnersSeed>({
 				closedYears++;
 				if (choice === "cash" && partner.creditNote && figures.level && figures.bonus.cash) {
 					// Paid out as a credit note the day after the choice, refunded two weeks later.
-					const issued = new Date(chosenAt.getTime() + DAY);
-					const settled = new Date(issued.getTime() + 14 * DAY);
+					const issued = closing(new Date(chosen.getTime() + DAY));
+					const settled = closing(new Date(chosen.getTime() + 15 * DAY));
 					const payout = await seedCreditNote(tx, {
 						organizationId,
 						customerId: customer,

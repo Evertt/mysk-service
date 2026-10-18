@@ -6,7 +6,8 @@
  * §2.10): breakdowns half of it, one in thirteen of all orders an urgent one ("storing prio"),
  * repairs a quarter. Days ahead hold planned work (no breakdowns beyond tomorrow), fewer the further
  * ahead, as a planning fills up. Some orders are fixed: the mockup's planning (as this week's and
- * the next weeks') and the open orders its Apparatuur page counts on Riedel's units.
+ * the next weeks'), the open orders its Apparatuur page counts on Riedel's units, and an
+ * inspection that runs out within the month, whatever the day.
  */
 import type { Faker } from "@faker-js/faker";
 
@@ -47,6 +48,12 @@ function workingDay(n: number) {
 		offset += Math.sign(n);
 		if (isWorkingDay(offset)) left--;
 	}
+	return offset;
+}
+
+/** The working day `offset` days from today, or the last one before it. */
+function onWorkingDay(offset: number) {
+	while (!isWorkingDay(offset)) offset--;
 	return offset;
 }
 
@@ -165,6 +172,8 @@ interface FixedOrder {
 	quote?: true;
 	/** Under way, whatever the time. */
 	started?: true;
+	/** The unit's last inspection: the generated orders inspect it no more after it. */
+	last?: true;
 }
 
 const fixedOrders = (): FixedOrder[] => [
@@ -275,6 +284,19 @@ const fixedOrders = (): FixedOrder[] => [
 		day: workingDay(-30),
 		time: "08:00",
 		laborHours: 3,
+	},
+	// A yearly inspection of eleven and a half months ago, the unit's last: whatever the day, the
+	// demo has an inspection that runs out within the month ("expiring").
+	{
+		customer: "Vermeer Logistiek",
+		category: "dock_leveller",
+		type: "inspection",
+		priority: "normal",
+		description: "Jaarlijkse keuring dockleveller",
+		day: onWorkingDay(-350),
+		time: "09:00",
+		laborHours: 1,
+		last: true,
 	},
 	{
 		customer: "Vermeer Logistiek",
@@ -436,6 +458,11 @@ export function generateShltrOrders(
 	const busy = new Set<number>();
 	/** Recent enough to be open still. */
 	const recent = (day: number) => day > -10;
+	/** The day of a unit's last inspection (`FixedOrder.last`), after which it gets none. */
+	const lastInspected = new Map<number, number>();
+	/** Whether an order of `type` on `day` may be about `unit`, as far as its inspections go. */
+	const inspectable = (unit: ShltrUnit, type: OrderType, day: number) =>
+		type !== "inspection" || !((lastInspected.get(unit.id) ?? day) < day);
 
 	/**
 	 * A unit of the customer the order is about, `null` for work on none (a new installation, a
@@ -445,7 +472,10 @@ export function generateShltrOrders(
 		const date = dayAt(day);
 		const owned = (unitsOf.get(customer.id) ?? []).filter(
 			// The units the Apparatuur page counts the open orders of get none but theirs.
-			(unit) => !(recent(day) && (unit.counted || busy.has(unit.id))) && unit.category !== "other",
+			(unit) =>
+				!(recent(day) && (unit.counted || busy.has(unit.id))) &&
+				unit.category !== "other" &&
+				inspectable(unit, type, day),
 		);
 		if (type === "installation") {
 			const fresh = owned.filter(
@@ -470,10 +500,15 @@ export function generateShltrOrders(
 
 	/**
 	 * `unit` and, after it, the customer's other units of `categories` at its site that are installed
-	 * by `day` and free for it (as `pickUnit` has them), for an order about them all; marks them
-	 * busy if it's recent.
+	 * by `day` and free for it (as `pickUnit` has them), for an order of `type` about them all;
+	 * marks them busy if it's recent.
 	 */
-	function together(unit: ShltrUnit, categories: readonly ShltrUnit["category"][], day: number) {
+	function together(
+		unit: ShltrUnit,
+		categories: readonly ShltrUnit["category"][],
+		type: OrderType,
+		day: number,
+	) {
 		const date = dayAt(day);
 		const units = [
 			unit,
@@ -483,7 +518,8 @@ export function generateShltrOrders(
 					other.siteId === unit.siteId &&
 					categories.includes(other.category) &&
 					other.installedAt.getTime() < date.getTime() &&
-					!(recent(day) && (other.counted || busy.has(other.id))),
+					!(recent(day) && (other.counted || busy.has(other.id))) &&
+					inspectable(other, type, day),
 			),
 		];
 		if (recent(day)) for (const other of units) busy.add(other.id);
@@ -501,9 +537,10 @@ export function generateShltrOrders(
 		const unit =
 			own.find((u) => (fixed.unit ? u.name === fixed.unit : u.category === fixed.category)) ?? null;
 		if (unit && recent(fixed.day)) busy.add(unit.id);
+		if (unit && fixed.last) lastInspected.set(unit.id, fixed.day);
 		return {
 			customer,
-			units: unit ? together(unit, fixed.together ?? [], fixed.day) : [],
+			units: unit ? together(unit, fixed.together ?? [], fixed.type, fixed.day) : [],
 			site: siteOf(customer, unit),
 			type: fixed.type,
 			urgent: fixed.priority === "urgent",
@@ -550,7 +587,7 @@ export function generateShltrOrders(
 			const units = !unit
 				? []
 				: byTheSite.has(customer.name) && plannedTogether.includes(type)
-					? together(unit, [unit.category], day)
+					? together(unit, [unit.category], type, day)
 					: [unit];
 			const site = siteOf(customer, unit);
 			let planOn = day;

@@ -21,7 +21,7 @@ import { and, desc, eq, ne } from "drizzle-orm";
 
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
-import { addDays, now } from "#lib/server/db/seed/clock.ts";
+import { addDays, DAY, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type ModuleSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 import { checklistScore } from "#modules/checklists/api/extensions.ts";
@@ -564,7 +564,16 @@ export default defineSeed<TenantDraft["profile"]>({
 							: i < NORTH.critical + NORTH.attention
 								? random.number.int({ min: 45, max: 65 })
 								: random.number.int({ min: 75, max: 98 });
-					add(unit.id, Math.min(100, score + random.number.int({ min: 10, max: 25 })), 180, "");
+					// The one before, half a year before the latest: on the unit's last visit, which may
+					// be longer ago than that.
+					const visit = lastDone.get(unit.id)?.completedAt;
+					const since = visit ? Math.floor((now.getTime() - visit.epochMilliseconds) / DAY) : 0;
+					add(
+						unit.id,
+						Math.min(100, score + random.number.int({ min: 10, max: 25 })),
+						since + 180,
+						"",
+					);
 					add(unit.id, score, 0, i < NORTH.critical ? random.helpers.arrayElement(wear) : "");
 				});
 			}

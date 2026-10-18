@@ -7,7 +7,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { fitsWidth, onPhone, useApp } from "#e2e/app.ts";
+import { fitsWidth, fixture, onPhone, useApp } from "#e2e/app.ts";
 
 import { kw, kwh, kwhToday, liveKw, postBatch, riedel, shltrOwner } from "./helpers.ts";
 
@@ -24,7 +24,19 @@ const tile = (kpi: string) =>
 describe("the door cards", () => {
 	test("show each door as its sensor last told: shut, open, open too long", async () => {
 		const { page } = app;
-		const { siteId } = await riedel();
+		const { siteId, door } = await riedel();
+		// What these doors' sensors told since 11 minutes ago is what's posted here: the seed's
+		// events, or a reset of the simulation in a file before, can have one of the freezer's
+		// openings (every half hour) in that time, later than the one posted.
+		await fixture(
+			`delete from energy_door_event where door_id in (?, ?, ?) and at > ? returning door_id`,
+			[
+				door("D-05").id,
+				door("D-KO1").id,
+				door("D-VR1").id,
+				Math.floor(Temporal.Now.instant().epochMilliseconds / 1000) - 660,
+			],
+		);
 		// The dock door shut a minute ago; the cold store just opened; the freezer opened 10
 		// minutes ago (it alerts at 4).
 		const posted = await postBatch({

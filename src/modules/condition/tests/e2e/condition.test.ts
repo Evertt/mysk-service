@@ -24,6 +24,24 @@ const shltr = organizations.shltr;
 const app = useApp({ user: users.shltrPlanner });
 const { kpis, shownStatuses, sidebarLinks } = pageLocators(app);
 
+/** The numbers of the mockup's 14 components, as seeded. */
+const mockupComponents = [
+	"OC-1041",
+	"OC-1042",
+	"OC-1043",
+	"OC-1044",
+	"OC-1045",
+	"OC-2011",
+	"OC-2012",
+	"OC-2013",
+	"OC-3007",
+	"OC-3008",
+	"OC-3009",
+	"OC-4002",
+	"OC-4003",
+	"OC-4004",
+];
+
 let units: UnitState[];
 let rows: RowState[];
 
@@ -32,9 +50,13 @@ describe("the Connect page", () => {
 		units = await unitStates(shltr.id);
 		rows = rowsOf(units);
 		const counts = countsOf(rows);
-		// The mockup's components are there, and the units without components too.
-		expect(rows.filter((row) => row.component).length).toBe(14);
-		expect(rows.length).toBe(units.filter((unit) => !unit.components.length).length + 14);
+		// The mockup's components are there (a file that ran before on the worker may have added
+		// one), and the units without components too.
+		const components = rows.flatMap((row) => (row.component ? [row.component.number] : []));
+		expect(components).toEqual(expect.arrayContaining(mockupComponents));
+		expect(rows.length).toBe(
+			units.filter((unit) => !unit.components.length).length + components.length,
+		);
 		// The seed shows every status.
 		for (const status of ["critical", "attention", "planned", "ok"] as const) {
 			expect(counts[status], status).toBeGreaterThan(0);

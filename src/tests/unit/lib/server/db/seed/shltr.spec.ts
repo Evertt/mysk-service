@@ -1,5 +1,5 @@
 import { en, Faker, nl } from "@faker-js/faker";
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { shltrCategories, specialtyOf } from "#lib/server/db/seed/categories.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
@@ -225,4 +225,72 @@ describe("SHLTR's demo data", () => {
 		expect(new Set([...byName.values()].map((s) => [...s][0])).size).toBe(byName.size);
 		expect(shltrSignoffs(generate().data)).toEqual(signoffs);
 	});
+});
+
+describe("SHLTR's demo data, whatever the day", () => {
+	// A week (its weekend with the clocks going back), months' and a year's ends, a leap day.
+	const days = [
+		...Array.from({ length: 7 }, (_, i) => `2026-10-${19 + i}`),
+		"2026-10-31",
+		"2026-11-30",
+		"2026-12-31",
+		"2027-01-01",
+		"2027-03-28",
+		"2028-02-29",
+	];
+
+	/** SHLTR's demo data as the seed makes it on `day`, at 10:00. */
+	async function generateOn(day: string) {
+		const { year, month, day: date } = Temporal.PlainDate.from(day);
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(new Date(year, month - 1, date, 10));
+		vi.resetModules();
+		try {
+			const seed = await import("#lib/server/db/seed/shltr/index.ts");
+			const faker = new Faker({ locale: [nl, en] });
+			faker.seed(20261016);
+			return seed.generateShltrTenant(faker).data;
+		} finally {
+			vi.useRealTimers();
+		}
+	}
+
+	/**
+	 * How many months an inspection of a unit of `category` stays valid, by the checklists seed's
+	 * templates for SHLTR: the general one's six, the others' twelve.
+	 */
+	const validityOf = (category: string) =>
+		["fire_door", "automatic_door", "aerial_platform", "other"].includes(category) ? 6 : 12;
+
+	test.each(days)(
+		"has a unit whose last inspection runs out within the month on %s",
+		async (day) => {
+			const { orders, equipments } = await generateOn(day);
+			const today = Temporal.PlainDate.from(day);
+			const doneOn = ({ completedAt }: (typeof orders)[number]) =>
+				Temporal.PlainDate.from({
+					year: completedAt!.getFullYear(),
+					month: completedAt!.getMonth() + 1,
+					day: completedAt!.getDate(),
+				});
+			// Each unit's last done inspection, and the day it runs out.
+			const last = new Map<number, Temporal.PlainDate>();
+			for (const o of orders) {
+				if (o.type !== "inspection" || !["completed", "invoiced"].includes(o.status)) continue;
+				for (const id of o.equipmentIds) {
+					const before = last.get(id);
+					if (!before || Temporal.PlainDate.compare(doneOn(o), before) > 0) last.set(id, doneOn(o));
+				}
+			}
+			// The 30 days the checklists count as expiring.
+			const expiring = [...last].filter(([id, done]) => {
+				const ends = done.add({ months: validityOf(equipments[id - 1].category) });
+				return (
+					Temporal.PlainDate.compare(ends, today) >= 0 &&
+					Temporal.PlainDate.compare(ends, today.add({ days: 30 })) <= 0
+				);
+			});
+			expect(expiring.length).toBeGreaterThan(0);
+		},
+	);
 });
