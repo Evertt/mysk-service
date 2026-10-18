@@ -131,6 +131,8 @@ describe("Lev's inspection order", () => {
 				.click();
 			await card(checklist.serial_number).locator("[data-outcome]").waitFor();
 		}
+		// The order's refusal is outdated now, so it's gone without trying again.
+		await expect.poll(() => page().getByText("can't be completed yet").count()).toBe(0);
 		expect(await card(first.serial_number).locator("[data-outcome]").innerText()).toBe(
 			"1 rejected",
 		);

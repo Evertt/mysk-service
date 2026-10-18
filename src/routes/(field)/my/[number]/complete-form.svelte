@@ -2,7 +2,8 @@
 	@component
 	Completes a job with the work order's sign-off: the engineer's signature, under their name as the
 	office knows them (shown, not sent), then the name of who signs for the customer and their
-	signature. Both signatures are required.
+	signature. Both signatures are required. A refusal of the order as a whole (e.g. a checklist that
+	isn't completed) shows until the modules' cards change what the order may do (`partsChanged`).
 -->
 <script lang="ts">
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
@@ -19,15 +20,22 @@
 		orderId,
 		contactName,
 		engineerName,
-	}: { orderId: number; contactName: string; engineerName: string } = $props();
+		partsChanged,
+	}: { orderId: number; contactName: string; engineerName: string; partsChanged: number } =
+		$props();
 
 	let signature = $state("");
 	let engineerSignature = $state("");
 	const fields = $derived(completeWork.fields);
+
+	// `partsChanged` as it was when the form was last sent: once it's changed, the refusal is outdated.
+	let sentAt = $state(0);
+	const refusal = $derived(sentAt === partsChanged ? fields.issues() : undefined);
 </script>
 
 <form
 	{...completeWork.enhance(async ({ submit }) => {
+		sentAt = partsChanged;
 		if (await submit()) toast.success(m.portal_job_completed());
 	})}
 	class="flex flex-col gap-6"
@@ -66,7 +74,7 @@
 		<input {...fields.signature.as("hidden", signature)} />
 		<Field.FieldError errors={fields.signature.issues()} />
 	</fieldset>
-	<Field.FieldError errors={fields.issues()} />
+	<Field.FieldError errors={refusal} />
 	<SubmitButton
 		size="lg"
 		class="h-12 text-base"

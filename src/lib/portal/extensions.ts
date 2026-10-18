@@ -9,6 +9,7 @@ import { defineSlot } from "#lib/extensions/define.ts";
  * Cards on an engineer's page of one of their orders, after its hours. The components load their
  * own data through their module's remote functions (made for engineers, `moduleRemote(id,
  * "engineer")`), which check it's the engineer's order, and what they may do with it
- * (`fieldActions()`).
+ * (`fieldActions()`). A card calls `changed()` when it changes what the order may do, e.g. once a
+ * checklist is completed, so the page's forms drop a refusal that's outdated by it.
  */
-export const order = defineSlot<{ number: string }>("portal.order");
+export const order = defineSlot<{ number: string; changed: () => void }>("portal.order");
