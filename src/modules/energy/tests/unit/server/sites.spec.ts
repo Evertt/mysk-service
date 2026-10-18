@@ -5,7 +5,7 @@
  * can't set one up. The server side of `energy.test.ts`, `energy.portal.test.ts` and
  * `energy.tenancy.test.ts`, which keep the pages.
  */
-import { describe, expect, test } from "vite-plus/test";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { getClientEnergy } from "#modules/energy/client/client-energy.remote.ts";
 import {
@@ -57,6 +57,33 @@ describe("a site's pages", () => {
 			expect(await report("2026-01-01", "2026-10-01")).toMatchObject({ status: 400 });
 			expect(await report("2026-10-07", "2026-10-01")).toMatchObject({ status: 400 });
 		});
+	});
+
+	test("a report covers this month so far by the site's calendar unless asked, not the user's", async () => {
+		const { siteId } = await riedel();
+		// 03:00 on 1 November for the user in Amsterdam, still 31 October at the site in New York.
+		const now = Temporal.ZonedDateTime.from("2026-11-01T03:00[Europe/Amsterdam]").toInstant();
+		const instant = vi.spyOn(Temporal.Now, "instant").mockReturnValue(now);
+		const [{ timeZone }] = await rows<{ timeZone: string }>(
+			`select time_zone as timeZone from energy_site where id = ?`,
+			[siteId],
+		);
+		await rows(`update energy_site set time_zone = 'America/New_York' where id = ?`, [siteId]);
+		try {
+			const report = await as(shltr.member, () => data(getEnergyReport, { site: siteId }));
+			expect([String(report.first), String(report.last), report.days]).toEqual([
+				"2026-10-01",
+				"2026-10-31",
+				31,
+			]);
+			const asked = await as(shltr.member, () =>
+				data(getEnergyReport, { site: siteId, from: "2026-10-05" }),
+			);
+			expect([String(asked.first), String(asked.last)]).toEqual(["2026-10-05", "2026-10-31"]);
+		} finally {
+			instant.mockRestore();
+			await rows(`update energy_site set time_zone = ? where id = ?`, [timeZone, siteId]);
+		}
 	});
 });
 

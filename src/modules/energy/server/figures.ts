@@ -3,10 +3,12 @@
  * SQL aggregates where they can be (a period's sums and peaks per zone, kWh per zone per hour) and
  * with the pure rules of `../model.ts` for the rest (live power, states, tones, door loss): what
  * the site's page, a zone's page and the report show. Days and hours are the site's own (its time
- * zone), so "today" is the building's.
+ * zone), so "today" is the building's. Many sites' figures (the sites' overview, the customer
+ * portal) take as many statements as one site's: each reads its zones' readings by a seek per zone,
+ * between its own site's moments.
  */
 import { error } from "@sveltejs/kit";
-import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, getTableName, type SQL, sql } from "drizzle-orm";
 
 import { inTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -39,9 +41,9 @@ import {
 	energyZone,
 } from "./schema.ts";
 
-/** The current tenant's site `id` with its customer, or a 404. */
-export async function loadSite(id: number) {
-	const [found] = await db
+/** Sites with their customer, as `where` picks them. */
+const selectSites = (where: SQL | undefined) =>
+	db
 		.select({
 			id: energySite.id,
 			name: energySite.name,
@@ -62,9 +64,24 @@ export async function loadSite(id: number) {
 		.from(energySite)
 		.innerJoin(...tenantJoin(customerSite, energySite.siteId))
 		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(energySite, id));
+		.where(where);
+
+/** The current tenant's site `id` with its customer, or a 404. */
+export async function loadSite(id: number) {
+	const [found] = await selectSites(idInTenant(energySite, id));
 	if (!found) error(404, m.energy_site_not_found());
 	return found;
+}
+
+/**
+ * The current tenant's sites with their customers, by name: those `where` picks (of the site, its
+ * customer site or its customer), or all.
+ */
+export function loadSites(where?: SQL) {
+	return selectSites(and(inTenant(energySite), where)).orderBy(
+		asc(energySite.name),
+		asc(energySite.id),
+	);
 }
 
 export type EnergySite = Awaited<ReturnType<typeof loadSite>>;
@@ -231,11 +248,95 @@ function bucketOf(
 	return from.toZonedDateTimeISO(timeZone).toPlainDate().until(local.toPlainDate()).days;
 }
 
+/** A site's zones and doors over its ranges, and whether the previous period is a full comparison. */
+export interface SiteFigures {
+	zones: ZoneFigures[];
+	doors: DoorFigures[];
+	previousComplete: boolean;
+}
+
 /** The site's zones and doors over `ranges` (see above), at `now`. */
-export async function siteFigures(site: EnergySite, ranges: Ranges, now: Temporal.Instant) {
+export async function siteFigures(
+	site: EnergySite,
+	ranges: Ranges,
+	now: Temporal.Instant,
+): Promise<SiteFigures> {
+	const [figures] = await sitesFigures([{ site, ranges }], now);
+	return figures;
+}
+
+/** A moment a statement over several sites' zones reads per zone, its site's own (`bound()`). */
+type Bound = "from" | "to" | "until" | "previousFrom" | "previousUntil" | "todayFrom";
+
+/**
+ * Each site's moments as one JSON parameter, `{ "<site id>": { "from": <seconds>, … } }`, so a
+ * statement binds them once however many sites it covers.
+ */
+const boundsOf = (bounds: Map<number, Record<string, Temporal.Instant>>) =>
+	JSON.stringify(
+		Object.fromEntries(
+			[...bounds].map(([siteId, moments]) => [
+				siteId,
+				Object.fromEntries(Object.entries(moments).map(([name, at]) => [name, seconds(at)])),
+			]),
+		),
+	);
+
+/**
+ * The zone table by its name, for its columns in a subquery of a select of zones: drizzle writes a
+ * column of the one table a select reads without it, which in a subquery of readings would name
+ * the reading's own (`organization_id`).
+ */
+const zoneTable = sql.identifier(getTableName(energyZone));
+
+/** The moment `name` of the zone's site in `bounds` (`boundsOf()`): read once per zone. */
+const bound = (bounds: string, name: Bound) =>
+	sql`json_extract(${bounds}, '$."' || ${zoneTable}.energy_site_id || '".${sql.raw(name)}')`;
+
+/**
+ * `aggregate` (code's own SQL, e.g. `max(r.start)`) of the zone's readings (`r`), with `range` those
+ * that start from its site's first moment up to its second: a seek per zone on the readings' key
+ * (zone, start), however long ago its readings began.
+ */
+function ofZone<T>(aggregate: string, range?: [bounds: string, from: Bound, to: Bound]) {
+	const within = range
+		? sql` and r.start >= ${bound(range[0], range[1])} and r.start < ${bound(range[0], range[2])}`
+		: sql``;
+	return sql<T>`(select ${sql.raw(aggregate)} from energy_reading r
+		where r.organization_id = ${zoneTable}.organization_id and r.zone_id = ${zoneTable}.id${within})`;
+}
+
+/** The zone's latest interval's average power, by the same seek. */
+const latestKwOfZone = sql<number | null>`(select r.avg_kw from energy_reading r
+	where r.organization_id = ${zoneTable}.organization_id and r.zone_id = ${zoneTable}.id
+	order by r.start desc limit 1)`;
+
+const fromSeconds = (value: number) => Temporal.Instant.fromEpochMilliseconds(value * 1000);
+
+const later = (a: Temporal.Instant, b: Temporal.Instant) =>
+	Temporal.Instant.compare(a, b) >= 0 ? a : b;
+
+/**
+ * What `siteFigures()` answers for each of `sites`, each over its own ranges (its own time zone's
+ * days), in as many statements as for one: a page of many sites doesn't queue a few for each of
+ * them (the Durable Object runs them one at a time).
+ */
+export async function sitesFigures(
+	sites: { site: EnergySite; ranges: Ranges }[],
+	now: Temporal.Instant,
+): Promise<SiteFigures[]> {
+	if (!sites.length) return [];
+	const siteIds = sites.map(({ site }) => site.id);
+	const until = (ranges: Ranges) => earlier(ranges.to, now);
+	const periods = boundsOf(
+		new Map(
+			sites.map(({ site, ranges }) => [site.id, { from: ranges.from, until: until(ranges) }]),
+		),
+	);
 	const zones = await db
 		.select({
 			id: energyZone.id,
+			siteId: energyZone.energySiteId,
 			code: energyZone.code,
 			name: energyZone.name,
 			floor: energyZone.floor,
@@ -243,136 +344,163 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 			enabled: energyThreshold.enabled,
 			maxKw: energyThreshold.maxKw,
 			maxKwh: energyThreshold.maxKwh,
+			// The period's last interval that has come in, the first ever, and the latest (live power).
+			last: ofZone<number | null>("max(r.start)", [periods, "from", "until"]),
+			first: ofZone<number | null>("min(r.start)"),
+			latestAt: ofZone<Temporal.Instant | null>("max(r.start)").mapWith(energyReading.start),
+			latestKw: latestKwOfZone,
 		})
 		.from(energyZone)
 		.leftJoin(energyThreshold, eq(energyThreshold.zoneId, energyZone.id))
-		.where(and(inTenant(energyZone), eq(energyZone.energySiteId, site.id)))
+		.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds)))
 		.orderBy(asc(energyZone.position), asc(energyZone.id));
-	const zoneIds = zones.map((zone) => zone.id);
-	const { from, to, previousFrom, today } = ranges;
-	const start = energyReading.start;
-	const inZones = and(inTenant(energyReading), inList(energyReading.zoneId, zoneIds));
-	const until = earlier(to, now);
 
 	// This period's sums hold the intervals that have ended and come in: the previous period's go
 	// as far into it as those go into this one, not to now (at 00:10 there's no reading of today
 	// yet, and a gateway that sends every hour is up to an hour behind), for a like comparison.
-	const [{ last }] = await db
-		.select({ last: sql<number | null>`max(${start})` })
-		.from(energyReading)
-		.where(and(inZones, gte(start, from), lt(start, until)));
-	const readTo =
-		last === null
-			? from
-			: earlier(
-					Temporal.Instant.fromEpochMilliseconds(last * 1000).add({ minutes: INTERVAL_MINUTES }),
-					until,
-				);
-	const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
-
-	const [sums, hourly, latest, [first]] = await Promise.all([
+	const bounds = new Map(
+		sites.map(({ site, ranges }) => {
+			const starts = zones.filter((zone) => zone.siteId === site.id).map((zone) => zone.last);
+			const last = Math.max(...starts.filter((start) => start !== null));
+			const readTo = Number.isFinite(last)
+				? earlier(fromSeconds(last).add({ minutes: INTERVAL_MINUTES }), until(ranges))
+				: ranges.from;
+			const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
+			return [
+				site.id,
+				{
+					from: ranges.from,
+					to: ranges.to,
+					until: until(ranges),
+					previousFrom: ranges.previousFrom,
+					previousUntil: earlier(previousTo, until(ranges)),
+					todayFrom: later(ranges.today, ranges.previousFrom),
+				},
+			];
+		}),
+	);
+	const json = boundsOf(bounds);
+	const ofZones = and(
+		inTenant(energyZone),
+		inList(
+			energyZone.id,
+			zones.map((zone) => zone.id),
+		),
+	);
+	const start = energyReading.start;
+	const [sums, hourly, doors] = await Promise.all([
 		db
 			.select({
-				zoneId: energyReading.zoneId,
-				kwh: sql<number>`coalesce(sum(case when ${start} >= ${seconds(from)} and ${start} < ${seconds(to)} then ${energyReading.kwh} end), 0)`,
-				previousKwh: sql<number>`coalesce(sum(case when ${start} >= ${seconds(previousFrom)} and ${start} < ${seconds(previousTo)} then ${energyReading.kwh} end), 0)`,
-				peakKw: sql<number>`coalesce(max(case when ${start} >= ${seconds(from)} and ${start} < ${seconds(to)} then ${energyReading.peakKw} end), 0)`,
-				previousPeakKw: sql<number>`coalesce(max(case when ${start} >= ${seconds(previousFrom)} and ${start} < ${seconds(previousTo)} then ${energyReading.peakKw} end), 0)`,
-				kwhToday: sql<number>`coalesce(sum(case when ${start} >= ${seconds(today)} then ${energyReading.kwh} end), 0)`,
+				zoneId: energyZone.id,
+				kwh: ofZone<number>("coalesce(sum(r.kwh), 0)", [json, "from", "until"]),
+				peakKw: ofZone<number>("coalesce(max(r.peak_kw), 0)", [json, "from", "until"]),
+				previousKwh: ofZone<number>("coalesce(sum(r.kwh), 0)", [
+					json,
+					"previousFrom",
+					"previousUntil",
+				]),
+				previousPeakKw: ofZone<number>("coalesce(max(r.peak_kw), 0)", [
+					json,
+					"previousFrom",
+					"previousUntil",
+				]),
+				kwhToday: ofZone<number>("coalesce(sum(r.kwh), 0)", [json, "todayFrom", "until"]),
 			})
-			.from(energyReading)
-			.where(and(inZones, gte(start, previousFrom), lt(start, until)))
-			.groupBy(energyReading.zoneId),
-		// kWh per zone per hour (UTC): the buckets are made of them in the site's zone.
+			.from(energyZone)
+			.where(ofZones),
+		// kWh per zone per hour (UTC): the buckets are made of them in the site's zone. A cross join,
+		// which SQLite keeps in its order: each zone, then its readings by a seek between its site's
+		// moments (else it reads every reading the zones ever had, by the tenant's index).
 		db
 			.select({
 				zoneId: energyReading.zoneId,
 				hour: sql<number>`${start} / 3600`,
 				kwh: sql<number>`sum(${energyReading.kwh})`,
 			})
-			.from(energyReading)
-			.where(and(inZones, gte(start, previousFrom), lt(start, to)))
-			.groupBy(energyReading.zoneId, sql`${start} / 3600`),
-		db
-			.select({ zoneId: energyReading.zoneId, start, avgKw: energyReading.avgKw })
-			.from(energyReading)
+			.from(energyZone)
+			.crossJoin(energyReading)
 			.where(
 				and(
-					inZones,
-					sql`${start} = (select max(r.start) from energy_reading r where r.zone_id = ${energyReading.zoneId})`,
+					ofZones,
+					eq(energyReading.organizationId, energyZone.organizationId),
+					eq(energyReading.zoneId, energyZone.id),
+					sql`${start} >= ${bound(json, "previousFrom")}`,
+					sql`${start} < ${bound(json, "to")}`,
 				),
-			),
-		db
-			.select({ start: sql<number | null>`min(${start})` })
-			.from(energyReading)
-			.where(inZones),
+			)
+			.groupBy(energyReading.zoneId, sql`${start} / 3600`),
+		doorFigures(sites, now),
 	]);
-	// The readings go back to the previous period's first hour: else it's no comparison (a site
-	// whose readings start in the middle of last month).
-	const previousComplete =
-		first?.start != null && first.start <= seconds(previousFrom.add({ hours: 1 }));
+	const sumOf = new Map(sums.map((row) => [row.zoneId, row]));
+	const hoursOf = Map.groupBy(hourly, (row) => row.zoneId);
 
-	const zoneFigures: ZoneFigures[] = zones.map((zone) => {
-		const sum = sums.find((row) => row.zoneId === zone.id);
-		const last = latest.find((row) => row.zoneId === zone.id);
-		const offline = isOffline(last?.start, now);
-		const liveKw = offline || !last ? 0 : last.avgKw;
-		const kwhToday = sum?.kwhToday ?? 0;
-		const threshold =
-			zone.enabled === null
-				? null
-				: { enabled: zone.enabled, maxKw: zone.maxKw!, maxKwh: zone.maxKwh! };
-		const { ratio } = threshold
-			? thresholdRatio({ kw: liveKw, kwh: kwhToday }, threshold)
-			: { ratio: 0 };
-		const state = threshold && !offline ? thresholdState(ratio, threshold.enabled) : "off";
-		// As many buckets before as now: day N against day N of last month, whose days past this
-		// month's last aren't compared (and are 0 past its own last).
-		const series = Array.from({ length: ranges.buckets }, () => 0);
-		const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
-		for (const row of hourly) {
-			if (row.zoneId !== zone.id) continue;
-			const at = Temporal.Instant.fromEpochMilliseconds(row.hour * 3600 * 1000);
-			const current = Temporal.Instant.compare(at, from) >= 0;
-			const index = bucketOf(at, current ? from : previousFrom, ranges, site.timeZone);
-			const target = current ? series : previousSeries;
-			if (index >= 0 && index < target.length) target[index] += row.kwh;
-		}
-		return {
-			id: zone.id,
-			code: zone.code,
-			name: zone.name,
-			floor: zone.floor,
-			areaM2: zone.areaM2,
-			liveKw,
-			latestAt: last?.start ?? null,
-			offline,
-			kwh: sum?.kwh ?? 0,
-			previousKwh: sum?.previousKwh ?? 0,
-			peakKw: sum?.peakKw ?? 0,
-			previousPeakKw: sum?.previousPeakKw ?? 0,
-			kwhToday,
-			threshold,
-			ratio,
-			state,
-			tone: zoneTone(offline, state),
-			series,
-			previousSeries,
-		};
+	return sites.map(({ site, ranges }, index) => {
+		const own = zones.filter((zone) => zone.siteId === site.id);
+		const { from, previousFrom } = ranges;
+		// The readings go back to the previous period's first hour: else it's no comparison (a site
+		// whose readings start in the middle of last month).
+		const first = Math.min(...own.map((zone) => zone.first).filter((start) => start !== null));
+		const previousComplete = first <= seconds(previousFrom.add({ hours: 1 }));
+
+		const zoneFigures: ZoneFigures[] = own.map((zone) => {
+			const sum = sumOf.get(zone.id);
+			const offline = isOffline(zone.latestAt, now);
+			const liveKw = offline || zone.latestKw === null ? 0 : zone.latestKw;
+			const kwhToday = sum?.kwhToday ?? 0;
+			const threshold =
+				zone.enabled === null
+					? null
+					: { enabled: zone.enabled, maxKw: zone.maxKw!, maxKwh: zone.maxKwh! };
+			const { ratio } = threshold
+				? thresholdRatio({ kw: liveKw, kwh: kwhToday }, threshold)
+				: { ratio: 0 };
+			const state = threshold && !offline ? thresholdState(ratio, threshold.enabled) : "off";
+			// As many buckets before as now: day N against day N of last month, whose days past this
+			// month's last aren't compared (and are 0 past its own last).
+			const series = Array.from({ length: ranges.buckets }, () => 0);
+			const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
+			for (const row of hoursOf.get(zone.id) ?? []) {
+				const at = fromSeconds(row.hour * 3600);
+				const current = Temporal.Instant.compare(at, from) >= 0;
+				const bucket = bucketOf(at, current ? from : previousFrom, ranges, site.timeZone);
+				const target = current ? series : previousSeries;
+				if (bucket >= 0 && bucket < target.length) target[bucket] += row.kwh;
+			}
+			return {
+				id: zone.id,
+				code: zone.code,
+				name: zone.name,
+				floor: zone.floor,
+				areaM2: zone.areaM2,
+				liveKw,
+				latestAt: zone.latestAt,
+				offline,
+				kwh: sum?.kwh ?? 0,
+				previousKwh: sum?.previousKwh ?? 0,
+				peakKw: sum?.peakKw ?? 0,
+				previousPeakKw: sum?.previousPeakKw ?? 0,
+				kwhToday,
+				threshold,
+				ratio,
+				state,
+				tone: zoneTone(offline, state),
+				series,
+				previousSeries,
+			};
+		});
+		return { zones: zoneFigures, doors: doors[index], previousComplete };
 	});
-
-	return { zones: zoneFigures, doors: await doorFigures(site, ranges, now), previousComplete };
 }
 
-/** The site's doors over `ranges`, at `now`. */
+/** Each of the sites' doors over its ranges, at `now`. */
 async function doorFigures(
-	site: EnergySite,
-	ranges: Ranges,
+	sites: { site: EnergySite; ranges: Ranges }[],
 	now: Temporal.Instant,
-): Promise<DoorFigures[]> {
+): Promise<DoorFigures[][]> {
 	const doors = await db
 		.select({
 			id: energyDoor.id,
+			siteId: energyDoor.energySiteId,
 			code: energyDoor.code,
 			name: energyDoor.name,
 			kind: energyDoor.kind,
@@ -387,59 +515,88 @@ async function doorFigures(
 		})
 		.from(energyDoor)
 		.leftJoin(...tenantJoin(equipment, energyDoor.equipmentId))
-		.where(and(inTenant(energyDoor), eq(energyDoor.energySiteId, site.id)))
+		.where(
+			and(
+				inTenant(energyDoor),
+				inList(
+					energyDoor.energySiteId,
+					sites.map(({ site }) => site.id),
+				),
+			),
+		)
 		.orderBy(asc(energyDoor.code));
-	if (!doors.length) return [];
-	// With the opening a door was in when the previous period began, however long ago it opened.
-	const events = await doorEvents(
-		db,
-		doors.map((door) => door.id),
-		ranges.previousFrom,
-		now,
+	// With the opening a door was in when its previous period began, however long ago it opened:
+	// a read per moment the sites' previous periods begin at (one, unless their time zones differ).
+	const windows = Map.groupBy(doors, (door) =>
+		sites.find(({ site }) => site.id === door.siteId)!.ranges.previousFrom.toString(),
 	);
-	const end = earlier(ranges.to, now);
-	return doors.map((door) => {
-		const own = openings(events.filter((event) => event.doorId === door.id));
-		const last = own.at(-1);
-		const openedAt = last && !last.closedAt ? last.openedAt : null;
-		const minutesOpen = last && openedAt ? openMinutes(last, now) : 0;
-		const loss = (from: Temporal.Instant, to: Temporal.Instant) =>
-			doorLossKwh(minutesOpenBetween(own, from, to), door.lossKw);
-		return {
-			id: door.id,
-			code: door.code,
-			name: door.name,
-			kind: door.kind,
-			zoneId: door.zoneId,
-			lossKw: door.lossKw,
-			thresholdMinutes: door.thresholdMinutes,
-			insideC: door.insideC,
-			outsideC: door.outsideC,
-			equipmentId: door.equipmentId,
-			unit: door.serialNumber ? { serialNumber: door.serialNumber, name: door.unitName } : null,
-			openedAt,
-			minutesOpen,
-			overdue: openedAt !== null && isOverdue(minutesOpen, door.thresholdMinutes),
-			lossKwh: loss(ranges.from, end),
-			previousLossKwh: loss(ranges.previousFrom, ranges.previousTo),
-			lossKwhToday: loss(ranges.today, now),
-			openingsToday: own.filter((o) => Temporal.Instant.compare(o.openedAt, ranges.today) >= 0)
-				.length,
-		};
+	const events = (
+		await Promise.all(
+			[...windows].map(([from, inWindow]) =>
+				doorEvents(
+					db,
+					inWindow.map((door) => door.id),
+					Temporal.Instant.from(from),
+					now,
+				),
+			),
+		)
+	).flat();
+	const eventsOf = Map.groupBy(events, (event) => event.doorId);
+
+	return sites.map(({ site, ranges }) => {
+		const end = earlier(ranges.to, now);
+		return doors
+			.filter((door) => door.siteId === site.id)
+			.map((door) => {
+				const own = openings(eventsOf.get(door.id) ?? []);
+				const last = own.at(-1);
+				const openedAt = last && !last.closedAt ? last.openedAt : null;
+				const minutesOpen = last && openedAt ? openMinutes(last, now) : 0;
+				const loss = (from: Temporal.Instant, to: Temporal.Instant) =>
+					doorLossKwh(minutesOpenBetween(own, from, to), door.lossKw);
+				return {
+					id: door.id,
+					code: door.code,
+					name: door.name,
+					kind: door.kind,
+					zoneId: door.zoneId,
+					lossKw: door.lossKw,
+					thresholdMinutes: door.thresholdMinutes,
+					insideC: door.insideC,
+					outsideC: door.outsideC,
+					equipmentId: door.equipmentId,
+					unit: door.serialNumber ? { serialNumber: door.serialNumber, name: door.unitName } : null,
+					openedAt,
+					minutesOpen,
+					overdue: openedAt !== null && isOverdue(minutesOpen, door.thresholdMinutes),
+					lossKwh: loss(ranges.from, end),
+					previousLossKwh: loss(ranges.previousFrom, ranges.previousTo),
+					lossKwhToday: loss(ranges.today, now),
+					openingsToday: own.filter((o) => Temporal.Instant.compare(o.openedAt, ranges.today) >= 0)
+						.length,
+				};
+			});
 	});
 }
 
 /** How many of the site's alerts are open. */
 export async function openAlertCount(siteId: number) {
-	const [row] = await db
-		.select({ count: sql<number>`count(*)` })
+	return (await openAlertCounts([siteId])).get(siteId) ?? 0;
+}
+
+/** How many of each of the sites' alerts are open (none: not in the map). */
+export async function openAlertCounts(siteIds: number[]) {
+	const counts = await db
+		.select({ siteId: energyAlert.energySiteId, count: sql<number>`count(*)` })
 		.from(energyAlert)
 		.where(
 			and(
 				inTenant(energyAlert),
-				eq(energyAlert.energySiteId, siteId),
+				inList(energyAlert.energySiteId, siteIds),
 				eq(energyAlert.status, "open"),
 			),
-		);
-	return row?.count ?? 0;
+		)
+		.groupBy(energyAlert.energySiteId);
+	return new Map(counts.map((row) => [row.siteId, row.count]));
 }

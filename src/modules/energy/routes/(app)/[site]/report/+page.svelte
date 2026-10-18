@@ -4,7 +4,6 @@
 	import type { RouteParams } from "$app/types";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
-	import { getTimeZone } from "#lib/dates.ts";
 	import { formatCents, formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import {
 		changeClass,
@@ -22,18 +21,15 @@
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/report"> } = $props();
 
-	const isDay = (value: string | null) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
-	const today = Temporal.Now.plainDateISO(getTimeZone());
-	// This month so far, unless the URL says otherwise.
-	const from = $derived(
-		isDay(page.url.searchParams.get("from"))
-			? page.url.searchParams.get("from")!
-			: today.with({ day: 1 }).toString(),
+	/** The URL's day `name`, if it's one. */
+	const day = (name: string) => {
+		const value = page.url.searchParams.get(name);
+		return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+	};
+	// The URL's days, else the server's this month so far, by the site's calendar (not the user's).
+	const report = $derived(
+		await getEnergyReport({ site: Number(params.site), from: day("from"), to: day("to") }),
 	);
-	const to = $derived(
-		isDay(page.url.searchParams.get("to")) ? page.url.searchParams.get("to")! : today.toString(),
-	);
-	const report = $derived(await getEnergyReport({ site: Number(params.site), from, to }));
 	const site = $derived(report.site);
 	const kpis = $derived(kpisOf(report.zones, report.doors, site, report.previousComplete));
 	const series = $derived(seriesOf(report.zones));
@@ -92,11 +88,11 @@
 		<form method="GET" class="flex flex-wrap items-end gap-3">
 			<label class="flex flex-col gap-1 text-sm">
 				{m.energy_report_from()}
-				<Input type="date" name="from" value={from} required />
+				<Input type="date" name="from" value={report.first.toString()} required />
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				{m.energy_report_to()}
-				<Input type="date" name="to" value={to} required />
+				<Input type="date" name="to" value={report.last.toString()} required />
 			</label>
 			<Button type="submit" variant="outline">{m.energy_report_show()}</Button>
 			<Button type="button" onclick={() => window.print()}>
