@@ -56,7 +56,8 @@ Organizations own all business data.
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()`. Ids come
   from the client.
 - Inserts take `organizationId` from `currentTenant()`. Numbers come from `nextNumber(tx, …)` in the
-  same transaction. Orders are created only through `createOrders(tx, drafts)`.
+  same transaction. Orders are created only through `createOrders(tx, drafts)`, and change status
+  only through `transitionOrder()`.
 - References between tenant tables are composite foreign keys that include the tenant.
 - Every section's tests cover isolation: South can't see or change North's records, also by
   tampering with ids. In e2e one page and one tampered form per section; the rest in its server
@@ -94,6 +95,8 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 
 - **Modules and extension points** (hooks, slots, form slots, bulk actions, list columns, module
   routes, seeds): `docs/agents/modules.md`.
+- **Orders' statuses** (the transition table, `transitionOrder()`, orders awaiting acceptance):
+  `docs/agents/orders.md`.
 - **Server-side lists** (filtering, sorting, range filters, module columns):
   `docs/agents/lists.md`.
 - **Tests** (where they go, e2e conventions, component harnesses): `docs/agents/tests.md`.
