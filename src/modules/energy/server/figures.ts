@@ -40,6 +40,7 @@ import {
 	energyThreshold,
 	energyZone,
 } from "./schema.ts";
+import { zoneThresholds } from "./thresholds.ts";
 
 /** Sites with their customer, as `where` picks them. */
 const selectSites = (where: SQL | undefined) =>
@@ -351,7 +352,7 @@ export async function sitesFigures(
 			latestKw: latestKwOfZone,
 		})
 		.from(energyZone)
-		.leftJoin(energyThreshold, eq(energyThreshold.zoneId, energyZone.id))
+		.leftJoin(...zoneThresholds())
 		.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds)))
 		.orderBy(asc(energyZone.position), asc(energyZone.id));
 

@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import {
 		changeClass,
@@ -16,7 +17,6 @@
 	import { getEnergyZone, watchEnergy } from "#modules/energy/energy.remote.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
 	import { changePercent } from "#modules/energy/model.ts";
-	import { Clock } from "#modules/energy/overview/clock.svelte.ts";
 	import DoorCard from "#modules/energy/overview/door-card.svelte";
 	import EnergyChart from "#modules/energy/overview/energy-chart.svelte";
 
@@ -34,7 +34,8 @@
 		if (seen !== undefined && changed !== seen) void getEnergyZone(args).refresh();
 		seen = changed;
 	});
-	const clock = new Clock();
+	// Open doors count up between batches.
+	const clock = new Clock(15_000);
 	const now = $derived(clock.now);
 
 	const ratedTotal = $derived(data.consumers.reduce((sum, consumer) => sum + consumer.ratedKw, 0));

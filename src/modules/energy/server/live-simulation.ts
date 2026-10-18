@@ -20,7 +20,7 @@
  * a zone's peak and day from its thresholds (or its consumers' rated power), a door's cycle by its
  * kind and threshold.
  */
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, getTableName, gte, sql } from "drizzle-orm";
 
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
@@ -50,6 +50,7 @@ import {
 	energyThreshold,
 	energyZone,
 } from "./schema.ts";
+import { zoneThresholds } from "./thresholds.ts";
 
 /** How far back a tick fills the readings a pause left out. */
 const FILL_HOURS = 24;
@@ -101,7 +102,7 @@ async function simulatedSites() {
 				maxKwh: energyThreshold.maxKwh,
 			})
 			.from(energyZone)
-			.leftJoin(energyThreshold, eq(energyThreshold.zoneId, energyZone.id))
+			.leftJoin(...zoneThresholds())
 			.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds))),
 		db
 			.select({ zoneId: energyConsumer.zoneId, kw: sql<number>`sum(${energyConsumer.ratedKw})` })
@@ -118,13 +119,14 @@ async function simulatedSites() {
 			})
 			.from(energyDoor)
 			.where(and(inTenant(energyDoor), inList(energyDoor.energySiteId, siteIds))),
-		// Each zone's latest interval and each door's latest event, by a seek per zone and door.
+		// Each zone's latest interval and each door's latest event, by a seek per zone and door. The
+		// zone's id by its table's name: drizzle writes the columns of a select of one table bare, and
+		// a bare `id` in the subquery would be the reading's, if it had one.
 		db
 			.select({
 				zoneId: energyZone.id,
-				start: sql<
-					number | null
-				>`(select max(r.start) from energy_reading r where r.zone_id = ${energyZone.id})`,
+				start: sql<number | null>`(select max(r.start) from energy_reading r
+					where r.zone_id = ${sql.identifier(getTableName(energyZone))}.id)`,
 			})
 			.from(energyZone)
 			.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds))),

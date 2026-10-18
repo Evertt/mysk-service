@@ -15,13 +15,13 @@
 	import TruckIcon from "@lucide/svelte/icons/truck";
 
 	import StatTile from "#lib/components/stat-tile.svelte";
+	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
 
 	import { watchDocks } from "../docks.remote.ts";
 	import { dockFigures, formatDuration } from "../model.ts";
 	import { getDockBoard } from "./board.remote.ts";
 	import { type DockBoard, dockView } from "./board.ts";
-	import { Clock } from "./clock.svelte.ts";
 	import ComponentsCard from "./components-card.svelte";
 	import DockCard from "./dock-card.svelte";
 	import ProcessCard from "./process-card.svelte";
@@ -30,7 +30,7 @@
 	let { board, siteId }: { board: DockBoard; siteId: number | undefined } = $props();
 
 	// The timers count every second.
-	const clock = new Clock();
+	const clock = new Clock(1000);
 	const now = $derived(clock.now);
 
 	// Live: a change to the docks (the feed's events, the rules, an edit) asks for the site again.
