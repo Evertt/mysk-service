@@ -1,5 +1,4 @@
 import { getRequestEvent } from "$app/server";
-import { error, isValidationError } from "@sveltejs/kit";
 import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -23,6 +22,7 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
+import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 
 import { byPriorityThenAge } from "./board/board.ts";
@@ -208,11 +208,6 @@ export const scheduleOrder = form(v.object({ id: id(), ...scheduleFields }), asy
 
 /** A drag and drop move; the client shows it right away and undoes it on an error. */
 export const moveOrder = command(v.object(moveFields), async (input) => {
-	try {
-		await plan(input);
-	} catch (thrown) {
-		if (isValidationError(thrown)) error(400, thrown.issues.map((i) => i.message).join("; "));
-		throw thrown;
-	}
+	await refusedAsBadRequest(() => plan(input));
 	await refreshRequested(getSchedule);
 });

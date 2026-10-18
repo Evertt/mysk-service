@@ -5,7 +5,7 @@ import { idInTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 
-import { type FieldAction, fieldActions, orderTransitions } from "../lifecycle.ts";
+import { type FieldAction, fieldActions, fieldRefusal } from "../lifecycle.ts";
 
 /**
  * One of the engineer's (`engineerId`) orders, in a transaction, if they may do `action` with it
@@ -23,6 +23,6 @@ export async function findEngineerOrder(
 		where: and(idInTenant(order, orderId), eq(order.engineerId, engineerId)),
 	});
 	if (!found) error(404, m.portal_not_found_plain());
-	if (!fieldActions(found.status)[action]) invalid(orderTransitions.complete.refusal(found));
+	if (!fieldActions(found.status)[action]) invalid(fieldRefusal(found.status));
 	return found;
 }

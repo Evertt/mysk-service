@@ -1,9 +1,9 @@
 // The status cell of the orders list, which changes an order's status right in the table.
-import { error, isValidationError } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { manualOrderStatuses } from "#lib/models.ts";
 import { db } from "#lib/server/db/index.ts";
+import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -23,12 +23,9 @@ export const setOrderStatus = forMembers.command(
 		status: v.picklist(manualOrderStatuses),
 	}),
 	async ({ id, status }) => {
-		try {
-			await db.transaction((tx) => transitionOrder(tx, { verb: "set", id, to: status }));
-		} catch (thrown) {
-			if (isValidationError(thrown)) error(400, thrown.issues.map((i) => i.message).join("; "));
-			throw thrown;
-		}
+		await refusedAsBadRequest(() =>
+			db.transaction((tx) => transitionOrder(tx, { verb: "set", id, to: status })),
+		);
 		await refreshRequested(getOrders, getOrderFacets);
 	},
 );

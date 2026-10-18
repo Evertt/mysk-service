@@ -25,7 +25,7 @@ import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
 import { createOrders } from "./server/creation.ts";
-import { orderCommitted, OrderRefused, tagOrders } from "./server/hooks.ts";
+import { orderCommitted, refuseParts, tagOrders } from "./server/hooks.ts";
 import { beginOrderChange } from "./server/lifecycle.ts";
 import { removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
@@ -234,15 +234,6 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 	});
 }
 
-/**
- * Refuses the form with the problems of a module that couldn't save its part, each on the field of
- * the form it names (a module's part's fields are under `modules.<its id>`), or for the whole form:
- * they're validation issues as they are.
- */
-function refuseParts(refused: OrderRefused): never {
-	invalid(...refused.problems);
-}
-
 interface ReferenceProblem {
 	field: "customerId" | "equipmentIds" | "engineerId";
 	message: string;
@@ -293,10 +284,7 @@ async function refuseProblems(issue: OrderIssue, input: OrderInput) {
 
 export const createOrder = forMembers.form(orderSchema, async (input, issue) => {
 	await refuseProblems(issue, input);
-	const number = await saveOrder(null, input, issue).catch((error) => {
-		if (error instanceof OrderRefused) refuseParts(error);
-		throw error;
-	});
+	const number = await saveOrder(null, input, issue).catch(refuseParts);
 	redirect(303, `/orders/${number}`);
 });
 
@@ -305,10 +293,7 @@ export const updateOrder = forMembers.form(
 	async (data, issue) => {
 		const { id, ...input } = data;
 		await refuseProblems(issue, input);
-		const number = await saveOrder(id, input, issue).catch((error) => {
-			if (error instanceof OrderRefused) refuseParts(error);
-			throw error;
-		});
+		const number = await saveOrder(id, input, issue).catch(refuseParts);
 		void getOrder(number).refresh();
 		orderCommitted({ number });
 		redirect(303, `/orders/${number}`);

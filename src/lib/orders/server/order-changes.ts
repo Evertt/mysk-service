@@ -12,7 +12,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 
 import { acceptFirst, notEditable } from "../lifecycle.ts";
-import { OrderRefused, saveOrderParts } from "./hooks.ts";
+import { refuseRefused, saveOrderParts } from "./hooks.ts";
 
 /**
  * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it
@@ -37,12 +37,6 @@ export async function removeOrder(id: number) {
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
 	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
-}
-
-/** Refuses with what a module said when it refused its part of an order's change. */
-function refuseRefused(error: unknown): never {
-	if (error instanceof OrderRefused) invalid(error.message);
-	throw error;
 }
 
 /**

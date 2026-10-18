@@ -25,8 +25,16 @@ export const notEditable = (number: string, change: "changed" | "deleted") =>
  */
 export const acceptFirst = (number: string) => m.orders_accept_first({ number });
 
+/**
+ * The status an open order gets when it's planned: a quote that gets an engineer and a date is
+ * scheduled (as in the seed data, where quotes have neither); other statuses stay as they are.
+ * The planner's moves (`plan`) and the planning board's moves share it.
+ */
+export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
+	status === "quote" && engineerId !== null ? "scheduled" : status;
+
 /** Why an engineer can't do what they asked with one of their orders in its status. */
-const fieldRefusal = (status: OrderStatus) =>
+export const fieldRefusal = (status: OrderStatus) =>
 	status === "scheduled"
 		? m.portal_start_first()
 		: m.portal_cant_change({ status: label("orderStatus", status).toLowerCase() });
@@ -38,9 +46,10 @@ type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing"
 export interface TransitionRule {
 	by: OrderActor;
 	from: readonly OrderStatus[];
-	to: readonly OrderStatus[];
+	/** The statuses it moves to, or how the status it moves to follows (the planner's). */
+	to: readonly OrderStatus[] | ((from: OrderStatus, engineerId: number | null) => OrderStatus);
 	/** The action its activity entry is logged with. */
-	action?: CoreActivityAction;
+	action: CoreActivityAction;
 	/** Why it can't move an order in its status. */
 	refusal?: (order: { number: string; status: OrderStatus }) => string;
 	/**
@@ -70,12 +79,12 @@ export const orderTransitions = {
 	},
 	/**
 	 * The planner gives an open order an engineer (or nobody) and a time: a quote that gets an
-	 * engineer is scheduled (`plannedStatus()`), others keep their status.
+	 * engineer is scheduled, others keep their status (`plannedStatus()`).
 	 */
 	plan: {
 		by: "planner",
 		from: openOrderStatuses,
-		to: openOrderStatuses,
+		to: plannedStatus,
 		action: "scheduled",
 		refusal: () => m.orders_only_open_scheduled(),
 		completedAt: "untouched",
@@ -156,14 +165,6 @@ export const mayDeleteOrder = (status: OrderStatus) => isEditableOrder(status);
  */
 export const statusChoices = (status: OrderStatus): readonly OrderStatus[] =>
 	can("set", status) ? orderTransitions.set.to : [];
-
-/**
- * The status an open order gets when it's planned: a quote that gets an engineer and a date is
- * scheduled (as in the seed data, where quotes have neither); other statuses stay as they are.
- * The planner's moves (`plan`) and the planning board's moves share it.
- */
-export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
-	status === "quote" && engineerId !== null ? "scheduled" : status;
 
 /**
  * What an engineer can do in the field (the engineer portal) with one of their orders, by its

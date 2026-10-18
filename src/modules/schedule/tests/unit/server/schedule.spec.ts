@@ -3,7 +3,7 @@
  * engineers, the week's orders but cancelled ones, the backlog of open orders without a date, most
  * urgent first) and the month's six weeks, also for South once it has the module (South's records
  * only); the schedule dialog and a drag and drop move, which plan through core's
- * `scheduleOrder()` (its rules are `src/tests/unit/lib/orders/server/lifecycle.spec.ts`'s), with
+ * `transitionOrder()` (its rules are `src/tests/unit/lib/orders/server/lifecycle.spec.ts`'s), with
  * their refusals: North's order by its id, North's or an inactive engineer, an order that isn't
  * open. The server side of `schedule.test.ts` and `schedule.tenancy.test.ts`, which keep the board.
  */

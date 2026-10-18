@@ -19,10 +19,11 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
   - `form/`: the new/edit form, its fields and valibot schema.
   - `detail/`: what only the detail page shows: cards, history, dialogs, their helpers and remote
     functions.
-  - `server/`: server-only code: services (`pricing.ts`, `scheduling.ts`), hooks, and the list's `ListSql`
+  - `server/`: server-only code: services (`pricing.ts`, `lifecycle.ts`), hooks, and the list's `ListSql`
     in `list-sql.ts`.
   - at the root: `display.ts` (display maps, options, domain rules), `extensions.ts` (the domain's
-    extension points), `countries.ts`-like data, and the record's own remote functions
+    extension points), browser-safe rules the server shares (orders' `lifecycle.ts`, the transition
+    table), `countries.ts`-like data, and the record's own remote functions
     (`order.remote.ts`: get, form options, create, update, delete).
 
   A page is a `+page.svelte` in `src/routes/(app)/<domain>/` that composes these.

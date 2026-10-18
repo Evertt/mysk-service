@@ -20,8 +20,8 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
 
 import type { OrderFormParts } from "../extensions.ts";
-import { can, orderTransitions, plannedStatus, type TransitionRule } from "../lifecycle.ts";
-import { OrderRefused, saveOrderParts } from "./hooks.ts";
+import { can, orderTransitions, type TransitionRule } from "../lifecycle.ts";
+import { OrderRefused, refuseParts, refuseRefused, saveOrderParts } from "./hooks.ts";
 import { assigneeProblem } from "./order-changes.ts";
 
 /** A move of an order, by its verb, with what that verb needs. */
@@ -80,7 +80,9 @@ export async function transitionOrder(
 	if (!found) {
 		error(404, rule.by === "engineer" ? m.portal_not_found_plain() : m.orders_not_found_plain());
 	}
-	if (!can(transition.verb, found.status)) invalid(rule.refusal!(found));
+	if (!can(transition.verb, found.status)) {
+		invalid(orderTransitions[transition.verb].refusal(found));
+	}
 	const moved = { id: found.id, number: found.number };
 
 	const { status, columns } = await target(tx, transition, found.status);
@@ -94,7 +96,7 @@ export async function transitionOrder(
 	if (transition.verb === "reject") await decide(tx, found.id, transition.reason);
 	if (transition.verb === "complete") await signOff(tx, found.id, transition.signoff, at);
 	await recordActivity(tx, {
-		action: rule.action!,
+		action: rule.action,
 		subject: { type: "order", id: found.id, label: found.number },
 		before: found,
 		after: {
@@ -123,13 +125,10 @@ async function target(tx: Transaction, transition: SingleTransition, from: Order
 		case "set":
 			return { status: transition.to, columns: {} };
 		case "accept":
-			return { status: "quote" as const, columns: {} };
 		case "reject":
-			return { status: "cancelled" as const, columns: {} };
 		case "start":
-			return { status: "in_progress" as const, columns: {} };
 		case "complete":
-			return { status: "completed" as const, columns: {} };
+			return { status: orderTransitions[transition.verb].to[0], columns: {} };
 		case "plan": {
 			const { engineerId, day, time } = transition;
 			if (engineerId !== null) {
@@ -139,7 +138,8 @@ async function target(tx: Transaction, transition: SingleTransition, from: Order
 			const scheduledFor = day
 				.toZonedDateTime({ timeZone: getTimeZone(), plainTime: time })
 				.toInstant();
-			return { status: plannedStatus(from, engineerId), columns: { engineerId, scheduledFor } };
+			const status = orderTransitions.plan.to(from, engineerId);
+			return { status, columns: { engineerId, scheduledFor } };
 		}
 		default: {
 			const unknown: never = transition;
@@ -200,20 +200,11 @@ export async function beginOrderChange(
 }
 
 /**
- * Refuses the order form with the problems of a module that couldn't save its part, each on the
- * field it names (a part's fields are under `modules.<its id>`), or for the whole form.
- */
-function refuseParts(thrown: unknown): never {
-	if (thrown instanceof OrderRefused) invalid(...thrown.problems);
-	throw thrown;
-}
-
-/**
  * Moves those of an invoice's orders that the verb moves from their status, with one entry each:
  * they stay done, so they keep their completion date (and get one if they had none).
  */
 async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
-	const rule: TransitionRule = orderTransitions[transition.verb];
+	const rule = orderTransitions[transition.verb];
 	const moving = transition.orders.filter((each) => can(transition.verb, each.status));
 	if (!moving.length) return;
 	const [status] = rule.to;
@@ -235,7 +226,7 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 			throw thrown;
 		});
 		await recordActivity(tx, {
-			action: rule.action!,
+			action: rule.action,
 			subject: { type: "order", id: moved.id, label: moved.number },
 			before: moved,
 			after: { status },
@@ -296,10 +287,4 @@ async function decide(tx: Transaction, orderId: number, rejectionReason: string 
 		.update(orderRequest)
 		.set({ decidedAt: Temporal.Now.instant(), decidedBy: user.id, rejectionReason })
 		.where(and(eq(orderRequest.orderId, orderId), inTenant(orderRequest)));
-}
-
-/** Refuses with what a module said when it refused its part of the move; rethrows anything else. */
-function refuseRefused(thrown: unknown): never {
-	if (thrown instanceof OrderRefused) invalid(thrown.message);
-	throw thrown;
 }
