@@ -162,8 +162,8 @@
 		}
 	],
 	"checklists_activity_subject_checklist": "checklist",
-	"checklists_type_change_refused": "The checklists of {units} have answers already: the order stays an inspection or maintenance order.",
-	"checklists_unit_removal_refused": "The checklists of {units} have answers already: those units stay on the order.",
+	"checklists_type_change_refused": "The checklists of {units} are filled in already: the order stays an inspection or maintenance order.",
+	"checklists_unit_removal_refused": "The checklists of {units} are filled in already: those units stay on the order.",
 	"checklists_delete_refused": "{number} can't be deleted: the checklists of {units} are filled in.",
 	"checklists_complete_refused": [
 		{

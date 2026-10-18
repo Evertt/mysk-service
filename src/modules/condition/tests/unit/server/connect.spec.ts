@@ -13,6 +13,9 @@ import { toListQuery } from "#lib/components/data-table/list-definition.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import { getEquipmentList } from "#lib/equipment/list/equipment-list.remote.ts";
 import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
+import { db } from "#lib/server/db/index.ts";
+import { equipment } from "#lib/server/db/schema.ts";
+import { searchMatch } from "#lib/server/lists/index.ts";
 import { getServiceHistory } from "#modules/condition/feed.remote.ts";
 import {
 	getConditionCounts,
@@ -20,6 +23,7 @@ import {
 } from "#modules/condition/list/units-list.remote.ts";
 import { conditionList } from "#modules/condition/list/units-list.ts";
 import { getConditionOverview } from "#modules/condition/overview.remote.ts";
+import { rowsSql } from "#modules/condition/server/list-sql.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import {
 	as,
@@ -132,6 +136,42 @@ describe("the Connect page, in SHLTR", () => {
 		expect(rowCount).toBe(rows.filter((row) => row.score !== null && row.score < 40).length);
 		const none = await listed("condition=none");
 		expect(none.rowCount).toBe(rows.filter((row) => row.score === null).length);
+	});
+
+	test("a search binds each word once, whatever the columns it searches", async () => {
+		const binds = await as(shltr.member, () => {
+			const where = searchMatch(rowsSql().search, "a b c d e f g h i j");
+			return db.select({ id: equipment.id }).from(equipment).where(where).toSQL().params.length;
+		});
+		expect(binds).toBe(10);
+	});
+
+	test("a long search, each word in any of the columns, with every filter and a sort", async () => {
+		const code = await riedel();
+		const [spring] = (await listed(`customer=${code}`)).rows.filter(
+			(row) => row.component?.number === "OC-1041",
+		);
+		const words = [
+			"torsieveerpakket",
+			"oc-1041",
+			spring.serialNumber,
+			"laaddok",
+			"07",
+			spring.manufacturer,
+			spring.model,
+			"riedel",
+			code,
+			"B.V.",
+		];
+		const filters = `customer=${code}&status=critical,attention&condition=low,fair&sort=condition`;
+		const search = `q=${encodeURIComponent(words.join(" "))}&${filters}`;
+		const { rows, rowCount } = await listed(search);
+		expect(rows.map((row) => row.component?.number)).toEqual(["OC-1041"]);
+		expect(rowCount).toBe(1);
+		expect((await countsFor(search)).status).toMatchObject({ critical: 1 });
+		// A word is never found across two of a row's values (its unit's name and manufacturer).
+		const across = `07${spring.manufacturer.slice(0, 3)}`;
+		expect((await listed(`q=${encodeURIComponent(`oc-1041 ${across}`)}`)).rowCount).toBe(0);
 	});
 
 	test("the dashboard's tile counts the units that need attention, their components taken in", async () => {

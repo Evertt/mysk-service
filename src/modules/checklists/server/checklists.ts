@@ -1,25 +1,31 @@
 /**
  * The checklists on orders: each unit of an inspection or maintenance order that's still to be done
  * has one, made from the template of the unit's category (none without a template), kept in step
- * with the order as core saves it (`orders.units`, `orders.saving`). A checklist that has answers,
- * or is completed, is on record: its unit can't be taken off the order, the order can't change to
- * another type or be deleted. An order is completed only once all of its checklists are.
+ * with the order as core saves it (`orders.units`, `orders.saving`). A checklist that's filled in
+ * (an answer, a point's remark or the customer's), or completed, is on record: its unit can't be
+ * taken off the order, the order can't change to another type or be deleted. An order is completed
+ * only once all of its checklists are.
  *
  * The drafts that follow an order's units and type aren't logged: like the stock that follows an
  * order's status, they need no entry beyond the order's own.
  */
-import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, or, sql } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
 import type { OrderProblem, OrderSaving, OrderUnitsSaving } from "#lib/orders/extensions.ts";
 import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
-import { inList, insertRows } from "#lib/server/db/parameters.ts";
+import { inList, literal } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 
 import { checklistKind, getsChecklists, orderPoints } from "../model.ts";
-import { checklist, checklistResult, checklistTemplateItem } from "./schema.ts";
-import { offeredTemplate } from "./templates.ts";
+import {
+	checklist,
+	checklistResult,
+	checklistTemplate,
+	checklistTemplateCategory,
+	checklistTemplateItem,
+} from "./schema.ts";
 
 /** The unit names in a message, e.g. "Deur 07, Deur 08". */
 const names = (units: readonly { title: string }[]) => units.map((unit) => unit.title).join(", ");
@@ -29,7 +35,6 @@ function unitsOf(tx: Transaction, orderId: number) {
 	return tx
 		.select({
 			id: equipment.id,
-			categoryId: equipment.categoryId,
 			name: equipment.name,
 			manufacturer: equipment.manufacturer,
 			model: equipment.model,
@@ -40,11 +45,14 @@ function unitsOf(tx: Transaction, orderId: number) {
 		.orderBy(asc(orderUnit.position));
 }
 
-/** The order's checklists, with how many of their points have an answer. */
+/**
+ * The order's checklists, with how many of their points have an answer or a remark, and whether
+ * the customer's remark is written.
+ */
 function checklistsOf(tx: Transaction, orderId: number) {
-	const answered = sql<number>`(select count(*) from ${checklistResult} where ${and(
+	const filledIn = sql<number>`(select count(*) from ${checklistResult} where ${and(
 		eq(checklistResult.checklistId, checklist.id),
-		isNotNull(checklistResult.result),
+		or(isNotNull(checklistResult.result), isNotNull(checklistResult.remark)),
 	)})`.mapWith(Number);
 	return tx
 		.select({
@@ -52,76 +60,140 @@ function checklistsOf(tx: Transaction, orderId: number) {
 			equipmentId: checklist.equipmentId,
 			kind: checklist.kind,
 			status: checklist.status,
-			answered,
+			filledIn,
+			remarked: isNotNull(checklist.remarks).mapWith(Boolean),
 		})
 		.from(checklist)
 		.where(and(eq(checklist.orderId, orderId), inTenant(checklist)));
 }
 
-/** Whether a checklist is on record: completed, or with answers. */
-const onRecord = (found: { status: string; answered: number }) =>
-	found.status === "completed" || found.answered > 0;
+/** Whether a checklist is on record: completed, or with answers or remarks. */
+const onRecord = (found: { status: string; filledIn: number; remarked: boolean }) =>
+	found.status === "completed" || found.filledIn > 0 || found.remarked;
 
 /**
- * Makes a draft checklist for each of `units` of the order, from the template of its category
- * (none for a unit whose category has none), with the template's points.
+ * Makes a draft checklist for each of `units` of the order (in their order), from the template of
+ * its category (none for a unit whose category has none), with the template's points. In three
+ * statements however many units there are, as the order's transaction holds every other request on
+ * Cloudflare: the checklists and their points are copied from the templates by `insert … select`,
+ * which names a value for every column of the table, in its order.
  */
 async function createChecklists(
 	tx: Transaction,
-	target: { id: number; organizationId: string },
+	target: { id: number },
 	kind: "inspection" | "maintenance",
-	units: readonly { id: number; categoryId: number }[],
+	units: readonly { id: number }[],
 ) {
-	const points = new Map<number, { id: number; group: string; text: string }[]>();
-	for (const unit of units) {
-		const template = await offeredTemplate(tx, unit.categoryId);
-		if (!template) continue;
-		if (!points.has(template.id)) {
-			const items = await tx
+	if (!units.length) return;
+	const unitIds = units.map((unit) => unit.id);
+	const created = await tx
+		.insert(checklist)
+		.select(
+			tx
 				.select({
-					id: checklistTemplateItem.id,
-					group: checklistTemplateItem.group,
-					text: checklistTemplateItem.text,
-					position: checklistTemplateItem.position,
+					id: sql`null`.as("id"),
+					organizationId: equipment.organizationId,
+					orderId: sql`${target.id}`.as("orderId"),
+					equipmentId: equipment.id,
+					templateId: checklistTemplate.id,
+					name: checklistTemplate.name,
+					norm: checklistTemplate.norm,
+					validityMonths: checklistTemplate.validityMonths,
+					kind: sql`${kind}`.as("kind"),
+					status: literal("draft").as("status"),
+					remarks: sql`null`.as("remarks"),
+					completedAt: sql`null`.as("completedAt"),
+					completedBy: sql`null`.as("completedBy"),
+					completedByUser: sql`null`.as("completedByUser"),
+					validUntil: sql`null`.as("validUntil"),
+					createdAt: sql`unixepoch()`.as("createdAt"),
 				})
-				.from(checklistTemplateItem)
+				.from(equipment)
+				.innerJoin(
+					checklistTemplateCategory,
+					and(
+						eq(checklistTemplateCategory.categoryId, equipment.categoryId),
+						inTenant(checklistTemplateCategory),
+					),
+				)
+				.innerJoin(...tenantJoin(checklistTemplate, checklistTemplateCategory.templateId))
 				.where(
-					and(eq(checklistTemplateItem.templateId, template.id), inTenant(checklistTemplateItem)),
-				);
-			points.set(template.id, orderPoints(items));
-		}
-		const [created] = await tx
-			.insert(checklist)
-			.values({
-				organizationId: target.organizationId,
-				orderId: target.id,
-				equipmentId: unit.id,
-				templateId: template.id,
-				name: template.name,
-				norm: template.norm,
-				validityMonths: template.validityMonths,
-				kind,
-			})
-			.returning({ id: checklist.id });
-		await insertRows(
-			tx,
-			checklistResult,
-			points.get(template.id)!.map(({ id, group, text }, position) => ({
-				organizationId: target.organizationId,
-				checklistId: created.id,
-				templateItemId: id,
-				group,
-				text,
-				position,
-			})),
+					and(
+						inList(equipment.id, unitIds),
+						inTenant(equipment),
+						eq(checklistTemplate.archived, false),
+					),
+				)
+				.orderBy(
+					sql`(select key from json_each(${JSON.stringify(unitIds)}) where value = ${equipment.id})`,
+				),
+		)
+		.returning({ id: checklist.id, templateId: checklist.templateId });
+	if (!created.length) return;
+
+	// Each template point's place in the checklists made with it (see `orderPoints()`), as
+	// `[point, place]`, bound as one JSON parameter.
+	const items = await tx
+		.select({
+			id: checklistTemplateItem.id,
+			templateId: checklistTemplateItem.templateId,
+			group: checklistTemplateItem.group,
+			position: checklistTemplateItem.position,
+		})
+		.from(checklistTemplateItem)
+		.where(
+			and(
+				inList(checklistTemplateItem.templateId, [
+					...new Set(created.map((made) => made.templateId)),
+				]),
+				inTenant(checklistTemplateItem),
+			),
 		);
-	}
+	const places = [...Map.groupBy(items, (item) => item.templateId).values()].flatMap((points) =>
+		orderPoints(points).map((point, place) => [point.id, place]),
+	);
+	const place = sql.identifier("place");
+	await tx.insert(checklistResult).select(
+		tx
+			.select({
+				id: sql`null`.as("id"),
+				organizationId: checklist.organizationId,
+				checklistId: checklist.id,
+				templateItemId: checklistTemplateItem.id,
+				group: checklistTemplateItem.group,
+				text: checklistTemplateItem.text,
+				position: sql`json_extract(${place}.value, '$[1]')`.as("position"),
+				result: sql`null`.as("result"),
+				remark: sql`null`.as("remark"),
+			})
+			.from(checklist)
+			.innerJoin(
+				checklistTemplateItem,
+				and(
+					eq(checklistTemplateItem.organizationId, checklist.organizationId),
+					eq(checklistTemplateItem.templateId, checklist.templateId),
+				),
+			)
+			.innerJoin(
+				sql`json_each(${JSON.stringify(places)}) as ${place}`,
+				sql`json_extract(${place}.value, '$[0]') = ${checklistTemplateItem.id}`,
+			)
+			.where(
+				and(
+					inList(
+						checklist.id,
+						created.map((made) => made.id),
+					),
+					inTenant(checklist),
+				),
+			),
+	);
 }
 
 /**
  * Keeps the checklists of the tenant's order `orderId` in step with it, in `tx`: the units it's
  * losing (`leaving`, still there) lose theirs, and so do all its units when it's no longer an
- * inspection or maintenance order, unless a checklist is on record (completed or with answers),
+ * inspection or maintenance order, unless a checklist is on record (completed or filled in),
  * which refuses the change; a draft follows the order's type; and while the order is still to be
  * done, each unit without one gets one. Answers the problems that refuse the change, if any.
  */

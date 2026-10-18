@@ -53,6 +53,10 @@ vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
 	],
 }));
 
+// The statements the database runs, to count them. It holds them to Cloudflare's limit on bound
+// values, as the app's database does.
+const statements = vi.hoisted((): string[] => []);
+
 // A temporary database made by the app's migrations, with two tenants' customers, units (doors,
 // with a template, and a pump, without), engineers and a template of two groups.
 const folder = await vi.hoisted(async () => {
@@ -69,6 +73,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	const { drizzle } = await import("drizzle-orm/libsql");
 	const { migrate } = await import("drizzle-orm/libsql/migrator");
 	const { drizzleQueued } = await import("#lib/server/db/serialize.ts");
+	const { checkParameters } = await import("#lib/server/db/parameters.ts");
 	const schema = await import("#lib/server/db/schema.ts");
 	const moduleSchema = await import("#lib/server/db/modules.gen.ts");
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
@@ -103,7 +108,13 @@ vi.mock("#lib/server/db/index.ts", async () => {
 			(2, 'north', 'Bram', 'bram@example.test', '1', 'mechanical', 'C', 7000, '2020-01-01', null),
 			(3, 'south', 'Sam', 'sam@example.test', '1', 'mechanical', 'C', 7000, '2020-01-01', null);
 	`);
-	return { db: drizzleQueued(client, { schema: { ...schema, ...moduleSchema } }) };
+	const logger = {
+		logQuery: (query: string, params: unknown[]) => {
+			checkParameters(query, params.length);
+			statements.push(query);
+		},
+	};
+	return { db: drizzleQueued(client, { schema: { ...schema, ...moduleSchema }, logger }) };
 });
 
 afterAll(() => {
@@ -331,6 +342,80 @@ describe("when an order gets its units", () => {
 	});
 });
 
+describe("an order of many units", () => {
+	// North's doors 100 to 159, with a template, and pumps 200 to 239, without.
+	const doors = Array.from({ length: 60 }, (_, i) => 100 + i);
+	const pumps = Array.from({ length: 40 }, (_, i) => 200 + i);
+
+	beforeEach(async () => {
+		await db.run(sql`insert into equipment (id, organization_id, serial_number, name, model,
+			manufacturer, category_id, status, customer_id, site_id, installed_at, warranty_until)
+		select value, 'north', 'SN-' || value, 'Unit ' || value, 'M', 'Make',
+			case when value < 200 then 1 else 2 end, 'operational', 1, 1, '2020-01-01', '2030-01-01'
+		from json_each(${JSON.stringify([...doors, ...pumps])})`);
+	});
+
+	afterEach(async () => {
+		await db.run(sql`delete from "order"`);
+		await db.run(sql`delete from equipment where id >= 100`);
+	});
+
+	/** A new inspection order of `units`, in their order, and how many statements its sync ran. */
+	async function synced(units: number[]) {
+		const [created] = await db.all<{ id: number }>(
+			sql`insert into "order" (organization_id, number, customer_id, engineer_id, type, status,
+				priority, description)
+			values ('north', ${`ORD-${++numbered}`}, 1, 1, 'inspection', 'scheduled', 'normal', 'Keuring')
+			returning id`,
+		);
+		await db.run(sql`insert into order_unit (organization_id, order_id, customer_id, equipment_id,
+			position) select 'north', ${created.id}, 1, value, key from json_each(${JSON.stringify(units)})`);
+		statements.length = 0;
+		expect(await db.transaction((tx) => syncChecklists(tx, created.id))).toBeUndefined();
+		return { id: created.id, statements: statements.length };
+	}
+
+	test("gets each unit's checklist, in as many statements as an order of one", async () => {
+		const one = await synced([10]);
+		const units = doors.flatMap((door, i) => (i < pumps.length ? [door, pumps[i]] : [door]));
+		const many = await synced(units);
+		expect(many.statements).toBe(one.statements);
+
+		// A draft for each door, in the units' order, a copy of the template with its points.
+		const made = await db
+			.select()
+			.from(checklist)
+			.where(eq(checklist.orderId, many.id))
+			.orderBy(asc(checklist.id));
+		expect(made.map((found) => found.equipmentId)).toEqual(doors);
+		for (const found of made) {
+			expect(found).toMatchObject({
+				organizationId: "north",
+				templateId,
+				name: "Sectionaaldeur",
+				norm: "NEN-EN 12604",
+				validityMonths: 12,
+				kind: "inspection",
+				status: "draft",
+				remarks: null,
+			});
+			expect(
+				(await pointsOf(found.id)).map(({ organizationId, group, text, position, result }) => [
+					organizationId,
+					group,
+					text,
+					position,
+					result,
+				]),
+			).toEqual([
+				["north", "Mechanisch", "Torsieveren gecontroleerd", 0, null],
+				["north", "Mechanisch", "Kabels zonder rafels", 1, null],
+				["north", "Veiligheid", "Fotocel stopt deur", 2, null],
+			]);
+		}
+	});
+});
+
 describe("taking units off an order", () => {
 	test("takes their checklists along while nothing is answered", async () => {
 		const id = await orderWith([10, 11]);
@@ -348,11 +433,35 @@ describe("taking units off an order", () => {
 				await saveUnitChecklists({ tx, order: { id }, equipmentIds: [11], removed: [10] }),
 			).toEqual([
 				{
-					message: "The checklists of Deur 10 have answers already: those units stay on the order.",
+					message:
+						"The checklists of Deur 10 are filled in already: those units stay on the order.",
 				},
 			]);
 		});
 		expect(await checklistsOf(id)).toHaveLength(2);
+	});
+
+	test("is refused for a draft with only a remark too, a point's or the customer's", async () => {
+		const id = await orderWith([10, 11]);
+		const [first, second] = await checklistsOf(id);
+		await remarkPoint(1, (await pointsOf(first.id))[0].id, "Roest op de rail.");
+		await remarkChecklist(1, second.id, "Rail vervangen.");
+		expect(await setUnits(id, [11])).toEqual([
+			{
+				message: "The checklists of Deur 10 are filled in already: those units stay on the order.",
+			},
+		]);
+		expect(await setUnits(id, [10])).toEqual([
+			{
+				message: "The checklists of Deur 11 are filled in already: those units stay on the order.",
+			},
+		]);
+		expect(await checklistsOf(id)).toHaveLength(2);
+		// With the remarks cleared again, they're drafts like any other.
+		await remarkPoint(1, (await pointsOf(first.id))[0].id, "");
+		await remarkChecklist(1, second.id, "");
+		expect(await setUnits(id, [])).toBeUndefined();
+		expect(await checklistsOf(id)).toEqual([]);
 	});
 
 	test("deleting the unit's row takes the checklist and its points along", async () => {
@@ -381,11 +490,15 @@ describe("changing an order's type", () => {
 		expect(problems).toEqual([
 			{
 				message:
-					"The checklists of Deur 10 have answers already: the order stays an inspection or maintenance order.",
+					"The checklists of Deur 10 are filled in already: the order stays an inspection or maintenance order.",
 				path: ["type"],
 			},
 		]);
+		// A remark alone keeps it too.
 		await answerPoint(1, (await pointsOf(made.id))[0].id, null);
+		await remarkChecklist(1, made.id, "Rail vervangen.");
+		expect((await db.transaction((tx) => syncChecklists(tx, id)))?.[0].path).toEqual(["type"]);
+		await remarkChecklist(1, made.id, "");
 		expect(await db.transaction((tx) => syncChecklists(tx, id))).toBeUndefined();
 		expect(await checklistsOf(id)).toEqual([]);
 	});
