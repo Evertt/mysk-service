@@ -1,7 +1,7 @@
 import type { App } from "#e2e/app.ts";
 
 /** Cents, rounded half away from zero. */
-export const round = (cents: number) => Math.sign(cents) * Math.round(Math.abs(cents));
+const round = (cents: number) => Math.sign(cents) * Math.round(Math.abs(cents));
 /** The VAT on a subtotal: the rate in percent, rounded once on the sum. */
 export const vatOf = (subtotal: number, rate = 21) => round((subtotal * rate) / 100);
 

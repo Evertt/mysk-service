@@ -9,7 +9,7 @@ export const dayKey = (date: Temporal.PlainDate) => date.toString();
 export const daysFromToday = (days: number) => today.add({ days });
 
 /** A plan as stored. */
-export interface Plan {
+interface Plan {
 	id: number;
 	organization_id: string;
 	equipment_id: number;
@@ -26,9 +26,6 @@ export interface Plan {
 export const plansOf = (equipmentId: number) =>
 	rows<Plan>(`select * from maintenance_plan where equipment_id = ? order by id`, [equipmentId]);
 
-export const planById = async (id: number) =>
-	(await rows<Plan>(`select * from maintenance_plan where id = ?`, [id]))[0];
-
 /** A unit of the tenant's that's in use and has no plan yet. */
 export const unitWithoutPlan = async (organizationId: string) =>
 	(
@@ -42,34 +39,14 @@ export const unitWithoutPlan = async (organizationId: string) =>
 	)[0];
 
 /** How many of the tenant's active plans are due before `before`. */
-export const activeDueBefore = async (
-	organizationId: string,
-	before: Temporal.PlainDate,
-	from?: Temporal.PlainDate,
-) =>
+export const activeDueBefore = async (organizationId: string, before: Temporal.PlainDate) =>
 	Number(
 		await value(
 			`select count(*) from maintenance_plan where organization_id = ? and paused = 0
-			 and next_due_on < ? and next_due_on >= ?`,
-			[organizationId, dayKey(before), from ? dayKey(from) : ""],
+			 and next_due_on < ?`,
+			[organizationId, dayKey(before)],
 		),
 	);
-
-/** The activity entries about a plan after the entry `since`, oldest first. */
-export const planActivity = (planId: number, since = 0) =>
-	rows<{
-		action: string;
-		subject_label: string;
-		parent_type: string | null;
-		changes: string | null;
-	}>(
-		`select action, subject_label, parent_type, changes from activity
-		 where subject_type = 'maintenancePlan' and subject_id = ? and id > ? order by id`,
-		[String(planId), since],
-	);
-
-export const lastActivityId = async () =>
-	Number(await value(`select coalesce(max(id), 0) from activity`));
 
 /** The parts of the page the tests use. */
 export function pageLocators(app: App) {
@@ -84,6 +61,5 @@ export function pageLocators(app: App) {
 	/** Opens the menu of the plan described as `description` on the unit's card. */
 	const planMenu = (description: string) =>
 		app.page.getByRole("button", { name: `Actions for ${description}`, exact: true }).click();
-	const settingsCard = () => app.page.locator('[data-module="maintenance"]');
-	return { card, dialog, sidebarLinks, planMenu, settingsCard };
+	return { card, dialog, sidebarLinks, planMenu };
 }

@@ -1,3 +1,9 @@
+/**
+ * Contracts' pages: the list, a contract's page, its form (what it suggests and offers as it's
+ * filled in), creating, editing and deleting one, and the dashboard's part failing. What the server
+ * decides (the checks the schema can't make, the numbers, the coverage stored, what's logged, a
+ * covered unit staying with its customer, tenant isolation) is `../unit/server/contracts.spec.ts`'s.
+ */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { countIn, isRemote, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
@@ -5,7 +11,6 @@ import { countIn, isRemote, organizations, rows, useApp, value, quiet } from "#e
 import {
 	activeContract,
 	type ActiveContract,
-	contractId,
 	customerWithoutContracts,
 	pageLocators,
 	year,
@@ -49,22 +54,17 @@ describe("in North", () => {
 		await expect.poll(() => app.rowCount()).toBe(1);
 		await page.getByLabel("Search contracts…").fill("");
 
-		await app.openFilter("Status");
-		await page.getByRole("option", { name: /Active/ }).click();
-		await page.keyboard.press("Escape");
 		await app.openFilter("Level");
 		await page.getByRole("option", { name: /Premium/ }).click();
 		await page.keyboard.press("Escape");
-		const activePremium = Number(
-			await value(
-				`select count(*) from contract where organization_id = ? and level = 'premium'
-				 and starts_on <= date('now', 'localtime') and ends_on >= date('now', 'localtime')`,
-				[north.id],
-			),
+		const premium = Number(
+			await value(`select count(*) from contract where organization_id = ? and level = 'premium'`, [
+				north.id,
+			]),
 		);
-		await expect.poll(() => app.rowCount()).toBe(activePremium);
+		await expect.poll(() => app.rowCount()).toBe(premium);
 		const badges = await tableRows().locator('[data-slot="badge"]').allInnerTexts();
-		expect(badges).not.toContainEqual(expect.stringMatching(/Expired|Upcoming|Basic|Standard/));
+		expect(badges).not.toContainEqual(expect.stringMatching(/Basic|Standard/));
 	});
 
 	test("a contract shows its customer and covered equipment; an unknown one is a 404", async () => {
@@ -90,29 +90,6 @@ describe("in North", () => {
 		);
 	});
 
-	test("a covered unit can't move to another customer", async () => {
-		const { page } = app;
-		// One without orders, which would stop the move on their own.
-		const [unit] = await rows<{ id: number; serial_number: string; customer_id: number }>(
-			`select e.id, e.serial_number, e.customer_id from equipment e
-			 where e.organization_id = ? and exists (select 1 from contract_equipment ce where ce.equipment_id = e.id)
-			 and not exists (select 1 from order_unit ou where ou.equipment_id = e.id) order by e.id limit 1`,
-			[north.id],
-		);
-		const other = await value<number>(
-			`select min(id) from customer where organization_id = ? and id != ?`,
-			[north.id, unit.customer_id],
-		);
-		await app.go(`/equipment/${encodeURIComponent(unit.serial_number)}/edit`);
-		await page.getByLabel("Customer").selectOption(String(other));
-		await page.getByLabel("Site", { exact: true }).selectOption({ index: 1 });
-		await app.submit(page.getByRole("button", { name: "Save equipment" }));
-		expect(await app.issues()).toContainEqual(expect.stringMatching(/service contract/));
-		expect(await value(`select customer_id from equipment where id = ?`, [unit.id])).toBe(
-			unit.customer_id,
-		);
-	});
-
 	test("choosing a level suggests its response time", async () => {
 		const { page } = app;
 		await app.go("/contracts/new");
@@ -121,24 +98,7 @@ describe("in North", () => {
 		expect(await page.getByLabel("Response time (hours)").inputValue()).toBe("4");
 	});
 
-	test("a unit already covered in the same period is refused", async () => {
-		const { page } = app;
-		const before = await countIn("contract", north.id);
-		await page.getByLabel("Customer").selectOption(String(busy.customer_id));
-		await units()
-			.and(page.locator(`[value="${busy.equipment_id}"]`))
-			.check();
-		await page.getByLabel("Starts on").fill(new Date().toISOString().slice(0, 10));
-		await page.getByLabel("Monthly fee").fill("99");
-		await app.submit(page.getByRole("button", { name: "Create contract" }));
-		expect(await app.issues()).toContainEqual(
-			expect.stringContaining(`already covered by ${busy.number}`),
-		);
-		expect(app.path()).toBe("/contracts/new");
-		expect(await countIn("contract", north.id)).toBe(before);
-	});
-
-	test("changing the customer lists their units, none checked", async () => {
+	test("choosing the customer lists their units, none checked", async () => {
 		const { page } = app;
 		await page.getByLabel("Customer").selectOption(String(free));
 		const owned = Number(
@@ -148,25 +108,14 @@ describe("in North", () => {
 		expect(await units().and(page.locator(":checked")).count()).toBe(0);
 	});
 
-	test("the period must run forwards", async () => {
+	test("a new contract gets the next number, and shows its terms and units", async () => {
 		const { page } = app;
 		await units().nth(0).check();
 		await units().nth(1).check();
 		await page.getByLabel("Starts on").fill(`${year + 1}-01-01`);
-		await page.getByLabel("Ends on").fill(`${year}-12-01`);
+		await page.getByLabel("Ends on").fill(`${year + 1}-12-31`);
 		await page.getByLabel("Monthly fee").fill("123.45");
 		await page.getByLabel("Notes").fill("Test contract (e2e)");
-		await app.submit(page.getByRole("button", { name: "Create contract" }));
-		expect(await app.issues()).toContainEqual(expect.stringMatching(/after the start/));
-		expect(app.path()).toBe("/contracts/new");
-	});
-
-	test("a new contract gets the next number and covers the chosen units", async () => {
-		const { page } = app;
-		const covering = await units().evaluateAll((boxes) =>
-			(boxes as HTMLInputElement[]).filter((box) => box.checked).map((box) => Number(box.value)),
-		);
-		await page.getByLabel("Ends on").fill(`${year + 1}-12-31`);
 		const expected = await nextNumber(north.id);
 		await page.getByRole("button", { name: "Create contract" }).click();
 		await page.waitForURL(/\/contracts\/CTR-/);
@@ -174,26 +123,6 @@ describe("in North", () => {
 		number = app.path().split("/").pop()!;
 		expect(number).toBe(expected);
 		await app.toast("Contract created");
-
-		const [stored] = await rows(
-			`select organization_id, customer_id, level, monthly_fee, response_hours, notes
-			 from contract where number = ? and organization_id = ?`,
-			[number, north.id],
-		);
-		expect(stored).toMatchObject({
-			organization_id: north.id,
-			customer_id: free,
-			level: "premium",
-			monthly_fee: 12345,
-			response_hours: 4,
-			notes: "Test contract (e2e)",
-		});
-		const id = await contractId(number, north.id);
-		const coverage = await rows<{ equipment_id: number }>(
-			`select equipment_id from contract_equipment where contract_id = ? order by 1`,
-			[id],
-		);
-		expect(coverage.map((row) => row.equipment_id)).toEqual(covering.toSorted((a, b) => a - b));
 
 		const terms = await page.locator("dl").first().innerText();
 		expect(terms).toContain("€123.45");
@@ -219,26 +148,17 @@ describe("in North", () => {
 		await expect
 			.poll(() => page.locator('h1 ~ [data-slot="badge"]').allInnerTexts())
 			.toContain("Basic");
-
-		const id = await contractId(number, north.id);
-		const [stored] = await rows(`select level, response_hours from contract where id = ?`, [id]);
-		expect(stored).toMatchObject({ level: "basic", response_hours: 72 });
-		expect(await value(`select count(*) from contract_equipment where contract_id = ?`, [id])).toBe(
-			1,
-		);
+		expect(await page.locator("table").first().locator("tbody tr").count()).toBe(1);
 	});
 
-	test("deleting it removes it and its coverage, after which it's a 404", async () => {
+	test("deleting it goes back to the list, without it", async () => {
 		const { page } = app;
-		const id = await contractId(number, north.id);
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/contracts");
-		expect(await contractId(number, north.id)).toBeUndefined();
-		expect(await value(`select count(*) from contract_equipment where contract_id = ?`, [id])).toBe(
-			0,
-		);
-		expect((await app.go(`/contracts/${number}`))?.status()).toBe(404);
+		await quiet(page);
+		expect(await app.rowCount()).toBe(await countIn("contract", north.id));
+		expect(await page.getByRole("link", { name: number }).count()).toBe(0);
 	});
 });
 

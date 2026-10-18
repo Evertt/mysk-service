@@ -1,3 +1,11 @@
+/**
+ * What contracts add to core's pages: an order's coverage card and SLA badge, the orders list's
+ * badge, the dashboard's cards, a covered order's adjustment line, a unit's contracts, and a new
+ * call-out's deadline through the order form. What the server decides (which contract covers an
+ * order, the deadlines and their order, the prices everywhere and in the revenue, all of it gone
+ * with the module off) is `../unit/server/orders.spec.ts`'s; South without the module is
+ * `contracts.tenancy.test.ts`'s.
+ */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { cents, organizations, rows, useApp, value, quiet } from "#e2e/app.ts";
@@ -84,139 +92,39 @@ describe("in North, contracts count on orders", () => {
 		]);
 	});
 
-	test("the orders table shows the same badges", async () => {
-		const { page } = app;
+	test("the orders table shows the badge", async () => {
 		await app.go("/orders");
-		for (const [callOut, badge] of [
-			[overdue, "SLA overdue"],
-			[atRisk, "SLA at risk"],
-		] as const) {
-			await page.getByLabel("Search orders…").fill(callOut.number);
-			await app.tableSettled();
-			await expect.poll(() => app.rowCount()).toBe(1);
-			expect(await tableRows().first().locator('[data-slot="badge"]').allInnerTexts()).toContain(
-				badge,
-			);
-		}
-		await page.getByLabel("Search orders…").fill("");
+		await app.page.getByLabel("Search orders…").fill(overdue.number);
 		await app.tableSettled();
-		await expect.poll(() => tableRows().count()).toBeGreaterThan(1);
-		// The first page shows the latest orders: the call-outs among them that are overdue or at
-		// risk have their badge (the at-risk one may be older than the first page's orders).
-		const shown = await tableRows().locator('a[href^="/orders/"]').allInnerTexts();
-		const urgent = (await callOuts()).filter(
-			(callOut) => shown.includes(callOut.number) && slaOf(callOut) !== "on_track",
+		await expect.poll(() => app.rowCount()).toBe(1);
+		expect(await tableRows().first().locator('[data-slot="badge"]').allInnerTexts()).toContain(
+			"SLA overdue",
 		);
-		expect(urgent.length).toBeGreaterThan(0);
-		await expect
-			.poll(() => page.locator('[data-slot="badge"]', { hasText: /SLA (overdue|at risk)/ }).count())
-			.toBeGreaterThanOrEqual(urgent.length);
 	});
 
-	test("the dashboard lists the call-outs at risk or overdue, most urgent first", async () => {
+	test("the dashboard lists the call-outs at risk or overdue, and the contracts ending soon", async () => {
 		await app.go("/");
-		const expected = (await callOuts())
-			.filter((callOut) => slaOf(callOut) !== "on_track")
-			.map((callOut) => callOut.number);
 		const listed = card("Response times at risk").locator('a[href^="/orders/"]');
-		await expect.poll(() => listed.allInnerTexts()).toEqual(expected);
+		await expect.poll(() => listed.allInnerTexts()).toContain(overdue.number);
+		const ending = card("Contracts ending soon").locator('a[href^="/contracts/CTR-"]');
+		await expect.poll(() => ending.count()).toBeGreaterThan(0);
 	});
 
-	test("and the contracts ending in the next 60 days that weren't renewed", async () => {
-		const expected = await rows<{ number: string }>(
-			`select number from contract k where organization_id = ? and starts_on <= date('now', 'localtime')
-			 and ends_on >= date('now', 'localtime') and ends_on < date('now', 'localtime', '+60 days')
-			 and not exists (select 1 from contract later
-			 where later.customer_id = k.customer_id and later.starts_on > k.ends_on)
-			 order by ends_on, number`,
-			[north.id],
+	test("a covered order shows what its contract includes, on its page", async () => {
+		// A premium-covered repair with both labour and materials.
+		const [order] = await pricing(
+			`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
+			 and exists (select 1 from order_line l where l.order_id = o.id)`,
 		);
-		expect(expected.length).toBeGreaterThan(0);
-		const listed = card("Contracts ending soon").locator('a[href^="/contracts/CTR-"]');
-		await expect.poll(() => listed.allInnerTexts()).toEqual(expected.map((row) => row.number));
-	});
-
-	test("the dashboard's revenue takes off what contracts include", async () => {
-		const done = await pricing(`o.status in ('completed', 'invoiced') and o.completed_at >= ?`, [
-			Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60,
-		]);
-		expect(done.some((order) => priceOf(order).included > 0)).toBe(true);
-		const expected = done.reduce((sum, order) => sum + priceOf(order).total, 0);
-		const revenue = app.page
-			.locator("[data-stat-tile]")
-			.filter({ has: app.page.getByText("Revenue, last 30 days", { exact: true }) })
-			.locator("[data-stat-value]");
-		expect(cents(await revenue.innerText())).toBe(expected);
-	});
-
-	describe("a covered order shows what its contract includes, and its total agrees everywhere", () => {
-		/**
-		 * A premium-covered repair with both labour and materials, among its customer's ten latest
-		 * orders (which their page lists), and its price.
-		 */
-		const covered = async () => {
-			const [order] = await pricing(
-				`c.level = 'premium' and o.type = 'repair' and o.labor_hours > 0
-				 and exists (select 1 from order_line l where l.order_id = o.id)
-				 and o.id in (select r.id from "order" r where r.customer_id = o.customer_id
-				 order by r.created_at desc, r.id desc limit 10)`,
-			);
-			return { order, price: priceOf(order) };
-		};
-
-		// One test per page: the four of them took up half a test's time under the load of a full
-		// run.
-		test("on its page", async () => {
-			const { order, price } = await covered();
-			expect(price.included).toBe(order.materials + price.labor);
-			await app.go(`/orders/${order.number}`);
-			const lines = card("Materials and labour");
-			const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
-			expect(await adjustment.innerText()).toContain(
-				`Covered by ${order.contract} (Premium)\nLabour and materials included`,
-			);
-			expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.included);
-			expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(price.total);
-		});
-
-		test("in the orders list", async () => {
-			const { order, price } = await covered();
-			await app.go("/orders");
-			await app.page.getByLabel("Search orders…").fill(order.number);
-			await expect.poll(() => app.rowCount()).toBe(1);
-			expect(cents(await tableRows().first().locator("td:nth-last-child(2)").innerText())).toBe(
-				price.total,
-			);
-		});
-
-		test("in the unit's service history, with what the contract took off", async () => {
-			const { page } = app;
-			const { order, price } = await covered();
-			await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
-			const entry = page
-				.getByRole("list", { name: "Service history" })
-				.locator(":scope > li")
-				.filter({ has: page.getByRole("link", { name: order.number }) });
-			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(price.total);
-			const adjustments = entry.getByRole("list", { name: "Adjustments" });
-			expect(await adjustments.innerText()).toContain(
-				`Covered by ${order.contract} (Premium)\nLabour and materials included`,
-			);
-			expect(cents(await adjustments.locator('[data-cost="adjustment"]').innerText())).toBe(
-				-price.included,
-			);
-		});
-
-		test("in the customer's recent activity", async () => {
-			const { page } = app;
-			const { order, price } = await covered();
-			await app.go(`/customers/${order.customer}`);
-			const activity = page
-				.getByRole("list", { name: "Recent activity" })
-				.locator(":scope > li")
-				.filter({ has: page.getByRole("link", { name: order.number }) });
-			expect(cents(await activity.locator('[data-cost="total"]').innerText())).toBe(price.total);
-		});
+		const price = priceOf(order);
+		await app.go(`/orders/${order.number}`);
+		const lines = card("Materials and labour");
+		const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
+		expect(await adjustment.innerText()).toContain(
+			`Covered by ${order.contract} (Premium)\nLabour and materials included`,
+		);
+		expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.included);
+		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(price.total);
 	});
 
 	test("a unit's page lists the contracts covering it, with their level and end", async () => {
@@ -258,29 +166,23 @@ describe("in North, contracts count on orders", () => {
 		await page.getByLabel("Labour (hours)").fill("1.5");
 		await page.getByRole("button", { name: "Add material" }).click();
 		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
-		const before = Math.floor(Date.now() / 1000);
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await quiet(page);
 		await app.toast("Order created");
 		const number = app.path().split("/").pop()!;
 
-		const [stored] = await rows<{ created_at: number }>(
+		const createdAt = await value<number>(
 			`select created_at from "order" where number = ? and organization_id = ?`,
 			[number, north.id],
 		);
-		expect(stored.created_at).toBeGreaterThanOrEqual(before);
 		const coverage = card("Service contract");
 		const text = await coverage.innerText();
 		expect(text).toContain(`Covered by ${premium.number} (Premium)`);
-		expect(text).toContain(
-			`· respond by ${formatDue(stored.created_at + premium.response_hours * 3600)}`,
-		);
+		expect(text).toContain(`· respond by ${formatDue(createdAt + premium.response_hours * 3600)}`);
 		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["On track"]);
 		expect(await badges()).not.toContainEqual(expect.stringMatching(/^SLA/));
 		// Premium: labour and materials included, so nothing to pay.
-		const [order] = await pricing(`o.number = ?`, [number]);
-		expect(priceOf(order).total).toBe(0);
 		const lines = card("Materials and labour");
 		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(0);
 
@@ -297,62 +199,9 @@ describe("in North, contracts count on orders", () => {
 			.poll(() => card("Service contract").locator('[data-slot="badge"]').allInnerTexts())
 			.toEqual(["Responded"]);
 
+		// As it was, for the files after this one on its database.
 		await page.getByRole("button", { name: "Delete" }).click();
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await page.waitForURL((url) => url.pathname === "/orders");
-		expect(
-			await value(`select count(*) from "order" where number = ? and organization_id = ?`, [
-				number,
-				north.id,
-			]),
-		).toBe(0);
-	});
-
-	test("with the module switched off, orders are priced in full and nothing of it shows", async () => {
-		const { page } = app;
-		const [order] = await pricing(
-			`c.level = 'premium' and o.labor_hours > 0
-			 and exists (select 1 from order_line l where l.order_id = o.id)`,
-		);
-		await app.go("/settings");
-		const row = page.locator("div.rounded-lg.border", { hasText: "Service contracts" });
-		await row.getByRole("button", { name: "Disable" }).click();
-		await row.getByText("Disabled").waitFor();
-
-		await app.go(`/orders/${order.number}`);
-		expect(await card("Service contract").count()).toBe(0);
-		const lines = card("Materials and labour");
-		expect(await lines.locator("tbody tr", { hasText: "Covered by" }).count()).toBe(0);
-		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(
-			order.materials + priceOf(order).labor,
-		);
-		await app.go(`/orders/${overdue.number}`);
-		expect(await badges()).not.toContainEqual(expect.stringMatching(/^SLA/));
-		await app.go(`/equipment/${encodeURIComponent(order.equipment!)}`);
-		expect(await card("Service contracts").count()).toBe(0);
-		await app.go("/orders");
-		expect(
-			// The page's rows (not the hidden ones that keep the columns wide, see `column-widths.svelte.ts`).
-			await page
-				.locator('[data-slot="table-body"] [data-slot="badge"]', {
-					hasText: /SLA (overdue|at risk)/,
-				})
-				.count(),
-		).toBe(0);
-		await app.go("/");
-		expect(await card("Response times at risk").count()).toBe(0);
-		expect(await card("Contracts ending soon").count()).toBe(0);
-	});
-
-	// A test of its own, so that it switches the module back on for the tests after it (which share
-	// the database) even when the one before ran out of time.
-	test("switched on again, it shows again", async () => {
-		const { page } = app;
-		await app.go("/settings");
-		const row = page.locator("div.rounded-lg.border", { hasText: "Service contracts" });
-		await row.getByRole("button", { name: "Enable" }).click();
-		await row.getByText(/Enabled since/).waitFor();
-		await app.go(`/orders/${overdue.number}`);
-		expect(await badges()).toContain("SLA overdue");
 	});
 });
