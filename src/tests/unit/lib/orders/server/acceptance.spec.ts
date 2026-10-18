@@ -4,12 +4,11 @@ import { isHttpError, isValidationError } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { acceptOrder, rejectOrder, requestOrder } from "#lib/orders/server/acceptance.ts";
-import { assignOrder, changeOrderStatus } from "#lib/orders/server/order-changes.ts";
+import { requestOrder } from "#lib/orders/server/acceptance.ts";
+import { assignOrder } from "#lib/orders/server/order-changes.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderUnit } from "#lib/server/db/schema.ts";
-import { day } from "#unit/temporal-support.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -154,80 +153,11 @@ describe("a customer's report", () => {
 		});
 	});
 
-	test("can't be given another status, an engineer or a plan before it's accepted", async () => {
+	test("can't be given an engineer before it's accepted", async () => {
 		const { id, number } = await reported();
-		expect(await refusal(() => changeOrderStatus(id, "scheduled"))).toEqual([
-			`Accept or reject order ${number} first.`,
-		]);
 		expect(await refusal(() => assignOrder(id, 1))).toEqual([
 			`Accept or reject order ${number} first.`,
 		]);
 		expect((await stored(id)).status).toBe("awaiting_acceptance");
-	});
-});
-
-describe("acceptOrder", () => {
-	test("makes it a quote, with the modules following, and logs who accepted it", async () => {
-		const { id } = await reported();
-		await db.transaction((tx) => acceptOrder(tx, id));
-		expect(await stored(id)).toMatchObject({
-			status: "quote",
-			decidedBy: "u1",
-			rejectionReason: null,
-		});
-		expect((await stored(id)).decidedAt).not.toBeNull();
-		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "quote" }));
-		expect(logged).toHaveBeenCalledWith(
-			expect.objectContaining({ action: "accepted", after: { status: "quote" } }),
-		);
-	});
-
-	test("plans it in the same step: with an engineer it's scheduled", async () => {
-		const { id } = await reported();
-		const problem = await db.transaction((tx) =>
-			acceptOrder(tx, id, { engineerId: 1, day: day("2026-10-20"), time: "09:00" }),
-		);
-		expect(problem).toBeUndefined();
-		expect(await stored(id)).toMatchObject({ status: "scheduled", engineerId: 1 });
-		expect(logged.mock.calls.map(([record]) => record.action)).toEqual(["accepted", "scheduled"]);
-	});
-
-	test("answers what's wrong with the plan, e.g. another tenant's engineer", async () => {
-		const { id } = await reported();
-		const problem = await db.transaction((tx) =>
-			acceptOrder(tx, id, { engineerId: 2, day: day("2026-10-20"), time: "09:00" }),
-		);
-		expect(problem).toMatchObject({ field: "engineerId" });
-	});
-
-	test("refuses an order that's decided already, and another tenant's", async () => {
-		const { id, number } = await reported();
-		await db.transaction((tx) => acceptOrder(tx, id));
-		expect(await refusal(() => db.transaction((tx) => acceptOrder(tx, id)))).toEqual([
-			`Order ${number} isn't awaiting acceptance any more.`,
-		]);
-		expect(await refusal(() => db.transaction((tx) => rejectOrder(tx, id, "Nee")))).toEqual([
-			`Order ${number} isn't awaiting acceptance any more.`,
-		]);
-		const other = await reported();
-		locals.tenant = tenant("south");
-		expect(await refusal(() => db.transaction((tx) => acceptOrder(tx, other.id)))).toBe(404);
-		expect(await refusal(() => db.transaction((tx) => rejectOrder(tx, other.id, "Nee")))).toBe(404);
-	});
-});
-
-describe("rejectOrder", () => {
-	test("cancels it with the reason, for the customer, and logs it with the reason", async () => {
-		const { id } = await reported();
-		await db.transaction((tx) => rejectOrder(tx, id, "Valt niet onder ons onderhoud"));
-		expect(await stored(id)).toMatchObject({
-			status: "cancelled",
-			decidedBy: "u1",
-			rejectionReason: "Valt niet onder ons onderhoud",
-		});
-		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled" }));
-		expect(logged).toHaveBeenCalledWith(
-			expect.objectContaining({ action: "rejected", note: "Valt niet onder ons onderhoud" }),
-		);
 	});
 });

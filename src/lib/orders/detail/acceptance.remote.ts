@@ -10,16 +10,15 @@ import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, optionalDate, optionalId, optionalTime, text } from "#lib/schema.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { watchChanges } from "#lib/server/changes.ts";
 import { db, inThisRequest } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { getOrder } from "../order.remote.ts";
-import { acceptOrder as accept, rejectOrder as reject } from "../server/acceptance.ts";
-import { orderCommitted, OrderRefused } from "../server/hooks.ts";
+import { orderCommitted } from "../server/hooks.ts";
+import { transitionOrder } from "../server/lifecycle.ts";
 
 /** The engineers an accepted order can be planned for: the tenant's active ones. */
 export const getAcceptanceOptions = forMembers.query(async () => ({
@@ -58,22 +57,6 @@ export const watchAwaitingAcceptance = forMembers.query.live(async function* () 
 	}
 });
 
-/** A plan that can't be made: thrown, so the transaction stores none of the acceptance either. */
-class PlanRefused extends Error {
-	constructor(readonly problem: Problem<"engineerId">) {
-		super(problem.message);
-	}
-}
-
-/** The order's number, to refresh its page by. */
-async function numberOf(orderId: number) {
-	const [found] = await db
-		.select({ number: order.number })
-		.from(order)
-		.where(idInTenant(order, orderId));
-	return found?.number;
-}
-
 /**
  * Accepts one of the tenant's orders awaiting acceptance: a quote, or, with a day (and an
  * engineer), planned at once. Refused with the plan's problems (the engineer, the day), or a
@@ -93,21 +76,11 @@ export const acceptReportedOrder = forMembers.form(
 		const plan = input.day
 			? { engineerId: input.engineerId, day: input.day, time: input.time ?? "08:00" }
 			: undefined;
-		try {
-			await db.transaction(async (tx) => {
-				const problem = await accept(tx, input.id, plan);
-				if (problem) throw new PlanRefused(problem);
-			});
-		} catch (error) {
-			if (error instanceof PlanRefused) refuse(issue, [error.problem]);
-			if (error instanceof OrderRefused) invalid(error.message);
-			throw error;
-		}
-		const number = await numberOf(input.id);
-		if (number) {
-			void getOrder(number).refresh();
-			orderCommitted({ number });
-		}
+		const { number } = await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "accept", id: input.id, plan }),
+		);
+		void getOrder(number).refresh();
+		orderCommitted({ number });
 	},
 );
 
@@ -119,16 +92,10 @@ export const rejectReportedOrder = forMembers.form(
 	v.object({ id: id(), reason: text(m.orders_reject_reason_required) }),
 	async (input, issue) => {
 		if (input.reason.length > MAX_REASON) invalid(issue.reason(m.orders_reject_reason_too_long()));
-		try {
-			await db.transaction((tx) => reject(tx, input.id, input.reason));
-		} catch (error) {
-			if (error instanceof OrderRefused) invalid(error.message);
-			throw error;
-		}
-		const number = await numberOf(input.id);
-		if (number) {
-			void getOrder(number).refresh();
-			orderCommitted({ number });
-		}
+		const { number } = await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "reject", id: input.id, reason: input.reason }),
+		);
+		void getOrder(number).refresh();
+		orderCommitted({ number });
 	},
 );

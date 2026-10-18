@@ -109,6 +109,7 @@ export const manualOrderStatuses = [
 	"completed",
 	"cancelled",
 ] as const satisfies OrderStatus[];
+export type ManualOrderStatus = (typeof manualOrderStatuses)[number];
 
 /**
  * Whether an order can still be changed or deleted. Not once it's invoiced: it's on an invoice
@@ -116,14 +117,6 @@ export const manualOrderStatuses = [
  * (An order awaiting acceptance can be deleted, but changed only by accepting or rejecting it.)
  */
 export const isEditableOrder = (status: OrderStatus) => status !== "invoiced";
-
-/**
- * The statuses an order with `status` can be given by hand (its own among them), e.g. from the
- * status in the orders list: any of `manualOrderStatuses`; none once it's invoiced, nor while it
- * awaits acceptance (it's accepted or rejected instead).
- */
-export const orderStatusChoices = (status: OrderStatus): readonly OrderStatus[] =>
-	isEditableOrder(status) && !isAwaitingAcceptance(status) ? manualOrderStatuses : [];
 
 /** How urgent a customer says their breakdown is, in the portal: the order's priority. */
 export const reportUrgencies = [

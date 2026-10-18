@@ -9,6 +9,7 @@
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 
+import { isDoneOrder } from "#lib/models.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
 import type { ModuleSeed, SeedTenant } from "#lib/server/db/seed/module-seed.ts";
@@ -152,9 +153,7 @@ export async function seedChecklists(
 			),
 		)
 		.orderBy(desc(order.completedAt), asc(order.id));
-	const done = orders.filter(
-		(row) => ["completed", "invoiced"].includes(row.status) && row.completedAt,
-	);
+	const done = orders.filter((row) => isDoneOrder(row.status) && row.completedAt);
 	const open = orders.filter((row) => getsChecklists(row.status));
 	const picked = shltr ? [...done, ...open] : done.slice(0, NORTH_DONE);
 	if (!picked.length) return;

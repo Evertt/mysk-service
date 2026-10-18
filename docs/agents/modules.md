@@ -298,9 +298,9 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   `order`), but changes only its own: `.insert()`, `.update()` and `.delete()` take its own
   tables (`foreignWrites` in `src/tests/unit/modules/boundaries.spec.ts`). A change to the core's records goes through the
   service the core offers, which holds the rules and the activity log entry, e.g.
-  `setOrdersStatus()` (`src/lib/orders/server/order-changes.ts`), which the invoices module uses to mark an
-  invoice's orders invoiced and completed again, `scheduleOrder(tx, plan)`
-  (`src/lib/orders/server/scheduling.ts`), through which the schedule plans orders, and
+  `transitionOrder(tx, { verb, … })` (`src/lib/orders/server/lifecycle.ts`, see
+  `docs/agents/orders.md`), through which the invoices module marks an invoice's orders invoiced and
+  completed again and the schedule plans orders, and
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`), through which maintenance turns
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.

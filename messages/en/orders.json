@@ -140,6 +140,7 @@
 	"orders_history_empty_units_description": "This is the first order for these units.",
 	"orders_report_engineer": "Engineer",
 	"orders_not_awaiting_acceptance": "Order {number} isn't awaiting acceptance any more.",
+	"orders_move_refused_for": "{number}: {reason}",
 	"orders_accept_first": "Accept or reject order {number} first.",
 	"orders_acceptance_awaiting": "Reported by the customer: awaiting acceptance",
 	"orders_acceptance_reported": "Reported by the customer",

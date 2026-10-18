@@ -9,13 +9,8 @@ import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { formatNumber } from "#lib/i18n/index.ts";
-import { doneOrderStatuses, type OrderStatus } from "#lib/models.ts";
-import {
-	findEngineerOrder,
-	orderCommitted,
-	OrderRefused,
-	saveOrderParts,
-} from "#lib/orders/server/index.ts";
+import { doneOrderStatuses } from "#lib/models.ts";
+import { findEngineerOrder, orderCommitted, transitionOrder } from "#lib/orders/server/index.ts";
 import { id, laborHours, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -27,7 +22,7 @@ import {
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { changedAt, watchChanges } from "#lib/server/changes.ts";
-import { db, type Transaction } from "#lib/server/db/index.ts";
+import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
 	customer,
@@ -208,37 +203,6 @@ type MyOrder = Awaited<ReturnType<typeof findEngineerOrder>>;
 const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
 
 /**
- * Changes the status of an order (in the transaction), with what the modules' parts of it follow
- * (e.g. its stock) and the rest of the change (`also`, e.g. the sign-off), and then logs it as
- * `action`, with who signed it off for the customer (`signedBy`) when it's completed. Refused
- * with a module's message.
- */
-async function setStatus(
-	tx: Transaction,
-	found: MyOrder,
-	status: OrderStatus,
-	action: "work_started" | "completed",
-	{
-		completedAt,
-		signedBy,
-		also,
-	}: { completedAt?: Temporal.Instant; signedBy?: string; also?: () => Promise<void> } = {},
-) {
-	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
-	await saveOrderParts({ tx, order: found, status }).catch((error) => {
-		if (error instanceof OrderRefused) invalid(error.message);
-		throw error;
-	});
-	await also?.();
-	await recordActivity(tx, {
-		action,
-		subject: subjectOf(found),
-		before: found,
-		after: { status, signedBy },
-	});
-}
-
-/**
  * Refreshes what the portal shows of an order after a change, the modules' cards on it too (they
  * refresh their own queries on `orders.committed`).
  */
@@ -250,12 +214,9 @@ function refreshMyOrder(number: string) {
 
 /** Starts a scheduled job: it's then in progress. */
 export const startWork = forEngineers.form(v.object({ id: id() }), async (input) => {
-	const engineer = await currentEngineer();
-	const number = await db.transaction(async (tx) => {
-		const found = await findEngineerOrder(tx, engineer.id, input.id, "start");
-		await setStatus(tx, found, "in_progress", "work_started");
-		return found.number;
-	});
+	const { number } = await db.transaction((tx) =>
+		transitionOrder(tx, { verb: "start", id: input.id }),
+	);
 	refreshMyOrder(number);
 });
 
@@ -316,7 +277,7 @@ export const addNote = forEngineers.form(
  * Completes a job under way with the work order's sign-off: the customer's name and signature, and
  * the engineer's own signature, in their name as the tenant knows them (not one the form could
  * send). A module may refuse it, e.g. while a checklist isn't completed. Logged with who signed
- * for the customer, once the sign-off is in.
+ * for the customer, once the sign-off is in (`transitionOrder()`'s `complete`).
  */
 export const completeWork = forEngineers.form(
 	v.object({
@@ -325,32 +286,10 @@ export const completeWork = forEngineers.form(
 		signature: signature(),
 		engineerSignature: signature(m.portal_engineer_signature_required),
 	}),
-	async (input) => {
-		const { organizationId, user: signedInUser } = currentTenant();
-		const engineer = await currentEngineer();
-		const number = await db.transaction(async (tx) => {
-			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
-			const now = Temporal.Now.instant();
-			const signoff = {
-				signerName: input.signerName,
-				signature: input.signature,
-				engineerName: engineer.name,
-				engineerSignature: input.engineerSignature,
-				userId: signedInUser.id,
-				signedAt: now,
-			};
-			await setStatus(tx, found, "completed", "completed", {
-				completedAt: now,
-				signedBy: input.signerName,
-				also: async () => {
-					await tx
-						.insert(orderSignoff)
-						.values({ orderId: found.id, organizationId, ...signoff })
-						.onConflictDoUpdate({ target: orderSignoff.orderId, set: signoff });
-				},
-			});
-			return found.number;
-		});
+	async ({ id, ...signoff }) => {
+		const { number } = await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "complete", id, signoff }),
+		);
 		refreshMyOrder(number);
 	},
 );

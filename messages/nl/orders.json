@@ -140,6 +140,7 @@
 	"orders_history_empty_units_description": "Dit is de eerste opdracht voor deze apparaten.",
 	"orders_report_engineer": "Monteur",
 	"orders_not_awaiting_acceptance": "Opdracht {number} wacht niet meer op acceptatie.",
+	"orders_move_refused_for": "{number}: {reason}",
 	"orders_accept_first": "Accepteer opdracht {number} eerst, of wijs hem af.",
 	"orders_acceptance_awaiting": "Gemeld door de klant: nog te accepteren",
 	"orders_acceptance_reported": "Gemeld door de klant",

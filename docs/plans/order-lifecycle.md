@@ -366,6 +366,20 @@ they stop using. Every step is a `refactor:` commit except the last, which chang
 Scope: about 600 lines touched over ~25 files. Steps 2–6 each fit a session's context; the whole
 plan fits one or two sessions.
 
+## Review decisions
+
+Settled with the user after the code review of the implementation:
+
+- **Voiding an invoice whose order has an open checklist** (the review's adversarial 1): the
+  modules' save hook gets the status an order moves `from`, and checklists refuses only an order
+  that becomes done from outside done. Every move still asks the modules (Q5); issuing and voiding
+  no longer trip a rule about completing.
+- **The status cell's tests in `changes.spec.ts`** (spec 5): all four stay. They are cheap and cover
+  the remote's 400 mapping, the hand-only statuses and the tenant's 404 at the remote.
+- **How a row's `to` is typed** (follow-up review, standards 3): one rule type, whose `to` is the
+  statuses a verb moves to or, for the planner, the function that works it out (`plannedStatus`).
+  A separate rule type for the planner pays off only once a second row needs a computed target.
+
 ## Follow-ups (behaviour changes, not in this work)
 
 - The edit page and the bulk "skip" still use `isEditableOrder` (not invoiced). Switching them to

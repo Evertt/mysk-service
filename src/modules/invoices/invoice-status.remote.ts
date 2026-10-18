@@ -4,7 +4,8 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
-import { setOrdersStatus } from "#lib/orders/server/index.ts";
+import { can } from "#lib/orders/index.ts";
+import { transitionOrder } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
@@ -81,13 +82,13 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 				.select({ id: order.id, number: order.number, status: order.status })
 				.from(order)
 				.where(idsInTenant(order, orderIds));
-			const undone = orders.filter((o) => o.status !== "completed").map((o) => o.number);
+			const undone = orders.filter((o) => !can("invoice", o.status)).map((o) => o.number);
 			if (undone.length) {
 				invalid(
 					m.invoices_orders_not_completed({ count: undone.length, orders: undone.join(", ") }),
 				);
 			}
-			await setOrdersStatus(tx, orders, "invoiced", invoiceNote(found));
+			await transitionOrder(tx, { verb: "invoice", orders, note: invoiceNote(found) });
 		}
 
 		// Today, the user's.
@@ -162,7 +163,7 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 				.select({ id: order.id, number: order.number, status: order.status })
 				.from(order)
 				.where(and(idsInTenant(order, orderIds), eq(order.status, "invoiced")));
-			await setOrdersStatus(tx, invoiced, "completed", invoiceNote(found));
+			await transitionOrder(tx, { verb: "uninvoice", orders: invoiced, note: invoiceNote(found) });
 		}
 		await tx
 			.update(invoice)

@@ -53,10 +53,10 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/modules/invoices/server/invoices.ts`. An order is created only through
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`, in `#lib/orders/server/index.ts`;
   a customer's report from the portal through `requestOrder()`, see "Orders awaiting acceptance"
-  below),
+  in `docs/agents/orders.md`),
   which checks each draft's customer, units and engineer, numbers, inserts it with its units
   (`units`, in their order; `setOrderUnits()` in `units.ts` saves an edited order's) and logs it: core's order
-  form calls it (and saves its modules' parts with `saveOrderParts()` after it, see below), and so
+  form calls it (and saves its modules' parts with `beginOrderChange()`, see `docs/agents/orders.md`), and so
   do the modules (maintenance's "Create orders"). It doesn't emit `orders.committed`, which is for orders the
   client's pages already show.
 - References between tenant tables are composite foreign keys that include the tenant, e.g.
@@ -70,20 +70,3 @@ helpers are in `src/lib/server/auth/session.ts`:
   `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
   (`records.ts`), `refuse()` for refusing a form with its problems and `refuseOffParts()` for a
   form slot's parts (`forms.ts`).
-
-## Orders awaiting acceptance
-
-An order a customer's contact reports in the customer portal (a breakdown) is made by
-`requestOrder(tx, draft)` (`src/lib/orders/server/acceptance.ts`): through `createOrders()`, with the
-status `awaiting_acceptance` and an `order_request` (who reported it). Until a planner decides, it's
-no open work (`openOrderStatuses` doesn't have it; `pendingOrderStatuses` is the customer's view of
-what's still to be done): it's off the planning board and its backlog, holds no stock (materials'
-`holdsStock()`), gets no checklists, can't be given a status by hand (`orderStatusChoices()` is
-empty), an engineer or a plan, or be edited (`acceptFirst()`); it can be deleted. The office's
-order page accepts it (`acceptOrder()`: a quote, logged `accepted`; with an engineer and a day it's
-planned at once by `scheduleOrder()`, logged `scheduled`) or rejects it (`rejectOrder()`: cancelled,
-logged `rejected` with the reason, which the customer reads). Both go through `saveOrderParts()`. A
-contract's response time counts from the report (the order's creation), not from its acceptance:
-the contracts module counts an order awaiting acceptance as not responded to yet, like a quote
-(`waitingStatuses` in `src/modules/contracts/coverage.ts`). Orders made in the office start as
-quotes, past acceptance.

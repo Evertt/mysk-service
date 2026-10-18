@@ -9,7 +9,6 @@ import {
 	manualOrderStatuses,
 	openOrderStatuses,
 	type OrderStatus,
-	orderStatusChoices,
 	orderStatuses,
 	pendingOrderStatuses,
 	reportUrgencies,
@@ -45,16 +44,4 @@ test("an invoiced order can't be changed, nor be made invoiced or awaiting accep
 	]);
 	// Every status that can be chosen can be changed again.
 	expect(manualOrderStatuses.every(isEditableOrder)).toBe(true);
-});
-
-test("an order can be given any status by hand, its own among them, until it's invoiced", () => {
-	for (const status of manualOrderStatuses) {
-		expect(orderStatusChoices(status), status).toEqual(manualOrderStatuses);
-	}
-	expect(orderStatusChoices("invoiced")).toEqual([]);
-});
-
-test("an order awaiting acceptance gets no status by hand: it's accepted or rejected", () => {
-	expect(orderStatusChoices("awaiting_acceptance")).toEqual([]);
-	expect(isEditableOrder("awaiting_acceptance")).toBe(true);
 });

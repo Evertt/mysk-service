@@ -2,12 +2,13 @@
  * What the invoicing module adds to the orders list's selection (see
  * `bulk-actions/orders.list.ts`).
  */
-import { error, isValidationError } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 
 import type { BulkResult } from "#lib/components/data-table/bulk-actions.ts";
 import { idsInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { idsTarget, targetIds } from "#lib/server/lists/index.ts";
 
 import { getOrderInvoice } from "./invoicing.remote.ts";
@@ -52,14 +53,10 @@ export const invoiceOrders = command(idsTarget, async (target): Promise<BulkResu
 		}));
 	if (!chosen.length) return { done: 0, skipped, missing };
 
-	let created;
-	try {
-		created = await createDraft({ customerId, orderIds: chosen.map((o) => o.id), items: [] });
-	} catch (thrown) {
-		// E.g. billed by someone else meanwhile.
-		if (isValidationError(thrown)) error(400, thrown.issues.map((i) => i.message).join("; "));
-		throw thrown;
-	}
+	// Refused, e.g., when someone else billed them meanwhile.
+	const created = await refusedAsBadRequest(() =>
+		createDraft({ customerId, orderIds: chosen.map((o) => o.id), items: [] }),
+	);
 	if ("problem" in created) error(400, created.problem.message);
 	for (const o of chosen) void getOrderInvoice(o.number).refresh();
 	return { done: chosen.length, skipped, missing, href: `/invoices/${created.number}` };

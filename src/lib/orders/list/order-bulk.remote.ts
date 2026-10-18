@@ -10,13 +10,9 @@ import { engineer, order } from "#lib/server/db/schema.ts";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
+import { transitionOrder } from "../server/lifecycle.ts";
 import { ordersSql } from "../server/list-sql.ts";
-import {
-	assignOrder,
-	assigneeProblem,
-	changeOrderStatus,
-	removeOrder,
-} from "../server/order-changes.ts";
+import { assignOrder, assigneeProblem, removeOrder } from "../server/order-changes.ts";
 import { getOrderFacets, getOrders } from "./order-list.remote.ts";
 import { ordersList } from "./orders-list.ts";
 
@@ -59,7 +55,8 @@ export const bulkSetOrderStatus = forMembers.command(
 			table: order,
 			label: order.number,
 			list: ordersSql,
-			change: (o) => changeOrderStatus(o.id, status),
+			change: (o) =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "set", id: o.id, to: status })),
 		});
 		await refreshRequested(getOrders, getOrderFacets);
 		return result;

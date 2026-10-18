@@ -1,4 +1,4 @@
-import { invalid } from "@sveltejs/kit";
+import { error, invalid, isValidationError } from "@sveltejs/kit";
 
 import { formPartKey } from "#lib/extensions/form-part-key.ts";
 import { partsOfModulesOff } from "#lib/extensions/form-parts.ts";
@@ -36,4 +36,17 @@ export function refuseOffParts(parts: Readonly<Record<string, unknown>>) {
 	const label = (key: string) =>
 		modules.find((module) => formPartKey(module.id) === key)?.label ?? key;
 	invalid(...off.map((id) => m.common_error_module_off({ module: label(id) })));
+}
+
+/**
+ * Runs a command's change, turning what it refuses with `invalid()` into a 400 with the reasons: a
+ * command has no form fields to show issues on, so the client shows the message.
+ */
+export async function refusedAsBadRequest<T>(change: () => Promise<T>): Promise<T> {
+	try {
+		return await change();
+	} catch (thrown) {
+		if (isValidationError(thrown)) error(400, thrown.issues.map((i) => i.message).join("; "));
+		throw thrown;
+	}
 }
