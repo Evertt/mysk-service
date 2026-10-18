@@ -27,22 +27,11 @@ import {
 
 const { north } = organizations;
 const app = useApp();
-const { board, backlog, cards, cell, operations, drag, openDialog } = pageLocators(app);
+const { board, backlog, cards, cell, drag, openDialog } = pageLocators(app);
 
 describe("in North", () => {
 	let planned: Order;
 	let engineers: { id: number; name: string }[];
-
-	test("North has the schedule, right after Orders in the sidebar", async () => {
-		await app.go("/");
-		expect(await operations()).toEqual(["Dashboard", "Orders", "Schedule", "Activity"]);
-		expect(
-			await rows(
-				`select module_id from organization_module where organization_id = ? and module_id = 'schedule'`,
-				[north.id],
-			),
-		).toEqual([{ module_id: "schedule" }]);
-	});
 
 	test("the week shows North's engineers and this week's orders, with today highlighted", async () => {
 		const { page } = app;
@@ -77,7 +66,7 @@ describe("in North", () => {
 		);
 	});
 
-	test("its band has the title, the week's orders in a pill and the view switch, phone-wide too", async () => {
+	test("its band has the title, the week's orders in a pill and the view switch, phone-wide too, and nothing hangs below the board", async () => {
 		const { page } = app;
 		const band = page.locator("[data-toolbar-band]");
 		expect(await band.getByRole("heading", { level: 1 }).innerText()).toBe("Schedule");
@@ -93,6 +82,13 @@ describe("in North", () => {
 		expect(await views.getByRole("link", { name: "Week" }).getAttribute("aria-current")).toBe(
 			"page",
 		);
+		// The page itself doesn't scroll.
+		const room = await page.evaluate(() =>
+			[document.documentElement, document.querySelector("main")!].map(
+				(element) => element.scrollHeight - element.clientHeight,
+			),
+		);
+		expect(room).toEqual([0, 0]);
 		await onPhone(page, async () => {
 			await page.reload();
 			await band.waitFor();
@@ -141,16 +137,6 @@ describe("in North", () => {
 			await page.setViewportSize({ width: 1440, height: 1000 });
 			await scrollBoard(thursday, { top: 0, left: 0 });
 		}
-	});
-
-	test("the page itself doesn't scroll: nothing hangs below the board", async () => {
-		await app.go("/schedule");
-		const room = await app.page.evaluate(() =>
-			[document.documentElement, document.querySelector("main")!].map(
-				(element) => element.scrollHeight - element.clientHeight,
-			),
-		);
-		expect(room).toEqual([0, 0]);
 	});
 
 	test("the week is in the URL, and can be paged through", async () => {

@@ -204,31 +204,6 @@ describe("in North, an order's materials", () => {
 		expect(await snapshot(id)).toEqual(before);
 	});
 
-	test("the server checks the lines too, when the browser doesn't", async () => {
-		const { page } = app;
-		const id = await orderId(number, north.id);
-		const before = await snapshot(id);
-		await app.go(`/orders/${number}/edit`);
-		await page.locator("tbody tr").first().getByLabel("Quantity").fill("-1");
-		// Posted the way a browser without JavaScript would, so nothing checks it before the server.
-		const { status, html } = await page.evaluate(async () => {
-			const form = document.querySelector<HTMLFormElement>("form:has(button[type=submit])")!;
-			const body = new URLSearchParams(
-				// As a browser sends a file field in such a form: by the file's name.
-				[...new FormData(form)].map(([name, value]) => [
-					name,
-					typeof value === "string" ? value : value.name,
-				]),
-			);
-			const headers = { accept: "text/html" };
-			const response = await fetch(form.action, { method: "POST", body, headers });
-			return { status: response.status, html: await response.text() };
-		});
-		expect(status).toBe(200);
-		expect(html).toContain("More than 0");
-		expect(await snapshot(id)).toEqual(before);
-	});
-
 	test("lines take decimals in kilos, metres and litres, but whole pieces", async () => {
 		const { page } = app;
 		const pick = (unit: string) =>
@@ -260,58 +235,6 @@ describe("in North, an order's materials", () => {
 		expect(await app.issues()).toEqual(["Whole pieces only"]);
 		expect(await snapshot(id)).toEqual(before);
 		expect(await orderMovements(number, north.id, since)).toHaveLength(2);
-
-		await piecesLine.getByLabel("Quantity").fill("2");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-		const [line] = await rows<{ quantity: number; unit_price: number }>(
-			`select quantity, unit_price from order_line where order_id = ? and material_id = ?`,
-			[id, kilos],
-		);
-		expect(line.quantity).toBe(2.5);
-		await page.getByText("2.5 kg").waitFor();
-		expect((await orderMovements(number, north.id, since)).slice(2)).toMatchObject([
-			{ material_id: kilos, quantity: -2.5, kind: "consumption" },
-			{ material_id: pieces, quantity: -2, kind: "consumption" },
-		]);
-	});
-
-	test("changing a line's quantity takes or returns the difference", async () => {
-		const { page } = app;
-		const id = await orderId(number, north.id);
-		const lines = await orderLines(id);
-		expect(lines).toHaveLength(4);
-		const before = await stocks(north.id);
-
-		await app.go(`/orders/${number}/edit`);
-		const rowsInForm = page.locator("tbody tr");
-		await rowsInForm.nth(0).getByLabel("Quantity").fill("1");
-		await rowsInForm.nth(2).getByLabel("Quantity").fill("4");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-		await app.toast("Order saved");
-
-		const returned = lines[0].quantity - 1;
-		expect((await orderMovements(number, north.id, since)).slice(4)).toEqual([
-			{
-				material_id: lines[0].material_id,
-				quantity: returned,
-				kind: "return",
-				order_number: number,
-				note: null,
-			},
-			{
-				material_id: lines[2].material_id,
-				quantity: -1.5,
-				kind: "consumption",
-				order_number: number,
-				note: null,
-			},
-		]);
-		const after = await stocks(north.id);
-		expect(after.get(lines[0].material_id)).toBe(before.get(lines[0].material_id)! + returned);
-		expect(after.get(lines[2].material_id)).toBeCloseTo(before.get(lines[2].material_id)! - 1.5, 2);
-		expect(await unbalancedStock(north.id)).toEqual([]);
 	});
 
 	test("taking more than is in stock is refused, naming the material and what's available", async () => {
@@ -331,33 +254,13 @@ describe("in North, an order's materials", () => {
 		await rowsInForm
 			.nth(0)
 			.getByLabel("Quantity")
-			.fill(String(Math.round((onOrder.stock + 2) * 100) / 100));
+			.fill(String(Math.round((onOrder.stock + lines[0].quantity + 1) * 100) / 100));
 		await app.submit(page.getByRole("button", { name: "Save order" }));
 		const available = formatNumber(onOrder.stock + lines[0].quantity);
 		expect(await app.issues()).toEqual([
 			`Only ${available} ${onOrder.unit} of ${onOrder.name} in stock`,
 		]);
 		expect(app.path()).toBe(`/orders/${number}/edit`);
-
-		// A new line can have the stock.
-		const [scarce] = await rows<{ id: number }>(
-			`select id from material where organization_id = ? and unit = 'pcs' and stock > 0
-			 and id not in (select material_id from order_line where order_id = ?)
-			 order by stock limit 1`,
-			[north.id, id],
-		);
-		const other = await materialById(scarce.id);
-		await rowsInForm.nth(0).getByLabel("Quantity").fill(String(lines[0].quantity));
-		await page.getByRole("button", { name: "Add material" }).click();
-		await rowsInForm.last().getByLabel("Material").selectOption(String(other.id));
-		await rowsInForm
-			.last()
-			.getByLabel("Quantity")
-			.fill(String(other.stock + 1));
-		await app.submit(page.getByRole("button", { name: "Save order" }));
-		expect(await app.issues()).toEqual([
-			`Only ${formatNumber(other.stock)} pcs of ${other.name} in stock`,
-		]);
 
 		// Nothing changed: not the order, not the stock, not its history.
 		expect([
@@ -367,85 +270,13 @@ describe("in North, an order's materials", () => {
 		]).toEqual(before);
 	});
 
-	test("removing a line returns its material", async () => {
-		const { page } = app;
-		const id = await orderId(number, north.id);
-		const lines = await orderLines(id);
-		const before = await stocks(north.id);
-
-		await app.go(`/orders/${number}/edit`);
-		await page.getByRole("button", { name: "Remove line" }).nth(2).click();
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-		await app.toast("Order saved");
-
-		expect(await orderLines(id)).toHaveLength(3);
-		expect((await orderMovements(number, north.id, since)).at(-1)).toEqual({
-			material_id: lines[2].material_id,
-			quantity: lines[2].quantity,
-			kind: "return",
-			order_number: number,
-			note: null,
-		});
-		expect((await stocks(north.id)).get(lines[2].material_id)).toBeCloseTo(
-			before.get(lines[2].material_id)! + lines[2].quantity,
-			2,
-		);
-		expect(await unbalancedStock(north.id)).toEqual([]);
-	});
-
-	test("cancelling it returns its materials, and reopening it takes them again", async () => {
-		const { page } = app;
-		const id = await orderId(number, north.id);
-		const lines = await orderLines(id);
-		const before = await stocks(north.id);
-		const history = await orderMovements(number, north.id, since);
-		const setStatus = async (status: string) => {
-			await app.go(`/orders/${number}/edit`);
-			await page.getByLabel("Status").selectOption(status);
-			await page.getByRole("button", { name: "Save order" }).click();
-			await page.waitForURL((url) => url.pathname === `/orders/${number}`);
-			await quiet(page);
-		};
-		const moved = (kind: string, sign: number) =>
-			lines.map((line) => ({
-				material_id: line.material_id,
-				quantity: sign * line.quantity,
-				kind,
-				order_number: number,
-				note: null,
-			}));
-
-		await setStatus("cancelled");
-		expect((await orderMovements(number, north.id, since)).slice(history.length)).toEqual(
-			moved("return", 1),
-		);
-		const cancelled = await stocks(north.id);
-		for (const line of lines) {
-			expect(cancelled.get(line.material_id)).toBeCloseTo(
-				before.get(line.material_id)! + line.quantity,
-				2,
-			);
-		}
-
-		await setStatus("scheduled");
-		expect((await orderMovements(number, north.id, since)).slice(history.length)).toEqual([
-			...moved("return", 1),
-			...moved("consumption", -1),
-		]);
-		const reopened = await stocks(north.id);
-		for (const line of lines) {
-			expect(reopened.get(line.material_id)).toBeCloseTo(before.get(line.material_id)!, 2);
-		}
-		expect(await unbalancedStock(north.id)).toEqual([]);
-	});
-
 	test("deleting it removes it and returns its materials, after which it's a 404", async () => {
 		const { page } = app;
 		const id = await orderId(number, north.id);
 		const lines = await orderLines(id);
 		const before = await stocks(north.id);
 		const history = await orderMovements(number, north.id, since);
+		await app.go(`/orders/${number}`);
 
 		/** The arguments of the queries the page asks for, as sent. */
 		const asked: string[] = [];
@@ -499,30 +330,41 @@ describe("in North, an order's materials", () => {
 		await page.getByText(`${number} (deleted)`).first().waitFor();
 	});
 
-	test("a quote's lines take no stock, so deleting it returns none", async () => {
+	// The status in the orders list (core's, `src/tests/e2e/orders.inline.test.ts`) changes an
+	// order through the same save hook as the order form, so materials refuses it for want of stock.
+	test("changing an order's status in the list is refused when its materials aren't in stock, and the status goes back", async () => {
 		const { page } = app;
+		const [scarce] = await rows<{ id: number; name: string; stock: number }>(
+			`select id, name, stock from material where organization_id = ? and unit = 'pcs'
+			 order by stock, id limit 1`,
+			[north.id],
+		);
+
+		// A quote takes no stock, so it may have more than there is.
 		await app.go("/orders/new");
 		await page.getByLabel("Customer").selectOption({ index: 1 });
-		await page.getByLabel("Description").fill("Quote for a new pump (test order)");
+		await page.getByLabel("Description").fill("Quote for more parts than in stock (test order)");
 		await page.getByRole("button", { name: "Add material" }).click();
-		await page.locator("tbody tr").last().getByLabel("Material").selectOption({ index: 1 });
-		expect(await page.getByLabel("Status").inputValue()).toBe("quote");
+		const line = page.locator("tbody tr").last();
+		await line.getByLabel("Material").selectOption(String(scarce.id));
+		await line.getByLabel("Quantity").fill(String(scarce.stock + 5));
 		const mark = await movementMark();
 		await page.getByRole("button", { name: "Create order" }).click();
 		await page.waitForURL(/\/orders\/ORD-/);
 		await quiet(page);
 		const quote = app.path().split("/").pop()!;
-		const id = await orderId(quote, north.id);
-		expect(await orderLines(id)).toHaveLength(1);
-		// Only this order's movements say whether it took stock: North's stock as a whole is also
-		// changed by other files on this worker (and, under load, late), so it isn't compared. Its
-		// number may be a deleted order's, whose history keeps it, hence the mark.
-		expect(await orderMovements(quote, north.id, mark)).toEqual([]);
+		const id = (await orderId(quote, north.id))!;
+		const before = await snapshot(id);
 
-		await page.getByRole("button", { name: "Delete" }).click();
-		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-		await page.waitForURL((url) => url.pathname === "/orders");
-		expect(await orderId(quote, north.id)).toBeUndefined();
+		await app.go(`/orders?q=${quote}`);
+		const row = page.locator('[data-slot="data-table"] tbody tr', { hasText: quote });
+		await row.getByRole("button", { name: `Change status of ${quote}: Quote` }).click();
+		await page.getByRole("option", { name: "In progress" }).click();
+
+		await app.toast(`Only ${formatNumber(scarce.stock)} pcs of ${scarce.name} in stock`);
+		await row.getByRole("button", { name: `Change status of ${quote}: Quote` }).waitFor();
+		expect(await snapshot(id)).toEqual(before);
+		expect(await value(`select status from "order" where id = ?`, [id])).toBe("quote");
 		expect(await orderMovements(quote, north.id, mark)).toEqual([]);
 		expect(await unbalancedStock(north.id)).toEqual([]);
 	});

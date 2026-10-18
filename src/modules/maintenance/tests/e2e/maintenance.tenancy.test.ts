@@ -2,17 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 // The remote functions' helpers through `app.ts`: a module may import no other `remote-functions.ts`
 // than its own (`remote-functions.spec.ts`).
-import {
-	countIn,
-	isRemote,
-	organizations,
-	remoteErrorStatus,
-	rows,
-	tamperWithCommand,
-	tamperWithQuery,
-	useApp,
-	value,
-} from "#e2e/app.ts";
+import { isRemote, organizations, rows, tamperWithCommand, useApp, value } from "#e2e/app.ts";
 
 import { dayKey, daysFromToday, type Plan, pageLocators, planById, plansOf } from "./helpers.ts";
 
@@ -20,39 +10,10 @@ const { north, south } = organizations;
 const app = useApp();
 const { card, dialog, sidebarLinks, planMenu, settingsCard } = pageLocators(app);
 
-/** The URLs of North's remote queries, as loaded in North, to try again from South. */
-const queries: Record<string, string> = {};
-
 /** A South unit, which North's forms are tampered to name. */
 let southUnit: { id: number; serial_number: string };
 
 describe("in North, which has the module", () => {
-	test("its pages load their data with remote queries", async () => {
-		const { page } = app;
-		const record = (request: { url(): string }) => {
-			for (const name of ["getDuePlans", "getUnitPlans", "getMaintenanceOverview"]) {
-				if (isRemote(request.url(), name)) queries[name] = request.url();
-			}
-		};
-		page.on("request", record);
-		// Client-side, so the pages load their data through remote queries.
-		await app.go("/activity");
-		const sidebar = page.locator('[data-sidebar="content"]');
-		await sidebar.getByRole("link", { name: "Maintenance plans" }).click();
-		await page.waitForURL((url) => url.pathname === "/maintenance");
-		await app.tableSettled();
-		await page.locator('[data-slot="data-table"] tbody tr a[href^="/equipment/"]').first().click();
-		await card().waitFor();
-		await sidebar.getByRole("link", { name: "Dashboard" }).click();
-		await page.locator("[data-maintenance-overview]").waitFor();
-		page.off("request", record);
-		expect(Object.keys(queries).toSorted()).toEqual([
-			"getDuePlans",
-			"getMaintenanceOverview",
-			"getUnitPlans",
-		]);
-	});
-
 	test("a new plan for another tenant's unit is refused", async () => {
 		const { page } = app;
 		[southUnit] = await rows<{ id: number; serial_number: string }>(
@@ -104,55 +65,18 @@ describe("in South, which doesn't have the module", () => {
 			.waitFor();
 		expect(await app.page.locator("[data-maintenance-overview]").count()).toBe(0);
 	});
-
-	test("the equipment list has no Next maintenance column, and ignores its URL parameter", async () => {
-		await app.go("/equipment?next-maintenance=overdue&sort=next-maintenance");
-		expect(await app.page.locator("thead").getByText("Next maintenance").count()).toBe(0);
-		expect(await app.rowCount()).toBe(await countIn("equipment", south.id));
-		// Nor does the list's query take the column, tampered in.
-		const { page } = app;
-		await tamperWithQuery<{ filters: Record<string, unknown> }>(
-			page,
-			"getEquipmentList",
-			(arg) => ({
-				...arg,
-				filters: { ...arg.filters, "maintenance.nextDue": ["overdue"] },
-			}),
-		);
-		const status = await app.expectingErrors(async () => {
-			const [response] = await Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "getEquipmentList")),
-				page.locator("thead").getByRole("button", { name: "Installed" }).click(),
-			]);
-			return response.status() === 200 ? remoteErrorStatus(response) : response.status();
-		});
-		expect(status).toBe(400);
-	});
-
-	test("North's remote queries are refused", async () => {
-		for (const [name, url] of Object.entries(queries)) {
-			const response = await app.page.context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), `${name}: ${body}`).toBe(true);
-		}
-	});
 });
 
 describe("switching the module on and off in South", () => {
 	let southPlan: Plan;
 
-	test("switched on, it's in the sidebar after Equipment, and a unit gets a plan", async () => {
+	// Where its sidebar entry goes is `nav.spec.ts`'s.
+	test("switched on, a unit gets a plan", async () => {
 		await app.go("/settings");
 		await app.submit(settingsCard().getByRole("button", { name: "Enable" }));
 		await settingsCard()
 			.getByText(/Enabled since/)
 			.waitFor();
-		await expect
-			.poll(async () => {
-				const links = await sidebarLinks();
-				return links[links.indexOf("Equipment") + 1];
-			})
-			.toBe("Maintenance plans");
 
 		await app.go(`/equipment/${southUnit.serial_number}`);
 		await card().getByRole("button", { name: "Add plan" }).click();

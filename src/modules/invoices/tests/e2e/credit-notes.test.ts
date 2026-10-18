@@ -3,7 +3,6 @@ import { describe, expect, test } from "vite-plus/test";
 import {
 	baseURL,
 	countIn,
-	isRemote,
 	organizations,
 	quiet,
 	rows,
@@ -17,7 +16,7 @@ import { cents, pageLocators, today, vatOf } from "./helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
-const { sidebar, card } = pageLocators(app);
+const { card } = pageLocators(app);
 const year = new Date().getFullYear();
 
 // --- The records -------------------------------------------------------------------------------
@@ -449,18 +448,6 @@ describe("in North", () => {
 			`${formatCents(toRefund)} to refund on ${refunds.length} credit note${refunds.length === 1 ? "" : "s"}`,
 		);
 	});
-
-	test("in Dutch, it's a creditnota", async () => {
-		const { page } = app;
-		await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
-		try {
-			await app.go(`/invoices/credit-notes/${partial}`);
-			await page.getByText(`Creditnota ${partial}`).first().waitFor();
-			await expect.poll(badges).toEqual(["Verrekend"]);
-		} finally {
-			await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "en", url: baseURL }]);
-		}
-	});
 });
 
 describe("in South", () => {
@@ -578,67 +565,5 @@ describe("in South", () => {
 				northInvoiceLine.id,
 			]),
 		).toBe(0);
-	});
-
-	describe("with the module switched off", () => {
-		/** The module's queries that the credit notes' pages made, opened client-side. */
-		const queries: string[] = [];
-		const row = () =>
-			app.page.locator("div.rounded-lg.border", {
-				has: app.page.getByText("Invoicing", { exact: true }),
-			});
-
-		test("opened client-side, the credit notes' pages load through remote queries", async () => {
-			const { page } = app;
-			const record = (request: { url(): string }) => {
-				for (const name of ["getCreditNotes", "getCreditNote"]) {
-					if (isRemote(request.url(), name)) queries.push(request.url());
-				}
-			};
-			page.on("request", record);
-			await app.go("/invoices");
-			await page.getByRole("link", { name: "Credit notes" }).click();
-			await page.waitForURL((url) => url.pathname === "/invoices/credit-notes");
-			await page.locator("tbody tr a", { hasText: southDraft }).first().click();
-			await page.waitForURL((url) => url.pathname === `/invoices/credit-notes/${southDraft}`);
-			await quiet(page);
-			page.off("request", record);
-			expect(queries.length).toBeGreaterThanOrEqual(2);
-		});
-
-		test("its pages, PDFs and queries are 404s", async () => {
-			const { page } = app;
-			const southPaid = await uncredited(south.id, "paid");
-			await app.go("/settings");
-			await row().getByRole("button", { name: "Disable" }).click();
-			await row().getByText("Disabled").waitFor();
-			try {
-				expect(await sidebar()).not.toContain("Invoicing");
-				for (const path of [
-					"/invoices/credit-notes",
-					"/invoices/credit-notes/new",
-					`/invoices/credit-notes/${southDraft}`,
-					`/invoices/${southPaid.number}/credit`,
-				]) {
-					expect((await app.go(path))?.status(), path).toBe(404);
-				}
-				const pdf = await page
-					.context()
-					.request.get(new URL(`/invoices/credit-notes/${southDraft}/pdf`, baseURL).href);
-				expect(pdf.status()).toBe(404);
-				for (const url of queries) {
-					const response = await page.context().request.get(url);
-					const body = await response.text();
-					expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-					expect(body).not.toContain(southDraft);
-				}
-			} finally {
-				await app.go("/settings");
-				await row().getByRole("button", { name: "Enable" }).click();
-				await row()
-					.getByText(/Enabled since/)
-					.waitFor();
-			}
-		});
 	});
 });

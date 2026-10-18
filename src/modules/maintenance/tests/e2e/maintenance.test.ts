@@ -102,7 +102,7 @@ describe("a unit's maintenance plans, in North", () => {
 });
 
 describe("the due list, in North", () => {
-	test("shows the active plans due within 30 days by default, and the overdue ones on request", async () => {
+	test("shows the active plans due within 30 days by default, the overdue ones on request, and finds a plan by its unit", async () => {
 		await app.go("/maintenance");
 		expect(await app.rowCount()).toBe(await activeDueBefore(north.id, daysFromToday(SOON_DAYS)));
 		await app.page.getByRole("combobox", { name: "Due" }).selectOption("overdue");
@@ -120,6 +120,13 @@ describe("the due list, in North", () => {
 				),
 			),
 		);
+
+		// It finds the plan by its unit's serial number.
+		await app.go(`/maintenance?q=${unit.serial_number}`);
+		const row = app.page.locator('[data-slot="data-table"] tbody tr').first();
+		await row.getByText("Quarterly filter change").waitFor();
+		expect(await row.innerText()).toContain("Every 3 months");
+		expect(await row.locator("[data-overdue]").count()).toBe(1);
 	});
 
 	test("fits a phone's screen, the toolbar's actions wrapping", async () => {
@@ -127,14 +134,6 @@ describe("the due list, in North", () => {
 			await app.go("/maintenance");
 			expect(await fitsWidth(app.page)).toBe(true);
 		});
-	});
-
-	test("finds the plan by its unit's serial number", async () => {
-		await app.go(`/maintenance?q=${unit.serial_number}`);
-		const row = app.page.locator('[data-slot="data-table"] tbody tr').first();
-		await row.getByText("Quarterly filter change").waitFor();
-		expect(await row.innerText()).toContain("Every 3 months");
-		expect(await row.locator("[data-overdue]").count()).toBe(1);
 	});
 
 	test("creates an order for each selected plan, and moves each plan on one interval", async () => {

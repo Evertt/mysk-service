@@ -6,7 +6,6 @@ import {
 	activeEngineers,
 	backlogSize,
 	calendarDays,
-	dayKey,
 	monthStart,
 	type Order,
 	orderByNumber,
@@ -26,36 +25,17 @@ const { board, month, backlog, cards, cell, operations, settingsCard, drag, open
 /** The last activity entry before this file switched South's schedule on. */
 let since = 0;
 
+// That the module's queries and its other forms refuse a tenant without it is `moduleRemote`'s
+// (`remote-functions.spec.ts`), and that its other pages are 404s the module route guard's
+// (`route-guard.spec.ts`).
 describe("in South, which doesn't have the schedule", () => {
-	/** The URL of the board's query, and of the month's, as loaded in North. */
-	let query: string;
-	let monthQuery: string;
-	/** A North order in the backlog, which the refused requests try to plan. */
-	let victim: Order;
-
 	test("a drag on a board left open in North is refused after switching to South elsewhere", async () => {
 		const { page } = app;
-		// Client-side, so the board loads its week through a remote query.
-		await app.go("/");
-		const record = (request: { url(): string; method(): string }) => {
-			if (/\/_app\/remote\/.*\/getSchedule\b/.test(request.url())) query = request.url();
-			if (/\/_app\/remote\/.*\/getScheduleMonth/.test(request.url())) monthQuery = request.url();
-		};
-		page.on("request", record);
-		await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Schedule" }).click();
-		await page.waitForURL((url) => url.pathname === "/schedule");
+		await app.go("/schedule");
 		await backlog().waitFor();
-		// And the month's, there and back.
-		const view = page.getByRole("navigation", { name: "View" });
-		await view.getByRole("link", { name: "Month" }).click();
-		await month().waitFor();
-		await view.getByRole("link", { name: "Week" }).click();
-		await backlog().waitFor();
-		page.off("request", record);
-		expect(query).toBeDefined();
-		expect(monthQuery).toBeDefined();
 		const card = cards(backlog()).first();
-		victim = await orderByNumber((await card.getAttribute("data-order"))!, north.id);
+		/** A North order in the backlog, which the refused request tries to plan. */
+		const victim = await orderByNumber((await card.getAttribute("data-order"))!, north.id);
 		const before = await snapshot(victim.id);
 
 		const other = await app.anotherTab();
@@ -77,18 +57,7 @@ describe("in South, which doesn't have the schedule", () => {
 		expect(await snapshot(victim.id)).toEqual(before);
 	});
 
-	test("so is the schedule dialog on that board", async () => {
-		const before = await snapshot(victim.id);
-		const dialog = await openDialog(victim.number);
-		await dialog.getByLabel("Date").fill(dayKey(weekday(2)));
-		const result = await app.expectingErrors(() =>
-			app.submit(dialog.getByRole("button", { name: "Schedule" })),
-		);
-		expect(result).toMatch(/"status":404/);
-		expect(await snapshot(victim.id)).toEqual(before);
-	});
-
-	test("South's sidebar has no Schedule, and its pages are 404s", async () => {
+	test("South's sidebar has no Schedule, and its page is a 404", async () => {
 		await app.go("/");
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
 		expect(await operations()).toEqual(["Dashboard", "Orders", "Activity"]);
@@ -98,31 +67,16 @@ describe("in South, which doesn't have the schedule", () => {
 				.getByRole("link", { name: "Schedule" })
 				.count(),
 		).toBe(0);
-		for (const path of [
-			"/schedule",
-			`/schedule?week=${dayKey(weekday(0))}`,
-			"/schedule?view=month",
-			`/schedule?view=day&date=${dayKey(weekday(2))}`,
-		]) {
-			const response = await app.go(path);
-			expect(response?.status(), path).toBe(404);
-			// The app's own 404 page, inside its layout.
-			expect(await app.page.locator('[data-sidebar="content"]').count(), path).toBe(1);
-		}
-	});
-
-	test("North's schedule queries are refused, the week's and the month's", async () => {
-		for (const url of [query, monthQuery]) {
-			const response = await app.page.context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-			expect(body).not.toContain(victim.number);
-		}
+		const response = await app.go("/schedule?view=month");
+		expect(response?.status()).toBe(404);
+		// The app's own 404 page, inside its layout.
+		expect(await app.page.locator('[data-sidebar="content"]').count()).toBe(1);
 	});
 });
 
 describe("switching the schedule on in South", () => {
-	test("an owner switches it on in settings, and it comes right after Orders", async () => {
+	// Where it goes in the sidebar is `nav.spec.ts`'s.
+	test("an owner switches it on in settings", async () => {
 		await app.go("/settings");
 		const card = settingsCard();
 		expect(await card.innerText()).toContain("Disabled");
@@ -136,7 +90,6 @@ describe("switching the schedule on in South", () => {
 			),
 		).toEqual([{ module_id: "schedule" }]);
 		expect(await scheduleSwitches(south.id, since)).toEqual([{ action: "module_enabled" }]);
-		await expect.poll(operations).toEqual(["Dashboard", "Orders", "Schedule", "Activity"]);
 	});
 });
 
