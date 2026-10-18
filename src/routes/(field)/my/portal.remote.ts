@@ -210,7 +210,8 @@ const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: fou
 /**
  * Changes the status of an order (in the transaction), with what the modules' parts of it follow
  * (e.g. its stock) and the rest of the change (`also`, e.g. the sign-off), and then logs it as
- * `action`. Refused with a module's message.
+ * `action`, with who signed it off for the customer (`signedBy`) when it's completed. Refused
+ * with a module's message.
  */
 async function setStatus(
 	tx: Transaction,
@@ -219,9 +220,9 @@ async function setStatus(
 	action: "work_started" | "completed",
 	{
 		completedAt,
-		note,
+		signedBy,
 		also,
-	}: { completedAt?: Temporal.Instant; note?: string; also?: () => Promise<void> } = {},
+	}: { completedAt?: Temporal.Instant; signedBy?: string; also?: () => Promise<void> } = {},
 ) {
 	await tx.update(order).set({ status, completedAt }).where(idInTenant(order, found.id));
 	await saveOrderParts({ tx, order: found, status }).catch((error) => {
@@ -233,8 +234,7 @@ async function setStatus(
 		action,
 		subject: subjectOf(found),
 		before: found,
-		after: { status },
-		note,
+		after: { status, signedBy },
 	});
 }
 
@@ -341,8 +341,7 @@ export const completeWork = forEngineers.form(
 			};
 			await setStatus(tx, found, "completed", "completed", {
 				completedAt: now,
-				// Stored, in the language of whoever completes it.
-				note: m.portal_signed_off_note({ name: input.signerName }),
+				signedBy: input.signerName,
 				also: async () => {
 					await tx
 						.insert(orderSignoff)

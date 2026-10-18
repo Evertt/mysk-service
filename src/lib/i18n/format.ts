@@ -26,11 +26,11 @@ function perLocale<T>(create: (locale: string) => T) {
 }
 
 /**
- * What a date formatter formats: a day (`Temporal.PlainDate`, as it is), a moment
- * (`Temporal.Instant`, in the user's time zone), or a `Date` (better-auth's, e.g. an invitation's
- * expiry).
+ * What a date formatter formats: a day (`Temporal.PlainDate`) or a time of day
+ * (`Temporal.PlainTime`), as they are, a moment (`Temporal.Instant`, in the user's time zone), or
+ * a `Date` (better-auth's, e.g. an invitation's expiry).
  */
-export type Formattable = Temporal.PlainDate | Temporal.Instant | Date;
+export type Formattable = Temporal.PlainDate | Temporal.PlainTime | Temporal.Instant | Date;
 
 /**
  * Formats dates with `options` in the current language and the user's time zone (`getTimeZone()`,
@@ -98,16 +98,12 @@ export const formatStoredMoment = (value: unknown) =>
 /** Formats a time of day, e.g. `09:30`. */
 export const formatTime = dateFormatter({ hour: "2-digit", minute: "2-digit" });
 
-/** Times of day as such, in no time zone: on 1 January 1970 in UTC. */
-const timesOfDay = dateFormatter({ hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
-
 /**
  * Formats a slot between two times of day as stored (`HH:MM`, e.g. a site's preferred hours), e.g.
- * `07:00–15:00`.
+ * `07:00–15:00`: `Temporal.PlainTime`s, which no time zone shifts.
  */
 export function formatTimeSlot(start: string, end: string, locale?: Locale) {
-	const at = (time: string) => new Date(`1970-01-01T${time}:00Z`);
-	return timesOfDay.range(at(start), at(end), locale);
+	return formatTime.range(Temporal.PlainTime.from(start), Temporal.PlainTime.from(end), locale);
 }
 
 const relativeTime = perLocale(

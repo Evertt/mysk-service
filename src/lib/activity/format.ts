@@ -70,6 +70,7 @@ const fieldLabels: Record<string, Text> = {
 	description: m.activity_field_description,
 	scheduledFor: m.activity_field_scheduled_for,
 	completedAt: m.activity_field_completed_at,
+	signedBy: m.activity_field_signed_by,
 	laborHours: m.activity_field_labor_hours,
 	notes: m.activity_field_notes,
 	siteId: m.activity_field_site,

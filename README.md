@@ -121,8 +121,8 @@ SHLTR, so other tenants' users never see it, and the server refuses it (404) to 
 Without the flag the buttons and the switch aren't there and the server answers 404 to whatever is
 posted. The flag is set for staging only
 (`wrangler.jsonc`'s `env.staging.vars`) and in `.env.example` for local development: never set it
-in production (`wrangler.jsonc`'s top-level vars, or a server of your own), where it would let
-anyone in as these users if they existed.
+in production (`wrangler.jsonc`'s top-level vars, or a Vercel project's environment variables),
+where it would let anyone in as these users if they existed.
 
 ## Members and invitations
 
@@ -173,46 +173,48 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
 
 ## Deploying
 
-The app runs as a Node server ([`adapter-node`](https://svelte.dev/docs/kit/adapter-node)) next to
-its SQLite database file.
+The app deploys to [Vercel](https://vercel.com) or to Cloudflare Workers. `pnpm build` builds with
+[`adapter-auto`](https://svelte.dev/docs/kit/adapter-auto), which uses the adapter of the platform
+it builds on: Vercel's in a Vercel build (installing it then). `ADAPTER=cloudflare` builds with
+`adapter-cloudflare` instead, for Cloudflare (see "On Cloudflare"). Anywhere else, `pnpm build`
+makes no server to deploy; `pnpm preview` tries the build locally.
+
+Environment variables (see `.env.example` and `src/env.ts`). On Vercel they're the project's
+environment variables; on Cloudflare `wrangler.jsonc`'s `vars`, or secrets
+(`wrangler secret put`); locally `.env` (`.dev.vars` for `pnpm dev:cloudflare`).
+
+| Variable              | Required      | What for                                                                                             |
+| --------------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | on Vercel     | The database: a Turso database (`libsql://<name>.turso.io`), or a file locally; unused on Cloudflare |
+| `DATABASE_AUTH_TOKEN` | with Turso    | The Turso database's access token                                                                    |
+| `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails                   |
+| `VERCEL_BRANCH_URL`   | no            | Set by Vercel: without `ORIGIN`, the origin is `https://` and this domain                            |
+| `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                           |
+| `SMTP_URL`            | no            | Sends mail, e.g. `smtps://user:password@smtp.example.com:465`; otherwise it's logged                 |
+| `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                                  |
+| `CRON_SECRET`         | on Vercel     | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself                     |
+| `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                              |
+| `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production                     |
+
+### On Vercel
+
+Vercel builds the app from the repository itself (`pnpm install`, whose `prepare` skips
+Playwright's browser there, and `pnpm build`), and runs it as functions, with no disk that lasts:
+the database is a Turso database. Set `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `BETTER_AUTH_SECRET`
+and `CRON_SECRET` in the project's environment variables, and `ORIGIN` to the production domain
+(without it, each deployment's origin is its branch's domain, `VERCEL_BRANCH_URL`).
+
+The build doesn't migrate the database. Create its tables, and update them with every new version,
+from a checkout:
 
 ```sh
-pnpm install
-pnpm build                                  # the server, in build/
-DATABASE_URL=file:/var/lib/fieldworks/fieldworks.db pnpm db:migrate   # create or update the tables
-node --env-file=.env build                  # listens on port 3000 (PORT, HOST to change)
+DATABASE_URL=libsql://<name>.turso.io DATABASE_AUTH_TOKEN=<token> pnpm db:migrate
 ```
 
-Run `pnpm db:migrate` with every new version, before starting it: it applies the migrations in
-`drizzle/` that the database doesn't have yet (and does nothing if it's up to date).
-
-To run it, a server needs `build/`, `package.json` and the production dependencies (`pnpm install
---prod`: the database driver, `@libsql/client`, which has native code and isn't bundled).
-To try the build locally, use `pnpm preview`: `node build` expects HTTPS (see below), so over plain
-HTTP it refuses form submissions, including signing in.
-
-Environment variables (see `.env.example` and `src/env.ts`):
-
-| Variable              | Required | What for                                                                                 |
-| --------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`        | yes      | The database, e.g. `file:/var/lib/fieldworks/fieldworks.db`: a file on a persistent disk |
-| `DATABASE_AUTH_TOKEN` | no       | The access token of a Turso database (`DATABASE_URL=libsql://<name>.turso.io`)           |
-| `ORIGIN`              | yes      | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails       |
-| `VERCEL_BRANCH_URL`   | no       | Set by Vercel: without `ORIGIN`, the origin is `https://` and this domain                |
-| `BETTER_AUTH_SECRET`  | yes      | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`               |
-| `SMTP_URL`            | no       | Sends mail, e.g. `smtps://user:password@smtp.example.com:465`; otherwise it's logged     |
-| `MAIL_FROM`           | no       | The sender, e.g. `Fieldworks <noreply@example.com>`                                      |
-| `CRON_SECRET`         | no       | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself         |
-| `OPS_TOKEN`           | no       | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                  |
-| `DEMO_SIGN_IN`        | no       | `true` for the login page's demo buttons (see "Demo login"); never in production         |
-
-The server assumes it's reached over HTTPS, from a reverse proxy that terminates TLS and passes on
-the `Host` header (form submissions from any other origin are refused). If the proxy sets
-`X-Forwarded-Host` instead, also set `HOST_HEADER=x-forwarded-host` and
-`PROTOCOL_HEADER=x-forwarded-proto`; see the adapter's docs for these and the other options.
-
-Then create the first organization and its owner, from the same checkout and with the same
-`DATABASE_URL`:
+It applies the migrations in `drizzle/` that the database doesn't have yet (and does nothing if
+it's up to date). Then create the first organization and its owner, from the same checkout and
+with the same `DATABASE_URL` and `DATABASE_AUTH_TOKEN` (on Cloudflare, make it in a local file and
+import that: see "On Cloudflare"):
 
 ```sh
 pnpm run org:create -- --org "Acme Service" --slug acme \
@@ -226,9 +228,8 @@ ones listed, and owners can switch modules on and off later); `--help` lists the
 refuses a slug or an email address that's taken, so it can also add more organizations later, each
 with a new owner. After that, the owner invites everyone else (see "Members and invitations").
 
-Back up the database file (and its `-wal` file, if any) like any other data. Don't run
-`pnpm db:seed` or `db:reset` against it: the seed deletes every organization and its data, and puts
-demo data and demo users in their place.
+Don't run `pnpm db:seed` or `db:reset` against the database: the seed deletes every organization
+and its data, and puts demo data and demo users in their place.
 
 ### Daily jobs
 
@@ -240,11 +241,10 @@ day does no harm. Without either variable set, nothing can start it.
 
 - **Vercel**: `vercel.json` schedules it at 04:00 UTC; set `CRON_SECRET` in the project's
   environment variables, and Vercel Cron sends it.
-- **A server of your own**: a crontab line such as
-  `0 4 * * * cd /srv/fieldworks && pnpm jobs:daily` (it posts to `ORIGIN` with the token from
-  `.env`).
 - **Cloudflare**: the Worker's Cron Trigger (`triggers.crons` in `wrangler.jsonc`) starts it inside
   the Durable Object, with `OPS_TOKEN`.
+- **By hand** (or from a cron of your own): `pnpm jobs:daily` posts to `ORIGIN` (or the URL it's
+  given) with the token from `.env`.
 
 The run's day is the server's (UTC on Vercel and Cloudflare), and its mail (customer reminders) is
 in English: the cron's request has no user's time zone or language.
@@ -262,8 +262,9 @@ leaves no gap, and the modules make up what's missing since their latest data.
 
 - **Cloudflare**: the Worker's Cron Trigger every 15 minutes (`*/15 * * * *`, next to the daily
   one) does it, asking nothing of the app while no simulation runs.
-- **A server of your own**: a crontab line posting to `/_ops/tick` every 15 minutes, like the daily
-  one.
+- **Vercel**: `vercel.json` schedules the daily jobs only, so the simulations move while the page
+  is open; a cron elsewhere posting to `/_ops/tick` every 15 minutes, with `CRON_SECRET`, keeps them
+  going.
 
 ### On Cloudflare
 

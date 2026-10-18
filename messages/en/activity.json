@@ -104,6 +104,7 @@
 	"activity_field_description": "description",
 	"activity_field_scheduled_for": "scheduled for",
 	"activity_field_completed_at": "completed",
+	"activity_field_signed_by": "signed off by",
 	"activity_field_labor_hours": "labour",
 	"activity_field_notes": "notes",
 	"activity_field_role": "role",

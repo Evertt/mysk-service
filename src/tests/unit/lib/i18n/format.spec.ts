@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
+import { overwriteGetTimeZone, runtimeTimeZone } from "#lib/dates.ts";
 import {
 	dateFormatter,
 	formatCents,
@@ -95,9 +96,16 @@ test("formatTime shows the time of day on a 24-hour clock in both languages", ()
 });
 
 test("formatTimeSlot shows two times of day as stored, whatever the user's time zone", () => {
-	// A slot is no moment: the zone doesn't shift it.
-	expect(formatTimeSlot("07:00", "15:00").replace(/\s/g, "")).toBe("07:00–15:00");
-	expect(formatTimeSlot("06:30", "14:00", "nl").replace(/\s/g, "")).toBe("06:30–14:00");
+	// A slot is no moment: the zone doesn't shift it, not even one 14 hours from UTC.
+	for (const zone of [runtimeTimeZone, "Pacific/Kiritimati", "America/Los_Angeles"]) {
+		overwriteGetTimeZone(() => zone);
+		try {
+			expect(formatTimeSlot("07:00", "15:00").replace(/\s/g, ""), zone).toBe("07:00–15:00");
+			expect(formatTimeSlot("06:30", "14:00", "nl").replace(/\s/g, ""), zone).toBe("06:30–14:00");
+		} finally {
+			overwriteGetTimeZone(() => runtimeTimeZone);
+		}
+	}
 });
 
 describe("formatNumber", () => {
