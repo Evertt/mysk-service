@@ -95,16 +95,4 @@ describe("the engineer portal's materials card", () => {
 		expect(await stockOf(part.id)).toBe(part.stock - 2);
 		expect((await movements(job.number)).slice(before.length)).toHaveLength(1);
 	});
-
-	test("the line is logged against the order, by them", async () => {
-		const engineer = await me();
-		const [entry] = await rows<{ user_id: string; action: string; changes: string }>(
-			`select user_id, action, changes from activity where organization_id = ?
-			 and subject_type = 'order_line' and parent_type = 'order' and parent_id = ?
-			 order by id desc limit 1`,
-			[north.id, String(job.id)],
-		);
-		expect(entry).toMatchObject({ user_id: engineer.user_id, action: "created" });
-		expect(JSON.parse(entry.changes)).toEqual({ quantity: [null, 2] });
-	});
 });

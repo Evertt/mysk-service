@@ -1,3 +1,9 @@
+/**
+ * The materials' pages: the list, the dashboard's tile, a material's page with its usage and stock
+ * history, the material form and the stock dialogs, and South's own materials, with North's a 404
+ * and one tampered form. What the list returns and what the remote functions store, refuse and log
+ * (also for South with North's ids) is `tests/unit/server/list.spec.ts`'s and `materials.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import {
@@ -6,10 +12,8 @@ import {
 	nextCode,
 	organizations,
 	rows,
-	unbalancedStock,
 	useApp,
 	userNames,
-	users,
 	value,
 	quiet,
 } from "#e2e/app.ts";
@@ -95,15 +99,6 @@ const tableRows = () => app.page.locator("tbody tr");
 const search = () => app.page.getByLabel("Search materials…");
 const main = async () => (await app.page.locator("main").innerText()).replace(/\s+/g, " ");
 
-/** Opens a faceted filter and ticks options. */
-async function filter(title: string, ...options: RegExp[]) {
-	const { page } = app;
-	await app.openFilter(title);
-	for (const option of options) await page.getByRole("option", { name: option }).click();
-	await page.keyboard.press("Escape");
-	await app.tableSettled();
-}
-
 /** Checks that searching the list for MAT-0001 shows the organization's price and usage. */
 async function expectFirstMaterial(organizationId: string) {
 	const first = await material("MAT-0001", organizationId);
@@ -123,20 +118,6 @@ describe("in North", () => {
 	let busy: Material;
 	let sku: string;
 
-	test("every material's stock is the sum of its movements", async () => {
-		expect(await unbalancedStock(north.id)).toEqual([]);
-		// An opening balance per material, and the lines of orders that hold stock.
-		expect(await countIn("stock_movement", north.id)).toBeGreaterThan(
-			Number(
-				await value(
-					`select count(*) from order_line l join "order" o on o.id = l.order_id
-					 where l.organization_id = ? and o.status not in ('quote', 'cancelled')`,
-					[north.id],
-				),
-			),
-		);
-	});
-
 	test("the list shows North's materials by name, 50 at a time as it scrolls", async () => {
 		await app.go(afresh("/materials"));
 		const total = await countIn("material", north.id);
@@ -145,56 +126,6 @@ describe("in North", () => {
 		expect(shown).toHaveLength(Math.min(50, total));
 		expect(shown).toEqual(shown.toSorted((a, b) => a.localeCompare(b)));
 		await expectFirstMaterial(north.id);
-	});
-
-	test("searching finds materials by SKU and by name", async () => {
-		const { page } = app;
-		const third = await material("MAT-0003", north.id);
-		await search().fill("MAT-0003");
-		await app.tableSettled();
-		expect(await names()).toEqual([third.name]);
-
-		await search().fill("koudemiddel");
-		await app.tableSettled();
-		const refrigerants = await rows<{ name: string }>(
-			`select name from material where organization_id = ? and name like '%koudemiddel%' order by name`,
-			[north.id],
-		);
-		expect(refrigerants.length).toBeGreaterThan(0);
-		expect((await names()).toSorted()).toEqual(refrigerants.map((row) => row.name).toSorted());
-		await page.getByRole("button", { name: "Reset" }).click();
-		await app.tableSettled();
-	});
-
-	test("filtering by unit shows only those", async () => {
-		await filter("Unit", /Litres/);
-		const litres = Number(
-			await value(`select count(*) from material where organization_id = ? and unit = 'l'`, [
-				north.id,
-			]),
-		);
-		expect(litres).toBeGreaterThan(0);
-		expect(await app.rowCount()).toBe(litres);
-		for (const row of await tableRows().allInnerTexts()) expect(row).toContain("Litres");
-		await app.page.getByRole("button", { name: "Reset" }).click();
-		await app.tableSettled();
-	});
-
-	test("filtering by stock level shows the low and out of stock ones", async () => {
-		await filter("Stock level", /Out of stock/, /^Low/);
-		const low = Number(
-			await value(
-				`select count(*) from material where organization_id = ?
-				 and stock < case unit when 'pcs' then 10 else 50 end`,
-				[north.id],
-			),
-		);
-		expect(await app.rowCount()).toBe(low);
-		for (const row of await tableRows().allInnerTexts()) {
-			expect(row).toMatch(/Out of stock|Low/);
-		}
-		await app.page.getByRole("button", { name: "Reset" }).click();
-		await app.tableSettled();
 	});
 
 	test("the dashboard counts the low and out of stock ones, and links to them", async () => {
@@ -222,19 +153,6 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Reset" }).click();
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await countIn("material", north.id));
-	});
-
-	test("the server sorts by stock level", async () => {
-		// Out of stock, then low, then in stock (as `stockLevel()` has it), each by name.
-		const expected = await rows<{ name: string }>(
-			`select name from material where organization_id = ?
-			 order by case when stock <= 0 then 0 when stock < case unit when 'pcs' then 10 else 50 end
-			 then 1 else 2 end, name collate nocase, id`,
-			[north.id],
-		);
-		await app.go("/materials?sort=stock,name");
-		expect(await names()).toEqual(expected.slice(0, 50).map((row) => row.name));
-		await app.go(afresh("/materials"));
 	});
 
 	test("sorting by usage puts the busiest first, whose page lists its orders", async () => {
@@ -272,51 +190,13 @@ describe("in North", () => {
 		expect(await card.locator('a[href^="/orders/"]').count()).toBe(consumed.length);
 	});
 
-	test("a material that's used on orders can't be deleted", async () => {
-		const { page } = app;
-		const before = await snapshot(busy.id);
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		expect(await dialog.locator('[data-slot="field-error"]').innerText()).toContain(
-			`This material is used on ${await ordersUsing(busy.id)} orders`,
-		);
-		expect(app.path()).toBe(`/materials/${busy.sku}`);
-		expect(await snapshot(busy.id)).toEqual(before);
-		await page.keyboard.press("Escape");
-	});
-
-	test("nor can its unit change", async () => {
-		const { page } = app;
-		const before = await snapshot(busy.id);
-		await app.go(`/materials/${busy.sku}/edit`);
-		const unit = page.getByLabel("Unit", { exact: true });
-		expect(await unit.inputValue()).toBe(busy.unit);
-		await unit.selectOption(busy.unit === "kg" ? "l" : "kg");
-		await app.submit(page.getByRole("button", { name: "Save material" }));
-		expect(await app.issues()).toContainEqual(
-			`Can't change the unit: ${await ordersUsing(busy.id)} orders count this material in ${busy.unit}`,
-		);
-		expect(app.path()).toBe(`/materials/${busy.sku}/edit`);
-		expect(await snapshot(busy.id)).toEqual(before);
-	});
-
-	test("a name that's taken (in any case) is refused", async () => {
-		const { page } = app;
-		const before = await countIn("material", north.id);
-		await app.go("/materials/new");
-		await page.getByLabel("Name", { exact: true }).fill(busy.name.toUpperCase());
-		await page.getByLabel("Unit price").fill("12.5");
-		await page.getByLabel("Opening stock").fill("4");
-		await app.submit(page.getByRole("button", { name: "Create material" }));
-		expect(await app.issues()).toEqual([`${busy.sku} already has this name`]);
-		expect(await countIn("material", north.id)).toBe(before);
-	});
-
 	test("a new material gets the next SKU", async () => {
 		const { page } = app;
+		await app.go("/materials/new");
 		await page.getByLabel("Name", { exact: true }).fill(testName);
 		await page.getByLabel("Unit", { exact: true }).selectOption("pcs");
+		await page.getByLabel("Unit price").fill("12.5");
+		await page.getByLabel("Opening stock").fill("4");
 		const expected = await nextCode("material", "sku", north.id);
 		await page.getByRole("button", { name: "Create material" }).click();
 		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
@@ -324,12 +204,6 @@ describe("in North", () => {
 		sku = app.path().split("/").pop()!;
 		expect(sku).toBe(expected);
 		await app.toast("Material created");
-		expect(await material(sku, north.id)).toMatchObject({
-			name: testName,
-			unit: "pcs",
-			unit_price: 1250,
-			stock: 4,
-		});
 
 		await page.getByRole("heading", { name: testName }).waitFor();
 		const text = await main();
@@ -339,10 +213,6 @@ describe("in North", () => {
 		expect(text).toContain("Not used yet");
 
 		// The stock it starts with is its opening balance, by whoever created it.
-		const { id } = await material(sku, north.id);
-		expect(await movements(id)).toEqual([
-			{ kind: "opening_balance", quantity: 4, note: null, order_number: null, user: users.admin },
-		]);
 		expect(await history()).toEqual([
 			expect.stringMatching(new RegExp(`Opening balance \\+4 pcs 4 pcs ${userNames.admin}`)),
 		]);
@@ -364,7 +234,6 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.pathname === `/materials/${sku}`);
 		await quiet(page);
 		await app.toast("Material saved");
-		expect(await material(sku, north.id)).toMatchObject({ unit: "m", unit_price: 399, stock: 4 });
 		// The redirect shows the cached material first and refreshes it right after.
 		await expect.poll(main).toContain("€3.99");
 		const text = await main();
@@ -374,21 +243,12 @@ describe("in North", () => {
 
 	test("receiving stock adds it, with a note", async () => {
 		const { page } = app;
-		const { id } = await material(sku, north.id);
 		const dialog = await openDialog("Receive stock");
 		await dialog.getByLabel(/^Quantity/).fill("8.75");
 		await dialog.getByLabel("Note").fill("Delivery 1234");
 		await app.submit(dialog.getByRole("button", { name: "Receive" }));
 		await app.toast("Stock received");
 		await dialog.waitFor({ state: "hidden" });
-		expect(await material(sku, north.id)).toMatchObject({ stock: 12.75 });
-		expect((await movements(id))[0]).toEqual({
-			kind: "receipt",
-			quantity: 8.75,
-			note: "Delivery 1234",
-			order_number: null,
-			user: users.admin,
-		});
 		await page.getByText("12.75 m").first().waitFor();
 		expect((await history())[0]).toMatch(
 			new RegExp(`Received Delivery 1234 \\+8\\.75 m 12\\.75 m ${userNames.admin}`),
@@ -397,36 +257,14 @@ describe("in North", () => {
 
 	test("a count records the difference as an adjustment, with the reason", async () => {
 		const { page } = app;
-		const { id } = await material(sku, north.id);
 		const dialog = await openDialog("Count / adjust");
 		const counted = dialog.getByLabel(/^Counted/);
 		expect(await counted.inputValue()).toBe("12.75");
-
-		// A reason is required, and a count that matches changes nothing.
-		await dialog.locator("form").evaluate((form: HTMLFormElement) => (form.noValidate = true));
-		await app.submit(dialog.getByRole("button", { name: "Adjust stock" }));
-		expect(await dialog.locator('[data-slot="field-error"]').allInnerTexts()).toEqual([
-			"Say why the stock differs",
-		]);
 		await dialog.getByLabel("Reason").fill("Yearly count");
-		await app.submit(dialog.getByRole("button", { name: "Adjust stock" }));
-		expect(await dialog.locator('[data-slot="field-error"]').allInnerTexts()).toEqual([
-			"That's the stock already",
-		]);
-		expect(await movements(id)).toHaveLength(2);
-
 		await counted.fill("10");
 		await dialog.getByText("Records −2.75 m.").waitFor();
 		await app.submit(dialog.getByRole("button", { name: "Adjust stock" }));
 		await app.toast("Stock adjusted");
-		expect(await material(sku, north.id)).toMatchObject({ stock: 10 });
-		expect((await movements(id))[0]).toEqual({
-			kind: "adjustment",
-			quantity: -2.75,
-			note: "Yearly count",
-			order_number: null,
-			user: users.admin,
-		});
 		await page.getByText("−2.75 m").first().waitFor();
 		expect(await history()).toEqual([
 			expect.stringMatching(
@@ -435,36 +273,6 @@ describe("in North", () => {
 			expect.stringMatching(/Received .* \+8\.75 m 12\.75 m/),
 			expect.stringMatching(/Opening balance \+4 m 4 m/),
 		]);
-		expect(await unbalancedStock(north.id)).toEqual([]);
-	});
-
-	test("pieces are only received whole, and a history in part pieces keeps its unit", async () => {
-		const { page } = app;
-
-		// The history has 8.75 m, which isn't whole pieces.
-		await app.go(`/materials/${sku}/edit`);
-		await page.getByLabel("Unit", { exact: true }).selectOption("pcs");
-		await app.submit(page.getByRole("button", { name: "Save material" }));
-		expect(await app.issues()).toEqual(["Whole pieces only: the stock history has part pieces"]);
-		expect(await material(sku, north.id)).toMatchObject({ unit: "m", stock: 10 });
-
-		// A material in pieces takes whole ones only.
-		const pieces = await material("MAT-0004", north.id);
-		expect(pieces.unit).toBe("pcs");
-		const before = await movements(pieces.id);
-		await app.go("/materials/MAT-0004");
-		const dialog = await openDialog("Receive stock");
-		expect(await dialog.getByLabel(/^Quantity/).getAttribute("step")).toBe("1");
-		// Past the browser's own check of the step, to see the app's.
-		await dialog.locator("form").evaluate((form: HTMLFormElement) => (form.noValidate = true));
-		await dialog.getByLabel(/^Quantity/).fill("1.5");
-		await app.submit(dialog.getByRole("button", { name: "Receive" }));
-		expect(await dialog.locator('[data-slot="field-error"]').allInnerTexts()).toEqual([
-			"Whole pieces only",
-		]);
-		expect(await material("MAT-0004", north.id)).toEqual(pieces);
-		expect(await movements(pieces.id)).toEqual(before);
-		await page.keyboard.press("Escape");
 	});
 });
 
@@ -490,24 +298,6 @@ describe("in South", () => {
 		expect((await app.go(`/materials/${northOnly.sku}/edit`))?.status()).toBe(404);
 	});
 
-	test("a SKU both have shows South's material", async () => {
-		const { page } = app;
-		const own = await material("MAT-0001", south.id);
-		const other = await material("MAT-0001", north.id);
-		expect(own.unit_price).not.toBe(other.unit_price);
-		await app.go("/materials/MAT-0001");
-		const text = await main();
-		expect(text).toContain(formatCents(own.unit_price));
-		expect(text).not.toContain(formatCents(other.unit_price));
-		expect(await page.locator("table").first().locator("tbody tr").count()).toBe(
-			await ordersUsing(own.id),
-		);
-		// Its stock history is South's own.
-		const shown = await history();
-		expect(shown).toHaveLength((await movements(own.id)).length);
-		expect(shown[0]).toContain(`${formatNumber(own.stock)} ${own.unit}`);
-	});
-
 	test("saving with the id of a North material is refused", async () => {
 		const { page } = app;
 		const own = await material("MAT-0002", south.id);
@@ -526,66 +316,5 @@ describe("in South", () => {
 		expect(app.path()).toBe("/materials/MAT-0002/edit");
 		expect(await snapshot(northOnly.id)).toEqual(victimBefore);
 		expect(await snapshot(own.id)).toEqual(ownBefore);
-	});
-
-	test("deleting with the id of a North material is refused", async () => {
-		const { page } = app;
-		const own = await material("MAT-0001", south.id);
-		const [victimBefore, ownBefore] = [await snapshot(northOnly.id), await snapshot(own.id)];
-
-		await app.go("/materials/MAT-0001");
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.waitFor();
-		const result = await app.expectingErrors(async () => {
-			await page.evaluate((id) => {
-				document.querySelector<HTMLInputElement>('[role="alertdialog"] input[name^="id"]')!.value =
-					String(id);
-			}, northOnly.id);
-			return app.submit(dialog.getByRole("button", { name: "Delete" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(app.path()).toBe("/materials/MAT-0001");
-		expect(await snapshot(northOnly.id)).toEqual(victimBefore);
-		expect(await snapshot(own.id)).toEqual(ownBefore);
-	});
-
-	test("a new material gets South's next SKU, and may use a name only North has", async () => {
-		const { page } = app;
-		const expected = await nextCode("material", "sku", south.id);
-		await app.go("/materials/new");
-		await page.getByLabel("Name", { exact: true }).fill(testName);
-		await page.getByLabel("Unit", { exact: true }).selectOption("pcs");
-		await page.getByLabel("Unit price").fill("8.25");
-		await page.getByLabel("Opening stock").fill("12");
-		await page.getByRole("button", { name: "Create material" }).click();
-		await page.waitForURL(/\/materials\/MAT-\d{4}$/);
-		await quiet(page);
-		expect(app.path()).toBe(`/materials/${expected}`);
-		expect(await material(expected, south.id)).toMatchObject({
-			name: testName,
-			unit_price: 825,
-			stock: 12,
-		});
-		await page.getByRole("heading", { name: testName }).waitFor();
-		const text = await main();
-		expect(text).toContain("€8.25");
-		expect(text).toContain("12 pcs");
-	});
-
-	test("deleting it removes only South's, after which it's a 404", async () => {
-		const { page } = app;
-		const deleted = app.path().split("/").pop()!;
-		const { id } = await material(deleted, south.id);
-		expect(await movements(id)).toHaveLength(1);
-		await page.getByRole("button", { name: "Delete" }).click();
-		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-		await page.waitForURL((url) => url.pathname === "/materials");
-		expect(await material(deleted, south.id)).toBeUndefined();
-		// Its stock history goes with it.
-		expect(await movements(id)).toEqual([]);
-		expect(await snapshot(northOnly.id)).toHaveLength(1);
-		expect((await app.go(`/materials/${deleted}`))?.status()).toBe(404);
-		expect(await unbalancedStock(south.id)).toEqual([]);
 	});
 });

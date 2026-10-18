@@ -1,6 +1,10 @@
+/**
+ * The materials list's range filters in the page: from the Filter menu, and no more than the list
+ * takes. What links with ranges list (combined, prices in euros) is `tests/unit/server/list.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, countIn, organizations, useApp, value } from "#e2e/app.ts";
+import { afresh, organizations, useApp, value } from "#e2e/app.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -10,15 +14,6 @@ const count = (where: string) =>
 	value<number>(`select count(*) from material m where organization_id = ? and ${where}`, [
 		north.id,
 	]);
-
-/** The orders a material is used on, in SQL. */
-const usedOn = `(select count(distinct l.order_id) from order_line l where l.material_id = m.id)`;
-
-/** The materials the URL's parameters show, in all. */
-const shownFor = async (search: string) => {
-	await app.go(`/materials?${search}`);
-	return app.rowCount();
-};
 
 describe("range filters on the materials list, in North", () => {
 	test("at most 10 in stock, from the Filter menu", async () => {
@@ -37,22 +32,6 @@ describe("range filters on the materials list, in North", () => {
 		expect(await app.rowCount()).toBe(expected);
 		const pill = app.page.locator('[data-slot="filter-pill"]', { hasText: "At most 10" });
 		expect(await pill.innerText()).toMatch(/^Stock\s+At most 10/);
-	});
-
-	test("links combine ranges with each other and the other filters", async () => {
-		expect(await shownFor("used=1..&quantity=50..")).toBe(
-			await count(`${usedOn} >= 1 and stock >= 50`),
-		);
-		expect(await shownFor("used=0&unit=pcs")).toBe(await count(`${usedOn} = 0 and unit = 'pcs'`));
-		// Prices in euros, to the cent.
-		expect(await shownFor("price=..10")).toBe(await count("unit_price <= 1000"));
-		expect(await shownFor("price=10.01..")).toBe(await count("unit_price >= 1001"));
-		// Several values: either.
-		expect(await shownFor("quantity=0,50..60")).toBe(
-			await count("(stock = 0 or stock between 50 and 60)"),
-		);
-		// What isn't a range is ignored.
-		expect(await shownFor("quantity=10..5&used=lots")).toBe(await countIn("material", north.id));
 	});
 
 	test("takes no more ranges than the list does: Add is off until one comes off", async () => {
