@@ -1,10 +1,12 @@
 /**
  * The work orders page ("Werkbonnen") in SHLTR's office: the sidebar opens it; its list of assets
- * with this year's badges, searched and filtered on the server; a unit's checklist of this year with
- * its history, and a component's points, score and scores; "Inspection 2026" makes an order with
- * its checklist (a second press opens it); the office fills it in and completes it for the engineer,
- * final afterwards; the templates are a click away; and on a phone it stacks without scrolling
- * sideways.
+ * with this year's badges, loading more as it scrolls, its filters in the URL; a unit's checklist
+ * of this year with its history, and a component's points, score and scores; "Inspection 2026"
+ * makes an order with its checklist (a second press opens it); the office fills it in and
+ * completes it for the engineer, final afterwards; the templates are a click away; and on a phone
+ * it stacks without scrolling sideways. What the server does for it (the list's search, filters and
+ * states, starting an order, the office's filling in and the scores it records, another tenant's
+ * ids refused) is `work-orders.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -69,18 +71,18 @@ describe("the list of assets", () => {
 		expect(await listCount()).toBe(states.length);
 		// Each shown has this year's badge as it stands.
 		const stateOf = new Map(states.map((row) => [row.serial_number, row.state]));
-		const shown = await listed();
-		expect(shown.length).toBeGreaterThan(10);
-		for (const serial of shown) {
-			const badge = list().locator(`li[data-asset="${serial}"] [data-year-state]`).first();
-			const state = stateOf.get(serial);
-			if (state === "none") {
-				expect(await badge.count(), serial).toBe(0);
-			} else {
-				expect(await badge.innerText(), serial).toBe(
-					state === "done" ? `${thisYear} ✓` : `${thisYear} open`,
-				);
-			}
+		const badges = await list()
+			.locator("li[data-asset]")
+			.evaluateAll((items: HTMLElement[]) =>
+				items.map((item) => [
+					item.dataset.asset!,
+					item.querySelector("[data-year-state]")?.textContent?.trim() ?? null,
+				]),
+			);
+		expect(badges.length).toBeGreaterThan(10);
+		const badgeOf = { done: `${thisYear} ✓`, open: `${thisYear} open`, none: null };
+		for (const [serial, badge] of badges) {
+			expect(badge, serial!).toBe(badgeOf[stateOf.get(serial!) as keyof typeof badgeOf]);
 		}
 		// The filters' counts.
 		const count = (state: string) => states.filter((row) => row.state === state).length;
@@ -99,23 +101,6 @@ describe("the list of assets", () => {
 			(count) => document.querySelectorAll("li[data-asset]").length > count,
 			first,
 		);
-	});
-
-	test("searches the server by unit, serial number, component and customer", async () => {
-		const part = await withComponents();
-		// A component's number finds its unit.
-		await searchFor(part.number, 1);
-		expect(await listed()).toEqual([part.serial]);
-		// The serial number.
-		await searchFor(part.serial, 1);
-		// A customer's name, with the unit's name.
-		const [riedel] = await rows<{ id: number; name: string }>(
-			`select id, name from customer where organization_id = ? and name like 'Riedel%'`,
-			[shltr.id],
-		);
-		const riedels = (await assetStates(shltr.id)).filter((row) => row.customer_id === riedel.id);
-		await searchFor(riedel.name, riedels.length);
-		await searchFor("", (await assetStates(shltr.id)).length);
 	});
 
 	test("keeps to a customer and to where they stand this year", async () => {
@@ -243,9 +228,6 @@ describe("starting and filling in a unit's inspection", () => {
 		expect(await panel().locator("[data-asset-notice]").innerText()).toBe(
 			`No work order filled in for ${thisYear} yet. Start a new checklist.`,
 		);
-		const before = Number(
-			await value(`select count(*) from "order" where organization_id = ?`, [shltr.id]),
-		);
 		await panel()
 			.getByRole("button", { name: `Inspection ${thisYear}` })
 			.click();
@@ -257,33 +239,8 @@ describe("starting and filling in a unit's inspection", () => {
 			 join equipment e on e.id = u.equipment_id where e.serial_number = ? order by o.id desc limit 1`,
 			[serial],
 		);
-		expect(
-			Number(await value(`select count(*) from "order" where organization_id = ?`, [shltr.id])),
-		).toBe(before + 1);
-		expect(
-			(
-				await rows(
-					`select type, status, engineer_id, scheduled_for, description from "order" where id = ?`,
-					[order.id],
-				)
-			)[0],
-		).toEqual({
-			type: "inspection",
-			status: "quote",
-			engineer_id: null,
-			scheduled_for: null,
-			description: `Inspection ${thisYear}`,
-		});
-		// Logged as orders are.
-		expect(
-			await value(
-				`select count(*) from activity where subject_type = 'order' and subject_id = ? and action = 'created'`,
-				[String(order.id)],
-			),
-		).toBe(1);
-		// Its checklist, by the rule every inspection order follows, shown to fill in.
+		// Its checklist, shown to fill in.
 		const [made] = await checklistsOfUnit(serial);
-		expect(made).toMatchObject({ order_id: order.id, kind: "inspection", status: "draft" });
 		const card = page().locator(`[data-office-checklist="${made.id}"]`);
 		await card.waitFor();
 		expect(await card.getAttribute("data-status")).toBe("draft");
@@ -298,15 +255,10 @@ describe("starting and filling in a unit's inspection", () => {
 			.getByRole("button", { name: `Inspection ${thisYear}` })
 			.click();
 		await app.toast(`${order.number} is open already`);
-		expect(await checklistsOfUnit(serial)).toHaveLength(1);
-		expect(
-			await value(
-				`select count(*) from "order" o join order_unit u on u.order_id = o.id
-				 join equipment e on e.id = u.equipment_id
-				 where e.serial_number = ? and o.type = 'inspection' and o.status = 'quote'`,
-				[serial],
-			),
-		).toBe(1);
+		// Its one checklist, still to fill in.
+		expect(await page().locator("[data-office-checklist]").getAttribute("data-status")).toBe(
+			"draft",
+		);
 	});
 
 	test("the office fills it in for the engineer, by the portal's rules, and completes it", async () => {
@@ -332,36 +284,6 @@ describe("starting and filling in a unit's inspection", () => {
 		await card.getByRole("button", { name: "Complete and record" }).click();
 		await app.toast("Checklist of");
 		await page().locator(`[data-office-checklist="${made.id}"][data-status="completed"]`).waitFor();
-
-		const userId = await value<string>(`select id from user where email = ?`, [users.shltrPlanner]);
-		const [done] = await rows<Record<string, unknown>>(
-			`select status, completed_by, completed_by_user, remarks from checklist where id = ?`,
-			[made.id],
-		);
-		expect(done).toEqual({
-			status: "completed",
-			completed_by: null,
-			completed_by_user: userId,
-			remarks: "Deurdranger vervangen.",
-		});
-		expect((await resultsOf(made.id)).map((point) => [point.result, point.remark])).toEqual([
-			["nok", "Deurdranger lekt olie."],
-			...points.slice(1).map(() => ["ok", null]),
-		]);
-		// The scores, by the hook a completed checklist runs: the unit's, on the order, by the member.
-		const [score] = await rows<Record<string, unknown>>(
-			`select score, source, order_id, engineer_id, user_id from unit_condition
-			 where equipment_id = (select id from equipment where serial_number = ?) and component_id is null
-			 order by id desc limit 1`,
-			[serial],
-		);
-		expect(score).toEqual({
-			score: Math.round((100 * (points.length - 1)) / points.length),
-			source: "checklist",
-			order_id: order.id,
-			engineer_id: null,
-			user_id: userId,
-		});
 		// Final: what was found and who completed it, in the office; nothing to answer.
 		const completed = page().locator(`[data-office-checklist="${made.id}"]`);
 		expect(await completed.locator("[data-completed-by]").innerText()).toMatch(

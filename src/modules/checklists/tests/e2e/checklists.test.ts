@@ -1,25 +1,15 @@
 /**
- * The checklist templates, in North: a manager finds them from the settings, adds one, gives it
- * categories and points, moves and deletes a point, retires and restores it; a unit's page shows
- * its template; a member sees them but can't change them. What the server does with each change
- * (placing, moving, logging) is `templates.spec.ts`'s.
+ * The checklist templates' pages, in North: a manager finds them from the settings, adds one, gives
+ * it categories and points, moves and deletes a point, retires and restores it; a unit's page shows
+ * its template; a member sees them without the buttons to change them. What the server does with
+ * each change (placing, moving, logging, refusing a member's forms) is `templates.spec.ts`'s and
+ * `template-pages.spec.ts`'s.
  */
-import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, quiet, useApp, users } from "#e2e/app.ts";
 
-import {
-	categoriesOf,
-	lastActivityId,
-	pageLocators,
-	pointsOf,
-	type Template,
-	templateActivity,
-	templateNamed,
-	templatesOf,
-	unitOf,
-} from "./helpers.ts";
+import { pageLocators, templateNamed, unitOf } from "./helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -39,8 +29,8 @@ const {
 } = pageLocators(app);
 const page = () => app.page;
 
-/** The template this file adds. */
-let added: Template;
+/** The id of the template this file adds. */
+let added: string;
 
 /** Adds a point through the dialog, from the card's button. */
 async function addPoint(group: string, text: string) {
@@ -66,23 +56,6 @@ async function move(label: string) {
 	await quiet(page());
 }
 
-/** A form on the page as a browser without JavaScript would submit it. */
-const captureForm = (form: ReturnType<Page["locator"]>) =>
-	form.evaluate((element: HTMLFormElement) => ({
-		action: element.action,
-		fields: [...new FormData(element)].map(([name, value]) => [name, value as string]),
-	}));
-
-/** Posts a captured form from the page, with its session; answers with the status. */
-const post = (form: Awaited<ReturnType<typeof captureForm>>) =>
-	app.expectingErrors(() =>
-		page().evaluate(async ({ action, fields }) => {
-			const body = new URLSearchParams(fields);
-			const headers = { accept: "text/html" };
-			return (await fetch(action, { method: "POST", body, headers })).status;
-		}, form),
-	);
-
 describe("an owner, in North", () => {
 	test("finds the templates from the settings and the sidebar, with the categories they miss", async () => {
 		await app.go("/settings");
@@ -90,18 +63,16 @@ describe("an owner, in North", () => {
 		await page().waitForURL((url) => url.pathname === "/checklists/templates");
 		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
 
-		const seeded = await templatesOf(north.id);
-		expect(seeded.map((template) => template.name)).toEqual([
+		const shown = await page()
+			.locator("tr[data-template]")
+			.evaluateAll((trs: HTMLElement[]) => trs.map((tr) => tr.dataset.template));
+		expect(shown).toEqual([
 			"Stookinstallatie",
 			"Koelmachine",
 			"Luchtbehandelingskast",
 			"Noodstroomaggregaat",
 			"Lift",
 		]);
-		const shown = await page()
-			.locator("tr[data-template]")
-			.evaluateAll((trs: HTMLElement[]) => trs.map((tr) => tr.dataset.template));
-		expect(shown).toEqual(seeded.map((template) => template.name));
 		const row = (await templateRow("Koelmachine").innerText()).replace(/\s+/g, " ");
 		expect(row).toBe("Koelmachine F-gassen 12 months Koelmachine 5");
 		expect((await gaps().innerText()).replace(/\s+/g, " ")).toContain("Compressor Pomp");
@@ -111,7 +82,6 @@ describe("an owner, in North", () => {
 	});
 
 	test("adds a template, with a name North doesn't have yet, and lands on its page", async () => {
-		const since = await lastActivityId();
 		await page().getByRole("button", { name: "Add template" }).click();
 		await dialog().getByLabel("Name").fill(" koelmachine ");
 		await dialog().getByLabel("Inspection valid for (months)").fill("24");
@@ -123,14 +93,9 @@ describe("an owner, in North", () => {
 		await app.submit(dialog().getByRole("button", { name: "Save template" }));
 		await page().waitForURL((url) => /^\/checklists\/templates\/\d+$/.test(url.pathname));
 		await page().getByRole("heading", { name: "Compressor" }).waitFor();
-
-		added = await templateNamed(north.id, "Compressor");
-		expect(added).toMatchObject({ norm: "NEN-EN 1012", validity_months: 24, archived: 0 });
-		expect(added.position).toBe(Math.max(...(await templatesOf(north.id)).map((t) => t.position)));
-		expect(app.path()).toBe(`/checklists/templates/${added.id}`);
-		expect(await templateActivity(added.id, since)).toMatchObject([
-			{ action: "created", subject_label: "Compressor" },
-		]);
+		added = app.path().split("/").at(-1)!;
+		expect(added).toBe(String((await templateNamed(north.id, "Compressor")).id));
+		expect(await page().getByText("NEN-EN 1012").count()).toBeGreaterThan(0);
 		expect(await pointsCard().getByText("No points yet").count()).toBe(1);
 	});
 
@@ -143,7 +108,6 @@ describe("an owner, in North", () => {
 		await categoryBox("Pomp").check();
 		await app.submit(categoriesCard().getByRole("button", { name: "Save categories" }));
 		await app.toast("Categories saved");
-		expect(await categoriesOf(added.id)).toEqual(["Compressor", "Pomp"]);
 
 		await app.go("/checklists/templates");
 		expect(await gaps().count()).toBe(0);
@@ -151,7 +115,7 @@ describe("an owner, in North", () => {
 	});
 
 	test("adds points in groups, moves one, and deletes one", async () => {
-		await app.go(`/checklists/templates/${added.id}`);
+		await app.go(`/checklists/templates/${added}`);
 		await addPoint("Smering", "Olie ververst");
 		await addPoint("Veiligheid", "Drukschakelaar getest");
 		// Through its group's own button, the group filled in.
@@ -185,9 +149,9 @@ describe("an owner, in North", () => {
 		await pointMenu(1, "Delete");
 		await app.submit(alert().getByRole("button", { name: "Delete" }));
 		await app.toast("Point deleted");
-		const expected = ["Smering:Olie ververst", "Veiligheid:Drukschakelaar getest"];
-		await expect.poll(shownPoints).toEqual(expected);
-		expect(await pointsOf(added.id)).toEqual(expected);
+		await expect
+			.poll(shownPoints)
+			.toEqual(["Smering:Olie ververst", "Veiligheid:Drukschakelaar getest"]);
 	});
 
 	test("retires it: kept with its points, its categories free, until it's restored", async () => {
@@ -195,9 +159,6 @@ describe("an owner, in North", () => {
 		await app.submit(alert().getByRole("button", { name: "Retire" }));
 		await app.toast("Template retired");
 		await page().getByText("Retired", { exact: true }).waitFor();
-		expect((await templateNamed(north.id, "Compressor")).archived).toBe(1);
-		expect(await categoriesOf(added.id)).toEqual([]);
-		expect(await pointsOf(added.id)).toHaveLength(2);
 		// It isn't changed while it's retired.
 		expect(await pointsCard().getByRole("button", { name: "Add point" }).count()).toBe(0);
 		expect(await categoriesCard().getByRole("checkbox").count()).toBe(0);
@@ -215,15 +176,10 @@ describe("an owner, in North", () => {
 		await app.go(`/equipment/${await unitOf(north.id, "Compressor")}`);
 		await unitCard().getByText("Compressor has no checklist template yet.").waitFor();
 
-		await app.go(`/checklists/templates/${added.id}`);
+		await app.go(`/checklists/templates/${added}`);
 		await app.submit(page().getByRole("button", { name: "Restore" }));
 		await app.toast("Template restored");
 		await pointsCard().getByRole("button", { name: "Add point" }).waitFor();
-		expect((await templateNamed(north.id, "Compressor")).archived).toBe(0);
-		expect((await templateActivity(added.id)).map((entry) => entry.action).slice(-2)).toEqual([
-			"retired",
-			"restored",
-		]);
 	});
 
 	test("a unit's page shows the template of its category", async () => {
@@ -241,22 +197,8 @@ describe("an owner, in North", () => {
 });
 
 describe("a member, in North", () => {
-	test("sees the templates and their points, but can't change them", async () => {
-		// The owner's forms, for the member to submit.
+	test("sees the templates and their points, without the buttons to change them", async () => {
 		const koelmachine = await templateNamed(north.id, "Koelmachine");
-		await app.go(`/checklists/templates/${koelmachine.id}`);
-		await page().getByRole("button", { name: "Edit", exact: true }).click();
-		await dialog().getByLabel("Name").fill("Planner's own");
-		const edit = await captureForm(dialog().locator("form"));
-		await page().keyboard.press("Escape");
-		const move = await captureForm(
-			page().getByRole("button", { name: "Move point 1 down" }).locator("xpath=ancestor::form"),
-		);
-		const before = {
-			templates: await templatesOf(north.id),
-			points: await pointsOf(koelmachine.id),
-		};
-
 		await page().context().clearCookies();
 		await app.signIn(users.planner);
 		await app.go("/checklists/templates");
@@ -271,10 +213,5 @@ describe("a member, in North", () => {
 		expect(await pointsCard().getByRole("button").count()).toBe(0);
 		expect(await categoriesCard().getByRole("checkbox").count()).toBe(0);
 		expect(await categoriesCard().innerText()).toContain("Koelmachine");
-
-		expect(await post(edit)).toBe(403);
-		expect(await post(move)).toBe(403);
-		expect(await templatesOf(north.id)).toEqual(before.templates);
-		expect(await pointsOf(koelmachine.id)).toEqual(before.points);
 	});
 });

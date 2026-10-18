@@ -1,9 +1,9 @@
-/** What the checklists module's end-to-end tests share: templates and points as stored, and the pages' parts. */
+/** What the checklists module's end-to-end tests share: templates and checklists as stored, and the pages' parts. */
 import type { Locator, Page } from "playwright";
 
 import { type App, rows, value } from "#e2e/app.ts";
 
-export interface Template {
+interface Template {
 	id: number;
 	organization_id: string;
 	name: string;
@@ -11,14 +11,6 @@ export interface Template {
 	validity_months: number;
 	position: number;
 	archived: number;
-}
-
-export interface Point {
-	id: number;
-	template_id: number;
-	group_name: string;
-	text: string;
-	position: number;
 }
 
 /** An organization's templates, in their order. */
@@ -31,46 +23,6 @@ export const templatesOf = (organizationId: string) =>
 
 export const templateNamed = async (organizationId: string, name: string) =>
 	(await templatesOf(organizationId)).find((template) => template.name === name)!;
-
-/** A template's points, in their order, as `group:text`. */
-export const pointsOf = async (templateId: number) =>
-	(
-		await rows<Point>(
-			`select id, template_id, group_name, text, position from checklist_template_item
-			 where template_id = ? order by position, id`,
-			[templateId],
-		)
-	).map((point) => `${point.group_name}:${point.text}`);
-
-/** The names of the categories a template is for, by name. */
-export const categoriesOf = async (templateId: number) =>
-	(
-		await rows<{ name: string }>(
-			`select c.name from checklist_template_category tc
-			 join equipment_category c on c.id = tc.category_id
-			 where tc.template_id = ? order by c.name`,
-			[templateId],
-		)
-	).map((row) => row.name);
-
-/** What was logged about a template and its points, after the entry `since`, oldest first. */
-export const templateActivity = (templateId: number, since = 0) =>
-	rows<{
-		action: string;
-		subject_type: string;
-		subject_label: string;
-		parent_label: string | null;
-		changes: string | null;
-	}>(
-		`select action, subject_type, subject_label, parent_label, changes from activity
-		 where id > ? and ((subject_type = 'checklistTemplate' and subject_id = ?)
-			or (parent_type = 'checklistTemplate' and parent_id = ?))
-		 order by id`,
-		[since, String(templateId), String(templateId)],
-	);
-
-export const lastActivityId = async () =>
-	Number(await value(`select coalesce(max(id), 0) from activity`));
 
 /** A unit of the organization's category `category`, by serial number. */
 export const unitOf = async (organizationId: string, category: string) =>

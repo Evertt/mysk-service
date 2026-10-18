@@ -1,14 +1,14 @@
 /**
  * The checklists between tenants: North can't read or change SHLTR's templates (both have the
- * module), its template's page being a 404 and a form with a tampered id refused, nor read SHLTR's
- * checklists on orders, also by a tampered query; South, which doesn't have the module, has no
- * pages or cards of it. Each of the module's functions refusing another tenant's ids is
- * `templates.spec.ts`'s and `checklists.spec.ts`'s; that a tenant without the module is refused its
- * routes and remote functions is `route-guard.spec.ts`'s and `remote-functions.spec.ts`'s.
+ * module), its template's page being a 404 and a form with a tampered id refused; South, which
+ * doesn't have the module, has no pages or cards of it. Each of the module's functions refusing
+ * another tenant's ids is the server specs' (`template-pages.spec.ts`, `order-checklists.spec.ts`,
+ * `portal.spec.ts`, `work-orders.spec.ts`); that a tenant without the module is refused its routes
+ * and remote functions is `route-guard.spec.ts`'s and `module-gate.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { isRemote, organizations, rows, tamperWithQuery, useApp, value } from "#e2e/app.ts";
+import { organizations, rows, useApp, value } from "#e2e/app.ts";
 
 import { pageLocators, templateNamed, templatesOf } from "./helpers.ts";
 
@@ -30,26 +30,6 @@ const shltrState = async () => ({
 		[shltr.id],
 	),
 });
-
-/** An order number of SHLTR's with checklists that North has no order of. */
-const shltrOnly = () =>
-	value<string>(
-		`select o.number from "order" o where o.organization_id = ?
-		 and exists (select 1 from checklist c where c.order_id = o.id)
-		 and o.number not in (select number from "order" where organization_id = ?)
-		 order by o.id limit 1`,
-		[shltr.id, north.id],
-	);
-
-/** Follows a link to `href` in the page, as a click would: a client-side navigation. */
-const navigate = (href: string) =>
-	page().evaluate((to) => {
-		const link = document.createElement("a");
-		link.href = to;
-		document.body.append(link);
-		link.click();
-		link.remove();
-	}, href);
 
 describe("in North, which has the module", () => {
 	test("SHLTR's templates can't be read or changed by their ids", async () => {
@@ -82,29 +62,6 @@ describe("in North, which has the module", () => {
 		expect((await templateNamed(north.id, "Koelmachine")).name).toBe("Koelmachine");
 		// Nothing logged in SHLTR (another file on this worker may have logged its checklists before).
 		expect(await shltrLogged()).toBe(loggedBefore);
-	});
-
-	test("SHLTR's checklists can't be read, also by a tampered query", async () => {
-		const number = await shltrOnly();
-		expect(
-			(await app.expectingErrors(() => app.go(`/checklists/work-orders/${number}`)))?.status(),
-		).toBe(404);
-		const [first, second] = await rows<{ number: string }>(
-			`select distinct o.number from checklist c join "order" o on o.id = c.order_id
-			 where c.organization_id = ? order by o.id limit 2`,
-			[north.id],
-		);
-		await app.go(`/orders/${first.number}`);
-		await page().locator("[data-order-checklists]").waitFor();
-		const answer = page().waitForResponse((response) =>
-			isRemote(response.url(), "getOrderChecklists"),
-		);
-		await app.expectingErrors(async () => {
-			// The next order's card asks for SHLTR's order instead.
-			await tamperWithQuery<string>(page(), "getOrderChecklists", () => number);
-			await navigate(`/orders/${second.number}`);
-			expect(await (await answer).text()).toMatch(/"status":404/);
-		});
 	});
 });
 

@@ -1,8 +1,9 @@
 /**
  * The checklists in the engineer portal, on a phone: Lev fills in each unit's checklist of one of
  * his inspection orders (each answer saved as he goes), completes them, and only then the order,
- * with his signature and the customer's; another tenant's checklist can't be changed by its ids
- * (the rest of who may change which checklist is `checklists.spec.ts`'s).
+ * with his signature and the customer's; the office prints its work order. What the server does
+ * with each answer and completion (who may change which checklist, its validity, what's logged,
+ * another tenant's ids refused) is `portal.spec.ts`'s and `checklists.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -13,7 +14,6 @@ import {
 	mobileViewport,
 	organizations,
 	rows,
-	tamperWithCommand,
 	useApp,
 	users,
 	value,
@@ -32,19 +32,18 @@ const card = (serial: string) => page().locator(`[data-field-checklist="${serial
 const point = (serial: string, text: string) =>
 	card(serial).locator(`[data-point="${text.replaceAll('"', '\\"')}"]`);
 
-/** Today in the browser's (and the server's) time zone, as stored. */
-const today = () => Temporal.Now.plainDateISO();
-
 describe("Lev's inspection order", () => {
 	let job: { id: number; number: string };
 	let lev: number;
 
 	test("has a checklist per unit with a template, to fill in once the job's started", async () => {
 		lev = await engineerOf(users.shltrEngineer, shltr.id);
+		// The one with the fewest points to answer.
 		[job] = await rows<{ id: number; number: string }>(
 			`select o.id, o.number from "order" o where o.engineer_id = ? and o.status = 'scheduled'
 			 and o.type = 'inspection' and exists (select 1 from checklist c where c.order_id = o.id)
-			 order by o.scheduled_for limit 1`,
+			 order by (select count(*) from checklist_result r join checklist c on c.id = r.checklist_id
+				where c.order_id = o.id), o.scheduled_for limit 1`,
 			[lev],
 		);
 		expect(job, "Lev has a planned inspection with checklists").toBeDefined();
@@ -97,33 +96,6 @@ describe("Lev's inspection order", () => {
 		);
 	});
 
-	test("another tenant's checklist can't be changed by its ids", async () => {
-		const [first] = await checklistsOfOrder(job.id);
-		const [, , c] = await resultsOf(first.id);
-		const [northern] = await rows<{ id: number; checklist_id: number }>(
-			`select r.id, r.checklist_id from checklist_result r where r.organization_id = ? limit 1`,
-			[organizations.north.id],
-		);
-		const before = await resultsOf(northern.checklist_id);
-		await app.expectingErrors(async () => {
-			await tamperWithCommand<{ id: number }>(page(), "answer", (arg) => ({
-				...arg,
-				id: northern.id,
-			}));
-			await point(first.serial_number, c.text).getByRole("button", { name: "N/A" }).click();
-			await app.toast("Checklist not found");
-		});
-		// Taken back: it wasn't saved.
-		await expect
-			.poll(() =>
-				point(first.serial_number, c.text)
-					.getByRole("button", { name: "N/A" })
-					.getAttribute("aria-pressed"),
-			)
-			.toBe("false");
-		expect(await resultsOf(northern.checklist_id)).toEqual(before);
-	});
-
 	test("the order and a checklist complete only once every point is answered, a rejection saying what's wrong", async () => {
 		await sign(page(), page().getByLabel("Engineer's signature"));
 		await page().getByLabel("Signed by").fill("M. Verhoeven");
@@ -159,37 +131,12 @@ describe("Lev's inspection order", () => {
 				.click();
 			await card(checklist.serial_number).locator("[data-outcome]").waitFor();
 		}
-		const done = await checklistsOfOrder(job.id);
-		const months = await value<number>(`select validity_months from checklist where id = ?`, [
-			first.id,
-		]);
-		for (const checklist of done) {
-			expect(checklist).toMatchObject({
-				status: "completed",
-				completed_by: lev,
-				kind: "inspection",
-			});
-			expect(checklist.valid_until).toBe(today().add({ months }).toString());
-		}
 		expect(await card(first.serial_number).locator("[data-outcome]").innerText()).toBe(
 			"1 rejected",
 		);
 		// What was found, to read: the rejection and what's wrong.
 		expect(await card(first.serial_number).innerText()).toContain(
 			"Draadbreuk zichtbaar bij trommel — kabelset meenemen.",
-		);
-		// Logged against the order, by Lev.
-		expect(
-			await rows(
-				`select action, note from activity where subject_type = 'checklist' and parent_id = ?
-				 order by id`,
-				[String(job.id)],
-			),
-		).toEqual(
-			done.map((checklist, i) => ({
-				action: "completed",
-				note: i === 0 ? "1 point rejected" : expect.any(String),
-			})),
 		);
 	});
 

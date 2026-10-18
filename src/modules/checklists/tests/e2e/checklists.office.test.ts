@@ -1,12 +1,13 @@
 /**
  * The checklists in SHLTR's office: an order's page shows each unit's checklist (rejected points
  * first), its work order prints them, a unit's page has its inspection status and history, the
- * equipment list a column of the status. What the order form does with an order's checklists
- * (keeping answered ones, taking unanswered ones along) is `checklists.spec.ts`'s.
+ * equipment list a column of the status. What the server reads for them (each status, the list's
+ * filters and sort) is `order-checklists.spec.ts`'s; what the order form does with an order's
+ * checklists (keeping answered ones, taking unanswered ones along) is `checklists.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, organizations, rows, useApp, users } from "#e2e/app.ts";
+import { organizations, rows, useApp, users } from "#e2e/app.ts";
 import { EXPIRING_DAYS } from "#modules/checklists/model.ts";
 
 import { checklistsOfOrder, inspectionStatuses, resultsOf } from "./helpers.ts";
@@ -96,25 +97,22 @@ describe("a done inspection with rejected points", () => {
 
 describe("a unit's inspections", () => {
 	test("its page shows the status of its latest inspection and its checklists per year", async () => {
-		const all = await statuses();
-		for (const status of ["rejected", "expired", "valid"]) {
-			const unit = all.find((each) => each.status === status)!;
-			expect(unit, status).toBeDefined();
-			await app.go(`/equipment/${unit.serial_number}`);
-			const cardOf = page().locator("[data-unit-inspections]");
-			await cardOf.waitFor();
-			expect(await cardOf.locator("[data-inspection]").getAttribute("data-inspection")).toBe(
-				status,
-			);
-			const history = await rows<{ number: string }>(
-				`select o.number from checklist c join "order" o on o.id = c.order_id
-				 join equipment e on e.id = c.equipment_id where e.serial_number = ? and e.organization_id = ?`,
-				[unit.serial_number, shltr.id],
-			);
-			expect(await cardOf.locator("[data-history]").count()).toBe(history.length);
-		}
-		// Opening one shows what was found.
+		// One that was rejected; each status's unit and its history is `order-checklists.spec.ts`'s.
+		const unit = (await statuses()).find((each) => each.status === "rejected")!;
+		expect(unit, "a unit whose inspection was rejected").toBeDefined();
+		await app.go(`/equipment/${unit.serial_number}`);
 		const cardOf = page().locator("[data-unit-inspections]");
+		await cardOf.waitFor();
+		expect(await cardOf.locator("[data-inspection]").getAttribute("data-inspection")).toBe(
+			"rejected",
+		);
+		const history = await rows<{ number: string }>(
+			`select o.number from checklist c join "order" o on o.id = c.order_id
+			 join equipment e on e.id = c.equipment_id where e.serial_number = ? and e.organization_id = ?`,
+			[unit.serial_number, shltr.id],
+		);
+		expect(await cardOf.locator("[data-history]").count()).toBe(history.length);
+		// Opening one shows what was found.
 		await cardOf.locator("[data-history]").first().click();
 		const dialog = page().getByRole("dialog");
 		await dialog.locator("[data-checklist-points]").waitFor();
@@ -122,30 +120,15 @@ describe("a unit's inspections", () => {
 		await page().keyboard.press("Escape");
 	});
 
-	test("the equipment list shows each unit's status, and filters and sorts by it", async () => {
-		const all = await statuses();
-		for (const status of ["valid", "expiring", "expired", "rejected"]) {
-			const count = all.filter((each) => each.status === status).length;
-			expect(count, status).toBeGreaterThan(0);
-			await app.go(`/equipment?inspection=${status}`);
-			expect(await app.rowCount(), status).toBe(count);
-			expect(
-				await page()
-					.locator(`[data-slot="data-table"] tbody [data-inspection="${status}"]`)
-					.count(),
-			).toBeGreaterThan(0);
-		}
-		// The list as it is by default, not with the filter visited last (`table-memory.svelte.ts`).
-		await app.go(afresh("/equipment"));
-		await app.sortBy("Inspection", "ascending");
-		const firstRow = page().locator('[data-slot="data-table"] tbody tr').first();
-		const first = await firstRow.locator("[data-inspection]").getAttribute("data-inspection");
-		// Worst first. Other files complete inspections meanwhile, so the worst status there is
-		// is read again, before and after the page.
-		const worst = (list: { status: string }[]) =>
-			["expired", "rejected", "expiring", "valid"].find((status) =>
-				list.some((each) => each.status === status),
-			);
-		expect([worst(all), worst(await statuses())]).toContain(first);
+	test("the equipment list shows each unit's status, and filters by it", async () => {
+		// One filter; each of them, and the sort, are `order-checklists.spec.ts`'s.
+		const count = (await statuses()).filter((each) => each.status === "expiring").length;
+		expect(count).toBeGreaterThan(0);
+		await app.go("/equipment?inspection=expiring");
+		expect(await app.rowCount()).toBe(count);
+		const table = page().locator('[data-slot="data-table"] tbody');
+		expect(await table.locator('[data-inspection="expiring"]').count()).toBe(
+			await table.locator("tr").count(),
+		);
 	});
 });
