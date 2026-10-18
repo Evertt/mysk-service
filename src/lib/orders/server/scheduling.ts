@@ -17,7 +17,7 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import type { Problem } from "#lib/server/forms.ts";
 
-import { plannedStatus } from "../display.ts";
+import { plannedStatus } from "../lifecycle.ts";
 import { saveOrderParts } from "./hooks.ts";
 import { assigneeProblem } from "./order-changes.ts";
 

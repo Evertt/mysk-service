@@ -86,14 +86,6 @@ export const priorityOptions = labelOptions("orderPriority", orderPriorities, pr
 export const typeOptions = labelOptions("orderType", orderTypes, typeDetails);
 
 /**
- * The status an open order gets when it's planned: a quote that gets an engineer and a date is
- * scheduled (as in the seed data, where quotes have neither); other statuses stay as they are.
- * The scheduling service (`scheduleOrder()`) and the planning board's moves share it.
- */
-export const plannedStatus = (status: OrderStatus, engineerId: number | null): OrderStatus =>
-	status === "quote" && engineerId !== null ? "scheduled" : status;
-
-/**
  * What an order's price is made of, in words, from the costs the tenant's modules add to it and
  * labour: "Materials and labour", or "Labour" when no module adds anything.
  */

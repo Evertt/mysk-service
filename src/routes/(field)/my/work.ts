@@ -1,7 +1,7 @@
 /**
  * The rules of the engineer portal: how an engineer's work is grouped by day, and what a customer's
  * signature must be. What they can do with an order in each status is `fieldActions()` in
- * `#lib/orders/field.ts`.
+ * `#lib/orders/lifecycle.ts`.
  */
 import * as v from "valibot";
 
