@@ -153,7 +153,10 @@ export function reportRanges(
 	const end = startOf(last.add({ days: 1 }), timeZone);
 	const to = earlier(end, now);
 	const previousFrom = startOf(first.subtract({ days }), timeZone);
-	const previousAt = (at: Temporal.Instant) => earlier(previousFrom.add(at.since(from)), from);
+	// By the clock on the wall, `days` before: a week across a change of summer time is 167 or 169
+	// hours, and compares with all of them.
+	const previousAt = (at: Temporal.Instant) =>
+		earlier(at.toZonedDateTimeISO(timeZone).subtract({ days }).toInstant(), from);
 	return {
 		from,
 		to,

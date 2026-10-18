@@ -7,7 +7,12 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { loadSite, periodRanges, siteFigures } from "#modules/energy/server/figures.ts";
+import {
+	loadSite,
+	periodRanges,
+	reportRanges,
+	siteFigures,
+} from "#modules/energy/server/figures.ts";
 import { as, rows, shltr } from "#unit/lib/server/harness/index.ts";
 
 import { riedel, shltrId } from "./energy.test-support.ts";
@@ -87,6 +92,24 @@ const figuresAt = (period: "day" | "month", now: string) =>
 
 const lab = async (period: "day" | "month", now: string) =>
 	(await figuresAt(period, now)).zones.find((zone) => zone.code === "Z-LAB")!;
+
+describe("a report", () => {
+	test("compares with the week before by the clock, also the 25-hour week summer time ends in", () => {
+		const day = (date: string) => Temporal.PlainDate.from(date);
+		const ranges = reportRanges(
+			day("2026-10-26"),
+			day("2026-11-01"),
+			timeZone,
+			at("2026-11-10T09:00"),
+		);
+		expect(ranges).toMatchObject({
+			from: at("2026-10-26T00:00"),
+			previousFrom: at("2026-10-19T00:00"),
+			previousTo: at("2026-10-26T00:00"),
+		});
+		expect(ranges.previousAt(at("2026-10-28T12:00"))).toEqual(at("2026-10-21T12:00"));
+	});
+});
 
 describe("the previous period's sums", () => {
 	test("go no further than today's readings: at 00:10, before the first is in, nothing", async () => {
