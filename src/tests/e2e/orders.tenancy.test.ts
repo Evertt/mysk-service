@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
+	afresh,
 	countIn,
 	nextCode,
 	organizations,
@@ -82,7 +83,9 @@ describe("in South", () => {
 			 and name not in (select name from customer where organization_id = ?) order by id limit 1`,
 			[north.id, south.id],
 		);
-		await app.go("/orders");
+		// Afresh: a visit without parameters brings back the filters the tests above left, if their
+		// table memory was saved in time, and the ticked customers are options too.
+		await app.go(afresh("/orders"));
 		await app.openFilter("Customer");
 		const box = page.getByPlaceholder("Search customers…");
 		await box.fill("CUST");
@@ -286,7 +289,7 @@ describe("in South", () => {
 		// South has invoices and materials but not contracts, the only module that adjusts prices.
 		expect(await table.locator("tbody tr").filter({ hasText: "Covered by" }).count()).toBe(0);
 
-		await app.go("/orders");
+		await app.go(afresh("/orders"));
 		await page.getByLabel("Search orders…").fill(shared);
 		await app.tableSettled();
 		await expect.poll(() => app.rowCount()).toBe(1);
