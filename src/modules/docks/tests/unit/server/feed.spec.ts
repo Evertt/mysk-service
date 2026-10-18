@@ -10,6 +10,7 @@ import type { RequestEvent } from "@sveltejs/kit";
 import { isHttpError } from "@sveltejs/kit";
 import { describe, expect, test } from "vite-plus/test";
 
+import { issueIntegrationToken } from "#lib/server/auth/integrations.ts";
 import { demoDockToken } from "#modules/docks/server/demo.ts";
 import {
 	createDockToken,
@@ -57,7 +58,9 @@ async function post(
 		const response = await signedOut(() => POST({ request } as RequestEvent<never, never>));
 		return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 	} catch (thrown) {
-		if (isHttpError(thrown)) return { status: thrown.status, body: thrown.body };
+		if (isHttpError(thrown)) {
+			return { status: thrown.status, body: thrown.body as unknown as Record<string, unknown> };
+		}
 		throw thrown;
 	}
 }
@@ -102,7 +105,8 @@ describe("the feed", () => {
 	});
 
 	test("refuses a missing or unknown token, or the energy feed's, with a 401", async () => {
-		for (const token of [null, "fwi_unknown", "fwi_shltr-energy-simulator-demo-token-do-not-use"]) {
+		const energy = await as(shltr.owner, () => issueIntegrationToken("energy", "Spec gateway"));
+		for (const token of [null, "fwi_unknown", energy.token]) {
 			expect((await post({ events: [] }, { token })).status, String(token)).toBe(401);
 		}
 	});

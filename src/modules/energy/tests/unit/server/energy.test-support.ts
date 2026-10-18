@@ -74,7 +74,9 @@ export async function feed(
 		const response = await signedOut(() => handler({ request } as RequestEvent<never, never>));
 		return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 	} catch (thrown) {
-		if (isHttpError(thrown)) return { status: thrown.status, body: thrown.body };
+		if (isHttpError(thrown)) {
+			return { status: thrown.status, body: thrown.body as unknown as Record<string, unknown> };
+		}
 		throw thrown;
 	}
 }
