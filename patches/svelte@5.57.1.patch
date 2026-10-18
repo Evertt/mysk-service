@@ -56,7 +56,7 @@ index 83833f493dc77e48e9ba28408cf8e1dacde3bd86..53e5270eff6b9e849b36d7a657c369e1
  				(data[0] === '[' && !isNaN(Number(data.slice(1))))
  			) {
 diff --git a/src/internal/client/reactivity/batch.js b/src/internal/client/reactivity/batch.js
-index 75ce33b1c56dcf090c289517209baf095724ad89..f2c6574b694dbb37165ae2ca0b05da01c5dace9d 100644
+index 75ce33b1c56dcf090c289517209baf095724ad89..fdc7ab053879a72fe1d0971e15fe0dcc6e0fcae6 100644
 --- a/src/internal/client/reactivity/batch.js
 +++ b/src/internal/client/reactivity/batch.js
 @@ -17,7 +17,8 @@ import {
@@ -216,6 +216,22 @@ index 75ce33b1c56dcf090c289517209baf095724ad89..f2c6574b694dbb37165ae2ca0b05da01
  				}
  
  				// A batch was unskipped in a later batch -> tell prior batches to unskip it, too
+@@ -832,6 +932,15 @@ export class Batch {
+ 					for (var root of batch.#resolve()) {
+ 						batch.#traverse(root, [], []);
+ 					}
++
++					// (Patched) `#resolve` marked the path to each effect, and `#traverse` doesn't
++					// enter the batch's skipped branches (e.g. a fork's: the page its preload
++					// replaces), so the marks in them stayed, and every later batch took their root
++					// as collected and ran nothing under them: the page froze. Reset them as
++					// `#process` does for a deferred batch.
++					for (const [e, t] of batch.#skipped_branches) {
++						reset_branch(e, t);
++					}
+ 				}
+ 
+ 				batch.deactivate();
 diff --git a/src/internal/client/reactivity/deriveds.js b/src/internal/client/reactivity/deriveds.js
 index 728ef1d214e340e1b41e4bfc85ac14af22cf637e..f2bf09ecd821ace7faac38f68dd40a7165c63724 100644
 --- a/src/internal/client/reactivity/deriveds.js
