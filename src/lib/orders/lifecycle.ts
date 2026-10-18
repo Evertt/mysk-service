@@ -3,28 +3,53 @@
  * (`#lib/orders/server/lifecycle.ts`) and the pages' buttons go by these same rules.
  */
 import {
+	type CoreActivityAction,
 	isAwaitingAcceptance,
 	isEditableOrder,
 	manualOrderStatuses,
+	openOrderStatuses,
 	type OrderStatus,
 	orderStatuses,
 } from "#lib/models.ts";
+
+/** Why an order can't be changed or deleted (see `isEditableOrder`). */
+export const notEditable = (number: string, change: "changed" | "deleted") =>
+	change === "changed"
+		? m.orders_invoiced_cant_change({ number })
+		: m.orders_invoiced_cant_delete({ number });
+
+/**
+ * Why an order awaiting acceptance can't be changed: it's accepted or rejected first (see
+ * `./server/acceptance.ts`), then changed like any other.
+ */
+export const acceptFirst = (number: string) => m.orders_accept_first({ number });
 
 /** Who moves an order from one status to another. */
 type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing";
 
 /** A transition: who makes it, from which statuses, and to which. */
-interface TransitionRule {
+export interface TransitionRule {
 	by: OrderActor;
 	from: readonly OrderStatus[];
 	to: readonly OrderStatus[];
+	/** The action its activity entry is logged with. */
+	action?: CoreActivityAction;
+	/** Why it can't move an order in its status. */
+	refusal?: (order: { number: string; status: OrderStatus }) => string;
+	/**
+	 * The completion date: "follows" the status (kept while done, set when it becomes done,
+	 * cleared otherwise; the default), or is left "untouched".
+	 */
+	completedAt?: "follows" | "untouched";
+	/** A move to the status it has: "skip" does nothing (the default); "move" still makes it. */
+	same?: "skip" | "move";
 }
 
 /**
  * Every way an order's status changes, by its verb. The rows are the only place that says which
  * status may follow which, and for whom: the rules below and the server's moves read them.
  */
-const orderTransitions = {
+export const orderTransitions = {
 	/** The office gives it a status by hand (the order form, the list's status, bulk). */
 	set: {
 		by: "office",
@@ -32,6 +57,40 @@ const orderTransitions = {
 			(status) => isEditableOrder(status) && !isAwaitingAcceptance(status),
 		),
 		to: manualOrderStatuses,
+		action: "updated",
+		refusal: ({ number, status }) =>
+			isAwaitingAcceptance(status) ? acceptFirst(number) : notEditable(number, "changed"),
+	},
+	/**
+	 * The planner gives an open order an engineer (or nobody) and a time: a quote that gets an
+	 * engineer is scheduled (`plannedStatus()`), others keep their status.
+	 */
+	plan: {
+		by: "planner",
+		from: openOrderStatuses,
+		to: openOrderStatuses,
+		action: "scheduled",
+		refusal: () => m.orders_only_open_scheduled(),
+		completedAt: "untouched",
+		same: "move",
+	},
+	/** A planner accepts a customer's report: it's then a quote (see `./server/acceptance.ts`). */
+	accept: {
+		by: "acceptance",
+		from: ["awaiting_acceptance"],
+		to: ["quote"],
+		action: "accepted",
+		refusal: ({ number }) => m.orders_not_awaiting_acceptance({ number }),
+		completedAt: "untouched",
+	},
+	/** A planner rejects a customer's report, with a reason the customer reads: it's cancelled. */
+	reject: {
+		by: "acceptance",
+		from: ["awaiting_acceptance"],
+		to: ["cancelled"],
+		action: "rejected",
+		refusal: ({ number }) => m.orders_not_awaiting_acceptance({ number }),
+		completedAt: "untouched",
 	},
 	/** The engineer starts a scheduled job. */
 	start: { by: "engineer", from: ["scheduled"], to: ["in_progress"] },
@@ -43,7 +102,7 @@ const orderTransitions = {
 export type OrderVerb = keyof typeof orderTransitions;
 
 /** Whether `verb` can move an order with `status` (whatever it moves it to). */
-const can = (verb: OrderVerb, status: OrderStatus) =>
+export const can = (verb: OrderVerb, status: OrderStatus) =>
 	(orderTransitions[verb].from as readonly OrderStatus[]).includes(status);
 
 /** The page's Edit button and the order form: whether an order can be changed in its status. */

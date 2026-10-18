@@ -109,6 +109,7 @@ export const manualOrderStatuses = [
 	"completed",
 	"cancelled",
 ] as const satisfies OrderStatus[];
+export type ManualOrderStatus = (typeof manualOrderStatuses)[number];
 
 /**
  * Whether an order can still be changed or deleted. Not once it's invoiced: it's on an invoice

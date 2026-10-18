@@ -17,19 +17,8 @@ import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 
+import { acceptFirst, notEditable } from "../lifecycle.ts";
 import { OrderRefused, saveOrderParts } from "./hooks.ts";
-
-/** Why an order can't be changed or deleted (see `isEditableOrder`). */
-export const notEditable = (number: string, change: "changed" | "deleted") =>
-	change === "changed"
-		? m.orders_invoiced_cant_change({ number })
-		: m.orders_invoiced_cant_delete({ number });
-
-/**
- * Why an order awaiting acceptance can't be changed: it's accepted or rejected first (see
- * `./acceptance.ts`), then changed like any other.
- */
-export const acceptFirst = (number: string) => m.orders_accept_first({ number });
 
 /** When an order with `status` was completed: kept from before, set when it's done, else none. */
 export const completedAt = (
