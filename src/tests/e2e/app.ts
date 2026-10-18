@@ -14,6 +14,7 @@ import {
 } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
+import { clockContext } from "#clock/clock.ts";
 import { isCustomerContact, isFieldEngineer, parseRoles } from "#lib/auth/roles.ts";
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
@@ -135,16 +136,25 @@ export async function homeOf(email: string) {
 const BROWSER_LOCALE = "en-GB";
 
 /**
- * The options of every test browser context: pass them to each new one,
- * `browser.newContext({ ...BROWSER_OPTIONS })`. Besides the language, without the app's service
- * worker (`src/service-worker/index.ts`): the tests check what the server answers, and
- * `page.route()`, which they tamper with and slow down requests with, doesn't see the requests a
- * worker answers. The worker has its own checks (`scripts/sw-check.ts`).
+ * The options of every test browser context (`newContext`). Besides the language, without the
+ * app's service worker (`src/service-worker/index.ts`): the tests check what the server answers,
+ * and `page.route()`, which they tamper with and slow down requests with, doesn't see the requests
+ * a worker answers. The worker has its own checks (`scripts/sw-check.ts`).
  */
-export const BROWSER_OPTIONS = {
+const BROWSER_OPTIONS = {
 	locale: BROWSER_LOCALE,
 	serviceWorkers: "block",
 } as const satisfies BrowserContextOptions;
+
+/**
+ * A new browser context, as every test makes one: with `BROWSER_OPTIONS` and `options`, and its
+ * pages' clock at `TEST_NOW` when the run is (`src/tests/clock/clock.ts`). Close it when done.
+ */
+export async function newContext(browser: Browser, options: BrowserContextOptions = {}) {
+	const context = await browser.newContext({ ...BROWSER_OPTIONS, ...options });
+	await clockContext(context);
+	return context;
+}
 
 /** A phone's screen, e.g. for the engineer portal. */
 export const mobileViewport = { width: 375, height: 812 };
@@ -401,8 +411,7 @@ export function useApp({
 		},
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
-			const context = await browser.newContext({
-				...BROWSER_OPTIONS,
+			const context = await newContext(browser, {
 				serviceWorkers,
 				storageState: await page.context().storageState(),
 			});
@@ -424,12 +433,8 @@ export function useApp({
 	beforeAll(async () => {
 		process.once("disconnect", exitOrphaned);
 		browser = await chromium.launch();
-		page = await browser.newPage({
-			...BROWSER_OPTIONS,
-			serviceWorkers,
-			viewport,
-			timezoneId: timeZone,
-		});
+		const context = await newContext(browser, { serviceWorkers, viewport, timezoneId: timeZone });
+		page = await context.newPage();
 		trackNetwork(page.context());
 		if (timeZone) {
 			await page

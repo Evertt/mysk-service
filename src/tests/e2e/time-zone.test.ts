@@ -8,7 +8,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 
-import { BROWSER_OPTIONS, baseURL, hydrated, organizations, rows, useApp } from "./app.ts";
+import { baseURL, hydrated, newContext, organizations, rows, useApp } from "./app.ts";
 
 /** UTC+14, or UTC−10 on a machine that's in it: a day apart from most of the world's moments. */
 const zone =
@@ -23,7 +23,7 @@ const dayIn = (seconds: number) =>
 test("a browser in another time zone tells the server, and gets the page again in its own", async () => {
 	const browser = await chromium.launch();
 	try {
-		const page = await browser.newPage({ ...BROWSER_OPTIONS, timezoneId: zone });
+		const page = await (await newContext(browser, { timezoneId: zone })).newPage();
 		await page.goto(new URL("/login", baseURL).href);
 		await hydrated(page);
 		// Reloaded once, now rendered in the browser's zone.

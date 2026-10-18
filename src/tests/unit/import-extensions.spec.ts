@@ -8,7 +8,7 @@
  *
  * Oxlint's `import/extensions` only checks that an extension is there, not that it's the file's
  * own, so this reads the specifiers (`from "…"`, `import("…")`, `vi.mock("…")`, …) of relative and
- * `#lib/`, `#modules/`, `#routes/`, `#e2e/` and `#unit/` imports and looks at what is on disk. What points at nothing is
+ * `#lib/`, `#modules/`, `#routes/`, `#clock/`, `#e2e/` and `#unit/` imports and looks at what is on disk. What points at nothing is
  * left to the type check. The `#ui/<name>` imports are a package.json `imports` pattern that adds
  * `/index.ts` itself, and `./$types` is Kit's.
  */
@@ -29,6 +29,7 @@ const aliases: Record<string, string> = {
 	"#lib/": "src/lib/",
 	"#modules/": "src/modules/",
 	"#routes/": "src/routes/",
+	"#clock/": "src/tests/clock/",
 	"#e2e/": "src/tests/e2e/",
 	"#unit/": "src/tests/unit/",
 };

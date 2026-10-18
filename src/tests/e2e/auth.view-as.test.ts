@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoOrganizations } from "#lib/server/db/demo.ts";
 
-import { BROWSER_OPTIONS, baseURL, hydrated, onPhone, quiet, rows, useApp, users } from "./app.ts";
+import { baseURL, hydrated, newContext, onPhone, quiet, rows, useApp, users } from "./app.ts";
 import { startServer } from "./global-setup.ts";
 import { lane } from "./lane.ts";
 
@@ -329,13 +329,9 @@ describe("without DEMO_SIGN_IN", () => {
 		server = await startServer(lane.databaseURL, `${lane.outbox}.no-view-as`, {
 			DEMO_SIGN_IN: "false",
 		});
-		context = await app.page
-			.context()
-			.browser()!
-			.newContext({
-				...BROWSER_OPTIONS,
-				viewport: { width: 1440, height: 1000 },
-			});
+		context = await newContext(app.page.context().browser()!, {
+			viewport: { width: 1440, height: 1000 },
+		});
 	}, 90_000);
 
 	afterAll(async () => {
