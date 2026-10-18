@@ -42,7 +42,7 @@ describe("consumptionBars", () => {
 	const previous = [10, 10, 20, 20];
 
 	test("measures the past buckets, the current one partly, and projects the rest", () => {
-		const bars = consumptionBars([10, 10, 6], previous, { index: 2, fraction: 0.5 });
+		const bars = consumptionBars([10, 10, 6, 0], previous, { index: 2, fraction: 0.5 });
 		expect(bars.map((bar) => bar.state)).toEqual(["measured", "measured", "current", "remaining"]);
 		expect(bars[0]).toEqual({ measured: 10, expected: 10, previous: 10, state: "measured" });
 		// Half the hour in: its own pace, 6 an half hour, 12 the hour.
@@ -53,23 +53,53 @@ describe("consumptionBars", () => {
 	});
 
 	test("projects the current bucket from the previous period until it's a quarter in", () => {
-		const bars = consumptionBars([10, 1], previous, { index: 1, fraction: 0.1 });
+		const bars = consumptionBars([10, 1, 0, 0], previous, { index: 1, fraction: 0.1 });
 		expect(bars[1].state).toBe("current");
 		expect(bars[1].expected).toBeGreaterThan(1);
 		expect(bars[1].expected).toBeLessThanOrEqual(10 * 1.6);
 	});
 
 	test("keeps the trend between 0.6 and 1.6", () => {
-		const high = consumptionBars([100], [10, 10], { index: 0, fraction: 1 });
+		const high = consumptionBars([100, 0], [10, 10], { index: 0, fraction: 1 });
 		expect(high[1].expected).toBeCloseTo(16);
-		const low = consumptionBars([1], [10, 10], { index: 0, fraction: 1 });
+		const low = consumptionBars([1, 0], [10, 10], { index: 0, fraction: 1 });
 		expect(low[1].expected).toBeCloseTo(6);
 	});
 
 	test("is all still to measure before the first reading", () => {
-		const bars = consumptionBars([], previous, { index: -1, fraction: 1 });
+		const bars = consumptionBars([0, 0, 0, 0], previous, { index: -1, fraction: 1 });
 		expect(bars.every((bar) => bar.state === "remaining")).toBe(true);
 		expect(bars.map((bar) => bar.expected)).toEqual(previous);
+	});
+
+	describe("a bar per day of this month, against the same day of last month", () => {
+		const days = (count: number, kwh = 10) => Array.from({ length: count }, () => kwh);
+		// Halfway into the 15th.
+		const midMonth = { index: 14, fraction: 0.5 };
+
+		test("a month of 30 days after one of 31: the 31st of last month isn't compared", () => {
+			const lastMonth = [...days(30), 99];
+			const bars = consumptionBars([...days(15), ...days(15, 0)], lastMonth, midMonth);
+			expect(bars).toHaveLength(30);
+			expect(bars.at(-1)).toMatchObject({ previous: 10, state: "remaining" });
+			expect(bars.some((bar) => bar.previous === 99)).toBe(false);
+		});
+
+		test("February after January: 28 bars", () => {
+			const bars = consumptionBars([...days(10), ...days(18, 0)], days(31), {
+				index: 9,
+				fraction: 0.5,
+			});
+			expect(bars).toHaveLength(28);
+			expect(bars.filter((bar) => bar.state === "current")).toHaveLength(1);
+		});
+
+		test("a month of 31 days after one of 30: its 31st has nothing to compare with", () => {
+			const bars = consumptionBars([...days(15), ...days(16, 0)], days(30), midMonth);
+			expect(bars).toHaveLength(31);
+			expect(bars[29]).toMatchObject({ previous: 10, state: "remaining" });
+			expect(bars[30]).toEqual({ measured: 0, expected: 0, previous: 0, state: "remaining" });
+		});
 	});
 });
 

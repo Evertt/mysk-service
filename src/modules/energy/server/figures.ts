@@ -73,9 +73,11 @@ interface Ranges {
 	/** The period so far: from its start (a local midnight) to now (or its end). */
 	from: Temporal.Instant;
 	to: Temporal.Instant;
-	/** The period before it, whole (its chart), and as far into it as the current one is (its sums). */
+	/**
+	 * The period before it, from its start (its chart: bucket N against this period's bucket N),
+	 * to the same moment in it as now is in this one (its sums).
+	 */
 	previousFrom: Temporal.Instant;
-	previousEnd: Temporal.Instant;
 	previousTo: Temporal.Instant;
 	/** Today's start at the site, for the thresholds, which are per day. */
 	today: Temporal.Instant;
@@ -91,18 +93,22 @@ const startOf = (day: Temporal.PlainDate, timeZone: string) =>
 const earlier = (a: Temporal.Instant, b: Temporal.Instant) =>
 	Temporal.Instant.compare(a, b) <= 0 ? a : b;
 
-/** Today against yesterday, or this month against last month, at `now` in `timeZone`. */
+/**
+ * Today against yesterday, or this month against last month, at `now` in `timeZone`. The previous
+ * period's sums go to the same time of day (yesterday's), or the same day and time of last month,
+ * by the clock on the wall, so a day of 23 or 25 hours between them doesn't shift them an hour;
+ * a day last month hasn't (the 31st after a month of 30 days) compares with the whole of it.
+ */
 export function periodRanges(period: Period, timeZone: string, now: Temporal.Instant): Ranges {
-	const day = now.toZonedDateTimeISO(timeZone).toPlainDate();
+	const local = now.toZonedDateTimeISO(timeZone);
+	const day = local.toPlainDate();
 	const today = startOf(day, timeZone);
 	if (period === "day") {
-		const previousFrom = startOf(day.subtract({ days: 1 }), timeZone);
 		return {
 			from: today,
 			to: now,
-			previousFrom,
-			previousEnd: today,
-			previousTo: earlier(previousFrom.add(now.since(today)), today),
+			previousFrom: startOf(day.subtract({ days: 1 }), timeZone),
+			previousTo: earlier(local.subtract({ days: 1 }).toInstant(), today),
 			today,
 			bucket: "hour",
 			buckets: 24,
@@ -110,13 +116,15 @@ export function periodRanges(period: Period, timeZone: string, now: Temporal.Ins
 	}
 	const first = day.with({ day: 1 });
 	const from = startOf(first, timeZone);
-	const previousFrom = startOf(first.subtract({ months: 1 }), timeZone);
+	const before = first.subtract({ months: 1 });
 	return {
 		from,
 		to: now,
-		previousFrom,
-		previousEnd: from,
-		previousTo: earlier(previousFrom.add(now.since(from)), from),
+		previousFrom: startOf(before, timeZone),
+		previousTo:
+			day.day <= before.daysInMonth
+				? earlier(local.subtract({ months: 1 }).toInstant(), from)
+				: from,
 		today,
 		bucket: "day",
 		buckets: first.daysInMonth,
@@ -139,7 +147,6 @@ export function reportRanges(
 		from,
 		to,
 		previousFrom,
-		previousEnd: from,
 		previousTo: earlier(previousFrom.add(to.since(from)), from),
 		today: startOf(now.toZonedDateTimeISO(timeZone).toPlainDate(), timeZone),
 		bucket: days === 1 ? "hour" : "day",
@@ -227,7 +234,7 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 		.where(and(inTenant(energyZone), eq(energyZone.energySiteId, site.id)))
 		.orderBy(asc(energyZone.position), asc(energyZone.id));
 	const zoneIds = zones.map((zone) => zone.id);
-	const { from, to, previousFrom, previousTo, previousEnd, today } = ranges;
+	const { from, to, previousFrom, previousTo, today } = ranges;
 	const start = energyReading.start;
 	const inZones = and(inTenant(energyReading), inList(energyReading.zoneId, zoneIds));
 
@@ -273,13 +280,6 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 	const previousComplete =
 		first?.start != null && first.start <= seconds(previousFrom.add({ hours: 1 }));
 
-	const previousBuckets =
-		ranges.bucket === "hour"
-			? 24
-			: previousFrom
-					.toZonedDateTimeISO(site.timeZone)
-					.toPlainDate()
-					.until(previousEnd.toZonedDateTimeISO(site.timeZone).toPlainDate()).days;
 	const zoneFigures: ZoneFigures[] = zones.map((zone) => {
 		const sum = sums.find((row) => row.zoneId === zone.id);
 		const last = latest.find((row) => row.zoneId === zone.id);
@@ -294,8 +294,10 @@ export async function siteFigures(site: EnergySite, ranges: Ranges, now: Tempora
 			? thresholdRatio({ kw: liveKw, kwh: kwhToday }, threshold)
 			: { ratio: 0 };
 		const state = threshold && !offline ? thresholdState(ratio, threshold.enabled) : "off";
+		// As many buckets before as now: day N against day N of last month, whose days past this
+		// month's last aren't compared (and are 0 past its own last).
 		const series = Array.from({ length: ranges.buckets }, () => 0);
-		const previousSeries = Array.from({ length: previousBuckets }, () => 0);
+		const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
 		for (const row of hourly) {
 			if (row.zoneId !== zone.id) continue;
 			const at = Temporal.Instant.fromEpochMilliseconds(row.hour * 3600 * 1000);
