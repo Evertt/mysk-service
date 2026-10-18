@@ -226,20 +226,20 @@ const PROJECT_FROM = 0.25;
  * from the previous period's (as the mockup's "Nog te meten"), scaled by how this period compares
  * with it so far (between 0.6 and 1.6, so one odd hour doesn't run away with it). The current
  * bucket's projection is its own pace once it's a quarter in, before that the previous period's.
+ * A bar per bucket of this period (`current`, the period's buckets in full): bucket N against the
+ * previous period's bucket N, and none for the days a previous month has past this one's last.
  */
 export function consumptionBars(
 	current: readonly number[],
 	previous: readonly number[],
 	{ index, fraction }: MeasuredSoFar,
 ): ConsumptionBar[] {
-	const length = Math.max(current.length, previous.length);
 	const at = (values: readonly number[], i: number) => values[i] ?? 0;
 	const soFar = sum(current.slice(0, Math.max(0, index + 1)));
 	const before =
 		sum(previous.slice(0, Math.max(0, index))) + (index >= 0 ? at(previous, index) * fraction : 0);
 	const trend = before > 0 && soFar > 0 ? Math.min(1.6, Math.max(0.6, soFar / before)) : 1;
-	return Array.from({ length }, (_, i) => {
-		const measured = at(current, i);
+	return current.map((measured, i) => {
 		const previousKwh = at(previous, i);
 		if (i < index || (i === index && fraction >= 1)) {
 			return { measured, expected: measured, previous: previousKwh, state: "measured" as const };

@@ -73,6 +73,8 @@ const warmConcurrency = 4;
 /** How many pages, and queries per page, the worker remembers for warming. */
 const maxPages = 100;
 const maxQueriesPerPage = 40;
+/** How many live queries' last answers the worker remembers (see `passLiveStream`). */
+const maxLiveQueries = 100;
 
 /** Changes that outdate only the answers of their own remote file (by its hash). */
 const quietChanges = new Set(["rememberTable"]);
@@ -97,9 +99,11 @@ interface Meta {
 	fileChangedAt: Record<string, number>;
 	/** The query URLs each page (path and search) asked for, most recently seen page last. */
 	pages: Record<string, string[]>;
+	/** The last answer each live query's stream brought (by URL), as a hash: see `passLiveStream`. */
+	live: Record<string, number>;
 }
 
-let meta: Meta = { scope: null, changedAt: 0, fileChangedAt: {}, pages: {} };
+let meta: Meta = { scope: null, changedAt: 0, fileChangedAt: {}, pages: {}, live: {} };
 
 const loaded = (async () => {
 	const response = await (await caches.open(metaCacheName)).match(metaKey);
@@ -147,6 +151,7 @@ async function setScope(scope: string | null) {
 	if (meta.scope === scope) return;
 	meta.scope = scope;
 	if (!scope) meta.pages = {};
+	meta.live = {};
 	await deleteCaches(scope ? cachePrefix + scope : undefined);
 	await saveMeta();
 }
@@ -479,19 +484,23 @@ self.addEventListener("fetch", (event) => {
 });
 
 /**
- * A live query's stream, passed on to the tab as it comes. Its first event is the query's answer;
- * each one after it says the server's data changed, made by someone else (the tab's own changes
- * are requests the worker sees, `noteChange`). So, as each comes in, before the tab gets it, the
- * answers stored until then are outdated: the queries the tab refreshes on it get the server's new
- * answers, not the cache's. SvelteKit's stream is Server-Sent Events: `data:` events, and comments
- * (`: keep-alive`) to hold the connection, which aren't changes.
+ * A live query's stream, passed on to the tab as it comes. Each event is the query's answer, the
+ * first one on opening and another whenever the server's data changed, made by someone else (the
+ * tab's own changes are requests the worker sees, `noteChange`). So, as an answer comes in that
+ * isn't the one the worker last saw of that query, before the tab gets it, the answers stored until
+ * then are outdated: the queries the tab refreshes on it get the server's new answers, not the
+ * cache's. That goes for the first one too: a change made while the query wasn't open (the page
+ * was elsewhere, or asked for its data just before the stream opened) only shows in it, and the
+ * page compares it with what its data was read at (as the schedule's board does). The first answer
+ * of a query the worker hasn't seen open counts as new. SvelteKit's stream is Server-Sent Events:
+ * `data:` events, and comments (`: keep-alive`) to hold the connection, which aren't answers.
  */
 async function passLiveStream(request: Request) {
+	await loaded;
 	const response = await fetch(request);
 	if (!response.ok || !response.body) return response;
 	const decoder = new TextDecoder();
 	let buffer = "";
-	let events = 0;
 	const body = response.body.pipeThrough(
 		new TransformStream<Uint8Array, Uint8Array>({
 			transform(chunk, controller) {
@@ -499,15 +508,26 @@ async function passLiveStream(request: Request) {
 				const complete = buffer.split("\n\n");
 				buffer = complete.pop() ?? "";
 				for (const message of complete) {
-					if (message.split("\n").some((line) => line.startsWith("data:")) && events++ > 0) {
-						noteServerChange();
-					}
+					const data = message.split("\n").filter((line) => line.startsWith("data:"));
+					if (data.length) noteLiveAnswer(request.url, data.join("\n"));
 				}
 				controller.enqueue(chunk);
 			},
 		}),
 	);
 	return new Response(body, response);
+}
+
+/** A live query's answer came in: unless it's the one the worker last saw of it, it's a change. */
+function noteLiveAnswer(url: string, data: string) {
+	const hash = fnv1a(data);
+	if (meta.live[url] === hash) return;
+	// Reinserted, so the least recently changed go first.
+	delete meta.live[url];
+	meta.live[url] = hash;
+	const urls = Object.keys(meta.live);
+	for (const old of urls.slice(0, Math.max(0, urls.length - maxLiveQueries))) delete meta.live[old];
+	noteServerChange();
 }
 
 /** The server's data changed elsewhere: every answer stored until now is outdated. */
