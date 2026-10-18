@@ -12,7 +12,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 
 import { overwriteGetTimeZone } from "#lib/dates.ts";
 import type { OrderStatus } from "#lib/models.ts";
-import { transitionOrder } from "#lib/orders/server/lifecycle.ts";
+import { beginOrderChange, transitionOrder } from "#lib/orders/server/lifecycle.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
@@ -593,5 +593,117 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 		const orders = [await loaded(id)];
 		await db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" }));
 		expect((await stored(id)).status).toBe("completed");
+	});
+});
+
+describe("the order form's change (beginOrderChange)", () => {
+	test("an edited order: its status columns, the modules asked with the form's parts, one entry", async () => {
+		const { id, number } = await orderIn("in_progress");
+		const form = { materials: { lines: [] } };
+		await db.transaction(async (tx) => {
+			const change = await beginOrderChange(tx, id, "completed");
+			expect(change.before).toMatchObject({ id, status: "in_progress" });
+			expect(change.columns.status).toBe("completed");
+			expect(change.columns.completedAt).not.toBeNull();
+			await tx
+				.update(order)
+				.set({ ...change.columns, description: "Scharnier vervangen" })
+				.where(eq(order.id, id));
+			await change.finish(
+				{ id, number },
+				{
+					form,
+					before: { equipmentIds: [10] },
+					after: { ...change.columns, description: "Scharnier vervangen", equipmentIds: [10, 11] },
+				},
+			);
+		});
+		expect(parts).toHaveBeenCalledWith(
+			expect.objectContaining({ order: { id, number }, status: "completed", form }),
+		);
+		expect(logged).toHaveBeenCalledTimes(1);
+		expect(logged).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: "updated",
+				subject: { type: "order", id, label: number },
+				before: expect.objectContaining({ status: "in_progress", equipmentIds: [10] }),
+				after: expect.objectContaining({
+					description: "Scharnier vervangen",
+					equipmentIds: [10, 11],
+				}),
+				ignore: ["completedAt"],
+			}),
+		);
+	});
+
+	test("a new order: nothing to guard, the modules asked, no entry (its creation logs it)", async () => {
+		// The order the form creates (through `createOrders()`, in the same transaction).
+		const created = await orderIn("quote");
+		await db.transaction(async (tx) => {
+			const change = await beginOrderChange(tx, null, "quote");
+			expect(change.before).toBeUndefined();
+			expect(change.columns).toEqual({ status: "quote", completedAt: null });
+			await change.finish(created, { form: {}, after: {} });
+		});
+		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "quote", form: {} }));
+		expect(logged).not.toHaveBeenCalled();
+	});
+
+	test("an order saved with the status it has still saves the modules' parts", async () => {
+		const { id, number } = await orderIn("scheduled");
+		await db.transaction(async (tx) => {
+			const change = await beginOrderChange(tx, id, "scheduled");
+			await change.finish({ id, number }, { form: {}, after: change.columns });
+		});
+		expect(parts).toHaveBeenCalledWith(expect.objectContaining({ status: "scheduled" }));
+	});
+
+	test("refuses an invoiced order, one awaiting acceptance, and another tenant's", async () => {
+		const begin = (id: number) =>
+			refusal(() => db.transaction((tx) => beginOrderChange(tx, id, "completed")));
+		const invoiced = await orderIn("invoiced");
+		expect(await begin(invoiced.id)).toEqual([
+			`${invoiced.number} is invoiced: it's on an invoice that has been sent, so it can't be changed`,
+		]);
+		const awaiting = await orderIn("awaiting_acceptance");
+		expect(await begin(awaiting.id)).toEqual([`Accept or reject order ${awaiting.number} first.`]);
+		const southern = await orderIn("quote", { organizationId: "south" });
+		expect(await begin(southern.id)).toBe(404);
+	});
+
+	test("a module's refusal refuses the form with its problems, each on its field", async () => {
+		const { OrderRefused } = await import("#lib/orders/server/hooks.ts");
+		parts.mockImplementation(async () => {
+			throw new OrderRefused([
+				{
+					message: "Not enough Scharnier in stock.",
+					path: ["modules", "materials", "lines", 0, "quantity"],
+				},
+			] as never);
+		});
+		const { id, number } = await orderIn("quote");
+		let issues: unknown;
+		try {
+			await db.transaction(async (tx) => {
+				const change = await beginOrderChange(tx, id, "scheduled");
+				await change.finish({ id, number }, { form: {}, after: change.columns });
+			});
+		} catch (error) {
+			issues = isValidationError(error) ? error.issues : error;
+		}
+		expect(issues).toMatchObject([
+			{
+				message: "Not enough Scharnier in stock.",
+				path: ["modules", "materials", "lines", 0, "quantity"],
+			},
+		]);
+	});
+
+	test("a done order kept done keeps its completion date", async () => {
+		const done = Temporal.Instant.from("2026-10-01T10:00:00Z");
+		const { id } = await orderIn("completed", { completedAt: done });
+		await db.transaction(async (tx) => {
+			expect((await beginOrderChange(tx, id, "completed")).columns.completedAt).toEqual(done);
+		});
 	});
 });

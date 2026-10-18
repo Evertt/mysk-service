@@ -160,7 +160,7 @@ export interface OrderSaving {
 }
 
 /** The modules' parts of the order form, by module id, as validated by their schemas. */
-type OrderFormParts = FormPartsOutput<"orders.form">;
+export type OrderFormParts = FormPartsOutput<"orders.form">;
 
 /**
  * Why a module can't save its part of an order, as a Standard Schema issue, which the order form

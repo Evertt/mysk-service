@@ -19,6 +19,7 @@ import {
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
 
+import type { OrderFormParts } from "../extensions.ts";
 import { can, orderTransitions, plannedStatus, type TransitionRule } from "../lifecycle.ts";
 import { OrderRefused, saveOrderParts } from "./hooks.ts";
 import { assigneeProblem } from "./order-changes.ts";
@@ -145,6 +146,66 @@ async function target(tx: Transaction, transition: SingleTransition, from: Order
 			throw new Error(`Unknown transition: ${JSON.stringify(unknown)}`);
 		}
 	}
+}
+
+/** The order form's change of an order: the guard first, the form's own writes, then `finish()`. */
+export interface OrderChange {
+	/** The order as loaded; undefined for a new one. */
+	readonly before: typeof order.$inferSelect | undefined;
+	/** The status columns to write with the form's: its status and completion date. */
+	readonly columns: { status: OrderStatus; completedAt: Temporal.Instant | null };
+	/**
+	 * After the form's writes: asks the modules with the form's parts (also when the status stays),
+	 * a refusal becoming the form's issues; then, for an edited order, its one `updated` entry.
+	 */
+	finish(
+		saved: { id: number; number: string },
+		extra: { form: OrderFormParts; before?: object; after: object },
+	): Promise<void>;
+}
+
+/**
+ * Starts the order form's change of one of the tenant's orders (`id`, or `null` for a new one) to
+ * the status `to`, in `tx`: refuses one it can't change (a 404, invoiced, awaiting acceptance).
+ */
+export async function beginOrderChange(
+	tx: Transaction,
+	id: number | null,
+	to: ManualOrderStatus,
+): Promise<OrderChange> {
+	const before =
+		id === null ? undefined : await tx.query.order.findFirst({ where: idInTenant(order, id) });
+	if (id !== null && !before) error(404, m.orders_not_found_plain());
+	if (before && !can("set", before.status)) invalid(orderTransitions.set.refusal(before));
+	const columns = {
+		status: to,
+		completedAt: completion("follows", to, before?.completedAt ?? null, Temporal.Now.instant())!,
+	};
+	return {
+		before,
+		columns,
+		async finish(saved, { form, before: beforeExtra, after }) {
+			await saveOrderParts({ tx, order: saved, status: to, form }).catch(refuseParts);
+			if (!before) return;
+			await recordActivity(tx, {
+				action: "updated",
+				subject: { type: "order", id: saved.id, label: saved.number },
+				before: { ...before, ...beforeExtra },
+				after,
+				// The completion date follows from the status.
+				ignore: ["completedAt"],
+			});
+		},
+	};
+}
+
+/**
+ * Refuses the order form with the problems of a module that couldn't save its part, each on the
+ * field it names (a part's fields are under `modules.<its id>`), or for the whole form.
+ */
+function refuseParts(thrown: unknown): never {
+	if (thrown instanceof OrderRefused) invalid(...thrown.problems);
+	throw thrown;
 }
 
 /**
