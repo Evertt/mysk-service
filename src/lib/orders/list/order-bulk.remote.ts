@@ -1,8 +1,9 @@
 // Bulk actions on the list's selected orders (see `bulk-actions.ts`).
-import { error } from "@sveltejs/kit";
+import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { label } from "#lib/i18n/index.ts";
 import { manualOrderStatuses } from "#lib/models.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -47,16 +48,26 @@ export const bulkAssignOrders = forMembers.command(
 	},
 );
 
-/** Gives the selected orders a status that can be given by hand (`manualOrderStatuses`). */
+/**
+ * Gives the selected orders a status that can be given by hand (`manualOrderStatuses`). An order
+ * that already has it is skipped, with the reason, rather than counted as updated.
+ */
 export const bulkSetOrderStatus = forMembers.command(
 	v.object({ target: ordersTarget, status: v.picklist(manualOrderStatuses) }),
 	async ({ target, status }) => {
 		const result = await bulkChange(target, {
 			table: order,
 			label: order.number,
+			columns: { status: order.status },
 			list: ordersSql,
-			change: (o) =>
-				db.transaction((tx) => transitionOrder(tx, { verb: "set", id: o.id, to: status })),
+			change: async (o) => {
+				// `transitionOrder()` would leave it as it is, but say nothing of it.
+				if (o.status === status) {
+					const named = label("orderStatus", status).toLowerCase();
+					invalid(m.orders_bulk_status_unchanged({ number: o.label, status: named }));
+				}
+				await db.transaction((tx) => transitionOrder(tx, { verb: "set", id: o.id, to: status }));
+			},
 		});
 		await refreshRequested(getOrders, getOrderFacets);
 		return result;

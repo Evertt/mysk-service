@@ -387,4 +387,30 @@ describe("what a field engineer can't do", () => {
 			expect([await snapshot(victim.id), await snapshot(own.id)]).toEqual(before);
 		});
 	});
+
+	test("hours on a job not started yet, by a tampered id, are refused with what's in the way", async () => {
+		const { page } = app;
+		const mine = await me();
+		const [own] = await rows<Order>(
+			`select id, number from "order" where engineer_id = ? and status = 'in_progress' limit 1`,
+			[mine.id],
+		);
+		const [planned] = await rows<Order>(
+			`select id, number from "order" where engineer_id = ? and status = 'scheduled' limit 1`,
+			[mine.id],
+		);
+		expect(planned, "the engineer has a job planned").toBeDefined();
+		const before = [await snapshot(planned.id), await snapshot(own.id)];
+		await app.go(`/my/${own.number}`);
+		await page.getByLabel("Hours").fill("1.5");
+		const save = page.getByRole("button", { name: "Save hours" });
+		await save.evaluate((element, id) => {
+			element
+				.closest("form")!
+				.querySelector<HTMLInputElement>('input[type="hidden"][name^="id"]')!.value = String(id);
+		}, planned.id);
+		await app.submit(save);
+		expect(await app.issues()).toContain("Start the job first");
+		expect([await snapshot(planned.id), await snapshot(own.id)]).toEqual(before);
+	});
 });

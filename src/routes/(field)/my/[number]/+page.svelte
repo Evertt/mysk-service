@@ -33,6 +33,9 @@
 	const actions = $derived(fieldActions(order.status));
 	const me = $derived(await getMe());
 
+	// How often the modules' cards changed what the order may do (`changed()` of `portal.order`).
+	let partsChanged = $state(0);
+
 	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
 	// taken off the engineer is a 404 then, as on a reload).
 	refreshOnChanges(() => getMyOrder(params.number).refresh());
@@ -185,7 +188,7 @@
 	</Card.Content>
 </Card.Root>
 
-<ExtensionSlot point={orderParts} props={{ number: order.number }} />
+<ExtensionSlot point={orderParts} props={{ number: order.number, changed: () => partsChanged++ }} />
 
 <NotesCard orderId={order.id} notes={data.notes} canAdd={actions.note} />
 
@@ -196,7 +199,12 @@
 			<Card.Description>{m.portal_complete_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<CompleteForm orderId={order.id} contactName={customer.contactName} engineerName={me.name} />
+			<CompleteForm
+				orderId={order.id}
+				contactName={customer.contactName}
+				engineerName={me.name}
+				{partsChanged}
+			/>
 		</Card.Content>
 	</Card.Root>
 {:else if data.signoff}

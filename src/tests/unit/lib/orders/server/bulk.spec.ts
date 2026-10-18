@@ -82,6 +82,31 @@ describe("bulk actions on North's orders", () => {
 		expect(await unbalancedStock()).toEqual([]);
 	});
 
+	test("changing the status skips an order that already has it, and says so", async () => {
+		const [quote, scheduled] = await ordersOfOneCustomer("quote", "scheduled");
+		const before = await snapshot(scheduled.id);
+		const logged = await activityOf(scheduled.id);
+		const answer = await as(north.member, () =>
+			call(bulkSetOrderStatus, { target: { ids: [quote.id, scheduled.id] }, status: "scheduled" }),
+		);
+		expect(answer).toMatchObject({
+			status: 200,
+			data: {
+				done: 1,
+				missing: 0,
+				skipped: [
+					{
+						label: scheduled.number,
+						reason: expect.stringContaining(`${scheduled.number} is already scheduled`),
+					},
+				],
+			},
+		});
+		expect(await value(`select status from "order" where id = ?`, [quote.id])).toBe("scheduled");
+		expect(await snapshot(scheduled.id)).toEqual(before);
+		expect(await activityOf(scheduled.id)).toEqual(logged);
+	});
+
 	test("deleting the selected orders deletes and logs each, and puts back their stock", async () => {
 		// Scheduled orders with materials: they hold stock.
 		const picked = await rows<{ id: number; number: string }>(
