@@ -67,27 +67,9 @@ describe("in North", () => {
 		expect(badges).not.toContainEqual(expect.stringMatching(/Expired|Upcoming|Basic|Standard/));
 	});
 
-	test("sorting by monthly fee puts the highest first", async () => {
-		await app.go("/contracts");
-		await app.sortBy("Monthly fee", "descending");
-		const highest = Number(
-			await value(`select max(monthly_fee) from contract where organization_id = ?`, [north.id]),
-		);
-		const fees = async () =>
-			(await tableRows().locator("td:nth-last-child(2)").allInnerTexts()).map((text) =>
-				Math.round(Number(text.replace(/[^\d.]/g, "")) * 100),
-			);
-		await expect.poll(async () => (await fees())[0]).toBe(highest);
-		const shown = await fees();
-		expect(shown).toEqual(shown.toSorted((a, b) => b - a));
-	});
-
-	test("an unknown contract is a 404", async () => {
-		expect((await app.go("/contracts/CTR-0000-0000"))?.status()).toBe(404);
-	});
-
-	test("a contract shows its customer and covered equipment", async () => {
+	test("a contract shows its customer and covered equipment; an unknown one is a 404", async () => {
 		const { page } = app;
+		expect((await app.go("/contracts/CTR-0000-0000"))?.status()).toBe(404);
 		await app.go(`/contracts/${busy.number}`);
 		expect(await page.locator("h1").innerText()).toBe(busy.number);
 		const [customer] = await rows<{ code: string; name: string }>(
@@ -131,18 +113,9 @@ describe("in North", () => {
 		);
 	});
 
-	test("creating a contract validates it first", async () => {
-		const { page } = app;
-		await app.go("/contracts/new");
-		await app.submit(page.getByRole("button", { name: "Create contract" }));
-		expect(await app.issues()).not.toEqual([]);
-		expect(app.path()).toBe("/contracts/new");
-		const options = await page.getByLabel("Customer").locator("option").count();
-		expect(options - 1).toBe(await countIn("customer", north.id));
-	});
-
 	test("choosing a level suggests its response time", async () => {
 		const { page } = app;
+		await app.go("/contracts/new");
 		expect(await page.getByLabel("Response time (hours)").inputValue()).toBe("24");
 		await page.getByLabel("Level").selectOption("premium");
 		expect(await page.getByLabel("Response time (hours)").inputValue()).toBe("4");

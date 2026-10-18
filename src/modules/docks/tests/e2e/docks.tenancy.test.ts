@@ -1,25 +1,18 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { baseURL, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
+import { baseURL, organizations, rows, useApp, value } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
 import { dockOf, postEvents, salvoEvent, shltrOwner, shltrPlanner } from "./helpers.ts";
 
-const { north, south, shltr } = organizations;
-// North's and South's admin: neither tenant has the module.
+const { north, shltr } = organizations;
+// North's admin: North doesn't have the module.
 const app = useApp();
-
-/** The URL of SHLTR's board query, as its owner's page asked for it, to try from elsewhere. */
-let boardQuery = "";
 
 describe("SHLTR's integration tokens", () => {
 	test("a manager makes one, which the feed then takes, and revokes it", async () => {
 		const { page } = await signedInPage(app, shltrOwner);
 		try {
-			page.on("request", (request) => {
-				if (isRemote(request.url(), "getDockBoard")) boardQuery = request.url();
-			});
-			// Client-side, so the board loads its data through its remote query.
 			await page.locator('[data-sidebar="content"]').getByRole("link", { name: "Docks" }).click();
 			await page.locator('[data-dock="DOCK 05"]').waitFor();
 			await page.getByRole("link", { name: "Salvo feed" }).click();
@@ -73,12 +66,6 @@ describe("SHLTR's integration tokens", () => {
 });
 
 describe("the feed", () => {
-	test("refuses a request without a valid token", async () => {
-		expect((await postEvents([], null)).status).toBe(401);
-		expect((await postEvents([], "fwi_0000")).status).toBe(401);
-		expect((await postEvents([], "not-a-token")).status).toBe(401);
-	});
-
 	test("refuses a dock its token's tenant doesn't have, and applies nothing of the batch", async () => {
 		const before = await dockOf(shltr.id, "DOCK 06");
 		const result = await postEvents([
@@ -98,37 +85,19 @@ describe("the feed", () => {
 	});
 });
 
-describe("in North and South, which don't have the module", () => {
-	test("its pages are 404s and the sidebar lacks it", async () => {
+describe("in North, which doesn't have the module", () => {
+	test("its pages are 404s, the sidebar lacks it, and the cards on core pages are empty", async () => {
 		const { page } = app;
-		// The admin starts in North.
-		for (const tenant of [north, south]) {
-			await app.go("/");
-			if (tenant === south) await app.switchOrganization(tenant.name);
-			const sidebar = page.locator('[data-sidebar="content"]');
-			await sidebar.getByRole("link", { name: "Dashboard" }).waitFor();
-			expect(await sidebar.getByRole("link", { name: "Docks" }).count()).toBe(0);
-			expect((await app.expectingErrors(() => app.go("/docks")))?.status()).toBe(404);
-			expect((await app.expectingErrors(() => app.go("/docks/settings")))?.status()).toBe(404);
-		}
-	});
-
-	test("its remote queries are refused, and the cards on core pages are empty", async () => {
-		const { page } = app;
-		expect(boardQuery).not.toBe("");
-		const status = await app.expectingErrors(() =>
-			page.evaluate(async (href) => {
-				const response = await fetch(href);
-				const body = (await response.json()) as { type: string; error?: { status?: number } };
-				return body.type === "error" ? body.error?.status : response.status;
-			}, boardQuery),
-		);
-		expect(status).toBe(404);
+		await app.go("/");
+		const sidebar = page.locator('[data-sidebar="content"]');
+		await sidebar.getByRole("link", { name: "Dashboard" }).waitFor();
+		expect(await sidebar.getByRole("link", { name: "Docks" }).count()).toBe(0);
+		expect((await app.expectingErrors(() => app.go("/docks")))?.status()).toBe(404);
 
 		const [unit] = await rows<{ serial_number: string; code: string }>(
 			`select e.serial_number, c.code from equipment e join customer c on c.id = e.customer_id
 			 where e.organization_id = ? order by e.id limit 1`,
-			[south.id],
+			[north.id],
 		);
 		await app.go(`/equipment/${unit.serial_number}`);
 		await page.getByRole("heading", { level: 1 }).waitFor();

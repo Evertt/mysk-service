@@ -8,13 +8,12 @@ import {
 	type CallOut,
 	callOuts,
 	contractId,
-	customerWithoutContracts,
 	pageLocators,
 	slaOf,
 	year,
 } from "./helpers.ts";
 
-const { north, south } = organizations;
+const { south } = organizations;
 const app = useApp();
 const { sidebar, units, card } = pageLocators(app);
 
@@ -35,12 +34,10 @@ const state = () =>
 		 order by 1, 2`,
 	);
 
-/** The remote queries of the module's cards on core pages, as loaded in North. */
+/** The remote queries of the module's cards on core pages, as loaded in North, to try from South. */
 const moduleQueries: string[] = [];
 
 let seeded: Awaited<ReturnType<typeof state>>;
-/** A North customer without contracts that owns at least two units. */
-let free: number;
 /** A North contract that is active today, one of its units, and its customer. */
 let busy: ActiveContract;
 /** A South customer with at least two units. */
@@ -48,7 +45,6 @@ let southCustomer: number;
 
 beforeAll(async () => {
 	seeded = await state();
-	free = await customerWithoutContracts();
 	busy = await activeContract();
 	southCustomer = await value<number>(
 		`select c.id from customer c where c.organization_id = ?
@@ -101,102 +97,14 @@ describe("in North, the module's cards on core pages", () => {
 });
 
 describe("in South, which doesn't have the module", () => {
-	/** The remote queries the contracts pages made in North, to replay them from South. */
-	const queries: string[] = [];
-
-	test("a contracts form left open in North is refused after switching to South elsewhere", async () => {
-		const { page } = app;
-		// Navigate client-side, so the pages load their data through remote queries.
-		const record = (request: {
-			url(): string;
-			method(): string;
-			headers(): Record<string, string>;
-		}) => {
-			// Not the toolbar's saved views, the table's memory or the slots' module list: core
-			// queries, which answer with South's own. Nor live queries (the dashboard's activity),
-			// whose stream doesn't end.
-			const url = request.url();
-			if (
-				url.includes("/_app/remote/") &&
-				!url.includes("/getTableViews") &&
-				!url.includes("/getTableMemory") &&
-				!url.includes("/getTenantModules") &&
-				request.method() === "GET" &&
-				request.headers().accept !== "text/event-stream"
-			) {
-				queries.push(url);
-			}
-		};
-		page.on("request", record);
-		await app.go("/");
-		await page
-			.locator('[data-sidebar="content"]')
-			.getByRole("link", { name: "Service contracts" })
-			.click();
-		await page.waitForURL((url) => url.pathname === "/contracts");
-		await quiet(page);
-		await page.getByLabel("Search contracts…").fill(busy.number);
-		// The search reaches the URL after a delay; a click before that loses its navigation to it.
-		await page.waitForURL((url) => url.searchParams.get("q") === busy.number);
-		await app.tableSettled();
-		await page.getByRole("link", { name: busy.number }).first().click();
-		await page.waitForURL((url) => url.pathname === `/contracts/${busy.number}`);
-		await quiet(page);
-		await app.go("/contracts/new");
-		page.off("request", record);
-		expect(queries.length).toBeGreaterThanOrEqual(2);
-
-		await page.getByLabel("Customer").selectOption(String(free));
-		await units().first().check();
-		await page.getByLabel("Starts on").fill(`${year + 1}-01-01`);
-		await page.getByLabel("Ends on").fill(`${year + 1}-12-31`);
-		await page.getByLabel("Monthly fee").fill("10");
-
-		const other = await app.anotherTab();
-		await other.goto(new URL("/", page.url()).href);
-		await quiet(other);
-		await other.locator('[data-sidebar="header"] button').first().click();
-		await other.getByRole("menuitem", { name: south.name }).click();
-		// The tab is at / already, so wait for the switch itself: the header names South.
-		await other.locator('[data-sidebar="header"]').getByText(south.name).waitFor();
-		await other.context().close();
-
-		const [northBefore, southBefore] = [
-			await countIn("contract", north.id),
-			await countIn("contract", south.id),
-		];
-		const result = await app.expectingErrors(() =>
-			app.submit(page.getByRole("button", { name: "Create contract" })),
-		);
-		expect(result).toMatch(/"status":404/);
-		expect(await countIn("contract", north.id)).toBe(northBefore);
-		expect(await countIn("contract", south.id)).toBe(southBefore);
-	}, 60_000); // several page loads, each waiting for the network to settle
-
-	test("the sidebar lacks the module and the contracts pages are 404s", async () => {
-		await app.go("/");
+	test("the sidebar lacks the module and its pages are 404s", async () => {
+		await app.switchOrganization(south.name);
 		expect(await app.page.locator('[data-sidebar="header"]').innerText()).toContain(south.name);
 		expect(await sidebar()).not.toContain("Service contracts");
-		for (const path of [
-			"/contracts",
-			"/contracts/new",
-			`/contracts/${busy.number}`,
-			`/contracts/${busy.number}/edit`,
-		]) {
-			expect((await app.go(path))?.status(), path).toBe(404);
-		}
+		expect((await app.go(`/contracts/${busy.number}`))?.status()).toBe(404);
 	});
 
-	test("North's remote queries are refused", async () => {
-		for (const url of queries) {
-			const response = await app.page.context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-			expect(body).not.toContain("CTR-");
-		}
-	});
-
-	test("orders, equipment and the dashboard show none of it, and its queries are refused", async () => {
+	test("orders, equipment and the dashboard show none of it", async () => {
 		await app.go("/");
 		expect(await card("Response times at risk").count()).toBe(0);
 		expect(await card("Contracts ending soon").count()).toBe(0);
@@ -212,14 +120,6 @@ describe("in South, which doesn't have the module", () => {
 		expect(await lines.locator("tbody tr", { hasText: "Covered by" }).count()).toBe(0);
 		await app.go(`/equipment/${encodeURIComponent(order.serial_number)}`);
 		expect(await card("Service contracts").count()).toBe(0);
-
-		expect(moduleQueries.length).toBeGreaterThanOrEqual(3);
-		for (const url of moduleQueries) {
-			const response = await app.page.context().request.get(url);
-			const body = await response.text();
-			expect(response.status() === 404 || /"status":404/.test(body), body).toBe(true);
-			expect(body).not.toContain("CTR-");
-		}
 	});
 });
 

@@ -47,6 +47,12 @@ describe("the list of assets", () => {
 			.getByRole("link", { name: "Work orders" })
 			.click();
 		await page().waitForURL((url) => url.pathname === "/checklists");
+		// The templates are a click away, and lead back.
+		await page().getByRole("link", { name: "Templates" }).click();
+		await page().waitForURL((url) => url.pathname === "/checklists/templates");
+		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
+		await page().locator("main").getByRole("link", { name: "Work orders" }).click();
+		await page().waitForURL((url) => url.pathname === "/checklists");
 		await page().getByRole("heading", { name: "Digital checkpoint work order" }).waitFor();
 		const states = await assetStates(shltr.id);
 		expect(await listCount()).toBe(states.length);
@@ -359,16 +365,6 @@ describe("starting and filling in a unit's inspection", () => {
 });
 
 describe("around the page", () => {
-	test("the templates are a click away, and lead back", async () => {
-		await app.go("/checklists");
-		await page().getByRole("link", { name: "Templates" }).click();
-		await page().waitForURL((url) => url.pathname === "/checklists/templates");
-		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
-		await page().locator("main").getByRole("link", { name: "Work orders" }).click();
-		await page().waitForURL((url) => url.pathname === "/checklists");
-		expect(await page().locator("[data-asset-list]").count()).toBe(1);
-	});
-
 	test("on a phone, the list and the asset stack, without scrolling sideways", async () => {
 		const { serial } = await withComponents();
 		await onPhone(page(), async () => {

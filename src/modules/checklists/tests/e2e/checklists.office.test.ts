@@ -1,13 +1,12 @@
 /**
  * The checklists in SHLTR's office: an order's page shows each unit's checklist (rejected points
  * first), its work order prints them, a unit's page has its inspection status and history, the
- * equipment list a column of the status; and the order form keeps a checklist that has answers.
+ * equipment list a column of the status. What the order form does with an order's checklists
+ * (keeping answered ones, taking unanswered ones along) is `checklists.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, baseURL, hydrated, organizations, rows, useApp, users, value } from "#e2e/app.ts";
-import { addUnits, formUnits, orderUnits } from "#e2e/orders-helpers.ts";
-import { signedInPage } from "#e2e/portal-helpers.ts";
+import { afresh, organizations, rows, useApp, users } from "#e2e/app.ts";
 import { EXPIRING_DAYS } from "#modules/checklists/model.ts";
 
 import { checklistsOfOrder, inspectionStatuses, resultsOf } from "./helpers.ts";
@@ -148,92 +147,5 @@ describe("a unit's inspections", () => {
 				list.some((each) => each.status === status),
 			);
 		expect([worst(all), worst(await statuses())]).toContain(first);
-	});
-});
-
-describe("an order's units in the order form", () => {
-	let order: { id: number; number: string };
-
-	test("a unit whose checklist has answers stays on the order", async () => {
-		[order] = await rows<{ id: number; number: string }>(
-			`select o.id, o.number from "order" o where o.organization_id = ? and o.status = 'scheduled'
-			 and o.type = 'inspection' and (select count(*) from checklist c where c.order_id = o.id) >= 2
-			 and o.engineer_id <> (select e.id from engineer e join user u on u.id = e.user_id
-				where u.email = ?)
-			 order by o.id limit 1`,
-			[shltr.id, users.shltrEngineer],
-		);
-		// Lev gets it, starts on it and answers a point, as he would on site.
-		await app.go(`/orders/${order.number}/edit`);
-		await page().getByLabel("Engineer").selectOption({ label: "Lev Hoekstra" });
-		await page().getByLabel("Status").selectOption("in_progress");
-		await page().getByRole("button", { name: "Save order" }).click();
-		await page().waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		const [answered] = await checklistsOfOrder(order.id);
-		const [firstPoint] = await resultsOf(answered.id);
-		const { page: lev } = await signedInPage(app, users.shltrEngineer);
-		try {
-			await lev.goto(`${baseURL}/my/${order.number}`);
-			await hydrated(lev);
-			await lev
-				.locator(`[data-field-checklist="${answered.serial_number}"]`)
-				.locator(`[data-point="${firstPoint.text}"]`)
-				.getByRole("button", { name: "OK" })
-				.click();
-			await expect.poll(async () => (await resultsOf(answered.id))[0].result).toBe("ok");
-		} finally {
-			await lev.context().close();
-		}
-
-		const units = await orderUnits(order.id);
-		await app.go(`/orders/${order.number}/edit`);
-		await page()
-			.getByRole("list", { name: "Units" })
-			.locator(":scope > li")
-			.nth(units.indexOf(answered.equipment_id))
-			.getByRole("button", { name: /^Remove/ })
-			.click();
-		await app.submit(page().getByRole("button", { name: "Save order" }));
-		expect((await app.issues()).join(" ")).toContain("have answers already");
-		expect(await orderUnits(order.id)).toEqual(units);
-		expect(await checklistsOfOrder(order.id)).toHaveLength(units.length);
-	});
-
-	test("one without answers goes with its checklist; a unit put on gets one", async () => {
-		const checklists = await checklistsOfOrder(order.id);
-		const [, unanswered] = checklists;
-		const [extra] = await rows<{ id: number }>(
-			`select e.id from equipment e join checklist_template_category t on t.category_id = e.category_id
-			 where e.customer_id = (select customer_id from "order" where id = ?)
-			 and e.id not in (select equipment_id from order_unit where order_id = ?) order by e.id limit 1`,
-			[order.id, order.id],
-		);
-		await app.go(`/orders/${order.number}/edit`);
-		const units = await formUnits(app);
-		await page()
-			.getByRole("list", { name: "Units" })
-			.locator(":scope > li")
-			.nth(units.indexOf(unanswered.equipment_id))
-			.getByRole("button", { name: /^Remove/ })
-			.click();
-		await addUnits(app, { id: extra.id });
-		await page().getByRole("button", { name: "Save order" }).click();
-		await page().waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		const after = await checklistsOfOrder(order.id);
-		expect(after.map((checklist) => checklist.equipment_id)).not.toContain(unanswered.equipment_id);
-		expect(after.map((checklist) => checklist.equipment_id)).toContain(extra.id);
-		// The ones it kept are the same records, answers and all.
-		expect(after.find((checklist) => checklist.id === checklists[0].id)).toBeDefined();
-		expect(
-			await value(`select count(*) from checklist_result where checklist_id = ?`, [unanswered.id]),
-		).toBe(0);
-	});
-
-	test("it stays an inspection while a checklist has answers", async () => {
-		await app.go(`/orders/${order.number}/edit`);
-		await page().getByLabel("Type").selectOption("repair");
-		await app.submit(page().getByRole("button", { name: "Save order" }));
-		expect((await app.issues()).join(" ")).toContain("the order stays an inspection");
-		expect(await value(`select type from "order" where id = ?`, [order.id])).toBe("inspection");
 	});
 });

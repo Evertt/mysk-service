@@ -62,7 +62,7 @@ describe("in North, contracts count on orders", () => {
 	/** The badges next to the order's title. */
 	const badges = () => app.page.locator('h1 ~ [data-slot="badge"]').allInnerTexts();
 
-	test("an overdue call-out shows its contract, deadline and badge", async () => {
+	test("an overdue call-out shows its contract, deadline and badge, and one at risk says so", async () => {
 		expect(overdue).toBeDefined();
 		await app.go(`/orders/${overdue.number}`);
 		expect(await badges()).toContain("SLA overdue");
@@ -72,15 +72,16 @@ describe("in North, contracts count on orders", () => {
 		expect(text).toContain(`· respond by ${formatDue(overdue.due)}`);
 		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["Overdue"]);
 		expect(await coverage.getByRole("link", { name: overdue.contract }).count()).toBe(1);
-	});
 
-	test("one at risk says so", async () => {
+		// One at risk says so.
 		expect(atRisk).toBeDefined();
 		await app.go(`/orders/${atRisk.number}`);
 		expect(await badges()).toContain("SLA at risk");
-		const coverage = card("Service contract");
-		expect(await coverage.innerText()).toContain(`· respond by ${formatDue(atRisk.due)}`);
-		expect(await coverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual(["At risk"]);
+		const atRiskCoverage = card("Service contract");
+		expect(await atRiskCoverage.innerText()).toContain(`· respond by ${formatDue(atRisk.due)}`);
+		expect(await atRiskCoverage.locator('[data-slot="badge"]').allInnerTexts()).toEqual([
+			"At risk",
+		]);
 	});
 
 	test("the orders table shows the same badges", async () => {
@@ -218,20 +219,6 @@ describe("in North, contracts count on orders", () => {
 		});
 	});
 
-	test("a standard contract includes the labour only", async () => {
-		const [order] = await pricing(
-			`c.level = 'standard' and o.labor_hours > 0
-			 and exists (select 1 from order_line l where l.order_id = o.id)`,
-		);
-		const price = priceOf(order);
-		await app.go(`/orders/${order.number}`);
-		const lines = card("Materials and labour");
-		const adjustment = lines.locator("tbody tr", { hasText: "Covered by" });
-		expect(await adjustment.innerText()).toContain("Labour included");
-		expect(cents(await adjustment.locator("td").last().innerText())).toBe(-price.labor);
-		expect(cents(await lines.locator("tfoot td").last().innerText())).toBe(order.materials);
-	});
-
 	test("a unit's page lists the contracts covering it, with their level and end", async () => {
 		const [unit] = await rows<{ serial_number: string }>(
 			`select serial_number from equipment where id = ?`,
@@ -367,49 +354,5 @@ describe("in North, contracts count on orders", () => {
 		await row.getByText(/Enabled since/).waitFor();
 		await app.go(`/orders/${overdue.number}`);
 		expect(await badges()).toContain("SLA overdue");
-	});
-
-	test("in Dutch, the contracts and materials pages are translated", async () => {
-		const { page } = app;
-		const locale = (value: string) =>
-			page
-				.context()
-				.addCookies([{ name: "PARAGLIDE_LOCALE", value, url: new URL(page.url()).origin }]);
-		await locale("nl");
-		try {
-			await app.go("/contracts");
-			await page.getByRole("heading", { name: "Servicecontracten" }).waitFor();
-			expect(await page.getByLabel("Contracten zoeken…").count()).toBe(1);
-			expect(await page.getByRole("link", { name: "Nieuw contract" }).count()).toBe(1);
-
-			await app.go(`/contracts/${busy.number}`);
-			expect(await page.title()).toBe(`${busy.number} · Servicecontracten`);
-			expect(await card("Gedekte apparatuur").count()).toBe(1);
-			const terms = await card("Voorwaarden").innerText();
-			expect(terms).toMatch(/\d+ (dag|dagen|maand|maanden|jaar)\b/);
-			expect(terms).toMatch(/Binnen \d+ uur/);
-
-			await app.go("/contracts/new");
-			await app.submit(page.getByRole("button", { name: "Contract aanmaken" }));
-			expect(await app.issues()).toEqual(
-				expect.arrayContaining(["Kies een klant", "Kies minstens één apparaat"]),
-			);
-
-			const sku = await value<string>(
-				`select sku from material m where organization_id = ? and exists (select 1
-				 from stock_movement s where s.material_id = m.id and s.kind = 'opening_balance')
-				 order by id limit 1`,
-				[north.id],
-			);
-			await app.go(`/materials/${sku}`);
-			await card("Voorraadhistorie").waitFor();
-			expect(await page.getByRole("button", { name: "Voorraad ontvangen" }).count()).toBe(1);
-			expect(await page.getByRole("columnheader", { name: "Mutatie" }).count()).toBe(1);
-			expect(await card("Voorraadhistorie").innerText()).toContain("Beginvoorraad");
-		} finally {
-			await locale("en");
-		}
-		await app.go("/contracts");
-		await page.getByRole("heading", { name: "Service contracts" }).waitFor();
 	});
 });

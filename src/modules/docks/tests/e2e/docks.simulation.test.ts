@@ -2,17 +2,18 @@
  * The docks' simulation for the demo (`#lib/server/simulation.ts`, the module's
  * `server/simulation.ts`): SHLTR's board has the simulation bar; a manager plays it, changes its
  * speed and resets it, and its ticks move the docks through the feed; a member sees its state only;
- * a tenant without the simulation has no bar; and no other tenant can drive SHLTR's. The tests
+ * a tenant without the simulation has no bar (that no other tenant can drive SHLTR's is
+ * `remote-functions.spec.ts`'s and `simulation.spec.ts`'s). The tests
  * start with it paused (`global-setup.ts`), and this file leaves it paused, in the mockup's states.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { fixture, isRemote, organizations, rows, users, useApp, value } from "#e2e/app.ts";
+import { fixture, isRemote, organizations, rows, useApp, value } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
 import { shltrOwner, shltrPlanner } from "./helpers.ts";
 
-const { north, south, shltr } = organizations;
+const { shltr } = organizations;
 const app = useApp({ user: shltrOwner });
 
 const bar = () => app.page.locator('[data-simulation="docks"]');
@@ -151,11 +152,7 @@ describe("the simulation bar", () => {
 		]);
 	});
 
-	test("a reset puts the docks back in the mockup's states, without an order", async () => {
-		const ordersBefore = await value<number>(
-			`select count(*) from dock_escalation where organization_id = ?`,
-			[shltr.id],
-		);
+	test("a reset puts the docks back in the mockup's states", async () => {
 		// Paused first, so no tick is under way while the docks are put back.
 		await bar().getByRole("button", { name: "Pause" }).click();
 		await expect.poll(async () => (await simulation()).running).toBe(0);
@@ -168,21 +165,8 @@ describe("the simulation bar", () => {
 		await expect.poll(async () => (await simulation()).running).toBe(0);
 		expect((await simulation()).speed).toBe(1);
 
-		const now = nowSeconds();
-		const near = (seconds: number | null, ago: number) =>
-			expect(Math.abs(now - ago - (seconds ?? 0))).toBeLessThan(30);
-		const dock05 = await stateOf("DOCK 05");
-		expect(dock05.locked).toBe(1);
-		near(dock05.door_open_since, 1420);
-		const dock06 = await stateOf("DOCK 06");
-		expect(dock06).toMatchObject({ locked: 0, door_alert: "amber" });
-		near(dock06.door_open_since, 2680);
-		expect(await stateOf("DOCK 07")).toMatchObject({ locked: 0, door_open_since: null });
-		const dock08 = await stateOf("DOCK 08");
-		expect(dock08).toMatchObject({ scp_online: 0, door_alert: "red" });
-		near(dock08.door_open_since, 5240);
-
-		// The board shows every state, live.
+		// The board shows every state, live. What the reset stores (and that it makes no notice
+		// or order) is `simulation.spec.ts`'s.
 		for (const [code, state] of [
 			["DOCK 05", "loading"],
 			["DOCK 06", "occupied"],
@@ -197,18 +181,6 @@ describe("the simulation bar", () => {
 		expect(await timer("DOCK 08")).toMatch(/^1:2\d:\d\d$/);
 		expect(await card("DOCK 08").locator('[data-dock-drawing][data-lit="red"]').count()).toBe(1);
 		expect(await card("DOCK 07").locator('[data-dock-drawing][data-truck="away"]').count()).toBe(1);
-		expect(
-			await value<number>(`select count(*) from dock_escalation where organization_id = ?`, [
-				shltr.id,
-			]),
-		).toBe(ordersBefore);
-		expect(
-			await value<number>(
-				`select count(*) from activity where organization_id = ? and subject_type = 'simulation'
-				 and action = 'reset'`,
-				[shltr.id],
-			),
-		).toBe(1);
 	});
 });
 
@@ -223,26 +195,6 @@ describe("who may drive it", () => {
 			const before = await simulation();
 			expect(await app.expectingErrors(() => replay(page, "playSimulation"))).toBe(403);
 			expect(await app.expectingErrors(() => replay(page, "resetSimulationState"))).toBe(403);
-			expect(await simulation()).toEqual(before);
-		} finally {
-			await page.context().close();
-		}
-	});
-
-	test("North and South, without the module, can't drive SHLTR's", async () => {
-		const { page } = await signedInPage(app, users.admin);
-		try {
-			const before = await simulation();
-			for (const tenant of [north, south]) {
-				if (tenant === south) {
-					await page.locator('[data-sidebar="header"] button').first().click();
-					await page.getByRole("menuitem", { name: south.name }).click();
-					await page.waitForURL((url) => url.pathname === "/");
-				}
-				for (const name of ["playSimulation", "setSimulationSpeed", "resetSimulationState"]) {
-					expect(await app.expectingErrors(() => replay(page, name))).toBe(404);
-				}
-			}
 			expect(await simulation()).toEqual(before);
 		} finally {
 			await page.context().close();
