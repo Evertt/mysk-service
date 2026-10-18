@@ -199,8 +199,8 @@ export default defineConfig({
 				experimental: { async: true },
 			},
 
-			// A Node server (`node build`), next to its SQLite database file. See "Deploying" in README.md.
-			// `ADAPTER=cloudflare` (`pnpm build:cloudflare`) builds for Cloudflare: see `cloudflare/entry.ts`.
+			// adapter-auto: Vercel's adapter in a Vercel build. `ADAPTER=cloudflare` (`pnpm
+			// build:cloudflare`) builds for Cloudflare: see `cloudflare/entry.ts`. See "Deploying" in README.md.
 			adapter:
 				process.env.ADAPTER === "cloudflare"
 					? cloudflareAdapter({ config: "cloudflare/adapter.wrangler.jsonc" })
