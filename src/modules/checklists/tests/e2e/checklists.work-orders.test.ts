@@ -17,6 +17,9 @@ const app = useApp({ user: users.shltrPlanner });
 const page = () => app.page;
 const { list, panel, checklistCard, listed, listCount, settledAt, searchFor } = assetLocators(app);
 
+/** How many assets the list loads at a time. */
+const PAGE = 40;
+
 /** A unit's checklists, newest first by id. */
 const checklistsOfUnit = (serial: string) =>
 	rows<{ id: number; status: string; kind: string; order_id: number; completed_at: number | null }>(
@@ -78,7 +81,7 @@ describe("the list of assets", () => {
 
 	test("loads more as it scrolls", async () => {
 		const first = (await listed()).length;
-		expect(first).toBe(40);
+		expect(first).toBe(PAGE);
 		await list()
 			.locator("[data-asset-scroll]")
 			.evaluate((element) => {
@@ -113,7 +116,11 @@ describe("the list of assets", () => {
 		await page().waitForURL((url) => url.searchParams.get("year") === "open");
 		const open = states.filter((row) => row.state === "open");
 		await settledAt(open.length);
-		expect((await listed()).toSorted()).toEqual(open.map((row) => row.serial_number).toSorted());
+		// Its first page, all of them open (early in the year, when little is done yet, there are
+		// more than a page of them).
+		const shown = await listed();
+		expect(shown).toHaveLength(Math.min(open.length, PAGE));
+		expect(open.map((row) => row.serial_number)).toEqual(expect.arrayContaining(shown));
 		await list().locator('[data-chip="all"]').click();
 		await settledAt(states.length);
 
