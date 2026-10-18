@@ -1,3 +1,8 @@
+/**
+ * The orders list's page: a link with filters and sorting, its layout, its paging as it scrolls,
+ * its filters' searches, and how it shows that rows are loading. What `getOrders` and
+ * `getOrderFacets` return for a search, filters and sorting is `orders/server/list.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import {
@@ -17,11 +22,6 @@ import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
 const { north } = organizations;
 const app = useApp();
 
-/** What the search finds an order `o` by of its units, any of them (four parameters). */
-const anyUnitLike = `exists (select 1 from order_unit x join equipment u on u.id = x.equipment_id
-	where x.order_id = o.id and (u.manufacturer like ? or u.model like ? or u.serial_number like ?
-	or u.name like ?))`;
-
 describe("in North", () => {
 	test("a link with filters and sorting opens the list that way", async () => {
 		const { page } = app;
@@ -32,28 +32,18 @@ describe("in North", () => {
 			 group by c.id order by count(*) desc, c.code limit 1`,
 			[north.id],
 		);
-		const open = await rows<{ number: string; priority: string; name: string }>(
-			`select o.number, o.priority, c.name from "order" o join customer c on c.id = o.customer_id
+		const open = await rows<{ name: string }>(
+			`select c.name from "order" o join customer c on c.id = o.customer_id
 			 where o.organization_id = ? and c.code = ?
 			 and o.status in ('quote', 'scheduled', 'in_progress')`,
 			[north.id, code],
 		);
 		expect(open.length).toBeGreaterThan(0);
-		const urgency = ["low", "normal", "high", "urgent"];
-		const expected = open
-			.toSorted(
-				(a, b) =>
-					urgency.indexOf(b.priority) - urgency.indexOf(a.priority) ||
-					a.number.localeCompare(b.number),
-			)
-			.map((row) => row.number);
 
+		// What the list sends for it, in which order, is `orders/server/list.spec.ts`'s.
 		const filtered = "status=quote,scheduled,in_progress&sort=-priority,number";
 		await app.go(`/orders?customer=${code}&${filtered}`);
 		expect(await app.rowCount()).toBe(open.length);
-		expect(await page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(
-			expected.slice(0, 50),
-		);
 		const headers = await page.locator("thead").innerText();
 		expect(headers).toMatch(/Priority\s*1/);
 		expect(headers).toMatch(/Order\s*2/);
@@ -128,56 +118,6 @@ describe("in North", () => {
 		expect(await remoteErrorStatus(response)).toBe(400);
 	});
 
-	test("searching, filtering and sorting happen in the database", async () => {
-		const { page } = app;
-		// A word of the name of the customer with the most scheduled or running orders.
-		const [{ word }] = await rows<{ word: string }>(
-			`select substr(c.name, 1, instr(c.name || ' ', ' ') - 1) as word
-			 from "order" o join customer c on c.id = o.customer_id
-			 where o.organization_id = ? and o.status in ('scheduled', 'in_progress')
-			 group by c.id order by count(*) desc, c.id limit 1`,
-			[north.id],
-		);
-		const like = `%${word}%`;
-		const expected = await rows<{ number: string }>(
-			`select o.number from "order" o join customer c on c.id = o.customer_id
-			 left join engineer e on e.id = o.engineer_id
-			 where o.organization_id = ? and o.status in ('scheduled', 'in_progress')
-			 and (o.number like ? or c.name like ? or c.code like ? or ${anyUnitLike} or e.name like ?)
-			 order by case o.priority when 'low' then 0 when 'normal' then 1 when 'high' then 2 else 3 end desc,
-			   o.scheduled_for is null, o.scheduled_for, o.id`,
-			[north.id, like, like, like, like, like, like, like, like],
-		);
-		expect(expected.length).toBeGreaterThan(0);
-
-		await app.go(`/orders?status=scheduled,in_progress&sort=-priority,scheduled`);
-		const search = page.getByLabel("Search orders…");
-		await search.fill(word);
-		await page.waitForURL((url) => url.searchParams.get("q") === word);
-		await app.tableSettled();
-		expect(await app.rowCount()).toBe(expected.length);
-		expect(await shownNumbers(app)).toEqual(expected.slice(0, 50).map((row) => row.number));
-
-		// The status filter counts what the search and the other filters leave.
-		const counts = await rows<{ status: string; n: number }>(
-			`select o.status, count(*) as n from "order" o join customer c on c.id = o.customer_id
-			 left join engineer e on e.id = o.engineer_id
-			 where o.organization_id = ? and (o.number like ? or c.name like ? or c.code like ?
-			   or ${anyUnitLike} or e.name like ?)
-			 group by o.status`,
-			[north.id, like, like, like, like, like, like, like, like],
-		);
-		await app.openFilter("Status");
-		for (const { status, n } of counts) {
-			const label =
-				{ in_progress: "In progress" }[status] ?? status[0].toUpperCase() + status.slice(1);
-			expect(await page.getByRole("option", { name: label }).innerText()).toMatch(
-				new RegExp(`${n}$`),
-			);
-		}
-		await page.keyboard.press("Escape");
-	});
-
 	test("filtering by customer and engineer, finding them by searching the filters", async () => {
 		const { page } = app;
 		// The customer and engineer with the most orders together.
@@ -194,21 +134,9 @@ describe("in North", () => {
 		);
 		await app.go(afresh("/orders"));
 
-		// Searching the customers finds them by name or code, North's only, at most 20.
+		// Found by searching the filter (what the search finds is `orders/server/list.spec.ts`'s).
 		await app.openFilter("Customer");
-		const box = page.getByPlaceholder("Search customers…");
-		const fragment = busy.name.slice(1, 4).toLowerCase();
-		await box.fill(fragment);
-		const like = `%${fragment}%`;
-		const matching = await rows<{ code: string }>(
-			`select code from customer where organization_id = ? and (name like ? or code like ?)
-			 order by name collate nocase, id limit 20`,
-			[north.id, like, like],
-		);
-		await expect
-			.poll(() => page.getByRole("option").allInnerTexts())
-			.toEqual(matching.map((row) => expect.stringContaining(row.code)));
-		await box.fill(busy.code);
+		await page.getByPlaceholder("Search customers…").fill(busy.code);
 		await page.getByRole("option", { name: new RegExp(busy.code) }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("customer") === busy.code);
@@ -237,56 +165,6 @@ describe("in North", () => {
 		);
 		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
 		expect(new Set(engineers)).toEqual(new Set([busy.engineer_name]));
-	});
-
-	test("filtering on the unassigned orders and the new installations, by the filter and the URL", async () => {
-		const { page } = app;
-		const engineerPill = app.filterPill("Engineer");
-		const unassigned = await value<number>(
-			`select count(*) from "order" where organization_id = ? and engineer_id is null`,
-			[north.id],
-		);
-		expect(unassigned).toBeGreaterThan(0);
-		await app.go(afresh("/orders"));
-
-		// The engineer filter offers "Unassigned" first, with how many there are.
-		await app.openFilter("Engineer");
-		const option = page.getByRole("option", { name: /^Unassigned/ });
-		await expect
-			.poll(() => option.innerText())
-			.toMatch(new RegExp(`^Unassigned\\s+${unassigned}$`));
-		expect(await page.getByRole("option").first().innerText()).toMatch(/^Unassigned/);
-		await option.click();
-		await page.keyboard.press("Escape");
-		await page.waitForURL((url) => url.searchParams.get("engineer") === "none");
-		await app.tableSettled();
-		expect(await app.rowCount()).toBe(unassigned);
-		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
-		expect(new Set(engineers)).toEqual(new Set(["Unassigned"]));
-		expect(await engineerPill.innerText()).toContain("Unassigned");
-
-		// From a link, with an engineer: theirs and the unassigned ones.
-		const [busy] = await rows<{ id: number; name: string; n: number }>(
-			`select e.id, e.name, count(*) as n from "order" o join engineer e on e.id = o.engineer_id
-			 where o.organization_id = ? group by e.id order by n desc, e.id limit 1`,
-			[north.id],
-		);
-		await app.go(`/orders?engineer=none,${busy.id}`);
-		expect(await app.rowCount()).toBe(unassigned + busy.n);
-		await expect.poll(() => engineerPill.innerText()).toContain(busy.name);
-		expect(await engineerPill.innerText()).toContain("Unassigned");
-
-		// The equipment filter likewise keeps the orders without a unit: the new installations.
-		const installations = await value<number>(
-			`select count(*) from "order" o where organization_id = ?
-			 and not exists (select 1 from order_unit x where x.order_id = o.id)`,
-			[north.id],
-		);
-		expect(installations).toBeGreaterThan(0);
-		await app.go("/orders?equipment=none");
-		expect(await app.rowCount()).toBe(installations);
-		const units = await page.locator("tbody td:nth-child(4)").allInnerTexts();
-		expect(new Set(units)).toEqual(new Set(["New installation"]));
 	});
 
 	test("while another sorting loads, the rows shown stay, dimmed", async () => {

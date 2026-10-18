@@ -1,12 +1,17 @@
+/**
+ * The range filters of the orders list, from its Filter menu: a date preset that stays relative in
+ * the URL, several values, days of one's own, a preset as an end, and an amount in euros. What
+ * `getOrders` keeps for each range (also from a link, combined, and in South) is
+ * `orders/server/ranges.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import { type DateRange, presetRange } from "#lib/components/data-table/ranges.ts";
-import { formatDate, formatNumber } from "#lib/i18n/format.ts";
+import { formatDate } from "#lib/i18n/format.ts";
 
-import { afresh, isRemote, organizations, rows, useApp, value } from "./app.ts";
-import { remoteErrorStatus, tamperWithQuery } from "./remote-functions.ts";
+import { afresh, organizations, useApp, value } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 /** The moment a day starts, in seconds, in the machine's time zone (the test server's). */
@@ -23,20 +28,14 @@ const bounds = ({ from, to }: DateRange) => [
 const today = () => Temporal.Now.plainDateISO();
 
 /** How many of an organization's orders have `column` (a date) in a range of days. */
-const countIn = (column: string, range: DateRange, organizationId: string = north.id, and = "") =>
+const countIn = (column: string, range: DateRange) =>
 	value<number>(
-		`select count(*) from "order" where organization_id = ? and ${column} >= ? and ${column} < ? ${and}`,
-		[organizationId, ...bounds(range)],
+		`select count(*) from "order" where organization_id = ? and ${column} >= ? and ${column} < ?`,
+		[north.id, ...bounds(range)],
 	);
 
-/** The orders the URL's parameters show, in all. */
-const shownFor = async (search: string) => {
-	await app.go(`/orders?${search}`);
-	return app.rowCount();
-};
-
 describe("range filters on the orders' dates, in North", () => {
-	test("the Filter menu: a preset stays relative in the URL, days of one's own, several values, a preset as an end", async () => {
+	test("the Filter menu: a preset stays relative in the URL, several values, days of one's own, a preset as an end, euros", async () => {
 		const { page } = app;
 		const options = page.locator('[data-slot="command-list"]');
 		const soon = await countIn("scheduled_for", presetRange("next-7-days"));
@@ -138,130 +137,19 @@ describe("range filters on the orders' dates, in North", () => {
 		await page.waitForURL((url) => url.searchParams.get("scheduled") === "today..");
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(fromToday);
-		expect(await app.filterPill("Scheduled").innerText()).toContain("From Today");
-	});
+		expect(await pill.innerText()).toContain("From Today");
+		await pill.getByRole("button", { name: "Remove the Scheduled filter" }).click();
+		await page.waitForURL((url) => !url.searchParams.has("scheduled"));
+		await app.tableSettled();
 
-	test("a link combines ranges with the other filters, with either end open", async () => {
-		const lastMonth = presetRange("last-30-days");
-		expect(await shownFor("created=last-30-days&status=quote")).toBe(
-			await countIn("created_at", lastMonth, north.id, "and status = 'quote'"),
-		);
-		const since = today().subtract({ days: 10 }).toString();
-		expect(await shownFor(`scheduled=${since}..`)).toBe(
-			await countIn("scheduled_for", { from: since, to: null }),
-		);
-		// Unscheduled orders are in no range.
-		expect(await shownFor("scheduled=..2100-01-01")).toBe(
-			await value<number>(
-				`select count(*) from "order" where organization_id = ? and scheduled_for is not null`,
-				[north.id],
-			),
-		);
-		// Presets as ends.
-		const thisWeek = presetRange("this-week");
-		const nextMonth = presetRange("next-month");
-		expect(await shownFor("scheduled=this-week..next-month")).toBe(
-			await countIn("scheduled_for", { from: thisWeek.from, to: nextMonth.to }),
-		);
-		expect(await shownFor("scheduled=..yesterday,none")).toBe(
-			(await countIn("scheduled_for", presetRange("before-today"))) +
-				(await value<number>(
-					`select count(*) from "order" where organization_id = ? and scheduled_for is null`,
-					[north.id],
-				)),
-		);
-	});
-
-	test("totals in euros, as priced with the modules, from the Filter menu and a link", async () => {
-		const { page } = app;
-		const all = await value<number>(`select count(*) from "order" where organization_id = ?`, [
-			north.id,
-		]);
-		/** The totals the table shows on its page, in cents. */
-		const shownTotals = async () =>
-			(await page.locator("tbody td:nth-child(10)").allInnerTexts()).map((text) =>
-				Math.round(Number(text.replace(/[^\d.-]/g, "")) * 100),
-			);
-
-		await app.go(afresh("/orders"));
+		// An amount in euros, on the totals (which orders it keeps is `ranges.spec.ts`'s).
 		await app.openFilter("Total");
 		await page.getByLabel("Minimum", { exact: true }).fill("500");
 		await page.getByRole("button", { name: "Add" }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("total") === "500..");
 		await app.tableSettled();
-		const over = await app.rowCount();
-		expect(over).toBeGreaterThan(0);
+		expect(await app.rowCount()).toBeLessThan(all);
 		expect(await app.filterPill("Total").innerText()).toContain("At least €500.00");
-		for (const total of await shownTotals()) expect(total).toBeGreaterThanOrEqual(50_000);
-
-		// The rest are below, to the cent: together, every order.
-		const under = await shownFor("total=..499.99");
-		expect(under).toBeGreaterThan(0);
-		expect(over + under).toBe(all);
-		for (const total of await shownTotals()) expect(total).toBeLessThanOrEqual(49_999);
-
-		// With the other filters, and several ranges.
-		const completedOver = await shownFor("total=500..&status=completed");
-		const completed = await value<number>(
-			`select count(*) from "order" where organization_id = ? and status = 'completed'`,
-			[north.id],
-		);
-		expect(completedOver + (await shownFor("total=..499.99&status=completed"))).toBe(completed);
-		expect(await shownFor("total=..100,500..")).toBe(over + (await shownFor("total=..100")));
-
-		// "Select all matching" counts what the filter keeps.
-		await app.go("/orders?total=500..");
-		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
-		const bar = page.getByRole("region", { name: "Actions on the selected rows" });
-		const total = formatNumber(over, "en");
-		await bar.getByRole("button", { name: `Select all ${total} matching` }).click();
-		await bar.getByText(`All ${total} matching selected`).waitFor();
-	});
-
-	// One test per request, each loading the page afresh. The schema's other refusals (a token, the
-	// ends the wrong way round, no end, a day that doesn't exist, too many ranges, cents that aren't
-	// whole) are `list-definition.spec.ts`'s.
-	describe("a malformed range in the list's query is refused with a 400", () => {
-		type Query = Record<string, unknown>;
-		test.each<Query>([
-			// The creation date can't be empty.
-			{ createdAt: [null] },
-			// A range of cents isn't a token.
-			{ total: ["500.."] },
-		])("%j", async (filters) => {
-			await app.go(afresh("/orders"));
-			await tamperWithQuery<Query>(app.page, "getOrders", (arg) => ({ ...arg, filters }));
-			const [response] = await app.expectingErrors(() =>
-				Promise.all([
-					app.page.waitForResponse((r) => isRemote(r.url(), "getOrders")),
-					app.page.locator('[data-slot="data-table-more"]').scrollIntoViewIfNeeded(),
-				]),
-			);
-			expect(await remoteErrorStatus(response)).toBe(400);
-		});
-	});
-});
-
-describe("range filters on the orders' dates, in South", () => {
-	test("count South's orders only", async () => {
-		await app.switchOrganization(south.name);
-		const range = presetRange("last-30-days");
-		const expected = await countIn("created_at", range, south.id);
-		expect(expected).toBeGreaterThan(0);
-		expect(await shownFor("created=last-30-days")).toBe(expected);
-		const numbers = await rows<{ number: string }>(
-			`select number from "order" where organization_id = ? and created_at >= ? and created_at < ?
-			 order by created_at desc, id limit 50`,
-			[south.id, ...bounds(range)],
-		);
-		expect(await app.page.locator("tbody td:nth-child(2)").allInnerTexts()).toEqual(
-			numbers.map((row) => row.number),
-		);
-		const southOrders = await value<number>(
-			`select count(*) from "order" where organization_id = ?`,
-			[south.id],
-		);
-		expect((await shownFor("total=500..")) + (await shownFor("total=..499.99"))).toBe(southOrders);
 	});
 });

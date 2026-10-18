@@ -1,14 +1,15 @@
 /**
- * "Changed by someone else": an order's (and a customer's) pages say so when another user changes
- * the record while it's open (`<ChangedElsewhere>`, `watchRecordChanges`), and not for the user's
- * own changes.
+ * "Changed by someone else": an order's pages say so when another user changes it while it's
+ * open (`<ChangedElsewhere>`, `watchRecordChanges`), and not for the user's own changes. That a
+ * customer's save is announced to its pages, and that another tenant's record can't be watched,
+ * is `components/activity/server/activity.spec.ts`'s.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { isRemote, organizations, quiet, rows, userNames, users, useApp, value } from "./app.ts";
+import { organizations, quiet, rows, userNames, users, useApp, value } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 /** Anouk, the admin, has the order open; Pieter, a planner, changes it. */
 const anouk = useApp();
 const pieter = useApp({ user: users.planner });
@@ -100,67 +101,4 @@ describe("an order", () => {
 		expect(await notice(anouk.page).innerText()).toContain(`Deleted by ${userNames.planner}`);
 		expect(await notice(anouk.page).getByRole("button", { name: "Reload" }).count()).toBe(0);
 	});
-});
-
-test("a customer's edit form says when someone else changed it", async () => {
-	const [{ code }] = await rows<{ code: string }>(
-		`select code from customer where organization_id = ? order by id limit 1`,
-		[north.id],
-	);
-	await anouk.go(`/customers/${code}/edit`);
-	await pieter.go(`/customers/${code}/edit`);
-	await pieter.page.getByLabel("Contact person").fill("Femke Jansen");
-	await pieter.page.getByRole("button", { name: "Save customer" }).click();
-	await pieter.page.waitForURL((url) => url.pathname === `/customers/${code}`);
-
-	await notice(anouk.page).waitFor();
-	expect(await notice(anouk.page).innerText()).toContain(`Changed by ${userNames.planner}`);
-});
-
-test("watching another tenant's record is refused", async () => {
-	const { page } = anouk;
-	const [{ number }] = await rows<{ number: string }>(
-		`select number from "order" where organization_id = ? order by id limit 1`,
-		[north.id],
-	);
-	const theirs = await value<number>(
-		`select id from "order" where organization_id = ? order by id limit 1`,
-		[south.id],
-	);
-	// The stream asks for South's order instead; its answer is read on its way back (the browser's
-	// copy of a stream isn't kept for Playwright to read).
-	const answer = new Promise<string>((resolve, reject) => {
-		void page.route(
-			(url) => isRemote(url.href, "watchRecordChanges"),
-			async (route) => {
-				try {
-					const url = new URL(route.request().url());
-					// devalue's flat JSON of `{ type, id }`, e.g. `[["__skrao",1],{"id":2,"type":3},1,"order"]`:
-					// the object's fields are the indexes of their values.
-					const flat = JSON.parse(
-						Buffer.from(url.searchParams.get("payload")!, "base64url").toString(),
-					) as unknown[];
-					const arg = flat.find(
-						(entry): entry is { id: number } =>
-							!!entry && typeof entry === "object" && "id" in entry,
-					)!;
-					flat[arg.id] = theirs;
-					url.searchParams.set("payload", Buffer.from(JSON.stringify(flat)).toString("base64url"));
-					const response = await route.fetch({ url: url.href });
-					resolve(await response.text());
-					await route.fulfill({ response });
-				} catch (error) {
-					reject(error as Error);
-				}
-			},
-			{ times: 1 },
-		);
-	});
-	const body = await anouk.expectingErrors(async () => {
-		await anouk.go(`/orders/${number}/edit`);
-		return answer;
-	});
-	expect(body).toMatch(/"type":"error"/);
-	expect(body).toMatch(/"status":404/);
-	expect(await notice(page).count()).toBe(0);
 });

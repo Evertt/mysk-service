@@ -6,7 +6,6 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
-import { getTimeZone } from "#lib/dates.ts";
 import { bulkSetOrderStatus } from "#lib/orders/list/order-bulk.remote.ts";
 import { getOrders } from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
@@ -22,6 +21,8 @@ import {
 	value,
 } from "#unit/lib/server/harness/index.ts";
 
+import { editForm, orderId, snapshot } from "./order-form.test-support.ts";
+
 const [northId, southId] = [organizationId("north"), organizationId("south")];
 
 /** The first page of the orders list, as South's table asks for it, filtered by `filters`. */
@@ -34,57 +35,6 @@ const ordersQuery = (filters: Record<string, unknown[]> = {}) =>
 		pageIndex: 0,
 		pageSize: ordersList.pageSize,
 	}) as Parameters<typeof getOrders>[0];
-
-/** An order, its units and its lines as stored, to check that a refused request changed nothing. */
-const snapshot = (id: number) =>
-	rows(
-		`select o.*, (select group_concat(material_id || 'x' || quantity || '@' || unit_price)
-		 from order_line where order_id = o.id) as lines,
-		 (select group_concat(equipment_id || '@' || position) from order_unit where order_id = o.id)
-		 as units from "order" o where id = ?`,
-		[id],
-	);
-
-const orderId = (number: string, organization: string) =>
-	value<number>(`select id from "order" where number = ? and organization_id = ?`, [
-		number,
-		organization,
-	]);
-
-/**
- * The edit form of South's order `number` as the browser submits it: its fields as the page
- * fills them (from `getOrder()`), with its material lines, and `changes` over them.
- */
-async function editForm(number: string, changes: Record<string, unknown> = {}) {
-	const { order } = await as(south.owner, () => data(getOrder, number));
-	const scheduled = order.scheduledFor?.toZonedDateTimeISO(getTimeZone());
-	const lines = await rows<{ material_id: number; quantity: number }>(
-		`select material_id, quantity from order_line where order_id = ? order by id`,
-		[order.id],
-	);
-	return {
-		id: String(order.id),
-		customerId: String(order.customerId),
-		equipmentIds: order.units.map((unit) => String(unit.id)),
-		engineerId: order.engineerId ? String(order.engineerId) : "",
-		type: order.type,
-		status: order.status,
-		priority: order.priority,
-		description: order.description,
-		scheduledFor: scheduled ? scheduled.toPlainDate().toString() : "",
-		scheduledTime: scheduled ? scheduled.toPlainTime().toString({ smallestUnit: "minute" }) : "",
-		laborHours: order.laborHours,
-		modules: {
-			materials: {
-				lines: lines.map((line) => ({
-					materialId: String(line.material_id),
-					quantity: line.quantity,
-				})),
-			},
-		},
-		...changes,
-	};
-}
 
 /** A number of North's that South hasn't, and one both have. */
 let northOnly: string;
@@ -238,7 +188,7 @@ describe("South's changes to North's orders", () => {
 		const victim = await orderId(northOnly, northId);
 		const own = await orderId(shared, southId);
 		const [victimBefore, ownBefore] = [await snapshot(victim), await snapshot(own)];
-		const tampered = await editForm(shared, { id: String(victim) });
+		const tampered = await editForm(south.owner, shared, { id: String(victim) });
 		expect(await as(south.owner, () => submit(updateOrder, tampered))).toMatchObject({
 			status: 404,
 		});
@@ -255,7 +205,14 @@ describe("South's changes to North's orders", () => {
 		const materialId = String(
 			await value(`select min(id) from material where organization_id = ?`, [northId]),
 		);
-		const form = await editForm(shared);
+		const northStock = () =>
+			rows(
+				`select m.id, m.stock, (select group_concat(s.id) from stock_movement s
+				 where s.material_id = m.id) as movements from material m where m.id = ?`,
+				[materialId],
+			);
+		const stockBefore = await northStock();
+		const form = await editForm(south.owner, shared);
 		const withNorthMaterial = {
 			materials: { lines: [...form.modules.materials.lines, { materialId, quantity: 1 }] },
 		};
@@ -281,6 +238,8 @@ describe("South's changes to North's orders", () => {
 		expect(northMaterial.status).toBe(400);
 		expect(northMaterial.issues?.map((issue) => issue.message)).toContain("Unknown material");
 		expect(await snapshot(own)).toEqual(before);
+		// North's material kept its stock, and its movements.
+		expect(await northStock()).toEqual(stockBefore);
 	});
 
 	test("deleting with the id of a North order is refused", async () => {
@@ -312,7 +271,7 @@ describe("South's changes to North's orders", () => {
 
 	test("the edit form itself saves, so the refusals above are the tenant's", async () => {
 		const answer = await as(south.owner, async () =>
-			submit(updateOrder, await editForm(shared, { description: "Edited by South" })),
+			submit(updateOrder, await editForm(south.owner, shared, { description: "Edited by South" })),
 		);
 		expect(answer).toMatchObject({ status: 303, location: `/orders/${shared}` });
 		expect(answer.refreshed).toContain("getOrder");

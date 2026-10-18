@@ -90,13 +90,6 @@ export const orderMovements = (number: string, organizationId: string, since = 0
 		[number, organizationId, since],
 	);
 
-/** An order's lines as stored, in order. */
-export const orderLines = (id: number) =>
-	rows<{ material_id: number; quantity: number }>(
-		`select material_id, quantity from order_line where order_id = ? order by id`,
-		[id],
-	);
-
 /**
  * Numbers that North has and South doesn't (North has 750 orders, South 320), and that both have.
  * SHLTR, numbering its own orders the same way, has them too.

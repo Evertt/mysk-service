@@ -1,9 +1,12 @@
+/**
+ * Bulk actions on the orders list: selecting orders, the dialog, the toast and the refreshed rows,
+ * and a single order's row menu. What the bulk commands skip, delete, log and act on is
+ * `orders/server/bulk.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatNumber } from "#lib/i18n/format.ts";
-
-import { organizations, rows, unbalancedStock, useApp, value } from "./app.ts";
-import { orderId, snapshot } from "./orders-helpers.ts";
+import { organizations, rows, useApp, value } from "./app.ts";
+import { snapshot } from "./orders-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -89,105 +92,6 @@ describe("bulk actions on selected orders, in North", () => {
 				.toContain(engineer.name);
 		}
 		expect(await bar().count()).toBe(0);
-	});
-
-	test("changing the status skips an invoiced order, and says why", async () => {
-		const { page } = app;
-		const [{ code }] = await rows<{ code: string }>(
-			`select c.code from customer c where c.organization_id = ?
-			 and exists (select 1 from "order" o where o.customer_id = c.id and o.status = 'invoiced')
-			 and exists (select 1 from "order" o where o.customer_id = c.id and o.status = 'quote')
-			 order by c.id desc limit 1`,
-			[north.id],
-		);
-		const [invoiced] = await ordersOf(code, "invoiced");
-		const [quote] = await ordersOf(code, "quote");
-		const before = await snapshot(invoiced.id);
-
-		await app.go(`/orders?customer=${code}&status=quote,invoiced&sort=number&size=50`);
-		await select(invoiced.number);
-		await select(quote.number);
-		await bar().getByRole("button", { name: "Change status" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.getByText("Applies to 1 of the 2 selected; the others are skipped.").waitFor();
-		await dialog.getByLabel("Status").selectOption({ label: "Cancelled" });
-		await dialog.getByRole("button", { name: "Apply" }).click();
-
-		await app.toast("1 updated, 1 skipped", `${invoiced.number} is invoiced`);
-		expect(await value(`select status from "order" where id = ?`, [quote.id])).toBe("cancelled");
-		expect(await snapshot(invoiced.id)).toEqual(before);
-		expect((await activityOf(quote.id))[0].action).toBe("updated");
-		expect(await unbalancedStock(north.id)).toEqual([]);
-	});
-
-	test("deleting the selected orders asks first, then deletes them and logs it", async () => {
-		const { page } = app;
-		const code = await customerWith(["quote"], 2);
-		const picked = (await ordersOf(code, "quote")).slice(0, 2);
-
-		await app.go(`/orders?customer=${code}&status=quote&sort=number&size=50`);
-		for (const order of picked) await select(order.number);
-		// Assign and status as buttons, the rest (with the modules' actions) in a menu.
-		await bar().getByRole("button", { name: "More actions" }).click();
-		await page.getByRole("menuitem", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await dialog.getByText("Delete 2 orders?").waitFor();
-		// Nothing's deleted until it's confirmed.
-		expect(await orderId(picked[0].number, north.id)).toBe(picked[0].id);
-		await dialog.getByRole("button", { name: "Delete" }).click();
-
-		await app.toast("2 deleted");
-		for (const order of picked) {
-			expect(await orderId(order.number, north.id), order.number).toBeUndefined();
-			expect((await activityOf(order.id))[0].action).toBe("deleted");
-			await expect.poll(() => page.locator("tbody tr", { hasText: order.number }).count()).toBe(0);
-		}
-		expect(await unbalancedStock(north.id)).toEqual([]);
-	});
-
-	test("selecting all the loaded orders acts on exactly the filtered ones", async () => {
-		const { page } = app;
-		// Fewer than a page of rows: all of them load at once.
-		const cancelled = await rows<{ id: number }>(
-			`select id from "order" where organization_id = ? and status = 'cancelled'`,
-			[north.id],
-		);
-		expect(cancelled.length).toBeGreaterThan(20);
-		expect(cancelled.length).toBeLessThanOrEqual(50);
-		const matching = new Set(cancelled.map((o) => o.id));
-		const [engineer] = await rows<{ id: number; name: string }>(
-			`select id, name from engineer where organization_id = ? and active = 1 order by id desc limit 1`,
-			[north.id],
-		);
-		/** Every order of every organization with its engineer. */
-		const engineers = () =>
-			rows<{ id: number; engineer_id: number | null }>(
-				`select id, engineer_id from "order" order by id`,
-			);
-		const before = await engineers();
-
-		await app.go("/orders?status=cancelled&sort=number");
-		await page.getByRole("checkbox", { name: "Select all loaded rows" }).click();
-		const total = formatNumber(cancelled.length);
-		// They're all loaded, so selecting them all is all that match: nothing more to offer.
-		await bar().getByText(`${total} selected`, { exact: true }).waitFor();
-		expect(
-			await bar()
-				.getByRole("button", { name: /^Select all \d+ matching$/ })
-				.count(),
-		).toBe(0);
-		await bar().getByRole("button", { name: "Assign engineer" }).click();
-		const dialog = page.getByRole("alertdialog");
-		const field = dialog.getByLabel("Engineer");
-		await field.locator("option", { hasText: engineer.name }).waitFor({ state: "attached" });
-		await field.selectOption({ label: engineer.name });
-		await dialog.getByRole("button", { name: "Apply" }).click();
-		await app.toast(`${total} updated`);
-
-		// The cancelled orders of North, all of them, and nothing else (not even South's).
-		expect(await engineers()).toEqual(
-			before.map((o) => (matching.has(o.id) ? { ...o, engineer_id: engineer.id } : o)),
-		);
 	});
 });
 

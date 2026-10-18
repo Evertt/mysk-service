@@ -1,3 +1,9 @@
+/**
+ * The orders list's status cell: choosing a status (by mouse, keyboard and on a phone) changes the
+ * order and logs it, an invoiced order's can only filter, and a refusal shows why and puts the
+ * status back. What `setOrderStatus` refuses (an invoiced order, a status not given by hand,
+ * another tenant's order) is `orders/server/changes.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import {
@@ -15,7 +21,7 @@ import {
 import { snapshot } from "./orders-helpers.ts";
 import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 /** An order of an organization's with `status` (the last by number). */
@@ -143,51 +149,5 @@ describe("changing an order's status in the list, in North", () => {
 		await app.toast(`${invoiced.number} is invoiced`);
 		await select(quote.number, "Quote").waitFor();
 		expect([await snapshot(quote.id), await snapshot(invoiced.id)]).toEqual(before);
-	});
-
-	test("a status that can't be given by hand is refused with a 400", async () => {
-		const { page } = app;
-		const quote = await orderWith(north.id, "quote");
-		const before = await snapshot(quote.id);
-		await app.go(`/orders?q=${quote.number}`);
-		await select(quote.number, "Quote").click();
-		await tamperWithCommand<{ status: string }>(page, "setOrderStatus", (arg) => ({
-			...arg,
-			status: "invoiced",
-		}));
-		const [response] = await app.expectingErrors(() =>
-			Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "setOrderStatus")),
-				page.getByRole("option", { name: "Completed" }).click(),
-			]),
-		);
-		expect(await remoteErrorStatus(response)).toBe(400);
-		// SvelteKit's own message for an argument the command's schema refuses.
-		await app.toast("Bad Request");
-		await select(quote.number, "Quote").waitFor();
-		expect(await snapshot(quote.id)).toEqual(before);
-	});
-
-	test("South's order can't be changed by tampering with the id", async () => {
-		const { page } = app;
-		const quote = await orderWith(north.id, "quote");
-		const theirs = await orderWith(south.id, "quote");
-		const before = [await snapshot(quote.id), await snapshot(theirs.id)];
-		await app.go(`/orders?q=${quote.number}`);
-		await select(quote.number, "Quote").click();
-		await tamperWithCommand<{ id: number }>(page, "setOrderStatus", (arg) => ({
-			...arg,
-			id: theirs.id,
-		}));
-		const [response] = await app.expectingErrors(() =>
-			Promise.all([
-				page.waitForResponse((r) => isRemote(r.url(), "setOrderStatus")),
-				page.getByRole("option", { name: "Cancelled" }).click(),
-			]),
-		);
-		expect(await remoteErrorStatus(response)).toBe(404);
-		await app.toast("Order not found");
-		await select(quote.number, "Quote").waitFor();
-		expect([await snapshot(quote.id), await snapshot(theirs.id)]).toEqual(before);
 	});
 });
