@@ -1,11 +1,17 @@
+/**
+ * A customer's locations: the sites card, adding, a location's page and QR code, the equipment
+ * form's location, the label sheets, deleting. What the locations' remote functions refuse
+ * (`locations.spec.ts`) and North's locations and label sheets being a 404 for South
+ * (`units.spec.ts`) are in `src/tests/unit/lib/equipment/server/`.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, value } from "./app.ts";
 import { equipmentPage } from "./equipment-helpers.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
-const { bodyRows, card } = equipmentPage(app);
+const { card } = equipmentPage(app);
 
 interface Location {
 	id: number;
@@ -177,15 +183,11 @@ describe("in North", () => {
 		);
 		expect(JSON.parse(logged.changes)).toEqual({ locationId: [unit.location_id, other.id] });
 
-		// The list filters by it, and finds its units by its name.
+		// The list filters by it (and finds its units by its name: `equipment/server/list.spec.ts`).
 		await app.go(`/equipment?location=${other.id}`);
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(other.units + 1);
 		expect(await app.filterPill("Location").innerText()).toContain(other.name);
-		await app.go(`/equipment?q=${encodeURIComponent(other.name)}&location=${other.id}`);
-		await app.tableSettled();
-		expect(await app.rowCount()).toBe(other.units + 1);
-		expect(await bodyRows().first().innerText()).toContain(other.name);
 	});
 
 	test("a site's label sheet has a QR code for each of its locations and units", async () => {
@@ -252,20 +254,3 @@ describe("in North", () => {
 
 /** Waits for the unit's page to have its specifications. */
 const quietCard = () => app.page.getByText("Specifications", { exact: true }).waitFor();
-
-describe("in South", () => {
-	// North's ids in South's location forms are `locations.spec.ts`'s ("another tenant's sites and
-	// locations are a 404, also by their ids", "a unit's location must be at its own site").
-	test("North's locations and label sheets are a 404", async () => {
-		await app.switchOrganization(south.name);
-		const target = await value<number>(
-			`select min(id) from equipment_location where organization_id = ?`,
-			[north.id],
-		);
-		const site = await value<number>(`select site_id from equipment_location where id = ?`, [
-			target,
-		]);
-		expect((await app.go(`/equipment/locations/${target}`))?.status()).toBe(404);
-		expect((await app.go(`/equipment/labels/${site}`))?.status()).toBe(404);
-	});
-});

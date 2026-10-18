@@ -11,8 +11,6 @@ export const unitId = (serial: string, organizationId: string) =>
 		serial,
 		organizationId,
 	]);
-export const orderCount = (id: number) =>
-	value<number>(`select count(*) from order_unit where equipment_id = ?`, [id]);
 
 /** An organization's unit with the most orders. */
 export async function busiest(organizationId: string) {
@@ -37,14 +35,6 @@ export async function northOnly() {
 	return found;
 }
 
-/** The ids of an organization's customers, sorted. */
-export async function customersIn(organizationId: string) {
-	const found = await rows<{ id: number }>(`select id from customer where organization_id = ?`, [
-		organizationId,
-	]);
-	return found.map((row) => String(row.id)).sort();
-}
-
 /** The pages of the equipment list and of a unit, as `app`'s page shows them. */
 export function equipmentPage(app: App) {
 	const bodyRows = () => app.page.locator('[data-slot="data-table"] tbody tr');
@@ -58,18 +48,6 @@ export function equipmentPage(app: App) {
 				),
 			),
 		);
-
-	/** The values the form's customer select offers, sorted. */
-	const customerOptions = () =>
-		app.page
-			.getByLabel("Customer")
-			.locator("option")
-			.evaluateAll((options: HTMLOptionElement[]) =>
-				options
-					.map((option) => option.value)
-					.filter(Boolean)
-					.sort(),
-			);
 
 	const timeline = () =>
 		app.page.getByRole("list", { name: "Service history" }).locator(":scope > li");
@@ -96,7 +74,6 @@ export function equipmentPage(app: App) {
 	return {
 		bodyRows,
 		shownSerials,
-		customerOptions,
 		timeline,
 		shownTimeline,
 		card,

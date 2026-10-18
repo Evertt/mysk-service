@@ -1,10 +1,14 @@
+/**
+ * The activity log on the pages: a customer's change and a stock delivery on their records'
+ * cards, the feed newest first with links, and its filter. What the log records of each change
+ * (and of a refused or empty one), the feed's filters, one record's feed and South's view are
+ * `components/activity/server/activity.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
-
-import { formatNumber } from "#lib/i18n/format.ts";
 
 import { organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
 
 interface Entry {
@@ -48,31 +52,16 @@ async function entriesIn(list: string) {
 /** The entries on a record's "Activity" card, or in the feed. */
 const logEntries = () => entriesIn("Activity log");
 
-/** A day as a date input has it, `days` from today. */
-const dayFromNow = (days: number) => {
-	const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-};
-
-/** What North changes here, to look for from South. */
-const fromNorth = { customer: 0, order: 0, number: "", material: 0, labels: [] as string[] };
-
 describe("in North", () => {
-	test("editing a customer logs the changed field, and a refused or empty save nothing", async () => {
+	test("editing a customer logs the changed field, on the customer's Activity card", async () => {
 		const { page } = app;
 		const [{ id, city }] = await rows<{ id: number; city: string }>(
 			`select id, city from customer where code = 'CUST-0002' and organization_id = ?`,
 			[north.id],
 		);
-		fromNorth.customer = id;
 		const before = await entriesAbout("customer", id, north.id);
 
 		await app.go("/customers/CUST-0002/edit");
-		await page.getByLabel("City").fill("");
-		await app.submit(page.getByRole("button", { name: "Save customer" }));
-		expect(await app.issues()).toEqual([expect.stringMatching(/city/i)]);
-		expect(await entriesAbout("customer", id, north.id)).toEqual(before);
-
 		await page.getByLabel("City").fill("Activityville");
 		await page.getByRole("button", { name: "Save customer" }).click();
 		await page.waitForURL((url) => url.pathname === "/customers/CUST-0002");
@@ -92,14 +81,6 @@ describe("in North", () => {
 				note: null,
 			},
 		]);
-		fromNorth.labels.push("Activityville");
-
-		// Saved again as it is, nothing changes.
-		await app.go("/customers/CUST-0002/edit");
-		await page.getByRole("button", { name: "Save customer" }).click();
-		await page.waitForURL((url) => url.pathname === "/customers/CUST-0002");
-		await quiet(page);
-		expect(await entriesAbout("customer", id, north.id)).toHaveLength(before.length + 1);
 
 		// The customer's page it's back on shows it on its Activity card.
 		await expect
@@ -109,83 +90,12 @@ describe("in North", () => {
 			);
 	});
 
-	test("changing an order's status logs it, and its lines against it", async () => {
-		const { page } = app;
-		const [order] = await rows<{ id: number; number: string }>(
-			`select id, number from "order" where organization_id = ? and status = 'quote'
-			 and scheduled_for is null and exists (select 1 from order_line where order_id = "order".id)
-			 order by priority = 'low' desc, id desc limit 1`,
-			[north.id],
-		);
-		Object.assign(fromNorth, { order: order.id, number: order.number });
-		fromNorth.labels.push(order.number);
-
-		await app.go(`/orders/${order.number}/edit`);
-		await page.getByLabel("Status").selectOption("scheduled");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		await quiet(page);
-		// Its lines didn't change, so only the order did.
-		expect(await entriesAbout("order", order.id, north.id)).toMatchObject([
-			{
-				action: "updated",
-				subject_type: "order",
-				subject_id: String(order.id),
-				subject_label: order.number,
-				changes: { status: ["quote", "scheduled"] },
-			},
-		]);
-		expect((await logEntries())[0]).toMatch(
-			new RegExp(`^${userNames.admin} updated order ${order.number} status: Quote → Scheduled `),
-		);
-
-		// A line's change is logged against the order, and shows on its card.
-		const [line] = await rows<{ material_id: number; quantity: number; name: string }>(
-			`select l.material_id, l.quantity, m.name from order_line l
-			 join material m on m.id = l.material_id where l.order_id = ? order by l.id limit 1`,
-			[order.id],
-		);
-		await app.go(`/orders/${order.number}/edit`);
-		await page
-			.locator("tbody tr")
-			.first()
-			.getByLabel("Quantity")
-			.fill(String(line.quantity + 1));
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${order.number}`);
-		await quiet(page);
-		expect((await entriesAbout("order", order.id, north.id))[1]).toMatchObject({
-			action: "updated",
-			subject_type: "order_line",
-			subject_id: String(line.material_id),
-			subject_label: line.name,
-			parent_type: "order",
-			parent_id: String(order.id),
-			changes: { quantity: [line.quantity, line.quantity + 1] },
-		});
-		expect((await logEntries())[0]).toContain(
-			`updated order line ${line.name} on order ${order.number} quantity: ` +
-				`${formatNumber(line.quantity)} → ${formatNumber(line.quantity + 1)}`,
-		);
-	});
-
-	test("a change refused for want of stock logs nothing", async () => {
-		const { page } = app;
-		const before = await entriesAbout("order", fromNorth.order, north.id);
-		await app.go(`/orders/${fromNorth.number}/edit`);
-		await page.locator("tbody tr").first().getByLabel("Quantity").fill("100000");
-		await app.submit(page.getByRole("button", { name: "Save order" }));
-		expect(await app.issues()).toEqual([expect.stringMatching(/in stock$/)]);
-		expect(await entriesAbout("order", fromNorth.order, north.id)).toEqual(before);
-	});
-
 	test("receiving stock logs the new stock and the note", async () => {
 		const { page } = app;
 		const [material] = await rows<{ id: number }>(
 			`select id from material where organization_id = ? and sku = 'MAT-0001'`,
 			[north.id],
 		);
-		fromNorth.material = material.id;
 		const before = await entriesAbout("material", material.id, north.id);
 		await app.go("/materials/MAT-0001");
 		await page.getByRole("button", { name: "Receive stock" }).click();
@@ -210,7 +120,6 @@ describe("in North", () => {
 					`^${userNames.admin} received stock of material MAT-0001 stock: .+ → .+ Activity delivery `,
 				),
 			);
-		fromNorth.labels.push("Activity delivery");
 	});
 
 	test("the feed shows the changes newest first, with links to their records", async () => {
@@ -230,7 +139,7 @@ describe("in North", () => {
 		);
 	});
 
-	test("the feed filters by record type, user and date", async () => {
+	test("the feed filters by record type", async () => {
 		const { page } = app;
 		await page.getByLabel("Record type").selectOption("customer");
 		await page.getByRole("button", { name: "Filter" }).click();
@@ -242,61 +151,8 @@ describe("in North", () => {
 				return entries.length > 0 && entries.filter((e) => !/ customer CUST-/.test(e));
 			})
 			.toEqual([]);
-
-		await page.getByLabel("User").selectOption(await adminId());
-		await page.getByRole("button", { name: "Filter" }).click();
-		await page.waitForURL((url) => url.searchParams.has("user"));
-		await expect.poll(async () => (await logEntries()).join("\n")).toContain("→ Activityville");
-
-		await app.go(`/activity?type=customer&from=${dayFromNow(0)}&to=${dayFromNow(0)}`);
 		expect((await logEntries()).join("\n")).toContain("→ Activityville");
-		// Nothing has happened tomorrow yet.
-		await app.go(`/activity?from=${dayFromNow(1)}`);
-		expect(await page.getByText("No activity").count()).toBe(1);
-	});
-
-	test("the feed of one record has it and its parts, newest first", async () => {
-		const { page } = app;
-		await app.go(`/activity?type=order&id=${fromNorth.order}`);
-		const entries = await logEntries();
-		expect(entries).toHaveLength(2);
-		expect(entries[0]).toContain("updated order line");
-		expect(entries[1]).toContain("status: Quote → Scheduled");
-		expect(await page.getByText("Only the order").count()).toBe(1);
 	});
 
 	// The dashboard's recent changes are dashboard.live's.
-});
-
-describe("in South", () => {
-	test("switching organization shows none of North's activity", async () => {
-		await app.switchOrganization(south.name);
-		for (const path of ["/activity", "/"]) {
-			await app.go(path);
-			const text = await app.page.locator("main").innerText();
-			for (const label of fromNorth.labels) expect(text, path).not.toContain(label);
-		}
-	});
-
-	// Logging a deletion, and the deleted record no longer linking, are `records.spec.ts`'s
-	// ("deletes the record and logs it") and `feed.spec.ts`'s ("knows a subject is gone…", "has no
-	// page for a subject that was deleted"); the feed in Dutch is `feed.spec.ts`'s too ("reads in
-	// the language of the request").
-	test("North's records' activity can't be loaded by their ids", async () => {
-		for (const [type, id] of [
-			["customer", fromNorth.customer],
-			["order", fromNorth.order],
-			["material", fromNorth.material],
-		] as const) {
-			const path = `/activity?type=${type}&id=${id}`;
-			await app.go(path);
-			expect(await app.page.getByText("No activity").count(), path).toBe(1);
-		}
-		// South's own customer with the same code doesn't show North's changes to theirs.
-		await app.go("/customers/CUST-0002");
-		const card = app.page.locator('[data-card="activity"]');
-		// Once it has loaded.
-		await card.getByText("No activity").or(card.getByRole("list")).first().waitFor();
-		expect(await card.innerText()).not.toContain("Activityville");
-	});
 });

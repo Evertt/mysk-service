@@ -5,22 +5,9 @@ import { busiest, equipmentPage, unitId } from "./equipment-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
-const { bodyRows, card, shownTimeline } = equipmentPage(app);
+const { card, shownTimeline } = equipmentPage(app);
 
 const serial = "ZZ-TEST-0001";
-
-/** The choices of the form's category select, without its placeholder. */
-const categoryChoices = async () =>
-	(await app.page.getByLabel("Category").locator("option").allInnerTexts()).slice(1);
-
-/** The names of an organization's categories, in its order. */
-const categoryNames = async (organizationId: string) =>
-	(
-		await rows<{ name: string }>(
-			`select name from equipment_category where organization_id = ? order by position, id`,
-			[organizationId],
-		)
-	).map((row) => row.name);
 
 /** The choices of the form's site select, as it shows them. */
 const siteChoices = () =>
@@ -71,31 +58,21 @@ describe("in North", () => {
 		// Without a customer, there's no site to choose.
 		expect(await siteChoices()).toEqual(["Choose the customer first"]);
 
-		// A serial number North already has, in lower case, and a warranty ending before installation.
+		// A serial number North already has, which the server refuses on its field (what else it
+		// checks is `equipment/server/units.spec.ts`'s).
 		const { serial: busy } = await busiest(north.id);
 		await page.getByLabel("Serial number").fill(busy.toLowerCase());
 		await page.getByLabel("Manufacturer").fill("Testco");
 		await page.getByLabel("Model").fill("TX-1");
-		// North's own categories, in its order.
-		expect(await categoryChoices()).toEqual(await categoryNames(north.id));
 		await page.getByLabel("Category").selectOption({ label: "Koelmachine" });
 		await page.getByLabel("Customer").selectOption(String(multiSite.id));
 		// The customer's sites to choose from, theirs only.
 		expect((await siteChoices()).slice(1)).toEqual(multiSite.sites);
 		await page.getByLabel("Site", { exact: true }).selectOption({ label: multiSite.sites[1] });
 		await page.getByLabel("Installed on").fill("2026-01-10");
-		await page.getByLabel("Warranty until").fill("2025-01-10");
-		await app.submit(page.getByRole("button", { name: "Register equipment" }));
-		const issues = await app.issues();
-		expect(issues).toContainEqual(expect.stringContaining("already has this serial"));
-		expect(issues).toContainEqual(expect.stringContaining("can't end before"));
-
-		await page.getByLabel("Serial number").fill("zz test!");
 		await page.getByLabel("Warranty until").fill("2029-01-10");
 		await app.submit(page.getByRole("button", { name: "Register equipment" }));
-		expect(await app.issues()).toContainEqual(
-			expect.stringContaining("letters, digits and dashes"),
-		);
+		expect(await app.issues()).toEqual([expect.stringContaining("already has this serial")]);
 		expect(app.path()).toBe("/equipment/new");
 		expect(await countIn("equipment", north.id)).toBe(before);
 	});
@@ -171,22 +148,6 @@ describe("in North", () => {
 			name: "Automatische deur kantine BES-3",
 			location: "Expeditie dock 07",
 		});
-	});
-
-	test("the list shows its name, site and location, and finds it by them", async () => {
-		const { page } = app;
-		await app.go(`/equipment?q=${encodeURIComponent("kantine BES-3")}`);
-		await expect.poll(() => bodyRows().count()).toBe(1);
-		const row = await bodyRows().first().innerText();
-		expect(row).toContain("Automatische deur kantine BES-3");
-		expect(row).toContain(`Testco TX-2 · ${serial}`);
-		expect(row).toContain(oneSite.site);
-		expect(row).toContain("Expeditie dock 07");
-		await page.getByLabel("Search equipment…").fill("Expeditie dock 07");
-		await expect
-			.poll(() => bodyRows().allInnerTexts())
-			.toContainEqual(expect.stringContaining(serial));
-		await app.go(`/equipment/${serial}`);
 	});
 
 	// The bulk actions are equipment.list's ("selecting all the loaded units…"); skipping a unit

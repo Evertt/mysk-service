@@ -1,14 +1,20 @@
+/**
+ * A unit's page: its service history newest first, with each order's engineer, materials and
+ * cost, and the summary's numbers; an unknown serial number is a 404. What the server refuses of
+ * a unit with orders (deleting, moving it), what its history costs and how a completed order
+ * shows in it are `equipment/server/units.spec.ts`'s and `history.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatCents, formatDate } from "#lib/i18n/format.ts";
 
 import { cents, organizations, rows, useApp, value } from "./app.ts";
 import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
-import { busiest, customersIn, equipmentPage, unit, unitId } from "./equipment-helpers.ts";
+import { busiest, equipmentPage } from "./equipment-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
-const { card, customerOptions, shownTimeline, timeline } = equipmentPage(app);
+const { card, shownTimeline, timeline } = equipmentPage(app);
 
 /** That the order `o` is about the unit `?`, one of its units or its only one. */
 const onUnit = `exists (select 1 from order_unit x where x.order_id = o.id and x.equipment_id = ?)`;
@@ -145,8 +151,9 @@ describe("in North", () => {
 		expect(repairs).toContain(expected.sinceRepair!);
 		expect(repairs).toContain(`Mean time between repairs: ${expected.betweenRepairs} day`);
 
-		// Every order costs what it does on its own page: less what a contract includes, which shows.
-		// On the busiest unit with an order that a contract includes something of.
+		// What a contract includes shows on the order, less (what each order costs, as on its own
+		// page, is `equipment/server/history.spec.ts`'s). On the busiest unit with an order that a
+		// contract includes something of.
 		const [covering] = await rows<{ id: number; serial: string }>(
 			`with ${covered} select e.id, e.serial_number as serial from equipment e
 			 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
@@ -157,85 +164,14 @@ describe("in North", () => {
 			[north.id],
 		);
 		if (covering.id !== busy.id) await app.go(`/equipment/${covering.serial}`);
-		const priced = await pricedOrders(north.id, onUnit, [covering.id]);
-		expect(priced.some((order) => priceOf(order).included > 0)).toBe(true);
-		for (const order of priced) {
-			const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
-			const { total, included } = priceOf(order);
-			expect(cents(await entry.locator('[data-cost="total"]').innerText())).toBe(total);
-			const adjustments = entry.locator('[data-cost="adjustment"]');
-			if (included) {
-				expect(cents(await adjustments.innerText())).toBe(-included);
-				expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
-			} else expect(await adjustments.count()).toBe(0);
-		}
-	});
-
-	test("deleting a unit with orders is refused", async () => {
-		const { page } = app;
-		const busy = await busiest(north.id);
-		await app.go(`/equipment/${busy.serial}`);
-		await page.getByRole("button", { name: "Delete" }).click();
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		expect(await dialog.locator('[data-slot="field-error"]').innerText()).toContain(
-			`${busy.orders} orders refer to it`,
+		const [order] = (await pricedOrders(north.id, onUnit, [covering.id])).filter(
+			(each) => priceOf(each).included > 0,
 		);
-		expect(app.path()).toBe(`/equipment/${busy.serial}`);
-		expect(await unitId(busy.serial, north.id)).toBe(busy.id);
-		await page.keyboard.press("Escape");
-	});
-
-	test("moving a unit with orders to another customer is refused", async () => {
-		const { page } = app;
-		const busy = await busiest(north.id);
-		const [before] = await unit(busy.id);
-		await app.go(`/equipment/${busy.serial}/edit`);
-		const inNorth = await customersIn(north.id);
-		await expect.poll(customerOptions).toEqual(inNorth);
-
-		await page
-			.getByLabel("Customer")
-			.selectOption(inNorth.find((id) => id !== String(before.customer_id))!);
-		await page.getByLabel("Site", { exact: true }).selectOption({ index: 1 });
-		await app.submit(page.getByRole("button", { name: "Save equipment" }));
-		expect(await app.issues()).toContainEqual(expect.stringContaining("Can't move this unit"));
-		expect(app.path()).toBe(`/equipment/${busy.serial}/edit`);
-		expect(await unit(busy.id)).toEqual([before]);
-	});
-
-	test("completing an order shows in the unit's history and summary", async () => {
-		const { page } = app;
-		const [open] = await rows<{ number: string; serial: string; unit: number }>(
-			`select o.number, e.serial_number as serial, e.id as unit from "order" o
-			 join order_unit ou on ou.order_id = o.id join equipment e on e.id = ou.equipment_id
-			 where o.organization_id = ?
-			 and o.type = 'breakdown' and o.status in ('scheduled', 'in_progress') order by o.id limit 1`,
-			[north.id],
+		const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
+		expect(cents(await entry.locator('[data-cost="adjustment"]').innerText())).toBe(
+			-priceOf(order).included,
 		);
-		const item = () => timeline().filter({ has: page.getByRole("link", { name: open.number }) });
-		await app.go(`/equipment/${open.serial}`);
-		expect(await item().locator('[data-slot="badge"]').innerText()).not.toContain("Completed");
-
-		await app.go(`/orders/${open.number}/edit`);
-		await page.getByLabel("Status").selectOption("completed");
-		await page.getByRole("button", { name: "Save order" }).click();
-		await page.waitForURL((url) => url.pathname === `/orders/${open.number}`);
-		expect(
-			await value(`select status from "order" where number = ? and organization_id = ?`, [
-				open.number,
-				north.id,
-			]),
-		).toBe("completed");
-
-		await app.go(`/equipment/${open.serial}`);
-		expect(await shownTimeline()).toEqual(await expectedTimeline(open.unit));
-		const today = formatDate(new Date());
-		expect(await item().locator('[data-slot="badge"]').innerText()).toContain("Completed");
-		expect(await item().locator("time").innerText()).toBe(today);
-		expect(await card("Last service")).toContain(today);
-		expect(await card("Since last repair")).toContain("0 days");
-		expect(await card("Service cost")).toContain((await expectedStats(open.unit)).cost);
+		expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
 	});
 
 	test("an unknown serial number is a 404", async () => {

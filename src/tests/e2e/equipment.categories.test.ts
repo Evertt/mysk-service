@@ -132,19 +132,6 @@ describe("an owner, in North", () => {
 		]);
 	});
 
-	test("the equipment form and the list's filter offer North's categories in their order", async () => {
-		const names = (await categoriesOf(north.id)).map((category) => category.name);
-		await app.go("/equipment/new");
-		const options = await page().getByLabel("Category").locator("option").allInnerTexts();
-		expect(options.slice(1)).toEqual(names);
-
-		await app.go("/equipment");
-		await app.openFilter("Category");
-		const offered = await page().getByRole("option").allInnerTexts();
-		expect(offered.map((text) => text.trim().replace(/\s*\d+$/, ""))).toEqual(names);
-		await page().keyboard.press("Escape");
-	});
-
 	test("deletes one that no equipment has", async () => {
 		await app.go("/settings/equipment-categories");
 		const [unused] = (await categoriesOf(north.id)).filter((c) => c.name === "Sectionaaldeur");

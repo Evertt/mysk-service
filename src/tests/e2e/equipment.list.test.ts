@@ -1,3 +1,10 @@
+/**
+ * The equipment list's page: its rows and layout, the band and its category chips, a range from
+ * the Filter menu, paging as it scrolls, the customer filter's search, grouping across pages, and
+ * a bulk action on all the loaded units. What `getEquipmentList` and `getEquipmentFacets` return
+ * (counts, ranges, sorting, search, another tenant's rows) is `equipment/server/list.spec.ts`'s and
+ * `lists/plan.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
@@ -38,12 +45,6 @@ async function filter(title: string, option: string) {
 	await page.getByRole("option", { name: new RegExp(`^${option}\\s*\\d+$`) }).click();
 	await page.keyboard.press("Escape");
 }
-
-const count = (where: string, args: (string | number)[] = []) =>
-	value<number>(`select count(*) from equipment where organization_id = ? and ${where}`, [
-		north.id,
-		...args,
-	]);
 
 describe("in North", () => {
 	// That it's exactly North's units is the list's SQL (`plan.spec.ts`, "never returns another
@@ -134,16 +135,30 @@ describe("in North", () => {
 		await expect.poll(() => app.rowCount()).toBe(first.units);
 		await chips.locator('[data-chip="all"]').click();
 		await expect.poll(() => app.rowCount()).toBe(total);
+		// The other filters narrow the chips' counts (`getEquipmentFacets`, in
+		// `equipment/server/list.spec.ts`).
+	});
 
-		// The other filters narrow the chips' counts.
-		await filter("Status", "Operational");
-		await expect.poll(() => app.rowCount()).toBe(await count(`status = 'operational'`));
-		const operational = await count(`status = 'operational' and category_id = ?`, [first.id]);
-		await expect
-			.poll(async () => chipText(await chips.locator(`[data-chip="${first.id}"]`).innerText()))
-			.toBe(`${first.name} ${formatNumber(operational)}`);
-		await page.getByRole("button", { name: "Reset" }).click();
-		await expect.poll(() => app.rowCount()).toBe(total);
+	// The other ranges, from links and combined with the other filters, and the open orders are
+	// `equipment/server/list.spec.ts`'s.
+	test("out of warranty, from the Filter menu: a preset that stays relative", async () => {
+		const { page } = app;
+		const expected = await value<number>(
+			`select count(*) from equipment where organization_id = ? and warranty_until < ?`,
+			[north.id, Temporal.Now.plainDateISO().toString()],
+		);
+		expect(expected).toBeGreaterThan(0);
+		await app.go(afresh("/equipment"));
+		await app.openFilter("Warranty");
+		await page
+			.locator('[data-slot="command-list"]')
+			.getByRole("option", { name: /^Before today/ })
+			.click();
+		await page.keyboard.press("Escape");
+		await page.waitForURL((url) => url.searchParams.get("warranty") === "before-today");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(expected);
+		expect(await app.filterPill("Warranty").innerText()).toContain("Before today");
 	});
 
 	test("the band and its chips fit a phone's screen", async () => {
@@ -152,24 +167,6 @@ describe("in North", () => {
 			await app.page.locator("[data-toolbar-band] [data-filter-chips]").waitFor();
 			expect(await fitsWidth(app.page)).toBe(true);
 		});
-	});
-
-	// Sorting a column in the database is `plan.spec.ts`'s ("sorting"); the open orders are counted
-	// in the list's own SQL.
-	test("sorting by open orders puts the busiest first", async () => {
-		const busiest = await rows<{ serial: string }>(
-			`with open as (
-				select e.serial_number as serial, count(*) as n from equipment e
-				join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
-				where e.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')
-				group by e.id
-			)
-			select serial from open where n = (select max(n) from open)`,
-			[north.id],
-		);
-		await app.sortBy("Open orders", "descending");
-		const [top] = await shownSerials();
-		expect(busiest.map((row) => row.serial)).toContain(top);
 	});
 
 	test("the server sends a page at a time, as the table scrolls", async () => {
