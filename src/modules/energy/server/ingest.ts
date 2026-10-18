@@ -76,7 +76,8 @@ export async function ingestSites() {
 	}));
 }
 
-const seconds = (instant: Temporal.Instant) => instant.epochMilliseconds / 1000;
+/** A moment as the database keeps it: whole seconds (`moment` in `#lib/server/db/columns.ts`). */
+const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
 
 /** Stores `batch` in the current tenant (see above). */
 export async function storeBatch(

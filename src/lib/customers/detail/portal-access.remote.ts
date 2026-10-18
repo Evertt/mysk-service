@@ -131,8 +131,8 @@ const customerParent = (found: { id: number; code: string }) => ({
 
 /**
  * Invites a contact of the customer to its portal by email, for all of its sites or only
- * `siteIds` (none ticked is all). Refuses an address that's a member already, has access already
- * or is invited already.
+ * `siteIds` (none ticked is all). Refuses an address that's a member already (a contact with access
+ * is one) or is invited already; a contact whose invitation expired is invited again.
  */
 export const invitePortalContact = forManagers.form(
 	v.object({
@@ -159,11 +159,6 @@ export const invitePortalContact = forManagers.form(
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), eq(user.email, email)));
 		if (existing) invalid(issue.email(m.customers_portal_already_member({ email })));
-		const [contact] = await db
-			.select({ id: portalContact.id })
-			.from(portalContact)
-			.where(and(inTenant(portalContact), eq(portalContact.email, email)));
-		if (contact) invalid(issue.email(m.customers_portal_already_invited({ email })));
 		const pending = await db.query.invitation.findMany({
 			columns: { status: true, expiresAt: true },
 			where: and(inTenant(invitation), eq(invitation.email, email)),
@@ -177,6 +172,10 @@ export const invitePortalContact = forManagers.form(
 			auth.api.createInvitation({ body: { email, role: "customer", organizationId }, headers }),
 		);
 		await db.transaction(async (tx) => {
+			// A contact of this address whose invitation expired (or was cancelled) is invited anew.
+			await tx
+				.delete(portalContact)
+				.where(and(inTenant(portalContact), eq(portalContact.email, email)));
 			const [created] = await tx
 				.insert(portalContact)
 				.values({

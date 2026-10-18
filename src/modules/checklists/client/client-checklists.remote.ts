@@ -9,6 +9,7 @@ import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { firstName } from "#lib/engineers/index.ts";
 import {
 	atSites,
 	currentCustomer,
@@ -26,6 +27,18 @@ import { unitInspection } from "../server/unit-inspection.ts";
 import { loadWorkOrder } from "../server/work-order.ts";
 
 /**
+ * Checklists as a customer sees who completed them: the engineer by their first name only, and of
+ * the office only that it was the office, not who.
+ */
+function forCustomer<T extends { engineer: string | null; office: string | null }>(records: T[]) {
+	return records.map(({ engineer, office, ...record }) => ({
+		...record,
+		engineer: engineer ? firstName(engineer) : null,
+		office: office !== null,
+	}));
+}
+
+/**
  * The checklists of the customer's order `number` (or a 404), of its units at the contact's sites,
  * with their points' results, and whether its work order can be printed: once it's done.
  */
@@ -39,7 +52,7 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
 	const checklists = await withPointArticles(
 		await checklistRecords(and(eq(checklist.orderId, found.id), atSites(access, equipment.siteId))),
 	);
-	return { status: found.status, checklists };
+	return { status: found.status, checklists: forCustomer(checklists) };
 });
 
 /**
@@ -70,5 +83,6 @@ export const getClientUnitInspection = forCustomers.query(v.string(), async (ser
 			),
 		);
 	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
-	return unitInspection(unit.id);
+	const inspection = await unitInspection(unit.id);
+	return { ...inspection, checklists: forCustomer(inspection.checklists) };
 });

@@ -144,6 +144,16 @@ describe("runSimulations", () => {
 		]);
 	});
 
+	test("ticks up to a whole second, so the next tick starts where it ended", async () => {
+		await simulations([["north", "a", true, 1, 0]]);
+		await runSimulations(time(1).add({ milliseconds: 700 }));
+		await runSimulations(time(2).add({ milliseconds: 300 }));
+		expect(ticks.map(({ tick }) => [tick.from, tick.to])).toEqual([
+			[time(0), time(1)],
+			[time(1), time(2)],
+		]);
+	});
+
 	test("overlapping runs share the interval out, without ticking any of it twice", async () => {
 		await simulations([["north", "a", true, 1, 0]]);
 		await Promise.all([runSimulations(time(2)), runSimulations(time(2))]);

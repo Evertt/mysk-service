@@ -143,12 +143,15 @@ export async function setOrderUnits(
 	if (removed.length) {
 		await tx.delete(orderUnit).where(and(ofOrder, inList(orderUnit.equipmentId, removed)));
 	}
-	for (const [position, equipmentId] of wanted.entries()) {
-		if (!had.has(equipmentId)) continue;
+	// The ones it keeps, still below zero, to their places in one statement: each unit's index in
+	// `wanted`, bound as one JSON parameter.
+	if (wanted.some((equipmentId) => had.has(equipmentId))) {
 		await tx
 			.update(orderUnit)
-			.set({ position })
-			.where(and(ofOrder, eq(orderUnit.equipmentId, equipmentId)));
+			.set({
+				position: sql`(select key from json_each(${JSON.stringify(wanted)}) where value = ${orderUnit.equipmentId})`,
+			})
+			.where(and(ofOrder, sql`${orderUnit.position} < 0`));
 	}
 }
 

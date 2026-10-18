@@ -3,9 +3,10 @@
  * `simulation` row for a module has that module make its data up while the row runs.
  *
  * `runSimulations(now)` ticks every running simulation over the real time since its last tick,
- * `(last_tick_at, now]`, at most `tickCap` of it (after a pause in the ticks or an outage, it moves
- * on from `now - tickCap`): it claims the interval in a transaction (sets `last_tick_at` to `now`)
- * before the module ticks, so overlapping callers never tick an interval twice. It's called from:
+ * `(last_tick_at, now]` up to `now`'s whole second, at most `tickCap` of it (after a pause in the
+ * ticks or an outage, it moves on from `now - tickCap`): it claims the interval in a transaction
+ * (sets `last_tick_at` to its end) before the module ticks, so overlapping callers never tick an
+ * interval twice. It's called from:
  *
  * - `POST /_ops/tick` (a cron's, authorized like `/_ops/daily`, `src/routes/_ops/tick/+server.ts`);
  * - on Cloudflare the Worker's Cron Trigger, every minute (`scheduled()` in `cloudflare/entry.ts`);
@@ -83,17 +84,17 @@ async function claimInterval(moduleId: string, now: Temporal.Instant) {
 			.from(simulation)
 			.where(and(inTenant(simulation), eq(simulation.moduleId, moduleId)));
 		if (!row?.running) return null;
-		const earliest = now.subtract(tickCap);
+		// Moments are stored in whole seconds, so the tick ends at one: the next starts where this
+		// one ends, and what's left of the second is the next tick's.
+		const to = now.round({ smallestUnit: "second", roundingMode: "floor" });
+		const earliest = to.subtract(tickCap);
 		const from = Temporal.Instant.compare(row.lastTickAt, earliest) < 0 ? earliest : row.lastTickAt;
-		// Moments are stored in whole seconds: an interval under a second is left for the next tick.
-		if (Math.floor(from.epochMilliseconds / 1000) >= Math.floor(now.epochMilliseconds / 1000)) {
-			return null;
-		}
+		if (Temporal.Instant.compare(from, to) >= 0) return null;
 		await tx
 			.update(simulation)
-			.set({ lastTickAt: now })
+			.set({ lastTickAt: to })
 			.where(and(inTenant(simulation), eq(simulation.moduleId, moduleId)));
-		return { from, to: now, speed: row.speed, startedAt: row.startedAt };
+		return { from, to, speed: row.speed, startedAt: row.startedAt };
 	});
 }
 

@@ -5,11 +5,16 @@
  * is answered and each rejection says what's wrong (on record then: by him, valid for its months,
  * logged against the order, and the unit's score recorded by the condition module's hook); the
  * order completed only once every checklist is. Another engineer's checklist or another tenant's is
- * a 404, and the portal's functions are only for engineers. The server side of
+ * a 404, and the portal's functions are only for engineers. A customer's contact sees who completed
+ * a checklist by the engineer's first name only. The server side of
  * `checklists.portal.test.ts`, which keeps the phone's page, the signatures and one tampered id.
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import {
+	getClientOrderChecklists,
+	getClientUnitInspection,
+} from "#modules/checklists/client/client-checklists.remote.ts";
 import {
 	answer,
 	complete,
@@ -316,6 +321,29 @@ describe("whose checklists Lev may change", () => {
 				status: 403,
 			});
 			expect(await call(getFieldChecklists, job.number)).toMatchObject({ status: 403 });
+		});
+	});
+});
+
+describe("the customer portal's checklists", () => {
+	test("say who completed them by the engineer's first name, and of the office not who", async () => {
+		const [done] = await rows<{ number: string; serial_number: string }>(
+			`select o.number, e.serial_number from checklist c
+			 join "order" o on o.id = c.order_id
+			 join equipment e on e.id = c.equipment_id
+			 join portal_contact p on p.customer_id = o.customer_id and p.organization_id = o.organization_id
+			 join user u on u.id = p.user_id
+			 where u.email = ? and c.status = 'completed' and c.completed_by is not null limit 1`,
+			[shltr.customer.email],
+		);
+		await as(shltr.customer, async () => {
+			const { checklists } = await data(getClientOrderChecklists, done.number);
+			const inspection = await data(getClientUnitInspection, done.serial_number);
+			for (const checklist of [...checklists, ...inspection.checklists]) {
+				expect(checklist.engineer ?? "").not.toContain(" ");
+				expect(typeof checklist.office).toBe("boolean");
+			}
+			expect(checklists.some((checklist) => checklist.engineer)).toBe(true);
 		});
 	});
 });

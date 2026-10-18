@@ -10,7 +10,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, moment, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, moment, momentMs, organizationId } from "#lib/server/db/columns.ts";
 import { customerSite, equipment, equipmentLocation, order } from "#lib/server/db/schema.ts";
 
 import { dockEventTypes, doorBands, eventOutcomes, keyLocations } from "../model.ts";
@@ -106,7 +106,8 @@ export const dockState = sqliteTable(
 		keyLocation: text("key_location", { enum: keyLocations }).notNull().default("scp"),
 		/** The band of the open door the rules acted on (notice, escalation); cleared when it closes. */
 		doorAlert: text("door_alert", { enum: doorBands }),
-		lastEventAt: moment("last_event_at"),
+		/** To the millisecond: an event older than this one, also in the same second, is stale. */
+		lastEventAt: momentMs("last_event_at"),
 		updatedAt: moment("updated_at")
 			.notNull()
 			.default(sql`(unixepoch())`),

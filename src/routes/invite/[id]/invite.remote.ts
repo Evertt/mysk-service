@@ -9,7 +9,7 @@ import { formatNumber } from "#lib/i18n/index.ts";
 import { recordActivityAfter } from "#lib/server/activity/index.ts";
 import { auth, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { invitation, organization, portalContact, user } from "#lib/server/db/schema.ts";
+import { invitation, member, organization, portalContact, user } from "#lib/server/db/schema.ts";
 import { forAnyone, forUsers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -72,9 +72,10 @@ async function pendingInvitation(id: string) {
  * invitation's organization (which isn't the user's current one yet). A customer contact's
  * invitation also links their account to the contact it was sent for (`portal_contact`), in the
  * invitation's organization by its id: the user isn't in it yet, so `inTenant()` can't scope it.
+ * If the contact's gone (revoked meanwhile), the membership goes too, and the form says so.
  */
 async function accept(
-	found: { id: string; email: string; organizationId: string },
+	found: { id: string; email: string; role: string | null; organizationId: string },
 	user: { id: string; name: string },
 	headers: Headers,
 ) {
@@ -85,15 +86,26 @@ async function accept(
 		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_invite_accept_failed());
 		throw e;
 	}
-	await db
-		.update(portalContact)
-		.set({ userId: user.id, invitationId: null })
-		.where(
-			and(
-				eq(portalContact.organizationId, found.organizationId),
-				eq(portalContact.invitationId, found.id),
-			),
-		);
+	if (isCustomerContact(parseRoles(found.role ?? "member"))) {
+		const linked = await db
+			.update(portalContact)
+			.set({ userId: user.id, invitationId: null })
+			.where(
+				and(
+					eq(portalContact.organizationId, found.organizationId),
+					eq(portalContact.invitationId, found.id),
+				),
+			)
+			.returning({ id: portalContact.id });
+		// The contact's access was revoked while they accepted: no membership without a contact,
+		// which would be a customer's role with no customer to see.
+		if (!linked.length) {
+			await db
+				.delete(member)
+				.where(and(eq(member.organizationId, found.organizationId), eq(member.userId, user.id)));
+			invalid(m.auth_invite_no_longer());
+		}
+	}
 	await recordActivityAfter(
 		{ action: "accepted", subject: { type: "invitation", id: found.id, label: found.email } },
 		{ organizationId: found.organizationId, user },

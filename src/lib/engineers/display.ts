@@ -69,3 +69,6 @@ export function fittingFirst<T extends { specialty: EngineerSpecialty }>(
 	};
 	return engineers.toSorted((a, b) => rank(a.specialty) - rank(b.specialty));
 }
+
+/** An engineer's first name: all of them a customer sees (`Jan de Vries` → `Jan`). */
+export const firstName = (name: string) => name.split(" ")[0];

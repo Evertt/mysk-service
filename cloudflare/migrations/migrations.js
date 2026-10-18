@@ -20,6 +20,7 @@ import m0017 from './0017_add-checklist-template-item.sql';
 import m0018 from './0018_add-components.sql';
 import m0019 from './0019_add-simulation.sql';
 import m0020 from './0020_add-checklist-completed-by-user.sql';
+import m0021 from './0021_dock-last-event-in-ms.sql';
 
   export default {
     journal,
@@ -44,7 +45,8 @@ m0016,
 m0017,
 m0018,
 m0019,
-m0020
+m0020,
+m0021
     }
   }
   

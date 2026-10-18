@@ -164,7 +164,8 @@ export function parseBatch(
 				`doorEvents[${i}].at: ${m.energy_ingest_too_old({ days: String(MAX_AGE_DAYS) })}`,
 			);
 		}
-		const key = `${e.door}|${e.at.epochMilliseconds}|${e.state}`;
+		// By the second, as it's stored: two in the same second would be the same row.
+		const key = `${e.door}|${Math.floor(e.at.epochMilliseconds / 1000)}|${e.state}`;
 		if (seenEvents.has(key)) issues.push(`doorEvents[${i}]: ${m.energy_ingest_duplicate()}`);
 		seenEvents.add(key);
 	});

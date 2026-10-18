@@ -91,6 +91,16 @@ describe("the feed", () => {
 			status: 413,
 			body: { error: "too_large" },
 		});
+		// Sent in chunks, without a length: read no further than the limit.
+		let pulled = 0;
+		const endless = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				pulled++;
+				controller.enqueue(new Uint8Array(64 * 1024).fill(32));
+			},
+		});
+		expect(await feed(endless)).toMatchObject({ status: 413, body: { error: "too_large" } });
+		expect(pulled).toBeLessThan(20);
 	});
 
 	test("refuses a missing or unknown token, or the docks feed's, with a 401", async () => {

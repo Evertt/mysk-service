@@ -170,6 +170,31 @@ describe("storing a batch", () => {
 		expect(await alerts()).toHaveLength(1);
 	});
 
+	test("a door event with milliseconds is stored once, also when it's sent again", async () => {
+		// Stored in whole seconds: the resent one must be known by its second.
+		const event = { door: "D-1", at: t(3).add({ milliseconds: 500 }).toString(), state: "open" };
+		await ingest({ doorEvents: [event] });
+		expect(await ingest({ doorEvents: [event] })).toEqual({
+			stored: { readings: 0, doorEvents: 0, alerts: 0 },
+		});
+		expect(await db.select().from(energyDoorEvent)).toHaveLength(1);
+	});
+
+	test("refuses two events of a door in one state within the same second", () => {
+		const at = (milliseconds: number) => t(3).add({ milliseconds }).toString();
+		const parsed = parseBatch(
+			{
+				site: 1,
+				doorEvents: [
+					{ door: "D-1", at: at(200), state: "open" },
+					{ door: "D-1", at: at(700), state: "open" },
+				],
+			},
+			now,
+		);
+		expect(parsed.issues).toEqual([expect.stringMatching(/^doorEvents\[1\]: /)]);
+	});
+
 	test("a resent interval replaces the one in", async () => {
 		await ingest({ readings: [reading("Z-A", 0, 20)] });
 		await ingest({ readings: [reading("Z-A", 0, 30)] });

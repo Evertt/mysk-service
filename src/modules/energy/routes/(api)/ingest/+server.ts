@@ -9,6 +9,28 @@ import { ingestSites, storeBatch } from "#modules/energy/server/ingest.ts";
  * tenant. `GET` answers the tenant's sites with their zones' and doors' codes; `POST` stores a batch
  * of readings and door events, all or nothing, and raises the alerts it breaches.
  */
+/**
+ * The request's body as text, or `null` once it's more than `max` bytes: a body without a length
+ * (sent in chunks) is read no further than that.
+ */
+async function textUpTo(request: Request, max: number) {
+	if (!request.body) return "";
+	const reader = request.body.getReader();
+	const decoder = new TextDecoder();
+	let size = 0;
+	let text = "";
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) return text + decoder.decode();
+		size += value.byteLength;
+		if (size > max) {
+			await reader.cancel();
+			return null;
+		}
+		text += decoder.decode(value, { stream: true });
+	}
+}
+
 export const GET: RequestHandler = async () => Response.json({ sites: await ingestSites() });
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -19,8 +41,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 	}
 	const length = Number(request.headers.get("content-length") ?? 0);
-	const text = length > MAX_BODY_BYTES ? null : await request.text();
-	if (text === null || new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
+	const text = length > MAX_BODY_BYTES ? null : await textUpTo(request, MAX_BODY_BYTES);
+	if (text === null) {
 		return Response.json(
 			{ error: "too_large", message: m.energy_ingest_too_large() },
 			{ status: 413 },

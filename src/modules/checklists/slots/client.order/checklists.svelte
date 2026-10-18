@@ -86,7 +86,7 @@
 						{#if checklist.status === "completed" && checklist.completedAt}
 							{m.checklists_completed_by({
 								name:
-									checklist.engineer?.split(" ")[0] ??
+									checklist.engineer ??
 									(checklist.office ? m.checklists_the_office() : m.checklists_someone()),
 								date: formatDateTime(checklist.completedAt),
 							})}

@@ -204,6 +204,13 @@
       "when": 1792263469546,
       "tag": "0028_add-checklist-completed-by-user",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1792322428263,
+      "tag": "0029_dock-last-event-in-ms",
+      "breakpoints": true
     }
   ]
 }

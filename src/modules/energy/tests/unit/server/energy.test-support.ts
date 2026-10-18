@@ -60,14 +60,18 @@ interface Sent {
  * (SHLTR's demo token unless asked; `null` for none): its status and JSON body.
  */
 export async function feed(
-	body: string | object = {},
+	body: string | object | ReadableStream<Uint8Array> = {},
 	{ token = DEMO_ENERGY_TOKEN, type = "application/json", method = "POST" }: Sent = {},
 ) {
 	const headers = { "content-type": type, ...(token ? { authorization: `Bearer ${token}` } : {}) };
 	const request = new Request("http://localhost/energy/ingest", {
 		method,
 		headers,
-		...(method === "POST" ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}),
+		...(method === "POST"
+			? body instanceof ReadableStream
+				? { body, duplex: "half" }
+				: { body: typeof body === "string" ? body : JSON.stringify(body) }
+			: {}),
 	});
 	const handler = method === "GET" ? GET : POST;
 	try {

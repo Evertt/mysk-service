@@ -195,6 +195,14 @@ describe("applying a batch", () => {
 		expect(stored).toHaveLength(1);
 	});
 
+	test("an event older than the dock's last one within the same second is stale too", async () => {
+		const at = (milliseconds: number) => t(10).add({ milliseconds });
+		await ingest([event("door_open", "DOCK 05", at(700))]);
+		const late = await ingest([event("door_close", "DOCK 05", at(300))]);
+		expect(late).toMatchObject({ applied: 0, stale: 1 });
+		expect((await stateOf(1)).doorOpenSince).toEqual(t(10));
+	});
+
 	test("refuses a batch naming a dock the tenant doesn't have, another tenant's included", async () => {
 		const parsed = parseBatch(
 			{ events: [event("lock", "DOCK 05", t(0)), event("lock", "DOCK 09", t(1))] },

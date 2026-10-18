@@ -11,6 +11,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, gte, isNotNull, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
+import { firstName } from "#lib/engineers/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses, pendingOrderStatuses, reportUrgencies } from "#lib/models.ts";
 import { onUnit, requestOrder } from "#lib/orders/server/index.ts";
@@ -217,7 +218,7 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
 		order: {
 			...rest,
 			// Only who's coming, by their first name.
-			engineer: engineerName?.split(" ")[0] ?? null,
+			engineer: engineerName ? firstName(engineerName) : null,
 			units: units.get(found.id) ?? [],
 		},
 		signoff: signoff[0] ?? null,

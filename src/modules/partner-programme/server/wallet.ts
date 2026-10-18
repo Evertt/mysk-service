@@ -156,7 +156,9 @@ export async function outstandingCredit(today: Temporal.PlainDate) {
 		.orderBy(asc(walletEntry.customerId), asc(walletEntry.id));
 	const byCustomer = new Map<number, LedgerEntry[]>();
 	for (const row of rows) {
-		byCustomer.set(row.customerId, [...(byCustomer.get(row.customerId) ?? []), withDay(row)]);
+		const entries = byCustomer.get(row.customerId);
+		if (entries) entries.push(withDay(row));
+		else byCustomer.set(row.customerId, [withDay(row)]);
 	}
 	let total = 0;
 	for (const entries of byCustomer.values()) total += walletSummary(entries, today).available;

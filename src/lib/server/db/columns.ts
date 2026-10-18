@@ -33,6 +33,16 @@ export const moment = customType<{ data: Temporal.Instant; driverData: number }>
 });
 
 /**
+ * A moment to the millisecond (milliseconds since 1970, UTC), for what must keep the order of
+ * events that come faster than a second, such as a dock's last event (`dock_state.last_event_at`).
+ */
+export const momentMs = customType<{ data: Temporal.Instant; driverData: number }>({
+	dataType: () => "integer",
+	toDriver: (instant) => instant.epochMilliseconds,
+	fromDriver: (milliseconds) => Temporal.Instant.fromEpochMilliseconds(Number(milliseconds)),
+});
+
+/**
  * A day on the calendar, e.g. a due date or when a contract starts: a `Temporal.PlainDate` in the
  * app, `yyyy-mm-dd` in the database. No time zone: it's the same day for everyone, and days
  * compare and sort as text.
