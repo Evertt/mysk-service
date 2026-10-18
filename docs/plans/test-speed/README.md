@@ -19,6 +19,26 @@ specs, about 190 are duplicates of specs that exist, and the rest are component 
 low-value. The seconds are from a loaded run; unloaded, expect roughly half of each, at the same
 proportions.
 
+## Result (2026-10-18)
+
+All five phases are done. The whole suite (`pnpm test`, locally, the same machine and load as the
+measurement above):
+
+|                        | 2026-10-17             | 2026-10-18                  |
+| ---------------------- | ---------------------- | --------------------------- |
+| e2e files / tests      | 104 / 900              | 95 / 506                    |
+| e2e time, summed       | 4,968 s                | 2,824 s (−43 %)             |
+| server specs (harness) | —                      | 47 files / 431 tests, 142 s |
+| whole run, wall        | ~1,190 s (incl. rerun) | 875 s (incl. rerun, −26 %)  |
+
+On CI the e2e runs in 6 shards instead of 3. What the e2e no longer checks is in server specs
+(`docs/agents/tests.md`, "Server specs"); the agents named a few gaps left: read-only UI for
+planners (hints, hidden buttons), the customer portal's checklist remotes, the energy live
+simulation's backfill. Along the way: the seed now gives the date-dependent tests their cases on
+any day, and three app bugs were fixed (the energy month chart, a schedule change lost before
+the board's live stream opened, and a Svelte batching bug that froze pages: bug 12 in
+`docs/upstream-bugs/`).
+
 ## The phases, cheapest first
 
 1. **CI: more shards** (no test changes). The repository is public, so runners cost nothing: 3 → 6

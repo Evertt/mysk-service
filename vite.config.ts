@@ -300,6 +300,9 @@ export default defineConfig({
 					// The seeded demo database, made once per run, and a copy of it for each file.
 					globalSetup: ["src/tests/unit/lib/server/harness/global-setup.ts"],
 					setupFiles: [...serverSpecs.setupFiles, "./src/tests/unit/lib/server/harness/setup.ts"],
+					// A file's first call imports the app's server code and its remote functions: fast
+					// alone, but past Vitest's 5 s beside the whole suite.
+					testTimeout: 20_000,
 				},
 			},
 
