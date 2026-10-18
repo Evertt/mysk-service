@@ -23,6 +23,7 @@ import { fixture, forgetTables, rows } from "./db.ts";
 import { authSecret, baseURL } from "./lane.ts";
 import { quiet, trackNetwork } from "./network.ts";
 import { newSession, sessionCookie } from "./sessions.ts";
+import { findToast, markToasts, recordToasts } from "./toasts.ts";
 
 export { baseURL } from "./lane.ts";
 export { cents, countIn, fixture, nextCode, rows, unbalancedStock, value } from "./db.ts";
@@ -148,11 +149,13 @@ const BROWSER_OPTIONS = {
 
 /**
  * A new browser context, as every test makes one: with `BROWSER_OPTIONS` and `options`, and its
- * pages' clock at `TEST_NOW` when the run is (`src/tests/clock/clock.ts`). Close it when done.
+ * pages' clock at `TEST_NOW` when the run is (`src/tests/clock/clock.ts`), recording their toasts
+ * (`toasts.ts`). Close it when done.
  */
 export async function newContext(browser: Browser, options: BrowserContextOptions = {}) {
 	const context = await browser.newContext({ ...BROWSER_OPTIONS, ...options });
 	await clockContext(context);
+	await recordToasts(context);
 	return context;
 }
 
@@ -208,9 +211,8 @@ export interface App {
 	/** The data table's group rows on the page, in order. */
 	groups(): Promise<TableGroup[]>;
 	/**
-	 * Waits for a toast with these texts (e.g. its title and description), and closes it. A toast
-	 * shows for 4 s, which waiting for the network to go quiet (`quiet()`, `expectingErrors()`) can
-	 * outlast under load: then wait for it alongside the step that brings it up (`Promise.all`).
+	 * Waits for a toast with these texts (e.g. its title and description) shown in the current step,
+	 * also one that came and went (`toasts.ts` says which count), and closes it if it's still there.
 	 */
 	toast(...texts: string[]): Promise<void>;
 	/**
@@ -300,6 +302,7 @@ export function useApp({
 			await quiet(page);
 		},
 		async submit(target) {
+			await markToasts(page);
 			const button = await target.elementHandle();
 			const [response] = await Promise.all([
 				page.waitForResponse(
@@ -324,6 +327,7 @@ export function useApp({
 			return body;
 		},
 		async expectingErrors(steps) {
+			await markToasts(page);
 			expecting = true;
 			try {
 				const result = await steps();
@@ -398,20 +402,19 @@ export function useApp({
 				}),
 			),
 		async toast(...texts) {
-			const found = texts
-				.reduce(
-					(toasts, text) => toasts.filter({ hasText: text }),
-					page.locator("[data-sonner-toast]"),
-				)
-				.first();
-			await found.waitFor();
-			// Closed once seen: it covers the bottom right of the page (a row's buttons, a form's Save)
-			// until it times out, and for good while the pointer rests on it, e.g. where it was left by
-			// the click that brought the toast up. Clicked without the pointer, so as not to rest on it.
-			const toast = await found.elementHandle();
-			await toast?.$eval("[data-close-button]", (button: HTMLElement) => button.click());
-			await page.waitForFunction((element) => !element?.isConnected, toast, { polling: 100 });
-			await toast?.dispose();
+			const toast = await findToast(page, texts);
+			// Closed once seen, if it's still there: it covers the bottom right of the page (a row's
+			// buttons, a form's Save) until it times out, and for good while the pointer rests on it,
+			// e.g. where it was left by the click that brought the toast up. Clicked without the
+			// pointer, so as not to rest on it.
+			// Once: each click puts its removal off again.
+			await toast.evaluate((element) =>
+				element.isConnected
+					? element.querySelector<HTMLElement>("[data-close-button]")?.click()
+					: undefined,
+			);
+			await page.waitForFunction((element) => !element.isConnected, toast, { polling: 100 });
+			await toast.dispose();
 		},
 		async anotherTab() {
 			// The page has a context of its own, so a new context with its cookies.
@@ -464,6 +467,8 @@ export function useApp({
 		await page
 			?.locator("[data-sonner-toast] [data-close-button]")
 			.evaluateAll((buttons: HTMLElement[]) => buttons.forEach((button) => button.click()));
+		// The next test's toasts are its own.
+		if (page) await markToasts(page);
 		const logged = errors.splice(0);
 		expect(logged, "console errors and hydration warnings").toEqual([]);
 	});
