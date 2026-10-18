@@ -5,7 +5,7 @@
  * breach becomes an alert once per key (a zone per local hour, a door per opening); a door's alert
  * that's still open follows its opening as it goes on (the longest it was open), a zone's grows from
  * near to active within its hour. Only the last day's breaches raise alerts: a gateway catching up
- * on last week raises none about it.
+ * on last week raises none about it, while a door that's still open (since last week) does.
  */
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 
@@ -22,14 +22,8 @@ import {
 	zoneBreaches,
 	type ZoneInterval,
 } from "../model.ts";
-import {
-	energyAlert,
-	energyDoor,
-	energyDoorEvent,
-	energyReading,
-	energyThreshold,
-	energyZone,
-} from "./schema.ts";
+import { doorEvents } from "./door-events.ts";
+import { energyAlert, energyDoor, energyReading, energyThreshold, energyZone } from "./schema.ts";
 
 /** How far back a breach still raises an alert. */
 const ALERT_WINDOW_HOURS = 24;
@@ -107,7 +101,10 @@ async function zoneBreachesOf(
 	return raised;
 }
 
-/** The site's doors' breaches: their openings of the last day (and a day before, to pair them). */
+/**
+ * The site's doors' breaches: their openings of the last day, with the one a door was in when it
+ * began, however long ago it opened (`door-events.ts`).
+ */
 async function doorBreachesOf(
 	tx: Transaction,
 	site: { id: number },
@@ -122,20 +119,11 @@ async function doorBreachesOf(
 		})
 		.from(energyDoor)
 		.where(and(inTenant(energyDoor), eq(energyDoor.energySiteId, site.id)));
-	if (!doors.length) return [];
-	const events = await tx
-		.select({ doorId: energyDoorEvent.doorId, at: energyDoorEvent.at, open: energyDoorEvent.open })
-		.from(energyDoorEvent)
-		.where(
-			and(
-				inTenant(energyDoorEvent),
-				inList(
-					energyDoorEvent.doorId,
-					doors.map((door) => door.id),
-				),
-				gte(energyDoorEvent.at, now.subtract({ hours: 2 * ALERT_WINDOW_HOURS })),
-			),
-		);
+	const events = await doorEvents(
+		tx,
+		doors.map((door) => door.id),
+		now.subtract({ hours: ALERT_WINDOW_HOURS }),
+	);
 	return doors.flatMap((door) =>
 		doorBreaches(
 			door.id,
@@ -145,6 +133,16 @@ async function doorBreachesOf(
 		).map((breach) => ({ ...breach, zoneId: door.zoneId, doorId: door.id, code: door.code })),
 	);
 }
+
+/**
+ * When a breach was last going on: a zone's at its interval's end, a door's at its opening's (its
+ * close, or now while it's open; `at` is when it opened, `measured` its minutes open since). So a
+ * door open since long before the window still raises its alert, once.
+ */
+const lastBreached = (breach: Breach) =>
+	breach.metric === "door"
+		? breach.at.add({ milliseconds: Math.round(breach.measured * 60_000) })
+		: breach.at.add({ minutes: INTERVAL_MINUTES });
 
 /**
  * Raises the alerts of the breaches since a batch (see above), in `tx`, and logs each new one as
@@ -159,13 +157,7 @@ export async function raiseAlerts(
 	const breaches = [
 		...(await zoneBreachesOf(tx, site, batch.zoneIds, batch.starts)),
 		...(await doorBreachesOf(tx, site, batch.now)),
-	].filter(
-		(breach) =>
-			Temporal.Instant.compare(
-				breach.at.add({ minutes: breach.metric === "door" ? 0 : INTERVAL_MINUTES }),
-				since,
-			) >= 0,
-	);
+	].filter((breach) => Temporal.Instant.compare(lastBreached(breach), since) >= 0);
 	if (!breaches.length) return 0;
 
 	const existing = await tx
