@@ -234,7 +234,10 @@ export function generateContractTerms(
 		.map((terms) => terms.reduce((a, b) => (b.startsOn > a.startsOn ? b : a)))
 		.filter((c) => c.startsOn <= now && c.endsOn >= today)
 		.sort((a, b) => a.endsOn.getTime() - b.endsOn.getTime() || a.id - b.id);
-	if (latestTerms.length && latestTerms[0].endsOn >= addDays(today, 60)) {
+	// In calendar days: over the clocks' change in spring, 60 days of 24 hours end an hour into the
+	// 60th day, so a term ending that day (not in the next 60) passed for one that ends in them.
+	const in60Days = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+	if (latestTerms.length && latestTerms[0].endsOn >= in60Days) {
 		latestTerms[0].endsOn = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
 	}
 
