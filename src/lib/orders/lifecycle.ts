@@ -33,6 +33,10 @@ const orderTransitions = {
 		),
 		to: manualOrderStatuses,
 	},
+	/** The engineer starts a scheduled job. */
+	start: { by: "engineer", from: ["scheduled"], to: ["in_progress"] },
+	/** The engineer completes the job under way, with the customer's sign-off. */
+	complete: { by: "engineer", from: ["in_progress"], to: ["completed"] },
 } as const satisfies Record<string, TransitionRule>;
 
 /** A way an order's status changes (see `orderTransitions`). */
@@ -57,7 +61,7 @@ export const mayDeleteOrder = (status: OrderStatus) => isEditableOrder(status);
  * awaits acceptance (it's accepted or rejected instead).
  */
 export const statusChoices = (status: OrderStatus): readonly OrderStatus[] =>
-	isEditableOrder(status) && !isAwaitingAcceptance(status) ? manualOrderStatuses : [];
+	can("set", status) ? orderTransitions.set.to : [];
 
 /**
  * The status an open order gets when it's planned: a quote that gets an engineer and a date is
@@ -74,11 +78,11 @@ export const plannedStatus = (status: OrderStatus, engineerId: number | null): O
 export function fieldActions(status: OrderStatus) {
 	return {
 		/** Start the job: a scheduled order is then in progress. */
-		start: status === "scheduled",
+		start: can("start", status),
 		/** Log hours and materials, and complete it with the customer's sign-off. */
-		work: status === "in_progress",
+		work: can("complete", status),
 		/** Write a note, e.g. about access or what they found. */
-		note: status === "scheduled" || status === "in_progress",
+		note: can("start", status) || can("complete", status),
 	};
 }
 
