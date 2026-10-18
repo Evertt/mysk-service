@@ -19,7 +19,8 @@ import type { Problem } from "#lib/server/forms.ts";
 
 import { createOrders, type OrderDraft } from "./creation.ts";
 import { saveOrderParts } from "./hooks.ts";
-import { type OrderPlan, scheduleOrder } from "./scheduling.ts";
+import type { OrderPlan } from "./lifecycle.ts";
+import { scheduleOrder } from "./scheduling.ts";
 
 /** Why an order that isn't awaiting acceptance (any more) can't be accepted or rejected. */
 const notAwaiting = (number: string) => m.orders_not_awaiting_acceptance({ number });

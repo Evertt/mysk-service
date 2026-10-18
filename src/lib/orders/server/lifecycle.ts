@@ -25,7 +25,7 @@ export type OrderTransition =
 	| { verb: "reject"; id: number; reason: string };
 
 /** Who does one of the tenant's orders (or nobody), on which day and at what time. */
-interface OrderPlan {
+export interface OrderPlan {
 	id: number;
 	engineerId: number | null;
 	day: Temporal.PlainDate;

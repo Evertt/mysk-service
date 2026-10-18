@@ -1,5 +1,5 @@
 import { getRequestEvent } from "$app/server";
-import { error } from "@sveltejs/kit";
+import { error, isValidationError } from "@sveltejs/kit";
 import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -7,8 +7,7 @@ import { type EngineerSpecialty, openOrderStatuses } from "#lib/models.ts";
 import {
 	type ListedUnit,
 	type OrderPlan,
-	OrderRefused,
-	scheduleOrder as planOrder,
+	transitionOrder,
 	withFirstUnit,
 } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
@@ -24,7 +23,6 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 
 import { byPriorityThenAge } from "./board/board.ts";
@@ -196,32 +194,25 @@ export const watchSchedule = query.live(async function* () {
 });
 
 /**
- * Plans an order of the current tenant (see `scheduleOrder()`): returns what's wrong if it can't be
- * planned, including a shortage of stock; a 404 if there's no such order.
+ * Plans an order of the current tenant (see `transitionOrder()`'s `plan`): refused with what's
+ * wrong (it isn't open, the engineer, a shortage of stock); a 404 if there's no such order.
  */
-async function plan(input: OrderPlan): Promise<Problem<"engineerId"> | undefined> {
-	try {
-		return await db.transaction((tx) => planOrder(tx, input));
-	} catch (error) {
-		// Thrown, so the transaction stores nothing of it.
-		if (error instanceof OrderRefused) return { message: error.message };
-		throw error;
-	}
-}
+const plan = (input: OrderPlan) =>
+	db.transaction((tx) => transitionOrder(tx, { verb: "plan", ...input }));
 
 /** The schedule dialog: plans an order, with the problems shown at its fields. */
-export const scheduleOrder = form(
-	v.object({ id: id(), ...scheduleFields }),
-	async (input, issue) => {
-		const problem = await plan(input);
-		refuse(issue, problem ? [problem] : []);
-		await refreshRequested(getSchedule);
-	},
-);
+export const scheduleOrder = form(v.object({ id: id(), ...scheduleFields }), async (input) => {
+	await plan(input);
+	await refreshRequested(getSchedule);
+});
 
-/** A drag and drop move on the board; the client shows it right away and undoes it on an error. */
+/** A drag and drop move; the client shows it right away and undoes it on an error. */
 export const moveOrder = command(v.object(moveFields), async (input) => {
-	const problem = await plan(input);
-	if (problem) error(400, problem.message);
+	try {
+		await plan(input);
+	} catch (thrown) {
+		if (isValidationError(thrown)) error(400, thrown.issues.map((i) => i.message).join("; "));
+		throw thrown;
+	}
 	await refreshRequested(getSchedule);
 });

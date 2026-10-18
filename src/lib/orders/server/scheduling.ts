@@ -19,16 +19,8 @@ import type { Problem } from "#lib/server/forms.ts";
 
 import { plannedStatus } from "../lifecycle.ts";
 import { saveOrderParts } from "./hooks.ts";
+import type { OrderPlan } from "./lifecycle.ts";
 import { assigneeProblem } from "./order-changes.ts";
-
-/** Who does one of the tenant's orders (or nobody), on which day and at what time. */
-export interface OrderPlan {
-	id: number;
-	engineerId: number | null;
-	day: Temporal.PlainDate;
-	/** `HH:MM`, in the user's time zone. */
-	time: string;
-}
 
 /**
  * Plans one of the current tenant's open orders in the caller's transaction `tx`: assigns
