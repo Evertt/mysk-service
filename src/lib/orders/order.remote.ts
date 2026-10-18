@@ -5,9 +5,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
-import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
@@ -26,10 +24,10 @@ import { refuseOffParts } from "#lib/server/forms.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
-import { acceptFirst, notEditable } from "./lifecycle.ts";
 import { createOrders } from "./server/creation.ts";
-import { orderCommitted, OrderRefused, saveOrderParts, tagOrders } from "./server/hooks.ts";
-import { completedAt, removeOrder } from "./server/order-changes.ts";
+import { orderCommitted, OrderRefused, tagOrders } from "./server/hooks.ts";
+import { beginOrderChange } from "./server/lifecycle.ts";
+import { removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { tenantOrderTypes } from "./server/types.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
@@ -177,24 +175,17 @@ type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
 
 /**
  * Creates or updates an order in the current tenant, with the parts the tenant's modules add to the
- * form (`modules`, saved through `orders.saving`); returns its number. Throws an `OrderRefused`
- * when a module can't save its part (see `refuseParts`).
+ * form (`modules`, saved through `orders.saving`, see `beginOrderChange()`); returns its number.
+ * Throws an `OrderRefused` when a module can't let go of a unit (see `refuseParts`).
  */
 async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
 	const { modules, scheduledTime, equipmentIds: units, ...fields } = input;
 	const equipmentIds = [...new Set(units)];
 
 	return db.transaction(async (tx) => {
-		const existing = id
-			? await tx.query.order.findFirst({
-					where: idInTenant(order, id),
-				})
-			: undefined;
-		if (id && !existing) error(404, m.orders_not_found_plain());
-		if (existing && !isEditableOrder(existing.status)) {
-			invalid(notEditable(existing.number, "changed"));
-		}
-		if (existing && isAwaitingAcceptance(existing.status)) invalid(acceptFirst(existing.number));
+		// Refused for an order that can't be changed (invoiced, awaiting acceptance), or a 404.
+		const change = await beginOrderChange(tx, id, fields.status);
+		const existing = change.before;
 		// A type the tenant hid is no choice, unless the order has it already.
 		if (!offeredOrderTypes(tenantOrderTypes(), existing?.type).includes(fields.type)) {
 			invalid(issue.type(m.orders_type_hidden_refused()));
@@ -210,8 +201,8 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 						.toZonedDateTime({ timeZone: getTimeZone(), plainTime: scheduledTime ?? "00:00" })
 						.toInstant()
 				: null,
-			// Keep the original completion date; set or clear it when the status changes.
-			completedAt: completedAt(fields.status, existing),
+			// The status, with the completion date that follows from it.
+			...change.columns,
 		};
 
 		let orderId: number;
@@ -229,27 +220,16 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 			[{ id: orderId, number }] = await createOrders(tx, [{ ...values, units: equipmentIds }]);
 		}
 
-		// The modules' parts of it, e.g. its materials, and the stock that follows its status.
-		await saveOrderParts({
-			tx,
-			order: { id: orderId, number },
-			status: fields.status,
-			form: modules ?? {},
-		});
-		// The modules log their parts; a new order is logged by `createOrders()`; the completion
-		// date follows from the status.
-		if (existing) {
-			const subject = { type: "order", id: orderId, label: number };
-			const ignore = ["completedAt"];
-			await recordActivity(tx, {
-				action: "updated",
-				subject,
-				// The units by id, in their order: the log names those added and removed.
-				before: { ...existing, equipmentIds: unitsBefore },
+		// The modules' parts of it, e.g. its materials, and the stock that follows its status; then
+		// its entry, the units by id, in their order (the log names those added and removed).
+		await change.finish(
+			{ id: orderId, number },
+			{
+				form: modules ?? {},
+				before: { equipmentIds: unitsBefore },
 				after: { ...values, equipmentIds },
-				ignore,
-			});
-		}
+			},
+		);
 		return number;
 	});
 }

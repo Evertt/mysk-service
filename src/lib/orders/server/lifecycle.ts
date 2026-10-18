@@ -153,7 +153,7 @@ export interface OrderChange {
 	/** The order as loaded; undefined for a new one. */
 	readonly before: typeof order.$inferSelect | undefined;
 	/** The status columns to write with the form's: its status and completion date. */
-	readonly columns: { status: OrderStatus; completedAt: Temporal.Instant | null };
+	readonly columns: { status: ManualOrderStatus; completedAt: Temporal.Instant | null };
 	/**
 	 * After the form's writes: asks the modules with the form's parts (also when the status stays),
 	 * a refusal becoming the form's issues; then, for an edited order, its one `updated` entry.

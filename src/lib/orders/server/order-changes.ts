@@ -3,28 +3,16 @@
  * changing, assigning or deleting many orders refuses what doing it to one refuses.
  */
 import { error, invalid } from "@sveltejs/kit";
-import { and, isNull } from "drizzle-orm";
 
-import {
-	isAwaitingAcceptance,
-	isDoneOrder,
-	isEditableOrder,
-	type OrderStatus,
-} from "#lib/models.ts";
+import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
+import { idInTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 
 import { acceptFirst, notEditable } from "../lifecycle.ts";
 import { OrderRefused, saveOrderParts } from "./hooks.ts";
-
-/** When an order with `status` was completed: kept from before, set when it's done, else none. */
-export const completedAt = (
-	status: OrderStatus,
-	existing?: { completedAt: Temporal.Instant | null },
-) => (isDoneOrder(status) ? (existing?.completedAt ?? Temporal.Now.instant()) : null);
 
 /**
  * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it
