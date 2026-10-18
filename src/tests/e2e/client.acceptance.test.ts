@@ -1,8 +1,8 @@
 /**
  * Accepting and rejecting the orders customers report in the customer portal, in SHLTR's office:
  * the badge on the sidebar's Orders and the dashboard's stat count them, the orders list filters
- * them, they're off the planning board, a planner accepts one (planning it at once, or not) or
- * rejects one with a reason, and the customer sees the outcome in their portal.
+ * them, they're off the planning board, a planner accepts one (planning it at once) or rejects one
+ * with a reason, and the customer sees the outcome in their portal.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -75,17 +75,6 @@ describe("orders awaiting acceptance", () => {
 			);
 		}
 	});
-
-	test("are accepted or rejected first: an awaiting order has no Edit", async () => {
-		const [first] = await awaiting();
-		await app.go(`/orders/${first.number}`);
-		const card = app.page.locator("[data-acceptance]");
-		expect(await card.innerText()).toContain(
-			"Marieke Verhoeven reported it in the customer portal",
-		);
-		expect(await app.page.getByRole("link", { name: "Edit" }).count()).toBe(0);
-		expect(await app.page.getByRole("button", { name: "Accept" }).count()).toBe(1);
-	});
 });
 
 describe("accepting and rejecting", () => {
@@ -118,9 +107,13 @@ describe("accepting and rejecting", () => {
 		await expect.poll(() => badge().innerText()).toBe("2");
 	});
 
-	test("accepting with an engineer but no day asks for the day", async () => {
+	test("an awaiting order is accepted or rejected first, without Edit; accepting with an engineer but no day asks for the day", async () => {
 		const [report] = await awaiting();
 		await app.go(`/orders/${report.number}`);
+		expect(await app.page.locator("[data-acceptance]").innerText()).toContain(
+			"reported it in the customer portal",
+		);
+		expect(await app.page.getByRole("link", { name: "Edit" }).count()).toBe(0);
 		await app.page.getByRole("button", { name: "Accept" }).click();
 		const dialog = app.page.getByRole("dialog");
 		await dialog.getByLabel("Engineer").selectOption({ label: "Lev Hoekstra" });
@@ -129,15 +122,7 @@ describe("accepting and rejecting", () => {
 		expect((await stored(report.id)).status).toBe("awaiting_acceptance");
 	});
 
-	test("accepting without a plan makes it a quote to plan", async () => {
-		const [report] = await awaiting();
-		await app.go(`/orders/${report.number}`);
-		await app.page.getByRole("button", { name: "Accept" }).click();
-		await app.submit(app.page.getByRole("dialog").getByRole("button", { name: "Accept" }));
-		await app.page.locator('[data-decision="accepted"]').waitFor();
-		expect(await stored(report.id)).toMatchObject({ status: "quote", decided_by: "Jan Weggemans" });
-	});
-
+	// Accepting without a plan makes it a quote: `acceptance.spec.ts` ("makes it a quote").
 	test("rejecting needs a reason, and cancels it with the reason", async () => {
 		const [report] = await awaiting();
 		await app.go(`/orders/${report.number}`);
@@ -161,7 +146,8 @@ describe("accepting and rejecting", () => {
 				)
 			)[0],
 		).toEqual({ action: "rejected", note: "Dubbele melding: zie de opdracht van gisteren." });
-		await expect.poll(() => badge().count()).toBe(0);
+		// The one left awaits.
+		await expect.poll(() => badge().innerText()).toBe("1");
 		// Decided: no more accepting or rejecting.
 		expect(await app.page.getByRole("button", { name: "Accept" }).count()).toBe(0);
 	});

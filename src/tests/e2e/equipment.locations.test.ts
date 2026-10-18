@@ -71,25 +71,16 @@ describe("in North", () => {
 		siteId = first.site_id;
 	});
 
-	test("adding a location needs a name the site hasn't got yet", async () => {
+	// What a new location needs (a name the site hasn't got yet, in any case), renaming one and
+	// the refusal to delete one with units are `locations.spec.ts`'s and `location-schema.spec.ts`'s.
+	test("a new location comes last at its site, with a QR token, logged against the customer", async () => {
 		const { page } = app;
-		const [taken] = await locationsWhere("l.site_id = ?", [siteId]);
 		await page
 			.locator(`[data-site="${siteId}"]`)
 			.getByRole("button", { name: "Add location" })
 			.click();
 		const dialog = page.getByRole("dialog");
 		await dialog.getByText("New location").waitFor();
-		await app.submit(dialog.getByRole("button", { name: "Save location" }));
-		expect(await app.issues()).toEqual(["Enter the location's name"]);
-		await dialog.getByLabel("Name").fill(taken.name.toUpperCase());
-		await app.submit(dialog.getByRole("button", { name: "Save location" }));
-		expect(await app.issues()).toEqual([`The site has a location called “${taken.name}” already`]);
-	});
-
-	test("a new location comes last at its site, with a QR token, logged against the customer", async () => {
-		const { page } = app;
-		const dialog = page.getByRole("dialog");
 		const before = await locationsWhere("l.site_id = ?", [siteId]);
 		await dialog.getByLabel("Name").fill("Expeditie noord");
 		await dialog.getByLabel("Description").fill("Achter de kantine");
@@ -122,35 +113,6 @@ describe("in North", () => {
 				parent_id: String(customer),
 			},
 		]);
-	});
-
-	test("renaming it saves it", async () => {
-		const { page } = app;
-		await locationAction("Expeditie noord", "Edit");
-		const dialog = page.getByRole("dialog");
-		expect(await dialog.getByLabel("Name").inputValue()).toBe("Expeditie noord");
-		await dialog.getByLabel("Name").fill("Expeditie zuid");
-		await dialog.getByRole("button", { name: "Save location" }).click();
-		await app.toast("Location saved");
-		await dialog.waitFor({ state: "detached" });
-		expect(await location(added)).toMatchObject([{ name: "Expeditie zuid" }]);
-		await expect.poll(() => locationRow(added).innerText()).toContain("Expeditie zuid");
-	});
-
-	test("a location with units can't be deleted", async () => {
-		const { page } = app;
-		const [used] = await locationsWhere(
-			"s.customer_id = ? and l.id in (select location_id from equipment)",
-			[customer],
-		);
-		await locationAction(used.name, "Delete");
-		const dialog = page.getByRole("alertdialog");
-		await app.submit(dialog.getByRole("button", { name: "Delete" }));
-		await expect
-			.poll(() => dialog.innerText())
-			.toMatch(/\d+ units? (is|are) there: move (it|them) to another location first/);
-		expect(await location(used.id)).toHaveLength(1);
-		await dialog.getByRole("button", { name: "Cancel" }).click();
 	});
 
 	test("a location's page shows its units, their orders and its QR code", async () => {
@@ -274,7 +236,7 @@ describe("in North", () => {
 	test("deleting the location without units removes it, and logs it", async () => {
 		const { page } = app;
 		await app.go(`/customers/${code}`);
-		await locationAction("Expeditie zuid", "Delete");
+		await locationAction("Expeditie noord", "Delete");
 		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
 		await app.toast("Location deleted");
 		await expect.poll(() => locationRow(added).count()).toBe(0);
@@ -292,67 +254,18 @@ describe("in North", () => {
 const quietCard = () => app.page.getByText("Specifications", { exact: true }).waitFor();
 
 describe("in South", () => {
-	/** One of North's locations, to tamper with from South. */
-	let target: number;
-	let targetBefore: unknown;
-
+	// North's ids in South's location forms are `locations.spec.ts`'s ("another tenant's sites and
+	// locations are a 404, also by their ids", "a unit's location must be at its own site").
 	test("North's locations and label sheets are a 404", async () => {
 		await app.switchOrganization(south.name);
-		target = await value<number>(
+		const target = await value<number>(
 			`select min(id) from equipment_location where organization_id = ?`,
 			[north.id],
 		);
-		targetBefore = await location(target);
 		const site = await value<number>(`select site_id from equipment_location where id = ?`, [
 			target,
 		]);
 		expect((await app.go(`/equipment/locations/${target}`))?.status()).toBe(404);
 		expect((await app.go(`/equipment/labels/${site}`))?.status()).toBe(404);
-	});
-
-	test("renaming a location with the id of a North one is refused", async () => {
-		const { page } = app;
-		const [own] = await locationsWhere("l.organization_id = ?", [south.id]);
-		const owner = await value<string>(
-			`select c.code from customer c join customer_site s on s.customer_id = c.id where s.id = ?`,
-			[own.site_id],
-		);
-		await app.go(`/customers/${owner}`);
-		await locationAction(own.name, "Edit");
-		const dialog = page.getByRole("dialog");
-		const hidden = dialog.locator('input[type="hidden"][name^="id"]');
-		await expect.poll(() => hidden.count()).toBe(1);
-		const result = await app.expectingErrors(async () => {
-			await hidden.evaluate((input: HTMLInputElement, id) => (input.value = String(id)), target);
-			await dialog.getByLabel("Name").fill("Tampered");
-			return app.submit(dialog.getByRole("button", { name: "Save location" }));
-		});
-		expect(result).toMatch(/"status":404/);
-		expect(await location(target)).toEqual(targetBefore);
-		await page.keyboard.press("Escape");
-	});
-
-	test("a South unit can't be put at a North location by its id", async () => {
-		const { page } = app;
-		const [unit] = await rows<{ id: number; serial: string; location_id: number | null }>(
-			`select id, serial_number as serial, location_id from equipment where organization_id = ?
-			 order by id limit 1`,
-			[south.id],
-		);
-		await app.go(`/equipment/${unit.serial}/edit`);
-		const select = page.getByLabel("Location at the site");
-		await select.evaluate((element: HTMLSelectElement, id) => {
-			const option = document.createElement("option");
-			option.value = String(id);
-			option.textContent = "Tampered";
-			element.append(option);
-		}, target);
-		await select.selectOption(String(target));
-		await app.submit(page.getByRole("button", { name: "Save equipment" }));
-		expect(app.path()).toBe(`/equipment/${unit.serial}/edit`);
-		await expect.poll(() => app.issues()).toContain("Choose one of the site's locations");
-		expect(await value(`select location_id from equipment where id = ?`, [unit.id])).toBe(
-			unit.location_id,
-		);
 	});
 });

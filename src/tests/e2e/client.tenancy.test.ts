@@ -142,50 +142,18 @@ describe("the office and the engineer portal aren't a customer's contact's", () 
 		}
 	});
 
-	test("their remote functions refuse them with a 403", async () => {
-		const office = await signedInPage(app, users.shltrPlanner);
-		const field = await signedInPage(app, users.shltrEngineer);
-		await office.page.context().close();
-		await field.page.context().close();
-		const queries = [
-			office.requests.find((url) => url.includes("/getDashboard"))!,
-			field.requests.find((url) => url.includes("/getMyWork"))!,
-		];
-		for (const query of queries) expect(query).toBeDefined();
-		const answers = await app.expectingErrors(() =>
-			app.page.evaluate(
-				(urls) =>
-					Promise.all(
-						urls.map(async (url) => {
-							const response = await fetch(url);
-							return `${response.status} ${await response.text()}`;
-						}),
-					),
-				queries,
-			),
-		);
-		for (const answer of answers) expect(answer).toMatch(/^403|"status":403/);
-	});
+	// That the office's and the engineer portal's remote functions refuse them with a 403 is
+	// `session.spec.ts`'s ("are refused by the office's remote functions with a 403").
 });
 
 describe("the customer portal isn't the office's", () => {
-	test("its pages send office members to the office, and its remote functions refuse them", async () => {
-		// The portal home's query, as signing in as a customer's contact calls it.
-		const contact = await signedInPage(app, users.weggemans);
-		await contact.page.context().close();
-		const query = contact.requests.find((url) => url.includes("/getPortalHome"))!;
-		expect(query).toBeDefined();
-
+	// Its remote functions refuse office members: `remote-functions.spec.ts` ("forCustomers").
+	test("its pages send office members to the office", async () => {
 		const office = await signedInPage(app, users.shltrPlanner);
 		try {
 			await office.page.goto(`${baseURL}/portal`);
 			await hydrated(office.page);
 			expect(new URL(office.page.url()).pathname).toBe("/");
-			const answer = await office.page.evaluate(async (url) => {
-				const response = await fetch(url);
-				return `${response.status} ${await response.text()}`;
-			}, query);
-			expect(answer).toMatch(/^403|"status":403/);
 		} finally {
 			await office.page.context().close();
 		}

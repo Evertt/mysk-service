@@ -12,9 +12,7 @@ import {
 	rows,
 	useApp,
 	users,
-	value,
 } from "./app.ts";
-import { signedInPage } from "./portal-helpers.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -93,14 +91,29 @@ describe("a unit's or location's QR code", () => {
 		expect((await scan(app.page, "not-a-token")).status).toBe(404);
 	});
 
-	test("leads a field engineer to the unit in their portal, with their open orders on it", async () => {
+	test("sends someone signed out to the login, and on to it after", async () => {
 		const unit = await engineersUnit();
-		const { page } = await signedInPage(app, users.engineer);
+		const page = await signedOutPage();
 		try {
-			expect(await scan(page, unit.token)).toMatchObject({
-				status: 200,
-				path: `/my/equipment/${unit.serial}`,
-			});
+			const scanned = await scan(page, unit.token);
+			expect(scanned.path).toBe("/login");
+			expect(scanned.url.searchParams.get("redirectTo")).toBe(`/q/${unit.token}`);
+			await signIn(page, users.planner);
+			expect(new URL(page.url()).pathname).toBe(`/equipment/${unit.serial}`);
+		} finally {
+			await page.context().close();
+		}
+	});
+
+	// Where a code leads whom (another tenant's is nothing for who isn't a member there) is
+	// `locations.spec.ts`'s ("QR codes"); the pages it leads a field engineer to are this test's.
+	test("leads a field engineer, signing in on the way, to the unit in their portal, with their open orders on it", async () => {
+		const unit = await engineersUnit();
+		const page = await signedOutPage();
+		try {
+			await scan(page, unit.token);
+			await signIn(page, users.engineer);
+			expect(new URL(page.url()).pathname).toBe(`/my/equipment/${unit.serial}`);
 			await page.locator(`[data-order="${unit.number}"]`).waitFor();
 			expect(await page.getByText("Your open orders here").count()).toBe(1);
 
@@ -116,47 +129,6 @@ describe("a unit's or location's QR code", () => {
 			);
 			const shown = await page.locator("main").innerText();
 			for (const each of serials) expect(shown).toContain(each.serial_number);
-		} finally {
-			await page.context().close();
-		}
-	});
-
-	test("sends someone signed out to the login, and on to it after", async () => {
-		const unit = await engineersUnit();
-		const page = await signedOutPage();
-		try {
-			const scanned = await scan(page, unit.token);
-			expect(scanned.path).toBe("/login");
-			expect(scanned.url.searchParams.get("redirectTo")).toBe(`/q/${unit.token}`);
-			await signIn(page, users.planner);
-			expect(new URL(page.url()).pathname).toBe(`/equipment/${unit.serial}`);
-		} finally {
-			await page.context().close();
-		}
-		// A field engineer goes on to their portal.
-		const field = await signedOutPage();
-		try {
-			await scan(field, unit.token);
-			await signIn(field, users.engineer);
-			expect(new URL(field.url()).pathname).toBe(`/my/equipment/${unit.serial}`);
-		} finally {
-			await field.context().close();
-		}
-	});
-
-	test("of another tenant is a 404 for who isn't a member there", async () => {
-		const unit = await engineersUnit();
-		const location = await northLocation();
-		const { page } = await signedInPage(app, users.shltrPlanner);
-		try {
-			expect((await scan(page, unit.token)).status).toBe(404);
-			expect((await scan(page, location.token)).status).toBe(404);
-			// Their own tenant's still lead to them.
-			const own = await value<string>(
-				`select qr_token from equipment where organization_id = ? order by id limit 1`,
-				[organizations.shltr.id],
-			);
-			expect((await scan(page, own)).path).toMatch(/^\/equipment\//);
 		} finally {
 			await page.context().close();
 		}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { afresh, countIn, isRemote, organizations, quiet, rows, useApp, value } from "./app.ts";
+import { afresh, isRemote, organizations, quiet, rows, useApp, value } from "./app.ts";
 import { remoteErrorStatus, tamperWithCommand } from "./remote-functions.ts";
 
 const { north, south } = organizations;
@@ -95,33 +95,7 @@ describe("filtering the engineers by a value in their row, in North", () => {
 			.locator(`[data-slot="data-table"] tbody [data-column-id="${columnId}"]`)
 			.getByRole("button", { name, exact: true });
 
-	test("clicking a specialty filters by it, and clicking it again stops", async () => {
-		const { page } = app;
-		const [{ specialty, count }] = await rows<{ specialty: string; count: number }>(
-			`select specialty, count(*) as count from engineer where organization_id = ?
-			 group by specialty order by count desc, specialty limit 1`,
-			[north.id],
-		);
-		const labels: Record<string, string> = {
-			electrical: "Electrical",
-			mechanical: "Mechanical",
-			hvac: "HVAC",
-			plumbing: "Plumbing",
-			controls: "Controls",
-		};
-		const all = await countIn("engineer", north.id);
-		await app.go(afresh("/engineers"));
-
-		await valuesIn("specialty", `Filter by ${labels[specialty]}`).first().click();
-		await page.waitForURL((url) => url.searchParams.get("specialty") === specialty);
-		await expect.poll(() => app.rowCount()).toBe(count);
-		await app.filterPill("Specialty").waitFor();
-
-		await valuesIn("specialty", `Stop filtering by ${labels[specialty]}`).first().click();
-		await page.waitForURL((url) => !url.searchParams.has("specialty"));
-		await expect.poll(() => app.rowCount()).toBe(all);
-	});
-
+	// Clicking a value to filter by it, and again to stop, is `cell-filter.svelte.spec.ts`'s.
 	test("clicking the status badge filters by it, while its arrow changes it", async () => {
 		const { page } = app;
 		const active = await value<number>(

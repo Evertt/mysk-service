@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { formatNumber } from "#lib/i18n/format.ts";
 
-import { baseURL, organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
+import { organizations, rows, useApp, userNames, users, value, quiet } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -54,9 +54,6 @@ const dayFromNow = (days: number) => {
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
-/** South's customer that is created and deleted, to read about in Dutch. */
-const fleeting = { id: 0, code: "" };
-
 /** What North changes here, to look for from South. */
 const fromNorth = { customer: 0, order: 0, number: "", material: 0, labels: [] as string[] };
 
@@ -103,13 +100,13 @@ describe("in North", () => {
 		await page.waitForURL((url) => url.pathname === "/customers/CUST-0002");
 		await quiet(page);
 		expect(await entriesAbout("customer", id, north.id)).toHaveLength(before.length + 1);
-	});
 
-	test("the customer's page shows it on its Activity card", async () => {
-		await app.go("/customers/CUST-0002");
-		expect((await logEntries())[0]).toMatch(
-			new RegExp(`^${userNames.admin} updated customer CUST-0002 city: .+ → Activityville `),
-		);
+		// The customer's page it's back on shows it on its Activity card.
+		await expect
+			.poll(async () => (await logEntries())[0])
+			.toMatch(
+				new RegExp(`^${userNames.admin} updated customer CUST-0002 city: .+ → Activityville `),
+			);
 	});
 
 	test("changing an order's status logs it, and its lines against it", async () => {
@@ -268,22 +265,7 @@ describe("in North", () => {
 		expect(await page.getByText("Only the order").count()).toBe(1);
 	});
 
-	test("the dashboard shows the organization's latest changes", async () => {
-		await app.go("/");
-		const entries = await entriesIn("Recent changes");
-		expect(entries.length).toBeGreaterThan(0);
-		expect(entries.length).toBeLessThanOrEqual(8);
-		const labels = await rows<{ subject_label: string }>(
-			`select distinct subject_label from activity where organization_id = ?`,
-			[north.id],
-		);
-		for (const entry of entries) {
-			expect(
-				labels.some((row) => entry.includes(row.subject_label)),
-				entry,
-			).toBe(true);
-		}
-	});
+	// The dashboard's recent changes are dashboard.live's.
 });
 
 describe("in South", () => {
@@ -296,47 +278,10 @@ describe("in South", () => {
 		}
 	});
 
-	test("creating and deleting a customer logs both, and the deleted one no longer links", async () => {
-		const { page } = app;
-		await app.go("/customers/new");
-		await page.getByLabel("Name").fill("Fleeting Activity BV");
-		await page.getByLabel("Segment").selectOption("small_business");
-		await page.getByLabel("Street address").fill("Kanaalstraat 9");
-		await page.getByLabel("Postal code").fill("5611 CT");
-		await page.getByLabel("City").fill("Eindhoven");
-		await page.getByLabel("Country").selectOption("Netherlands");
-		await page.getByLabel("Contact person").fill("Fleur Kort");
-		await page.getByLabel("Email").fill("fleur@fleeting.example");
-		await page.getByLabel("Phone").fill("+31 40 765 4321");
-		await page.getByRole("button", { name: "Create customer" }).click();
-		await page.waitForURL(/\/customers\/CUST-\d{4}$/);
-		await quiet(page);
-		const code = app.path().split("/").pop()!;
-		const id = await value<number>(
-			`select id from customer where code = ? and organization_id = ?`,
-			[code, south.id],
-		);
-		await page.getByRole("button", { name: "Delete" }).click();
-		await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-		await page.waitForURL((url) => url.pathname === "/customers");
-
-		const entries = await entriesAbout("customer", id, south.id);
-		expect(entries.map((e) => [e.action, e.subject_label, e.user_name])).toEqual([
-			["created", code, userNames.admin],
-			["deleted", code, userNames.admin],
-		]);
-		expect(await entriesAbout("customer", id, north.id)).toEqual([]);
-		Object.assign(fleeting, { id, code });
-
-		await app.go(`/activity?type=customer&id=${id}`);
-		expect(await logEntries()).toEqual([
-			expect.stringMatching(new RegExp(`^${userNames.admin} deleted customer ${code} `)),
-			expect.stringMatching(new RegExp(`^${userNames.admin} created customer ${code} `)),
-		]);
-		const feed = page.getByRole("list", { name: "Activity log", exact: true });
-		expect(await feed.getByRole("link", { name: code }).count()).toBe(0);
-	});
-
+	// Logging a deletion, and the deleted record no longer linking, are `records.spec.ts`'s
+	// ("deletes the record and logs it") and `feed.spec.ts`'s ("knows a subject is gone…", "has no
+	// page for a subject that was deleted"); the feed in Dutch is `feed.spec.ts`'s too ("reads in
+	// the language of the request").
 	test("North's records' activity can't be loaded by their ids", async () => {
 		for (const [type, id] of [
 			["customer", fromNorth.customer],
@@ -353,31 +298,5 @@ describe("in South", () => {
 		// Once it has loaded.
 		await card.getByText("No activity").or(card.getByRole("list")).first().waitFor();
 		expect(await card.innerText()).not.toContain("Activityville");
-	});
-});
-
-describe("in Dutch", () => {
-	/** Switches the language as the language menus do: Paraglide's cookie, read on every request. */
-	const useLanguage = (locale: string) =>
-		app.page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: locale, url: baseURL }]);
-
-	test("the feed reads in Dutch, with the words where Dutch puts them", async () => {
-		await useLanguage("nl");
-		await app.go(`/activity?type=customer&id=${fleeting.id}`);
-		expect(await entriesIn("Activiteitenlog")).toEqual([
-			expect.stringMatching(
-				new RegExp(`^${userNames.admin} heeft klant ${fleeting.code} verwijderd `),
-			),
-			expect.stringMatching(
-				new RegExp(`^${userNames.admin} heeft klant ${fleeting.code} aangemaakt `),
-			),
-		]);
-		expect(await app.page.getByText("Alleen klant", { exact: true }).count()).toBe(1);
-	});
-
-	test("switching back to English", async () => {
-		await useLanguage("en");
-		await app.go("/activity");
-		expect((await entriesIn("Activity log")).length).toBeGreaterThan(0);
 	});
 });
