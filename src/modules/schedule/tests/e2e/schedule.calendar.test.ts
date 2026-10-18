@@ -204,21 +204,28 @@ describe("switching views", () => {
 		expect(await board().isVisible()).toBe(true);
 		expect(await backlog().isVisible()).toBe(true);
 
+		// The week's first day, or today when the week has it (next month's first week does in this
+		// month's last days).
+		const today = dayKey(new Date());
+		const day =
+			calendarDays(first)
+				.slice(0, 7)
+				.find((each) => dayKey(each) === today) ?? monday;
 		await viewLink("Day").click();
 		await page.waitForURL(
 			(url) =>
-				url.searchParams.get("view") === "day" && url.searchParams.get("date") === dayKey(monday),
+				url.searchParams.get("view") === "day" && url.searchParams.get("date") === dayKey(day),
 		);
-		await cell("Unassigned", monday).waitFor();
+		await cell("Unassigned", day).waitFor();
 		// Just the one day.
 		expect(await page.locator('section[aria-label="Day"] [data-day]').count()).toBe(1);
 
 		await page.getByRole("link", { name: "Next day" }).click();
-		await page.waitForURL((url) => url.searchParams.get("date") === dayKey(nextDay(monday)));
-		await cell("Unassigned", nextDay(monday)).waitFor();
+		await page.waitForURL((url) => url.searchParams.get("date") === dayKey(nextDay(day)));
+		await cell("Unassigned", nextDay(day)).waitFor();
 		await page.goBack();
-		await page.waitForURL((url) => url.searchParams.get("date") === dayKey(monday));
-		await cell("Unassigned", monday).waitFor();
+		await page.waitForURL((url) => url.searchParams.get("date") === dayKey(day));
+		await cell("Unassigned", day).waitFor();
 
 		// In this month, the day is today.
 		await app.go("/schedule?view=month");
