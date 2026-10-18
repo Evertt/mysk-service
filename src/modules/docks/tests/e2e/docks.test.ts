@@ -106,6 +106,7 @@ describe("the live board", () => {
 });
 
 describe("the cards on core pages", () => {
+	// What saving and deleting a dock store, refuse and log is `tests/unit/server/customer-docks.spec.ts`'s.
 	test("the customer's page lists its docks, and a manager adds and deletes one", async () => {
 		const { page } = app;
 		const [weggemans] = await rows<{ code: string; site: number }>(
@@ -125,29 +126,10 @@ describe("the cards on core pages", () => {
 		await dialog.getByLabel("SCP panel").fill("SCP-09");
 		await app.submit(dialog.getByRole("button", { name: "Save" }));
 		await docks.locator('[data-customer-dock="DOCK 09"]').waitFor();
-		expect(
-			await value<string>(
-				`select position from dock_position where organization_id = ? and code = 'DOCK 09'`,
-				[shltr.id],
-			),
-		).toBe("P-09 · Expeditie oost");
-
-		// A code another dock has is refused.
-		await docks.getByRole("button", { name: "Add dock" }).click();
-		await dialog.getByLabel("Code").fill("DOCK 05");
-		await app.submit(dialog.getByRole("button", { name: "Save" }));
-		expect(await app.issues()).toContain("Another dock already has this code");
-		await page.keyboard.press("Escape");
 
 		await docks.getByRole("button", { name: "Delete DOCK 09?" }).click();
 		await app.submit(page.getByRole("alertdialog").getByRole("button", { name: "Delete dock" }));
 		await docks.locator('[data-customer-dock="DOCK 09"]').waitFor({ state: "detached" });
-		expect(
-			await value<number>(
-				`select count(*) from dock_position where organization_id = ? and code = 'DOCK 09'`,
-				[shltr.id],
-			),
-		).toBe(0);
 	});
 
 	test("a dock's door shows its use", async () => {
