@@ -2,8 +2,8 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { formatDate, formatNumber } from "#lib/i18n/index.ts";
-import { onAnyUnit, withUnitIds } from "#lib/orders/server/index.ts";
+import { formatDate } from "#lib/i18n/index.ts";
+import { listedUnitsOf, onAnyUnit } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -22,7 +22,7 @@ import { nextNumber } from "#lib/server/numbering.ts";
 
 import { contractFields } from "./form/contract-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
-import { contractNumbers, overlappingCoverage } from "./server/contracts.ts";
+import { contractNumbers, coverageOf, overlappingCoverage } from "./server/contracts.ts";
 import { contract, contractEquipment } from "./server/schema.ts";
 
 /** The tenant's contracts with their customer and the number of units they cover, latest start first. */
@@ -54,7 +54,7 @@ export const getContracts = query(async () => {
 		.orderBy(desc(contract.startsOn));
 });
 
-/** One contract with its customer and covered equipment, plus the work on that equipment during the contract. */
+/** One contract with its customer and covered equipment, plus the orders it covered. */
 export const getContract = query(v.string(), async (number) => {
 	const found = await db.query.contract.findFirst({
 		where: and(eq(contract.number, number), inTenant(contract)),
@@ -77,41 +77,45 @@ export const getContract = query(v.string(), async (number) => {
 				a.serialNumber.localeCompare(b.serialNumber),
 		);
 
-	// The orders on any of its units (with others too, perhaps).
-	const orders = units.length
-		? await withUnitIds(
-				await db
-					.select({
-						id: order.id,
-						number: order.number,
-						type: order.type,
-						status: order.status,
-						description: order.description,
-						createdAt: order.createdAt,
-					})
-					.from(order)
-					.where(
-						and(
-							inTenant(order),
-							onAnyUnit(units.map((unit) => unit.id)),
-							// Made during the contract, on its days in the user's time zone.
-							inDays(order.createdAt, [
-								{ from: found.startsOn.toString(), to: found.endsOn.toString() },
-							]),
-						),
-					)
-					.orderBy(desc(order.createdAt)),
-			)
+	// The orders made during the contract on any of its units, as candidates.
+	const made = units.length
+		? await db
+				.select({
+					id: order.id,
+					number: order.number,
+					type: order.type,
+					status: order.status,
+					description: order.description,
+					createdAt: order.createdAt,
+				})
+				.from(order)
+				.where(
+					and(
+						inTenant(order),
+						onAnyUnit(units.map((unit) => unit.id)),
+						// Made during the contract, on its days in the user's time zone.
+						inDays(order.createdAt, [
+							{ from: found.startsOn.toString(), to: found.endsOn.toString() },
+						]),
+					),
+				)
+				.orderBy(desc(order.createdAt))
 		: [];
-	const serials = new Map(units.map((unit) => [unit.id, unit.serialNumber]));
+	const listed = await listedUnitsOf(made.map((row) => row.id));
+	// Of those, the ones it covers, as their prices and response times have it (`coverageOf()`):
+	// covered work on units it all covers. Not an order on other units too (mixed coverage), nor an
+	// installation on a covered unit.
+	const covering = await coverageOf(
+		made.map((row) => ({ ...row, equipmentIds: (listed.get(row.id) ?? []).map(({ id }) => id) })),
+	);
 
 	return {
 		contract: { ...rest, equipment: units },
-		orders: orders.map(({ equipmentIds, ...o }) => {
-			// Its units that the contract covers: the first one's serial number, and how many more.
-			const covered = equipmentIds.flatMap((unit) => serials.get(unit) ?? []);
-			const more = covered.length > 1 ? ` +${formatNumber(covered.length - 1)}` : "";
-			return { ...o, serialNumber: `${covered[0] ?? ""}${more}` };
+		// With their first unit and how many they're about, for `unitsSummary()`.
+		orders: made.flatMap((row) => {
+			if (covering.get(row.id)?.id !== found.id) return [];
+			const own = listed.get(row.id) ?? [];
+			return [{ ...row, unit: own[0] ?? null, unitCount: own.length }];
 		}),
 	};
 });

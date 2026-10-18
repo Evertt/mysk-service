@@ -82,6 +82,20 @@
 	"docks_delete_title": "Delete {code}?",
 	"docks_delete_description": "Its live state, sessions and events go with it. Breakdown orders it made stay.",
 	"docks_deleted": "{code} deleted",
+	"docks_site_delete_refused": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "This site has {countText} dock. Delete it on the Docks card first.",
+				"countPlural=*": "This site has {countText} docks. Delete them on the Docks card first."
+			}
+		}
+	],
 	"docks_saved": "{code} saved",
 	"docks_form_site": "Site",
 	"docks_form_code": "Code",

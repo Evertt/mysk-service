@@ -73,10 +73,10 @@
 	"contracts_no_equipment_title": "Geen apparatuur gedekt",
 	"contracts_no_equipment_description": "De apparaten die dit contract dekte zijn verwijderd.",
 	"contracts_orders": "Opdrachten onder dit contract",
-	"contracts_orders_description": "Werk aan de gedekte apparatuur tussen {from} en {until}.",
+	"contracts_orders_description": "Gedekt werk aan de apparatuur tussen {from} en {until}.",
 	"contracts_no_orders_title": "Geen opdrachten",
 	"contracts_no_orders_upcoming": "Het contract is nog niet begonnen.",
-	"contracts_no_orders_description": "Geen werk aan de gedekte apparatuur tijdens het contract.",
+	"contracts_no_orders_description": "Geen gedekt werk aan de apparatuur tijdens het contract.",
 	"contracts_terms": "Voorwaarden",
 	"contracts_within_hours": [
 		{

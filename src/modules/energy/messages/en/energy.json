@@ -241,6 +241,7 @@
 	"energy_setup_site_delete_title": "Delete {name}?",
 	"energy_setup_site_delete_description": "Its zones, consumers, doors and thresholds go with it. A site with readings or alerts can't be deleted.",
 	"energy_setup_site_measured": "The site has readings, door events or alerts, which would be lost: it can't be deleted.",
+	"energy_site_delete_refused": "This site's energy is monitored as {name}. Delete that energy site first.",
 	"energy_setup_name": "Name",
 	"energy_setup_name_hint": "Leave it empty for the customer's and the site's names.",
 	"energy_setup_name_required": "Fill in a name",
