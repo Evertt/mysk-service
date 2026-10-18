@@ -199,7 +199,8 @@ describe("an asset", () => {
 			[id],
 		);
 		const own = all.filter((point) => items.includes(point.template_item_id!));
-		expect(await card.locator("li[data-point]").count()).toBe(own.length);
+		// (A completed checklist's points are a list, a draft's the fields to answer them.)
+		expect(await card.locator("[data-point]").count()).toBe(own.length);
 		expect(await card.locator("[data-other-points]").innerText()).toMatch(
 			new RegExp(`^${all.length - own.length} other points? of this unit (is|are) hidden$`),
 		);
