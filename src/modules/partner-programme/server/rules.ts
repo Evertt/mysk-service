@@ -1,9 +1,11 @@
 /**
  * The programme's rules per year (`partner_programme_year`): the levels, how each revenue category
  * counts and how long credit stays valid. A year that isn't set up yet goes by the latest one
- * before it; a manager adds it (a copy of that one) to change its rules.
+ * before it; a manager adds it (a copy of that one) to change its rules, until a partner is closed
+ * for a year that goes by them.
  */
-import { and, desc, eq, lte } from "drizzle-orm";
+import { invalid } from "@sveltejs/kit";
+import { and, asc, count, desc, eq, gt, gte, lt, lte } from "drizzle-orm";
 
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -16,7 +18,7 @@ import {
 	type ProgrammeRules,
 	sortedTiers,
 } from "../model.ts";
-import { programmeYear } from "./schema.ts";
+import { bonusYear, programmeYear } from "./schema.ts";
 
 /** A year's rules as stored, with the row's id. */
 export interface StoredRules extends ProgrammeRules {
@@ -104,12 +106,50 @@ export async function addYear(tx: Transaction, year: number): Promise<StoredRule
 	return added;
 }
 
-/** Changes a year's rules (setting it up first if it isn't), in `tx`, and logs what changed. */
+/**
+ * The years that go by `year`'s rules once it's saved (it, and the later ones up to the next that's
+ * set up, see `rulesFor()`) and are closed for any partner, earliest first, with how many each.
+ */
+async function closedUnder(tx: Transaction, year: number) {
+	const [next] = await tx
+		.select({ year: programmeYear.year })
+		.from(programmeYear)
+		.where(and(inTenant(programmeYear), gt(programmeYear.year, year)))
+		.orderBy(asc(programmeYear.year))
+		.limit(1);
+	return tx
+		.select({ year: bonusYear.year, partners: count() })
+		.from(bonusYear)
+		.where(
+			and(
+				inTenant(bonusYear),
+				gte(bonusYear.year, year),
+				next ? lt(bonusYear.year, next.year) : undefined,
+			),
+		)
+		.groupBy(bonusYear.year)
+		.orderBy(asc(bonusYear.year));
+}
+
+/**
+ * Changes a year's rules (setting it up first if it isn't), in `tx`, and logs what changed. Refused
+ * once a year that goes by them is closed for a partner: its figures were frozen under them, so
+ * changing them would give one year two rates for a level.
+ */
 export async function saveRules(
 	tx: Transaction,
 	year: number,
 	rules: Omit<ProgrammeRules, "year">,
 ): Promise<void> {
+	const [closed] = await closedUnder(tx, year);
+	if (closed) {
+		const refusal = { year: String(closed.year), count: closed.partners };
+		invalid(
+			closed.year === year
+				? m.partners_rules_closed(refusal)
+				: m.partners_rules_closed_later(refusal),
+		);
+	}
 	const before = await addYear(tx, year);
 	const after = {
 		tiers: sortedTiers(rules.tiers),

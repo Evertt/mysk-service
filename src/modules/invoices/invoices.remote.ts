@@ -53,7 +53,7 @@ export const getInvoices = query(async () => {
 	const credits = await creditsByInvoice();
 	return rows.map(({ subtotal, ...row }) => {
 		const totals = invoiceTotals([{ amount: subtotal }], row.vatRate);
-		const { credited, remaining } = creditSummary(totals, credits.get(row.id) ?? []);
+		const { credited, remaining } = creditSummary(totals, credits.get(row.id) ?? [], row.status);
 		return {
 			...row,
 			state: invoiceState(row, today),

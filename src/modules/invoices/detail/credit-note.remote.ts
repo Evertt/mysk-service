@@ -1,6 +1,6 @@
 /**
  * What's done on a credit note's page: issuing, settling and voiding it, and changing a draft (its
- * lines and its reason). See `../credit-note.ts` for the rules.
+ * lines, unless another module made it, and its reason). See `../credit-note.ts` for the rules.
  */
 import { error, invalid } from "@sveltejs/kit";
 import * as v from "valibot";
@@ -11,7 +11,7 @@ import { currentTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
 import { lineNote } from "../activity.ts";
-import { typedCreditLine } from "../credit-note.ts";
+import { isMadeElsewhere, typedCreditLine } from "../credit-note.ts";
 import { reasonFields } from "../form/credit-note-schema.ts";
 import { lineFields } from "../form/invoice-schema.ts";
 import { isEditable } from "../invoice.ts";
@@ -31,6 +31,13 @@ import { issueCredit } from "../server/settlement.ts";
 async function draftById(tx: Transaction, id: number) {
 	const found = await creditNoteById(tx, id);
 	if (!isEditable(found.status)) invalid(m.invoices_not_editable({ number: found.number }));
+	return found;
+}
+
+/** The tenant's draft credit note by id whose lines may change: not another module's. */
+async function linesDraftById(tx: Transaction, id: number) {
+	const found = await draftById(tx, id);
+	if (isMadeElsewhere(found)) invalid(m.invoices_credit_lines_elsewhere({ number: found.number }));
 	return found;
 }
 
@@ -64,7 +71,7 @@ export const voidCreditNote = form(v.object({ id: id() }), async ({ id }) => {
 export const addCreditLine = form(v.object({ id: id(), ...lineFields }), async (input) => {
 	const { organizationId } = currentTenant();
 	const draft = await db.transaction(async (tx) => {
-		const draft = await draftById(tx, input.id);
+		const draft = await linesDraftById(tx, input.id);
 		// One against an invoice credits the invoice's lines only (`creditLines()`).
 		if (draft.invoice) invalid(m.invoices_credit_lines_of_invoice());
 		const line = typedCreditLine(input);
@@ -91,7 +98,7 @@ export const removeCreditLine = form(v.object({ id: id() }), async ({ id }) => {
 			where: idInTenant(creditNoteLine, id),
 		});
 		if (!line) error(404, m.invoices_line_not_found());
-		const draft = await draftById(tx, line.creditNoteId);
+		const draft = await linesDraftById(tx, line.creditNoteId);
 		const [gone] = await tx
 			.delete(creditNoteLine)
 			.where(idInTenant(creditNoteLine, line.id))

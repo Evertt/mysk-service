@@ -79,19 +79,6 @@ async function createDraft(organizationId: string) {
 	return expected;
 }
 
-/** The invoice's total, as its page shows it. */
-const shownTotal = async () =>
-	cents(
-		await app.page
-			.locator("main table")
-			.first()
-			.locator("tfoot tr")
-			.last()
-			.locator("td")
-			.nth(1)
-			.innerText(),
-	);
-
 describe("in North", () => {
 	/** The paid invoice credited in part, and its credit note. */
 	let paid: { id: number; number: string };
@@ -126,20 +113,20 @@ describe("in North", () => {
 		await app.toast("Credit note issued");
 		await expect.poll(badges).toEqual(["Sent"]);
 		expect(await card("Invoice").innerText()).toContain("to refund");
+		// The paid invoice leaves nothing to pay: the credit is refunded instead.
+		expect(cents(await card("Invoice").locator("[data-remaining]").innerText())).toBe(0);
 
 		await confirm("Mark settled");
 		await app.toast("Credit note marked settled");
 		await expect.poll(badges).toEqual(["Settled"]);
 
-		// With what's credited and what's left.
+		// With what's credited, and nothing left to pay: the invoice was paid, the credit refunded.
 		const credited = -(2500 + vatOf(2500));
 		await app.go(`/invoices/${paid.number}`);
 		const credits = card("Credit notes");
 		await credits.locator(`[data-credit-note="${partial}"]`).waitFor();
 		expect(cents(await credits.locator("[data-credited]").innerText())).toBe(credited);
-		expect(cents(await credits.locator("[data-remaining]").innerText())).toBe(
-			(await shownTotal()) + credited,
-		);
+		expect(cents(await credits.locator("[data-remaining]").innerText())).toBe(0);
 	});
 
 	test("a sent invoice credited in full is paid by its credit note", async () => {

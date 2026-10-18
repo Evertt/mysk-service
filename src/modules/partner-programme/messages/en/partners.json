@@ -152,6 +152,36 @@
 	"partners_rules_categories_description": "Per category: whether it counts for the level, and for each bonus form. By agreement: as the order is classified.",
 	"partners_rules_save": "Save rules",
 	"partners_rules_saved": "The rules of {year} are saved",
+	"partners_rules_closed": [
+		{
+			"declarations": [
+				"input count",
+				"input year",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{year} is closed for {countText} partner, so its rules can't change any more.",
+				"countPlural=*": "{year} is closed for {countText} partners, so its rules can't change any more."
+			}
+		}
+	],
+	"partners_rules_closed_later": [
+		{
+			"declarations": [
+				"input count",
+				"input year",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{year} goes by these rules and is closed for {countText} partner, so they can't change any more.",
+				"countPlural=*": "{year} goes by these rules and is closed for {countText} partners, so they can't change any more."
+			}
+		}
+	],
 	"partners_column_threshold": "Partner revenue from",
 	"partners_column_cash_rate": "Cash bonus",
 	"partners_column_credit_rate": "Parts credit",

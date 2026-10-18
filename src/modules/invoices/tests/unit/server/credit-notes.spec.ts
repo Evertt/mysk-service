@@ -9,6 +9,8 @@ import { isHttpError } from "@sveltejs/kit";
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { formatCents } from "#lib/i18n/index.ts";
+import { db } from "#lib/server/db/index.ts";
+import { createCreditNote as createModuleCreditNote } from "#modules/invoices/api/credit-notes.server.ts";
 import {
 	createCreditNote,
 	createInvoiceCredit,
@@ -254,15 +256,17 @@ describe("crediting a paid invoice in part, in North", () => {
 		});
 		expect((await invoiceOf(paid.number, northId)).status).toBe("paid");
 
-		// The invoice's page lists it, with what's credited and what's left.
+		// The invoice's page lists it, with what's credited, and nothing left to pay: the invoice
+		// was paid, so the credit is refunded (the credit note's business), not taken off what's owed.
 		const credited = -(2500 + vatOf(2500));
-		const { totals, credits } = await as(north.owner, () => data(getInvoice, paid.number));
+		const { credits } = await as(north.owner, () => data(getInvoice, paid.number));
 		expect(credits.notes.map((note) => [note.number, note.status, note.total])).toEqual([
 			[number, "paid", credited],
 		]);
-		expect(credits).toMatchObject({ credited, remaining: totals.total + credited });
+		expect(credits).toMatchObject({ credited, remaining: 0 });
 		const listed = (await as(north.owner, () => data(getInvoices))).find((i) => i.id === paid.id);
-		expect(listed).toMatchObject({ credited, remaining: totals.total + credited });
+		expect(listed).toMatchObject({ credited, remaining: 0 });
+		expect((await as(north.owner, () => data(getCreditNote, number))).remaining).toBe(0);
 	});
 
 	test("its log has its life, on the invoice's card too", async () => {
@@ -486,6 +490,71 @@ describe("a standalone credit note, in North", () => {
 			invoice: null,
 			status: "sent",
 		});
+	});
+});
+
+describe("a credit note another module made, in North", () => {
+	/** A draft standalone credit note, made as another module makes one (the partner programme's bonus). */
+	async function madeElsewhere(reason: string) {
+		const customerId = await value<number>(
+			`select min(id) from customer where organization_id = ?`,
+			[northId],
+		);
+		const made = await as(north.owner, () =>
+			db.transaction((tx) =>
+				createModuleCreditNote(tx, {
+					customerId,
+					reason,
+					lines: [{ description: "Bonus", amount: 50_000, source: "elsewhere:bonus:1" }],
+				}),
+			),
+		);
+		return creditOf(made.number, northId);
+	}
+
+	test("keeps its lines as they were made: none added or removed", async () => {
+		const stored = await madeElsewhere("Bonus 2025");
+		const [line] = await creditLinesOf(stored.id);
+		const before = await creditSnapshot(stored.id);
+		const refused = `${stored.number} was made by another module, so its lines can't be changed`;
+		await as(north.owner, async () => {
+			expect(
+				await submit(addCreditLine, {
+					id: String(stored.id),
+					description: "Bonus",
+					quantity: 1,
+					unitPrice: 500,
+				}),
+			).toMatchObject({ status: 400, issues: [{ message: refused }] });
+			expect(await submit(removeCreditLine, { id: String(line.id) })).toMatchObject({
+				status: 400,
+				issues: [{ message: refused }],
+			});
+		});
+		expect(await creditSnapshot(stored.id)).toEqual(before);
+		expect(
+			(await activityAbout("credit_note", stored.id, northId)).filter(
+				(entry) => entry.subject_type === "credit_note_line",
+			),
+		).toEqual([]);
+	});
+
+	test("is still issued and settled, or voided", async () => {
+		const { id, number } = await madeElsewhere("Bonus 2025");
+		await as(north.owner, async () => {
+			expect(await submit(updateCreditReason, { id: String(id), reason: "Bonus" })).toMatchObject({
+				status: 200,
+			});
+			expect(await submit(issueCreditNote, { id: String(id) })).toMatchObject({ status: 200 });
+			expect(await submit(settleCreditNote, { id: String(id) })).toMatchObject({ status: 200 });
+		});
+		expect(await creditOf(number, northId)).toMatchObject({ status: "paid", reason: "Bonus" });
+
+		const other = await madeElsewhere("Bonus 2024");
+		expect(
+			await as(north.owner, () => submit(voidCreditNote, { id: String(other.id) })),
+		).toMatchObject({ status: 200 });
+		expect((await creditOf(other.number, northId)).status).toBe("void");
 	});
 });
 

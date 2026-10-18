@@ -133,7 +133,7 @@ export async function loadInvoice(
 				settledOn,
 				total: totals.total,
 			})),
-			...creditSummary(totals, credits),
+			...creditSummary(totals, credits, found.status),
 		},
 	};
 }

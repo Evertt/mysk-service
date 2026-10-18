@@ -136,10 +136,14 @@ export async function creditsByInvoice(tx: Transaction | typeof db = db) {
 	return byInvoice;
 }
 
-/** Of an invoice's credit notes, what they credit and what's left of it to pay and to credit. */
+/**
+ * Of the credit notes of an invoice of `status`, what they credit and what's left of it to pay
+ * (nothing once it's paid, see `remainingOf()`) and to credit.
+ */
 export function creditSummary(
 	totals: { subtotal: number; vat: number; total: number },
 	credits: { status: InvoiceStatus; totals: { subtotal: number; vat: number; total: number } }[],
+	status: InvoiceStatus,
 ) {
 	const issued = credits.filter((credit) => isIssued(credit.status)).map((credit) => credit.totals);
 	const held = credits
@@ -149,7 +153,7 @@ export function creditSummary(
 		/** The issued credit notes' totals together, negative (or zero). */
 		credited: issued.reduce((sum, credit) => sum + credit.total, 0),
 		/** What's left to pay, after the issued credit notes. */
-		remaining: remainingOf(totals, issued),
+		remaining: remainingOf(totals, issued, status),
 		/** What's left of the subtotal to credit, after the credit notes that aren't void. */
 		creditable: Math.max(0, totals.subtotal + held),
 	};
@@ -341,7 +345,7 @@ export async function creditNoteById(tx: Transaction, id: number) {
 	const found = await tx.query.creditNote.findFirst({
 		where: idInTenant(creditNote, id),
 		with: {
-			lines: { columns: { id: true, amount: true } },
+			lines: { columns: { id: true, amount: true, source: true } },
 			invoice: { columns: { id: true, number: true, status: true, vatRate: true } },
 		},
 	});
@@ -436,6 +440,6 @@ export async function remainingOfInvoice(tx: Transaction, invoiceId: number) {
 	const credits = await creditsOf(tx, [found.id]);
 	return {
 		invoice: found,
-		...creditSummary(invoiceTotals(found.lines, found.vatRate), credits),
+		...creditSummary(invoiceTotals(found.lines, found.vatRate), credits, found.status),
 	};
 }

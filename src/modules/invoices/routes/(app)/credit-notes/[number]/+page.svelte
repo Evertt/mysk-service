@@ -11,6 +11,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
+	import { isMadeElsewhere } from "#modules/invoices/credit-note.ts";
 	import { getCreditNote } from "#modules/invoices/credit-notes.remote.ts";
 	import ConfirmDialog from "#modules/invoices/detail/confirm-dialog.svelte";
 	import CreditNoteDocument from "#modules/invoices/detail/credit-note-document.svelte";
@@ -31,6 +32,8 @@
 	const data = $derived(await getCreditNote(params.number));
 	const credit = $derived(data.creditNote);
 	const editable = $derived(isEditable(credit.status));
+	// Another module's keeps its lines; it's still issued, settled or voided here.
+	const linesEditable = $derived(editable && !isMadeElsewhere(credit));
 	// One against a sent invoice is settled when the invoice is paid, not by hand.
 	const offset = $derived(credit.invoice?.status === "sent");
 	const problems = $derived(
@@ -118,7 +121,7 @@
 
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="min-w-0 lg:col-span-2 print:col-span-3">
-		<CreditNoteDocument {data} {editable} />
+		<CreditNoteDocument {data} editable={linesEditable} />
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6 print:hidden">

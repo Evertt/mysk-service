@@ -8,6 +8,7 @@ import {
 	creditTotals,
 	holdsCredit,
 	isIssued,
+	isMadeElsewhere,
 	leftOf,
 	remainingOf,
 	typedCreditLine,
@@ -173,20 +174,42 @@ describe("a standalone credit note's line", () => {
 	});
 });
 
+describe("a credit note another module made", () => {
+	test("is a standalone one with a line that refers to that module's record", () => {
+		const typed = { source: null };
+		const theirs = { source: "partner-programme:bonus:12" };
+		expect(isMadeElsewhere({ invoiceId: null, lines: [theirs] })).toBe(true);
+		expect(isMadeElsewhere({ invoiceId: null, lines: [typed, theirs] })).toBe(true);
+		expect(isMadeElsewhere({ invoiceId: null, lines: [typed] })).toBe(false);
+		expect(isMadeElsewhere({ invoiceId: null, lines: [] })).toBe(false);
+		// One against an invoice keeps its lines' references (a contract's fee): it's the office's.
+		expect(isMadeElsewhere({ invoiceId: 7, lines: [theirs] })).toBe(false);
+	});
+});
+
 describe("what's left to pay", () => {
 	const invoice = invoiceTotals(lines, 21);
 
 	test("is the invoice's total less its issued credit notes'", () => {
 		const credit = creditTotals(-2500, 21);
-		expect(remainingOf(invoice, [credit])).toBe(invoice.total + credit.total);
-		expect(remainingOf(invoice, [])).toBe(invoice.total);
+		expect(remainingOf(invoice, [credit], "sent")).toBe(invoice.total + credit.total);
+		expect(remainingOf(invoice, [], "sent")).toBe(invoice.total);
+		expect(remainingOf(invoice, [], "draft")).toBe(invoice.total);
 	});
 
 	test("is nothing once its subtotal is credited in full, whatever the rounding", () => {
 		// Two credits of a third each and the rest: the VAT of each is rounded on its own.
 		const thirds = [creditTotals(-4667, 21), creditTotals(-4667, 21), creditTotals(-4666, 21)];
 		expect(thirds.reduce((sum, each) => sum + each.subtotal, 0)).toBe(-subtotal);
-		expect(remainingOf(invoice, thirds)).toBe(0);
+		expect(remainingOf(invoice, thirds, "sent")).toBe(0);
+	});
+
+	test("is nothing of a paid or void invoice, whatever its credit notes", () => {
+		// A credit note against a paid invoice is refunded: that's the credit note's to settle.
+		const credit = creditTotals(-2500, 21);
+		expect(remainingOf(invoice, [credit], "paid")).toBe(0);
+		expect(remainingOf(invoice, [], "paid")).toBe(0);
+		expect(remainingOf(invoice, [], "void")).toBe(0);
 	});
 });
 
