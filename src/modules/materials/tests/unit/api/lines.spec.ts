@@ -29,7 +29,10 @@ const materialIn = (organization: string, unit: string) =>
 	);
 
 const linesOf = (orderId: number) =>
-	rows(`select material_id, quantity from order_line where order_id = ? order by id`, [orderId]);
+	rows<{ material_id: number; quantity: number }>(
+		`select material_id, quantity from order_line where order_id = ? order by id`,
+		[orderId],
+	);
 
 /** What `addOrderLine()` throws, as North's planner, or nothing. */
 const adding = (number: string, materialId: number, quantity: number) =>

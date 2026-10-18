@@ -1,71 +1,28 @@
 # Review follow-ups (develop vs main, 2026-10-18)
 
-The second-pass review of `develop` found 32 issues; 13 are fixed (merged 2026-10-18). These are
-the ones still to fix, most severe first, then the lower ones the slice reviews noted. Each says
-where, what's wrong, and how it shows. Verify against the code before fixing: lines drift.
+The second-pass review of `develop` found 32 issues; all are fixed (merged 2026-10-18). Below:
+what was decided for some, what came up while fixing, and the lower ones the slice reviews noted,
+still to look at. Each says where, what's wrong, and how it shows. Verify against the code before
+fixing: lines drift.
 
-## Still to fix
+## Fixed
 
-1. **`src/lib/equipment/server/locations.ts:66`, `categories.ts:68`**: the duplicate-name check
-   compares SQLite `lower()` (ASCII only) with JS `toLowerCase()` (Unicode), while the unique index
-   uses SQLite `lower()`. Typing an existing "Één" again misses the check, hits the index: a 500
-   instead of "name taken"; `locationAt()` in the equipment form crashes instead of reusing it.
-   Compare `lower(col) = lower(?)` in SQL.
-2. **`src/modules/docks/routes/(api)/ingest/+server.ts:19`**: `request.json()` with no body limit;
-   `maxBatch` is checked after parsing. Read it like the energy feed does (`textUpTo()` in
-   `src/modules/energy/routes/(api)/ingest/+server.ts`; share it).
-3. **`wrangler.jsonc:19`**: the every-minute `* * * * *` tick cron is top-level, so production
-   gets it too: with the demo imported, SHLTR's simulations run around the clock, waking the
-   Durable Object every minute; at 04:00 UTC it fires with the daily job. Staging only?
-4. **`src/modules/materials/api/lines.server.ts:25-59`**: `addOrderLine()` changes an order's
-   lines, stock and price without `orders.committed` (the engineer portal's materials card and
-   contracts' coverage aren't refreshed), and skips `checkLines()` (tenant's material,
-   `fitsUnit`): a foreign `materialId` on a quote is a 500 instead of a 404. Also the "can take
-   lines" predicate is duplicated in `parts-shop/suggestions/suggested-parts.remote.ts:76-79`.
-5. **`src/routes/(field)/my/portal.remote.ts` (`completeWork`)**: the sign-off's engineer name is
-   whatever the client sends (an engineer can sign as another); store `engineer.name`. It also
-   logs "completed" before the sign-off upsert, so the log can't show who signed.
-6. **`src/modules/partner-programme/form/rules-form.svelte:105-107, 128-130, 145-147`**: number
-   inputs write `Number(value)` back, so clearing a threshold snaps it to 0, and a half-typed
-   "3." may become 8% in some browsers.
-7. **`src/modules/checklists/server/checklists.ts:79-121` (`createChecklists`)**: per unit,
-   `offeredTemplate()` + insert + `insertRows()` inside the order's transaction: a 50-unit
-   inspection runs ~150 statements while holding every other request on Cloudflare.
-8. **`src/modules/checklists/server/checklists.ts:66-67` (`onRecord`)**: a draft with point remarks
-   or the customer remark but no results counts as not on record and is deleted silently when the
-   unit leaves the order or the type changes.
-9. **`src/modules/energy/server/setup.ts:221, 443, 643`**: `deleteEnergySite`, `deleteZone`,
-   `deleteDoor` check "has measurements" outside the deleting transaction: a batch committed in
-   between is cascade-deleted.
-10. **`src/lib/orders/server/list-sql.ts:151-152`**: the units column sorts by manufacturer/model
-    but shows `unitTitle()` (the unit's name first); the equipment list sorts by
-    `coalesce(name, manufacturer)`. Rows read out of order.
-11. **`src/lib/equipment/form/equipment-schema.ts:52` vs `locations/location-schema.ts:18`**: a new
-    location's name may be 120 characters from the equipment form, 80 in the location form, so
-    such a location can't be saved unchanged.
-12. **`src/modules/materials/detail/parts-used.remote.ts:39`**: `onUnit()` credits the full quantity
-    of every line of a multi-unit order to each unit (one spring set shows on all 15 doors).
-    Documented as deliberate; a product question.
-13. **`src/lib/orders/form/order-form.svelte:65`**: `chosenIds?.length ? … : initialUnits` falls
-    back to the order's original units when all are cleared, so engineers are ranked for units no
-    longer on it. Use `chosenIds ?? initialUnits` as `units-field.svelte` does.
-14. **`src/modules/energy/energy.remote.ts:34-58`, `client/client-energy.remote.ts:35-59`**: ~9
-    queries per site (40 sites: ~350 per `/energy` load). And `figures.ts` "latest" query
-    (~264-272) scans every reading the zones ever had; `simulatedSites()` in `live-simulation.ts`
-    seeks per zone instead.
-15. **`src/routes/(field)/my/work.ts:80`**: two signatures of up to 500,000 characters each exceed
-    adapter-node's default 512 KB body limit: a 413 instead of a message (if the Node deploy uses
-    adapter-node; unconfirmed).
-16. **`src/modules/invoices/invoicing.remote.ts:110`**: the dashboard's refunds figure leaves out
-    sent credit notes offset against a sent invoice, while its link
-    (`/invoices/credit-notes?status=sent`) lists all of them.
-17. **`src/modules/energy/routes/(app)/[site]/report/+page.svelte:26`**: the default range is built
-    in `getTimeZone()`, the server counts days in the site's `timeZone`: a day or month off near
-    midnight or on the 1st for a user elsewhere.
-18. **`src/modules/condition/server/list-sql.ts:111-121`**: 9 search columns × up to 10 words, plus
-    scope, filters and paging, bind 98 of 100 values; one more column or filter and a full search
-    throws `TooManyParameters`. Cap words by column count.
-19. **`src/modules/docks/board/board.remote.ts:73-82`**: recent sessions, one query per dock.
+All 19 that were still to fix after the first 13 are fixed and merged on develop (2026-10-18),
+each with a test that failed before; #3 by ticking the simulations every 15 minutes, a tick
+covering 20, and the cron asking nothing of the app while none runs (production and staging);
+#12 by marking an order of several units as shared on a unit's "Parts used" card; #15 by
+lowering `MAX_SIGNATURE_LENGTH` to 200,000 (no deploy uses adapter-node today, see below).
+
+## Noted while fixing
+
+- README's "Deploying" section still describes adapter-node and `node build`; the app builds with
+  adapter-auto (Vercel) or adapter-cloudflare since 64009fff.
+- `searchMatch()` in `src/lib/server/lists/plan.ts` binds each search word once per column; the
+  Connect list now joins its columns into one expression (#18), but every list with many search
+  columns has the same budget.
+- `completeWork`'s activity entry names the signer in its note only, not as a field in `after`.
+- #13 (`order-form.svelte`, all units cleared) has no test: the order form has no component-test
+  harness.
 
 ## Lower, noted by the slice reviews
 
