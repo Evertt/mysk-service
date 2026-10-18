@@ -1,13 +1,21 @@
 /**
  * Deleting a customer's site that has docks (`server/site-removal.ts`, at core's
  * `customers.removingSite`) on the seeded demo database: the sites card's delete is refused with
- * how many docks are there, the site and its docks stay, and nothing is logged; once the docks are
- * gone the site can go.
+ * how many docks are there, the site and its docks stay, and nothing is logged, also while SHLTR
+ * has the docks off; once the docks are gone the site can go.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { deleteCustomerSite } from "#lib/customers/detail/sites.remote.ts";
-import { as, organizationId, rows, shltr, submit, value } from "#unit/lib/server/harness/index.ts";
+import {
+	as,
+	organizationId,
+	rows,
+	shltr,
+	submit,
+	value,
+	withoutModule,
+} from "#unit/lib/server/harness/index.ts";
 
 const shltrId = organizationId("shltr");
 
@@ -48,6 +56,26 @@ describe("deleting a site with docks", () => {
 		expect(await deleteSite(site)).toMatchObject({
 			status: 400,
 			issues: [{ message: "This site has 2 docks. Delete them on the Docks card first." }],
+		});
+		expect(await value(`select count(*) from customer_site where id = ?`, [site])).toBe(1);
+		expect(await docksAt(site)).toBe(2);
+		expect(await logged(site)).toBe(0);
+	});
+
+	test("is refused while the docks are off too, saying to switch them on", async () => {
+		const site = await emptySite();
+		await rows(
+			`insert into dock_position (organization_id, site_id, code) values (?, ?, 'DOCK 94'), (?, ?, 'DOCK 95')`,
+			[shltrId, site, shltrId, site],
+		);
+		expect(await withoutModule("shltr", "docks", () => deleteSite(site))).toMatchObject({
+			status: 400,
+			issues: [
+				{
+					message:
+						"This site still has 2 docks. Switch Docks on and delete them on the Docks card first.",
+				},
+			],
 		});
 		expect(await value(`select count(*) from customer_site where id = ?`, [site])).toBe(1);
 		expect(await docksAt(site)).toBe(2);

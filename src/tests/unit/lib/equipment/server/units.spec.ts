@@ -169,6 +169,56 @@ describe("in North", () => {
 		);
 		expect(await unit(busy.id)).toEqual(before);
 	});
+
+	test("a location's page and labels list its units as they're named, else by make", async () => {
+		const [location] = await rows<{ id: number; site: number }>(
+			`select l.id, l.site_id as site from equipment_location l
+			 join equipment e on e.location_id = l.id where l.organization_id = ?
+			 group by l.id having count(*) > 1 order by l.id limit 1`,
+			[northId],
+		);
+		// The seeded units have no names: name the last by make, in lower case, so it comes first
+		// (unnamed units came first before).
+		const [last] = await rows<{ id: number }>(
+			`select id from equipment where location_id = ? order by manufacturer desc, id desc limit 1`,
+			[location.id],
+		);
+		await rows(`update equipment set name = 'aaa Hal' where id = ?`, [last.id]);
+		await as(north.member, async () => {
+			const page = await data(getLocation, String(location.id) as never);
+			expect(page.units[0]).toMatchObject({ id: last.id, name: "aaa Hal" });
+			const sheet = await data(getLabelSheet, {
+				site: String(location.site),
+				location: String(location.id),
+			} as never);
+			expect(sheet.units.map((u) => u.id)).toEqual(page.units.map((u) => u.id));
+		});
+	});
+
+	test("a unit's label at its location is its own, and a 404 at another", async () => {
+		const [placed] = await rows<{ serial: string; site: number; location: number }>(
+			`select serial_number as serial, site_id as site, location_id as location from equipment
+			 where organization_id = ? and location_id is not null order by id limit 1`,
+			[northId],
+		);
+		const other = await value<number>(
+			`select min(id) from equipment_location where organization_id = ? and id != ?`,
+			[northId, placed.location],
+		);
+		const sheet = (location: number) =>
+			call(getLabelSheet, {
+				site: String(placed.site),
+				location: String(location),
+				unit: placed.serial,
+			} as never);
+		await as(north.member, async () => {
+			expect(await sheet(placed.location)).toMatchObject({
+				status: 200,
+				data: { locations: [], units: [{ serialNumber: placed.serial }] },
+			});
+			expect(await sheet(other)).toMatchObject({ status: 404 });
+		});
+	});
 });
 
 describe("in South", () => {

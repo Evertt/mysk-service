@@ -34,6 +34,7 @@ export interface SiteRemoval {
 /**
  * Whether a customer's site may go (`SiteRemoval`): a module that has records at the site (the
  * docks' dock positions, an energy site) refuses, saying what's there and what to remove first,
- * and the site stays. The sites card shows the refusal.
+ * and the site stays. The sites card shows the refusal. The modules the tenant has switched off are
+ * asked too, since their records would go just the same: one that's off says to switch it on first.
  */
-export const removingSite = defineVote<SiteRemoval>("customers.removingSite");
+export const removingSite = defineVote<SiteRemoval>("customers.removingSite", { alsoOff: true });

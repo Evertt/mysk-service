@@ -6,7 +6,7 @@
  * its `server/index.ts`: `defineServerModule("contracts", [contribute(adjustPrices, …), …])`, the
  * point imported from its owner, so the types follow it. The owner calls each point from one
  * function of its own, e.g. `priceOrders()` (`#lib/orders/server/pricing.ts`), for the modules the
- * current tenant has on; a module that isn't on is never asked.
+ * current tenant has on; a module that isn't on is never asked, but by a vote that asks for it.
  *
  * A point is one of these kinds, and keeps to its rules:
  *
@@ -22,7 +22,10 @@
  *   committed, in the same request (see `afterCommit()` in `#lib/server/db/serialize.ts`). Errors
  *   are logged with the module's id, never thrown: the change is made.
  * - Vote (`vote()`): every contributor is asked whether something may happen, and answers with a
- *   refusal or nothing; any refusal wins. A voter that throws fails the request.
+ *   refusal or nothing; any refusal wins. A voter that throws fails the request. A vote declared
+ *   with `alsoOff` asks the modules that are off too, telling each whether it's on: one whose
+ *   records the change would take with it (a site's removal cascades to its docks) refuses even
+ *   while it's off, so nothing goes unnoticed.
  * - Save hook (`save()`): each contributor saves its part of a change in the owner's transaction
  *   (the input carries it), one after another in registry order, and answers the problems that
  *   keep it from saving, or nothing. The first problems stop the rest; the owner then refuses the
@@ -60,6 +63,12 @@ export interface Contribution {
 	answer: (input: never) => unknown;
 }
 
+/** What a vote tells each voter about its own module. */
+export interface Voter {
+	/** Whether the tenant has the module on (a vote with `alsoOff` asks those that are off too). */
+	on: boolean;
+}
+
 /** A module's contributions to the points of others (core's and the modules' it enhances). */
 export interface ServerModule {
 	id: ModuleId;
@@ -81,10 +90,13 @@ export function contribute<Payload>(
 	point: EventPoint<Payload>,
 	handler: (payload: Payload) => void | Promise<void>,
 ): Contribution;
-/** A module's voter: a refusal (a message), or `undefined` to allow. */
+/**
+ * A module's voter: a refusal (a message), or `undefined` to allow. `module.on` says whether the
+ * tenant has it on: always, but at a vote that asks the modules that are off too (`alsoOff`).
+ */
 export function contribute<In>(
 	point: VotePoint<In>,
-	voter: (input: In) => Promise<string | undefined>,
+	voter: (input: In, module: Voter) => Promise<string | undefined>,
 ): Contribution;
 /** A module's part of a save: what it saves in the owner's transaction, or the problems in the way. */
 export function contribute<In, Problem>(
@@ -113,21 +125,21 @@ function ownerIsOff(point: AnyPoint, enabled: readonly string[]) {
 }
 
 /**
- * The answers to `point` of the `enabled` modules, in registry order, each with its module's id;
- * none while the point's owner is off, so a module that only enhances the owner isn't asked even
- * if it calls the owner's point itself. Reads the registry when called, not when loaded: the
- * modules import `contribute()` from here.
+ * The answers to `point` of the `enabled` modules (with `alsoOff`, of every module), in registry
+ * order, each with its module's id and whether it's on; none while the point's owner is off, so a
+ * module that only enhances the owner isn't asked even if it calls the owner's point itself. Reads
+ * the registry when called, not when loaded: the modules import `contribute()` from here.
  */
-function contributionsTo<Answer>(point: AnyPoint, enabled: readonly string[]) {
+function contributionsTo<Answer>(point: AnyPoint, enabled: readonly string[], alsoOff = false) {
 	if (ownerIsOff(point, enabled)) return [];
 	const modules: readonly ServerModule[] = generatedServerModules();
-	return modules.flatMap(({ id, contributions }) =>
-		enabled.includes(id)
-			? contributions.flatMap((contribution) =>
-					contribution.point.id === point.id ? [{ id, answer: contribution.answer as Answer }] : [],
-				)
-			: [],
-	);
+	return modules.flatMap(({ id, contributions }) => {
+		const on = enabled.includes(id);
+		if (!on && !alsoOff) return [];
+		return contributions.flatMap((contribution) =>
+			contribution.point.id === point.id ? [{ id, on, answer: contribution.answer as Answer }] : [],
+		);
+	});
 }
 
 /** Calls `answer`, turning what it throws into a rejection. */
@@ -207,15 +219,22 @@ export function emit<Payload>(
 
 /**
  * The refusals of the modules that are on (by default the current tenant's) to `input`, in
- * registry order: empty when it's allowed.
+ * registry order: empty when it's allowed. A point with `alsoOff` asks every module that
+ * contributes to it, each told whether it's on.
  */
 export async function vote<In>(
 	point: VotePoint<In>,
 	input: In,
 	enabled: readonly string[] = requireTenant().modules,
 ): Promise<string[]> {
-	const voters = contributionsTo<(input: In) => Promise<string | undefined>>(point, enabled);
-	const answers = await Promise.all(voters.map(({ answer }) => ask(answer, input)));
+	const voters = contributionsTo<(input: In, module: Voter) => Promise<string | undefined>>(
+		point,
+		enabled,
+		point.alsoOff,
+	);
+	const answers = await Promise.all(
+		voters.map(({ answer, on }) => ask((given: In) => answer(given, { on }), input)),
+	);
 	return answers.filter((answer) => answer !== undefined);
 }
 

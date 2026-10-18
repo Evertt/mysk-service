@@ -96,6 +96,20 @@
 			}
 		}
 	],
+	"docks_site_delete_refused_off": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "This site still has {countText} dock. Switch Docks on and delete it on the Docks card first.",
+				"countPlural=*": "This site still has {countText} docks. Switch Docks on and delete them on the Docks card first."
+			}
+		}
+	],
 	"docks_saved": "{code} saved",
 	"docks_form_site": "Site",
 	"docks_form_code": "Code",
