@@ -37,6 +37,11 @@
 
 	/** How often the open page ticks the simulation. */
 	const tickEvery = 15_000;
+	/**
+	 * When the first tick comes: a second on, so that on Start it has a whole second to cover (a
+	 * tick ends on a whole second, `runSimulations()`), and a playing simulation moves at once.
+	 */
+	const firstTickAfter = 1_100;
 
 	const simulation = $derived(await getSimulation(module));
 	let busy = $state(false);
@@ -52,7 +57,7 @@
 				// The next tick, or the cron's, tries again.
 			});
 		};
-		const first = setTimeout(tick, 0);
+		const first = setTimeout(tick, firstTickAfter);
 		const timer = setInterval(tick, tickEvery);
 		return () => {
 			clearTimeout(first);
