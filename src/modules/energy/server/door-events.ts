@@ -27,6 +27,9 @@ export async function doorEvents(
 	const { doorId, at, open } = energyDoorEvent;
 	const ofDoors = and(inTenant(energyDoorEvent), inList(doorId, doorIds));
 	// A door's last close before the window; the first open after it is the opening it's in then.
+	// Correlated with the outer event: in a `where` drizzle writes its columns with their table
+	// (`"energy_door_event"."door_id"`), which inside the subquery, whose table is `c`, names the
+	// outer row. In a select's columns it writes them bare, and they would name `c`'s.
 	const closed = sql`(select max(c.at) from energy_door_event c
 		where c.organization_id = ${energyDoorEvent.organizationId} and c.door_id = ${doorId}
 			and c.open = 0 and c.at < ${seconds(from)})`;

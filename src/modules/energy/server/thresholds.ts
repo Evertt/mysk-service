@@ -16,6 +16,17 @@ import { firstDayThreshold, INTERVAL_MINUTES } from "../model.ts";
 import { energyReading, energyThreshold, energyZone } from "./schema.ts";
 
 /**
+ * The arguments of a join from `energyZone` to its thresholds, kept in the tenant as `tenantJoin()`
+ * keeps one (which needs an `id`; a threshold is keyed by its zone):
+ * `.leftJoin(...zoneThresholds())`.
+ */
+export const zoneThresholds = () =>
+	[
+		energyThreshold,
+		and(eq(energyThreshold.zoneId, energyZone.id), inTenant(energyThreshold))!,
+	] as const;
+
+/**
  * Gives the zones of `zoneIds` (of the energy site `site`) that have no thresholds the defaults of
  * their first day of readings, once they have one. Answers how many it set.
  */
@@ -28,7 +39,7 @@ export async function setFirstThresholds(
 	const zones = await tx
 		.select({ id: energyZone.id, code: energyZone.code })
 		.from(energyZone)
-		.leftJoin(energyThreshold, eq(energyThreshold.zoneId, energyZone.id))
+		.leftJoin(...zoneThresholds())
 		.where(
 			and(
 				inTenant(energyZone),

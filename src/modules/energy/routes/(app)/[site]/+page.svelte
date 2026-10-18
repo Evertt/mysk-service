@@ -17,13 +17,13 @@
 	import HeroBanner, { type HeroChip } from "#lib/components/hero-banner.svelte";
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
 	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
+	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { formatCo2, formatFactor, formatKw, formatKwh } from "#modules/energy/display.ts";
 	import { getEnergyOverview, watchEnergy } from "#modules/energy/energy.remote.ts";
 	import { type Period, periods } from "#modules/energy/model.ts";
 	import AlertsList from "#modules/energy/overview/alerts-list.svelte";
 	import BuildingOverview from "#modules/energy/overview/building-overview.svelte";
-	import { Clock } from "#modules/energy/overview/clock.svelte.ts";
 	import ComparisonTable from "#modules/energy/overview/comparison-table.svelte";
 	import ConsumptionChart from "#modules/energy/overview/consumption-chart.svelte";
 	import DetailPanel from "#modules/energy/overview/detail-panel.svelte";
@@ -73,7 +73,7 @@
 		seen = changed;
 	});
 	// Open doors count up between batches, the solar estimate follows the sun.
-	const clock = new Clock();
+	const clock = new Clock(15_000);
 	const now = $derived(clock.now);
 
 	const zones = $derived(zonesIn(overview.zones, scope));
