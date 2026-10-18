@@ -6,8 +6,8 @@
  * §2.10): breakdowns half of it, one in thirteen of all orders an urgent one ("storing prio"),
  * repairs a quarter. Days ahead hold planned work (no breakdowns beyond tomorrow), fewer the further
  * ahead, as a planning fills up. Some orders are fixed: the mockup's planning (as this week's and
- * the next weeks'), the open orders its Apparatuur page counts on Riedel's units, and an
- * inspection that runs out within the month, whatever the day.
+ * the next weeks'), the open orders its Apparatuur page counts on Riedel's units, an inspection
+ * that runs out within the month, whatever the day, and Lev's inspection of Weggemans' docks.
  */
 import type { Faker } from "@faker-js/faker";
 
@@ -174,6 +174,8 @@ interface FixedOrder {
 	started?: true;
 	/** The unit's last inspection: the generated orders inspect it no more after it. */
 	last?: true;
+	/** The engineer's name, whoever else would be free. */
+	engineer?: string;
 }
 
 const fixedOrders = (): FixedOrder[] => [
@@ -273,6 +275,9 @@ const fixedOrders = (): FixedOrder[] => [
 		day: inWeek(1, 3),
 		time: "07:30",
 		laborHours: 6,
+		// Whatever the day, Lev (the demo engineer) has a planned inspection of several units, each
+		// with its checklist, to fill in on the portal.
+		engineer: "Lev Hoekstra",
 	},
 	{
 		customer: "Weggemans Logistiek",
@@ -425,6 +430,8 @@ interface Draft {
 	quote: boolean;
 	started: boolean;
 	fixed: boolean;
+	/** The engineer's name, if fixed. */
+	engineer?: string;
 }
 
 /** One of SHLTR's orders, like `generateOrders`' (oldest first, ids from 1). */
@@ -552,6 +559,7 @@ export function generateShltrOrders(
 			quote: fixed.quote ?? false,
 			started: fixed.started ?? false,
 			fixed: true,
+			engineer: fixed.engineer,
 		};
 	});
 
@@ -697,7 +705,9 @@ export function generateShltrOrders(
 			}
 			const [first] = draft.units;
 			const specialty = first ? specialtyOf(first.category) : "mechanical";
-			const engineer = pickEngineer(specialty, draft.day);
+			// Picked also for a fixed engineer, so the rest of the demo draws as it did without one.
+			const picked = pickEngineer(specialty, draft.day);
+			const engineer = engineers.find((e) => e.name === draft.engineer) ?? picked;
 			const jobs = takenOn(engineer, draft.day);
 			const minutes = draft.time ? minutesOf(draft.time) : pickTime(jobs, draft.site, draft.urgent);
 			jobs.push(minutes);
