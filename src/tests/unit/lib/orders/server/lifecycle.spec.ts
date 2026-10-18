@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { overwriteGetTimeZone } from "#lib/dates.ts";
-import type { OrderStatus } from "#lib/models.ts";
+import { type OrderStatus, orderStatuses } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { type OrderProblem, saving } from "#lib/orders/extensions.ts";
 import { beginOrderChange, transitionOrder } from "#lib/orders/server/lifecycle.ts";
@@ -730,5 +730,100 @@ describe("the order form's change (beginOrderChange)", () => {
 		await db.transaction(async (tx) => {
 			expect((await beginOrderChange(tx, id, "completed")).columns.completedAt).toEqual(done);
 		});
+	});
+});
+
+describe("each verb moves an order only from its statuses, and refuses it from the others", () => {
+	// The statuses each verb moves from, as the plan's rules (Q1) have them.
+	const movesFrom: Record<string, readonly OrderStatus[]> = {
+		set: ["quote", "scheduled", "in_progress", "completed", "cancelled"],
+		plan: ["quote", "scheduled", "in_progress"],
+		accept: ["awaiting_acceptance"],
+		reject: ["awaiting_acceptance"],
+		start: ["scheduled"],
+		complete: ["in_progress"],
+	};
+	const move = (verb: string, id: number) => {
+		const day = Temporal.PlainDate.from("2026-11-03");
+		const transitions = {
+			set: { verb: "set", id, to: "completed" },
+			plan: { verb: "plan", id, engineerId: null, day, time: "09:00" },
+			accept: { verb: "accept", id },
+			reject: { verb: "reject", id, reason: "Nee" },
+			start: { verb: "start", id },
+			complete: { verb: "complete", id, signoff },
+		} as const;
+		return db.transaction((tx) =>
+			transitionOrder(tx, transitions[verb as keyof typeof transitions]),
+		);
+	};
+
+	for (const [verb, from] of Object.entries(movesFrom)) {
+		for (const status of orderStatuses) {
+			const moves = from.includes(status);
+			test(`${verb} ${moves ? "moves" : "refuses"} an order that's ${status}`, async () => {
+				const engineers = verb === "start" || verb === "complete";
+				const { id } = await orderIn(status, { engineerId: engineers ? 1 : null });
+				if (engineers) asEngineer();
+				const refused = await refusal(() => move(verb, id));
+				if (moves) {
+					expect(refused).toEqual([]);
+				} else {
+					expect(refused).toEqual([expect.any(String)]);
+					expect((await stored(id)).status).toBe(status);
+				}
+			});
+		}
+	}
+
+	test("the engineer can't complete a job that's done already", async () => {
+		const { id } = await orderIn("completed", { engineerId: 1 });
+		asEngineer();
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "complete", id, signoff })),
+			),
+		).toEqual(["This order is completed; it can't be changed here"]);
+	});
+});
+
+describe("another tenant's (or engineer's) order is a 404 for every verb", () => {
+	test("plan", async () => {
+		const { id } = await orderIn("quote", { organizationId: "south" });
+		expect(
+			await refusal(() =>
+				db.transaction((tx) =>
+					transitionOrder(tx, {
+						verb: "plan",
+						id,
+						engineerId: null,
+						day: Temporal.PlainDate.from("2026-11-03"),
+						time: "09:00",
+					}),
+				),
+			),
+		).toBe(404);
+	});
+
+	test("reject", async () => {
+		const { id } = await orderIn("awaiting_acceptance", { organizationId: "south" });
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "reject", id, reason: "Nee" })),
+			),
+		).toBe(404);
+		expect((await stored(id)).status).toBe("awaiting_acceptance");
+	});
+
+	test("complete", async () => {
+		const { id } = await orderIn("in_progress", { engineerId: 4 });
+		asEngineer();
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "complete", id, signoff })),
+			),
+		).toBe(404);
+		expect((await stored(id)).status).toBe("in_progress");
+		expect(await storedSignoff(id)).toBeUndefined();
 	});
 });
