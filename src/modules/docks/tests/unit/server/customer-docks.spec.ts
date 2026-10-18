@@ -2,23 +2,27 @@
  * The docks card on a customer's page (`docks.remote.ts`) on the seeded demo database: Weggemans'
  * docks, and a manager adding, editing and deleting one (logged against the customer), refused a
  * code another dock has, a unit or location at another site, another customer's dock and a
- * planner. The server side of `docks.test.ts`, which keeps the card.
+ * planner; and the dock of a door, for the energy module's door card. The server side of
+ * `docks.test.ts`, and of the dock on `energy.setup.test.ts`' door card, which keep the cards.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import {
 	deleteCustomerDock,
 	getCustomerDocks,
+	getDoorDock,
 	saveCustomerDock,
 } from "#modules/docks/docks.remote.ts";
 import {
 	as,
+	call,
 	data,
 	organizationId,
 	rows,
 	shltr,
 	submit,
 	value,
+	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
 const shltrId = organizationId("shltr");
@@ -205,5 +209,26 @@ describe("Weggemans' docks", () => {
 			"updated",
 			"deleted",
 		]);
+	});
+});
+
+describe("the dock of a door, for energy's door card", () => {
+	test("is DOCK 05's for its door, none for a unit that's no dock's door, and a 404 without docks", async () => {
+		const door = await value<number>(
+			`select door_id from dock_position where organization_id = ? and code = 'DOCK 05'`,
+			[shltrId],
+		);
+		// Riedel's freezer door: a unit, but no dock's.
+		const freezer = await value<number>(
+			`select equipment_id from energy_door where organization_id = ? and code = 'D-VR1'`,
+			[shltrId],
+		);
+		await as(shltr.member, async () => {
+			expect(await data(getDoorDock, door)).toMatchObject({ code: "DOCK 05" });
+			expect(await data(getDoorDock, freezer)).toBeNull();
+		});
+		await withoutModule("shltr", "docks", async () => {
+			expect(await as(shltr.member, () => call(getDoorDock, door))).toMatchObject({ status: 404 });
+		});
 	});
 });

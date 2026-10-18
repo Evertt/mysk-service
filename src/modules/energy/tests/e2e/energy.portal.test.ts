@@ -1,12 +1,11 @@
 /**
  * The energy page of the customer portal: Riedel's contact reads their own site's figures and
- * door losses, read-only; Weggemans' contact, another of SHLTR's customers, sees no site of
- * Riedel's; and the office's energy pages aren't a contact's.
+ * door losses, read-only; and the office's energy pages aren't a contact's. That another
+ * customer's contact sees none of Riedel's sites is `tests/unit/server/sites.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { isRemote, useApp } from "#e2e/app.ts";
-import { signedInPage } from "#e2e/portal-helpers.ts";
 
 import { kwh, kwhToday, riedel } from "./helpers.ts";
 
@@ -37,18 +36,6 @@ describe("in the customer portal", () => {
 		await page.locator('[data-period="month"]').click();
 		await page.waitForURL((url) => url.searchParams.get("period") === "month");
 		await site.getByText("Consumption this month").waitFor();
-	});
-
-	test("another customer's contact sees none of Riedel's sites", async () => {
-		const { page } = await signedInPage(app, "rob@weggemans.example");
-		try {
-			await page.getByRole("link", { name: "Energy" }).click();
-			await page.waitForURL((url) => url.pathname === "/energy/portal");
-			await page.locator("[data-client-energy-empty]").waitFor();
-			expect(await page.locator("[data-client-site]").count()).toBe(0);
-		} finally {
-			await page.context().close();
-		}
 	});
 
 	test("the office's energy pages aren't a contact's", async () => {
