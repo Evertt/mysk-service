@@ -117,4 +117,9 @@ describe("signature", () => {
 			issue: "The signature is too large; clear it and sign again",
 		});
 	});
+
+	test("two of them, with the rest of the completion form, fit adapter-node's default body limit", () => {
+		// 512 KB (`BODY_SIZE_LIMIT`); a few KB to spare for the form's other fields.
+		expect(2 * MAX_SIGNATURE_LENGTH + 16 * 1024).toBeLessThan(512 * 1024);
+	});
 });

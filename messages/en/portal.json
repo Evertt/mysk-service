@@ -66,7 +66,7 @@
 	"portal_engineer_signature": "Your signature",
 	"portal_engineer_name": "Your name",
 	"portal_engineer_signature_pad": "Engineer's signature",
-	"portal_engineer_name_required": "Enter your name",
+	"portal_engineer_name_description": "As the office knows you: it goes on the work order.",
 	"portal_engineer_signature_required": "Sign the work order yourself too",
 	"portal_customer_signature": "The customer's signature",
 	"portal_engineer_signed": "Engineer: {name}",

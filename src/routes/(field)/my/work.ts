@@ -76,8 +76,13 @@ export function groupByDay<T extends { scheduledFor: Temporal.Instant | null }>(
 	return groups;
 }
 
-/** A signature as drawn on the canvas: a PNG data URL, at most this long. */
-export const MAX_SIGNATURE_LENGTH = 500_000;
+/**
+ * A signature as drawn on the canvas: a PNG data URL, at most this long (a drawn one is some tens of
+ * thousands). The completion form sends two, which with the rest of the form stay under the
+ * smallest request body a deploy takes: adapter-node's default `BODY_SIZE_LIMIT`, 512 KB (Vercel's
+ * functions take 4.5 MB, Workers 100 MB), so a larger one gets the form's message, not a 413.
+ */
+export const MAX_SIGNATURE_LENGTH = 200_000;
 
 /**
  * A signature from the signature pad, the customer's or the engineer's (`required` says who must

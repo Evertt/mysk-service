@@ -230,5 +230,19 @@
 			}
 		}
 	],
-	"materials_parts_last_used": "laatst {date}"
+	"materials_parts_last_used": "laatst {date}",
+	"materials_parts_shared": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "op een opdracht voor 1 apparaat",
+				"countPlural=*": "op een opdracht voor {countText} apparaten"
+			}
+		}
+	]
 }

@@ -62,7 +62,8 @@
 					{#if data.canAdd}
 						<form
 							{...form.enhance(async ({ submit }) => {
-								if (await submit())
+								// The order and the modules' cards are the server's to refresh; this card's stock too.
+								if (await submit().updates(getSuggestedParts({ number, ids, articles })))
 									toast.success(m.shop_suggested_added({ name: part.name, number }));
 							})}
 						>
