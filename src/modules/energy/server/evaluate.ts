@@ -2,9 +2,9 @@
  * Raising alerts after a batch (`ingest.ts`), in its transaction: the site's zones that got
  * readings against their thresholds, interval by interval (power, and the day's consumption up to
  * it), and every door of the site by its openings, still-open ones up to now (`../model.ts`). A
- * breach becomes an alert once per key (a zone per local hour, a door per opening); a door's alert
- * that's still open follows its opening as it goes on (the longest it was open), a zone's grows from
- * near to active within its hour. Only the last day's breaches raise alerts: a gateway catching up
+ * breach becomes an alert once per key (a zone's power per local hour, its consumption per local
+ * day, a door per opening); a door's alert that's still open follows its opening as it goes on (the
+ * longest it was open), a zone's grows from near to active within its hour or day. Only the last day's breaches raise alerts: a gateway catching up
  * on last week raises none about it, while a door that's still open (since last week) does.
  */
 import { and, asc, eq, gte, lte } from "drizzle-orm";
@@ -28,10 +28,14 @@ import { energyAlert, energyDoor, energyReading, energyThreshold, energyZone } f
 /** How far back a breach still raises an alert. */
 const ALERT_WINDOW_HOURS = 24;
 
-/** The local hour a moment is in at the site, `yyyy-mm-ddThh`: a zone's alert's key. */
-function localHour(instant: Temporal.Instant, timeZone: string) {
+/**
+ * The local day and hour a moment is in at the site, `yyyy-mm-dd` and `yyyy-mm-ddThh`: what a
+ * zone's alerts are keyed by.
+ */
+function localDayAndHour(instant: Temporal.Instant, timeZone: string) {
 	const local = instant.toZonedDateTimeISO(timeZone);
-	return `${local.toPlainDate().toString()}T${String(local.hour).padStart(2, "0")}`;
+	const day = local.toPlainDate().toString();
+	return { day, hour: `${day}T${String(local.hour).padStart(2, "0")}` };
 }
 
 /** A breach with what it's about. */
@@ -82,17 +86,16 @@ async function zoneBreachesOf(
 		const threshold = thresholds.find((t) => t.zoneId === zone.id);
 		if (!threshold) continue;
 		const intervals: ZoneInterval[] = [];
-		let day = "";
+		let today = "";
 		let kwhToday = 0;
 		for (const reading of readings) {
 			if (reading.zoneId !== zone.id) continue;
-			const hour = localHour(reading.start, site.timeZone);
-			const date = hour.slice(0, 10);
-			if (date !== day) [day, kwhToday] = [date, 0];
+			const { day, hour } = localDayAndHour(reading.start, site.timeZone);
+			if (day !== today) [today, kwhToday] = [day, 0];
 			kwhToday += reading.kwh;
 			// Only the batch's intervals are judged; the earlier ones of the day add up to them.
 			if (!incoming.has(reading.start.epochMilliseconds)) continue;
-			intervals.push({ start: reading.start, hour, kw: reading.avgKw, kwhToday });
+			intervals.push({ start: reading.start, day, hour, kw: reading.avgKw, kwhToday });
 		}
 		for (const breach of zoneBreaches(zone.id, intervals, threshold)) {
 			raised.push({ ...breach, zoneId: zone.id, doorId: null, code: zone.code });
@@ -180,7 +183,8 @@ export async function raiseAlerts(
 		);
 	const byKey = new Map(existing.map((alert) => [alert.key, alert]));
 
-	// An open alert follows its breach: a door open for longer, a zone from near to over.
+	// An open alert follows its breach: a door open for longer, a zone from near to over (within its
+	// hour for power, its day for consumption).
 	for (const breach of breaches) {
 		const alert = byKey.get(breach.key);
 		if (!alert || alert.status !== "open") continue;

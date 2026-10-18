@@ -204,18 +204,20 @@ export default defineSeed({
 					.filter((reading) => reading.zoneId === zone.id)
 					.toSorted((a, b) => Temporal.Instant.compare(a.start, b.start));
 				const intervals: ZoneInterval[] = [];
-				let day = "";
+				let today = "";
 				let kwhToday = 0;
 				for (const reading of own) {
 					const local = reading.start.toZonedDateTimeISO(timeZone);
-					const date = local.toPlainDate().toString();
-					if (date !== day) [day, kwhToday] = [date, 0];
+					const day = local.toPlainDate().toString();
+					if (day !== today) [today, kwhToday] = [day, 0];
 					kwhToday += reading.kwh;
-					const hour = `${date}T${String(local.hour).padStart(2, "0")}`;
-					intervals.push({ start: reading.start, hour, kw: reading.avgKw, kwhToday });
+					const hour = `${day}T${String(local.hour).padStart(2, "0")}`;
+					intervals.push({ start: reading.start, day, hour, kw: reading.avgKw, kwhToday });
 				}
 				const threshold = thresholds.find((t) => t.zoneId === zone.id)!;
-				const breaches = zoneBreaches(zone.id, intervals, threshold).filter(recent);
+				const breaches = zoneBreaches(zone.id, intervals, threshold)
+					.filter(recent)
+					.toSorted((a, b) => Temporal.Instant.compare(a.at, b.at));
 				// The latest two of a zone over its thresholds, rather than every hour.
 				for (const breach of breaches.filter((b) => b.severity === "active").slice(-2)) {
 					alerts.push({ organizationId, energySiteId: site.id, zoneId: zone.id, ...breach });

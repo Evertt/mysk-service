@@ -33,6 +33,7 @@ import {
 	totalKwh,
 	weightedChange,
 	zoneAlertKey,
+	zoneDayAlertKey,
 	zoneBreaches,
 	zoneTone,
 } from "#modules/energy/model.ts";
@@ -208,14 +209,15 @@ describe("thresholds", () => {
 
 describe("alerts", () => {
 	const threshold = { enabled: true, maxKw: 200, maxKwh: 10_000 };
-	const interval = (minutes: number, kw: number, hour: string) => ({
+	const interval = (minutes: number, kw: number, hour: string, kwhToday = 0) => ({
 		start: t(minutes),
+		day: hour.slice(0, 10),
 		hour,
 		kw,
-		kwhToday: 0,
+		kwhToday,
 	});
 
-	test("a zone raises one alert per hour: the worst interval over or near its thresholds", () => {
+	test("a zone's power raises one alert per hour: the worst interval over or near its max", () => {
 		const breaches = zoneBreaches(
 			7,
 			[
@@ -248,17 +250,60 @@ describe("alerts", () => {
 	});
 
 	test("consumption counts up to the interval, against the day's max", () => {
-		const [breach] = zoneBreaches(
-			1,
-			[{ start: t(0), hour: "2026-10-17T21", kw: 10, kwhToday: 1450 }],
-			{ enabled: true, maxKw: 201, maxKwh: 1408 },
-		);
+		const [breach] = zoneBreaches(1, [interval(0, 10, "2026-10-17T21", 1450)], {
+			enabled: true,
+			maxKw: 201,
+			maxKwh: 1408,
+		});
 		expect(breach).toMatchObject({ metric: "energy", severity: "active", measured: 1450 });
+	});
+
+	test("a zone's consumption raises one alert per day, its latest interval, beside its power", () => {
+		const breaches = zoneBreaches(
+			7,
+			[
+				interval(0, 100, "2026-10-17T10", 8_600),
+				interval(60, 210, "2026-10-17T11", 9_900),
+				interval(120, 100, "2026-10-17T12", 10_200),
+				interval(24 * 60, 100, "2026-10-18T10", 9_000),
+			],
+			threshold,
+		);
+		expect(breaches).toEqual([
+			{
+				key: zoneDayAlertKey(7, "2026-10-17"),
+				metric: "energy",
+				severity: "active",
+				threshold: 10_000,
+				measured: 10_200,
+				at: t(120),
+			},
+			{
+				key: zoneAlertKey(7, "2026-10-17T11"),
+				metric: "power",
+				severity: "active",
+				threshold: 200,
+				measured: 210,
+				at: t(60),
+			},
+			{
+				key: "zone:7:2026-10-18",
+				metric: "energy",
+				severity: "near",
+				threshold: 10_000,
+				measured: 9_000,
+				at: t(24 * 60),
+			},
+		]);
 	});
 
 	test("nothing while the thresholds are off", () => {
 		expect(
-			zoneBreaches(1, [interval(0, 999, "h")], { enabled: false, maxKw: 1, maxKwh: 1 }),
+			zoneBreaches(1, [interval(0, 999, "2026-10-17T10", 999)], {
+				enabled: false,
+				maxKw: 1,
+				maxKwh: 1,
+			}),
 		).toEqual([]);
 	});
 
