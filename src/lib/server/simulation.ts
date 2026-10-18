@@ -9,8 +9,9 @@
  * interval twice. It's called from:
  *
  * - `POST /_ops/tick` (a cron's, authorized like `/_ops/daily`, `src/routes/_ops/tick/+server.ts`);
- * - on Cloudflare the Worker's Cron Trigger, every minute (`scheduled()` in `cloudflare/entry.ts`);
- * - the simulation bar (`#lib/components/simulation/`), every few seconds while a page with a
+ * - on Cloudflare the Worker's Cron Trigger, every 15 minutes (`scheduled()` in
+ *   `cloudflare/entry.ts`), which asks nothing of the app while no simulation runs;
+ * - the simulation bar (`#lib/components/simulation/`), every 15 seconds while a page with a
  *   running simulation is open, for the current tenant only, so the demo moves between the
  *   cron's minutes.
  *
@@ -34,8 +35,8 @@ import { organization, organizationModule, simulation } from "#lib/server/db/sch
 import { collect } from "#lib/server/extensions.ts";
 import { type SimulationSpeed, simulationRun } from "#lib/simulation/extensions.ts";
 
-/** The most real time one tick covers. */
-export const tickCap = Temporal.Duration.from({ minutes: 10 });
+/** The most real time one tick covers: more than the cron's 15 minutes, so its ticks leave no gap. */
+export const tickCap = Temporal.Duration.from({ minutes: 20 });
 
 /** A module's simulation in a tenant, as stored. */
 export type SimulationRow = typeof simulation.$inferSelect;

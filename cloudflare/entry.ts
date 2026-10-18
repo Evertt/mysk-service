@@ -12,8 +12,10 @@
  *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
  *   start with the demo data.
  * - The Cron Triggers (`triggers.crons` in `wrangler.jsonc`): the daily one starts the daily jobs,
- *   the one every minute ticks the demo's simulations. `scheduled()` has the object answer
- *   `POST /_ops/daily` or `POST /_ops/tick` with the `OPS_TOKEN`, like a request from outside, so
+ *   the one every 15 minutes ticks the demo's simulations (an open page's simulation bar ticks in
+ *   between). `scheduled()` has the object answer `POST /_ops/daily` or `POST /_ops/tick` with the
+ *   `OPS_TOKEN`, like a request from outside (a tick only if a simulation runs: else it asks
+ *   nothing of the app, see `operation()`), so
  *   they run inside it with its database (`runDaily()`, `src/lib/server/jobs/daily.ts`;
  *   `runSimulations()`, `src/lib/server/simulation.ts`).
  */
@@ -61,6 +63,8 @@ export class AppDatabase extends DurableObject<Env> {
 	 * the app refused or failed.
 	 */
 	async operation(path: "/_ops/daily" | "/_ops/tick"): Promise<string> {
+		// No simulation running (the usual case): the tick asks nothing of SvelteKit, a query only.
+		if (path === "/_ops/tick" && !this.simulationRuns()) return JSON.stringify({ ticked: [] });
 		const response = await this.fetch(
 			new Request(new URL(path, this.env.ORIGIN), {
 				method: "POST",
@@ -76,6 +80,12 @@ export class AppDatabase extends DurableObject<Env> {
 			throw new Error(`${path} failed (${response.status}): ${await response.text()}`);
 		}
 		return response.text();
+	}
+
+	/** Whether any organization's simulation runs, straight from the object's SQLite. */
+	private simulationRuns() {
+		const running = this.ctx.storage.sql.exec("select 1 from simulation where running = 1 limit 1");
+		return running.toArray().length > 0;
 	}
 
 	/**
@@ -129,7 +139,7 @@ function authorized(request: Request, token: string | undefined) {
 }
 
 /** The Cron Trigger that ticks the simulations (`wrangler.jsonc`); any other runs the daily jobs. */
-const tickCron = "* * * * *";
+const tickCron = "*/15 * * * *";
 
 /** The app's one object, kept in western Europe, near its users. */
 const appDatabase = (env: Env) =>
@@ -156,7 +166,7 @@ export default {
 
 	/**
 	 * The Cron Triggers, in the object (see `AppDatabase.operation()`): the simulations' tick every
-	 * minute (`tickCron`), the daily jobs at the other one.
+	 * 15 minutes (`tickCron`), the daily jobs at the other one.
 	 */
 	async scheduled(controller, env, ctx) {
 		const path = controller.cron === tickCron ? "/_ops/tick" : "/_ops/daily";
@@ -164,7 +174,7 @@ export default {
 			appDatabase(env)
 				.operation(path)
 				.then((report) => {
-					// A minute's tick that ticked nothing isn't worth a line.
+					// A tick that ticked nothing isn't worth a line.
 					if (path === "/_ops/daily" || !report.includes('"ticked":[]')) {
 						console.info(`${path}:`, report);
 					}

@@ -14,9 +14,9 @@
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
 	"vars": { "ORIGIN": "https://fieldworks.devign.workers.dev" },
 	// The daily jobs (e.g. maintenance plans that become orders), at 04:00 UTC, and the demo's
-	// simulations' tick, every minute: `scheduled()` in `cloudflare/entry.ts`. They need the
+	// simulations' tick, every 15 minutes: `scheduled()` in `cloudflare/entry.ts`. They need the
 	// `OPS_TOKEN` secret.
-	"triggers": { "crons": ["0 4 * * *", "* * * * *"] },
+	"triggers": { "crons": ["0 4 * * *", "*/15 * * * *"] },
 	"observability": { "enabled": true },
 	"env": {
 		// Staging, the deploy of `develop` (`wrangler deploy --env staging`, from CI): a Worker of its
@@ -29,7 +29,7 @@
 			// `DEMO_SIGN_IN`: the login page's one-click demo sign-in (README "Demo login"), passwordless,
 			// so here only, never in the top-level vars above (production).
 			"vars": { "ORIGIN": "https://fieldworks-staging.devign.workers.dev", "DEMO_SIGN_IN": "true" },
-			"triggers": { "crons": ["0 4 * * *", "* * * * *"] },
+			"triggers": { "crons": ["0 4 * * *", "*/15 * * * *"] },
 		},
 	},
 }

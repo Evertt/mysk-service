@@ -256,11 +256,14 @@ Salvo docks and P1 meters; the seed gives it the rows in `simulation`, real tena
 one). While it runs, the module makes its data up over each interval of real time, through its own
 ingest path. `POST /_ops/tick` (or `GET`), with the same token as the daily jobs, moves every
 running simulation on to now; the bar on the module's page (Start/Pause, speed, reset, for
-managers) does it every few seconds while the page is open, so a cron is only needed to keep it
-going while no one looks.
+managers) does it every 15 seconds while the page is open, so a cron is only needed to keep it
+going while no one looks. A tick covers up to 20 minutes (`tickCap`), so a cron every 15 minutes
+leaves no gap, and the modules make up what's missing since their latest data.
 
-- **Cloudflare**: the Worker's minute Cron Trigger (`* * * * *`, next to the daily one) does it.
-- **A server of your own**: a crontab line posting to `/_ops/tick` every minute, like the daily one.
+- **Cloudflare**: the Worker's Cron Trigger every 15 minutes (`*/15 * * * *`, next to the daily
+  one) does it, asking nothing of the app while no simulation runs.
+- **A server of your own**: a crontab line posting to `/_ops/tick` every 15 minutes, like the daily
+  one.
 
 ### On Cloudflare
 
@@ -283,7 +286,7 @@ there. To try it locally in Cloudflare's runtime: copy `.dev.vars.example` to `.
 `pnpm dev:cloudflare` (wrangler keeps the object's data in `.wrangler/`).
 
 The Worker has two Cron Triggers (`triggers.crons`, in the top level and in `env.staging`):
-`0 4 * * *` runs the daily jobs, `* * * * *` ticks the demo's simulations (see "The demo's
+`0 4 * * *` runs the daily jobs, `*/15 * * * *` ticks the demo's simulations (see "The demo's
 simulations"); `scheduled()` tells them apart by `controller.cron`, and has the object answer
 `/_ops/daily` or `/_ops/tick` with the `OPS_TOKEN`.
 

@@ -3,7 +3,7 @@
 	The bar of a module's simulation for a demo, as the client's mockup has it ("P1 simulatie"):
 	start or pause, reset, the speeds 1× to 30×, and a badge with the state. Managers drive it;
 	members see its state. While the simulation runs and the page is visible, it asks the server to
-	tick it every few seconds (the cron does it every minute too), so the demo moves on. Renders
+	tick it every 15 seconds (the cron does it every 15 minutes too), so the demo moves on. Renders
 	nothing for a tenant that's offered no simulation of the module.
 -->
 <script lang="ts">
@@ -36,7 +36,7 @@
 	} = $props();
 
 	/** How often the open page ticks the simulation. */
-	const tickEvery = 5000;
+	const tickEvery = 15_000;
 
 	const simulation = $derived(await getSimulation(module));
 	let busy = $state(false);
