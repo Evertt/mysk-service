@@ -60,9 +60,10 @@
 	);
 	const initialUnits = $derived(order?.units.map((unit) => unit.id) ?? []);
 	// The specialties that service the chosen units' categories, first unit first: their engineers
-	// come first.
+	// come first. The order's own units until the field has a value (as `UnitsField` shows them):
+	// with all cleared, none.
 	const chosenIds = $derived(fields.equipmentIds.value() as string[] | undefined);
-	const chosenUnits = $derived(chosenIds?.length ? chosenIds.map(Number) : initialUnits);
+	const chosenUnits = $derived(chosenIds?.map(Number) ?? initialUnits);
 	const fitting = $derived(
 		chosenUnits.map((id) => customerUnits.find((unit) => unit.id === id)?.specialty ?? null),
 	);

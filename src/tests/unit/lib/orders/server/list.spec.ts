@@ -150,6 +150,33 @@ describe("North's orders list", () => {
 		expect(facets.status).toEqual(Object.fromEntries(counts.map(({ status, n }) => [status, n])));
 	});
 
+	test("sorts by the first unit as the column shows it: its name, or its manufacturer and model", async () => {
+		// The first unit that sorts last by its manufacturer gets a name of its own (the seed's have
+		// none) that sorts it among the first.
+		const [last] = await rows<{ id: number; number: string }>(
+			`select u.id, o.number from "order" o
+			 join order_unit ou on ou.order_id = o.id and ou.position = 0
+			 join equipment u on u.id = ou.equipment_id
+			 where o.organization_id = ?
+			 order by u.manufacturer collate nocase desc, u.model collate nocase desc, o.id desc limit 1`,
+			[northId],
+		);
+		await rows(`update equipment set name = 'Achterdeur' where id = ?`, [last.id]);
+		const expected = await rows<{ number: string }>(
+			`select o.number from "order" o
+			 left join order_unit ou on ou.order_id = o.id and ou.position = 0
+			 left join equipment u on u.id = ou.equipment_id
+			 where o.organization_id = ?
+			 order by coalesce(u.name, u.manufacturer) collate nocase asc nulls last,
+			   u.model collate nocase asc nulls last, o.id
+			 limit 50`,
+			[northId],
+		);
+		expect(expected.map((row) => row.number)).toContain(last.number);
+		const found = await listed({ sort: [{ id: "equipment", desc: false }] });
+		expect(found.numbers).toEqual(expected.map((row) => row.number));
+	});
+
 	test("the customer filter finds North's customers by name or code, at most 20", async () => {
 		// The customer with the most orders with one engineer, as the e2e test picks it.
 		const [busy] = await rows<{ code: string; name: string }>(

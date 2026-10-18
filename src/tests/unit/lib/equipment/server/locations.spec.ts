@@ -181,6 +181,26 @@ describe("locations", () => {
 		);
 	});
 
+	test("a name with a letter beyond ASCII is taken as the unique index takes it", async () => {
+		// SQLite's `lower()`, which the index uses, leaves "É" as it is: the check must too.
+		await createLocation(1, { name: "Één", description: null }, nameIssue);
+		expect(
+			await failure(() => createLocation(1, { name: "ÉéN", description: null }, nameIssue)),
+		).toEqual(["The site has a location called “Één” already"]);
+		expect(
+			await failure(() => updateLocation(51, { name: "ÉéN", description: null }, nameIssue)),
+		).toEqual(["The site has a location called “Één” already"]);
+		const [{ id }] = await db.all<{ id: number }>(
+			sql`select id from equipment_location where name = 'Één'`,
+		);
+		expect(await db.transaction((tx) => locationAt(tx, 1, "Één"))).toBe(id);
+		expect((await locationsAt(1)).map((location) => location.name)).toEqual([
+			"Dock 03",
+			"Hal A",
+			"Één",
+		]);
+	});
+
 	test("one with units can't be deleted; one without can", async () => {
 		expect(await failure(() => removeLocation(50))).toEqual([
 			"1 unit is there: move it to another location first",

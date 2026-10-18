@@ -147,9 +147,13 @@ export const ordersSql = (): ListSql<typeof ordersList.columns> => ({
 			filter: (codes) => inList(customer.code, codes),
 			group: customer.code,
 		},
-		// By the first unit, as the column shows it; any of the units' serial numbers filters.
+		// By the first unit, as the column shows it (its name, or its manufacturer and model, as the
+		// equipment list sorts); any of the units' serial numbers filters.
 		equipment: {
-			sort: [nocase(equipment.manufacturer), nocase(equipment.model)],
+			sort: [
+				nocase(sql`coalesce(${equipment.name}, ${equipment.manufacturer})`),
+				nocase(equipment.model),
+			],
 			nullsLast: true,
 			// `null` among the serial numbers: the new installations.
 			filter: withUnitIn,

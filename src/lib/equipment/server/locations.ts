@@ -54,7 +54,10 @@ async function findLocation(tx: Transaction, id: number) {
 	return found;
 }
 
-/** The location at site `siteId` named `name`, in any case (but `except`), if there is one. */
+/**
+ * The location at site `siteId` named `name`, in any case (but `except`), if there is one. Compared
+ * with SQLite's `lower()`, as the unique index compares them: it lowers ASCII letters only.
+ */
 async function locationNamed(tx: Transaction, siteId: number, name: string, except?: number) {
 	const [found] = await tx
 		.select({ id: equipmentLocation.id, name: equipmentLocation.name })
@@ -63,7 +66,7 @@ async function locationNamed(tx: Transaction, siteId: number, name: string, exce
 			and(
 				inTenant(equipmentLocation),
 				eq(equipmentLocation.siteId, siteId),
-				eq(sql`lower(${equipmentLocation.name})`, name.toLowerCase()),
+				eq(sql`lower(${equipmentLocation.name})`, sql`lower(${name})`),
 				except === undefined ? undefined : ne(equipmentLocation.id, except),
 			),
 		);

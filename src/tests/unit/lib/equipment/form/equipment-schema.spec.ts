@@ -109,4 +109,13 @@ describe("site, name and location", () => {
 			issues: ["Use at most 120 characters"],
 		});
 	});
+
+	test("a new location's name is at most as long as the location form takes it", () => {
+		expect(parse(equipmentFields.newLocationName, "A".repeat(80))).toEqual({
+			value: "A".repeat(80),
+		});
+		expect(parse(equipmentFields.newLocationName, "A".repeat(81))).toEqual({
+			issues: ["Use at most 80 characters"],
+		});
+	});
 });
