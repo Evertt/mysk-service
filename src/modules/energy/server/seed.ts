@@ -168,6 +168,7 @@ export default defineSeed({
 
 			// The history up to the last quarter hour that has ended, and today so far.
 			const until = toMoment(now);
+			const doorsUntil = until.subtract({ minutes: 15 });
 			const { timeZone } = riedelSite;
 			const today = until.toZonedDateTimeISO(timeZone).toPlainDate();
 			const readings: (typeof energyReading.$inferInsert)[] = [];
@@ -186,9 +187,15 @@ export default defineSeed({
 					readings.push({ organizationId, zoneId: zoneId.get(zone)!, ...reading });
 				}
 				for (const { door, ...event } of simulated.doorEvents) {
+					// The doors' sensors told up to a quarter of an hour ago, so what one tells now (a
+					// batch posted from ten minutes back, as the tests post) is the latest it told.
+					if (Temporal.Instant.compare(event.at, doorsUntil) > 0) continue;
 					events.push({ organizationId, doorId: doorId.get(door)!, ...event });
 				}
 			}
+			// A door that was open then is shut by then: without its opening.
+			const lastEvent = new Map(events.map((event) => [event.doorId, event]));
+			for (const [, event] of lastEvent) if (event.open) events.splice(events.indexOf(event), 1);
 			await insertMany(readings, (chunk) => tx.insert(energyReading).values(chunk));
 			await insertMany(events, (chunk) => tx.insert(energyDoorEvent).values(chunk));
 			count("energyReadings", readings);
