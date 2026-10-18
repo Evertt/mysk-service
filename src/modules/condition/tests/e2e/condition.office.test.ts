@@ -1,13 +1,15 @@
 /**
- * The condition in North's office: the equipment list's condition and status columns, sorted and
- * filtered in the database; a unit's card, where a member records its condition (logged, and its
- * status following); and the parts used on a unit, from its orders' materials.
+ * The condition in North's office: the equipment list's condition and status columns, filtered by
+ * status; a unit's card, where a member records its condition (its status following, a newer one
+ * in its place); and the parts used on a unit, from its orders' materials. The columns' other
+ * filters and their sort, and what recording a condition stores and logs, are `connect.spec.ts`'s
+ * and `conditions.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp, users, value } from "#e2e/app.ts";
+import { organizations, rows, useApp } from "#e2e/app.ts";
 
-import { conditionsOf, pageLocators, thresholdsOf, unitStates } from "./helpers.ts";
+import { pageLocators, unitStates } from "./helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -28,32 +30,10 @@ describe("the equipment list", () => {
 			.evaluateAll((cells: HTMLElement[]) => cells.map((cell) => cell.dataset.status));
 		expect(new Set(shown)).toEqual(new Set(["critical"]));
 	});
-
-	test("sorts by condition, the lowest first, the units without one last", async () => {
-		const { page } = app;
-		const units = await unitStates(north.id, true);
-		await app.go("/equipment?sort=condition");
-		await app.tableSettled();
-		const scores = await page
-			.locator('[data-slot="data-table"] tbody tr [data-condition]')
-			.evaluateAll((cells: HTMLElement[]) => cells.map((cell) => Number(cell.dataset.condition)));
-		const recorded = units.flatMap((unit) => unit.score ?? []).toSorted((a, b) => a - b);
-		expect(scores).toEqual(recorded.slice(0, scores.length));
-	});
-
-	test("filters by the condition's band", async () => {
-		const { attention } = await thresholdsOf(north.id);
-		const units = await unitStates(north.id, true);
-		await app.go("/equipment?condition=low,fair");
-		await app.tableSettled();
-		expect(await app.rowCount()).toBe(
-			units.filter((unit) => unit.score !== null && unit.score < attention).length,
-		);
-	});
 });
 
 describe("a unit's card", () => {
-	test("records a condition, which makes the unit critical and is logged, and a newer one in its place", async () => {
+	test("records a condition, which makes the unit critical, and a newer one in its place", async () => {
 		const [unit] = await rows<{ id: number; serial_number: string }>(
 			`select e.id, e.serial_number from equipment e where e.organization_id = ?
 			 and e.status = 'operational'
@@ -75,37 +55,9 @@ describe("a unit's card", () => {
 		await dialog().getByLabel("Advice").fill("Veerpakket vervangen (SD-001).");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
 		await app.toast("Condition recorded");
-		const admin = await value<string>(`select id from user where email = ?`, [users.admin]);
-		expect(await conditionsOf(unit.id)).toEqual([
-			expect.objectContaining({
-				organization_id: north.id,
-				score: 30,
-				advice: "Veerpakket vervangen (SD-001).",
-				source: "office",
-				order_id: null,
-				engineer_id: null,
-				user_id: admin,
-			}),
-		]);
 		await card().locator('[data-condition="30"]').first().waitFor();
 		expect(await card().locator("[data-status]").getAttribute("data-status")).toBe("critical");
 		expect(await card().innerText()).toContain("Veerpakket vervangen (SD-001).");
-		const [entry] = await rows<{
-			action: string;
-			subject_label: string;
-			parent_id: string;
-			note: string;
-		}>(
-			`select action, subject_label, parent_id, note from activity where organization_id = ?
-			 and subject_type = 'unitCondition' order by id desc limit 1`,
-			[north.id],
-		);
-		expect(entry).toEqual({
-			action: "recorded",
-			subject_label: `${unit.serial_number} · 30%`,
-			parent_id: String(unit.id),
-			note: "Veerpakket vervangen (SD-001).",
-		});
 
 		// A newer one takes its place; the older one stays in its history.
 		await card().getByRole("button", { name: "Record condition" }).click();
@@ -114,7 +66,6 @@ describe("a unit's card", () => {
 		await app.toast("Condition recorded");
 		await expect.poll(() => card().locator("[data-condition-entry]").count()).toBe(2);
 		expect(await card().locator("[data-status]").getAttribute("data-status")).toBe("ok");
-		expect((await conditionsOf(unit.id)).map((condition) => condition.score)).toEqual([85, 30]);
 	});
 });
 

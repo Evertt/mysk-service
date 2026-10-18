@@ -1,10 +1,10 @@
 /**
- * The Connect page (Components) in SHLTR, as seeded: a row per component of a unit in care and one
- * per unit without components; the KPI tiles count the rows by status as the database has them,
- * the customer chips and "only what needs attention" filter the list, which is worst first; the
- * legend says what the statuses mean, and the activity log shows what happened to the chosen
- * customer's units, also on its page. The dashboard's tile counts the units (their components'
- * conditions taken in) and links here.
+ * The Connect page (Components) in SHLTR, as seeded: the KPI tiles count the rows by status as the
+ * database has them, the customer chips and "only what needs attention" filter the list (in the
+ * URL); the legend says what the statuses mean, and the activity log shows what happened to the
+ * chosen customer's units, also on its page. The dashboard's tile counts the units (their
+ * components' conditions taken in) and links here. What the server lists and counts (a row per
+ * component and per unit without, worst first, its filters and sorts) is `connect.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -13,7 +13,6 @@ import { fitsWidth, onPhone, organizations, useApp, users } from "#e2e/app.ts";
 import {
 	countsOf,
 	pageLocators,
-	rank,
 	type RowState,
 	rowsOf,
 	type UnitState,
@@ -24,24 +23,6 @@ const shltr = organizations.shltr;
 const app = useApp({ user: users.shltrPlanner });
 const { kpis, shownStatuses, sidebarLinks } = pageLocators(app);
 
-/** The numbers of the mockup's 14 components, as seeded. */
-const mockupComponents = [
-	"OC-1041",
-	"OC-1042",
-	"OC-1043",
-	"OC-1044",
-	"OC-1045",
-	"OC-2011",
-	"OC-2012",
-	"OC-2013",
-	"OC-3007",
-	"OC-3008",
-	"OC-3009",
-	"OC-4002",
-	"OC-4003",
-	"OC-4004",
-];
-
 let units: UnitState[];
 let rows: RowState[];
 
@@ -50,13 +31,6 @@ describe("the Connect page", () => {
 		units = await unitStates(shltr.id);
 		rows = rowsOf(units);
 		const counts = countsOf(rows);
-		// The mockup's components are there (a file that ran before on the worker may have added
-		// one), and the units without components too.
-		const components = rows.flatMap((row) => (row.component ? [row.component.number] : []));
-		expect(components).toEqual(expect.arrayContaining(mockupComponents));
-		expect(rows.length).toBe(
-			units.filter((unit) => !unit.components.length).length + components.length,
-		);
 		// The seed shows every status.
 		for (const status of ["critical", "attention", "planned", "ok"] as const) {
 			expect(counts[status], status).toBeGreaterThan(0);
@@ -72,14 +46,6 @@ describe("the Connect page", () => {
 		await app.tableSettled();
 		expect(await kpis()).toEqual(counts);
 		expect(await app.rowCount()).toBe(counts.units);
-	});
-
-	test("lists the rows worst first, the critical ones on top", async () => {
-		const shown = await shownStatuses();
-		expect(shown.length).toBeGreaterThan(0);
-		expect(shown[0]).toBe("critical");
-		const ranks = shown.map((status) => rank[status as keyof typeof rank]);
-		expect(ranks).toEqual(ranks.toSorted((a, b) => a - b));
 	});
 
 	test("opens with its banner and how it works in four steps, and fits a phone", async () => {
@@ -141,23 +107,9 @@ describe("the Connect page", () => {
 				url.searchParams.get("status")?.split(",").toSorted().join() === "attention,critical",
 		);
 		await app.tableSettled();
-		const counts = countsOf(rows);
-		expect(await app.rowCount()).toBe(counts.critical + counts.attention);
 		expect(new Set(await shownStatuses())).toEqual(new Set(["critical", "attention"]));
-		// The tiles still count every status.
-		expect(await kpis()).toEqual(counts);
 		await page.getByRole("checkbox", { name: "Only what needs attention" }).click();
 		await page.waitForURL((url) => !url.searchParams.has("status"));
-	});
-
-	test("sorts by condition, the lowest first", async () => {
-		await app.sortBy("Condition", "ascending");
-		const scores = await app.page
-			.locator('[data-slot="data-table"] tbody tr [data-condition]')
-			.evaluateAll((cells: HTMLElement[]) => cells.map((cell) => Number(cell.dataset.condition)));
-		expect(scores.length).toBeGreaterThan(0);
-		expect(scores).toEqual(scores.toSorted((a, b) => a - b));
-		expect(scores[0]).toBe(Math.min(...rows.flatMap((row) => row.score ?? [])));
 	});
 
 	test("says what the statuses mean", async () => {

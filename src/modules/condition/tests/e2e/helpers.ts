@@ -47,7 +47,7 @@ export interface UnitState {
 }
 
 /** The tenant's thresholds, as stored (the defaults until its settings are first read). */
-export async function thresholdsOf(organizationId: string): Promise<Thresholds> {
+async function thresholdsOf(organizationId: string): Promise<Thresholds> {
 	const [found] = await rows<{ critical_below: number; attention_below: number }>(
 		`select critical_below, attention_below from condition_settings where organization_id = ?`,
 		[organizationId],
@@ -194,16 +194,6 @@ export const componentsOf = (equipmentId: number) =>
 		[equipmentId],
 	);
 
-/** The template points that check a component, by id. */
-export const checkpointsOf = async (componentId: number) =>
-	(
-		await rows<{ template_item_id: number }>(
-			`select template_item_id from component_checkpoint where component_id = ?
-			 order by template_item_id`,
-			[componentId],
-		)
-	).map((row) => row.template_item_id);
-
 /** How many of `units` (or rows) have each status. */
 export const countsOf = (units: { status: UnitStatus }[]) => ({
 	units: units.length,
@@ -212,44 +202,6 @@ export const countsOf = (units: { status: UnitStatus }[]) => ({
 	planned: units.filter((unit) => unit.status === "planned").length,
 	ok: units.filter((unit) => unit.status === "ok").length,
 });
-
-/** The type of a condition as stored. */
-type StoredCondition = {
-	id: number;
-	organization_id: string;
-	score: number;
-	advice: string | null;
-	source: string;
-	order_id: number | null;
-	engineer_id: number | null;
-	user_id: string | null;
-};
-
-/** A component's conditions as stored, newest first. */
-export const componentConditionsOf = (componentId: number) =>
-	rows<StoredCondition>(
-		`select id, organization_id, score, advice, source, order_id, engineer_id, user_id
-		 from unit_condition where component_id = ? order by recorded_at desc, id desc`,
-		[componentId],
-	);
-
-/** A unit's conditions as a whole as stored, newest first. */
-export const conditionsOf = (equipmentId: number) =>
-	rows<{
-		id: number;
-		organization_id: string;
-		score: number;
-		advice: string | null;
-		source: string;
-		order_id: number | null;
-		engineer_id: number | null;
-		user_id: string | null;
-	}>(
-		`select id, organization_id, score, advice, source, order_id, engineer_id, user_id
-		 from unit_condition where equipment_id = ? and component_id is null
-		 order by recorded_at desc, id desc`,
-		[equipmentId],
-	);
 
 export const conditionCount = async () =>
 	Number(await value(`select count(*) from unit_condition`));
@@ -287,6 +239,3 @@ export function pageLocators(app: App) {
 			.evaluateAll((links) => links.map((link) => link.textContent!.trim()));
 	return { kpi, kpis, shownStatuses, card, dialog, sidebarLinks };
 }
-
-/** Statuses worst first, as the Connect page sorts them. */
-export const rank: Record<UnitStatus, number> = { critical: 0, attention: 1, planned: 2, ok: 3 };
