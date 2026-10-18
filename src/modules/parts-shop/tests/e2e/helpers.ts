@@ -22,10 +22,6 @@ export const productOf = async (sku: string) =>
 		)
 	)[0];
 
-/** A material's stock now. */
-export const stockOf = (materialId: number) =>
-	value<number>(`select stock from material where id = ?`, [materialId]);
-
 /** A shop order as stored, by number. */
 export const shopOrderOf = async (number: string) =>
 	(
@@ -42,13 +38,6 @@ export const shopOrderOf = async (number: string) =>
 			[shltr.id, number],
 		)
 	)[0];
-
-/** A customer's wallet entries, in the order they were made. */
-export const walletOf = (customerId: number) =>
-	rows<{ kind: string; amount: number; valid_until: string | null; note: string | null }>(
-		`select kind, amount, valid_until, note from partner_wallet_entry where customer_id = ? order by id`,
-		[customerId],
-	);
 
 /** What the customer's wallet holds: the sum of its entries. */
 export const balanceOf = async (customerId: number) =>

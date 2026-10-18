@@ -1,21 +1,13 @@
 /**
  * The parts shop: Riedel's contact shops in the customer portal (by category and search, stock and
- * checklist points) and checks out with its Parts Credit, and is refused over its balance and for a
- * product on request; the office confirms and cancels the order (its credit and stock come back).
+ * checklist points) and checks out with its Parts Credit, can't pay over its balance and is refused
+ * a product on request in a tampered cart; the office confirms and cancels the order. What the
+ * checkout and the steps store, refuse and log is `tests/unit/server/orders.spec.ts`'s.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import {
-	fitsWidth,
-	onPhone,
-	organizations,
-	rows,
-	unbalancedStock,
-	useApp,
-	users,
-	value,
-} from "#e2e/app.ts";
+import { fitsWidth, onPhone, organizations, useApp, users, value } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
@@ -26,8 +18,6 @@ import {
 	nextShopNumber,
 	productOf,
 	shopOrderOf,
-	stockOf,
-	walletOf,
 } from "./helpers.ts";
 
 const { shltr } = organizations;
@@ -120,10 +110,6 @@ describe("a partner's contact in the shop", () => {
 		const available = await balanceOf(riedel.id);
 		expect(available).toBe(227_500);
 		const [cables, seal] = [await productOf("SD-002"), await productOf("SD-004")];
-		const before = {
-			cables: await stockOf(cables.material_id),
-			seal: await stockOf(seal.material_id),
-		};
 		await addToCart("SD-002", 2);
 		await addToCart("SD-004");
 		const total = 2 * cables.price + seal.price;
@@ -144,21 +130,7 @@ describe("a partner's contact in the shop", () => {
 		expect(await page.locator("[data-order-placed]").innerText()).toContain(
 			`${formatCents(total)} of parts credit reserved`,
 		);
-
-		expect(await shopOrderOf(number)).toMatchObject({ status: "placed", total, vat: 0 });
-		expect((await walletOf(riedel.id)).at(-1)).toMatchObject({
-			kind: "spend",
-			amount: -total,
-			note: `Order ${number}`,
-		});
-		expect(await balanceOf(riedel.id)).toBe(available - total);
-		expect(await movementsOf(number)).toEqual([
-			{ material_id: cables.material_id, quantity: -2, kind: "reservation" },
-			{ material_id: seal.material_id, quantity: -1, kind: "reservation" },
-		]);
-		expect(await stockOf(cables.material_id)).toBe(before.cables - 2);
-		expect(await stockOf(seal.material_id)).toBe(before.seal - 1);
-		expect(await unbalancedStock(shltr.id)).toEqual([]);
+		expect(await shopOrderOf(number)).toMatchObject({ status: "placed", total });
 
 		// The shop shows what's left, and the order is among the customer's.
 		await page.getByRole("link", { name: "Your shop orders" }).click();
@@ -169,8 +141,8 @@ describe("a partner's contact in the shop", () => {
 		);
 	});
 
-	test("is refused an order above the credit available", async () => {
-		const { page } = app;
+	// That the server refuses it too is the spec's.
+	test("can't pay for an order above the credit available", async () => {
 		const riedel = await customerNamed("Riedel B.V.");
 		const available = await balanceOf(riedel.id);
 		const cylinder = await productOf("LV-001");
@@ -181,21 +153,6 @@ describe("a partner's contact in the shop", () => {
 		expect(
 			await checkout().getByRole("button", { name: "Pay with parts credit" }).isDisabled(),
 		).toBe(true);
-		const orders = await value<number>(
-			`select count(*) from shop_order where organization_id = ?`,
-			[shltr.id],
-		);
-		// Sent anyway: the server refuses it, in the same transaction as the spend would be.
-		await forceCheckout(page);
-		await checkout()
-			.getByText(
-				`The order comes to ${formatCents(quantity * cylinder.price)}, but only ${formatCents(available)} of parts credit is available.`,
-			)
-			.waitFor();
-		expect(
-			await value<number>(`select count(*) from shop_order where organization_id = ?`, [shltr.id]),
-		).toBe(orders);
-		expect(await balanceOf(riedel.id)).toBe(available);
 		await checkout()
 			.getByRole("button", { name: `Remove ${cylinder.name}` })
 			.click();
@@ -216,13 +173,9 @@ describe("a partner's contact in the shop", () => {
 });
 
 describe("the office", () => {
-	test("confirms an order, and cancels it: its credit and stock come back", async () => {
+	test("confirms an order, and cancels it", async () => {
 		expect(number).not.toBe("");
-		const riedel = await customerNamed("Riedel B.V.");
 		const placed = await shopOrderOf(number);
-		const balance = await balanceOf(riedel.id);
-		const cables = await productOf("SD-002");
-		const stock = await stockOf(cables.material_id);
 		const { page } = await signedInPage(app, users.shltrPlanner);
 		const go = async (path: string) => {
 			await page.goto(new URL(path, page.url()).href);
@@ -252,28 +205,6 @@ describe("the office", () => {
 			await expect.poll(async () => (await shopOrderOf(number)).status).toBe("cancelled");
 			// Stored before the page has its answer: the steps go once it's refreshed the order.
 			await page.locator("[data-shop-steps]").waitFor({ state: "detached" });
-
-			// The credit back, piece by piece, as the credit it was taken from (last year's).
-			expect((await walletOf(riedel.id)).at(-1)).toMatchObject({
-				kind: "reversal",
-				amount: placed.total,
-				valid_until: `${Temporal.Now.plainDateISO().year}-12-31`,
-			});
-			expect(await balanceOf(riedel.id)).toBe(balance + placed.total);
-			expect((await movementsOf(number)).map((movement) => movement.kind)).toEqual([
-				"reservation",
-				"reservation",
-				"release",
-				"release",
-			]);
-			expect(await stockOf(cables.material_id)).toBe(stock + 2);
-			expect(await unbalancedStock(shltr.id)).toEqual([]);
-			const log = await rows<{ action: string }>(
-				`select action from activity where organization_id = ? and subject_type = 'shop_order'
-				 and subject_label = ? order by id`,
-				[shltr.id, number],
-			);
-			expect(log.map((entry) => entry.action)).toEqual(["placed", "updated", "updated"]);
 		} finally {
 			await page.context().close();
 		}
