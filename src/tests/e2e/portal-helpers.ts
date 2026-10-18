@@ -1,12 +1,4 @@
-import {
-	type App,
-	BROWSER_OPTIONS,
-	baseURL,
-	homeOf,
-	hydrated,
-	quiet,
-	signInContext,
-} from "./app.ts";
+import { type App, baseURL, homeOf, hydrated, newContext, quiet, signInContext } from "./app.ts";
 
 /**
  * A page in a browser context of its own, signed in as `email`, with the URLs of the remote
@@ -18,10 +10,7 @@ import {
  */
 export async function signedInPage(app: App, email: string) {
 	const browser = app.page.context().browser()!;
-	const context = await browser.newContext({
-		viewport: { width: 1440, height: 1000 },
-		...BROWSER_OPTIONS,
-	});
+	const context = await newContext(browser, { viewport: { width: 1440, height: 1000 } });
 	const page = await context.newPage();
 	const requests: string[] = [];
 	page.on("request", (request) => {

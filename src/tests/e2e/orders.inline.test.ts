@@ -146,6 +146,24 @@ describe("changing an order's status in the list, in North", () => {
 			]),
 		);
 		expect(await remoteErrorStatus(response)).toBe(400);
+		// Found also once it's gone, as after a wait for the network that outlasted it (`toasts.ts`):
+		// closed here first, as soon as the page's record of its toasts has it.
+		const shown = (
+			await page.waitForFunction(
+				() => {
+					const log = window.__e2eToasts;
+					return log && log.shown.length > log.from ? log.elements[log.from] : undefined;
+				},
+				undefined,
+				{ polling: 100 },
+			)
+		).asElement()!;
+		await shown.evaluate((toast) =>
+			toast.isConnected
+				? toast.querySelector<HTMLElement>("[data-close-button]")?.click()
+				: undefined,
+		);
+		await page.waitForFunction((toast) => !toast.isConnected, shown, { polling: 100 });
 		await app.toast(`${invoiced.number} is invoiced`);
 		await select(quote.number, "Quote").waitFor();
 		expect([await snapshot(quote.id), await snapshot(invoiced.id)]).toEqual(before);

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import { BROWSER_OPTIONS, baseURL, hydrated, useApp, userNames, users, quiet } from "./app.ts";
+import { baseURL, hydrated, newContext, useApp, userNames, users, quiet } from "./app.ts";
 
 const app = useApp({ user: null });
 
@@ -101,10 +101,7 @@ describe("signing in", () => {
 	});
 
 	test("works without JavaScript", async () => {
-		const context = await app.page
-			.context()
-			.browser()!
-			.newContext({ ...BROWSER_OPTIONS, javaScriptEnabled: false });
+		const context = await newContext(app.page.context().browser()!, { javaScriptEnabled: false });
 		try {
 			const page = await context.newPage();
 			await page.goto(`${baseURL}/orders`);

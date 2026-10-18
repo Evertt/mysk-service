@@ -164,6 +164,12 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
   a file in the temporary folder, `MAIL_OUTBOX`, instead of sending it). `E2E_DEV=1 pnpm test:e2e` runs them against a single dev
   server instead: slower, but with Svelte's dev-only warnings. `pnpm test` runs a file that fails
   once more, afresh, before calling the run failed (`scripts/test.ts`).
+- **At another date**: `TEST_NOW=2027-01-01 pnpm test --project e2e <files>` runs the tests, the
+  seed and the app as if it were that day (or `TEST_NOW=2027-01-01T07:45`, a time, or an instant
+  with `Z`), in the e2e and server projects. The **Dates** workflow runs the e2e tests and server
+  specs weekly at the dates that tend to break them (a weekend, a month's end, 1 January, a clock
+  change), and by hand at the dates you give (Actions → Dates → Run workflow). See "Testing at
+  another date" in `docs/agents/tests.md`.
 
 ## Deploying
 

@@ -9,10 +9,10 @@ import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import {
-	BROWSER_OPTIONS,
 	baseURL,
 	hydrated,
 	linkInMail,
+	newContext,
 	organizations,
 	quiet,
 	rows,
@@ -77,10 +77,7 @@ describe("portal access", () => {
 	});
 
 	test("the contact creates their account and sees only their sites in the portal", async () => {
-		const context = await app.page
-			.context()
-			.browser()!
-			.newContext({ ...BROWSER_OPTIONS });
+		const context = await newContext(app.page.context().browser()!);
 		contactsPage = await context.newPage();
 		const page = contactsPage;
 		await page.goto(linkInMail(contact.email));

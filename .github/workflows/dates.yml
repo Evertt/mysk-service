@@ -1,0 +1,99 @@
+# The end-to-end tests and the server specs at the kinds of dates that broke them before: a
+# weekend, a month's end and start, 1 January, a clock change and the end of a month that follows
+# one of 30 days, picked from the run's own date (`scripts/test-dates.ts`), each in a job named
+# after it. Weekly, and by hand (Actions → Dates → Run workflow) for the dates you give. Off the
+# push path: CI (ci.yml) doesn't run or wait for it. See "Testing at another date" in
+# docs/agents/tests.md.
+name: Dates
+
+on:
+  schedule:
+    # Mondays, 04:23 UTC.
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: >-
+          TEST_NOW values, separated by commas (e.g. 2027-01-01, 2027-03-28T02:30,
+          2027-01-01T06:45Z); empty for the risky dates from today
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# As on the dates (their clock changes are Amsterdam's), and as locally: not the runner's UTC.
+env:
+  TZ: Europe/Amsterdam
+
+jobs:
+  dates:
+    name: Pick the dates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      dates: ${{ steps.pick.outputs.dates }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: "24"
+          cache: true
+      - id: pick
+        env:
+          DATES: ${{ inputs.dates }}
+        run: |
+          dates=$(node scripts/test-dates.ts "$DATES")
+          echo "$dates"
+          echo "dates=$dates" >> "$GITHUB_OUTPUT"
+
+  specs:
+    name: Server specs at ${{ matrix.at.now }} (${{ matrix.at.why }})
+    needs: dates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        at: ${{ fromJSON(needs.dates.outputs.dates) }}
+    env:
+      TEST_NOW: ${{ matrix.at.now }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: "24"
+          cache: true
+      - name: Create .env
+        run: |
+          sed -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\"|" \
+            .env.example > .env
+      # `pnpm test`'s script, which runs a failed file once more (as in CI), but not through
+      # `vp run test`: Vite Task gives a script only the common variables, not TEST_NOW.
+      - run: node scripts/test.ts --project 'server-*'
+
+  e2e:
+    name: End-to-end tests at ${{ matrix.at.now }} (${{ matrix.at.why }}, ${{ matrix.shard }}/6)
+    needs: dates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        at: ${{ fromJSON(needs.dates.outputs.dates) }}
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      TEST_NOW: ${{ matrix.at.now }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: "24"
+          cache: true
+      - name: Create .env
+        run: |
+          sed -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\"|" \
+            .env.example > .env
+      - run: vp exec playwright install --with-deps chromium
+      # A file that fails is run once more on its own, at TEST_NOW again (scripts/test.ts).
+      - run: node scripts/test.ts --project e2e --shard=${{ matrix.shard }}/6

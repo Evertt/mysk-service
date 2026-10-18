@@ -3,16 +3,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD } from "#lib/server/db/demo.ts";
 
-import {
-	BROWSER_OPTIONS,
-	baseURL,
-	hydrated,
-	organizations,
-	quiet,
-	rows,
-	useApp,
-	users,
-} from "./app.ts";
+import { baseURL, hydrated, newContext, organizations, quiet, rows, useApp, users } from "./app.ts";
 
 const { north, south } = organizations;
 const app = useApp();
@@ -53,13 +44,9 @@ async function scan(page: Page, token: string) {
 
 /** A page in a browser context of its own, signed out. Close its context when done. */
 async function signedOutPage() {
-	const context = await app.page
-		.context()
-		.browser()!
-		.newContext({
-			viewport: { width: 1440, height: 1000 },
-			...BROWSER_OPTIONS,
-		});
+	const context = await newContext(app.page.context().browser()!, {
+		viewport: { width: 1440, height: 1000 },
+	});
 	return context.newPage();
 }
 
