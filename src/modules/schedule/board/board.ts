@@ -80,14 +80,22 @@ export function groupByCell<T extends Placed>(orders: T[], rows: RowId[]) {
 }
 
 /**
- * The engineers that get a row: the active ones, and inactive ones who still have orders in the
- * week (so those don't go missing), in the given order.
+ * The engineers that get a row on the board showing `days`: the active ones, and inactive ones who
+ * still have orders on those days (so those don't go missing), in the given order.
  */
 export const boardEngineers = <E extends { id: number; active: boolean }>(
 	engineers: E[],
 	orders: Placed[],
+	days: Temporal.PlainDate[],
 ) => {
-	const busy = new Set(orders.map((order) => order.engineerId));
+	const shown = new Set(days.map(String));
+	const busy = new Set(
+		orders
+			.filter((order) =>
+				shown.has(String(order.scheduledFor?.toZonedDateTimeISO(getTimeZone()).toPlainDate())),
+			)
+			.map((order) => order.engineerId),
+	);
 	return engineers.filter((engineer) => engineer.active || busy.has(engineer.id));
 };
 

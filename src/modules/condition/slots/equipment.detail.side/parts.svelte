@@ -65,8 +65,6 @@
 			bind:open={() => editing !== null, (open) => !open && (editing = null)}
 			unit={data.unit}
 			editing={edited}
-			articles={data.articles}
-			articleCheckpoints={data.articleCheckpoints}
 			checkpoints={data.checkpoints}
 			hasArticles={data.has.materials}
 			hasCheckpoints={data.has.checklists}

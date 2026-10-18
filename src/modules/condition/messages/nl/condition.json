@@ -122,6 +122,7 @@
 	"condition_field_article": "Artikel",
 	"condition_component_article_none": "Geen artikel",
 	"condition_component_article_description": "Het materiaal waarvan de shop het artikelnummer verkoopt: een afgekeurd punt van het onderdeel stelt het als eerste voor.",
+	"condition_component_article_search": "Zoek op artikelnummer of naam…",
 	"condition_field_checkpoints": "Keuringspunten",
 	"condition_component_checkpoints_description": "De punten van de werkbon van het apparaat die dit onderdeel controleren. Een gekozen artikel vinkt de punten uit de shop aan.",
 	"condition_component_no_checkpoints": "De categorie van het apparaat heeft geen werkbon, dus er zijn geen punten om te kiezen.",

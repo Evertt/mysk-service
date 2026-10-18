@@ -35,9 +35,9 @@ import { componentSql, conditionSql } from "./server/status-sql.ts";
 
 /**
  * The components of the tenant's unit `serialNumber` (or a 404), in their order, each with its
- * article, its points, its latest condition and its status; what they can be linked to (the
- * tenant's articles, with the points their shop products fix, and the unit's checklist points); and
- * which of the modules that offer those the tenant has.
+ * article, its points, its latest condition and its status; the unit's checklist points they can be
+ * checked by (the articles to link them to are `findArticles`'s); and which of the modules that
+ * offer those the tenant has.
  */
 export const getUnitComponents = query(v.string(), async (serialNumber) => {
 	const [unit] = await db
@@ -77,21 +77,13 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 		.orderBy(asc(component.position), asc(component.id));
 	const points = await checkpointsOf(rows.map((row) => row.id));
 	const { modules } = currentTenant();
-	const [offered, choices, thresholds] = await Promise.all([
+	const [offered, linked, thresholds] = await Promise.all([
 		collect(checkpoints, {
 			equipmentId: unit.id,
 			ids: [...new Set([...points.values()].flat())],
 		}),
-		collect(articles, { ids: null }),
-		thresholdsOf(),
-	]);
-	const articleList = choices.flat();
-	const [shopPoints, linked] = await Promise.all([
-		articleList.length
-			? collect(articleCheckpoints, { materialIds: articleList.map((article) => article.id) })
-			: [],
-		// An article that isn't among the choices (there are more than are listed).
 		articlesById(rows.flatMap((row) => row.materialId ?? [])),
+		thresholdsOf(),
 	]);
 	const hasChecklists = modules.includes("checklists");
 	const pointIds = new Set(offered.flat().map((point) => point.id));
@@ -105,13 +97,32 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 			checkpointIds: (points.get(row.id) ?? []).filter((id) => !hasChecklists || pointIds.has(id)),
 		})),
 		checkpoints: offered.flat(),
-		articles: articleList,
-		/** The points each article's shop product fixes: a new component's defaults. */
-		articleCheckpoints: Object.fromEntries(
-			shopPoints.flat().map((each) => [each.materialId, each.templateItemIds]),
-		) as Record<number, number[]>,
 		thresholds,
 		has: { materials: modules.includes("materials"), checklists: hasChecklists },
+	};
+});
+
+/** How many articles a search of the component dialog answers at most. */
+const ARTICLES_FOUND = 20;
+
+/**
+ * The tenant's articles whose SKU or name has every word of `search` (all, for an empty one), to
+ * link a component to: the first so many by SKU, and whether more match (`more`), so a tenant with
+ * any number of materials finds each one. Each with the points its shop product fixes
+ * (`checkpointIds`), which choosing it checks. None while the tenant hasn't materials.
+ */
+export const findArticles = query(v.pipe(v.string(), v.maxLength(100)), async (search) => {
+	const found = (await collect(articles, { search, limit: ARTICLES_FOUND + 1 })).flat();
+	const shown = found.slice(0, ARTICLES_FOUND);
+	const shopPoints = shown.length
+		? (
+				await collect(articleCheckpoints, { materialIds: shown.map((article) => article.id) })
+			).flat()
+		: [];
+	const fixes = new Map(shopPoints.map((each) => [each.materialId, each.templateItemIds]));
+	return {
+		articles: shown.map((article) => ({ ...article, checkpointIds: fixes.get(article.id) ?? [] })),
+		more: found.length > ARTICLES_FOUND,
 	};
 });
 

@@ -122,6 +122,7 @@
 	"condition_field_article": "Article",
 	"condition_component_article_none": "No article",
 	"condition_component_article_description": "The material whose SKU the parts shop sells: a rejected point of the component suggests it first.",
+	"condition_component_article_search": "Search by SKU or name…",
 	"condition_field_checkpoints": "Checklist points",
 	"condition_component_checkpoints_description": "The points of the unit's checklist that check this component. Choosing an article checks its shop points.",
 	"condition_component_no_checkpoints": "The unit's category has no checklist template, so there are no points to choose.",

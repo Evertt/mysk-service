@@ -64,7 +64,11 @@ describe("a unit's components", () => {
 		await row("OC-1043").waitFor();
 		await card().getByRole("button", { name: "Add component" }).click();
 		await dialog().getByLabel("Name").fill("Kabelset");
-		await dialog().getByLabel("Article").selectOption({ label: "SD-002 · Kabelset compleet" });
+		// Found on the server as it's typed.
+		await dialog().getByLabel("Article").click();
+		await app.page.getByRole("combobox", { name: "Search by SKU or name…" }).fill("kabelset");
+		await app.page.getByRole("option", { name: "SD-002 · Kabelset compleet" }).click();
+		await dialog().getByLabel("Article").getByText("SD-002 · Kabelset compleet").waitFor();
 		// The shop's points of SD-002 are checked.
 		const shop = await rows<{ text: string }>(
 			`select i.text from shop_product_checkpoint k join shop_product p on p.id = k.product_id

@@ -7,14 +7,19 @@
  * their refusals: North's order by its id, North's or an inactive engineer, an order that isn't
  * open. The server side of `schedule.test.ts` and `schedule.tenancy.test.ts`, which keep the board.
  */
-import { beforeAll, describe, expect, test } from "vite-plus/test";
+import type { InStatement } from "@libsql/client";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
+import { withFirstUnit } from "#lib/orders/server/index.ts";
+import { announceChange } from "#lib/server/changes.ts";
+import { db } from "#lib/server/db/index.ts";
 import { mondayOf, monthRange } from "#modules/schedule/calendar/calendar.ts";
 import {
 	getSchedule,
 	getScheduleMonth,
 	moveOrder,
 	scheduleOrder,
+	watchSchedule,
 } from "#modules/schedule/schedule.remote.ts";
 import { snapshot } from "#unit/lib/orders/server/order-form.test-support.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
@@ -70,6 +75,10 @@ const engineersOf = async (organization: string) =>
 		])
 	).map((row) => row.id);
 
+/** A statement's SQL, as the database client gets it. */
+const sqlOf = (statement: InStatement) =>
+	typeof statement === "string" ? statement : statement.sql;
+
 const numbers = (orders: { number: string }[]) => orders.map((order) => order.number).toSorted();
 
 /** The week's board as `actor` sees it. */
@@ -116,6 +125,70 @@ describe("North's board", () => {
 				Temporal.PlainDate.from(range.to),
 			),
 		);
+	});
+});
+
+describe("what the board shows of its orders", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	test("their first unit, how many, and their units' specialties, in one query each", async () => {
+		const execute = vi.spyOn(db.$client, "execute");
+		const week = await board(north.member);
+		const ofUnits = execute.mock.calls.filter(([statement]) =>
+			sqlOf(statement).includes(`"order_unit"`),
+		);
+		// One for the week's orders, one for the backlog.
+		expect(ofUnits).toHaveLength(2);
+		execute.mockRestore();
+
+		const orders = [...week.orders, ...week.backlog];
+		expect(orders.some((order) => order.unitCount > 0)).toBe(true);
+		const listed = await as(north.member, () =>
+			withFirstUnit(orders.map((order) => ({ id: order.id }))),
+		);
+		expect(orders.map(({ id, unit, unitCount }) => ({ id, unit, unitCount }))).toEqual(listed);
+		for (const order of orders) {
+			const specialties = await rows<{ specialty: string | null }>(
+				`select category.specialty from order_unit
+				 join equipment on equipment.id = order_unit.equipment_id
+				 join equipment_category category on category.id = equipment.category_id
+				 where order_unit.order_id = ? order by order_unit.position`,
+				[order.id],
+			);
+			expect(order.specialties, order.number).toEqual(specialties.map((row) => row.specialty));
+		}
+	});
+});
+
+describe("the live query's first answer", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	/** Whether a board that read `week` would ask for it again on the live query's first answer. */
+	const outdates = async (week: { changedAt: number }) =>
+		(await as(north.member, () => data(watchSchedule))) > week.changedAt;
+
+	test("is later than the board's for a change after the read, also in the same millisecond", async () => {
+		vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
+		announceChange(northId, "order");
+		const week = await board(north.member);
+		announceChange(northId, "customer");
+		expect(await outdates(week)).toBe(true);
+	});
+
+	test("isn't, without a change since the read", async () => {
+		const now = Date.now() + 120_000;
+		vi.spyOn(Date, "now").mockReturnValue(now);
+		announceChange(northId, "order");
+		vi.spyOn(Date, "now").mockReturnValue(now + 1);
+		const week = await board(north.member);
+		expect(await outdates(week)).toBe(false);
+		// Nor for the month's.
+		const month = await as(north.member, () => data(getScheduleMonth, today.toString()));
+		expect(await outdates(month)).toBe(false);
 	});
 });
 

@@ -73,14 +73,19 @@ describe("the board", () => {
 		expect(cells.get("unassigned/2026-10-07")!.map((o) => o.id)).toEqual([4]);
 	});
 
-	test("rows are the active engineers, and inactive ones with orders in the week", () => {
+	test("rows are the active engineers, and inactive ones with orders on the days shown", () => {
 		const engineers = [
 			{ id: 7, active: true },
 			{ id: 8, active: false },
 			{ id: 9, active: false },
 			{ id: 10, active: true },
 		];
-		expect(boardEngineers(engineers, orders).map((e) => e.id)).toEqual([7, 9, 10]);
+		const rows = (days: Temporal.PlainDate[]) =>
+			boardEngineers(engineers, orders, days).map((e) => e.id);
+		expect(rows(weekDays(day("2026-10-05")))).toEqual([7, 9, 10]);
+		expect(rows([day("2026-10-07")])).toEqual([7, 9, 10]);
+		// The day view of another day of the week: 9's order is on the 7th.
+		expect(rows([day("2026-10-06")])).toEqual([7, 10]);
 	});
 
 	test("the load of a cell", () => {
