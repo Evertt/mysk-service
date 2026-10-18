@@ -223,12 +223,7 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 		await saveOrderParts({ tx, order: moved, from: moved.status, status }).catch(
 			(thrown: unknown) => {
 				if (thrown instanceof OrderRefused) {
-					const { message } = thrown;
-					invalid(
-						message.includes(moved.number)
-							? message
-							: m.orders_move_refused_for({ number: moved.number, reason: message }),
-					);
+					invalid(m.orders_move_refused_for({ number: moved.number, reason: thrown.message }));
 				}
 				throw thrown;
 			},

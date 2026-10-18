@@ -616,17 +616,6 @@ describe("invoice and uninvoice: invoicing moves an invoice's orders", () => {
 		expect((await stored(second.id)).status).toBe("completed");
 	});
 
-	test("a refusal that names the order already isn't prefixed with it again", async () => {
-		const { id, number } = await orderIn("completed");
-		parts.mockImplementation(async () => [{ message: `${number} has an open checklist.` }]);
-		const orders = [await loaded(id)];
-		expect(
-			await refusal(() =>
-				db.transaction((tx) => transitionOrder(tx, { verb: "invoice", orders, note: "F-1" })),
-			),
-		).toEqual([`${number} has an open checklist.`]);
-	});
-
 	test("doesn't move another tenant's order, also when its id is passed", async () => {
 		const { id } = await orderIn("completed", { organizationId: "south" });
 		const orders = [await loaded(id)];
@@ -754,10 +743,38 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		start: ["scheduled"],
 		complete: ["in_progress"],
 	};
-	const move = (verb: string, id: number) => {
+	// What each verb moves an order with `status` to: the office's set to another status than its
+	// own; the planner, without an engineer, keeps it.
+	const movesTo = (verb: string, status: OrderStatus): OrderStatus => {
+		const to: Record<string, OrderStatus> = {
+			set: status === "cancelled" ? "quote" : "cancelled",
+			plan: status,
+			accept: "quote",
+			reject: "cancelled",
+			start: "in_progress",
+			complete: "completed",
+		};
+		return to[verb];
+	};
+	// Why each verb refuses an order with `status`, in English.
+	const refusedWith = (verb: string, number: string, status: OrderStatus) => {
+		if (verb === "set") {
+			return status === "invoiced"
+				? `${number} is invoiced: it's on an invoice that has been sent, so it can't be changed`
+				: `Accept or reject order ${number} first.`;
+		}
+		if (verb === "plan") return "Only open orders can be scheduled";
+		if (verb === "accept" || verb === "reject") {
+			return `Order ${number} isn't awaiting acceptance any more.`;
+		}
+		return status === "scheduled"
+			? "Start the job first"
+			: expect.stringMatching(/^This order is [a-z ]+; it can't be changed here$/);
+	};
+	const move = (verb: string, id: number, status: OrderStatus) => {
 		const day = Temporal.PlainDate.from("2026-11-03");
 		const transitions = {
-			set: { verb: "set", id, to: "completed" },
+			set: { verb: "set", id, to: movesTo("set", status) as "quote" | "cancelled" },
 			plan: { verb: "plan", id, engineerId: null, day, time: "09:00" },
 			accept: { verb: "accept", id },
 			reject: { verb: "reject", id, reason: "Nee" },
@@ -774,15 +791,34 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 			const moves = from.includes(status);
 			test(`${verb} ${moves ? "moves" : "refuses"} an order that's ${status}`, async () => {
 				const engineers = verb === "start" || verb === "complete";
-				const { id } = await orderIn(status, { engineerId: engineers ? 1 : null });
+				const { id, number } = await orderIn(status, { engineerId: engineers ? 1 : null });
 				if (engineers) asEngineer();
-				const refused = await refusal(() => move(verb, id));
+				const refused = await refusal(() => move(verb, id, status));
 				if (moves) {
 					expect(refused).toEqual([]);
+					expect((await stored(id)).status).toBe(movesTo(verb, status));
 				} else {
-					expect(refused).toEqual([expect.any(String)]);
+					expect(refused).toEqual([refusedWith(verb, number, status)]);
 					expect((await stored(id)).status).toBe(status);
 				}
+			});
+		}
+	}
+
+	// Invoicing refuses nothing: it moves those of an invoice's orders it moves, and leaves the rest.
+	const invoicing = { invoice: ["completed", "invoiced"], uninvoice: ["invoiced", "completed"] };
+	for (const [verb, [from, to]] of Object.entries(invoicing) as [
+		"invoice" | "uninvoice",
+		OrderStatus[],
+	][]) {
+		for (const status of orderStatuses) {
+			const moves = status === from;
+			test(`${verb} ${moves ? "moves" : "leaves"} an order that's ${status}`, async () => {
+				const { id, number } = await orderIn(status);
+				const orders = [{ id, number, status }];
+				await db.transaction((tx) => transitionOrder(tx, { verb, orders, note: "F-1" }));
+				expect((await stored(id)).status).toBe(moves ? to : status);
+				expect(logged).toHaveBeenCalledTimes(moves ? 1 : 0);
 			});
 		}
 	}
