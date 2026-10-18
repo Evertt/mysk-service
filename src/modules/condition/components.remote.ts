@@ -109,6 +109,7 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 		// An article that isn't among the choices (there are more than are listed).
 		articlesById(rows.flatMap((row) => row.materialId ?? [])),
 	]);
+	const hasChecklists = modules.includes("checklists");
 	const pointIds = new Set(offered.flat().map((point) => point.id));
 	const byComponent = Map.groupBy(links, (link) => link.componentId);
 	return {
@@ -116,10 +117,11 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 		components: rows.map((row) => ({
 			...row,
 			article: row.materialId === null ? null : (linked.get(row.materialId) ?? null),
-			// Those of its points that are still a template's.
+			// Those of its points that are still a template's; all it has while checklists is off,
+			// which offers none (and saving leaves them as they are, `changeComponent()`).
 			checkpointIds: (byComponent.get(row.id) ?? [])
 				.map((link) => link.templateItemId)
-				.filter((id) => pointIds.has(id)),
+				.filter((id) => !hasChecklists || pointIds.has(id)),
 		})),
 		checkpoints: offered.flat(),
 		articles: articleList,
@@ -128,7 +130,7 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 			shopPoints.flat().map((each) => [each.materialId, each.templateItemIds]),
 		) as Record<number, number[]>,
 		thresholds,
-		has: { materials: modules.includes("materials"), checklists: modules.includes("checklists") },
+		has: { materials: modules.includes("materials"), checklists: hasChecklists },
 	};
 });
 

@@ -87,7 +87,9 @@ async function componentOf(tx: Transaction, id: number) {
 /**
  * The input as it's saved: its article one of the tenant's (a 400 otherwise), and its points the
  * unit's (its template's, or ones it `kept`; a 400 otherwise). A new component (`fresh`) without
- * points gets its article's shop points, those the unit can be checked by.
+ * points gets its article's shop points, those the unit can be checked by. While the tenant hasn't
+ * checklists, which offers the points, the form has none to give: the component keeps the ones it
+ * has (a new one none), so switching checklists off for a while loses none of them.
  */
 async function checked(
 	equipmentId: number,
@@ -99,6 +101,9 @@ async function checked(
 			? null
 			: (await articlesById([input.materialId])).get(input.materialId);
 	if (article === undefined) invalid(m.condition_component_article_not_found());
+	if (!currentTenant().modules.includes("checklists")) {
+		return { article, checkpointIds: [...kept].sort((a, b) => a - b) };
+	}
 	const offered = (await collect(checkpoints, { equipmentId, ids: [...kept] })).flat();
 	const allowed = new Set(offered.map((point) => point.id));
 	let checkpointIds = [...new Set(input.checkpointIds)];
@@ -177,7 +182,7 @@ export function addComponent(serialNumber: string, input: ComponentInput) {
 	});
 }
 
-/** Changes the tenant's component `id`: its name, article and points. */
+/** Changes the tenant's component `id`: its name, article and points (with checklists on). */
 export function changeComponent(id: number, input: ComponentInput) {
 	return db.transaction(async (tx) => {
 		const found = await componentOf(tx, id);

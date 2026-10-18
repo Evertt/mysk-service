@@ -69,6 +69,7 @@
 			articleCheckpoints={data.articleCheckpoints}
 			checkpoints={data.checkpoints}
 			hasArticles={data.has.materials}
+			hasCheckpoints={data.has.checklists}
 		/>
 	{/key}
 {/if}

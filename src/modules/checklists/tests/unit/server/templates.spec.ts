@@ -49,6 +49,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 	const { drizzle } = await import("drizzle-orm/libsql");
 	const { migrate } = await import("drizzle-orm/libsql/migrator");
 	const { drizzleQueued } = await import("#lib/server/db/serialize.ts");
+	const { checkParameters } = await import("#lib/server/db/parameters.ts");
 	const schema = await import("#lib/server/db/schema.ts");
 	const moduleSchema = await import("#lib/server/db/modules.gen.ts");
 	const client = createClient({ url: `file:${path.join(folder, "test.db")}` });
@@ -73,7 +74,11 @@ vi.mock("#lib/server/db/index.ts", async () => {
 			(10, 'north', 'SN-10', 'M', 'Make', 1, 'operational', 1, 1, '2020-01-01', '2030-01-01'),
 			(11, 'north', 'SN-11', 'M', 'Make', 3, 'operational', 1, 1, '2020-01-01', '2030-01-01');
 	`);
-	return { db: drizzleQueued(client, { schema: { ...schema, ...moduleSchema } }) };
+	// Held to Cloudflare's limit on bound parameters, as the app's database is.
+	const logger = {
+		logQuery: (query: string, params: unknown[]) => checkParameters(query, params.length),
+	};
+	return { db: drizzleQueued(client, { schema: { ...schema, ...moduleSchema }, logger }) };
 });
 
 afterAll(() => {
@@ -237,6 +242,24 @@ describe("categories", () => {
 		await setTemplateCategories(first, [1], issue);
 		await setTemplateCategories(second, [2, 3], issue);
 		expect((await templateList()).uncovered).toEqual([]);
+	});
+
+	test("a template may be for more categories than a statement binds values", async () => {
+		const many = Array.from({ length: 40 }, (_, i) => 100 + i);
+		await db.$client.execute(
+			`insert into equipment_category (id, organization_id, name, specialty, position) values ${many
+				.map((id) => `(${id}, 'north', 'Category ${id}', null, ${id})`)
+				.join(", ")}`,
+		);
+		try {
+			const id = await createTemplate(sectional, issue);
+			await setTemplateCategories(id, many, issue);
+			expect(
+				(await templateDetail(id)).categories.filter((c) => c.templateId === id).map((c) => c.id),
+			).toEqual(many);
+		} finally {
+			await db.$client.execute(`delete from equipment_category where id >= 100`);
+		}
 	});
 
 	test("another tenant's category is a 404", async () => {
