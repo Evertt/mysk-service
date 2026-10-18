@@ -1,33 +1,15 @@
+/**
+ * The dashboard: the greeting, the charts as drawn (and their hidden tables), the cards packed
+ * into columns or stacked on a phone, redrawing when the window grows, and the upcoming work's
+ * units. The numbers (the tiles' trends, the charts' counts and revenue, South's own, the upcoming
+ * work's units) are `routes/(app)/(dashboard)/dashboard.spec.ts`'s.
+ */
 import { describe, expect, test } from "vite-plus/test";
 
-import {
-	cents,
-	fitsWidth,
-	onPhone,
-	organizations,
-	quiet,
-	rows,
-	statTile,
-	statTileNamed,
-	userNames,
-	useApp,
-	value,
-} from "./app.ts";
-import { addUnits } from "./orders-helpers.ts";
+import { fitsWidth, onPhone, organizations, quiet, rows, userNames, useApp } from "./app.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const app = useApp();
-
-const statusValues = [
-	"awaiting_acceptance",
-	"quote",
-	"scheduled",
-	"in_progress",
-	"completed",
-	"invoiced",
-	"cancelled",
-];
-const equipmentStatuses = ["operational", "needs_service", "out_of_service", "decommissioned"];
 
 /** The card of a chart. */
 const chartCard = (title: string) => app.page.locator('[data-slot="card"]', { hasText: title });
@@ -38,68 +20,8 @@ async function chartTable(title: string) {
 	return Promise.all(trs.map((tr) => tr.locator("th, td").allInnerTexts()));
 }
 
-/** An organization's orders made this week (Monday to now), by status, as the chart groups them. */
-const ordersThisWeek = (organizationId: string) =>
-	rows<{ status: string; count: number }>(
-		`select status, count(*) as count from "order" where organization_id = ?
-		 and date(created_at, 'unixepoch', 'localtime', '-6 days', 'weekday 1')
-		   = date('now', 'localtime', '-6 days', 'weekday 1')
-		 group by status`,
-		[organizationId],
-	);
-
-/** An organization's completed and invoiced orders of this month. */
-const completedThisMonth = (organizationId: string) =>
-	value<number>(
-		`select count(*) from "order" where organization_id = ?
-		 and status in ('completed', 'invoiced')
-		 and strftime('%Y-%m', completed_at, 'unixepoch', 'localtime') = strftime('%Y-%m', 'now', 'localtime')`,
-		[organizationId],
-	);
-
-/** An organization's equipment per status, in the order the chart lists them. */
-const equipmentByStatus = (organizationId: string) =>
-	Promise.all(
-		equipmentStatuses.map((status) =>
-			value<number>(`select count(*) from equipment where organization_id = ? and status = ?`, [
-				organizationId,
-				status,
-			]),
-		),
-	);
-
-/** Checks the three charts' numbers against the organization's rows. */
-async function expectChartsOf(organizationId: string) {
-	const weeks = await chartTable("Orders per week");
-	expect(weeks).toHaveLength(12);
-	const thisWeek = await ordersThisWeek(organizationId);
-	expect(weeks.at(-1)!.slice(1)).toEqual(
-		statusValues.map((status) => String(thisWeek.find((row) => row.status === status)?.count ?? 0)),
-	);
-
-	const months = await chartTable("Revenue per month");
-	expect(months).toHaveLength(12);
-	expect(months.at(-1)![2]).toBe(String(await completedThisMonth(organizationId)));
-
-	const equipment = await chartTable("Equipment by status");
-	expect(equipment.map((row) => row[0])).toEqual([
-		"Operational",
-		"Needs service",
-		"Out of service",
-		"Decommissioned",
-	]);
-	expect(equipment.map((row) => row[1])).toEqual(
-		(await equipmentByStatus(organizationId)).map(String),
-	);
-}
-
-/** An organization's orders made since `from` days ago and before `to` days ago. */
-const madeBetween = (organizationId: string, from: number, to: number) =>
-	value<number>(
-		`select count(*) from "order" where organization_id = ?
-		 and created_at >= unixepoch('now', ?) and created_at < unixepoch('now', ?)`,
-		[organizationId, `-${from} days`, `-${to} days`],
-	);
+/** How many rows a chart's hidden table has. */
+const chartRows = async (title: string) => (await chartTable(title)).length;
 
 describe("the dashboard's greeting and tiles", () => {
 	test("greets the member by first name, for the time of day", async () => {
@@ -111,32 +33,10 @@ describe("the dashboard's greeting and tiles", () => {
 		);
 		await app.page.getByText("Here's what's happening today.").waitFor();
 	});
-
-	test("compare the orders made and the revenue with the period before", async () => {
-		const [week, weekBefore] = await Promise.all([
-			madeBetween(north.id, 7, 0),
-			madeBetween(north.id, 14, 7),
-		]);
-		const change = week - weekBefore;
-		const trend = statTileNamed(app.page, "Open orders").locator("[data-stat-trend]");
-		expect(await trend.innerText()).toBe(
-			`${week} new in the last 7 days (${change > 0 ? "+" : ""}${change})`,
-		);
-		expect(await trend.getAttribute("data-stat-trend")).toBe(
-			change > 0 ? "up" : change < 0 ? "down" : "flat",
-		);
-		// The seed completes work every week: there was revenue in the 30 days before too.
-		const revenue = statTileNamed(app.page, "Revenue, last 30 days").locator("[data-stat-trend]");
-		expect(await revenue.innerText()).toMatch(/^([+-]\d+|0)% on the 30 days before$/);
-		// A tile without a period before has none.
-		const urgent = statTileNamed(app.page, "Urgent");
-		expect(await urgent.count()).toBe(1);
-		expect(await urgent.locator("[data-stat-trend]").count()).toBe(0);
-	});
 });
 
 describe("the dashboard's charts", () => {
-	test("show North's orders per week, revenue per month and equipment by status", async () => {
+	test("show the orders per week, revenue per month and equipment by status", async () => {
 		await app.go("/");
 		expect(
 			await chartCard("Orders per week")
@@ -152,16 +52,14 @@ describe("the dashboard's charts", () => {
 			"Invoiced",
 			"Cancelled",
 		]);
-		await expectChartsOf(north.id);
-	});
-
-	test("price the revenue like the tile, so the year adds up to at least the last 30 days", async () => {
-		const last30Days = cents(await statTile(app.page, "Revenue, last 30 days").innerText());
-		const months = await chartTable("Revenue per month");
-		expect(months.at(-1)![1]).toMatch(/^€[\d,]+\.\d\d$/);
-		const year = months.reduce((sum, row) => sum + cents(row[1]), 0);
-		expect(year).toBeGreaterThanOrEqual(last30Days);
-		expect(last30Days).toBeGreaterThan(0);
+		expect(await chartRows("Orders per week")).toBe(12);
+		expect(await chartRows("Revenue per month")).toBe(12);
+		expect((await chartTable("Equipment by status")).map((row) => row[0])).toEqual([
+			"Operational",
+			"Needs service",
+			"Out of service",
+			"Decommissioned",
+		]);
 	});
 
 	// That a chart is hidden from assistive technology, with a bar per status, is
@@ -172,13 +70,6 @@ describe("the dashboard's charts", () => {
 			await app.go("/");
 			expect(await fitsWidth(app.page)).toBe(true);
 		});
-	});
-
-	test("show South its own numbers only", async () => {
-		await app.switchOrganization(south.name);
-		await expectChartsOf(south.id);
-		expect(await equipmentByStatus(south.id)).not.toEqual(await equipmentByStatus(north.id));
-		await app.switchOrganization(north.name);
 	});
 });
 
@@ -338,27 +229,7 @@ describe("the dashboard's upcoming work", () => {
 		await app.go("/");
 		const shown = await upcomingWork();
 		expect(shown.length).toBeGreaterThan(0);
+		// That an order with more units has "+N" is `dashboard.spec.ts`'s (its unit count).
 		for (const [number, units] of shown) expect(units).toBe(await unitsOf(number));
-
-		// Another of its customer's units on an order with one: "+1".
-		const [other] = await rows<{ number: string; id: number }>(
-			`select o.number, e.id from "order" o join equipment e on e.customer_id = o.customer_id
-			 where o.organization_id = ? and o.number in (${shown.map(() => "?").join(", ")})
-			  and (select count(*) from order_unit where order_id = o.id) = 1
-			  and e.id not in (select equipment_id from order_unit where order_id = o.id)
-			 order by o.number, e.id limit 1`,
-			[north.id, ...shown.map(([number]) => number)],
-		);
-		expect(other).toBeDefined();
-		await app.go(`/orders/${other.number}/edit`);
-		await quiet(app.page);
-		await addUnits(app, other);
-		await app.page.getByRole("button", { name: "Save order" }).click();
-		await app.page.waitForURL((url) => url.pathname === `/orders/${other.number}`);
-
-		await app.go("/");
-		const after = new Map(await upcomingWork());
-		expect(after.get(other.number)).toBe(await unitsOf(other.number));
-		expect(after.get(other.number)).toMatch(/ \+1$/);
 	});
 });
