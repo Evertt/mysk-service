@@ -57,6 +57,15 @@ core and for each module.
   remote functions and server routes refuse such a tenant is the generic module-gate spec's,
   `src/tests/unit/module-gate.spec.ts`, and that its slots stay empty `extension-slot.svelte.spec.ts`'s)
   and tenant isolation.
+- E2E pages start signed in without the login form. `useApp({ user })`, `signedInPage(app, user)`
+  and `app.signIn(user)` give each browser context a session of its own: a row written into the
+  lane's database, in the organization a sign-in starts in, and its cookie signed with the lanes'
+  secret (`src/tests/e2e/sessions.ts`). `global-setup.ts` gives the servers that secret and checks
+  once a run, through one real sign-in, that better-auth makes the same row and cookie. A test can
+  switch organization, sign out or change a user's role without touching another context's
+  session or the next file's. Pick each file's main actor in `useApp({ user })` rather than
+  signing in as North's admin and switching. The form itself is tested only in `auth.test.ts`
+  (and on `auth.view-as`'s server without the demo flag).
 - What a section's server code decides (its rules and calculations, what its queries and lists
   return, how they filter and sort, what gets logged, what it refuses) is tested in a server spec
   (`*.spec.ts` in a `tests/unit/**/server/` folder), which runs it as a tenant on a seeded database

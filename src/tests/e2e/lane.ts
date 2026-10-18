@@ -8,3 +8,6 @@ const lanes = inject("lanes");
 export const lane = lanes[(Number(process.env.VITEST_POOL_ID ?? 1) - 1) % lanes.length];
 
 export const baseURL = lane.baseURL;
+
+/** The secret the lanes' servers sign their cookies with, to sign sessions' (`sessions.ts`). */
+export const authSecret = inject("authSecret");

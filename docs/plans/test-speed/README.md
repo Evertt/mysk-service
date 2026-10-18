@@ -34,6 +34,17 @@ proportions.
    cached `storageState` per user and lane), so `useApp()` and `signedInPage()` start signed in;
    the UI sign-in stays in `auth.test`. Saves ~250–300 s summed. Also: choose each file's main
    actor in `useApp({ user })` (several sign in as North's admin and then work as SHLTR's people).
+   **Done (2026-10-18):** a session row per browser context, written into the lane's database,
+   with its cookie signed with a secret `global-setup.ts` gives the servers
+   (`src/tests/e2e/sessions.ts`); global setup checks it against one real sign-in each run.
+   Per context rather than cached per lane: switching organization changes the session row.
+   `signedInPage()` still goes from /login to the home client-side, so its `requests` hold the
+   home's remote queries. Measured: unloaded, a sign-in went from ~1.6 to ~1.3 s (admin) and
+   ~0.9 to ~0.7 s (engineer): most of it is the home page, not the form. In a full run (104
+   files, 392 s wall) the hooks (browser launch and sign-in) of the 94 files a develop run had
+   summed 206 s against its 389 s, and the files 1,834 s against 2,615 s, but that run was more
+   loaded (its tests alone were 27 % slower), so the sign-in's own share is roughly 80–180 s.
+   Choosing each file's main actor is left to the files.
 4. **A shared harness for server specs** (done, 2026-10-17): `src/tests/unit/lib/server/harness/`,
    described in "Server specs" in `docs/agents/tests.md`. The `server-harness` project seeds the
    demo database once per run (migrate 0.5 s + seed 2.2 s) and copies it per file (~10 ms); `as()`

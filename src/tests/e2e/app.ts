@@ -5,6 +5,7 @@
  */
 import {
 	type Browser,
+	type BrowserContext,
 	type BrowserContextOptions,
 	chromium,
 	type Locator,
@@ -13,12 +14,14 @@ import {
 } from "playwright";
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
+import { isCustomerContact, isFieldEngineer, parseRoles } from "#lib/auth/roles.ts";
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
-import { DEMO_PASSWORD, demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
+import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 
-import { forgetTables } from "./db.ts";
-import { baseURL } from "./lane.ts";
+import { fixture, forgetTables, rows } from "./db.ts";
+import { authSecret, baseURL } from "./lane.ts";
 import { quiet, trackNetwork } from "./network.ts";
+import { newSession, sessionCookie } from "./sessions.ts";
 
 export { baseURL } from "./lane.ts";
 export { cents, countIn, fixture, nextCode, rows, unbalancedStock, value } from "./db.ts";
@@ -104,6 +107,33 @@ export const userNames = {
 };
 
 /**
+ * Signs a browser context in as `email`, without the login form: a session of its own in the
+ * lane's database, in the organization signing in starts in, and its cookie (`sessions.ts`). So
+ * what a test does to its session (switching organization, signing out) stays its own, and
+ * changes no other context's or file's.
+ */
+export async function signInContext(context: BrowserContext, email: string) {
+	const session = await newSession(fixture, email);
+	await context.addCookies([await sessionCookie(session, baseURL, authSecret)]);
+}
+
+/**
+ * Where signing in takes `email`: the engineer portal for a field engineer, the customer portal
+ * for a customer's contact, else the office's dashboard (see `login.remote.ts`).
+ */
+export async function homeOf(email: string) {
+	const [membership] = await rows<{ role: string }>(
+		`select m.role from member m join user u on u.id = m.user_id where u.email = ?
+		 order by m.created_at limit 1`,
+		[email],
+	);
+	const roles = parseRoles(membership?.role ?? "");
+	if (isFieldEngineer(roles)) return "/my";
+	if (isCustomerContact(roles)) return "/portal";
+	return "/";
+}
+
+/**
  * The browser's language in every test browser: English, so the app is in English (the tests read
  * its English texts) whatever the language of the machine running them.
  */
@@ -130,7 +160,11 @@ export interface App {
 	go(path: string): Promise<Response | null>;
 	/** The current path. */
 	path(): string;
-	/** Signs in at /login (from wherever the page is). */
+	/**
+	 * Signs in as `email` (from wherever the page is, signed out) and opens where the login form
+	 * would take them, as `go()` does: where they were sent to /login from, else their home. Without
+	 * the form, which `auth.test.ts` tests: a session of its own (`signInContext`).
+	 */
 	signIn(email: string): Promise<void>;
 	/** Switches organization through the sidebar, which reloads the app at `/`. */
 	switchOrganization(name: string): Promise<void>;
@@ -195,7 +229,8 @@ interface TableGroup {
 
 /**
  * Gives the tests in a file one browser page, signed in as `user` (the admin by default, who
- * starts in North; `null` for signed out), on a desktop screen unless `viewport` says
+ * starts in North; `null` for signed out) at their home, without the login form (`signIn`), on a
+ * desktop screen unless `viewport` says
  * otherwise, in the time zone of the machine running them (the server's) unless `timeZone` says
  * otherwise: then the browser has told the server its zone already (the cookie the app sets, see
  * `src/routes/time-zone.ts`). After each test, checks that the app logged no errors or hydration
@@ -241,11 +276,12 @@ export function useApp({
 		},
 		path: () => new URL(page.url()).pathname,
 		async signIn(email) {
-			if (app.path() !== "/login") await app.go("/login");
-			await page.getByLabel("Email").fill(email);
-			await page.getByLabel("Password").fill(DEMO_PASSWORD);
-			await page.getByRole("button", { name: "Sign in" }).click();
-			await page.waitForURL((url) => url.pathname !== "/login");
+			const from = app.path() === "/login" && new URL(page.url()).searchParams.get("redirectTo");
+			await signInContext(page.context(), email);
+			// The app sends field engineers and customers' contacts on from `/` to their portals. Then
+			// until the network is quiet, as after the form: without it, shltr.test's engineer read
+			// the portal's Today cards before they were in (full run, 2026-10-17).
+			await app.go(from || "/");
 			await quiet(page);
 		},
 		async switchOrganization(name) {

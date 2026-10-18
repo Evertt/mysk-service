@@ -12,6 +12,7 @@
  * but with Svelte's dev-only checks, e.g. the hydration mismatch warnings, for debugging.
  */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { constants, tmpdir } from "node:os";
@@ -19,6 +20,10 @@ import { join } from "node:path";
 
 import { createClient } from "@libsql/client";
 import type { TestProject } from "vite-plus/test/node";
+
+import { DEMO_PASSWORD, demoUsers } from "#lib/server/db/demo.ts";
+
+import { checkSessions } from "./sessions.ts";
 
 export interface Lane {
 	/** Where the app under test runs, e.g. `http://localhost:51234`. */
@@ -33,6 +38,8 @@ declare module "vitest" {
 	export interface ProvidedContext {
 		/** One app per test worker, see `useApp` in `app.ts`. */
 		lanes: Lane[];
+		/** The lanes' `BETTER_AUTH_SECRET`, to sign the sessions' cookies (`sessions.ts`). */
+		authSecret: string;
 	}
 }
 
@@ -197,6 +204,9 @@ export default async function setup(project: TestProject) {
 		});
 	}
 
+	// The lanes' own secret, rather than .env's, so the tests can sign session cookies with it: they
+	// start signed in without the login form (`sessions.ts`).
+	const authSecret = randomBytes(32).toString("base64");
 	const count = dev ? 1 : project.config.maxWorkers;
 	const started = await Promise.allSettled(
 		Array.from({ length: count }, async (_, i) => {
@@ -204,7 +214,8 @@ export default async function setup(project: TestProject) {
 			copyFileSync(template, database);
 			const databaseURL = `file:${database}`;
 			const outbox = join(folder, `lane-${i + 1}-outbox.jsonl`);
-			return { databaseURL, outbox, ...(await startServer(databaseURL, outbox)) };
+			const server = await startServer(databaseURL, outbox, { BETTER_AUTH_SECRET: authSecret });
+			return { databaseURL, outbox, ...server };
 		}),
 	);
 	const servers = started.flatMap((result) =>
@@ -222,6 +233,19 @@ export default async function setup(project: TestProject) {
 		throw failed.reason;
 	}
 
+	// Once a run, that the sessions the tests write are the ones better-auth makes.
+	const [first] = servers;
+	const client = createClient({ url: first.databaseURL });
+	try {
+		await checkSessions(client, first.baseURL, authSecret, demoUsers[0].email, DEMO_PASSWORD);
+	} catch (error) {
+		await teardown();
+		throw error;
+	} finally {
+		client.close();
+	}
+
+	project.provide("authSecret", authSecret);
 	project.provide(
 		"lanes",
 		servers.map(({ baseURL, databaseURL, outbox }) => ({ baseURL, databaseURL, outbox })),
