@@ -293,4 +293,18 @@ describe("SHLTR's demo data, whatever the day", () => {
 			expect(expiring.length).toBeGreaterThan(0);
 		},
 	);
+
+	// The portal's checklists specs fill in one of several units (each category has a template).
+	test.each(days)("gives Lev a planned inspection of several units on %s", async (day) => {
+		const { orders, engineers } = await generateOn(day);
+		const lev = engineers.find((engineer) => engineer.name === "Lev Hoekstra")!;
+		const planned = orders.filter(
+			(o) =>
+				o.engineerId === lev.id &&
+				o.status === "scheduled" &&
+				o.type === "inspection" &&
+				o.equipmentIds.length > 1,
+		);
+		expect(planned.length).toBeGreaterThan(0);
+	});
 });
