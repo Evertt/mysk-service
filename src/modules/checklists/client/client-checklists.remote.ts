@@ -1,7 +1,8 @@
 /**
  * The checklists as a customer's contact reads them in the customer portal: an order's (its
- * results, on the order's page), its work order to print, and a unit's inspection status and
- * history. Gated by `forCustomers` (the module's set for customers' contacts) and scoped to their
+ * results, on the order's page), its work order to print once it's done, and a unit's inspection
+ * status and its completed checklists (a draft's remarks are the office's until it's completed).
+ * Gated by `forCustomers` (the module's set for customers' contacts) and scoped to their
  * customer and the sites they see (`#lib/server/auth/customer.ts`), so another customer's order or
  * unit is a 404, also by a tampered number or serial.
  */
@@ -10,6 +11,7 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { firstName } from "#lib/engineers/index.ts";
+import { doneOrderStatuses } from "#lib/models.ts";
 import {
 	atSites,
 	currentCustomer,
@@ -18,6 +20,7 @@ import {
 	seesSite,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 
 import { forCustomers } from "../remote-functions.ts";
@@ -56,20 +59,23 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
 });
 
 /**
- * The customer's order `number` as its work order prints it (or a 404), with only its units (and
- * their checklists) at the contact's sites.
+ * The customer's order `number` as its work order prints it, once it's done (a 404 before, or for
+ * another's), with only its units (and their checklists) at the contact's sites.
  */
 export const getClientWorkOrder = forCustomers.query(v.string(), async (number) => {
 	const access = await currentCustomer();
 	const found = await loadWorkOrder(
-		and(eq(order.number, number), customerOrders(access))!,
+		and(eq(order.number, number), customerOrders(access), inList(order.status, doneOrderStatuses))!,
 		(siteId) => seesSite(access, siteId),
 	);
 	if (!found) error(404, m.checklists_order_not_found({ number }));
 	return found;
 });
 
-/** The customer's unit `serialNumber`'s inspection status and checklists (or a 404). */
+/**
+ * The customer's unit `serialNumber`'s inspection status and its completed checklists, newest
+ * first (or a 404).
+ */
 export const getClientUnitInspection = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const [unit] = await db
@@ -84,5 +90,6 @@ export const getClientUnitInspection = forCustomers.query(v.string(), async (ser
 		);
 	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
 	const inspection = await unitInspection(unit.id);
-	return { ...inspection, checklists: forCustomer(inspection.checklists) };
+	const completed = inspection.checklists.filter((each) => each.status === "completed");
+	return { ...inspection, checklists: forCustomer(completed) };
 });

@@ -2,7 +2,8 @@
 	@component
 	Adds a component to a unit, or changes one: its name, its article (one of the tenant's materials,
 	with the materials module on, by SKU) and the points of the unit's checklist that check it,
-	grouped. Choosing an article checks the points its shop product fixes.
+	grouped (with the checklists module on; without, it sends none and the server keeps the
+	component's). Choosing an article checks the points its shop product fixes.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
@@ -31,6 +32,7 @@
 		articleCheckpoints,
 		checkpoints,
 		hasArticles,
+		hasCheckpoints,
 	}: {
 		open?: boolean;
 		unit: { serialNumber: string; title: string };
@@ -42,6 +44,8 @@
 		checkpoints: Checkpoint[];
 		/** Whether the tenant has materials, whose articles a component can have. */
 		hasArticles: boolean;
+		/** Whether the tenant has checklists, whose points check a component. */
+		hasCheckpoints: boolean;
 	} = $props();
 
 	const form = $derived(saveComponent.for(editing ? `component-${editing.id}` : "component-new"));
@@ -114,44 +118,47 @@
 						onchange={chooseArticle}
 					/>
 				{/if}
-				<Field.FieldSet>
-					<Field.FieldLegend variant="label">{m.condition_field_checkpoints()}</Field.FieldLegend>
-					{#if checkpoints.length}
-						<Field.FieldDescription>
-							{m.condition_component_checkpoints_description()}
-						</Field.FieldDescription>
-						{#each byTemplate as { template, groups } (template)}
-							<div class="flex flex-col gap-2" data-checkpoint-template={template}>
-								{#if byTemplate.length > 1}
-									<span class="text-xs font-medium text-muted-foreground">{template}</span>
-								{/if}
-								{#each groups as { group, points } (group)}
-									<div class="flex flex-col gap-1.5">
-										{#if group}
-											<span class="text-xs font-medium text-muted-foreground">{group}</span>
-										{/if}
-										{#each points as point (point.id)}
-											<label class="flex items-start gap-2 text-sm">
-												<input
-													class="mt-0.5 size-4 shrink-0 accent-primary"
-													{...form.fields.checkpointIds.as(
-														"checkbox",
-														String(point.id),
-														editing?.checkpointIds.includes(point.id) ?? false,
-													)}
-												/>
-												<span>{point.text}</span>
-											</label>
-										{/each}
-									</div>
-								{/each}
-							</div>
-						{/each}
-					{:else}
-						<Field.FieldDescription>{m.condition_component_no_checkpoints()}</Field.FieldDescription
-						>
-					{/if}
-				</Field.FieldSet>
+				{#if hasCheckpoints}
+					<Field.FieldSet>
+						<Field.FieldLegend variant="label">{m.condition_field_checkpoints()}</Field.FieldLegend>
+						{#if checkpoints.length}
+							<Field.FieldDescription>
+								{m.condition_component_checkpoints_description()}
+							</Field.FieldDescription>
+							{#each byTemplate as { template, groups } (template)}
+								<div class="flex flex-col gap-2" data-checkpoint-template={template}>
+									{#if byTemplate.length > 1}
+										<span class="text-xs font-medium text-muted-foreground">{template}</span>
+									{/if}
+									{#each groups as { group, points } (group)}
+										<div class="flex flex-col gap-1.5">
+											{#if group}
+												<span class="text-xs font-medium text-muted-foreground">{group}</span>
+											{/if}
+											{#each points as point (point.id)}
+												<label class="flex items-start gap-2 text-sm">
+													<input
+														class="mt-0.5 size-4 shrink-0 accent-primary"
+														{...form.fields.checkpointIds.as(
+															"checkbox",
+															String(point.id),
+															editing?.checkpointIds.includes(point.id) ?? false,
+														)}
+													/>
+													<span>{point.text}</span>
+												</label>
+											{/each}
+										</div>
+									{/each}
+								</div>
+							{/each}
+						{:else}
+							<Field.FieldDescription
+								>{m.condition_component_no_checkpoints()}</Field.FieldDescription
+							>
+						{/if}
+					</Field.FieldSet>
+				{/if}
 			</Field.FieldGroup>
 			<Field.FieldError errors={form.fields.allIssues()} />
 			<Dialog.Footer>

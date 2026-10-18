@@ -30,6 +30,7 @@ import {
 	shltr,
 	submit,
 	value,
+	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
 import { unitStates } from "./support.ts";
@@ -204,6 +205,35 @@ describe("a unit's components, in SHLTR's office", () => {
 		expect(JSON.parse(updated.changes!)).toEqual({
 			name: ["Kabelset", "Staaldraadkabels links"],
 			checkpoints: [2, 1],
+		});
+	});
+
+	test("while checklists is off, its points are read and kept as they are", async () => {
+		const cables = await pointOf("Staaldraadkabels vrij van rafels en corrosie");
+		const article = await materialOf("SD-002");
+		await withoutModule("shltr", "checklists", async () => {
+			const card = await as(jan, () => data(getUnitComponents, unit.serial_number));
+			expect(card.has.checklists).toBe(false);
+			expect(card.checkpoints).toEqual([]);
+			expect(card.components.find((part) => part.id === made.id)?.checkpointIds).toEqual([cables]);
+			// The dialog offers no points, so it sends none: the rename keeps them.
+			const answer = await as(jan, () =>
+				submit(saveComponent, {
+					serialNumber: unit.serial_number,
+					id: String(made.id),
+					name: "Staaldraadkabels",
+					materialId: String(article),
+					checkpointIds: [],
+				}),
+			);
+			expect(answer.status).toBe(200);
+		});
+		expect((await componentsOf(unit.id)).find((part) => part.id === made.id)?.name).toBe(
+			"Staaldraadkabels",
+		);
+		expect(await checkpointsOf(made.id)).toEqual([cables]);
+		expect(JSON.parse((await loggedOf(made.id)).at(-1)!.changes!)).toEqual({
+			name: ["Staaldraadkabels links", "Staaldraadkabels"],
 		});
 	});
 

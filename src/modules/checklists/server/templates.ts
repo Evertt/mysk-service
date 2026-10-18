@@ -11,6 +11,7 @@ import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
 import { equipment, equipmentCategory } from "#lib/server/db/schema.ts";
 
 import type { TemplateInput } from "../form/template-schema.ts";
@@ -260,11 +261,11 @@ export function setTemplateCategories(id: number, categoryIds: number[], issue: 
 			.where(
 				and(eq(checklistTemplateCategory.templateId, id), inTenant(checklistTemplateCategory)),
 			);
-		if (wanted.length) {
-			await tx
-				.insert(checklistTemplateCategory)
-				.values(wanted.map((categoryId) => ({ organizationId, templateId: id, categoryId })));
-		}
+		await insertRows(
+			tx,
+			checklistTemplateCategory,
+			wanted.map((categoryId) => ({ organizationId, templateId: id, categoryId })),
+		);
 		await recordActivity(tx, {
 			action: "updated",
 			subject: templateSubject(template),

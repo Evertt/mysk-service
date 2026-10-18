@@ -17,9 +17,8 @@
 	let { serialNumber }: { serialNumber: string } = $props();
 
 	const data = $derived(await getClientUnitInspection(serialNumber));
-	const completed = $derived(
-		data.checklists.filter((checklist) => checklist.status === "completed").slice(0, 10),
-	);
+	// The query answers only the completed ones.
+	const completed = $derived(data.checklists.slice(0, 10));
 </script>
 
 <Card.Root data-client-inspection>

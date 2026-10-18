@@ -14,6 +14,7 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 import {
 	getClientOrderChecklists,
 	getClientUnitInspection,
+	getClientWorkOrder,
 } from "#modules/checklists/client/client-checklists.remote.ts";
 import {
 	answer,
@@ -344,6 +345,45 @@ describe("the customer portal's checklists", () => {
 				expect(typeof checklist.office).toBe("boolean");
 			}
 			expect(checklists.some((checklist) => checklist.engineer)).toBe(true);
+		});
+	});
+
+	/** Of the contact's customer's units at the sites they see, the checklists with `status`. */
+	const contactsChecklists = (status: string) =>
+		rows<{ id: number; serial_number: string; number: string; order_status: string }>(
+			`select c.id, e.serial_number, o.number, o.status as order_status from checklist c
+			 join "order" o on o.id = c.order_id
+			 join equipment e on e.id = c.equipment_id
+			 join portal_contact p on p.customer_id = e.customer_id and p.organization_id = e.organization_id
+			 join user u on u.id = p.user_id
+			 where u.email = ? and c.status = ? and (p.all_sites or e.site_id in
+				(select s.site_id from portal_contact_site s where s.contact_id = p.id))
+			 order by c.id`,
+			[shltr.customer.email, status],
+		);
+
+	test("of a unit, are only its completed ones: a draft's half-typed remarks stay in the office", async () => {
+		const [draft] = await contactsChecklists("draft");
+		expect(draft).toBeDefined();
+		const inspection = await as(shltr.customer, () =>
+			data(getClientUnitInspection, draft.serial_number),
+		);
+		expect(inspection.checklists.map((checklist) => checklist.id)).not.toContain(draft.id);
+		expect(inspection.checklists.every((checklist) => checklist.status === "completed")).toBe(true);
+	});
+
+	test("print an order's work order once it's done, and before that it's a 404", async () => {
+		const drafts = await contactsChecklists("draft");
+		const open = drafts.find((each) => each.order_status === "scheduled");
+		const [done] = await contactsChecklists("completed");
+		expect(open).toBeDefined();
+		expect(["completed", "invoiced"]).toContain(done.order_status);
+		await as(shltr.customer, async () => {
+			expect(await call(getClientWorkOrder, open!.number)).toMatchObject({ status: 404 });
+			expect(await call(getClientWorkOrder, done.number)).toMatchObject({
+				status: 200,
+				data: { order: { number: done.number } },
+			});
 		});
 	});
 });

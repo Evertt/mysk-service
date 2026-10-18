@@ -3,7 +3,8 @@
  * alike: the answers kept here as they're given (shown at once, whatever the server's copy says by
  * then), each saved as it's given, one after another so the last answer given stays; a remark a
  * moment after typing stops, or when its field is left; and completing once every point is
- * answered, after what's still to save. An answer that fails to save is taken back, and said so.
+ * answered, after what's still to save, unless some of it fails to. An answer that fails to save
+ * is taken back to the server's, and said so, unless a newer one has replaced it by then.
  */
 import { untrack } from "svelte";
 import { toast } from "svelte-sonner";
@@ -50,15 +51,26 @@ export function checklistDraft<Point extends DraftPoint>(
 
 	/** Saves run one after another, so the last answer given is the one that stays. */
 	let queue: Promise<unknown> = Promise.resolve();
+	/** How many saves have failed, so completing knows whether one did while it waited. */
+	let failures = 0;
 	function enqueue(save: () => Promise<unknown>, undo: () => void) {
 		saving++;
 		queue = queue
 			.then(save)
 			.catch((error) => {
+				failures++;
 				undo();
 				toast.error(errorMessage(error, m.checklists_save_failed()));
 			})
 			.finally(() => saving--);
+	}
+	/** Waits until every save is done, also those given while it waits. */
+	async function settled() {
+		let last;
+		do {
+			last = queue;
+			await last;
+		} while (last !== queue);
 	}
 
 	// Plain records: what's pending to save shows nowhere.
@@ -79,30 +91,41 @@ export function checklistDraft<Point extends DraftPoint>(
 		save();
 	}
 
-	/** What the server has of each point's remark, to save only a change. */
-	const saved: Record<number, string> = Object.fromEntries(
+	/** What the server has of each point's result, as its saves confirm it. */
+	const answered: Record<number, PointResult | null> = Object.fromEntries(
+		untrack(() => checklist().results.map((point) => [point.id, point.result])),
+	);
+
+	/**
+	 * What's sent of each point's remark, to save only a change; `null` once a save failed, as the
+	 * server's is then unknown.
+	 */
+	const saved: Record<number, string | null> = Object.fromEntries(
 		untrack(() => checklist().results.map((point) => [point.id, point.remark ?? ""])),
 	);
 	function saveRemark(point: Point) {
 		const remark = point.remark ?? "";
-		const before = saved[point.id] ?? "";
-		if (remark === before) return;
+		if (remark === saved[point.id]) return;
 		saved[point.id] = remark;
-		// A remark that fails to save stays as typed, and is saved again when it's changed.
+		// A remark that fails to save stays as typed, and is saved again when it's changed or the
+		// checklist completed (unless a newer one is on its way by then).
 		enqueue(
 			() => saves.remarkOn({ id: point.id, remark }),
-			() => (saved[point.id] = before),
+			() => {
+				if (saved[point.id] === remark) saved[point.id] = null;
+			},
 		);
 	}
 
-	let savedRemarks = untrack(() => checklist().remarks ?? "");
+	let savedRemarks: string | null = untrack(() => checklist().remarks ?? "");
 	function saveRemarks() {
 		if (remarks === savedRemarks) return;
-		const before = savedRemarks;
-		savedRemarks = remarks;
+		const sent = (savedRemarks = remarks);
 		enqueue(
-			() => saves.remarkForCustomer({ id: untrack(checklist).id, remarks }),
-			() => (savedRemarks = before),
+			() => saves.remarkForCustomer({ id: untrack(checklist).id, remarks: sent }),
+			() => {
+				if (savedRemarks === sent) savedRemarks = null;
+			},
 		);
 	}
 
@@ -135,11 +158,16 @@ export function checklistDraft<Point extends DraftPoint>(
 		/** Gives a point a result, saved at once. */
 		setResult(point: Point, result: PointResult) {
 			if (point.result === result) return;
-			const before = point.result;
 			point.result = result;
 			enqueue(
-				() => saves.answer({ id: point.id, result }),
-				() => (point.result = before),
+				async () => {
+					await saves.answer({ id: point.id, result });
+					answered[point.id] = result;
+				},
+				// Back to the server's, unless a newer answer replaced it since.
+				() => {
+					if (point.result === result) point.result = answered[point.id] ?? null;
+				},
 			);
 		},
 		/** Sets a point's remark, saved a moment after typing stops. */
@@ -157,16 +185,24 @@ export function checklistDraft<Point extends DraftPoint>(
 		},
 		/**
 		 * Completes it, once every point is answered (else it shows what's missing), after what's
-		 * still to save; answers whether it did.
+		 * still to save (and remarks whose save failed); not if some of it fails to save, which is
+		 * taken back and said so. Answers whether it did.
 		 */
 		async complete() {
 			tried = true;
 			if (!ready) return false;
-			for (const point of points) now(`point-${point.id}`, () => saveRemark(point));
-			now("remarks", saveRemarks);
+			for (const key of Object.keys(timers)) {
+				clearTimeout(timers[key]);
+				delete timers[key];
+			}
+			const failed = failures;
+			for (const point of points) saveRemark(point);
+			saveRemarks();
 			completing = true;
 			try {
-				await queue;
+				await settled();
+				// The server hasn't all that's shown, or an answer was taken back.
+				if (failures !== failed || !ready) return false;
 				await saves.complete({ id: untrack(checklist).id });
 				return true;
 			} catch (error) {
