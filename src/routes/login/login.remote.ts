@@ -7,9 +7,7 @@ import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
 
-/** Only local paths, so the login can't be used to send people to another site. */
-const safeRedirect = (path: string | undefined) =>
-	path?.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\") ? path : "/";
+import { safeRedirect } from "./redirect.ts";
 
 export const login = forAnyone.form(
 	v.object({
