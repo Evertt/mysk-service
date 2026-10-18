@@ -15,7 +15,8 @@ the board's simulation bar and the minute cron) hands batches of these events, w
 - `Authorization: Bearer <token>`: an integration token of the tenant's, made by a manager on
   `/docks/settings` (shown once; only its SHA-256 is stored). The token says whose docks the events
   are about. A missing, unknown or revoked token is a `401`; a tenant without the docks module a `404`.
-- `Content-Type: application/json` (else `415`), and a body:
+- `Content-Type: application/json` (else `415`), and a body of at most 800 kB (else `413`,
+  `{ "error": "too_large" }`; room enough for a full batch):
 
 ```json
 {

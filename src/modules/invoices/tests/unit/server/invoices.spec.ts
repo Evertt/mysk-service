@@ -9,9 +9,13 @@
 import { isHttpError } from "@sveltejs/kit";
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { deleteOrder, getOrder } from "#lib/orders/order.remote.ts";
 import invoiceBulkActions from "#modules/invoices/bulk-actions/orders.list.ts";
 import { invoiceOrders } from "#modules/invoices/bulk.remote.ts";
+import { getCreditNotes } from "#modules/invoices/credit-notes.remote.ts";
 import {
 	addLine,
 	addToInvoice,
@@ -33,6 +37,7 @@ import {
 	getInvoices,
 } from "#modules/invoices/invoices.remote.ts";
 import { getOrderInvoice, getReceivables } from "#modules/invoices/invoicing.remote.ts";
+import { creditNoteColumns } from "#modules/invoices/list/credit-note-columns.ts";
 import { GET as invoicePdf } from "#modules/invoices/routes/(app)/[number]/pdf/+server.ts";
 import { getInvoicingSettings, saveSettings } from "#modules/invoices/settings.remote.ts";
 import {
@@ -869,6 +874,34 @@ describe("the lists and the dashboard, in North", () => {
 			]),
 		);
 		expect((await as(south.owner, () => data(getReceivables))).outstanding.count).toBe(southSent);
+	});
+
+	test("the refunds link to just the credit notes they add up: none offset against a sent invoice", async () => {
+		const expected = await rows<{ id: number; settlement: string | null }>(
+			`select c.id, case when c.status != 'sent' then null when i.status = 'sent' then 'offset'
+			 else 'refund' end as settlement from credit_note c left join invoice i on i.id = c.invoice_id
+			 where c.organization_id = ? order by c.id desc`,
+			[northId],
+		);
+		const listed = await as(north.member, () => data(getCreditNotes));
+		expect(listed.map((credit) => [credit.id, credit.settlement])).toEqual(
+			expected.map((credit) => [credit.id, credit.settlement]),
+		);
+		// The seed has one of each: a standalone one to refund, and one against a sent invoice.
+		expect(listed.map((credit) => credit.settlement)).toEqual(
+			expect.arrayContaining(["refund", "offset"]),
+		);
+
+		// The card's link (`?settlement=refund`) on the credit notes' table.
+		const table = createAppTable({ columns: creditNoteColumns, data: listed });
+		const linked = parseTableUrl(new URLSearchParams("settlement=refund"), tableUrlSpec(table));
+		table.setColumnFilters(linked.columnFilters);
+		const shown = table.getRowModel().rows.map((row) => row.original);
+		const { refunds } = await as(north.member, () => data(getReceivables));
+		expect(refunds.count).toBeGreaterThan(0);
+		expect({ count: shown.length, total: -shown.reduce((sum, c) => sum + c.total, 0) }).toEqual(
+			refunds,
+		);
 	});
 
 	test("selected invoices are marked paid, except those that aren't sent", async () => {

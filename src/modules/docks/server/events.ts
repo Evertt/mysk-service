@@ -14,6 +14,13 @@ import { dockCodePattern, type DockEvent, keyLocations } from "../model.ts";
 /** At most this many events per batch: one transaction holds the database, keep it short. */
 export const maxBatch = 100;
 
+/**
+ * The largest body the feed reads (800 kB): room to spare for `maxBatch` events at their longest
+ * (about 3 kB each with every character escaped and the JSON indented), so a larger one is
+ * refused before it's read.
+ */
+export const maxBodyBytes = maxBatch * 8_000;
+
 /** How far ahead of the server's clock an event may be (the hardware's clock may run ahead). */
 const allowedSkew = Temporal.Duration.from({ minutes: 5 });
 

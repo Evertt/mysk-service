@@ -3,7 +3,7 @@
 	import { recordFacets } from "#lib/components/data-table/record-facets.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 
-	import { creditStateOptions } from "../display.ts";
+	import { creditSettlementOptions, creditStateOptions } from "../display.ts";
 	import { creditNoteColumns, type CreditNoteRow } from "./credit-note-columns.ts";
 
 	// Made here rather than in the page: `createAppTable` sets context, which Svelte doesn't allow
@@ -18,7 +18,7 @@
 		getRowId: (row) => String(row.id),
 		initialState: {
 			sorting: [{ id: "number", desc: true }],
-			columnVisibility: { createdAt: false },
+			columnVisibility: { createdAt: false, settlement: false },
 		},
 	});
 
@@ -38,6 +38,11 @@
 				columnId="status"
 				title={m.invoices_column_status()}
 				options={creditStateOptions}
+			/>
+			<FacetedFilter
+				columnId="settlement"
+				title={m.invoices_credit_column_settlement()}
+				options={creditSettlementOptions}
 			/>
 			<FacetedFilter
 				columnId="customer"

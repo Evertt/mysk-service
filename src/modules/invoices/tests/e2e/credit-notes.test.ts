@@ -187,8 +187,13 @@ describe("in North", () => {
 		await app.go("/");
 		const receivables = card("Receivables");
 		await expect.poll(() => receivables.locator("dd[data-amount]").count()).toBe(2);
-		expect(await receivables.locator("[data-refunds]").innerText()).toMatch(
-			/^€[\d,.]+ to refund on \d+ credit notes?$/,
-		);
+		const refunds = await receivables.locator("[data-refunds]").innerText();
+		expect(refunds).toMatch(/^€[\d,.]+ to refund on \d+ credit notes?$/);
+
+		// Its link lists just those: none offset against a sent invoice.
+		await receivables.locator("[data-refunds]").click();
+		await app.page.waitForURL((url) => url.pathname === "/invoices/credit-notes");
+		await quiet(app.page);
+		expect(await app.rowCount()).toBe(Number(/on (\d+) credit/.exec(refunds)?.[1]));
 	});
 });
