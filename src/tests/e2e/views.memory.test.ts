@@ -1,17 +1,17 @@
 /**
  * The tables' memory (see `table-memory.svelte.ts`), on the orders list: the columns a user hides
- * stay hidden, for them alone and on any device; and the list comes back as they left it, with the
- * saved view they had open and its unsaved changes, unless a link says otherwise.
+ * stay hidden after a reload; and the list comes back as they left it, with the saved view they had
+ * open and its unsaved changes, unless a link says otherwise. That it's each member's own, per
+ * organization, and remembers only a view they see, is
+ * `components/data-table/server/views.spec.ts`'s.
  */
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, users, quiet } from "./app.ts";
-import { tamperWithCommand } from "./remote-functions.ts";
 
-const { north, south } = organizations;
+const { north } = organizations;
 const admin = useApp();
-const planner = useApp({ user: users.planner });
 
 const ordersKey = "/(app)/orders";
 
@@ -71,18 +71,6 @@ describe("in North", () => {
 		await quiet(page);
 		expect(await headers(page)).not.toContain("Total");
 		expect(await headers(page)).toContain("Engineer");
-	});
-
-	test("and on another device, but not for another user", async () => {
-		const elsewhere = await admin.anotherTab();
-		await elsewhere.goto(new URL("/orders", admin.page.url()).href);
-		await quiet(elsewhere);
-		expect(await headers(elsewhere)).not.toContain("Total");
-		await elsewhere.context().close();
-
-		await planner.go("/orders");
-		expect(await headers(planner.page)).toContain("Total");
-		expect(await memoryOf(users.planner, north.id)).toBeUndefined();
 	});
 
 	test("the list comes back as it was left, with the open view's unsaved changes, unless a link or No view says otherwise", async () => {
@@ -146,36 +134,5 @@ describe("in North", () => {
 
 		await leaveAndComeBack(page);
 		expect(search(page)).toBe("");
-	});
-});
-
-describe("in South", () => {
-	test("North's memory doesn't come back", async () => {
-		const { page } = admin;
-		await toggleColumn(page, "Total");
-		await expect.poll(async () => (await adminMemory(north.id))?.columns).toMatch(/"total":false/);
-
-		await admin.switchOrganization(south.name);
-		await admin.go("/orders");
-		expect(search(page)).toBe("");
-		expect(await headers(page)).toContain("Total");
-	});
-
-	test("a North view can't be remembered as open by a tampered id", async () => {
-		const { page } = admin;
-		const [northView] = await rows<{ id: number }>(
-			"select id from saved_view where organization_id = ? and name = 'Quotes'",
-			[north.id],
-		);
-		await tamperWithCommand<{ viewId: number | null }>(page, "rememberTable", (arg) => ({
-			...arg,
-			viewId: northView.id,
-		}));
-		await admin.go("/orders?status=completed");
-		await admin.tableSettled();
-		await expect.poll(async () => (await adminMemory(south.id))?.query).toBe("?status=completed");
-		expect((await adminMemory(south.id))?.view_id).toBeNull();
-		// North's is as it was.
-		expect((await adminMemory(north.id))?.columns).toMatch(/"total":false/);
 	});
 });
