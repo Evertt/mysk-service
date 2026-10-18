@@ -7,7 +7,49 @@ import {
 	isEditableOrder,
 	manualOrderStatuses,
 	type OrderStatus,
+	orderStatuses,
 } from "#lib/models.ts";
+
+/** Who moves an order from one status to another. */
+type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing";
+
+/** A transition: who makes it, from which statuses, and to which. */
+interface TransitionRule {
+	by: OrderActor;
+	from: readonly OrderStatus[];
+	to: readonly OrderStatus[];
+}
+
+/**
+ * Every way an order's status changes, by its verb. The rows are the only place that says which
+ * status may follow which, and for whom: the rules below and the server's moves read them.
+ */
+const orderTransitions = {
+	/** The office gives it a status by hand (the order form, the list's status, bulk). */
+	set: {
+		by: "office",
+		from: orderStatuses.filter(
+			(status) => isEditableOrder(status) && !isAwaitingAcceptance(status),
+		),
+		to: manualOrderStatuses,
+	},
+} as const satisfies Record<string, TransitionRule>;
+
+/** A way an order's status changes (see `orderTransitions`). */
+export type OrderVerb = keyof typeof orderTransitions;
+
+/** Whether `verb` can move an order with `status` (whatever it moves it to). */
+const can = (verb: OrderVerb, status: OrderStatus) =>
+	(orderTransitions[verb].from as readonly OrderStatus[]).includes(status);
+
+/** The page's Edit button and the order form: whether an order can be changed in its status. */
+export const mayEditOrder = (status: OrderStatus) => can("set", status);
+
+/**
+ * The page's Delete button: whether an order can be deleted in its status. Not once it's invoiced;
+ * an order awaiting acceptance can be (it isn't accepted first).
+ */
+export const mayDeleteOrder = (status: OrderStatus) => isEditableOrder(status);
 
 /**
  * The statuses an order with `status` can be given by hand (its own among them), e.g. from the

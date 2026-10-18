@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { isEditableOrder, manualOrderStatuses, orderStatuses } from "#lib/models.ts";
-import { fieldActions, plannedStatus, statusChoices } from "#lib/orders/lifecycle.ts";
+import {
+	fieldActions,
+	mayDeleteOrder,
+	mayEditOrder,
+	plannedStatus,
+	statusChoices,
+} from "#lib/orders/lifecycle.ts";
 
 describe("fieldActions", () => {
 	test("a scheduled job can be started and noted, not yet worked on", () => {
@@ -36,4 +42,25 @@ test("a quote that gets an engineer becomes scheduled; other statuses stay", () 
 	expect(plannedStatus("quote", null)).toBe("quote");
 	expect(plannedStatus("scheduled", null)).toBe("scheduled");
 	expect(plannedStatus("in_progress", 3)).toBe("in_progress");
+});
+
+test("an order can be edited until it's invoiced, and not while it awaits acceptance", () => {
+	expect(orderStatuses.filter(mayEditOrder)).toEqual([
+		"quote",
+		"scheduled",
+		"in_progress",
+		"completed",
+		"cancelled",
+	]);
+});
+
+test("an order can be deleted until it's invoiced, also while it awaits acceptance", () => {
+	expect(orderStatuses.filter(mayDeleteOrder)).toEqual([
+		"awaiting_acceptance",
+		"quote",
+		"scheduled",
+		"in_progress",
+		"completed",
+		"cancelled",
+	]);
 });
