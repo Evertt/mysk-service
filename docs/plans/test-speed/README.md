@@ -34,15 +34,17 @@ proportions.
    cached `storageState` per user and lane), so `useApp()` and `signedInPage()` start signed in;
    the UI sign-in stays in `auth.test`. Saves ~250–300 s summed. Also: choose each file's main
    actor in `useApp({ user })` (several sign in as North's admin and then work as SHLTR's people).
-   **In progress (branch `e2e-signed-in`):** a session row per browser context written into the
-   lane's database, with its cookie signed with a secret `global-setup.ts` gives the servers
-   (`src/tests/e2e/sessions.ts`); global setup checks it against one real sign-in each run. Per
-   context rather than cached per lane, since switching organization changes the session row.
+   **Done (2026-10-18):** a session row per browser context, written into the lane's database,
+   with its cookie signed with a secret `global-setup.ts` gives the servers
+   (`src/tests/e2e/sessions.ts`); global setup checks it against one real sign-in each run.
+   Per context rather than cached per lane: switching organization changes the session row.
    `signedInPage()` still goes from /login to the home client-side, so its `requests` hold the
-   home's queries. Measured: ~0.3–0.9 s saved per sign-in unloaded (most of a sign-in is the home
-   page, not the form); hooks per file ~1–2 s less under load. A near-full run summed 2,134 s over
-   103 files against 2,615 s for the dedupe agent's 94-file baseline (different load; not a clean
-   comparison).
+   home's remote queries. Measured: unloaded, a sign-in went from ~1.6 to ~1.3 s (admin) and
+   ~0.9 to ~0.7 s (engineer): most of it is the home page, not the form. In a full run (104
+   files, 392 s wall) the hooks (browser launch and sign-in) of the 94 files a develop run had
+   summed 206 s against its 389 s, and the files 1,834 s against 2,615 s, but that run was more
+   loaded (its tests alone were 27 % slower), so the sign-in's own share is roughly 80–180 s.
+   Choosing each file's main actor is left to the files.
 4. **A shared harness for server specs** (~3–4 h): call a remote function, gate included, as a
    tenant on a seeded copy of the demo database, with the `$app/server` stand-ins of
    `remote-functions.spec.ts` and a faked request event; plus one generic module-gate spec (every
