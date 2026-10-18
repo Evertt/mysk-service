@@ -11,10 +11,9 @@ import * as v from "valibot";
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
-import { planList, refreshRequested } from "#lib/server/lists/index.ts";
+import { customerFacet, planList, refreshRequested } from "#lib/server/lists/index.ts";
 
 import { componentScores } from "../api/extensions.ts";
 import {
@@ -67,19 +66,7 @@ export const getAssetFacets = query(assetList.where, async (where) => {
 		thisYear: state,
 		customer: customer.code,
 	});
-	const codes = Object.keys(facets.customer);
-	const names = codes.length
-		? await db
-				.select({ code: customer.code, name: customer.name })
-				.from(customer)
-				.where(and(inList(customer.code, codes), inTenant(customer)))
-		: [];
-	return {
-		thisYear: facets.thisYear,
-		customers: names
-			.map((found) => ({ ...found, count: facets.customer[found.code] ?? 0 }))
-			.toSorted((a, b) => a.name.localeCompare(b.name)),
-	};
+	return { thisYear: facets.thisYear, customers: await customerFacet(facets.customer) };
 });
 
 /** The tenant's unit `serialNumber` with its template, components and checklists (or a 404). */

@@ -5,7 +5,7 @@
  * points that check them, a component's history of scores, and the SQL its search finds a unit by
  * its components with.
  */
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -13,8 +13,10 @@ import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { ComponentScore, UnitComponent } from "#modules/checklists/api/extensions.ts";
 
+import { checkpointsOf } from "./components.ts";
 import { conditionsOf } from "./conditions.ts";
-import { component, componentCheckpoint, unitCondition } from "./schema.ts";
+import { component } from "./schema.ts";
+import { componentScoreSql } from "./status-sql.ts";
 
 /** `checklists.components`: the units' components in their order, with score and points. */
 export async function componentsOfUnits({
@@ -23,44 +25,19 @@ export async function componentsOfUnits({
 	equipmentIds: readonly number[];
 }): Promise<UnitComponent[]> {
 	if (!equipmentIds.length) return [];
-	const score = sql<number | null>`(select ${unitCondition.score} from ${unitCondition} where ${and(
-		eq(unitCondition.organizationId, component.organizationId),
-		eq(unitCondition.componentId, component.id),
-	)} order by ${desc(unitCondition.recordedAt)}, ${desc(unitCondition.id)} limit 1)`.mapWith(
-		(value: number | null) => (value === null ? null : Number(value)),
-	);
 	const parts = await db
 		.select({
 			id: component.id,
 			equipmentId: component.equipmentId,
 			number: component.number,
 			name: component.name,
-			score,
+			score: componentScoreSql(),
 		})
 		.from(component)
 		.where(and(inList(component.equipmentId, [...new Set(equipmentIds)]), inTenant(component)))
 		.orderBy(asc(component.equipmentId), asc(component.position), asc(component.id));
-	if (!parts.length) return [];
-	const links = await db
-		.select({
-			componentId: componentCheckpoint.componentId,
-			templateItemId: componentCheckpoint.templateItemId,
-		})
-		.from(componentCheckpoint)
-		.where(
-			and(
-				inList(
-					componentCheckpoint.componentId,
-					parts.map((part) => part.id),
-				),
-				inTenant(componentCheckpoint),
-			),
-		);
-	const byComponent = Map.groupBy(links, (link) => link.componentId);
-	return parts.map((part) => ({
-		...part,
-		templateItemIds: (byComponent.get(part.id) ?? []).map((link) => link.templateItemId),
-	}));
+	const points = await checkpointsOf(parts.map((part) => part.id));
+	return parts.map((part) => ({ ...part, templateItemIds: points.get(part.id) ?? [] }));
 }
 
 /** `checklists.componentScores`: the unit's component's scores, newest first. */

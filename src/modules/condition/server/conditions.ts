@@ -23,7 +23,8 @@ import { type ChecklistCompleting, checklistScore } from "#modules/checklists/ap
 
 import { conditionLabel } from "../activity.ts";
 import type { ConditionSource } from "../model.ts";
-import { component, componentCheckpoint, unitCondition } from "./schema.ts";
+import { checkpointsOf } from "./components.ts";
+import { component, unitCondition } from "./schema.ts";
 
 /** What's recorded: the score and the advice (none when empty). */
 export interface ConditionInput {
@@ -165,26 +166,11 @@ async function checkedComponents(tx: Transaction, equipmentId: number) {
 		.from(component)
 		.where(and(eq(component.equipmentId, equipmentId), inTenant(component)))
 		.orderBy(asc(component.position), asc(component.id));
-	if (!parts.length) return [];
-	const links = await tx
-		.select({
-			componentId: componentCheckpoint.componentId,
-			templateItemId: componentCheckpoint.templateItemId,
-		})
-		.from(componentCheckpoint)
-		.innerJoin(
-			component,
-			and(
-				eq(component.organizationId, componentCheckpoint.organizationId),
-				eq(component.id, componentCheckpoint.componentId),
-			),
-		)
-		.where(and(eq(component.equipmentId, equipmentId), inTenant(componentCheckpoint)));
-	const byComponent = Map.groupBy(links, (link) => link.componentId);
-	return parts.map((part) => ({
-		...part,
-		items: new Set((byComponent.get(part.id) ?? []).map((link) => link.templateItemId)),
-	}));
+	const points = await checkpointsOf(
+		parts.map((part) => part.id),
+		tx,
+	);
+	return parts.map((part) => ({ ...part, items: new Set(points.get(part.id)) }));
 }
 
 /**

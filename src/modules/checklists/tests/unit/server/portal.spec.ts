@@ -5,12 +5,14 @@
  * is answered and each rejection says what's wrong (on record then: by him, valid for its months,
  * logged against the order, and the unit's score recorded by the condition module's hook); the
  * order completed only once every checklist is. Another engineer's checklist or another tenant's is
- * a 404, and the portal's functions are only for engineers. A customer's contact sees who completed
- * a checklist by the engineer's first name only. The server side of
+ * a 404, and the portal's functions are only for engineers. A customer's contact sees only completed
+ * checklists, who completed one by the engineer's first name only, and on the printed work order
+ * the engineer's full name but not who in the office. The server side of
  * `checklists.portal.test.ts`, which keeps the phone's page, the signatures and one tampered id.
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import { getWorkOrder } from "#modules/checklists/checklists.remote.ts";
 import {
 	getClientOrderChecklists,
 	getClientUnitInspection,
@@ -372,6 +374,18 @@ describe("the customer portal's checklists", () => {
 		expect(inspection.checklists.every((checklist) => checklist.status === "completed")).toBe(true);
 	});
 
+	test("of an order, are only its completed ones: its drafts' answers stay in the office too", async () => {
+		const [draft] = await contactsChecklists("draft");
+		const [done] = await contactsChecklists("completed");
+		await as(shltr.customer, async () => {
+			const open = await data(getClientOrderChecklists, draft.number);
+			expect(open.checklists.map((checklist) => checklist.id)).not.toContain(draft.id);
+			expect(open.checklists.every((checklist) => checklist.status === "completed")).toBe(true);
+			const closed = await data(getClientOrderChecklists, done.number);
+			expect(closed.checklists.map((checklist) => checklist.id)).toContain(done.id);
+		});
+	});
+
 	test("print an order's work order once it's done, and before that it's a 404", async () => {
 		const drafts = await contactsChecklists("draft");
 		const open = drafts.find((each) => each.order_status === "scheduled");
@@ -385,5 +399,35 @@ describe("the customer portal's checklists", () => {
 				data: { order: { number: done.number } },
 			});
 		});
+	});
+
+	test("print the engineer's full name on the work order, as signed, but of the office not who", async () => {
+		const [done] = await contactsChecklists("completed");
+		const [jan] = await rows<{ id: string; name: string }>(
+			`select id, name from user where email = ?`,
+			[shltr.member.email],
+		);
+		const engineer = String(
+			await value(
+				`select e.name from "order" o join engineer e on e.id = o.engineer_id where o.number = ?`,
+				[done.number],
+			),
+		);
+		expect(engineer).toContain(" ");
+		// The office completed it for the engineer.
+		await rows(`update checklist set completed_by = null, completed_by_user = ? where id = ?`, [
+			jan.id,
+			done.id,
+		]);
+		const workOrder = await as(shltr.customer, () => data(getClientWorkOrder, done.number));
+		expect(workOrder.order.engineer).toBe(engineer);
+		expect(workOrder.checklists.find((checklist) => checklist.id === done.id)).toMatchObject({
+			engineer: null,
+			office: true,
+		});
+		expect(JSON.stringify(workOrder)).not.toContain(jan.name);
+		// The office's own work order says who.
+		const office = await as(shltr.member, () => data(getWorkOrder, done.number));
+		expect(office.checklists.find((checklist) => checklist.id === done.id)?.office).toBe(jan.name);
 	});
 });

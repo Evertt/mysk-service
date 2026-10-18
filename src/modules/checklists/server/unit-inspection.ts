@@ -9,7 +9,9 @@ import { checklist } from "./schema.ts";
 /**
  * The checklists of the tenant's unit `unitId` (found by the caller, in its scope), newest first,
  * and its inspection status today, by its latest completed inspection. The office's unit page and
- * the customer portal's both read it.
+ * the customer portal's both read it; the equipment list and the condition module work the status
+ * out in SQL (`inspectionSql()`), by the same rule: an inspection counts with its last valid day,
+ * which completing it always sets, so one without (none that the app completed) is passed over.
  */
 export async function unitInspection(unitId: number) {
 	const records = await checklistRecords(eq(checklist.equipmentId, unitId));
@@ -20,14 +22,13 @@ export async function unitInspection(unitId: number) {
 		}))
 		.toSorted((a, b) => Temporal.Instant.compare(b.date, a.date) || b.id - a.id);
 	const latest = dated.find(
-		(record) => record.kind === "inspection" && record.status === "completed",
+		(record): record is typeof record & { validUntil: Temporal.PlainDate } =>
+			record.kind === "inspection" && record.status === "completed" && record.validUntil !== null,
 	);
 	const today = Temporal.Now.plainDateISO(getTimeZone());
 	return {
 		status: inspectionStatus(
-			latest?.validUntil
-				? { validUntil: latest.validUntil, rejected: rejections(latest.results) > 0 }
-				: null,
+			latest ? { validUntil: latest.validUntil, rejected: rejections(latest.results) > 0 } : null,
 			today,
 		),
 		validUntil: latest?.validUntil ?? null,

@@ -183,7 +183,10 @@ export async function seedChecklists(
 	for (const row of picked) {
 		const kind = checklistKind(row.type)!;
 		const completed = !getsChecklists(row.status);
-		const completedOn = row.completedAt?.toZonedDateTimeISO("Europe/Amsterdam").toPlainDate();
+		// Its day in the seed's time zone (`#lib/server/db/seed/time-zone.ts`), as `today`'s.
+		const completedOn = row.completedAt
+			?.toZonedDateTimeISO(Temporal.Now.timeZoneId())
+			.toPlainDate();
 		for (const unit of unitsOf.get(row.id) ?? []) {
 			const template = templateOf.get(unit.categoryId);
 			if (!template) continue;

@@ -1,9 +1,9 @@
 <!--
 	@component
 	The checklists module's card on an order's page in the customer portal (`client.order`,
-	`#lib/client/extensions.ts`): each of the customer's units' checklist with its outcome and, once
-	answered, its points and the remark for the customer; and, once the order is done, its work
-	order to print. Nothing for an order without checklists.
+	`#lib/client/extensions.ts`): each of the customer's units' completed checklist with its outcome,
+	who completed it, its points and the remark for the customer; and, once the order is done, its
+	work order to print. Nothing for an order without completed checklists.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -11,14 +11,14 @@
 
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
+	import { formatDateTime } from "#lib/i18n/index.ts";
 	import { isDoneOrder } from "#lib/models.ts";
 
 	import { clientRejected } from "../../api/extensions.ts";
 	import { getClientOrderChecklists } from "../../client/client-checklists.remote.ts";
 	import ChecklistPoints from "../../detail/checklist-points.svelte";
+	import { completerName } from "../../display.ts";
 	import { checklistLabels } from "../../labels.ts";
-	import { progress } from "../../model.ts";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
 
 	let { number }: { number: string } = $props();
@@ -65,7 +65,6 @@
 		</Card.Header>
 		<Card.Content class="flex flex-col divide-y">
 			{#each data.checklists as checklist (checklist.id)}
-				{@const counts = progress(checklist.results)}
 				<article
 					class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
 					data-checklist={checklist.unit.serialNumber}
@@ -82,24 +81,15 @@
 						</div>
 						<OutcomeBadge {checklist} />
 					</div>
-					<p class="text-xs text-muted-foreground tabular-nums">
-						{#if checklist.status === "completed" && checklist.completedAt}
+					{#if checklist.completedAt}
+						<p class="text-xs text-muted-foreground tabular-nums">
 							{m.checklists_completed_by({
-								name:
-									checklist.engineer ??
-									(checklist.office ? m.checklists_the_office() : m.checklists_someone()),
+								name: completerName(checklist) ?? m.checklists_someone(),
 								date: formatDateTime(checklist.completedAt),
 							})}
-						{:else}
-							{m.checklists_progress({
-								answered: formatNumber(counts.answered),
-								total: formatNumber(counts.total),
-							})}
-						{/if}
-					</p>
-					{#if checklist.status === "completed"}
-						<ChecklistPoints results={checklist.results} remarks={checklist.remarks} />
+						</p>
 					{/if}
+					<ChecklistPoints results={checklist.results} remarks={checklist.remarks} />
 				</article>
 			{/each}
 		</Card.Content>

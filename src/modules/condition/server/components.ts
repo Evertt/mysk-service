@@ -46,6 +46,34 @@ export async function articlesById(ids: readonly number[]): Promise<Map<number, 
 	return new Map(found.map((article) => [article.id, article]));
 }
 
+/**
+ * The template points that check each of the tenant's components `componentIds`, in `tx`: their
+ * ids by component (none for a component without).
+ */
+export async function checkpointsOf(
+	componentIds: readonly number[],
+	tx: Transaction | typeof db = db,
+): Promise<Map<number, number[]>> {
+	if (!componentIds.length) return new Map();
+	const links = await tx
+		.select({
+			componentId: componentCheckpoint.componentId,
+			templateItemId: componentCheckpoint.templateItemId,
+		})
+		.from(componentCheckpoint)
+		.where(
+			and(inList(componentCheckpoint.componentId, componentIds), inTenant(componentCheckpoint)),
+		);
+	const byComponent = new Map<number, number[]>();
+	for (const link of links) {
+		byComponent.set(link.componentId, [
+			...(byComponent.get(link.componentId) ?? []),
+			link.templateItemId,
+		]);
+	}
+	return byComponent;
+}
+
 /** The tenant's unit `serialNumber`, in `tx`, or a 404. */
 async function unitOf(tx: Transaction | typeof db, serialNumber: string) {
 	const [unit] = await tx
@@ -77,11 +105,8 @@ async function componentOf(tx: Transaction, id: number) {
 		)
 		.where(idInTenant(component, id));
 	if (!found) error(404, m.condition_component_not_found());
-	const points = await tx
-		.select({ id: componentCheckpoint.templateItemId })
-		.from(componentCheckpoint)
-		.where(and(eq(componentCheckpoint.componentId, id), inTenant(componentCheckpoint)));
-	return { ...found, checkpointIds: points.map((point) => point.id).sort((a, b) => a - b) };
+	const points = (await checkpointsOf([id], tx)).get(id) ?? [];
+	return { ...found, checkpointIds: points.toSorted((a, b) => a - b) };
 }
 
 /**
