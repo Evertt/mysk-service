@@ -1,5 +1,5 @@
 import { updated } from "$app/state";
-import type { ClientInit, HandleClientError } from "@sveltejs/kit";
+import type { ClientInit, HandleClientError } from "@sveltejs/kit/hooks";
 
 import { classify } from "#lib/errors/classify.ts";
 import { newErrorId, report } from "#lib/errors/report.ts";

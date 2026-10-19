@@ -32,7 +32,7 @@ let next = 0;
 /** A report as the browser sends it, with an error id of its own. */
 const reportOf = (fields: Record<string, unknown> = {}) => ({
 	errorId: `error-${++next}`,
-	kind: "unknown",
+	kind: "unknown" as const,
 	message: "Cannot read properties of undefined (reading 'name')",
 	stack: "TypeError: Cannot read properties of undefined\n    at page.svelte:12:3",
 	route: "/(app)/orders/[number]",

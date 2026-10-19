@@ -3,8 +3,7 @@ import "temporal-polyfill/global";
 import { building } from "$app/env";
 import { DEV_REMOTE_DELAY_MS } from "$app/env/private";
 import { redirect } from "@sveltejs/kit";
-import type { HandleServerError } from "@sveltejs/kit";
-import { type Handle, sequence } from "@sveltejs/kit/hooks";
+import { type Handle, type HandleServerError, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
 import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
