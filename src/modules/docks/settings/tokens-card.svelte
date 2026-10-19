@@ -36,7 +36,7 @@
 	<Card.Content class="flex flex-col gap-6">
 		<form
 			{...createDockToken.enhance(async ({ element, submit }) => {
-				await submitted(submit);
+				if (!(await submitted(submit))) return;
 				const result = createDockToken.result;
 				if (result) {
 					made = result.token;

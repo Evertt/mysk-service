@@ -64,8 +64,7 @@
 						{#if data.canManage}
 							<form
 								{...form.enhance(async ({ submit }) => {
-									await submitted(submit);
-									if (!form.fields.allIssues()?.length) toast.success(m.energy_thresholds_saved());
+									if (await submitted(submit)) toast.success(m.energy_thresholds_saved());
 								})}
 								class="grid items-end gap-4 sm:grid-cols-[auto_1fr_1fr_auto]"
 							>

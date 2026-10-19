@@ -40,7 +40,7 @@
 	<Card.Content class="flex flex-col gap-6">
 		<form
 			{...createEnergyToken.enhance(async ({ element, submit }) => {
-				await submitted(submit);
+				if (!(await submitted(submit))) return;
 				const result = createEnergyToken.result;
 				if (result) {
 					made = result.token;
