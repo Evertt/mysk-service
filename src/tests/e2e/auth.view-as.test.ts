@@ -5,7 +5,7 @@
  * `DEMO_SIGN_IN` (the lanes' servers have it, one of this file's own hasn't).
  */
 import { hashPassword } from "better-auth/crypto";
-import type { BrowserContext, Locator } from "playwright";
+import type { BrowserContext, Locator, Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { DEMO_PASSWORD, demoOrganizations } from "#lib/server/db/demo.ts";
@@ -23,6 +23,7 @@ import {
 } from "./app.ts";
 import { startServer } from "./global-setup.ts";
 import { lane } from "./lane.ts";
+import { openFieldMenu, signOutOfPortal } from "./portal-helpers.ts";
 
 const app = useApp({ user: users.shltrPlanner });
 
@@ -36,8 +37,14 @@ const roles = {
 };
 type Role = keyof typeof roles;
 
-/** Where the switch is: in the office's user menu, or a button in a portal's header. */
+/**
+ * Where the switch is: in the office's user menu, or in a portal's header: the engineer portal's
+ * menu, or the customer portal's own button.
+ */
 type Side = "office" | "portal";
+
+/** Whether the page is the engineer portal's (its phone frame's wrappers are there on any screen). */
+const inField = async (page: Page) => (await page.locator("[data-phone-frame]").count()) > 0;
 
 /** The view-as form's action (`?/remote=<id>`), the same on every server of the build. */
 let action: string;
@@ -64,10 +71,29 @@ const cookieHeader = async (context: BrowserContext = app.page.context()) =>
 async function openMenu(side: Side): Promise<Locator> {
 	const { page } = app;
 	if (side === "office") await page.locator('[data-slot="sidebar-footer"] button').first().click();
+	else if (await inField(page)) return openFieldMenu(page);
 	else await page.getByRole("button", { name: /^View as/ }).click();
 	const menu = page.getByRole("menu");
 	await menu.waitFor();
 	return menu;
+}
+
+/**
+ * Checks that a portal's page has a way to sign out and no switch: in the engineer portal's menu,
+ * or as the customer portal's header buttons.
+ */
+async function expectNoViewAs(page: Page) {
+	if (await inField(page)) {
+		const menu = await openFieldMenu(page);
+		expect(await menu.getByRole("menuitem", { name: "Sign out" }).isVisible()).toBe(true);
+		expect(await menu.innerText()).not.toContain("View as");
+		expect(await menu.getByRole("menuitemradio", { name: "Engineer" }).count()).toBe(0);
+		await page.keyboard.press("Escape");
+		await menu.waitFor({ state: "detached" });
+	} else {
+		expect(await page.getByRole("button", { name: "Sign out" }).isVisible()).toBe(true);
+		expect(await page.getByRole("button", { name: /^View as/ }).count()).toBe(0);
+	}
 }
 
 /** The switch's items in the open menu, and which is checked. */
@@ -124,10 +150,10 @@ async function signOut(side: Side) {
 	if (side === "office") {
 		await openMenu("office");
 		await page.getByRole("menuitem", { name: "Sign out" }).click();
+		await page.waitForURL((url) => url.pathname === "/login");
 	} else {
-		await page.getByRole("button", { name: "Sign out" }).click();
+		await signOutOfPortal(page);
 	}
-	await page.waitForURL((url) => url.pathname === "/login");
 }
 
 /**
@@ -347,14 +373,12 @@ describe("other tenants' users", () => {
 		await signOut("office");
 		await app.signIn(users.engineer);
 		expect(app.path()).toBe("/my");
-		expect(await page.getByRole("button", { name: "Sign out" }).isVisible()).toBe(true);
-		expect(await page.getByRole("button", { name: /^View as/ }).count()).toBe(0);
+		await expectNoViewAs(page);
 
 		await signOut("portal");
 		await app.signIn(users.northCustomer);
 		expect(app.path()).toBe("/portal");
-		expect(await page.getByRole("button", { name: "Sign out" }).isVisible()).toBe(true);
-		expect(await page.getByRole("button", { name: /^View as/ }).count()).toBe(0);
+		await expectNoViewAs(page);
 		await signOut("portal");
 	});
 
@@ -430,8 +454,7 @@ describe("without DEMO_SIGN_IN", () => {
 		]) {
 			const page = await signInThere(email);
 			expect(new URL(page.url()).pathname, email).toBe(path);
-			expect(await page.getByRole("button", { name: "Sign out" }).isVisible(), email).toBe(true);
-			expect(await page.getByRole("button", { name: /^View as/ }).count(), email).toBe(0);
+			await expectNoViewAs(page);
 			await page.close();
 		}
 	});

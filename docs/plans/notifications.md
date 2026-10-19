@@ -200,7 +200,9 @@ entries, and a "mark as unread".
   phone width; the engineer portal's in the desktop phone frame and at phone width (its empty
   state). At phone width the portal's header is crowded: the name shrinks to its first letter
   next to six buttons (the bell, language, theme, mode, view-as, sign out), and bug-recorder adds
-  one more; the header wants a menu for some of them.
+  one more; the header wants a menu for some of them. Since then it has one
+  (`src/routes/(field)/header-menu.svelte`): the header keeps the name, the bell, the menu and,
+  while it records, the record button.
 - **Open:** the query scans the tenant's entries of the window until it has 50 matches; a tenant
   with a very busy log and few notifications would want an index on `activity (organization_id,
 created_at)` or an id bound for the window.

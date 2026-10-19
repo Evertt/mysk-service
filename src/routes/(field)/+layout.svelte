@@ -8,20 +8,16 @@
 	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
-	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
 	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
-	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { nameOrderTypes } from "#lib/orders/index.ts";
 	import { getOrderTypes } from "#lib/orders/remotes.ts";
-	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
-	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 
 	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
-	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
-	import { getMe, signOut } from "./my/portal.remote.ts";
+	import HeaderMenu from "./header-menu.svelte";
+	import { getMe } from "./my/portal.remote.ts";
 	import NotificationBell from "./notification-bell.svelte";
 	import PhoneFrame from "./phone-frame.svelte";
 
@@ -41,7 +37,8 @@
 		<header
 			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur"
 		>
-			<a href={resolve("/(field)/my")} class="flex min-w-0 items-center gap-2">
+			<!-- The way home, as an app's logo is; the rest is in the menu (`header-menu.svelte`). -->
+			<a href={resolve("/(field)/my")} class="flex min-w-0 flex-1 items-center gap-2">
 				<span
 					class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
 				>
@@ -52,25 +49,13 @@
 					<span class="truncate text-xs text-muted-foreground">{me.organization}</span>
 				</span>
 			</a>
-			<div class="ml-auto flex items-center gap-1">
+			<div class="flex shrink-0 items-center gap-1">
+				<!-- Only while it records or waits to be sent (the menu starts it), and only its dot, no
+					time beside it: a phone's header has no room for it. -->
+				<BugReportButton compact whileActive />
 				<NotificationBell />
-				<!-- Its dot only while it records, no time beside it: the header is full on a phone. -->
-				<BugReportButton compact />
-				<LanguageSwitcher />
-				<ThemeSwitcher />
-				<ModeSwitcher />
-				{#if viewAs}
-					<!-- In the desktop phone frame its menu opens in the phone's screen (`BitsConfig`). -->
-					<ViewAs current={viewAs.current} />
-				{/if}
-				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to
-					the session that ends, so the login page loads afresh rather than this page refreshing
-					them signed out (which logged errors). -->
-				<form method={signOut.method} action={signOut.action}>
-					<Button type="submit" variant="ghost" size="icon-sm" aria-label={m.common_sign_out()}>
-						<LogOutIcon />
-					</Button>
-				</form>
+				<!-- In the desktop phone frame its menus open in the phone's screen (`BitsConfig`). -->
+				<HeaderMenu name={me.name} organization={me.organization} {viewAs} />
 			</div>
 		</header>
 		<main class="relative mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 p-4 pb-12">

@@ -1,7 +1,7 @@
 /**
  * Bug reports: the record button in the office's header records a session (a click, typing, a
  * navigation, a password that stays out of the recording), stops for a note and sends it; the
- * engineer portal has the button too; a developer opens the report and its replay, which is a 404
+ * engineer portal's menu starts one too, and its header shows the button while it records; a developer opens the report and its replay, which is a 404
  * for anyone else. What the upload refuses and stores, and who may read the reports, is
  * `src/tests/unit/lib/server/bug-reports/upload.spec.ts`'s.
  */
@@ -27,6 +27,7 @@ import {
 } from "./app.ts";
 import { bugReportEmail, bugReportsFolder, developerEmail } from "./global-setup.ts";
 import { lane } from "./lane.ts";
+import { openFieldMenu } from "./portal-helpers.ts";
 
 const app = useApp();
 
@@ -135,9 +136,22 @@ describe("the record button", () => {
 		expect(recording).toContain('"tag":"request"');
 	});
 
-	test("is in the engineer portal's header too", async () => {
+	test("is in the engineer portal too: started from its menu, in its header while it records", async () => {
 		const page = await pageOf(users.engineer, "/my");
-		expect(await recordButton(page).getAttribute("aria-label", step)).toBe("Report a problem");
+		// Not in the header while idle: the phone's header has no room for it.
+		expect(await recordButton(page).count()).toBe(0);
+		const menu = await openFieldMenu(page);
+		await menu.getByRole("menuitem", { name: "Report a problem" }).click(step);
+		await inPhase(page, "recording");
+		expect(await page.locator("header [data-slot='bug-report-button']").count()).toBe(1);
+		// Stopped from its dot, and discarded: out of the header again, back in the menu.
+		await recordButton(page).click(step);
+		const review = page.locator('[data-slot="bug-report-review"]');
+		await review.getByRole("button", { name: "Discard" }).click(step);
+		await recordButton(page).waitFor({ state: "detached", ...step });
+		await openFieldMenu(page);
+		await menu.getByRole("menuitem", { name: "Report a problem" }).waitFor(step);
+		await page.keyboard.press("Escape");
 	});
 });
 

@@ -69,5 +69,6 @@
 	"portal_engineer_signature_required": "Teken de werkbon ook zelf",
 	"portal_customer_signature": "Handtekening van de klant",
 	"portal_engineer_signed": "Monteur: {name}",
-	"portal_frame_caption": "Monteursportaal · zo ziet de monteur het op zijn telefoon"
+	"portal_frame_caption": "Monteursportaal · zo ziet de monteur het op zijn telefoon",
+	"portal_header_menu": "Menu"
 }

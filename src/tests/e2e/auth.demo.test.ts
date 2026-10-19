@@ -10,6 +10,7 @@ import { demoOrganizations } from "#lib/server/db/demo.ts";
 import { baseURL, rows, useApp } from "./app.ts";
 import { startServer } from "./global-setup.ts";
 import { lane } from "./lane.ts";
+import { signOutOfPortal } from "./portal-helpers.ts";
 
 const app = useApp({ user: null });
 
@@ -45,13 +46,6 @@ async function sessions(email: string) {
 		[email],
 	);
 	return { latest: found[0]?.organization, count: found.length };
-}
-
-/** Signs out with the engineer or customer portal's button, back to the login page. */
-async function signOutOfPortal() {
-	const { page } = app;
-	await page.getByRole("button", { name: "Sign out" }).click();
-	await page.waitForURL((url) => url.pathname === "/login");
 }
 
 describe("with DEMO_SIGN_IN", () => {
@@ -109,7 +103,7 @@ describe("with DEMO_SIGN_IN", () => {
 		expect(header).toContain(shltr.name);
 		expect((await sessions("lev@shltr.example")).latest).toBe(shltr.id);
 
-		await signOutOfPortal();
+		await signOutOfPortal(app.page);
 		await app.go("/my");
 		expect(app.path()).toBe("/login");
 	});
@@ -126,7 +120,7 @@ describe("with DEMO_SIGN_IN", () => {
 		expect(header).toContain(shltr.name);
 		expect((await sessions("facilitair@riedel.example")).latest).toBe(shltr.id);
 
-		await signOutOfPortal();
+		await signOutOfPortal(app.page);
 		await app.go("/portal");
 		expect(app.path()).toBe("/login");
 	});

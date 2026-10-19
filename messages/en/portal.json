@@ -69,5 +69,6 @@
 	"portal_engineer_signature_required": "Sign the work order yourself too",
 	"portal_customer_signature": "The customer's signature",
 	"portal_engineer_signed": "Engineer: {name}",
-	"portal_frame_caption": "Engineer portal · how engineers see it on their phone"
+	"portal_frame_caption": "Engineer portal · how engineers see it on their phone",
+	"portal_header_menu": "Menu"
 }
