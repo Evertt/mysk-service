@@ -233,11 +233,11 @@ describe("SHLTR's checklists, to North", () => {
 
 describe("the work order of an order without units", () => {
 	// Which site it shows is the work record's rule (`work-record.spec.ts`); this is its wiring.
-	test("prints no site for a customer with more than one", async () => {
-		const [found] = await rows<{ number: string }>(
-			`select o.number from "order" o where o.organization_id = ?
+	test("prints the site of a customer with just one", async () => {
+		const [found] = await rows<{ number: string; customerId: number }>(
+			`select o.number, o.customer_id as customerId from "order" o where o.organization_id = ?
 			 and not exists (select 1 from checklist c where c.order_id = o.id)
-			 and (select count(*) from customer_site s where s.customer_id = o.customer_id) > 1
+			 and (select count(*) from customer_site s where s.customer_id = o.customer_id) = 1
 			 order by o.id limit 1`,
 			[shltrId],
 		);
@@ -246,7 +246,10 @@ describe("the work order of an order without units", () => {
 			`delete from order_unit where order_id = (select id from "order" where number = ? and organization_id = ?)`,
 			[found.number, shltrId],
 		);
+		const site = await value<number>(`select id from customer_site where customer_id = ?`, [
+			found.customerId,
+		]);
 		const printed = await as(shltr.member, () => data(getWorkOrder, found.number));
-		expect(printed.sites).toEqual([]);
+		expect(printed.sites.map((each) => each.id)).toEqual([site]);
 	});
 });

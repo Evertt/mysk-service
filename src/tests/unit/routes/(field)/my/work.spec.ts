@@ -94,10 +94,9 @@ describe("signature", () => {
 		const result = v.safeParse(signature(), input);
 		return result.success ? { value: result.output } : { issue: result.issues[0].message };
 	};
-	const png = drawn;
 
 	test("is a PNG data URL", () => {
-		expect(parse(png)).toEqual({ value: png });
+		expect(parse(drawn)).toEqual({ value: drawn });
 	});
 
 	test("is required", () => {

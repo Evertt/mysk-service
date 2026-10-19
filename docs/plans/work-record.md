@@ -41,11 +41,23 @@ and the "building blocks" design's reads as its private inside.
 
 ```ts
 /** What each audience sees of an order's work record: the only place it's declared. */
-export const audiences = {
-	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite" },
-	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite" },
-	customer: { notes: false, collectedBy: false, engineer: "first", site: "address" },
-	workOrder: { notes: false, collectedBy: false, engineer: "full", site: "address" },
+const audiences = {
+	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite", warranty: true },
+	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite", warranty: false },
+	customer: {
+		notes: false,
+		collectedBy: false,
+		engineer: "first",
+		site: "address",
+		warranty: false,
+	},
+	workOrder: {
+		notes: false,
+		collectedBy: false,
+		engineer: "full",
+		site: "address",
+		warranty: false,
+	},
 } as const satisfies Record<string, Policy>;
 export type Audience = keyof typeof audiences;
 
@@ -61,8 +73,8 @@ export function readWorkRecord<A extends Audience>(
 ): Promise<WorkRecord<A> | undefined>;
 ```
 
-- **`WorkRecord<A>`** has `order: { id, number, customerId }`, `units` (in their order, each with
-  its category, location and site, the site's detail by the audience's `site`), `sites` (the units'
+- **`WorkRecord<A>`** has `units` (in their order, each with its category, location and site, the
+  site's detail by the audience's `site`, its warranty date where the table says), `sites` (the units'
   distinct sites, or the customer's only one, else none), `signoff` (five columns, plus
   `collectedBy` only where the table says), and, only where the table says, `notes` and `engineer`
   (full or first name). A key the table says no to isn't in the type: a customer's record has no
@@ -179,3 +191,14 @@ the engineer portal; the customer portal; the printed work order; the components
 8. **Docs:** `docs/agents/orders.md` (the work record), AGENTS.md's pointer if needed.
 9. **Gate:** check, knip, the specs above, and the e2e files of the office order page, both
    portals and checklists' work order (when the machine is free).
+
+## Decisions after review
+
+- `audiences` stays private to the reader (nothing outside reads it), and gained `warranty`: a
+  unit's warranty date is the office's only (the portals and the printed work order never had it).
+- `WorkRecord<A>` has no `order` key: every caller reads the order's own columns in its header.
+- The printed work order's unit cell is the title with `unitLine()` under it (the serial moves into
+  the line, its own column goes); the engineer page's single-unit detail items stay as they are.
+- The sign-off shows the engineer's name as signed, in full, also to customers (as the printed work
+  order does); Q7's first name is the order's engineer field.
+- The printed work order shows no site (and no city in its place) when the record has none.

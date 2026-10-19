@@ -224,7 +224,6 @@ type Withheld<A extends Audience> = PolicyOf<A>["warranty"] extends true ? never
 
 /** The work record as audience `A` sees it: a key its table says no to isn't in the type. */
 export type WorkRecord<A extends Audience> = {
-	order: { id: number; number: string; customerId: number };
 	/** In their order, each at its site. */
 	units: (Omit<Unit, "site" | Withheld<A>> & { site: Site<PolicyOf<A>["site"]> })[];
 	/** Where the work is: the units' sites, or the customer's only one for an order without units. */
@@ -241,29 +240,29 @@ export async function readWorkRecord<A extends Audience>(
 ): Promise<WorkRecord<A> | undefined> {
 	const policy: Policy = audiences[scope.audience];
 	const [found] = await db
-		.select({
-			order: { id: order.id, number: order.number, customerId: order.customerId },
-			engineer: engineer.name,
-		})
+		.select({ id: order.id, customerId: order.customerId, engineer: engineer.name })
 		.from(order)
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(scope.where);
 	if (!found) return undefined;
-	const { order: owned, engineer: engineerName } = found;
 	const [units, notes, signoff] = await Promise.all([
-		unitsOf(owned.id, scope.unitsAt, policy.site),
-		policy.notes ? notesOf(owned.id) : undefined,
-		signoffOf(owned.id, policy.collectedBy),
+		unitsOf(found.id, scope.unitsAt, policy.site),
+		policy.notes ? notesOf(found.id) : undefined,
+		signoffOf(found.id, policy.collectedBy),
 	]);
 	const record: Record<string, unknown> = {
-		order: owned,
-		units: policy.warranty ? units : units.map(({ warrantyUntil: _, ...unit }) => unit),
-		sites: await sitesOf(units, owned.customerId, policy.site),
+		units: policy.warranty
+			? units
+			: units.map((unit) => {
+					const { warrantyUntil: _, ...shown } = unit;
+					return shown;
+				}),
+		sites: await sitesOf(units, found.customerId, policy.site),
 		signoff,
 	};
 	if (notes) record.notes = notes;
-	if (policy.engineer === "full") record.engineer = engineerName;
+	if (policy.engineer === "full") record.engineer = found.engineer;
 	// Only who's coming, by their first name.
-	if (policy.engineer === "first") record.engineer = engineerName && firstName(engineerName);
+	if (policy.engineer === "first") record.engineer = found.engineer && firstName(found.engineer);
 	return record as WorkRecord<A>;
 }
