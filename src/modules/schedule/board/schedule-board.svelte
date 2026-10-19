@@ -14,7 +14,7 @@
 	import { MediaQuery } from "svelte/reactivity";
 
 	import { historyDialog } from "#lib/components/history-dialog.svelte.ts";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay, dayOf } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
@@ -47,7 +47,7 @@
 		day?: Temporal.PlainDate;
 	} = $props();
 
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	// Where the board is shown (`lg`), the page fits the viewport (see `(app)/+layout.svelte`); below
 	// that, the list scrolls with the page. Assumed wide until known, so the board doesn't jump on
 	// load; on a narrower screen the switch happens before anything's scrolled.
@@ -78,9 +78,7 @@
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
 	const ordersOn = (day: Temporal.PlainDate) =>
 		schedule.orders
-			.filter((order) =>
-				order.scheduledFor?.toZonedDateTimeISO(getTimeZone()).toPlainDate().equals(day),
-			)
+			.filter((order) => order.scheduledFor && dayOf(order.scheduledFor).equals(day))
 			.sort((a, b) => Temporal.Instant.compare(a.scheduledFor!, b.scheduledFor!));
 
 	// Live: when someone changes an order, an engineer or a customer, the board asks for the week

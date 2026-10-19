@@ -2,7 +2,7 @@
  * The contracts module's domain enums, shared by its database tables, the seed script and the UI.
  * Kept out of `server/` so client code (filters, badges) can import them.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import type { OrderType } from "#lib/models.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
 
@@ -31,8 +31,7 @@ export function contractStatus(
 	contract: { startsOn: Temporal.PlainDate; endsOn: Temporal.PlainDate },
 	at: Temporal.PlainDate | Temporal.Instant = Temporal.Now.instant(),
 ): ContractStatus {
-	const day =
-		at instanceof Temporal.Instant ? at.toZonedDateTimeISO(getTimeZone()).toPlainDate() : at;
+	const day = at instanceof Temporal.Instant ? dayOf(at) : at;
 	if (Temporal.PlainDate.compare(day, contract.startsOn) < 0) return "upcoming";
 	return Temporal.PlainDate.compare(day, contract.endsOn) <= 0 ? "active" : "expired";
 }

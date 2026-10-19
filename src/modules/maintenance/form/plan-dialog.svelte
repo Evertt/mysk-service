@@ -11,7 +11,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay } from "#lib/dates.ts";
 	import { labelOptions } from "#lib/i18n/index.ts";
 
 	import { intervalLimits, planOrderTypes } from "../model.ts";
@@ -91,7 +91,7 @@
 						field={form.fields.nextDueOn}
 						label={m.maintenance_field_next_due()}
 						type="date"
-						value={(plan?.nextDueOn ?? Temporal.Now.plainDateISO(getTimeZone())).toString()}
+						value={(plan?.nextDueOn ?? currentDay()).toString()}
 					/>
 				</div>
 			</Field.FieldGroup>

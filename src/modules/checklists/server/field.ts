@@ -16,7 +16,7 @@ import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { orderSubject } from "#lib/activity/index.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { isOpenOrder } from "#lib/models.ts";
 import { fieldActions } from "#lib/orders/index.ts";
@@ -153,7 +153,7 @@ export function completeChecklist(by: Filler, id: number) {
 		if (unanswered) error(400, m.checklists_complete_unanswered({ count: unanswered }));
 		if (unexplained) error(400, m.checklists_complete_unexplained({ count: unexplained }));
 		const now = Temporal.Now.instant();
-		const today = now.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+		const today = dayOf(now);
 		// The engineer's own order (the scope): its engineer is them.
 		const engineerId = by === "office" ? null : found.order.engineerId;
 		const { user } = currentTenant();

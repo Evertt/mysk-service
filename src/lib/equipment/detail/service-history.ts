@@ -1,4 +1,4 @@
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import {
 	isCorrectiveWork,
 	isDoneOrder,
@@ -56,7 +56,6 @@ export const orderDate = (
 ) => order.completedAt ?? order.scheduledFor ?? order.createdAt;
 
 /** A moment's day, in the user's time zone. */
-const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
 
 /** On the same day, the warranty's end goes above orders, and the installation below them. */
 const rank: Record<ServiceEvent["kind"], number> = { warranty: 0, order: 1, installation: 2 };

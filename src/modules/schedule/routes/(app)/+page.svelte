@@ -7,14 +7,13 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	import ToolbarBand, { bandButton } from "#lib/components/toolbar-band.svelte";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay, dayOf, mondayOf } from "#lib/dates.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatLongDay, formatWeek } from "#modules/schedule/board/board.ts";
 	import ScheduleBoard from "#modules/schedule/board/schedule-board.svelte";
 	import {
 		formatMonth,
 		inMonth,
-		mondayOf,
 		periodOf,
 		type ScheduleView,
 		shiftPeriod,
@@ -28,7 +27,7 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/schedule"> } = $props();
 
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	// The view and its day are in the URL (see `viewFromParams`), so they can be linked to and
 	// survive a reload; this week by default.
 	const current = $derived(viewFromParams(page.url.searchParams, today));
@@ -50,8 +49,6 @@
 
 	/** The orders planned in the period shown: the band's pill. */
 	const planned = $derived.by(() => {
-		const timeZone = getTimeZone();
-		const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(timeZone).toPlainDate();
 		if (month) {
 			return month.orders.filter((order) => inMonth(dayOf(order.scheduledFor!), start)).length;
 		}

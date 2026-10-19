@@ -23,7 +23,7 @@
  * week", "due from today") means the current week whenever it's opened; the list's query
  * (`toListQuery()`) has it as the days it means on the day it's built, in the user's time zone.
  */
-import { getTimeZone, isDay } from "#lib/dates.ts";
+import { currentDay, dayOf, isDay, mondayOf } from "#lib/dates.ts";
 
 /** How a range filter is written in the URL, besides a set of values (`"set"`). */
 export type RangeGrammar = "dateRange" | "numberRange" | "moneyRange";
@@ -104,10 +104,7 @@ function ends(token: string): [string, string] | undefined {
 }
 
 /** The days a preset means, on `today` (the user's, by default). */
-export function presetRange(
-	preset: DatePreset,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-): DateRange {
+export function presetRange(preset: DatePreset, today = currentDay()): DateRange {
 	const span = (from: Temporal.PlainDate, to: Temporal.PlainDate) => ({
 		from: from.toString(),
 		to: to.toString(),
@@ -116,7 +113,7 @@ export function presetRange(
 	const period = (unit: "weeks" | "months" | "years", offset = 0) => {
 		const start = (
 			unit === "weeks"
-				? today.subtract({ days: today.dayOfWeek - 1 })
+				? mondayOf(today)
 				: today.with(unit === "months" ? { day: 1 } : { month: 1, day: 1 })
 		).add({ [unit]: offset });
 		return span(start, start.add({ [unit]: 1 }).subtract({ days: 1 }));
@@ -180,10 +177,7 @@ function dateEnd(text: string, end: keyof DateRange, today: Temporal.PlainDate) 
  * aren't days or presets (or can't be that end), days that don't exist, no end at all, or the end
  * before the start.
  */
-export function parseDateRange(
-	token: string,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-): DateRange | undefined {
+export function parseDateRange(token: string, today = currentDay()): DateRange | undefined {
 	const text = token.trim();
 	// A preset on its own is its days, also those with an open end.
 	if (isDatePreset(text)) return presetRange(text, today);
@@ -258,11 +252,7 @@ export function parseMoneyRange(token: string): NumberRange | undefined {
 export const moneyRangeToken = (range: NumberRange) => rangeToken(range, centsEuros);
 
 /** A token as a range in a grammar, if it is one. */
-function parseRange(
-	grammar: RangeGrammar,
-	token: string,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-) {
+function parseRange(grammar: RangeGrammar, token: string, today = currentDay()) {
 	if (grammar === "dateRange") return parseDateRange(token, today);
 	return grammar === "numberRange" ? parseNumberRange(token) : parseMoneyRange(token);
 }
@@ -277,7 +267,7 @@ export function dateInRange(value: unknown, { from, to }: DateRange) {
 		value instanceof Temporal.PlainDate
 			? value.toString()
 			: value instanceof Temporal.Instant
-				? value.toZonedDateTimeISO(getTimeZone()).toPlainDate().toString()
+				? dayOf(value).toString()
 				: undefined;
 	if (day === undefined) return false;
 	// Days as `yyyy-mm-dd` sort as text.
@@ -296,7 +286,7 @@ export function numberInRange(value: unknown, { from, to }: NumberRange) {
  * with none left, every row is.
  */
 export function inAnyRange(grammar: RangeGrammar, value: unknown, tokens: readonly string[]) {
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	let any = false;
 	for (const token of tokens) {
 		if (token.trim() === none) {

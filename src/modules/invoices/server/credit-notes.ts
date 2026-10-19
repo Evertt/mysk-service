@@ -7,7 +7,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -48,8 +48,6 @@ export const creditNoteSubject = (found: { id: number; number: string }): Subjec
 	id: found.id,
 	label: found.number,
 });
-
-const today = () => Temporal.Now.plainDateISO(getTimeZone());
 
 // --- What's credited ---------------------------------------------------------------------------
 
@@ -428,7 +426,7 @@ export async function settleCredit(id: number) {
 		}
 		await tx
 			.update(creditNote)
-			.set({ status: "paid", settledOn: today() })
+			.set({ status: "paid", settledOn: currentDay() })
 			.where(idInTenant(creditNote, found.id));
 		await recordActivity(tx, {
 			action: "settled",

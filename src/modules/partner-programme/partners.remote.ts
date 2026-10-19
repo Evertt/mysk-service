@@ -1,11 +1,12 @@
+import * as v from "valibot";
+
+import { isManager } from "#lib/auth/index.ts";
 /**
  * A partner's figures and wallet, and what managers do with them: accept a customer into the
  * programme, close its last year, record its bonus choice and add to or take from its wallet.
  * Shared by the customer page's card (`slots/customers.detail.side/`) and the programme's pages.
  */
-import * as v from "valibot";
-
-import { isManager } from "#lib/auth/index.ts";
+import { currentDay } from "#lib/dates.ts";
 import { customerCode } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -14,7 +15,7 @@ import { walletEntrySchema, yearField } from "./form/wallet-schema.ts";
 import { bonusForms, creditValidUntil, isClosable } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { chooseBonus, closedYearsOf, closeYear, payBonusByCreditNote } from "./server/close.ts";
-import { acceptPartner as accept, customerByCode, figuresOf, today } from "./server/partners.ts";
+import { acceptPartner as accept, customerByCode, figuresOf } from "./server/partners.ts";
 import { rulesFor } from "./server/rules.ts";
 import { addEntry, walletOf } from "./server/wallet.ts";
 
@@ -30,7 +31,7 @@ export const getPartnerCard = query(code, async (customerCode) => {
 	const customer = { id: found.id, code: found.code, name: found.name };
 	if (!found.partner) return { customer, partner: null, canManage };
 
-	const now = today();
+	const now = currentDay();
 	const rules = await rulesFor(now.year);
 	const figures = rules ? (await figuresOf(rules, [found.id])).get(found.id)! : null;
 	const closed = await closedYearsOf(found.id);
@@ -116,7 +117,7 @@ export const addWalletEntry = forManagers.form(walletEntrySchema, async (input) 
 				validUntil: spend ? null : input.validUntil,
 				note: input.note,
 			},
-			today(),
+			currentDay(),
 		),
 	);
 	void getPartnerCard(input.code).refresh();

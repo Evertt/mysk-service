@@ -9,7 +9,7 @@
  * They are sequential per organization. A yearly one has the year in it, but the sequence runs on
  * across years: `ORD-2026-00041` is followed by `ORD-2027-00042`.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 
 export interface NumberFormat {
 	prefix: string;
@@ -33,7 +33,7 @@ const formatOf = (kind: NumberKind | NumberFormat): NumberFormat =>
 export function formatCode(
 	kind: NumberKind | NumberFormat,
 	sequence: number,
-	year = Temporal.Now.plainDateISO(getTimeZone()).year,
+	year = currentDay().year,
 ) {
 	const { prefix, digits, yearly } = formatOf(kind);
 	return `${prefix}${yearly ? `${year}-` : ""}${String(sequence).padStart(digits, "0")}`;

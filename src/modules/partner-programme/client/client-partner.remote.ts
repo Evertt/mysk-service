@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 /**
  * The partner programme as a partner's contact reads it in the customer portal
  * (`/partner-programme/portal` and the home page's card): this year's figures so far, the year's
@@ -6,8 +8,7 @@
  * customer (`currentCustomer()`): another customer's figures or wallet are never in it, and a
  * customer that isn't a partner gets only that.
  */
-import * as v from "valibot";
-
+import { currentDay } from "#lib/dates.ts";
 import { currentCustomer, currentTenant } from "#lib/server/auth/index.ts";
 
 import { isPartner } from "../api/wallet.server.ts";
@@ -15,7 +16,7 @@ import { yearField } from "../form/wallet-schema.ts";
 import { bonusForms, creditValidUntil } from "../model.ts";
 import { forCustomers } from "../remote-functions.ts";
 import { chooseBonus, closedYearsOf } from "../server/close.ts";
-import { figuresOf, today } from "../server/partners.ts";
+import { figuresOf } from "../server/partners.ts";
 import { rulesFor } from "../server/rules.ts";
 import { walletOf } from "../server/wallet.ts";
 
@@ -28,7 +29,7 @@ import { walletOf } from "../server/wallet.ts";
 export const getClientPartner = forCustomers.query(async () => {
 	const { customer } = await currentCustomer();
 	if (!(await isPartner(customer.id))) return { partner: false as const };
-	const now = today();
+	const now = currentDay();
 	const rules = await rulesFor(now.year);
 	const figures = rules ? (await figuresOf(rules, [customer.id])).get(customer.id)! : null;
 	const years = (await closedYearsOf(customer.id)).map((year) => ({

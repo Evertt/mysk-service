@@ -16,7 +16,7 @@
  *   a line per adjustment of the tenant's modules (e.g. what a contract includes, negative). The
  *   lines add up to the order's total from `priceOrders()`.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 import type { InvoiceStatus } from "./model.ts";
@@ -30,7 +30,7 @@ export type InvoiceState = (typeof invoiceStates)[number];
 /** Whether a sent invoice is overdue `today` (the user's): from the day after its due date. */
 export const isOverdue = (
 	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
-	today = Temporal.Now.plainDateISO(getTimeZone()),
+	today = currentDay(),
 ) =>
 	invoice.status === "sent" &&
 	!!invoice.dueOn &&
@@ -38,7 +38,7 @@ export const isOverdue = (
 
 export const invoiceState = (
 	invoice: { status: InvoiceStatus; dueOn: Temporal.PlainDate | null },
-	today = Temporal.Now.plainDateISO(getTimeZone()),
+	today = currentDay(),
 ): InvoiceState => (isOverdue(invoice, today) ? "overdue" : invoice.status);
 
 /** Where an invoice of each status can go next. */

@@ -5,30 +5,28 @@
  */
 import * as v from "valibot";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay, dayOf } from "#lib/dates.ts";
 import { dateFormatter, formatTime } from "#lib/i18n/index.ts";
 
 const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });
 
 /** A moment's day, in the user's time zone. */
-const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
 
 /** Today, in the user's time zone. */
-const todayNow = () => Temporal.Now.plainDateISO(getTimeZone());
 
 /**
  * When an order is planned, as a card in its day's group shows it: the time, with the day too if
  * it's work left over from an earlier day (which is grouped under today).
  */
-export function plannedTime(moment: Temporal.Instant, today = todayNow()) {
+export function plannedTime(moment: Temporal.Instant, today = currentDay()) {
 	return Temporal.PlainDate.compare(dayOf(moment), today) < 0
 		? `${shortDayFormat(moment)}, ${formatTime(moment)}`
 		: formatTime(moment);
 }
 
 /** A day relative to today: `Today`, `Tomorrow` or e.g. `Friday 9 October`. */
-export function dayLabel(day: Temporal.PlainDate, today = todayNow()) {
+export function dayLabel(day: Temporal.PlainDate, today = currentDay()) {
 	const days = today.until(day).days;
 	if (days === 0) return m.portal_today();
 	if (days === 1) return m.portal_tomorrow();
@@ -49,7 +47,7 @@ export interface DayGroup<T> {
  */
 export function groupByDay<T extends { scheduledFor: Temporal.Instant | null }>(
 	orders: T[],
-	today = todayNow(),
+	today = currentDay(),
 ): DayGroup<T>[] {
 	const days = new Map<string, T[]>();
 	const undated: T[] = [];

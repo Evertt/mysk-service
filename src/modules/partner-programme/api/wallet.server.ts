@@ -1,16 +1,16 @@
+import { and, eq } from "drizzle-orm";
+
 /**
  * The partner programme's wallet, for the modules that require it (the parts shop): what a
  * partner can spend, spending it and giving a spend back, in the caller's transaction, through
  * the ledger's own rules (`addEntry()`: nothing goes out beyond what's available, every entry is
  * logged against the customer).
  */
-import { and, eq } from "drizzle-orm";
-
+import { currentDay } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
 import { creditTaken } from "../model.ts";
-import { today } from "../server/partners.ts";
 import { partnerAccount } from "../server/schema.ts";
 import { addEntry, ledgerOf, walletOf } from "../server/wallet.ts";
 
@@ -31,7 +31,7 @@ export async function isPartner(customerId: number, tx: Transaction | typeof db 
 
 /** What the customer's wallet holds today (see `walletSummary()`), with its latest entries. */
 export const walletToday = (customerId: number, tx: Transaction | typeof db = db) =>
-	walletOf(customerId, today(), tx);
+	walletOf(customerId, currentDay(), tx);
 
 /**
  * Takes `amount` (cents, more than zero) of the holder's credit in `tx`, as a `spend` with `note`
@@ -40,7 +40,7 @@ export const walletToday = (customerId: number, tx: Transaction | typeof db = db
  * id, to give it back by.
  */
 export const spendCredit = (tx: Transaction, holder: WalletHolder, amount: number, note: string) =>
-	addEntry(tx, holder, { kind: "spend", amount: -amount, note }, today());
+	addEntry(tx, holder, { kind: "spend", amount: -amount, note }, currentDay());
 
 /**
  * Gives back what the spend `entryId` took of the holder's credit, in `tx`: a `reversal` for each
@@ -65,7 +65,7 @@ export async function giveBackCredit(
 				bonusYearId: piece.bonusYearId,
 				note,
 			},
-			today(),
+			currentDay(),
 		);
 	}
 	return pieces.reduce((sum, piece) => sum + piece.amount, 0);

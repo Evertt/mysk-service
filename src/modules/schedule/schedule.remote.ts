@@ -1,6 +1,7 @@
 import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
+import { mondayOf } from "#lib/dates.ts";
 import { type EngineerSpecialty, openOrderStatuses } from "#lib/models.ts";
 import {
 	type ListedUnit,
@@ -25,7 +26,7 @@ import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 import { live, readAt } from "#lib/server/live.ts";
 
 import { byPriorityThenAge } from "./board/board.ts";
-import { mondayOf, monthRange } from "./calendar/calendar.ts";
+import { monthRange } from "./calendar/calendar.ts";
 import { moveFields, scheduleFields } from "./form/schedule-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
 

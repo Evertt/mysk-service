@@ -52,7 +52,7 @@ import type {
 import { type DateRange, type NumberRange } from "#lib/components/data-table/ranges.ts";
 import { searchWords } from "#lib/components/data-table/search-words.ts";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { startOfDay } from "#lib/dates.ts";
 import { formatNumber } from "#lib/i18n/format.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 
@@ -217,8 +217,7 @@ export function anyOf(expression: SQLWrapper, values: readonly unknown[]) {
  */
 export function inDays(column: Column, ranges: readonly (DateRange | null)[]) {
 	const days = column.getSQLType() === "text";
-	const start = (day: Temporal.PlainDate) =>
-		days ? day : day.toZonedDateTime(getTimeZone()).toInstant();
+	const start = (day: Temporal.PlainDate) => (days ? day : startOfDay(day));
 	return or(
 		...ranges.map((range) => {
 			if (range === null) return isNull(column);

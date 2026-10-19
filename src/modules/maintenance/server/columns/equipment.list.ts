@@ -5,7 +5,7 @@
  */
 import { sql } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
@@ -17,7 +17,7 @@ import { maintenancePlan } from "../schema.ts";
 export default [
 	columnSql(nextMaintenance, () => {
 		const next = nextDueSql().mapWith(maintenancePlan.nextDueOn);
-		const today = Temporal.Now.plainDateISO(getTimeZone());
+		const today = currentDay();
 		// The filter's values; `later` for a unit whose next visit is further off (in none of them).
 		// Days as `yyyy-mm-dd` compare as text.
 		const bucket = sql<string>`(case when ${next} is null then 'none' when ${next} < ${today.toString()} then 'overdue' when ${next} < ${today.add({ days: SOON_DAYS }).toString()} then 'soon' else 'later' end)`;

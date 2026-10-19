@@ -14,7 +14,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
 
 	import type {
@@ -47,7 +47,7 @@
 	const uid = $props.id();
 
 	// A new contract runs for a year from the first of next month.
-	const nextMonth = Temporal.Now.plainDateISO(getTimeZone()).with({ day: 1 }).add({ months: 1 });
+	const nextMonth = currentDay().with({ day: 1 }).add({ months: 1 });
 	const startsOn = $derived(contract?.startsOn ?? nextMonth);
 	const endsOn = $derived(contract?.endsOn ?? nextMonth.add({ years: 1 }).subtract({ days: 1 }));
 

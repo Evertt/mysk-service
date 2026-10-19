@@ -16,7 +16,7 @@
  */
 import { en, Faker, nl } from "@faker-js/faker";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import { formatCode } from "#lib/numbering.ts";
 import { DAY, now } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
@@ -65,7 +65,7 @@ function keepCreditLeft(entries: readonly (typeof walletEntry.$inferInsert)[]) {
 				amount: entry.amount,
 				validUntil: entry.validUntil ?? null,
 				bonusYearId: entry.bonusYearId ?? null,
-				on: entry.createdAt!.toZonedDateTimeISO(getTimeZone()).toPlainDate(),
+				on: dayOf(entry.createdAt!),
 			})),
 		);
 		ledger.forEach((entry, id) => (entry.remaining = left.get(id)));
@@ -76,7 +76,7 @@ const thisYear = now.getFullYear();
 const lastYear = thisYear - 1;
 
 /** A day of a year, but never after today (the demo is relative to when it's seeded). */
-const dayOf = (year: number, month: number, date: number) => {
+const demoDay = (year: number, month: number, date: number) => {
 	const day = new Date(year, month - 1, date);
 	return day > now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : day;
 };
@@ -199,13 +199,13 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 					amount: 100_000,
 					note: `Veerpakketten en scharnierbanden (bestelling SH-${thisYear}-007)`,
 					order: `SH-${thisYear}-007`,
-					on: dayOf(thisYear, 4, 9),
+					on: demoDay(thisYear, 4, 9),
 				},
 				{
 					amount: 47_500,
 					note: `Veerpakket, lipscharnier en rolscharnieren (bestelling SH-${thisYear}-011)`,
 					order: `SH-${thisYear}-011`,
-					on: dayOf(thisYear, 8, 21),
+					on: demoDay(thisYear, 8, 21),
 				},
 			],
 		});
@@ -224,7 +224,9 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 			acceptedOn: new Date(lastYear - 2, 4, 2),
 			closed: { revenue: 8_320_000, bonusRevenue: 6_900_000, choice: "credit" },
 			older: { credit: 120_000, spent: 80_000 },
-			spends: [{ amount: 35_000, note: "Rubberafdichtingen docks 1–4", on: dayOf(thisYear, 6, 3) }],
+			spends: [
+				{ amount: 35_000, note: "Rubberafdichtingen docks 1–4", on: demoDay(thisYear, 6, 3) },
+			],
 		});
 	}
 	if (pakhuis) {
@@ -243,7 +245,7 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 		});
 	}
 	// New this year: nothing closed yet.
-	if (vanDijk) partners.push({ customerId: vanDijk, acceptedOn: dayOf(thisYear, 3, 11) });
+	if (vanDijk) partners.push({ customerId: vanDijk, acceptedOn: demoDay(thisYear, 3, 11) });
 	for (const customerId of others) {
 		const revenue = random.number.int({ min: 45_000, max: 260_000 }) * 100;
 		const bonusRevenue = Math.round(revenue * random.number.float({ min: 0.4, max: 0.9 }));
@@ -265,7 +267,7 @@ function shltrPartners(draft: TenantDraft, random: Faker): PartnersSeed {
 									"Veerset sectionaaldeur",
 									"Fotocellen en lichtscherm",
 								]),
-								on: dayOf(thisYear, random.number.int({ min: 2, max: 9 }), 14),
+								on: demoDay(thisYear, random.number.int({ min: 2, max: 9 }), 14),
 							},
 						]
 					: undefined,

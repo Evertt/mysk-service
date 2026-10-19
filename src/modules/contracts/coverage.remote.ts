@@ -7,7 +7,7 @@ import { and, asc, desc, eq, gt, gte, lt, lte, notExists, sql } from "drizzle-or
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { correctiveOrderTypes } from "#lib/models.ts";
 import { unitCount, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -69,7 +69,7 @@ export const getUnitCoverage = query(v.string(), async (serialNumber) => {
  */
 export const getContractsOverview = query(async () => {
 	const now = Temporal.Now.instant();
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const horizon = today.add({ days: EXPIRING_DAYS });
 
 	// Only breakdowns and repairs not yet scheduled can be at risk or overdue (see `coverage.ts`).

@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, lt, min, sql } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay, dayOf, mondayOf, startOfDay } from "#lib/dates.ts";
 import { doneOrderStatuses, openOrderStatuses, type OrderStatus } from "#lib/models.ts";
 import { priceOrders, withFirstUnit, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -126,11 +126,9 @@ export const getDashboard = forMembers.query(async () => {
  * (then per week in the user's time zone) or status; the revenue per order, because `priceOrders()` applies the modules' adjustments.
  */
 export const getCharts = forMembers.query(async () => {
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const weeks = lastWeeks(today);
 	const months = lastMonths(today);
-	/** The moment a day starts, in the user's time zone. */
-	const start = (day: Temporal.PlainDate) => day.toZonedDateTime(getTimeZone()).toInstant();
 
 	// Counted per quarter of an hour in the database (every time zone's offset is a whole number of
 	// them), then per week (its Monday, as `yyyy-mm-dd`) here: SQLite knows only the server's time
@@ -139,12 +137,12 @@ export const getCharts = forMembers.query(async () => {
 	const perQuarter = await db
 		.select({ createdAt: min(order.createdAt), status: order.status, count: count() })
 		.from(order)
-		.where(and(inTenant(order), gte(order.createdAt, start(weeks[0]))))
+		.where(and(inTenant(order), gte(order.createdAt, startOfDay(weeks[0]))))
 		.groupBy(quarter, order.status);
 	const counts = new Map<string, { week: string; status: OrderStatus; count: number }>();
 	for (const row of perQuarter) {
-		const day = row.createdAt!.toZonedDateTimeISO(getTimeZone()).toPlainDate();
-		const week = day.subtract({ days: day.dayOfWeek - 1 }).toString();
+		const day = dayOf(row.createdAt!);
+		const week = mondayOf(day).toString();
 		const key = `${week}|${row.status}`;
 		const found = counts.get(key);
 		if (found) found.count += row.count;
@@ -168,7 +166,7 @@ export const getCharts = forMembers.query(async () => {
 			and(
 				inTenant(order),
 				inList(order.status, doneOrderStatuses),
-				gte(order.completedAt, start(months[0])),
+				gte(order.completedAt, startOfDay(months[0])),
 			),
 		);
 	const prices = await priceOrders(await withUnitIds(done));

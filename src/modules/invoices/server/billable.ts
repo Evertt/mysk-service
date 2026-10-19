@@ -9,7 +9,7 @@
 import { and, asc, eq, ne, notExists, or } from "drizzle-orm";
 
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -131,10 +131,7 @@ async function unbilledItems(customerId: number, at: Temporal.PlainDate): Promis
 
 /** What the customer can be billed for now: completed orders and other modules' items. */
 /** `at` is a day: today, the user's, by default. */
-export async function billableFor(
-	customerId: number,
-	at = Temporal.Now.plainDateISO(getTimeZone()),
-) {
+export async function billableFor(customerId: number, at = currentDay()) {
 	const [orders, items] = await Promise.all([
 		billableOrders(customerId),
 		unbilledItems(customerId, at),

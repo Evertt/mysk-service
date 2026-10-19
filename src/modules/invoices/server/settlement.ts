@@ -7,7 +7,7 @@
 import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -74,7 +74,7 @@ export async function issueCredit(id: number) {
 		if (found.lines.reduce((sum, line) => sum + line.amount, 0) >= 0) {
 			invalid(m.invoices_credit_nothing());
 		}
-		const issuedOn = Temporal.Now.plainDateISO(getTimeZone());
+		const issuedOn = currentDay();
 		const issued = {
 			status: "sent" as const,
 			issuedOn,

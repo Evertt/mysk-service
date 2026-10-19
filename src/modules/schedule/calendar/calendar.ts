@@ -7,7 +7,7 @@
  * week without), a month as `?view=month&date=` any day of it, and a day as `?view=day&date=`;
  * without a date, a view shows today's month or day.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay, dayOf, mondayOf } from "#lib/dates.ts";
 import { dateFormatter } from "#lib/i18n/index.ts";
 
 import { parseDay } from "../board/board.ts";
@@ -23,13 +23,10 @@ export type ScheduleView = (typeof scheduleViews)[number];
 const isView = (value: string | null): value is ScheduleView =>
 	(scheduleViews as readonly (string | null)[]).includes(value);
 
-/** The Monday of `day`'s week. */
-export const mondayOf = (day: Temporal.PlainDate) => day.subtract({ days: day.dayOfWeek - 1 });
-
 /** The view a schedule URL's search params ask for (the week by default), and a day in it. */
 export function viewFromParams(
 	params: Pick<URLSearchParams, "get">,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
+	today = currentDay(),
 ): { view: ScheduleView; day: Temporal.PlainDate } {
 	const asked = params.get("view");
 	const view = isView(asked) ? asked : "week";
@@ -121,11 +118,10 @@ export const inMonth = (day: Temporal.PlainDate, month: Temporal.PlainDate) =>
  * orders without a date are left out.
  */
 export function groupByDay<T extends { scheduledFor: Temporal.Instant | null }>(orders: T[]) {
-	const timeZone = getTimeZone();
 	const days = new Map<string, T[]>();
 	for (const order of orders) {
 		if (!order.scheduledFor) continue;
-		const key = order.scheduledFor.toZonedDateTimeISO(timeZone).toPlainDate().toString();
+		const key = dayOf(order.scheduledFor).toString();
 		days.set(key, [...(days.get(key) ?? []), order]);
 	}
 	for (const list of days.values()) {

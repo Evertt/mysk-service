@@ -7,7 +7,7 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay } from "#lib/dates.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { getScheduleMonth, watchSchedule } from "../schedule.remote.ts";
@@ -18,7 +18,7 @@
 
 	let { schedule }: { schedule: ScheduleMonth } = $props();
 
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const days = $derived(groupByDay(schedule.orders));
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
 

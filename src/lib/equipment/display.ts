@@ -1,5 +1,5 @@
 import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import { labelOptions, withLabels } from "#lib/i18n/index.ts";
 import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 
@@ -29,8 +29,7 @@ export function isUnderWarranty(
 	warrantyUntil: Temporal.PlainDate,
 	at: Temporal.PlainDate | Temporal.Instant = Temporal.Now.instant(),
 ) {
-	const day =
-		at instanceof Temporal.Instant ? at.toZonedDateTimeISO(getTimeZone()).toPlainDate() : at;
+	const day = at instanceof Temporal.Instant ? dayOf(at) : at;
 	return Temporal.PlainDate.compare(day, warrantyUntil) <= 0;
 }
 
