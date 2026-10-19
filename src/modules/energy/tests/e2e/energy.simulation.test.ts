@@ -51,7 +51,7 @@ describe("SHLTR's P1 simulation", () => {
 
 		await bar.getByRole("button", { name: "Start" }).click();
 		await expect.poll(() => bar.getAttribute("data-running")).toBe("true");
-		await expect.poll(() => state.textContent()).toContain("simulation 1×");
+		await expect.poll(() => state.textContent()).toContain("simulation 30×");
 		expect(await running()).toBe(1);
 
 		// The bar's first tick fills every interval since the seed's latest, through the ingest.
@@ -67,13 +67,13 @@ describe("SHLTR's P1 simulation", () => {
 		await expect.poll(() => page.locator('[data-zone][data-tone="offline"]').count()).toBe(1);
 		expect(await page.locator('[data-zone="Z-EXP"]').getAttribute("data-tone")).toBe("offline");
 
-		await bar.getByRole("button", { name: "30×" }).click();
-		await expect.poll(() => state.textContent()).toContain("simulation 30×");
+		await bar.getByRole("button", { name: "5×" }).click();
+		await expect.poll(() => state.textContent()).toContain("simulation 5×");
 
 		// Reset: yesterday and today as the seed has them, every interval of yesterday.
 		await bar.getByRole("button", { name: "Reset simulation" }).click();
 		await page.getByText("The simulation starts over.").waitFor();
-		await expect.poll(() => state.textContent()).toContain("simulation 1×");
+		await expect.poll(() => state.textContent()).toContain("simulation 30×");
 		const midnight = Temporal.Now.zonedDateTimeISO("Europe/Amsterdam").startOfDay();
 		const yesterday = await value(
 			`select count(*) from energy_reading r join energy_zone z on z.id = r.zone_id

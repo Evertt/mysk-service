@@ -115,7 +115,7 @@ describe("the simulation bar", () => {
 		// Paused right away, so the mockup's states hold for the files after this one.
 		await bar().getByRole("button", { name: "Pause" }).click();
 		await expect.poll(async () => (await simulation()).running).toBe(0);
-		expect((await simulation()).speed).toBe(1);
+		expect((await simulation()).speed).toBe(30);
 
 		// The board shows every state, live. What the reset stores (and that it makes no notice
 		// or order) is `simulation.spec.ts`'s.

@@ -72,7 +72,7 @@ describe.each(modules)("SHLTR's %s simulation", (module) => {
 			expect(await call(playSimulation, { module, running: true })).toMatchObject({
 				status: 403,
 			});
-			expect(await call(setSimulationSpeed, { module, speed: 30 })).toMatchObject({ status: 403 });
+			expect(await call(setSimulationSpeed, { module, speed: 5 })).toMatchObject({ status: 403 });
 			expect(await call(resetSimulationState, module)).toMatchObject({ status: 403 });
 			// Paused, a tick moves nothing on.
 			expect(await call(tickSimulation, module)).toMatchObject({
@@ -102,10 +102,10 @@ describe.each(modules)("SHLTR's %s simulation", (module) => {
 	test("a manager plays it from now, sets its speed and pauses it; logged", async () => {
 		await as(shltr.owner, async () => {
 			expect(await call(playSimulation, { module, running: true })).toMatchObject({ status: 200 });
-			expect(await call(setSimulationSpeed, { module, speed: 30 })).toMatchObject({ status: 200 });
+			expect(await call(setSimulationSpeed, { module, speed: 5 })).toMatchObject({ status: 200 });
 		});
 		const playing = await simulation(module);
-		expect(playing).toMatchObject({ running: 1, speed: 30 });
+		expect(playing).toMatchObject({ running: 1, speed: 5 });
 		// The paused time isn't made up for.
 		expect(playing.last_tick_at).toBeGreaterThan(nowSeconds() - 60);
 		await as(shltr.owner, () => call(playSimulation, { module, running: false }));
@@ -150,14 +150,14 @@ describe.each(modules)("SHLTR's %s simulation", (module) => {
 });
 
 describe("a reset of the docks' simulation", () => {
-	test("starts it over at 1×, running; logged", async () => {
+	test("starts it over at 30×, running; logged", async () => {
 		const before = await simulation("docks");
 		await as(shltr.owner, async () => {
-			await call(setSimulationSpeed, { module: "docks", speed: 30 });
+			await call(setSimulationSpeed, { module: "docks", speed: 5 });
 			expect(await call(resetSimulationState, "docks")).toMatchObject({ status: 200 });
 		});
 		const after = await simulation("docks");
-		expect(after).toMatchObject({ running: 1, speed: 1 });
+		expect(after).toMatchObject({ running: 1, speed: 30 });
 		expect(after.started_at).toBeGreaterThanOrEqual(before.started_at);
 		expect(after.started_at).toBeGreaterThan(nowSeconds() - 60);
 		expect((await logOf("docks")).at(-1)).toEqual({ action: "reset", user: shltr.owner.email });

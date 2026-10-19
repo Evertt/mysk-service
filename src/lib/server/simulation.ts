@@ -33,7 +33,11 @@ import { asSystem, currentTenant, inTenant, type Tenant } from "#lib/server/auth
 import { db } from "#lib/server/db/index.ts";
 import { organization, organizationModule, simulation } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
-import { type SimulationSpeed, simulationRun } from "#lib/simulation/extensions.ts";
+import {
+	defaultSimulationSpeed,
+	type SimulationSpeed,
+	simulationRun,
+} from "#lib/simulation/extensions.ts";
 
 /** The most real time one tick covers: more than the cron's 15 minutes, so its ticks leave no gap. */
 export const tickCap = Temporal.Duration.from({ minutes: 20 });
@@ -187,13 +191,19 @@ export async function changeSimulation(
 
 /**
  * Resets the current tenant's simulation of `moduleId`: the module puts its data back in its
- * starting states (as the system), and the simulation starts over, running at 1×; logged.
+ * starting states (as the system), and the simulation starts over, running at
+ * `defaultSimulationSpeed`; logged.
  */
 export async function resetSimulation(moduleId: ModuleId) {
 	await requireSimulation(moduleId);
 	await asSystemHere(() => collect(simulationRun, { kind: "reset" }, [moduleId]));
 	const now = Temporal.Now.instant();
-	const restarted = { running: true, speed: 1, lastTickAt: now, startedAt: now };
+	const restarted = {
+		running: true,
+		speed: defaultSimulationSpeed,
+		lastTickAt: now,
+		startedAt: now,
+	};
 	await db.transaction(async (tx) => {
 		await tx
 			.update(simulation)

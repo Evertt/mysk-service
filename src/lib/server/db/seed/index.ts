@@ -22,6 +22,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
 import { moduleIds } from "#lib/modules/ids.ts";
+import { defaultSimulationSpeed } from "#lib/simulation/extensions.ts";
 
 import { demoOrganizations, demoUsers } from "../demo.ts";
 import { moduleSeeds } from "../module-seeds.gen.ts";
@@ -197,7 +198,7 @@ await db.transaction(async (tx) => {
 					organizationId: tenant.id,
 					moduleId,
 					running: true,
-					speed: 1,
+					speed: defaultSimulationSpeed,
 					lastTickAt: toMoment(now),
 					startedAt: toMoment(now),
 				}));

@@ -15,6 +15,9 @@ import { defineCollector } from "#lib/extensions/define.ts";
 export const simulationSpeeds = [1, 2, 5, 10, 30] as const;
 export type SimulationSpeed = (typeof simulationSpeeds)[number];
 
+/** The speed a simulation starts at: as the seed offers it, and after a reset. */
+export const defaultSimulationSpeed: SimulationSpeed = 30;
+
 /**
  * What a tick is told: the interval of real time it covers, `(from, to]`, the speed, and when the
  * simulation last started from its starting states (the seed, or a reset).
