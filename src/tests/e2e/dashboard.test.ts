@@ -7,6 +7,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, organizations, quiet, rows, userNames, useApp } from "./app.ts";
+import { cardBoxes, columnsOf, expectApart } from "./masonry-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -73,44 +74,14 @@ describe("the dashboard's charts", () => {
 	});
 });
 
-type Box = { title: string; left: number; top: number; right: number; bottom: number };
-
-/** The boxes of the dashboard's cards (the masonry's items), with their titles, in page order. */
-const cardBoxes = () =>
-	app.page.locator("[data-dashboard-cards]").evaluate((container): Box[] => {
-		const items = (element: Element): Element[] =>
-			[...element.children].flatMap((child) =>
-				getComputedStyle(child).display === "contents" ? items(child) : [child],
-			);
-		return items(container).map((card) => {
-			const { left, top, right, bottom } = card.getBoundingClientRect();
-			const title = card.querySelector('[data-slot="card-title"]')?.textContent?.trim() ?? "";
-			return { title, left, top, right, bottom };
-		});
-	});
-
-/** Checks that no two cards overlap (by more than a pixel's rounding). */
-function expectApart(boxes: Box[]) {
-	for (const [index, a] of boxes.entries()) {
-		for (const b of boxes.slice(index + 1)) {
-			const overlap =
-				a.left < b.right - 1 &&
-				b.left < a.right - 1 &&
-				a.top < b.bottom - 1 &&
-				b.top < a.bottom - 1;
-			expect(overlap, `${a.title} overlaps ${b.title}`).toBe(false);
-		}
-	}
-}
-
-/** The cards' columns: their left edges. */
-const columnsOf = (boxes: Box[]) => new Set(boxes.map((box) => Math.round(box.left)));
+/** The dashboard's cards' container (a masonry). */
+const cards = () => app.page.locator("[data-dashboard-cards]");
 
 /** The dashboard, once its cards are packed into columns. */
 async function packedDashboard() {
 	await app.go("/");
 	await expect.poll(() => app.page.locator("[data-dashboard-cards][data-masonry]").count()).toBe(1);
-	return cardBoxes();
+	return cardBoxes(cards());
 }
 
 describe("the dashboard's cards", () => {
@@ -142,7 +113,7 @@ describe("the dashboard's cards", () => {
 		await onPhone(app.page, async () => {
 			await app.go("/");
 			expect(await app.page.locator("[data-dashboard-cards][data-masonry]").count()).toBe(0);
-			const boxes = await cardBoxes();
+			const boxes = await cardBoxes(cards());
 			expect(columnsOf(boxes).size).toBe(1);
 			expectApart(boxes);
 			expect(await fitsWidth(app.page)).toBe(true);
