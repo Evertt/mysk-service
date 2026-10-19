@@ -19,6 +19,8 @@
  *   scope every query to that customer (and its sites they see) as well as the tenant.
  * - `forAnyRole`: any member, field engineers too (`requireTenant()`); the app shell's tenant.
  * - `forUsers`: signed in, with or without an organization (`requireUser()`).
+ * - `forDevelopers`: the developers, signed-in users whose email is in `DEVELOPER_EMAILS`
+ *   (`requireDeveloper()`), across tenants: the bug reports' pages. A 404 for everyone else.
  * - `forAnyone`: public on purpose (signing in, the theme, an invitation's link).
  * - `moduleRemote(id)`: an optional module's (`requireModule(id)`), only in its
  *   `remote-functions.ts`.
@@ -43,6 +45,7 @@ import {
 	requireTenant,
 	requireUser,
 } from "#lib/server/auth/index.ts";
+import { requireDeveloper } from "#lib/server/bug-reports/developers.ts";
 
 /** A remote function set, typed as SvelteKit's own so every overload and field type carries over. */
 interface RemoteSet {
@@ -94,6 +97,7 @@ export const forEngineers = remoteSet(requireEngineer);
 export const forCustomers = remoteSet(requireCustomer);
 export const forAnyRole = remoteSet(requireTenant);
 export const forUsers = remoteSet(requireUser);
+export const forDevelopers = remoteSet(requireDeveloper);
 export const forAnyone = remoteSet(() => {});
 
 /** Who may call a module's remote functions, besides the tenant having the module. */

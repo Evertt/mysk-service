@@ -1,6 +1,7 @@
 // The app on Cloudflare: a Worker whose requests are answered by one Durable Object with the app's
 // SQLite database (`cloudflare/entry.ts`). `pnpm deploy:cloudflare` builds and deploys it; secrets
-// (`BETTER_AUTH_SECRET`, `OPS_TOKEN` for imports and the daily jobs, optionally `SMTP_URL`) are set with `wrangler secret put`, and
+// (`BETTER_AUTH_SECRET`, `OPS_TOKEN` for imports and the daily jobs, optionally `SMTP_URL`,
+// `BUG_REPORT_EMAIL` and `DEVELOPER_EMAILS`) are set with `wrangler secret put`, and
 // locally in `.dev.vars` (see `.dev.vars.example`).
 {
 	"name": "fieldworks",
@@ -12,6 +13,9 @@
 	"rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
 	"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
+	// The recordings of bug reports (`src/lib/server/bug-reports/storage.ts`); made once with
+	// `wrangler r2 bucket create fieldworks-bug-reports`.
+	"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-bug-reports" }],
 	"vars": { "ORIGIN": "https://fieldworks.devign.workers.dev" },
 	// The daily jobs (e.g. maintenance plans that become orders), at 04:00 UTC, and the demo's
 	// simulations' tick, every 15 minutes: `scheduled()` in `cloudflare/entry.ts`. They need the
@@ -26,6 +30,8 @@
 			"name": "fieldworks-staging",
 			"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
 			"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
+			// `wrangler r2 bucket create fieldworks-staging-bug-reports`.
+			"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-staging-bug-reports" }],
 			// `DEMO_SIGN_IN`: the login page's one-click demo sign-in (README "Demo login"), passwordless,
 			// so here only, never in the top-level vars above (production).
 			"vars": { "ORIGIN": "https://fieldworks-staging.devign.workers.dev", "DEMO_SIGN_IN": "true" },

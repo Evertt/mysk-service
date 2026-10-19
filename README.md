@@ -199,6 +199,9 @@ environment variables; on Cloudflare `wrangler.jsonc`'s `vars`, or secrets
 | `CRON_SECRET`         | on Vercel     | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself                     |
 | `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                              |
 | `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production                     |
+| `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged                  |
+| `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`                    |
+| `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket         |
 
 ### On Vercel
 
@@ -283,6 +286,7 @@ migrates its database itself when it starts (`cloudflare/migrations/`).
 pnpm exec wrangler login                    # once
 pnpm exec wrangler secret put BETTER_AUTH_SECRET
 pnpm exec wrangler secret put OPS_TOKEN      # allows importing data (see below), the daily jobs and the simulations' tick
+pnpm exec wrangler r2 bucket create fieldworks-bug-reports   # once: the bug reports' recordings
 pnpm deploy:cloudflare                      # builds with ADAPTER=cloudflare and deploys
 ```
 

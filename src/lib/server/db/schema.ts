@@ -11,6 +11,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { ReportContext } from "#lib/bug-reports/report.ts";
 import {
 	type ActivityAction,
 	contactChannels,
@@ -25,8 +26,8 @@ import {
 } from "#lib/models.ts";
 import { simulationSpeeds } from "#lib/simulation/extensions.ts";
 
-import { user } from "./auth.schema.ts";
-import { createdAt, day, moment, organizationId } from "./columns.ts";
+import { organization, user } from "./auth.schema.ts";
+import { createdAt, day, moment, momentMs, organizationId } from "./columns.ts";
 
 /** A company that owns equipment and places orders. */
 export const customer = sqliteTable(
@@ -879,5 +880,53 @@ export const notificationSeen = sqliteTable(
 			columns: [table.organizationId, table.lastSeenActivityId],
 			foreignColumns: [activity.organizationId, activity.id],
 		}).onDelete("cascade"),
+	],
+);
+
+// --- Platform -------------------------------------------------------------------------------------
+// The app's own records about itself, not a tenant's business data.
+
+/**
+ * A bug report a user recorded with the record button in the headers (`#lib/bug-reports/`): who,
+ * where and when, their note, and where the recording is (`objectKey`, in the R2 bucket or the
+ * folder of `#lib/server/bug-reports/storage.ts`). The platform's, not the tenant's: the
+ * organization and the user only say who reported it (emptied when either is deleted), the
+ * reporters can't read it at all, and the developers read it across tenants (`forDevelopers`). So
+ * it isn't scoped with `inTenant()`, and isn't logged to the activity log: it changes none of the
+ * tenant's records.
+ */
+export const bugReport = sqliteTable(
+	"bug_report",
+	{
+		/** A random UUID: the replay page's URL, which says nothing about how many there are. */
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id").references(() => organization.id, {
+			onDelete: "set null",
+		}),
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		/** Who reported it, as they were named then. */
+		userName: text("user_name").notNull(),
+		/** The page the recording started on, and its route id. */
+		url: text("url").notNull(),
+		routeId: text("route_id"),
+		/** What they wrote when they stopped; empty if nothing. */
+		note: text("note").notNull().default(""),
+		userAgent: text("user_agent").notNull(),
+		/** The app's version (`version` of `$app/env`) the recording was made in. */
+		appVersion: text("app_version").notNull(),
+		/** The rest of what was known when it started (`ReportContext`, `#lib/bug-reports/report.ts`). */
+		context: text("context", { mode: "json" }).$type<ReportContext>().notNull(),
+		startedAt: momentMs("started_at").notNull(),
+		durationMs: integer("duration_ms").notNull(),
+		/** The recording's size, gzipped, in bytes. */
+		size: integer("size").notNull(),
+		/** The recording's key in the store: `<year>/<month>/<id>.json.gz`. */
+		objectKey: text("object_key").notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("bug_report_created").on(table.createdAt),
+		index("bug_report_organization").on(table.organizationId),
+		index("bug_report_user").on(table.userId),
 	],
 );

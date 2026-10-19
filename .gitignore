@@ -43,3 +43,6 @@ project.inlang/cache/
 # wrangler (Cloudflare): local secrets and state
 .dev.vars
 .wrangler
+
+# Bug reports' recordings, off Cloudflare (`BUG_REPORTS_DIR`)
+/.bug-reports/

@@ -128,3 +128,76 @@ developer, but follow the same rule.
 
 The customer portal, attaching screenshots, creating issues in a tracker, and deleting or archiving
 reports from the ops page (a follow-up, when there are enough of them).
+
+## As built
+
+- **Packages**: `@rrweb/record`, `@rrweb/rrweb-plugin-console-record` and `rrweb-player`, exactly
+  2.1.7 (2 October 2026, tagged upstream). Vetted from rrweb's own guide and console recipe, which
+  name these packages and imports; their npm `repository` is `rrweb-io/rrweb`, with registry
+  signatures and SLSA provenance. `@rrweb/record` is rrweb's record half only, with the same
+  events. All three are loaded with `import()`: none is in the app's bundle.
+- **Where**: `src/lib/bug-reports/` rather than `src/lib/components/bug-report/`, as the server and
+  the ops pages share part of it: the button (`bug-report-button.svelte`, one line in each header),
+  the recorder (`recorder.svelte.ts`: one per tab, outside the components), its states
+  (`machine.ts`), the context collector (`context.ts`), the fetch wrapper (`requests.ts`), and the
+  shared parts: the limits and the summary's schema (`report.ts`), reading the events
+  (`events.ts`), the context's lines (`context-lines.ts`). The server's part is
+  `src/lib/server/bug-reports/`.
+- **The button**: closing the popover without a choice keeps the recording (the button shows a send
+  icon that opens it again) rather than discarding it. Sending that fails leaves it there to send
+  again. In the engineer portal it's `compact`: only the dot while it records, without the time
+  (still in its label), as that header, with the notification bell, is full on a phone.
+- **Console**: the plugin with `level: ["error", "warn"]`, which already listens for the window's
+  `error` and `unhandledrejection` itself: no listeners of our own.
+- **Requests** are rrweb custom events (`tag: "request"`), so they're in the recording with their
+  moments, and the replay page reads them from the events as it reads the console's. The size is
+  the `Content-Length`, when there is one.
+- **Context**: the browser collects the page, version, viewport, user agent, locale (and the
+  browser's languages), time zone, theme, mode, dark and density, and online. Who, in which
+  organization (name and slug), with which roles and modules, the server adds from the session when
+  the report arrives, instead of taking the browser's word. It's all stored in a `context` JSON
+  column, added to the table: the planned columns had no place for it.
+- **Upload**: `POST /bug-reports` (`src/routes/bug-reports/+server.ts`), not a remote `form`: the
+  recorder sends from script, and the endpoint refuses by `Content-Length` before reading. SvelteKit
+  has no body limit of its own for either; the platforms' are the Worker's 100 MB, `adapter-node`'s
+  `BODY_SIZE_LIMIT` (512 KB unless raised) and Vercel's 4.5 MB per request. The body is multipart:
+  `events` (the gzipped JSON array of events) and `report` (JSON: note, start, duration, the
+  browser's context, and up to 50 console errors as text, for the mail). 411 without a length, 413
+  over 20 MB (plus 256 KB for the form) or for a larger file, 400 for anything that isn't a report
+  or isn't gzip, 201 with the id. The gate (`requireReporter()`): `requireTenant()`, then a 403 for
+  customers' contacts.
+- **The guard** (`hooks.server.ts`) lets field engineers and customers' contacts through to
+  `/bug-reports` and `/ops/…`, which gate themselves: it sent engineers' uploads to `/my`.
+- **Table**: the id is a random UUID, made before the insert so the object's key has it; `startedAt`
+  in milliseconds. No spec enforces tenant scoping or `recordActivity()` per table (checked), so
+  there was nothing to exempt; the schema's comment says why it's neither. Indexes on the two
+  foreign keys (`foreign-key-indexes.spec.ts`) and on `created_at` for the list.
+- **Storage**: `bugReportStore()` is the `BUG_REPORTS` binding when the platform has one, else the
+  folder; the folder store refuses keys outside it. The recording is stored before the row, the
+  mail sent after it; a mail that fails doesn't fail the report. Without `BUG_REPORT_EMAIL` the mail
+  is logged. The mail is in the reporter's language, its link from `ORIGIN` (or the request's).
+- **Settings** are read in one file, `src/lib/server/bug-reports/settings.ts`, which specs mock:
+  mocking `$app/env/private` in a harness spec replaced the test database's URL too.
+  `DEVELOPER_EMAILS` is parsed (lower case, comma-separated) in `src/env.ts`.
+- **`forDevelopers`**: `requireDeveloper()` (`src/lib/server/bug-reports/developers.ts`), a 401
+  signed out and a 404 for everyone not listed.
+- **Ops pages**: the `(ops)` route group with a plain layout; the list shows the newest 500. The
+  replay page fetches the recording from `GET /ops/bug-reports/[id]/recording` (gzip, gated by
+  `requireDeveloper()`; a query would pass megabytes through devalue), unpacks it in the browser
+  with `DecompressionStream`, and mounts `rrweb-player` (and its CSS) in an attachment.
+- **Text** is in a new message section, `bugs.json`.
+- **Tests**: unit specs for the states, the recorder with fake parts, the context collector, the
+  fetch wrapper, reading events and both stores; the server spec
+  `src/tests/unit/lib/server/bug-reports/upload.spec.ts`; e2e `src/tests/e2e/bug-reports.test.ts`.
+  The e2e servers get `BUG_REPORT_EMAIL`, `DEVELOPER_EMAILS` (SHLTR's owner) and a
+  `BUG_REPORTS_DIR` per lane (`global-setup.ts`). The e2e file is a sequence of short tests (start,
+  record, stop and send, the row and mail, the password, the portal, the list, the replay, the
+  404), each wait with a 15 s timeout: as one 30 s test, it timed out without saying where when
+  the machine was loaded (load average ~100 under another full run). The player mounted all
+  along; it only took that long to load then.
+- **Open**: on Vercel a report over 4.5 MB is refused by the platform, and its functions have no
+  disk that lasts, so reports there need a store of their own (e.g. R2 over its S3 API) if wanted;
+  where the app runs on `adapter-node`, `BODY_SIZE_LIMIT` must be raised above 20 MB. Deleting
+  reports and expiring old recordings are follow-ups. Before production on Cloudflare: make the
+  buckets (`wrangler r2 bucket create fieldworks-bug-reports` and
+  `fieldworks-staging-bug-reports`) and set `BUG_REPORT_EMAIL` and `DEVELOPER_EMAILS`.

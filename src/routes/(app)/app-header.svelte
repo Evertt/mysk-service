@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
 	import { useTheme } from "#lib/themes/context.ts";
 	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
@@ -18,6 +19,7 @@
 	<div class="ml-auto flex items-center gap-1">
 		<NotificationBell />
 		<SyncIndicator />
+		<BugReportButton />
 		<ThemeSwitcher />
 		<ModeSwitcher />
 	</div>
