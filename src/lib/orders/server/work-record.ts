@@ -6,7 +6,7 @@
  * isn't the work record stays with each caller: the order's own columns, its customer and request,
  * prices, tags, history and checklists.
  */
-import { and, asc, eq, type GetColumnData, type SQL } from "drizzle-orm";
+import { and, asc, type Column, eq, type GetColumnData, type SQL } from "drizzle-orm";
 
 import { firstName } from "#lib/engineers/index.ts";
 import {
@@ -121,7 +121,9 @@ type SiteDetail = keyof typeof siteColumns;
 
 /** A site as the audience sees it. */
 type Site<D extends SiteDetail> = {
-	[K in keyof (typeof siteColumns)[D]]: GetColumnData<(typeof siteColumns)[D][K]>;
+	[K in keyof (typeof siteColumns)[D]]: (typeof siteColumns)[D][K] extends Column
+		? GetColumnData<(typeof siteColumns)[D][K]>
+		: never;
 };
 
 /** The order's units the scope sees, in their order, at their sites. */
