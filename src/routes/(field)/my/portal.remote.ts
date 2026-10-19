@@ -187,8 +187,6 @@ const portalTypes = ["order", "customer", "site", "equipment"] as const;
  */
 export const watchMyWork = forEngineers.query.live(() => live(portalTypes));
 
-/** How an order shows in the activity log. */
-
 /**
  * Refreshes what the portal shows of an order after a change, the modules' cards on it too (they
  * refresh their own queries on `orders.committed`).

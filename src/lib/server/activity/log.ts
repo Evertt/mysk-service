@@ -54,6 +54,9 @@ export interface ActivityRecord {
 	note?: string | null;
 }
 
+/** How an entry names its record and, if it has one, the record it is part of. */
+export type LoggedSubjects = Pick<ActivityRecord, "subject" | "parent">;
+
 /** Fields that are never worth listing: keys and timestamps the app keeps itself. */
 export const ignoredFields = ["id", "organizationId", "createdAt", "updatedAt"];
 

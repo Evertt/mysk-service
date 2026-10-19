@@ -41,20 +41,6 @@ describe("watchChanges", () => {
 		expect(second).toBe("waiting");
 		changes.stop();
 	});
-
-	it("ends a consumer that waits for a change when stopped", async () => {
-		const changes = watchChanges("org-e", ["order"]);
-		const next = changes.next();
-		changes.stop();
-		expect(await next).toEqual({ value: undefined, done: true });
-	});
-
-	it("stops watching without ever being iterated (a live query during SSR)", async () => {
-		const changes = watchChanges("org-f", ["order"]);
-		changes.stop();
-		announceChange("org-f", "order");
-		expect(await changes.next()).toEqual({ value: undefined, done: true });
-	});
 });
 
 describe("watchSubject", () => {

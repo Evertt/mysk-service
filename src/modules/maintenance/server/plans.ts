@@ -8,7 +8,7 @@ import { and, eq, notExists } from "drizzle-orm";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
-import { recordActivity, type ActivityRecord } from "#lib/server/activity/index.ts";
+import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
 	idInTenant,
@@ -35,7 +35,7 @@ interface PlanInput {
 const subjects = (
 	plan: { id: number; description: string },
 	unit: { id: number; serialNumber: string },
-): Pick<ActivityRecord, "subject" | "parent"> => ({
+): LoggedSubjects => ({
 	subject: { type: "maintenancePlan", id: plan.id, label: planLabel({ ...unit, ...plan }) },
 	parent: equipmentSubject(unit),
 });

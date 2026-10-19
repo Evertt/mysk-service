@@ -7,7 +7,7 @@
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
-import { recordActivity, type ActivityRecord } from "#lib/server/activity/index.ts";
+import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
@@ -28,7 +28,7 @@ import { findActiveTemplate, templateSubject } from "./templates.ts";
 const subjects = (
 	point: { id: number; text: string },
 	template: { id: number; name: string },
-): Pick<ActivityRecord, "subject" | "parent"> => ({
+): LoggedSubjects => ({
 	subject: { type: "checklistTemplateItem", id: point.id, label: point.text },
 	parent: templateSubject(template),
 });

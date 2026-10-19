@@ -119,7 +119,8 @@ describe("live(watched, answer)", () => {
 		globalThis.durableRequests = requests;
 		const durable = { storage: {} } as DurableRequest;
 		const answers = requests.run(durable, () => live(["order"], () => requests.getStore()));
-		await answers.next();
+		// The first, where it's asked for: in the request itself.
+		expect((await answers.next()).value).toBeUndefined();
 		announceChange("org-answer", "order");
 		expect((await answers.next()).value).toBe(durable);
 	});

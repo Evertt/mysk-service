@@ -302,3 +302,16 @@ beyond a commit: every caller is in this repository.
    the activity log" names `live()` instead of `watchChanges()`/`watchSubject()`.
 6. **Gate:** `pnpm run check`, `pnpm knip`, the specs above, and the e2e live files plus the
    energy and docks e2e files, one at a time under the lock.
+
+## Changed while building
+
+- **No `pageKeys` map** (see the builders section).
+- **Order of the commits:** builders first, then the types (Migration strategy).
+- **"`refresh` isn't tracked" has no test:** an effect re-run caused by what `refresh` reads has the
+  same live query and the same answer, so it never refreshes again; the mutation is equivalent
+  (review round 1). `untrack()` stays, so such re-runs don't happen.
+- **`schedule.spec.ts`'s read-time tests stay** as the board's integration of `readAt()`;
+  `changes.spec.ts`'s lifecycle tests moved to `live.spec.ts`.
+- **A getter must not hand `refreshOnChange()` a new handle of the same live query:** each call of
+  a remote live query gives a new proxy, which the helper takes for another live query. The door
+  card's getter depends on whether the door is a dock's, not on the dock (review round 1).

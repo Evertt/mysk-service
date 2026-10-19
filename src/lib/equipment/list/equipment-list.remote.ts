@@ -134,13 +134,13 @@ export const bulkSetEquipmentStatus = forMembers.command(
 		const result = await bulkChange(target, {
 			table: equipment,
 			label: equipment.serialNumber,
-			columns: { status: equipment.status },
+			columns: { status: equipment.status, serialNumber: equipment.serialNumber },
 			list: equipmentSql,
 			change: (unit) =>
 				db.transaction(async (tx) => {
 					if (unit.status === status) return;
 					await tx.update(equipment).set({ status }).where(idInTenant(equipment, unit.id));
-					const subject = equipmentSubject({ id: unit.id, serialNumber: unit.label });
+					const subject = equipmentSubject(unit);
 					await recordActivity(tx, { action: "updated", subject, before: unit, after: { status } });
 				}),
 		});

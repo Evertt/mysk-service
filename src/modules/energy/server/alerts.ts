@@ -7,7 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq, ne, type SQL } from "drizzle-orm";
 
 import { createOrders, type OrderDraft } from "#lib/orders/server/index.ts";
-import { recordActivity, type ActivityRecord } from "#lib/server/activity/index.ts";
+import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customerSite, order } from "#lib/server/db/schema.ts";
@@ -78,7 +78,7 @@ async function loadAlert(id: number) {
 	return alert;
 }
 
-const logged = (alert: SiteAlert): Pick<ActivityRecord, "subject" | "parent"> => ({
+const logged = (alert: SiteAlert): LoggedSubjects => ({
 	subject: { type: "energy_alert", id: alert.id, label: alert.door?.code ?? alert.zoneCode },
 	parent: { type: "energy_site", id: alert.siteId, label: alert.siteName },
 });
