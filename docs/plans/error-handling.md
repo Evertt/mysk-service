@@ -167,3 +167,146 @@ tracing span would answer that, and so does a log line:
 Sentry or any third party, alerting on errors, symbolicating client stacks, and fixing the
 `undefined` race itself. The logs from this plan are meant to catch it in the act. When they do,
 it's a bug for `docs/upstream-bugs/` or a fix of its own.
+
+## As built
+
+Built on 19 October 2026 (branch `error-handling`). What differs from the design above, and what
+was found on the way.
+
+### Where a page's error lands (checked in the browser)
+
+SvelteKit 3 wraps **every page in a boundary of its own**, inside the layouts, whose `failed` is
+the nearest `+error.svelte` (`node_modules/@sveltejs/kit/src/runtime/components/root.svelte`). An
+`HttpError` from an awaited remote query in a page (`/orders/ORD-999999`), server-rendered and on
+a client navigation alike, lands on `(app)/+error.svelte`: a boundary around `{@render
+children()}` in a layout never sees it, nor any other error of the page. Without
+`(app)/+error.svelte` the layout's boundary does catch it, but then a load error (a module route
+guard's 404) falls through to the root error page, outside the shell.
+
+So **the layouts get no `<ErrorBoundary>`**, and there's no `page` variant. A page's failures are
+the `+error` pages', which now do what the page variant was to do: `src/routes/error-view.svelte`
+(used by all four `+error` pages, with `home`, `homeLabel` and `size="lg"` in the portals) shows
+the kind's message (`describeError()`), the error id for an unknown error ("Quote this code when
+you report it", `data-error-id`), and Try again (unknown, offline), Sign in (session), Reload,
+Back (when there's history) and the shell's home. It tries again by itself once per 30 s per path
+after an unknown error (one `AutoResets` for all error pages, in the module script), with the
+toast, and on `online` after an offline one. Trying again is `goto(location.href, { replace: true,
+reset: false, refreshAll: true })`: SvelteKit resets its failed boundaries on every navigation.
+(Kit 3's `goto` options are `replace`, `reset` and `refreshAll`; `noScroll`, `keepFocus` and
+`replaceState` throw or warn.)
+
+`<ErrorBoundary>` (`src/lib/errors/error-boundary.svelte`) is for parts: props `name` (for logs and
+reports: `part:<contribution id>`, `activity`), `children`, `pending` and `failed` (a snippet with
+`{ error, kind, retry }`). By default it shows a small card with the kind's text and Try again.
+
+### Findings that shaped the code
+
+- A boundary's `onerror` and `failed` get SvelteKit's `App.Error` (Kit passes `transformError`,
+  which runs the client's `handleError`), not the thrown error. So the client hook classifies the
+  error while it has it and returns `{ errorId, kind }`; `classify()` reads a status, then that
+  `kind`, then the thrown error.
+- Svelte refuses `reset()` inside `onerror` (`svelte_boundary_reset_onerror`): the automatic reset
+  runs in a microtask. A failed boundary stays failed across navigations (Kit resets only its
+  own), so `ErrorBoundary` tries again after a navigation to another path.
+- `App.Error.errorId` and `kind` are optional: Kit 3 accepts `error(404, message)` only when
+  `App.Error` has no required properties besides `status` and `message`. Both hooks always set the
+  id.
+- Inside a remote function `event.route` and `event.url` throw (`remote_request_property`), so the
+  log lines read them guarded (`requestFields()`).
+- **The equipment page's doubled cards** (a slot contribution whose chunk loaded on the server but
+  not in the browser): the slot threw it while hydrating (`{fail(error)}` in the template), after
+  which Svelte 5.57 hydrated the next parts into the wrong place: Maintenance and Parts used showed
+  twice, the copies at the start of the slot without hydration markers. Reproduced with
+  `ErrorBoundary` too. Fixed by failing from an attachment (`<span hidden {@attach () =>
+fail(error)}>`), after hydration: verified in the browser (one card per part, the failed one's
+  card, Try again loads it).
+- A crash thrown from a template expression was used up by `forkPreloads` renders, so the crash
+  switch throws from an effect (`crash-switch.svelte`), once per mount.
+- The extension slot's Try again still loads the contribution again (`attempts`, `{#key}`): a
+  boundary's `reset()` alone doesn't load a chunk that failed. The automatic reset uses the
+  boundary's `reset()`, which is enough for an unknown error; a failed chunk is `updated`, which
+  isn't reset by itself.
+- The activity card's boundary is `ErrorBoundary` with its `pending`, one boundary rather than one
+  inside another. (A slow hydration of the equipment page while testing turned out to be the
+  Browser pane's background tab, not the nesting.)
+
+### Reporting and logs
+
+As designed, in `src/lib/errors/` (`classify.ts`, `auto-reset.ts`, `messages.ts`, `report.ts`,
+`report.remote.ts`) and `src/lib/server/logs/` (rather than `server/errors/`: it holds the timing
+too): `log.ts` (`logLine()`, one JSON line with the app's `version`), `reports.ts`
+(`admitReport()`: 20 a minute per session, or address when signed out; each id once, the last
+5,000 remembered), `counts.ts` and `timing.ts`. The server's `handleError` gives every error an id
+and logs unknown errors and 5xx (not refusals); the report's field for where it was caught is
+`source`. The client reports only `unknown` errors; a report waits 100 ms, so a boundary that
+catches the same error (by its id) names itself as the source instead of `hook`. An `App.Error`
+whose id the browser didn't make is the server's, logged already, and isn't reported again.
+
+### Timing
+
+`TIMING_LOGS=1` (`src/env.ts`, private, read when the app starts): `handleTiming` first in
+`handle`; transactions counted around `storage.transaction()` (`durable.ts`) and the libsql queue
+(`serialize.ts`, its wait included); statements through drizzle's logger (`db/index.ts`, which
+already checked the parameter limit there); live queries log `live: true` with how long they were
+open when the stream closes. On Workers the clocks only move at I/O and the object's SQLite is
+synchronous, so durations there are lower bounds; the counts are exact. README.md has "Reading the
+logs" under "On Cloudflare".
+
+### Cloudflare
+
+- `wrangler.jsonc` (checked against wrangler 4.151's `config-schema.json`): `observability` with
+  `logs: { enabled, invocation_logs }` and `traces: { enabled }`, `head_sampling_rate` left at its
+  default (1). **Staging already inherited it**: wrangler's normalisation treats `observability` as
+  inheritable (`inheritable(…, "observability", …)` in `wrangler-dist/cli.js`), unlike bindings and
+  vars; so it isn't repeated, the comment says so. Staging's vars have `TIMING_LOGS: "1"`;
+  `cloudflare/worker-configuration.d.ts` was updated by hand (`wrangler types` here lacked the
+  `.dev.vars` it was made with).
+- **Tracing: skipped.** adapter-cloudflare 8 does load `instrumentation.server.ts`
+  (`supports.instrumentation: () => true`, `builder.instrument()` with an initializer that reads
+  `cloudflare:workers`'s `env`), and `kit.tracing.server` would emit spans through
+  `@opentelemetry/api`. But they need a tracer provider that runs in a Worker (the Node SDK
+  doesn't; a Workers one such as `otel-cf-workers` wraps the exported handler, which Kit's
+  instrumentation doesn't give it) and an OTLP endpoint to export to: Cloudflare's own traces don't
+  take custom spans, and a third party is out of scope. Cloudflare's automatic traces (on above)
+  and the timing lines cover wish 7.
+
+### Test switch
+
+`#lib/errors/crash-switch.ts` and `crash-switch.svelte`, rendered `{#if crashSwitches}` in the
+dashboard (`page:dashboard`) and in each slot part (`part:<contribution id>`); a test sets
+`sessionStorage["fieldworks:crash:<where>"]` to how many mounts throw. `crashSwitches` is
+`import.meta.env.DEV || import.meta.env.VITE_TEST_SWITCHES === "1"`, which Vite inlines at build
+time; the e2e global setup builds with `VITE_TEST_SWITCHES=1`. Not Kit's static `$app/env/public`
+as first built: in a dev build Kit reads it from the dev server's global, which component tests
+don't have ("Cannot destructure property 'env' of 'globalThis.__sveltekit_dev'"). Nor `$app/env`'s
+`dev`: the server's bundle kept it as a value, and with it the switch (found by the check below).
+A production build without the variable has no trace of it: checked, no "Crashed on purpose" or
+`fieldworks:crash` in `.svelte-kit/output`, client or server.
+
+### Types
+
+Kit 3's hook types (`Handle`, `HandleServerError`, `HandleClientError`, `ClientInit`) are exported
+from `@sveltejs/kit/hooks`, not `@sveltejs/kit`: imported from the latter they were `any`, which
+only `svelte-check` noticed (the lint passed).
+
+### Tests
+
+- Unit: `src/tests/unit/lib/errors/classify.spec.ts`, `auto-reset.spec.ts`,
+  `src/tests/unit/lib/server/logs/counts.spec.ts`.
+- Component: `src/tests/unit/lib/errors/error-boundary.svelte.spec.ts` (resets once with a toast,
+  its card when it fails again within 30 s and Try again, again after 30 s with a faked `Date`,
+  never for a refusal, on `online` when offline); `extension-slot.svelte.spec.ts` updated (the log
+  line's name, widgets' unknown failure tried once by itself).
+- Server: `src/tests/unit/lib/errors/server/report.spec.ts` (logged with the session's user and
+  tenant and never the report's, signed out too, refused over its limits, each id once, 20 a
+  minute per session).
+- e2e: `src/tests/e2e/errors.test.ts` (a page that crashes once recovers with a toast; one that
+  keeps crashing shows the error view with its id, Try again and Reload inside the shell; a part
+  that keeps crashing shows its card while the page works, and Try again brings it back).
+
+### Left
+
+- Symbolicating client stacks (hidden source maps and a script), as planned.
+- The slot's chunk-hydration bug is worked around, not reported: worth a note in
+  `docs/upstream-bugs/` with a reproduction (a boundary that throws during hydration misplaces the
+  next siblings of a keyed `{#each}`).
