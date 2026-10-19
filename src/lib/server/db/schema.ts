@@ -847,6 +847,9 @@ export const activity = sqliteTable(
 		index("activity_subject").on(table.organizationId, table.subjectType, table.subjectId),
 		index("activity_parent").on(table.organizationId, table.parentType, table.parentId),
 		index("activity_user").on(table.userId),
+		// The tenant's recent entries (the notifications' window): without it, a tray with fewer
+		// matches than it shows walks the tenant's whole history by id.
+		index("activity_organization_created").on(table.organizationId, table.createdAt),
 	],
 );
 

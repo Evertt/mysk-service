@@ -1,0 +1,1 @@
+CREATE INDEX `activity_organization_created` ON `activity` (`organization_id`,`created_at`);

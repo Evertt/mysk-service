@@ -183,6 +183,13 @@
       "when": 1792409008719,
       "tag": "0025_add-bug-reports",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792410006737,
+      "tag": "0026_add-activity-window-index",
+      "breakpoints": true
     }
   ]
 }
