@@ -1,4 +1,32 @@
+import type { Page } from "playwright";
+
 import { type App, baseURL, homeOf, hydrated, newContext, quiet, signInContext } from "./app.ts";
+
+/**
+ * Opens the engineer portal's header menu (`header-menu.svelte`: the language, theme and mode,
+ * "Report a problem", "View as" and signing out), answering it.
+ */
+export async function openFieldMenu(page: Page) {
+	await page.getByRole("button", { name: "Menu", exact: true }).click();
+	const menu = page.getByRole("menu");
+	await menu.waitFor();
+	return menu;
+}
+
+/**
+ * Signs out of a portal, back to the login page: of the engineer portal from its header menu, of
+ * the customer portal with its header's button.
+ */
+export async function signOutOfPortal(page: Page) {
+	// The phone frame's wrappers are there on any screen (`display: contents` on a phone's).
+	if ((await page.locator("[data-phone-frame]").count()) > 0) {
+		const menu = await openFieldMenu(page);
+		await menu.getByRole("menuitem", { name: "Sign out" }).click();
+	} else {
+		await page.getByRole("button", { name: "Sign out" }).click();
+	}
+	await page.waitForURL((url) => url.pathname === "/login");
+}
 
 /**
  * A page in a browser context of its own, signed in as `email`, with the URLs of the remote

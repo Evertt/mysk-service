@@ -1,12 +1,14 @@
 /**
  * The engineer portal on a desk's screen: shown in a phone (`phone-frame.svelte`), with what's
  * fixed in it (menus, notifications) kept inside the phone's screen; on a phone's screen no frame,
- * the portal is the page. And signing out of the portal.
+ * the portal is the page, its header with room for the engineer's name. And signing out of the
+ * portal, from the header's menu.
  */
 import type { Locator, Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, useApp, users } from "./app.ts";
+import { openFieldMenu, signOutOfPortal } from "./portal-helpers.ts";
 
 const app = useApp({ user: users.engineer });
 
@@ -58,14 +60,17 @@ describe("the engineer portal on a desk's screen", () => {
 
 	test("its menus open inside the phone's screen", async () => {
 		const { page } = app;
-		await page.getByRole("button", { name: /^Language:/ }).click();
-		const menu = page.getByRole("menu");
-		await menu.waitFor();
+		const menu = await openFieldMenu(page);
+		// The language's choices open below their item, over the menu.
+		await menu.getByRole("menuitem", { name: /^Language/ }).click();
+		await page.getByRole("menuitemradio", { name: "Nederlands" }).waitFor();
 		// In the phone's screen, not in <body>, and painted within it.
-		expect(await page.locator("[data-phone-overlays]").getByRole("menu").count()).toBe(1);
-		expect(await inside(menu, screen(page))).toBe(true);
+		const menus = page.locator("[data-phone-overlays]").getByRole("menu");
+		expect(await menus.count()).toBe(2);
+		for (const each of await menus.all()) expect(await inside(each, screen(page))).toBe(true);
 		await page.keyboard.press("Escape");
-		await menu.waitFor({ state: "detached" });
+		await page.keyboard.press("Escape");
+		await expect.poll(() => page.getByRole("menu").count()).toBe(0);
 	});
 
 	test("its notifications show inside the phone's screen", async () => {
@@ -98,11 +103,25 @@ describe("the engineer portal on a desk's screen", () => {
 				),
 			).toBe(true);
 			expect(await fitsWidth(page)).toBe(true);
-			// Its menus are where the trigger is, in the window.
-			await page.getByRole("button", { name: /^Language:/ }).click();
-			const menu = await box(page.getByRole("menu"));
-			expect(menu.x + menu.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+			// The header has room for the engineer's name, whole, beside the bell and the menu (the
+			// record button joins them only while it records).
+			const name = page.locator("header a span.truncate").first();
+			expect(await name.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+				true,
+			);
+			expect(await page.locator("header button").count()).toBe(2);
+			// Its menus are where the trigger is, in the window, the language's choices too.
+			const menu = await openFieldMenu(page);
+			await menu.getByRole("menuitem", { name: /^Language/ }).click();
+			await page.getByRole("menuitemradio", { name: "Nederlands" }).waitFor();
+			for (const each of await page.getByRole("menu").all()) {
+				const { x, width } = await box(each);
+				expect(x).toBeGreaterThanOrEqual(0);
+				expect(x + width).toBeLessThanOrEqual(page.viewportSize()!.width);
+			}
 			await page.keyboard.press("Escape");
+			await page.keyboard.press("Escape");
+			await expect.poll(() => page.getByRole("menu").count()).toBe(0);
 		});
 		// And back in the phone on the desk's screen.
 		await page.locator("[data-phone-screen]").evaluate((element) => {
@@ -115,8 +134,7 @@ describe("signing out of the engineer portal", () => {
 	test("lands on the login page, without errors", async () => {
 		const { page } = app;
 		await app.go("/my");
-		await page.getByRole("button", { name: "Sign out" }).click();
-		await page.waitForURL((url) => url.pathname === "/login");
+		await signOutOfPortal(page);
 		await page.getByRole("button", { name: "Sign in" }).waitFor();
 		await app.go("/my");
 		expect(app.path()).toBe("/login");

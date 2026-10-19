@@ -146,7 +146,10 @@ reports from the ops page (a follow-up, when there are enough of them).
 - **The button**: closing the popover without a choice keeps the recording (the button shows a send
   icon that opens it again) rather than discarding it. Sending that fails leaves it there to send
   again. In the engineer portal it's `compact`: only the dot while it records, without the time
-  (still in its label), as that header, with the notification bell, is full on a phone.
+  (still in its label), as that header, with the notification bell, is full on a phone. And
+  `whileActive`: while idle it's not in that header but in its menu, as "Report a problem"
+  (`bug-report-menu-item.svelte`, `start.ts`), and it's back in the header from the start of a
+  recording until it's sent or discarded.
 - **Console**: the plugin with `level: ["error", "warn"]`, which already listens for the window's
   `error` and `unhandledrejection` itself: no listeners of our own.
 - **Requests** are rrweb custom events (`tag: "request"`), so they're in the recording with their

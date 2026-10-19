@@ -116,7 +116,8 @@ with her password). They sign in through better-auth with the demo password, lik
 session and its organization (SHLTR) are the same as after typing it. The browser sends only the
 role's name; the server maps it to its fixed account and refuses one that isn't there, isn't in
 SHLTR or hasn't the role (`src/routes/demo.remote.ts`, `demo-accounts.server.ts`). Once in, the
-user menus (the office's, and a button in each portal's header) have **View as** with the same
+user menus (the office's, the engineer portal's header menu, and a button in the customer portal's
+header) have **View as** with the same
 three roles, the current one checked, to switch without signing out: it signs in as the role
 chosen and then ends the old session (its row deleted), in one request, to that role's home; if the
 sign-in fails (a demo password was changed), it answers 404 and the old session stays. It's there
