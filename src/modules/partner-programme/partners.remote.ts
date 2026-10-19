@@ -6,6 +6,7 @@
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { customerCode } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -17,7 +18,7 @@ import { acceptPartner as accept, customerByCode, figuresOf, today } from "./ser
 import { rulesFor } from "./server/rules.ts";
 import { addEntry, walletOf } from "./server/wallet.ts";
 
-const code = v.pipe(v.string(), v.nonEmpty(), v.maxLength(64));
+const code = customerCode();
 
 /**
  * The customer's place in the programme: whether it's a partner (and since when), this year's

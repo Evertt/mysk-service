@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import {
 	cents,
+	customerCode,
 	date,
 	email,
 	id,
@@ -54,6 +55,16 @@ describe("recordId", () => {
 
 	test.each([0, -1, 1.5, "1", null])("refuses %j", (input) => {
 		expect(parse(recordId(), input)).toHaveProperty("issue");
+	});
+});
+
+describe("customerCode", () => {
+	test("is a customer's code", () => {
+		expect(parse(customerCode(), "C-00042")).toEqual({ value: "C-00042" });
+	});
+
+	test.each(["", "C".repeat(65), 42])("refuses %j", (input) => {
+		expect(parse(customerCode(), input)).toHaveProperty("issue");
 	});
 });
 

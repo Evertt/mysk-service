@@ -1,7 +1,7 @@
 /** The dock form's fields (the customer page's card): a dock at one of the customer's sites. */
 import * as v from "valibot";
 
-import { id, optionalId, optionalText, textMax } from "#lib/schema.ts";
+import { customerCode, id, optionalId, optionalText, textMax } from "#lib/schema.ts";
 
 import { dockCodePattern } from "../model.ts";
 
@@ -27,7 +27,7 @@ const dockFields = {
 
 /** A dock as the form submits it, for the customer `customer` (its code); with `dockId` when edited. */
 export const dockSchema = v.object({
-	customer: v.pipe(v.string(), v.nonEmpty(), v.maxLength(64)),
+	customer: customerCode(),
 	// The dock edited; none for a new one. (Not `id`: a remote form's `.for()` key takes that name.)
 	dockId: v.optional(optionalId(), ""),
 	...dockFields,

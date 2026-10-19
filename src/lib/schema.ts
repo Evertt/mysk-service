@@ -43,6 +43,9 @@ export const optionalId = (message: Message = m.validation_choose_one) =>
  */
 export const recordId = () => v.pipe(v.number(), v.integer(), v.minValue(1));
 
+/** A customer's code, as a query or command takes it (e.g. from the customer page's URL). */
+export const customerCode = () => v.pipe(v.string(), v.nonEmpty(), v.maxLength(64));
+
 /** A required, trimmed text. */
 export const text = (message: Message = m.validation_required) =>
 	v.pipe(v.string(), v.trim(), v.nonEmpty(message));
