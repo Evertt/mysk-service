@@ -50,14 +50,15 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
   `.remote.ts` may only export remote functions) go in a `*.server.ts` next to them, which SvelteKit
   keeps out of client bundles.
 - **Generic, domain-free code** (UI kit, data table, forms, themes, activity subjects, auth,
-  i18n, module manifests, extension point declarations): `src/lib/components/`, `src/lib/activity/`,
-  `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`, `src/lib/extensions/`, `src/lib/themes/`;
+  i18n, module manifests, extension point declarations, errors and their boundary):
+  `src/lib/components/`, `src/lib/activity/`, `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`,
+  `src/lib/extensions/`, `src/lib/themes/`, `src/lib/errors/`;
   the loose `src/lib/*.ts` that remain are domain enums (`models.ts`), valibot blocks
   (`schema.ts`), the time zone and Temporal's transport (`dates.ts`), code shapes (`numbering.ts`), what's billed besides
   orders (`billing.ts`, types the seed shares with invoicing) and shadcn's `cn` (`utils.ts`).
   Infrastructure on the server (database, auth, activity log, list plans and bulk helpers, mail,
-  the modules' route guards): `src/lib/server/db/`, `server/auth/`, `server/activity/`,
-  `server/lists/`, `server/mail/`, `server/modules/`; the loose `src/lib/server/*.ts` that remain
+  the modules' route guards, the structured log lines): `src/lib/server/db/`, `server/auth/`,
+  `server/activity/`, `server/lists/`, `server/mail/`, `server/modules/`, `server/logs/`; the loose `src/lib/server/*.ts` that remain
   are `extensions.ts` (the hooks' dispatch), `forms.ts`, `records.ts` and `numbering.ts`.
 - **An optional module** (something a tenant can switch off, like contracts and invoices): everything of it in `src/modules/<id>/`, whoever uses it, see `modules.md`. Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder. Core code never imports from `src/modules/`.
 

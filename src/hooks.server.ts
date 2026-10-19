@@ -3,7 +3,7 @@ import "temporal-polyfill/global";
 import { building } from "$app/env";
 import { DEV_REMOTE_DELAY_MS } from "$app/env/private";
 import { redirect } from "@sveltejs/kit";
-import { type Handle, sequence } from "@sveltejs/kit/hooks";
+import { type Handle, type HandleServerError, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
 import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
@@ -13,6 +13,8 @@ import { m } from "#lib/paraglide/messages.js";
 import { getTextDirection } from "#lib/paraglide/runtime.js";
 import { paraglideMiddleware } from "#lib/paraglide/server.js";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
+import { logServerError } from "#lib/server/logs/log.ts";
+import { handleTiming } from "#lib/server/logs/timing.ts";
 import { handleTimeZone } from "#lib/server/time-zone.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
 
@@ -181,7 +183,9 @@ const handleGuard: Handle = ({ event, resolve }) => {
 };
 
 // The guard runs after `handleBetterAuth`, which sets `locals.user` and answers /api/auth itself.
+// The timing first, so that its line covers the whole request.
 export const handle: Handle = sequence(
+	handleTiming,
 	delayRemoteCalls,
 	handleParaglide,
 	handleTimeZone,
@@ -190,3 +194,17 @@ export const handle: Handle = sequence(
 	handleBetterAuth,
 	handleGuard,
 );
+
+/**
+ * Every error the server catches gets an id, which the error pages show for quoting
+ * (`App.Error.errorId`). Those that are bugs (unknown errors, and any 5xx) are logged as one
+ * structured line with it (`#lib/server/logs/log.ts`), which Workers Logs finds by `errorId`. The
+ * refusals (`error(404)`, a 403, a remote function's invalid argument) aren't: they're the app
+ * working. An unknown error's message stays SvelteKit's generic one.
+ */
+export const handleError: HandleServerError = ({ kind, error, event }) => {
+	const errorId = crypto.randomUUID();
+	const status = kind === "unknown" ? 500 : error.status;
+	if (status >= 500) logServerError(event, { errorId, status, error });
+	return { errorId };
+};

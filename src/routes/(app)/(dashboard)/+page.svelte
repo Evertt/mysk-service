@@ -21,6 +21,8 @@
 	import { cards, stats } from "#lib/dashboard/extensions.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { EngineerLink } from "#lib/engineers/components.ts";
+	import CrashSwitch from "#lib/errors/crash-switch.svelte";
+	import { crashSwitches } from "#lib/errors/crash-switch.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
@@ -75,6 +77,11 @@
 <svelte:head>
 	<title>{m.dashboard_title()}</title>
 </svelte:head>
+
+{#if crashSwitches}
+	<!-- A test switch (e2e and dev only): the page crashes when a test asks. -->
+	<CrashSwitch where="page:dashboard" />
+{/if}
 
 <div class="flex flex-col gap-1">
 	<h1 class="text-2xl font-semibold tracking-tight">{greeting}</h1>

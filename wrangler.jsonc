@@ -21,7 +21,14 @@
 	// simulations' tick, every 15 minutes: `scheduled()` in `cloudflare/entry.ts`. They need the
 	// `OPS_TOKEN` secret.
 	"triggers": { "crons": ["0 4 * * *", "*/15 * * * *"] },
-	"observability": { "enabled": true },
+	// Workers Logs (the app's JSON lines, see "Reading the logs" in README.md, and a line per
+	// invocation) and Cloudflare's automatic traces. `env.staging` inherits it (wrangler's
+	// `observability` is inheritable, unlike bindings and vars).
+	"observability": {
+		"enabled": true,
+		"logs": { "enabled": true, "invocation_logs": true },
+		"traces": { "enabled": true },
+	},
 	"env": {
 		// Staging, the deploy of `develop` (`wrangler deploy --env staging`, from CI): a Worker of its
 		// own, `fieldworks-staging`, with its own Durable Object and so its own database, which CI fills
@@ -33,8 +40,13 @@
 			// `wrangler r2 bucket create fieldworks-staging-bug-reports`.
 			"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-staging-bug-reports" }],
 			// `DEMO_SIGN_IN`: the login page's one-click demo sign-in (README "Demo login"), passwordless,
-			// so here only, never in the top-level vars above (production).
-			"vars": { "ORIGIN": "https://fieldworks-staging.devign.workers.dev", "DEMO_SIGN_IN": "true" },
+			// so here only, never in the top-level vars above (production). `TIMING_LOGS`: a timing line
+			// per request (`src/lib/server/logs/timing.ts`), here only, so production's log volume stays known.
+			"vars": {
+				"ORIGIN": "https://fieldworks-staging.devign.workers.dev",
+				"DEMO_SIGN_IN": "true",
+				"TIMING_LOGS": "1",
+			},
 			"triggers": { "crons": ["0 4 * * *", "*/15 * * * *"] },
 		},
 	},

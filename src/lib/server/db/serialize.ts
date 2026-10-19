@@ -4,6 +4,8 @@ import type { Client } from "@libsql/client";
 import type { DrizzleConfig } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
+import { timedTransaction } from "#lib/server/logs/counts.ts";
+
 /**
  * Runs database work one piece at a time. SQLite has one writer at a time, and libsql runs a local
  * database synchronously: a transaction holds the write lock on a connection of its own while it
@@ -81,8 +83,9 @@ export function drizzleQueued<TSchema extends Record<string, unknown> = Record<s
 			// Inside another transaction's work, the callbacks join its list.
 			if (pendingCallbacks.getStore()) return queue.run(() => transaction(work, options));
 			const pending: Callback[] = [];
+			// Counted for the request's timing line (`TIMING_LOGS`), its wait in the queue included.
 			const result = await pendingCallbacks.run(pending, () =>
-				queue.run(() => transaction(work, options)),
+				timedTransaction(() => queue.run(() => transaction(work, options))),
 			);
 			for (const callback of pending) await runCallback(callback);
 			return result;

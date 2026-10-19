@@ -30,7 +30,7 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   engineer portal (`(field)/my`) and customer portal (`(customer)/portal`), which belong to no
   domain.
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
-  `themes/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
+  `themes/`, `errors/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
   server-only: database code and secrets go there.
 - A file sits in the nearest folder that holds all its users; move it when its users move.
 - Outside a domain, import it through its **barrels** (`#lib/orders/index.ts`, `components.ts`,

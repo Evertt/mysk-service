@@ -321,3 +321,37 @@ on the first deploy; its ops token anew on every deploy, used only by CI.
 Cloudflare keeps 30 days of the object's history (point-in-time recovery). Mail: `SMTP_URL` sends
 through nodemailer, which is untested on Workers; without it, mail is logged
 (`wrangler tail`).
+
+#### Reading the logs
+
+Workers Logs keeps what the Worker logs (`observability` in `wrangler.jsonc`, both environments),
+and indexes the fields of a line that is a JSON object. The app logs two kinds
+(`src/lib/server/logs/`), each with the app's `version`:
+
+- `type = "error"`: an error the server caught (`side = "server"`, from `handleError` in
+  `src/hooks.server.ts`: unknown errors and 5xx, not refusals such as a 404) or one a browser
+  reported (`side = "client"`, `reportClientError`, with its `source`: `hook`,
+  `boundary:<name>`, `error` or `unhandledrejection`). Both carry the `errorId` the user was shown
+  ("Quote this code when you report it"), `message`, `stack`, `route`, the path (`url` on the
+  server, `path` from the browser, without the query), the `remote` function (server), and the
+  `userId` and `organizationId` of the session. Browser stacks are minified.
+- `type = "timing"` (only with `TIMING_LOGS=1`, which staging has): one line per request with
+  `route`, `url`, `remote`, `method`, `status`, `ms` (wall time), `transactions.count` and
+  `transactions.ms` (the database's transactions: on Cloudflare each holds every other request of
+  the Durable Object until it's done) and `queries` (statements); and one per live query when its
+  stream closes (`live = true`, `ms` open). A Worker's clocks only move at I/O, so `ms` there is a
+  lower bound; the counts are exact.
+
+In the dashboard: Workers & Pages → the Worker → Observability → Events, with the query builder:
+
+- **An error someone quotes**: filter `errorId` = the id. A client line and the server's own share
+  it when the error came from the server.
+- **The slowest remote functions**: filter `type` = `timing` and `remote` exists; group by
+  `remote`; visualise P95 (or max) of `ms`, or of `transactions.ms`.
+- **Requests that held up others**: filter `type` = `timing` and `transactions.count` > 0; sort by
+  `transactions.ms`. Many `queries` in one request is a lead too.
+- **Errors by kind**: filter `type` = `error`; group by `side`, `route` or `remote`.
+
+`wrangler tail --format json` (add `--env staging`) shows the same lines live. Cloudflare's own
+invocation logs and traces (each request, with its CPU and wall time, and the object's storage
+calls) are under the same Observability tab.

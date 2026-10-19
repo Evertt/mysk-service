@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	BUG_REPORTS: R2Bucket;
 	ASSETS: Fetcher;
 	DEMO_SIGN_IN?: "true";
+	TIMING_LOGS?: "1";
 	BETTER_AUTH_SECRET: string;
 	OPS_TOKEN: string;
 	ORIGIN: string;
@@ -19,6 +20,7 @@ declare namespace Cloudflare {
 		BUG_REPORTS: R2Bucket;
 		ASSETS: Fetcher;
 		DEMO_SIGN_IN: "true";
+		TIMING_LOGS: "1";
 		BETTER_AUTH_SECRET: string;
 		OPS_TOKEN: string;
 		ORIGIN: string;
@@ -31,7 +33,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "DEMO_SIGN_IN" | "BETTER_AUTH_SECRET" | "OPS_TOKEN" | "ORIGIN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "DEMO_SIGN_IN" | "TIMING_LOGS" | "BETTER_AUTH_SECRET" | "OPS_TOKEN" | "ORIGIN">> {}
 }
 declare module "*.sql" {
 	const value: string;

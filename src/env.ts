@@ -72,6 +72,11 @@ export const variables = defineEnvVars({
 			"Optional, not on Cloudflare (whose bug reports go to the `BUG_REPORTS` R2 bucket). The folder the recorded bug reports are stored in; `.bug-reports` by default.",
 		schema: (value) => value || ".bug-reports",
 	},
+	TIMING_LOGS: {
+		description:
+			"Optional. `1` logs a `timing` line per request (its time, transactions and statements) and per live query when it closes, as JSON (`src/lib/server/logs/timing.ts`). On in staging (`wrangler.jsonc`), off unless set.",
+		schema: (value) => value === "1",
+	},
 	DEV_REMOTE_DELAY_MS: {
 		description:
 			"Optional, in development only. Milliseconds to hold up each remote function call, to try navigations under a slow server.",

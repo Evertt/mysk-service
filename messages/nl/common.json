@@ -290,5 +290,21 @@
 	"common_notifications_category_assigned": "Aan jou toegewezen",
 	"common_notifications_category_planned": "Ingepland of verplaatst",
 	"common_notifications_category_unassigned": "Van je afgehaald",
-	"common_notifications_category_cancelled": "Geannuleerd"
+	"common_notifications_category_cancelled": "Geannuleerd",
+	"common_error_reset_toast": "Er ging iets mis, dus het is opnieuw geladen.",
+	"common_error_no_access": "Geen toegang",
+	"common_error_no_access_description": "Je hebt hier geen toegang toe.",
+	"common_error_gone": "Dit bestaat niet (meer).",
+	"common_error_signed_out": "Je bent afgemeld",
+	"common_error_signed_out_description": "Log opnieuw in om verder te gaan.",
+	"common_error_offline": "Je bent offline",
+	"common_error_offline_description": "Zodra je weer online bent, probeert dit het vanzelf opnieuw.",
+	"common_error_updated": "De app is bijgewerkt",
+	"common_error_updated_description": "Laad de pagina opnieuw om de nieuwe versie te gebruiken.",
+	"common_error_unknown_description": "Probeer het opnieuw, of laad de pagina opnieuw.",
+	"common_error_id": "Noem deze code als je het meldt:",
+	"common_error_part": "Dit onderdeel kon niet worden getoond.",
+	"common_reload": "Opnieuw laden",
+	"common_back": "Terug",
+	"common_sign_in": "Inloggen"
 }

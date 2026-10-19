@@ -290,5 +290,21 @@
 	"common_notifications_category_assigned": "Assigned to you",
 	"common_notifications_category_planned": "Planned or moved",
 	"common_notifications_category_unassigned": "Taken off you",
-	"common_notifications_category_cancelled": "Cancelled"
+	"common_notifications_category_cancelled": "Cancelled",
+	"common_error_reset_toast": "Something went wrong, so it was loaded again.",
+	"common_error_no_access": "No access",
+	"common_error_no_access_description": "You don't have access to this.",
+	"common_error_gone": "This doesn't exist (anymore).",
+	"common_error_signed_out": "You've been signed out",
+	"common_error_signed_out_description": "Sign in again to carry on.",
+	"common_error_offline": "You're offline",
+	"common_error_offline_description": "This tries again by itself once you're back online.",
+	"common_error_updated": "The app was updated",
+	"common_error_updated_description": "Reload the page to use the new version.",
+	"common_error_unknown_description": "Try again, or reload the page.",
+	"common_error_id": "Quote this code when you report it:",
+	"common_error_part": "This part couldn't be shown.",
+	"common_reload": "Reload",
+	"common_back": "Back",
+	"common_sign_in": "Sign in"
 }

@@ -15,6 +15,7 @@ import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { type Change, changedAt, watchChanges, watchSubject } from "#lib/server/changes.ts";
 import { inThisRequest } from "#lib/server/db/index.ts";
+import { timeLiveStream } from "#lib/server/logs/timing.ts";
 
 /** What a live query watches: records of some types, or one record. */
 type Watched = readonly ChangeType[] | { type: LoggedType; id: string | number };
@@ -42,7 +43,10 @@ export function live(
 		"type" in watched
 			? watchSubject(organizationId, { type: watched.type, id: String(watched.id) })
 			: watchChanges(organizationId, watched);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
+	const event = getRequestEvent();
+	event.request.signal.addEventListener("abort", changes.stop, { once: true });
+	// How long the stream was open, with `TIMING_LOGS` (`#lib/server/logs/timing.ts`).
+	const closed = timeLiveStream(event);
 	const again = inThisRequest();
 	const respond = answer ?? (() => changedAt(organizationId, watched as readonly ChangeType[]));
 	return (async function* () {
@@ -51,6 +55,7 @@ export function live(
 			for await (const change of changes) yield await again(() => respond(change));
 		} finally {
 			changes.stop();
+			closed();
 		}
 	})();
 }
