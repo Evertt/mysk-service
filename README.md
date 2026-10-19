@@ -356,7 +356,10 @@ and indexes the fields of a line that is a JSON object. The app logs two kinds
   `boundary:<name>`, `error` or `unhandledrejection`). Both carry the `errorId` the user was shown
   ("Quote this code when you report it"), `message`, `stack`, `route`, the path (`url` on the
   server, `path` from the browser, without the query), the `remote` function (server), and the
-  `userId` and `organizationId` of the session. Browser stacks are minified.
+  `userId` and `organizationId` of the session. Browser stacks are minified. A server error with
+  a cause also has `causes`, outermost first: each one's `message`, and its `code` from SQLite
+  (`SQLITE_BUSY`) where it has one, since drizzle's "Failed query" error keeps the driver's error
+  there.
 - `type = "timing"` (only with `TIMING_LOGS=1`, which staging has): one line per request with
   `route`, `url`, `remote`, `method`, `status`, `ms` (wall time), `transactions.count` and
   `transactions.ms` (the database's transactions: on Cloudflare each holds every other request of

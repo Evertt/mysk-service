@@ -56,7 +56,31 @@ export function requestFields(event: RequestEvent) {
 	};
 }
 
-/** Logs an error the server caught, with its id (see `handleError`). */
+/**
+ * What `error` was caused by, outermost first: each cause's message, and the database's code where
+ * it has one (`SQLITE_BUSY`; drizzle's "Failed query" error has the driver's error as its cause).
+ * `undefined` without a cause.
+ */
+function causesOf(error: unknown) {
+	const causes: { message: string; code?: string }[] = [];
+	const seen = new Set<unknown>([error]);
+	let cause = error instanceof Error ? error.cause : undefined;
+	while (cause !== undefined && !seen.has(cause)) {
+		seen.add(cause);
+		if (!(cause instanceof Error)) {
+			const text = typeof cause === "string" ? cause : readable(() => JSON.stringify(cause));
+			causes.push({ message: text ?? typeof cause });
+			break;
+		}
+		const { code, extendedCode } = cause as { code?: unknown; extendedCode?: unknown };
+		const sqlite = [extendedCode, code].find((value) => typeof value === "string");
+		causes.push(sqlite ? { message: cause.message, code: sqlite } : { message: cause.message });
+		cause = cause.cause;
+	}
+	return causes.length ? causes : undefined;
+}
+
+/** Logs an error the server caught, with its id and its causes (see `handleError`). */
 export function logServerError(
 	event: RequestEvent,
 	{ errorId, status, error }: { errorId: string; status: number; error: unknown },
@@ -68,6 +92,7 @@ export function logServerError(
 		status,
 		message: error instanceof Error ? error.message : String(error),
 		stack: error instanceof Error ? error.stack : undefined,
+		causes: causesOf(error),
 		...requestFields(event),
 	});
 }
