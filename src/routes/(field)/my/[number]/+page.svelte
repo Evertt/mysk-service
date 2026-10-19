@@ -121,7 +121,7 @@
 							<div class="flex min-w-0 flex-col">
 								<span class="font-medium">{unitTitle(unit)}</span>
 								<span class="text-muted-foreground">
-									{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category.name]
+									{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category]
 										.filter(Boolean)
 										.join(" · ")}
 								</span>
