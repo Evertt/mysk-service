@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
 
 	import { cancelInvitation, getMembers, resendInvitation } from "./members.remote.ts";
@@ -61,7 +62,7 @@
 								<div class="flex justify-end gap-2">
 									<form
 										{...resend.enhance(async ({ submit }) => {
-											if (await submit())
+											if (await submitted(submit))
 												toast.success(m.settings_sent_again({ email: invitation.email }));
 										})}
 									>
@@ -72,7 +73,7 @@
 									</form>
 									<form
 										{...cancel.enhance(async ({ submit }) => {
-											if (await submit())
+											if (await submitted(submit))
 												toast.success(m.settings_invitation_cancelled({ email: invitation.email }));
 										})}
 									>

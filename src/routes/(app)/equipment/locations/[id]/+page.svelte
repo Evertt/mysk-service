@@ -8,6 +8,7 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import {
 		StatusBadge as EquipmentStatusBadge,
@@ -17,7 +18,6 @@
 	} from "#lib/equipment/components.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { deleteLocation, getLocation } from "#lib/equipment/remotes.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import type { PageProps } from "./$types";
 
@@ -160,14 +160,10 @@
 		</AlertDialog.Header>
 		<form
 			{...remove.enhance(async ({ submit }) => {
-				try {
-					if (!(await submit())) return;
-					deleting = false;
-					toast.success(m.equipment_location_deleted());
-					await goto(customerHref);
-				} catch (error) {
-					toast.error(errorMessage(error, m.common_error_generic()));
-				}
+				if (!(await submitted(submit))) return;
+				deleting = false;
+				toast.success(m.equipment_location_deleted());
+				await goto(customerHref);
 			})}
 		>
 			<input {...remove.fields.id.as("hidden", String(location.id))} />

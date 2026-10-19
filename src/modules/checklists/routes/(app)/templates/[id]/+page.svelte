@@ -9,8 +9,8 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { errorMessage } from "#lib/utils.ts";
 	import CategoriesCard from "#modules/checklists/detail/categories-card.svelte";
 	import PointsCard from "#modules/checklists/detail/points-card.svelte";
 	import TemplateDialog from "#modules/checklists/form/template-dialog.svelte";
@@ -63,11 +63,7 @@
 		{:else if data.canManage}
 			<form
 				{...restoreForm.enhance(async ({ submit }) => {
-					try {
-						if (await submit()) toast.success(m.checklists_restored());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (await submitted(submit)) toast.success(m.checklists_restored());
 				})}
 			>
 				<input {...restoreForm.fields.id.as("hidden", String(template.id))} />
@@ -111,13 +107,9 @@
 			</AlertDialog.Header>
 			<form
 				{...retireForm.enhance(async ({ submit }) => {
-					try {
-						if (!(await submit())) return;
-						retiring = false;
-						toast.success(m.checklists_retired_toast());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (!(await submitted(submit))) return;
+					retiring = false;
+					toast.success(m.checklists_retired_toast());
 				})}
 			>
 				<input {...retireForm.fields.id.as("hidden", String(template.id))} />

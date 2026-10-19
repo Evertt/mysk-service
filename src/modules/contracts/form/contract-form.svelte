@@ -12,6 +12,7 @@
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
@@ -79,7 +80,8 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the contract; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(contract ? m.contracts_saved() : m.contracts_created_toast());
+		if (await submitted(submit))
+			toast.success(contract ? m.contracts_saved() : m.contracts_created_toast());
 	})}
 	class="flex flex-col gap-6"
 >

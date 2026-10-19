@@ -11,6 +11,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 	import { errorMessage } from "#lib/utils.ts";
@@ -118,13 +119,9 @@
 			</AlertDialog.Header>
 			<form
 				{...remove.enhance(async ({ submit }) => {
-					try {
-						if (!(await submit())) return;
-						deleting = false;
-						toast.success(m.maintenance_plan_deleted());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (!(await submitted(submit))) return;
+					deleting = false;
+					toast.success(m.maintenance_plan_deleted());
 				})}
 			>
 				<input {...remove.fields.id.as("hidden", String(plan.id))} />

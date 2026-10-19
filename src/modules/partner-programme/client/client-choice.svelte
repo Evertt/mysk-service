@@ -8,6 +8,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { partnerLabels } from "../labels.ts";
@@ -86,7 +87,7 @@
 		<form
 			{...form.enhance(async ({ submit }) => {
 				const chosen = label;
-				if (await submit()) {
+				if (await submitted(submit)) {
 					confirming = false;
 					toast.success(m.partners_chosen({ form: chosen }));
 				}

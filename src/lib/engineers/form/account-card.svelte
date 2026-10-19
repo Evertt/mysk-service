@@ -9,6 +9,7 @@
 	import { parseRoles } from "#lib/auth/index.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { labelOrValue } from "#lib/i18n/index.ts";
 
 	import { getEngineerAccount, linkEngineerAccount } from "./account.remote.ts";
@@ -34,7 +35,7 @@
 		<Card.Content>
 			<form
 				{...linkEngineerAccount.enhance(async ({ submit }) => {
-					if (await submit()) toast.success(m.engineers_account_saved());
+					if (await submitted(submit)) toast.success(m.engineers_account_saved());
 				})}
 				class="flex flex-col gap-4"
 			>

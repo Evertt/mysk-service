@@ -8,6 +8,7 @@
 
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
@@ -73,7 +74,7 @@
 {#if actions.start}
 	<form
 		{...startWork.enhance(async ({ submit }) => {
-			if (await submit()) toast.success(m.portal_job_started());
+			if (await submitted(submit)) toast.success(m.portal_job_started());
 		})}
 	>
 		<input {...startWork.fields.id.as("hidden", String(order.id))} />

@@ -7,6 +7,7 @@
 
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { logHours } from "../portal.remote.ts";
 
@@ -15,7 +16,7 @@
 
 <form
 	{...logHours.enhance(async ({ submit }) => {
-		if (await submit()) toast.success(m.portal_hours_saved());
+		if (await submitted(submit)) toast.success(m.portal_hours_saved());
 	})}
 	class="flex flex-col gap-2"
 >

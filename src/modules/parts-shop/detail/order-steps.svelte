@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
 
 	import { shopLabels } from "../labels.ts";
@@ -30,7 +31,7 @@
 			<form
 				{...form.enhance(async ({ submit }) => {
 					const next = statusAfter(status, step);
-					if ((await submit()) && next) {
+					if ((await submitted(submit)) && next) {
 						toast.success(
 							m.shop_step_done({ number, status: shopLabels.label("shopOrderStatus", next) }),
 						);
@@ -64,7 +65,7 @@
 		</AlertDialog.Header>
 		<form
 			{...cancel.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					cancelling = false;
 					toast.success(m.shop_cancelled({ number }));
 				}

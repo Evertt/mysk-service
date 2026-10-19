@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
 	import type { CreditNoteStatus } from "#modules/invoices/api/credit-notes.server.ts";
 
@@ -45,7 +46,7 @@
 {:else if canManage}
 	<form
 		{...form.enhance(async ({ submit }) => {
-			if (await submit()) toast.success(m.partners_credit_note_created());
+			if (await submitted(submit)) toast.success(m.partners_credit_note_created());
 		})}
 		class="flex flex-col gap-2"
 	>

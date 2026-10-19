@@ -8,6 +8,7 @@
 
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
@@ -61,7 +62,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (!(await submit().updates(getSchedule(week)))) return;
+				if (!(await submitted(() => submit().updates(getSchedule(week))))) return;
 				const day = parseDay(form.fields.day.value());
 				toast.success(
 					day

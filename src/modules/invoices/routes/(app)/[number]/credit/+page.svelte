@@ -4,6 +4,7 @@
 	import { toast } from "svelte-sonner";
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents } from "#lib/i18n/index.ts";
@@ -39,7 +40,7 @@
 	<form
 		{...createInvoiceCredit.enhance(async ({ submit }) => {
 			// On success the server redirects to the draft; otherwise the form shows what's wrong.
-			if (await submit()) toast.success(m.invoices_credit_created());
+			if (await submitted(submit)) toast.success(m.invoices_credit_created());
 		})}
 		class="flex flex-col gap-6"
 	>

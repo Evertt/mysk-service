@@ -9,8 +9,8 @@
 
 	import FormField from "#lib/components/form/form-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import { createPoint, savePoint } from "../templates.remote.ts";
 
@@ -46,12 +46,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ element, submit }) => {
-				try {
-					if (!(await submit())) return;
-				} catch (error) {
-					toast.error(errorMessage(error, m.common_error_generic()));
-					return;
-				}
+				if (!(await submitted(submit))) return;
 				open = false;
 				if (!point) element.reset();
 				toast.success(m.checklists_point_saved());

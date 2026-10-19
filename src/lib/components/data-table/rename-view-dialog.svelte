@@ -5,6 +5,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { renameView, type TableView } from "./views.remote.ts";
@@ -21,7 +22,7 @@
 		</Dialog.Header>
 		<form
 			{...rename.enhance(async (form) => {
-				if (await form.submit()) {
+				if (await submitted(form.submit)) {
 					open = false;
 					toast.success(m.common_views_renamed());
 				}

@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
 	import type { RejectedPoint } from "#modules/checklists/api/extensions.ts";
 
@@ -63,7 +64,11 @@
 						<form
 							{...form.enhance(async ({ submit }) => {
 								// The order and the modules' cards are the server's to refresh; this card's stock too.
-								if (await submit().updates(getSuggestedParts({ number, ids, articles })))
+								if (
+									await submitted(() =>
+										submit().updates(getSuggestedParts({ number, ids, articles })),
+									)
+								)
 									toast.success(m.shop_suggested_added({ name: part.name, number }));
 							})}
 						>

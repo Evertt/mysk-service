@@ -9,11 +9,11 @@
 
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { label, languageNames, standardLabel } from "#lib/i18n/index.ts";
 	import type { OrderType } from "#lib/models.ts";
 	import { locales } from "#lib/paraglide/runtime.js";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import { saveOrderType } from "./type-settings.remote.ts";
 
@@ -43,12 +43,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				try {
-					if (!(await submit())) return;
-				} catch (error) {
-					toast.error(errorMessage(error, m.common_error_generic()));
-					return;
-				}
+				if (!(await submitted(submit))) return;
 				open = false;
 				toast.success(m.orders_types_saved());
 			})}

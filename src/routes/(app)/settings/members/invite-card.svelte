@@ -10,6 +10,7 @@
 	import { INVITATION_EXPIRES_IN, type MemberRole } from "#lib/auth/index.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatNumber, label as roleLabel } from "#lib/i18n/index.ts";
 
@@ -38,7 +39,7 @@
 	<Card.Content>
 		<form
 			{...invite.enhance(async ({ element, submit }) => {
-				if (!(await submit())) return;
+				if (!(await submitted(submit))) return;
 				toast.success(m.settings_invitation_sent({ email: invite.result?.email ?? "" }));
 				element.reset();
 			})}

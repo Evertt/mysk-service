@@ -6,6 +6,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
@@ -34,7 +35,7 @@
 {#if settings.canManage}
 	<form
 		{...saveSettings.enhance(async ({ submit }) => {
-			if (await submit()) toast.success(m.invoices_settings_saved());
+			if (await submitted(submit)) toast.success(m.invoices_settings_saved());
 		})}
 		class="flex max-w-2xl flex-col gap-6"
 	>

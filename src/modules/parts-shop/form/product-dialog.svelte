@@ -11,6 +11,7 @@
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import type { Checkpoint } from "../api/extensions.ts";
@@ -60,7 +61,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(m.shop_product_saved({ sku: material.sku }));
 				}

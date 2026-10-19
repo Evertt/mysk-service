@@ -10,7 +10,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { saveTemplateCategories } from "../templates.remote.ts";
 
@@ -45,11 +45,7 @@
 		{#if canChange}
 			<form
 				{...form.enhance(async ({ submit }) => {
-					try {
-						if (await submit()) toast.success(m.checklists_categories_saved());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (await submitted(submit)) toast.success(m.checklists_categories_saved());
 				})}
 				class="flex flex-col gap-4"
 			>
