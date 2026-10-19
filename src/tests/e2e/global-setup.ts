@@ -52,6 +52,15 @@ const dev = !!process.env.E2E_DEV;
 /** The token the servers take to start the daily jobs (`CRON_SECRET`, see `jobs.ts`). */
 export const cronSecret = "e2e-cron-secret";
 
+/** Where the servers mail bug reports (`BUG_REPORT_EMAIL`). */
+export const bugReportEmail = "bugs@fieldworks.test";
+
+/** The developer who may open the bug reports (`DEVELOPER_EMAILS`): SHLTR's owner. */
+export const developerEmail = demoUsers[3].email;
+
+/** The folder a server with `outbox` keeps its bug reports' recordings in (`BUG_REPORTS_DIR`). */
+export const bugReportsFolder = (outbox: string) => `${outbox}-bug-reports`;
+
 /**
  * The process groups of the servers that may still be running. Each is a `vp` process and the
  * Vite process it starts, which outlives `vp` (a SIGTERM ends `vp` at once, while Vite closes).
@@ -109,6 +118,9 @@ export async function startServer(
 				ORIGIN: baseURL,
 				MAIL_OUTBOX: outbox,
 				CRON_SECRET: cronSecret,
+				BUG_REPORT_EMAIL: bugReportEmail,
+				DEVELOPER_EMAILS: developerEmail,
+				BUG_REPORTS_DIR: bugReportsFolder(outbox),
 				// The login page's one-click demo sign-in (`src/routes/demo.remote.ts`).
 				DEMO_SIGN_IN: "true",
 				...env,
