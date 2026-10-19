@@ -550,6 +550,8 @@ off first.
 - C1, the order lifecycle (`docs/plans/order-lifecycle.md`).
 - C2 and C3, live changes and activity subjects (`docs/plans/live-changes-and-subjects.md`).
 - D6 (`submitted()`), X7's `orderTypes` (`order-types.spec.ts`), D13 (`#lib/schema.ts`) and F5.
+- C4, the engineer portal's scope (`docs/plans/engineer-scope.md`), with the customer portal's two
+  bypasses moved onto `ofCustomer()`.
 
 **To consider later:**
 
