@@ -7,9 +7,11 @@
  * on, a unit's inspection status goes into its condition status (`condition.signals`) and its
  * completed checklists into the service history (`condition.history`), and a unit's template's
  * points are what its components can be checked by (`condition.checkpoints`). With the parts shop
- * on, its products are linked to the templates' points (`parts-shop.checkpoints`).
+ * on, its products are linked to the templates' points (`parts-shop.checkpoints`). A checklist
+ * completed with rejected points rings the office's bell (`notifications.rules`).
  */
 import { isFieldEngineer } from "#lib/auth/index.ts";
+import { notificationRules } from "#lib/notifications/extensions.ts";
 import { committed, saving, units } from "#lib/orders/extensions.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
@@ -24,6 +26,7 @@ import { getOrderChecklists } from "../checklists.remote.ts";
 import { getFieldChecklists } from "../portal/field-checklists.remote.ts";
 import { saveOrderChecklists, saveUnitChecklists } from "./checklists.ts";
 import { checklistHistory, inspectionSignal } from "./history.ts";
+import { checklistNotificationRules } from "./notifications.ts";
 import { shopCheckpoints, unitCheckpoints } from "./shop.ts";
 
 export default defineServerModule("checklists", [
@@ -38,4 +41,5 @@ export default defineServerModule("checklists", [
 	contribute(history, checklistHistory),
 	contribute(checkpoints, shopCheckpoints),
 	contribute(componentCheckpoints, unitCheckpoints),
+	contribute(notificationRules, checklistNotificationRules),
 ]);

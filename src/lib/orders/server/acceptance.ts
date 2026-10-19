@@ -7,9 +7,11 @@
  * plan it in the same step) or rejects it with a reason (its `reject`: it's cancelled, and the
  * customer reads the reason in their portal). Orders made in the office never await acceptance.
  */
+import { and, count, eq } from "drizzle-orm";
+
 import { currentTenant } from "#lib/server/auth/index.ts";
-import type { Transaction } from "#lib/server/db/index.ts";
-import { orderRequest } from "#lib/server/db/schema.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
+import { order, orderRequest } from "#lib/server/db/schema.ts";
 
 import { createOrders, type OrderDraft } from "./creation.ts";
 
@@ -27,4 +29,17 @@ export async function requestOrder(
 		.insert(orderRequest)
 		.values({ orderId: created.id, organizationId, userId: user.id, reporterName: user.name });
 	return created;
+}
+
+/**
+ * How many of the tenant `organizationId`'s orders await acceptance, for the badge on the office
+ * sidebar's Orders. The tenant is the one a live query's gate admitted, read once
+ * (`currentTenant()`), as `inTenant()` would: its later answers run outside the request.
+ */
+export async function awaitingAcceptance(organizationId: string) {
+	const [row] = await db
+		.select({ count: count() })
+		.from(order)
+		.where(and(eq(order.organizationId, organizationId), eq(order.status, "awaiting_acceptance")));
+	return row?.count ?? 0;
 }

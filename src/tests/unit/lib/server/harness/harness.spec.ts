@@ -15,7 +15,6 @@ import {
 	deleteEquipmentCategory,
 	getCategorySettings,
 } from "#lib/equipment/categories/categories.remote.ts";
-import { watchAwaitingAcceptance } from "#lib/orders/detail/acceptance.remote.ts";
 import { setOrderStatus } from "#lib/orders/list/order-status.remote.ts";
 import { getOrder } from "#lib/orders/order.remote.ts";
 import { getLocale } from "#lib/paraglide/runtime.js";
@@ -28,6 +27,7 @@ import {
 } from "#lib/server/auth/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 import { getTheme, setTheme } from "#lib/themes/theme.remote.ts";
+import { watchShell } from "#routes/(app)/shell.remote.ts";
 import { getPortalMe } from "#routes/(customer)/portal/client.remote.ts";
 import { getMyWork } from "#routes/(field)/my/portal.remote.ts";
 import {
@@ -214,16 +214,18 @@ describe("a query", () => {
 		expect(seen.finished).toBe(true);
 		expect(seen.signal?.aborted).toBe(true);
 
-		const awaiting = await as(shltr.owner, () => call(watchAwaitingAcceptance));
-		expect(awaiting).toEqual({
+		const shell = await as(shltr.owner, () => call(watchShell));
+		expect(shell).toMatchObject({
 			status: 200,
-			data: Number(
-				await value(
-					`select count(*) from "order" where organization_id = 'org-shltr' and status = 'awaiting_acceptance'`,
+			data: {
+				awaiting: Number(
+					await value(
+						`select count(*) from "order" where organization_id = 'org-shltr' and status = 'awaiting_acceptance'`,
+					),
 				),
-			),
+			},
 		});
-		expect(awaiting.data).toBeGreaterThan(0);
+		expect(shell.data?.awaiting).toBeGreaterThan(0);
 	});
 });
 

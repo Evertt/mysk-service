@@ -225,6 +225,13 @@
       "when": 1792343619631,
       "tag": "0031_wallet-credit-remaining",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1792403763762,
+      "tag": "0032_add-notification-seen",
+      "breakpoints": true
     }
   ]
 }

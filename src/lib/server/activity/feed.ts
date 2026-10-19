@@ -15,7 +15,7 @@ import {
 	type SubjectType,
 	subjectTypes,
 } from "#lib/activity/index.ts";
-import { inTenant, requireMember } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -154,7 +154,7 @@ export async function subjectStates(keys: Map<string, Set<string>>) {
 /** Log rows as entries to show, with the names and links they need. */
 export async function present(rows: Row[]): Promise<ActivityEntry[]> {
 	if (!rows.length) return [];
-	const types = subjectTypes(requireMember().modules);
+	const types = subjectTypes(currentTenant().modules);
 
 	const keys = new Map<string, Set<string>>();
 	const add = (type: string, id: string) => keys.set(type, (keys.get(type) ?? new Set()).add(id));

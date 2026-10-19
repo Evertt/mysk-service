@@ -24,7 +24,7 @@ import { refuseRefused, saveOrderParts } from "./hooks.ts";
 export async function removeOrder(id: number) {
 	const deleting = db.transaction(async (tx) => {
 		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true, status: true },
+			columns: { id: true, number: true, status: true, engineerId: true },
 			where: idInTenant(order, id),
 		});
 		if (!found) error(404, m.orders_not_found_plain());
@@ -36,6 +36,11 @@ export async function removeOrder(id: number) {
 		await recordActivity(tx, {
 			action: "deleted",
 			subject: orderSubject({ id, number: found.number }),
+			// The engineer it had, as a change to none: their notifications read it.
+			...(found.engineerId !== null && {
+				before: { engineerId: found.engineerId },
+				after: { engineerId: null },
+			}),
 		});
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.

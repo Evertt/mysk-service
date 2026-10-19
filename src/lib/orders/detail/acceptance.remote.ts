@@ -5,14 +5,13 @@
  * reads in their portal.
  */
 import { invalid } from "@sveltejs/kit";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, optionalDate, optionalId, optionalTime, text } from "#lib/schema.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { engineer, order } from "#lib/server/db/schema.ts";
-import { live } from "#lib/server/live.ts";
+import { engineer } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { getOrder } from "../order.remote.ts";
@@ -27,25 +26,6 @@ export const getAcceptanceOptions = forMembers.query(async () => ({
 		.where(and(inTenant(engineer), eq(engineer.active, true)))
 		.orderBy(asc(engineer.name)),
 }));
-
-/** How many of the tenant `organizationId`'s orders await acceptance. */
-async function awaitingCount(organizationId: string) {
-	const [row] = await db
-		.select({ count: count() })
-		.from(order)
-		// The tenant the live query's gate admitted, read once (`currentTenant()`), as `inTenant()`.
-		.where(and(eq(order.organizationId, organizationId), eq(order.status, "awaiting_acceptance")));
-	return row?.count ?? 0;
-}
-
-/**
- * How many of the tenant's orders await acceptance, for the badge on the sidebar's Orders, sent
- * again whenever an order changes (a customer reports one, a planner accepts or rejects one).
- */
-export const watchAwaitingAcceptance = forMembers.query.live(() => {
-	const { organizationId } = currentTenant();
-	return live(["order"], () => awaitingCount(organizationId));
-});
 
 /**
  * Accepts one of the tenant's orders awaiting acceptance: a quote, or, with a day (and an
