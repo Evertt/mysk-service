@@ -92,7 +92,8 @@ Before you change the schema, add a migration, or log a new subject or action: r
   message function itself where a module-scope value needs a label.
 - Format through `#lib/i18n/format.ts`, and show enum values with `label(kind, value)`.
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
-  `.equals()`, and read a moment's day in `getTimeZone()`.
+  `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
+  `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.
 
 Before you add a message file, an enum kind, a plural or a format, or write Dutch copy: read
 `docs/agents/i18n.md`.

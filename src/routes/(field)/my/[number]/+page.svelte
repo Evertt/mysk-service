@@ -10,7 +10,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { dayOf } from "#lib/dates.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
@@ -56,9 +56,7 @@
 		<h1 class="text-2xl font-semibold tracking-tight">{customer.name}</h1>
 		<p class="text-muted-foreground">
 			{#if order.scheduledFor}
-				{dayLabel(order.scheduledFor.toZonedDateTimeISO(getTimeZone()).toPlainDate())}, {formatTime(
-					order.scheduledFor,
-				)}
+				{dayLabel(dayOf(order.scheduledFor))}, {formatTime(order.scheduledFor)}
 			{:else}
 				{m.portal_no_time()}
 			{/if}

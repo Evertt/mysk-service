@@ -3,7 +3,7 @@ import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { can } from "#lib/orders/index.ts";
 import { transitionOrder } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
@@ -92,7 +92,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		}
 
 		// Today, the user's.
-		const issuedOn = Temporal.Now.plainDateISO(getTimeZone());
+		const issuedOn = currentDay();
 		const issued = {
 			status: "sent" as const,
 			issuedOn,
@@ -116,7 +116,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 function payInvoice(id: number) {
 	return db.transaction(async (tx) => {
 		const found = await changing(tx, id, "paid");
-		const settled = await recordPayment(tx, found, Temporal.Now.plainDateISO(getTimeZone()));
+		const settled = await recordPayment(tx, found, currentDay());
 		return { ...found, settled };
 	});
 }

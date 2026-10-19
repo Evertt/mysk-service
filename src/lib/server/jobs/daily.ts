@@ -16,7 +16,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { CRON_SECRET, OPS_TOKEN } from "$app/env/private";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { daily, type DailyReport } from "#lib/jobs/extensions.ts";
 import { effectiveModules } from "#lib/modules/graph.ts";
 import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
@@ -36,9 +36,7 @@ export interface DailyResult {
  * run's: the server's time zone, as a cron's request has no user's). Each organization's modules
  * are those it has on, as for its members; a job that fails is logged and the others go on.
  */
-export async function runDaily(
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-): Promise<DailyResult[]> {
+export async function runDaily(today = currentDay()): Promise<DailyResult[]> {
 	const [organizations, stored] = await Promise.all([
 		db
 			.select({ id: organization.id, name: organization.name, slug: organization.slug })

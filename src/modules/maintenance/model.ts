@@ -3,7 +3,7 @@
  * which orders a plan makes, how a due date moves on, and the ranges the due list and the
  * equipment list's column filter by. Pure, so client code (filters, badges) can import it.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
 
 /** The order types a plan makes: a subset of the orders' own. */
@@ -28,7 +28,6 @@ export function advanceDueDate(
 }
 
 /** Today, the user's. */
-const todayNow = () => Temporal.Now.plainDateISO(getTimeZone());
 
 /**
  * The due list's ranges, as horizons: due before today (`overdue`), or before today plus 30 or 90
@@ -41,7 +40,7 @@ export type DueRange = (typeof dueRanges)[number];
 export const defaultDueRange: DueRange = "30-days";
 
 /** The day before which a plan is due in `range`, seen from `today`. */
-export const dueBefore = (range: DueRange, today = todayNow()) =>
+export const dueBefore = (range: DueRange, today = currentDay()) =>
 	range === "overdue" ? today : today.add({ days: range === "30-days" ? 30 : 90 });
 
 /**
@@ -57,7 +56,7 @@ export const SOON_DAYS = 30;
 /** Which bucket a next due date falls in, seen from `today` (`later` for one in none of them). */
 export function nextDueBucket(
 	due: Temporal.PlainDate | null,
-	today = todayNow(),
+	today = currentDay(),
 ): NextDueBucket | "later" {
 	if (!due) return "none";
 	if (Temporal.PlainDate.compare(due, today) < 0) return "overdue";
@@ -65,7 +64,7 @@ export function nextDueBucket(
 }
 
 /** Whether a plan that's due on `due` is overdue `today`. */
-export const isOverdue = (due: Temporal.PlainDate, today = todayNow()) =>
+export const isOverdue = (due: Temporal.PlainDate, today = currentDay()) =>
 	Temporal.PlainDate.compare(due, today) < 0;
 
 // --- Automatic orders (the daily run, `server/automatic.ts`) ---------------------------------

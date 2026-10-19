@@ -6,7 +6,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, lte } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, currentUser, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -17,7 +17,6 @@ import { revenueLines } from "./revenue.ts";
 import { partnerAccount } from "./schema.ts";
 
 /** Today, the user's (or, in a job, the run's zone's). */
-export const today = () => Temporal.Now.plainDateISO(getTimeZone());
 
 /** The tenant's customer with `code`, with its partner account if it's a partner; a 404 if none. */
 export async function customerByCode(code: string) {
@@ -52,7 +51,7 @@ const partnerSubject = (partner: { id: number; code: string }): Subject => ({
 export async function acceptPartner(code: string) {
 	const found = await customerByCode(code);
 	if (found.partner) invalid(m.partners_already_partner());
-	const acceptedOn = today();
+	const acceptedOn = currentDay();
 	await db.transaction(async (tx) => {
 		await tx.insert(partnerAccount).values({
 			organizationId: currentTenant().organizationId,

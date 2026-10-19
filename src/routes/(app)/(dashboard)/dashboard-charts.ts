@@ -3,7 +3,7 @@
  * without orders is a zero, not a missing bar). Isomorphic: `dashboard.remote.ts` shapes its SQL
  * results with these, the chart components take the result.
  */
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf, mondayOf } from "#lib/dates.ts";
 import {
 	type EquipmentStatus,
 	equipmentStatuses,
@@ -17,7 +17,7 @@ const MONTHS = 12;
 
 /** The Mondays of the last `count` weeks up to and including `today`'s, oldest first. */
 export function lastWeeks(today: Temporal.PlainDate, count = WEEKS) {
-	const monday = today.subtract({ days: today.dayOfWeek - 1 });
+	const monday = mondayOf(today);
 	return Array.from({ length: count }, (_, i) => monday.subtract({ weeks: count - 1 - i }));
 }
 
@@ -68,7 +68,7 @@ export function revenuePerMonth(
 	);
 	for (const order of orders) {
 		// The month it was completed in, in the user's time zone.
-		const day = order.completedAt.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+		const day = dayOf(order.completedAt);
 		const entry = byMonth.get(day.with({ day: 1 }).toString());
 		if (entry) {
 			entry.total += order.total;

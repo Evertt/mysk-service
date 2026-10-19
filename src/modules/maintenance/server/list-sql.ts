@@ -5,7 +5,7 @@
 import { and, eq, lt } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -30,9 +30,7 @@ export const withPlanJoins = <T extends SQLiteSelect>(query: T) =>
  * The due list's columns in SQL, checked against its definition. Call it for each request: the
  * tenant and today are the request's.
  */
-export const dueSql = (
-	today = Temporal.Now.plainDateISO(getTimeZone()),
-): ListSql<typeof dueList.columns> => ({
+export const dueSql = (today = currentDay()): ListSql<typeof dueList.columns> => ({
 	list: dueList,
 	from: (fields) => withPlanJoins(db.select(fields).from(maintenancePlan).$dynamic()),
 	columns: {

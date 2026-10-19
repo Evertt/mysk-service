@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 
 import { inspectionStatus, rejections } from "../model.ts";
 import { checklistRecords } from "./records.ts";
@@ -25,7 +25,7 @@ export async function unitInspection(unitId: number) {
 		(record): record is typeof record & { validUntil: Temporal.PlainDate } =>
 			record.kind === "inspection" && record.status === "completed" && record.validUntil !== null,
 	);
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	return {
 		status: inspectionStatus(
 			latest ? { validUntil: latest.validUntil, rejected: rejections(latest.results) > 0 } : null,

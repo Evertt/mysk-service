@@ -8,7 +8,7 @@ import { error } from "@sveltejs/kit";
 import { and, eq, ne, type SQL, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay, getTimeZone } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -33,7 +33,7 @@ import { offeredTemplate } from "./templates.ts";
 import { unitInspection } from "./unit-inspection.ts";
 
 /** This year, in the user's time zone. */
-export const currentYear = () => Temporal.Now.plainDateISO(getTimeZone()).year;
+export const currentYear = () => currentDay().year;
 
 /** A moment as the database stores it: seconds. */
 const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);

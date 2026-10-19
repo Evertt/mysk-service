@@ -7,7 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, eq, notExists } from "drizzle-orm";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
@@ -136,7 +136,7 @@ export function deletePlan(id: number) {
 export function addPlansToUnits(
 	equipmentIds: number[],
 	input: Omit<PlanInput, "nextDueOn">,
-	today = Temporal.Now.plainDateISO(getTimeZone()),
+	today = currentDay(),
 ) {
 	const { organizationId } = currentTenant();
 	const nextDueOn = advanceDueDate(today, input.intervalMonths);

@@ -1,11 +1,11 @@
 /** The programme at a glance, for the dashboard's card: partners per level, and credit to spend. */
+import { currentDay } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { levelFor, sortedTiers } from "./model.ts";
 import { query } from "./remote-functions.ts";
 import { partnerJoins } from "./server/list-sql.ts";
-import { today } from "./server/partners.ts";
 import { rulesFor } from "./server/rules.ts";
 import { partnerAccount } from "./server/schema.ts";
 import { outstandingCredit } from "./server/wallet.ts";
@@ -15,7 +15,7 @@ import { outstandingCredit } from "./server/wallet.ts";
  * those below the first level), and the wallets' credit that can still be spent.
  */
 export const getProgrammeOverview = query(async () => {
-	const now = today();
+	const now = currentDay();
 	const rules = await rulesFor(now.year);
 	const joins = partnerJoins(rules, now);
 	const partners = await joins

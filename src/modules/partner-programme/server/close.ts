@@ -1,3 +1,7 @@
+import { error, invalid } from "@sveltejs/kit";
+import { and, desc, eq, isNull } from "drizzle-orm";
+
+import { customerSubject } from "#lib/activity/index.ts";
 /**
  * Closing a year (`partner_bonus_year`): its figures for each partner are frozen as they are, with
  * the level and the bonus in both forms, and the partner then chooses one of them, once. Credit
@@ -7,10 +11,7 @@
  * A manager makes the choice in the office, or the partner itself in the customer portal, both
  * through `chooseBonus()`.
  */
-import { error, invalid } from "@sveltejs/kit";
-import { and, desc, eq, isNull } from "drizzle-orm";
-
-import { customerSubject } from "#lib/activity/index.ts";
+import { currentDay } from "#lib/dates.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -22,7 +23,7 @@ import { creditNote } from "#modules/invoices/api/schema.server.ts";
 import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
 import { type BonusForm, bonusLineSource, creditValidUntil, isClosable } from "../model.ts";
-import { figuresOf, partnersOf, today } from "./partners.ts";
+import { figuresOf, partnersOf } from "./partners.ts";
 import { rulesFor } from "./rules.ts";
 import { bonusCreditNote, bonusYear } from "./schema.ts";
 import { addEntry } from "./wallet.ts";
@@ -53,7 +54,7 @@ export async function closePreview(year: number, tx: Transaction | typeof db = d
 	return {
 		year,
 		rules: rules ?? null,
-		closable: isClosable(year, today()),
+		closable: isClosable(year, currentDay()),
 		partners: partners.map((partner) => ({
 			...partner,
 			figures: figures.get(partner.id) ?? null,
@@ -75,7 +76,7 @@ const yearSubject = (row: { id: number; year: number }, code: string): Subject =
  * the year runs, or without rules for it. Answers how many it closed.
  */
 export async function closeYear(year: number, customerId?: number): Promise<number> {
-	if (!isClosable(year, today())) invalid(m.partners_close_not_over({ year: String(year) }));
+	if (!isClosable(year, currentDay())) invalid(m.partners_close_not_over({ year: String(year) }));
 	return db.transaction(async (tx) => {
 		const preview = await closePreview(year, tx);
 		if (!preview.rules) invalid(m.partners_no_rules({ year: String(year) }));
@@ -269,7 +270,7 @@ export async function chooseBonus(customerId: number, year: number, choice: Bonu
 					bonusYearId: closed.id,
 					note: m.partners_award_note({ year: String(year) }),
 				},
-				today(),
+				currentDay(),
 			);
 		}
 	});

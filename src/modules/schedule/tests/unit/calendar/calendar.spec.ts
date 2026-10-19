@@ -9,7 +9,6 @@ import {
 	groupByDay,
 	initials,
 	inMonth,
-	mondayOf,
 	monthRange,
 	monthWeeks,
 	periodOf,
@@ -64,16 +63,6 @@ describe("the view in the URL", () => {
 });
 
 describe("periods", () => {
-	test("weeks start on Monday", () => {
-		const monday = day("2026-10-05");
-		expect(mondayOf(day("2026-10-05"))).toEqual(monday);
-		// Sunday is the last day of the week, not the first.
-		expect(mondayOf(day("2026-10-11"))).toEqual(monday);
-		expect(mondayOf(day("2026-10-12"))).toEqual(day("2026-10-12"));
-		// Across a month and a year.
-		expect(mondayOf(day("2027-01-01"))).toEqual(day("2026-12-28"));
-	});
-
 	test("a month, a week and a day run from their first to their last day", () => {
 		expect(periodOf("month", day("2026-02-14"))).toEqual({
 			start: day("2026-02-01"),

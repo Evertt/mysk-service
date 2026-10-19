@@ -2,7 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { recordId } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -50,7 +50,7 @@ export const getInvoices = query(async () => {
 		.where(inTenant(invoice))
 		.orderBy(desc(invoice.id));
 
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const credits = await creditsByInvoice();
 	return rows.map(({ subtotal, ...row }) => {
 		const totals = invoiceTotals([{ amount: subtotal }], row.vatRate);

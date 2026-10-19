@@ -2,7 +2,7 @@
  * Week maths and grouping for the dispatch board. Days are `Temporal.PlainDate`s, an order's the
  * day of its moment in the user's time zone, and weeks run Monday to Sunday.
  */
-import { getTimeZone, isDay } from "#lib/dates.ts";
+import { dayOf, isDay } from "#lib/dates.ts";
 import { dateFormatter, formatDate } from "#lib/i18n/index.ts";
 import { type OrderPriority, orderPriorities, type OrderStatus } from "#lib/models.ts";
 import { plannedStatus } from "#lib/orders/index.ts";
@@ -70,7 +70,7 @@ export function groupByCell<T extends Placed>(orders: T[], rows: RowId[]) {
 		if (!order.scheduledFor) continue;
 		const row =
 			order.engineerId !== null && known.has(order.engineerId) ? order.engineerId : "unassigned";
-		const key = cellKey(row, order.scheduledFor.toZonedDateTimeISO(getTimeZone()).toPlainDate());
+		const key = cellKey(row, dayOf(order.scheduledFor));
 		cells.set(key, [...(cells.get(key) ?? []), order]);
 	}
 	for (const cell of cells.values()) {
@@ -91,9 +91,7 @@ export const boardEngineers = <E extends { id: number; active: boolean }>(
 	const shown = new Set(days.map(String));
 	const busy = new Set(
 		orders
-			.filter((order) =>
-				shown.has(String(order.scheduledFor?.toZonedDateTimeISO(getTimeZone()).toPlainDate())),
-			)
+			.filter((order) => shown.has(String(order.scheduledFor && dayOf(order.scheduledFor))))
 			.map((order) => order.engineerId),
 	);
 	return engineers.filter((engineer) => engineer.active || busy.has(engineer.id));
@@ -141,7 +139,7 @@ export function applyMove<
 		scheduledFor: move.scheduledFor,
 		status: plannedStatus(order.status, move.engineerId),
 	};
-	const day = move.scheduledFor.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+	const day = dayOf(move.scheduledFor);
 	const inWeek =
 		Temporal.PlainDate.compare(day, schedule.start) >= 0 &&
 		Temporal.PlainDate.compare(day, schedule.start.add({ days: 7 })) < 0;

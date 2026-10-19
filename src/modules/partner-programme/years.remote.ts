@@ -1,11 +1,12 @@
-/**
- * The programme's years and their rules: every member may read them, managers set up a year (a
- * copy of the one before) and change its rules. Closing a year is in `close.remote.ts`.
- */
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+/**
+ * The programme's years and their rules: every member may read them, managers set up a year (a
+ * copy of the one before) and change its rules. Closing a year is in `close.remote.ts`.
+ */
+import { currentDay } from "#lib/dates.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -13,7 +14,6 @@ import { rulesSchema } from "./form/rules-schema.ts";
 import { yearField } from "./form/wallet-schema.ts";
 import { defaultCategoryRules, defaultTiers } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
-import { today } from "./server/partners.ts";
 import { addYear, programmeYears, rulesFor, saveRules, storedRules } from "./server/rules.ts";
 
 /** A year as the client asks for it. */
@@ -22,7 +22,7 @@ const year = v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100))
 /** The years set up, latest first, and the one to add next. */
 export const getProgrammeYears = query(async () => {
 	const years = await programmeYears();
-	const current = today().year;
+	const current = currentDay().year;
 	const next = Math.max(current, (years[0]?.year ?? current - 1) + 1);
 	return {
 		years: years.map((each) => ({ year: each.year, levels: each.tiers.length })),

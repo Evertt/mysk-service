@@ -11,14 +11,14 @@
  */
 import { and, desc, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { literal } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
 import { EXPIRING_DAYS } from "../model.ts";
 import { checklist, checklistResult } from "./schema.ts";
 
-export function inspectionSql(today = Temporal.Now.plainDateISO(getTimeZone())) {
+export function inspectionSql(today = currentDay()) {
 	// Days as `yyyy-mm-dd` compare as text.
 	const status = sql`(case when ${checklist.validUntil} < ${literal(today.toString())} then 'expired' when exists (select 1 from ${checklistResult} where ${and(
 		eq(checklistResult.checklistId, checklist.id),

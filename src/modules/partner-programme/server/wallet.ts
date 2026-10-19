@@ -8,7 +8,7 @@ import { invalid } from "@sveltejs/kit";
 import { and, asc, gte, isNull, or, sql } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
-import { getTimeZone } from "#lib/dates.ts";
+import { dayOf } from "#lib/dates.ts";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -29,7 +29,6 @@ const withDay = (row: typeof walletEntry.$inferSelect): LedgerEntry => ({
 });
 
 /** The day of a moment an entry was made, in the user's zone (outside a request, the runtime's). */
-const dayOf = (moment: Temporal.Instant) => moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
 
 /**
  * Of the entries' credit, the part that can be spent on `today` (the credit still valid), as a

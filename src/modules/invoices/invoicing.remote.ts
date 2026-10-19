@@ -6,7 +6,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
@@ -59,7 +59,7 @@ export const getOrderInvoice = query(v.string(), async (number) => {
  * first), and how many drafts wait to be issued.
  */
 export const getReceivables = query(async () => {
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const subtotals = db
 		.select({
 			invoiceId: invoiceLine.invoiceId,

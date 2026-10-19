@@ -7,7 +7,7 @@
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageBanner from "#lib/components/page-banner.svelte";
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay } from "#lib/dates.ts";
 	import AssetList from "#modules/checklists/assets/asset-list.svelte";
 	import { assetList } from "#modules/checklists/assets/asset-list.ts";
 	import AssetPanel from "#modules/checklists/assets/asset-panel.svelte";
@@ -28,7 +28,7 @@
 	const serialNumber = $derived(params.get("unit"));
 	const componentNumber = $derived(params.get("component"));
 	const checklistId = $derived(Number(params.get("checklist")) || undefined);
-	const year = $derived(Temporal.Now.plainDateISO(getTimeZone()).year);
+	const year = $derived(currentDay().year);
 </script>
 
 <svelte:head>

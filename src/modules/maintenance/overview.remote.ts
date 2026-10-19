@@ -1,7 +1,7 @@
 /** What the maintenance module's card on the dashboard shows. */
 import { and, count, eq, gte, lt } from "drizzle-orm";
 
-import { getTimeZone } from "#lib/dates.ts";
+import { currentDay } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -11,7 +11,7 @@ import { maintenancePlan } from "./server/schema.ts";
 
 /** How many active plans are overdue, and how many are due within the next 30 days. */
 export const getMaintenanceOverview = query(async () => {
-	const today = Temporal.Now.plainDateISO(getTimeZone());
+	const today = currentDay();
 	const active = and(inTenant(maintenancePlan), eq(maintenancePlan.paused, false));
 	const counted = (from: Temporal.PlainDate | null, until: Temporal.PlainDate) =>
 		db
