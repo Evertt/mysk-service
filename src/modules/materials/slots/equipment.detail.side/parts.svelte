@@ -25,24 +25,26 @@
 		{#if parts.length}
 			<ul class="flex flex-col divide-y">
 				{#each parts as part (part.sku)}
-					<li class="flex items-start justify-between gap-4 py-2 first:pt-0 last:pb-0">
-						<MaterialLink sku={part.sku} name={part.name} />
-						<div class="flex shrink-0 flex-col items-end text-sm">
-							<span class="font-medium tabular-nums"
+					<!-- The quantity beside the name, which truncates rather than push it out of a narrow
+						card; how often and when it was used on a line of its own below. -->
+					<li class="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
+						<div class="flex items-start justify-between gap-4">
+							<div class="min-w-0">
+								<MaterialLink sku={part.sku} name={part.name} />
+							</div>
+							<span class="shrink-0 text-sm font-medium whitespace-nowrap tabular-nums"
 								>{formatQuantity(part.quantity, part.unit)}</span
 							>
-							<span class="text-xs text-muted-foreground">
-								{m.materials_parts_orders({ count: part.orders })}{part.lastUsed
-									? ` · ${m.materials_parts_last_used({ date: formatDate(part.lastUsed) })}`
-									: ""}
-							</span>
+						</div>
+						<p class="text-xs text-muted-foreground">
+							{m.materials_parts_orders({ count: part.orders })}{part.lastUsed
+								? ` · ${m.materials_parts_last_used({ date: formatDate(part.lastUsed) })}`
+								: ""}
 							<!-- Its lines count on each of the order's units: not this unit's alone. -->
 							{#if part.units > 1}
-								<span class="text-xs text-muted-foreground" data-shared>
-									{m.materials_parts_shared({ count: part.units })}
-								</span>
+								<span data-shared>· {m.materials_parts_shared({ count: part.units })}</span>
 							{/if}
-						</div>
+						</p>
 					</li>
 				{/each}
 			</ul>
