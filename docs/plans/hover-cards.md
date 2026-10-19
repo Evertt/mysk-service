@@ -49,7 +49,19 @@ The links are built in two ways:
 
 - Add shadcn-svelte's `hover-card` through its CLI (the `shadcn-svelte` skill describes how).
 - Each link component wraps its anchor in a hover card:
-  - The open delay is about 400 ms and the close delay about 150 ms. Tune them by feel.
+  - **The open delay is 500 ms** (the user's choice). Cards don't pop in and out while the cursor
+    crosses the page, and resting on a link for half a second is a clear sign of intent. The close
+    delay is about 150 ms. Both are one shared constant, not set per link.
+  - **The e2e tests turn the delay off**, so no test waits half a second or times out on it. Put the
+    switch in the shared e2e context setup (`#e2e/app.ts`), so every test gets it without asking.
+    For example, an `addInitScript` that sets a key the link components read once, giving a 0 ms
+    delay. Two rules:
+    - Production behaves the same whether the key is set or not, apart from the delay.
+    - No build flag ships test code.
+
+    One e2e test leaves the delay on and checks that a quick pass over a link opens no card, so the
+    delay itself is covered.
+
   - The content loads when the card opens, never before (but see "Measure", below).
   - A skeleton shows while it loads.
   - Opt out with `preview={false}`.
