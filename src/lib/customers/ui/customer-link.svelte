@@ -24,7 +24,9 @@
 		class: className = "font-medium underline-offset-4 hover:underline",
 		children,
 		...rest
-	}: Omit<HTMLAnchorAttributes, "href" | "children"> & {
+	}: Omit<HTMLAnchorAttributes, "href" | "children" | "class"> & {
+		/** The link's classes, instead of its own look. */
+		class?: string;
 		code: string;
 		name: string;
 		withCode?: boolean;

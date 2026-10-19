@@ -37,6 +37,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   `remotes.ts`, `server/index.ts`); inside, import siblings relatively.
 - Imports name the real extension: `.ts`, `.svelte.ts`, `.svelte`, and `.js` only for Paraglide's
   output. A folder is never imported by its name.
+- A link that shows an order, customer, unit or engineer is its link component (`OrderLink`,
+  `CustomerLink`, `EquipmentLink`, `EngineerLink`; in a table cell with `secondary`), never a
+  `resolve()`d anchor: it gives the office the record's hover card (`RecordLink`). Breadcrumbs,
+  page headers and buttons stay plain.
 
 Details: `docs/agents/structure.md`.
 

@@ -21,7 +21,9 @@
 		class: className = "font-medium whitespace-nowrap underline-offset-4 hover:underline",
 		children,
 		...rest
-	}: Omit<HTMLAnchorAttributes, "href" | "children"> & {
+	}: Omit<HTMLAnchorAttributes, "href" | "children" | "class"> & {
+		/** The link's classes, instead of its own look. */
+		class?: string;
 		number: string;
 		secondary?: string | null;
 		/** Whether resting the pointer on it shows the order's hover card. */

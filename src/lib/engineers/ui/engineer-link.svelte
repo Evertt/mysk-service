@@ -22,7 +22,9 @@
 		class: className = "font-medium underline-offset-4 hover:underline",
 		children,
 		...rest
-	}: Omit<HTMLAnchorAttributes, "href" | "children" | "id"> & {
+	}: Omit<HTMLAnchorAttributes, "href" | "children" | "class" | "id"> & {
+		/** The link's classes, instead of its own look. */
+		class?: string;
 		id: number;
 		name: string;
 		secondary?: string | null;

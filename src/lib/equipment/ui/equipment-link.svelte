@@ -22,7 +22,9 @@
 		class: className = "font-medium whitespace-nowrap underline-offset-4 hover:underline",
 		children,
 		...rest
-	}: Omit<HTMLAnchorAttributes, "href" | "children"> & {
+	}: Omit<HTMLAnchorAttributes, "href" | "children" | "class"> & {
+		/** The link's classes, instead of its own look. */
+		class?: string;
 		serialNumber: string;
 		/** The text shown instead of the serial number, e.g. the unit's name. */
 		label?: string;
