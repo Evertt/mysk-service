@@ -153,13 +153,13 @@
 		compact.area,
 		// The rows scroll inside the table only when it fills the viewport; otherwise the table
 		// container scrolls sideways only. Filling it, the table is as tall as its rows need, but at
-		// least 12rem (`--data-table-fit`, see `natural-height.ts`); with more rows than fit, it takes
+		// least --spacing(48) (`--data-table-fit`, see `natural-height.ts`); with more rows than fit, it takes
 		// the room the page leaves it, at least 60% of the screen. Its rows don't count towards the
 		// page's height (size containment), only that minimum, so where there's less room the page
 		// grows by it (see the app layout) and keeps its padding under the table.
 		fillViewport && [
-			"[--data-table-fit:max(12rem,var(--data-table-natural-height,100vh))]",
-			"desktop:max-h-(--data-table-fit) desktop:min-h-[min(60vh,var(--data-table-fit))] desktop:flex-1 desktop:contain-size",
+			"[--data-table-fit:max(--spacing(48),var(--data-table-natural-height,100vh))]",
+			"desktop:max-h-(--data-table-fit) desktop:min-h-[clamp(--spacing(48),calc(100vh---spacing(86)),var(--data-table-fit))] desktop:flex-1 desktop:contain-size",
 			"desktop:*:data-[slot=table-container]:overflow-y-auto",
 		],
 		theme.classes("data-table"),
