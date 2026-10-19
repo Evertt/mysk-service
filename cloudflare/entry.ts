@@ -8,6 +8,8 @@
  * - `AppDatabase` migrates its SQLite database when it starts, then answers each request by running
  *   SvelteKit inside itself, with its storage in `durableRequests`, where `db` finds it
  *   (`src/lib/server/db/durable.ts`). So every query is a call into SQLite in the same process.
+ *   The bug reports' R2 bucket goes along (`bugReportStore()`): the adapter's worker passes the app
+ *   no `platform`.
  * - `POST /_ops/import` (with `Authorization: Bearer <OPS_TOKEN>`) replaces the database's data
  *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
  *   start with the demo data.
@@ -52,8 +54,9 @@ export class AppDatabase extends DurableObject<Env> {
 	}
 
 	fetch(request: Request): Promise<Response> {
-		return globalThis.durableRequests!.run({ storage: this.ctx.storage }, () =>
-			kit.fetch(request, this.env, this.ctx),
+		return globalThis.durableRequests!.run(
+			{ storage: this.ctx.storage, bugReports: this.env.BUG_REPORTS },
+			() => kit.fetch(request, this.env, this.ctx),
 		);
 	}
 

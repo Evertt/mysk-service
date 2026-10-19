@@ -6,7 +6,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 
-import { getRequestEvent } from "$app/server";
+import type { Bucket } from "#lib/server/db/durable.ts";
 
 import { bugReportSettings } from "./settings.ts";
 
@@ -15,12 +15,6 @@ export interface BugReportStore {
 	put(key: string, data: Uint8Array): Promise<void>;
 	/** The recording under `key`, or `null` if there's none. */
 	get(key: string): Promise<Uint8Array<ArrayBuffer> | null>;
-}
-
-/** The parts of an R2 bucket binding the store uses (`R2Bucket` of the Workers runtime). */
-interface Bucket {
-	put(key: string, value: Uint8Array, options?: object): Promise<unknown>;
-	get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
 }
 
 /** A store in an R2 bucket. */
@@ -62,11 +56,13 @@ export function folderStore(folder: string): BugReportStore {
 	};
 }
 
-/** The request's store: the R2 bucket where the platform has one (Cloudflare), else the folder. */
+/**
+ * The request's store: on Cloudflare the R2 bucket, which `cloudflare/entry.ts` passes with each
+ * request in `durableRequests` (SvelteKit's adapter passes no `platform`), else the folder.
+ */
 export function bugReportStore(): BugReportStore {
-	const platform = getRequestEvent().platform as { env?: { BUG_REPORTS?: Bucket } } | undefined;
-	const env = platform?.env;
-	return env?.BUG_REPORTS ? bucketStore(env.BUG_REPORTS) : folderStore(bugReportSettings.folder);
+	const bucket = globalThis.durableRequests?.getStore()?.bugReports;
+	return bucket ? bucketStore(bucket) : folderStore(bugReportSettings.folder);
 }
 
 /** The key of a report's recording, by when it was made: `<year>/<month>/<id>.json.gz` (UTC). */
