@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { masonry, masonryGrid } from "#lib/components/masonry.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getEquipmentCategories } from "#lib/equipment/remotes.ts";
 	import { label, labelOrValue } from "#lib/i18n/index.ts";
@@ -27,7 +28,16 @@
 
 <PageHeader title={m.common_organization_settings()} description={settings.name} />
 
-<div class="grid items-start gap-6 lg:grid-cols-2">
+<!-- The cards, packed into columns (`#lib/components/masonry.ts`): columns at least 20rem wide (the
+	members' table still fits), two at most, by the page's width rather than the window's (the sidebar
+	takes 16rem of it). -->
+<div
+	class={[
+		masonryGrid,
+		"grid-cols-[repeat(auto-fill,minmax(min(100%,max(20rem,calc((100%_-_1.5rem)/2))),1fr))] gap-6",
+	]}
+	{@attach masonry}
+>
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{m.settings_modules()}</Card.Title>
