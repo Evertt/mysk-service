@@ -16,6 +16,18 @@ helpers are in `src/lib/server/auth/session.ts`:
   call, so the handler doesn't check again: it reads what the gate admitted with `currentTenant()`
   (`organizationId`, `roles`, `modules`, `user`), `currentUser()`, `await currentEngineer()` or
   `await currentCustomer()`.
+- **Field engineers** (the role `engineer`) use the engineer portal (`(field)/my`, `forEngineers`, and
+  a module's `moduleRemote(id, "engineer")`). `requireEngineer()` (the gate) finds the engineer
+  record linked to their account once per request; `await currentEngineer()` answers it without
+  its id. The orders they reach are the tenant's assigned to them, through the helpers in
+  `src/lib/server/auth/engineer.ts`, which read the engineer's id themselves:
+  `await engineerOrders()` for a query on `order` (a list, or a checklist or unit reached through
+  its order), `await engineerOrder({ id } | { number })` for one, and
+  `engineerOrderNotFound(ref)`, the one 404 ("Order ORD-… not found" when the request named a
+  number); `findEngineerOrder(runner, ref, action?)` (`#lib/orders/server`) adds the orders' field
+  rules. A record written with the engineer takes them from the order it reached
+  (`order.engineerId`). Units and locations (the QR pages) are the tenant's for every engineer.
+  `src/tests/unit/lib/server/auth/engineer-scope.spec.ts` keeps the engineer's id in that file.
 - **Customers' contacts** (the role `customer`, `isCustomerContact()` in `#lib/auth/roles.ts`) are
   members linked to one of the tenant's customers (`portal_contact`), for all of its sites or some
   (`portal_contact_site`). They use the customer portal only: `requireMember()` refuses them (so
