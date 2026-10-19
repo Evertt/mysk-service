@@ -305,6 +305,10 @@ beyond a commit: every caller is in this repository.
 
 ## Changed while building
 
+- **The activity feed's type filter stays a string** (`getActivity`'s `type`; decided with the
+  user after review round 1, O2): it comes from a URL a person can edit, and it only matches
+  stored entries, so an unknown type shows the empty feed rather than a 400 and the error page.
+
 - **No `pageKeys` map** (see the builders section).
 - **Order of the commits:** builders first, then the types (Migration strategy).
 - **"`refresh` isn't tracked" has no test:** an effect re-run caused by what `refresh` reads has the
