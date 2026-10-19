@@ -1,8 +1,9 @@
 /**
  * An order about several units, as North's planner makes it: the list shows its first unit and
  * how many more and finds it by any of them, each unit's service history has it at its share of
- * the cost, and the engineer it's planned for gets all its units and their sites. The server side
- * of `src/tests/e2e/orders.units.test.ts`, which keeps the form, the order's page and the log.
+ * the cost. The server side of `src/tests/e2e/orders.units.test.ts`, which keeps the form, the
+ * order's page and the log. That the engineer it's planned for gets all its units and their sites
+ * is the work record's (`work-record.spec.ts`).
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
@@ -10,8 +11,7 @@ import { getServiceHistory } from "#lib/equipment/detail/service-history.remote.
 import { unitShare } from "#lib/equipment/detail/service-history.ts";
 import { getOrders } from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
-import { createOrder, updateOrder } from "#lib/orders/order.remote.ts";
-import { getMyOrder } from "#routes/(field)/my/portal.remote.ts";
+import { createOrder } from "#lib/orders/order.remote.ts";
 import {
 	as,
 	data,
@@ -21,8 +21,6 @@ import {
 	submit,
 	value,
 } from "#unit/lib/server/harness/index.ts";
-
-import { editForm, orderId } from "./order-form.test-support.ts";
 
 const northId = organizationId("north");
 
@@ -43,8 +41,6 @@ const listed = (changes: Partial<Query>) =>
 interface Unit {
 	id: number;
 	serial: string;
-	site: string;
-	access: string | null;
 }
 
 /** Three units of North's customer with the most, in the order they're put on the order. */
@@ -58,8 +54,7 @@ beforeAll(async () => {
 		[northId],
 	);
 	units = await rows<Unit>(
-		`select e.id, e.serial_number as serial, s.name as site, s.access_notes as access
-		 from equipment e join customer_site s on s.id = e.site_id
+		`select e.id, e.serial_number as serial from equipment e
 		 where e.customer_id = ? order by e.id limit 3`,
 		[owner],
 	);
@@ -118,40 +113,6 @@ describe("an order about several units", () => {
 			expect(entry.order.units).toBe(3);
 			expect(entry.order.cost.total).toBeGreaterThan(0);
 			expect(unitShare(entry.order)).toBe(Math.round(entry.order.cost.total / 3));
-		}
-	});
-
-	test("the engineer it's planned for gets all its units, in their order, and their sites", async () => {
-		const engineerId = await value<number>(
-			`select e.id from engineer e join user u on u.id = e.user_id
-			 where u.email = ? and e.organization_id = ?`,
-			[north.engineer.email, northId],
-		);
-		const tomorrow = Temporal.Now.plainDateISO().add({ days: 1 }).toString();
-		const planned = await as(north.member, async () =>
-			submit(
-				updateOrder,
-				await editForm(north.member, number, {
-					status: "scheduled",
-					engineerId: String(engineerId),
-					scheduledFor: tomorrow,
-				}),
-			),
-		);
-		expect(planned.status).toBe(303);
-		expect(
-			await value(`select engineer_id from "order" where id = ?`, [await orderId(number, northId)]),
-		).toBe(engineerId);
-
-		const mine = await as(north.engineer, () => data(getMyOrder, number));
-		expect(mine.order.units.map((unit) => unit.serialNumber)).toEqual(units.map((u) => u.serial));
-		expect(mine.sites.map((site) => site.name).toSorted()).toEqual(
-			[...new Set(units.map((unit) => unit.site))].toSorted(),
-		);
-		for (const unit of units) {
-			if (unit.access) {
-				expect(mine.sites.find((site) => site.name === unit.site)?.accessNotes).toBe(unit.access);
-			}
 		}
 	});
 });
