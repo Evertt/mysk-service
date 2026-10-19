@@ -132,6 +132,14 @@ const isPortal = (pathname: string) =>
 const isCustomerPortal = (routeId: string | null) => routeId?.startsWith("/(customer)/") ?? false;
 
 /**
+ * Paths of every signed-in role, each with a gate of its own: the bug reports' upload (`/bug-reports`,
+ * the office's and the engineer portal's record button) and the developers' pages (`/ops/…`,
+ * `forDevelopers`, a 404 for everyone else). The guard leaves them to it.
+ */
+const isForAnyRole = (pathname: string) =>
+	pathname === "/bug-reports" || pathname === "/ops" || pathname.startsWith("/ops/");
+
+/**
  * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers
  * from the office app to their portal, customers' contacts from everything but the customer portal
  * (and the QR codes' links, which lead them into it) to theirs, and everyone else out of the
@@ -151,12 +159,17 @@ const handleGuard: Handle = ({ event, resolve }) => {
 		const { tenant } = event.locals;
 		const routeId = event.route.id;
 		if (tenant && isCustomerContact(tenant.roles)) {
-			const allowed = isCustomerPortal(routeId) || pathname.startsWith("/q/") || isPublic(pathname);
+			const allowed =
+				isCustomerPortal(routeId) ||
+				pathname.startsWith("/q/") ||
+				isPublic(pathname) ||
+				isForAnyRole(pathname);
 			if (!allowed) redirect(303, "/portal");
 		} else if (isCustomerPortal(routeId)) {
 			redirect(303, "/");
 		}
-		if (tenant && isFieldEngineer(tenant.roles) && !isPortal(pathname) && !isPublic(pathname)) {
+		const elsewhere = !isPortal(pathname) && !isPublic(pathname) && !isForAnyRole(pathname);
+		if (tenant && isFieldEngineer(tenant.roles) && elsewhere) {
 			redirect(303, "/my");
 		}
 	} else if (!isPublic(pathname) && !isIntegration(event.route.id)) {

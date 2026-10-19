@@ -53,6 +53,25 @@ export const variables = defineEnvVars({
 			"Optional, for local development and staging only, never in production. `true` shows the login page's demo buttons, which sign in as SHLTR's demo users without a password, and the user menus' 'View as' in SHLTR, which switches between them (`src/routes/demo.remote.ts`); anything else, or unset, hides them and refuses their sign-in.",
 		schema: (value) => value === "true",
 	},
+	BUG_REPORT_EMAIL: {
+		description:
+			"Optional. Who gets an email for each bug report a user records (the record button in the headers), with a link to its replay page. Without it, the mail is logged to the server console instead.",
+		schema: (value) => value || undefined,
+	},
+	DEVELOPER_EMAILS: {
+		description:
+			"Optional. The developers, by their accounts' email addresses, comma-separated: only they may open the bug reports' pages (`/ops/bug-reports`), which are a 404 for everyone else. Without it, no one may.",
+		schema: (value) =>
+			(value ?? "")
+				.split(",")
+				.map((email) => email.trim().toLowerCase())
+				.filter(Boolean),
+	},
+	BUG_REPORTS_DIR: {
+		description:
+			"Optional, not on Cloudflare (whose bug reports go to the `BUG_REPORTS` R2 bucket). The folder the recorded bug reports are stored in; `.bug-reports` by default.",
+		schema: (value) => value || ".bug-reports",
+	},
 	DEV_REMOTE_DELAY_MS: {
 		description:
 			"Optional, in development only. Milliseconds to hold up each remote function call, to try navigations under a slow server.",
