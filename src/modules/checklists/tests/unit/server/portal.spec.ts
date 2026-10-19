@@ -36,13 +36,10 @@ import {
 	submit,
 	value,
 } from "#unit/lib/server/harness/index.ts";
+import { drawn } from "#unit/signature.test-support.ts";
 
 const [northId, shltrId] = [organizationId("north"), organizationId("shltr")];
 const lev = shltr.engineer;
-
-/** A tiny PNG, as the signature pad sends one. */
-const drawn =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 /** Today in the seed's (and Lev's) time zone, as stored. */
 const today = () => Temporal.Now.plainDateISO("Europe/Amsterdam");

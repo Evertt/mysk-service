@@ -9,6 +9,7 @@ import {
 	plannedTime,
 	signature,
 } from "#routes/(field)/my/work.ts";
+import { drawn } from "#unit/signature.test-support.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
 describe("groupByDay", () => {
@@ -93,8 +94,7 @@ describe("signature", () => {
 		const result = v.safeParse(signature(), input);
 		return result.success ? { value: result.output } : { issue: result.issues[0].message };
 	};
-	const png =
-		"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+	const png = drawn;
 
 	test("is a PNG data URL", () => {
 		expect(parse(png)).toEqual({ value: png });

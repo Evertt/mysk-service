@@ -232,12 +232,12 @@ describe("SHLTR's checklists, to North", () => {
 });
 
 describe("the work order of an order without units", () => {
-	/** SHLTR's order without checklists of a customer with one site, or more, its units taken off. */
-	async function unitless(sites: "one" | "more") {
-		const [found] = await rows<{ number: string; customerId: number }>(
-			`select o.number, o.customer_id as customerId from "order" o where o.organization_id = ?
+	// Which site it shows is the work record's rule (`work-record.spec.ts`); this is its wiring.
+	test("prints no site for a customer with more than one", async () => {
+		const [found] = await rows<{ number: string }>(
+			`select o.number from "order" o where o.organization_id = ?
 			 and not exists (select 1 from checklist c where c.order_id = o.id)
-			 and (select count(*) from customer_site s where s.customer_id = o.customer_id) ${sites === "one" ? "= 1" : "> 1"}
+			 and (select count(*) from customer_site s where s.customer_id = o.customer_id) > 1
 			 order by o.id limit 1`,
 			[shltrId],
 		);
@@ -246,19 +246,7 @@ describe("the work order of an order without units", () => {
 			`delete from order_unit where order_id = (select id from "order" where number = ? and organization_id = ?)`,
 			[found.number, shltrId],
 		);
-		return found;
-	}
-
-	test("prints the customer's site only when it has just one", async () => {
-		const [single, several] = [await unitless("one"), await unitless("more")];
-		const site = await value<number>(`select id from customer_site where customer_id = ?`, [
-			single.customerId,
-		]);
-		await as(shltr.member, async () => {
-			expect((await data(getWorkOrder, single.number)).sites.map((each) => each.id)).toEqual([
-				site,
-			]);
-			expect((await data(getWorkOrder, several.number)).sites).toEqual([]);
-		});
+		const printed = await as(shltr.member, () => data(getWorkOrder, found.number));
+		expect(printed.sites).toEqual([]);
 	});
 });

@@ -3,10 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import SignOff from "#lib/orders/ui/sign-off.svelte";
-
-/** A tiny PNG, as the signature pad sends one. */
-const drawn =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+import { drawn } from "#unit/signature.test-support.ts";
 
 const signoff = {
 	signerName: "Bram de Vries",
