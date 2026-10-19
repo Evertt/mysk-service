@@ -9,7 +9,7 @@
 <script lang="ts" generics="Entry extends NotificationEntry">
 	import BellIcon from "@lucide/svelte/icons/bell";
 
-	import { getTimeZone } from "#lib/dates.ts";
+	import { currentDay, getTimeZone } from "#lib/dates.ts";
 	import { formatDate, formatTimeAgo } from "#lib/i18n/index.ts";
 	import {
 		byDay,
@@ -76,7 +76,7 @@
 
 	/** "Today", "Yesterday", or the date. */
 	function dayLabel(day: Temporal.PlainDate) {
-		const today = Temporal.Now.plainDateISO(getTimeZone());
+		const today = currentDay();
 		if (day.equals(today)) return m.common_notifications_today();
 		if (day.equals(today.subtract({ days: 1 }))) return m.common_notifications_yesterday();
 		return formatDate(day);
