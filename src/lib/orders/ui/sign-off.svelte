@@ -1,7 +1,8 @@
 <!--
 	@component
 	An order's sign-off, as the office and both portals show it: who signed off for the customer and
-	when, then the customer's and the engineer's signatures side by side (stacked on a phone), and
+	when, then the customer's and the engineer's signatures side by side (stacked where it's narrow: a
+	phone, the office's side column), and
 	who in the office collected it when the sign-off says (the office's).
 -->
 <script lang="ts">
@@ -30,14 +31,14 @@
 	]);
 </script>
 
-<div class="flex flex-col gap-4" data-signoff>
+<div class="@container flex flex-col gap-4" data-signoff>
 	<p class="text-sm">
 		{m.orders_signoff_signed({
 			name: signoff.signerName,
 			date: formatDateTime(signoff.signedAt),
 		})}
 	</p>
-	<div class="grid gap-4 sm:grid-cols-2">
+	<div class="grid gap-4 @sm:grid-cols-2">
 		{#each signatures as signature (signature.key)}
 			<figure class="flex flex-col gap-2" data-signature={signature.key}>
 				<img

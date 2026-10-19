@@ -53,7 +53,9 @@
 									})}
 									class="truncate text-sm text-muted-foreground underline-offset-4 hover:underline"
 								>
-									{unitTitle(order.equipment)} · {unitLine(order.equipment)}
+									{[unitTitle(order.equipment), unitLine(order.equipment)]
+										.filter(Boolean)
+										.join(" · ")}
 									{#if order.unitCount > 1}
 										<span class="tabular-nums">
 											+{formatNumber(order.unitCount - 1)}
