@@ -10,10 +10,11 @@
 import type { InStatement } from "@libsql/client";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
+import { mondayOf } from "#lib/dates.ts";
 import { withFirstUnit } from "#lib/orders/server/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
-import { mondayOf, monthRange } from "#modules/schedule/calendar/calendar.ts";
+import { monthRange } from "#modules/schedule/calendar/calendar.ts";
 import {
 	getSchedule,
 	getScheduleMonth,

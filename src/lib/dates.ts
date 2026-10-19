@@ -3,11 +3,13 @@
  * day a contract starts), a moment a `Temporal.Instant` (when an order was made or is scheduled
  * for); see `day` and `moment` in `#lib/server/db/columns.ts`. Work with them through the Temporal
  * API itself, e.g. `date.add({ days: 1 })`, `Temporal.PlainDate.compare(a, b)` (never `<`: a
- * Temporal value has no `valueOf`), `instant.toZonedDateTimeISO(getTimeZone()).toPlainDate()`.
+ * Temporal value has no `valueOf`), `day.add({ days: 1 })`.
  *
  * What's here is the time zone a moment is turned into a day or a time of day in: the user's
  * (`getTimeZone()`), on the server too, where the browser told it (see
- * `src/lib/server/time-zone.ts`); else the runtime's own.
+ * `src/lib/server/time-zone.ts`); else the runtime's own. And the few questions asked of it
+ * everywhere: the day it is now (`currentDay()`), the day of a moment (`dayOf()`), when a day
+ * starts (`startOfDay()`), and the Monday of a day's week (`mondayOf()`).
  */
 
 /** The cookie the browser keeps its time zone in, for the server (see `src/routes/time-zone.ts`). */
@@ -25,6 +27,20 @@ export const getTimeZone = () => currentTimeZone();
 export function overwriteGetTimeZone(get: () => string) {
 	currentTimeZone = get;
 }
+
+/** The day it is now in the user's time zone (`getTimeZone()`). */
+export const currentDay = () => Temporal.Now.plainDateISO(getTimeZone());
+
+/** The day `moment` falls on in the user's time zone. */
+export const dayOf = (moment: Temporal.Instant) =>
+	moment.toZonedDateTimeISO(getTimeZone()).toPlainDate();
+
+/** The moment `day` starts in the user's time zone (not always midnight UTC, nor 24 hours before the next). */
+export const startOfDay = (day: Temporal.PlainDate) =>
+	day.toZonedDateTime(getTimeZone()).toInstant();
+
+/** The Monday of `day`'s week: weeks run from Monday to Sunday. */
+export const mondayOf = (day: Temporal.PlainDate) => day.subtract({ days: day.dayOfWeek - 1 });
 
 /** Whether `value` is a time zone `Intl` knows, e.g. `Europe/Amsterdam`. */
 export function isTimeZone(value: unknown): value is string {
