@@ -1,9 +1,9 @@
 /**
- * The dashboard's masonry: its cards, of different heights, packed into columns without the gaps
- * a grid's rows leave.
+ * A masonry: a page's cards, of different heights, packed into columns without the gaps a grid's
+ * rows leave (the dashboard's, a unit's page).
  *
- * The container is a CSS grid whose columns CSS decides (see the page's `.cards`); this only
- * places the cards in them: each, in the page's order, under the column that's shortest so far,
+ * The container is a CSS grid with `masonryGrid`'s classes, whose columns the page's own classes
+ * decide; this only places the cards in them: each, in the page's order, under the column that's shortest so far,
  * so the cards read roughly left to right, row by row, and the DOM order (what a keyboard and a
  * screen reader follow) stays the page's. In masonry mode (`data-masonry`) the grid's rows are 1px
  * each, and a card spans as many as it's tall. Until the script runs, and with one column, it's
@@ -19,6 +19,14 @@
  * first rather than beside it; and not `grid-template-rows: masonry`, which no browser ships yet.
  */
 import type { Attachment } from "svelte/attachments";
+
+/**
+ * The classes a masonry's container needs, besides its columns and gap: a grid whose cards keep
+ * their own height (not stretched to their row's), and in masonry mode rows of 1px with no gap
+ * between them, the cards spanning as many as they're tall (the gap between cards is the column
+ * gap, which `masonry` adds itself).
+ */
+export const masonryGrid = "grid items-start data-masonry:auto-rows-[1px] data-masonry:gap-y-0";
 
 /**
  * Where a card goes: its (first) column (from 0), how many it spans, and its top, in px from the

@@ -9,6 +9,7 @@
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import { getRecentActivity } from "#lib/components/activity/activity.remote.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
+	import { masonry } from "#lib/components/masonry.ts";
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import {
 		compare,
@@ -28,7 +29,6 @@
 	import { cardGrid, statGrid } from "./dashboard-grids.ts";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
 	import EquipmentByStatusChart from "./equipment-by-status-chart.svelte";
-	import { masonry } from "./masonry.ts";
 	import OrdersPerWeekChart from "./orders-per-week-chart.svelte";
 	import RecentActivity from "./recent-activity.svelte";
 	import RevenuePerMonthChart from "./revenue-per-month-chart.svelte";
@@ -134,8 +134,8 @@
 	<ExtensionSlot point={stats} props={{}} />
 </div>
 
-<!-- The cards, packed into columns (`masonry.ts`). The slot's wrapper is `display: contents`, so
-	each of the modules' cards is placed on its own. -->
+<!-- The cards, packed into columns (`#lib/components/masonry.ts`). The slot's wrapper is
+	`display: contents`, so each of the modules' cards is placed on its own. -->
 <div class={cardGrid} data-dashboard-cards {@attach masonry}>
 	<Card.Root data-wide>
 		<Card.Header>
