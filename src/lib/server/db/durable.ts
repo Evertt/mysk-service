@@ -28,9 +28,20 @@ export interface DurableStorage {
 	transactionSync<T>(work: () => T): T;
 }
 
-/** What the entry runs each request of the Durable Object with. */
+/** The parts of an R2 bucket binding the app uses (`R2Bucket` of the Workers runtime). */
+export interface Bucket {
+	put(key: string, value: Uint8Array, options?: object): Promise<unknown>;
+	get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+}
+
+/**
+ * What the entry runs each request of the Durable Object with: its storage, and the Worker's
+ * bindings the app uses besides (SvelteKit's adapter doesn't pass them as `platform`).
+ */
 export interface DurableRequest {
 	storage: DurableStorage;
+	/** The recordings of bug reports (`BUG_REPORTS` in `wrangler.jsonc`, `bugReportStore()`). */
+	bugReports: Bucket;
 }
 
 declare global {

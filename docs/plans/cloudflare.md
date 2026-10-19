@@ -66,8 +66,9 @@ object: 1–4 ms. Importing the demo data: about 2 s.
 
 ## Open
 
-- Mail through `SMTP_URL` (nodemailer) is untested on Workers; Cloudflare's own email binding is
-  an alternative.
+- Mail goes through `SMTP_URL` (nodemailer over the Worker's sockets, STARTTLS on port 587 only;
+  README "Mail on Cloudflare"). Cloudflare's own Email Sending binding is the alternative once a
+  domain is on Cloudflare DNS and the account is on Workers Paid.
 - The e2e suite runs on Node with libsql; the Cloudflare path is covered by the unit specs, the
   parameter check and manual checks of a deployment.
 - Latency for users far from the object's location; eviction and cold starts.

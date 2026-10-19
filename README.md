@@ -195,7 +195,7 @@ environment variables; on Cloudflare `wrangler.jsonc`'s `vars`, or secrets
 | `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails                   |
 | `VERCEL_BRANCH_URL`   | no            | Set by Vercel: without `ORIGIN`, the origin is `https://` and this domain                            |
 | `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                           |
-| `SMTP_URL`            | no            | Sends mail, e.g. `smtps://user:password@smtp.example.com:465`; otherwise it's logged                 |
+| `SMTP_URL`            | no            | Sends mail, e.g. `smtp://user:password@smtp.example.com:587`; otherwise it's logged                  |
 | `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                                  |
 | `CRON_SECRET`         | on Vercel     | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself                     |
 | `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                              |
@@ -319,9 +319,30 @@ data (see "Demo login") on every deploy, so what's done there doesn't last; its 
 one-click demo sign-in (`DEMO_SIGN_IN` in its vars), production's hasn't. Its auth secret is made
 on the first deploy; its ops token anew on every deploy, used only by CI.
 
-Cloudflare keeps 30 days of the object's history (point-in-time recovery). Mail: `SMTP_URL` sends
-through nodemailer, which is untested on Workers; without it, mail is logged
-(`wrangler tail`).
+Cloudflare keeps 30 days of the object's history (point-in-time recovery).
+
+#### Mail on Cloudflare
+
+Invitations, maintenance reminders and bug reports' mails go out through `SMTP_URL`, with
+nodemailer over the Worker's TCP sockets (`nodejs_compat`), from `MAIL_FROM` (in `wrangler.jsonc`'s
+vars: `noreply@devign.nl`). Only STARTTLS works there: `smtp://…:587`, not `smtps://` on port 465.
+Without `SMTP_URL`, mail is logged (`wrangler tail`, Workers Logs). Set it up once:
+
+1. Make the sender's mailbox, `noreply@devign.nl` at TransIP (devign.nl's SPF already allows
+   TransIP's servers), or use another SMTP service that may send for that address.
+2. Set the secret on both Workers, with the user and password URL-encoded (`@` is `%40`):
+
+   ```sh
+   echo 'smtp://noreply%40devign.nl:<password>@smtp.transip.email:587' | wrangler secret put SMTP_URL
+   echo 'smtp://noreply%40devign.nl:<password>@smtp.transip.email:587' | wrangler secret put SMTP_URL --env staging
+   ```
+
+3. Check it: on staging, record a bug report (the header's record button) as a demo user; the
+   mail goes to `BUG_REPORT_EMAIL`. A failure is in Workers Logs as
+   `[bug report] The mail about it couldn't be sent`.
+
+Cloudflare's own Email Sending (a `send_email` binding) would need no secret, but it needs the
+Workers Paid plan and the sender's domain on Cloudflare DNS; devign.nl's DNS is at TransIP.
 
 #### Reading the logs
 

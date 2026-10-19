@@ -2,7 +2,8 @@
 // SQLite database (`cloudflare/entry.ts`). `pnpm deploy:cloudflare` builds and deploys it; secrets
 // (`BETTER_AUTH_SECRET`, `OPS_TOKEN` for imports and the daily jobs, optionally `SMTP_URL`,
 // `BUG_REPORT_EMAIL` and `DEVELOPER_EMAILS`) are set with `wrangler secret put`, and
-// locally in `.dev.vars` (see `.dev.vars.example`).
+// locally in `.dev.vars` (see `.dev.vars.example`). Mail goes out through `SMTP_URL` on port 587
+// (STARTTLS), from `MAIL_FROM` in the vars: see "Mail on Cloudflare" in README.md.
 {
 	"name": "fieldworks",
 	"main": "cloudflare/entry.ts",
@@ -16,7 +17,10 @@
 	// The recordings of bug reports (`src/lib/server/bug-reports/storage.ts`); made once with
 	// `wrangler r2 bucket create fieldworks-bug-reports`.
 	"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-bug-reports" }],
-	"vars": { "ORIGIN": "https://fieldworks.devign.workers.dev" },
+	"vars": {
+		"ORIGIN": "https://fieldworks.devign.workers.dev",
+		"MAIL_FROM": "Fieldworks <noreply@devign.nl>",
+	},
 	// The daily jobs (e.g. maintenance plans that become orders), at 04:00 UTC, and the demo's
 	// simulations' tick, every 15 minutes: `scheduled()` in `cloudflare/entry.ts`. They need the
 	// `OPS_TOKEN` secret.
@@ -44,6 +48,7 @@
 			// per request (`src/lib/server/logs/timing.ts`), here only, so production's log volume stays known.
 			"vars": {
 				"ORIGIN": "https://fieldworks-staging.devign.workers.dev",
+				"MAIL_FROM": "Fieldworks (staging) <noreply@devign.nl>",
 				"DEMO_SIGN_IN": "true",
 				"TIMING_LOGS": "1",
 			},

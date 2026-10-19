@@ -26,7 +26,7 @@ export const variables = defineEnvVars({
 	},
 	SMTP_URL: {
 		description:
-			"Optional. Where to send mail, e.g. `smtps://user:password@smtp.example.com:465`. Without it, mail (such as invitations) is logged to the server console.",
+			"Optional. Where to send mail, e.g. `smtp://user:password@smtp.example.com:587` (STARTTLS; on Cloudflare only that works, not `smtps://` on port 465). Without it, mail (such as invitations) is logged to the server console.",
 		schema: (value) => value || undefined,
 	},
 	MAIL_FROM: {
