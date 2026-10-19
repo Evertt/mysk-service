@@ -17,8 +17,8 @@
 >
 	<Sidebar.Trigger class="-ml-1" />
 	<div class="ml-auto flex items-center gap-1">
-		<NotificationBell />
 		<SyncIndicator />
+		<NotificationBell />
 		<BugReportButton />
 		<ThemeSwitcher />
 		<ModeSwitcher />
