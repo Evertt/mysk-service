@@ -117,8 +117,7 @@ async function unitsOfOrders(access: CustomerAccess, orderIds: number[]) {
 		.where(
 			and(
 				inList(orderUnit.orderId, orderIds),
-				inTenant(orderUnit),
-				eq(orderUnit.customerId, access.customer.id),
+				ofCustomer(access, orderUnit),
 				atSites(access, equipment.siteId),
 			),
 		)

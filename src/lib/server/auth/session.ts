@@ -270,8 +270,18 @@ export const currentUser = () => requireUser();
  */
 export const currentTenant = () => requireTenant();
 
-/** The engineer record of the signed-in user, in a remote function gated by `forEngineers`. */
-export const currentEngineer = async () => (await requireEngineer()).engineer;
+/**
+ * The engineer record of the signed-in user, in a remote function gated by `forEngineers`: without
+ * its id (and its account, the way back to it). The engineer's orders are `engineerOrders()`'s
+ * (`./engineer.ts`), which reads the id itself, so no one else compares it by hand.
+ */
+export const currentEngineer = async (): Promise<Omit<LinkedEngineer, "id" | "userId">> => {
+	const { id: _id, userId: _userId, ...handed } = (await requireEngineer()).engineer;
+	return handed;
+};
+
+/** The engineer record linked to the signed-in user, as `requireEngineer()` finds it. */
+type LinkedEngineer = Awaited<ReturnType<typeof findEngineer>>["engineer"];
 
 /**
  * The customer the signed-in contact sees, and its sites they're limited to (`siteIds`, `null` for

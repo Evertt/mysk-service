@@ -211,7 +211,6 @@
 	"materials_activity_field_quantity": "quantity",
 	"materials_order_line_amount": "Amount",
 	"materials_order_line_quantity": "Quantity",
-	"materials_portal_not_found": "Order {number} not found",
 	"materials_equipment_not_found": "Unit {serial} not found",
 	"materials_parts_title": "Parts used",
 	"materials_parts_description": "The materials on this unit's completed orders.",

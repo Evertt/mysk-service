@@ -464,15 +464,6 @@ describe("start: the engineer starts a scheduled job", () => {
 		);
 	});
 
-	test("another engineer's order is a 404, and stays as it was", async () => {
-		const { id } = await orderIn("scheduled", { engineerId: 4 });
-		asEngineer();
-		expect(
-			await refusal(() => db.transaction((tx) => transitionOrder(tx, { verb: "start", id }))),
-		).toBe(404);
-		expect((await stored(id)).status).toBe("scheduled");
-	});
-
 	test("a job under way can't be started again", async () => {
 		const { id } = await orderIn("in_progress", { engineerId: 1 });
 		asEngineer();

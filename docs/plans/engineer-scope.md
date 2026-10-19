@@ -126,7 +126,9 @@ should:
   `src/lib/engineers/**` (the office's account form).
 - **R3:** in engineer-gated files (those making their remote functions with `forEngineers` or a
   module's engineer set: `src/routes/(field)/**`, `src/modules/*/portal/**`), no `order.engineerId`,
-  `inTenant(order)` or `idInTenant(order,`.
+  `inTenant(order)`, `tenantJoin(order,`, `idsInTenant(order,`, or `idInTenant(order,` other than
+  writing the order found through the scope (`idInTenant(order, found.id)`); these folders by path,
+  and any file making remote functions with `forEngineers`.
 - **A type test:** `currentEngineer()`'s result has no `id`.
 
 The office's filters by an engineer it was given (`?engineer=`, the planner, the engineers page)
@@ -189,3 +191,11 @@ the source spec; the customer bypasses; docs.
    Tenancy bullet names `engineerOrders()`/`engineerOrder()`.
 8. **Gate:** check, knip, the specs above, the portal, checklists, condition, materials and customer
    portal e2e files.
+
+## Review decisions
+
+- **A1 (round 1), O1:** the two places where the engineer condition sits in a module's own query
+  (checklists' `findFieldChecklist`, condition's `findFieldUnit`) keep a same-tenant
+  other-engineer case each (checklists' point and checklist, condition's unit), so dropping the
+  scope there fails a test. This narrows Q8: the other engineer-vs-engineer cases stay at the
+  scope's spec.

@@ -11,7 +11,7 @@ import * as v from "valibot";
 import { openOrderStatuses } from "#lib/models.ts";
 import { onAnyUnit } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { currentEngineer, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { engineerOrders, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -66,7 +66,6 @@ const siteOf = (siteId: number) =>
 /** The signed-in engineer's open orders on any of the units `ids`, the next first. */
 async function myOpenOrders(ids: number[]) {
 	if (!ids.length) return [];
-	const engineer = await currentEngineer();
 	return db
 		.select({
 			id: order.id,
@@ -79,14 +78,7 @@ async function myOpenOrders(ids: number[]) {
 		})
 		.from(order)
 		.innerJoin(...tenantJoin(customer, order.customerId))
-		.where(
-			and(
-				inTenant(order),
-				eq(order.engineerId, engineer.id),
-				inList(order.status, openOrderStatuses),
-				onAnyUnit(ids),
-			),
-		)
+		.where(and(await engineerOrders(), inList(order.status, openOrderStatuses), onAnyUnit(ids)))
 		.orderBy(asc(order.scheduledFor), asc(order.id));
 }
 

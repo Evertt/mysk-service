@@ -125,7 +125,13 @@ describe("running as someone", () => {
 			await value("select organization_id from customer where id = ?", [contact.customer.id]),
 		).toBe("org-south");
 		// Once: the second time, the same account.
-		expect((await as(south.engineer, () => currentEngineer())).id).toBe(engineer.id);
+		expect((await as(south.engineer, () => currentEngineer())).email).toBe(engineer.email);
+		expect(
+			await value(
+				"select count(*) from engineer e join user u on u.id = e.user_id where u.email = ?",
+				[south.engineer.email],
+			),
+		).toBe(1);
 		expect(await value("select count(*) from user where email = ?", [south.engineer.email])).toBe(
 			1,
 		);

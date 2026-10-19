@@ -51,8 +51,10 @@ Organizations own all business data.
   purpose), or a module's `moduleRemote("<id>")`. Each has `query`, `query.live`, `form` and
   `command`. The gate runs before the handler, which reads what it admitted with
   `currentTenant()`, `currentUser()`, `await currentEngineer()` or `await currentCustomer()`; the
-  customer portal's queries are scoped to the customer too (`ofCustomer()`, `customerOrders()`,
-  `atSites()` in `src/lib/server/auth/customer.ts`).
+  engineer portal's orders are scoped to the engineer (`await engineerOrders()`,
+  `await engineerOrder(ref)`, `engineerOrderNotFound(ref)` in `src/lib/server/auth/engineer.ts`),
+  the customer portal's queries to the customer (`ofCustomer()`, `customerOrders()`, `atSites()`
+  in `src/lib/server/auth/customer.ts`).
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()`. Ids come
   from the client.

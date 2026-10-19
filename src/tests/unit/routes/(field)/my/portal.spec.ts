@@ -1,7 +1,7 @@
 /**
  * The engineer portal's remote functions on the seeded demo database, as North's field engineer
  * (Erik) uses them: their work is their own orders only; completing needs their own signature
- * too, which is in their own name, logged once it's in; and another engineer's order, or South's, is a 404 to read and to change, also by its id in
+ * too, which is in their own name, logged once it's in; and South's order is a 404 to read and to change (another engineer's is the scope's, `engineer.spec.ts`), also by its id in
  * the forms of their own order. The server side of `src/tests/e2e/portal.test.ts`, which keeps the
  * job's story, a page's 404 and one tampered form.
  */
@@ -47,9 +47,8 @@ interface Order {
 }
 
 let mine: number;
-/** An order of theirs under way, another North engineer's, and one of South's. */
+/** An order of theirs under way, and one of South's. */
 let own: Order;
-let others: Order;
 let southern: Order;
 
 beforeAll(async () => {
@@ -64,9 +63,8 @@ beforeAll(async () => {
 			args,
 		).then(([found]) => found);
 	own = await inProgress("engineer_id = ?", [mine]);
-	others = await inProgress("organization_id = ? and engineer_id <> ?", [northId, mine]);
 	southern = await inProgress("organization_id = ?", [southId]);
-	expect([own, others, southern].every(Boolean)).toBe(true);
+	expect([own, southern].every(Boolean)).toBe(true);
 });
 
 describe("an engineer's work", () => {
@@ -140,37 +138,32 @@ describe("an engineer's work", () => {
 	});
 });
 
-describe("another engineer's order, or South's", () => {
+describe("South's order", () => {
 	test("is a 404 to read", async () => {
 		await as(erik, async () => {
-			for (const order of [others, southern]) {
-				expect(await call(getMyOrder, order.number), order.number).toMatchObject({ status: 404 });
-			}
+			expect(await call(getMyOrder, southern.number)).toMatchObject({ status: 404 });
 			expect(await call(getMyOrder, own.number)).toMatchObject({ status: 200 });
 		});
 	});
 
 	test("is a 404 to change, also by its id in the forms of their own order", async () => {
-		const victims = [others, southern];
-		const before = await Promise.all([...victims, own].map((order) => snapshot(order.id)));
+		const before = await Promise.all([southern, own].map((order) => snapshot(order.id)));
+		const id = String(southern.id);
 		await as(erik, async () => {
-			for (const victim of victims) {
-				const id = String(victim.id);
-				for (const answer of [
-					await submit(addNote, { id, text: "1" }),
-					await submit(logHours, { id, laborHours: 1 }),
-					await submit(startWork, { id }),
-					await submit(completeWork, {
-						id,
-						signerName: "Robin Customer",
-						signature: drawn,
-						engineerSignature: drawn,
-					}),
-				]) {
-					expect(answer, victim.number).toMatchObject({ status: 404 });
-				}
+			for (const answer of [
+				await submit(addNote, { id, text: "1" }),
+				await submit(logHours, { id, laborHours: 1 }),
+				await submit(startWork, { id }),
+				await submit(completeWork, {
+					id,
+					signerName: "Robin Customer",
+					signature: drawn,
+					engineerSignature: drawn,
+				}),
+			]) {
+				expect(answer).toMatchObject({ status: 404 });
 			}
 		});
-		expect(await Promise.all([...victims, own].map((order) => snapshot(order.id)))).toEqual(before);
+		expect(await Promise.all([southern, own].map((order) => snapshot(order.id)))).toEqual(before);
 	});
 });

@@ -4,10 +4,10 @@
  * read-only. Gated by the module's set for customers and scoped to their customer and the sites
  * they see (`#lib/server/auth/customer.ts`): another customer's site is never in it.
  */
-import { and, eq } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import * as v from "valibot";
 
-import { atSites, currentCustomer } from "#lib/server/auth/index.ts";
+import { atSites, currentCustomer, ofCustomer } from "#lib/server/auth/index.ts";
 import { customerSite } from "#lib/server/db/schema.ts";
 
 import { periods } from "../model.ts";
@@ -18,7 +18,7 @@ import { loadSites, periodRanges, sitesFigures } from "../server/figures.ts";
 export const getClientEnergy = forCustomers.query(v.picklist(periods), async (period) => {
 	const access = await currentCustomer();
 	const own = await loadSites(
-		and(eq(customerSite.customerId, access.customer.id), atSites(access, customerSite.id)),
+		and(ofCustomer(access, customerSite), atSites(access, customerSite.id)),
 	);
 	const now = Temporal.Now.instant();
 	const ofSites = own.map((site) => ({ site, ranges: periodRanges(period, site.timeZone, now) }));

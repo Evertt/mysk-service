@@ -8,7 +8,6 @@ import * as v from "valibot";
 
 import { fieldActions } from "#lib/orders/index.ts";
 import { id, recordId } from "#lib/schema.ts";
-import { currentEngineer } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { advice } from "../form/condition-schema.ts";
@@ -32,8 +31,7 @@ const unitOnOrder = v.object({
  * thresholds that colour it.
  */
 export const getFieldCondition = forEngineers.query(unitOnOrder, async (input) => {
-	const engineer = await currentEngineer();
-	const found = await findFieldUnit(db, engineer.id, input.number, input.equipmentId);
+	const found = await findFieldUnit(db, input.number, input.equipmentId);
 	const [recorded, components, thresholds] = await Promise.all([
 		checklistCondition(db, found.unit.id, found.order.id),
 		checklistComponentConditions(found.unit.id, found.order.id),
@@ -58,8 +56,7 @@ export const adviseFieldConditionForm = forEngineers.form(
 		advice: advice(),
 	}),
 	async ({ number, equipmentId, advice }) => {
-		const engineer = await currentEngineer();
-		await adviseFieldCondition(engineer.id, number, equipmentId, advice);
+		await adviseFieldCondition(number, equipmentId, advice);
 		void getFieldCondition({ number, equipmentId }).refresh();
 	},
 );

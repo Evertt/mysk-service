@@ -338,16 +338,11 @@ describe("the engineer's advice, in the portal", () => {
 		);
 	});
 
-	test("for a unit not on the order, another engineer's order or another tenant's, is a 404", async () => {
+	test("for a unit not on the order, or another tenant's order, is a 404", async () => {
 		const [elsewhere] = await rows<{ id: number }>(
 			`select e.id from equipment e where e.organization_id = ? and not exists
 			 (select 1 from order_unit u where u.order_id = ? and u.equipment_id = e.id) limit 1`,
 			[shltrId, job.id],
-		);
-		const [others] = await rows<{ number: string; equipment_id: number }>(
-			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
-			 where o.organization_id = ? and o.engineer_id <> ? limit 1`,
-			[shltrId, levId],
 		);
 		const [northern] = await rows<{ number: string; equipment_id: number }>(
 			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
@@ -358,7 +353,6 @@ describe("the engineer's advice, in the portal", () => {
 		const advised = (await conditionsOf(job.equipment_id))[0].advice;
 		for (const fields of [
 			{ equipmentId: elsewhere.id },
-			{ number: others.number, equipmentId: others.equipment_id },
 			{ number: northern.number, equipmentId: northern.equipment_id },
 		]) {
 			const target = { ...unitOnJob(), ...fields };
@@ -377,6 +371,45 @@ describe("the engineer's advice, in the portal", () => {
 		}
 		expect(await conditionCount()).toBe(before);
 		expect((await conditionsOf(job.equipment_id))[0].advice).toBe(advised);
+	});
+
+	test("another engineer's order, with its unit, is a 404 to read and to advise on", async () => {
+		// The condition of the engineer's own scope in findFieldUnit(): SHLTR's own orders.
+		const [others] = await rows<{ number: string; equipment_id: number }>(
+			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
+			 where o.organization_id = ? and o.engineer_id <> ? and not exists
+			 (select 1 from "order" s where s.engineer_id = ? and s.number = o.number) limit 1`,
+			[shltrId, levId, levId],
+		);
+		const before = await conditionCount();
+		const target = { number: others.number, equipmentId: others.equipment_id };
+		expect(await as(lev, () => call(getFieldCondition, target))).toMatchObject({
+			status: 404,
+			message: `Order ${others.number} not found`,
+		});
+		expect(
+			await advise({
+				...target,
+				equipmentId: String(target.equipmentId),
+				advice: "Gemanipuleerd.",
+			}),
+		).toMatchObject({ status: 404 });
+		expect(await conditionCount()).toBe(before);
+	});
+
+	test("an order that isn't theirs is the portal's 404, naming the order", async () => {
+		// North's, by a number none of Lev's orders has (numbers repeat across tenants).
+		const [northern] = await rows<{ number: string; equipment_id: number }>(
+			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
+			 where o.organization_id = ? and not exists
+			 (select 1 from "order" s where s.engineer_id = ? and s.number = o.number) limit 1`,
+			[northId, levId],
+		);
+		const target = { number: northern.number, equipmentId: northern.equipment_id };
+		expect(await as(lev, () => call(getFieldCondition, target))).toMatchObject({
+			status: 404,
+			message: `Order ${northern.number} not found`,
+		});
 	});
 
 	test("is an engineer's: an office member is refused it", async () => {

@@ -4,7 +4,7 @@
  * another engineer's order (or another tenant's) is a 404, also by a tampered id.
  */
 import { getRequestEvent } from "$app/server";
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -18,6 +18,9 @@ import {
 	auth,
 	currentEngineer,
 	currentTenant,
+	engineerOrder,
+	engineerOrderNotFound,
+	engineerOrders,
 	idInTenant,
 	inTenant,
 	tenantJoin,
@@ -58,8 +61,7 @@ const listColumns = {
 
 /** The engineer's open work (scheduled or under way), and what they completed recently. */
 export const getMyWork = forEngineers.query(async () => {
-	const engineer = await currentEngineer();
-	const mine = and(inTenant(order), eq(order.engineerId, engineer.id));
+	const mine = await engineerOrders();
 	const [open, recent] = await Promise.all([
 		db
 			.select(listColumns)
@@ -102,9 +104,8 @@ const siteColumns = {
  * units. A 404 for anyone else's.
  */
 export const getMyOrder = forEngineers.query(v.string(), async (number) => {
-	const engineer = await currentEngineer();
 	const found = await db.query.order.findFirst({
-		where: and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineer.id)),
+		where: await engineerOrder({ number }),
 		with: {
 			customer: {
 				columns: { name: true, contactName: true, phone: true, email: true, city: true },
@@ -132,7 +133,7 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 			},
 		},
 	});
-	if (!found) error(404, m.portal_not_found({ number }));
+	if (!found) engineerOrderNotFound({ number });
 	const { sites: customerSites, ...owner } = found.customer;
 	// Each unit with the name of its location at the site, if it has one.
 	const units = found.units.map(({ equipment: unit }) => ({
@@ -209,10 +210,9 @@ export const startWork = forEngineers.form(v.object({ id: id() }), async (input)
 export const logHours = forEngineers.form(
 	v.object({ id: id(), laborHours: laborHours() }),
 	async (input, issue) => {
-		const engineer = await currentEngineer();
 		if (input.laborHours > 24 * 14) invalid(issue.laborHours(m.portal_hours_too_many()));
 		const number = await db.transaction(async (tx) => {
-			const found = await findEngineerOrder(tx, engineer.id, input.id, "work");
+			const found = await findEngineerOrder(tx, { id: input.id }, "work");
 			const after = { laborHours: input.laborHours };
 			await tx.update(order).set(after).where(idInTenant(order, found.id));
 			await recordActivity(tx, {
@@ -235,12 +235,11 @@ export const addNote = forEngineers.form(
 	v.object({ id: id(), text: text(m.portal_note_required) }),
 	async (input, issue) => {
 		const { organizationId, user: author } = currentTenant();
-		const engineer = await currentEngineer();
 		if (input.text.length > MAX_NOTE_LENGTH) {
 			invalid(issue.text(m.portal_note_too_long({ max: formatNumber(MAX_NOTE_LENGTH) })));
 		}
 		const number = await db.transaction(async (tx) => {
-			const found = await findEngineerOrder(tx, engineer.id, input.id, "note");
+			const found = await findEngineerOrder(tx, { id: input.id }, "note");
 			await tx.insert(orderNote).values({
 				organizationId,
 				orderId: found.id,
