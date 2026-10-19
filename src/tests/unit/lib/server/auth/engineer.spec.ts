@@ -136,7 +136,10 @@ describe("the conditions", () => {
 			sql: '("order"."id" = ? and ("order"."organization_id" = ? and "order"."engineer_id" = ?))',
 			params: [7, northId, mine],
 		});
-		expect(byNumber).toMatchObject({ params: ["ORD-1", northId, mine] });
+		expect(byNumber).toMatchObject({
+			sql: '("order"."number" = ? and ("order"."organization_id" = ? and "order"."engineer_id" = ?))',
+			params: ["ORD-1", northId, mine],
+		});
 	});
 });
 

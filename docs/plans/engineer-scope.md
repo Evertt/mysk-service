@@ -126,7 +126,9 @@ should:
   `src/lib/engineers/**` (the office's account form).
 - **R3:** in engineer-gated files (those making their remote functions with `forEngineers` or a
   module's engineer set: `src/routes/(field)/**`, `src/modules/*/portal/**`), no `order.engineerId`,
-  `inTenant(order)` or `idInTenant(order,`.
+  `inTenant(order)`, `tenantJoin(order,`, `idsInTenant(order,`, or `idInTenant(order,` other than
+  writing the order found through the scope (`idInTenant(order, found.id)`); these folders by path,
+  and any file making remote functions with `forEngineers`.
 - **A type test:** `currentEngineer()`'s result has no `id`.
 
 The office's filters by an engineer it was given (`?engineer=`, the planner, the engineers page)

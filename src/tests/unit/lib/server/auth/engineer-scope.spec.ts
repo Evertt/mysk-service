@@ -10,8 +10,10 @@
  * - `engineer.userId` is read only there and by the office's account form (`src/lib/engineers/`);
  * - an engineer-gated file (in `src/routes/(field)/` or a module's `portal/`, or one that makes
  *   remote functions with `forEngineers`) reads orders only through the scope: no
- *   `order.engineerId`, no `inTenant(order)`, no `tenantJoin(order, …)`, and `idInTenant(order, …)`
- *   only for the order it found through the scope (`idInTenant(order, found.id)`, to write it).
+ *   `order.engineerId`, no `inTenant(order)`, no `tenantJoin(order, …)`, no
+ *   `idsInTenant(order, …)`, and `idInTenant(order, …)` only to write the order it found through
+ *   the scope (`idInTenant(order, found.id)`, where `found` is `findEngineerOrder()`'s or a read
+ *   with `engineerOrder()`; a review keeps it so).
  *
  * The office's filters by an engineer it was given (the orders list's `?engineer=`, the planner)
  * aren't engineer-gated and hold no signed-in engineer's id: none of these match them. Run on
@@ -60,6 +62,7 @@ export function scopeBreaches(files: readonly SourceFile[]) {
 			if (/\border\.engineerId\b/.test(text)) found.push("order.engineerId");
 			if (/\binTenant\(\s*order\s*\)/.test(text)) found.push("inTenant(order)");
 			if (/\btenantJoin\(\s*order\s*,/.test(text)) found.push("tenantJoin(order, …)");
+			if (/\bidsInTenant\(\s*order\s*,/.test(text)) found.push("idsInTenant(order, …)");
 			if (/\bidInTenant\(\s*order\s*,(?!\s*found\.id\s*\))/.test(text)) {
 				found.push("idInTenant(order, …)");
 			}
@@ -114,10 +117,12 @@ describe("on made-up files", () => {
 		const helper = {
 			path: "src/routes/(field)/my/work.ts",
 			source: `const found = await db.query.order.findFirst({ where: idInTenant(order, input.id) });
-				db.select().from(orderUnit).innerJoin(...tenantJoin(order, orderUnit.orderId));`,
+				db.select().from(orderUnit).innerJoin(...tenantJoin(order, orderUnit.orderId));
+				db.select().from(order).where(idsInTenant(order, [input.id]));`,
 		};
 		expect(scopeBreaches([helper])).toEqual([
 			`${helper.path}: tenantJoin(order, …)`,
+			`${helper.path}: idsInTenant(order, …)`,
 			`${helper.path}: idInTenant(order, …)`,
 		]);
 		const write = {
