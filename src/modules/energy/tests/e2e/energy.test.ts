@@ -262,7 +262,7 @@ describe("the report", () => {
 		// A range of its own.
 		await page.getByLabel("From", { exact: true }).fill("2026-10-01");
 		await page.getByLabel("To", { exact: true }).fill("2026-10-07");
-		await page.getByRole("button", { name: "Show" }).click();
+		await page.getByRole("button", { name: "Show", exact: true }).click();
 		await page.waitForURL((url) => url.searchParams.get("from") === "2026-10-01");
 		await page.getByText(/\(7 days\)/).waitFor();
 

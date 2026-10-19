@@ -29,8 +29,12 @@ describe("a batch from the feed", () => {
 		// (A door that's been open since the seed ran may raise one of its own.)
 		expect(result).toMatchObject({ status: 200, body: { readings: 1 } });
 		expect(result.body.alerts).toBeGreaterThanOrEqual(1);
+		// The zone's power alerts: late in the day the reading also takes the day's consumption,
+		// with the seed's readings since midnight, over its kWh, which raises an energy alert too.
 		const lab = async () =>
-			(await alertsOf(siteId)).filter((a) => a.zone_id === zone("Z-LAB").id && !a.door_id);
+			(await alertsOf(siteId)).filter(
+				(a) => a.zone_id === zone("Z-LAB").id && !a.door_id && a.metric === "power",
+			);
 		const [alert] = await lab();
 		expect(alert).toMatchObject({ metric: "power", severity: "active", status: "open" });
 
