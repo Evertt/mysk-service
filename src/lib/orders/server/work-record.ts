@@ -42,14 +42,28 @@ interface Policy {
 	engineer: "full" | "first" | "omit";
 	/** Of a site, what's needed on it (contacts, time slot, access) or only its address. */
 	site: "onSite" | "address";
+	/** Until when each unit is under warranty. */
+	warranty: boolean;
 }
 
 /** What each audience sees of an order's work record: the only place it's declared. */
 const audiences = {
-	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite" },
-	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite" },
-	customer: { notes: false, collectedBy: false, engineer: "first", site: "address" },
-	workOrder: { notes: false, collectedBy: false, engineer: "full", site: "address" },
+	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite", warranty: true },
+	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite", warranty: false },
+	customer: {
+		notes: false,
+		collectedBy: false,
+		engineer: "first",
+		site: "address",
+		warranty: false,
+	},
+	workOrder: {
+		notes: false,
+		collectedBy: false,
+		engineer: "full",
+		site: "address",
+		warranty: false,
+	},
 } as const satisfies Record<string, Policy>;
 
 export type Audience = keyof typeof audiences;
@@ -87,23 +101,21 @@ export const customerWork = (access: CustomerAccess, number: string) =>
 export const printedWorkOrder = (where: SQL, unitsAt: SQL | undefined) =>
 	scope("workOrder", where, unitsAt);
 
+/** Where a site is. */
+const addressColumns = {
+	id: customerSite.id,
+	name: customerSite.name,
+	address: customerSite.address,
+	postalCode: customerSite.postalCode,
+	city: customerSite.city,
+} as const;
+
 /** A site's columns, by what the audience sees of it. */
 const siteColumns = {
-	/** Where it is. */
-	address: {
-		id: customerSite.id,
-		name: customerSite.name,
-		address: customerSite.address,
-		postalCode: customerSite.postalCode,
-		city: customerSite.city,
-	},
+	address: addressColumns,
 	/** What the engineer needs of it: how to get there and in, and when to come. */
 	onSite: {
-		id: customerSite.id,
-		name: customerSite.name,
-		address: customerSite.address,
-		postalCode: customerSite.postalCode,
-		city: customerSite.city,
+		...addressColumns,
 		country: customerSite.country,
 		contactName: customerSite.contactName,
 		contactPhone: customerSite.contactPhone,
@@ -207,11 +219,14 @@ type Signoff = Omit<NonNullable<Awaited<ReturnType<typeof signoffOf>>>, "collect
 
 type PolicyOf<A extends Audience> = (typeof audiences)[A];
 
+/** What audience `A` doesn't see of a unit, besides its site's detail. */
+type Withheld<A extends Audience> = PolicyOf<A>["warranty"] extends true ? never : "warrantyUntil";
+
 /** The work record as audience `A` sees it: a key its table says no to isn't in the type. */
 export type WorkRecord<A extends Audience> = {
 	order: { id: number; number: string; customerId: number };
 	/** In their order, each at its site. */
-	units: (Omit<Unit, "site"> & { site: Site<PolicyOf<A>["site"]> })[];
+	units: (Omit<Unit, "site" | Withheld<A>> & { site: Site<PolicyOf<A>["site"]> })[];
 	/** Where the work is: the units' sites, or the customer's only one for an order without units. */
 	sites: Site<PolicyOf<A>["site"]>[];
 	signoff:
@@ -227,25 +242,23 @@ export async function readWorkRecord<A extends Audience>(
 	const policy: Policy = audiences[scope.audience];
 	const [found] = await db
 		.select({
-			id: order.id,
-			number: order.number,
-			customerId: order.customerId,
+			order: { id: order.id, number: order.number, customerId: order.customerId },
 			engineer: engineer.name,
 		})
 		.from(order)
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
 		.where(scope.where);
 	if (!found) return undefined;
-	const { engineer: engineerName, ...owned } = found;
+	const { order: owned, engineer: engineerName } = found;
 	const [units, notes, signoff] = await Promise.all([
-		unitsOf(found.id, scope.unitsAt, policy.site),
-		policy.notes ? notesOf(found.id) : undefined,
-		signoffOf(found.id, policy.collectedBy),
+		unitsOf(owned.id, scope.unitsAt, policy.site),
+		policy.notes ? notesOf(owned.id) : undefined,
+		signoffOf(owned.id, policy.collectedBy),
 	]);
 	const record: Record<string, unknown> = {
 		order: owned,
-		units,
-		sites: await sitesOf(units, found.customerId, policy.site),
+		units: policy.warranty ? units : units.map(({ warrantyUntil: _, ...unit }) => unit),
+		sites: await sitesOf(units, owned.customerId, policy.site),
 		signoff,
 	};
 	if (notes) record.notes = notes;

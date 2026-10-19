@@ -20,6 +20,7 @@ import type { CustomerAccess } from "#lib/server/auth/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { as, north, organizationId, rows, value } from "#unit/lib/server/harness/index.ts";
+import { drawn } from "#unit/signature.test-support.ts";
 
 const [northId, southId] = [organizationId("north"), organizationId("south")];
 
@@ -41,10 +42,6 @@ const userOf = (email: string) =>
 	rows<{ id: string; name: string }>(`select id, name from user where email = ?`, [email]).then(
 		([found]) => found,
 	);
-
-/** A tiny PNG, as the signature pad sends one. */
-const drawn =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 /** Erik's (North's field engineer's) and his full name. */
 let erik: { id: number; name: string };
@@ -111,6 +108,7 @@ describe("the office", () => {
 		expect(record?.engineer).toBe(erik.name);
 		// What the engineer needs on site.
 		expect(record?.sites[0]).toHaveProperty("accessNotes");
+		expect(record?.units[0]).toHaveProperty("warrantyUntil");
 	});
 
 	test("doesn't see another tenant's order", async () => {
@@ -129,7 +127,10 @@ describe("the engineer", () => {
 		const record = await as(north.engineer, async () =>
 			readWorkRecord(await engineerWork({ number: job.number })),
 		);
-		expect(record?.units).toHaveLength((await unitsOf(job.id)).length);
+		const stored = await unitsOf(job.id);
+		expect(record?.units.map((unit) => unit.serialNumber)).toEqual(stored.map((u) => u.serial));
+		expect(record?.sites.map((site) => site.id)).toEqual([...new Set(stored.map((u) => u.siteId))]);
+		expect(record?.units[0]).not.toHaveProperty("warrantyUntil");
 		expect(record?.notes.map((note) => note.text)).toEqual(["First", "Second"]);
 		expect(record?.signoff).not.toHaveProperty("collectedBy");
 		expect(record).not.toHaveProperty("engineer");
@@ -170,6 +171,7 @@ describe("a customer's contact", () => {
 		// The site's address, not what the engineer needs on it.
 		expect(record?.sites[0]).not.toHaveProperty("accessNotes");
 		expect(record?.sites[0]).toHaveProperty("address");
+		expect(record?.units[0]).not.toHaveProperty("warrantyUntil");
 	});
 
 	test("doesn't see another customer's order", async () => {
@@ -206,8 +208,10 @@ describe("the printed work order", () => {
 				printedWorkOrder(eq(order.number, job.number), inList(equipment.siteId, [first.siteId])),
 			),
 		);
-		expect(record?.units.every((unit) => unit.site.id === first.siteId)).toBe(true);
-		expect(record?.units.length).toBeLessThan((await unitsOf(job.id)).length);
+		const there = (await unitsOf(job.id)).filter((unit) => unit.siteId === first.siteId);
+		expect(record?.units.map((unit) => unit.serialNumber)).toEqual(there.map((u) => u.serial));
+		expect(there.length).toBeLessThan((await unitsOf(job.id)).length);
+		expect(record?.units[0]).not.toHaveProperty("warrantyUntil");
 		expect(record?.engineer).toBe(erik.name);
 		expect(record).not.toHaveProperty("notes");
 		expect(record?.sites[0]).not.toHaveProperty("accessNotes");
@@ -239,7 +243,15 @@ test("an audience's record has only the keys its table allows", () => {
 		(record: WorkRecord<"engineer">) =>
 			// @ts-expect-error the engineer is them
 			record.engineer,
-		(record: WorkRecord<"office">) => [record.notes, record.signoff?.collectedBy, record.engineer],
+		(record: WorkRecord<"customer">) =>
+			// @ts-expect-error nor the units' warranty
+			record.units[0].warrantyUntil,
+		(record: WorkRecord<"office">) => [
+			record.notes,
+			record.signoff?.collectedBy,
+			record.engineer,
+			record.units[0].warrantyUntil,
+		],
 	];
 	// Only the type check tells them apart.
 	expect(types.every((each) => typeof each === "function")).toBe(true);
