@@ -12,6 +12,8 @@ export default defineModule({
 	settings: "/(app)/(modules)/energy/settings",
 	icon: ZapIcon,
 	subjects: energySubjects,
+	// Announced with each batch of meter readings, for the live pages; never logged.
+	liveTypes: ["energy_reading"],
 	actions: energyActions,
 	// The customer's own sites' energy, read-only, in the customer portal.
 	portal: {

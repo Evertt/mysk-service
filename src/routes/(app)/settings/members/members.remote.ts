@@ -17,7 +17,7 @@ import {
 	teamRoles,
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
-import { recordActivityAfter } from "#lib/server/activity/index.ts";
+import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
@@ -131,11 +131,12 @@ async function memberSubject(memberId: string) {
 		.innerJoin(user, eq(member.userId, user.id))
 		.where(and(eq(member.id, memberId), inTenant(member)));
 	if (!found) error(404, m.settings_member_not_found());
-	return { subject: { type: "member", id: memberId, label: found.name }, role: found.role };
+	const subject: Subject = { type: "member", id: memberId, label: found.name };
+	return { subject, role: found.role };
 }
 
 /** How an invitation shows in the activity log: by the email address it's for. */
-const invitationSubject = (found: { id: string; email: string }) => ({
+const invitationSubject = (found: { id: string; email: string }): Subject => ({
 	type: "invitation",
 	id: found.id,
 	label: found.email,

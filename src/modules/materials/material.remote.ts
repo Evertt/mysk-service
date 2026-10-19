@@ -5,7 +5,7 @@ import * as v from "valibot";
 import { getTimeZone } from "#lib/dates.ts";
 import { isOpenOrder } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order, user } from "#lib/server/db/schema.ts";
@@ -174,7 +174,7 @@ export const updateMaterial = form(
 
 		await db.transaction(async (tx) => {
 			await tx.update(material).set(input).where(idInTenant(material, id));
-			const subject = { type: "material", id, label: existing.sku };
+			const subject: Subject = { type: "material", id, label: existing.sku };
 			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 		});
 		// Send the updated material along, so the page we redirect to doesn't show the old one first.

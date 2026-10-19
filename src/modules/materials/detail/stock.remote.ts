@@ -3,7 +3,7 @@ import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -25,7 +25,7 @@ export const receiveStock = form(
 
 		await db.transaction(async (tx) => {
 			const { stock } = await moveStock(tx, { materialId: id, quantity, kind: "receipt", note });
-			const subject = { type: "material", id, label: existing.sku };
+			const subject: Subject = { type: "material", id, label: existing.sku };
 			const before = { stock: roundQuantity(stock - quantity) };
 			await recordActivity(tx, {
 				action: "stock_received",
@@ -58,7 +58,7 @@ export const countStock = form(
 			const difference = roundQuantity(counted - current.stock);
 			if (!difference) invalid(issue.counted(m.materials_count_unchanged()));
 			await moveStock(tx, { materialId: id, quantity: difference, kind: "adjustment", note });
-			const subject = { type: "material", id, label: existing.sku };
+			const subject: Subject = { type: "material", id, label: existing.sku };
 			const [before, after] = [{ stock: current.stock }, { stock: counted }];
 			await recordActivity(tx, { action: "stock_adjusted", subject, before, after, note });
 		});

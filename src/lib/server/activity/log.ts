@@ -22,6 +22,7 @@
  * log shows as the system's (`m.activity_system_user()`). How entries read (the
  * subject's name and link, field labels and values) is `subjectTypes` in `#lib/activity/subjects.ts`.
  */
+import type { LoggedType } from "#lib/activity/index.ts";
 import type { ActivityAction } from "#lib/models.ts";
 import { isSystemUser, requireTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
@@ -32,7 +33,7 @@ import { afterCommit } from "#lib/server/db/serialize.ts";
 /** A record the log is about: its type (see `subjectTypes`), id, and how it reads now. */
 export interface Subject {
 	/** E.g. `order`. */
-	type: string;
+	type: LoggedType;
 	id: string | number;
 	/** What it's known by, e.g. its order number or customer code: kept as it is now. */
 	label: string;

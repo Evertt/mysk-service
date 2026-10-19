@@ -18,7 +18,7 @@
 import { error } from "@sveltejs/kit";
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentCategory } from "#lib/server/db/schema.ts";
@@ -158,7 +158,7 @@ async function siteRow(id: number, tx: Transaction | typeof db = db) {
 }
 
 /** The energy site as the log names it, the parent of its zones', consumers' and doors' entries. */
-const siteSubject = (site: { id: number; name: string }) => ({
+const siteSubject = (site: { id: number; name: string }): Subject => ({
 	type: "energy_site",
 	id: site.id,
 	label: site.name,

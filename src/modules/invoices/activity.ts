@@ -28,7 +28,7 @@ export const invoicingActions = {
 	settled: m.invoices_action_settled,
 } satisfies Record<string, Sentence>;
 
-export const invoicingSubjects: Record<string, SubjectType> = {
+export const invoicingSubjects = {
 	invoice: {
 		noun: m.invoices_activity_subject,
 		href: ({ label }) => resolve("/(app)/(modules)/invoices/[number]", { number: label }),
@@ -71,7 +71,7 @@ export const invoicingSubjects: Record<string, SubjectType> = {
 			billFrom: { label: m.invoices_activity_field_bill_from, format: day },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;
 
 /**
  * The amount of a line, as a note in the activity log, e.g. "2 × €45.00 = €90.00": stored as

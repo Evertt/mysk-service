@@ -15,7 +15,7 @@ const onOff = (value: unknown) => (value ? m.maintenance_on() : m.maintenance_of
 /** The unit's serial number in a plan's label. */
 const serialOf = (label: string) => label.split(" · ")[0];
 
-export const maintenanceSubjects: Record<string, SubjectType> = {
+export const maintenanceSubjects = {
 	maintenancePlan: {
 		noun: m.maintenance_activity_subject,
 		// A plan has no page of its own: it's on its unit's.
@@ -53,4 +53,4 @@ export const maintenanceSubjects: Record<string, SubjectType> = {
 			remindCustomers: { label: m.maintenance_remind_customers, format: onOff },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

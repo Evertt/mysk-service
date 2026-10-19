@@ -8,7 +8,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
+import { type LoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
@@ -110,7 +110,7 @@ export const countNewActivity = forMembers.query(
  * Every subject type the log may name, the core's and all modules' (not only the tenant's: a module
  * switched on while a page watches logs as well).
  */
-const loggedTypes = Object.keys(subjectTypes(allModules));
+const loggedTypes = Object.keys(subjectTypes(allModules)) as LoggedType[];
 
 /**
  * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again
@@ -132,7 +132,7 @@ export const watchActivity = forMembers.query.live(async function* () {
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(
-	v.object({ type: v.string(), id: v.string() }),
+	v.object({ type: v.picklist(loggedTypes), id: v.string() }),
 	async ({ type, id }) => {
 		const { modules } = currentTenant();
 		// A module's records are a 404 to a tenant without the module, like the rest of it.

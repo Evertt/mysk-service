@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 
 import {
 	type ActivityRecord,
+	type Subject,
 	diff,
 	ignoredFields,
 	recordActivity,
@@ -161,7 +162,7 @@ describe("recordActivity", () => {
 	});
 
 	test("logs an update's changed fields, and nothing if none changed", async () => {
-		const subject = { type: "order", id: 12, label: "ORD-2026-00012" };
+		const subject: Subject = { type: "order", id: 12, label: "ORD-2026-00012" };
 		const before = { id: 12, status: "scheduled", engineerId: null, createdAt: new Date(0) };
 		const after = { status: "in_progress", engineerId: 3, createdAt: new Date() };
 		expect(await record({ action: "updated", subject, before, after })).toBe(true);
@@ -200,7 +201,7 @@ describe("recordActivity", () => {
 			user: { id: "u3", name: "Eli Engineer" },
 			tenant: { ...tenant("north"), roles: ["engineer"] },
 		});
-		const subject = { type: "order", id: 4, label: "ORD-2026-00004" };
+		const subject: Subject = { type: "order", id: 4, label: "ORD-2026-00004" };
 		expect(await record({ action: "work_started", subject })).toBe(true);
 		expect(await log()).toMatchObject([
 			{ organization_id: "north", user_id: "u3", user_name: "Eli Engineer" },
@@ -208,7 +209,7 @@ describe("recordActivity", () => {
 	});
 
 	test("logs as `by` when given, e.g. in another organization than the current one", async () => {
-		const subject = { type: "invitation", id: "inv1", label: "new@example.com" };
+		const subject: Subject = { type: "invitation", id: "inv1", label: "new@example.com" };
 		const by = { organizationId: "south", user: { id: "u9", name: "New Member" } };
 		await inTransaction((tx) => recordActivity(tx, { action: "accepted", subject }, by));
 		expect(await log()).toMatchObject([

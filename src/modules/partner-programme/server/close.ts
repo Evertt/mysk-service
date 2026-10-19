@@ -12,7 +12,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
 import { formatCents } from "#lib/i18n/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
@@ -63,7 +63,7 @@ export async function closePreview(year: number, tx: Transaction | typeof db = d
 }
 
 /** The closed year's subject in the activity log: `CUST-0001 · 2025`. */
-const yearSubject = (row: { id: number; year: number }, code: string) => ({
+const yearSubject = (row: { id: number; year: number }, code: string): Subject => ({
 	type: "partner_bonus_year",
 	id: row.id,
 	label: `${code} · ${row.year}`,

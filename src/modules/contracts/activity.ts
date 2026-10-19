@@ -9,7 +9,7 @@ import { contractLabels } from "./labels.ts";
 
 const day = formatStoredDay;
 
-export const contractSubjects: Record<string, SubjectType> = {
+export const contractSubjects = {
 	contract: {
 		noun: m.contracts_activity_subject,
 		href: ({ label }) => resolve("/(app)/(modules)/contracts/[number]", { number: label }),
@@ -32,4 +32,4 @@ export const contractSubjects: Record<string, SubjectType> = {
 			equipmentIds: { label: m.contracts_activity_field_covered_equipment, ref: "equipment" },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

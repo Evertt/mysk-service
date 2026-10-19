@@ -8,7 +8,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
@@ -22,7 +22,7 @@ import { checklistTemplate, checklistTemplateCategory, checklistTemplateItem } f
 type FieldIssue = (message: string) => Parameters<typeof invalid>[number];
 
 /** A template as the activity log knows it: by its name. */
-export const templateSubject = (template: { id: number; name: string }) => ({
+export const templateSubject = (template: { id: number; name: string }): Subject => ({
 	type: "checklistTemplate",
 	id: template.id,
 	label: template.name,

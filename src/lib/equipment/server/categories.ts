@@ -7,7 +7,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment, equipmentCategory } from "#lib/server/db/schema.ts";
@@ -20,7 +20,7 @@ import { moved } from "../categories/positions.ts";
 type NameIssue = (message: string) => Parameters<typeof invalid>[number];
 
 /** A category as the activity log knows it: by its name. */
-const subject = (category: { id: number; name: string }) => ({
+const subject = (category: { id: number; name: string }): Subject & { id: number } => ({
 	type: "equipment_category",
 	id: category.id,
 	label: category.name,

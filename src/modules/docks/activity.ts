@@ -13,7 +13,7 @@ export const dockActions = {
 	door_escalated: m.docks_action_door_escalated,
 } satisfies Record<string, Sentence>;
 
-export const dockSubjects: Record<string, SubjectType> = {
+export const dockSubjects = {
 	/** A dock position, by its code (`DOCK 05`); logged with its site's customer as the parent. */
 	dock: {
 		noun: m.docks_activity_subject_dock,
@@ -26,4 +26,4 @@ export const dockSubjects: Record<string, SubjectType> = {
 			keyStorageUnit: { label: m.docks_field_key_storage },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

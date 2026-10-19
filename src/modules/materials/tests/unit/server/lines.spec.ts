@@ -2,6 +2,7 @@ import { rmSync } from "node:fs";
 
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import type { Subject } from "#lib/server/activity/index.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { recordOrderLines } from "#modules/materials/server/lines.ts";
@@ -82,7 +83,7 @@ beforeEach(async () => {
 });
 
 describe("recordOrderLines", () => {
-	const order = { type: "order", id: 5, label: "ORD-2026-00005" };
+	const order: Subject = { type: "order", id: 5, label: "ORD-2026-00005" };
 
 	test("logs added, removed and changed materials against the order", async () => {
 		await inTransaction((tx) =>

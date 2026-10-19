@@ -12,7 +12,7 @@ import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, text } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -130,7 +130,7 @@ async function nameTaken(
 	return !!taken;
 }
 
-const subjectOf = (view: { id: number; name: string }) => ({
+const subjectOf = (view: { id: number; name: string }): Subject => ({
 	type: "saved_view",
 	id: view.id,
 	label: view.name,

@@ -5,7 +5,7 @@ import * as v from "valibot";
 import { formatDate } from "#lib/i18n/index.ts";
 import { listedUnitsOf, onAnyUnit } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
 	idInTenant,
@@ -248,7 +248,7 @@ async function saveContract(organizationId: string, id: number | null, input: Co
 			equipmentIds: covered(existing.coverage.map((row) => row.equipmentId)),
 		};
 		const after = { ...fields, equipmentIds: covered(equipmentIds) };
-		const subject = { type: "contract", id: contractId, label: number };
+		const subject: Subject = { type: "contract", id: contractId, label: number };
 		await recordActivity(tx, { action: existing ? "updated" : "created", subject, before, after });
 		return number;
 	});
@@ -293,7 +293,7 @@ async function removeContract(id: number) {
 		if (!found) error(404, m.contracts_not_found());
 		await tx.delete(contractEquipment).where(eq(contractEquipment.contractId, id));
 		await tx.delete(contract).where(idInTenant(contract, id));
-		const subject = { type: "contract", id, label: found.number };
+		const subject: Subject = { type: "contract", id, label: found.number };
 		await recordActivity(tx, { action: "deleted", subject });
 	});
 }

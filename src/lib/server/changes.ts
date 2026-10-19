@@ -10,11 +10,12 @@
  * A live query that reads the database again after a change reads it through `inThisRequest()`
  * (`#lib/server/db/index.ts`): on Cloudflare its generator resumes outside the object's request.
  */
+import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 
 /** A change as it's announced: the record (an activity subject's type and id) and who changed it. */
 interface Change {
 	/** E.g. `order`. */
-	type: string;
+	type: ChangeType;
 	/** The record's id, as text (as in the activity log), if the announcement names one. */
 	id?: string;
 	/** What was done, e.g. `updated` (an activity action). */
@@ -40,14 +41,18 @@ const lastChanged = new Map<string, number>();
  * Tells the organization's live queries that a record of `type` (an activity subject's) changed;
  * `details` names the record and who changed it, for the queries that watch one record.
  */
-export function announceChange(organizationId: string, type: string, details: ChangeDetails = {}) {
+export function announceChange(
+	organizationId: string,
+	type: ChangeType,
+	details: ChangeDetails = {},
+) {
 	const change: Change = { ...details, type, at: Date.now() };
 	lastChanged.set(`${organizationId}/${type}`, change.at);
 	for (const listener of listeners.get(organizationId) ?? []) listener(change);
 }
 
 /** When the organization's records of any of `types` last changed here, or 0. */
-export const changedAt = (organizationId: string, types: readonly string[]) =>
+export const changedAt = (organizationId: string, types: readonly ChangeType[]) =>
 	Math.max(0, ...types.map((type) => lastChanged.get(`${organizationId}/${type}`) ?? 0));
 
 /**
@@ -57,14 +62,14 @@ export const changedAt = (organizationId: string, types: readonly string[]) =>
  * was never resumed (a live query during server-side rendering) never runs its own, and when the
  * client goes away, since a consumer waiting for a change can't be stopped otherwise.
  */
-export const watchChanges = (organizationId: string, types: readonly string[]) =>
+export const watchChanges = (organizationId: string, types: readonly ChangeType[]) =>
 	watch(organizationId, (change) => types.includes(change.type));
 
 /**
  * Like `watchChanges()`, for one record: yields the latest change announced with its `type` and
  * `id`. A change to one of its parts (an order's line) is announced for it too, as the parent.
  */
-export const watchSubject = (organizationId: string, subject: { type: string; id: string }) =>
+export const watchSubject = (organizationId: string, subject: { type: LoggedType; id: string }) =>
 	watch(organizationId, (change) => change.type === subject.type && change.id === subject.id);
 
 /** Watches the organization's changes that `matches` keeps (see `watchChanges()`). */

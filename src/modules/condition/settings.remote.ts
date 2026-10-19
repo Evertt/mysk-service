@@ -7,7 +7,7 @@ import { redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 
 import { isManager } from "#lib/auth/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -32,7 +32,7 @@ export const saveConditionSettings = forManagers.form(settingsSchema, async (inp
 			.set(input)
 			.where(eq(conditionSettings.organizationId, organizationId));
 		// The settings have no name of their own: they read as "condition settings".
-		const subject = { type: "condition_settings", id: organizationId, label: "" };
+		const subject: Subject = { type: "condition_settings", id: organizationId, label: "" };
 		await recordActivity(tx, { action: "updated", subject, before, after: input });
 	});
 	void getConditionSettings().refresh();

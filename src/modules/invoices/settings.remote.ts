@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -28,7 +28,7 @@ export const saveSettings = forManagers.form(v.object(settingsFields), async (in
 			.set(input)
 			.where(eq(invoicingSettings.organizationId, organizationId));
 		// The settings have no name of their own: they read as "invoicing settings".
-		const subject = { type: "invoicing_settings", id: organizationId, label: "" };
+		const subject: Subject = { type: "invoicing_settings", id: organizationId, label: "" };
 		await recordActivity(tx, { action: "updated", subject, before, after: input });
 	});
 	void getInvoicingSettings().refresh();

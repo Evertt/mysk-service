@@ -9,7 +9,7 @@ import { and, asc, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { formatCents } from "#lib/i18n/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
@@ -43,7 +43,7 @@ const creditNoteNumbers: NumberTarget = {
 };
 
 /** How a credit note shows in the activity log. */
-export const creditNoteSubject = (found: { id: number; number: string }) => ({
+export const creditNoteSubject = (found: { id: number; number: string }): Subject => ({
 	type: "credit_note",
 	id: found.id,
 	label: found.number,
@@ -190,7 +190,7 @@ async function insertCreditNote(
 	tx: Transaction,
 	values: { customerId: number; invoiceId: number | null; vatRate: number; reason: string },
 	lines: CreditLineDraft[],
-	parent?: { type: string; id: number | string; label: string },
+	parent?: Subject,
 ) {
 	const { organizationId } = currentTenant();
 	const number = await nextNumber(tx, creditNoteNumbers);
@@ -263,7 +263,7 @@ export async function createStandalone(
 		customerId: number;
 		reason: string;
 		lines: CreditLineDraft[];
-		parent?: { type: string; id: number | string; label: string };
+		parent?: Subject;
 	},
 ) {
 	const { organizationId } = currentTenant();

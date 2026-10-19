@@ -7,7 +7,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import type * as v from "valibot";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
@@ -34,7 +34,7 @@ export async function shopCategories() {
 		.orderBy(asc(shopCategory.position), asc(shopCategory.id));
 }
 
-const categorySubject = (row: { id: number; name: string }) => ({
+const categorySubject = (row: { id: number; name: string }): Subject => ({
 	type: "shop_category",
 	id: row.id,
 	label: row.name,
@@ -161,7 +161,7 @@ export async function saveProduct(input: ProductInput) {
 			.select()
 			.from(shopProduct)
 			.where(and(inTenant(shopProduct), eq(shopProduct.materialId, found.id)));
-		const subject = (id: number) => ({ type: "shop_product", id, label: found.sku });
+		const subject = (id: number): Subject => ({ type: "shop_product", id, label: found.sku });
 
 		if (!input.inShop) {
 			if (!existing) return;

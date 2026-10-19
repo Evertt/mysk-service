@@ -6,6 +6,7 @@ import {
 	actionVerbs,
 	coreSubjectTypes,
 	subjectTypeLabel,
+	type SubjectType,
 	subjectTypes,
 } from "#lib/activity/subjects.ts";
 import { activityActions } from "#lib/models.ts";
@@ -16,7 +17,7 @@ vi.mock("#lib/modules/manifests.gen.ts", async () => ({
 	manifests: (await import("#unit/lib/modules/fakes.ts")).fakeModules,
 }));
 
-const { order, equipment, engineer, module } = coreSubjectTypes;
+const { order, equipment, engineer, module }: Record<string, SubjectType> = coreSubjectTypes;
 
 const englishByDefault = getLocale;
 afterEach(() => overwriteGetLocale(englishByDefault));

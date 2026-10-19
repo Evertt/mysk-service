@@ -7,7 +7,7 @@ import { and, asc, eq, lte } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, currentUser, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, user } from "#lib/server/db/schema.ts";
@@ -42,7 +42,7 @@ export async function customerByCode(code: string) {
 }
 
 /** The partner's subject in the activity log: its customer, by code. */
-const partnerSubject = (partner: { id: number; code: string }) => ({
+const partnerSubject = (partner: { id: number; code: string }): Subject => ({
 	type: "partner",
 	id: partner.id,
 	label: partner.code,

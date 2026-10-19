@@ -235,6 +235,13 @@ describe("in North, the feed", () => {
 		);
 		expect(card.map((entry) => entry.id)).toEqual(entries.map((entry) => entry.id));
 	});
+
+	test("of a record of a type the log doesn't know is refused", async () => {
+		const answer = await as(north.owner, () =>
+			call(getSubjectActivity, { type: "ordr" as never, id: String(fromNorth.order) }),
+		);
+		expect(answer).toMatchObject({ status: 400 });
+	});
 });
 
 describe("in South", () => {

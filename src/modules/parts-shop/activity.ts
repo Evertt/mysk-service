@@ -12,7 +12,7 @@ export const shopActions = {
 	placed: m.shop_action_placed,
 } satisfies Record<string, Sentence>;
 
-export const shopSubjects: Record<string, SubjectType> = {
+export const shopSubjects = {
 	/** A customer's order in the shop, by its number. */
 	shop_order: {
 		noun: m.shop_activity_subject_order,
@@ -46,7 +46,7 @@ export const shopSubjects: Record<string, SubjectType> = {
 		href: () => resolve("/(app)/(modules)/parts-shop/categories"),
 		fields: { name: { label: m.shop_field_name } },
 	},
-};
+} satisfies Record<string, SubjectType>;
 
 function yesNo(value: unknown) {
 	return value ? m.shop_yes() : m.shop_no();
