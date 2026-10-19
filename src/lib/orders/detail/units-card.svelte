@@ -39,7 +39,7 @@
 							<EquipmentStatusBadge status={unit.status} />
 						</div>
 						<p class="text-muted-foreground">
-							{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category.name]
+							{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category]
 								.filter(Boolean)
 								.join(" · ")}
 						</p>

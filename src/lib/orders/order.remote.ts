@@ -17,7 +17,6 @@ import {
 	equipmentLocation,
 	order,
 	orderRequest,
-	orderUnit,
 	user,
 } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
@@ -31,45 +30,22 @@ import { removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { tenantOrderTypes } from "./server/types.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
+import { officeOrder, readWorkRecord } from "./server/work-record.ts";
 import { offeredOrderTypes } from "./types.ts";
 
 /**
- * One order with everything on it: its units in their order, other orders for the same units, and
- * the sites the work is at: its units' (one, usually), or the customer's only one for an order
- * without units.
+ * One order with everything on it: its work record (its units in their order, the sites the work
+ * is at, the notes and the sign-off, see `readWorkRecord()`), other orders for the same units, its
+ * prices, tags and request.
  */
 export const getOrder = forMembers.query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		where: and(eq(order.number, number), inTenant(order)),
-		with: {
-			customer: { with: { sites: true } },
-			units: {
-				orderBy: asc(orderUnit.position),
-				with: {
-					equipment: {
-						with: {
-							site: true,
-							location: { columns: { name: true } },
-							category: { columns: { name: true } },
-						},
-					},
-				},
-			},
-			engineer: true,
-		},
-	});
-	if (!found) error(404, m.orders_not_found({ number }));
-	const { sites: customerSites, ...owner } = found.customer;
-	// Each unit with the name of its location at the site, if it has one.
-	const units = found.units.map(({ equipment: unit }) => ({
-		...unit,
-		location: unit.location?.name ?? null,
-	}));
-	const sites = units.length
-		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
-		: customerSites.length === 1
-			? customerSites
-			: [];
+	const scope = officeOrder(number);
+	const [found, record] = await Promise.all([
+		db.query.order.findFirst({ where: scope.where, with: { customer: true, engineer: true } }),
+		readWorkRecord(scope),
+	]);
+	if (!found || !record) error(404, m.orders_not_found({ number }));
+	const { units, sites, notes, signoff } = record;
 	const equipmentIds = units.map((unit) => unit.id);
 
 	// Earlier and later work on the same units, for context.
@@ -107,8 +83,11 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 	]);
 
 	return {
-		order: { ...found, customer: owner, units },
+		order: { ...found, units },
 		sites,
+		/** What was recorded on it in the field. */
+		notes,
+		signoff,
 		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 		/** From the tenant's modules, e.g. a response time about to be missed. */
 		tags,

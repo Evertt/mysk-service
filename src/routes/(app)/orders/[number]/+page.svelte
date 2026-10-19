@@ -113,7 +113,7 @@
 			</Card.Content>
 		</Card.Root>
 
-		<WorkReport number={order.number} />
+		<WorkReport notes={data.notes} signoff={data.signoff} />
 
 		<CustomerCard {customer} title={m.orders_customer()} />
 
