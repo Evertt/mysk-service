@@ -160,7 +160,8 @@ describe("field engineers", () => {
 	test("are looked up once per request, so the gate and the handler share the lookup", async () => {
 		Object.assign(locals, { user, tenant: fieldEngineer });
 		const lookup = vi.spyOn(db.query.engineer, "findFirst");
-		expect(await currentEngineer()).toMatchObject({ id: 1, name: "Eli" });
+		expect(await currentEngineer()).toMatchObject({ name: "Eli" });
+		expect(await currentEngineer()).not.toHaveProperty("id");
 		await requireEngineer();
 		expect(lookup).toHaveBeenCalledTimes(1);
 		nextRequest();
