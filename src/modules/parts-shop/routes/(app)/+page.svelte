@@ -9,6 +9,7 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { getShopOrders } from "#modules/parts-shop/orders.remote.ts";
 	import StatusBadge from "#modules/parts-shop/ui/status-badge.svelte";
@@ -78,12 +79,11 @@
 								</a>
 							</Table.Cell>
 							<Table.Cell>
-								<a
+								<CustomerLink
+									code={order.customer.code}
+									name={order.customer.name}
 									class="hover:underline"
-									href={resolve("/(app)/customers/[code]", { code: order.customer.code })}
-								>
-									{order.customer.name}
-								</a>
+								/>
 							</Table.Cell>
 							<Table.Cell class="tabular-nums">{formatDate(order.createdAt)}</Table.Cell>
 							<Table.Cell><StatusBadge status={order.status} /></Table.Cell>

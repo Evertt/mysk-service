@@ -7,7 +7,8 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
+	import { CustomerLink } from "#lib/customers/components.ts";
+	import { StatusBadge as EquipmentStatusBadge, EquipmentLink } from "#lib/equipment/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, label } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components.ts";
@@ -88,12 +89,7 @@
 							{#each equipment as unit (unit.id)}
 								<Table.Row>
 									<Table.Cell>
-										<a
-											href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
-											class="font-medium whitespace-nowrap underline-offset-4 hover:underline"
-										>
-											{unit.serialNumber}
-										</a>
+										<EquipmentLink serialNumber={unit.serialNumber} />
 									</Table.Cell>
 									<Table.Cell>{unit.manufacturer} {unit.model}</Table.Cell>
 									<Table.Cell>{unit.category.name}</Table.Cell>
@@ -204,11 +200,13 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem
-						label={m.contracts_company()}
-						value={customer.name}
-						href={resolve("/(app)/customers/[code]", { code: customer.code })}
-					/>
+					<DetailItem label={m.contracts_company()}>
+						<CustomerLink
+							code={customer.code}
+							name={customer.name}
+							class="underline-offset-4 hover:underline"
+						/>
+					</DetailItem>
 					<DetailItem label={m.contracts_contact()} value={customer.contactName} />
 					<DetailItem
 						label={m.contracts_email()}

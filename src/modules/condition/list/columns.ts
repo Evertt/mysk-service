@@ -1,9 +1,9 @@
-import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
+import { EquipmentLink } from "#lib/equipment/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 
 import { conditionLabels } from "../labels.ts";
@@ -43,10 +43,10 @@ export const columns = column.columns([
 	column.accessor((row) => unitTitle(row), {
 		id: "unit",
 		cell: ({ getValue, row }) =>
-			renderComponent(TwoLineCell, {
-				primary: getValue(),
+			renderComponent(EquipmentLink, {
+				serialNumber: row.original.serialNumber,
+				label: getValue(),
 				secondary: [row.original.location?.name, row.original.site].filter(Boolean).join(" · "),
-				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
 		meta: { label: m.condition_column_unit },

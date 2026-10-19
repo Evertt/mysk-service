@@ -9,6 +9,7 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import OrderSteps from "#modules/parts-shop/detail/order-steps.svelte";
 	import { lineAmount } from "#modules/parts-shop/model.ts";
@@ -94,11 +95,13 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem
-						label={m.shop_column_customer()}
-						value={order.customer.name}
-						href={resolve("/(app)/customers/[code]", { code: order.customer.code })}
-					/>
+					<DetailItem label={m.shop_column_customer()}>
+						<CustomerLink
+							code={order.customer.code}
+							name={order.customer.name}
+							class="underline-offset-4 hover:underline"
+						/>
+					</DetailItem>
 					<DetailItem label={m.shop_field_placed_by()} value={order.placedBy} />
 					<DetailItem label={m.shop_column_placed()} value={formatDateTime(order.createdAt)} />
 					<DetailItem label={m.shop_field_payment()} value={m.shop_payment_parts_credit()} />

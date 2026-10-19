@@ -4,10 +4,9 @@
 	its date and where it came from (a checklist on an order, or the office's correction).
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import { getTimeZone } from "#lib/dates.ts";
 	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getComponentScores } from "./assets.remote.ts";
 
@@ -33,12 +32,9 @@
 									{#if entry.source === "office"}
 										{m.checklists_score_source_office()}
 									{:else if entry.order}
-										<a
-											class="underline-offset-4 hover:underline"
-											href={resolve("/(app)/orders/[number]", { number: entry.order })}
-										>
+										<OrderLink number={entry.order} class="underline-offset-4 hover:underline">
 											{m.checklists_score_source_checklist({ order: entry.order })}
-										</a>
+										</OrderLink>
 									{:else}
 										{m.checklists_score_source_unknown()}
 									{/if}

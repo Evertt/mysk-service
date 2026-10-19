@@ -9,6 +9,7 @@
 	import { resolve } from "$app/paths";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
@@ -68,12 +69,12 @@
 				>
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex min-w-0 flex-col">
-							<a
+							<EquipmentLink
+								serialNumber={checklist.unit.serialNumber}
 								class="truncate font-medium hover:underline"
-								href={resolve("/(app)/equipment/[serial]", { serial: checklist.unit.serialNumber })}
 							>
 								{unitTitle(checklist.unit)}
-							</a>
+							</EquipmentLink>
 							<span class="text-xs text-muted-foreground">
 								{checklist.name}{checklist.norm ? ` · ${checklist.norm}` : ""} · {checklistLabels.label(
 									"checklistKind",

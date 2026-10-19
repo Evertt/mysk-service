@@ -8,7 +8,7 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
-	import { SpecialtyBadge } from "#lib/engineers/components.ts";
+	import { EngineerLink, SpecialtyBadge } from "#lib/engineers/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
@@ -136,11 +136,13 @@
 			<Card.Content>
 				{#if engineer}
 					<dl class="grid grid-cols-2 gap-4">
-						<DetailItem
-							label={m.orders_detail_name()}
-							value={engineer.name}
-							href={resolve("/(app)/engineers/[id]", { id: String(engineer.id) })}
-						/>
+						<DetailItem label={m.orders_detail_name()}>
+							<EngineerLink
+								id={engineer.id}
+								name={engineer.name}
+								class="underline-offset-4 hover:underline"
+							/>
+						</DetailItem>
 						<DetailItem
 							label={m.orders_detail_hourly_rate()}
 							value={formatCents(engineer.hourlyRate)}

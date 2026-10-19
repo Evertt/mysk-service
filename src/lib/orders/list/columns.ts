@@ -5,6 +5,8 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import { CustomerLink } from "#lib/customers/components.ts";
+import { EngineerLink } from "#lib/engineers/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
@@ -31,10 +33,10 @@ export const columns = column.columns([
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
-			renderComponent(TwoLineCell, {
-				primary: row.original.customer.name,
-				secondary: row.original.customer.code,
-				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
+			renderComponent(CustomerLink, {
+				code: row.original.customer.code,
+				name: row.original.customer.name,
+				withCode: true,
 			}),
 		// By the customer's code (e.g. `?customer=CUST-0001`, from a customer's page). The server
 		// filters, but the table needs a filter function all the same.
@@ -102,15 +104,14 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",
-		cell: ({ getValue, row }) =>
-			renderComponent(TwoLineCell, {
-				primary: getValue(),
-				href:
-					(row.original.engineer &&
-						resolve("/(app)/engineers/[id]", { id: String(row.original.engineer.id) })) ??
-					undefined,
-				fallback: m.common_unassigned(),
-			}),
+		cell: ({ row }) =>
+			row.original.engineer
+				? renderComponent(EngineerLink, {
+						id: row.original.engineer.id,
+						name: row.original.engineer.name,
+						secondary: null,
+					})
+				: renderComponent(TwoLineCell, { fallback: m.common_unassigned() }),
 		sortUndefined: "last",
 		// By id; `none` keeps the unassigned orders.
 		filterFn: (row, _id, ids: string[]) =>

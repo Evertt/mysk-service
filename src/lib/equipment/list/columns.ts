@@ -10,6 +10,7 @@ import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
 import { unitModel, unitTitle } from "../display.ts";
+import EquipmentLink from "../ui/equipment-link.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
@@ -24,13 +25,13 @@ export const columns = column.columns([
 	column.accessor((row) => unitTitle(row), {
 		id: "unit",
 		cell: ({ getValue, row }) =>
-			renderComponent(TwoLineCell, {
-				primary: getValue(),
+			renderComponent(EquipmentLink, {
+				serialNumber: row.original.serialNumber,
+				label: getValue(),
 				// The make too, under the customer's own name for it.
 				secondary: [row.original.name && unitModel(row.original), row.original.serialNumber]
 					.filter(Boolean)
 					.join(" · "),
-				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
 		meta: { label: m.equipment_column_unit },

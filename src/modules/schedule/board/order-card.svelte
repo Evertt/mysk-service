@@ -5,11 +5,11 @@
 	dialog (`onschedule`).
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 
 	import { formatDate, formatTime } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 	import { priorities, statuses, types, unitsSummary } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -99,8 +99,8 @@
 		fork (`forkPreloads`), and a card the move re-created meanwhile never ran its effects, so it
 		kept pulsing (docs/upstream-bugs/README.md, 8).
 	-->
-	<a
-		href={resolve("/(app)/orders/[number]", { number: order.number })}
+	<OrderLink
+		number={order.number}
 		class="truncate font-medium underline-offset-4 hover:underline"
 		draggable="false"
 		data-sveltekit-preload-data="off"
@@ -108,7 +108,7 @@
 	>
 		<!-- The prefix is the same on every card; the rest fits a narrow column. -->
 		<span class="sr-only">{prefix}</span>{order.number.slice(prefix.length)}
-	</a>
+	</OrderLink>
 	<span class="truncate" title={order.customer.name}>{order.customer.name}</span>
 	{#if units}
 		<span class="truncate text-muted-foreground" title={units} data-units>{units}</span>

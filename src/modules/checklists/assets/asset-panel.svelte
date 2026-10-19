@@ -9,13 +9,13 @@
 -->
 <script lang="ts">
 	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import { toast } from "svelte-sonner";
 
 	import { type ListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { getTimeZone } from "#lib/dates.ts";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { isOpenOrder } from "#lib/models.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
@@ -117,12 +117,12 @@
 					</Card.Title>
 				{:else}
 					<Card.Title class="text-xl" data-asset-title>
-						<a
+						<EquipmentLink
+							serialNumber={data.unit.serialNumber}
 							class="underline-offset-4 hover:underline"
-							href={resolve("/(app)/equipment/[serial]", { serial: data.unit.serialNumber })}
 						>
 							{data.unit.title}
-						</a>
+						</EquipmentLink>
 					</Card.Title>
 				{/if}
 				<Card.Description>{place}</Card.Description>

@@ -5,9 +5,8 @@
 	first (date, kind, engineer, outcome), each opening its points and remarks.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import { formatDate } from "#lib/i18n/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getUnitChecklists } from "../../checklists.remote.ts";
 	import ChecklistHistory from "../../detail/checklist-history.svelte";
@@ -61,12 +60,7 @@
 				</Dialog.Title>
 				<Dialog.Description>
 					{opened.name}{opened.norm ? ` · ${opened.norm}` : ""} ·
-					<a
-						class="underline-offset-4 hover:underline"
-						href={resolve("/(app)/orders/[number]", { number: opened.order.number })}
-					>
-						{opened.order.number}
-					</a>
+					<OrderLink number={opened.order.number} class="underline-offset-4 hover:underline" />
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="flex items-center gap-2 text-sm">

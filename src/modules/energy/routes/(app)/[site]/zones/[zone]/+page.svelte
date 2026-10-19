@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
@@ -144,11 +145,10 @@
 									>
 									<Table.Cell>
 										{#if consumer.serialNumber}
-											<a
+											<EquipmentLink
+												serialNumber={consumer.serialNumber}
 												class="underline-offset-4 hover:underline"
-												href={resolve("/(app)/equipment/[serial]", {
-													serial: consumer.serialNumber,
-												})}>{consumer.unitName ?? consumer.serialNumber}</a
+												>{consumer.unitName ?? consumer.serialNumber}</EquipmentLink
 											>
 										{:else}
 											<span class="text-muted-foreground">—</span>

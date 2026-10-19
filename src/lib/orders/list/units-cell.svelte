@@ -4,9 +4,8 @@
 	number below, and how many more units the order has ("+14"); "New installation" without units.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
@@ -29,13 +28,15 @@
 </script>
 
 <div class="flex items-start gap-1.5">
-	<TwoLineCell
-		primary={first && unitTitle(first)}
-		secondary={first &&
-			(first.name ? `${unitModel(first)} · ${first.serialNumber}` : first.serialNumber)}
-		href={first ? resolve("/(app)/equipment/[serial]", { serial: first.serialNumber }) : undefined}
-		fallback={m.orders_new_installation()}
-	/>
+	{#if first}
+		<EquipmentLink
+			serialNumber={first.serialNumber}
+			label={unitTitle(first)}
+			secondary={first.name ? `${unitModel(first)} · ${first.serialNumber}` : first.serialNumber}
+		/>
+	{:else}
+		<TwoLineCell fallback={m.orders_new_installation()} />
+	{/if}
 	{#if more}
 		<Badge
 			variant="secondary"

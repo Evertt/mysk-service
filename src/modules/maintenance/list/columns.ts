@@ -1,9 +1,9 @@
-import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
+import { EquipmentLink } from "#lib/equipment/components.ts";
 import { label } from "#lib/i18n/index.ts";
 import { OrderLink } from "#lib/orders/components.ts";
 
@@ -21,10 +21,10 @@ export const columns = column.columns([
 	column.accessor((row) => `${row.unit.manufacturer} ${row.unit.model}`, {
 		id: "unit",
 		cell: ({ getValue, row }) =>
-			renderComponent(TwoLineCell, {
-				primary: getValue(),
+			renderComponent(EquipmentLink, {
+				serialNumber: row.original.unit.serialNumber,
+				label: getValue(),
 				secondary: row.original.unit.serialNumber,
-				href: resolve("/(app)/equipment/[serial]", { serial: row.original.unit.serialNumber }),
 			}),
 		enableHiding: false,
 		meta: { label: m.maintenance_column_unit },
