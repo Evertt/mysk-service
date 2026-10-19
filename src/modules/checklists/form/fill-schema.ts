@@ -5,16 +5,11 @@
  */
 import * as v from "valibot";
 
-import { recordId } from "#lib/schema.ts";
+import { recordId, textMax } from "#lib/schema.ts";
 
 import { pointResults, textLimits } from "../model.ts";
 
-const remark = (max: number) =>
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.maxLength(max, (issue) => m.checklists_text_max({ max: issue.requirement })),
-	);
+const remark = (max: number) => v.pipe(v.string(), v.trim(), textMax(max));
 
 /** A point's result (or none, to take it back). */
 export const answerSchema = v.object({

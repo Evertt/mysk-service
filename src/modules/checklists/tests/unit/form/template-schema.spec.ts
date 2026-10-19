@@ -40,7 +40,7 @@ describe("newTemplateSchema", () => {
 		const long = "x".repeat(81);
 		expect(
 			messages(v.safeParse(newTemplateSchema, { name: long, norm: long, validityMonths: 12 })),
-		).toEqual(["At most 80 characters", "At most 80 characters"]);
+		).toEqual(["Use at most 80 characters", "Use at most 80 characters"]);
 	});
 });
 

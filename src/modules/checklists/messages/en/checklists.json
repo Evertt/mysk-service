@@ -69,7 +69,6 @@
 	"checklists_template_saved": "Template saved",
 	"checklists_name_required": "Give the template a name",
 	"checklists_name_taken": "There's a template {name} already",
-	"checklists_text_max": "At most {max} characters",
 	"checklists_validity_range": "Between {min} and {max} months",
 	"checklists_point_required": "Say what's checked",
 	"checklists_template_not_found": "Checklist template not found",

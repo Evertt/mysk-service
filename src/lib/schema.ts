@@ -65,6 +65,9 @@ export const optionalText = (max: number) =>
 		v.transform((value) => value || null),
 	);
 
+/** Like `optionalText()`, for a field a command may leave out: a missing one reads as empty. */
+export const omittableText = (max: number) => v.optional(optionalText(max), "");
+
 /** The day a valid date input stands for (checked only once there's a value). */
 const day = () =>
 	v.check((value: string) => value === "" || isDay(value), m.validation_date_invalid);

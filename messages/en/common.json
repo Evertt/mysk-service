@@ -226,7 +226,6 @@
 	"common_views_delete_shared_description": "Everyone in the organization loses this view. Deleting it can't be undone.",
 	"common_views_deleted": "View deleted",
 	"common_views_name_required": "Enter a name",
-	"common_views_name_too_long": "Use at most {max} characters",
 	"common_views_name_taken": "You already have a view called “{name}” here",
 	"common_views_not_found": "View not found",
 	"common_count_orders": [

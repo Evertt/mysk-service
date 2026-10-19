@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { id, optionalId, optionalText, type Message, text, textMax } from "#lib/schema.ts";
+import { id, omittableText, optionalId, text, textMax, type Message } from "#lib/schema.ts";
 
 import { doorKinds } from "../model.ts";
 
@@ -21,9 +21,6 @@ const amount = (message: Message, { min = 0, max = 100_000, above = false } = {}
 /** A whole number from a number input, from `min` up to `max`. */
 const whole = (message: Message, min: number, max: number) =>
 	v.pipe(v.number(message), v.integer(message), v.minValue(min, message), v.maxValue(max, message));
-
-/** An optional text up to `max`, which the form may leave out: empty or missing is none. */
-const optionalPart = (max: number) => v.optional(optionalText(max), "");
 
 /** A required, trimmed text up to `max`. */
 const requiredText = (message: Message, max: number) => v.pipe(text(message), textMax(max));
@@ -66,8 +63,8 @@ const siteFields = {
  */
 export const newEnergySiteSchema = v.object({
 	siteId: id(m.energy_setup_site_required),
-	name: optionalPart(120),
-	meterName: optionalPart(80),
+	name: omittableText(120),
+	meterName: omittableText(80),
 	...siteFields,
 });
 
@@ -88,7 +85,7 @@ export const zoneSchema = v.object({
 	zoneId: v.optional(optionalId(), ""),
 	code: code(),
 	name: requiredText(m.energy_setup_name_required, 80),
-	floor: optionalPart(40),
+	floor: omittableText(40),
 	areaM2: v.optional(whole(m.energy_setup_area_invalid, 0, 1_000_000), 0),
 });
 

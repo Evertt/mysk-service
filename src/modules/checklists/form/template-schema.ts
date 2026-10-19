@@ -1,7 +1,7 @@
 /** The forms of the checklist templates: a template's details, its categories, and its points. */
 import * as v from "valibot";
 
-import { id, text } from "#lib/schema.ts";
+import { id, text, textMax } from "#lib/schema.ts";
 
 import { textLimits, validityLimits } from "../model.ts";
 
@@ -9,15 +9,12 @@ const validityMessage = () => m.checklists_validity_range(validityLimits);
 
 /** The fields of a template's details, shared by adding and editing one. */
 const templateFields = {
-	name: v.pipe(
-		text(m.checklists_name_required),
-		v.maxLength(textLimits.name, (issue) => m.checklists_text_max({ max: issue.requirement })),
-	),
+	name: v.pipe(text(m.checklists_name_required), textMax(textLimits.name)),
 	/** The norm it inspects by; none when left empty. */
 	norm: v.pipe(
 		v.optional(v.string(), ""),
 		v.trim(),
-		v.maxLength(textLimits.norm, (issue) => m.checklists_text_max({ max: issue.requirement })),
+		textMax(textLimits.norm),
 		v.transform((value) => value || null),
 	),
 	validityMonths: v.pipe(
@@ -46,15 +43,8 @@ export const templateIdSchema = v.object({ id: id() });
 /** The fields of a point, shared by adding and editing one. */
 const pointFields = {
 	/** E.g. "Mechanisch"; none when left empty. */
-	group: v.pipe(
-		v.optional(v.string(), ""),
-		v.trim(),
-		v.maxLength(textLimits.group, (issue) => m.checklists_text_max({ max: issue.requirement })),
-	),
-	text: v.pipe(
-		text(m.checklists_point_required),
-		v.maxLength(textLimits.text, (issue) => m.checklists_text_max({ max: issue.requirement })),
-	),
+	group: v.pipe(v.optional(v.string(), ""), v.trim(), textMax(textLimits.group)),
+	text: v.pipe(text(m.checklists_point_required), textMax(textLimits.text)),
 };
 
 export const newPointSchema = v.object({ templateId: id(), ...pointFields });

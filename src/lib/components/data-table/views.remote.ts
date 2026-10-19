@@ -11,7 +11,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { id, recordId, text } from "#lib/schema.ts";
+import { id, recordId, text, textMax } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
@@ -26,10 +26,7 @@ import {
 } from "./views.server.ts";
 import { canShareViews, viewNameMax } from "./views.ts";
 
-const viewName = v.pipe(
-	text(m.common_views_name_required),
-	v.maxLength(viewNameMax, () => m.common_views_name_too_long({ max: viewNameMax })),
-);
+const viewName = v.pipe(text(m.common_views_name_required), textMax(viewNameMax));
 
 /** A view's columns, from a form: as JSON (see `column-visibility.ts`). */
 const viewColumns = v.pipe(v.string(), v.parseJson(), columnVisibilitySchema);
