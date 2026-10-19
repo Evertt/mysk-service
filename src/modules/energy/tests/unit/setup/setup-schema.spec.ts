@@ -102,7 +102,7 @@ describe("a zone", () => {
 	test("refuses a code the gateway can't send and a part of a square metre", () => {
 		expect(
 			issues(zoneSchema, { energySiteId: "1", code: "Z".repeat(41), name: "A", areaM2: 1.5 }),
-		).toEqual({ code: "This is too long", areaM2: "A whole number of m², 0 or more" });
+		).toEqual({ code: "Use at most 40 characters", areaM2: "A whole number of m², 0 or more" });
 		expect(issues(zoneSchema, { energySiteId: "1", code: " ", name: "A" })).toEqual({
 			code: "Fill in the code the gateway sends, up to 40 characters",
 		});

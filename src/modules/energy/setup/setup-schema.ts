@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { id, optionalId, type Message, text } from "#lib/schema.ts";
+import { id, optionalId, optionalText, type Message, text, textMax } from "#lib/schema.ts";
 
 import { doorKinds } from "../model.ts";
 
@@ -22,18 +22,11 @@ const amount = (message: Message, { min = 0, max = 100_000, above = false } = {}
 const whole = (message: Message, min: number, max: number) =>
 	v.pipe(v.number(message), v.integer(message), v.minValue(min, message), v.maxValue(max, message));
 
-/** An optional, trimmed text up to `max`: empty is none. */
-const optionalText = (max: number) =>
-	v.pipe(
-		v.optional(v.string(), ""),
-		v.trim(),
-		v.maxLength(max, m.energy_setup_too_long),
-		v.transform((value) => value || null),
-	);
+/** An optional text up to `max`, which the form may leave out: empty or missing is none. */
+const optionalPart = (max: number) => v.optional(optionalText(max), "");
 
 /** A required, trimmed text up to `max`. */
-const requiredText = (message: Message, max: number) =>
-	v.pipe(text(message), v.maxLength(max, m.energy_setup_too_long));
+const requiredText = (message: Message, max: number) => v.pipe(text(message), textMax(max));
 
 /** Whether `value` is a time zone this runtime knows, e.g. `Europe/Amsterdam`. */
 export function isTimeZone(value: string) {
@@ -73,8 +66,8 @@ const siteFields = {
  */
 export const newEnergySiteSchema = v.object({
 	siteId: id(m.energy_setup_site_required),
-	name: optionalText(120),
-	meterName: optionalText(80),
+	name: optionalPart(120),
+	meterName: optionalPart(80),
 	...siteFields,
 });
 
@@ -95,7 +88,7 @@ export const zoneSchema = v.object({
 	zoneId: v.optional(optionalId(), ""),
 	code: code(),
 	name: requiredText(m.energy_setup_name_required, 80),
-	floor: optionalText(40),
+	floor: optionalPart(40),
 	areaM2: v.optional(whole(m.energy_setup_area_invalid, 0, 1_000_000), 0),
 });
 

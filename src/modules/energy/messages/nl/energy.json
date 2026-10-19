@@ -262,7 +262,6 @@
 	"energy_setup_time_zone": "Tijdzone",
 	"energy_setup_time_zone_hint": "Waar de locatie is, bijvoorbeeld Europe/Amsterdam.",
 	"energy_setup_time_zone_invalid": "Een tijdzone zoals Europe/Amsterdam",
-	"energy_setup_too_long": "Dit is te lang",
 	"energy_setup_saved": "{name} opgeslagen",
 	"energy_setup_deleted": "{name} verwijderd",
 	"energy_setup_code": "Code",

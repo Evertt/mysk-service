@@ -11,7 +11,7 @@ import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, ne, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { id, text } from "#lib/schema.ts";
+import { id, recordId, text } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
@@ -194,7 +194,7 @@ export const renameView = forMembers.form(
 /** Saves a table's current parameters and columns in an existing view. */
 export const updateView = forMembers.command(
 	v.object({
-		id: v.pipe(v.number(), v.integer()),
+		id: recordId(),
 		query: viewQuery,
 		columns: columnVisibilitySchema,
 	}),
@@ -221,7 +221,7 @@ export const updateView = forMembers.command(
 
 /** Shares a view with the organization, or stops sharing it: for owners and admins. */
 export const shareView = forMembers.command(
-	v.object({ id: v.pipe(v.number(), v.integer()), shared: v.boolean() }),
+	v.object({ id: recordId(), shared: v.boolean() }),
 	async (input) => {
 		const tenant = currentTenant();
 		if (!canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
@@ -242,7 +242,7 @@ export const shareView = forMembers.command(
 );
 
 /** Deletes a view. */
-export const deleteView = forMembers.command(v.pipe(v.number(), v.integer()), async (viewId) => {
+export const deleteView = forMembers.command(recordId(), async (viewId) => {
 	const existing = await findView(viewId, { edit: true });
 	await db.transaction(async (tx) => {
 		await tx.delete(savedView).where(and(eq(savedView.id, existing.id), inTenant(savedView)));

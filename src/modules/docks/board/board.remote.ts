@@ -8,6 +8,7 @@ import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { recordId } from "#lib/schema.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -48,7 +49,7 @@ function latestSessions(ids: number[]) {
  * The board of the tenant's site `siteId`, or of the first site with docks. The docks come with
  * their facts (none for a dock that never reported), their open session and their latest sessions.
  */
-export const getDockBoard = query(v.optional(v.pipe(v.number(), v.integer())), async (siteId) => {
+export const getDockBoard = query(v.optional(recordId()), async (siteId) => {
 	const sites = await sitesWithDocks();
 	const site = sites.find((each) => each.id === siteId) ?? sites[0] ?? null;
 	const canManage = isManager(currentTenant().roles);

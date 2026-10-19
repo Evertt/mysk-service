@@ -1,7 +1,7 @@
 /** The forms on a partner's card: which year, and an entry in its wallet made by hand. */
 import * as v from "valibot";
 
-import { cents, optionalDate, text } from "#lib/schema.ts";
+import { cents, customerCode, optionalDate, text } from "#lib/schema.ts";
 
 /** A year, from a hidden field. */
 export const yearField = v.pipe(
@@ -25,7 +25,7 @@ const walletEntryFields = {
 
 /** The wallet entry's form, with the partner's customer code: added credit needs a last day. */
 export const walletEntrySchema = v.pipe(
-	v.object({ code: v.pipe(v.string(), v.nonEmpty()), ...walletEntryFields }),
+	v.object({ code: customerCode(), ...walletEntryFields }),
 	v.forward(
 		v.check(
 			({ kind, validUntil }) => kind === "spend" || validUntil !== null,

@@ -8,6 +8,7 @@
 import { and, eq, or } from "drizzle-orm";
 import * as v from "valibot";
 
+import { recordId } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { savedView, tableMemory } from "#lib/server/db/schema.ts";
@@ -92,7 +93,7 @@ export const rememberTable = forMembers.command(
 		tableKey: tableKeySchema,
 		columns: v.nullable(columnVisibilitySchema),
 		query: viewQuerySchema,
-		viewId: v.nullable(v.pipe(v.number(), v.integer())),
+		viewId: v.nullable(recordId()),
 	}),
 	async (input) => {
 		if (input.owner !== memoryOwner()) return;

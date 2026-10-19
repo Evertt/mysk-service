@@ -169,7 +169,6 @@
 	"equipment_site_unknown": "Choose one of the customer's sites",
 	"equipment_site_placeholder": "Choose a site",
 	"equipment_site_choose_customer": "Choose the customer first",
-	"equipment_text_max": "Use at most {max} characters",
 	"equipment_field_name": "Name",
 	"equipment_field_name_description": "The customer's own name or tag for it, if any.",
 	"equipment_field_site": "Site",

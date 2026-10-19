@@ -1,18 +1,9 @@
 import * as v from "valibot";
 
 import { equipmentStatuses } from "#lib/models.ts";
-import { date, id, text } from "#lib/schema.ts";
+import { date, id, optionalText, text } from "#lib/schema.ts";
 
 import { locationNameMax } from "../locations/location-schema.ts";
-
-/** An optional, trimmed text of at most `max` characters; `null` if it's left empty. */
-const optionalText = (max = 120) =>
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.maxLength(max, (issue) => m.equipment_text_max({ max: issue.requirement })),
-		v.transform((value) => value || null),
-	);
 
 /** The location field's option for adding a location to the site. */
 export const newLocationToken = "new";
@@ -31,7 +22,7 @@ export const equipmentFields = {
 	categoryId: id(m.equipment_category_required),
 	status: v.picklist(equipmentStatuses, m.equipment_status_required),
 	/** The customer's own name or tag for it, if any. */
-	name: optionalText(),
+	name: optionalText(120),
 	customerId: id(m.equipment_customer_required),
 	/** One of the customer's sites. */
 	siteId: id(m.equipment_site_required),

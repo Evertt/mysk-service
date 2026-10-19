@@ -7,6 +7,7 @@
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { customerCode, recordId } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { refuse } from "#lib/server/forms.ts";
 import { live } from "#lib/server/live.ts";
@@ -15,7 +16,7 @@ import { dockSchema } from "./form/dock-schema.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { customerDocks, deleteDock, doorDock, dockUsage, saveDock } from "./server/docks.ts";
 
-const code = v.pipe(v.string(), v.nonEmpty(), v.maxLength(64));
+const code = customerCode();
 
 /** The customer's docks and what they can be given (its sites, locations and units). */
 export const getCustomerDocks = query(code, async (customerCode) => ({
@@ -44,12 +45,13 @@ export const deleteCustomerDock = forManagers.form(
 );
 
 /** How the unit is used as a dock's door or leveller; `null` if it's no dock's. */
-export const getDockUsage = query(code, (serialNumber) => dockUsage(serialNumber));
+export const getDockUsage = query(
+	v.pipe(v.string(), v.nonEmpty(), v.maxLength(64)),
+	(serialNumber) => dockUsage(serialNumber),
+);
 
 /** The dock whose door is the unit `unitId`, with its live state; `null` if it's no dock's door. */
-export const getDoorDock = query(v.pipe(v.number(), v.integer(), v.minValue(1)), (unitId) =>
-	doorDock(unitId),
-);
+export const getDoorDock = query(recordId(), (unitId) => doorDock(unitId));
 
 /** The records the docks' live views show: a change to any of them outdates them. */
 const dockTypes = ["dock", "customer"] as const;

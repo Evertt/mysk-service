@@ -4,12 +4,14 @@
  */
 import * as v from "valibot";
 
+import { recordId } from "#lib/schema.ts";
+
 import { alertStatuses } from "./model.ts";
 import { command, query } from "./remote-functions.ts";
 import { orderAlert, resolveAlert, siteAlerts } from "./server/alerts.ts";
 import { loadSite } from "./server/figures.ts";
 
-const id = v.pipe(v.number(), v.integer(), v.minValue(1));
+const id = recordId();
 
 /** The site's alerts, newest first: those of `status`, or all of them. */
 export const getEnergyAlerts = query(

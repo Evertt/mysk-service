@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { date, optionalId, time } from "#lib/schema.ts";
+import { date, optionalId, recordId, time } from "#lib/schema.ts";
 
 /** Who does an order and when: the fields of the schedule dialog and of a drag and drop move. */
 export const scheduleFields = {
@@ -11,8 +11,8 @@ export const scheduleFields = {
 
 /** A drag and drop move, sent as a command: ids are numbers, `null` for unassigned. */
 export const moveFields = {
-	id: v.pipe(v.number(), v.integer(), v.minValue(1)),
-	engineerId: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	id: recordId(),
+	engineerId: v.nullable(recordId()),
 	day: date(),
 	time: time(),
 };

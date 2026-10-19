@@ -169,7 +169,6 @@
 	"equipment_site_unknown": "Kies een vestiging van deze klant",
 	"equipment_site_placeholder": "Kies een vestiging",
 	"equipment_site_choose_customer": "Kies eerst de klant",
-	"equipment_text_max": "Gebruik hoogstens {max} tekens",
 	"equipment_field_name": "Naam",
 	"equipment_field_name_description": "De eigen naam of code van de klant, als die er is.",
 	"equipment_field_site": "Vestiging",
