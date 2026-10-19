@@ -139,3 +139,71 @@ must act on or would want to know about drown in it. Nothing is per user:
 
 Push and email notifications, per-user settings for which categories to see, dismissing single
 entries, and a "mark as unread".
+
+## As built
+
+- **Read state:** `notification_seen` (`organization_id`, `user_id`, `last_seen_activity_id`,
+  `updated_at`), primary key on the first two. Its composite key is
+  `(organization_id, last_seen_activity_id)` → `activity (organization_id, id)`, for which the
+  index `activity_organization` became the unique `activity_organization_id`: the database refuses
+  another tenant's entry as the marker. `markNotificationsSeen(upToId)` checks the entry first (a 404) and never moves the marker back (`max()` on conflict). It isn't logged: it's personal, like
+  `table_memory`.
+- **Rules and the query:** the rule type and the extension point (`notifications.rules`, an
+  immediate `skip` collector) are in `src/lib/notifications/extensions.ts`; the core's rules, the
+  conditions modules build theirs from (`entryAbout()`, `bySystem`, `subjectNumber`) and the query
+  in `src/lib/server/notifications/`. All rules of an audience are one `case` in one statement (the
+  first that matches gives the category), with constants written in, so it binds only the user,
+  the tenant and the window. `notificationsFor(audience)` reads the request once (tenant, user,
+  modules, the engineer's conditions), so a live query can ask again after a change.
+- **Office rules:** customer reports: `orders.reported` (an order's `created` entry with an
+  `order_request` row) and `parts-shop.placed`; alerts: `orders.automatic` (an order the system
+  created: maintenance's due plans, condition's critical units and a dock door's escalation alike,
+  as the order's entry can't tell which module made it), `docks.doorAlerts` (`door_alert`,
+  `door_escalated` by the system) and `energy.alerts` (an `energy_alert` the system created);
+  field progress: `orders.fieldProgress` (`work_started`, `completed`) and `checklists.rejected` (a
+  checklist completed with a rejected point; completed checklists don't change, so its results now
+  are those it was completed with); changes to my records: `records.mine`, on any subject type.
+- **Engineer rules** (`orders.cancelled`, `orders.unassigned`, `orders.assigned`, `orders.planned`,
+  in that order): `engineerActivity()` in `src/lib/server/auth/engineer.ts` builds their conditions
+  (`changes.engineerId` was or became theirs; an order of theirs now through `engineerOrders()`),
+  so the engineer's id stays in that file. "Planned or moved" and "cancelled" read whether the
+  order is theirs now; the rest read the entry.
+- **Added to the entries:** an order created with an engineer logs `engineerId` (none → them), and
+  deleting an assigned order logs it (them → none); the deletion is "cancelled" for the engineer
+  (that rule comes before "taken off"). Nothing else was missing: assignments, plans and the order
+  form log `engineerId`, and plans `scheduledFor`.
+- **Deviations:**
+  - Energy's `alert_ordered` is someone's own doing (the office makes an alert into an order), not
+    system-raised: energy's rule is the alert the readings raise instead.
+  - Condition dropping below a threshold isn't logged (only the recorded score is); its automatic
+    orders for critical units are, as `orders.automatic`. Maintenance has no rule of its own for
+    the same reason.
+  - The parts shop's rule takes every `placed` entry: only a customer's contact places an order.
+- **Live streams:** the office's shell held one already (the sidebar's badge,
+  `watchAwaitingAcceptance`). It became `watchShell` (`src/routes/(app)/shell.remote.ts`), which
+  answers both counts on any change, so the bell adds no stream. The engineer portal's shell held
+  none, but its pages hold `watchMyWork`; the bell's count is a plain query
+  (`getMyUnreadNotifications`) that `watchMyWork` refreshes (the same stream, shared). The tray is
+  a plain query read when it opens. Not measured: error-handling's timing lines aren't merged.
+  The server's count lags after marking until the next change; the page hides the dot up to the
+  entry it marked (`showsDot()`), and other tabs catch up on the next change.
+- **Tray:** `#lib/components/notifications/notification-bell.svelte`, with
+  `activity-sentence.svelte` taken out of the activity list for the sentence; each shell's
+  `notification-bell.svelte` gives its remote functions. Changes show on one muted line. The
+  engineer's entries link to `/my/<number>` while the order is theirs. Each opening reads the tray
+  afresh, showing a skeleton (`aria-busy`) rather than the last tray, whose highlights were of
+  then: the engineer's e2e read the old tray's first unread entry before the new one was in. Days
+  are grouped by a map and sorted, as the demo data's entry times aren't in id order. In the
+  desktop's phone frame the tray keeps within the portal's column (`boundary`, its width the
+  space bits-ui leaves it).
+- **Checked by hand** (dev server, SHLTR): the office's bell, its dot and tray at desktop and
+  phone width; the engineer portal's in the desktop phone frame and at phone width (its empty
+  state). At phone width the portal's header is crowded: the name shrinks to its first letter
+  next to six buttons (the bell, language, theme, mode, view-as, sign out), and bug-recorder adds
+  one more; the header wants a menu for some of them.
+- **Open:** the query scans the tenant's entries of the window until it has 50 matches; a tenant
+  with a very busy log and few notifications would want an index on `activity (organization_id,
+created_at)` or an id bound for the window.
+- **Learned:** drizzle wraps an embedded query in parentheses (write `exists ${subquery}`, not
+  `exists (${subquery})`); `literal()` refuses JSON paths (`sql.raw` for code constants); a rule's
+  subquery is built per request, never at module scope (`db` is the request's on Cloudflare).

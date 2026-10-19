@@ -121,6 +121,18 @@ describe("the Connect page", () => {
 			.waitFor();
 		expect(await legend.innerText()).toContain("Within interval and inspection valid — no action.");
 	});
+
+	test("with a single row, the table doesn't scroll inside itself", async () => {
+		// The mockup's worn spring set: its row's status has a dot and a screen reader's text,
+		// positioned, which the table's hidden widest-cell rows once let hang below it.
+		await app.go("/condition?q=OC-1041");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(1);
+		const container = app.page.locator('[data-slot="data-table"] [data-slot="table-container"]');
+		expect(await container.evaluate((element) => element.scrollHeight - element.clientHeight)).toBe(
+			0,
+		);
+	});
 });
 
 describe("elsewhere", () => {

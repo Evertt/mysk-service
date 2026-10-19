@@ -3,7 +3,7 @@
  * matching its filters (both in `equipment-list.remote.ts`). A remote file can only export remote
  * functions, so it can't export these.
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { openOrderStatuses } from "#lib/models.ts";
@@ -19,7 +19,15 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
-import { anyOf, between, inDays, type ListSql, nocase } from "#lib/server/lists/index.ts";
+import {
+	anyOf,
+	between,
+	inDays,
+	type ListSql,
+	nocase,
+	parseIds,
+	type RecordSource,
+} from "#lib/server/lists/index.ts";
 import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { equipmentList } from "../list/equipment-list.ts";
@@ -36,6 +44,39 @@ export const withEquipmentJoins = <T extends SQLiteSelect>(query: T) =>
 		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
 		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
 		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId));
+
+/**
+ * A unit's manufacturer, `null` for none: the form requires one, but imported units may have an
+ * empty one (SHLTR's demo data has some), which the filter offers as "No manufacturer".
+ */
+export const manufacturerOrNone = sql<string | null>`nullif(${equipment.manufacturer}, '')`;
+
+/**
+ * The tenant's locations, for the list's location filter (`facetOptions()`): by name, each with
+ * whose site it's at (the same name is at many sites, "Dock 03"), and searched by any of those
+ * names; their id is the filter's value (`?location=12`).
+ */
+export const locationRecords = (): RecordSource => ({
+	from: (fields) =>
+		db
+			.select(fields)
+			.from(equipmentLocation)
+			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.$dynamic(),
+	scope: () => inTenant(equipmentLocation),
+	value: equipmentLocation.id,
+	label: equipmentLocation.name,
+	detail: sql`${customer.name} || ' · ' || ${customerSite.name}`,
+	search: [equipmentLocation.name, customerSite.name, customer.name],
+	sort: [
+		nocase(equipmentLocation.name),
+		nocase(customer.name),
+		nocase(customerSite.name),
+		asc(equipmentLocation.id),
+	],
+	parse: parseIds,
+});
 
 /**
  * The equipment list's columns in SQL, checked against its definition (`equipmentList`). Call it
@@ -64,9 +105,10 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 				],
 			},
 			serialNumber: { sort: equipment.serialNumber },
+			// `null` among the names: the units without one.
 			manufacturer: {
 				sort: nocase(equipment.manufacturer),
-				filter: (manufacturers) => inList(equipment.manufacturer, manufacturers),
+				filter: (manufacturers) => anyOf(manufacturerOrNone, manufacturers),
 				group: equipment.manufacturer,
 			},
 			// In the tenant's order of its categories, by id in the URL.

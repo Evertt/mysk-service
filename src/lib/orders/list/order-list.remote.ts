@@ -1,11 +1,23 @@
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { pageGroupsOf, planList } from "#lib/server/lists/index.ts";
+import {
+	customerRecords,
+	facetOptions,
+	facetOptionsInput,
+	pageGroupsOf,
+	planList,
+} from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { tagOrders } from "../server/hooks.ts";
-import { ordersSql, unitFacets, withOrderJoins } from "../server/list-sql.ts";
+import {
+	engineerRecords,
+	ordersSql,
+	unitCounts,
+	unitRecords,
+	withOrderJoins,
+} from "../server/list-sql.ts";
 import { priceOrders } from "../server/pricing.ts";
 import { unitCount, withUnitIds } from "../server/units.ts";
 import { ordersList } from "./orders-list.ts";
@@ -80,21 +92,39 @@ export const getOrders = forMembers.query(ordersList.query, async (input) => {
 });
 
 /**
- * How many orders have each type, status, priority, engineer (by id) and unit (by serial number;
- * an order counts for each of its units), for the counts in the list's filters: of those matching
- * the search and the other filters. The unassigned orders and the new installations count under
- * `none`.
+ * How many orders have each type, status and priority, for the counts in the list's filters: of
+ * those matching the search and the other filters. The filters on customers, engineers and units
+ * count theirs with their options (below).
  */
-export const getOrderFacets = forMembers.query(ordersList.where, async (where) => {
-	const plan = planList(ordersSql(), where);
-	const [facets, equipment] = await Promise.all([
-		plan.facets({
-			type: order.type,
-			status: order.status,
-			priority: order.priority,
-			engineer: order.engineerId,
-		}),
-		unitFacets(plan),
-	]);
-	return { ...facets, equipment };
-});
+export const getOrderFacets = forMembers.query(ordersList.where, (where) =>
+	planList(ordersSql(), where).facets({
+		type: order.type,
+		status: order.status,
+		priority: order.priority,
+	}),
+);
+
+// The options of the list's filters on related records, each with how many orders have it under
+// the list's search and other filters, most first (see `facetOptions()`).
+const optionsInput = facetOptionsInput(ordersList);
+
+/** Customers by name or code; their code is the filter's value (`?customer=CUST-0001`). */
+export const getOrderCustomerOptions = forMembers.query(optionsInput, (input) =>
+	facetOptions(ordersSql(), input, "customer", customerRecords(), { by: customer.code }),
+);
+
+/** Engineers by name, and the unassigned orders; their id is the filter's value (`?engineer=12`). */
+export const getOrderEngineerOptions = forMembers.query(optionsInput, (input) =>
+	facetOptions(ordersSql(), input, "engineer", engineerRecords(), {
+		by: order.engineerId,
+		none: true,
+	}),
+);
+
+/**
+ * Units by serial number, name, manufacturer or model, and the new installations (orders without
+ * units); an order counts for each of its units. Their serial number is the filter's value.
+ */
+export const getOrderEquipmentOptions = forMembers.query(optionsInput, (input) =>
+	facetOptions(ordersSql(), input, "equipment", unitRecords(), { count: unitCounts, none: true }),
+);

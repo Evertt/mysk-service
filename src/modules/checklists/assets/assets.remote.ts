@@ -67,7 +67,13 @@ export const getAssetFacets = query(assetList.where, async (where) => {
 		thisYear: state,
 		customer: customer.code,
 	});
-	return { thisYear: facets.thisYear, customers: await customerFacet(facets.customer) };
+	// The chosen customer too, with 0 when the year's filter leaves none of theirs: else the select
+	// would show "All customers" while the list shows no one's.
+	const chosen = Object.fromEntries((where.filters.customer ?? []).map((code) => [code, 0]));
+	return {
+		thisYear: facets.thisYear,
+		customers: await customerFacet({ ...chosen, ...facets.customer }),
+	};
 });
 
 /** The tenant's unit `serialNumber` with its template, components and checklists (or a 404). */

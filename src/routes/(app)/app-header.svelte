@@ -5,6 +5,7 @@
 	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 	import { cn } from "#lib/utils.ts";
 
+	import NotificationBell from "./notification-bell.svelte";
 	import SyncIndicator from "./sync-indicator.svelte";
 
 	const theme = useTheme();
@@ -16,6 +17,7 @@
 >
 	<Sidebar.Trigger class="-ml-1" />
 	<div class="ml-auto flex items-center gap-1">
+		<NotificationBell />
 		<SyncIndicator />
 		<BugReportButton />
 		<ThemeSwitcher />

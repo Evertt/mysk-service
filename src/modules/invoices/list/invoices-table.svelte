@@ -39,12 +39,7 @@
 	<div class="flex min-h-0 flex-1 flex-col gap-4">
 		<table.Toolbar searchLabel={m.invoices_search()}>
 			<FacetedFilter columnId="status" title={m.invoices_column_status()} options={stateOptions} />
-			<FacetedFilter
-				columnId="customer"
-				title={m.invoices_column_customer()}
-				options={customers.options}
-				counts={customers.counts}
-			/>
+			<FacetedFilter columnId="customer" title={m.invoices_column_customer()} options={customers} />
 			<NumberRangeFilter columnId="total" title={m.invoices_column_total()} money />
 			<DateRangeFilter
 				columnId="dueOn"

@@ -34,9 +34,12 @@ export function isUnderWarranty(
 	return Temporal.PlainDate.compare(day, warrantyUntil) <= 0;
 }
 
-/** What a unit is, by make: its manufacturer and model, e.g. `Daikin EWAD-410`. */
+/**
+ * What a unit is, by make: its manufacturer and model, e.g. `Daikin EWAD-410`; empty for an
+ * imported unit without either.
+ */
 export const unitModel = (unit: { manufacturer: string; model: string }) =>
-	`${unit.manufacturer} ${unit.model}`;
+	`${unit.manufacturer} ${unit.model}`.trim();
 
 /**
  * What a unit is called: the customer's own name for it if it has one (`Automatische deur kantine

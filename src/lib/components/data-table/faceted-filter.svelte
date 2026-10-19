@@ -11,6 +11,7 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import type { Component } from "svelte";
 
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { registerTableFilter } from "./filters.svelte.ts";
@@ -21,8 +22,13 @@
 		value: string;
 		label: string;
 		icon?: Component;
-		/** Shown after the label, e.g. a customer's code; the search box finds it by it too. */
-		detail?: string;
+		/** What the search box finds it by, if not only its label, e.g. a customer's code too. */
+		keywords?: string[];
+		/**
+		 * How many rows have it, rather than `counts`' number; greyed at 0, as a `RecordFilter`'s
+		 * options are (`recordFacets()`' options have it).
+		 */
+		count?: number;
 	}
 
 	let {
@@ -107,12 +113,14 @@
 				{#each shown as option (option.value)}
 					<Command.Item
 						value={option.value}
-						keywords={option.detail ? [option.label, option.detail] : [option.label]}
+						keywords={option.keywords ?? [option.label]}
 						onSelect={() => toggle(option.value)}
+						class={cn(option.count === 0 && "text-muted-foreground")}
+						data-no-rows={option.count === 0 || undefined}
 					>
 						<div
 							class={cn(
-								"flex size-4 items-center justify-center rounded-[4px] border",
+								"flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
 								selected.has(option.value)
 									? "border-primary bg-primary text-primary-foreground"
 									: "border-input [&_svg]:invisible",
@@ -124,11 +132,8 @@
 							<option.icon class="text-muted-foreground" />
 						{/if}
 						<span class="truncate">{option.label}</span>
-						{#if option.detail}
-							<span class="shrink-0 font-mono text-xs text-muted-foreground">{option.detail}</span>
-						{/if}
-						<Command.Shortcut class="font-mono">
-							{counts.get(option.value) ?? 0}
+						<Command.Shortcut class="shrink-0 font-mono">
+							{formatNumber(option.count ?? counts.get(option.value) ?? 0)}
 						</Command.Shortcut>
 					</Command.Item>
 				{/each}

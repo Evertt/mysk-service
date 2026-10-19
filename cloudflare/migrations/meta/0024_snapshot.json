@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0e8dd735-53fc-43b5-ac7f-92568ed8cac6",
+  "id": "16681f2a-fa7a-4c6b-8cc4-071ca14c6b5d",
   "prevId": "edfdb9ba-02fc-487f-80b1-9b8d94037ecb",
   "tables": {
     "activity": {
@@ -108,13 +108,13 @@
         }
       },
       "indexes": {
-        "activity_organization": {
-          "name": "activity_organization",
+        "activity_organization_id": {
+          "name": "activity_organization_id",
           "columns": [
             "organization_id",
             "id"
           ],
-          "isUnique": false
+          "isUnique": true
         },
         "activity_subject": {
           "name": "activity_subject",
@@ -159,172 +159,6 @@
         "activity_user_id_user_id_fk": {
           "name": "activity_user_id_user_id_fk",
           "tableFrom": "activity",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "bug_report": {
-      "name": "bug_report",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "user_name": {
-          "name": "user_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "url": {
-          "name": "url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "route_id": {
-          "name": "route_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "user_agent": {
-          "name": "user_agent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "app_version": {
-          "name": "app_version",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "context": {
-          "name": "context",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "duration_ms": {
-          "name": "duration_ms",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "size": {
-          "name": "size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "object_key": {
-          "name": "object_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(unixepoch())"
-        }
-      },
-      "indexes": {
-        "bug_report_created": {
-          "name": "bug_report_created",
-          "columns": [
-            "created_at"
-          ],
-          "isUnique": false
-        },
-        "bug_report_organization": {
-          "name": "bug_report_organization",
-          "columns": [
-            "organization_id"
-          ],
-          "isUnique": false
-        },
-        "bug_report_user": {
-          "name": "bug_report_user",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "bug_report_organization_id_organization_id_fk": {
-          "name": "bug_report_organization_id_organization_id_fk",
-          "tableFrom": "bug_report",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "bug_report_user_id_user_id_fk": {
-          "name": "bug_report_user_id_user_id_fk",
-          "tableFrom": "bug_report",
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
@@ -1423,6 +1257,111 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "notification_seen": {
+      "name": "notification_seen",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_seen_activity_id": {
+          "name": "last_seen_activity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "notification_seen_user": {
+          "name": "notification_seen_user",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "notification_seen_activity": {
+          "name": "notification_seen_activity",
+          "columns": [
+            "organization_id",
+            "last_seen_activity_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "notification_seen_organization_id_organization_id_fk": {
+          "name": "notification_seen_organization_id_organization_id_fk",
+          "tableFrom": "notification_seen",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "notification_seen_user_id_user_id_fk": {
+          "name": "notification_seen_user_id_user_id_fk",
+          "tableFrom": "notification_seen",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "notification_seen_organization_id_last_seen_activity_id_activity_organization_id_id_fk": {
+          "name": "notification_seen_organization_id_last_seen_activity_id_activity_organization_id_id_fk",
+          "tableFrom": "notification_seen",
+          "tableTo": "activity",
+          "columnsFrom": [
+            "organization_id",
+            "last_seen_activity_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "notification_seen_organization_id_user_id_pk": {
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
+          "name": "notification_seen_organization_id_user_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },

@@ -5,9 +5,12 @@
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
 import { bulkSetOrderStatus } from "#lib/orders/list/order-bulk.remote.ts";
-import { getOrders } from "#lib/orders/list/order-list.remote.ts";
+import {
+	getOrderCustomerOptions,
+	getOrderEngineerOptions,
+	getOrders,
+} from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
 import { deleteOrder, getOrder, updateOrder } from "#lib/orders/order.remote.ts";
 import {
@@ -114,22 +117,42 @@ describe("South's orders list", () => {
 			 and name not in (select name from customer where organization_id = ?) order by id limit 1`,
 			[northId, southId],
 		);
+		const everyWhere = { q: "", filters: {} };
+		const options = (search: string, selected: string[] = [], where = everyWhere) =>
+			data(getOrderCustomerOptions, { where, search, selected });
 		await as(south.owner, async () => {
-			const found = await data(getCustomerOptions, { search: "CUST", selected: [] });
+			const found = await options("CUST");
 			expect(found.options).toHaveLength(Math.min(own.size, 20));
 			for (const option of found.options) expect(own.has(option.value), option.label).toBe(true);
-			expect(
-				(await data(getCustomerOptions, { search: northOnlyName, selected: [] })).options,
-			).toEqual([]);
-			// Nor by a code only North has, ticked (codes are numbered per tenant).
+			// And counts South's orders only.
+			const ordersOf = await rows<{ code: string; n: number }>(
+				`select c.code, count(o.id) as n from customer c left join "order" o on o.customer_id = c.id
+				 where c.organization_id = ? group by c.id`,
+				[southId],
+			);
+			for (const option of found.options) {
+				expect(option.count, option.label).toBe(
+					ordersOf.find((row) => row.code === option.value)?.n,
+				);
+			}
+			expect((await options(northOnlyName)).options).toEqual([]);
+			// Nor by a code only North has, ticked (codes are numbered per tenant), also in the
+			// list's own filters.
 			const northCode = await value<string>(
 				`select code from customer where organization_id = ?
 				 and code not in (select code from customer where organization_id = ?) limit 1`,
 				[northId, southId],
 			);
-			expect(
-				(await data(getCustomerOptions, { search: "", selected: [northCode] })).selected,
-			).toEqual([]);
+			expect((await options("", [northCode])).selected).toEqual([]);
+			const tampered = await options("", [], { q: "", filters: { customer: [northCode] } });
+			for (const option of tampered.options) expect(own.has(option.value), option.label).toBe(true);
+			const narrowed = await data(getOrderEngineerOptions, {
+				where: { q: "", filters: { customer: [northCode] } },
+				search: "",
+				selected: [],
+			});
+			expect(narrowed.options.every((option) => option.count === 0)).toBe(true);
+			expect(narrowed.none).toBe(0);
 		});
 	});
 });

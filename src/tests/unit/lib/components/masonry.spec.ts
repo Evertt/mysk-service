@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { placeCards, stickiness } from "#routes/(app)/(dashboard)/masonry.ts";
+import { placeCards, stickiness } from "#lib/components/masonry.ts";
 
 describe("placeCards", () => {
 	test("puts the first row side by side, in order, then each card under the shortest column", () => {

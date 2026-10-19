@@ -1,7 +1,8 @@
 /**
  * The equipment list's page: its rows and layout, the band and its category chips, a range from
- * the Filter menu, paging as it scrolls, the customer filter's search, grouping across pages, and
- * a bulk action on all the loaded units. What `getEquipmentList` and `getEquipmentFacets` return
+ * the Filter menu, paging as it scrolls, the customer filter's search, the location filter's
+ * layout, grouping across pages, a bulk action on all the loaded units, and SHLTR's units without
+ * a manufacturer. What `getEquipmentList` and `getEquipmentFacets` return
  * (counts, ranges, sorting, search, another tenant's rows) is `equipment/server/list.spec.ts`'s and
  * `lists/plan.spec.ts`'s.
  */
@@ -18,6 +19,7 @@ import {
 	organizations,
 	rows,
 	useApp,
+	users,
 	value,
 } from "./app.ts";
 import { equipmentPage } from "./equipment-helpers.ts";
@@ -42,7 +44,7 @@ const shownRows = () =>
 async function filter(title: string, option: string) {
 	const { page } = app;
 	await app.openFilter(title);
-	await page.getByRole("option", { name: new RegExp(`^${option}\\s*\\d+$`) }).click();
+	await page.getByRole("option", { name: new RegExp(`^${option}\\s*[\\d,]+$`) }).click();
 	await page.keyboard.press("Escape");
 }
 
@@ -83,6 +85,47 @@ describe("in North", () => {
 			expect(await page.locator('[data-slot="data-table"]').boundingBox()).toEqual(table);
 		} finally {
 			await page.setViewportSize({ width: 1440, height: 1000 });
+		}
+	});
+
+	test("on a laptop screen a list of a few units, or none, is only as tall as they need", async () => {
+		const { page } = app;
+		const table = page.locator('[data-slot="data-table"]');
+		/** The table's height, and how tall its rows are (the line under them included). */
+		const heights = () =>
+			table.evaluate((element) => ({
+				table: element.getBoundingClientRect().height,
+				rows: element.querySelector("table")!.getBoundingClientRect().height,
+			}));
+		/** How far the page scrolls (its padding under the table stays in view without). */
+		const pageScrolls = () =>
+			page
+				.locator('[data-slot="sidebar-inset"]')
+				.evaluate((element) => element.scrollHeight - element.clientHeight);
+		const serial = await value<string>(
+			`select serial_number from equipment where organization_id = ? order by id limit 1`,
+			[north.id],
+		);
+		await page.setViewportSize({ width: 1440, height: 900 });
+		try {
+			// One unit: the table keeps its least height, 12rem, which is more than its rows need.
+			await app.go(`/equipment?q=${encodeURIComponent(serial)}`);
+			await expect.poll(() => bodyRows().count()).toBe(1);
+			const one = await heights();
+			expect(one.rows).toBeLessThan(192);
+			expect(one.table).toBe(192);
+			expect(await pageScrolls()).toBe(0);
+			// None: the empty state, which needs more than that.
+			await app.go("/equipment?q=no-such-unit-anywhere");
+			await expect.poll(() => table.getByText("No equipment found").isVisible()).toBe(true);
+			const none = await heights();
+			expect(none.rows).toBeGreaterThan(192);
+			expect(none.table).toBeCloseTo(none.rows, -1);
+			expect(await pageScrolls()).toBe(0);
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 1000 });
+			// The tests below go on with the whole list.
+			await app.go(afresh("/equipment"));
 		}
 	});
 
@@ -197,8 +240,11 @@ describe("in North", () => {
 		);
 		await app.go(afresh("/equipment"));
 		await app.openFilter("Customer");
+		// By its code, which the option doesn't show: its name, and how many units it has.
 		await page.getByPlaceholder("Search customers…").fill(owner.code.toLowerCase());
-		await page.getByRole("option", { name: new RegExp(owner.code) }).click();
+		const option = page.getByRole("option").filter({ hasText: owner.name });
+		expect(await option.innerText()).toMatch(new RegExp(`${owner.units}$`));
+		await option.click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("customer") === owner.code);
 		await app.tableSettled();
@@ -208,6 +254,47 @@ describe("in North", () => {
 		await page.getByRole("button", { name: "Reset" }).click();
 		await app.tableSettled();
 		expect(await app.rowCount()).toBe(await countIn("equipment", north.id));
+	});
+
+	test("the location filter lists each location's name, whose site it's at and its units, apart", async () => {
+		const { page } = app;
+		await app.go(afresh("/equipment"));
+		const check = async () => {
+			await app.openFilter("Location");
+			const options = page.getByRole("option");
+			await options.nth(3).waitFor();
+			const boxes = await options.evaluateAll((items: HTMLElement[]) =>
+				items.slice(1, 6).map((item) => {
+					const box = (element: Element | null) => {
+						const rect = element!.getBoundingClientRect();
+						return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+					};
+					const [label, detail] = item.querySelectorAll("span.truncate");
+					return {
+						item: box(item),
+						label: box(label),
+						detail: box(detail),
+						count: box(item.querySelector('[data-slot="command-shortcut"]')),
+						text: (label as HTMLElement).innerText,
+					};
+				}),
+			);
+			for (const { item, label, detail, count, text } of boxes) {
+				expect(text.length, "the label is shown").toBeGreaterThan(0);
+				expect(label.right - label.left, text).toBeGreaterThan(20);
+				// The site under the name, the count after both, all inside the option.
+				expect(detail.top, text).toBeGreaterThanOrEqual(label.bottom - 1);
+				expect(count.left, text).toBeGreaterThanOrEqual(Math.max(label.right, detail.right));
+				expect(count.right, text).toBeLessThanOrEqual(item.right);
+			}
+			await page.keyboard.press("Escape");
+			await page.keyboard.press("Escape");
+		};
+		await check();
+		await onPhone(page, async () => {
+			await app.go(afresh("/equipment"));
+			await check();
+		});
 	});
 
 	test("grouped by category, each category is counted whole and kept together as more rows load", async () => {
@@ -309,5 +396,23 @@ describe("in North", () => {
 		expect(await statuses()).toEqual(
 			before.map((unit) => (matching.has(unit.id) ? { ...unit, status: "out_of_service" } : unit)),
 		);
+	});
+});
+
+describe("in SHLTR, whose imported units may have no manufacturer", () => {
+	test("the manufacturer filter offers them as “No manufacturer”", async () => {
+		const { page } = app;
+		await app.signIn(users.shltrPlanner);
+		const without = await value<number>(
+			`select count(*) from equipment where organization_id = ? and manufacturer = ''`,
+			[organizations.shltr.id],
+		);
+		expect(without).toBeGreaterThan(0);
+		await app.go(afresh("/equipment"));
+		await filter("Manufacturer", "No manufacturer");
+		await page.waitForURL((url) => url.searchParams.get("manufacturer") === "none");
+		await app.tableSettled();
+		expect(await app.rowCount()).toBe(without);
+		expect(await app.filterPill("Manufacturer").innerText()).toContain("No manufacturer");
 	});
 });

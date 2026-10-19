@@ -7,7 +7,13 @@ import { sql } from "drizzle-orm";
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
-import { customerFacet, planList } from "#lib/server/lists/index.ts";
+import {
+	customerFacet,
+	customerRecords,
+	facetOptions,
+	facetOptionsInput,
+	planList,
+} from "#lib/server/lists/index.ts";
 
 import { query } from "../remote-functions.ts";
 import { articlesById } from "../server/components.ts";
@@ -108,3 +114,12 @@ export const getConditionCounts = query(conditionList.where, async (where) => {
 	);
 	return { status: facets.status, condition: facets.condition, customers };
 });
+
+/**
+ * The customer filter's options: customers by name or code, each with how many rows have it under
+ * the list's search and other filters, most first (see `facetOptions()`); their code is the
+ * filter's value.
+ */
+export const getConditionCustomerOptions = query(facetOptionsInput(conditionList), (input) =>
+	facetOptions(rowsSql(), input, "customer", customerRecords(), { by: customer.code }),
+);

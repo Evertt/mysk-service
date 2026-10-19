@@ -70,3 +70,36 @@ code. Other detail pages can adopt it when they get crowded.
 ## Out of scope
 
 The customer and order detail pages, and changing what the cards show.
+
+## As built
+
+- **Shared masonry**: `src/lib/components/masonry.ts` (spec `src/tests/unit/lib/components/masonry.spec.ts`),
+  with a general doc comment. The container's classes the masonry needs (`grid items-start`, and
+  1px rows without a row gap in `data-masonry` mode) are its `masonryGrid`; the dashboard's
+  `cardGrid` builds on it and adds its own columns and gap.
+- **The unit's page**: one masonry grid (`data-unit-cards`) under `ServiceStats`, in the planned
+  order. The timeline is wrapped in a `data-wide` `div` (the item), so `ServiceTimeline` is
+  unchanged. `<ExtensionSlot>` already wraps its parts in `display: contents` by default, so each
+  module's card, and a failed part's card (`data-extension-failed`, checked by blocking a
+  contribution's chunk), is an item of its own; `extension-slot.svelte` is untouched. The slot's
+  declaration (`detailSide`) says it's no longer a side column; its id stays
+  `equipment.detail.side`.
+- **Deviation: columns by the page's width, not `md`/`lg`.** Viewport breakpoints don't fit next
+  to the 16rem sidebar: from `md` (768px) two columns were 220px wide, and the condition and
+  components cards' headers (title and button) overflowed. The grid uses the dashboard's
+  `auto-fill` formula with columns at least 17rem, three at most: one column on a phone and on a
+  tablet next to the sidebar (≤ ~870px), two on a small laptop (e.g. 900 and 1024px: 272–348px
+  columns), three from ~1170px (1280 and 1440px: 309 and 363px columns). It follows the sidebar
+  collapsing too.
+- **Measured** (North, all modules, a unit with three orders, 1440px): the timeline ends at
+  1,472px; stacked in one side column, as before, the other twelve cards would end near 3,850px.
+  Now the three columns end at 2,333, 2,315 and 2,146px, the module cards under the timeline in
+  two columns. On the busiest unit (19 orders) the timeline is ~5,400px
+  tall, so at three columns every narrow card stays beside it in the third column, and at two
+  columns they all come after it (the plan's "with 2 columns, the timeline spans both").
+- **Tests**: `src/tests/e2e/equipment.detail.test.ts` ("the unit's cards": a North unit with at
+  most two orders at 1440px, and on a phone); the dashboard's box helpers moved to
+  `src/tests/e2e/masonry-helpers.ts` for both pages.
+- **Seen, not changed** (out of scope): the materials module's "Parts used" card overflows its
+  width at 363px and narrower (a quantity like "13.88 m" is clipped), as it did in the old side
+  column.

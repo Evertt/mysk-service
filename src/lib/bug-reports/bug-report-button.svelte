@@ -2,7 +2,8 @@
 	@component
 	The record button of the office's header and the engineer portal's: a quiet bug icon that starts
 	recording the screen (`recorder.svelte.ts`); while it records, a red pulsing dot with the time it
-	has run, which stops it and asks for a note before the report is sent.
+	has run, which stops it and asks for a note before the report is sent. `compact` leaves the time
+	out (it's still in the button's label), for a header with no room for it (a phone's).
 -->
 <script lang="ts">
 	import { version } from "$app/env";
@@ -20,7 +21,10 @@
 	import { bugRecorder } from "./recorder.svelte.ts";
 	import { maxReportBytes } from "./report.ts";
 
+	let { compact = false }: { compact?: boolean } = $props();
+
 	const recorder = bugRecorder();
+	const showTime = $derived(recorder.phase === "recording" && !compact);
 	const time = $derived(formatStopwatch(recorder.elapsed));
 	const megabytes = numberFormatter({ style: "unit", unit: "megabyte", maximumFractionDigits: 0 });
 
@@ -86,7 +90,7 @@
 							<Button
 								{...props}
 								variant="ghost"
-								size={recorder.phase === "recording" ? "sm" : "icon-sm"}
+								size={showTime ? "sm" : "icon-sm"}
 								aria-label={label}
 								data-slot="bug-report-button"
 								data-phase={recorder.phase}
@@ -98,7 +102,9 @@
 										></span>
 										<span class="relative inline-flex size-2.5 rounded-full bg-red-600"></span>
 									</span>
-									<span class="font-mono text-xs tabular-nums" aria-hidden="true">{time}</span>
+									{#if showTime}
+										<span class="font-mono text-xs tabular-nums" aria-hidden="true">{time}</span>
+									{/if}
 								{:else if recorder.phase === "idle"}
 									<BugIcon />
 								{:else}

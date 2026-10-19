@@ -5,8 +5,8 @@
 	The header row sticks to the top of the table's scroll area, and pinned columns (see
 	`default-pinning.ts`) stick to its sides, with a shadow while there's more to scroll to. With
 	`fillViewport` (list pages), the page fits the viewport on larger screens and the rows scroll
-	inside the table, so the toolbar and footer stay in view; on small or low screens the page
-	scrolls as usual.
+	inside the table, so the toolbar and footer stay in view, while a few rows leave the table only
+	as tall as they need; on small or low screens the page scrolls as usual.
 
 	The rows don't page: more come as the table is scrolled towards its end (see
 	`scroll-window.svelte.ts` and `scroll-position.svelte.ts`), with a line under them saying they're
@@ -41,6 +41,7 @@
 	import { groupExpansion } from "./group-expansion.svelte.ts";
 	import GroupRow from "./group-row.svelte";
 	import { groupedPage, groupRowId, type PageGroups } from "./grouping.ts";
+	import { naturalHeight } from "./natural-height.ts";
 	import { createPinning } from "./pinning.svelte.ts";
 	import { createRowNavigation } from "./row-navigation.svelte.ts";
 	import { tableScrolling } from "./scroll-position.svelte.ts";
@@ -151,15 +152,20 @@
 		"*:data-[slot=table-container]:min-h-0 *:data-[slot=table-container]:[overflow-anchor:none]",
 		compact.area,
 		// The rows scroll inside the table only when it fills the viewport; otherwise the table
-		// container scrolls sideways only. Filling it, the table takes the room the page leaves it, at
-		// least half the screen: its rows don't count towards the page's height (size containment),
-		// only that minimum, so where there's less room the page grows by it (see the app layout)
-		// and keeps its padding under the table.
-		fillViewport &&
-			"desktop:min-h-[60vh] desktop:flex-1 desktop:contain-size desktop:*:data-[slot=table-container]:overflow-y-auto",
+		// container scrolls sideways only. Filling it, the table is as tall as its rows need, but at
+		// least 12rem (`--data-table-fit`, see `natural-height.ts`); with more rows than fit, it takes
+		// the room the page leaves it, at least 60% of the screen. Its rows don't count towards the
+		// page's height (size containment), only that minimum, so where there's less room the page
+		// grows by it (see the app layout) and keeps its padding under the table.
+		fillViewport && [
+			"[--data-table-fit:max(12rem,var(--data-table-natural-height,100vh))]",
+			"desktop:max-h-(--data-table-fit) desktop:min-h-[min(60vh,var(--data-table-fit))] desktop:flex-1 desktop:contain-size",
+			"desktop:*:data-[slot=table-container]:overflow-y-auto",
+		],
 		theme.classes("data-table"),
 	)}
 	{@attach overflowTracker}
+	{@attach fillViewport && naturalHeight}
 >
 	<ProgressBar
 		active={loading || !!scroll?.loadingEarlier}
@@ -282,8 +288,10 @@
 		<!-- The widest cells seen so far (see `column-widths.svelte.ts`): laid out, but not shown. -->
 		<tfoot inert aria-hidden="true" data-slot="data-table-hidden-rows">
 			{#each widths.rows as row, index (index)}
-				<!-- Their cells clip what they hold, which would otherwise hang below the table. -->
-				<tr class="collapse *:overflow-hidden">
+				<!-- Their cells clip what they hold, which would otherwise hang below the table and
+				     scroll it: positioned, so they clip what's positioned in them too (a cell's
+				     `sr-only` text, a status dot), which only a positioned ancestor clips. -->
+				<tr class="collapse *:relative *:overflow-hidden">
 					{#each columns as column (column.id)}
 						{@const hidden = row.get(column.id)}
 						<Table.Cell data-column-id={column.id} class={compact.cell} {@attach hidden?.attach}>

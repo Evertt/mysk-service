@@ -5,6 +5,8 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
+import { formatNumber } from "#lib/i18n/format.ts";
+
 import {
 	afresh,
 	countIn,
@@ -137,7 +139,7 @@ describe("in North", () => {
 		// Found by searching the filter (what the search finds is `orders/server/list.spec.ts`'s).
 		await app.openFilter("Customer");
 		await page.getByPlaceholder("Search customers…").fill(busy.code);
-		await page.getByRole("option", { name: new RegExp(busy.code) }).click();
+		await page.getByRole("option").filter({ hasText: busy.name }).click();
 		await page.keyboard.press("Escape");
 		await page.waitForURL((url) => url.searchParams.get("customer") === busy.code);
 		await app.tableSettled();
@@ -165,6 +167,39 @@ describe("in North", () => {
 		);
 		const engineers = await page.locator("tbody td:nth-child(8)").allInnerTexts();
 		expect(new Set(engineers)).toEqual(new Set([busy.engineer_name]));
+	});
+
+	test("the customer filter shows each customer's orders, most first, under the other filters", async () => {
+		const { page } = app;
+		/** North's customers with the most orders `where` (on `o`), and how many. */
+		const busiest = (where = "1") =>
+			rows<{ name: string; n: number }>(
+				`select c.name, count(o.id) as n from customer c
+				 left join "order" o on o.customer_id = c.id and ${where}
+				 where c.organization_id = ? group by c.id order by n desc, c.name collate nocase, c.id
+				 limit 5`,
+				[north.id],
+			);
+		/** The filter's first options, as "name count". */
+		const shown = async () => {
+			await app.openFilter("Customer");
+			const options = page.getByRole("option");
+			await options.nth(4).waitFor();
+			const texts = await options.evaluateAll((items: HTMLElement[]) =>
+				items.slice(0, 5).map((item) => item.innerText.replace(/\s+/g, " ").trim()),
+			);
+			await page.keyboard.press("Escape");
+			await page.keyboard.press("Escape");
+			return texts;
+		};
+		const asShown = (expected: { name: string; n: number }[]) =>
+			expected.map((row) => `${row.name} ${formatNumber(row.n)}`);
+
+		await app.go(afresh("/orders"));
+		expect(await shown()).toEqual(asShown(await busiest()));
+		// Narrowed by status, the counts (and so the order) are the completed orders'.
+		await app.go("/orders?status=completed&row=1");
+		expect(await shown()).toEqual(asShown(await busiest("o.status = 'completed'")));
 	});
 
 	test("while another sorting loads, the rows shown stay, dimmed", async () => {

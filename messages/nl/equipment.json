@@ -182,6 +182,7 @@
 	"equipment_field_new_location_description": "Hoe hij heet, bijv. „Dock 03”: hij komt bij de locaties van de vestiging.",
 	"equipment_location_add_option": "Locatie toevoegen…",
 	"equipment_location_none": "Geen locatie",
+	"equipment_manufacturer_none": "Geen fabrikant",
 	"equipment_location_unknown": "Kies een van de locaties van de vestiging",
 	"equipment_location_name_required": "Vul de naam van de locatie in",
 	"equipment_location_name_taken": "De vestiging heeft al een locatie „{name}”",

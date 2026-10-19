@@ -12,9 +12,12 @@
  * the engineer takes them from the order it reached (`order.engineerId`).
  */
 import { error } from "@sveltejs/kit";
-import { and, eq, type SQL } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 
-import { order } from "#lib/server/db/schema.ts";
+import type { EngineerActivity } from "#lib/notifications/extensions.ts";
+import { db } from "#lib/server/db/index.ts";
+import { literal } from "#lib/server/db/parameters.ts";
+import { activity, order } from "#lib/server/db/schema.ts";
 
 import { inTenant, requireEngineer } from "./session.ts";
 
@@ -46,4 +49,27 @@ export function engineerOrderNotFound(ref: OrderRef): never {
 		404,
 		"number" in ref ? m.portal_not_found({ number: ref.number }) : m.portal_not_found_plain(),
 	);
+}
+
+/**
+ * For the engineer's notifications (`#lib/server/notifications/`): conditions on an `activity`
+ * entry about one of the tenant's orders that gave it to the signed-in engineer, took it off them,
+ * or is about an order of theirs now. The entries record the engineer as `changes.engineerId`
+ * (before, after): an assignment, a plan, the order form, a creation with an engineer and a
+ * deletion of an assigned order all do.
+ */
+export async function engineerActivity(): Promise<EngineerActivity> {
+	const { engineer } = await requireEngineer();
+	const engineerWas = (side: 0 | 1) =>
+		sql`json_extract(${activity.changes}, ${sql.raw(`'$.engineerId[${side}]'`)}) = ${engineer.id}`;
+	const isOrder = sql`${activity.subjectType} = ${literal("order")}`;
+	const theirs = db
+		.select({ id: order.id })
+		.from(order)
+		.where(and(eq(order.id, sql`cast(${activity.subjectId} as integer)`), await engineerOrders()));
+	return {
+		assigned: sql`(${isOrder} and ${engineerWas(1)})`,
+		unassigned: sql`(${isOrder} and ${engineerWas(0)})`,
+		aboutTheirOrder: sql`(${isOrder} and exists ${theirs})`,
+	};
 }

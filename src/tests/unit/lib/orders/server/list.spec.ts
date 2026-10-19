@@ -6,8 +6,13 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
-import { getOrderFacets, getOrders } from "#lib/orders/list/order-list.remote.ts";
+import {
+	getOrderCustomerOptions,
+	getOrderEngineerOptions,
+	getOrderEquipmentOptions,
+	getOrderFacets,
+	getOrders,
+} from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
 import {
 	as,
@@ -177,7 +182,7 @@ describe("North's orders list", () => {
 		expect(found.numbers).toEqual(expected.map((row) => row.number));
 	});
 
-	test("the customer filter finds North's customers by name or code, at most 20", async () => {
+	test("the customer filter finds North's customers by name or code, at most 20, most orders first", async () => {
 		// The customer with the most orders with one engineer, as the e2e test picks it.
 		const [busy] = await rows<{ code: string; name: string }>(
 			`select c.code, c.name from "order" o
@@ -189,16 +194,101 @@ describe("North's orders list", () => {
 		const fragment = busy.name.slice(1, 4).toLowerCase();
 		expect(fragment).toMatch(/^\S+$/);
 		const like = `%${fragment}%`;
-		const matching = await rows<{ code: string }>(
-			`select code from customer where organization_id = ? and (name like ? or code like ?)
-			 order by name collate nocase, id limit 20`,
+		const matching = await rows<{ code: string; name: string; orders: number }>(
+			`select c.code, c.name, (select count(*) from "order" o where o.customer_id = c.id) as orders
+			 from customer c where c.organization_id = ? and (c.name like ? or c.code like ?)
+			 order by orders desc, c.name collate nocase, c.id limit 20`,
 			[northId, like, like],
 		);
 		const found = await as(north.member, () =>
-			data(getCustomerOptions, { search: fragment, selected: [busy.code] }),
+			data(getOrderCustomerOptions, {
+				where: { q: "", filters: {} },
+				search: fragment,
+				selected: [busy.code],
+			}),
 		);
-		expect(found.options.map((option) => option.value)).toEqual(matching.map((row) => row.code));
-		expect(found.selected).toEqual([{ value: busy.code, label: busy.name, detail: busy.code }]);
+		expect(found.options).toEqual(
+			matching.map((row) => ({ value: row.code, label: row.name, count: row.orders })),
+		);
+		const orders = matching.find((row) => row.code === busy.code)?.orders;
+		expect(found.selected).toEqual([{ value: busy.code, label: busy.name, count: orders }]);
+	});
+
+	test("the customer filter's counts are under the search and the other filters, not its own", async () => {
+		const where = { q: "", filters: { status: ["completed" as const] } };
+		const options = (filters: Query["filters"], search = "") =>
+			as(north.member, () =>
+				data(getOrderCustomerOptions, { where: { ...where, filters }, search, selected: [] }),
+			);
+		const completed = await rows<{ code: string; n: number }>(
+			`select c.code, count(o.id) as n from customer c
+			 left join "order" o on o.customer_id = c.id and o.status = 'completed'
+			 where c.organization_id = ? group by c.id order by n desc, c.name collate nocase, c.id`,
+			[northId],
+		);
+		const found = await options({ status: ["completed"] });
+		expect(found.options.map((option) => [option.value, option.count])).toEqual(
+			completed.slice(0, 20).map((row) => [row.code, row.n]),
+		);
+		expect(found.more).toBe(completed.length > 20);
+		// Ticking a customer doesn't change its own filter's counts.
+		const ticked = await options({ status: ["completed"], customer: [completed[1].code] });
+		expect(ticked.options).toEqual(found.options);
+		// A customer without completed orders is still offered, with 0, after those with some.
+		const idle = completed.find((row) => row.n === 0);
+		expect(idle).toBeDefined();
+		const named = await value<string>(
+			`select name from customer where code = ? and organization_id = ?`,
+			[idle!.code, northId],
+		);
+		const searched = await options({ status: ["completed"] }, named);
+		expect(searched.options).toContainEqual(
+			expect.objectContaining({ value: idle!.code, count: 0 }),
+		);
+		const counts = searched.options.map((option) => option.count ?? 0);
+		expect(counts).toEqual(counts.toSorted((a, b) => b - a));
+	});
+
+	test("the engineer and unit filters count orders under the other filters", async () => {
+		const [busy] = await rows<{ code: string }>(
+			`select c.code from "order" o join customer c on c.id = o.customer_id
+			 where o.organization_id = ? group by c.id order by count(*) desc, c.id limit 1`,
+			[northId],
+		);
+		const where = { q: "", filters: { customer: [busy.code] } };
+		const engineers = await as(north.member, () =>
+			data(getOrderEngineerOptions, { where, search: "", selected: [] }),
+		);
+		const expected = await rows<{ id: number; n: number }>(
+			`select e.id, count(o.id) as n from engineer e
+			 left join "order" o on o.engineer_id = e.id
+			   and o.customer_id = (select id from customer where code = ? and organization_id = ?)
+			 where e.organization_id = ? group by e.id order by n desc, e.name collate nocase, e.id limit 20`,
+			[busy.code, northId, northId],
+		);
+		expect(engineers.options.map((option) => [option.value, option.count])).toEqual(
+			expected.map((row) => [String(row.id), row.n]),
+		);
+		expect(engineers.none).toBe(
+			await count(
+				`select count(*) from "order" o join customer c on c.id = o.customer_id
+				 where o.organization_id = ? and c.code = ? and o.engineer_id is null`,
+				[northId, busy.code],
+			),
+		);
+		// An order counts for each of its units.
+		const units = await as(north.member, () =>
+			data(getOrderEquipmentOptions, { where, search: "", selected: [] }),
+		);
+		const [top] = await rows<{ serial: string; n: number }>(
+			`select u.serial_number as serial, count(distinct o.id) as n from "order" o
+			 join customer c on c.id = o.customer_id join order_unit x on x.order_id = o.id
+			 join equipment u on u.id = x.equipment_id
+			 where o.organization_id = ? and c.code = ? group by u.id order by n desc limit 1`,
+			[northId, busy.code],
+		);
+		expect(units.options[0]).toMatchObject({ count: top.n, detail: expect.any(String) });
+		expect(units.options.find((option) => option.value === top.serial)?.count).toBe(top.n);
 	});
 
 	test("filters by customer and engineer", async () => {
@@ -237,8 +327,10 @@ describe("North's orders list", () => {
 		);
 		expect(nobody.rowCount).toBe(unassigned);
 		expect(new Set(nobody.rows.map((row) => row.engineer?.id ?? null))).toEqual(new Set([null]));
-		const facets = await as(north.member, () => data(getOrderFacets, { q: "", filters: {} }));
-		expect(facets.engineer.none).toBe(unassigned);
+		const engineers = await as(north.member, () =>
+			data(getOrderEngineerOptions, { where: { q: "", filters: {} }, search: "", selected: [] }),
+		);
+		expect(engineers.none).toBe(unassigned);
 
 		// With an engineer: theirs and the unassigned ones.
 		const [busy] = await rows<{ id: number; n: number }>(
@@ -262,6 +354,10 @@ describe("North's orders list", () => {
 		);
 		expect(without.rowCount).toBe(installations);
 		expect(new Set(without.rows.map((row) => row.unitCount))).toEqual(new Set([0]));
+		const units = await as(north.member, () =>
+			data(getOrderEquipmentOptions, { where: { q: "", filters: {} }, search: "", selected: [] }),
+		);
+		expect(units.none).toBe(installations);
 	});
 });
 

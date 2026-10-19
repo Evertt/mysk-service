@@ -49,7 +49,19 @@ The links are built in two ways:
 
 - Add shadcn-svelte's `hover-card` through its CLI (the `shadcn-svelte` skill describes how).
 - Each link component wraps its anchor in a hover card:
-  - The open delay is about 400 ms and the close delay about 150 ms. Tune them by feel.
+  - **The open delay is 500 ms** (the user's choice). Cards don't pop in and out while the cursor
+    crosses the page, and resting on a link for half a second is a clear sign of intent. The close
+    delay is about 150 ms. Both are one shared constant, not set per link.
+  - **The e2e tests turn the delay off**, so no test waits half a second or times out on it. Put the
+    switch in the shared e2e context setup (`#e2e/app.ts`), so every test gets it without asking.
+    For example, an `addInitScript` that sets a key the link components read once, giving a 0 ms
+    delay. Two rules:
+    - Production behaves the same whether the key is set or not, apart from the delay.
+    - No build flag ships test code.
+
+    One e2e test leaves the delay on and checks that a quick pass over a link opens no card, so the
+    delay itself is covered.
+
   - The content loads when the card opens, never before (but see "Measure", below).
   - A skeleton shows while it loads.
   - Opt out with `preview={false}`.
@@ -67,20 +79,52 @@ The links are built in two ways:
   Dates and numbers go through `#lib/i18n/format.ts`, enum values through `label()`, and text
   through Paraglide `en` and `nl`.
 
-### The queries
+### The queries: the detail page's own, shared with the card
 
-- One `query.batch` per record kind, in its domain's `<record>.remote.ts`. For example,
-  `getOrderPreview = forMembers.query.batch(v.string(), async (numbers) => …)`. Each does this:
-  - one select with `inList()` over the asked keys, scoped with `inTenant()`
-  - joins through `tenantJoin()`
-  - returns `(key) => preview | null`
-- A key from another tenant, or an unknown one, gives `null`. The card then says "Not found", and
-  this is never an error.
-- **What batching gains here.** Kit batches calls made in the same macrotask, so one hover is one
-  request either way. The gain comes when many previews are asked at once, as in the prefetch
-  experiment below. Check whether batch requests go through the service worker's response cache
-  (`src/service-worker/index.ts`), and whether a repeated hover on the same link is answered from
-  the client's query cache. Write both findings down in this plan.
+**The card and the detail page read the same query** (the user's ask, added after the grilling).
+The card's data is a subset of what the detail page loads. So the detail page's record query
+becomes a `query.batch` and the card calls that same query, not a separate preview query. A hover
+followed by a click then costs one request for the record, not two.
+
+- **Turn `getOrder`, `getCustomer`, `getEquipment` and `getEngineer` into batch queries.** These
+  are `forMembers.query` in each domain's `<record>.remote.ts`. Each becomes
+  `forMembers.query.batch(v.string(), async (keys) => …)`. The detail pages
+  (`src/routes/(app)/<domain>/[…]/+page.svelte`) keep calling `await getCustomer(code)` as they do
+  now, and the card calls the same thing.
+  - The batch reads the asked keys in one go: `inList()`, scoped with `inTenant()`, joins through
+    `tenantJoin()`. It returns `(key) => record`.
+  - Every place that refreshes or reads these queries (forms, `refreshOnChange()`, the e2e tests)
+    keeps working. Find them with CodeGraph before changing a signature.
+- **Not found:** the detail page needs today's 404 with its message (`customers_code_not_found`,
+  …). Check how a batch query's per-key resolver can give that: throw `error(404)` for one key, or
+  return `null` and let the page throw. The card shows "Not found" for a missing or another
+  tenant's key, never an error.
+- **Keep the shared query light enough for a hover.** Some of the detail queries do heavy work that
+  a hover shouldn't pay for:
+  - `getCustomer` reads all of the customer's orders and prices the done ones for the revenue stat.
+  - `getOrder` reads the history of the order's units.
+
+  Move such parts into their own queries that only the detail page calls, e.g.
+  `getCustomerStats(code)`, so the shared record query stays a few joined selects. The card shows
+  only the fields listed above. If a card field (open orders, last order date) needs one of those
+  parts, prefer a cheap count in the record query over calling the heavy one.
+
+- **The link already preloads on hover.** `src/app.html` has `data-sveltekit-preload-data="hover"`,
+  and `forkPreloads` is on, so hovering a link already runs the detail page's top-level `await`s in
+  a fork. The service worker keeps those preloaded answers (`startHover`/`freshForHover` in
+  `src/service-worker/index.ts`). Find out:
+  - whether the card's call and the preload's call of the same query and key share one request, or
+    make two
+  - whether the click then reuses that answer
+
+  The goal is **one request for the record per hover and click together**, counted in the network
+  panel and the timing lines. If the preload and the card can't share it, make them: e.g. the card
+  waits for the preload's answer.
+
+- **What batching gains beyond that.** Kit batches calls made in the same macrotask, so one hover is
+  one request either way. The gain comes when many records are asked at once, as in the prefetch
+  experiment below. Check whether a repeated hover on the same link is answered from the client's
+  query cache. Write the findings down in this plan.
 
 ### Measure (wish 7)
 
@@ -101,7 +145,7 @@ With the timing lines of [error-handling.md](error-handling.md) on (`TIMING_LOGS
 ## Steps
 
 1. The links to the link components (its own commit).
-2. `hover-card`, the four batch queries with their server specs, and the cards.
+2. The four detail queries as batch queries (their heavy parts split off), with their server specs; the detail pages still pass their e2e tests. Then `hover-card` and the cards on those same queries.
 3. The measurement and its findings.
 
 ## Tests

@@ -76,6 +76,17 @@ path? }` from the form's root, which the form passes to `invalid()` as they are)
   for members (`null` without a row); play, pause, speed and reset for managers (a 404 without a
   row), logged on the subject `simulation`. The e2e tests start with the simulations paused
   (`global-setup.ts`), so the seeded states hold. The docks' `server/simulation.ts` is the example.
+- **Notifications** (`notifications.rules`, an immediate `skip` collector in
+  `src/lib/notifications/extensions.ts`): the bells in the office's header and the engineer
+  portal's show the activity entries a rule picks (`#lib/server/notifications/`; nothing is stored
+  per user but how far they've read, `notification_seen`). A module answers its rules at once:
+  `contribute(notificationRules, () => [{ id, audience, category, where }])`, `where` a condition on
+  `activity` built per request (never `db` at module scope), from `entryAbout()`, `bySystem` and
+  `subjectNumber` (`#lib/server/notifications/rules.ts`) and correlated subqueries on its own
+  tables, with its constants written in (`literal()`). The first rule that matches gives an entry
+  its category; a module that's off adds none. Docks' `server/notifications.ts` is the example; a
+  rule that needs more than the entry says adds it to the entry (`changes`), not a record of its
+  own.
 - **Form slots** (`defineFormSlot()`, e.g. the order form's `orders.form`) take a module's inputs
   into a core form. The module gives, besides its components at `slots/<point id>/`, the valibot
   object schema of its part as the default export of `form-parts/<point id>.ts`; the generator

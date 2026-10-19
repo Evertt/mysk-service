@@ -7,7 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import { type LoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
+import { everyLoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
@@ -106,11 +106,8 @@ export const countNewActivity = forMembers.query(
 	},
 );
 
-/**
- * Every subject type the log may name, the core's and all modules' (not only the tenant's: a module
- * switched on while a page watches logs as well).
- */
-const loggedTypes = Object.keys(subjectTypes(allModules)) as LoggedType[];
+/** Every subject type the log may name (see `everyLoggedType()`). */
+const loggedTypes = everyLoggedType();
 
 /**
  * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again

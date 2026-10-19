@@ -44,7 +44,8 @@ export function isMultiSortEvent(event: unknown) {
  */
 const hook = createTableHook({
 	features,
-	globalFilterFn: "includesString",
+	// Each word of the search in one of the row's columns (see `search-filter.ts`).
+	globalFilterFn: "allWords",
 	enableRowSelection: true,
 	// Sorting a column goes ascending, descending, then unsorted.
 	sortDescFirst: false,

@@ -182,6 +182,7 @@
 	"equipment_field_new_location_description": "Its name, e.g. “Dock 03”: it's added to the site's locations.",
 	"equipment_location_add_option": "Add a location…",
 	"equipment_location_none": "No location",
+	"equipment_manufacturer_none": "No manufacturer",
 	"equipment_location_unknown": "Choose one of the site's locations",
 	"equipment_location_name_required": "Enter the location's name",
 	"equipment_location_name_taken": "The site has a location called “{name}” already",

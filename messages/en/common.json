@@ -273,5 +273,22 @@
 	"common_badge_select_label": "{label}: {value}",
 	"common_error_customers_use_portal": "Customer contacts use the customer portal",
 	"common_error_not_customer": "Your account isn't a customer contact's",
-	"common_error_back_to_portal": "Back to the portal"
+	"common_error_back_to_portal": "Back to the portal",
+	"common_notifications_show": "Show notifications",
+	"common_notifications_show_new": "Show notifications, {count} new",
+	"common_notifications_unread": "New",
+	"common_notifications_none": "Nothing new",
+	"common_notifications_none_office": "Customer reports, alerts, progress in the field and changes to your records show up here.",
+	"common_notifications_none_engineer": "Orders assigned or planned for you, moved, taken off you or cancelled show up here.",
+	"common_notifications_all_activity": "All activity",
+	"common_notifications_today": "Today",
+	"common_notifications_yesterday": "Yesterday",
+	"common_notifications_category_reports": "Customer report",
+	"common_notifications_category_alerts": "Alert",
+	"common_notifications_category_field": "Progress in the field",
+	"common_notifications_category_mine": "Your record",
+	"common_notifications_category_assigned": "Assigned to you",
+	"common_notifications_category_planned": "Planned or moved",
+	"common_notifications_category_unassigned": "Taken off you",
+	"common_notifications_category_cancelled": "Cancelled"
 }

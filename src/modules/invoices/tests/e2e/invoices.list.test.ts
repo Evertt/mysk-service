@@ -27,8 +27,14 @@ describe("in North", () => {
 		await app.openFilter("Customer");
 		// The options come from a query of their own.
 		await expect.poll(() => page.getByRole("option").count()).toBe(customers.length);
+		// Most invoices first.
+		const counts = (await page.getByRole("option").allInnerTexts()).map((text) =>
+			Number(text.match(/(\d+)\s*$/)?.[1]),
+		);
+		expect(counts).toEqual(counts.toSorted((a, b) => b - a));
+		// Found by its code, which it doesn't show.
 		await page.getByPlaceholder("Customer").fill(busiest.code);
-		const option = page.getByRole("option", { name: new RegExp(busiest.code) });
+		const option = page.getByRole("option").filter({ hasText: busiest.name });
 		expect(await option.innerText()).toMatch(new RegExp(`${busiest.n}$`));
 		await option.click();
 		await page.keyboard.press("Escape");

@@ -44,12 +44,7 @@
 				title={m.invoices_credit_column_settlement()}
 				options={creditSettlementOptions}
 			/>
-			<FacetedFilter
-				columnId="customer"
-				title={m.invoices_column_customer()}
-				options={customers.options}
-				counts={customers.counts}
-			/>
+			<FacetedFilter columnId="customer" title={m.invoices_column_customer()} options={customers} />
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_credit_empty()} fillViewport />
 	</div>
