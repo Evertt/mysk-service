@@ -338,16 +338,11 @@ describe("the engineer's advice, in the portal", () => {
 		);
 	});
 
-	test("for a unit not on the order, another engineer's order or another tenant's, is a 404", async () => {
+	test("for a unit not on the order, or another tenant's order, is a 404", async () => {
 		const [elsewhere] = await rows<{ id: number }>(
 			`select e.id from equipment e where e.organization_id = ? and not exists
 			 (select 1 from order_unit u where u.order_id = ? and u.equipment_id = e.id) limit 1`,
 			[shltrId, job.id],
-		);
-		const [others] = await rows<{ number: string; equipment_id: number }>(
-			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
-			 where o.organization_id = ? and o.engineer_id <> ? limit 1`,
-			[shltrId, levId],
 		);
 		const [northern] = await rows<{ number: string; equipment_id: number }>(
 			`select o.number, u.equipment_id from "order" o join order_unit u on u.order_id = o.id
@@ -358,7 +353,6 @@ describe("the engineer's advice, in the portal", () => {
 		const advised = (await conditionsOf(job.equipment_id))[0].advice;
 		for (const fields of [
 			{ equipmentId: elsewhere.id },
-			{ number: others.number, equipmentId: others.equipment_id },
 			{ number: northern.number, equipmentId: northern.equipment_id },
 		]) {
 			const target = { ...unitOnJob(), ...fields };

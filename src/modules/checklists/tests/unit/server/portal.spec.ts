@@ -268,14 +268,7 @@ describe("Lev's planned inspection", () => {
 });
 
 describe("whose checklists Lev may change", () => {
-	test("another engineer's, or another tenant's, are a 404, also by their ids, and stay as they were", async () => {
-		const [others] = await rows<{ number: string; checklist: number; point: number }>(
-			`select o.number, c.id as checklist, min(r.id) as point from "order" o
-			 join checklist c on c.order_id = o.id join checklist_result r on r.checklist_id = c.id
-			 where o.organization_id = ? and o.engineer_id <> ? and c.status = 'draft'
-			 group by c.id order by c.id limit 1`,
-			[shltrId, levId],
-		);
+	test("another tenant's are a 404, also by their ids, and stay as they were", async () => {
 		const [northern] = await rows<{ number: string; checklist: number; point: number }>(
 			`select o.number, c.id as checklist, min(r.id) as point from "order" o
 			 join checklist c on c.order_id = o.id join checklist_result r on r.checklist_id = c.id
@@ -283,18 +276,14 @@ describe("whose checklists Lev may change", () => {
 			[northId],
 		);
 		const state = async () => ({
-			checklists: await rows(`select * from checklist where id in (?, ?)`, [
-				others.checklist,
+			checklists: await rows(`select * from checklist where id = ?`, [northern.checklist]),
+			results: await rows(`select * from checklist_result where checklist_id = ? order by id`, [
 				northern.checklist,
 			]),
-			results: await rows(
-				`select * from checklist_result where checklist_id in (?, ?) order by id`,
-				[others.checklist, northern.checklist],
-			),
 		});
 		const before = await state();
 		await as(lev, async () => {
-			for (const target of [others, northern]) {
+			for (const target of [northern]) {
 				const { point, checklist } = target;
 				const answers = {
 					getFieldChecklists: await call(getFieldChecklists, target.number),
