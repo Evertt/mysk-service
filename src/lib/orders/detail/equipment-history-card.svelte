@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 
-	import type { getOrder } from "../order.remote.ts";
+	import type { getOrderHistory } from "../order.remote.ts";
 	import OrderLink from "../ui/order-link.svelte";
 	import StatusBadge from "../ui/status-badge.svelte";
 	import TypeLabel from "../ui/type-label.svelte";
@@ -16,7 +16,7 @@
 	}: {
 		/** The order's units: at least one. */
 		units: readonly { serialNumber: string }[];
-		history: Awaited<ReturnType<typeof getOrder>>["history"];
+		history: Awaited<ReturnType<typeof getOrderHistory>>;
 	} = $props();
 </script>
 

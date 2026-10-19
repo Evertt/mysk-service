@@ -16,7 +16,12 @@
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
+	import {
+		deleteCustomer,
+		getCustomer,
+		getCustomerFormOptions,
+		getCustomerRevenue,
+	} from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import {
 		StatusBadge as EquipmentStatusBadge,
@@ -100,8 +105,10 @@
 		tone="brand"
 		icon={BanknoteIcon}
 		label={m.customers_stats_revenue()}
-		value={formatCents(stats.revenue)}
-		detail={m.customers_stats_revenue_orders({ count: stats.revenueOrders })}
+		value={formatCents((await getCustomerRevenue(customer.code)).revenue)}
+		detail={m.customers_stats_revenue_orders({
+			count: (await getCustomerRevenue(customer.code)).revenueOrders,
+		})}
 	/>
 	<StatTile
 		layout="row"

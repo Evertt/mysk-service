@@ -10,7 +10,7 @@
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components.ts";
 	import { regionLabel } from "#lib/engineers/index.ts";
-	import { deleteEngineer, getEngineer } from "#lib/engineers/remotes.ts";
+	import { deleteEngineer, getEngineer, getEngineerWork } from "#lib/engineers/remotes.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
 
@@ -21,7 +21,8 @@
 	const data = $derived(await getEngineer(params.id));
 	const engineer = $derived(data.engineer);
 
-	type OrderRow = (typeof data.openOrders)[number];
+	type Work = Awaited<ReturnType<typeof getEngineerWork>>;
+	type OrderRow = Work["openOrders"][number];
 </script>
 
 <svelte:head>
@@ -98,75 +99,80 @@
 	{/snippet}
 </PageHeader>
 
+<!-- Their orders and numbers, asked for alongside the engineer (an await in the markup). -->
+{#snippet workColumn(work: Work)}
+	<div class="grid gap-4 sm:grid-cols-3">
+		<StatCard
+			size="small"
+			label={m.engineers_stats_open_orders()}
+			value={formatNumber(work.stats.openOrders)}
+		/>
+		<StatCard
+			size="small"
+			label={m.engineers_stats_hours()}
+			value={m.common_count_hours_short({ count: work.stats.hours })}
+		/>
+		<StatCard
+			size="small"
+			label={m.engineers_stats_revenue()}
+			value={formatCents(work.stats.revenue)}
+		/>
+	</div>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{m.engineers_open_title()}</Card.Title>
+			<Card.Description>{m.engineers_open_description()}</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			{#if work.openOrders.length}
+				{@render orders(
+					work.openOrders,
+					m.engineers_orders_column_scheduled(),
+					(row) => row.scheduledFor,
+				)}
+			{:else}
+				<Empty.Root class="p-6">
+					<Empty.Header>
+						<Empty.Title>{m.engineers_open_empty_title()}</Empty.Title>
+						<Empty.Description>
+							{m.engineers_open_empty_description({ name: engineer.name })}
+						</Empty.Description>
+					</Empty.Header>
+				</Empty.Root>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{m.engineers_recent_title()}</Card.Title>
+			<Card.Description>
+				{m.engineers_recent_description({ count: formatNumber(10) })}
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			{#if work.completedOrders.length}
+				{@render orders(
+					work.completedOrders,
+					m.engineers_orders_column_completed(),
+					(row) => row.completedAt,
+				)}
+			{:else}
+				<Empty.Root class="p-6">
+					<Empty.Header>
+						<Empty.Title>{m.engineers_recent_empty_title()}</Empty.Title>
+						<Empty.Description>{m.engineers_recent_empty_description()}</Empty.Description>
+					</Empty.Header>
+				</Empty.Root>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+{/snippet}
+
 <div class="grid items-start gap-6 lg:grid-cols-3">
 	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
-		<div class="grid gap-4 sm:grid-cols-3">
-			<StatCard
-				size="small"
-				label={m.engineers_stats_open_orders()}
-				value={formatNumber(data.stats.openOrders)}
-			/>
-			<StatCard
-				size="small"
-				label={m.engineers_stats_hours()}
-				value={m.common_count_hours_short({ count: data.stats.hours })}
-			/>
-			<StatCard
-				size="small"
-				label={m.engineers_stats_revenue()}
-				value={formatCents(data.stats.revenue)}
-			/>
-		</div>
-
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.engineers_open_title()}</Card.Title>
-				<Card.Description>{m.engineers_open_description()}</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				{#if data.openOrders.length}
-					{@render orders(
-						data.openOrders,
-						m.engineers_orders_column_scheduled(),
-						(row) => row.scheduledFor,
-					)}
-				{:else}
-					<Empty.Root class="p-6">
-						<Empty.Header>
-							<Empty.Title>{m.engineers_open_empty_title()}</Empty.Title>
-							<Empty.Description>
-								{m.engineers_open_empty_description({ name: engineer.name })}
-							</Empty.Description>
-						</Empty.Header>
-					</Empty.Root>
-				{/if}
-			</Card.Content>
-		</Card.Root>
-
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.engineers_recent_title()}</Card.Title>
-				<Card.Description>
-					{m.engineers_recent_description({ count: formatNumber(10) })}
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				{#if data.completedOrders.length}
-					{@render orders(
-						data.completedOrders,
-						m.engineers_orders_column_completed(),
-						(row) => row.completedAt,
-					)}
-				{:else}
-					<Empty.Root class="p-6">
-						<Empty.Header>
-							<Empty.Title>{m.engineers_recent_empty_title()}</Empty.Title>
-							<Empty.Description>{m.engineers_recent_empty_description()}</Empty.Description>
-						</Empty.Header>
-					</Empty.Root>
-				{/if}
-			</Card.Content>
-		</Card.Root>
+		{@render workColumn(await getEngineerWork(params.id))}
 	</div>
 
 	<div class="flex min-w-0 flex-col gap-6">

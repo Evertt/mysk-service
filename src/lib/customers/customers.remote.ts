@@ -1,9 +1,9 @@
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, max, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { customerSubject } from "#lib/activity/index.ts";
-import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
+import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
 import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -51,12 +51,15 @@ export const getCustomers = forMembers.query(async () => {
 });
 
 /**
- * One customer with their sites (each with how many units are there), their equipment and key
- * figures. Their latest orders are `getCustomerActivity` (`detail/activity.remote.ts`).
+ * Customers by code, each with their sites (each with how many units are there), their equipment
+ * and how many orders they have: what their page shows, and their hover card (`CustomerLink`). A
+ * batch query, so the cards of a page's links come in one request, and a hover card and the page
+ * share their answer. An unknown code (or another tenant's) is a 404 for that code. Their revenue
+ * is `getCustomerRevenue`, their latest orders `getCustomerActivity` (`detail/activity.remote.ts`).
  */
-export const getCustomer = forMembers.query(v.string(), async (code) => {
-	const found = await db.query.customer.findFirst({
-		where: and(eq(customer.code, code), inTenant(customer)),
+export const getCustomer = forMembers.query.batch(v.string(), async (codes) => {
+	const found = await db.query.customer.findMany({
+		where: and(inList(customer.code, codes), inTenant(customer)),
 		with: {
 			sites: { orderBy: (site, { asc }) => [asc(site.name), asc(site.id)] },
 			equipment: {
@@ -68,14 +71,61 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 			},
 		},
 	});
-	if (!found) error(404, m.customers_code_not_found({ code }));
-	const unitsAt = Map.groupBy(found.equipment, (unit) => unit.siteId);
-	const sites = found.sites.map((site) => ({
-		...site,
-		equipmentCount: unitsAt.get(site.id)?.length ?? 0,
-	}));
+	const counts = found.length
+		? await db
+				.select({
+					customerId: order.customerId,
+					orders: count(),
+					openOrders: sql<number>`coalesce(sum(${inList(order.status, openOrderStatuses)}), 0)`,
+					lastOrderAt: max(order.createdAt),
+				})
+				.from(order)
+				.where(
+					and(
+						inList(
+							order.customerId,
+							found.map((c) => c.id),
+						),
+						inTenant(order),
+					),
+				)
+				.groupBy(order.customerId)
+		: [];
+	const byCode = new Map(found.map((c) => [c.code, c]));
+	const countsOf = new Map(counts.map((row) => [row.customerId, row]));
 
-	const orders = await db
+	return (code: string) => {
+		const one = byCode.get(code);
+		if (!one) error(404, m.customers_code_not_found({ code }));
+		const unitsAt = Map.groupBy(one.equipment, (unit) => unit.siteId);
+		const sites = one.sites.map((site) => ({
+			...site,
+			equipmentCount: unitsAt.get(site.id)?.length ?? 0,
+		}));
+		const counted = countsOf.get(one.id);
+		return {
+			customer: { ...one, sites },
+			stats: {
+				orders: counted?.orders ?? 0,
+				openOrders: Number(counted?.openOrders ?? 0),
+				lastOrderAt: counted?.lastOrderAt ?? null,
+			},
+		};
+	};
+});
+
+/**
+ * A customer's revenue: their done orders, priced like everywhere else (e.g. without the work their
+ * contracts include). Only their page asks for it, apart from `getCustomer`, which a hover card
+ * reads too.
+ */
+export const getCustomerRevenue = forMembers.query(v.string(), async (code) => {
+	const found = await db.query.customer.findFirst({
+		where: and(eq(customer.code, code), inTenant(customer)),
+		columns: { id: true },
+	});
+	if (!found) error(404, m.customers_code_not_found({ code }));
+	const done = await db
 		.select({
 			id: order.id,
 			type: order.type,
@@ -86,21 +136,13 @@ export const getCustomer = forMembers.query(v.string(), async (code) => {
 		})
 		.from(order)
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(and(eq(order.customerId, found.id), inTenant(order)))
-		.orderBy(desc(order.createdAt), desc(order.id));
-
-	// The revenue is priced like everywhere else, e.g. without the work their contracts include.
-	const done = orders.filter((o) => isDoneOrder(o.status));
+		.where(
+			and(eq(order.customerId, found.id), inList(order.status, doneOrderStatuses), inTenant(order)),
+		);
 	const prices = await priceOrders(await withUnitIds(done));
 	return {
-		customer: { ...found, sites },
-		stats: {
-			orders: orders.length,
-			openOrders: orders.filter((o) => isOpenOrder(o.status)).length,
-			revenue: prices.reduce((sum, price) => sum + price.total, 0),
-			revenueOrders: done.length,
-			lastOrderAt: orders[0]?.createdAt ?? null,
-		},
+		revenue: prices.reduce((sum, price) => sum + price.total, 0),
+		revenueOrders: done.length,
 	};
 });
 

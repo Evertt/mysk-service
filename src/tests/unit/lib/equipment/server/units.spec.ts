@@ -18,6 +18,7 @@ import {
 } from "#lib/equipment/equipment.remote.ts";
 import { getLabelSheet } from "#lib/equipment/labels/labels.remote.ts";
 import { getLocation } from "#lib/equipment/locations/locations.remote.ts";
+import { batchQueryTests } from "#unit/lib/server/batch-query.test-support.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import {
 	as,
@@ -369,5 +370,29 @@ describe("in South", () => {
 				status: 200,
 			});
 		});
+	});
+});
+
+describe("getEquipment, the unit's page's and hover card's batch query", () => {
+	batchQueryTests({
+		query: getEquipment,
+		table: "equipment",
+		column: "serial_number",
+		keyOf: (answer) => answer.unit.serialNumber,
+	});
+
+	test("it counts the unit's orders, and says when it was last serviced", async () => {
+		const [serviced] = await rows<{ serial: string; orders: number; last: number }>(
+			`select e.serial_number as serial, count(*) as orders,
+			 max(case when o.status in ('completed', 'invoiced') then o.completed_at end) as last
+			 from equipment e join order_unit ou on ou.equipment_id = e.id
+			 join "order" o on o.id = ou.order_id
+			 where e.organization_id = ? group by e.id having last is not null
+			 order by orders desc limit 1`,
+			[organizationId("north")],
+		);
+		const found = await as(north.member, () => data(getEquipment, serviced.serial));
+		expect(found.orderCount).toBe(serviced.orders);
+		expect(found.lastService?.epochMilliseconds).toBe(serviced.last * 1000);
 	});
 });

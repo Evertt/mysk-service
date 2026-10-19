@@ -13,12 +13,14 @@ import {
 	bulkSetEngineersActive,
 	createEngineer,
 	deleteEngineer,
+	getEngineer,
 	getEngineers,
 	setEngineerActive,
 	updateEngineer,
 } from "#lib/engineers/engineers.remote.ts";
 import { getEngineerAccount, linkEngineerAccount } from "#lib/engineers/form/account.remote.ts";
 import { demoUsers } from "#lib/server/db/demo.ts";
+import { batchQueryTests } from "#unit/lib/server/batch-query.test-support.ts";
 import {
 	as,
 	call,
@@ -270,5 +272,26 @@ describe("South", () => {
 			submit(linkEngineerAccount, { id: String(own), userId: erik }),
 		);
 		expect(answer.status).toBe(400);
+	});
+});
+
+describe("getEngineer, the engineer's page's and hover card's batch query", () => {
+	batchQueryTests({
+		query: getEngineer,
+		table: "engineer",
+		column: "id",
+		keyOf: (answer) => String(answer.engineer.id),
+	});
+
+	test("it counts the engineer's open orders", async () => {
+		const [busiest] = await rows<{ id: number; open: number }>(
+			`select engineer_id as id, count(*) as open from "order"
+			 where organization_id = ? and engineer_id is not null
+			 and status in ('quote', 'scheduled', 'in_progress')
+			 group by engineer_id order by open desc limit 1`,
+			[organizationId("north")],
+		);
+		const { counts } = await as(north.member, () => data(getEngineer, String(busiest.id)));
+		expect(counts.openOrders).toBe(busiest.open);
 	});
 });

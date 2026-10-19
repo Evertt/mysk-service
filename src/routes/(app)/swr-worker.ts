@@ -25,7 +25,8 @@ export const revalidating = new SvelteSet<string>();
 /**
  * Refreshes the query whose request `href` was, if the page has it (or SvelteKit still keeps it in
  * memory, for a page a preload may render from it): it gets the new answer from the worker's cache.
- * SvelteKit keys its queries by the request's parts, `<file hash>/<name>` and the payload.
+ * SvelteKit keys its queries by the request's parts, `<file hash>/<name>` and the payload (a batch
+ * query's, each of the payloads it asked for).
  */
 async function refreshQuery(href: string) {
 	// Left out of the server's build, where SvelteKit's client runtime can't be imported.
@@ -33,8 +34,12 @@ async function refreshQuery(href: string) {
 	const { query_map } = await import("$kit-client");
 	const url = new URL(href);
 	const id = url.pathname.slice("/_app/remote/".length);
-	const payload = url.searchParams.get("payload") ?? "";
-	await query_map.get(id)?.get(payload)?.resource.refresh();
+	// A batch query's answer is for each of its payloads (see `batchUrl` in the worker).
+	const batch = url.searchParams.get("payloads");
+	const payloads = batch
+		? (JSON.parse(batch) as string[])
+		: [url.searchParams.get("payload") ?? ""];
+	await Promise.all(payloads.map((payload) => query_map.get(id)?.get(payload)?.resource.refresh()));
 }
 
 /** The page's path as the worker remembers it. */

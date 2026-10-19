@@ -13,6 +13,7 @@ import {
 } from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
 import { deleteOrder, getOrder, updateOrder } from "#lib/orders/order.remote.ts";
+import { batchQueryTests } from "#unit/lib/server/batch-query.test-support.ts";
 import {
 	as,
 	call,
@@ -301,5 +302,14 @@ describe("South's changes to North's orders", () => {
 		expect(
 			await value(`select description from "order" where id = ?`, [await orderId(shared, southId)]),
 		).toBe("Edited by South");
+	});
+});
+
+describe("getOrder, the order's page's and hover card's batch query", () => {
+	batchQueryTests({
+		query: getOrder,
+		table: "order",
+		column: "number",
+		keyOf: (answer) => answer.order.number,
 	});
 });

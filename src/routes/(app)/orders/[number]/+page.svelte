@@ -22,7 +22,7 @@
 	} from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
 	import { mayDeleteOrder, mayEditOrder } from "#lib/orders/index.ts";
-	import { deleteOrder, getOrder } from "#lib/orders/remotes.ts";
+	import { deleteOrder, getOrder, getOrderHistory } from "#lib/orders/remotes.ts";
 
 	import type { PageProps } from "./$types";
 
@@ -87,7 +87,7 @@
 		<UnitsCard {order} />
 
 		{#if order.units.length}
-			<EquipmentHistoryCard units={order.units} history={data.history} />
+			<EquipmentHistoryCard units={order.units} history={await getOrderHistory(order.number)} />
 		{/if}
 	</div>
 
