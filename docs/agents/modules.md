@@ -98,9 +98,11 @@ path? }` from the form's root, which the form passes to `invalid()` as they are)
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
 self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
-description, `route`, icon, `nav`, `subjects`, `actions`, `liveTypes` (types it announces for its
-live pages but never logs, e.g. energy's readings; its `subjects` are written
-`satisfies Record<string, SubjectType>`, so their names stay in the `LoggedType` union), and `settings`, the route of the page
+description, `route`, icon, `nav`, `subjects` (written `satisfies Record<string, SubjectType>`, so
+their names stay in the `LoggedType` union), `actions`, `orderTypes` (the types of the orders it
+makes or works with, which a tenant can't hide while it's on: a module that calls `createOrders()`
+declares every type it names, which `src/tests/unit/modules/order-types.spec.ts` checks),
+`liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and `settings`, the route of the page
 where it's set up, which its card on the settings page links to while it's on; it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its

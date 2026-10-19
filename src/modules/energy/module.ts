@@ -15,6 +15,8 @@ export default defineModule({
 	// Announced with each batch of meter readings, for the live pages; never logged.
 	liveTypes: ["energy_reading"],
 	actions: energyActions,
+	// The orders an alert is made into: a repair of its door's unit, else a survey (`server/alerts.ts`).
+	orderTypes: ["repair", "survey"],
 	// The customer's own sites' energy, read-only, in the customer portal.
 	portal: {
 		route: "/(customer)/(modules)/energy/portal",
