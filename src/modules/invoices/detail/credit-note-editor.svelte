@@ -10,6 +10,7 @@
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { isMadeElsewhere } from "../credit-note.ts";
@@ -35,7 +36,7 @@
 		<Card.Content>
 			<form
 				{...updateCreditReason.enhance(async ({ submit }) => {
-					if (await submit()) toast.success(m.invoices_credit_reason_saved());
+					if (await submitted(submit)) toast.success(m.invoices_credit_reason_saved());
 				})}
 				class="flex flex-col gap-4"
 			>
@@ -61,7 +62,7 @@
 			<Card.Content>
 				<form
 					{...addCreditLine.enhance(async ({ element, submit }) => {
-						if (await submit()) {
+						if (await submitted(submit)) {
 							element.reset();
 							toast.success(m.invoices_line_added());
 						}

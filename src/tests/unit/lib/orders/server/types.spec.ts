@@ -112,6 +112,13 @@ describe("the types that must stay offered", () => {
 		expect(required.has("survey")).toBe(false);
 	});
 
+	test("and those the modules make orders of by themselves: condition's and energy's", () => {
+		const required = requiredOrderTypes(["condition", "energy"]);
+		expect(required.get("maintenance")).toEqual(["Components"]);
+		expect(required.get("repair")).toEqual(["Energy"]);
+		expect(required.get("survey")).toEqual(["Energy"]);
+	});
+
 	test("a module that's off needs nothing", () => {
 		expect(requiredOrderTypes(["invoices"]).has("inspection")).toBe(false);
 	});

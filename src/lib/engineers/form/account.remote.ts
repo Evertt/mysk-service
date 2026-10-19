@@ -3,7 +3,7 @@ import { and, asc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
-import { id } from "#lib/schema.ts";
+import { id, recordId } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -15,7 +15,7 @@ import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
  * The user account an engineer signs in to the engineer portal with, and (for owners and admins)
  * the organization's members it can be linked to: those not linked to another engineer.
  */
-export const getEngineerAccount = forMembers.query(v.number(), async (engineerId) => {
+export const getEngineerAccount = forMembers.query(recordId(), async (engineerId) => {
 	const tenant = currentTenant();
 	const found = await db.query.engineer.findFirst({
 		columns: { id: true, userId: true },

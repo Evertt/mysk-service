@@ -13,6 +13,7 @@
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField, { type SelectOption } from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { energyLabels } from "../labels.ts";
@@ -77,7 +78,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(m.energy_setup_saved({ name: form.result?.code ?? "" }));
 				}

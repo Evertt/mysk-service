@@ -9,7 +9,7 @@
 	import GaugeIcon from "@lucide/svelte/icons/gauge";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { scoreBand } from "../../model.ts";
 	import {
@@ -67,12 +67,7 @@
 				<p class="text-sm text-muted-foreground">{m.condition_portal_ask()}</p>
 				<form
 					{...form.enhance(async ({ submit }) => {
-						try {
-							if (!(await submit())) return;
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-							return;
-						}
+						if (!(await submitted(submit))) return;
 						toast.success(m.condition_advised_toast());
 					})}
 					class="flex flex-col gap-3"

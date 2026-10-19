@@ -9,7 +9,14 @@ export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "childre
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
 
-/** What to tell the user about a failed call: the message of a thrown `error(status, message)`, else `fallback`. */
+/**
+ * What to tell the user about a failed call: the message of an `error(status, message)` the app
+ * threw, else `fallback`. A server's own failure (5xx: a handler that crashed, which SvelteKit
+ * reports as "Internal Error", or a proxy's error page, whose message is its status text, often
+ * empty) has no message for the user.
+ */
 export function errorMessage(error: unknown, fallback: string) {
-	return isHttpError(error) ? error.body.message : fallback;
+	return isHttpError(error) && error.status < 500 && error.body.message
+		? error.body.message
+		: fallback;
 }

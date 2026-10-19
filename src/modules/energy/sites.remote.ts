@@ -5,9 +5,9 @@
  */
 import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
-import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { customerCode } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { refuse } from "#lib/server/forms.ts";
 
@@ -16,13 +16,10 @@ import { createEnergySite as create, customerEnergy, siteChoices } from "./serve
 import { newEnergySiteSchema } from "./setup/setup-schema.ts";
 
 /** The customer's sites with their energy sites, and whether the user may add one. */
-export const getCustomerEnergy = query(
-	v.pipe(v.string(), v.nonEmpty(), v.maxLength(64)),
-	async (code) => ({
-		...(await customerEnergy(code)),
-		canManage: isManager(currentTenant().roles),
-	}),
-);
+export const getCustomerEnergy = query(customerCode(), async (code) => ({
+	...(await customerEnergy(code)),
+	canManage: isManager(currentTenant().roles),
+}));
 
 /** The tenant's customer sites without energy monitoring, to add it to one. */
 export const getEnergySiteChoices = forManagers.query(() => siteChoices());

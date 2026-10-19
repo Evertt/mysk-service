@@ -226,7 +226,6 @@
 	"common_views_delete_shared_description": "Iedereen in de organisatie raakt deze weergave kwijt. Verwijderen kan niet ongedaan worden gemaakt.",
 	"common_views_deleted": "Weergave verwijderd",
 	"common_views_name_required": "Vul een naam in",
-	"common_views_name_too_long": "Gebruik maximaal {max} tekens",
 	"common_views_name_taken": "Je hebt hier al een weergave met de naam “{name}”",
 	"common_views_not_found": "Weergave niet gevonden",
 	"common_count_orders": [

@@ -1,6 +1,6 @@
 /**
  * Storing a gateway's batch (`../ingest/format.ts`): in the token's tenant (the request runs as
- * the system there, see `#lib/server/integrations/tokens.ts`), against one of its sites, in one
+ * the system there, see `#lib/server/auth/integrations.ts`), against one of its sites, in one
  * transaction. Readings replace the zone's interval, door events that are in already are skipped,
  * a zone without thresholds gets its defaults once it has a day of readings (`thresholds.ts`),
  * then the site's thresholds are evaluated (`evaluate.ts`) and the alerts raised; the live queries

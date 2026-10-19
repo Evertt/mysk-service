@@ -4,7 +4,7 @@
  * tenant's order, the open orders (sorted, and as a range), the dates' ranges combined with the
  * other filters, finding units by their own name and their location, and South seeing its own
  * units only, also by a North customer's code, in its facets and its groups. The server side of
- * `src/tests/e2e/equipment.list.test.ts`, `equipment.ranges.test.ts`, `equipment.tenancy.test.ts`,
+ * `src/tests/e2e/equipment.list.test.ts`, `equipment.tenancy.test.ts`,
  * `equipment.locations.test.ts` and `equipment.categories.test.ts`, which keep the pages.
  */
 import { describe, expect, test } from "vite-plus/test";

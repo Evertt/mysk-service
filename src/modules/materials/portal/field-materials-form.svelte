@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
 
 	import { materialLabels } from "../labels.ts";
@@ -46,7 +47,7 @@
 
 <form
 	{...saveMaterials.enhance(async ({ submit }) => {
-		if (await submit()) toast.success(m.materials_portal_saved());
+		if (await submitted(submit)) toast.success(m.materials_portal_saved());
 	})}
 	class="flex flex-col gap-4"
 >

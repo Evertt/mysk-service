@@ -15,5 +15,7 @@ export default defineModule({
 	actions: conditionActions,
 	// Asks for a unit's condition on the engineer portal's checklist, once it's completed.
 	enhances: ["checklists"],
+	// The orders it makes by itself, for a unit whose condition calls for it (`server/automatic.ts`).
+	orderTypes: ["maintenance"],
 	nav: { after: "equipment" },
 });

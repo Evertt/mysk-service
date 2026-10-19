@@ -8,6 +8,8 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { submitted } from "#lib/components/form/submitted.ts";
+
 	let {
 		form: remote,
 		siteId,
@@ -45,7 +47,7 @@
 		</AlertDialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(deleted);
 				}

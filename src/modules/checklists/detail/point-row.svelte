@@ -11,7 +11,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { removePoint, shiftPoint } from "../templates.remote.ts";
 
@@ -65,11 +65,7 @@
 			{#each moves as move (move.direction)}
 				<form
 					{...move.form.enhance(async ({ submit }) => {
-						try {
-							await submit();
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-						}
+						await submitted(submit);
 					})}
 				>
 					<input {...move.form.fields.id.as("hidden", String(point.id))} />
@@ -119,13 +115,9 @@
 				</AlertDialog.Header>
 				<form
 					{...remove.enhance(async ({ submit }) => {
-						try {
-							if (!(await submit())) return;
-							deleting = false;
-							toast.success(m.checklists_point_deleted());
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-						}
+						if (!(await submitted(submit))) return;
+						deleting = false;
+						toast.success(m.checklists_point_deleted());
 					})}
 				>
 					<input {...remove.fields.id.as("hidden", String(point.id))} />

@@ -1,18 +1,25 @@
 import * as v from "valibot";
-import { describe, expect, test } from "vite-plus/test";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import {
 	cents,
+	customerCode,
 	date,
 	email,
 	id,
 	optionalDate,
 	optionalId,
+	optionalText,
 	optionalTime,
 	phone,
+	recordId,
 	text,
 	time,
 } from "#lib/schema.ts";
+
+const englishByDefault = getLocale;
+afterEach(() => overwriteGetLocale(englishByDefault));
 
 /** The parsed value, or the first issue's message. */
 const parse = (schema: v.GenericSchema, input: unknown) => {
@@ -38,6 +45,44 @@ describe("optionalId", () => {
 	test("otherwise it's an id", () => {
 		expect(parse(optionalId(), "7")).toEqual({ value: 7 });
 		expect(parse(optionalId("Choose an engineer"), "0")).toHaveProperty("issue");
+	});
+});
+
+describe("recordId", () => {
+	test("is a positive whole number, as JSON sends it", () => {
+		expect(parse(recordId(), 1)).toEqual({ value: 1 });
+	});
+
+	test.each([0, -1, 1.5, "1", null])("refuses %j", (input) => {
+		expect(parse(recordId(), input)).toHaveProperty("issue");
+	});
+});
+
+describe("customerCode", () => {
+	test("is a customer's code", () => {
+		expect(parse(customerCode(), "C-00042")).toEqual({ value: "C-00042" });
+	});
+
+	test.each(["", "C".repeat(65), 42])("refuses %j", (input) => {
+		expect(parse(customerCode(), input)).toHaveProperty("issue");
+	});
+});
+
+describe("optionalText", () => {
+	test("is trimmed, and none if it's left empty", () => {
+		expect(parse(optionalText(10), "  Pump  ")).toEqual({ value: "Pump" });
+		expect(parse(optionalText(10), "")).toEqual({ value: null });
+		expect(parse(optionalText(10), "   ")).toEqual({ value: null });
+	});
+
+	test("counts the trimmed text against its limit", () => {
+		expect(parse(optionalText(4), "  Pump  ")).toEqual({ value: "Pump" });
+	});
+
+	test("says how long it may be, in the user's language", () => {
+		expect(parse(optionalText(4), "Pumps")).toEqual({ issue: "Use at most 4 characters" });
+		overwriteGetLocale(() => "nl");
+		expect(parse(optionalText(4), "Pumps")).toEqual({ issue: "Gebruik maximaal 4 tekens" });
 	});
 });
 

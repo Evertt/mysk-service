@@ -1,15 +1,7 @@
 import * as v from "valibot";
 
 import { contactChannels, sitePriorities, weekdays } from "#lib/models.ts";
-import { id, optionalTime, text } from "#lib/schema.ts";
-
-/** An optional, trimmed text; `null` if it's left empty. */
-const optionalText = () =>
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.transform((value) => value || null),
-	);
+import { id, optionalText, optionalTime, text } from "#lib/schema.ts";
 
 /** An optional text in a format (checked once there's a value); `null` if it's left empty. */
 const optionalFormatted = (pattern: RegExp, message: () => string) =>
@@ -48,7 +40,7 @@ const siteFields = {
 	...siteAddressFields,
 	city: text(m.customers_city_required),
 	country: text(m.customers_country_required),
-	contactName: optionalText(),
+	contactName: optionalText(120),
 	contactPhone: optionalFormatted(/^\+?[\d\s().-]{6,20}$/, m.validation_phone_invalid),
 	contactEmail: v.pipe(
 		optionalFormatted(v.EMAIL_REGEX, m.validation_email_invalid),
@@ -59,7 +51,7 @@ const siteFields = {
 	slotStart: optionalTime(),
 	slotEnd: optionalTime(),
 	priority: v.picklist(sitePriorities, m.validation_choose_one),
-	accessNotes: optionalText(),
+	accessNotes: optionalText(500),
 };
 
 interface Slot {

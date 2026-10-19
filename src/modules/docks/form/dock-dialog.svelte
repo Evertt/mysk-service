@@ -10,6 +10,7 @@
 
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { type getCustomerDocks, saveCustomerDock } from "../docks.remote.ts";
@@ -77,7 +78,7 @@
 		</Dialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					const saved = form.result?.code;
 					if (saved) toast.success(m.docks_saved({ code: saved }));

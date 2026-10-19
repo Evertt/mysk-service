@@ -5,26 +5,23 @@
  */
 import * as v from "valibot";
 
+import { recordId, textMax } from "#lib/schema.ts";
+
 import { pointResults, textLimits } from "../model.ts";
 
-/** A record's id, as a command takes it: a number. */
-const id = () => v.pipe(v.number(), v.integer(), v.minValue(1));
-
-const remark = (max: number) =>
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.maxLength(max, (issue) => m.checklists_text_max({ max: issue.requirement })),
-	);
+const remark = (max: number) => v.pipe(v.string(), v.trim(), textMax(max));
 
 /** A point's result (or none, to take it back). */
-export const answerSchema = v.object({ id: id(), result: v.nullable(v.picklist(pointResults)) });
+export const answerSchema = v.object({
+	id: recordId(),
+	result: v.nullable(v.picklist(pointResults)),
+});
 
 /** What's wrong with a point (or what part it needs), as the remark a rejection needs. */
-export const pointRemarkSchema = v.object({ id: id(), remark: remark(textLimits.remark) });
+export const pointRemarkSchema = v.object({ id: recordId(), remark: remark(textLimits.remark) });
 
 /** The general remark and advice for the customer on a checklist. */
-export const remarksSchema = v.object({ id: id(), remarks: remark(textLimits.remarks) });
+export const remarksSchema = v.object({ id: recordId(), remarks: remark(textLimits.remarks) });
 
 /** A checklist, to complete. */
-export const checklistIdSchema = v.object({ id: id() });
+export const checklistIdSchema = v.object({ id: recordId() });

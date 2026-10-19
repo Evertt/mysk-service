@@ -69,7 +69,6 @@
 	"checklists_template_saved": "Sjabloon opgeslagen",
 	"checklists_name_required": "Geef het sjabloon een naam",
 	"checklists_name_taken": "Er is al een sjabloon {name}",
-	"checklists_text_max": "Hoogstens {max} tekens",
 	"checklists_validity_range": "Tussen {min} en {max} maanden",
 	"checklists_point_required": "Zeg wat er wordt gecontroleerd",
 	"checklists_template_not_found": "Checklistsjabloon niet gevonden",

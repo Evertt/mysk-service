@@ -6,6 +6,7 @@ import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { customerCode } from "#lib/schema.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
@@ -15,7 +16,7 @@ import { serviceHistory } from "./server/feed.ts";
 
 export const getServiceHistory = query(
 	v.object({
-		customer: v.nullable(v.pipe(v.string(), v.nonEmpty())),
+		customer: v.nullable(customerCode()),
 		limit: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50)),
 	}),
 	async (input) => {

@@ -6,6 +6,7 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatKw } from "#modules/energy/display.ts";
@@ -83,7 +84,7 @@
 		<Card.Content>
 			<form
 				{...saveEnergySite.enhance(async ({ submit }) => {
-					if (await submit()) toast.success(m.energy_setup_saved({ name: site.name }));
+					if (await submitted(submit)) toast.success(m.energy_setup_saved({ name: site.name }));
 				})}
 				class="flex flex-col gap-6"
 			>

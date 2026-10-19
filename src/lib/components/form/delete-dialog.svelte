@@ -16,6 +16,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
 	import { historyDialog } from "../history-dialog.svelte.ts";
+	import { submitted } from "./submitted.ts";
 
 	let {
 		form,
@@ -52,7 +53,7 @@
 		<form
 			{...form.enhance(async ({ submit }) => {
 				// Deleted without leaving the page (a member): the dialog's history entry goes too.
-				if ((await submit().updates()) && dialog.open) dialog.open = false;
+				if ((await submitted(() => submit().updates())) && dialog.open) dialog.open = false;
 			})}
 		>
 			<input {...form.fields.id.as("hidden", id)} />

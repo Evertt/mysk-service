@@ -6,6 +6,7 @@
 
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import BillablePicker from "#modules/invoices/form/billable-picker.svelte";
 	import {
@@ -46,7 +47,7 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the draft; otherwise the form shows what's wrong.
-		if (await submit()) toast.success(m.invoices_draft_created());
+		if (await submitted(submit)) toast.success(m.invoices_draft_created());
 	})}
 	class="flex flex-col gap-6"
 >

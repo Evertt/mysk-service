@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
-import * as v from "valibot";
 
+import { recordId } from "#lib/schema.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -26,7 +26,7 @@ export const getMaterialOptions = query(async () => {
  * One of the tenant's orders' lines, at the prices they were quoted at, as the order form starts
  * from them. None for another tenant's order.
  */
-export const getOrderLines = query(v.number(), async (orderId) => {
+export const getOrderLines = query(recordId(), async (orderId) => {
 	return db
 		.select({
 			id: orderLine.id,

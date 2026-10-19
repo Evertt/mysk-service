@@ -11,6 +11,7 @@
 
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { partnerLabels } from "../labels.ts";
 	import { categoryRuleValues, type ProgrammeRules, ruleLimits } from "../model.ts";
@@ -64,7 +65,7 @@
 
 <form
 	{...form.enhance(async ({ submit }) => {
-		if (await submit()) toast.success(m.partners_rules_saved({ year: String(year) }));
+		if (await submitted(submit)) toast.success(m.partners_rules_saved({ year: String(year) }));
 	})}
 	class="flex flex-col gap-6"
 	data-rules-form

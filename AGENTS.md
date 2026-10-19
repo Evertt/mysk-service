@@ -46,7 +46,8 @@ Organizations own all business data.
 
 - Make every remote function with a **gated set** from `src/lib/server/remote-functions.ts`:
   `forMembers` (the office), `forManagers` (settings), `forEngineers` (the engineer portal),
-  `forCustomers` (the customer portal), `forUsers` (no tenant data), `forAnyone` (public on
+  `forCustomers` (the customer portal), `forAnyRole` (any member, field engineers too: the app
+  shell's tenant), `forUsers` (no tenant data), `forAnyone` (public on
   purpose), or a module's `moduleRemote("<id>")`. Each has `query`, `query.live`, `form` and
   `command`. The gate runs before the handler, which reads what it admitted with
   `currentTenant()`, `currentUser()`, `await currentEngineer()` or `await currentCustomer()`; the

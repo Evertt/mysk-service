@@ -30,6 +30,7 @@ import * as v from "valibot";
 import { type BulkResult, MAX_BULK_RECORDS } from "#lib/components/data-table/bulk-actions.ts";
 import type { ListWhere } from "#lib/components/data-table/list-definition.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
+import { recordId } from "#lib/schema.ts";
 import { idsInTenant, type TenantTable } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -37,11 +38,7 @@ import { type ListSql, planList } from "./plan.ts";
 
 /** A bulk command's target in a client-side table (customers, invoices, …, module actions): ids only. */
 export const idsTarget = v.object({
-	ids: v.pipe(
-		v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
-		v.minLength(1),
-		v.maxLength(MAX_BULK_RECORDS),
-	),
+	ids: v.pipe(v.array(recordId()), v.minLength(1), v.maxLength(MAX_BULK_RECORDS)),
 });
 
 type IdsTarget = v.InferOutput<typeof idsTarget>;

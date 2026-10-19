@@ -8,6 +8,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
@@ -85,7 +86,7 @@
 							</AlertDialog.Header>
 							<form
 								{...closeProgrammeYear.enhance(async ({ submit }) => {
-									if (await submit()) {
+									if (await submitted(submit)) {
 										open = false;
 										toast.success(m.partners_closed({ year: String(preview.year) }));
 									}

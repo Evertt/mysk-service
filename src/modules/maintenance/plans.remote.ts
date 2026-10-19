@@ -7,7 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { id } from "#lib/schema.ts";
+import { id, recordId } from "#lib/schema.ts";
 import { idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
@@ -59,28 +59,25 @@ export const getUnitPlans = query(v.string(), async (serialNumber) => {
  * The tenant's units among `ids` (a contract's covered units) with their plans, by serial number,
  * and how many have none.
  */
-export const getCoveredPlans = query(
-	v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(500)),
-	async (ids) => {
-		if (!ids.length) return { units: [], without: 0 };
-		const units = await db
-			.select({
-				id: equipment.id,
-				serialNumber: equipment.serialNumber,
-				manufacturer: equipment.manufacturer,
-				model: equipment.model,
-			})
-			.from(equipment)
-			.where(idsInTenant(equipment, ids))
-			.orderBy(asc(equipment.serialNumber));
-		const plans = Map.groupBy(await plansOf(ids), (plan) => plan.equipmentId);
-		const withPlans = units.map((unit) => ({ ...unit, plans: plans.get(unit.id) ?? [] }));
-		return {
-			units: withPlans.filter((unit) => unit.plans.length),
-			without: withPlans.filter((unit) => !unit.plans.length).length,
-		};
-	},
-);
+export const getCoveredPlans = query(v.pipe(v.array(recordId()), v.maxLength(500)), async (ids) => {
+	if (!ids.length) return { units: [], without: 0 };
+	const units = await db
+		.select({
+			id: equipment.id,
+			serialNumber: equipment.serialNumber,
+			manufacturer: equipment.manufacturer,
+			model: equipment.model,
+		})
+		.from(equipment)
+		.where(idsInTenant(equipment, ids))
+		.orderBy(asc(equipment.serialNumber));
+	const plans = Map.groupBy(await plansOf(ids), (plan) => plan.equipmentId);
+	const withPlans = units.map((unit) => ({ ...unit, plans: plans.get(unit.id) ?? [] }));
+	return {
+		units: withPlans.filter((unit) => unit.plans.length),
+		without: withPlans.filter((unit) => !unit.plans.length).length,
+	};
+});
 
 export const createPlan = form(newPlanSchema, async ({ equipmentId, ...input }) => {
 	const serialNumber = await create(equipmentId, input);
@@ -93,7 +90,7 @@ export const updatePlan = form(planSchema, async ({ id, ...input }) => {
 });
 
 export const pausePlan = command(
-	v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)), paused: v.boolean() }),
+	v.object({ id: recordId(), paused: v.boolean() }),
 	async ({ id, paused }) => {
 		const serialNumber = await setPlanPaused(id, paused);
 		void getUnitPlans(serialNumber).refresh();

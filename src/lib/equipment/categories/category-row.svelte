@@ -11,9 +11,9 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import type { EngineerSpecialty } from "#lib/models.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import { deleteEquipmentCategory, moveEquipmentCategory } from "./categories.remote.ts";
 	import CategoryDialog from "./category-dialog.svelte";
@@ -63,11 +63,7 @@
 			{#each moves as move (move.direction)}
 				<form
 					{...move.form.enhance(async ({ submit }) => {
-						try {
-							await submit();
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-						}
+						await submitted(submit);
 					})}
 				>
 					<input {...move.form.fields.id.as("hidden", String(category.id))} />
@@ -123,13 +119,9 @@
 				</AlertDialog.Header>
 				<form
 					{...remove.enhance(async ({ submit }) => {
-						try {
-							if (!(await submit())) return;
-							deleting = false;
-							toast.success(m.equipment_category_deleted());
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-						}
+						if (!(await submitted(submit))) return;
+						deleting = false;
+						toast.success(m.equipment_category_deleted());
 					})}
 				>
 					<input {...remove.fields.id.as("hidden", String(category.id))} />

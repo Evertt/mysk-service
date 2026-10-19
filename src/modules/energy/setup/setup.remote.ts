@@ -5,8 +5,8 @@
  */
 import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
-import * as v from "valibot";
 
+import { recordId } from "#lib/schema.ts";
 import { refuse } from "#lib/server/forms.ts";
 
 import { forManagers } from "../remote-functions.ts";
@@ -31,10 +31,7 @@ import {
 } from "./setup-schema.ts";
 
 /** The site's settings, zones, consumers and doors, and the units at its customer site. */
-export const getEnergySetup = forManagers.query(
-	v.pipe(v.number(), v.integer(), v.minValue(1)),
-	(id) => siteSetup(id),
-);
+export const getEnergySetup = forManagers.query(recordId(), (id) => siteSetup(id));
 
 /** Saves the site's own settings. */
 export const saveEnergySite = forManagers.form(

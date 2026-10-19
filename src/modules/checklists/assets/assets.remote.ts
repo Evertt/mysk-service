@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
+import { recordId } from "#lib/schema.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment } from "#lib/server/db/schema.ts";
@@ -77,7 +78,7 @@ export const getAsset = query(v.string(), (serialNumber) => assetView(serialNumb
  * for a unit that isn't the tenant's or a component that isn't the unit's.
  */
 export const getComponentScores = query(
-	v.object({ serialNumber: v.string(), componentId: v.pipe(v.number(), v.integer()) }),
+	v.object({ serialNumber: v.string(), componentId: recordId() }),
 	async ({ serialNumber, componentId }) => {
 		const [unit] = await db
 			.select({ id: equipment.id })
