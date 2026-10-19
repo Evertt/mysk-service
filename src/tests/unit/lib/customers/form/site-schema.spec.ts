@@ -108,6 +108,18 @@ test("the choices are from their lists, the contact details well-formed", () => 
 	});
 });
 
+test("the contact's name and the access notes have a limit", () => {
+	const long = { ...form, id: "4", contactName: "J".repeat(121), accessNotes: "N".repeat(501) };
+	expect(parse(siteSchema, long)).toEqual({
+		issues: [
+			["contactName", "Use at most 120 characters"],
+			["accessNotes", "Use at most 500 characters"],
+		],
+	});
+	const longest = { ...form, id: "4", contactName: "J".repeat(120), accessNotes: "N".repeat(500) };
+	expect(parse(siteSchema, longest)).toHaveProperty("value");
+});
+
 test("a time slot has both ends, the end after the start", () => {
 	const slot = (slotStart: string, slotEnd: string) =>
 		parse(siteSchema, { ...form, id: "4", slotStart, slotEnd });

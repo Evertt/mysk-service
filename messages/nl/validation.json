@@ -15,5 +15,6 @@
 	"validation_more_than_zero": "Meer dan 0",
 	"validation_two_decimals": "Maximaal twee decimalen",
 	"validation_time_required": "Kies een tijd",
-	"validation_time_invalid": "Vul een geldige tijd in"
+	"validation_time_invalid": "Vul een geldige tijd in",
+	"validation_text_max": "Gebruik maximaal {max} tekens"
 }

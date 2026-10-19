@@ -9,6 +9,7 @@
 import * as v from "valibot";
 
 import { isDay } from "#lib/dates.ts";
+import { formatNumber } from "#lib/i18n/format.ts";
 
 /**
  * A validation message: a message function (`m.…`) or one that builds the text, e.g.
@@ -39,6 +40,21 @@ export const optionalId = (message: Message = m.validation_choose_one) =>
 /** A required, trimmed text. */
 export const text = (message: Message = m.validation_required) =>
 	v.pipe(v.string(), v.trim(), v.nonEmpty(message));
+
+/** At most `max` characters, for a text's pipe: `v.pipe(text(), textMax(80))`. */
+export const textMax = (max: number) =>
+	v.maxLength<string, number, (issue: v.MaxLengthIssue<string, number>) => string>(max, (issue) =>
+		m.validation_text_max({ max: formatNumber(issue.requirement) }),
+	);
+
+/** An optional, trimmed text of at most `max` characters; `null` if it's left empty. */
+export const optionalText = (max: number) =>
+	v.pipe(
+		v.string(),
+		v.trim(),
+		textMax(max),
+		v.transform((value) => value || null),
+	);
 
 /** The day a valid date input stands for (checked only once there's a value). */
 const day = () =>

@@ -15,5 +15,6 @@
 	"validation_more_than_zero": "More than 0",
 	"validation_two_decimals": "At most two decimals",
 	"validation_time_required": "Choose a time",
-	"validation_time_invalid": "Enter a valid time"
+	"validation_time_invalid": "Enter a valid time",
+	"validation_text_max": "Use at most {max} characters"
 }

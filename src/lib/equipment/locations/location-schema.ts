@@ -1,25 +1,13 @@
 import * as v from "valibot";
 
-import { id, text } from "#lib/schema.ts";
-
-/** An optional, trimmed text; `null` if it's left empty. */
-const optionalText = (max: number) =>
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.maxLength(max, (issue) => m.equipment_text_max({ max: issue.requirement })),
-		v.transform((value) => value || null),
-	);
+import { id, optionalText, text, textMax } from "#lib/schema.ts";
 
 /** The longest a location's name may be, here and where the equipment form adds a location. */
 export const locationNameMax = 80;
 
 /** The fields of the location form, shared by adding and editing a location. */
 const locationFields = {
-	name: v.pipe(
-		text(m.equipment_location_name_required),
-		v.maxLength(locationNameMax, (issue) => m.equipment_text_max({ max: issue.requirement })),
-	),
+	name: v.pipe(text(m.equipment_location_name_required), textMax(locationNameMax)),
 	/** What helps to find it, if anything. */
 	description: optionalText(200),
 };

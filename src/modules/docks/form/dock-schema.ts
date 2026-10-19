@@ -1,18 +1,12 @@
 /** The dock form's fields (the customer page's card): a dock at one of the customer's sites. */
 import * as v from "valibot";
 
-import { id, optionalId } from "#lib/schema.ts";
+import { id, optionalId, optionalText, textMax } from "#lib/schema.ts";
 
 import { dockCodePattern } from "../model.ts";
 
-/** An optional short text: empty is none. */
-const optionalText = (max: number) =>
-	v.pipe(
-		v.optional(v.string(), ""),
-		v.trim(),
-		v.maxLength(max),
-		v.transform((value) => value || null),
-	);
+/** An optional short text, which the form may leave out: empty or missing is none. */
+const optionalPart = (max: number) => v.optional(optionalText(max), "");
 
 const dockFields = {
 	siteId: id(m.docks_unknown_site),
@@ -22,13 +16,13 @@ const dockFields = {
 		v.nonEmpty(m.docks_code_required),
 		v.regex(dockCodePattern, m.docks_code_format),
 	),
-	position: v.pipe(v.optional(v.string(), ""), v.trim(), v.maxLength(80)),
+	position: v.pipe(v.optional(v.string(), ""), v.trim(), textMax(80)),
 	locationId: v.optional(optionalId(), ""),
 	doorId: v.optional(optionalId(), ""),
 	levellerId: v.optional(optionalId(), ""),
-	scpCode: optionalText(32),
-	keyId: optionalText(32),
-	keyStorageUnit: optionalText(32),
+	scpCode: optionalPart(32),
+	keyId: optionalPart(32),
+	keyStorageUnit: optionalPart(32),
 };
 
 /** A dock as the form submits it, for the customer `customer` (its code); with `dockId` when edited. */
