@@ -5,3 +5,7 @@ ORIGIN=http://localhost:8787
 # Optional: who is mailed about bug reports, and the developers who may open them (comma-separated).
 # BUG_REPORT_EMAIL=bugs@example.com
 # DEVELOPER_EMAILS=you@example.com
+# Optional: sends mail (STARTTLS on port 587; `smtps://` on 465 can't connect from a Worker), from
+# MAIL_FROM (wrangler.jsonc's vars set it; this overrides it). Without SMTP_URL, mail is logged.
+# SMTP_URL=smtp://user:password@smtp.example.com:587
+# MAIL_FROM=Fieldworks <noreply@example.com>

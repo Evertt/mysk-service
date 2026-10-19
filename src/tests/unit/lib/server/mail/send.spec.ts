@@ -59,6 +59,12 @@ test("with SMTP_URL, mail goes through SMTP", async () => {
 	expect(smtp.sendMail).toHaveBeenCalledWith({ from: env.MAIL_FROM, ...mail });
 });
 
+test("a message SMTP refuses fails the call, for the caller to handle", async () => {
+	env.SMTP_URL = "smtp://localhost:2525";
+	smtp.sendMail.mockRejectedValueOnce(new Error("535 Authentication failed"));
+	await expect(sendMail(mail)).rejects.toThrow("535 Authentication failed");
+});
+
 test("with MAIL_OUTBOX, mail is appended to that file, even if SMTP_URL is set", async () => {
 	env.MAIL_OUTBOX = join(folder, "outbox.jsonl");
 	env.SMTP_URL = "smtp://localhost:2525";

@@ -27,7 +27,7 @@
 		"build:cloudflare": "ADAPTER=cloudflare vp build",
 		"dev:cloudflare": "ADAPTER=cloudflare vp build && wrangler dev",
 		"deploy:cloudflare": "ADAPTER=cloudflare vp build && wrangler deploy",
-		"types:cloudflare": "wrangler types cloudflare/worker-configuration.d.ts",
+		"types:cloudflare": "wrangler types --env-file=.dev.vars.example cloudflare/worker-configuration.d.ts",
 		"prepare": "node scripts/prepare.ts",
 		"generate": "node scripts/generate.ts",
 		"check": "vpr generate && vp check && svelte-check && tsc -p cloudflare",

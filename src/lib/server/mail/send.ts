@@ -16,7 +16,8 @@ let transport: Transporter | undefined;
  * Sends a message, depending on the environment (see "Deploying" in README.md):
  * - `MAIL_OUTBOX` set: appends it to that file as a line of JSON, for the end-to-end tests to read.
  *   It wins over `SMTP_URL`, so tests never send real mail.
- * - `SMTP_URL` set: sends it through that SMTP server.
+ * - `SMTP_URL` set: sends it through that SMTP server. On Cloudflare too (`nodejs_compat`'s sockets),
+ *   but there only with STARTTLS (`smtp://…:587`): an `smtps://` URL (port 465) can't connect.
  * - neither: logs it to the server console, e.g. for local development.
  */
 export async function sendMail(mail: Mail) {
