@@ -137,3 +137,31 @@ soon, do steps 1–2 and leave the generator until one is.
 [maintenance-plans-implementation.md](maintenance-plans-implementation.md) (done): the first module
 built from scratch, which added module columns in core lists, slots owned by a module and the core's
 `createOrders()`.
+
+## Wishes of 19 October 2026
+
+Seven plans, each after a grilling round. The table's minimum height was fixed without a plan
+(branch `table-fill-height`). The wish for an in-memory cache in front of the database was dropped:
+on Cloudflare, every query is already an in-process call inside the Durable Object. Its
+measurement went into the error handling and hover cards plans.
+
+| Plan                                               | Covers                                                                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [error-handling.md](error-handling.md)             | A shared error boundary that resets once by itself, friendlier error pages, error reports and timing in Workers Logs |
+| [bug-recorder.md](bug-recorder.md)                 | Users record a bug (rrweb) from the top bar; R2, an email, and a replay page for developers                          |
+| [multi-word-search.md](multi-word-search.md)       | The browser-side tables match every word in any column, as the server lists do                                       |
+| [equipment-masonry.md](equipment-masonry.md)       | The dashboard's masonry, shared, for the equipment detail page                                                       |
+| [record-filter-counts.md](record-filter-counts.md) | Counts on every record filter, options sorted by count; filter layout and label fixes                                |
+| [hover-cards.md](hover-cards.md)                   | Previews of orders, customers, units and engineers on their links, with `query.batch`; measures the object's load    |
+| [notifications.md](notifications.md)               | A bell with a tray in the office app and the engineer portal, worked out from the activity log                       |
+
+Order of work:
+
+1. **In parallel, each in its own worktree:** error handling, bug recorder, multi-word search,
+   equipment masonry, record filter counts. They overlap only lightly:
+   - error handling and the bug recorder both touch the `(field)` layout
+   - the search and the record filters both work in the data table's folder, but in different files
+2. **Notifications** after `engineer-scope` is merged. It also touches the headers the bug
+   recorder touches.
+3. **Hover cards** after error handling is merged (it measures with its timing lines), and
+   preferably after the equipment masonry (both touch the equipment page's cards).
