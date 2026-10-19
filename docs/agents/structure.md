@@ -32,7 +32,7 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
   (plain TS: display maps, list definitions, data; safe to load anywhere Vite's Svelte plugin runs),
   `components.ts` (Svelte components), `remotes.ts` (re-exports the `*.remote.ts` files; not named
   `remote.ts`, which SvelteKit would treat as a remote module) and `server/index.ts` (server-only;
-  only orders has one: add one when something outside needs it).
+  orders and equipment have one: add one when something outside needs it).
   E.g. `import { OrderLink } from "#lib/orders/components.ts"`. A barrel exports what something
   outside the domain imports, no more. Exceptions: `#lib/<domain>/extensions.ts` is imported as itself
   (the module generator reads it and the modules contribute to it at module scope), and the tests (`src/tests/` and

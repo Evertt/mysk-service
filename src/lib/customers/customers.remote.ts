@@ -52,7 +52,7 @@ export const getCustomers = forMembers.query(async () => {
 
 /**
  * One customer with their sites (each with how many units are there), their equipment and key
- * figures. Their latest orders are `getCustomerActivity` (`[code]/activity.remote.ts`).
+ * figures. Their latest orders are `getCustomerActivity` (`detail/activity.remote.ts`).
  */
 export const getCustomer = forMembers.query(v.string(), async (code) => {
 	const found = await db.query.customer.findFirst({

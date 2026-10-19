@@ -217,7 +217,7 @@ describe("in North", () => {
 		expect(planned).toMatchObject({ status: "scheduled", engineer_id: engineer.id });
 		expect(scheduledAt(planned)).toEqual(weekday(2, 13, 30));
 		// That it takes its materials from stock, and what planning refuses (an order that isn't
-		// open, another tenant's, an inactive engineer), is `scheduling.spec.ts`'s.
+		// open, another tenant's, an inactive engineer), is `planning.spec.ts`'s.
 		await cell(engineer.name, weekday(2)).locator(`[data-order="${number}"]`).waitFor();
 		expect(await backlog().locator(`[data-order="${number}"]`).count()).toBe(0);
 	});

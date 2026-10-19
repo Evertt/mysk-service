@@ -15,7 +15,7 @@
  * ```
  *
  * `ListSql` is built per request (a function), as `inTenant()` reads the request. The orders list
- * (`src/routes/(app)/orders/order-list.server.ts`) is the example.
+ * (`src/lib/orders/server/list-sql.ts`) is the example.
  *
  * Grouped (see `#lib/components/data-table/grouping.ts`), the rows are sorted by the group first,
  * and the plan fetches one row more on either side of the page: `plan.page()` splits them off, for

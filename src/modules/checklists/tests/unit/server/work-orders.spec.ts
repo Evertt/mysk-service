@@ -6,7 +6,7 @@
  * order with its checklist (a second press opening it); the office filling one in for the engineer
  * and completing it, the condition module's hook scoring the unit and each component over its own
  * points; and North never listing, opening, starting or filling in SHLTR's, also by their ids. The
- * server side of `checklists.work-orders.test.ts` and `checklists.work-orders-tenancy.test.ts`,
+ * server side of `checklists.work-orders.test.ts` and `checklists.tenancy.test.ts`,
  * which keep the page (its badges, scrolling, selection in the URL, the phone) and one tampered
  * command. The office's fill rules in detail are `checklists.spec.ts`'s.
  */

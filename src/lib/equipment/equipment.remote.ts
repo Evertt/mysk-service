@@ -26,7 +26,7 @@ import { newQrToken } from "./server/qr.ts";
 
 /**
  * One of the tenant's units with its owner, and how many orders it has (which keep it from being
- * moved). Its service history is `getServiceHistory` (`[serial]/service-history.remote.ts`).
+ * moved). Its service history is `getServiceHistory` (`detail/service-history.remote.ts`).
  */
 export const getEquipment = forMembers.query(v.string(), async (serialNumber) => {
 	const unit = await db.query.equipment.findFirst({

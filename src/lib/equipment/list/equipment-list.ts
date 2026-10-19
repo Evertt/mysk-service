@@ -13,7 +13,7 @@ import { listColumns } from "../extensions.ts";
 
 /**
  * The equipment list: what it sorts, groups and filters by, and with which values. The page, the
- * table, the server's SQL (`equipmentSql` in `equipment-list.server.ts`) and the bulk commands read
+ * table, the server's SQL (`equipmentSql` in `server/list-sql.ts`) and the bulk commands read
  * it. Its state is in the URL, e.g. `?customer=CUST-0001&category=3&sort=-warranty`
  * (`columns.spec.ts` checks that the table reads and writes the same). Customers are filtered (and
  * grouped) by code, manufacturers by name, the tenant's categories by id (and sorted in the
