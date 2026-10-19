@@ -9,7 +9,6 @@
 	points that check it, with the score they give it, and how many others are hidden.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import MinusIcon from "@lucide/svelte/icons/minus";
@@ -20,6 +19,7 @@
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderStatus } from "#lib/models.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import type { UnitComponent } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";
@@ -133,13 +133,13 @@
 		<Card.Description class="flex flex-wrap items-center gap-x-2 gap-y-1">
 			<span>{checklist.name}{checklist.norm ? ` · ${checklist.norm}` : ""}</span>
 			<span aria-hidden="true">·</span>
-			<a
+			<OrderLink
+				number={checklist.order.number}
 				class="font-medium text-primary underline-offset-4 hover:underline"
-				href={resolve("/(app)/orders/[number]", { number: checklist.order.number })}
 				data-checklist-order
 			>
 				{m.checklists_assets_order({ number: checklist.order.number })}
-			</a>
+			</OrderLink>
 			<Badge variant="outline">{label("orderStatus", checklist.order.status)}</Badge>
 		</Card.Description>
 		<Card.Action>

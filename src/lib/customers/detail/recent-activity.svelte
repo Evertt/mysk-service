@@ -8,6 +8,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import { joinValues } from "#lib/components/data-table/url-state.ts";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitLine } from "#lib/equipment/index.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
@@ -47,10 +48,8 @@
 								<TypeLabel type={order.type} />
 							</div>
 							{#if order.equipment}
-								<a
-									href={resolve("/(app)/equipment/[serial]", {
-										serial: order.equipment.serialNumber,
-									})}
+								<EquipmentLink
+									serialNumber={order.equipment.serialNumber}
 									class="truncate text-sm text-muted-foreground underline-offset-4 hover:underline"
 								>
 									{unitLine(order.equipment)}
@@ -59,7 +58,7 @@
 											+{formatNumber(order.unitCount - 1)}
 										</span>
 									{/if}
-								</a>
+								</EquipmentLink>
 							{:else}
 								<span class="text-sm text-muted-foreground">
 									{m.customers_recent_new_installation()}

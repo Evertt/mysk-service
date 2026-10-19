@@ -7,7 +7,7 @@
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import { masonry, masonryGrid } from "#lib/components/masonry.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { SiteCard } from "#lib/customers/components.ts";
+	import { CustomerLink, SiteCard } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
 	import {
 		StatusBadge as EquipmentStatusBadge,
@@ -130,11 +130,13 @@
 		</Card.Header>
 		<Card.Content>
 			<dl class="grid grid-cols-2 gap-4">
-				<DetailItem
-					label={m.equipment_owner_company()}
-					value={owner.name}
-					href={resolve("/(app)/customers/[code]", { code: owner.code })}
-				/>
+				<DetailItem label={m.equipment_owner_company()}>
+					<CustomerLink
+						code={owner.code}
+						name={owner.name}
+						class="underline-offset-4 hover:underline"
+					/>
+				</DetailItem>
 				<DetailItem label={m.equipment_owner_contact()} value={owner.contactName} />
 				<DetailItem
 					label={m.equipment_owner_email()}

@@ -13,7 +13,8 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
 - **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`): in
   `src/lib/<domain>/`, in a folder by feature. Its tests are not in it: see `tests.md`.
   - `ui/`: the small pieces other sections reuse: links, badges, labels, cards, tags
-    (`#lib/orders/ui/order-link.svelte`).
+    (`#lib/orders/ui/order-link.svelte`). A record's link and its hover card (`order-preview.svelte`)
+    are on `RecordLink` (`src/lib/components/record-link/`), which reads the record's batch query.
   - `list/`: the list definition (`orders-list.ts`), columns, table, cells, bulk actions, and the
     list's remote functions (`order-list.remote.ts`, `order-bulk.remote.ts`).
   - `form/`: the new/edit form, its fields and valibot schema.

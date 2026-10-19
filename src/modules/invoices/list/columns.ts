@@ -3,7 +3,7 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
-import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import { CustomerLink } from "#lib/customers/components.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
 import { invoiceStates } from "../invoice.ts";
@@ -27,10 +27,10 @@ export const columns = column.columns([
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
-			renderComponent(TwoLineCell, {
-				primary: row.original.customer.name,
-				secondary: row.original.customer.code,
-				href: resolve("/(app)/customers/[code]", { code: row.original.customer.code }),
+			renderComponent(CustomerLink, {
+				code: row.original.customer.code,
+				name: row.original.customer.name,
+				withCode: true,
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
 		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),

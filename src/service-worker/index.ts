@@ -5,9 +5,11 @@
  * it's installed (`files`), so no page waits for its JavaScript.
  *
  * - **What it caches**: a remote query is a `GET /_app/remote/<file hash>/<name>?payload=…`, whose
- *   JSON answer the worker keeps as it came. It never runs a remote function itself (they run on
- *   the server, against the database): it only replays answers. A page's server data
- *   (`__data.json`, a module page's guard) it keeps the same way (`isPageData`).
+ *   JSON answer the worker keeps as it came. A batch query (`query.batch`, e.g. a record's page and
+ *   hover card, `getOrder`) is a `POST` of its payloads (`{ payloads }`), kept the same way under a
+ *   URL of its own that names them (`?payloads=…`, see `batchUrl`). It never runs a remote function
+ *   itself (they run on the server, against the database): it only replays answers. A page's server
+ *   data (`__data.json`, a module page's guard) it keeps the same way (`isPageData`).
  * - **Stale, then fresh**: a cached answer is served at once, and the worker asks the server again
  *   in the background. If the answer differs, it stores it and tells the tab (`swr:updated`), which
  *   refreshes that query; the refresh finds the new answer in the cache (`freshFor`), without
@@ -129,6 +131,49 @@ function remoteName(url: URL) {
 	return { hash, name };
 }
 
+/**
+ * The URL the worker keeps a batch query's answer under: its own, with the payloads it asks for
+ * (`?payloads=["…"]`), which no request of SvelteKit's has.
+ */
+function batchUrl(url: URL, payloads: string[]) {
+	const keyed = new URL(url);
+	keyed.search = "";
+	keyed.searchParams.set("payloads", JSON.stringify(payloads));
+	return keyed;
+}
+
+/** The payloads of a batch query's URL (`batchUrl`), if it is one. */
+function batchPayloads(url: URL): string[] | undefined {
+	const payloads = url.searchParams.get("payloads");
+	return payloads === null ? undefined : (JSON.parse(payloads) as string[]);
+}
+
+/** The request that asks the server for `url`: a batch query's is a `POST` of its payloads. */
+function requestFor(url: URL) {
+	const payloads = batchPayloads(url);
+	if (!payloads) return new Request(url, { credentials: "same-origin" });
+	return new Request(new URL(url.pathname, url), {
+		method: "POST",
+		body: JSON.stringify({ payloads }),
+		headers: { "Content-Type": "application/json" },
+		credentials: "same-origin",
+	});
+}
+
+/**
+ * Whether a request may be a batch query's (`query.batch`): a `POST` of JSON to a remote function
+ * without the page's path, which a command's request has (`x-sveltekit-pathname`). Its body says
+ * for sure (`answerBatch`).
+ */
+function mayBeBatch(request: Request, url: URL) {
+	return (
+		request.method === "POST" &&
+		url.pathname.startsWith(remotePath) &&
+		request.headers.get("content-type") === "application/json" &&
+		!request.headers.has("x-sveltekit-pathname")
+	);
+}
+
 /** Whether an answer asked for at `askedAt` may predate a change to what `url` answers. */
 function outdated(url: URL, askedAt: number) {
 	return askedAt < Math.max(meta.changedAt, meta.fileChangedAt[remoteName(url).hash] ?? 0);
@@ -185,7 +230,7 @@ function differs(fresh: Answer, shown: Answer) {
  */
 async function fetchAndStore(url: URL, scope: string) {
 	const askedAt = Date.now();
-	const response = await fetch(url, { credentials: "same-origin" });
+	const response = await fetch(requestFor(url));
 	if (!response.ok) return { response };
 
 	const answer = await answerOf(response);
@@ -221,7 +266,9 @@ function storable(url: URL, body: string) {
 			return data.type === "data" && !data.nodes?.some((node) => node?.type === "error");
 		}
 		const answer = JSON.parse(body) as { type?: string; data?: string };
-		return answer.type === "result" && !answer.data?.startsWith('[{"redirect":');
+		if (answer.type !== "result" || answer.data?.startsWith('[{"redirect":')) return false;
+		// A batch query answers each payload, some maybe with an error (e.g. a 404): not kept.
+		return !batchPayloads(url) || !answer.data?.includes('"error":');
 	} catch {
 		return false;
 	}
@@ -358,6 +405,23 @@ async function answerQuery(event: FetchEvent, url: URL): Promise<Response> {
 	return cached;
 }
 
+/**
+ * Answers a batch query's request like a query's, under its own URL (`batchUrl`); a request that
+ * turns out to be something else is passed on, as a change.
+ */
+async function answerBatch(event: FetchEvent, url: URL): Promise<Response> {
+	const body = (await event.request
+		.clone()
+		.json()
+		.catch(() => undefined)) as { payloads?: unknown } | undefined;
+	const { payloads } = body ?? {};
+	if (!Array.isArray(payloads) || !payloads.every((payload) => typeof payload === "string")) {
+		noteChange(url);
+		return fetch(event.request);
+	}
+	return answerQuery(event, batchUrl(url, payloads));
+}
+
 /** Notes a request that may change what the queries answer (see the module's comment). */
 function noteChange(url: URL) {
 	const { hash, name } = remoteName(url);
@@ -464,6 +528,10 @@ async function answerFile(request: Request) {
 self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 	if (url.origin !== self.location.origin) return;
+	if (mayBeBatch(event.request, url)) {
+		event.respondWith(answerBatch(event, url));
+		return;
+	}
 	if (event.request.method !== "GET") {
 		noteChange(url);
 		return;

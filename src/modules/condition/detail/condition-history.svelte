@@ -5,9 +5,8 @@
 	whom.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { bandText } from "../display.ts";
 	import { conditionLabels } from "../labels.ts";
@@ -85,12 +84,7 @@
 						m.condition_someone()}
 					{#if condition.order}
 						·
-						<a
-							href={resolve("/(app)/orders/[number]", { number: condition.order })}
-							class="underline-offset-4 hover:underline"
-						>
-							{condition.order}
-						</a>
+						<OrderLink number={condition.order} class="underline-offset-4 hover:underline" />
 					{/if}
 				</p>
 			</li>

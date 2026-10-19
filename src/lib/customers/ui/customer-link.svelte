@@ -1,24 +1,57 @@
 <!--
 	@component
-	A customer's name linking to their page; with `withCode`, their code is shown below it (e.g. in
-	table cells).
+	A customer's name linking to their page, unless `children` say otherwise; with `withCode`, their
+	code is shown below it (e.g. in table cells), or `secondary` (see `RecordLink`). `class` replaces
+	the link's own look. Other attributes go to the anchor. Resting the pointer on it shows the
+	customer's hover card (`CustomerPreview`), unless `preview={false}`.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import type { Snippet } from "svelte";
+	import type { HTMLAnchorAttributes } from "svelte/elements";
 
-	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+	import RecordLink from "#lib/components/record-link/record-link.svelte";
+
+	import { getCustomer } from "../customers.remote.ts";
+	import CustomerPreview from "./customer-preview.svelte";
 
 	let {
 		code,
 		name,
 		withCode = false,
-	}: { code: string; name: string; withCode?: boolean } = $props();
-
-	const href = $derived(resolve("/(app)/customers/[code]", { code }));
+		secondary,
+		preview = true,
+		class: className = "font-medium underline-offset-4 hover:underline",
+		children,
+		...rest
+	}: Omit<HTMLAnchorAttributes, "href" | "children" | "class"> & {
+		/** The link's classes, instead of its own look. */
+		class?: string;
+		code: string;
+		name: string;
+		withCode?: boolean;
+		secondary?: string | null;
+		/** Whether resting the pointer on it shows the customer's hover card. */
+		preview?: boolean;
+		children?: Snippet;
+	} = $props();
 </script>
 
-{#if withCode}
-	<TwoLineCell primary={name} secondary={code} {href} />
-{:else}
-	<a {href} class="font-medium underline-offset-4 hover:underline">{name}</a>
-{/if}
+{#snippet card(record: Awaited<ReturnType<typeof getCustomer>>)}
+	<CustomerPreview {...record} />
+{/snippet}
+
+<RecordLink
+	{...rest}
+	href={resolve("/(app)/customers/[code]", { code })}
+	class={className}
+	secondary={withCode ? code : secondary}
+	load={() => getCustomer(code)}
+	preview={preview ? card : undefined}
+>
+	{#if children}
+		{@render children()}
+	{:else}
+		{name}
+	{/if}
+</RecordLink>

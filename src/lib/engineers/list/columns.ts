@@ -3,12 +3,12 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
-import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { engineerSpecialties } from "#lib/models.ts";
 
 import { regionLabel } from "../display.ts";
 import type { getEngineers } from "../engineers.remote.ts";
+import EngineerLink from "../ui/engineer-link.svelte";
 import SpecialtyBadge from "../ui/specialty-badge.svelte";
 import StatusCell from "./status-cell.svelte";
 
@@ -20,10 +20,10 @@ export const columns = column.columns([
 	column.select(),
 	column.accessor("name", {
 		cell: ({ row }) =>
-			renderComponent(TwoLineCell, {
-				primary: row.original.name,
+			renderComponent(EngineerLink, {
+				id: row.original.id,
+				name: row.original.name,
 				secondary: row.original.email,
-				href: resolve("/(app)/engineers/[id]", { id: String(row.original.id) }),
 			}),
 		enableHiding: false,
 		meta: { label: m.engineers_column_engineer },

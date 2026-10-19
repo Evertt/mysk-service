@@ -114,6 +114,7 @@ export default defineTheme({
 		"dropdown-menu-separator": { base: "h-0.5 bg-foreground" },
 		input: { base: `border-2 border-foreground bg-card ${hardShadow.sm} dark:bg-card` },
 		"input-group": { base: `border-2 border-foreground bg-card ${hardShadow.sm} dark:bg-card` },
+		"hover-card-content": { base: floating },
 		"popover-content": { base: floating },
 		"select-content": { base: floating },
 		"select-item": { base: highlightOnFocus },

@@ -5,10 +5,9 @@
 	and (for the door) the open breakdown orders the door rules made on it. Nothing for other units.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getDockUsage } from "../../docks.remote.ts";
 	import { formatDuration } from "../../model.ts";
@@ -47,10 +46,7 @@
 				<div class="flex flex-col gap-1 text-sm">
 					<span class="text-muted-foreground">{m.docks_usage_open_orders()}</span>
 					{#each usage.openOrders as number (number)}
-						<a
-							class="font-medium underline-offset-4 hover:underline"
-							href={resolve("/(app)/orders/[number]", { number })}>{number}</a
-						>
+						<OrderLink {number} class="font-medium underline-offset-4 hover:underline" />
 					{/each}
 				</div>
 			{/if}

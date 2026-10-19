@@ -72,6 +72,7 @@
 	"engineers_delete_title": "{name} verwijderen?",
 	"engineers_delete_description": "De monteur wordt definitief verwijderd.",
 	"engineers_stats_open_orders": "Open opdrachten",
+	"engineers_preview_today": "Opdrachten vandaag",
 	"engineers_stats_hours": "Geboekte uren, laatste 30 dagen",
 	"engineers_stats_revenue": "Omzet arbeid, laatste 30 dagen",
 	"engineers_open_title": "Open opdrachten",

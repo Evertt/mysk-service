@@ -1,19 +1,22 @@
 import { error, redirect } from "@sveltejs/kit";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
+import { doneOrderStatuses } from "#lib/models.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import {
 	customer,
 	customerSite,
 	equipment,
 	equipmentCategory,
 	equipmentLocation,
+	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
 import { type Problem, refuse } from "#lib/server/forms.ts";
@@ -25,12 +28,16 @@ import { locationAt } from "./server/locations.ts";
 import { newQrToken } from "./server/qr.ts";
 
 /**
- * One of the tenant's units with its owner, and how many orders it has (which keep it from being
- * moved). Its service history is `getServiceHistory` (`detail/service-history.remote.ts`).
+ * Units by serial number, each with its owner, site, category and location, how many orders it has
+ * (which keep it from being moved) and when it was last serviced: what its page shows, and its
+ * hover card (`EquipmentLink`). A batch query, so the cards of a page's links come in one request,
+ * and a hover card and the page share their answer. An unknown serial number (or another tenant's)
+ * is a 404 for that one. Its service history is `getServiceHistory`
+ * (`detail/service-history.remote.ts`).
  */
-export const getEquipment = forMembers.query(v.string(), async (serialNumber) => {
-	const unit = await db.query.equipment.findFirst({
-		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
+export const getEquipment = forMembers.query.batch(v.string(), async (serialNumbers) => {
+	const units = await db.query.equipment.findMany({
+		where: and(inList(equipment.serialNumber, serialNumbers), inTenant(equipment)),
 		with: {
 			customer: true,
 			site: true,
@@ -38,13 +45,43 @@ export const getEquipment = forMembers.query(v.string(), async (serialNumber) =>
 			location: { columns: { id: true, name: true, description: true } },
 		},
 	});
-	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
+	const counts = units.length
+		? await db
+				.select({
+					equipmentId: orderUnit.equipmentId,
+					orderCount: count(),
+					// When its latest completed or invoiced order was completed.
+					lastService: sql<Temporal.Instant | null>`max(case when ${inList(
+						order.status,
+						doneOrderStatuses,
+					)} then ${order.completedAt} end)`.mapWith(order.completedAt),
+				})
+				.from(orderUnit)
+				.innerJoin(...tenantJoin(order, orderUnit.orderId))
+				.where(
+					and(
+						inList(
+							orderUnit.equipmentId,
+							units.map((unit) => unit.id),
+						),
+						inTenant(orderUnit),
+					),
+				)
+				.groupBy(orderUnit.equipmentId)
+		: [];
+	const bySerial = new Map(units.map((unit) => [unit.serialNumber, unit]));
+	const countsOf = new Map(counts.map((row) => [row.equipmentId, row]));
 
-	const [{ orderCount }] = await db
-		.select({ orderCount: count() })
-		.from(orderUnit)
-		.where(and(eq(orderUnit.equipmentId, unit.id), inTenant(orderUnit)));
-	return { unit, orderCount };
+	return (serialNumber: string) => {
+		const unit = bySerial.get(serialNumber);
+		if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
+		const counted = countsOf.get(unit.id);
+		return {
+			unit,
+			orderCount: counted?.orderCount ?? 0,
+			lastService: counted?.lastService ?? null,
+		};
+	};
 });
 
 /**

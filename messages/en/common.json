@@ -31,6 +31,7 @@
 	"common_notifications": "Notifications",
 	"common_close_notification": "Close notification",
 	"common_error_not_found": "Not found",
+	"common_preview_failed": "Couldn't load this preview",
 	"common_error_generic": "Something went wrong",
 	"common_error_unexpected": "An unexpected error occurred.",
 	"common_error_back_to_dashboard": "Back to the dashboard",

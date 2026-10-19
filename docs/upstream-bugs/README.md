@@ -283,3 +283,29 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   `$derived(await getThing(params.id))` and a button that toggles some state, a link to another
   route preloaded in a `fork()` (kept, not committed), then a refresh of `getThing`: the button
   stops working.
+
+## 13. SvelteKit/Svelte: a query first asked for in a preload fork can't be read outside it
+
+- **Versions:** svelte 5.57.1, @sveltejs/kit 3.0.0 with `experimental.forkPreloads`, Svelte's
+  `experimental.async`.
+- **What happens:** the record links' hover cards (`src/lib/components/record-link/`) read the
+  record's batch query (`getCustomer(code)`), which the record's page reads too. Hovering a link,
+  SvelteKit preloads its page in a `fork()` 20 ms after the pointer rests, which asks for the query;
+  the card opens later (half a second) and asks for the same key: SvelteKit's cache gives it the
+  same `Query`, and awaiting it outside the fork failed (the card's catch got a non-HTTP error and
+  showed "Couldn't load this preview"; probably `Query`'s "Query resolved without a value", its
+  `#ready` set in the fork only), while the fork's page had the answer. Reading it in the card's
+  markup instead (`await`, or a `<svelte:boundary>` waiting on it) held the card up with the fork:
+  bits-ui's floating layer never positioned it (it stayed at `translate(0, -200%)`), and with
+  the link's preload off (`data-sveltekit-preload-data="off"`) it did.
+- **Also seen:** every query a preload fork asks for first is requested twice, within a few
+  milliseconds (the session in `docs/plans/hover-cards.md`, "As built": 18 `getOrder` requests
+  without the cards, 7 with them); a query that existed before the fork is asked once.
+- **Workaround:** the link asks for the record itself on the same 20 ms rest, from its pointer
+  events, which come before the mouse events SvelteKit starts its timer on, so the query is the
+  page's before the fork reads it (`RecordLink`). A card that still meets the error asks again
+  (`refresh()`, `preview-content.svelte`). And as a card opened while a fork was pending sometimes
+  didn't run its effects (#8: it never closed), the link closes it itself.
+- **Reproduction:** not cut down yet. Likely: a page `[id]` with `$derived(await getThing(id))`, a
+  link to it preloaded on hover, and a component outside the page that awaits `getThing(id)` after
+  the preload started: its `then` rejects, or it never commits.

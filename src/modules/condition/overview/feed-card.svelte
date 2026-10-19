@@ -5,9 +5,8 @@
 	who did it, and the remark or advice that came with it.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import { getTimeZone } from "#lib/dates.ts";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { getServiceHistory } from "../feed.remote.ts";
@@ -57,9 +56,9 @@
 						<p class="flex flex-wrap gap-x-1 text-sm text-muted-foreground">
 							{#each line.units as unit, i (unit.serialNumber)}
 								<span>
-									<a
-										href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
-										class="underline-offset-4 hover:underline">{unit.title}</a
+									<EquipmentLink
+										serialNumber={unit.serialNumber}
+										class="underline-offset-4 hover:underline">{unit.title}</EquipmentLink
 									>{i < line.units.length - 1 ? "," : ""}
 								</span>
 							{/each}

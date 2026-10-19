@@ -5,9 +5,8 @@
 	shown by initials (`compact`, where the calendar's cells are narrow) or by name.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import { formatTime } from "#lib/i18n/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
 	import { types, unitsSummary } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -36,8 +35,8 @@
 	);
 </script>
 
-<a
-	href={resolve("/(app)/orders/[number]", { number: order.number })}
+<OrderLink
+	number={order.number}
 	class={cn(
 		"flex min-w-0 items-center rounded-sm border transition-colors",
 		// Compact in a calendar cell; roomier, for a finger, in the list.
@@ -74,4 +73,4 @@
 			<span class="ms-auto max-w-[40%] shrink-0 truncate opacity-70">{engineer}</span>
 		{/if}
 	{/if}
-</a>
+</OrderLink>

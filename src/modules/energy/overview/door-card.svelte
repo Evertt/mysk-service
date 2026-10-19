@@ -10,11 +10,11 @@
 	door's real state, and not at all with reduced motion.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import SnowflakeIcon from "@lucide/svelte/icons/snowflake";
 	import ThermometerIcon from "@lucide/svelte/icons/thermometer";
 	import TruckIcon from "@lucide/svelte/icons/truck";
 
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 
@@ -175,10 +175,10 @@
 			})}
 		</p>
 		{#if door.unit}
-			<a
+			<EquipmentLink
+				serialNumber={door.unit.serialNumber}
 				class="text-xs underline-offset-4 hover:underline"
-				href={resolve("/(app)/equipment/[serial]", { serial: door.unit.serialNumber })}
-				>{door.unit.name ?? door.unit.serialNumber}</a
+				>{door.unit.name ?? door.unit.serialNumber}</EquipmentLink
 			>
 		{/if}
 		<ExtensionSlot

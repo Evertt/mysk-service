@@ -12,12 +12,14 @@ import {
 	createCustomer,
 	deleteCustomer,
 	getCustomer,
+	getCustomerRevenue,
 	getCustomers,
 	updateCustomer,
 } from "#lib/customers/customers.remote.ts";
 import { getCustomerActivity } from "#lib/customers/detail/activity.remote.ts";
 import { isDoneOrder } from "#lib/models.ts";
 import { getOrder, updateOrder } from "#lib/orders/order.remote.ts";
+import { batchQueryTests } from "#unit/lib/server/batch-query.test-support.ts";
 import {
 	as,
 	call,
@@ -129,7 +131,7 @@ describe("North's customers", () => {
 				totals.set(number, { total: priced.total, status: order.status });
 			}
 			const done = [...totals.values()].filter((order) => isDoneOrder(order.status as never));
-			const { stats } = await data(getCustomer, covered.code);
+			const stats = await data(getCustomerRevenue, covered.code);
 			expect(stats.revenue).toBe(done.reduce((sum, order) => sum + order.total, 0));
 			expect(stats.revenueOrders).toBe(done.length);
 
@@ -249,5 +251,27 @@ describe("South's customers", () => {
 		});
 		expect(await customer(target)).toEqual(targetBefore);
 		expect(await customer(own)).toEqual(ownBefore);
+	});
+});
+
+describe("getCustomer, the customer's page's and hover card's batch query", () => {
+	batchQueryTests({
+		query: getCustomer,
+		table: "customer",
+		column: "code",
+		keyOf: (answer) => answer.customer.code,
+	});
+
+	test("it counts the customer's orders, open ones and when the last was made", async () => {
+		const [busiest] = await rows<{ code: string; orders: number; open: number; last: number }>(
+			`select c.code, count(*) as orders,
+			 sum(o.status in ('quote', 'scheduled', 'in_progress')) as open, max(o.created_at) as last
+			 from customer c join "order" o on o.customer_id = c.id
+			 where c.organization_id = ? group by c.id order by orders desc limit 1`,
+			[organizationId("north")],
+		);
+		const { stats } = await as(north.member, () => data(getCustomer, busiest.code));
+		expect(stats).toMatchObject({ orders: busiest.orders, openOrders: busiest.open });
+		expect(stats.lastOrderAt?.epochMilliseconds).toBe(busiest.last * 1000);
 	});
 });

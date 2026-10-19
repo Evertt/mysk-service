@@ -8,6 +8,7 @@ import { getTimeZone } from "#lib/dates.ts";
 import { id } from "#lib/schema.ts";
 import { idInTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import {
 	customer,
 	customerSite,
@@ -34,13 +35,16 @@ import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
 import { offeredOrderTypes } from "./types.ts";
 
 /**
- * One order with everything on it: its units in their order, other orders for the same units, and
- * the sites the work is at: its units' (one, usually), or the customer's only one for an order
- * without units.
+ * Orders by number, each with everything on it: its units in their order, the sites the work is at
+ * (its units', one usually, or the customer's only one for an order without units), its price, its
+ * modules' tags and whether a customer reported it. What its page shows, and its hover card
+ * (`OrderLink`): a batch query, so the cards of a page's links come in one request (priced and
+ * tagged together), and a hover card and the page share their answer. An unknown number (or another
+ * tenant's) is a 404 for that number. Other orders for the same units are `getOrderHistory`.
  */
-export const getOrder = forMembers.query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		where: and(eq(order.number, number), inTenant(order)),
+export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
+	const found = await db.query.order.findMany({
+		where: and(inList(order.number, numbers), inTenant(order)),
 		with: {
 			customer: { with: { sites: true } },
 			units: {
@@ -58,64 +62,90 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 			engineer: true,
 		},
 	});
-	if (!found) error(404, m.orders_not_found({ number }));
-	const { sites: customerSites, ...owner } = found.customer;
-	// Each unit with the name of its location at the site, if it has one.
-	const units = found.units.map(({ equipment: unit }) => ({
-		...unit,
-		location: unit.location?.name ?? null,
+	const facts = found.map((one) => ({
+		...one,
+		equipmentIds: one.units.map((unit) => unit.equipment.id),
+		hourlyRate: one.engineer?.hourlyRate,
 	}));
-	const sites = units.length
-		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
-		: customerSites.length === 1
-			? customerSites
-			: [];
-	const equipmentIds = units.map((unit) => unit.id);
-
-	// Earlier and later work on the same units, for context.
-	const history = equipmentIds.length
-		? await db
-				.select({
-					id: order.id,
-					number: order.number,
-					type: order.type,
-					status: order.status,
-					createdAt: order.createdAt,
-				})
-				.from(order)
-				.where(and(onAnyUnit(equipmentIds), ne(order.id, found.id), inTenant(order)))
-				.orderBy(desc(order.createdAt))
-				.limit(8)
-		: [];
-
-	const facts = { ...found, equipmentIds, hourlyRate: found.engineer?.hourlyRate };
 	const decider = alias(user, "decider");
-	const [[price], [tags], [request]] = await Promise.all([
-		priceOrders([facts], { items: true }),
-		tagOrders([facts]),
+	const [prices, tags, requests] = await Promise.all([
+		priceOrders(facts, { items: true }),
+		tagOrders(facts),
 		// Reported in the customer portal: by whom, and what a planner decided.
-		db
-			.select({
-				reporterName: orderRequest.reporterName,
-				decidedAt: orderRequest.decidedAt,
-				decidedBy: decider.name,
-				rejectionReason: orderRequest.rejectionReason,
-			})
-			.from(orderRequest)
-			.leftJoin(decider, eq(orderRequest.decidedBy, decider.id))
-			.where(and(eq(orderRequest.orderId, found.id), inTenant(orderRequest))),
+		found.length
+			? db
+					.select({
+						orderId: orderRequest.orderId,
+						reporterName: orderRequest.reporterName,
+						decidedAt: orderRequest.decidedAt,
+						decidedBy: decider.name,
+						rejectionReason: orderRequest.rejectionReason,
+					})
+					.from(orderRequest)
+					.leftJoin(decider, eq(orderRequest.decidedBy, decider.id))
+					.where(
+						and(
+							inList(
+								orderRequest.orderId,
+								found.map((one) => one.id),
+							),
+							inTenant(orderRequest),
+						),
+					)
+			: [],
 	]);
+	const at = new Map(found.map((one, i) => [one.number, i]));
+	const requestOf = new Map(requests.map(({ orderId, ...request }) => [orderId, request]));
 
-	return {
-		order: { ...found, customer: owner, units },
-		sites,
-		totals: { ...price, laborRate: found.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
-		/** From the tenant's modules, e.g. a response time about to be missed. */
-		tags,
-		history,
-		/** If a customer reported it in the portal: who, and the planner's decision. */
-		request: request ?? null,
+	return (number: string) => {
+		const i = at.get(number);
+		if (i === undefined) error(404, m.orders_not_found({ number }));
+		const one = found[i];
+		const { sites: customerSites, ...owner } = one.customer;
+		// Each unit with the name of its location at the site, if it has one.
+		const units = one.units.map(({ equipment: unit }) => ({
+			...unit,
+			location: unit.location?.name ?? null,
+		}));
+		const sites = units.length
+			? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
+			: customerSites.length === 1
+				? customerSites
+				: [];
+		return {
+			order: { ...one, customer: owner, units },
+			sites,
+			totals: { ...prices[i], laborRate: one.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
+			/** From the tenant's modules, e.g. a response time about to be missed. */
+			tags: tags[i],
+			/** If a customer reported it in the portal: who, and the planner's decision. */
+			request: requestOf.get(one.id) ?? null,
+		};
 	};
+});
+
+/** Earlier and later work on an order's units, for context on its page: the latest eight. */
+export const getOrderHistory = forMembers.query(v.string(), async (number) => {
+	const found = await db.query.order.findFirst({
+		where: and(eq(order.number, number), inTenant(order)),
+		columns: { id: true },
+		with: { units: { columns: { equipmentId: true } } },
+	});
+	if (!found) error(404, m.orders_not_found({ number }));
+	const equipmentIds = found.units.map((unit) => unit.equipmentId);
+	if (!equipmentIds.length) return [];
+	return db
+		.select({
+			id: order.id,
+			number: order.number,
+			type: order.type,
+			status: order.status,
+			createdAt: order.createdAt,
+		})
+		.from(order)
+		.where(and(onAnyUnit(equipmentIds), ne(order.id, found.id), inTenant(order)))
+		.orderBy(desc(order.createdAt))
+		.limit(8);
 });
 
 /** Everything the order form needs to choose from. */
@@ -295,6 +325,8 @@ export const updateOrder = forMembers.form(
 		await refuseProblems(issue, input);
 		const number = await saveOrder(id, input, issue).catch(refuseParts);
 		void getOrder(number).refresh();
+		// Its units may have changed.
+		void getOrderHistory(number).refresh();
 		orderCommitted({ number });
 		redirect(303, `/orders/${number}`);
 	},

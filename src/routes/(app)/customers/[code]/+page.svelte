@@ -16,9 +16,18 @@
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import { deleteCustomer, getCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
+	import {
+		deleteCustomer,
+		getCustomer,
+		getCustomerFormOptions,
+		getCustomerRevenue,
+	} from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { StatusBadge as EquipmentStatusBadge, SiteLocations } from "#lib/equipment/components.ts";
+	import {
+		StatusBadge as EquipmentStatusBadge,
+		EquipmentLink,
+		SiteLocations,
+	} from "#lib/equipment/components.ts";
 	import { unitModel } from "#lib/equipment/index.ts";
 	import { getCustomerLocations } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
@@ -96,8 +105,10 @@
 		tone="brand"
 		icon={BanknoteIcon}
 		label={m.customers_stats_revenue()}
-		value={formatCents(stats.revenue)}
-		detail={m.customers_stats_revenue_orders({ count: stats.revenueOrders })}
+		value={formatCents((await getCustomerRevenue(customer.code)).revenue)}
+		detail={m.customers_stats_revenue_orders({
+			count: (await getCustomerRevenue(customer.code)).revenueOrders,
+		})}
 	/>
 	<StatTile
 		layout="row"
@@ -153,12 +164,12 @@
 								<Table.Row>
 									<Table.Cell>
 										<div class="flex flex-col">
-											<a
-												href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
+											<EquipmentLink
+												serialNumber={unit.serialNumber}
 												class="font-medium underline-offset-4 hover:underline"
 											>
 												{unit.name ?? unitModel(unit)}
-											</a>
+											</EquipmentLink>
 											<span class="text-xs text-muted-foreground">
 												{unit.name
 													? `${unitModel(unit)} · ${unit.serialNumber}`

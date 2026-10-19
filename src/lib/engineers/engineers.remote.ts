@@ -1,12 +1,19 @@
 import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNotNull, lt, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { openOrderStatuses } from "#lib/models.ts";
+import { getTimeZone } from "#lib/dates.ts";
+import { doneOrderStatuses, openOrderStatuses } from "#lib/models.ts";
 import { laborCost } from "#lib/orders/server/index.ts";
 import { id, recordId } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	idsInTenant,
+	inTenant,
+	tenantJoin,
+} from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
@@ -53,10 +60,73 @@ function parseId(value: string) {
 	return parsed;
 }
 
-/** One of the tenant's engineers with their open and recent orders and last month's numbers. */
-export const getEngineer = forMembers.query(v.string(), async (param) => {
+/** Orders an engineer has on their plate: accepted, and not cancelled. */
+const workStatuses = [...openOrderStatuses, ...doneOrderStatuses];
+
+/**
+ * Engineers by id (as the URL has it), each with how many open orders they have and how many are
+ * planned for today (in the user's time zone): what their page shows of them, and their hover card
+ * (`EngineerLink`). A batch query, so the cards of a page's links come in one request, and a hover
+ * card and the page share their answer. An unknown id (or another tenant's) is a 404 for that one.
+ * Their orders and last month's numbers are `getEngineerWork`.
+ */
+export const getEngineer = forMembers.query.batch(v.string(), async (params) => {
+	const ids = params.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0);
+	const found = ids.length
+		? await db.query.engineer.findMany({ where: idsInTenant(engineer, ids) })
+		: [];
+	const zone = getTimeZone();
+	const today = Temporal.Now.plainDateISO(zone);
+	const [start, end] = [today, today.add({ days: 1 })].map((day) =>
+		day.toZonedDateTime(zone).toInstant(),
+	);
+	const counts = found.length
+		? await db
+				.select({
+					engineerId: order.engineerId,
+					openOrders: sql<number>`coalesce(sum(${inList(order.status, openOrderStatuses)}), 0)`,
+					today: sql<number>`coalesce(sum(${and(
+						gte(order.scheduledFor, start),
+						lt(order.scheduledFor, end),
+					)}), 0)`,
+				})
+				.from(order)
+				.where(
+					and(
+						inList(
+							order.engineerId,
+							found.map((one) => one.id),
+						),
+						inList(order.status, workStatuses),
+						inTenant(order),
+					),
+				)
+				.groupBy(order.engineerId)
+		: [];
+	const byId = new Map(found.map((one) => [one.id, one]));
+	const countsOf = new Map(counts.map((row) => [row.engineerId, row]));
+
+	return (param: string) => {
+		const one = byId.get(Number(param));
+		if (!one) error(404, m.engineers_id_not_found({ id: param }));
+		const counted = countsOf.get(one.id);
+		return {
+			engineer: one,
+			counts: {
+				openOrders: Number(counted?.openOrders ?? 0),
+				today: Number(counted?.today ?? 0),
+			},
+		};
+	};
+});
+
+/** One of the tenant's engineers' open and recent orders and last month's numbers, for their page. */
+export const getEngineerWork = forMembers.query(v.string(), async (param) => {
 	const engineerId = parseId(param);
-	const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, engineerId) });
+	const found = await db.query.engineer.findFirst({
+		where: idInTenant(engineer, engineerId),
+		columns: { hourlyRate: true },
+	});
 	if (!found) error(404, m.engineers_id_not_found({ id: param }));
 
 	const columns = {
@@ -101,7 +171,6 @@ export const getEngineer = forMembers.query(v.string(), async (param) => {
 
 	const hours = lastMonth.reduce((sum, row) => sum + row.laborHours, 0);
 	return {
-		engineer: found,
 		openOrders,
 		completedOrders,
 		stats: {
@@ -161,6 +230,8 @@ export const updateEngineer = forMembers.form(
 		});
 		void getEngineers().refresh();
 		void getEngineer(String(id)).refresh();
+		// Their revenue is priced at their rate.
+		void getEngineerWork(String(id)).refresh();
 		redirect(303, `/engineers/${id}`);
 	},
 );

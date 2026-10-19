@@ -5,8 +5,7 @@
 	Cards are dragged between cells (`drag`), or planned with `onschedule`.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
+	import { EngineerLink } from "#lib/engineers/components.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import type { createBoardDrag } from "./board-drag.svelte.ts";
@@ -98,12 +97,11 @@
 				{#if row.id === "unassigned"}
 					<span class="font-medium">{row.name}</span>
 				{:else}
-					<a
-						href={resolve("/(app)/engineers/[id]", { id: String(row.id) })}
+					<EngineerLink
+						id={row.id}
+						name={row.name}
 						class="truncate font-medium underline-offset-4 hover:underline"
-					>
-						{row.name}
-					</a>
+					/>
 				{/if}
 				<span class="truncate text-xs text-muted-foreground">
 					{row.droppable ? row.detail : m.schedule_inactive()}

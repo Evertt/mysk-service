@@ -6,8 +6,13 @@
 	In a table, either value can filter the table by it when clicked (`primaryFilter`,
 	`secondaryFilter`; see `filter-value.svelte`), e.g. a customer's city (into the search box) and
 	country (into its filter); a linked primary value keeps its link.
+
+	A record's link component renders its own link (`link`, given the class to style it with), e.g.
+	`OrderLink` with `secondary`.
 -->
 <script lang="ts">
+	import type { Snippet } from "svelte";
+
 	import type { ValueFilter } from "./cell-filter.svelte.ts";
 	import FilterValue from "./filter-value.svelte";
 
@@ -15,6 +20,7 @@
 		primary,
 		secondary,
 		href,
+		link,
 		fallback = "—",
 		primaryFilter,
 		secondaryFilter,
@@ -22,6 +28,8 @@
 		primary?: string | null;
 		secondary?: string | null;
 		href?: string;
+		/** The primary value as a link of its own, rendered with the class it's given. */
+		link?: Snippet<[className: string]>;
 		fallback?: string;
 		/** Clicking the primary value filters by this (not with `href`). */
 		primaryFilter?: ValueFilter;
@@ -30,9 +38,11 @@
 	} = $props();
 </script>
 
-{#if primary}
+{#if primary || link}
 	<div class="flex max-w-64 flex-col items-start">
-		{#if href}
+		{#if link}
+			{@render link("max-w-full truncate font-medium underline-offset-4 hover:underline")}
+		{:else if href}
 			<a {href} class="max-w-full truncate font-medium underline-offset-4 hover:underline">
 				{primary}
 			</a>

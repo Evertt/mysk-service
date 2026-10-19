@@ -4,12 +4,11 @@
 	contract, a piece of equipment). `title` names the role, e.g. "Customer" or "Owner".
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
-
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import type { CustomerSegment } from "#lib/models.ts";
 
 	import { countryName } from "../countries.ts";
+	import CustomerLink from "./customer-link.svelte";
 	import SegmentBadge from "./segment-badge.svelte";
 
 	let {
@@ -40,11 +39,13 @@
 	</Card.Header>
 	<Card.Content>
 		<dl class="grid grid-cols-2 gap-4">
-			<DetailItem
-				label={m.customers_card_company()}
-				value={customer.name}
-				href={resolve("/(app)/customers/[code]", { code: customer.code })}
-			/>
+			<DetailItem label={m.customers_card_company()}>
+				<CustomerLink
+					code={customer.code}
+					name={customer.name}
+					class="underline-offset-4 hover:underline"
+				/>
+			</DetailItem>
 			<DetailItem label={m.customers_card_contact()} value={customer.contactName} />
 			<DetailItem
 				label={m.customers_card_email()}

@@ -6,5 +6,5 @@
  */
 export { demoAccount, north, shltr, south } from "./actors.ts";
 export { organizationId, rows, value, withoutModule } from "./database.ts";
-export { call, data, submit } from "./calls.ts";
+export { call, callBatch, data, submit } from "./calls.ts";
 export { as, asSystem, signedOut } from "./request.ts";

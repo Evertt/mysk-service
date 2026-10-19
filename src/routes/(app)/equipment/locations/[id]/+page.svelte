@@ -10,8 +10,10 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
 	import {
 		StatusBadge as EquipmentStatusBadge,
+		EquipmentLink,
 		LocationDialog,
 		LocationHistory,
 		QrCard,
@@ -88,12 +90,12 @@
 								<Table.Row>
 									<Table.Cell>
 										<div class="flex flex-col">
-											<a
-												href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
+											<EquipmentLink
+												serialNumber={unit.serialNumber}
 												class="font-medium underline-offset-4 hover:underline"
 											>
 												{unitTitle(unit)}
-											</a>
+											</EquipmentLink>
 											<span class="text-xs text-muted-foreground">
 												{unit.name
 													? `${unitModel(unit)} · ${unit.serialNumber}`
@@ -127,7 +129,13 @@
 			</Card.Header>
 			<Card.Content>
 				<dl class="grid gap-4">
-					<DetailItem label={m.equipment_owner_company()} value={owner.name} href={customerHref} />
+					<DetailItem label={m.equipment_owner_company()}>
+						<CustomerLink
+							code={owner.code}
+							name={owner.name}
+							class="underline-offset-4 hover:underline"
+						/>
+					</DetailItem>
 					<DetailItem
 						label={m.equipment_detail_site()}
 						value={site.name.includes(site.city) ? site.name : `${site.name}, ${site.city}`}

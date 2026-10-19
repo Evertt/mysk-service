@@ -6,8 +6,9 @@
 	from contracts' tables; nothing shows for a contract that covers none.
 -->
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import PlusIcon from "@lucide/svelte/icons/plus";
+
+	import { EquipmentLink } from "#lib/equipment/components.ts";
 
 	import CoveredPlansDialog from "../../form/covered-plans-dialog.svelte";
 	import { getCoveredPlans } from "../../plans.remote.ts";
@@ -34,10 +35,10 @@
 						{#each unit.plans as plan (plan.id)}
 							<li class="flex items-start justify-between gap-4 py-2 first:pt-0 last:pb-0">
 								<div class="flex min-w-0 flex-col">
-									<a
-										href={resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber })}
-										class="font-medium underline-offset-4 hover:underline">{unit.serialNumber}</a
-									>
+									<EquipmentLink
+										serialNumber={unit.serialNumber}
+										class="font-medium underline-offset-4 hover:underline"
+									/>
 									<span class="truncate text-sm text-muted-foreground">{plan.description}</span>
 								</div>
 								<span class="text-sm">

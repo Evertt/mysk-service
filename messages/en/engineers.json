@@ -72,6 +72,7 @@
 	"engineers_delete_title": "Delete {name}?",
 	"engineers_delete_description": "The engineer is removed permanently.",
 	"engineers_stats_open_orders": "Open orders",
+	"engineers_preview_today": "Orders today",
 	"engineers_stats_hours": "Hours booked, last 30 days",
 	"engineers_stats_revenue": "Labour revenue, last 30 days",
 	"engineers_open_title": "Open orders",

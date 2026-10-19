@@ -4,6 +4,7 @@
 	import type { RouteParams } from "$app/types";
 
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { CustomerLink } from "#lib/customers/components.ts";
 	import { getDockSettings } from "#modules/docks/settings/settings.remote.ts";
 	import TokensCard from "#modules/docks/settings/tokens-card.svelte";
 
@@ -56,12 +57,11 @@
 										<span class="text-muted-foreground">{dock.position}</span>
 									</Table.Cell>
 									<Table.Cell>
-										<a
+										<CustomerLink
+											code={dock.customer.code}
+											name={dock.customer.name}
 											class="underline-offset-4 hover:underline"
-											href={resolve("/(app)/customers/[code]", { code: dock.customer.code })}
-										>
-											{dock.customer.name}
-										</a>
+										/>
 									</Table.Cell>
 									<Table.Cell>{dock.site.name}</Table.Cell>
 									<Table.Cell class="font-mono text-xs">{dock.scpCode ?? "—"}</Table.Cell>

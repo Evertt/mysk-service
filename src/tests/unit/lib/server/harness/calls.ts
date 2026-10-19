@@ -27,6 +27,8 @@ import type {
 } from "$app/server";
 import { isHttpError, isRedirect, isValidationError } from "@sveltejs/kit";
 
+import { countRequest } from "#lib/server/logs/counts.ts";
+
 import { inRequest, type RequestFlags, type RequestState } from "./request.ts";
 
 /** A form's or a schema's issue, as SvelteKit sends it to the client. */
@@ -91,6 +93,30 @@ export function call<A, T>(
 			return { status: 200, data: (await called) as Awaited<T> };
 		}),
 	);
+}
+
+/**
+ * Calls the batch query `remote` with each of `args` in one request, at once, as a page's calls of
+ * it in the same moment are: SvelteKit answers them with one run of its handler. The answers are
+ * per argument, as `call()` gives them (an `error()` for one is that one's); `statements` counts
+ * the database statements they took together.
+ */
+export function callBatch<A, T>(
+	remote: RemoteQueryFunction<A, T>,
+	args: readonly A[],
+): Promise<{ answers: Answer<Awaited<T>>[]; statements: number }> {
+	if (internalsOf(remote)?.type !== "query_batch")
+		throw new Error("callBatch() takes a batch query");
+	return inRequest("GET", {}, async () => {
+		const { counted, result } = countRequest(() =>
+			Promise.all(
+				args.map((arg) =>
+					answer(false, async () => ({ status: 200, data: (await remote(arg)) as Awaited<T> })),
+				),
+			),
+		);
+		return { answers: await result, statements: counted.queries };
+	});
 }
 
 /**

@@ -137,6 +137,7 @@ export default defineTheme({
 		"input-group": {
 			base: `${field} has-[[data-slot=input-group-control]:focus-visible]:border-primary/50`,
 		},
+		"hover-card-content": { base: floating },
 		"popover-content": { base: floating },
 		"select-content": { base: floating },
 		"select-item": { base: menuItem },
