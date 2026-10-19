@@ -65,11 +65,22 @@ every request inside one Durable Object, `AppDatabase`, whose SQLite is the app'
   (`cloudflare/worker-configuration.d.ts`; rerun `pnpm types:cloudflare` after changing
   `wrangler.jsonc`).
 - What changed, for live queries: `recordActivity()` announces each change after its commit
-  (`announceChange()`, `src/lib/server/changes.ts`), and a `query.live` watches the subject types it
-  shows (`watchChanges()`; the schedule's `watchSchedule` is the example) or one record
-  (`watchSubject()`, which says who changed it; `<ChangedElsewhere>` on an order's and a customer's
-  pages, through `watchRecordChanges`). In memory: on Cloudflare
-  one object serves every request; on Node, one process.
+  (`announceChange()`, `src/lib/server/changes.ts`). A `query.live` returns `live()`
+  (`src/lib/server/live.ts`), which watches before the first answer, stops when the request ends
+  and answers later changes inside the Cloudflare request:
+  - `live(types)` answers when the tenant's records of those types last changed (the schedule's
+    `watchSchedule`, the portals' `watchMyWork` and `watchPortal`);
+  - `live(watched, answer)` answers what `answer` makes of nothing first (`null`: a check that
+    refuses goes there), then of each change, to records of some types or to one record, with who
+    changed it (`watchRecordChanges`, for `<ChangedElsewhere>` on an order's and a customer's pages;
+    `getSimulation`).
+
+  The page refreshes with `refreshOnChange(watchX, () => getX().refresh())`
+  (`src/lib/hooks/refresh-on-change.svelte.ts`): not on the first answer, unless it is later than
+  the data's read time (`readAt(types)` on the server; the schedule's board and month pass it).
+  Record types are typed (`ChangeType`): a type a module announces but never logs, like energy's
+  readings, is in its manifest's `liveTypes`. In memory: on Cloudflare one object serves every
+  request; on Node, one process.
 
 ## Activity log
 
@@ -81,7 +92,7 @@ nothing (wrap a single write in a transaction for this). Tenant and user come fr
 ```ts
 await db.transaction(async (tx) => {
 	await tx.update(customer).set(input).where(idInTenant(customer, id));
-	const subject = { type: "customer", id, label: existing.code };
+	const subject = customerSubject(existing);
 	await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 });
 ```
@@ -89,14 +100,18 @@ await db.transaction(async (tx) => {
 - `action` is one of `activityActions` (`src/lib/models.ts`): created, updated, deleted, or a verb
   that says more (scheduled, stock_received, …); a new one also gets a sentence in `actionVerbs`
   (`messages/<locale>/activity.json`).
-- `subject` is the record: its type, id, and the label it's known (and its page found) by now,
-  e.g. the order number. `parent` puts it on another record's card too (an order line's order).
+- `subject` is the record: its type (`LoggedType`), id, and the label it's known (and its page
+  found) by now, e.g. the order number. Orders, customers and units are named by their builders,
+  `orderSubject()`, `customerSubject()` and `equipmentSubject()` (`#lib/activity`), as subject or
+  parent, since their label is their page's URL key. `parent` puts it on another record's card too
+  (an order line's order).
 - For an update, pass the row as loaded as `before` and what the update sets as `after`: only
   `after`'s fields are compared, and an update that changes nothing logs nothing. `ignore` leaves
   out fields that follow from others.
 - A new subject type gets a noun, page and field formats in `coreSubjectTypes`
   (`src/lib/activity/subjects.ts`), or, for a module's records, in the `subjects` of its manifest
-  (`src/modules/<id>/module.ts`; its verbs are its `actions`).
+  (`src/modules/<id>/module.ts`, written `satisfies Record<string, SubjectType>` so its type names
+  stay in the `LoggedType` union; its verbs are its `actions`).
   Its detail page shows `<ActivityCard type="…" id={…} />` (`#lib/components/activity/`).
 - Log deletions too: a subject links to its page until its deletion (or removal) is logged.
 - Changes made outside the app's transactions (better-auth's member and invitation endpoints) log
