@@ -53,6 +53,11 @@ export const variables = defineEnvVars({
 			"Optional, for local development and staging only, never in production. `true` shows the login page's demo buttons, which sign in as SHLTR's demo users without a password, and the user menus' 'View as' in SHLTR, which switches between them (`src/routes/demo.remote.ts`); anything else, or unset, hides them and refuses their sign-in.",
 		schema: (value) => value === "true",
 	},
+	TIMING_LOGS: {
+		description:
+			"Optional. `1` logs a `timing` line per request (its time, transactions and statements) and per live query when it closes, as JSON (`src/lib/server/logs/timing.ts`). On in staging (`wrangler.jsonc`), off unless set.",
+		schema: (value) => value === "1",
+	},
 	DEV_REMOTE_DELAY_MS: {
 		description:
 			"Optional, in development only. Milliseconds to hold up each remote function call, to try navigations under a slow server.",

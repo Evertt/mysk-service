@@ -17,6 +17,8 @@ import type { AsyncLocalStorage } from "node:async_hooks";
 import type { DrizzleConfig } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 
+import { timedTransaction } from "#lib/server/logs/counts.ts";
+
 import { pendingCallbacks, runCallback } from "./serialize.ts";
 
 /** The part of a Durable Object's storage (`DurableObjectStorage`) the app's database uses. */
@@ -49,7 +51,8 @@ export function drizzleDurable<TSchema extends Record<string, unknown>>(
 			if (pendingCallbacks.getStore()) return work(database);
 			const pending: (() => void | Promise<void>)[] = [];
 			const result = await pendingCallbacks.run(pending, () =>
-				storage.transaction(() => work(database)),
+				// Counted for the request's timing line (`TIMING_LOGS`): the time other requests waited.
+				timedTransaction(() => storage.transaction(() => work(database))),
 			);
 			for (const callback of pending) await runCallback(callback);
 			return result;

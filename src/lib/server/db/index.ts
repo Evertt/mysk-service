@@ -2,15 +2,23 @@ import { DATABASE_AUTH_TOKEN, DATABASE_URL } from "$app/env/private";
 import { createClient } from "@libsql/client";
 import type { Logger } from "drizzle-orm";
 
+import { countQuery } from "#lib/server/logs/counts.ts";
+
 import { type DurableStorage, drizzleDurable } from "./durable.ts";
 import * as moduleSchema from "./modules.gen.ts";
 import { checkParameters } from "./parameters.ts";
 import * as schema from "./schema.ts";
 import { drizzleQueued } from "./serialize.ts";
 
-/** Holds every statement to the parameter limit of Cloudflare's SQLite (see `parameters.ts`). */
+/**
+ * Holds every statement to the parameter limit of Cloudflare's SQLite (see `parameters.ts`), and
+ * counts it for the request's timing line (`TIMING_LOGS`, `#lib/server/logs/timing.ts`).
+ */
 const parameterCheck: Logger = {
-	logQuery: (query, params) => checkParameters(query, params.length),
+	logQuery: (query, params) => {
+		checkParameters(query, params.length);
+		countQuery();
+	},
 };
 
 // The modules' tables (and their relations) are in the schema too, so `db.query.<table>` knows them.
