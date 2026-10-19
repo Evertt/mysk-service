@@ -2,7 +2,8 @@
  * The condition module's lists and counts on the seeded demo database: the Connect page's rows (a
  * component of a unit in care each, and each unit without components), worst first, with their
  * counts by status and by customer, filtered by customer, status and band, sorted by condition; the
- * dashboard's tile; a customer's service history; the equipment list's condition columns; and North
+ * dashboard's tile; a customer's service history; the customer filter's options, counted under the
+ * other filters; the equipment list's condition columns; and North
  * never seeing SHLTR's, also by a customer's code. Each status worked out in SQL is checked against
  * the module's pure rules (`support.ts`). The server side of `condition.test.ts`,
  * `condition.office.test.ts` and `condition.tenancy.test.ts`, which keep the pages.
@@ -19,6 +20,7 @@ import { searchMatch } from "#lib/server/lists/index.ts";
 import { getServiceHistory } from "#modules/condition/feed.remote.ts";
 import {
 	getConditionCounts,
+	getConditionCustomerOptions,
 	getConditionUnits,
 } from "#modules/condition/list/units-list.remote.ts";
 import { conditionList } from "#modules/condition/list/units-list.ts";
@@ -52,6 +54,18 @@ const countsFor = (search: string, actor: Actor = shltr.member) =>
 	as(actor, () => {
 		const { q, filters } = queryOf(search);
 		return data(getConditionCounts, { q, filters });
+	});
+
+/** The customer filter's options on the Connect list a link with `search` shows, as `actor`. */
+const customerOptionsFor = (
+	search: string,
+	actor: Actor = shltr.member,
+	selected: string[] = [],
+	term = "",
+) =>
+	as(actor, () => {
+		const { q, filters } = queryOf(search);
+		return data(getConditionCustomerOptions, { where: { q, filters }, search: term, selected });
 	});
 
 /** The code of SHLTR's customer Riedel B.V. */
@@ -107,6 +121,25 @@ describe("the Connect page, in SHLTR", () => {
 		});
 		// A unit without components is a row of its own, as a whole.
 		expect((await listed("")).rows.some((row) => row.component === null)).toBe(true);
+	});
+
+	test("the customer filter counts each customer's rows under the other filters, most first", async () => {
+		const search = "status=critical,attention";
+		const { customers } = await countsFor(search);
+		const options = await customerOptionsFor(search);
+		const counted = options.options.filter((option) => option.count);
+		// As the chips count them, most first, then by name.
+		expect(counted.map((option) => [option.value, option.count])).toEqual(
+			customers
+				.toSorted((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+				.slice(0, 20)
+				.map((chip) => [chip.code, chip.count]),
+		);
+		// Those without such rows follow, with 0; ticking one doesn't change the counts.
+		expect(options.options.slice(counted.length).every((option) => option.count === 0)).toBe(true);
+		expect((await customerOptionsFor(`${search}&customer=${await riedel()}`)).options).toEqual(
+			options.options,
+		);
 	});
 
 	test("only what needs attention, when asked; the tiles still count every status", async () => {
@@ -266,6 +299,10 @@ describe("SHLTR's units, to North", () => {
 			count: theirs.length,
 		});
 		expect(chips.map((chip) => chip.name)).not.toContain("Riedel B.V.");
+		// Nor does the customer filter offer or count SHLTR's, searched or ticked by its code.
+		const options = await customerOptionsFor(`customer=${code}`, north.member, [code], "Riedel");
+		expect(options.options).toEqual([]);
+		expect(options.selected).toEqual([{ value: code, label: own, count: theirs.length }]);
 		const history = await as(north.member, () =>
 			data(getServiceHistory, { customer: code, limit: 10 }),
 		);

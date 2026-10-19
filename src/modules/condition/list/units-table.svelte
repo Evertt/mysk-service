@@ -13,9 +13,10 @@
 	import { type Component, untrack } from "svelte";
 
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
+	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import {
+		recordOptions,
 		scrollPages,
 		serverTableLoading,
 	} from "#lib/components/data-table/server-table.svelte.ts";
@@ -27,7 +28,11 @@
 	import { conditionLabels } from "../labels.ts";
 	import { needsAttention, type UnitStatus, unitStatuses } from "../model.ts";
 	import { columns } from "./columns.ts";
-	import { type getConditionCounts, getConditionUnits } from "./units-list.remote.ts";
+	import {
+		getConditionCustomerOptions,
+		type getConditionCounts,
+		getConditionUnits,
+	} from "./units-list.remote.ts";
 	import { conditionList, scoreBands } from "./units-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -67,6 +72,13 @@
 	});
 
 	const loading = serverTableLoading(table, conditionList, () => pages.key);
+
+	// The customer filter, counted under the list's search and other filters.
+	const customerOptions = recordOptions(
+		getConditionCustomerOptions,
+		() => whereOf(units.query),
+		"customer",
+	);
 
 	const filterOf = (id: "status" | "customer") =>
 		(table.getColumn(id)?.getFilterValue() as string[] | undefined) ?? [];
@@ -195,7 +207,7 @@
 				columnId="customer"
 				title={m.condition_column_customer()}
 				searchLabel={m.common_table_search_customers()}
-				load={getCustomerOptions}
+				load={customerOptions.current}
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.condition_empty()} fillViewport loading={loading.current} />

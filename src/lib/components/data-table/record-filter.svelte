@@ -1,9 +1,11 @@
 <!--
 	@component
 	Multi-select filter for a column of related records (a customer, an engineer, …), with more of
-	them than fit in a list: the options come from the server as you type (`load`, a remote query,
-	which answers with a limited number of matches), and the ones ticked are always shown, by name.
-	The column's filter values are the records' codes (or ids), as in the URL, e.g.
+	them than fit in a list: the options come from the server as you type (`load`, the list's options
+	query for the column, see `recordOptions()` and `facetOptions()`), which answers with a limited
+	number of matches, each with how many of the list's rows have it under its search and other
+	filters, most first; those no row has are greyed. The ticked ones are always shown, by name. The
+	column's filter values are the records' codes (or ids), as in the URL, e.g.
 	`?customer=CUST-0001,CUST-0007`. A column that can be empty gives `none` a label, and the rows
 	without a value are an option too (`?engineer=none`). For a column with a few fixed values, see
 	`FacetedFilter`.
@@ -16,10 +18,12 @@
 	import type { Attachment } from "svelte/attachments";
 	import { SvelteMap } from "svelte/reactivity";
 
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { registerTableFilter } from "./filters.svelte.ts";
-	import type { RecordOption, RecordOptions } from "./server-table.svelte.ts";
+	import { recordOptionsInOrder } from "./record-facets.ts";
+	import type { LoadRecordOptions, RecordOption, RecordOptions } from "./server-table.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
 	import { noneToken } from "./url-state.ts";
 
@@ -29,21 +33,22 @@
 		searchLabel,
 		load,
 		none,
-		counts,
 	}: {
 		columnId: string;
 		title: string;
 		/** The search box's placeholder and label, e.g. "Search customers…". */
 		searchLabel: string;
-		/** The options for a search, and the names of the ticked ones. */
-		load: (input: { search: string; selected: string[] }) => PromiseLike<RecordOptions>;
+		/**
+		 * The options for a search, with their counts, and the names of the ticked ones: a new
+		 * function when the list's other filters change (`recordOptions().current`), which fetches
+		 * them again.
+		 */
+		load: LoadRecordOptions;
 		/**
 		 * For a column that can be empty: offers the rows without a value as the first option, with
 		 * this label, e.g. "Unassigned". Its value is `none` in the URL (`noneToken`).
 		 */
 		none?: string;
-		/** How many rows have each value (the rows without one under `none`), shown with the options. */
-		counts?: Readonly<Record<string, number>>;
 	} = $props();
 
 	/** How long typing waits before searching. */
@@ -56,7 +61,13 @@
 	/** Whether the options are on screen (in the Filter menu or the pill's popover). */
 	let shown = $state(false);
 	let search = $state("");
-	let found = $state<RecordOptions>();
+	/** The last answer, and what it was asked with. */
+	let answer = $state.raw<{ load: LoadRecordOptions; options: RecordOptions }>();
+	/**
+	 * What was found, while the list's other filters are those it was found under: another's counts
+	 * (on opening the filter after they changed) aren't shown while the new ones come.
+	 */
+	const found = $derived(answer?.load === load ? answer.options : undefined);
 	let searching = $state(false);
 
 	/** On the option list: it's searched while shown, and the search starts over each time. */
@@ -86,14 +97,16 @@
 		);
 		if (!missing.length) return;
 		for (const value of missing) asked.add(value);
-		Promise.resolve(load({ search: "", selected: missing }))
+		Promise.resolve(untrack(() => load)({ search: "", selected: missing }))
 			.then(remember)
 			.catch(() => {});
 	});
 
-	// Searching, while shown: right away when shown, then once typing pauses.
+	// Searching, while shown: right away when shown or the list's other filters change (a new
+	// `load`), then once typing pauses.
 	$effect(() => {
 		if (!shown) return;
+		const fetch = load;
 		const term = search.trim();
 		const ticked = untrack(() => selected);
 		let current = true;
@@ -101,10 +114,10 @@
 		const timer = setTimeout(
 			async () => {
 				try {
-					const result = await load({ search: term, selected: ticked });
+					const result = await fetch({ search: term, selected: ticked });
 					if (!current) return;
 					remember(result);
-					found = result;
+					answer = { load: fetch, options: result };
 				} catch {
 					// Keep what was found before.
 				} finally {
@@ -120,23 +133,25 @@
 	});
 
 	/** The option for rows without a value, unless the search rules it out. */
-	const noneOption = $derived.by((): RecordOption[] => {
-		if (!none) return [];
+	const noneOption = $derived.by((): RecordOption | undefined => {
+		if (!none) return undefined;
 		const term = search.trim().toLowerCase();
-		return term && !none.toLowerCase().includes(term) ? [] : [{ value: noneToken, label: none }];
+		if (term && !none.toLowerCase().includes(term)) return undefined;
+		return { value: noneToken, label: none, count: found?.none };
 	});
 
 	/**
 	 * The option for rows without a value, the ticked ones that the search didn't find, then what
-	 * it found, in its order.
+	 * it found, in its order (most rows first).
 	 */
-	const options = $derived.by(() => {
-		const matches = found?.options ?? [];
-		const ticked = selected
-			.filter((value) => value !== noneToken && !matches.some((option) => option.value === value))
-			.map((value) => known.get(value) ?? { value, label: value });
-		return [...noneOption, ...ticked, ...matches];
-	});
+	const options = $derived(
+		recordOptionsInOrder({
+			none: noneOption,
+			selected: selected.filter((value) => value !== noneToken),
+			found: found ?? { options: [], selected: [] },
+			known: (value) => known.get(value),
+		}),
+	);
 
 	const isSelected = (value: string) => selected.includes(value);
 
@@ -179,7 +194,12 @@
 			{:else}
 				<Command.Group class={cn(searching && "opacity-60 transition-opacity")}>
 					{#each options as option (option.value)}
-						<Command.Item value={option.value} onSelect={() => toggle(option.value)}>
+						<Command.Item
+							value={option.value}
+							onSelect={() => toggle(option.value)}
+							class={cn(option.count === 0 && "text-muted-foreground")}
+							data-no-rows={option.count === 0 || undefined}
+						>
 							<div
 								class={cn(
 									"flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
@@ -190,21 +210,15 @@
 							>
 								<CheckIcon class="size-3.5" />
 							</div>
-							<span class="truncate">{option.label}</span>
-							{#if option.detail}
-								{#if counts}
-									<span class="shrink-0 font-mono text-xs text-muted-foreground">
-										{option.detail}
-									</span>
-								{:else}
-									<Command.Shortcut class="shrink-0 font-mono tracking-wide">
-										{option.detail}
-									</Command.Shortcut>
+							<div class="flex min-w-0 flex-col">
+								<span class="truncate">{option.label}</span>
+								{#if option.detail}
+									<span class="truncate text-xs text-muted-foreground">{option.detail}</span>
 								{/if}
-							{/if}
-							{#if counts}
+							</div>
+							{#if option.count !== undefined}
 								<Command.Shortcut class="shrink-0 font-mono">
-									{counts[option.value] ?? 0}
+									{formatNumber(option.count)}
 								</Command.Shortcut>
 							{/if}
 						</Command.Item>

@@ -39,12 +39,7 @@
 		<table.Toolbar searchLabel={m.contracts_search()}>
 			<FacetedFilter columnId="status" title={m.contracts_status()} options={statusOptions} />
 			<FacetedFilter columnId="level" title={m.contracts_level()} options={levelOptions} />
-			<FacetedFilter
-				columnId="customer"
-				title={m.contracts_customer()}
-				options={customers.options}
-				counts={customers.counts}
-			/>
+			<FacetedFilter columnId="customer" title={m.contracts_customer()} options={customers} />
 			<NumberRangeFilter columnId="monthlyFee" title={m.contracts_monthly_fee()} money min={0} />
 		</table.Toolbar>
 		<table.Table emptyTitle={m.contracts_empty()} fillViewport />

@@ -19,6 +19,9 @@ import {
 } from "#lib/server/db/schema.ts";
 import {
 	bulkChange,
+	customerRecords,
+	facetOptions,
+	facetOptionsInput,
 	listTarget,
 	refreshRequested,
 	moduleFacets,
@@ -29,7 +32,12 @@ import {
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { removeEquipment } from "../server/equipment.ts";
-import { equipmentSql, withEquipmentJoins } from "../server/list-sql.ts";
+import {
+	equipmentSql,
+	locationRecords,
+	manufacturerOrNone,
+	withEquipmentJoins,
+} from "../server/list-sql.ts";
 import { equipmentList } from "./equipment-list.ts";
 
 /**
@@ -105,22 +113,41 @@ export const getEquipmentList = forMembers.query(equipmentList.query, async (inp
 });
 
 /**
- * How many units have each category, location (by id), status and manufacturer, for the list's
- * filters: of those
- * matching the search and the other filters.
+ * How many units have each category, status and manufacturer (those without one under `none`), for
+ * the list's filters: of those matching the search and the other filters. The filters on customers
+ * and locations count theirs with their options (below).
  */
 export const getEquipmentFacets = forMembers.query(equipmentList.where, async (where) => {
 	const listSql = equipmentSql();
 	const counts = await planList(listSql, where).facets({
 		category: equipment.categoryId,
-		location: equipment.locationId,
 		status: equipment.status,
-		manufacturer: equipment.manufacturer,
+		manufacturer: manufacturerOrNone,
 		// And the tenant's modules' columns, by their ids (the type names the list's own only).
 		...(moduleFacets(listSql) as Record<never, never>),
 	});
 	return counts as typeof counts & { readonly [moduleColumn: string]: Record<string, number> };
 });
+
+// The options of the list's filters on related records, each with how many units have it under
+// the list's search and other filters, most first (see `facetOptions()`).
+const optionsInput = facetOptionsInput(equipmentList);
+
+/** Customers by name or code; their code is the filter's value (`?customer=CUST-0001`). */
+export const getEquipmentCustomerOptions = forMembers.query(optionsInput, (input) =>
+	facetOptions(equipmentSql(), input, "customer", customerRecords(), { by: customer.code }),
+);
+
+/**
+ * Locations by their name, their site's or their customer's, and the units without one; their id
+ * is the filter's value (`?location=12`).
+ */
+export const getEquipmentLocationOptions = forMembers.query(optionsInput, (input) =>
+	facetOptions(equipmentSql(), input, "location", locationRecords(), {
+		by: equipment.locationId,
+		none: true,
+	}),
+);
 
 // --- Bulk actions on the list's selected units (see `bulk-actions.ts`) -------------------------
 

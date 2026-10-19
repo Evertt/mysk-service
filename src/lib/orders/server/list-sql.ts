@@ -3,11 +3,10 @@
  * act on the orders matching its filters (`order-bulk.remote.ts`). A remote file can only export
  * remote functions, so it can't be shared from there.
  */
-import { and, countDistinct, eq, exists, notExists, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, countDistinct, eq, exists, notExists, or, sql, type SQL } from "drizzle-orm";
 import { alias, type SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { type NumberRange, numberInRange } from "#lib/components/data-table/ranges.ts";
-import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { orderPriorities } from "#lib/models.ts";
 import { idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -17,9 +16,10 @@ import {
 	anyOf,
 	inDays,
 	type ListSql,
-	type ListWherePlan,
 	nocase,
+	parseIds,
 	rank,
+	type RecordSource,
 } from "#lib/server/lists/index.ts";
 
 import { ordersList } from "../list/orders-list.ts";
@@ -86,15 +86,17 @@ const unitsText = () =>
 	)})`;
 
 /**
- * How many orders have each unit (by serial number) among their units, for the counts in the
- * list's filter by unit: of those matching the search and the other filters, an order counted for
- * each of its units; those without units under `null`.
+ * How many of the orders matching `where` have each unit (by serial number) among their units, for
+ * the counts in the list's filter by unit (`facetOptions()`'s `count`): an order counts for each of
+ * its units, and those without units under `null`.
  */
-export async function unitFacets(plan: ListWherePlan<typeof ordersList.columns>) {
-	const where = await plan.where("equipment");
-	const rows = await withOrderJoins(
+export const unitCounts = (where: SQL | undefined) =>
+	withOrderJoins(
 		db
-			.select({ value: anyUnit.serialNumber, count: countDistinct(order.id) })
+			.select({
+				value: sql<string | null>`${anyUnit.serialNumber}`.as("value"),
+				count: countDistinct(order.id).as("count"),
+			})
 			.from(order)
 			.$dynamic(),
 	)
@@ -102,8 +104,39 @@ export async function unitFacets(plan: ListWherePlan<typeof ordersList.columns>)
 		.leftJoin(anyUnit, and(eq(anyUnit.id, anyLink.equipmentId), inTenant(anyUnit)))
 		.where(where)
 		.groupBy(anyUnit.serialNumber);
-	return Object.fromEntries(rows.map((row) => [row.value ?? noneToken, row.count]));
-}
+
+/**
+ * The tenant's engineers, for the list's engineer filter (`facetOptions()`): by name; their id is
+ * the filter's value (`?engineer=12`).
+ */
+export const engineerRecords = (): RecordSource => ({
+	from: (fields) => db.select(fields).from(engineer).$dynamic(),
+	scope: () => inTenant(engineer),
+	value: engineer.id,
+	label: engineer.name,
+	search: [engineer.name],
+	sort: [nocase(engineer.name), asc(engineer.id)],
+	parse: parseIds,
+});
+
+/**
+ * The tenant's units, for the list's filter by unit (`facetOptions()`): named as the list shows
+ * them (their own name first, if they have one, then manufacturer and model), with their serial
+ * number, which is the filter's value; searched by any of those.
+ */
+export const unitRecords = (): RecordSource => {
+	// Without the separators an imported unit without a make (or name) would leave.
+	const name = sql`trim(coalesce(${equipment.name}, '') || ' · ' || ${equipment.manufacturer} || ' ' || ${equipment.model}, ' ·')`;
+	return {
+		from: (fields) => db.select(fields).from(equipment).$dynamic(),
+		scope: () => inTenant(equipment),
+		value: equipment.serialNumber,
+		label: name,
+		detail: equipment.serialNumber,
+		search: [equipment.serialNumber, equipment.name, equipment.manufacturer, equipment.model],
+		sort: [nocase(name), asc(equipment.id)],
+	};
+};
 
 /**
  * Of the orders `ids`, those whose total is in any of `ranges` (in cents). A total isn't in the

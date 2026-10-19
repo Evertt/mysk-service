@@ -27,9 +27,9 @@ export const columns = column.columns([
 			renderComponent(TwoLineCell, {
 				primary: getValue(),
 				// The make too, under the customer's own name for it.
-				secondary: row.original.name
-					? `${unitModel(row.original)} · ${row.original.serialNumber}`
-					: row.original.serialNumber,
+				secondary: [row.original.name && unitModel(row.original), row.original.serialNumber]
+					.filter(Boolean)
+					.join(" · "),
 				href: resolve("/(app)/equipment/[serial]", { serial: row.original.serialNumber }),
 			}),
 		enableHiding: false,
@@ -45,7 +45,11 @@ export const columns = column.columns([
 		filterFn: "oneOf",
 		enableHiding: false,
 		enableGrouping: true,
-		meta: { label: m.equipment_column_manufacturer },
+		meta: {
+			label: m.equipment_column_manufacturer,
+			// Imported units may have none.
+			groupLabel: (manufacturer) => String(manufacturer ?? "") || m.equipment_manufacturer_none(),
+		},
 	}),
 	// One of the tenant's categories, shown by name, filtered and grouped by id (`?category=3`).
 	column.accessor((row) => row.category.name, {
