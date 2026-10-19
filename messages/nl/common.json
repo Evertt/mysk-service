@@ -31,6 +31,7 @@
 	"common_notifications": "Meldingen",
 	"common_close_notification": "Melding sluiten",
 	"common_error_not_found": "Niet gevonden",
+	"common_preview_failed": "Dit voorbeeld kon niet worden geladen",
 	"common_error_generic": "Er ging iets mis",
 	"common_error_unexpected": "Er is een onverwachte fout opgetreden.",
 	"common_error_back_to_dashboard": "Terug naar het dashboard",

@@ -16,6 +16,7 @@ import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
 import { clockContext } from "#clock/clock.ts";
 import { isCustomerContact, isFieldEngineer, parseRoles } from "#lib/auth/roles.ts";
+import { previewDelayKey } from "#lib/components/record-link/preview-delay.ts";
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
 
@@ -156,7 +157,23 @@ export async function newContext(browser: Browser, options: BrowserContextOption
 	const context = await browser.newContext({ ...BROWSER_OPTIONS, ...options });
 	await clockContext(context);
 	await recordToasts(context);
+	await openPreviewsAtOnce(context);
 	return context;
+}
+
+/**
+ * Record links' hover cards open as soon as the pointer is on the link, not after half a second
+ * (`previews.ts`), in every page of `context`. A test that wants the delay sets the key to it
+ * (`sessionStorage`, before the page reads it: at its next load).
+ */
+async function openPreviewsAtOnce(context: BrowserContext) {
+	await context.addInitScript((key) => {
+		try {
+			if (sessionStorage.getItem(key) === null) sessionStorage.setItem(key, "0");
+		} catch {
+			// A page without storage (about:blank) has no record links either.
+		}
+	}, previewDelayKey);
 }
 
 /** A phone's screen, e.g. for the engineer portal. */

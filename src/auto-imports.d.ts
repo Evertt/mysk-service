@@ -21,6 +21,7 @@ declare global {
   const DropdownMenu: typeof import('#ui/dropdown-menu')
   const Empty: typeof import('#ui/empty')
   const Field: typeof import('#ui/field')
+  const HoverCard: typeof import('#ui/hover-card')
   const Input: typeof import('#ui/input').Input
   const InputGroup: typeof import('#ui/input-group')
   const Label: typeof import('#ui/label').Label

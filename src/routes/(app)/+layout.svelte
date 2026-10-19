@@ -7,6 +7,7 @@
 	import { type Component, onMount } from "svelte";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+	import { showRecordPreviews } from "#lib/components/record-link/previews.ts";
 	import { nameOrderTypes } from "#lib/orders/index.ts";
 	import { getOrderTypes } from "#lib/orders/remotes.ts";
 
@@ -19,6 +20,9 @@
 	import { connectSwrWorker } from "./swr-worker.ts";
 
 	let { children }: LayoutProps = $props();
+
+	// The office's links to orders, customers, units and engineers show a hover card of the record.
+	showRecordPreviews();
 
 	// The order types read as the tenant named them: in the browser from this query, from before the
 	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow

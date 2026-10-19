@@ -97,7 +97,8 @@
 	<!--
 		Not preloaded on hover: dragging a card over the others would preload their pages, each in a
 		fork (`forkPreloads`), and a card the move re-created meanwhile never ran its effects, so it
-		kept pulsing (docs/upstream-bugs/README.md, 8).
+		kept pulsing (docs/upstream-bugs/README.md, 8). No hover card either: the board's card shows
+		the order already, and a hover card would cover the cells a card is dragged to.
 	-->
 	<OrderLink
 		number={order.number}
@@ -105,6 +106,7 @@
 		draggable="false"
 		data-sveltekit-preload-data="off"
 		title={order.number}
+		preview={false}
 	>
 		<!-- The prefix is the same on every card; the rest fits a narrow column. -->
 		<span class="sr-only">{prefix}</span>{order.number.slice(prefix.length)}

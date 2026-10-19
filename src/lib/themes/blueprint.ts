@@ -91,6 +91,7 @@ export default defineTheme({
 		"card-title": { base: "text-xs font-semibold tracking-widest text-primary uppercase" },
 		"data-table": { base: "rounded-none border-dashed border-primary/40" },
 		"dropdown-menu-content": { base: "shadow-lg ring-primary/30" },
+		"hover-card-content": { base: "shadow-lg ring-primary/30" },
 		"popover-content": { base: "shadow-lg ring-primary/30" },
 		"select-content": { base: "shadow-lg ring-primary/30" },
 		"sidebar-menu-button": {
