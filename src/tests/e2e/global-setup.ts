@@ -205,8 +205,10 @@ export default async function setup(project: TestProject) {
 	if (!dev) {
 		// A production build, as deployed: Paraglide's messages a module per message, in a folder of
 		// their own, so the build leaves the one the other tests read alone (scripts/paraglide.ts).
+		// With the test switches built in (`VITE_TEST_SWITCHES`, `#lib/errors/crash-switch.ts`), which
+		// a deployed build leaves out.
 		execFileSync("node_modules/.bin/vp", ["build"], {
-			env: { ...process.env, NODE_ENV: "production" },
+			env: { ...process.env, NODE_ENV: "production", VITE_TEST_SWITCHES: "1" },
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	}
