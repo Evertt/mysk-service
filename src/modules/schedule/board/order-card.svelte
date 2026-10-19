@@ -104,7 +104,7 @@
 		number={order.number}
 		class="truncate font-medium underline-offset-4 hover:underline"
 		draggable="false"
-		data-sveltekit-preload-data="off"
+		data-sveltekit-preload-data={false}
 		title={order.number}
 		preview={false}
 	>

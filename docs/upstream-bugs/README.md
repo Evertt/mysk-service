@@ -173,7 +173,7 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Evidence:** a trace on the deployed app (real mouse drags; Playwright's `dragTo` doesn't hover
   the links on its way, and never triggered it): the stuck card's `$effect` logged nothing, the
   set its `pending` comes from no longer held its id, and the element was connected. With the
-  cards' links not preloaded (`data-sveltekit-preload-data="off"`) it didn't happen again; with
+  cards' links not preloaded (`data-sveltekit-preload-data={false}`) it didn't happen again; with
   them preloaded, a few moves did it.
 - **Suspected cause:** effects of a branch created while a fork is pending are taken as the
   fork's, and dropped when the fork is discarded (the hover moved on), though the branch's DOM was
@@ -279,7 +279,7 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Reproduction:** `src/modules/invoices/tests/e2e/credit-notes.test.ts` without the patch, where
   the draft's "Create draft" click leaves the pointer over the credit note page's "View all":
   "issued and settled" timed out at "Mark settled" every time; with the page's preloads off
-  (`data-sveltekit-preload-data="off"`), it passed. For the issue: a page `[id]` rendering
+  (`data-sveltekit-preload-data={false}`), it passed. For the issue: a page `[id]` rendering
   `$derived(await getThing(params.id))` and a button that toggles some state, a link to another
   route preloaded in a `fork()` (kept, not committed), then a refresh of `getThing`: the button
   stops working.
@@ -297,7 +297,7 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   `#ready` set in the fork only), while the fork's page had the answer. Reading it in the card's
   markup instead (`await`, or a `<svelte:boundary>` waiting on it) held the card up with the fork:
   bits-ui's floating layer never positioned it (it stayed at `translate(0, -200%)`), and with
-  the link's preload off (`data-sveltekit-preload-data="off"`) it did.
+  the link's preload off (`data-sveltekit-preload-data={false}`) it did.
 - **Also seen:** every query a preload fork asks for first is requested twice, within a few
   milliseconds (the session in `docs/plans/hover-cards.md`, "As built": 18 `getOrder` requests
   without the cards, 7 with them); a query that existed before the fork is asked once.
