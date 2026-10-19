@@ -11,7 +11,7 @@
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import { reportUrgencies } from "#lib/models.ts";
 	import { cn } from "#lib/utils.ts";
@@ -22,7 +22,6 @@
 		getPortalUnit,
 		reportBreakdown,
 	} from "../client.remote.ts";
-	import { unitDetails } from "../units.ts";
 
 	const serial = $derived(page.url.searchParams.get("unit"));
 	const locationParam = $derived(page.url.searchParams.get("location"));
@@ -77,7 +76,7 @@
 			<Card.Header>
 				<Card.Title>{unitTitle(scanned)}</Card.Title>
 				<Card.Description>
-					{unitDetails(scanned, scanned.site, scanned.location)}
+					{unitLine(scanned, { site: scanned.site, location: scanned.location })}
 				</Card.Description>
 			</Card.Header>
 		</Card.Root>

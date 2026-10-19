@@ -10,7 +10,7 @@
 		StatusBadge as EquipmentStatusBadge,
 		WarrantyBadge,
 	} from "#lib/equipment/components.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import type { getOrder } from "../order.remote.ts";
@@ -39,12 +39,11 @@
 							<EquipmentStatusBadge status={unit.status} />
 						</div>
 						<p class="text-muted-foreground">
-							{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category.name]
-								.filter(Boolean)
-								.join(" · ")}
-						</p>
-						<p class="text-muted-foreground">
-							{[unit.site.name, unit.location].filter(Boolean).join(" · ")}
+							{unitLine(unit, {
+								category: unit.category,
+								site: unit.site.name,
+								location: unit.location,
+							})}
 						</p>
 						<p class="flex flex-wrap items-center gap-2 text-muted-foreground">
 							{m.orders_warranty_until({ date: formatDate(unit.warrantyUntil) })}

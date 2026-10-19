@@ -6,7 +6,7 @@
 <script lang="ts">
 	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	let {
@@ -32,7 +32,7 @@
 		<EquipmentLink
 			serialNumber={first.serialNumber}
 			label={unitTitle(first)}
-			secondary={first.name ? `${unitModel(first)} · ${first.serialNumber}` : first.serialNumber}
+			secondary={unitLine(first)}
 		/>
 	{:else}
 		<TwoLineCell fallback={m.orders_new_installation()} />

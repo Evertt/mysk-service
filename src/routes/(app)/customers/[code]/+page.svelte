@@ -28,7 +28,7 @@
 		EquipmentLink,
 		SiteLocations,
 	} from "#lib/equipment/components.ts";
-	import { unitModel } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { getCustomerLocations } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
@@ -168,12 +168,10 @@
 												serialNumber={unit.serialNumber}
 												class="font-medium underline-offset-4 hover:underline"
 											>
-												{unit.name ?? unitModel(unit)}
+												{unitTitle(unit)}
 											</EquipmentLink>
 											<span class="text-xs text-muted-foreground">
-												{unit.name
-													? `${unitModel(unit)} · ${unit.serialNumber}`
-													: unit.serialNumber}
+												{unitLine(unit)}
 											</span>
 										</div>
 									</Table.Cell>

@@ -36,13 +36,10 @@ import {
 	submit,
 	value,
 } from "#unit/lib/server/harness/index.ts";
+import { drawn } from "#unit/signature.test-support.ts";
 
 const [northId, shltrId] = [organizationId("north"), organizationId("shltr")];
 const lev = shltr.engineer;
-
-/** A tiny PNG, as the signature pad sends one. */
-const drawn =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 /** Today in the seed's (and Lev's) time zone, as stored. */
 const today = () => Temporal.Now.plainDateISO("Europe/Amsterdam");
@@ -456,5 +453,55 @@ describe("the customer portal's checklists", () => {
 		// The office's own work order says who.
 		const office = await as(shltr.member, () => data(getWorkOrder, done.number));
 		expect(office.checklists.find((checklist) => checklist.id === done.id)?.office).toBe(jan.name);
+	});
+
+	test("print of a site-limited contact's order only the units at their sites, and their checklists", async () => {
+		// A done order with completed checklists, and a unit of its customer's at a site none of
+		// its units are at.
+		const [done] = await rows<{
+			id: number;
+			number: string;
+			customerId: number;
+			other: number;
+			serial: string;
+			siteId: number;
+		}>(
+			`select o.id, o.number, o.customer_id as customerId, e.id as other,
+				e.serial_number as serial, e.site_id as siteId
+			 from "order" o join equipment e on e.customer_id = o.customer_id
+			 where o.organization_id = ? and o.status in ('completed', 'invoiced')
+			 and exists (select 1 from checklist c where c.order_id = o.id and c.status = 'completed')
+			 and e.site_id not in (select x.site_id from order_unit u
+				join equipment x on x.id = u.equipment_id where u.order_id = o.id)
+			 order by o.id, e.id limit 1`,
+			[shltrId],
+		);
+		expect(done).toBeDefined();
+		await rows(
+			`insert into order_unit (organization_id, order_id, customer_id, equipment_id, position)
+			 values (?, ?, ?, ?, (select max(position) + 1 from order_unit where order_id = ?))`,
+			[shltrId, done.id, done.customerId, done.other, done.id],
+		);
+		// The contact is that customer's now, and sees only the other unit's site.
+		const contact = await value<number>(
+			`select p.id from portal_contact p join user u on u.id = p.user_id
+			 where u.email = ? and p.organization_id = ?`,
+			[shltr.customer.email, shltrId],
+		);
+		await rows(`delete from portal_contact_site where contact_id = ?`, [contact]);
+		await rows(`update portal_contact set customer_id = ?, all_sites = 0 where id = ?`, [
+			done.customerId,
+			contact,
+		]);
+		await rows(
+			`insert into portal_contact_site (organization_id, contact_id, customer_id, site_id)
+			 values (?, ?, ?, ?)`,
+			[shltrId, contact, done.customerId, done.siteId],
+		);
+
+		const workOrder = await as(shltr.customer, () => data(getClientWorkOrder, done.number));
+		expect(workOrder.units.map((unit) => unit.serialNumber)).toEqual([done.serial]);
+		expect(workOrder.sites.map((site) => site.id)).toEqual([done.siteId]);
+		expect(workOrder.checklists).toEqual([]);
 	});
 });

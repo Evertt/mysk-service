@@ -9,13 +9,12 @@
 
 	import { unit as unitParts } from "#lib/client/extensions.ts";
 	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { getPortalUnit, watchPortal } from "../../client.remote.ts";
 	import OrderList from "../../order-list.svelte";
-	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -36,7 +35,7 @@
 		<StatusBadge status={unit.status} />
 	</div>
 	<p class="text-sm text-muted-foreground">
-		{unitDetails(unit, unit.category, unit.site, unit.location)}
+		{unitLine(unit, { category: unit.category, site: unit.site, location: unit.location })}
 	</p>
 </header>
 

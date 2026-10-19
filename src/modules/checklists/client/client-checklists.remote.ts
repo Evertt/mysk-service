@@ -13,13 +13,7 @@ import * as v from "valibot";
 
 import { firstName } from "#lib/engineers/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
-import {
-	atSites,
-	currentCustomer,
-	customerOrders,
-	ofCustomer,
-	seesSite,
-} from "#lib/server/auth/index.ts";
+import { atSites, currentCustomer, customerOrders, ofCustomer } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
@@ -80,7 +74,7 @@ export const getClientWorkOrder = forCustomers.query(v.string(), async (number) 
 	const access = await currentCustomer();
 	const found = await loadWorkOrder(
 		and(eq(order.number, number), customerOrders(access), inList(order.status, doneOrderStatuses))!,
-		(siteId) => seesSite(access, siteId),
+		atSites(access, equipment.siteId),
 	);
 	if (!found) error(404, m.checklists_order_not_found({ number }));
 	return { ...found, checklists: officeUnnamed(found.checklists) };

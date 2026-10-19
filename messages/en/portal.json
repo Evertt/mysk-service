@@ -27,7 +27,6 @@
 	"portal_hours_saved": "Hours saved",
 	"portal_notes": "Notes",
 	"portal_no_notes": "No notes yet.",
-	"portal_someone": "Someone",
 	"portal_note_label": "Add a note",
 	"portal_note_placeholder": "E.g. what you found, or what's needed next time",
 	"portal_add_note": "Add note",
@@ -39,9 +38,7 @@
 	"portal_complete_job": "Complete job",
 	"portal_job_completed": "Job completed",
 	"portal_signed_off": "Signed off",
-	"portal_signed_off_by": "By {name}, {date}",
 	"portal_signature": "Signature",
-	"portal_signature_of": "Signature of {name}",
 	"portal_signature_clear": "Clear",
 	"portal_signature_hint": "Sign in the box above.",
 	"portal_signature_required": "Ask the customer to sign",
@@ -68,7 +65,6 @@
 	"portal_engineer_name_description": "As the office knows you: it goes on the work order.",
 	"portal_engineer_signature_required": "Sign the work order yourself too",
 	"portal_customer_signature": "The customer's signature",
-	"portal_engineer_signed": "Engineer: {name}",
 	"portal_frame_caption": "Engineer portal · how engineers see it on their phone",
 	"portal_header_menu": "Menu"
 }

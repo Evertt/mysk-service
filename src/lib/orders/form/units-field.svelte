@@ -15,7 +15,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { unitLine, unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -77,8 +77,6 @@
 		next.splice(index + by, 0, unit);
 		choose(next);
 	}
-
-	const where = (unit: Unit) => [unit.site.name, unit.location].filter(Boolean).join(" · ");
 </script>
 
 <Field.Field data-invalid={issues?.length ? true : undefined} class="md:col-span-2">
@@ -94,9 +92,7 @@
 					<div class="flex min-w-0 flex-1 flex-col">
 						<span class="truncate font-medium">{unitTitle(unit)}</span>
 						<span class="truncate text-xs text-muted-foreground">
-							{[unit.name ? unitModel(unit) : null, unit.serialNumber, where(unit)]
-								.filter(Boolean)
-								.join(" · ")}
+							{unitLine(unit, { site: unit.site.name, location: unit.location })}
 						</span>
 					</div>
 					<div class="flex shrink-0 items-center">
@@ -173,14 +169,14 @@
 								{#each siteUnits as unit (unit.id)}
 									<Command.Item
 										value="unit-{unit.id}"
-										keywords={[unitLine(unit), unit.location ?? ""]}
+										keywords={[unitTitle(unit), unitLine(unit), unit.location ?? ""]}
 										onSelect={() => toggle(unit.id)}
 									>
 										{@render tick(chosen.includes(unit.id))}
 										<div class="flex min-w-0 flex-col">
 											<span class="truncate">{unitTitle(unit)}</span>
 											<span class="truncate text-xs text-muted-foreground">
-												{[unit.serialNumber, unit.location].filter(Boolean).join(" · ")}
+												{unitLine(unit, { location: unit.location })}
 											</span>
 										</div>
 									</Command.Item>

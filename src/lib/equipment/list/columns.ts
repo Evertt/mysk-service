@@ -9,7 +9,7 @@ import { CustomerLink } from "#lib/customers/components.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
-import { unitModel, unitTitle } from "../display.ts";
+import { unitLine, unitTitle } from "../display.ts";
 import EquipmentLink from "../ui/equipment-link.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
@@ -29,9 +29,7 @@ export const columns = column.columns([
 				serialNumber: row.original.serialNumber,
 				label: getValue(),
 				// The make too, under the customer's own name for it.
-				secondary: [row.original.name && unitModel(row.original), row.original.serialNumber]
-					.filter(Boolean)
-					.join(" · "),
+				secondary: unitLine(row.original),
 			}),
 		enableHiding: false,
 		meta: { label: m.equipment_column_unit },

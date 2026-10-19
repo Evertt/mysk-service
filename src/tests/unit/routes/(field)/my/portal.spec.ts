@@ -25,6 +25,7 @@ import {
 	submit,
 	value,
 } from "#unit/lib/server/harness/index.ts";
+import { drawn } from "#unit/signature.test-support.ts";
 
 const [northId, southId] = [organizationId("north"), organizationId("south")];
 const erik = north.engineer;
@@ -36,10 +37,6 @@ const snapshot = (id: number) =>
 		 from "order" o where o.id = ?`,
 		[id],
 	);
-
-/** A tiny PNG, as the signature pad sends one. */
-const drawn =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 interface Order {
 	id: number;

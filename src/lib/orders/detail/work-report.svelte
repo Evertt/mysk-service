@@ -1,69 +1,32 @@
 <!--
 	@component
 	What the engineer recorded on an order in the field: the sign-off (the customer's signature and,
-	since engineers sign too, the engineer's) and work notes.
+	since engineers sign too, the engineer's, with who in the office collected it) and work notes.
 	Nothing while there's neither.
 -->
 <script lang="ts">
-	import { formatDateTime } from "#lib/i18n/index.ts";
+	import type { getOrder } from "../order.remote.ts";
+	import NotesList from "../ui/notes-list.svelte";
+	import SignOff from "../ui/sign-off.svelte";
 
-	import { getWorkReport } from "./work-report.remote.ts";
+	type Order = Awaited<ReturnType<typeof getOrder>>;
 
-	let { number }: { number: string } = $props();
-
-	const report = $derived(await getWorkReport(number));
+	let { notes, signoff }: Pick<Order, "notes" | "signoff"> = $props();
 </script>
 
-{#if report.signoff || report.notes.length}
+{#if signoff || notes.length}
 	<Card.Root data-slot="work-report">
 		<Card.Header>
 			<Card.Title>{m.orders_report_title()}</Card.Title>
 			<Card.Description>{m.orders_report_description()}</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
-			{#if report.signoff}
-				<div class="flex flex-col gap-2">
-					<dl class="grid grid-cols-2 gap-4">
-						<div class="flex flex-col gap-0.5">
-							<dt class="text-xs text-muted-foreground">{m.orders_report_signed_off_by()}</dt>
-							<dd class="text-sm">{report.signoff.signerName}</dd>
-						</div>
-						<div class="flex flex-col gap-0.5">
-							<dt class="text-xs text-muted-foreground">{m.orders_report_signed()}</dt>
-							<dd class="text-sm tabular-nums">{formatDateTime(report.signoff.signedAt)}</dd>
-						</div>
-					</dl>
-					<img
-						src={report.signoff.signature}
-						alt={m.orders_report_signature({ name: report.signoff.signerName })}
-						class="h-28 w-full rounded-lg border bg-white object-contain"
-					/>
-					{#if report.signoff.engineerName && report.signoff.engineerSignature}
-						<div class="flex flex-col gap-0.5">
-							<span class="text-xs text-muted-foreground">{m.orders_report_engineer()}</span>
-							<span class="text-sm">{report.signoff.engineerName}</span>
-						</div>
-						<img
-							src={report.signoff.engineerSignature}
-							alt={m.orders_report_signature({ name: report.signoff.engineerName })}
-							class="h-28 w-full rounded-lg border bg-white object-contain"
-						/>
-					{/if}
-					{#if report.signoff.collectedBy}
-						<span class="text-xs text-muted-foreground">
-							{m.orders_report_collected_by({ name: report.signoff.collectedBy })}
-						</span>
-					{/if}
-				</div>
+			{#if signoff}
+				<SignOff {signoff} />
 			{/if}
-			{#each report.notes as note (note.id)}
-				<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
-					<p class="text-sm whitespace-pre-line">{note.text}</p>
-					<span class="text-xs text-muted-foreground">
-						{note.author ?? m.orders_report_someone()} · {formatDateTime(note.createdAt)}
-					</span>
-				</div>
-			{/each}
+			{#if notes.length}
+				<NotesList {notes} />
+			{/if}
 		</Card.Content>
 	</Card.Root>
 {/if}

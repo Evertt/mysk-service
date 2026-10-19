@@ -14,15 +14,15 @@
 	import { order as orderParts } from "#lib/client/extensions.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { StatusBadge as UnitStatusBadge } from "#lib/equipment/components.ts";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
+	import { SignOff } from "#lib/orders/components.ts";
 
 	import ClientStatusBadge from "../../client-status-badge.svelte";
 	import { clientStatus } from "../../client-status.ts";
 	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
-	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -129,7 +129,7 @@
 						<span class="flex min-w-0 flex-col">
 							<span class="truncate font-medium">{unitTitle(unit)}</span>
 							<span class="truncate text-xs text-muted-foreground">
-								{unitDetails(unit, unit.site, unit.location)}
+								{unitLine(unit, { site: unit.site.name, location: unit.location })}
 							</span>
 						</span>
 						<UnitStatusBadge status={unit.status} />
@@ -141,36 +141,12 @@
 		<ExtensionSlot point={orderParts} props={{ number: order.number }} />
 
 		{#if data.signoff}
-			<Card.Root data-signoff>
+			<Card.Root>
 				<Card.Header>
 					<Card.Title>{m.client_signoff_title()}</Card.Title>
-					<Card.Description>
-						{m.client_signoff_description({ date: formatDateTime(data.signoff.signedAt) })}
-					</Card.Description>
 				</Card.Header>
-				<Card.Content class="grid gap-4 sm:grid-cols-2">
-					<figure class="flex flex-col gap-2">
-						<img
-							src={data.signoff.signature}
-							alt={m.client_signoff_customer({ name: data.signoff.signerName })}
-							class="h-24 w-full rounded-md border bg-white object-contain"
-						/>
-						<figcaption class="text-sm">
-							{m.client_signoff_customer({ name: data.signoff.signerName })}
-						</figcaption>
-					</figure>
-					{#if data.signoff.engineerSignature && data.signoff.engineerName}
-						<figure class="flex flex-col gap-2">
-							<img
-								src={data.signoff.engineerSignature}
-								alt={m.client_signoff_engineer({ name: data.signoff.engineerName })}
-								class="h-24 w-full rounded-md border bg-white object-contain"
-							/>
-							<figcaption class="text-sm">
-								{m.client_signoff_engineer({ name: data.signoff.engineerName })}
-							</figcaption>
-						</figure>
-					{/if}
+				<Card.Content>
+					<SignOff signoff={data.signoff} />
 				</Card.Content>
 			</Card.Root>
 		{/if}

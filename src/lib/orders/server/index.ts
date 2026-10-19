@@ -7,3 +7,4 @@ export * from "./order-changes.ts";
 export * from "./pricing.ts";
 export * from "./types.ts";
 export * from "./units.ts";
+export * from "./work-record.ts";

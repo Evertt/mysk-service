@@ -11,10 +11,9 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, gte, isNotNull, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
-import { firstName } from "#lib/engineers/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses, pendingOrderStatuses, reportUrgencies } from "#lib/models.ts";
-import { onUnit, requestOrder } from "#lib/orders/server/index.ts";
+import { customerWork, onUnit, readWorkRecord, requestOrder } from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
 import {
 	atSites,
@@ -32,13 +31,11 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
 	customerSite,
-	engineer,
 	equipment,
 	equipmentCategory,
 	equipmentLocation,
 	order,
 	orderRequest,
-	orderSignoff,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
@@ -69,6 +66,19 @@ const orderColumns = {
 	decidedAt: orderRequest.decidedAt,
 	rejectionReason: orderRequest.rejectionReason,
 };
+
+/** Orders as the portal shows them, with their request if the customer reported them. */
+const selectOrders = () =>
+	db
+		.select(orderColumns)
+		.from(order)
+		.leftJoin(
+			orderRequest,
+			and(
+				eq(orderRequest.orderId, order.id),
+				eq(orderRequest.organizationId, order.organizationId),
+			),
+		);
 
 /** A unit as the portal shows it: what it's called, what it is and where. */
 const unitColumns = {
@@ -128,16 +138,7 @@ async function unitsOfOrders(access: CustomerAccess, orderIds: number[]) {
 
 /** The customer's orders that `where` picks and the contact sees, newest first, with their units. */
 async function ordersWhere(access: CustomerAccess, where?: SQL, limit = 200) {
-	const rows = await db
-		.select(orderColumns)
-		.from(order)
-		.leftJoin(
-			orderRequest,
-			and(
-				eq(orderRequest.orderId, order.id),
-				eq(orderRequest.organizationId, order.organizationId),
-			),
-		)
+	const rows = await selectOrders()
 		.where(and(customerOrders(access), where))
 		.orderBy(desc(order.createdAt), desc(order.id))
 		.limit(limit);
@@ -181,47 +182,19 @@ export const getPortalOrders = forCustomers.query(async () => {
 
 /**
  * One of the customer's orders the contact sees, by its number, or a 404: what it's about and
- * where it stands, its units (those at the contact's sites), who reported it and what the planner
- * decided, the engineer's first name, and once it's done its work order's sign-off.
+ * where it stands, who reported it and what the planner decided, and of its work record (see
+ * `readWorkRecord()`) its units at the contact's sites, the engineer's first name and once it's
+ * done its work order's sign-off.
  */
 export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
-	const access = await currentCustomer();
-	const [found] = await db
-		.select({ ...orderColumns, engineer: engineer.name })
-		.from(order)
-		.leftJoin(
-			orderRequest,
-			and(
-				eq(orderRequest.orderId, order.id),
-				eq(orderRequest.organizationId, order.organizationId),
-			),
-		)
-		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(and(eq(order.number, number), customerOrders(access)));
-	if (!found) error(404, m.client_order_not_found({ number }));
-	const [units, signoff] = await Promise.all([
-		unitsOfOrders(access, [found.id]),
-		db
-			.select({
-				signerName: orderSignoff.signerName,
-				signature: orderSignoff.signature,
-				engineerName: orderSignoff.engineerName,
-				engineerSignature: orderSignoff.engineerSignature,
-				signedAt: orderSignoff.signedAt,
-			})
-			.from(orderSignoff)
-			.where(and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff))),
+	const scope = customerWork(await currentCustomer(), number);
+	const [[found], record] = await Promise.all([
+		selectOrders().where(scope.where),
+		readWorkRecord(scope),
 	]);
-	const { engineer: engineerName, ...rest } = found;
-	return {
-		order: {
-			...rest,
-			// Only who's coming, by their first name.
-			engineer: engineerName ? firstName(engineerName) : null,
-			units: units.get(found.id) ?? [],
-		},
-		signoff: signoff[0] ?? null,
-	};
+	if (!found || !record) error(404, m.client_order_not_found({ number }));
+	const { engineer, units, signoff } = record;
+	return { order: { ...found, engineer, units }, signoff };
 });
 
 // --- Equipment and locations ---------------------------------------------------------------

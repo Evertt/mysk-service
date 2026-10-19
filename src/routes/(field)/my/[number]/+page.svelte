@@ -11,11 +11,11 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { dayOf } from "#lib/dates.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatDateTime, formatNumber, formatTime } from "#lib/i18n/index.ts";
-	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import { PriorityBadge, SignOff, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
@@ -121,17 +121,13 @@
 							<div class="flex min-w-0 flex-col">
 								<span class="font-medium">{unitTitle(unit)}</span>
 								<span class="text-muted-foreground">
-									{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category.name]
-										.filter(Boolean)
-										.join(" · ")}
+									{unitLine(unit, {
+										category: unit.category,
+										// The site only when the units are at more than one.
+										site: data.sites.length > 1 ? unit.site.name : null,
+										location: unit.location,
+									})}
 								</span>
-								{#if unit.location || data.sites.length > 1}
-									<span class="text-muted-foreground">
-										{[data.sites.length > 1 ? unit.site.name : null, unit.location]
-											.filter(Boolean)
-											.join(" · ")}
-									</span>
-								{/if}
 							</div>
 						</li>
 					{/each}
@@ -210,30 +206,9 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{m.portal_signed_off()}</Card.Title>
-			<Card.Description>
-				{m.portal_signed_off_by({
-					name: data.signoff.signerName,
-					date: formatDateTime(data.signoff.signedAt),
-				})}
-			</Card.Description>
 		</Card.Header>
-		<Card.Content class="flex flex-col gap-3">
-			<img
-				src={data.signoff.signature}
-				alt={m.portal_signature_of({ name: data.signoff.signerName })}
-				class="h-32 w-full rounded-lg border bg-white object-contain"
-			/>
-			<!-- The engineer's own, on sign-offs since engineers sign too. -->
-			{#if data.signoff.engineerName && data.signoff.engineerSignature}
-				<p class="text-sm text-muted-foreground">
-					{m.portal_engineer_signed({ name: data.signoff.engineerName })}
-				</p>
-				<img
-					src={data.signoff.engineerSignature}
-					alt={m.portal_signature_of({ name: data.signoff.engineerName })}
-					class="h-32 w-full rounded-lg border bg-white object-contain"
-				/>
-			{/if}
+		<Card.Content>
+			<SignOff signoff={data.signoff} />
 		</Card.Content>
 	</Card.Root>
 {/if}

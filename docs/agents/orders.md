@@ -1,7 +1,8 @@
 # Orders
 
-Read before you change which status an order can get, add a way its status changes, or touch
-orders awaiting acceptance.
+Read before you change which status an order can get, add a way its status changes, touch
+orders awaiting acceptance, or read or show what was done on an order's site (its units, notes or
+sign-off).
 
 ## The lifecycle
 
@@ -63,3 +64,34 @@ customer reads). A contract's response time counts from the report (the order's 
 from its acceptance: the contracts module counts an order awaiting acceptance as not responded to
 yet, like a quote (`waitingStatuses` in `src/modules/contracts/coverage.ts`). Orders made in the
 office start as quotes, past acceptance.
+
+## The work record
+
+What was done on an order's site (its units in their order at their sites, with each one's
+category and location, the notes engineers wrote, and the sign-off with both signatures) is read
+in one place: `readWorkRecord(scope)` (`src/lib/orders/server/work-record.ts`, in
+`#lib/orders/server/index.ts`). Its readers are the office's order page (`getOrder`), the engineer
+portal's (`getMyOrder`), the customer portal's (`getPortalOrder`) and the checklists module's
+printed work order (`loadWorkOrder`); each reads its own header beside it (the order's columns, the
+customer, the request, prices, tags, history, checklists), on the scope's `where`.
+
+- **Who sees what** is the `audiences` table, the only place it's declared: `office` (the notes,
+  who in the office collected the sign-off, the engineer in full, the site's `onSite` columns),
+  `engineer` (the notes, not who collected it, no engineer: it's them), `customer` (no notes, the
+  engineer by first name, the site's address) and `workOrder` (no notes, the engineer in full, the
+  address); only the office sees a unit's warranty date. A key the table says no to isn't in
+  `WorkRecord<A>`'s type: a customer's record has no `notes`. A new column a portal mustn't see is a key in the table, not a select of its own; a key
+  that doesn't change the record's shape (prices) doesn't belong there.
+- **A scope** finds the order and names its audience, and only these make one: `officeOrder(number)`
+  (the tenant's), `await engineerWork(ref)` (the engineer's own, `engineerOrder()`),
+  `customerWork(access, number)` (`customerOrders()`, with only the units at the contact's sites,
+  `atSites()`) and `printedWorkOrder(where, unitsAt)`. An order the scope doesn't reach reads as
+  `undefined`: the caller 404s with its own message (`engineerOrderNotFound()` on the portal).
+  A batch query reads several in as many statements as one: `readWorkRecords(officeOrders(numbers))`
+  answers them by number (`getOrder`, which the order's page and its hover card share).
+- **Sites**: the units' distinct sites, or for an order without units the customer's site when it
+  has just one, else none, for every audience.
+- **Showing it**: `<SignOff signoff />` ("Signed off by <signer> on <date>", both signatures side
+  by side, "collected by" when the sign-off has it) and `<NotesList notes empty? footer? />`, in
+  `#lib/orders/components.ts`; a unit's line under its title is `unitLine(unit, { category, site,
+location })` (`#lib/equipment/index.ts`), the extras the page shows, always in that order.

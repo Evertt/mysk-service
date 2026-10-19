@@ -38,9 +38,19 @@ describe("a unit's name", () => {
 		expect(unitTitle(named)).toBe("Automatische deur kantine BES-3");
 	});
 
-	test("on one line it comes first, before the make and serial number", () => {
-		expect(unitLine(unit)).toBe("Hörmann ST 50 · H1234567");
-		expect(unitLine(named)).toBe("Automatische deur kantine BES-3 · Hörmann ST 50 · H1234567");
+	test("under it, its line says the make if the title doesn't, then the serial number", () => {
+		expect(unitLine(unit)).toBe("H1234567");
+		expect(unitLine(named)).toBe("Hörmann ST 50 · H1234567");
+	});
+
+	test("then the page's extras, always in this order: category, site, location", () => {
+		expect(unitLine(named, { location: "Dock 03", site: "Ede", category: "Overheaddeur" })).toBe(
+			"Hörmann ST 50 · H1234567 · Overheaddeur · Ede · Dock 03",
+		);
+		// Those it hasn't, or the page leaves out, aren't there.
+		expect(unitLine(unit, { category: null, site: "Ede", location: undefined })).toBe(
+			"H1234567 · Ede",
+		);
 	});
 });
 

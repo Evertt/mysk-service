@@ -249,7 +249,7 @@ describe("the engineer portal", () => {
 		expect(signoff.engineer_name).toBe((await me()).name);
 		expect(signoff.engineer_signature).toMatch(/^data:image\/png;base64,/);
 		expect(signoff.user_id).toBe((await me()).user_id);
-		await page.getByText("Signed off").waitFor();
+		await page.getByText("Signed off", { exact: true }).waitFor();
 		expect(await page.getByRole("button", { name: "Save hours" }).count()).toBe(0);
 
 		// It's now among the recently completed.

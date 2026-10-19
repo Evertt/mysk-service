@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
 	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 
 	import PlaceCard from "../../place-card.svelte";
 	import { getMyUnit } from "../../places.remote.ts";
@@ -27,9 +27,7 @@
 		<StatusBadge status={unit.status} />
 	</div>
 	<p class="text-sm text-muted-foreground">
-		{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category]
-			.filter(Boolean)
-			.join(" · ")}
+		{unitLine(unit, { category: unit.category })}
 	</p>
 </header>
 

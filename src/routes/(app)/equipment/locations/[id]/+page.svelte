@@ -18,7 +18,7 @@
 		LocationHistory,
 		QrCard,
 	} from "#lib/equipment/components.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { deleteLocation, getLocation } from "#lib/equipment/remotes.ts";
 
 	import type { PageProps } from "./$types";
@@ -97,9 +97,7 @@
 												{unitTitle(unit)}
 											</EquipmentLink>
 											<span class="text-xs text-muted-foreground">
-												{unit.name
-													? `${unitModel(unit)} · ${unit.serialNumber}`
-													: unit.serialNumber}
+												{unitLine(unit)}
 											</span>
 										</div>
 									</Table.Cell>

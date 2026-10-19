@@ -6,7 +6,7 @@
 	import { resolve } from "$app/paths";
 
 	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 
 	import PlaceCard from "../../place-card.svelte";
 	import { getMyLocation } from "../../places.remote.ts";
@@ -45,7 +45,7 @@
 						class="flex min-w-0 flex-col"
 					>
 						<span class="truncate font-medium">{unitTitle(unit)}</span>
-						<span class="text-xs text-muted-foreground">{unit.serialNumber}</span>
+						<span class="text-xs text-muted-foreground">{unitLine(unit)}</span>
 					</a>
 					<StatusBadge status={unit.status} />
 				</li>

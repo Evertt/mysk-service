@@ -6,7 +6,7 @@
 	styles).
 -->
 <script lang="ts">
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 
 	import { completerName } from "../display.ts";
@@ -70,23 +70,24 @@
 			<p class="font-medium">{order.customer.name}</p>
 			<p>{order.customer.contactName}</p>
 		</div>
-		<div class="flex flex-col gap-0.5">
-			<h2 class="text-xs font-medium text-muted-foreground uppercase">
-				{m.checklists_print_site()}
-			</h2>
-			{#each data.sites as site (site.id)}
-				<p>
-					<span class="font-medium">{site.name}</span>{site.address ? `, ${site.address}` : ""}, {[
-						site.postalCode,
-						site.city,
-					]
-						.filter(Boolean)
-						.join(" ")}
-				</p>
-			{:else}
-				<p>{order.customer.city}</p>
-			{/each}
-		</div>
+		<!-- Without units, a site is known only when the customer has just one. -->
+		{#if data.sites.length}
+			<div class="flex flex-col gap-0.5">
+				<h2 class="text-xs font-medium text-muted-foreground uppercase">
+					{m.checklists_print_site()}
+				</h2>
+				{#each data.sites as site (site.id)}
+					<p>
+						<span class="font-medium">{site.name}</span>{site.address ? `, ${site.address}` : ""}, {[
+							site.postalCode,
+							site.city,
+						]
+							.filter(Boolean)
+							.join(" ")}
+					</p>
+				{/each}
+			</div>
+		{/if}
 	</section>
 
 	{#if data.units.length}
@@ -99,7 +100,6 @@
 					<tr class="border-b">
 						<th class="py-1 pr-2 font-medium">#</th>
 						<th class="py-1 pr-2 font-medium">{m.checklists_print_unit()}</th>
-						<th class="py-1 pr-2 font-medium">{m.checklists_print_serial()}</th>
 						<th class="py-1 pr-2 font-medium">{m.checklists_print_location()}</th>
 						<th class="py-1 font-medium">{m.checklists_print_outcome()}</th>
 					</tr>
@@ -110,10 +110,9 @@
 						<tr class="border-b align-top">
 							<td class="py-1 pr-2 tabular-nums">{formatNumber(index + 1)}</td>
 							<td class="py-1 pr-2">
-								{unitTitle(unit)}
-								{#if unit.name}<span class="text-muted-foreground"> · {unitModel(unit)}</span>{/if}
+								<span class="font-medium">{unitTitle(unit)}</span>
+								<span class="block text-muted-foreground">{unitLine(unit)}</span>
 							</td>
-							<td class="py-1 pr-2 tabular-nums">{unit.serialNumber}</td>
 							<td class="py-1 pr-2">{unit.location ?? "—"}</td>
 							<td class="py-1">
 								{#if unitChecklist}<OutcomeBadge checklist={unitChecklist} />{:else}—{/if}

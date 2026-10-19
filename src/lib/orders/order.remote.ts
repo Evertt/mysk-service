@@ -18,7 +18,6 @@ import {
 	equipmentLocation,
 	order,
 	orderRequest,
-	orderUnit,
 	user,
 } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
@@ -32,39 +31,28 @@ import { removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { tenantOrderTypes } from "./server/types.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
+import { officeOrders, readWorkRecords } from "./server/work-record.ts";
 import { offeredOrderTypes } from "./types.ts";
 
 /**
- * Orders by number, each with everything on it: its units in their order, the sites the work is at
- * (its units', one usually, or the customer's only one for an order without units), its price, its
- * modules' tags and whether a customer reported it. What its page shows, and its hover card
- * (`OrderLink`): a batch query, so the cards of a page's links come in one request (priced and
- * tagged together), and a hover card and the page share their answer. An unknown number (or another
- * tenant's) is a 404 for that number. Other orders for the same units are `getOrderHistory`.
+ * Orders by number, each with everything on it: its work record (its units in their order, the
+ * sites the work is at, the notes and the sign-off, see `readWorkRecord()`), its price, its modules'
+ * tags and whether a customer reported it. What its page shows, and its hover card (`OrderLink`): a
+ * batch query, so the cards of a page's links come in one request (priced and tagged together), and
+ * a hover card and the page share their answer. An unknown number (or another tenant's) is a 404 for
+ * that number. Other orders for the same units are `getOrderHistory`.
  */
 export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
-	const found = await db.query.order.findMany({
-		where: and(inList(order.number, numbers), inTenant(order)),
-		with: {
-			customer: { with: { sites: true } },
-			units: {
-				orderBy: asc(orderUnit.position),
-				with: {
-					equipment: {
-						with: {
-							site: true,
-							location: { columns: { name: true } },
-							category: { columns: { name: true } },
-						},
-					},
-				},
-			},
-			engineer: true,
-		},
-	});
+	const [found, records] = await Promise.all([
+		db.query.order.findMany({
+			where: and(inList(order.number, numbers), inTenant(order)),
+			with: { customer: true, engineer: true },
+		}),
+		readWorkRecords(officeOrders(numbers)),
+	]);
 	const facts = found.map((one) => ({
 		...one,
-		equipmentIds: one.units.map((unit) => unit.equipment.id),
+		equipmentIds: records.get(one.number)?.units.map((unit) => unit.id) ?? [],
 		hourlyRate: one.engineer?.hourlyRate,
 	}));
 	const decider = alias(user, "decider");
@@ -99,22 +87,16 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 
 	return (number: string) => {
 		const i = at.get(number);
-		if (i === undefined) error(404, m.orders_not_found({ number }));
+		const record = records.get(number);
+		if (i === undefined || !record) error(404, m.orders_not_found({ number }));
 		const one = found[i];
-		const { sites: customerSites, ...owner } = one.customer;
-		// Each unit with the name of its location at the site, if it has one.
-		const units = one.units.map(({ equipment: unit }) => ({
-			...unit,
-			location: unit.location?.name ?? null,
-		}));
-		const sites = units.length
-			? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
-			: customerSites.length === 1
-				? customerSites
-				: [];
+		const { units, sites, notes, signoff } = record;
 		return {
-			order: { ...one, customer: owner, units },
+			order: { ...one, units },
 			sites,
+			/** What was recorded on it in the field. */
+			notes,
+			signoff,
 			totals: { ...prices[i], laborRate: one.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 			/** From the tenant's modules, e.g. a response time about to be missed. */
 			tags: tags[i],

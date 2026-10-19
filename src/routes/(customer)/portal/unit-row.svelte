@@ -7,10 +7,8 @@
 	import { resolve } from "$app/paths";
 
 	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import type { EquipmentStatus } from "#lib/models.ts";
-
-	import { unitDetails } from "./units.ts";
 
 	let {
 		unit,
@@ -37,7 +35,7 @@
 	<span class="flex min-w-0 flex-col">
 		<span class="truncate text-sm font-medium">{unitTitle(unit)}</span>
 		<span class="truncate text-xs text-muted-foreground">
-			{unitDetails(unit, unit.category, showLocation ? unit.location : null)}
+			{unitLine(unit, { category: unit.category, location: showLocation ? unit.location : null })}
 		</span>
 	</span>
 	<StatusBadge status={unit.status} />

@@ -5,36 +5,33 @@
  */
 import { getRequestEvent } from "$app/server";
 import { invalid, redirect } from "@sveltejs/kit";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
-import { findEngineerOrder, orderCommitted, transitionOrder } from "#lib/orders/server/index.ts";
+import {
+	engineerWork,
+	findEngineerOrder,
+	orderCommitted,
+	readWorkRecord,
+	transitionOrder,
+} from "#lib/orders/server/index.ts";
 import { id, laborHours, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	auth,
 	currentEngineer,
 	currentTenant,
-	engineerOrder,
 	engineerOrderNotFound,
 	engineerOrders,
 	idInTenant,
-	inTenant,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import {
-	customer,
-	order,
-	orderNote,
-	orderSignoff,
-	orderUnit,
-	user,
-} from "#lib/server/db/schema.ts";
+import { customer, order, orderNote } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
@@ -80,101 +77,27 @@ export const getMyWork = forEngineers.query(async () => {
 	return { open, recent };
 });
 
-/** What the engineer needs of the site they go to: how to get there and in, and when to come. */
-const siteColumns = {
-	name: true,
-	address: true,
-	postalCode: true,
-	city: true,
-	country: true,
-	contactName: true,
-	contactPhone: true,
-	contactEmail: true,
-	contactChannel: true,
-	preferredDay: true,
-	slotStart: true,
-	slotEnd: true,
-	priority: true,
-	accessNotes: true,
-} as const;
-
 /**
- * One of the engineer's orders, with what they need on site: its units in the order they're worked
- * on, and the sites they're at (one, usually), or the customer's only one for an order without
- * units. A 404 for anyone else's.
+ * One of the engineer's orders, with what they need on site: its work record (its units in the
+ * order they're worked on, the sites they're at, the notes and the sign-off, see
+ * `readWorkRecord()`) and whom to ask at the customer. A 404 for anyone else's.
  */
 export const getMyOrder = forEngineers.query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		where: await engineerOrder({ number }),
-		with: {
-			customer: {
-				columns: { name: true, contactName: true, phone: true, email: true, city: true },
-				with: { sites: { columns: { id: true, ...siteColumns } } },
-			},
-			units: {
-				columns: {},
-				orderBy: asc(orderUnit.position),
-				with: {
-					equipment: {
-						columns: {
-							id: true,
-							name: true,
-							model: true,
-							manufacturer: true,
-							serialNumber: true,
-						},
-						with: {
-							site: { columns: { id: true, ...siteColumns } },
-							location: { columns: { name: true } },
-							category: { columns: { name: true } },
-						},
-					},
+	const scope = await engineerWork({ number });
+	const [found, record] = await Promise.all([
+		db.query.order.findFirst({
+			where: scope.where,
+			with: {
+				customer: {
+					columns: { name: true, contactName: true, phone: true, email: true, city: true },
 				},
 			},
-		},
-	});
-	if (!found) engineerOrderNotFound({ number });
-	const { sites: customerSites, ...owner } = found.customer;
-	// Each unit with the name of its location at the site, if it has one.
-	const units = found.units.map(({ equipment: unit }) => ({
-		...unit,
-		location: unit.location?.name ?? null,
-	}));
-	const sites = units.length
-		? [...new Map(units.map((unit) => [unit.site.id, unit.site])).values()]
-		: customerSites.length === 1
-			? customerSites
-			: [];
-
-	const [notes, signoff] = await Promise.all([
-		db
-			.select({
-				id: orderNote.id,
-				text: orderNote.text,
-				createdAt: orderNote.createdAt,
-				author: user.name,
-			})
-			.from(orderNote)
-			.leftJoin(user, eq(orderNote.userId, user.id))
-			.where(and(eq(orderNote.orderId, found.id), inTenant(orderNote)))
-			.orderBy(asc(orderNote.createdAt), asc(orderNote.id)),
-		db.query.orderSignoff.findFirst({
-			columns: {
-				signerName: true,
-				signature: true,
-				engineerName: true,
-				engineerSignature: true,
-				signedAt: true,
-			},
-			where: and(eq(orderSignoff.orderId, found.id), inTenant(orderSignoff)),
 		}),
+		readWorkRecord(scope),
 	]);
-	return {
-		order: { ...found, customer: owner, units },
-		sites,
-		notes,
-		signoff: signoff ?? null,
-	};
+	if (!found || !record) engineerOrderNotFound({ number });
+	const { units, sites, notes, signoff } = record;
+	return { order: { ...found, units }, sites, notes, signoff };
 });
 
 /** The records the portal shows: a change to any of them may outdate it. */
