@@ -16,7 +16,7 @@
 	} from "#lib/equipment/components.ts";
 	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDate, label } from "#lib/i18n/index.ts";
@@ -39,9 +39,7 @@
 
 <PageHeader
 	title={name}
-	description={[unit.category.name, unit.name && unitModel(unit), unit.serialNumber]
-		.filter(Boolean)
-		.join(" · ")}
+	description={unitLine(unit, { category: unit.category.name })}
 	breadcrumbs={[
 		{ label: m.equipment_title(), href: resolve("/(app)/equipment") },
 		{ label: unit.serialNumber },

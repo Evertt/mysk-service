@@ -11,7 +11,7 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { dayOf } from "#lib/dates.ts";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
@@ -121,17 +121,13 @@
 							<div class="flex min-w-0 flex-col">
 								<span class="font-medium">{unitTitle(unit)}</span>
 								<span class="text-muted-foreground">
-									{[unit.name ? unitModel(unit) : null, unit.serialNumber, unit.category]
-										.filter(Boolean)
-										.join(" · ")}
+									{unitLine(unit, {
+										category: unit.category,
+										// The site only when the units are at more than one.
+										site: data.sites.length > 1 ? unit.site.name : null,
+										location: unit.location,
+									})}
 								</span>
-								{#if unit.location || data.sites.length > 1}
-									<span class="text-muted-foreground">
-										{[data.sites.length > 1 ? unit.site.name : null, unit.location]
-											.filter(Boolean)
-											.join(" · ")}
-									</span>
-								{/if}
 							</div>
 						</li>
 					{/each}

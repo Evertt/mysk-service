@@ -14,7 +14,7 @@
 	import { order as orderParts } from "#lib/client/extensions.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import { StatusBadge as UnitStatusBadge } from "#lib/equipment/components.ts";
-	import { unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
@@ -23,7 +23,6 @@
 	import ClientStatusBadge from "../../client-status-badge.svelte";
 	import { clientStatus } from "../../client-status.ts";
 	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
-	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -130,7 +129,7 @@
 						<span class="flex min-w-0 flex-col">
 							<span class="truncate font-medium">{unitTitle(unit)}</span>
 							<span class="truncate text-xs text-muted-foreground">
-								{unitDetails(unit, unit.site.name, unit.location)}
+								{unitLine(unit, { site: unit.site.name, location: unit.location })}
 							</span>
 						</span>
 						<UnitStatusBadge status={unit.status} />

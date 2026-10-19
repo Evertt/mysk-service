@@ -48,12 +48,20 @@ export const unitTitle = (unit: { name: string | null; manufacturer: string; mod
 	unit.name ?? unitModel(unit);
 
 /**
- * A unit on one line, e.g. in a select: its name first if it has one, then its manufacturer and
- * model and its serial number, `Deur kantine BES-3 · Hörmann ST 50 · H1234567`.
+ * What a unit's title (`unitTitle()`) doesn't say, on one line under it: its manufacturer and model
+ * if the title is its own name, its serial number, then the page's `extras` in this order, those it
+ * has: `Hörmann ST 50 · H1234567 · Overheaddeur · Ede · Dock 03`.
  */
-export const unitLine = (unit: {
-	name: string | null;
-	manufacturer: string;
-	model: string;
-	serialNumber: string;
-}) => [unit.name, unitModel(unit), unit.serialNumber].filter(Boolean).join(" · ");
+export const unitLine = (
+	unit: { name: string | null; manufacturer: string; model: string; serialNumber: string },
+	extras: { category?: string | null; site?: string | null; location?: string | null } = {},
+) =>
+	[
+		unit.name ? unitModel(unit) : null,
+		unit.serialNumber,
+		extras.category,
+		extras.site,
+		extras.location,
+	]
+		.filter(Boolean)
+		.join(" · ");

@@ -7,7 +7,7 @@
 	import { resolve } from "$app/paths";
 
 	import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	let {
@@ -31,8 +31,7 @@
 <div class="flex items-start gap-1.5">
 	<TwoLineCell
 		primary={first && unitTitle(first)}
-		secondary={first &&
-			(first.name ? `${unitModel(first)} · ${first.serialNumber}` : first.serialNumber)}
+		secondary={first && unitLine(first)}
 		href={first ? resolve("/(app)/equipment/[serial]", { serial: first.serialNumber }) : undefined}
 		fallback={m.orders_new_installation()}
 	/>
