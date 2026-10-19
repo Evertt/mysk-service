@@ -3,14 +3,12 @@
  * each of its units, filled in as they go (each answer saved as it's given, so a phone that drops
  * out loses nothing) and completed one by one. Only the engineer's own orders, while in progress.
  */
-import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { fieldActions } from "#lib/orders/index.ts";
-import { currentEngineer, inTenant } from "#lib/server/auth/index.ts";
+import { findEngineerOrder } from "#lib/orders/server/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { order } from "#lib/server/db/schema.ts";
 
 import {
 	answerSchema,
@@ -28,12 +26,7 @@ import { checklist } from "../server/schema.ts";
  * whether they can fill them in (while it's in progress); a 404 for anyone else's order.
  */
 export const getFieldChecklists = forEngineers.query(v.string(), async (number) => {
-	const engineer = await currentEngineer();
-	const [found] = await db
-		.select({ id: order.id, status: order.status })
-		.from(order)
-		.where(and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineer.id)));
-	if (!found) error(404, m.checklists_order_not_found({ number }));
+	const found = await findEngineerOrder(db, { number });
 	return {
 		canChange: fieldActions(found.status).work,
 		checklists: await checklistRecords(eq(checklist.orderId, found.id)),
@@ -42,25 +35,21 @@ export const getFieldChecklists = forEngineers.query(v.string(), async (number) 
 
 /** Gives a point of one of the engineer's checklists a result (or none, to take it back). */
 export const answer = forEngineers.command(answerSchema, async (input) => {
-	const engineer = await currentEngineer();
-	await answerPoint(engineer.id, input.id, input.result);
+	await answerPoint("engineer", input.id, input.result);
 });
 
 /** Says what's wrong with a point (or what part it needs), as the remark a rejection needs. */
 export const remarkOn = forEngineers.command(pointRemarkSchema, async (input) => {
-	const engineer = await currentEngineer();
-	await remarkPoint(engineer.id, input.id, input.remark);
+	await remarkPoint("engineer", input.id, input.remark);
 });
 
 /** The general remark and advice for the customer on one of the engineer's checklists. */
 export const remarkForCustomer = forEngineers.command(remarksSchema, async (input) => {
-	const engineer = await currentEngineer();
-	await remarkChecklist(engineer.id, input.id, input.remarks);
+	await remarkChecklist("engineer", input.id, input.remarks);
 });
 
 /** Completes one of the engineer's checklists once every point is answered; refreshes the card. */
 export const complete = forEngineers.command(checklistIdSchema, async (input) => {
-	const engineer = await currentEngineer();
-	const number = await completeChecklist(engineer.id, input.id);
+	const number = await completeChecklist("engineer", input.id);
 	void getFieldChecklists(number).refresh();
 });

@@ -314,6 +314,19 @@ describe("whose checklists Lev may change", () => {
 		expect(await state()).toEqual(before);
 	});
 
+	test("an order that isn't theirs is the portal's 404, naming the order", async () => {
+		// North's, by a number none of Lev's orders has (numbers repeat across tenants).
+		const [northern] = await rows<{ number: string }>(
+			`select o.number from "order" o where o.organization_id = ? and not exists
+			 (select 1 from "order" s where s.engineer_id = ? and s.number = o.number) limit 1`,
+			[northId, levId],
+		);
+		expect(await as(lev, () => call(getFieldChecklists, northern.number))).toMatchObject({
+			status: 404,
+			message: `Order ${northern.number} not found`,
+		});
+	});
+
 	test("the portal's checklists are an engineer's: an office member is refused them", async () => {
 		const [point] = await rows<{ id: number }>(
 			`select r.id from checklist_result r where r.organization_id = ? limit 1`,

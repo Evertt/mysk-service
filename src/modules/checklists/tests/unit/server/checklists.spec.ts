@@ -251,7 +251,7 @@ const pointsOf = (checklistId: number) =>
 
 /** Answers every point of a checklist `ok`. */
 async function answerAll(checklistId: number) {
-	for (const point of await pointsOf(checklistId)) await answerPoint(1, point.id, "ok");
+	for (const point of await pointsOf(checklistId)) await answerPoint("engineer", point.id, "ok");
 }
 
 /** The status and message of what `run` threw. */
@@ -427,7 +427,7 @@ describe("taking units off an order", () => {
 		const id = await orderWith([10, 11]);
 		const [made] = await checklistsOf(id);
 		const [point] = await pointsOf(made.id);
-		await answerPoint(1, point.id, "nok");
+		await answerPoint("engineer", point.id, "nok");
 		await db.transaction(async (tx) => {
 			expect(
 				await saveUnitChecklists({ tx, order: { id }, equipmentIds: [11], removed: [10] }),
@@ -444,8 +444,8 @@ describe("taking units off an order", () => {
 	test("is refused for a draft with only a remark too, a point's or the customer's", async () => {
 		const id = await orderWith([10, 11]);
 		const [first, second] = await checklistsOf(id);
-		await remarkPoint(1, (await pointsOf(first.id))[0].id, "Roest op de rail.");
-		await remarkChecklist(1, second.id, "Rail vervangen.");
+		await remarkPoint("engineer", (await pointsOf(first.id))[0].id, "Roest op de rail.");
+		await remarkChecklist("engineer", second.id, "Rail vervangen.");
 		expect(await setUnits(id, [11])).toEqual([
 			{
 				message: "The checklists of Deur 10 are filled in already: those units stay on the order.",
@@ -458,8 +458,8 @@ describe("taking units off an order", () => {
 		]);
 		expect(await checklistsOf(id)).toHaveLength(2);
 		// With the remarks cleared again, they're drafts like any other.
-		await remarkPoint(1, (await pointsOf(first.id))[0].id, "");
-		await remarkChecklist(1, second.id, "");
+		await remarkPoint("engineer", (await pointsOf(first.id))[0].id, "");
+		await remarkChecklist("engineer", second.id, "");
 		expect(await setUnits(id, [])).toBeUndefined();
 		expect(await checklistsOf(id)).toEqual([]);
 	});
@@ -484,7 +484,7 @@ describe("changing an order's type", () => {
 	test("away from inspection takes unanswered checklists along, refuses answered ones", async () => {
 		const id = await orderWith([10, 11]);
 		const [made] = await checklistsOf(id);
-		await answerPoint(1, (await pointsOf(made.id))[0].id, "ok");
+		await answerPoint("engineer", (await pointsOf(made.id))[0].id, "ok");
 		await changeOrder(id, "type", "repair");
 		const problems = await db.transaction((tx) => syncChecklists(tx, id));
 		expect(problems).toEqual([
@@ -495,10 +495,10 @@ describe("changing an order's type", () => {
 			},
 		]);
 		// A remark alone keeps it too.
-		await answerPoint(1, (await pointsOf(made.id))[0].id, null);
-		await remarkChecklist(1, made.id, "Rail vervangen.");
+		await answerPoint("engineer", (await pointsOf(made.id))[0].id, null);
+		await remarkChecklist("engineer", made.id, "Rail vervangen.");
 		expect((await db.transaction((tx) => syncChecklists(tx, id)))?.[0].path).toEqual(["type"]);
-		await remarkChecklist(1, made.id, "");
+		await remarkChecklist("engineer", made.id, "");
 		expect(await db.transaction((tx) => syncChecklists(tx, id))).toBeUndefined();
 		expect(await checklistsOf(id)).toEqual([]);
 	});
@@ -525,12 +525,12 @@ describe("saving an order's status", () => {
 		]);
 		const [first, second] = await checklistsOf(id);
 		await answerAll(first.id);
-		await completeChecklist(1, first.id);
+		await completeChecklist("engineer", first.id);
 		expect((await saving(id, "completed"))?.[0].message).toBe(
 			`${number} can't be completed yet: the checklist of Deur 11 isn't completed.`,
 		);
 		await answerAll(second.id);
-		await completeChecklist(1, second.id);
+		await completeChecklist("engineer", second.id);
 		expect(await saving(id, "completed")).toBeUndefined();
 		expect(await saving(id, "in_progress")).toBeUndefined();
 	});
@@ -550,7 +550,7 @@ describe("saving an order's status", () => {
 		const id = await orderWith([10, 11]);
 		expect(await saving(id, null)).toBeUndefined();
 		const [made] = await checklistsOf(id);
-		await answerPoint(1, (await pointsOf(made.id))[0].id, "ok");
+		await answerPoint("engineer", (await pointsOf(made.id))[0].id, "ok");
 		expect((await saving(id, null))?.[0].message).toMatch(/can't be deleted.*Deur 10/);
 	});
 });
@@ -561,20 +561,24 @@ describe("filling a checklist in, in the field", () => {
 		const id = await orderWith([10]);
 		const [made] = await checklistsOf(id);
 		const points = await pointsOf(made.id);
-		expect(await thrown(() => completeChecklist(1, made.id))).toEqual({
+		expect(await thrown(() => completeChecklist("engineer", made.id))).toEqual({
 			status: 400,
 			message: "3 points have no answer yet.",
 		});
-		await answerPoint(1, points[0].id, "nok");
-		await answerPoint(1, points[1].id, "ok");
-		await answerPoint(1, points[2].id, "na");
-		expect(await thrown(() => completeChecklist(1, made.id))).toEqual({
+		await answerPoint("engineer", points[0].id, "nok");
+		await answerPoint("engineer", points[1].id, "ok");
+		await answerPoint("engineer", points[2].id, "na");
+		expect(await thrown(() => completeChecklist("engineer", made.id))).toEqual({
 			status: 400,
 			message: "1 rejected point doesn't say what's wrong.",
 		});
-		await remarkPoint(1, points[0].id, "Draadbreuk zichtbaar bij trommel — kabelset meenemen.");
-		await remarkChecklist(1, made.id, "Kabelset vervangen bij volgend bezoek.");
-		await completeChecklist(1, made.id);
+		await remarkPoint(
+			"engineer",
+			points[0].id,
+			"Draadbreuk zichtbaar bij trommel — kabelset meenemen.",
+		);
+		await remarkChecklist("engineer", made.id, "Kabelset vervangen bij volgend bezoek.");
+		await completeChecklist("engineer", made.id);
 
 		const [done] = await checklistsOf(id);
 		expect(done).toMatchObject({
@@ -596,7 +600,7 @@ describe("filling a checklist in, in the field", () => {
 			note: "1 point rejected",
 		});
 		// On record: it isn't changed again.
-		expect((await thrown(() => answerPoint(1, points[1].id, "nok")))?.status).toBe(400);
+		expect((await thrown(() => answerPoint("engineer", points[1].id, "nok")))?.status).toBe(400);
 		// The modules were told, in the transaction that completed it, with its points.
 		expect(told.at(-1)).toMatchObject({
 			checklist: { id: made.id, kind: "inspection", orderId: id, equipmentId: 10, engineerId: 1 },
@@ -614,7 +618,7 @@ describe("filling a checklist in, in the field", () => {
 		const refusing = vi
 			.spyOn(await import("#lib/server/extensions.ts"), "save")
 			.mockResolvedValueOnce([{ message: "Nope." }]);
-		expect(await thrown(() => completeChecklist(1, made.id))).toEqual({
+		expect(await thrown(() => completeChecklist("engineer", made.id))).toEqual({
 			status: 400,
 			message: "Nope.",
 		});
@@ -627,25 +631,19 @@ describe("filling a checklist in, in the field", () => {
 		const id = await orderWith([10], { type: "maintenance" });
 		const [made] = await checklistsOf(id);
 		await answerAll(made.id);
-		await completeChecklist(1, made.id);
+		await completeChecklist("engineer", made.id);
 		expect((await checklistsOf(id))[0].validUntil).toBeNull();
 	});
 
-	test("only on the engineer's own orders while in progress, in their tenant", async () => {
+	test("only while the engineer's order is in progress", async () => {
 		const id = await orderWith([10]);
 		const [made] = await checklistsOf(id);
 		const [point] = await pointsOf(made.id);
-		// Another engineer's: as if it didn't exist.
-		expect((await thrown(() => answerPoint(2, point.id, "ok")))?.status).toBe(404);
-		expect((await thrown(() => completeChecklist(2, made.id)))?.status).toBe(404);
-		// Another tenant's.
-		locals.tenant = tenantOf("south");
-		expect((await thrown(() => answerPoint(1, point.id, "ok")))?.status).toBe(404);
-		expect((await thrown(() => remarkChecklist(3, made.id, "x")))?.status).toBe(404);
-		locals.tenant = tenantOf("north");
 		// Not in progress.
 		await changeOrder(id, "status", "scheduled");
-		expect(await thrown(() => answerPoint(1, point.id, "ok"))).toMatchObject({ status: 400 });
+		expect(await thrown(() => answerPoint("engineer", point.id, "ok"))).toMatchObject({
+			status: 400,
+		});
 		expect((await pointsOf(made.id))[0].result).toBeNull();
 	});
 });
@@ -688,7 +686,7 @@ describe("filling a checklist in, in the office, for the engineer", () => {
 		const id = await orderWith([10]);
 		const [made] = await checklistsOf(id);
 		await answerAll(made.id);
-		await completeChecklist(1, made.id);
+		await completeChecklist("engineer", made.id);
 		expect((await checklistsOf(id))[0]).toMatchObject({ completedBy: 1, completedByUser: "u1" });
 	});
 
@@ -728,7 +726,7 @@ describe("a unit's state this year, in SQL", () => {
 		freezeNow(at("2026-10-17 15:00"));
 		const done = await orderWith([10]);
 		await answerAll((await checklistsOf(done))[0].id);
-		await completeChecklist(1, (await checklistsOf(done))[0].id);
+		await completeChecklist("engineer", (await checklistsOf(done))[0].id);
 		const open = await orderWith([11], { status: "scheduled" });
 		expect(await states(2026)).toEqual({ 10: "done", 11: "open", 12: "none" });
 		// Another year: what was completed then counts, a draft still open always does.

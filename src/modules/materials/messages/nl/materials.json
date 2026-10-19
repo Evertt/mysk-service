@@ -211,7 +211,6 @@
 	"materials_activity_field_quantity": "aantal",
 	"materials_order_line_amount": "Bedrag",
 	"materials_order_line_quantity": "Aantal",
-	"materials_portal_not_found": "Opdracht {number} niet gevonden",
 	"materials_equipment_not_found": "Apparaat {serial} niet gevonden",
 	"materials_parts_title": "Onderdelen",
 	"materials_parts_description": "De materialen op de afgeronde opdrachten van dit apparaat.",

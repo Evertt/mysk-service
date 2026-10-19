@@ -13,6 +13,8 @@ import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
+	engineerOrder,
+	engineerOrderNotFound,
 	idInTenant,
 	inTenant,
 	isSystemUser,
@@ -130,7 +132,6 @@ export function recordOfficeCondition(
  */
 export async function findFieldUnit(
 	tx: Transaction | typeof db,
-	engineerId: number,
 	number: string,
 	equipmentId: number,
 ) {
@@ -155,8 +156,8 @@ export async function findFieldUnit(
 			),
 		)
 		.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-		.where(and(eq(order.number, number), inTenant(order), eq(order.engineerId, engineerId)));
-	if (!found) error(404, m.condition_order_not_found({ number }));
+		.where(await engineerOrder({ number }));
+	if (!found) engineerOrderNotFound({ number });
 	return found;
 }
 
@@ -263,14 +264,9 @@ export function checklistComponentConditions(equipmentId: number, orderId: numbe
  * `recordChecklistConditions()`) the engineer's advice (none when empty), while the order is in
  * progress. Logged as a change of that condition. A 400 when the checklist gave it no score.
  */
-export function adviseFieldCondition(
-	engineerId: number,
-	number: string,
-	equipmentId: number,
-	advice: string,
-) {
+export function adviseFieldCondition(number: string, equipmentId: number, advice: string) {
 	return db.transaction(async (tx) => {
-		const found = await findFieldUnit(tx, engineerId, number, equipmentId);
+		const found = await findFieldUnit(tx, number, equipmentId);
 		if (!fieldActions(found.order.status).work) {
 			error(400, m.condition_not_in_progress({ number }));
 		}

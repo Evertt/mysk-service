@@ -23,6 +23,7 @@ import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
+	engineerOrders,
 	idInTenant,
 	inTenant,
 	isSystemUser,
@@ -37,10 +38,10 @@ import { completionProblems, type PointResult, rejections, validUntil } from "..
 import { checklist, checklistResult } from "./schema.ts";
 
 /**
- * Who fills a checklist in: an engineer (their id), on one of their own orders in the field, or
- * the office, on any of the tenant's, on the engineer's behalf.
+ * Who fills a checklist in: the signed-in engineer, on one of their own orders in the field
+ * (`engineerOrders()`), or the office, on any of the tenant's, on the engineer's behalf.
  */
-export type Filler = number | "office";
+export type Filler = "engineer" | "office";
 
 /**
  * The tenant's checklist `id`, in `tx`, if `by` may change it: an engineer's on one of their
@@ -56,13 +57,18 @@ async function findFieldChecklist(tx: Transaction, by: Filler, id: number) {
 			status: checklist.status,
 			validityMonths: checklist.validityMonths,
 			equipmentId: checklist.equipmentId,
-			order: { id: order.id, number: order.number, status: order.status },
+			order: {
+				id: order.id,
+				number: order.number,
+				status: order.status,
+				engineerId: order.engineerId,
+			},
 			unit: { name: equipment.name, manufacturer: equipment.manufacturer, model: equipment.model },
 		})
 		.from(checklist)
 		.innerJoin(...tenantJoin(order, checklist.orderId))
 		.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
-		.where(and(idInTenant(checklist, id), by === "office" ? undefined : eq(order.engineerId, by)));
+		.where(and(idInTenant(checklist, id), by === "office" ? undefined : await engineerOrders()));
 	if (!found) error(404, m.checklists_not_found());
 	if (by === "office" && !isOpenOrder(found.order.status)) {
 		error(400, m.checklists_office_order_closed({ number: found.order.number }));
@@ -148,7 +154,8 @@ export function completeChecklist(by: Filler, id: number) {
 		if (unexplained) error(400, m.checklists_complete_unexplained({ count: unexplained }));
 		const now = Temporal.Now.instant();
 		const today = now.toZonedDateTimeISO(getTimeZone()).toPlainDate();
-		const engineerId = by === "office" ? null : by;
+		// The engineer's own order (the scope): its engineer is them.
+		const engineerId = by === "office" ? null : found.order.engineerId;
 		const { user } = currentTenant();
 		const after = {
 			status: "completed" as const,
