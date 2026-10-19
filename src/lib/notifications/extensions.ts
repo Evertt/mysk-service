@@ -25,8 +25,8 @@ export const officeCategories = ["reports", "alerts", "field", "mine"] as const;
 /** What an engineer's notification is about: its icon in the tray. */
 export const engineerCategories = ["assigned", "planned", "unassigned", "cancelled"] as const;
 
-export type OfficeCategory = (typeof officeCategories)[number];
-export type EngineerCategory = (typeof engineerCategories)[number];
+type OfficeCategory = (typeof officeCategories)[number];
+type EngineerCategory = (typeof engineerCategories)[number];
 export type NotificationCategory = OfficeCategory | EngineerCategory;
 
 /**
@@ -43,7 +43,7 @@ export interface EngineerActivity {
 }
 
 /** What a rule's condition is built with, per request. */
-export interface RuleContext {
+interface RuleContext {
 	/** The signed-in user's id: whose records are "mine". */
 	userId: string;
 	/** The engineer's orders, for the engineer's rules (`null` for the office's). */

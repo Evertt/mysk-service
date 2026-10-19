@@ -273,5 +273,22 @@
 	"common_badge_select_label": "{label}: {value}",
 	"common_error_customers_use_portal": "Klantcontacten werken in het klantportaal",
 	"common_error_not_customer": "Je account is niet van een klantcontact",
-	"common_error_back_to_portal": "Terug naar het portaal"
+	"common_error_back_to_portal": "Terug naar het portaal",
+	"common_notifications_show": "Meldingen tonen",
+	"common_notifications_show_new": "Meldingen tonen, {count} nieuw",
+	"common_notifications_unread": "Nieuw",
+	"common_notifications_none": "Niets nieuws",
+	"common_notifications_none_office": "Meldingen van klanten, waarschuwingen, voortgang in het veld en wijzigingen in jouw gegevens komen hier.",
+	"common_notifications_none_engineer": "Opdrachten die aan jou zijn toegewezen of voor jou zijn ingepland, verplaatst, van je zijn afgehaald of geannuleerd, komen hier.",
+	"common_notifications_all_activity": "Alle activiteit",
+	"common_notifications_today": "Vandaag",
+	"common_notifications_yesterday": "Gisteren",
+	"common_notifications_category_reports": "Melding van een klant",
+	"common_notifications_category_alerts": "Waarschuwing",
+	"common_notifications_category_field": "Voortgang in het veld",
+	"common_notifications_category_mine": "Jouw gegevens",
+	"common_notifications_category_assigned": "Aan jou toegewezen",
+	"common_notifications_category_planned": "Ingepland of verplaatst",
+	"common_notifications_category_unassigned": "Van je afgehaald",
+	"common_notifications_category_cancelled": "Geannuleerd"
 }

@@ -27,11 +27,11 @@ import { collectNow } from "#lib/server/extensions.ts";
 import { coreNotificationRules } from "./rules.ts";
 
 /** How far back the bell looks. */
-export const NOTIFICATION_DAYS = 30;
+const NOTIFICATION_DAYS = 30;
 /** The most entries the tray shows: the newest. */
-export const TRAY_SIZE = 50;
+const TRAY_SIZE = 50;
 /** The most unread entries the dot counts: one more reads as "9+". */
-export const UNREAD_CAP = 9;
+const UNREAD_CAP = 9;
 
 /** A notification: an activity entry as the feed shows it, with its category and whether it's new. */
 export interface NotificationEntry extends ActivityEntry {

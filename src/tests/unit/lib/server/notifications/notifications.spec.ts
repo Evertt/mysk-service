@@ -5,7 +5,12 @@
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
-import type { NotificationCategory } from "#lib/notifications/extensions.ts";
+import { moduleIds } from "#lib/modules/ids.ts";
+import {
+	engineerCategories,
+	type NotificationCategory,
+	officeCategories,
+} from "#lib/notifications/extensions.ts";
 import {
 	assignOrder,
 	createOrders,
@@ -15,7 +20,7 @@ import {
 } from "#lib/orders/server/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { notificationsFor } from "#lib/server/notifications/index.ts";
+import { notificationsFor, rulesFor } from "#lib/server/notifications/index.ts";
 import { getNotifications, markNotificationsSeen, watchShell } from "#routes/(app)/shell.remote.ts";
 import { reportBreakdown } from "#routes/(customer)/portal/client.remote.ts";
 import { getMyNotifications } from "#routes/(field)/notifications.remote.ts";
@@ -84,6 +89,32 @@ const makeOrder = (actor: Actor, extra: Partial<OrderDraft> = {}) =>
 		db.transaction(async (tx) => (await createOrders(tx, [draft(customerId, extra)]))[0]),
 	);
 
+describe("the rules", () => {
+	test("have unique ids, and each audience its own categories, the modules' too", () => {
+		const office = rulesFor("office", moduleIds);
+		const engineer = rulesFor("engineer", moduleIds);
+		const ids = [...office, ...engineer].map((rule) => rule.id);
+		expect(new Set(ids).size).toBe(ids.length);
+		expect(office.map((rule) => rule.id)).toEqual(
+			expect.arrayContaining([
+				"docks.doorAlerts",
+				"energy.alerts",
+				"checklists.rejected",
+				"parts-shop.placed",
+			]),
+		);
+		for (const rule of office) expect(officeCategories).toContain(rule.category);
+		for (const rule of engineer) expect(engineerCategories).toContain(rule.category);
+		// The core's first, in the order that picks a category; a module that's off adds none.
+		expect(rulesFor("office", []).map((rule) => rule.id)).toEqual([
+			"orders.reported",
+			"orders.automatic",
+			"orders.fieldProgress",
+			"records.mine",
+		]);
+	});
+});
+
 describe("the office's rules", () => {
 	test("a breakdown a customer reports in the portal is a customer report", async () => {
 		const unitId = await value<number>(
@@ -129,7 +160,7 @@ describe("the office's rules", () => {
 		// The owner made it: their own entries never ring, the engineer's change of their record does.
 		expect(await officeTray(north.owner, made.number)).toEqual(["field"]);
 		await as(north.admin, () =>
-			db.transaction((tx) => transitionOrder(tx, { verb: "set", id: made.id, to: "on_hold" })),
+			db.transaction((tx) => transitionOrder(tx, { verb: "set", id: made.id, to: "scheduled" })),
 		);
 		// The admin's change is the owner's record's (they made it), not field progress for the member.
 		expect(await officeTray(north.member, made.number)).toEqual(["field"]);
