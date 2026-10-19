@@ -10,6 +10,7 @@
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
+	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
 	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
 	import { nameOrderTypes } from "#lib/orders/index.ts";
 	import { getOrderTypes } from "#lib/orders/remotes.ts";
@@ -51,6 +52,7 @@
 				</span>
 			</a>
 			<div class="ml-auto flex items-center gap-1">
+				<BugReportButton />
 				<LanguageSwitcher />
 				<ThemeSwitcher />
 				<ModeSwitcher />

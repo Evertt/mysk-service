@@ -128,6 +128,15 @@ export function formatTimeAgo(
 }
 
 /**
+ * Formats a stopwatch's time, in minutes and seconds: `0:07`, `12:30` (the same in every language
+ * the app has), e.g. how long a bug report has been recording.
+ */
+export function formatStopwatch(milliseconds: number) {
+	const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/**
  * Formats a count or quantity, with at most two decimals, e.g. `2.5` or `1,250`; in Dutch `2,5`
  * or `1.250`.
  */
