@@ -129,7 +129,7 @@
 						<span class="flex min-w-0 flex-col">
 							<span class="truncate font-medium">{unitTitle(unit)}</span>
 							<span class="truncate text-xs text-muted-foreground">
-								{unitDetails(unit, unit.site, unit.location)}
+								{unitDetails(unit, unit.site.name, unit.location)}
 							</span>
 						</span>
 						<UnitStatusBadge status={unit.status} />
