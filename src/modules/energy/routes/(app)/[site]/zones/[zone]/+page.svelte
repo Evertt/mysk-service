@@ -4,6 +4,7 @@
 
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import {
 		changeClass,
@@ -26,14 +27,7 @@
 	const data = $derived(await getEnergyZone(args));
 	const zone = $derived(data.zone);
 
-	const changes = watchEnergy();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) void getEnergyZone(args).refresh();
-		seen = changed;
-	});
+	refreshOnChange(watchEnergy, () => getEnergyZone(args).refresh());
 	// Open doors count up between batches.
 	const clock = new Clock(15_000);
 	const now = $derived(clock.now);

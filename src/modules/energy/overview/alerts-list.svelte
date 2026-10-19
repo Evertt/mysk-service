@@ -10,6 +10,7 @@
 	import { resolve } from "$app/paths";
 	import { toast } from "svelte-sonner";
 
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import { getEnergyAlerts, makeAlertOrder, resolveEnergyAlert } from "../alerts.remote.ts";
@@ -33,14 +34,7 @@
 	// Live: an alert the feed raises, or one dealt with here or elsewhere, shows at once. Also
 	// after this list's own commands: their log entries announce them, and a refresh of its own as
 	// well, while the live one runs, froze the page (Svelte 5.57).
-	const changes = watchEnergy();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) void getEnergyAlerts({ site, status }).refresh();
-		seen = changed;
-	});
+	refreshOnChange(watchEnergy, () => getEnergyAlerts({ site, status }).refresh());
 
 	async function act(id: number, action: "order" | "resolve") {
 		busy = id;

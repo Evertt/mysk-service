@@ -16,6 +16,7 @@
 
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
 
 	import { watchDocks } from "../docks.remote.ts";
@@ -34,14 +35,7 @@
 	const now = $derived(clock.now);
 
 	// Live: a change to the docks (the feed's events, the rules, an edit) asks for the site again.
-	const changes = watchDocks();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) void getDockBoard(siteId).refresh();
-		seen = changed;
-	});
+	refreshOnChange(watchDocks, () => getDockBoard(siteId).refresh());
 
 	// The docks with Salvo get a card; the others (no live state) are listed below them.
 	const salvoDocks = $derived(board.docks.filter((dock) => dock.scpCode || dock.reported));

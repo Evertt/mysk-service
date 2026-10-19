@@ -5,17 +5,17 @@
 <script lang="ts">
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { isDoneOrder, type OrderStatus, pendingOrderStatuses } from "#lib/models.ts";
 	import { cn } from "#lib/utils.ts";
 
-	import { getPortalOrders } from "../client.remote.ts";
-	import { refreshOnChanges } from "../live.svelte.ts";
+	import { getPortalOrders, watchPortal } from "../client.remote.ts";
 	import OrderList from "../order-list.svelte";
 
 	const orders = $derived(await getPortalOrders());
 
-	refreshOnChanges(() => getPortalOrders().refresh());
+	refreshOnChange(watchPortal, () => getPortalOrders().refresh());
 
 	const tabs: Record<string, { label: () => string; keep: (status: OrderStatus) => boolean }> = {
 		open: {
