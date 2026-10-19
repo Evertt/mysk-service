@@ -206,7 +206,7 @@ await recordActivity(tx, {
 ```ts
 // (customer)/portal/live.svelte.ts and (field)/my/live.svelte.ts go; pages call:
 refreshOnChange(watchPortal, () => getPortalOrder(number).refresh());
-// dock-state:   refreshOnChange(() => (dock ? watchDocks() : undefined), () => query?.refresh());
+// dock-state:   refreshOnChange(() => docked && watchDocks(), () => query?.refresh());  (docked: a $derived boolean)
 // month view:   refreshOnChange(watchSchedule, () => getScheduleMonth(month).refresh(), () => data.changedAt);
 // board:        refreshOnChange(watchSchedule, () => { outdated = true; if (!drag.busy) void refresh(); }, () => schedule.changedAt);
 // refreshOnActivity: refreshOnChange(watchActivity, schedule)  (throttle and hidden tabs unchanged)
