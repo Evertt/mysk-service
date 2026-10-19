@@ -1,7 +1,9 @@
 <!--
 	@component
 	Chooses the app's language (see `switchLanguage`): an icon button with a menu, like the mode
-	switcher, or with `submenu` a "Language" item to put in another dropdown menu (the user menu).
+	switcher, or with `submenu` a "Language" item to put in another dropdown menu (the user menu),
+	its choices beside it, or with `submenu="below"` under it, over the menu (a phone's narrow menu,
+	where there's no room beside it).
 -->
 <script lang="ts">
 	import LanguagesIcon from "@lucide/svelte/icons/languages";
@@ -10,7 +12,9 @@
 
 	import { languageNames, switchLanguage } from "./languages.ts";
 
-	let { submenu = false }: { submenu?: boolean } = $props();
+	let { submenu = false }: { submenu?: boolean | "below" } = $props();
+
+	const below = $derived(submenu === "below");
 
 	const current = getLocale();
 </script>
@@ -35,7 +39,12 @@
 			{m.common_language()}
 			<span class="ml-auto text-xs text-muted-foreground">{languageNames[current]}</span>
 		</DropdownMenu.SubTrigger>
-		<DropdownMenu.SubContent class="w-40">
+		<DropdownMenu.SubContent
+			class="w-40"
+			side={below ? "bottom" : "right"}
+			align={below ? "end" : "start"}
+			alignOffset={below ? 0 : -3}
+		>
 			{@render choices()}
 		</DropdownMenu.SubContent>
 	</DropdownMenu.Sub>
