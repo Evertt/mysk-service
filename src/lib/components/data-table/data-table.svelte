@@ -288,8 +288,10 @@
 		<!-- The widest cells seen so far (see `column-widths.svelte.ts`): laid out, but not shown. -->
 		<tfoot inert aria-hidden="true" data-slot="data-table-hidden-rows">
 			{#each widths.rows as row, index (index)}
-				<!-- Their cells clip what they hold, which would otherwise hang below the table. -->
-				<tr class="collapse *:overflow-hidden">
+				<!-- Their cells clip what they hold, which would otherwise hang below the table and
+				     scroll it: positioned, so they clip what's positioned in them too (a cell's
+				     `sr-only` text, a status dot), which only a positioned ancestor clips. -->
+				<tr class="collapse *:relative *:overflow-hidden">
 					{#each columns as column (column.id)}
 						{@const hidden = row.get(column.id)}
 						<Table.Cell data-column-id={column.id} class={compact.cell} {@attach hidden?.attach}>

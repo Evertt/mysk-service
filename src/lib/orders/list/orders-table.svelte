@@ -2,15 +2,11 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import {
-		getCustomerOptions,
-		getEngineerOptions,
-		getEquipmentOptions,
-	} from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import {
+		recordOptions,
 		scrollPages,
 		serverTableLoading,
 	} from "#lib/components/data-table/server-table.svelte.ts";
@@ -21,7 +17,13 @@
 	import { list as bulkTable } from "../extensions.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
-	import { type getOrderFacets, getOrders } from "./order-list.remote.ts";
+	import {
+		getOrderCustomerOptions,
+		getOrderEngineerOptions,
+		getOrderEquipmentOptions,
+		type getOrderFacets,
+		getOrders,
+	} from "./order-list.remote.ts";
 	import { ordersList } from "./orders-list.ts";
 	import { setStatusCellQuery } from "./status-cell.svelte";
 
@@ -36,10 +38,7 @@
 		 * grouped: the table loads the next as it's scrolled.
 		 */
 		orders: Awaited<ReturnType<typeof getOrders>>;
-		/**
-		 * How many orders have each value of the filters' (the unassigned orders and the new
-		 * installations under `none`).
-		 */
+		/** How many orders have each type, status and priority. */
 		facets: Awaited<ReturnType<typeof getOrderFacets>>;
 	} = $props();
 
@@ -65,6 +64,12 @@
 
 	// Until the rows for a new search, filter or sort are in.
 	const loading = serverTableLoading(table, ordersList, () => pages.key);
+
+	// The filters on related records, counted under the list's search and other filters.
+	const where = () => whereOf(orders.query);
+	const customerOptions = recordOptions(getOrderCustomerOptions, where, "customer");
+	const engineerOptions = recordOptions(getOrderEngineerOptions, where, "engineer");
+	const equipmentOptions = recordOptions(getOrderEquipmentOptions, where, "equipment");
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
 	const moduleActions = extensionBulkActions(bulkTable);
@@ -96,23 +101,21 @@
 				columnId="customer"
 				title={m.orders_column_customer()}
 				searchLabel={m.common_table_search_customers()}
-				load={getCustomerOptions}
+				load={customerOptions.current}
 			/>
 			<RecordFilter
 				columnId="engineer"
 				title={m.orders_column_engineer()}
 				searchLabel={m.common_table_search_engineers()}
-				load={getEngineerOptions}
+				load={engineerOptions.current}
 				none={m.common_unassigned()}
-				counts={facets.engineer}
 			/>
 			<RecordFilter
 				columnId="equipment"
 				title={m.orders_column_equipment()}
 				searchLabel={m.common_table_search_equipment()}
-				load={getEquipmentOptions}
+				load={equipmentOptions.current}
 				none={m.orders_new_installation()}
-				counts={facets.equipment}
 			/>
 			<DateRangeFilter
 				columnId="scheduledFor"

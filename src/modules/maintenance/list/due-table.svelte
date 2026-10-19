@@ -1,10 +1,10 @@
 <script lang="ts">
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { getCustomerOptions } from "#lib/components/data-table/filter-options.remote.ts";
 	import { whereOf } from "#lib/components/data-table/list-definition.ts";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import {
+		recordOptions,
 		scrollPages,
 		serverTableLoading,
 	} from "#lib/components/data-table/server-table.svelte.ts";
@@ -15,7 +15,7 @@
 	import { dueRanges, planOrderTypes } from "../model.ts";
 	import { createOrdersAction } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
-	import { type getDueFacets, getDuePlans } from "./due-list.remote.ts";
+	import { getDueCustomerOptions, type getDueFacets, getDuePlans } from "./due-list.remote.ts";
 	import { dueList } from "./due-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -53,6 +53,13 @@
 
 	const loading = serverTableLoading(table, dueList, () => pages.key);
 
+	// The customer filter, counted under the list's search and other filters.
+	const customerOptions = recordOptions(
+		getDueCustomerOptions,
+		() => whereOf(plans.query),
+		"customer",
+	);
+
 	/** "Every plan": no range at all. */
 	const ALL = "all";
 	const range = $derived(
@@ -78,7 +85,7 @@
 				columnId="customer"
 				title={m.maintenance_column_customer()}
 				searchLabel={m.common_table_search_customers()}
-				load={getCustomerOptions}
+				load={customerOptions.current}
 			/>
 			{#snippet actions()}
 				<NativeSelect.Root

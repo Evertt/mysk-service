@@ -2,7 +2,15 @@
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
-import { bulkChange, listTarget, planList, refreshRequested } from "#lib/server/lists/index.ts";
+import {
+	bulkChange,
+	customerRecords,
+	facetOptions,
+	facetOptionsInput,
+	listTarget,
+	planList,
+	refreshRequested,
+} from "#lib/server/lists/index.ts";
 
 import { command, query } from "../remote-functions.ts";
 import { dueSql, withPlanJoins } from "../server/list-sql.ts";
@@ -53,6 +61,15 @@ export const getDuePlans = query(dueList.query, async (input) => {
 /** How many plans of each order type match the search and the other filters. */
 export const getDueFacets = query(dueList.where, async (where) =>
 	planList(dueSql(), where).facets({ type: maintenancePlan.orderType }),
+);
+
+/**
+ * The customer filter's options: customers by name or code, each with how many plans it has under
+ * the list's search and other filters, most first (see `facetOptions()`); their code is the
+ * filter's value.
+ */
+export const getDueCustomerOptions = query(facetOptionsInput(dueList), (input) =>
+	facetOptions(dueSql(), input, "customer", customerRecords(), { by: customer.code }),
 );
 
 /**

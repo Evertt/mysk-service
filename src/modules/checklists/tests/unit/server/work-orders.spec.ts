@@ -154,6 +154,23 @@ describe("the list of assets, in SHLTR's office", () => {
 			theirs.filter((row) => row.state === "open").length,
 		);
 	});
+
+	test("the chosen customer stays in the customer select with 0, when the year leaves none of theirs", async () => {
+		const states = await assetStates(shltrId);
+		const done = new Set(
+			states.filter((row) => row.state === "done").map((row) => row.customer_id),
+		);
+		const idle = states.find((row) => !done.has(row.customer_id));
+		expect(idle).toBeDefined();
+		const code = await value<string>(`select code from customer where id = ?`, [idle!.customer_id]);
+		const { q, filters } = queryOf(`customer=${code}&year=done`);
+		const facets = await as(shltr.member, () => data(getAssetFacets, { q, filters }));
+		expect(facets.customers.find((each) => each.code === code)).toMatchObject({ count: 0 });
+		// Without it chosen, it isn't offered under that year.
+		const { q: all, filters: year } = queryOf("year=done");
+		const offered = await as(shltr.member, () => data(getAssetFacets, { q: all, filters: year }));
+		expect(offered.customers.map((each) => each.code)).not.toContain(code);
+	});
 });
 
 describe("an asset", () => {

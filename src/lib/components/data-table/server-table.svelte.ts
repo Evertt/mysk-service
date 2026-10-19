@@ -14,7 +14,15 @@ import { untrack } from "svelte";
 
 import type { Features } from "./features.ts";
 import type { PageGroups } from "./grouping.ts";
-import { type List, type ListQuery, queryKey, startingAt, toListQuery } from "./list-definition.ts";
+import {
+	type FilterId,
+	type List,
+	type ListQuery,
+	type ListWhere,
+	queryKey,
+	startingAt,
+	toListQuery,
+} from "./list-definition.ts";
 import type { ScrollWindow } from "./scroll-window.svelte.ts";
 import { parseTablePosition, parseTableUrl, type TableUrlSpec } from "./url-state.ts";
 
@@ -96,11 +104,16 @@ export interface RecordOption {
 	/** The filter value, e.g. a customer's code. */
 	value: string;
 	label: string;
-	/** Shown after the label, e.g. the code. */
+	/** Shown under the label, e.g. a unit's serial number. */
 	detail?: string;
+	/** How many of the list's rows have it, of those its search and other filters leave. */
+	count?: number;
 }
 
-/** What a `RecordFilter` loads: the options matching its search, and the ticked ones. */
+/**
+ * What a `RecordFilter` loads (`facetOptions()` on the server): the options matching its search,
+ * most rows first, and the ticked ones.
+ */
 export interface RecordOptions {
 	/** Those that match the search, the first so many. */
 	options: RecordOption[];
@@ -108,6 +121,48 @@ export interface RecordOptions {
 	selected: RecordOption[];
 	/** Whether more match than `options` has. */
 	more: boolean;
+	/** For a column that can be empty: how many rows have no value. */
+	none?: number;
+}
+
+/** What a `RecordFilter` loads its options with. */
+export type LoadRecordOptions = (input: {
+	search: string;
+	selected: string[];
+}) => PromiseLike<RecordOptions>;
+
+/**
+ * A `RecordFilter`'s `load` on a server-side list: the list's options query for the filter (e.g.
+ * `getOrderCustomerOptions`, made with `facetOptions()`), asked with the list's search and filters
+ * (`where`, e.g. `whereOf()` of the rows' query), for the counts and their order to be those of the
+ * rows the other filters leave. `current` is a new function when they change (but for the filter's
+ * own values, which its counts don't depend on), so the filter fetches its options again.
+ */
+export function recordOptions<C>(
+	query: (input: {
+		where: ListWhere<C>;
+		search: string;
+		selected: string[];
+	}) => PromiseLike<RecordOptions>,
+	where: () => ListWhere<C>,
+	columnId: FilterId<C>,
+) {
+	const others = $derived.by((): ListWhere<C> => {
+		const { q, filters } = where();
+		const { [columnId]: _own, ...rest } = filters;
+		return { q, filters: rest as ListWhere<C>["filters"] };
+	});
+	const key = $derived(queryKey(others));
+	const load = $derived.by((): LoadRecordOptions => {
+		void key;
+		const current = untrack(() => others);
+		return (input) => query({ ...input, where: current });
+	});
+	return {
+		get current() {
+			return load;
+		},
+	};
 }
 
 /**

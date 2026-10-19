@@ -4,26 +4,29 @@
 	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
 	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
 	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import {
-		getCustomerOptions,
-		getLocationOptions,
-	} from "#lib/components/data-table/filter-options.remote.ts";
 	import { type List, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
 	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
 	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
 	import {
+		recordOptions,
 		scrollPages,
 		serverTableLoading,
 	} from "#lib/components/data-table/server-table.svelte.ts";
 	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import { noneToken } from "#lib/components/data-table/url-state.ts";
 
 	import type { getEquipmentCategories } from "../categories/categories.remote.ts";
 	import { statusOptions } from "../display.ts";
 	import { changeStatus, deleteEquipment } from "./bulk-actions.ts";
 	import CategoryChips from "./category-chips.svelte";
 	import { columns, type EquipmentRow } from "./columns.ts";
-	import { type getEquipmentFacets, getEquipmentList } from "./equipment-list.remote.ts";
+	import {
+		getEquipmentCustomerOptions,
+		type getEquipmentFacets,
+		getEquipmentList,
+		getEquipmentLocationOptions,
+	} from "./equipment-list.remote.ts";
 	import type { equipmentList } from "./equipment-list.ts";
 
 	// The table is created here rather than in the page because `createAppTable` sets context,
@@ -42,7 +45,7 @@
 		 * grouped: the table loads the next as it's scrolled.
 		 */
 		equipment: Awaited<ReturnType<typeof getEquipmentList>>;
-		/** How many units have each value of the filters'. */
+		/** How many units have each category, status and manufacturer (and module column's value). */
 		facets: Awaited<ReturnType<typeof getEquipmentFacets>>;
 		/** The tenant's categories in their order, for the category filter and its chips. */
 		categories: Awaited<ReturnType<typeof getEquipmentCategories>>;
@@ -99,14 +102,25 @@
 		},
 	});
 
+	const tickedManufacturers = $derived(
+		(table.getColumn("manufacturer")?.getFilterValue() as string[] | undefined) ?? [],
+	);
 	// The manufacturers that the search and the other filters leave, and those ticked.
-	const manufacturerOptions = $derived.by(() => {
-		const ticked =
-			(table.getColumn("manufacturer")?.getFilterValue() as string[] | undefined) ?? [];
-		return [...new Set([...Object.keys(facets.manufacturer), ...ticked])]
+	const manufacturerOptions = $derived(
+		[...new Set([...Object.keys(facets.manufacturer), ...tickedManufacturers])]
+			.filter((value) => value !== noneToken)
 			.sort((a, b) => a.localeCompare(b))
-			.map((value) => ({ value, label: value }));
-	});
+			.map((value) => ({ value, label: value })),
+	);
+	// The units without one, where there are any (imported units may have none).
+	const noManufacturer = $derived(
+		noneToken in facets.manufacturer || tickedManufacturers.includes(noneToken),
+	);
+
+	// The filters on related records, counted under the list's search and other filters.
+	const where = () => whereOf(equipment.query);
+	const customerOptions = recordOptions(getEquipmentCustomerOptions, where, "customer");
+	const locationOptions = recordOptions(getEquipmentLocationOptions, where, "location");
 
 	const loading = serverTableLoading(table, list, () => pages.key);
 </script>
@@ -140,20 +154,20 @@
 				title={m.equipment_column_manufacturer()}
 				options={manufacturerOptions}
 				counts={facets.manufacturer}
+				none={noManufacturer ? m.equipment_manufacturer_none() : undefined}
 			/>
 			<RecordFilter
 				columnId="customer"
 				title={m.equipment_column_customer()}
 				searchLabel={m.common_table_search_customers()}
-				load={getCustomerOptions}
+				load={customerOptions.current}
 			/>
 			<RecordFilter
 				columnId="location"
 				title={m.equipment_column_location()}
 				searchLabel={m.equipment_search_locations()}
-				load={getLocationOptions}
+				load={locationOptions.current}
 				none={m.equipment_location_none()}
-				counts={facets.location}
 			/>
 			<DateRangeFilter
 				columnId="installedAt"

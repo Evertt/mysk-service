@@ -11,10 +11,15 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { toListQuery } from "#lib/components/data-table/list-definition.ts";
 import { presetRange } from "#lib/components/data-table/ranges.ts";
-import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
+import { noneToken, parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import { getEquipmentCategories } from "#lib/equipment/categories/categories.remote.ts";
 import { getEquipmentFormOptions } from "#lib/equipment/equipment.remote.ts";
-import { getEquipmentFacets, getEquipmentList } from "#lib/equipment/list/equipment-list.remote.ts";
+import {
+	getEquipmentCustomerOptions,
+	getEquipmentFacets,
+	getEquipmentList,
+	getEquipmentLocationOptions,
+} from "#lib/equipment/list/equipment-list.remote.ts";
 import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import {
@@ -23,6 +28,7 @@ import {
 	north,
 	organizationId,
 	rows,
+	shltr,
 	south,
 	value,
 } from "#unit/lib/server/harness/index.ts";
@@ -45,6 +51,18 @@ const facetsFor = (search: string, actor: Actor = north.member) =>
 	as(actor, () => {
 		const { q, filters } = queryOf(search);
 		return data(getEquipmentFacets, { q, filters });
+	});
+
+/** A record filter's options on the list a link with `search` opens. */
+const optionsFor = (
+	options: typeof getEquipmentCustomerOptions,
+	search: string,
+	actor: Actor = north.member,
+	selected: string[] = [],
+) =>
+	as(actor, () => {
+		const { q, filters } = queryOf(search);
+		return data(options, { where: { q, filters }, search: "", selected });
 	});
 
 /** How many of an organization's units `e` match `where`. */
@@ -160,6 +178,61 @@ describe("North's equipment list", () => {
 		expect(found.rowCount).toBe(location.units);
 		expect(found.rows[0].location?.name).toBe(location.name);
 	});
+
+	test("its customer and location filters count units under the other filters, most first", async () => {
+		const [category] = await categoriesOf(northId);
+		const search = `category=${category.id}`;
+		const customers = await optionsFor(getEquipmentCustomerOptions, search);
+		const expected = await rows<{ code: string; n: number }>(
+			`select c.code, count(e.id) as n from customer c
+			 left join equipment e on e.customer_id = c.id and e.category_id = ?
+			 where c.organization_id = ? group by c.id order by n desc, c.name collate nocase, c.id
+			 limit 20`,
+			[category.id, northId],
+		);
+		expect(customers.options.map((option) => [option.value, option.count])).toEqual(
+			expected.map((row) => [row.code, row.n]),
+		);
+		// Its own filter doesn't change them.
+		expect(
+			(await optionsFor(getEquipmentCustomerOptions, `${search}&customer=${expected[0].code}`))
+				.options,
+		).toEqual(customers.options);
+
+		const locations = await optionsFor(getEquipmentLocationOptions, search);
+		expect(locations.none).toBe(
+			await count("category_id = ? and location_id is null", [category.id]),
+		);
+		const [top] = await rows<{ id: number; n: number }>(
+			`select l.id, count(e.id) as n from equipment_location l
+			 join equipment e on e.location_id = l.id and e.category_id = ?
+			 where l.organization_id = ? group by l.id order by n desc limit 1`,
+			[category.id, northId],
+		);
+		expect(locations.options[0].count).toBe(top.n);
+		// Each says whose site it's at, under its name.
+		expect(locations.options[0].detail).toMatch(/ · /);
+	});
+});
+
+describe("SHLTR's equipment list", () => {
+	test("offers the units without a manufacturer as `none`, and filters by it", async () => {
+		const shltrId = organizationId("shltr");
+		const without = await count("manufacturer = ''", [], shltrId);
+		expect(without).toBeGreaterThan(0);
+		const { manufacturer } = await facetsFor("", shltr.member);
+		expect(manufacturer[noneToken]).toBe(without);
+		expect(manufacturer[""]).toBeUndefined();
+		expect(await shownFor("manufacturer=none", shltr.member)).toBe(without);
+		const [some] = await rows<{ manufacturer: string; n: number }>(
+			`select manufacturer, count(*) as n from equipment where organization_id = ?
+			 and manufacturer <> '' group by manufacturer order by n desc limit 1`,
+			[shltrId],
+		);
+		expect(
+			await shownFor(`manufacturer=none,${encodeURIComponent(some.manufacturer)}`, shltr.member),
+		).toBe(without + some.n);
+	});
 });
 
 describe("South's equipment list", () => {
@@ -206,6 +279,47 @@ describe("South's equipment list", () => {
 			if (found.length < query.pageSize) break;
 		}
 		expect(counts).toEqual(Object.fromEntries(expected.map((row) => [row.category, row.n])));
+	});
+
+	test("its customer and location filters offer and count South's records only", async () => {
+		const northCode = await value<string>(
+			`select code from customer where organization_id = ?
+			 and code not in (select code from customer where organization_id = ?) order by code limit 1`,
+			[northId, southId],
+		);
+		const own = new Set(
+			(
+				await rows<{ code: string }>(`select code from customer where organization_id = ?`, [
+					southId,
+				])
+			).map((row) => row.code),
+		);
+		const customers = await optionsFor(getEquipmentCustomerOptions, "", south.owner, [northCode]);
+		expect(customers.selected).toEqual([]);
+		for (const option of customers.options) expect(own.has(option.value)).toBe(true);
+		for (const option of customers.options.slice(0, 3)) {
+			expect(option.count).toBe(
+				await count(
+					"customer_id = (select id from customer where code = ? and organization_id = ?)",
+					[option.value, southId],
+					southId,
+				),
+			);
+		}
+		// A North location's id, ticked or in the list's filters, names and counts nothing.
+		const northLocation = await value<number>(
+			`select id from equipment_location where organization_id = ? limit 1`,
+			[northId],
+		);
+		const locations = await optionsFor(
+			getEquipmentLocationOptions,
+			`customer=${northCode}`,
+			south.owner,
+			[String(northLocation)],
+		);
+		expect(locations.selected).toEqual([]);
+		expect(locations.options.every((option) => option.count === 0)).toBe(true);
+		expect(locations.none).toBe(0);
 	});
 
 	test("its ranges count South's units only", async () => {

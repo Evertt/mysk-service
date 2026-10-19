@@ -14,6 +14,7 @@ import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
 import { deleteOrder } from "#lib/orders/order.remote.ts";
 import {
 	createDueOrders,
+	getDueCustomerOptions,
 	getDueFacets,
 	getDuePlans,
 } from "#modules/maintenance/list/due-list.remote.ts";
@@ -278,6 +279,30 @@ describe("the due list, in North", () => {
 				),
 			);
 			expect(facets).toMatchObject({ type: expect.objectContaining({ inspection: inspections }) });
+		});
+	});
+
+	test("the customer filter counts each customer's plans under the range, most first", async () => {
+		await as(north.member, async () => {
+			const options = await data(getDueCustomerOptions, {
+				where: { q: "", filters: { due: ["overdue"] } },
+				search: "",
+				selected: [],
+			} as never);
+			const counts = options.options.map((option) => option.count ?? 0);
+			expect(counts).toEqual(counts.toSorted((a, b) => b - a));
+			const [top] = options.options;
+			expect(top.count).toBeGreaterThan(0);
+			expect(
+				(await data(getDuePlans, dueQuery({ due: ["overdue"], customer: [top.value] }))).rowCount,
+			).toBe(top.count);
+			// Wider, more.
+			const wider = await data(getDueCustomerOptions, {
+				where: { q: "", filters: { due: ["90-days"] } },
+				search: "",
+				selected: [top.value],
+			} as never);
+			expect(wider.selected[0].count).toBeGreaterThanOrEqual(top.count!);
 		});
 	});
 
@@ -588,8 +613,19 @@ describe("North and South's plans", () => {
 				status: 200,
 				data: { done: 0, missing: 1 },
 			});
-			// Nor do North's lists show it.
+			// Nor do North's lists show it, nor its customer filter offer South's customers.
 			expect((await data(getDuePlans, dueQuery({}, southUnit.serial_number))).rows).toEqual([]);
+			const southOnly = await value<string>(
+				`select name from customer where organization_id = ?
+				 and name not in (select name from customer where organization_id = ?) order by id limit 1`,
+				[southId, northId],
+			);
+			const options = await data(getDueCustomerOptions, {
+				where: { q: "", filters: {} },
+				search: southOnly,
+				selected: [],
+			} as never);
+			expect(options.options).toEqual([]);
 		});
 		expect(await planById(southPlan.id)).toEqual(southPlan);
 		expect(await planById(own.id)).toEqual(own);
