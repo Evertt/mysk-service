@@ -2,6 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -196,7 +197,7 @@ export const createEquipment = forMembers.form(v.object(equipmentFields), async 
 			.insert(equipment)
 			.values({ ...fields, organizationId, qrToken: newQrToken() })
 			.returning({ id: equipment.id });
-		const subject = { type: "equipment", id: created.id, label: input.serialNumber };
+		const subject = equipmentSubject({ id: created.id, serialNumber: input.serialNumber });
 		await recordActivity(tx, { action: "created", subject });
 	});
 	if (input.locationId === newLocationToken) void getEquipmentFormOptions().refresh();
@@ -217,7 +218,7 @@ export const updateEquipment = forMembers.form(
 				db.transaction(async (tx) => {
 					const fields = await storedFields(tx, input);
 					await tx.update(equipment).set(fields).where(idInTenant(equipment, id));
-					const subject = { type: "equipment", id, label: input.serialNumber };
+					const subject = equipmentSubject({ id, serialNumber: input.serialNumber });
 					await recordActivity(tx, { action: "updated", subject, before: existing, after: fields });
 				}),
 			issue.customerId(m.equipment_move_refused_records()),

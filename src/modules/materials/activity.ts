@@ -15,7 +15,7 @@ export const materialActions = {
 	stock_adjusted: m.materials_activity_action_stock_adjusted,
 } satisfies Record<string, Sentence>;
 
-export const materialSubjects: Record<string, SubjectType> = {
+export const materialSubjects = {
 	material: {
 		noun: m.materials_activity_subject,
 		href: ({ label }) => resolve("/(app)/(modules)/materials/[sku]", { sku: label }),
@@ -42,4 +42,4 @@ export const materialSubjects: Record<string, SubjectType> = {
 			},
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

@@ -18,6 +18,7 @@
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
 	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { formatCo2, formatFactor, formatKw, formatKwh } from "#modules/energy/display.ts";
 	import { getEnergyOverview, watchEnergy } from "#modules/energy/energy.remote.ts";
@@ -62,16 +63,7 @@
 	const simulation = $derived(await getSimulation("energy"));
 
 	// Live: a batch from the gateway, an alert dealt with or a threshold changed asks again.
-	const changes = watchEnergy();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) {
-			void getEnergyOverview({ site: siteId, period }).refresh();
-		}
-		seen = changed;
-	});
+	refreshOnChange(watchEnergy, () => getEnergyOverview({ site: siteId, period }).refresh());
 	// Open doors count up between batches, the solar estimate follows the sun.
 	const clock = new Clock(15_000);
 	const now = $derived(clock.now);

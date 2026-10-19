@@ -3,21 +3,20 @@
  * it: entries newest first, each with its subject's noun, its changes and links ready to show, in
  * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
-import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import { subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
+import { type LoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, type TenantTable } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges, watchSubject } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
+import { live } from "#lib/server/live.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
@@ -110,29 +109,18 @@ export const countNewActivity = forMembers.query(
  * Every subject type the log may name, the core's and all modules' (not only the tenant's: a module
  * switched on while a page watches logs as well).
  */
-const loggedTypes = Object.keys(subjectTypes(allModules));
+const loggedTypes = Object.keys(subjectTypes(allModules)) as LoggedType[];
 
 /**
  * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again
  * on each change (once per burst), so the feed and the dashboard look again when anyone changes
  * something. See `watchSchedule` in the schedule module.
  */
-export const watchActivity = forMembers.query.live(async function* () {
-	const { organizationId } = currentTenant();
-	// Watching before the first answer, so a change in between isn't missed.
-	const changes = watchChanges(organizationId, loggedTypes);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, loggedTypes);
-		for await (const _ of changes) yield changedAt(organizationId, loggedTypes);
-	} finally {
-		changes.stop();
-	}
-});
+export const watchActivity = forMembers.query.live(() => live(loggedTypes));
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(
-	v.object({ type: v.string(), id: v.string() }),
+	v.object({ type: v.picklist(loggedTypes), id: v.string() }),
 	async ({ type, id }) => {
 		const { modules } = currentTenant();
 		// A module's records are a 404 to a tenant without the module, like the rest of it.
@@ -215,26 +203,22 @@ export const watchRecordChanges = forMembers.query.live(
 		type: v.picklist(Object.keys(watchedRecords) as (keyof typeof watchedRecords)[]),
 		id: v.pipe(v.number(), v.integer()),
 	}),
-	async function* ({ type, id }) {
-		const { organizationId, user } = currentTenant();
-		// Watching before checking, so a change in between isn't missed.
-		const changes = watchSubject(organizationId, { type, id: String(id) });
-		getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-		try {
-			const table = watchedRecords[type];
-			const [found] = await db.select({ id: table.id }).from(table).where(idInTenant(table, id));
-			if (!found) error(404, m.common_error_not_found());
-			yield null;
-			for await (const change of changes) {
-				yield {
+	({ type, id }) => {
+		const { user } = currentTenant();
+		return live({ type, id }, async (change): Promise<RecordChange | null> => {
+			if (change) {
+				return {
 					action: change.action ?? "updated",
 					name: change.user?.name ?? "",
 					mine: change.user?.id === user.id,
 					at: Temporal.Instant.fromEpochMilliseconds(change.at),
-				} satisfies RecordChange as RecordChange | null;
+				};
 			}
-		} finally {
-			changes.stop();
-		}
+			// Checked once watching, so a change in between isn't missed.
+			const table = watchedRecords[type];
+			const [found] = await db.select({ id: table.id }).from(table).where(idInTenant(table, id));
+			if (!found) error(404, m.common_error_not_found());
+			return null;
+		});
 	},
 );

@@ -5,6 +5,7 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import type { OrderSaving } from "#lib/orders/extensions.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
@@ -67,7 +68,7 @@ export async function saveClassification({ tx, order, status, form }: OrderSavin
 	await recordActivity(tx, {
 		action: "updated",
 		subject: { type: "partner_classification", id: order.id, label: order.number },
-		parent: { type: "order", id: order.id, label: order.number },
+		parent: orderSubject(order),
 		before,
 		after,
 	});

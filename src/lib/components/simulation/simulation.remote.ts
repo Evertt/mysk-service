@@ -4,15 +4,13 @@
  * managers. A tenant without the module, or without a simulation of it, gets a 404 from the
  * commands; the state is `null` for a tenant that has the module but no simulation of it.
  */
-import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
-import { watchChanges } from "#lib/server/changes.ts";
-import { inThisRequest } from "#lib/server/db/index.ts";
+import { live } from "#lib/server/live.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 import {
 	changeSimulation,
@@ -39,19 +37,12 @@ const view = (row: SimulationRow | null) =>
  * The current tenant's simulation of the module (`null` if it's offered none), sent again when a
  * manager plays, pauses, changes its speed or resets it. A 404 for a module the tenant lacks.
  */
-export const getSimulation = forMembers.query.live(moduleId, async function* (id) {
-	const { organizationId, modules } = currentTenant();
-	if (!modules.includes(id)) error(404, m.common_error_not_found());
-	const changes = watchChanges(organizationId, ["simulation"]);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	const again = inThisRequest();
-	try {
-		yield view(await simulationOf(id));
-		for await (const _ of changes) yield view(await again(() => simulationOf(id)));
-	} finally {
-		changes.stop();
-	}
-});
+export const getSimulation = forMembers.query.live(moduleId, (id) =>
+	live(["simulation"], async (change) => {
+		if (!change && !currentTenant().modules.includes(id)) error(404, m.common_error_not_found());
+		return view(await simulationOf(id));
+	}),
+);
 
 /** Moves the current tenant's running simulation of the module on, up to now. */
 export const tickSimulation = forMembers.command(moduleId, async (id) => {

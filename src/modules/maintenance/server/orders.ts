@@ -7,6 +7,7 @@
  */
 import { error, invalid } from "@sveltejs/kit";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -80,7 +81,7 @@ export function orderPlan(
 		await recordActivity(tx, {
 			action: "updated",
 			subject: { type: "maintenancePlan", id, label },
-			parent: { type: "equipment", id: unit.id, label: unit.serialNumber },
+			parent: equipmentSubject(unit),
 			before: { nextDueOn: plan.nextDueOn, lastOrder: found.lastOrder },
 			after: { nextDueOn, lastOrder: created.number },
 		});

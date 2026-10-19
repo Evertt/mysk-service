@@ -94,7 +94,7 @@ const fieldLabels: Record<string, Text> = {
  */
 const moduleFieldLabel = (field: string) =>
 	modules
-		.flatMap((module) => ("subjects" in module ? Object.values(module.subjects) : []))
+		.flatMap((module) => ("subjects" in module ? Object.values<SubjectType>(module.subjects) : []))
 		.find((type) => type.fields?.[field]?.label)?.fields?.[field]?.label ?? null;
 
 /** A field's label: "engineer" for `engineerId`, "scheduled for" for `scheduledFor`. */

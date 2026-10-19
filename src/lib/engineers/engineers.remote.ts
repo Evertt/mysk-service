@@ -5,7 +5,7 @@ import * as v from "valibot";
 import { openOrderStatuses } from "#lib/models.ts";
 import { laborCost } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -139,7 +139,7 @@ export const createEngineer = forMembers.form(v.object(engineerFields), async (i
 			.insert(engineer)
 			.values({ ...input, organizationId })
 			.returning({ id: engineer.id });
-		const subject = { type: "engineer", id: created.id, label: input.name };
+		const subject: Subject = { type: "engineer", id: created.id, label: input.name };
 		await recordActivity(tx, { action: "created", subject });
 		return created;
 	});
@@ -156,7 +156,7 @@ export const updateEngineer = forMembers.form(
 		refuse(issue, await emailProblems(input.email, id));
 		await db.transaction(async (tx) => {
 			await tx.update(engineer).set(input).where(idInTenant(engineer, id));
-			const subject = { type: "engineer", id, label: input.name };
+			const subject: Subject = { type: "engineer", id, label: input.name };
 			await recordActivity(tx, { action: "updated", subject, before: found, after: input });
 		});
 		void getEngineers().refresh();
@@ -188,7 +188,7 @@ async function setActive(found: { id: number; label: string; active: boolean }, 
 	await db.transaction(async (tx) => {
 		if (found.active === active) return;
 		await tx.update(engineer).set({ active }).where(idInTenant(engineer, found.id));
-		const subject = { type: "engineer", id: found.id, label: found.label };
+		const subject: Subject = { type: "engineer", id: found.id, label: found.label };
 		await recordActivity(tx, { action: "updated", subject, before: found, after: { active } });
 	});
 }

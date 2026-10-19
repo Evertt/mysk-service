@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
-import { describeChanges } from "#lib/activity/index.ts";
+import { describeChanges, type SubjectType } from "#lib/activity/index.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import { invoicingActions, invoicingSubjects, lineNote } from "#modules/invoices/activity.ts";
 
@@ -12,7 +12,7 @@ const {
 	invoice_line: line,
 	invoicing_settings: settings,
 	credit_note: credit,
-} = invoicingSubjects;
+}: Record<string, SubjectType> = invoicingSubjects;
 
 describe("invoicingActions", () => {
 	const inputs = { user: "Avery", subject: "invoice INV-1" };

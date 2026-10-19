@@ -1,4 +1,3 @@
-import { getRequestEvent } from "$app/server";
 import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,8 +9,7 @@ import {
 	withFirstUnit,
 } from "#lib/orders/server/index.ts";
 import { date, id } from "#lib/schema.ts";
-import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -24,6 +22,7 @@ import {
 } from "#lib/server/db/schema.ts";
 import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
+import { live, readAt } from "#lib/server/live.ts";
 
 import { byPriorityThenAge } from "./board/board.ts";
 import { mondayOf, monthRange } from "./calendar/calendar.ts";
@@ -118,19 +117,7 @@ const scheduledIn = (days: { from: string; to: string }) =>
 		.orderBy(asc(order.scheduledFor));
 
 /** The records the board shows: a change to any of them outdates it. */
-const boardSubjects = ["order", "engineer", "customer"] as const;
-
-/**
- * When the board's records last changed (see `watchSchedule`), read before them: a board or month
- * whose live query opens on a later change than its data's asks for it again. Changes are timed
- * in milliseconds, so one announced in this millisecond leaves it a millisecond earlier: another
- * change in the same millisecond, after the read, still counts as later (`>` on the client). That
- * asks once too many when there's none, which takes reading in the millisecond of a change.
- */
-function readAt() {
-	const changed = changedAt(currentTenant().organizationId, boardSubjects);
-	return changed && changed >= Date.now() ? changed - 1 : changed;
-}
+const boardTypes = ["order", "engineer", "customer"] as const;
 
 /**
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
@@ -138,7 +125,7 @@ function readAt() {
  * the board's records had last changed as it was read (`changedAt`).
  */
 export const getSchedule = query(date(m.schedule_week_required), async (day) => {
-	const changed = readAt();
+	const changed = readAt(boardTypes);
 	const start = mondayOf(day);
 	const week = { from: start.toString(), to: start.add({ days: 6 }).toString() };
 
@@ -169,7 +156,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
  * tenant's engineers. The server sets the range, so no request loads more than six weeks.
  */
 export const getScheduleMonth = query(date(m.schedule_date_required), async (day) => {
-	const changed = readAt();
+	const changed = readAt(boardTypes);
 	const range = monthRange(day);
 	const [team, orders] = await Promise.all([engineers(), scheduledIn(range).then(withFirstUnit)]);
 	return { month: day.with({ day: 1 }), engineers: team, orders, changedAt: changed };
@@ -180,18 +167,7 @@ export const getScheduleMonth = query(date(m.schedule_date_required), async (day
  * on each change, so an open board refreshes `getSchedule` (and an open month `getScheduleMonth`)
  * when someone else plans an order, an engineer completes one, or an order comes in.
  */
-export const watchSchedule = query.live(async function* () {
-	const { organizationId } = currentTenant();
-	// Watching before the first answer, so a change in between isn't missed.
-	const changes = watchChanges(organizationId, boardSubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, boardSubjects);
-		for await (const _ of changes) yield changedAt(organizationId, boardSubjects);
-	} finally {
-		changes.stop();
-	}
-});
+export const watchSchedule = query.live(() => live(boardTypes));
 
 /**
  * Plans an order of the current tenant (see `transitionOrder()`'s `plan`): refused with what's

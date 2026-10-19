@@ -16,6 +16,7 @@
 	import { historyDialog } from "#lib/components/history-dialog.svelte.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { specialties } from "#lib/engineers/index.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { viewSearch } from "../calendar/calendar.ts";
 	import ScheduleDialog from "../form/schedule-dialog.svelte";
@@ -89,20 +90,15 @@
 	// while it asked. The live query's first answer is a change too if it's later than the week's
 	// (`changedAt`): one made after the board asked for the week (the service worker may answer it
 	// from its cache) and before the live query opened.
-	const changes = watchSchedule();
-	let seen: number | undefined;
 	let outdated = false;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		const news =
-			seen === undefined ? changed > untrack(() => schedule.changedAt) : changed !== seen;
-		if (news) {
+	refreshOnChange(
+		watchSchedule,
+		() => {
 			outdated = true;
 			if (!drag.busy) void refresh();
-		}
-		seen = changed;
-	});
+		},
+		() => schedule.changedAt,
+	);
 
 	async function refresh() {
 		outdated = false;

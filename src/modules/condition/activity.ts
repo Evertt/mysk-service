@@ -33,7 +33,7 @@ const onOff = (value: unknown) => (value ? m.condition_on() : m.condition_off())
 /** A score in percent. */
 const percent = (value: unknown) => `${formatNumber(Number(value))}%`;
 
-export const conditionSubjects: Record<string, SubjectType> = {
+export const conditionSubjects = {
 	/** A unit's condition, logged with its unit as its parent; it's on the unit's page. */
 	unitCondition: {
 		noun: m.condition_activity_subject,
@@ -64,4 +64,4 @@ export const conditionSubjects: Record<string, SubjectType> = {
 			autoPlan: { label: m.condition_auto_plan, format: onOff },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

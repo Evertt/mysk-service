@@ -14,7 +14,7 @@ export const checklistActions = {
 /** A place in an order, from 0 as stored, read from 1. */
 const place = (value: unknown) => formatNumber(Number(value) + 1);
 
-export const checklistSubjects: Record<string, SubjectType> = {
+export const checklistSubjects = {
 	checklistTemplate: {
 		noun: m.checklists_activity_subject_template,
 		href: ({ id }) => resolve("/(app)/(modules)/checklists/templates/[id]", { id: String(id) }),
@@ -54,4 +54,4 @@ export const checklistSubjects: Record<string, SubjectType> = {
 			position: { label: m.checklists_field_place, format: place },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

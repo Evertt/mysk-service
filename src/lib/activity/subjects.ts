@@ -27,7 +27,12 @@ import {
 	languageNames,
 } from "#lib/i18n/index.ts";
 import type { CoreActivityAction } from "#lib/models.ts";
-import { type AppModule, modules } from "#lib/modules/manifests.ts";
+import {
+	type AppModule,
+	type ModuleLiveType,
+	type ModuleSubjectType,
+	modules,
+} from "#lib/modules/manifests.ts";
 import { locales } from "#lib/paraglide/runtime.js";
 
 import type { ReferenceType } from "./format.ts";
@@ -150,7 +155,7 @@ const legacyCategory = (value: unknown) => {
 	return Object.hasOwn(legacyCategories, text) ? legacyCategories[text]() : text;
 };
 
-export const coreSubjectTypes: Record<string, SubjectType> = {
+export const coreSubjectTypes = {
 	customer: {
 		noun: m.activity_subject_customer,
 		href: ({ label }) => resolve("/(app)/customers/[code]", { code: label }),
@@ -296,7 +301,16 @@ export const coreSubjectTypes: Record<string, SubjectType> = {
 			columns: { label: m.activity_field_hidden_columns, format: hiddenColumns },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;
+
+/** A type of record the activity log can name: the core's or a module's (its `subjects`). */
+export type LoggedType = keyof typeof coreSubjectTypes | ModuleSubjectType;
+
+/**
+ * A type of record a change can be announced for, and a live query can watch: a logged type, or a
+ * module's live-only type (its `liveTypes`), which the log never names.
+ */
+export type ChangeType = LoggedType | ModuleLiveType;
 
 /**
  * The subject types of the core and of the `enabled` modules. Another module's records still

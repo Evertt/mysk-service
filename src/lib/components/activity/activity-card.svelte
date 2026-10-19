@@ -7,6 +7,8 @@
 	import { resolve } from "$app/paths";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
+	import type { LoggedType } from "#lib/activity/index.ts";
+
 	import ActivityList from "./activity-list.svelte";
 	import { getSubjectActivity } from "./activity.remote.ts";
 
@@ -16,7 +18,7 @@
 		description = m.activity_card_description(),
 	}: {
 		/** The subject type, e.g. `order` (see `#lib/activity/subjects.ts`). */
-		type: string;
+		type: LoggedType;
 		id: string | number;
 		description?: string;
 	} = $props();

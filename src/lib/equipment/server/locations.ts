@@ -8,7 +8,8 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, count, eq, ne, sql } from "drizzle-orm";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { customerSubject } from "#lib/activity/index.ts";
+import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
@@ -26,9 +27,9 @@ interface Owner {
 }
 
 /** A location as the activity log knows it: by its name, with its site's customer as its parent. */
-const subjects = (location: { id: number; name: string }, owner: Owner) => ({
+const subjects = (location: { id: number; name: string }, owner: Owner): LoggedSubjects => ({
 	subject: { type: "location", id: location.id, label: location.name },
-	parent: { type: "customer", id: owner.id, label: owner.code },
+	parent: customerSubject(owner),
 });
 
 /** The tenant's site `id` with its customer, or a 404. */

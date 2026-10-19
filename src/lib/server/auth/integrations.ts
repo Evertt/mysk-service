@@ -17,7 +17,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { integrationToken, organization, organizationModule, user } from "#lib/server/db/schema.ts";
 
@@ -60,7 +60,11 @@ export function integrationTokens(moduleId: ModuleId) {
 		.orderBy(desc(integrationToken.id));
 }
 
-const moduleParent = (moduleId: ModuleId) => ({ type: "module", id: moduleId, label: moduleId });
+const moduleParent = (moduleId: ModuleId): Subject => ({
+	type: "module",
+	id: moduleId,
+	label: moduleId,
+});
 
 /**
  * Makes a token for the tenant's `moduleId`, named `name`, and logs it. Answers the token itself,

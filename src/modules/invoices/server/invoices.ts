@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 
 import { getTimeZone } from "#lib/dates.ts";
 import { formatCents } from "#lib/i18n/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
@@ -30,7 +30,7 @@ const invoiceNumbers: NumberTarget = {
 };
 
 /** How an invoice shows in the activity log. */
-export const invoiceSubject = (found: { id: number; number: string }) => ({
+export const invoiceSubject = (found: { id: number; number: string }): Subject => ({
 	type: "invoice",
 	id: found.id,
 	label: found.number,

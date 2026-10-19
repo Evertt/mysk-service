@@ -4,6 +4,7 @@
  */
 import { error, invalid } from "@sveltejs/kit";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
@@ -34,7 +35,7 @@ export async function removeOrder(id: number) {
 		await tx.delete(order).where(idInTenant(order, found.id));
 		await recordActivity(tx, {
 			action: "deleted",
-			subject: { type: "order", id, label: found.number },
+			subject: orderSubject({ id, number: found.number }),
 		});
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
@@ -71,7 +72,7 @@ export async function assignOrder(id: number, engineerId: number | null) {
 		if (found.engineerId === engineerId) return;
 		if (isAwaitingAcceptance(found.status)) invalid(acceptFirst(found.number));
 		await tx.update(order).set({ engineerId }).where(idInTenant(order, id));
-		const subject = { type: "order", id, label: found.number };
+		const subject = orderSubject({ id, number: found.number });
 		await recordActivity(tx, { action: "updated", subject, before: found, after: { engineerId } });
 	});
 }

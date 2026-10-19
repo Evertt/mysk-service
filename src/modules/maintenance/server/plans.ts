@@ -6,8 +6,9 @@
 import { error } from "@sveltejs/kit";
 import { and, eq, notExists } from "drizzle-orm";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
 	idInTenant,
@@ -34,9 +35,9 @@ interface PlanInput {
 const subjects = (
 	plan: { id: number; description: string },
 	unit: { id: number; serialNumber: string },
-) => ({
+): LoggedSubjects => ({
 	subject: { type: "maintenancePlan", id: plan.id, label: planLabel({ ...unit, ...plan }) },
-	parent: { type: "equipment", id: unit.id, label: unit.serialNumber },
+	parent: equipmentSubject(unit),
 });
 
 /** The tenant's unit with `id`, or a 404. */

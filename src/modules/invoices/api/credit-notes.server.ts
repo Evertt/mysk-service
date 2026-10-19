@@ -6,6 +6,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 
+import type { Subject } from "#lib/server/activity/index.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -29,7 +30,7 @@ export interface CreditNoteDraft {
 		source?: string | null;
 	}[];
 	/** A record of the caller's whose activity card shows its creation too. */
-	parent?: { type: string; id: number | string; label: string };
+	parent?: Subject;
 }
 
 /**

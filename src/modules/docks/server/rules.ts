@@ -9,9 +9,10 @@
  */
 import { and, eq, isNotNull } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -70,8 +71,8 @@ async function checkDoor(dockId: number, now: Temporal.Instant): Promise<DoorChe
 			.update(dockState)
 			.set({ doorAlert: band, updatedAt: now })
 			.where(and(inTenant(dockState), eq(dockState.dockId, dockId)));
-		const subject = { type: "dock", id: dockId, label: found.code };
-		const parent = { type: "customer", id: found.customer.id, label: found.customer.code };
+		const subject: Subject = { type: "dock", id: dockId, label: found.code };
+		const parent = customerSubject(found.customer);
 		if (band === "amber") {
 			await recordActivity(tx, { action: "door_alert", subject, parent });
 			return { notices: 1, orders: [] };

@@ -10,6 +10,8 @@
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LockOpenIcon from "@lucide/svelte/icons/lock-open";
 
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+
 	import { getDoorDock, watchDocks } from "../../docks.remote.ts";
 	import { dockState } from "../../model.ts";
 	import StateBadge from "../../ui/state-badge.svelte";
@@ -28,15 +30,14 @@
 	const dock = $derived(query?.current ?? null);
 	const state = $derived(dock && dockState(dock, dock.occupied));
 
-	// Live, once it's a dock's: a change to the docks (the feed's events, an edit) asks again.
-	const changes = $derived(dock ? watchDocks() : undefined);
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes?.current;
-		if (changed === undefined) return;
-		if (seen !== undefined && changed !== seen) void query?.refresh();
-		seen = changed;
-	});
+	// Live, once it's a dock's: a change to the docks (the feed's events, an edit) asks again. On
+	// whether it's a dock's, not on the dock itself: each answer is a new one, and each call of
+	// `watchDocks()` a new handle, which `refreshOnChange()` would take for another live query.
+	const docked = $derived(dock !== null);
+	refreshOnChange(
+		() => docked && watchDocks(),
+		() => query?.refresh(),
+	);
 </script>
 
 {#if dock && state}

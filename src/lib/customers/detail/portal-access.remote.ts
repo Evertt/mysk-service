@@ -11,6 +11,7 @@ import { isAPIError } from "better-auth/api";
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { invitationState, isManager } from "#lib/auth/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -122,13 +123,6 @@ const emailSchema = v.config(
 	{ abortPipeEarly: true },
 );
 
-/** How the customer shows in the log, as the parent of its portal access. */
-const customerParent = (found: { id: number; code: string }) => ({
-	type: "customer",
-	id: found.id,
-	label: found.code,
-});
-
 /**
  * Invites a contact of the customer to its portal by email, for all of its sites or only
  * `siteIds` (none ticked is all). Refuses an address that's a member already (a contact with access
@@ -199,7 +193,7 @@ export const invitePortalContact = forManagers.form(
 			await recordActivity(tx, {
 				action: "sent",
 				subject: { type: "invitation", id: sent.id, label: email },
-				parent: customerParent(owner),
+				parent: customerSubject(owner),
 				note: m.customers_portal_invitation_note(),
 			});
 		});
@@ -249,7 +243,7 @@ export const revokePortalContact = forManagers.form(v.object({ id: id() }), asyn
 		await recordActivity(tx, {
 			action: "revoked",
 			subject: { type: "portal_contact", id: found.id, label: found.email },
-			parent: customerParent(found.customer),
+			parent: customerSubject(found.customer),
 		});
 	});
 	void getPortalAccess(found.customer.code).refresh();

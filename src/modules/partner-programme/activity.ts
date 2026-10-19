@@ -22,7 +22,7 @@ export const partnerActions = {
 	credited: m.partners_action_credited,
 } satisfies Record<string, Sentence>;
 
-export const partnerSubjects: Record<string, SubjectType> = {
+export const partnerSubjects = {
 	/** A customer accepted into the programme, by its code. */
 	partner: {
 		noun: m.partners_activity_subject_partner,
@@ -76,4 +76,4 @@ export const partnerSubjects: Record<string, SubjectType> = {
 			amount: { label: m.partners_field_amount, format: (value) => formatCents(Number(value)) },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;

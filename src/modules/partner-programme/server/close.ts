@@ -10,8 +10,9 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { formatCents } from "#lib/i18n/index.ts";
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
@@ -21,7 +22,7 @@ import { creditNote } from "#modules/invoices/api/schema.server.ts";
 import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
 import { type BonusForm, bonusLineSource, creditValidUntil, isClosable } from "../model.ts";
-import { customerSubject, figuresOf, partnersOf, today } from "./partners.ts";
+import { figuresOf, partnersOf, today } from "./partners.ts";
 import { rulesFor } from "./rules.ts";
 import { bonusCreditNote, bonusYear } from "./schema.ts";
 import { addEntry } from "./wallet.ts";
@@ -62,7 +63,7 @@ export async function closePreview(year: number, tx: Transaction | typeof db = d
 }
 
 /** The closed year's subject in the activity log: `CUST-0001 · 2025`. */
-const yearSubject = (row: { id: number; year: number }, code: string) => ({
+const yearSubject = (row: { id: number; year: number }, code: string): Subject => ({
 	type: "partner_bonus_year",
 	id: row.id,
 	label: `${code} · ${row.year}`,

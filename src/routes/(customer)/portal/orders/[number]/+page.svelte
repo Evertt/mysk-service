@@ -16,12 +16,12 @@
 	import { StatusBadge as UnitStatusBadge } from "#lib/equipment/components.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
 
 	import ClientStatusBadge from "../../client-status-badge.svelte";
 	import { clientStatus } from "../../client-status.ts";
-	import { getPortalOrder } from "../../client.remote.ts";
-	import { refreshOnChanges } from "../../live.svelte.ts";
+	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
 	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
 
@@ -33,7 +33,7 @@
 	// Just reported from the form.
 	const reported = $derived(page.url.searchParams.has("reported"));
 
-	refreshOnChanges(() => getPortalOrder(params.number).refresh());
+	refreshOnChange(watchPortal, () => getPortalOrder(params.number).refresh());
 </script>
 
 <svelte:head>

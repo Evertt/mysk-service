@@ -11,9 +11,9 @@
 	import { StatusBadge } from "#lib/equipment/components.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
-	import { getPortalUnit } from "../../client.remote.ts";
-	import { refreshOnChanges } from "../../live.svelte.ts";
+	import { getPortalUnit, watchPortal } from "../../client.remote.ts";
 	import OrderList from "../../order-list.svelte";
 	import { unitDetails } from "../../units.ts";
 	import type { PageProps } from "./$types";
@@ -23,7 +23,7 @@
 	const data = $derived(await getPortalUnit(params.serial));
 	const unit = $derived(data.unit);
 
-	refreshOnChanges(() => getPortalUnit(params.serial).refresh());
+	refreshOnChange(watchPortal, () => getPortalUnit(params.serial).refresh());
 </script>
 
 <svelte:head>

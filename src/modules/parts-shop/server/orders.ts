@@ -9,6 +9,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, desc, eq, type SQL } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -77,13 +78,6 @@ function problemMessage(problem: CheckoutProblem, products: readonly CatalogueRo
 			});
 	}
 }
-
-/** The customer's subject, for the entries that show on its card too. */
-const customerSubject = (holder: { id: number; code: string }) => ({
-	type: "customer",
-	id: holder.id,
-	label: holder.code,
-});
 
 /**
  * Places the contact's customer's order for `lines` in one transaction: checked against the

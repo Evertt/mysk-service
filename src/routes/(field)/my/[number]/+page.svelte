@@ -12,13 +12,13 @@
 	import { getTimeZone } from "#lib/dates.ts";
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
-	import { refreshOnChanges } from "../live.svelte.ts";
-	import { getMe, getMyOrder, startWork } from "../portal.remote.ts";
+	import { getMe, getMyOrder, startWork, watchMyWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
@@ -38,7 +38,7 @@
 
 	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
 	// taken off the engineer is a 404 then, as on a reload).
-	refreshOnChanges(() => getMyOrder(params.number).refresh());
+	refreshOnChange(watchMyWork, () => getMyOrder(params.number).refresh());
 </script>
 
 <svelte:head>

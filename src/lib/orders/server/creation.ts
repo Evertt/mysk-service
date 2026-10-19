@@ -5,6 +5,7 @@
  */
 import { invalid } from "@sveltejs/kit";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import type { OrderPriority, OrderStatus, OrderType } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idsInTenant } from "#lib/server/auth/index.ts";
@@ -128,7 +129,7 @@ export async function createOrders(
 			.returning({ id: order.id });
 		const equipmentIds = [...new Set(units)];
 		await setOrderUnits(tx, { id: inserted.id, customerId: draft.customerId }, equipmentIds);
-		const subject = { type: "order", id: inserted.id, label: number };
+		const subject = orderSubject({ id: inserted.id, number });
 		await recordActivity(tx, { action: "created", subject, after: { ...values, equipmentIds } });
 		created.push({ id: inserted.id, number });
 	}

@@ -6,6 +6,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, eq, isNull } from "drizzle-orm";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { isDoneOrder, type ManualOrderStatus, type OrderStatus } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -97,7 +98,7 @@ export async function transitionOrder(
 	if (transition.verb === "complete") await signOff(tx, found.id, transition.signoff, at);
 	await recordActivity(tx, {
 		action: rule.action,
-		subject: { type: "order", id: found.id, label: found.number },
+		subject: orderSubject(found),
 		before: found,
 		after: {
 			...values,
@@ -190,7 +191,7 @@ export async function beginOrderChange(
 			if (!before) return;
 			await recordActivity(tx, {
 				action: "updated",
-				subject: { type: "order", id: saved.id, label: saved.number },
+				subject: orderSubject(saved),
 				before: { ...before, ...beforeExtra },
 				after,
 				// The completion date follows from the status.
@@ -230,7 +231,7 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 		);
 		await recordActivity(tx, {
 			action: rule.action,
-			subject: { type: "order", id: moved.id, label: moved.number },
+			subject: orderSubject(moved),
 			before: moved,
 			after: { status },
 			note: transition.note,

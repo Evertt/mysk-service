@@ -11,16 +11,16 @@
 
 	import { home } from "#lib/client/extensions.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
-	import { getPortalHome } from "./client.remote.ts";
-	import { refreshOnChanges } from "./live.svelte.ts";
+	import { getPortalHome, watchPortal } from "./client.remote.ts";
 	import OrderList from "./order-list.svelte";
 
 	const data = $derived(await getPortalHome());
 
 	// Live: a planner accepting, rejecting or planning a report shows without a reload.
-	refreshOnChanges(() => getPortalHome().refresh());
+	refreshOnChange(watchPortal, () => getPortalHome().refresh());
 </script>
 
 <svelte:head>

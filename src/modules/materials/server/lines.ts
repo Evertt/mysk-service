@@ -5,6 +5,7 @@
  */
 import { and, asc, eq } from "drizzle-orm";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { type OrderStatus } from "#lib/models.ts";
 import type { OrderProblem, OrderSaving } from "#lib/orders/extensions.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
@@ -164,7 +165,7 @@ export async function saveLines(
 	// In the order of the lines it had, like their stock.
 	const lineOrder = [...before, ...lines].map((line) => line.materialId);
 	await moveOrderStock(tx, order, { status, lines }, null, lineOrder);
-	const subject = { type: "order", id: order.id, label: order.number };
+	const subject = orderSubject(order);
 	await recordOrderLines(tx, subject, before, lines);
 }
 

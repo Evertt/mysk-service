@@ -2,6 +2,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { isDoneOrder, isOpenOrder, openOrderStatuses } from "#lib/models.ts";
 import { priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
@@ -126,7 +127,7 @@ export const createCustomer = forMembers.form(
 				.returning({ id: customer.id });
 			await recordActivity(tx, {
 				action: "created",
-				subject: { type: "customer", id: created.id, label: code },
+				subject: customerSubject({ id: created.id, code }),
 			});
 			await addSite(tx, created.id, {
 				name: input.city,
@@ -160,7 +161,7 @@ export const updateCustomer = forMembers.form(
 
 		await db.transaction(async (tx) => {
 			await tx.update(customer).set(input).where(idInTenant(customer, id));
-			const subject = { type: "customer", id, label: existing.code };
+			const subject = customerSubject({ id, code: existing.code });
 			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
 		});
 		void getCustomers().refresh();
@@ -205,7 +206,7 @@ async function removeCustomer(id: number) {
 
 	await deleteAndLog(
 		customer,
-		{ type: "customer", id, label: existing.code },
+		customerSubject({ id, code: existing.code }),
 		m.customers_delete_referenced(),
 	);
 }

@@ -8,6 +8,7 @@
 	import { untrack } from "svelte";
 
 	import { getTimeZone } from "#lib/dates.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { getScheduleMonth, watchSchedule } from "../schedule.remote.ts";
 	import { groupByDay, type ScheduleMonth } from "./calendar.ts";
@@ -22,18 +23,11 @@
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
 
 	// Its first answer too, if it's later than the month's (`changedAt`): see the board's.
-	const changes = watchSchedule();
-	let seen: number | undefined;
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		const news =
-			seen === undefined ? changed > untrack(() => schedule.changedAt) : changed !== seen;
-		if (news) {
-			void getScheduleMonth(schedule.month.toString()).refresh();
-		}
-		seen = changed;
-	});
+	refreshOnChange(
+		watchSchedule,
+		() => getScheduleMonth(schedule.month.toString()).refresh(),
+		() => schedule.changedAt,
+	);
 </script>
 
 <section aria-label={m.schedule_month()} class="flex flex-col gap-3">

@@ -10,6 +10,7 @@
 import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 
+import { equipmentSubject } from "#lib/activity/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -200,7 +201,7 @@ export function addComponent(serialNumber: string, input: ComponentInput) {
 				id: made.id,
 				label: componentLabel({ serialNumber: unit.serialNumber, number, name: input.name }),
 			},
-			parent: { type: "equipment", id: unit.id, label: unit.serialNumber },
+			parent: equipmentSubject(unit),
 			after: logged(input.name, article, checkpointIds),
 		});
 		return { number, serialNumber: unit.serialNumber };
@@ -234,7 +235,7 @@ export function changeComponent(id: number, input: ComponentInput) {
 					name: input.name,
 				}),
 			},
-			parent: { type: "equipment", id: found.unit.id, label: found.unit.serialNumber },
+			parent: equipmentSubject(found.unit),
 			before: logged(found.name, before ?? null, found.checkpointIds),
 			after: logged(input.name, article, checkpointIds),
 		});
@@ -258,7 +259,7 @@ export function removeComponent(id: number) {
 					name: found.name,
 				}),
 			},
-			parent: { type: "equipment", id: found.unit.id, label: found.unit.serialNumber },
+			parent: equipmentSubject(found.unit),
 		});
 		return { serialNumber: found.unit.serialNumber };
 	});
@@ -296,7 +297,7 @@ export function moveComponent(id: number, direction: "up" | "down") {
 					name: found.name,
 				}),
 			},
-			parent: { type: "equipment", id: found.unit.id, label: found.unit.serialNumber },
+			parent: equipmentSubject(found.unit),
 			before: { position: found.position + 1 },
 			after: { position: to + 1 },
 		});

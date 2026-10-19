@@ -8,6 +8,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
+import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
 import { findEngineerOrder, orderCommitted, transitionOrder } from "#lib/orders/server/index.ts";
@@ -21,7 +22,6 @@ import {
 	inTenant,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -32,6 +32,7 @@ import {
 	orderUnit,
 	user,
 } from "#lib/server/db/schema.ts";
+import { live } from "#lib/server/live.ts";
 import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
 
 import { signature } from "./work.ts";
@@ -176,7 +177,7 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 });
 
 /** The records the portal shows: a change to any of them may outdate it. */
-const portalSubjects = ["order", "customer", "site", "equipment"] as const;
+const portalTypes = ["order", "customer", "site", "equipment"] as const;
 
 /**
  * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
@@ -184,23 +185,7 @@ const portalSubjects = ["order", "customer", "site", "equipment"] as const;
  * changes or cancels an order. Any change of those types in the tenant, not only the engineer's:
  * it says only that something changed, and the queries it has the portal refresh are gated again.
  */
-export const watchMyWork = forEngineers.query.live(async function* () {
-	const { organizationId } = currentTenant();
-	// Watching before the first answer, so a change in between isn't missed.
-	const changes = watchChanges(organizationId, portalSubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, portalSubjects);
-		for await (const _ of changes) yield changedAt(organizationId, portalSubjects);
-	} finally {
-		changes.stop();
-	}
-});
-
-type MyOrder = Awaited<ReturnType<typeof findEngineerOrder>>;
-
-/** How an order shows in the activity log. */
-const subjectOf = (found: MyOrder) => ({ type: "order", id: found.id, label: found.number });
+export const watchMyWork = forEngineers.query.live(() => live(portalTypes));
 
 /**
  * Refreshes what the portal shows of an order after a change, the modules' cards on it too (they
@@ -232,7 +217,7 @@ export const logHours = forEngineers.form(
 			await tx.update(order).set(after).where(idInTenant(order, found.id));
 			await recordActivity(tx, {
 				action: "updated",
-				subject: subjectOf(found),
+				subject: orderSubject(found),
 				before: found,
 				after,
 			});
@@ -264,7 +249,7 @@ export const addNote = forEngineers.form(
 			});
 			await recordActivity(tx, {
 				action: "note_added",
-				subject: subjectOf(found),
+				subject: orderSubject(found),
 				note: input.text,
 			});
 			return found.number;

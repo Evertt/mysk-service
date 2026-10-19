@@ -37,6 +37,11 @@ interface ModuleParts {
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;
 	/**
+	 * The types the module announces changes of for its live queries but never logs (e.g. energy's
+	 * meter readings): a live query may watch them; the activity log never names them.
+	 */
+	liveTypes?: readonly string[];
+	/**
 	 * The verbs the module adds to the activity log (`ActivityAction`), as a sentence each. They
 	 * read for every tenant, also after the module is switched off.
 	 */
@@ -98,3 +103,15 @@ export type { ModuleId };
 /** The activity verbs of all modules, e.g. `issued`. */
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;
 type ActionsOf<Module> = Module extends { actions: infer Actions } ? keyof Actions & string : never;
+
+/** The subject types of all modules, e.g. `invoice`. */
+export type ModuleSubjectType = SubjectsOf<(typeof modules)[number]>;
+type SubjectsOf<Module> = Module extends { subjects: infer Subjects }
+	? keyof Subjects & string
+	: never;
+
+/** The live-only types of all modules (`liveTypes`), e.g. `energy_reading`. */
+export type ModuleLiveType = LiveTypesOf<(typeof modules)[number]>;
+type LiveTypesOf<Module> = Module extends { liveTypes: readonly (infer Type extends string)[] }
+	? Type
+	: never;

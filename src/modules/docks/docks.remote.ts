@@ -4,13 +4,12 @@
  * a door, for the energy module's door card. And when the docks changed, for whatever shows them
  * live (the board, the door card).
  */
-import { getRequestEvent } from "$app/server";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { refuse } from "#lib/server/forms.ts";
+import { live } from "#lib/server/live.ts";
 
 import { dockSchema } from "./form/dock-schema.ts";
 import { forManagers, query } from "./remote-functions.ts";
@@ -53,20 +52,10 @@ export const getDoorDock = query(v.pipe(v.number(), v.integer(), v.minValue(1)),
 );
 
 /** The records the docks' live views show: a change to any of them outdates them. */
-const dockSubjects = ["dock", "customer"] as const;
+const dockTypes = ["dock", "customer"] as const;
 
 /**
  * When the docks last changed (epoch ms, 0 if not since the server started), sent again on each
  * change: events applied, the rules' notices, docks added or edited.
  */
-export const watchDocks = query.live(async function* () {
-	const { organizationId } = currentTenant();
-	const changes = watchChanges(organizationId, dockSubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, dockSubjects);
-		for await (const _ of changes) yield changedAt(organizationId, dockSubjects);
-	} finally {
-		changes.stop();
-	}
-});
+export const watchDocks = query.live(() => live(dockTypes));

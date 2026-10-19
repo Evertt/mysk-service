@@ -7,6 +7,8 @@
  */
 import { onMount } from "svelte";
 
+import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+
 import { watchActivity } from "./activity.remote.ts";
 
 /** How long a change waits for the rest of its burst before the page looks again (ms). */
@@ -14,8 +16,6 @@ const defaultDelay = 400;
 
 /** Calls `refresh` after changes in the activity log. Call it while a component initializes. */
 export function refreshOnActivity(refresh: () => Promise<unknown>, delay = defaultDelay) {
-	const changes = watchActivity();
-	let seen: number | undefined;
 	/** A change came in that no refresh has answered yet. */
 	let outdated = false;
 	let running = false;
@@ -44,14 +44,7 @@ export function refreshOnActivity(refresh: () => Promise<unknown>, delay = defau
 		if (outdated) schedule();
 	}
 
-	$effect(() => {
-		const changed = changes.current;
-		if (changed === undefined) return;
-		// The first answer is when the log last changed: the page shows that already. After a
-		// reconnection, a different one means changes were missed in between.
-		if (seen !== undefined && changed !== seen) schedule();
-		seen = changed;
-	});
+	refreshOnChange(watchActivity, schedule);
 
 	onMount(() => {
 		const onVisible = () => {

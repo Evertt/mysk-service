@@ -7,6 +7,7 @@
 import { error } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, isNull, ne, or } from "drizzle-orm";
 
+import { customerSubject } from "#lib/activity/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -271,7 +272,7 @@ export async function saveDock(customerCode: string, input: DockInput & { id?: n
 	if (problems.length) return problems;
 	const values = dockValues(input);
 	const { organizationId } = currentTenant();
-	const parent = { type: "customer", id: owner.id, label: owner.code };
+	const parent = customerSubject(owner);
 	await db.transaction(async (tx) => {
 		if (input.id) {
 			const [before] = await tx
@@ -318,7 +319,7 @@ export async function deleteDock(customerCode: string, id: number) {
 		await recordActivity(tx, {
 			action: "deleted",
 			subject: { type: "dock", id, label: found.code },
-			parent: { type: "customer", id: owner.id, label: owner.code },
+			parent: customerSubject(owner),
 		});
 		return found;
 	});

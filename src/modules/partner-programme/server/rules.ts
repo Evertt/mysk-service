@@ -7,7 +7,7 @@
 import { invalid } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gt, gte, lt, lte } from "drizzle-orm";
 
-import { recordActivity } from "#lib/server/activity/index.ts";
+import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
@@ -73,7 +73,7 @@ export async function rulesFor(
 }
 
 /** The year's subject in the activity log. */
-const subjectOf = (rules: { id: number; year: number }) => ({
+const subjectOf = (rules: { id: number; year: number }): Subject => ({
 	type: "partner_programme_year",
 	id: rules.id,
 	label: String(rules.year),

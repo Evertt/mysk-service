@@ -25,7 +25,7 @@ const sitePage = (id: string) =>
 /** A door's kind, e.g. "Sectional door". */
 const doorKind = (value: unknown) => energyLabels.labelOrValue("doorKind", String(value));
 
-export const energySubjects: Record<string, SubjectType> = {
+export const energySubjects = {
 	/**
 	 * An energy site, by its name: the parent of its zones, consumers, doors, alerts and
 	 * thresholds, whose entries are on its page.
@@ -84,4 +84,4 @@ export const energySubjects: Record<string, SubjectType> = {
 			maxKwh: { label: m.energy_threshold_max_kwh, format: amount },
 		},
 	},
-};
+} satisfies Record<string, SubjectType>;
