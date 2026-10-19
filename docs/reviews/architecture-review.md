@@ -540,3 +540,26 @@ says updates are written out so each names the fields it compares.
 **C2, live changes,** is the cheap companion for the same or a later session: in-process, with
 9 call sites that simplify mechanically. It is also where C3's typed subject union would pay
 off first.
+
+---
+
+## 10. Since the review
+
+**Done** (merged into `develop`):
+
+- C1, the order lifecycle (`docs/plans/order-lifecycle.md`).
+- C2 and C3, live changes and activity subjects (`docs/plans/live-changes-and-subjects.md`).
+- D6 (`submitted()`), X7's `orderTypes` (`order-types.spec.ts`), D13 (`#lib/schema.ts`) and F5.
+
+**To consider later:**
+
+- **SvelteKit's own validation errors aren't translated.** A command or query given input its
+  schema refuses throws SvelteKit's 400 "Bad Request", in English, and `errorMessage()`
+  (`src/lib/utils.ts`) shows it in the toast. The app's pages send valid input, so a user meets it
+  only through a bug or a tampered request. A `handleValidationError` in `src/hooks.server.ts`
+  returning a translated generic message would fix it; it changes what
+  `src/tests/unit/lib/server/harness/harness.spec.ts` expects of a refused argument. Left out of
+  the drift fixes (2026-10-19, the user's decision): nothing in them made it reachable.
+- **The customer site form's new limits** (contact name 120, access notes 500; D13) were checked
+  only against local data (longest 23 and 67). A longer stored value in production would have to
+  be shortened before that site can be saved again.
