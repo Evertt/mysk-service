@@ -79,8 +79,8 @@ customer, the request, prices, tags, history, checklists), on the scope's `where
   who in the office collected the sign-off, the engineer in full, the site's `onSite` columns),
   `engineer` (the notes, not who collected it, no engineer: it's them), `customer` (no notes, the
   engineer by first name, the site's address) and `workOrder` (no notes, the engineer in full, the
-  address); only the office sees a unit's warranty date. A key the table says no to isn't in `WorkRecord<A>`'s type: a customer's record has no
-  `notes`. A new column a portal mustn't see is a key in the table, not a select of its own; a key
+  address); only the office sees a unit's warranty date. A key the table says no to isn't in
+  `WorkRecord<A>`'s type: a customer's record has no `notes`. A new column a portal mustn't see is a key in the table, not a select of its own; a key
   that doesn't change the record's shape (prices) doesn't belong there.
 - **A scope** finds the order and names its audience, and only these make one: `officeOrder(number)`
   (the tenant's), `await engineerWork(ref)` (the engineer's own, `engineerOrder()`),

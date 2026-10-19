@@ -36,7 +36,6 @@ export async function loadWorkOrder(where: SQL, unitsAt?: SQL) {
 					name: customer.name,
 					code: customer.code,
 					contactName: customer.contactName,
-					city: customer.city,
 				},
 			})
 			.from(order)

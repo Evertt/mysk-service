@@ -2,8 +2,8 @@
 	@component
 	An order's sign-off, as the office and both portals show it: who signed off for the customer and
 	when, then the customer's and the engineer's signatures side by side (stacked where the card is
-	narrow: on a phone, in the office's side column), and
-	who in the office collected it when the sign-off says (the office's).
+	narrow: on a phone, in the office's side column), and who in the office collected it when the
+	sign-off says (the office's).
 -->
 <script lang="ts">
 	import { formatDateTime } from "#lib/i18n/index.ts";
