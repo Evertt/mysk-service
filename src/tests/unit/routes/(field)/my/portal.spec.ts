@@ -141,34 +141,29 @@ describe("an engineer's work", () => {
 describe("South's order", () => {
 	test("is a 404 to read", async () => {
 		await as(erik, async () => {
-			for (const order of [southern]) {
-				expect(await call(getMyOrder, order.number), order.number).toMatchObject({ status: 404 });
-			}
+			expect(await call(getMyOrder, southern.number)).toMatchObject({ status: 404 });
 			expect(await call(getMyOrder, own.number)).toMatchObject({ status: 200 });
 		});
 	});
 
 	test("is a 404 to change, also by its id in the forms of their own order", async () => {
-		const victims = [southern];
-		const before = await Promise.all([...victims, own].map((order) => snapshot(order.id)));
+		const before = await Promise.all([southern, own].map((order) => snapshot(order.id)));
+		const id = String(southern.id);
 		await as(erik, async () => {
-			for (const victim of victims) {
-				const id = String(victim.id);
-				for (const answer of [
-					await submit(addNote, { id, text: "1" }),
-					await submit(logHours, { id, laborHours: 1 }),
-					await submit(startWork, { id }),
-					await submit(completeWork, {
-						id,
-						signerName: "Robin Customer",
-						signature: drawn,
-						engineerSignature: drawn,
-					}),
-				]) {
-					expect(answer, victim.number).toMatchObject({ status: 404 });
-				}
+			for (const answer of [
+				await submit(addNote, { id, text: "1" }),
+				await submit(logHours, { id, laborHours: 1 }),
+				await submit(startWork, { id }),
+				await submit(completeWork, {
+					id,
+					signerName: "Robin Customer",
+					signature: drawn,
+					engineerSignature: drawn,
+				}),
+			]) {
+				expect(answer).toMatchObject({ status: 404 });
 			}
 		});
-		expect(await Promise.all([...victims, own].map((order) => snapshot(order.id)))).toEqual(before);
+		expect(await Promise.all([southern, own].map((order) => snapshot(order.id)))).toEqual(before);
 	});
 });

@@ -6,6 +6,7 @@
  */
 import { isHttpError } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import {
@@ -44,7 +45,12 @@ beforeAll(async () => {
 		);
 	own = await first("engineer_id = ?", [mine]);
 	others = await first("organization_id = ? and engineer_id <> ?", [northId, mine]);
-	southern = await first("organization_id = ? and engineer_id is not null", [southId]);
+	// By a number none of Erik's orders has (numbers repeat across tenants).
+	southern = await first(
+		`organization_id = ? and engineer_id is not null and not exists
+		 (select 1 from "order" s where s.engineer_id = ? and s.number = "order".number)`,
+		[southId, mine],
+	);
 	expect([own, others, southern].every(Boolean)).toBe(true);
 });
 
@@ -110,6 +116,27 @@ describe("engineerOrder(ref)", () => {
 		}
 		expect(await reached({ id: 0 })).toEqual([]);
 		expect(await reached({ number: "ORD-0000-00000" })).toEqual([]);
+	});
+});
+
+describe("the conditions", () => {
+	const dialect = new SQLiteSyncDialect();
+
+	test("are the tenant's and the engineer's, and the order's id or number", async () => {
+		const [orders, byId, byNumber] = await as(erik, async () => [
+			dialect.sqlToQuery(await engineerOrders()),
+			dialect.sqlToQuery(await engineerOrder({ id: 7 })),
+			dialect.sqlToQuery(await engineerOrder({ number: "ORD-1" })),
+		]);
+		expect(orders).toMatchObject({
+			sql: '("order"."organization_id" = ? and "order"."engineer_id" = ?)',
+			params: [northId, mine],
+		});
+		expect(byId).toMatchObject({
+			sql: '("order"."id" = ? and ("order"."organization_id" = ? and "order"."engineer_id" = ?))',
+			params: [7, northId, mine],
+		});
+		expect(byNumber).toMatchObject({ params: ["ORD-1", northId, mine] });
 	});
 });
 

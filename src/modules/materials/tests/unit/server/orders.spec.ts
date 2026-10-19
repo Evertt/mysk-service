@@ -11,10 +11,14 @@ import { describe, expect, test } from "vite-plus/test";
 import { getOrders } from "#lib/orders/list/order-list.remote.ts";
 import { ordersList } from "#lib/orders/list/orders-list.ts";
 import { createOrder, deleteOrder, getOrder, updateOrder } from "#lib/orders/order.remote.ts";
-import { saveFieldMaterials } from "#modules/materials/portal/field-materials.remote.ts";
+import {
+	getFieldMaterials,
+	saveFieldMaterials,
+} from "#modules/materials/portal/field-materials.remote.ts";
 import { editForm, orderId } from "#unit/lib/orders/server/order-form.test-support.ts";
 import {
 	as,
+	call,
 	data,
 	north,
 	organizationId,
@@ -116,6 +120,20 @@ describe("the engineer portal", () => {
 		expect(entry).toMatchObject({ user_id: job.user_id, action: "created" });
 		expect(JSON.parse(entry.changes)).toEqual({ quantity: [null, 2] });
 		expect(await unbalancedStock(northId)).toEqual([]);
+	});
+
+	test("an order that isn't theirs is the portal's 404, naming the order", async () => {
+		// South's, by a number none of Erik's orders has (numbers repeat across tenants).
+		const number = await value<string>(
+			`select o.number from "order" o where o.organization_id = ? and not exists
+			 (select 1 from "order" s join engineer e on e.id = s.engineer_id
+			  join user u on u.id = e.user_id where u.email = ? and s.number = o.number) limit 1`,
+			[southId, north.engineer.email],
+		);
+		expect(await as(north.engineer, () => call(getFieldMaterials, number))).toMatchObject({
+			status: 404,
+			message: `Order ${number} not found`,
+		});
 	});
 });
 

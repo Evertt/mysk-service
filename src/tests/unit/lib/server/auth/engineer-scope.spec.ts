@@ -8,16 +8,17 @@
  * - `requireEngineer` (which has it) is used only in `src/lib/server/auth/` and by the gates
  *   (`src/lib/server/remote-functions.ts`);
  * - `engineer.userId` is read only there and by the office's account form (`src/lib/engineers/`);
- * - an engineer-gated file (one that makes remote functions with `forEngineers`) reads orders
- *   only through the scope: no `order.engineerId` and no `inTenant(order)`. (It writes an order it
- *   found through the scope by its id, `idInTenant(order, found.id)`.)
+ * - an engineer-gated file (in `src/routes/(field)/` or a module's `portal/`, or one that makes
+ *   remote functions with `forEngineers`) reads orders only through the scope: no
+ *   `order.engineerId`, no `inTenant(order)`, no `tenantJoin(order, …)`, and `idInTenant(order, …)`
+ *   only for the order it found through the scope (`idInTenant(order, found.id)`, to write it).
  *
  * The office's filters by an engineer it was given (the orders list's `?engineer=`, the planner)
  * aren't engineer-gated and hold no signed-in engineer's id: none of these match them. Run on
  * made-up files too, to show they find what they should.
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { join, posix, relative } from "node:path";
+import { join, posix } from "node:path";
 
 import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
@@ -51,9 +52,17 @@ export function scopeBreaches(files: readonly SourceFile[]) {
 		if (!inAuth && !path.startsWith("src/lib/engineers/") && /\bengineer\.userId\b/.test(text)) {
 			found.push("engineer.userId");
 		}
-		if (/\bforEngineers\./.test(text)) {
+		const gated =
+			path.startsWith("src/routes/(field)/") ||
+			/^src\/modules\/[^/]+\/portal\//.test(path) ||
+			/\bforEngineers\./.test(text);
+		if (gated) {
 			if (/\border\.engineerId\b/.test(text)) found.push("order.engineerId");
 			if (/\binTenant\(\s*order\s*\)/.test(text)) found.push("inTenant(order)");
+			if (/\btenantJoin\(\s*order\s*,/.test(text)) found.push("tenantJoin(order, …)");
+			if (/\bidInTenant\(\s*order\s*,(?!\s*found\.id\s*\))/.test(text)) {
+				found.push("idInTenant(order, …)");
+			}
 		}
 		return found.map((what) => `${path}: ${what}`);
 	});
@@ -68,8 +77,15 @@ function sources(): SourceFile[] {
 }
 
 test("the app keeps to the scope", () => {
-	expect(relative(root, join(root, "src"))).toBe("src");
-	expect(scopeBreaches(sources())).toEqual([]);
+	const files = sources();
+	// It reads the scope and the engineer-gated files (an empty scan would pass too).
+	expect(files.map((file) => file.path)).toEqual(
+		expect.arrayContaining([
+			"src/lib/server/auth/engineer.ts",
+			"src/routes/(field)/my/portal.remote.ts",
+		]),
+	);
+	expect(scopeBreaches(files)).toEqual([]);
 });
 
 test("currentEngineer() hands out neither the engineer's id nor their account", () => {
@@ -92,6 +108,23 @@ describe("on made-up files", () => {
 			`${portal.path}: order.engineerId`,
 			`${portal.path}: inTenant(order)`,
 		]);
+	});
+
+	test("finds an order read by id or joined by hand in a portal folder", () => {
+		const helper = {
+			path: "src/routes/(field)/my/work.ts",
+			source: `const found = await db.query.order.findFirst({ where: idInTenant(order, input.id) });
+				db.select().from(orderUnit).innerJoin(...tenantJoin(order, orderUnit.orderId));`,
+		};
+		expect(scopeBreaches([helper])).toEqual([
+			`${helper.path}: tenantJoin(order, …)`,
+			`${helper.path}: idInTenant(order, …)`,
+		]);
+		const write = {
+			path: "src/routes/(field)/my/portal.remote.ts",
+			source: `forEngineers.form(…); await tx.update(order).set(after).where(idInTenant(order, found.id));`,
+		};
+		expect(scopeBreaches([write])).toEqual([]);
 	});
 
 	test("finds the ways back to the engineer's id outside the scope", () => {

@@ -17,7 +17,7 @@ export async function findEngineerOrder(
 	action?: FieldAction,
 ) {
 	const found = await runner.query.order.findFirst({
-		columns: { id: true, number: true, status: true, laborHours: true, engineerId: true },
+		columns: { id: true, number: true, status: true, laborHours: true },
 		where: await engineerOrder(ref),
 	});
 	if (!found) engineerOrderNotFound(ref);

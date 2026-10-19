@@ -269,11 +269,14 @@ describe("Lev's planned inspection", () => {
 
 describe("whose checklists Lev may change", () => {
 	test("another tenant's are a 404, also by their ids, and stay as they were", async () => {
+		// North's, by a number none of Lev's orders has (numbers repeat across tenants).
 		const [northern] = await rows<{ number: string; checklist: number; point: number }>(
 			`select o.number, c.id as checklist, min(r.id) as point from "order" o
 			 join checklist c on c.order_id = o.id join checklist_result r on r.checklist_id = c.id
-			 where o.organization_id = ? group by c.id order by c.id limit 1`,
-			[northId],
+			 where o.organization_id = ? and not exists
+			 (select 1 from "order" s where s.engineer_id = ? and s.number = o.number)
+			 group by c.id order by c.id limit 1`,
+			[northId, levId],
 		);
 		const state = async () => ({
 			checklists: await rows(`select * from checklist where id = ?`, [northern.checklist]),
@@ -282,24 +285,17 @@ describe("whose checklists Lev may change", () => {
 			]),
 		});
 		const before = await state();
-		await as(lev, async () => {
-			for (const target of [northern]) {
-				const { point, checklist } = target;
-				const answers = {
-					getFieldChecklists: await call(getFieldChecklists, target.number),
-					answer: await call(answer, { id: point, result: "ok" }),
-					remarkOn: await call(remarkOn, { id: point, remark: "Overgenomen" }),
-					remarkForCustomer: await call(remarkForCustomer, {
-						id: checklist,
-						remarks: "Overgenomen",
-					}),
-					complete: await call(complete, { id: checklist }),
-				};
-				for (const [name, answered] of Object.entries(answers)) {
-					expect(answered.status, `${target.number} ${name}`).toBe(404);
-				}
-			}
-		});
+		const { point, checklist } = northern;
+		const answers = await as(lev, async () => ({
+			getFieldChecklists: await call(getFieldChecklists, northern.number),
+			answer: await call(answer, { id: point, result: "ok" }),
+			remarkOn: await call(remarkOn, { id: point, remark: "Overgenomen" }),
+			remarkForCustomer: await call(remarkForCustomer, { id: checklist, remarks: "Overgenomen" }),
+			complete: await call(complete, { id: checklist }),
+		}));
+		for (const [name, answered] of Object.entries(answers)) {
+			expect(answered.status, name).toBe(404);
+		}
 		expect(await state()).toEqual(before);
 	});
 
