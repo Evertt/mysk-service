@@ -191,3 +191,11 @@ the source spec; the customer bypasses; docs.
    Tenancy bullet names `engineerOrders()`/`engineerOrder()`.
 8. **Gate:** check, knip, the specs above, the portal, checklists, condition, materials and customer
    portal e2e files.
+
+## Review decisions
+
+- **A1 (round 1), O1:** the two places where the engineer condition sits in a module's own query
+  (checklists' `findFieldChecklist`, condition's `findFieldUnit`) keep a same-tenant
+  other-engineer case each (checklists' point and checklist, condition's unit), so dropping the
+  scope there fails a test. This narrows Q8: the other engineer-vs-engineer cases stay at the
+  scope's spec.

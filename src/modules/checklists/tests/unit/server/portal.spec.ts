@@ -268,6 +268,35 @@ describe("Lev's planned inspection", () => {
 });
 
 describe("whose checklists Lev may change", () => {
+	test("another engineer's, in Lev's tenant, are a 404 by their ids, and stay as they were", async () => {
+		// The condition of the engineer's own scope in findFieldChecklist(): SHLTR's own checklists.
+		const [others] = await rows<{ checklist: number; point: number }>(
+			`select c.id as checklist, min(r.id) as point from "order" o
+			 join checklist c on c.order_id = o.id join checklist_result r on r.checklist_id = c.id
+			 where o.organization_id = ? and o.engineer_id <> ? and c.status = 'draft'
+			 group by c.id order by c.id limit 1`,
+			[shltrId, levId],
+		);
+		const state = async () => ({
+			checklist: await rows(`select * from checklist where id = ?`, [others.checklist]),
+			results: await rows(`select * from checklist_result where checklist_id = ? order by id`, [
+				others.checklist,
+			]),
+		});
+		const before = await state();
+		const { point, checklist } = others;
+		const answers = await as(lev, async () => ({
+			answer: await call(answer, { id: point, result: "ok" }),
+			remarkOn: await call(remarkOn, { id: point, remark: "Overgenomen" }),
+			remarkForCustomer: await call(remarkForCustomer, { id: checklist, remarks: "Overgenomen" }),
+			complete: await call(complete, { id: checklist }),
+		}));
+		for (const [name, answered] of Object.entries(answers)) {
+			expect(answered, name).toMatchObject({ status: 404, message: "Checklist not found" });
+		}
+		expect(await state()).toEqual(before);
+	});
+
 	test("another tenant's are a 404, also by their ids, and stay as they were", async () => {
 		// North's, by a number none of Lev's orders has (numbers repeat across tenants).
 		const [northern] = await rows<{ number: string; checklist: number; point: number }>(
