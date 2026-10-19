@@ -123,6 +123,47 @@ describe("in North", () => {
 		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
 	});
 
+	// How words are matched is `search-filter.spec.ts`'s; this is the box on the page.
+	test("a word of a customer's name and one of their city find them, a word of nothing no one", async () => {
+		const { page } = app;
+		const customers = await rows<Record<string, string>>(
+			`select name, code, contact_name, email, city, phone, country from customer
+			 where organization_id = ?`,
+			[north.id],
+		);
+		// What the search reads of a customer (in English, the countries are as stored).
+		const text = (row: Record<string, string>) =>
+			[row.name, row.contact_name, row.email, row.code, row.city, row.phone, row.country]
+				.join("\n")
+				.toLowerCase();
+		const finds = (words: string[]) =>
+			customers.filter((row) => words.every((word) => text(row).includes(word.toLowerCase())));
+		// A word of a name that more customers have, and a city that only some of them are in.
+		const [word, city] = customers
+			.flatMap((row) =>
+				row.name
+					.split(" ")
+					.filter((each) => /^\p{L}{4,}$/u.test(each))
+					.map((each) => [each, row.city]),
+			)
+			.find(([each, city]) => {
+				const found = finds([each, city]).length;
+				return found > 0 && found < finds([each]).length;
+			})!;
+		const expected = finds([word, city]);
+
+		await app.go(afresh("/customers"));
+		await page.getByLabel("Search customers…").fill(`${word} ${city}`);
+		await expect.poll(() => app.rowCount()).toBe(expected.length);
+		const shown = await bodyRows().locator("td:nth-child(2) a").allInnerTexts();
+		expect(shown.toSorted(byName)).toEqual(expected.map((row) => row.name).toSorted(byName));
+
+		await page.getByLabel("Search customers…").fill(`${word} ${city} xyzzy`);
+		await expect.poll(() => app.rowCount()).toBe(0);
+		await page.getByLabel("Search customers…").fill("");
+		await expect.poll(() => app.rowCount()).toBe(await countIn("customer", north.id));
+	});
+
 	test("filtering by a range of open orders, from the Filter menu and from a link", async () => {
 		const { page } = app;
 		/** North's customers with at least `min` open orders. */

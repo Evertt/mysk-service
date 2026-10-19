@@ -90,6 +90,31 @@ describe("in North", () => {
 		expect(shown).toEqual(shown.toSorted((a, b) => a.localeCompare(b)));
 	});
 
+	// How words are matched is `search-filter.spec.ts`'s; this is the box on the page.
+	test("a word of an engineer's name and their region find them", async () => {
+		const { page } = app;
+		const engineers = await rows<{ name: string; email: string; region: string }>(
+			`select name, email, region from engineer where organization_id = ?`,
+			[north.id],
+		);
+		// What the search reads of an engineer (in English, the regions are as stored).
+		const finds = (words: string[]) =>
+			engineers.filter((row) =>
+				words.every((word) =>
+					[row.name, row.email, row.region].join("\n").toLowerCase().includes(word.toLowerCase()),
+				),
+			);
+		const [{ name, region }] = engineers;
+		const first = name.split(" ")[0];
+		const expected = finds([first, region]);
+
+		await page.getByLabel("Search engineers…").fill(`${first} ${region}`);
+		await expect.poll(() => app.rowCount()).toBe(expected.length);
+		expect((await names()).toSorted()).toEqual(expected.map((row) => row.name).toSorted());
+		await page.getByLabel("Search engineers…").fill("");
+		await expect.poll(() => app.rowCount()).toBe(engineers.length);
+	});
+
 	test("unknown ids and South's engineers are a 404", async () => {
 		const southId = await value<number>(`select min(id) from engineer where organization_id = ?`, [
 			south.id,
