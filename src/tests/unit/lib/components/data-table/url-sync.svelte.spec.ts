@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import { lastSearch, visit, visits } from "./fake-navigation.svelte.ts";
+import { lastSearch, leaveFor, visit, visits } from "./fake-navigation.svelte.ts";
 import Harness from "./table.test-harness.svelte";
 import {
 	addToSort,
@@ -17,7 +17,7 @@ import {
 } from "./table.test-support.ts";
 
 // The table keeps its state in the URL: a fake one, which `goto` changes.
-vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
+vi.mock("$app/state", () => import("./fake-navigation.svelte.ts"));
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
@@ -82,6 +82,28 @@ describe("the URL", () => {
 		await expect.poll(lastSearch).toBe("?q=pump");
 		await expect.poll(names).toEqual(["Pump replacement"]);
 		expect(visits.map((visit) => visit.replace)).toEqual([false, true]);
+	});
+
+	test("a search typed just before leaving the page doesn't undo the navigation", async () => {
+		render(Harness, { items });
+		await expect.poll(names).toEqual(byName);
+
+		await page.getByRole("textbox", { name: "Search items…" }).fill("pump");
+		// A link clicked before typing paused, its page still loading.
+		leaveFor("/customers");
+		await expect.poll(names).toEqual(["Pump replacement"]);
+		await new Promise((resolve) => setTimeout(resolve, 600));
+		expect(visits).toEqual([]);
+	});
+
+	test("a search typed while the page itself loads other rows still goes into the URL", async () => {
+		render(Harness, { items });
+		await expect.poll(names).toEqual(byName);
+
+		// The table's own last change, on its way.
+		leaveFor("/items?status=open");
+		await page.getByRole("textbox", { name: "Search items…" }).fill("pump");
+		await expect.poll(lastSearch).toBe("?q=pump");
 	});
 
 	test("the rows show sorted and filtered as the URL says", async () => {

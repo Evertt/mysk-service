@@ -1,5 +1,5 @@
 import { goto } from "$app/navigation";
-import { page } from "$app/state";
+import { navigating, page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
 import { untrack } from "svelte";
 
@@ -234,7 +234,12 @@ export function syncTableWithUrl<TData extends RowData>(
 			if (!searchOnly) return commit(state, key, replace);
 			// Typing: wait for a pause, and keep to one history entry per search.
 			const searching = syncedState.globalFilter !== (spec.defaults?.globalFilter ?? "");
-			timer = setTimeout(() => commit(state, key, replace || searching), searchDelay);
+			timer = setTimeout(() => {
+				// Not once a navigation elsewhere is under way (a link clicked before typing paused):
+				// writing the search then would cancel it, and the member would stay on this page.
+				if (navigating.to && navigating.to.url.pathname !== pathname) return;
+				commit(state, key, replace || searching);
+			}, searchDelay);
 		});
 		// Also when typing goes on (the effect runs again) or the table goes away.
 		return () => clearTimeout(timer);

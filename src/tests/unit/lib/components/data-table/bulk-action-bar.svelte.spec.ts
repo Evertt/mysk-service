@@ -9,7 +9,7 @@ import Harness, { type Job } from "./bulk-action-bar.test-harness.svelte";
 import { visits } from "./fake-navigation.svelte.ts";
 
 // Opening a page goes to a fake URL.
-vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
+vi.mock("$app/state", () => import("./fake-navigation.svelte.ts"));
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));

@@ -6,7 +6,7 @@ import { lastSearch, visit } from "./fake-navigation.svelte.ts";
 import Harness, { type Item } from "./table.test-harness.svelte";
 
 // The table keeps its state in the URL: a fake one, which `goto` changes.
-vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
+vi.mock("$app/state", () => import("./fake-navigation.svelte.ts"));
 vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));

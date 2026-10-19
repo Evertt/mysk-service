@@ -1,9 +1,9 @@
 /**
- * Stand-ins for SvelteKit's `page` and `goto`, for component tests of tables that keep their
- * state in the URL:
+ * Stand-ins for SvelteKit's `page`, `navigating` and `goto`, for component tests of tables that
+ * keep their state in the URL:
  *
  * ```ts
- * vi.mock("$app/state", async () => ({ page: (await import("./fake-navigation.svelte.ts")).page }));
+ * vi.mock("$app/state", () => import("./fake-navigation.svelte.ts"));
  * vi.mock("$app/navigation", async () => ({ goto: (await import("./fake-navigation.svelte.ts")).goto }));
  * ```
  */
@@ -15,6 +15,9 @@ export const page = $state({
 	route: { id: "/items" as string | null },
 	data: {} as App.PageData,
 });
+
+/** A navigation under way (`leaveFor()`), or none. */
+export const navigating = $state({ to: null as { url: URL } | null });
 
 /** The navigations `goto` made, oldest first. */
 export const visits: { url: string; replace: boolean }[] = [];
@@ -33,6 +36,7 @@ export function visit(
 	{ clear = true, memory }: { clear?: boolean; memory?: TableMemory | null } = {},
 ) {
 	page.url = new URL(path, "http://localhost");
+	navigating.to = null;
 	page.data =
 		memory === undefined
 			? {}
@@ -42,3 +46,8 @@ export function visit(
 
 /** The search of the last navigation, e.g. `?status=open`. */
 export const lastSearch = () => new URL(visits.at(-1)?.url ?? "", page.url).search;
+
+/** Starts a navigation to `path` that hasn't arrived yet, as a clicked link whose page loads. */
+export function leaveFor(path: string) {
+	navigating.to = { url: new URL(path, page.url) };
+}
