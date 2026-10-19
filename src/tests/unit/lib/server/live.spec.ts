@@ -119,7 +119,7 @@ describe("live(watched, answer)", () => {
 		globalThis.durableRequests = requests;
 		const durable = { storage: {} } as DurableRequest;
 		const answers = requests.run(durable, () => live(["order"], () => requests.getStore()));
-		// The first, where it's asked for: in the request itself.
+		// The first runs where it's asked for: here outside the stubbed request (on Cloudflare, in it).
 		expect((await answers.next()).value).toBeUndefined();
 		announceChange("org-answer", "order");
 		expect((await answers.next()).value).toBe(durable);

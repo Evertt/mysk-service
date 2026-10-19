@@ -10,8 +10,10 @@ type LiveAnswer = { readonly current: number | undefined };
 /**
  * Calls `refresh` when a live query's answer changes. Call it while a component initializes.
  *
- * - `watch` gives the live query (`watchPortal`), or none yet (`() => dock && watchDocks()`); a
- *   different one starts over.
+ * - `watch` gives the live query (`watchPortal`), or none yet (`() => docked && watchDocks()`); a
+ *   different one starts over. Each call of a live query gives a new handle, which counts as a
+ *   different one: so the getter reads only what decides whether there is one (`docked`, a
+ *   `$derived` boolean), never a value that changes with every answer (the dock itself).
  * - The first answer only says when the records last changed, which the page shows already. With
  *   `readTime` (the data's, `readAt()` on the server), a first answer later than it counts as a
  *   change: one made after the data was read, before the live query opened.
