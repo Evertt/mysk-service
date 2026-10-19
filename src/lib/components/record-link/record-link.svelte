@@ -12,11 +12,11 @@
 	**One request for a hover and a click.** SvelteKit preloads the page of a link the pointer rests
 	on (20 ms after it stopped moving), rendering it in a fork (`forkPreloads`), which asks for the
 	page's queries, the record's among them. The card has to share that request, but a query first
-	asked for in the fork is the fork's until the click commits it: read outside it, it hadn't
-	resolved ("Query resolved without a value"). So the link asks for the record itself, a little
-	before SvelteKit does (`restDelay`): the query is then the page's, and the fork, the card and the
-	page after the click all read that one answer. It's the request the preload would have made, so
-	resting on a link costs no more than it did; a pointer passing over the link asks for nothing.
+	asked for in the fork is the fork's until the click commits it: read outside it, it failed (the
+	card said it couldn't load). So the link asks for the record itself, on the same rest as
+	SvelteKit but just before it (`restDelay`): the query is then the page's, and the fork, the card
+	and the page after the click all read that one answer. It's the request the preload would have
+	made, so resting on a link costs no more than it did; a pointer passing over it asks for nothing.
 -->
 <script lang="ts" generics="T">
 	import type { Snippet } from "svelte";

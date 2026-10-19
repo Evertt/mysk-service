@@ -41,11 +41,14 @@ const standardOpenDelay = 500;
 export const closeDelay = 150;
 
 /**
- * How long the pointer rests on a link before the link asks for its record: before SvelteKit's
- * preload of the link's page does (20 ms after the pointer stopped), so the two share the request
- * (see `RecordLink`).
+ * How long the pointer rests on a link before the link asks for its record: as long as SvelteKit
+ * waits before it preloads the link's page (20 ms after the pointer stopped), so a pointer passing
+ * over the link asks for nothing. The link starts its wait on the pointer events, which come just
+ * before the mouse events SvelteKit starts its own on, so it asks first and the two share the
+ * request (see `RecordLink`). Shorter, and a pointer moving slowly over a link (at 60 Hz, 16 ms
+ * between moves) asked for its record where SvelteKit preloaded nothing.
  */
-export const restDelay = 10;
+export const restDelay = 20;
 
 let openDelayRead: number | undefined;
 
