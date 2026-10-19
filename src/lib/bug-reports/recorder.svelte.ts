@@ -42,7 +42,7 @@ export interface RecorderDeps {
 }
 
 /** Why a report wasn't sent. */
-export type SendFailure = "too-large" | "refused" | "network";
+type SendFailure = "too-large" | "refused" | "network";
 
 /** The result of `send()`. */
 export type SendResult = { sent: true } | { sent: false; failure: SendFailure; message?: string };

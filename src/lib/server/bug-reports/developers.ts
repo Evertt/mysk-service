@@ -9,7 +9,7 @@ import { requireUser } from "#lib/server/auth/index.ts";
 import { bugReportSettings } from "./settings.ts";
 
 /** Whether `email` is a developer's. */
-export const isDeveloper = (email: string) =>
+const isDeveloper = (email: string) =>
 	bugReportSettings.developers.includes(email.trim().toLowerCase());
 
 /**

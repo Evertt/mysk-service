@@ -41,7 +41,7 @@ function invalid(): never {
  * engineer, but not a customer's contact (the customer portal has no record button). A 401 or 403
  * otherwise.
  */
-export function requireReporter() {
+function requireReporter() {
 	const tenant = requireTenant();
 	if (isCustomerContact(tenant.roles)) error(403, m.common_error_no_permission());
 	return tenant;

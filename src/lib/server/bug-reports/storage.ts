@@ -14,7 +14,7 @@ import { bugReportSettings } from "./settings.ts";
 export interface BugReportStore {
 	put(key: string, data: Uint8Array): Promise<void>;
 	/** The recording under `key`, or `null` if there's none. */
-	get(key: string): Promise<Uint8Array | null>;
+	get(key: string): Promise<Uint8Array<ArrayBuffer> | null>;
 }
 
 /** The parts of an R2 bucket binding the store uses (`R2Bucket` of the Workers runtime). */

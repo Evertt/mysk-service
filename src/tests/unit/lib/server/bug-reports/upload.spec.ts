@@ -83,9 +83,9 @@ const events = [{ type: 4, timestamp: summary.startedAt, data: { href: summary.c
 /** A report's request as the recorder sends it, with `report` and `recording` instead if given. */
 async function reportRequest({
 	report = JSON.stringify(summary) as string,
-	recording = new Uint8Array(gzipSync(JSON.stringify(events))) as Uint8Array,
+	recording = new Uint8Array(gzipSync(JSON.stringify(events))),
 	length,
-}: { report?: string; recording?: Uint8Array; length?: string | null } = {}) {
+}: { report?: string; recording?: Uint8Array<ArrayBuffer>; length?: string | null } = {}) {
 	const form = new FormData();
 	form.set("report", report);
 	form.set("events", new Blob([recording]), "events.json.gz");
