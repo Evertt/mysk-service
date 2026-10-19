@@ -102,8 +102,8 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 
 - **Modules and extension points** (hooks, slots, form slots, bulk actions, list columns, module
   routes, seeds): `docs/agents/modules.md`.
-- **Orders' statuses** (the transition table, `transitionOrder()`, orders awaiting acceptance):
-  `docs/agents/orders.md`.
+- **Orders** (the transition table, `transitionOrder()`, orders awaiting acceptance, the work
+  record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`.
 - **Server-side lists** (filtering, sorting, range filters, module columns):
   `docs/agents/lists.md`.
 - **Tests** (where they go, e2e conventions, component harnesses): `docs/agents/tests.md`.
