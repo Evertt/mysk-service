@@ -4,16 +4,15 @@
  * the same step (an engineer, a day and a time); rejecting needs a reason, which the customer
  * reads in their portal.
  */
-import { getRequestEvent } from "$app/server";
 import { invalid } from "@sveltejs/kit";
 import { and, asc, count, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, optionalDate, optionalId, optionalTime, text } from "#lib/schema.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
-import { watchChanges } from "#lib/server/changes.ts";
-import { db, inThisRequest } from "#lib/server/db/index.ts";
+import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
+import { live } from "#lib/server/live.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { getOrder } from "../order.remote.ts";
@@ -43,18 +42,9 @@ async function awaitingCount(organizationId: string) {
  * How many of the tenant's orders await acceptance, for the badge on the sidebar's Orders, sent
  * again whenever an order changes (a customer reports one, a planner accepts or rejects one).
  */
-export const watchAwaitingAcceptance = forMembers.query.live(async function* () {
+export const watchAwaitingAcceptance = forMembers.query.live(() => {
 	const { organizationId } = currentTenant();
-	// Watching before the first answer, so a change in between isn't missed.
-	const changes = watchChanges(organizationId, ["order"]);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	const again = inThisRequest();
-	try {
-		yield await awaitingCount(organizationId);
-		for await (const _ of changes) yield await again(() => awaitingCount(organizationId));
-	} finally {
-		changes.stop();
-	}
+	return live(["order"], () => awaitingCount(organizationId));
 });
 
 /**

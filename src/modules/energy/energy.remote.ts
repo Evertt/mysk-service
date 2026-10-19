@@ -3,16 +3,15 @@
  * yesterday, this month against last month), a zone's, the report's for a range of days, and a
  * live query that says when the readings, alerts or thresholds changed, so an open page asks again.
  */
-import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
+import { live } from "#lib/server/live.ts";
 
 import { periods } from "./model.ts";
 import { query } from "./remote-functions.ts";
@@ -204,7 +203,7 @@ export const getEnergyReport = query(
 );
 
 /** The records the energy pages show: a change to any of them outdates them. */
-const energySubjects = [
+const energyTypes = [
 	"energy_site",
 	"energy_zone",
 	"energy_consumer",
@@ -220,17 +219,7 @@ const energySubjects = [
  * the server started), sent again on each change: a new batch from a gateway, an alert made into an
  * order, a threshold changed, a zone or door set up.
  */
-export const watchEnergy = query.live(async function* () {
-	const { organizationId } = currentTenant();
-	const changes = watchChanges(organizationId, energySubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, energySubjects);
-		for await (const _ of changes) yield changedAt(organizationId, energySubjects);
-	} finally {
-		changes.stop();
-	}
-});
+export const watchEnergy = query.live(() => live(energyTypes));
 
 /** The dashboard's tile: the tenant's open alerts, and how many of them are over a threshold. */
 export const getEnergyStat = query(async () => {

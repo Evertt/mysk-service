@@ -1,19 +1,17 @@
 /**
  * What changed, for live queries (`query.live`): `recordActivity()` announces each change it logs
- * once its transaction has committed, and a live query watches the types of records it shows
- * (`watchChanges()`), or one record (`watchSubject()`).
+ * once its transaction has committed, and a live query watches the types of records it shows, or
+ * one record, through `live()` (`#lib/server/live.ts`), which is built on `watchChanges()` and
+ * `watchSubject()` here.
  *
  * In memory, so it reaches the live queries this process (or isolate) serves. In a Durable Object
  * per organization (the Cloudflare spike, `cloudflare/entry.ts`) that's all of the organization's;
  * on a server with several instances it would need a broker between them.
- *
- * A live query that reads the database again after a change reads it through `inThisRequest()`
- * (`#lib/server/db/index.ts`): on Cloudflare its generator resumes outside the object's request.
  */
 import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 
 /** A change as it's announced: the record (an activity subject's type and id) and who changed it. */
-interface Change {
+export interface Change {
 	/** E.g. `order`. */
 	type: ChangeType;
 	/** The record's id, as text (as in the activity log), if the announcement names one. */

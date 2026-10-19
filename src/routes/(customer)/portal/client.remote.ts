@@ -28,7 +28,6 @@ import {
 	seesSite,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
-import { changedAt, watchChanges } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -42,6 +41,7 @@ import {
 	orderSignoff,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
+import { live } from "#lib/server/live.ts";
 import { forAnyone, forCustomers } from "#lib/server/remote-functions.ts";
 
 /** Who is signed in, for the portal's header: their name, their customer and its supplier. */
@@ -358,7 +358,7 @@ export const reportBreakdown = forCustomers.form(
 // --- Live ----------------------------------------------------------------------------------
 
 /** The records the portal shows: a change to any of them may outdate it. */
-const portalSubjects = ["order", "customer", "site", "equipment", "location"] as const;
+const portalTypes = ["order", "customer", "site", "equipment", "location"] as const;
 
 /**
  * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
@@ -366,17 +366,7 @@ const portalSubjects = ["order", "customer", "site", "equipment", "location"] as
  * an order without a reload. Any change of those types in the tenant: it says only that something
  * changed, and the queries it has the portal refresh are gated and scoped again.
  */
-export const watchPortal = forCustomers.query.live(async function* () {
-	const { organizationId } = currentTenant();
-	const changes = watchChanges(organizationId, portalSubjects);
-	getRequestEvent().request.signal.addEventListener("abort", changes.stop, { once: true });
-	try {
-		yield changedAt(organizationId, portalSubjects);
-		for await (const _ of changes) yield changedAt(organizationId, portalSubjects);
-	} finally {
-		changes.stop();
-	}
-});
+export const watchPortal = forCustomers.query.live(() => live(portalTypes));
 
 /** Signs out, back to the login page. */
 export const signOut = forAnyone.form(async () => {

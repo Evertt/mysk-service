@@ -13,11 +13,12 @@ import {
 	getActivity,
 	getRecentActivity,
 	getSubjectActivity,
+	watchActivity,
 	watchRecordChanges,
 } from "#lib/components/activity/activity.remote.ts";
 import { updateCustomer } from "#lib/customers/customers.remote.ts";
 import { updateOrder } from "#lib/orders/order.remote.ts";
-import { watchSubject } from "#lib/server/changes.ts";
+import { announceChange, watchSubject } from "#lib/server/changes.ts";
 import { demoUsers } from "#lib/server/db/demo.ts";
 import {
 	as,
@@ -241,6 +242,16 @@ describe("in North, the feed", () => {
 			call(getSubjectActivity, { type: "ordr" as never, id: String(fromNorth.order) }),
 		);
 		expect(answer).toMatchObject({ status: 400 });
+	});
+});
+
+describe("in North, the live feed", () => {
+	test("isn't woken by what's announced but never logged: energy's meter readings", async () => {
+		await new Promise((resolve) => setTimeout(resolve, 2));
+		const before = Date.now();
+		announceChange(northId, "energy_reading");
+		const answer = await as(north.owner, () => data(watchActivity));
+		expect(answer).toBeLessThan(before);
 	});
 });
 
