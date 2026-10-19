@@ -45,7 +45,7 @@ interface Policy {
 }
 
 /** What each audience sees of an order's work record: the only place it's declared. */
-export const audiences = {
+const audiences = {
 	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite" },
 	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite" },
 	customer: { notes: false, collectedBy: false, engineer: "first", site: "address" },
