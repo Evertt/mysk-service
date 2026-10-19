@@ -7,10 +7,12 @@
 	order. Wrapped in a `div` with `class` (by default `contents`, so the components lay out as the
 	page's own), or nothing if no module adds anything.
 
-	Each contribution is rendered in a boundary of its own, so when it fails (its remote query
-	throws, its chunk doesn't load) the page and the other contributions still render, and it shows
-	a small card saying so, with a retry. The parts are server-rendered and awaited like the rest of
-	the page, without a loading state.
+	Each contribution is rendered in a boundary of its own (`ErrorBoundary`, which logs and reports
+	the error, and resets a part that failed for an unknown reason once by itself), so when it fails
+	(its remote query throws, its chunk doesn't load) the page and the other contributions still
+	render, and it shows a small card saying so, with a retry. Trying again loads the contribution
+	again, in a new boundary: resetting the boundary alone wouldn't load a chunk that failed. The
+	parts are server-rendered and awaited like the rest of the page, without a loading state.
 
 	The components are loaded together, up front: loading each in a component of its own (an async
 	`$derived` per part) froze the browser after an order was deleted from its page (Svelte 5.57).
@@ -26,6 +28,9 @@
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
+	import CrashSwitch from "#lib/errors/crash-switch.svelte";
+	import { crashSwitches } from "#lib/errors/crash-switch.ts";
+	import ErrorBoundary from "#lib/errors/error-boundary.svelte";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 	import type { FormSlotPoint, SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
 	import { formPartKey } from "#lib/extensions/form-part-key.ts";
@@ -81,13 +86,18 @@
 	<div class={className}>
 		{#each parts as { id, module, attempt, Slot, error } (id)}
 			{#key attempt}
-				<svelte:boundary
-					onerror={(error: unknown) => console.error(`The ${id} contribution failed`, error)}
-				>
+				<ErrorBoundary name={`part:${id}`}>
+					{#if crashSwitches}
+						<!-- A test switch (e2e and dev only): this part crashes when a test asks. -->
+						<CrashSwitch where={`part:${id}`} />
+					{/if}
 					{#if Slot}
 						<Slot {...props} {...partOf(module)} />
 					{:else}
-						{fail(error)}
+						<!-- Fails the boundary once mounted, not while rendering: a chunk that loaded on the
+							server and not in the browser would fail it mid-hydration, after which Svelte
+							(5.57) hydrated the next parts into the wrong place and showed them twice. -->
+						<span hidden {@attach () => fail(error)}></span>
 					{/if}
 
 					{#snippet failed()}
@@ -101,7 +111,7 @@
 							</Card.Content>
 						</Card.Root>
 					{/snippet}
-				</svelte:boundary>
+				</ErrorBoundary>
 			{/key}
 		{/each}
 	</div>

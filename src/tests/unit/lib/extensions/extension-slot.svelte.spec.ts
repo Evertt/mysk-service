@@ -50,6 +50,8 @@ vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 vi.mock("#lib/auth/session.remote.ts", () => ({
 	getTenantModules: vi.fn(() => Promise.resolve(["gadgets", "gizmos", "widgets"])),
 }));
+// The parts' boundaries report what fails (`ErrorBoundary`); nothing is sent here.
+vi.mock("#lib/errors/report.ts", () => ({ report: vi.fn() }));
 
 const logged = vi.spyOn(console, "error");
 
@@ -94,13 +96,18 @@ test("a failed part is logged with its contribution", async () => {
 
 	await expect.element(page.getByText("Couldn't load what Widgets adds here.")).toBeVisible();
 	expect(logged).toHaveBeenCalledWith(
-		"The gizmos/orders.detail.side/card contribution failed",
+		"part:gizmos/orders.detail.side/card failed",
 		expect.objectContaining({ message: "Failed to fetch dynamically imported module" }),
 	);
 	expect(logged).toHaveBeenCalledWith(
-		"The widgets/orders.detail.side/card contribution failed",
+		"part:widgets/orders.detail.side/card failed",
 		expect.objectContaining({ message: "The query failed" }),
 	);
+	// Widgets' failure is an unknown one, so the part tried again once by itself (and failed again);
+	// gizmos' chunk that didn't load isn't tried again by itself.
+	const times = (label: string) => logged.mock.calls.filter(([first]) => first === label).length;
+	expect(times("part:widgets/orders.detail.side/card failed")).toBe(2);
+	expect(times("part:gizmos/orders.detail.side/card failed")).toBe(1);
 });
 
 test("trying again renders the part once it works", async () => {

@@ -1,6 +1,7 @@
 import type { Session, User } from "better-auth";
 
 import type { TableMemory } from "#lib/components/data-table/table-memory.remote.ts";
+import type { ErrorKind } from "#lib/errors/classify.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
@@ -14,7 +15,15 @@ declare global {
 			tenant?: Tenant;
 		}
 
-		// interface Error {}
+		interface Error {
+			/**
+			 * The error's id in the logs (`handleError` in both hooks), which the error pages show to
+			 * quote. Optional only so that `error(404, message)` needs none: the hooks always set it.
+			 */
+			errorId?: string;
+			/** What kind of error it was, when the browser's `handleError` saw it (`classify()`). */
+			kind?: ErrorKind;
+		}
 		interface PageData {
 			/** What's remembered of the page's data table, if it brings it back (`loadTableMemory`). */
 			tableMemory?: Record<string, TableMemory | null>;

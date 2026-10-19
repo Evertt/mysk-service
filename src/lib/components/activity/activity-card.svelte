@@ -8,6 +8,7 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import type { LoggedType } from "#lib/activity/index.ts";
+	import ErrorBoundary from "#lib/errors/error-boundary.svelte";
 
 	import ActivityList from "./activity-list.svelte";
 	import { getSubjectActivity } from "./activity.remote.ts";
@@ -40,8 +41,9 @@
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
-		<!-- Loads on its own, so the page doesn't wait for it. -->
-		<svelte:boundary>
+		<!-- Loads on its own, so the page doesn't wait for it, and fails on its own: a log that
+			doesn't load doesn't take the record's page with it. -->
+		<ErrorBoundary name="activity">
 			<ActivityList
 				entries={await getSubjectActivity({ type, id: String(id) })}
 				label={m.activity_log()}
@@ -50,6 +52,6 @@
 			{#snippet pending()}
 				<Skeleton class="h-16 w-full" />
 			{/snippet}
-		</svelte:boundary>
+		</ErrorBoundary>
 	</Card.Content>
 </Card.Root>
