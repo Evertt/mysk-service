@@ -31,6 +31,7 @@ import * as v from "valibot";
 
 import { isDay } from "#lib/dates.ts";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
+import { recordId } from "#lib/schema.ts";
 
 import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
 import {
@@ -98,7 +99,7 @@ export const code: FilterKind<string> = {
 
 /** A filter on a record's id (a positive whole number). */
 export const id: FilterKind<number> = {
-	value: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	value: recordId(),
 	fromUrl: (token) => (/^\d{1,15}$/.test(token) ? Number(token) : Number.NaN),
 	toUrl: String,
 };

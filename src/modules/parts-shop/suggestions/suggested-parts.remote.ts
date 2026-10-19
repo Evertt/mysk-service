@@ -12,6 +12,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getOrder } from "#lib/orders/remotes.ts";
+import { recordId } from "#lib/schema.ts";
 import { currentCustomer, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -25,7 +26,7 @@ import { forCustomers, form, query } from "../remote-functions.ts";
 import { catalogue } from "../server/catalogue.ts";
 import { shopProduct, shopProductCheckpoint } from "../server/schema.ts";
 
-const idList = v.pipe(v.array(v.pipe(v.number(), v.integer(), v.minValue(1))), v.maxLength(200));
+const idList = v.pipe(v.array(recordId()), v.maxLength(200));
 
 /** The rejected points' template point ids, and the articles (materials) they check, if any. */
 const rejectedPoints = v.object({ ids: idList, articles: v.optional(idList, []) });

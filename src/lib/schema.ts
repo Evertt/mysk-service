@@ -37,6 +37,12 @@ export const optionalId = (message: Message = m.validation_choose_one) =>
 		id(message),
 	]);
 
+/**
+ * A record's id as a command or query takes it, a JSON number (a form's ids are strings: `id()`).
+ * Its refusals are a 400, not a message to show: the page sends ids it was given.
+ */
+export const recordId = () => v.pipe(v.number(), v.integer(), v.minValue(1));
+
 /** A required, trimmed text. */
 export const text = (message: Message = m.validation_required) =>
 	v.pipe(v.string(), v.trim(), v.nonEmpty(message));

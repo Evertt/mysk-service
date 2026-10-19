@@ -12,6 +12,7 @@ import {
 	optionalText,
 	optionalTime,
 	phone,
+	recordId,
 	text,
 	time,
 } from "#lib/schema.ts";
@@ -43,6 +44,16 @@ describe("optionalId", () => {
 	test("otherwise it's an id", () => {
 		expect(parse(optionalId(), "7")).toEqual({ value: 7 });
 		expect(parse(optionalId("Choose an engineer"), "0")).toHaveProperty("issue");
+	});
+});
+
+describe("recordId", () => {
+	test("is a positive whole number, as JSON sends it", () => {
+		expect(parse(recordId(), 1)).toEqual({ value: 1 });
+	});
+
+	test.each([0, -1, 1.5, "1", null])("refuses %j", (input) => {
+		expect(parse(recordId(), input)).toHaveProperty("issue");
 	});
 });
 

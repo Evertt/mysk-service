@@ -7,7 +7,7 @@
 import * as v from "valibot";
 
 import { fieldActions } from "#lib/orders/index.ts";
-import { id } from "#lib/schema.ts";
+import { id, recordId } from "#lib/schema.ts";
 import { currentEngineer } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -23,7 +23,7 @@ import { thresholdsOf } from "../server/settings.ts";
 
 const unitOnOrder = v.object({
 	number: v.pipe(v.string(), v.nonEmpty()),
-	equipmentId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	equipmentId: recordId(),
 });
 
 /**

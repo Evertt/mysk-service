@@ -8,6 +8,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { recordId } from "#lib/schema.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
@@ -27,7 +28,7 @@ import {
 } from "./server/figures.ts";
 import { energyAlert, energyConsumer, energyZone } from "./server/schema.ts";
 
-const siteId = v.pipe(v.number(), v.integer(), v.minValue(1));
+const siteId = recordId();
 
 /**
  * The tenant's energy sites, each with its live power, today's consumption and open alerts, and

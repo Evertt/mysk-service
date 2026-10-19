@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import { label } from "#lib/i18n/index.ts";
 import { manualOrderStatuses } from "#lib/models.ts";
+import { recordId } from "#lib/schema.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
@@ -31,7 +32,7 @@ export const getAssignableEngineers = forMembers.query(async () => {
 
 /** Assigns the selected orders to an active engineer of the tenant, or to nobody (`null`). */
 export const bulkAssignOrders = forMembers.command(
-	v.object({ target: ordersTarget, engineerId: v.nullable(v.pipe(v.number(), v.integer())) }),
+	v.object({ target: ordersTarget, engineerId: v.nullable(recordId()) }),
 	async ({ target, engineerId }) => {
 		if (engineerId !== null) {
 			const problem = await assigneeProblem(engineerId);

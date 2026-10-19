@@ -11,6 +11,7 @@ import { type LoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/i
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
+import { recordId } from "#lib/schema.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, type TenantTable } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -63,7 +64,7 @@ const matching = ({ type, id, user, from, to }: v.InferOutput<typeof feedFilters
  * `before` an entry (the previous page's `older`).
  */
 export const getActivity = forMembers.query(
-	v.object({ ...feedFilters.entries, before: v.optional(v.pipe(v.number(), v.integer())) }),
+	v.object({ ...feedFilters.entries, before: v.optional(recordId()) }),
 	async ({ before, ...filters }) => {
 		const conditions = matching(filters);
 		const rows = await db
@@ -95,7 +96,7 @@ export const getActivity = forMembers.query(
  * a page past the first, which says so rather than move its entries.
  */
 export const countNewActivity = forMembers.query(
-	v.object({ ...feedFilters.entries, after: v.nullable(v.pipe(v.number(), v.integer())) }),
+	v.object({ ...feedFilters.entries, after: v.nullable(recordId()) }),
 	async ({ after, ...filters }) => {
 		const [found] = await db
 			.select({ count: count() })
@@ -201,7 +202,7 @@ export interface RecordChange {
 export const watchRecordChanges = forMembers.query.live(
 	v.object({
 		type: v.picklist(Object.keys(watchedRecords) as (keyof typeof watchedRecords)[]),
-		id: v.pipe(v.number(), v.integer()),
+		id: recordId(),
 	}),
 	({ type, id }) => {
 		const { user } = currentTenant();

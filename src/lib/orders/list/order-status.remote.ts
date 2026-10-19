@@ -2,6 +2,7 @@
 import * as v from "valibot";
 
 import { manualOrderStatuses } from "#lib/models.ts";
+import { recordId } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
 import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
@@ -19,7 +20,7 @@ import { getOrderFacets, getOrders } from "./order-list.remote.ts";
  */
 export const setOrderStatus = forMembers.command(
 	v.object({
-		id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+		id: recordId(),
 		status: v.picklist(manualOrderStatuses),
 	}),
 	async ({ id, status }) => {

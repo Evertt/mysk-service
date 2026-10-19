@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.ts";
 import { laborCost } from "#lib/orders/server/index.ts";
-import { id } from "#lib/schema.ts";
+import { id, recordId } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -198,7 +198,7 @@ async function setActive(found: { id: number; label: string; active: boolean }, 
  * (see `bulkSetEngineersActive`). A 404 if there's no such engineer.
  */
 export const setEngineerActive = forMembers.command(
-	v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)), active: v.boolean() }),
+	v.object({ id: recordId(), active: v.boolean() }),
 	async ({ id, active }) => {
 		const found = await db.query.engineer.findFirst({
 			columns: { id: true, name: true, active: true },
