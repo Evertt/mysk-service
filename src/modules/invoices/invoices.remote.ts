@@ -3,6 +3,7 @@ import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
+import { recordId } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
@@ -84,7 +85,7 @@ export const getInvoiceCustomers = query(async () => {
  * What a customer can be billed for now: their completed orders that aren't on an invoice, with
  * the lines they become, and other modules' items (e.g. contract fees).
  */
-export const getBillable = query(v.number(), async (customerId) => {
+export const getBillable = query(recordId(), async (customerId) => {
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
 		where: idInTenant(customer, customerId),
