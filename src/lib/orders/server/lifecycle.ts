@@ -13,6 +13,8 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentEngineer,
 	currentTenant,
+	engineerOrder,
+	engineerOrderNotFound,
 	idInTenant,
 	idsInTenant,
 	inTenant,
@@ -79,7 +81,8 @@ export async function transitionOrder(
 	const rule: TransitionRule = orderTransitions[transition.verb];
 	const found = await tx.query.order.findFirst({ where: await scope(transition) });
 	if (!found) {
-		error(404, rule.by === "engineer" ? m.portal_not_found_plain() : m.orders_not_found_plain());
+		if (rule.by === "engineer") engineerOrderNotFound({ id: transition.id });
+		error(404, m.orders_not_found_plain());
 	}
 	if (!can(transition.verb, found.status)) {
 		invalid(orderTransitions[transition.verb].refusal(found));
@@ -279,9 +282,9 @@ async function signOff(
 
 /** The order `transition` moves, as its actor may see it: the tenant's; the engineer's own. */
 async function scope(transition: SingleTransition) {
-	const own = idInTenant(order, transition.id);
-	if (orderTransitions[transition.verb].by !== "engineer") return own;
-	return and(own, eq(order.engineerId, (await currentEngineer()).id));
+	if (orderTransitions[transition.verb].by === "engineer")
+		return engineerOrder({ id: transition.id });
+	return idInTenant(order, transition.id);
 }
 
 /** Notes on the order's request who decided, and when (and why, for a rejection). */
