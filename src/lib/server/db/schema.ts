@@ -841,9 +841,43 @@ export const activity = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		index("activity_organization").on(table.organizationId, table.id),
+		// Unique, for `notification_seen`'s composite key; the tenant's entries by id.
+		uniqueIndex("activity_organization_id").on(table.organizationId, table.id),
 		index("activity_subject").on(table.organizationId, table.subjectType, table.subjectId),
 		index("activity_parent").on(table.organizationId, table.parentType, table.parentId),
 		index("activity_user").on(table.userId),
+	],
+);
+
+// --- Notifications --------------------------------------------------------------------------------
+
+/**
+ * How far a user has read their notifications in an organization: the newest activity entry their
+ * tray showed when they last opened it (`#lib/server/notifications/`). Notifications themselves
+ * aren't stored: they're the activity entries that match a rule, newer than this. An entry's id
+ * rather than a time, as ids only grow: no clock skew, and nothing lost within a second. The entry
+ * is the tenant's (the composite key), so a tampered id can't point at another tenant's.
+ */
+export const notificationSeen = sqliteTable(
+	"notification_seen",
+	{
+		organizationId: organizationId(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		lastSeenActivityId: integer("last_seen_activity_id").notNull(),
+		updatedAt: moment("updated_at")
+			.notNull()
+			.default(sql`(unixepoch())`)
+			.$onUpdate(() => Temporal.Now.instant()),
+	},
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.userId] }),
+		index("notification_seen_user").on(table.userId),
+		index("notification_seen_activity").on(table.organizationId, table.lastSeenActivityId),
+		foreignKey({
+			columns: [table.organizationId, table.lastSeenActivityId],
+			foreignColumns: [activity.organizationId, activity.id],
+		}).onDelete("cascade"),
 	],
 );

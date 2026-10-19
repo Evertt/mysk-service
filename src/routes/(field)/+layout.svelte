@@ -21,6 +21,7 @@
 	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import { getMe, signOut } from "./my/portal.remote.ts";
+	import NotificationBell from "./notification-bell.svelte";
 	import PhoneFrame from "./phone-frame.svelte";
 
 	let { children }: LayoutProps = $props();
@@ -51,6 +52,7 @@
 				</span>
 			</a>
 			<div class="ml-auto flex items-center gap-1">
+				<NotificationBell />
 				<LanguageSwitcher />
 				<ThemeSwitcher />
 				<ModeSwitcher />

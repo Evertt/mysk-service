@@ -130,7 +130,14 @@ export async function createOrders(
 		const equipmentIds = [...new Set(units)];
 		await setOrderUnits(tx, { id: inserted.id, customerId: draft.customerId }, equipmentIds);
 		const subject = orderSubject({ id: inserted.id, number });
-		await recordActivity(tx, { action: "created", subject, after: { ...values, equipmentIds } });
+		const after = { ...values, equipmentIds };
+		await recordActivity(tx, {
+			action: "created",
+			subject,
+			after,
+			// Its engineer, if it has one, as the one change (from none): their notifications read it.
+			...(values.engineerId != null && { before: { ...after, engineerId: null } }),
+		});
 		created.push({ id: inserted.id, number });
 	}
 	return created;

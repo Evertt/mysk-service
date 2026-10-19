@@ -12,14 +12,16 @@
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { type AppModule, modules } from "#lib/modules/manifests.ts";
 	import { type CoreNavId, type NavItem, placeNav } from "#lib/modules/nav.ts";
-	import { watchAwaitingAcceptance } from "#lib/orders/remotes.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
+	import { watchShell } from "./shell.remote.ts";
 	import UserMenu from "./user-menu.svelte";
 
 	const tenant = $derived(await getCurrentTenant());
-	// The orders customers reported in their portal that wait for a planner, on Orders' badge.
-	const awaiting = watchAwaitingAcceptance();
+	// The orders customers reported in their portal that wait for a planner, on Orders' badge: the
+	// shell's live counts, which the header's bell shares (one stream).
+	const shell = watchShell();
+	const awaiting = $derived(shell.current?.awaiting);
 
 	/** The core's entries; the tenant's modules are placed among them (`placeNav()`). */
 	const coreGroups = $derived([
@@ -115,12 +117,12 @@
 										</a>
 									{/snippet}
 								</Sidebar.MenuButton>
-								{#if item.id === "orders" && awaiting.current}
+								{#if item.id === "orders" && awaiting}
 									<Sidebar.MenuBadge
 										data-awaiting-acceptance
-										title={m.orders_awaiting_badge({ count: formatNumber(awaiting.current) })}
+										title={m.orders_awaiting_badge({ count: formatNumber(awaiting) })}
 									>
-										{formatNumber(awaiting.current)}
+										{formatNumber(awaiting)}
 									</Sidebar.MenuBadge>
 								{/if}
 							</Sidebar.MenuItem>

@@ -75,7 +75,9 @@ Every mutation calls `recordActivity(tx, { action, subject, before, after })` in
 announces the change to live queries, which return `live()` (`src/lib/server/live.ts`; `watchSchedule` and
 `<ChangedElsewhere>` are the examples) and refresh their page with `refreshOnChange()`. Orders, customers and
 units are logged by `orderSubject()`, `customerSubject()` and `equipmentSubject()`. Keep outside I/O (mail, `fetch`) out of transactions:
-on Cloudflare a transaction holds every other request.
+on Cloudflare a transaction holds every other request. The bells' notifications are log entries
+that rules pick (`#lib/server/notifications/`, a module's through `notifications.rules`): a rule that
+needs more than an entry says gets it added to the entry, not a record of its own.
 
 A statement binds at most 100 values: pass lists with `inList()`/`notInList()` and insert rows with
 `insertRows()`.

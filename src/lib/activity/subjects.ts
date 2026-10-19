@@ -327,6 +327,13 @@ export function subjectTypes(enabled: readonly string[]): Record<string, Subject
 }
 
 /**
+ * Every subject type the log may name, the core's and all modules' (not only the tenant's: a module
+ * switched on while a page watches logs as well), for a live query that watches every change.
+ */
+export const everyLoggedType = () =>
+	Object.keys(subjectTypes(modules.map((module) => module.id))) as LoggedType[];
+
+/**
  * The page of a subject of `type`, by its id and latest label, if the type has pages. Only in
  * components: `resolve()` can't run in a query.
  */
