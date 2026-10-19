@@ -7,6 +7,7 @@
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 	import { leadDayLimits } from "#modules/maintenance/model.ts";
@@ -46,7 +47,7 @@
 {#if settings.canManage}
 	<form
 		{...saveMaintenanceSettings.enhance(async ({ submit }) => {
-			if (await submit()) toast.success(m.maintenance_settings_saved());
+			if (await submitted(submit)) toast.success(m.maintenance_settings_saved());
 		})}
 		class="flex max-w-2xl flex-col gap-6"
 	>

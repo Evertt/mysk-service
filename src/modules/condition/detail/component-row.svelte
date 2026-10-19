@@ -13,7 +13,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { moveComponent, removeComponent } from "../components.remote.ts";
 	import type { Concern, ScoreBand, UnitStatus } from "../model.ts";
@@ -86,11 +86,7 @@
 			{#each moves as move (move.direction)}
 				<form
 					{...move.form.enhance(async ({ submit }) => {
-						try {
-							await submit();
-						} catch (error) {
-							toast.error(errorMessage(error, m.common_error_generic()));
-						}
+						await submitted(submit);
 					})}
 				>
 					<input {...move.form.fields.id.as("hidden", String(part.id))} />
@@ -158,13 +154,9 @@
 			</AlertDialog.Header>
 			<form
 				{...remove.enhance(async ({ submit }) => {
-					try {
-						if (!(await submit())) return;
-						removing = false;
-						toast.success(m.condition_component_removed_toast());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (!(await submitted(submit))) return;
+					removing = false;
+					toast.success(m.condition_component_removed_toast());
 				})}
 			>
 				<input {...remove.fields.id.as("hidden", String(part.id))} />

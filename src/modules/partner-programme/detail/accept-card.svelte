@@ -6,6 +6,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { acceptPartner } from "../partners.remote.ts";
 
@@ -22,7 +23,7 @@
 	<Card.Content>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) toast.success(m.partners_accepted({ name: customer.name }));
+				if (await submitted(submit)) toast.success(m.partners_accepted({ name: customer.name }));
 			})}
 			class="flex flex-col gap-3"
 		>

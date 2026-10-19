@@ -9,6 +9,7 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { countryOptions } from "../countries.ts";
@@ -43,7 +44,8 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the customer; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(customer ? m.customers_saved() : m.customers_created());
+		if (await submitted(submit))
+			toast.success(customer ? m.customers_saved() : m.customers_created());
 	})}
 	class="flex flex-col gap-6"
 >

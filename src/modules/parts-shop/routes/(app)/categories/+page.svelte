@@ -8,6 +8,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import {
@@ -49,7 +50,7 @@
 								<form
 									class="flex min-w-0 flex-1 items-center gap-2"
 									{...rename.enhance(async ({ submit }) => {
-										if (await submit()) toast.success(m.shop_category_saved());
+										if (await submitted(submit)) toast.success(m.shop_category_saved());
 									})}
 								>
 									<input {...rename.fields.id.as("hidden", String(category.id))} />
@@ -62,7 +63,7 @@
 										{m.common_save()}
 									</SubmitButton>
 								</form>
-								<form {...remove.enhance(async ({ submit }) => void (await submit()))}>
+								<form {...remove.enhance(async ({ submit }) => void (await submitted(submit)))}>
 									<input {...remove.fields.id.as("hidden", String(category.id))} />
 									<SubmitButton size="sm" variant="ghost" pending={remove.pending}>
 										{m.common_delete()}
@@ -97,7 +98,7 @@
 			<form
 				class="flex flex-col gap-2"
 				{...addShopCategory.enhance(async ({ element, submit }) => {
-					if (await submit()) {
+					if (await submitted(submit)) {
 						element.reset();
 						toast.success(m.shop_category_added());
 					}

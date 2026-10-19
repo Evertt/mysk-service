@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
@@ -39,7 +40,7 @@
 	<Card.Content class="flex flex-col gap-6">
 		<form
 			{...createEnergyToken.enhance(async ({ element, submit }) => {
-				await submit();
+				await submitted(submit);
 				const result = createEnergyToken.result;
 				if (result) {
 					made = result.token;

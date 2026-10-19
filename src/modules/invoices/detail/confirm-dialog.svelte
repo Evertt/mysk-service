@@ -9,6 +9,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import type { ButtonVariant } from "#lib/components/ui/button/index.ts";
 
 	let {
@@ -51,7 +52,7 @@
 		</AlertDialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(done);
 				}

@@ -11,6 +11,7 @@
 	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { regionOptions, specialtyOptions } from "../display.ts";
@@ -36,7 +37,8 @@
 <form
 	{...form.enhance(async ({ submit }) => {
 		// On success the server redirects to the engineer; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(engineer ? m.engineers_saved() : m.engineers_added());
+		if (await submitted(submit))
+			toast.success(engineer ? m.engineers_saved() : m.engineers_added());
 	})}
 	class="flex flex-col gap-6"
 >

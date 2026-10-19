@@ -6,6 +6,7 @@
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatKw, formatKwh, formatPercent, stateBadges } from "#modules/energy/display.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
@@ -63,7 +64,7 @@
 						{#if data.canManage}
 							<form
 								{...form.enhance(async ({ submit }) => {
-									await submit();
+									await submitted(submit);
 									if (!form.fields.allIssues()?.length) toast.success(m.energy_thresholds_saved());
 								})}
 								class="grid items-end gap-4 sm:grid-cols-[auto_1fr_1fr_auto]"

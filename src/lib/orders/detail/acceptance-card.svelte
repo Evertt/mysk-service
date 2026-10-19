@@ -13,6 +13,7 @@
 
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import { isAwaitingAcceptance, type OrderStatus } from "#lib/models.ts";
@@ -102,7 +103,7 @@
 			</Dialog.Header>
 			<form
 				{...accept.enhance(async ({ submit }) => {
-					if (!(await submit())) return;
+					if (!(await submitted(submit))) return;
 					accepting = false;
 					toast.success(m.orders_accepted({ number: order.number }));
 				})}
@@ -141,7 +142,7 @@
 			</Dialog.Header>
 			<form
 				{...reject.enhance(async ({ submit }) => {
-					if (!(await submit())) return;
+					if (!(await submitted(submit))) return;
 					rejecting = false;
 					toast.success(m.orders_rejected({ number: order.number }));
 				})}

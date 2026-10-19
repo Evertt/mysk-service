@@ -7,6 +7,7 @@
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { createCreditNote } from "#modules/invoices/credit-notes.remote.ts";
@@ -39,7 +40,7 @@
 <form
 	{...createCreditNote.enhance(async ({ submit }) => {
 		// On success the server redirects to the draft; otherwise the form shows what's wrong.
-		if (await submit()) toast.success(m.invoices_credit_created());
+		if (await submitted(submit)) toast.success(m.invoices_credit_created());
 	})}
 	class="flex max-w-2xl flex-col gap-6"
 >

@@ -8,6 +8,7 @@
 
 	import type { TeamRole } from "#lib/auth/index.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatDate, labelOrValue } from "#lib/i18n/index.ts";
 
 	import { changeRole, getMembers, removeMember } from "./members.remote.ts";
@@ -62,7 +63,7 @@
 							{#if member.roleOptions.length}
 								<form
 									{...change.enhance(async ({ submit }) => {
-										if (await submit())
+										if (await submitted(submit))
 											toast.success(m.settings_role_changed({ name: member.name }));
 									})}
 									class="flex flex-col gap-1"

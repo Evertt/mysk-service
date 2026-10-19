@@ -10,7 +10,7 @@
 	import type { ComponentProps, Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import SiteDialog from "../form/site-dialog.svelte";
 	import SiteDetails from "../ui/site-details.svelte";
@@ -86,13 +86,9 @@
 			</AlertDialog.Header>
 			<form
 				{...remove.enhance(async ({ submit }) => {
-					try {
-						if (!(await submit())) return;
-						deleting = false;
-						toast.success(m.customers_site_deleted());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (!(await submitted(submit))) return;
+					deleting = false;
+					toast.success(m.customers_site_deleted());
 				})}
 			>
 				<input {...remove.fields.id.as("hidden", String(site.id))} />

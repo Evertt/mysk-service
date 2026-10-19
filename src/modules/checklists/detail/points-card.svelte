@@ -7,9 +7,8 @@
 	import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
 	import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
 	import PlusIcon from "@lucide/svelte/icons/plus";
-	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import PointDialog from "../form/point-dialog.svelte";
 	import { groupPoints } from "../model.ts";
@@ -86,11 +85,7 @@
 							{#each groupMoves(group, index) as move (move.direction)}
 								<form
 									{...move.form.enhance(async ({ submit }) => {
-										try {
-											await submit();
-										} catch (error) {
-											toast.error(errorMessage(error, m.common_error_generic()));
-										}
+										await submitted(submit);
 									})}
 								>
 									<input {...move.form.fields.templateId.as("hidden", String(templateId))} />

@@ -6,6 +6,8 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { submitted } from "#lib/components/form/submitted.ts";
+
 	import { deleteCustomerDock } from "../docks.remote.ts";
 
 	let { customer, dock }: { customer: string; dock: { id: number; code: string } } = $props();
@@ -34,7 +36,7 @@
 		</AlertDialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(m.docks_deleted({ code: dock.code }));
 				}

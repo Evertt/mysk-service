@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import type { ColumnVisibility } from "./column-visibility.ts";
@@ -45,7 +46,7 @@
 		<form
 			{...save.enhance(async (form) => {
 				// Otherwise the fields show what's wrong.
-				if (await form.submit()) {
+				if (await submitted(form.submit)) {
 					onsaved(form.result?.id);
 					form.element.reset();
 					open = false;

@@ -11,7 +11,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import LocationDialog from "./location-dialog.svelte";
 	import { deleteLocation } from "./locations.remote.ts";
@@ -85,13 +85,9 @@
 			</AlertDialog.Header>
 			<form
 				{...remove.enhance(async ({ submit }) => {
-					try {
-						if (!(await submit())) return;
-						deleting = false;
-						toast.success(m.equipment_location_deleted());
-					} catch (error) {
-						toast.error(errorMessage(error, m.common_error_generic()));
-					}
+					if (!(await submitted(submit))) return;
+					deleting = false;
+					toast.success(m.equipment_location_deleted());
 				})}
 			>
 				<input {...remove.fields.id.as("hidden", String(location.id))} />

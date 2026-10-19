@@ -11,6 +11,7 @@
 
 	import FormField from "#lib/components/form/form-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { completeWork } from "../portal.remote.ts";
@@ -36,7 +37,7 @@
 <form
 	{...completeWork.enhance(async ({ submit }) => {
 		sentAt = partsChanged;
-		if (await submit()) toast.success(m.portal_job_completed());
+		if (await submitted(submit)) toast.success(m.portal_job_completed());
 	})}
 	class="flex flex-col gap-6"
 >

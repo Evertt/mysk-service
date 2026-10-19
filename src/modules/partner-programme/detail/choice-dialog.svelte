@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
 
 	import { partnerLabels } from "../labels.ts";
@@ -46,7 +47,7 @@
 		</AlertDialog.Header>
 		<form
 			{...form.enhance(async ({ submit }) => {
-				if (await submit()) {
+				if (await submitted(submit)) {
 					open = false;
 					toast.success(m.partners_chosen({ form: label }));
 				}

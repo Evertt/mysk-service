@@ -9,6 +9,7 @@
 
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { label } from "#lib/i18n/index.ts";
 
@@ -50,7 +51,7 @@
 		<form
 			{...countStock.enhance(async ({ element, submit }) => {
 				// Otherwise the fields show what's wrong.
-				if (await submit()) {
+				if (await submitted(submit)) {
 					element.reset();
 					open = false;
 					toast.success(m.materials_count_done());

@@ -12,6 +12,7 @@
 	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
@@ -84,7 +85,7 @@
 <form
 	{...form.preflight(orderFormPreflight).enhance(async ({ submit }) => {
 		// On success the server redirects to the order; otherwise the fields show what's wrong.
-		if (await submit()) toast.success(order ? m.orders_saved() : m.orders_created());
+		if (await submitted(submit)) toast.success(order ? m.orders_saved() : m.orders_created());
 	})}
 	class="flex flex-col gap-6"
 >

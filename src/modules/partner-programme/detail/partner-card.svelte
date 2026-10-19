@@ -12,6 +12,7 @@
 	import DarkPanel from "#lib/components/dark-panel.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import KeyFigure from "#lib/components/key-figure.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
@@ -100,7 +101,7 @@
 		{#if card.closable !== null}
 			<div class="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
 				<span class="text-sm">{m.partners_close_waiting({ year: String(card.closable) })}</span>
-				<form {...close.enhance(async ({ submit }) => void (await submit()))}>
+				<form {...close.enhance(async ({ submit }) => void (await submitted(submit)))}>
 					<input {...close.fields.code.as("hidden", card.customer.code)} />
 					<input {...close.fields.year.as("hidden", String(card.closable))} />
 					<SubmitButton size="sm" variant="outline" pending={close.pending}>
