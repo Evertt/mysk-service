@@ -30,9 +30,12 @@
 	const dock = $derived(query?.current ?? null);
 	const state = $derived(dock && dockState(dock, dock.occupied));
 
-	// Live, once it's a dock's: a change to the docks (the feed's events, an edit) asks again.
+	// Live, once it's a dock's: a change to the docks (the feed's events, an edit) asks again. On
+	// whether it's a dock's, not on the dock itself: each answer is a new one, and each call of
+	// `watchDocks()` a new handle, which `refreshOnChange()` would take for another live query.
+	const docked = $derived(dock !== null);
 	refreshOnChange(
-		() => dock && watchDocks(),
+		() => docked && watchDocks(),
 		() => query?.refresh(),
 	);
 </script>
