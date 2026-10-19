@@ -86,6 +86,47 @@ describe("in North", () => {
 		}
 	});
 
+	test("on a laptop screen a list of a few units, or none, is only as tall as they need", async () => {
+		const { page } = app;
+		const table = page.locator('[data-slot="data-table"]');
+		/** The table's height, and how tall its rows are (the line under them included). */
+		const heights = () =>
+			table.evaluate((element) => ({
+				table: element.getBoundingClientRect().height,
+				rows: element.querySelector("table")!.getBoundingClientRect().height,
+			}));
+		/** How far the page scrolls (its padding under the table stays in view without). */
+		const pageScrolls = () =>
+			page
+				.locator('[data-slot="sidebar-inset"]')
+				.evaluate((element) => element.scrollHeight - element.clientHeight);
+		const serial = await value<string>(
+			`select serial_number from equipment where organization_id = ? order by id limit 1`,
+			[north.id],
+		);
+		await page.setViewportSize({ width: 1440, height: 900 });
+		try {
+			// One unit: the table keeps its least height, 12rem, which is more than its rows need.
+			await app.go(`/equipment?q=${encodeURIComponent(serial)}`);
+			await expect.poll(() => bodyRows().count()).toBe(1);
+			const one = await heights();
+			expect(one.rows).toBeLessThan(192);
+			expect(one.table).toBe(192);
+			expect(await pageScrolls()).toBe(0);
+			// None: the empty state, which needs more than that.
+			await app.go("/equipment?q=no-such-unit-anywhere");
+			await expect.poll(() => table.getByText("No equipment found").isVisible()).toBe(true);
+			const none = await heights();
+			expect(none.rows).toBeGreaterThan(192);
+			expect(none.table).toBeCloseTo(none.rows, -1);
+			expect(await pageScrolls()).toBe(0);
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 1000 });
+			// The tests below go on with the whole list.
+			await app.go(afresh("/equipment"));
+		}
+	});
+
 	// Searching and filtering in the database are `plan.spec.ts`'s ("searching", "filtering"); the
 	// band's chips and the Status filter below go through them from the toolbar.
 	test("the band counts the units listed, and its category chips set the category filter", async () => {
