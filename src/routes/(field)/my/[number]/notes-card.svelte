@@ -8,7 +8,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDateTime } from "#lib/i18n/index.ts";
+	import { NotesList } from "#lib/orders/components.ts";
 
 	import { addNote, type getMyOrder } from "../portal.remote.ts";
 
@@ -21,38 +21,30 @@
 	<Card.Header>
 		<Card.Title>{m.portal_notes()}</Card.Title>
 	</Card.Header>
-	<Card.Content class="flex flex-col gap-4">
-		{#each notes as note (note.id)}
-			<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
-				<p class="text-sm whitespace-pre-line">{note.text}</p>
-				<span class="text-xs text-muted-foreground">
-					{note.author ?? m.portal_someone()} · {formatDateTime(note.createdAt)}
-				</span>
-			</div>
-		{:else}
-			<p class="text-sm text-muted-foreground">{m.portal_no_notes()}</p>
-		{/each}
-		{#if canAdd}
-			<form
-				{...addNote.enhance(async ({ element, submit }) => {
-					if (await submitted(submit)) {
-						element.reset();
-						toast.success(m.portal_note_added());
-					}
-				})}
-				class="flex flex-col gap-2"
-			>
-				<input {...addNote.fields.id.as("hidden", String(orderId))} />
-				<TextField
-					field={addNote.fields.text}
-					label={m.portal_note_label()}
-					multiline
-					placeholder={m.portal_note_placeholder()}
-				/>
-				<SubmitButton variant="outline" size="lg" class="h-12" pending={addNote.pending}>
-					{m.portal_add_note()}
-				</SubmitButton>
-			</form>
-		{/if}
+	<Card.Content>
+		<NotesList {notes} empty={m.portal_no_notes()} footer={canAdd ? addForm : undefined} />
 	</Card.Content>
 </Card.Root>
+
+{#snippet addForm()}
+	<form
+		{...addNote.enhance(async ({ element, submit }) => {
+			if (await submitted(submit)) {
+				element.reset();
+				toast.success(m.portal_note_added());
+			}
+		})}
+		class="flex flex-col gap-2"
+	>
+		<input {...addNote.fields.id.as("hidden", String(orderId))} />
+		<TextField
+			field={addNote.fields.text}
+			label={m.portal_note_label()}
+			multiline
+			placeholder={m.portal_note_placeholder()}
+		/>
+		<SubmitButton variant="outline" size="lg" class="h-12" pending={addNote.pending}>
+			{m.portal_add_note()}
+		</SubmitButton>
+	</form>
+{/snippet}

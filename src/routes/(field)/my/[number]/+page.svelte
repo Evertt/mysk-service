@@ -14,8 +14,8 @@
 	import { unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatDateTime, formatNumber, formatTime } from "#lib/i18n/index.ts";
-	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import { PriorityBadge, SignOff, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
 	import { fieldActions } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
@@ -210,30 +210,9 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{m.portal_signed_off()}</Card.Title>
-			<Card.Description>
-				{m.portal_signed_off_by({
-					name: data.signoff.signerName,
-					date: formatDateTime(data.signoff.signedAt),
-				})}
-			</Card.Description>
 		</Card.Header>
-		<Card.Content class="flex flex-col gap-3">
-			<img
-				src={data.signoff.signature}
-				alt={m.portal_signature_of({ name: data.signoff.signerName })}
-				class="h-32 w-full rounded-lg border bg-white object-contain"
-			/>
-			<!-- The engineer's own, on sign-offs since engineers sign too. -->
-			{#if data.signoff.engineerName && data.signoff.engineerSignature}
-				<p class="text-sm text-muted-foreground">
-					{m.portal_engineer_signed({ name: data.signoff.engineerName })}
-				</p>
-				<img
-					src={data.signoff.engineerSignature}
-					alt={m.portal_signature_of({ name: data.signoff.engineerName })}
-					class="h-32 w-full rounded-lg border bg-white object-contain"
-				/>
-			{/if}
+		<Card.Content>
+			<SignOff signoff={data.signoff} />
 		</Card.Content>
 	</Card.Root>
 {/if}

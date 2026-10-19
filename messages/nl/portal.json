@@ -27,7 +27,6 @@
 	"portal_hours_saved": "Uren opgeslagen",
 	"portal_notes": "Notities",
 	"portal_no_notes": "Nog geen notities.",
-	"portal_someone": "Iemand",
 	"portal_note_label": "Nieuwe notitie",
 	"portal_note_placeholder": "Bijv. wat je aantrof, of wat er de volgende keer nodig is",
 	"portal_add_note": "Notitie toevoegen",
@@ -39,9 +38,7 @@
 	"portal_complete_job": "Klus afronden",
 	"portal_job_completed": "Klus afgerond",
 	"portal_signed_off": "Afgetekend",
-	"portal_signed_off_by": "Door {name}, {date}",
 	"portal_signature": "Handtekening",
-	"portal_signature_of": "Handtekening van {name}",
 	"portal_signature_clear": "Wissen",
 	"portal_signature_hint": "Teken in het vak hierboven.",
 	"portal_signature_required": "Vraag de klant te tekenen",
@@ -68,7 +65,6 @@
 	"portal_engineer_name_description": "Zoals het kantoor je kent: zo komt het op de werkbon.",
 	"portal_engineer_signature_required": "Teken de werkbon ook zelf",
 	"portal_customer_signature": "Handtekening van de klant",
-	"portal_engineer_signed": "Monteur: {name}",
 	"portal_frame_caption": "Monteursportaal · zo ziet de monteur het op zijn telefoon",
 	"portal_header_menu": "Menu"
 }

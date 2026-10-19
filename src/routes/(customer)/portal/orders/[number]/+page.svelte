@@ -18,6 +18,7 @@
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
+	import { SignOff } from "#lib/orders/components.ts";
 
 	import ClientStatusBadge from "../../client-status-badge.svelte";
 	import { clientStatus } from "../../client-status.ts";
@@ -141,36 +142,12 @@
 		<ExtensionSlot point={orderParts} props={{ number: order.number }} />
 
 		{#if data.signoff}
-			<Card.Root data-signoff>
+			<Card.Root>
 				<Card.Header>
 					<Card.Title>{m.client_signoff_title()}</Card.Title>
-					<Card.Description>
-						{m.client_signoff_description({ date: formatDateTime(data.signoff.signedAt) })}
-					</Card.Description>
 				</Card.Header>
-				<Card.Content class="grid gap-4 sm:grid-cols-2">
-					<figure class="flex flex-col gap-2">
-						<img
-							src={data.signoff.signature}
-							alt={m.client_signoff_customer({ name: data.signoff.signerName })}
-							class="h-24 w-full rounded-md border bg-white object-contain"
-						/>
-						<figcaption class="text-sm">
-							{m.client_signoff_customer({ name: data.signoff.signerName })}
-						</figcaption>
-					</figure>
-					{#if data.signoff.engineerSignature && data.signoff.engineerName}
-						<figure class="flex flex-col gap-2">
-							<img
-								src={data.signoff.engineerSignature}
-								alt={m.client_signoff_engineer({ name: data.signoff.engineerName })}
-								class="h-24 w-full rounded-md border bg-white object-contain"
-							/>
-							<figcaption class="text-sm">
-								{m.client_signoff_engineer({ name: data.signoff.engineerName })}
-							</figcaption>
-						</figure>
-					{/if}
+				<Card.Content>
+					<SignOff signoff={data.signoff} />
 				</Card.Content>
 			</Card.Root>
 		{/if}

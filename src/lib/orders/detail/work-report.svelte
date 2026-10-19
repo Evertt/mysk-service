@@ -1,13 +1,13 @@
 <!--
 	@component
 	What the engineer recorded on an order in the field: the sign-off (the customer's signature and,
-	since engineers sign too, the engineer's) and work notes.
+	since engineers sign too, the engineer's, with who in the office collected it) and work notes.
 	Nothing while there's neither.
 -->
 <script lang="ts">
-	import { formatDateTime } from "#lib/i18n/index.ts";
-
 	import type { getOrder } from "../order.remote.ts";
+	import NotesList from "../ui/notes-list.svelte";
+	import SignOff from "../ui/sign-off.svelte";
 
 	type Order = Awaited<ReturnType<typeof getOrder>>;
 
@@ -22,48 +22,11 @@
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			{#if signoff}
-				<div class="flex flex-col gap-2">
-					<dl class="grid grid-cols-2 gap-4">
-						<div class="flex flex-col gap-0.5">
-							<dt class="text-xs text-muted-foreground">{m.orders_report_signed_off_by()}</dt>
-							<dd class="text-sm">{signoff.signerName}</dd>
-						</div>
-						<div class="flex flex-col gap-0.5">
-							<dt class="text-xs text-muted-foreground">{m.orders_report_signed()}</dt>
-							<dd class="text-sm tabular-nums">{formatDateTime(signoff.signedAt)}</dd>
-						</div>
-					</dl>
-					<img
-						src={signoff.signature}
-						alt={m.orders_report_signature({ name: signoff.signerName })}
-						class="h-28 w-full rounded-lg border bg-white object-contain"
-					/>
-					{#if signoff.engineerName && signoff.engineerSignature}
-						<div class="flex flex-col gap-0.5">
-							<span class="text-xs text-muted-foreground">{m.orders_report_engineer()}</span>
-							<span class="text-sm">{signoff.engineerName}</span>
-						</div>
-						<img
-							src={signoff.engineerSignature}
-							alt={m.orders_report_signature({ name: signoff.engineerName })}
-							class="h-28 w-full rounded-lg border bg-white object-contain"
-						/>
-					{/if}
-					{#if signoff.collectedBy}
-						<span class="text-xs text-muted-foreground">
-							{m.orders_report_collected_by({ name: signoff.collectedBy })}
-						</span>
-					{/if}
-				</div>
+				<SignOff {signoff} />
 			{/if}
-			{#each notes as note (note.id)}
-				<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
-					<p class="text-sm whitespace-pre-line">{note.text}</p>
-					<span class="text-xs text-muted-foreground">
-						{note.author ?? m.orders_report_someone()} · {formatDateTime(note.createdAt)}
-					</span>
-				</div>
-			{/each}
+			{#if notes.length}
+				<NotesList {notes} />
+			{/if}
 		</Card.Content>
 	</Card.Root>
 {/if}
