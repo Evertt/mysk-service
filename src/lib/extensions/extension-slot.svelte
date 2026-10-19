@@ -25,6 +25,7 @@
 	server needs the fix in `patches/svelte@5.57.1.patch`.
 -->
 <script lang="ts" generics="Props extends Record<string, unknown>">
+	import { browser } from "$app/env";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
@@ -93,11 +94,15 @@
 					{/if}
 					{#if Slot}
 						<Slot {...props} {...partOf(module)} />
-					{:else}
-						<!-- Fails the boundary once mounted, not while rendering: a chunk that loaded on the
-							server and not in the browser would fail it mid-hydration, after which Svelte
-							(5.57) hydrated the next parts into the wrong place and showed them twice. -->
+					{:else if browser}
+						<!-- In the browser, fails the boundary once mounted, not while rendering: a chunk that
+							loaded on the server and not in the browser would fail it mid-hydration, after
+							which Svelte (5.57) hydrated the next parts into the wrong place and showed them
+							twice. -->
 						<span hidden {@attach () => fail(error)}></span>
+					{:else}
+						<!-- On the server, while rendering, so the page's HTML has the part's notice. -->
+						{fail(error)}
 					{/if}
 
 					{#snippet failed()}
