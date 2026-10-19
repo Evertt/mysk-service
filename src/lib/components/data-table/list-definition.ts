@@ -61,6 +61,11 @@ import {
 export const listLimits = {
 	/** The search text. */
 	search: 200,
+	/**
+	 * The words of the search that count (`searchWords()`); the rest are ignored. On the server
+	 * each binds a value, of the 100 a statement may (`searchMatch()`).
+	 */
+	words: 10,
 	/** The values of one filter. */
 	values: 50,
 	/** The values of one range filter (`dateRange`, …): ranges, and `none`. */

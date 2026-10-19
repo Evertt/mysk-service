@@ -50,6 +50,7 @@ import type {
 	SortId,
 } from "#lib/components/data-table/list-definition.ts";
 import { type DateRange, type NumberRange } from "#lib/components/data-table/ranges.ts";
+import { searchWords } from "#lib/components/data-table/search-words.ts";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { formatNumber } from "#lib/i18n/format.ts";
@@ -253,15 +254,15 @@ export function between(expression: SQLWrapper, ranges: readonly (NumberRange | 
 }
 
 /**
- * A search's condition: each word of `text` is in one of `columns`, in any case (for letters
- * without accents: SQLite's `like`). `undefined` for an empty search.
+ * A search's condition: each word of `text` (`searchWords()`) is in one of `columns`, in any case
+ * (for letters without accents: SQLite's `like`). `undefined` for an empty search.
  *
- * The columns are searched as one text, a value a line, so each word (up to ten) binds once,
+ * The columns are searched as one text, a value a line, so each word binds once,
  * however many columns there are: a word per column would bind ten per column of the 100 a
  * statement may. A word has no white space, so it's never found across two of the values.
  */
 export function searchMatch(columns: readonly SQLWrapper[], text: string) {
-	const words = text.trim().split(/\s+/).filter(Boolean).slice(0, 10);
+	const words = searchWords(text);
 	if (!words.length || !columns.length) return undefined;
 	const searched =
 		columns.length === 1

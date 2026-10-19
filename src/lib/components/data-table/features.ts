@@ -11,7 +11,6 @@ import {
 	createFilteredRowModel,
 	createPaginatedRowModel,
 	createSortedRowModel,
-	filterFn_includesString,
 	globalFilteringFeature,
 	metaHelper,
 	rowPaginationFeature,
@@ -27,6 +26,7 @@ import {
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
 import { inAnyRange, type RangeGrammar } from "./ranges.ts";
+import { filterFn_allWords } from "./search-filter.ts";
 import { noneToken } from "./url-state.ts";
 
 export interface DataTableColumnMeta {
@@ -73,7 +73,8 @@ export interface DataTableColumnMeta {
 	 * Clicking a cell's value toggles it in the column's set filter (see `cell-filter.svelte.ts`);
 	 * this names the value as shown, for "Filter by …", e.g. `(type) => types[type].label`. For a
 	 * column of plain values with a set filter of their own: a column that links to another
-	 * record's page keeps its link instead. A cell without a value (`null`) isn't clickable.
+	 * record's page keeps its link instead. A cell without a value (`null`) isn't clickable. The
+	 * search box finds the value by this name too (see `search-filter.ts`).
 	 */
 	clickFilter?: (value: string) => string;
 }
@@ -163,7 +164,8 @@ const tableFeatureSet = tableFeatures({
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
 	filterFns: {
-		includesString: filterFn_includesString,
+		// The search box's (`globalFilterFn`, see `search-filter.ts`).
+		allWords: filterFn_allWords,
 		oneOf: filterFn_oneOf,
 		inDateRange: rangeFilterFn("dateRange"),
 		inNumberRange: rangeFilterFn("numberRange"),

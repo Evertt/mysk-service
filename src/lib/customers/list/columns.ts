@@ -50,6 +50,9 @@ export const columns = column.columns([
 			}),
 		filterFn: "oneOf",
 		enableGrouping: true,
+		// The search finds the city and the country as shown in the hidden `search` column, not the
+		// country as stored (in English).
+		enableGlobalFilter: false,
 		// By country (by its name as shown), then city.
 		sortFn: (a, b) =>
 			countryName(a.original.country).localeCompare(
