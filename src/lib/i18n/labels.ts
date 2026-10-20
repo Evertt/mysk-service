@@ -12,6 +12,8 @@
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
+import type { Component } from "svelte";
+
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { labels as coreLabels } from "./labels.gen.ts";
@@ -21,6 +23,18 @@ import { labels as coreLabels } from "./labels.gen.ts";
  * @public The generated `labels.gen.ts` files hold their maps to it, which knip doesn't see.
  */
 export type Labels<T extends string> = Record<T, () => string>;
+
+/**
+ * How an enum value shows as a badge (`EnumBadge`): its icon, if it has one, and its tone: what it
+ * means (a `BadgeTone`: done, needs attention, planned, critical, out of the picture), or for a
+ * value without a meaning, such as a customer's segment, a plain variant. A kind's display map is
+ * `withLabels(kind, { [value]: BadgeDisplay })`, which adds each value's `label`.
+ */
+export interface BadgeDisplay {
+	icon?: Component;
+	/** `BadgeTone`'s, or a plain variant (written out: the linter can't read a `.svelte` file's types). */
+	tone: "success" | "warning" | "info" | "danger" | "neutral" | "default" | "secondary" | "outline";
+}
 
 /**
  * The name a tenant gave a value in the current language, if it gave it one (e.g. its own name for
@@ -102,6 +116,21 @@ const withLabel = <T extends object>(entry: T, get: () => string) =>
 	Object.defineProperty({ ...entry }, "label", { get, enumerable: true }) as T & {
 		readonly label: string;
 	};
+
+/**
+ * A display map like `withLabels()`'s for values that aren't a label kind, whose entries name their
+ * message: `labelled({ done: { label: m.client_status_done, tone: "success" } })[value].label`.
+ */
+export function labelled<V extends string, const D extends { label: () => string }>(
+	entries: Record<V, D>,
+) {
+	return Object.fromEntries(
+		Object.entries<D>(entries).map(([value, { label, ...entry }]) => [
+			value,
+			withLabel(entry, label),
+		]),
+	) as Record<V, Omit<D, "label"> & { readonly label: string }>;
+}
 
 export type LabelKind = keyof typeof coreLabels;
 

@@ -7,7 +7,7 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { statuses } from "#lib/equipment/index.ts";
+	import { equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 
@@ -26,7 +26,10 @@
 		...Object.fromEntries(
 			equipmentStatuses.map((status) => [
 				status,
-				{ label: statuses[status].label, color: statuses[status].color },
+				{
+					label: equipmentStatusDisplay[status].label,
+					color: equipmentStatusDisplay[status].color,
+				},
 			]),
 		),
 	} satisfies ChartConfig);
@@ -51,13 +54,13 @@
 				y="status"
 				c="status"
 				cDomain={[...equipmentStatuses]}
-				cRange={equipmentStatuses.map((status) => statuses[status].color)}
+				cRange={equipmentStatuses.map((status) => equipmentStatusDisplay[status].color)}
 				series={[{ key: "count", label: config.count.label }]}
 				labels={{ format: countTick }}
 				padding={{ left: 112, right: 32 }}
 				props={{
 					xAxis: { format: countTick },
-					yAxis: { format: (status: EquipmentStatus) => statuses[status].label },
+					yAxis: { format: (status: EquipmentStatus) => equipmentStatusDisplay[status].label },
 				}}
 			>
 				{#snippet tooltip()}
@@ -68,7 +71,7 @@
 		<ChartTable
 			caption={m.dashboard_equipment_by_status()}
 			columns={[m.dashboard_column_status(), m.dashboard_column_units()]}
-			rows={data.map((row) => [statuses[row.status].label, formatNumber(row.count)])}
+			rows={data.map((row) => [equipmentStatusDisplay[row.status].label, formatNumber(row.count)])}
 		/>
 	</Card.Content>
 </Card.Root>

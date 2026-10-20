@@ -7,6 +7,7 @@ import {
 	label,
 	type LabelKind,
 	labelOptions,
+	labelled,
 	labelOrValue,
 	withLabels,
 } from "#lib/i18n/labels.ts";
@@ -18,6 +19,7 @@ import {
 	orderStatuses,
 	orderTypes,
 } from "#lib/models.ts";
+import { m } from "#lib/paraglide/messages.js";
 import { getLocale, type Locale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 
 const englishByDefault = getLocale;
@@ -92,6 +94,13 @@ describe("made up front, e.g. at module scope", () => {
 		expect(priorities.urgent).toEqual({ rank: 4, label: "Urgent" });
 		inLanguage("nl");
 		expect(priorities.urgent.label).toBe("Spoed");
+	});
+
+	test("labelled turns entries' messages into labels translated when read", () => {
+		const shown = labelled({ urgent: { label: m.enum_order_priority_urgent, tone: "danger" } });
+		expect(shown.urgent).toEqual({ tone: "danger", label: "Urgent" });
+		inLanguage("nl");
+		expect(shown.urgent.label).toBe("Spoed");
 	});
 
 	test("labelOptions lists the values in order, translated when read", () => {

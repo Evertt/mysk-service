@@ -20,9 +20,8 @@ import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
-import { formatNumber, labelOptions, withLabels } from "#lib/i18n/index.ts";
+import { type BadgeDisplay, formatNumber, labelOptions, withLabels } from "#lib/i18n/index.ts";
 import {
 	type OrderPriority,
 	orderPriorities,
@@ -32,17 +31,12 @@ import {
 	orderTypes,
 } from "#lib/models.ts";
 
-interface Display {
-	icon: Component;
-	tone: BadgeTone;
-}
-
 /**
  * A status also has a colour for the charts, a CSS variable of the theme: the chart tokens in
  * workflow order (so a theme with a single-hue ramp reads as progress), destructive for cancelled,
  * like its badge's tone, and the muted foreground for orders not accepted yet (before the ramp).
  */
-interface StatusDisplay extends Display {
+interface StatusDisplay extends BadgeDisplay {
 	color: string;
 }
 
@@ -56,14 +50,14 @@ const statusDetails: Record<OrderStatus, StatusDisplay> = {
 	cancelled: { icon: CircleXIcon, tone: "danger", color: "var(--destructive)" },
 };
 
-const priorityDetails: Record<OrderPriority, Display> = {
+const priorityDetails: Record<OrderPriority, BadgeDisplay> = {
 	low: { icon: ArrowDownIcon, tone: "neutral" },
 	normal: { icon: ArrowRightIcon, tone: "info" },
 	high: { icon: ArrowUpIcon, tone: "warning" },
 	urgent: { icon: TriangleAlertIcon, tone: "danger" },
 };
 
-const typeDetails: Record<OrderType, Omit<Display, "tone">> = {
+const typeDetails: Record<OrderType, { icon: Component }> = {
 	breakdown: { icon: SirenIcon },
 	repair: { icon: HammerIcon },
 	maintenance: { icon: WrenchIcon },
@@ -76,9 +70,9 @@ const typeDetails: Record<OrderType, Omit<Display, "tone">> = {
 };
 
 /** Each value's translated `label`, icon and badge tone (and a status's chart colour). */
-export const statuses = withLabels("orderStatus", statusDetails);
-export const priorities = withLabels("orderPriority", priorityDetails);
-export const types = withLabels("orderType", typeDetails);
+export const orderStatusDisplay = withLabels("orderStatus", statusDetails);
+export const orderPriorityDisplay = withLabels("orderPriority", priorityDetails);
+export const orderTypeDisplay = withLabels("orderType", typeDetails);
 
 /** Options for the faceted filters, in workflow order. */
 export const statusOptions = labelOptions("orderStatus", orderStatuses, statusDetails);

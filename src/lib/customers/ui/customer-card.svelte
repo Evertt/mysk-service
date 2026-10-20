@@ -5,11 +5,12 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import type { CustomerSegment } from "#lib/models.ts";
 
 	import { countryName } from "../countries.ts";
+	import { customerSegmentDisplay } from "../display.ts";
 	import CustomerLink from "./customer-link.svelte";
-	import SegmentBadge from "./segment-badge.svelte";
 
 	let {
 		customer,
@@ -34,7 +35,7 @@
 		<Card.Title>{title}</Card.Title>
 		<Card.Description>{customer.code}</Card.Description>
 		<Card.Action>
-			<SegmentBadge segment={customer.segment} />
+			<EnumBadge display={customerSegmentDisplay} value={customer.segment} />
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>

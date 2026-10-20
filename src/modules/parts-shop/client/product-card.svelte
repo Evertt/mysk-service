@@ -9,11 +9,12 @@
 	import MinusIcon from "@lucide/svelte/icons/minus";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 
+	import { productStockDisplay } from "../display.ts";
 	import { shopLabels } from "../labels.ts";
 	import { isOrderable, maxQuantity, type ProductStock, type ProductUnit } from "../model.ts";
-	import StockBadge from "../ui/stock-badge.svelte";
 
 	interface Product {
 		id: number;
@@ -60,7 +61,11 @@
 	</Card.Header>
 	<Card.Content class="flex flex-1 flex-col gap-3">
 		<div class="flex flex-wrap items-center gap-1.5">
-			<StockBadge availability={product.availability} />
+			<EnumBadge
+				display={productStockDisplay}
+				value={product.availability}
+				data-stock={product.availability}
+			/>
 			{#if product.creditEligible && !product.onRequest}
 				<Badge variant="success" data-credit-eligible>{m.shop_credit_eligible()}</Badge>
 			{/if}

@@ -5,12 +5,12 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import { getOrderCoverage } from "../../coverage.remote.ts";
-	import { levels } from "../../display.ts";
+	import { contractLevelDisplay, slaStateDisplay } from "../../display.ts";
 	import ContractLink from "../../ui/contract-link.svelte";
-	import SlaBadge from "../../ui/sla-badge.svelte";
 
 	let { number }: { number: string } = $props();
 
@@ -24,7 +24,7 @@
 
 {#if coverage}
 	{@const { contract, response } = coverage}
-	{@const [before, after] = coveredBy(levels[contract.level].label)}
+	{@const [before, after] = coveredBy(contractLevelDisplay[contract.level].label)}
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{m.contracts_coverage_title()}</Card.Title>
@@ -34,7 +34,7 @@
 			</Card.Description>
 			{#if response}
 				<Card.Action>
-					<SlaBadge state={response.state} />
+					<EnumBadge display={slaStateDisplay} value={response.state} />
 				</Card.Action>
 			{/if}
 		</Card.Header>

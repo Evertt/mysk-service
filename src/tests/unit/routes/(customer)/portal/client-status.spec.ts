@@ -30,7 +30,7 @@ test("every status reads in SHLTR's words in Dutch", () => {
 	const englishByDefault = getLocale;
 	overwriteGetLocale(() => "nl");
 	try {
-		expect(clientStatuses.map((status) => clientStatusDisplay[status].label())).toEqual([
+		expect(clientStatuses.map((status) => clientStatusDisplay[status].label)).toEqual([
 			"Opdracht nog niet geaccepteerd",
 			"Opdracht geaccepteerd",
 			"Ingepland",

@@ -4,15 +4,14 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 import type { getContracts } from "../contracts.remote.ts";
-import { formatTerm } from "../display.ts";
+import { formatTerm, contractLevelDisplay, contractStatusDisplay } from "../display.ts";
 import { contractLabels } from "../labels.ts";
 import { contractLevels, contractStatus, contractStatuses } from "../model.ts";
 import ContractLink from "../ui/contract-link.svelte";
-import LevelBadge from "../ui/level-badge.svelte";
-import StatusBadge from "../ui/status-badge.svelte";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];
 
@@ -39,7 +38,8 @@ export const columns = column.columns([
 		meta: { label: m.contracts_customer, filter: "set" },
 	}),
 	column.accessor("level", {
-		cell: ({ getValue }) => renderComponent(LevelBadge, { level: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: contractLevelDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		// From basic to premium rather than alphabetically.
@@ -54,7 +54,8 @@ export const columns = column.columns([
 	// Not stored: follows from the period and today's date.
 	column.accessor((row) => contractStatus(row), {
 		id: "status",
-		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: contractStatusDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		sortFn: (a, b, id) =>

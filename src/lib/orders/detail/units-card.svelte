@@ -5,12 +5,9 @@
 	warranty on the day the order was made. "New installation" for an order without units.
 -->
 <script lang="ts">
-	import {
-		EquipmentLink,
-		StatusBadge as EquipmentStatusBadge,
-		WarrantyBadge,
-	} from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { EquipmentLink, WarrantyBadge } from "#lib/equipment/components.ts";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import type { getOrder } from "../order.remote.ts";
@@ -36,7 +33,7 @@
 					<li class="flex flex-col gap-1 py-3 text-sm first:pt-0 last:pb-0">
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<EquipmentLink serialNumber={unit.serialNumber}>{unitTitle(unit)}</EquipmentLink>
-							<EquipmentStatusBadge status={unit.status} />
+							<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 						</div>
 						<p class="text-muted-foreground">
 							{unitLine(unit, {

@@ -1,9 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { fittingFirst, specialtyOptions } from "#lib/engineers/display.ts";
+import {
+	engineerSpecialtyDisplay,
+	fittingFirst,
+	specialtyOptions,
+} from "#lib/engineers/display.ts";
 import { type EngineerSpecialty, engineerSpecialties } from "#lib/models.ts";
 
-import { describeOptions } from "../display.test-support.ts";
+import { describeBadges, describeOptions } from "../display.test-support.ts";
 
 describeOptions("engineer specialties", specialtyOptions, engineerSpecialties);
 
@@ -55,3 +59,11 @@ describe("fittingFirst", () => {
 		expect(names(engineers)).toEqual(before);
 	});
 });
+
+describeBadges("specialty badges", engineerSpecialtyDisplay, [
+	["electrical", "Electrical", "outline"],
+	["mechanical", "Mechanical", "outline"],
+	["hvac", "HVAC", "outline"],
+	["plumbing", "Plumbing", "outline"],
+	["controls", "Controls", "outline"],
+]);

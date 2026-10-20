@@ -1,15 +1,16 @@
-/** How the docks module shows its states: badge tones, the beacon's colour and the timer's. */
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
+/** How the docks module shows its states: badges, the beacon's colour and the timer's. */
+import type { BadgeDisplay } from "#lib/i18n/index.ts";
 
+import { dockLabels } from "./labels.ts";
 import { type Beacon, type DockState, doorBand } from "./model.ts";
 
 /** A state's badge: Laden is fine, Bezet needs attention, Storing is critical, Vrij is quiet. */
-export const stateTones: Record<DockState, BadgeTone> = {
-	loading: "success",
-	occupied: "warning",
-	fault: "danger",
-	free: "neutral",
-};
+export const dockStateDisplay = dockLabels.withLabels("dockState", {
+	loading: { tone: "success" },
+	occupied: { tone: "warning" },
+	fault: { tone: "danger" },
+	free: { tone: "neutral" },
+} satisfies Record<DockState, BadgeDisplay>);
 
 /** The beacon's lamp. */
 export const beaconColours: Record<Beacon, string> = {

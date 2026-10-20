@@ -8,13 +8,14 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import OrderSteps from "#modules/parts-shop/detail/order-steps.svelte";
+	import { shopOrderStatusDisplay } from "#modules/parts-shop/display.ts";
 	import { lineAmount } from "#modules/parts-shop/model.ts";
 	import { getShopOrder } from "#modules/parts-shop/orders.remote.ts";
-	import StatusBadge from "#modules/parts-shop/ui/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/parts-shop/orders/[number]"> } = $props();
 
@@ -34,7 +35,11 @@
 	]}
 >
 	{#snippet badges()}
-		<StatusBadge status={order.status} />
+		<EnumBadge
+			display={shopOrderStatusDisplay}
+			value={order.status}
+			data-shop-status={order.status}
+		/>
 	{/snippet}
 	{#snippet actions()}
 		<OrderSteps number={order.number} status={order.status} total={order.total} />

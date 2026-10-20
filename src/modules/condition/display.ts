@@ -2,9 +2,9 @@
  * How the conditions show: a status's badge tone and what it means (the Connect page's legend), and
  * a score's colour by its band (rose, amber, emerald). Isomorphic.
  */
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
-import { formatNumber } from "#lib/i18n/index.ts";
+import { type BadgeDisplay, formatNumber } from "#lib/i18n/index.ts";
 
+import { conditionLabels } from "./labels.ts";
 import {
 	PLAN_WITHIN_WORKING_DAYS,
 	type ScoreBand,
@@ -12,12 +12,13 @@ import {
 	type UnitStatus,
 } from "./model.ts";
 
-export const statusTones: Record<UnitStatus, BadgeTone> = {
-	critical: "danger",
-	attention: "warning",
-	planned: "info",
-	ok: "success",
-};
+/** Each status's translated `label` and badge tone. */
+export const unitStatusDisplay = conditionLabels.withLabels("unitStatus", {
+	critical: { tone: "danger" },
+	attention: { tone: "warning" },
+	planned: { tone: "info" },
+	ok: { tone: "success" },
+} satisfies Record<UnitStatus, BadgeDisplay>);
 
 /** What a status means and asks for, as the legend says it ("Wat betekenen de statussen?"). */
 export function statusMeaning(status: UnitStatus, thresholds: Thresholds): string {

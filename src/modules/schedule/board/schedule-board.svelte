@@ -15,7 +15,7 @@
 
 	import { historyDialog } from "#lib/components/history-dialog.svelte.ts";
 	import { currentDay, dayOf } from "#lib/dates.ts";
-	import { specialties } from "#lib/engineers/index.ts";
+	import { engineerSpecialtyDisplay } from "#lib/engineers/index.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { viewSearch } from "../calendar/calendar.ts";
@@ -65,7 +65,7 @@
 		...engineers.map((engineer) => ({
 			id: engineer.id as RowId,
 			name: engineer.name,
-			detail: specialties[engineer.specialty].label,
+			detail: engineerSpecialtyDisplay[engineer.specialty].label,
 			droppable: engineer.active,
 		})),
 	]);

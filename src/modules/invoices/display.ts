@@ -3,22 +3,15 @@ import CircleCheckBigIcon from "@lucide/svelte/icons/circle-check-big";
 import ClockAlertIcon from "@lucide/svelte/icons/clock-alert";
 import FilePenLineIcon from "@lucide/svelte/icons/file-pen-line";
 import SendIcon from "@lucide/svelte/icons/send";
-import type { Component } from "svelte";
 
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
-import { numberFormatter } from "#lib/i18n/index.ts";
+import { type BadgeDisplay, numberFormatter } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { type CreditNoteState, creditNoteStates, creditSettlements } from "./credit-note.ts";
 import { type InvoiceState, invoiceStates } from "./invoice.ts";
 import { invoicingLabels } from "./labels.ts";
 
-interface Display {
-	icon: Component;
-	tone: BadgeTone;
-}
-
-const stateDetails: Record<InvoiceState, Display> = {
+const stateDetails: Record<InvoiceState, BadgeDisplay> = {
 	draft: { icon: FilePenLineIcon, tone: "neutral" },
 	sent: { icon: SendIcon, tone: "info" },
 	overdue: { icon: ClockAlertIcon, tone: "danger" },
@@ -27,7 +20,7 @@ const stateDetails: Record<InvoiceState, Display> = {
 };
 
 /** An invoice's status as shown (overdue for sent ones past their due date), translated. */
-export const states = invoicingLabels.withLabels("invoiceState", stateDetails);
+export const invoiceStateDisplay = invoicingLabels.withLabels("invoiceState", stateDetails);
 
 /** Options for the faceted filter, in order. */
 export const stateOptions = invoicingLabels.labelOptions(
@@ -36,7 +29,7 @@ export const stateOptions = invoicingLabels.labelOptions(
 	stateDetails,
 );
 
-const creditStateDetails: Record<CreditNoteState, Display> = {
+const creditStateDetails: Record<CreditNoteState, BadgeDisplay> = {
 	draft: stateDetails.draft,
 	sent: stateDetails.sent,
 	paid: stateDetails.paid,
@@ -44,7 +37,10 @@ const creditStateDetails: Record<CreditNoteState, Display> = {
 };
 
 /** A credit note's status as shown (paid as settled), translated. */
-export const creditStates = invoicingLabels.withLabels("creditNoteState", creditStateDetails);
+export const creditNoteStateDisplay = invoicingLabels.withLabels(
+	"creditNoteState",
+	creditStateDetails,
+);
 
 /** Options for the credit notes' faceted filter, in order. */
 export const creditStateOptions = invoicingLabels.labelOptions(

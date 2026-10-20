@@ -10,7 +10,5 @@ export { default as CostItem } from "./ui/cost-item.svelte";
 export { default as NotesList } from "./ui/notes-list.svelte";
 export { default as OrderLink } from "./ui/order-link.svelte";
 export { default as OrderTags } from "./ui/order-tags.svelte";
-export { default as PriorityBadge } from "./ui/priority-badge.svelte";
 export { default as SignOff } from "./ui/sign-off.svelte";
-export { default as StatusBadge } from "./ui/status-badge.svelte";
 export { default as TypeLabel } from "./ui/type-label.svelte";

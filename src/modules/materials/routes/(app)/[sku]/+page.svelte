@@ -5,19 +5,20 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 	import CountStockDialog from "#modules/materials/detail/count-stock-dialog.svelte";
 	import ReceiveStockDialog from "#modules/materials/detail/receive-stock-dialog.svelte";
 	import StockHistory from "#modules/materials/detail/stock-history.svelte";
-	import { formatQuantity } from "#modules/materials/display.ts";
+	import { formatQuantity, stockLevel, stockLevelDisplay } from "#modules/materials/display.ts";
 	import { materialLabels } from "#modules/materials/labels.ts";
 	import { deleteMaterial, getMaterial } from "#modules/materials/material.remote.ts";
-	import StockBadge from "#modules/materials/ui/stock-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/materials/[sku]"> } = $props();
 
@@ -25,6 +26,7 @@
 	const material = $derived(data.material);
 	const stats = $derived(data.stats);
 	const quantity = (value: number) => formatQuantity(value, material.unit);
+	const level = $derived(stockLevel(material.stock, material.unit));
 </script>
 
 <svelte:head>
@@ -40,7 +42,7 @@
 	]}
 >
 	{#snippet badges()}
-		<StockBadge stock={material.stock} unit={material.unit} />
+		<EnumBadge display={stockLevelDisplay} value={level} />
 	{/snippet}
 	{#snippet actions()}
 		<ReceiveStockDialog {material} />
@@ -119,7 +121,9 @@
 									<Table.Cell>
 										<CustomerLink code={row.customer.code} name={row.customer.name} withCode />
 									</Table.Cell>
-									<Table.Cell><StatusBadge status={row.status} /></Table.Cell>
+									<Table.Cell
+										><EnumBadge display={orderStatusDisplay} value={row.status} /></Table.Cell
+									>
 									<Table.Cell class="text-right tabular-nums">{quantity(row.quantity)}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">
 										{formatCents(row.unitPrice)}
@@ -179,7 +183,7 @@
 					<DetailItem label={m.materials_stock()}>
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="tabular-nums">{quantity(material.stock)}</span>
-							<StockBadge stock={material.stock} unit={material.unit} />
+							<EnumBadge display={stockLevelDisplay} value={level} />
 						</div>
 					</DetailItem>
 				</dl>

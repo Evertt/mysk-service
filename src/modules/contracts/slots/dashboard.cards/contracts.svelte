@@ -6,15 +6,15 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { squeeze } from "#lib/components/squeeze.ts";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatDate, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getContractsOverview } from "../../coverage.remote.ts";
+	import { contractLevelDisplay, slaStateDisplay } from "../../display.ts";
 	import ContractLink from "../../ui/contract-link.svelte";
-	import LevelBadge from "../../ui/level-badge.svelte";
-	import SlaBadge from "../../ui/sla-badge.svelte";
 
 	const data = $derived(await getContractsOverview());
 	const days = $derived(formatNumber(data.days));
@@ -50,7 +50,7 @@
 							<Table.Cell class="text-right">
 								<div class="flex flex-col items-end gap-1">
 									<span class="tabular-nums">{formatDateTime(order.response.due)}</span>
-									<SlaBadge state={order.response.state} />
+									<EnumBadge display={slaStateDisplay} value={order.response.state} />
 								</div>
 							</Table.Cell>
 						</Table.Row>
@@ -103,7 +103,7 @@
 								</div>
 							</Table.Cell>
 							<Table.Cell class="hidden @xs:table-cell"
-								><LevelBadge level={contract.level} /></Table.Cell
+								><EnumBadge display={contractLevelDisplay} value={contract.level} /></Table.Cell
 							>
 							<Table.Cell class="text-right tabular-nums">{formatDate(contract.endsOn)}</Table.Cell>
 						</Table.Row>

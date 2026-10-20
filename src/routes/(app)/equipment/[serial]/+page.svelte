@@ -4,19 +4,16 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import { masonry, masonryGrid } from "#lib/components/masonry.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink, SiteCard } from "#lib/customers/components.ts";
 	import { countryName } from "#lib/customers/index.ts";
-	import {
-		StatusBadge as EquipmentStatusBadge,
-		QrCard,
-		WarrantyBadge,
-	} from "#lib/equipment/components.ts";
+	import { QrCard, WarrantyBadge } from "#lib/equipment/components.ts";
 	import { ServiceStats, ServiceTimeline } from "#lib/equipment/components.ts";
 	import { detailSide } from "#lib/equipment/extensions.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { deleteEquipment, getEquipment } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDate, label } from "#lib/i18n/index.ts";
@@ -46,7 +43,7 @@
 	]}
 >
 	{#snippet badges()}
-		<EquipmentStatusBadge status={unit.status} />
+		<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 		<WarrantyBadge until={unit.warrantyUntil} />
 	{/snippet}
 	{#snippet actions()}

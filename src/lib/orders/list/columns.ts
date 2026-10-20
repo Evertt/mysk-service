@@ -5,14 +5,15 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { EngineerLink } from "#lib/engineers/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
+import { orderPriorityDisplay } from "../display.ts";
 import OrderLink from "../ui/order-link.svelte";
-import PriorityBadge from "../ui/priority-badge.svelte";
 import TypeLabel from "../ui/type-label.svelte";
 import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";
@@ -90,7 +91,8 @@ export const columns = column.columns([
 		meta: { label: m.orders_column_status, filterValues: orderStatuses },
 	}),
 	column.accessor("priority", {
-		cell: ({ getValue }) => renderComponent(PriorityBadge, { priority: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: orderPriorityDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		// By urgency rather than alphabetically.

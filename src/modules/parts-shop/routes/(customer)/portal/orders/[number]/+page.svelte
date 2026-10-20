@@ -9,10 +9,11 @@
 	import type { RouteParams } from "$app/types";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { getClientShopOrder } from "#modules/parts-shop/client/client-shop.remote.ts";
+	import { shopOrderStatusDisplay } from "#modules/parts-shop/display.ts";
 	import { lineAmount } from "#modules/parts-shop/model.ts";
-	import StatusBadge from "#modules/parts-shop/ui/status-badge.svelte";
 
 	let {
 		params,
@@ -52,7 +53,11 @@
 			})}
 		</p>
 	</div>
-	<StatusBadge status={order.status} />
+	<EnumBadge
+		display={shopOrderStatusDisplay}
+		value={order.status}
+		data-shop-status={order.status}
+	/>
 </div>
 
 <Card.Root class="w-full max-w-3xl" data-client-order-lines>

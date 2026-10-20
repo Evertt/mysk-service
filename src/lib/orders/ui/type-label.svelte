@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { OrderType } from "#lib/models.ts";
 
-	import { types } from "../display.ts";
+	import { orderTypeDisplay } from "../display.ts";
 
 	let { type }: { type: OrderType } = $props();
 
-	const display = $derived(types[type]);
+	const display = $derived(orderTypeDisplay[type]);
 </script>
 
 <span class="inline-flex items-center gap-1.5 whitespace-nowrap">

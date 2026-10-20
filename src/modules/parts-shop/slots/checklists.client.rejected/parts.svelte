@@ -9,11 +9,12 @@
 	import { resolve } from "$app/paths";
 	import ShoppingCartIcon from "@lucide/svelte/icons/shopping-cart";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents } from "#lib/i18n/index.ts";
 	import type { RejectedPoint } from "#modules/checklists/api/extensions.ts";
 
+	import { productStockDisplay } from "../../display.ts";
 	import { getClientSuggestedParts } from "../../suggestions/suggested-parts.remote.ts";
-	import StockBadge from "../../ui/stock-badge.svelte";
 
 	let { rejected }: { number: string; rejected: RejectedPoint[] } = $props();
 
@@ -50,7 +51,11 @@
 								{part.sku} · {m.shop_price_excl_vat({ price: formatCents(part.price) })}
 							</span>
 						</div>
-						<StockBadge availability={part.availability} />
+						<EnumBadge
+							display={productStockDisplay}
+							value={part.availability}
+							data-stock={part.availability}
+						/>
 					</div>
 					<ul class="flex flex-col gap-0.5 text-xs text-muted-foreground">
 						{#each points as point, i (i)}

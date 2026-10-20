@@ -3,13 +3,13 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { engineerSpecialties } from "#lib/models.ts";
 
-import { regionLabel } from "../display.ts";
+import { regionLabel, engineerSpecialtyDisplay } from "../display.ts";
 import type { getEngineers } from "../engineers.remote.ts";
 import EngineerLink from "../ui/engineer-link.svelte";
-import SpecialtyBadge from "../ui/specialty-badge.svelte";
 import StatusCell from "./status-cell.svelte";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
@@ -35,7 +35,8 @@ export const columns = column.columns([
 		meta: { label: m.engineers_column_email },
 	}),
 	column.accessor("specialty", {
-		cell: ({ getValue }) => renderComponent(SpecialtyBadge, { specialty: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: engineerSpecialtyDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		enableGlobalFilter: false,

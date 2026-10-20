@@ -8,10 +8,12 @@
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
 	import { joinValues } from "#lib/components/data-table/url-state.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { OrderLink, TypeLabel } from "#lib/orders/components.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { getCustomerActivity } from "./activity.remote.ts";
 
@@ -67,7 +69,7 @@
 								</span>
 							{/if}
 						</div>
-						<StatusBadge status={order.status} />
+						<EnumBadge display={orderStatusDisplay} value={order.status} />
 						<div class="flex w-32 flex-col items-end">
 							<span data-cost="total" class="text-sm font-medium tabular-nums">
 								{formatCents(order.total)}

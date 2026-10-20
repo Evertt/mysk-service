@@ -4,14 +4,15 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
 import { creditNoteStates, creditSettlements } from "../credit-note.ts";
 import type { getCreditNotes } from "../credit-notes.remote.ts";
+import { creditNoteStateDisplay } from "../display.ts";
 import { invoicingLabels } from "../labels.ts";
 import CreditNoteLink from "../ui/credit-note-link.svelte";
-import CreditStatusBadge from "../ui/credit-status-badge.svelte";
 
 export type CreditNoteRow = Awaited<ReturnType<typeof getCreditNotes>>[number];
 
@@ -54,7 +55,8 @@ export const creditNoteColumns = column.columns([
 		meta: { label: m.invoices_credit_column_reason },
 	}),
 	column.accessor("status", {
-		cell: ({ getValue }) => renderComponent(CreditStatusBadge, { state: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: creditNoteStateDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		sortFn: (a, b, id) =>

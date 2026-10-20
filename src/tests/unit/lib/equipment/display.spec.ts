@@ -1,10 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { isUnderWarranty, statusOptions, unitLine, unitTitle } from "#lib/equipment/display.ts";
+import {
+	equipmentStatusDisplay,
+	isUnderWarranty,
+	statusOptions,
+	unitLine,
+	unitTitle,
+} from "#lib/equipment/display.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 import { at, day } from "#unit/temporal-support.ts";
 
-import { describeOptions } from "../display.test-support.ts";
+import { describeBadges, describeOptions } from "../display.test-support.ts";
 
 // Equipment statuses are shown as plain text.
 describeOptions("equipment statuses", statusOptions, equipmentStatuses, { icons: false });
@@ -63,3 +69,15 @@ test("status options are the translated statuses, in order", () => {
 	]);
 	expect(statusOptions.map((option) => option.value)).toEqual(equipmentStatuses);
 });
+
+describeBadges(
+	"equipment status badges",
+	equipmentStatusDisplay,
+	[
+		["operational", "Operational", "success"],
+		["needs_service", "Needs service", "warning"],
+		["out_of_service", "Out of service", "danger"],
+		["decommissioned", "Decommissioned", "neutral"],
+	],
+	{ icons: false },
+);

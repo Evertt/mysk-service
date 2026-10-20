@@ -8,11 +8,12 @@
 	import { resolve } from "$app/paths";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate, messageParts } from "#lib/i18n/index.ts";
 
+	import { invoiceStateDisplay } from "../../display.ts";
 	import { getOrderInvoice } from "../../invoicing.remote.ts";
 	import InvoiceLink from "../../ui/invoice-link.svelte";
-	import StatusBadge from "../../ui/status-badge.svelte";
 
 	let { number }: { number: string } = $props();
 
@@ -40,7 +41,7 @@
 			</Card.Description>
 			{#if data.invoice}
 				<Card.Action>
-					<StatusBadge state={data.invoice.state} />
+					<EnumBadge display={invoiceStateDisplay} value={data.invoice.state} />
 				</Card.Action>
 			{/if}
 		</Card.Header>

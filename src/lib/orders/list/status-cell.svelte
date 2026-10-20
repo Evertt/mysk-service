@@ -33,7 +33,7 @@
 	import type { OrderStatus } from "#lib/models.ts";
 	import { errorMessage } from "#lib/utils.ts";
 
-	import { statuses } from "../display.ts";
+	import { orderStatusDisplay } from "../display.ts";
 	import type { OrderTag } from "../extensions.ts";
 	import { statusChoices } from "../lifecycle.ts";
 	import OrderTags from "../ui/order-tags.svelte";
@@ -57,13 +57,13 @@
 
 	const query = getQuery();
 	// Clicking the badge filters the table by the status; its arrow changes it.
-	const filter = cellFilter(() => ({ value: status, label: statuses[status].label }));
+	const filter = cellFilter(() => ({ value: status, label: orderStatusDisplay[status].label }));
 
 	const option = (value: OrderStatus): BadgeOption<OrderStatus> => ({
 		value,
-		label: statuses[value].label,
-		icon: statuses[value].icon,
-		variant: statuses[value].tone,
+		label: orderStatusDisplay[value].label,
+		icon: orderStatusDisplay[value].icon,
+		variant: orderStatusDisplay[value].tone,
 	});
 
 	async function change(to: OrderStatus) {

@@ -6,8 +6,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import type { EquipmentStatus } from "#lib/models.ts";
 
 	let {
@@ -38,5 +38,5 @@
 			{unitLine(unit, { category: unit.category, location: showLocation ? unit.location : null })}
 		</span>
 	</span>
-	<StatusBadge status={unit.status} />
+	<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 </a>

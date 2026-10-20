@@ -7,11 +7,13 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+
+	import { dockStateDisplay } from "../../display.ts";
 	import { getCustomerDocks } from "../../docks.remote.ts";
 	import DeleteDock from "../../form/delete-dock.svelte";
 	import DockDialog from "../../form/dock-dialog.svelte";
 	import { dockState } from "../../model.ts";
-	import StateBadge from "../../ui/state-badge.svelte";
 
 	let { code }: { code: string } = $props();
 
@@ -54,12 +56,11 @@
 								</span>
 								<span class="flex shrink-0 items-center gap-1">
 									{#if dock.locked !== null}
-										<StateBadge
-											state={dockState(
-												{ scpOnline: dock.scpOnline ?? true, locked: dock.locked },
-												dock.occupied,
-											)}
-										/>
+										{@const state = dockState(
+											{ scpOnline: dock.scpOnline ?? true, locked: dock.locked },
+											dock.occupied,
+										)}
+										<EnumBadge display={dockStateDisplay} value={state} data-dock-state={state} />
 									{/if}
 									{#if data.canManage}
 										<DockDialog {data} {dock} />

@@ -5,13 +5,13 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
-import { unitLine, unitTitle } from "../display.ts";
+import { unitLine, unitTitle, equipmentStatusDisplay } from "../display.ts";
 import EquipmentLink from "../ui/equipment-link.svelte";
-import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
 
@@ -59,7 +59,8 @@ export const columns = column.columns([
 		meta: { label: m.equipment_column_category, filter: "set" },
 	}),
 	column.accessor("status", {
-		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: equipmentStatusDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		meta: {

@@ -7,8 +7,9 @@
 <script lang="ts">
 	import Building2Icon from "@lucide/svelte/icons/building-2";
 
-	import { changeClass, formatChange, formatKw, formatKwh, toneBadges } from "../display.ts";
-	import { energyLabels } from "../labels.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+
+	import { changeClass, formatChange, formatKw, formatKwh, zoneToneDisplay } from "../display.ts";
 	import type { ZoneFigures } from "../server/figures.ts";
 	import { comparisonOf, type Scope } from "./scope.ts";
 
@@ -88,9 +89,7 @@
 							</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{formatKw(row.peakKw)}</Table.Cell>
 							<Table.Cell>
-								<Badge variant={toneBadges[row.tone]}>
-									{energyLabels.label("zoneTone", row.tone)}
-								</Badge>
+								<EnumBadge display={zoneToneDisplay} value={row.tone} />
 							</Table.Cell>
 						</Table.Row>
 					{/each}

@@ -8,13 +8,14 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import { toast } from "svelte-sonner";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
 	import type { RejectedPoint } from "#modules/checklists/api/extensions.ts";
 
+	import { productStockDisplay } from "../../display.ts";
 	import { addSuggestedPart, getSuggestedParts } from "../../suggestions/suggested-parts.remote.ts";
-	import StockBadge from "../../ui/stock-badge.svelte";
 
 	let { number, rejected }: { number: string; rejected: RejectedPoint[] } = $props();
 
@@ -53,7 +54,11 @@
 								{part.sku} · {formatCents(part.price)}
 							</span>
 						</div>
-						<StockBadge availability={part.availability} />
+						<EnumBadge
+							display={productStockDisplay}
+							value={part.availability}
+							data-stock={part.availability}
+						/>
 					</div>
 					<ul class="flex flex-col gap-0.5 text-xs text-muted-foreground">
 						{#each points as point, i (i)}

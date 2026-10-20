@@ -11,7 +11,7 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
-	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
+	import { fittingFirst, engineerSpecialtyDisplay } from "#lib/engineers/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { DEFAULT_TIME, parseDay } from "../board/board.ts";
@@ -49,7 +49,7 @@
 		).map((engineer) => ({
 			value: String(engineer.id),
 			label: engineer.name,
-			group: specialties[engineer.specialty].label,
+			group: engineerSpecialtyDisplay[engineer.specialty].label,
 		})),
 	);
 </script>

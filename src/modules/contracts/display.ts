@@ -8,9 +8,8 @@ import ShieldIcon from "@lucide/svelte/icons/shield";
 import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
 import ShieldPlusIcon from "@lucide/svelte/icons/shield-plus";
 import TimerIcon from "@lucide/svelte/icons/timer";
-import type { Component } from "svelte";
 
-import type { BadgeTone, BadgeVariant } from "#lib/components/ui/badge/index.ts";
+import type { BadgeDisplay } from "#lib/i18n/index.ts";
 
 import type { SlaState } from "./coverage.ts";
 import { contractLabels } from "./labels.ts";
@@ -21,41 +20,31 @@ import {
 	contractStatuses,
 } from "./model.ts";
 
-interface Display {
-	icon: Component;
-	variant: BadgeVariant;
-}
-
-/** A value that has a meaning (fine, attention, critical), coloured by it. */
-interface ToneDisplay {
-	icon: Component;
-	tone: BadgeTone;
-}
-
-const levelDetails: Record<ContractLevel, Display> = {
-	basic: { icon: ShieldIcon, variant: "outline" },
-	standard: { icon: ShieldCheckIcon, variant: "outline" },
-	premium: { icon: ShieldPlusIcon, variant: "secondary" },
+/** A level means nothing good or bad: plain variants, premium the boldest. */
+const levelDetails: Record<ContractLevel, BadgeDisplay> = {
+	basic: { icon: ShieldIcon, tone: "outline" },
+	standard: { icon: ShieldCheckIcon, tone: "outline" },
+	premium: { icon: ShieldPlusIcon, tone: "secondary" },
 };
 
-const statusDetails: Record<ContractStatus, ToneDisplay> = {
+const statusDetails: Record<ContractStatus, BadgeDisplay> = {
 	upcoming: { icon: CalendarClockIcon, tone: "info" },
 	active: { icon: CalendarCheckIcon, tone: "success" },
 	expired: { icon: CalendarXIcon, tone: "neutral" },
 };
 
 /** Where a covered order's response stands, see `coverage.ts`. */
-const slaStateDetails: Record<SlaState, ToneDisplay> = {
+const slaStateDetails: Record<SlaState, BadgeDisplay> = {
 	on_track: { icon: TimerIcon, tone: "info" },
 	at_risk: { icon: ClockAlertIcon, tone: "warning" },
 	overdue: { icon: AlarmClockOffIcon, tone: "danger" },
 	responded: { icon: AlarmClockCheckIcon, tone: "success" },
 };
 
-/** Each value's translated `label`, icon and badge variant (a level) or tone. */
-export const levels = contractLabels.withLabels("contractLevel", levelDetails);
-export const statuses = contractLabels.withLabels("contractStatus", statusDetails);
-export const slaStates = contractLabels.withLabels("slaState", slaStateDetails);
+/** Each value's translated `label`, icon and badge tone. */
+export const contractLevelDisplay = contractLabels.withLabels("contractLevel", levelDetails);
+export const contractStatusDisplay = contractLabels.withLabels("contractStatus", statusDetails);
+export const slaStateDisplay = contractLabels.withLabels("slaState", slaStateDetails);
 
 /** Options for the faceted filters, in order. */
 export const levelOptions = contractLabels.labelOptions(

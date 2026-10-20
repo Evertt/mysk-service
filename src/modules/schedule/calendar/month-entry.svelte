@@ -7,7 +7,7 @@
 <script lang="ts">
 	import { formatTime } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
-	import { types, unitsSummary } from "#lib/orders/index.ts";
+	import { orderTypeDisplay, unitsSummary } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import { initials, type ScheduleMonthOrder } from "./calendar.ts";
@@ -24,7 +24,7 @@
 		compact?: boolean;
 	} = $props();
 
-	const type = $derived(types[order.type]);
+	const type = $derived(orderTypeDisplay[order.type]);
 	const color = $derived(typeColors[order.type]);
 	// Its first unit and how many more, e.g. "Deur 07 +14".
 	const units = $derived(unitsSummary(order.unit, order.unitCount));

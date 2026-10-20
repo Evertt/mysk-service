@@ -7,6 +7,7 @@
 	import { toast } from "svelte-sonner";
 
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
@@ -15,8 +16,8 @@
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
-	import { PriorityBadge, SignOff, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
-	import { fieldActions } from "#lib/orders/index.ts";
+	import { SignOff, TypeLabel } from "#lib/orders/components.ts";
+	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
 	import { getMe, getMyOrder, startWork, watchMyWork } from "../portal.remote.ts";
@@ -63,8 +64,8 @@
 		</p>
 	</div>
 	<div class="flex flex-wrap items-center gap-2">
-		<StatusBadge status={order.status} />
-		<PriorityBadge priority={order.priority} />
+		<EnumBadge display={orderStatusDisplay} value={order.status} />
+		<EnumBadge display={orderPriorityDisplay} value={order.priority} />
 		<TypeLabel type={order.type} />
 	</div>
 </div>

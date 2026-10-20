@@ -10,10 +10,11 @@
 	import ShieldOffIcon from "@lucide/svelte/icons/shield-off";
 
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { CostItem, OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
-	import { types } from "#lib/orders/index.ts";
+	import { CostItem, OrderLink } from "#lib/orders/components.ts";
+	import { orderTypeDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
 	import { type ServiceEvent, unitShare } from "./service-history.ts";
@@ -26,7 +27,7 @@
 		event.kind === "order" ? `order-${event.order.id}` : event.kind;
 	const icon = (event: ServiceEvent) =>
 		event.kind === "order"
-			? types[event.order.type].icon
+			? orderTypeDisplay[event.order.type].icon
 			: event.kind === "installation"
 				? PackageCheckIcon
 				: event.upcoming
@@ -82,9 +83,9 @@
 							{@const order = event.order}
 							{@const hours = m.common_count_hours_short({ count: order.laborHours })}
 							<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-								<span class="font-medium">{types[order.type].label}</span>
+								<span class="font-medium">{orderTypeDisplay[order.type].label}</span>
 								<OrderLink number={order.number} />
-								<OrderStatusBadge status={order.status} />
+								<EnumBadge display={orderStatusDisplay} value={order.status} />
 								<span data-cost="total" class="ml-auto font-medium tabular-nums">
 									{formatCents(order.cost.total)}
 								</span>

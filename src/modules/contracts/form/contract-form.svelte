@@ -7,6 +7,7 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import { toast } from "svelte-sonner";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
 	import MoneyField from "#lib/components/form/money-field.svelte";
@@ -15,7 +16,7 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { currentDay } from "#lib/dates.ts";
-	import { StatusBadge as EquipmentStatusBadge } from "#lib/equipment/components.ts";
+	import { equipmentStatusDisplay } from "#lib/equipment/index.ts";
 
 	import type {
 		createContract,
@@ -23,7 +24,7 @@
 		getContractFormOptions,
 		updateContract,
 	} from "../contracts.remote.ts";
-	import { levels } from "../display.ts";
+	import { contractLevelDisplay } from "../display.ts";
 	import { type ContractLevel, contractLevels, defaultResponseHours } from "../model.ts";
 
 	type Options = Awaited<ReturnType<typeof getContractFormOptions>>;
@@ -112,7 +113,10 @@
 					field={fields.level}
 					label={m.contracts_level()}
 					value={level}
-					options={contractLevels.map((value) => ({ value, label: levels[value].label }))}
+					options={contractLevels.map((value) => ({
+						value,
+						label: contractLevelDisplay[value].label,
+					}))}
 					onchange={changeLevel}
 				/>
 				<TextField
@@ -183,7 +187,7 @@
 										{unit.serialNumber} · {unit.category}
 									</Field.FieldDescription>
 								</Field.FieldContent>
-								<EquipmentStatusBadge status={unit.status} />
+								<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 							</Field.Field>
 						{/each}
 					</Field.FieldGroup>

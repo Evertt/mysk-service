@@ -9,11 +9,12 @@
 	import { resolve } from "$app/paths";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 	import type { OrderPriority, OrderStatus, OrderType } from "#lib/models.ts";
 
-	import ClientStatusBadge from "./client-status-badge.svelte";
+	import { clientStatus, clientStatusDisplay } from "./client-status.ts";
 
 	let {
 		order,
@@ -34,6 +35,7 @@
 		};
 	} = $props();
 
+	const status = $derived(clientStatus(order.status, order.rejectionReason));
 	const when = $derived(
 		order.completedAt
 			? m.client_completed_on({ date: formatDate(order.completedAt) })
@@ -71,7 +73,7 @@
 		</p>
 	{/if}
 	<span class="order-status">
-		<ClientStatusBadge status={order.status} rejectionReason={order.rejectionReason} />
+		<EnumBadge display={clientStatusDisplay} value={status} data-client-status={status} />
 	</span>
 	<span class="order-when text-xs text-muted-foreground">{when}</span>
 	<ChevronRightIcon class="order-chevron size-5 shrink-0 self-center text-muted-foreground" />

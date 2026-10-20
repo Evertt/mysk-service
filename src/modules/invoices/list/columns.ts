@@ -3,14 +3,15 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
+import { invoiceStateDisplay } from "../display.ts";
 import { invoiceStates } from "../invoice.ts";
 import type { getInvoices } from "../invoices.remote.ts";
 import { invoicingLabels } from "../labels.ts";
 import InvoiceLink from "../ui/invoice-link.svelte";
-import StatusBadge from "../ui/status-badge.svelte";
 import CreditedCell from "./credited-cell.svelte";
 
 export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
@@ -41,7 +42,8 @@ export const columns = column.columns([
 	// The status, with sent invoices past their due date as overdue.
 	column.accessor("state", {
 		id: "status",
-		cell: ({ getValue }) => renderComponent(StatusBadge, { state: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: invoiceStateDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		// In the order an invoice goes through them rather than alphabetically.

@@ -4,13 +4,14 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
+import EnumBadge from "#lib/components/enum-badge.svelte";
 import { intlLocale, labelOrValue } from "#lib/i18n/index.ts";
 import { customerSegments } from "#lib/models.ts";
 
 import { countryName } from "../countries.ts";
 import type { getCustomers } from "../customers.remote.ts";
+import { customerSegmentDisplay } from "../display.ts";
 import CustomerLink from "../ui/customer-link.svelte";
-import SegmentBadge from "../ui/segment-badge.svelte";
 
 export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
 
@@ -66,7 +67,8 @@ export const columns = column.columns([
 		},
 	}),
 	column.accessor("segment", {
-		cell: ({ getValue }) => renderComponent(SegmentBadge, { segment: getValue() }),
+		cell: ({ getValue }) =>
+			renderComponent(EnumBadge, { display: customerSegmentDisplay, value: getValue() }),
 		filterFn: "oneOf",
 		enableGrouping: true,
 		// By size rather than alphabetically.

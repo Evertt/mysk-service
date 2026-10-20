@@ -35,3 +35,26 @@ export function describeOptions(
 		}
 	});
 }
+
+/**
+ * Checks a kind's display map (what `EnumBadge` shows) against each value's `[value, label,
+ * tone]`, and that every value has an icon (or, with `icons: false`, none).
+ */
+export function describeBadges<V extends string>(
+	name: string,
+	display: Readonly<Record<V, { readonly label: string; tone: string; icon?: unknown }>>,
+	rows: [V, string, string][],
+	{ icons = true }: { icons?: boolean } = {},
+) {
+	describe(name, () => {
+		test("cover every value", () => {
+			expect(Object.keys(display).toSorted()).toEqual(rows.map(([value]) => value).toSorted());
+		});
+
+		test.each(rows)("%s shows as %s, in the %s tone", (value, label, tone) => {
+			expect(display[value].label).toBe(label);
+			expect(display[value].tone).toBe(tone);
+			expect(Boolean(display[value].icon)).toBe(icons);
+		});
+	});
+}

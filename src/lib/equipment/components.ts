@@ -9,5 +9,4 @@ export { default as LocationHistory } from "./locations/location-history.svelte"
 export { default as SiteLocations } from "./locations/site-locations.svelte";
 export { default as EquipmentLink } from "./ui/equipment-link.svelte";
 export { default as QrCard } from "./ui/qr-card.svelte";
-export { default as StatusBadge } from "./ui/status-badge.svelte";
 export { default as WarrantyBadge } from "./ui/warranty-badge.svelte";
