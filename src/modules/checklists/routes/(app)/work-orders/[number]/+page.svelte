@@ -4,6 +4,7 @@
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
+	import PrintSheet from "#lib/components/print-sheet.svelte";
 	import { getWorkOrder } from "#modules/checklists/checklists.remote.ts";
 	import WorkOrder from "#modules/checklists/detail/work-order.svelte";
 
@@ -33,35 +34,6 @@
 	</Button>
 </div>
 
-<div
-	class="mx-auto w-full max-w-[210mm] rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0"
->
+<PrintSheet>
 	<WorkOrder {data} />
-</div>
-
-<style>
-	/* A4, and only the work order: the app's sidebar, header and notices stay off the paper. */
-	@media print {
-		@page {
-			size: A4;
-			margin: 14mm;
-		}
-		:global([data-slot="sidebar"]),
-		:global([data-slot="app-header"]),
-		:global([data-sonner-toaster]) {
-			display: none !important;
-		}
-		:global([data-slot="sidebar-wrapper"]),
-		:global([data-slot="sidebar-inset"]) {
-			display: block !important;
-			min-height: 0 !important;
-			margin: 0 !important;
-			border: 0 !important;
-			box-shadow: none !important;
-			background: white !important;
-		}
-		:global(body) {
-			background: white !important;
-		}
-	}
-</style>
+</PrintSheet>

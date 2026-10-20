@@ -13,7 +13,10 @@
 
 <header
 	data-slot="app-header"
-	class={cn("flex h-14 shrink-0 items-center gap-2 border-b px-4", theme.classes("app-header"))}
+	class={cn(
+		"flex h-14 shrink-0 items-center gap-2 border-b px-4 print:hidden",
+		theme.classes("app-header"),
+	)}
 >
 	<Sidebar.Trigger class="-ml-1" />
 	<div class="ml-auto flex items-center gap-1">

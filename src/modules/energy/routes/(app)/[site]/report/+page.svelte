@@ -78,7 +78,7 @@
 	<title>{m.energy_report_title()} · {site.name}</title>
 </svelte:head>
 
-<div class="energy-report flex max-w-5xl flex-col gap-6" data-energy-report>
+<div class="flex max-w-5xl flex-col gap-6 print:max-w-none print:text-black" data-energy-report>
 	<div class="flex flex-col gap-4 print:hidden">
 		<nav class="text-sm text-muted-foreground">
 			<a class="hover:underline" href={resolve("/(app)/(modules)/energy")}>{m.energy_title()}</a>
@@ -244,23 +244,3 @@
 		<SavingsAdvice {kpis} period="month" />
 	</div>
 </div>
-
-<style>
-	/* Printed ("Exporteer PDF"), the report alone: no sidebar, header or toasts, black on white. */
-	@media print {
-		:global(body) {
-			background: white;
-		}
-		:global([data-slot="sidebar"]),
-		:global([data-slot="sidebar-gap"]),
-		:global([data-slot="app-header"]),
-		:global([data-slot="sidebar-container"]),
-		:global([data-sonner-toaster]) {
-			display: none !important;
-		}
-		.energy-report {
-			max-width: none;
-			color: black;
-		}
-	}
-</style>

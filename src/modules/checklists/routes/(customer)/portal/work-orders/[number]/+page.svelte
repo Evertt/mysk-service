@@ -8,6 +8,7 @@
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
+	import PrintSheet from "#lib/components/print-sheet.svelte";
 	import { getClientWorkOrder } from "#modules/checklists/client/client-checklists.remote.ts";
 	import WorkOrder from "#modules/checklists/detail/work-order.svelte";
 
@@ -39,25 +40,6 @@
 	</Button>
 </div>
 
-<div
-	class="w-full max-w-4xl rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0"
->
+<PrintSheet>
 	<WorkOrder {data} />
-</div>
-
-<style>
-	/* A4, and only the work order: the portal's navigation and header stay off the paper (see the
-	   portal's layout), and so do its notifications. */
-	@media print {
-		@page {
-			size: A4;
-			margin: 14mm;
-		}
-		:global([data-sonner-toaster]) {
-			display: none !important;
-		}
-		:global(body) {
-			background: white !important;
-		}
-	}
-</style>
+</PrintSheet>

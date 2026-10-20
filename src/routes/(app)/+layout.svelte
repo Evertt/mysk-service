@@ -51,11 +51,14 @@
 </script>
 
 <!-- A list page whose table fills the viewport (see `data-table.svelte`) is as high as the screen,
-	and scrolls itself only if it can't shrink enough. -->
-<Sidebar.Provider class="desktop:has-data-fill-viewport:h-svh">
+	and scrolls itself only if it can't shrink enough. On paper only the page: no sidebar, no header
+	(see `app-header.svelte`), and no flex layout, which breaks pages badly. -->
+<Sidebar.Provider
+	class="print:block print:min-h-0 desktop:has-data-fill-viewport:h-svh print:[&>[data-slot=sidebar]]:hidden"
+>
 	<AppSidebar />
 	<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->
-	<Sidebar.Inset class="min-w-0 desktop:has-data-fill-viewport:overflow-y-auto">
+	<Sidebar.Inset class="min-w-0 print:block desktop:has-data-fill-viewport:overflow-y-auto">
 		<AppHeader />
 		<!-- Shrinks to the screen's height, but not below what its table needs at least (a table that
 			fills the viewport counts as only its minimum height), so the page scrolls instead and keeps

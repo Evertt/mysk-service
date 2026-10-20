@@ -32,13 +32,18 @@
 	const [me, , viewAs] = $derived(await Promise.all([getPortalMe(), orderTypes, getViewAs()]));
 </script>
 
-<Sidebar.Provider data-customer-portal>
+<!-- On paper only the page: no navigation, no header, and no flex layout (e.g. a work order to
+	print). -->
+<Sidebar.Provider
+	data-customer-portal
+	class="print:block print:min-h-0 print:[&>[data-slot=sidebar]]:hidden"
+>
 	<PortalSidebar organization={me.organization} />
 	<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->
-	<Sidebar.Inset class="min-w-0">
+	<Sidebar.Inset class="min-w-0 print:block">
 		<header
 			data-slot="portal-header"
-			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur"
+			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur print:hidden"
 		>
 			<Sidebar.Trigger class="-ml-1" />
 			<Separator orientation="vertical" class="mr-1 h-4! self-center" />
@@ -81,13 +86,3 @@
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
-
-<style>
-	/* On paper only the page: no navigation, no header (e.g. a work order to print). */
-	@media print {
-		:global([data-customer-portal] [data-slot="sidebar"]),
-		:global([data-customer-portal] [data-slot="portal-header"]) {
-			display: none !important;
-		}
-	}
-</style>

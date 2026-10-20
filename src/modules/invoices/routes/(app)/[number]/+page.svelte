@@ -149,12 +149,3 @@
 		<ActivityCard type="invoice" id={invoice.id} />
 	</div>
 </div>
-
-<style>
-	/* Print only the invoice itself, without the app around it. */
-	@media print {
-		:global([data-slot="sidebar"], [data-slot="app-header"], [data-sonner-toaster]) {
-			display: none !important;
-		}
-	}
-</style>
