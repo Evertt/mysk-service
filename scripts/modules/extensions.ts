@@ -17,7 +17,6 @@ import { byName, GENERATED, type ModuleFolder } from "./shared.ts";
 const kinds = {
 	Slot: "slot",
 	FormSlot: "form",
-	ListColumns: "columns",
 	BulkTable: "bulk",
 	Collector: "collector",
 	Event: "event",
@@ -29,13 +28,19 @@ const kinds = {
 export interface ExtensionPoint {
 	/** E.g. `orders.detail.side`: its owner's id, a dot, and a name. */
 	id: string;
-	kind: (typeof kinds)[keyof typeof kinds];
+	/** Its kind; a list that takes columns is always a record's (`defineRecordPoints()`). */
+	kind: (typeof kinds)[keyof typeof kinds] | "columns";
 	/** Core's domain folder (`orders`) or the module's id (`invoices`). */
 	owner: string;
 	/** The file that declares it, relative to the root, with `/`. */
 	file: string;
 	/** The name it's exported as. */
 	exportName: string;
+	/**
+	 * Where it is in that export, for a record's points (`defineRecordPoints()`, e.g.
+	 * `detail.side`); none for a point that is the export.
+	 */
+	member?: string;
 }
 
 const kindNames: Record<ExtensionPoint["kind"], string> = {
@@ -54,6 +59,9 @@ const declaration = new RegExp(
 	String.raw`\bexport\s+const\s+([\w$]+)\s*=\s*define(${Object.keys(kinds).join("|")})\b`,
 	"g",
 );
+
+/** `export const <name> = defineRecordPoints`, before the owner. */
+const recordDeclaration = /\bexport\s+const\s+([\w$]+)\s*=\s*defineRecordPoints\b/g;
 
 /** The text without its comments (block comments, and line comments that start a line). */
 const withoutComments = (source: string) =>
@@ -78,14 +86,54 @@ function literalIdAt(source: string, index: number) {
 	return /^\s*\(\s*(["'`])([^"'`$]+)\1/.exec(source.slice(at))?.[2];
 }
 
+/** The text of the call's arguments that starts at `index` (just after its `(`), up to its `)`. */
+function argumentsAt(source: string, index: number) {
+	let depth = 1;
+	for (let at = index; at < source.length; at++) {
+		if ("([{".includes(source[at])) depth++;
+		else if (")]}".includes(source[at]) && --depth === 0) return source.slice(index, at);
+	}
+	return source.slice(index);
+}
+
+/**
+ * The points of a record that `defineRecordPoints(<owner>, options)` declares at `index` (after
+ * its name): the two detail slots always, the list's columns and bulk table if its options name
+ * them (`listColumns: true`, `bulk: …`).
+ */
+function recordPointsAt(source: string, index: number, file: string, owner: string, name: string) {
+	const record = literalIdAt(source, index);
+	if (!record) return [];
+	const options = argumentsAt(source, source.indexOf("(", index) + 1);
+	const point = (member: string, kind: ExtensionPoint["kind"]): ExtensionPoint => ({
+		id: `${record}.${member}`,
+		kind,
+		owner,
+		file,
+		exportName: name,
+		member,
+	});
+	return [
+		point("detail.main", "slot"),
+		point("detail.side", "slot"),
+		...(/\blistColumns\s*:\s*true\b/.test(options) ? [point("list.columns", "columns")] : []),
+		...(/\bbulk\s*:/.test(options) ? [point("list.bulk", "bulk")] : []),
+	];
+}
+
 /** The points declared in `file` (relative to `root`), owned by `owner`. */
 function pointsIn(root: string, file: string, owner: string): ExtensionPoint[] {
 	const source = withoutComments(readFileSync(join(root, file), "utf8"));
-	return [...source.matchAll(declaration)].flatMap((match) => {
+	const declared = [...source.matchAll(declaration)].map((match) => {
 		const id = literalIdAt(source, match.index + match[0].length);
 		const kind = kinds[match[2] as keyof typeof kinds];
-		return id ? [{ id, kind, owner, file, exportName: match[1] }] : [];
+		return { at: match.index, points: id ? [{ id, kind, owner, file, exportName: match[1] }] : [] };
 	});
+	const records = [...source.matchAll(recordDeclaration)].map((match) => ({
+		at: match.index,
+		points: recordPointsAt(source, match.index + match[0].length, file, owner, match[1]),
+	}));
+	return [...declared, ...records].toSorted((a, b) => a.at - b.at).flatMap(({ points }) => points);
 }
 
 const folders = (dir: string) =>
@@ -265,8 +313,19 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 	return problems;
 }
 
-/** `orders.detail.side` → `ordersDetailSide`: the name a point is imported as. */
+/** `orders.detail.side` → `ordersDetailSide`. */
 const localName = (id: string) => id.replace(/[.-](\w)/g, (_, c: string) => c.toUpperCase());
+
+/**
+ * The name a point's export is imported as: the point's own name (`ordersForm`), or for a record's
+ * points the export's, with its owner (`ordersPoints`).
+ */
+const bindingName = (point: ExtensionPoint) =>
+	localName(point.member ? `${point.owner}.${point.exportName}` : point.id);
+
+/** How the generated code names a point: `ordersForm`, `ordersPoints.detail.side`. */
+const pointRef = (point: ExtensionPoint) =>
+	point.member ? `${bindingName(point)}.${point.member}` : bindingName(point);
 
 /** `materials` and `orders.form` → `materialsOrdersFormPart`: the name a part's schema is imported as. */
 const partName = (module: ModuleFolder, point: string) =>
@@ -287,20 +346,21 @@ function allContributions(points: ExtensionPoint[], modules: ModuleFolder[]) {
 	);
 }
 
-/** The imports of `points`, each as its `localName()`, by file. */
+/** The imports of `points`' exports, each as its `bindingName()`, by file. */
 function pointImports(points: ExtensionPoint[]) {
-	const used = new Map<string, ExtensionPoint[]>();
+	const used = new Map<string, Map<string, string>>();
 	for (const point of points) {
-		const named = used.get(point.file) ?? [];
-		if (!named.includes(point)) used.set(point.file, [...named, point]);
+		const named = used.get(point.file) ?? new Map<string, string>();
+		named.set(point.exportName, bindingName(point));
+		used.set(point.file, named);
 	}
 	return [...used]
 		.toSorted(([a], [b]) => byName(specifier(a), specifier(b)))
 		.map(
 			([file, named]) =>
-				`import { ${named
-					.toSorted((a, b) => byName(a.exportName, b.exportName))
-					.map((point) => `${point.exportName} as ${localName(point.id)}`)
+				`import { ${[...named]
+					.toSorted(([a], [b]) => byName(a, b))
+					.map(([exported, local]) => `${exported} as ${local}`)
 					.join(", ")} } from "${specifier(file)}";`,
 		);
 }
@@ -332,9 +392,9 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
 		),
 	];
 	const slotCall = ({ module, contribution, point }: (typeof all)[number]) => {
-		const args = `${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)}`;
+		const args = `${pointRef(point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)}`;
 		return point.kind === "form"
-			? `formSlotContribution<typeof ${localName(point.id)}, typeof ${partName(module, point.id)}>(${args})`
+			? `formSlotContribution<typeof ${pointRef(point)}, typeof ${partName(module, point.id)}>(${args})`
 			: `slotContribution(${args})`;
 	};
 
@@ -360,16 +420,16 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
 		`/** The bulk actions the modules add to tables, in registry order. */`,
 		`export const bulkContributions: readonly AnyBulkContribution[] = ${listOf(
 			of("bulk").map(
-				({ module, contribution }) =>
-					`bulkContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
+				({ module, contribution, point }) =>
+					`bulkContribution(${pointRef(point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
 			),
 		)};`,
 		"",
 		`/** The columns the modules add to lists (their definitions and cells), in registry order. */`,
 		`export const columnContributions: readonly ColumnsContribution[] = ${listOf(
 			of("columns").map(
-				({ module, contribution }) =>
-					`columnsContribution(${localName(contribution.point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
+				({ module, contribution, point }) =>
+					`columnsContribution(${pointRef(point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
 			),
 		)};`,
 		"",
@@ -402,8 +462,8 @@ export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[
 		`export function generatedColumnSql(): readonly ColumnSqlContribution[] {`,
 		`\treturn ${listOf(
 			columns.map(
-				({ module, contribution }) =>
-					`{ module: ${JSON.stringify(module.id)}, point: ${localName(contribution.point)}, columns: ${sqlName(module, contribution.point)} }`,
+				({ module, contribution, point }) =>
+					`{ module: ${JSON.stringify(module.id)}, point: ${pointRef(point)}, columns: ${sqlName(module, contribution.point)} }`,
 			),
 		).replaceAll("\n", "\n\t")};`,
 		`}`,

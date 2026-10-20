@@ -14,10 +14,6 @@
 	const orders = listQueries(() => ordersList, getOrders, getOrderFacets);
 </script>
 
-<svelte:head>
-	<title>{m.orders_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.orders_title()} description={m.orders_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/orders/new")}>

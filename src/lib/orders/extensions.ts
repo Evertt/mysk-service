@@ -7,12 +7,13 @@
  * are also there for the pages that show costs, tags and adjustments.
  */
 import {
-	defineBulkTable,
+	bulkRows,
 	defineCollector,
 	defineEvent,
 	defineFormSlot,
+	defineRecordPoints,
 	defineSaveHook,
-	defineSlot,
+	slotProps,
 } from "#lib/extensions/define.ts";
 import type { FormPartsOutput } from "#lib/extensions/form-parts.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
@@ -205,13 +206,12 @@ export const units = defineSaveHook<OrderUnitsSaving, Problem>("orders.units");
 export const form = defineFormSlot<{ order: { id: number } | undefined }>("orders.form");
 
 /**
- * Cards in the side column of an order's page. The components load their own data through their
- * module's remote functions, and render nothing when they have nothing to say.
+ * An order's points: cards in the columns of its page (`detail`), and bulk actions on the orders
+ * list's selection after the list's own (`list.bulk`, e.g. invoicing's "Create invoice", whose
+ * commands are made with `moduleRemote()`). The cards load their own data through their module's
+ * remote functions, and render nothing when they have nothing to say.
  */
-export const detailSide = defineSlot<{ number: string }>("orders.detail.side");
-
-/**
- * Bulk actions on the orders list's selection, after the list's own (e.g. invoicing's "Create
- * invoice"). Their commands are made with `moduleRemote()`.
- */
-export const list = defineBulkTable<OrderBulkRow>("orders.list");
+export const points = defineRecordPoints("orders", {
+	detail: slotProps<{ number: string }>(),
+	bulk: bulkRows<OrderBulkRow>(),
+});

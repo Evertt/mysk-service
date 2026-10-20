@@ -7,7 +7,7 @@
 	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import ToolbarBand, { bandButton } from "#lib/components/toolbar-band.svelte";
 	import { EquipmentTable } from "#lib/equipment/components.ts";
-	import { listColumns } from "#lib/equipment/extensions.ts";
+	import { points } from "#lib/equipment/extensions.ts";
 	import { equipmentList } from "#lib/equipment/index.ts";
 	import {
 		getEquipmentCategories,
@@ -18,7 +18,7 @@
 
 	// The list with the columns of the tenant's modules (e.g. the next maintenance), whose
 	// parameters the URL may hold.
-	const list = $derived(extendList(equipmentList, await loadListColumns(listColumns)));
+	const list = $derived(extendList(equipmentList, await loadListColumns(points.list.columns)));
 	// The server filters, sorts and pages the units, as the URL says (see the orders page).
 	const equipment = listQueries(() => list, getEquipmentList, getEquipmentFacets);
 	const categories = getEquipmentCategories();

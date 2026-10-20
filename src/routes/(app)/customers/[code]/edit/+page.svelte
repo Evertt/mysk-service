@@ -16,10 +16,6 @@
 	let loaded = $state(0);
 </script>
 
-<svelte:head>
-	<title>{m.customers_edit_title({ name: customer.name })} · {m.customers_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.customers_edit_title({ name: customer.name })}
 	description={customer.code}

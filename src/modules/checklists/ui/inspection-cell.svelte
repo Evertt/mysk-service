@@ -7,7 +7,7 @@
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 
-	import type { InspectionValue } from "../columns/equipment.list.ts";
+	import type { InspectionValue } from "../columns/equipment.list.columns.ts";
 	import { inspectionStatusDisplay } from "../display.ts";
 
 	let { value }: { value: InspectionValue } = $props();

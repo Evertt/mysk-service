@@ -1,6 +1,6 @@
 /**
  * The orders list's bulk actions (see `#lib/components/data-table/bulk-actions.ts`): assign an
- * engineer, change the status, delete. The tenant's modules add theirs (`orders.list` in
+ * engineer, change the status, delete. The tenant's modules add theirs (`orders.list.bulk` in
  * `#lib/orders/extensions.ts`), e.g. invoicing's "Create invoice".
  */
 import CircleDotIcon from "@lucide/svelte/icons/circle-dot";

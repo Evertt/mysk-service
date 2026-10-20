@@ -23,10 +23,6 @@
 	]);
 </script>
 
-<svelte:head>
-	<title>{m.bugs_replay_title({ user: report.userName })}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.bugs_replay_title({ user: report.userName })}
 	description={report.context.organization.name}

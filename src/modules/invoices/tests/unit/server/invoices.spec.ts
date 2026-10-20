@@ -13,7 +13,7 @@ import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { deleteOrder, getOrder } from "#lib/orders/order.remote.ts";
-import invoiceBulkActions from "#modules/invoices/bulk-actions/orders.list.ts";
+import invoiceBulkActions from "#modules/invoices/bulk-actions/orders.list.bulk.ts";
 import { invoiceOrders } from "#modules/invoices/bulk.remote.ts";
 import { getCreditNotes } from "#modules/invoices/credit-notes.remote.ts";
 import {

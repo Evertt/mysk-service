@@ -27,10 +27,6 @@
 	const inShop = $derived(data.materials.filter((each) => each.product).length);
 </script>
 
-<svelte:head>
-	<title>{m.shop_products_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.shop_products_title()}
 	description={m.shop_products_description({ count: inShop })}

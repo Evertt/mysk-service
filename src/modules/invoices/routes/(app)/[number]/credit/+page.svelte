@@ -21,11 +21,6 @@
 	const lines = $derived(data.lines.filter((line) => line.left !== 0));
 </script>
 
-<svelte:head>
-	<title>{m.invoices_credit_invoice_title({ number: invoice.number })} · {m.invoices_title()}</title
-	>
-</svelte:head>
-
 <PageHeader
 	title={m.invoices_credit_invoice_title({ number: invoice.number })}
 	description={m.invoices_credit_invoice_description({ customer: invoice.customer.name })}

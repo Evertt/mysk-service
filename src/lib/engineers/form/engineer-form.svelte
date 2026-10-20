@@ -4,14 +4,11 @@
 	`engineer`) an engineer.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
-	import FormActions from "#lib/components/form/form-actions.svelte";
-	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
+	import FormSection from "#lib/components/form/form-section.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
+	import RecordForm from "#lib/components/form/record-form.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { regionOptions, specialtyOptions } from "../display.ts";
@@ -30,101 +27,75 @@
 	} = $props();
 
 	const fields = $derived(form.fields);
-	// What's typed and not saved yet comes back with the page (back button, reload).
-	formSnapshot("engineer", () => form);
 </script>
 
-<form
-	{...form.enhance(async ({ submit }) => {
-		// On success the server redirects to the engineer; otherwise the fields show what's wrong.
-		if (await submitted(submit))
-			toast.success(engineer ? m.engineers_saved() : m.engineers_added());
-	})}
-	class="flex flex-col gap-6"
+<RecordForm
+	{form}
+	record={engineer}
+	snapshot="engineer"
+	submitLabel={engineer ? m.engineers_save() : m.engineers_add()}
+	done={engineer ? m.engineers_saved() : m.engineers_added()}
+	{cancelHref}
 >
-	{#if engineer}
-		<!-- Only the edit form has an id field. -->
-		<input {...(form as typeof updateEngineer).fields.id.as("hidden", String(engineer.id))} />
-	{/if}
+	<FormSection
+		title={m.engineers_form_contact()}
+		description={m.engineers_form_contact_description()}
+	>
+		<TextField
+			field={fields.name}
+			label={m.engineers_field_name()}
+			value={engineer?.name}
+			autocomplete="off"
+			class="md:col-span-2"
+		/>
+		<TextField
+			field={fields.email}
+			label={m.engineers_field_email()}
+			type="email"
+			value={engineer?.email}
+			autocomplete="off"
+		/>
+		<TextField
+			field={fields.phone}
+			label={m.engineers_field_phone()}
+			type="tel"
+			value={engineer?.phone}
+			autocomplete="off"
+		/>
+	</FormSection>
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.engineers_form_contact()}</Card.Title>
-			<Card.Description>{m.engineers_form_contact_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<TextField
-					field={fields.name}
-					label={m.engineers_field_name()}
-					value={engineer?.name}
-					autocomplete="off"
-					class="md:col-span-2"
-				/>
-				<TextField
-					field={fields.email}
-					label={m.engineers_field_email()}
-					type="email"
-					value={engineer?.email}
-					autocomplete="off"
-				/>
-				<TextField
-					field={fields.phone}
-					label={m.engineers_field_phone()}
-					type="tel"
-					value={engineer?.phone}
-					autocomplete="off"
-				/>
-			</Field.FieldGroup>
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.engineers_form_work()}</Card.Title>
-			<Card.Description>{m.engineers_form_work_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<SelectField
-					field={fields.specialty}
-					label={m.engineers_field_specialty()}
-					placeholder={engineer ? undefined : m.engineers_specialty_placeholder()}
-					value={engineer?.specialty}
-					options={specialtyOptions.map(({ value, label }) => ({ value, label }))}
-				/>
-				<SelectField
-					field={fields.region}
-					label={m.engineers_field_region()}
-					placeholder={engineer ? undefined : m.engineers_region_placeholder()}
-					value={engineer?.region}
-					options={regionOptions()}
-				/>
-				<MoneyField
-					field={fields.hourlyRate}
-					label={m.engineers_field_hourly_rate()}
-					cents={engineer?.hourlyRate}
-					description={m.engineers_field_hourly_rate_description()}
-				/>
-				<TextField
-					field={fields.hiredAt}
-					label={m.engineers_field_hired()}
-					type="date"
-					value={engineer?.hiredAt.toString() ?? ""}
-				/>
-				<CheckboxField
-					field={fields.active}
-					label={m.engineers_field_active()}
-					checked={engineer?.active ?? true}
-					description={m.engineers_field_active_description()}
-				/>
-			</Field.FieldGroup>
-		</Card.Content>
-	</Card.Root>
-
-	<FormActions
-		pending={form.pending}
-		submitLabel={engineer ? m.engineers_save() : m.engineers_add()}
-		{cancelHref}
-	/>
-</form>
+	<FormSection title={m.engineers_form_work()} description={m.engineers_form_work_description()}>
+		<SelectField
+			field={fields.specialty}
+			label={m.engineers_field_specialty()}
+			placeholder={engineer ? undefined : m.engineers_specialty_placeholder()}
+			value={engineer?.specialty}
+			options={specialtyOptions.map(({ value, label }) => ({ value, label }))}
+		/>
+		<SelectField
+			field={fields.region}
+			label={m.engineers_field_region()}
+			placeholder={engineer ? undefined : m.engineers_region_placeholder()}
+			value={engineer?.region}
+			options={regionOptions()}
+		/>
+		<MoneyField
+			field={fields.hourlyRate}
+			label={m.engineers_field_hourly_rate()}
+			cents={engineer?.hourlyRate}
+			description={m.engineers_field_hourly_rate_description()}
+		/>
+		<TextField
+			field={fields.hiredAt}
+			label={m.engineers_field_hired()}
+			type="date"
+			value={engineer?.hiredAt.toString() ?? ""}
+		/>
+		<CheckboxField
+			field={fields.active}
+			label={m.engineers_field_active()}
+			checked={engineer?.active ?? true}
+			description={m.engineers_field_active_description()}
+		/>
+	</FormSection>
+</RecordForm>

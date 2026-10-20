@@ -13,10 +13,6 @@
 	const types = $derived(await getOrderTypeSetup());
 </script>
 
-<svelte:head>
-	<title>{m.orders_types_title()} · {m.common_organization_settings()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.orders_types_title()}
 	description={m.orders_types_description()}

@@ -14,7 +14,6 @@
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
-	import HeroBanner, { type HeroChip } from "#lib/components/hero-banner.svelte";
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
 	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
@@ -29,6 +28,7 @@
 	import ConsumptionChart from "#modules/energy/overview/consumption-chart.svelte";
 	import DetailPanel from "#modules/energy/overview/detail-panel.svelte";
 	import DoorCard from "#modules/energy/overview/door-card.svelte";
+	import HeroBanner, { type HeroChip } from "#modules/energy/overview/hero-banner.svelte";
 	import KpiTile from "#modules/energy/overview/kpi-tile.svelte";
 	import SavingsAdvice from "#modules/energy/overview/savings-advice.svelte";
 	import {

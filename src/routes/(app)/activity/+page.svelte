@@ -77,10 +77,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>{m.activity_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.activity_title()} description={m.activity_description()} />
 
 <Card.Root>

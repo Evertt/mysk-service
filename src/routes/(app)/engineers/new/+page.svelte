@@ -6,10 +6,6 @@
 	import { createEngineer } from "#lib/engineers/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.engineers_new()} · {m.engineers_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.engineers_new()}
 	description={m.engineers_new_description()}

@@ -1,3 +1,6 @@
+export { default as ContactCard } from "./detail/contact-card.svelte";
+export { default as CustomerFigures } from "./detail/customer-figures.svelte";
+export { default as EquipmentCard } from "./detail/equipment-card.svelte";
 export { default as PortalAccessCard } from "./detail/portal-access-card.svelte";
 export { default as RecentActivity } from "./detail/recent-activity.svelte";
 export { default as SitesCard } from "./detail/sites-card.svelte";

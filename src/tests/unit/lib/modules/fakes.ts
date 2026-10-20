@@ -11,14 +11,11 @@ import type { Sentence } from "#lib/activity/index.ts";
 import { oneOf } from "#lib/components/data-table/list-definition.ts";
 import { listColumn } from "#lib/components/data-table/module-columns.ts";
 import { cards } from "#lib/dashboard/extensions.ts";
-import {
-	detailSide as equipmentDetailSide,
-	listColumns as equipmentListColumns,
-} from "#lib/equipment/extensions.ts";
+import { points as equipmentPoints } from "#lib/equipment/extensions.ts";
 import { columnsContribution, slotContribution } from "#lib/extensions/define.ts";
 import type { ModuleGraph } from "#lib/modules/graph.ts";
 import type { AppModule, ModuleId } from "#lib/modules/manifests.ts";
-import { detailSide as orderDetailSide } from "#lib/orders/extensions.ts";
+import { points as orderPoints } from "#lib/orders/extensions.ts";
 
 const loader = () => Promise.resolve({ default: {} as Component });
 const sentence =
@@ -86,13 +83,13 @@ export const fakeModules = [gadgets, widgets] as const;
  */
 export const fakeSlotContributions = [
 	slotContribution(cards, gadgets.id, "card", loader),
-	slotContribution(equipmentDetailSide, gadgets.id, "card", loader),
+	slotContribution(equipmentPoints.detail.side, gadgets.id, "card", loader),
 	slotContribution(cards, widgets.id, "card", loader),
-	slotContribution(orderDetailSide, widgets.id, "card", loader),
+	slotContribution(orderPoints.detail.side, widgets.id, "card", loader),
 ];
 
 /** Gizmos' component on an order's page, which never loads. */
-export const gizmosOrderCard = slotContribution(orderDetailSide, gizmos.id, "card", () =>
+export const gizmosOrderCard = slotContribution(orderPoints.detail.side, gizmos.id, "card", () =>
 	Promise.reject(new Error("Failed to fetch dynamically imported module")),
 );
 
@@ -118,10 +115,10 @@ export const widgetsNote = listColumn<string | null>({
 
 /** The fake modules' columns, as `contributions.gen.ts` lists them, in registry order. */
 export const fakeColumnContributions = [
-	columnsContribution(equipmentListColumns, gadgets.id, () =>
+	columnsContribution(equipmentPoints.list.columns, gadgets.id, () =>
 		Promise.resolve({ default: [gadgetsRating] }),
 	),
-	columnsContribution(equipmentListColumns, widgets.id, () =>
+	columnsContribution(equipmentPoints.list.columns, widgets.id, () =>
 		Promise.resolve({ default: [widgetsNote] }),
 	),
 ];

@@ -1,6 +1,6 @@
 /**
  * The SQL of the condition module's columns in the equipment list (see
- * `../../columns/equipment.list.ts`): each unit's latest condition and its status, as
+ * `../../columns/equipment.list.columns.ts`): each unit's latest condition and its status, as
  * `../status-sql.ts` works them out.
  */
 import { sql } from "drizzle-orm";
@@ -8,7 +8,12 @@ import { sql } from "drizzle-orm";
 import { inList } from "#lib/server/db/parameters.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
-import { type ScoreValue, type StatusValue, score, status } from "../../columns/equipment.list.ts";
+import {
+	type ScoreValue,
+	type StatusValue,
+	score,
+	status,
+} from "../../columns/equipment.list.columns.ts";
 import { conditionSql } from "../status-sql.ts";
 
 export default [

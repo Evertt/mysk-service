@@ -1,7 +1,7 @@
 /**
  * A unit's inspection status in SQL, as `inspectionStatus()` in `../model.ts` has it: a correlated
  * subquery for its latest completed inspection (expired, rejected, expiring, valid; none without
- * one). The equipment list's column (`columns/equipment.list.ts`) and the condition module's status
+ * one). The equipment list's column (`columns/equipment.list.columns.ts`) and the condition module's status
  * (`condition.signals`) both read it. Built per request: today is the request's.
  *
  * It binds no parameters: the condition module repeats it many times in one statement, which may

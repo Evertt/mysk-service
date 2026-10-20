@@ -16,10 +16,6 @@
 	const plans = listQueries(() => dueList, getDuePlans, getDueFacets);
 </script>
 
-<svelte:head>
-	<title>{m.maintenance_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.maintenance_title()} description={m.maintenance_description()}>
 	{#snippet actions()}
 		<Button variant="outline" href={resolve("/(app)/(modules)/maintenance/settings")}>

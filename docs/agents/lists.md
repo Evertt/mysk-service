@@ -121,12 +121,12 @@ the definition, one in `ListSql` (if it sorts, groups or filters) and one in the
 ## Modules' columns
 
 See `docs/agents/modules.md`. A list that takes them names its point,
-`defineList({ …, moduleColumns: listColumns })`; its `ListSql` factory returns
+`defineList({ …, moduleColumns: points.list.columns })` (`defineRecordPoints()`); its `ListSql` factory returns
 `withModuleColumns({ … })` (`#lib/server/lists/module-columns.ts`, imported by its path: it imports
 the registry, which imports the modules' files, which import the lists barrel); its rows query adds
 `moduleValues(listSql, ids)` to each row as `moduleValues` (in `enrich`), and its facets query
 `moduleFacets(listSql)`; its page merges the tenant's columns before reading the URL,
-`extendList(list, await loadListColumns(listColumns))`, and gives the merged list to the table,
+`extendList(list, await loadListColumns(points.list.columns))`, and gives the merged list to the table,
 which adds their columns with `withModuleTableColumns()`; the toolbar has their filters from the
 merged list. Such a list's `list.query` and `list.where` let any namespaced column
 (`<module>.<name>`) through, and `planList()` checks the query against the tenant's list

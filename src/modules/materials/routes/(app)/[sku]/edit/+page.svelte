@@ -12,12 +12,6 @@
 	const materialHref = $derived(resolve("/(app)/(modules)/materials/[sku]", { sku: material.sku }));
 </script>
 
-<svelte:head>
-	<title>
-		{m.materials_head_title({ title: m.materials_edit_title({ name: material.name }) })}
-	</title>
-</svelte:head>
-
 <PageHeader
 	title={m.materials_edit_title({ name: material.name })}
 	description={material.sku}

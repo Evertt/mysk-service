@@ -2,7 +2,6 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"contracts_title": "Servicecontracten",
 	"contracts_description": "Onderhoudsafspraken die de apparatuur van klanten dekken, met een gegarandeerde reactietijd.",
-	"contracts_head_title": "{title} · Servicecontracten",
 	"contracts_new": "Nieuw contract",
 	"contracts_new_description": "Spreek onderhoudsdekking af voor de apparatuur van een klant.",
 	"contracts_breadcrumb_new": "Nieuw",
@@ -92,11 +91,6 @@
 			}
 		}
 	],
-	"contracts_company": "Bedrijf",
-	"contracts_contact": "Contactpersoon",
-	"contracts_email": "E-mail",
-	"contracts_phone": "Telefoon",
-	"contracts_location": "Plaats",
 	"contracts_term_days": [
 		{
 			"declarations": [

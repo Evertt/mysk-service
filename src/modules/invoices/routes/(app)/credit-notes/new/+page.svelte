@@ -23,10 +23,6 @@
 	);
 </script>
 
-<svelte:head>
-	<title>{m.invoices_credit_new()} · {m.invoices_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.invoices_credit_new()}
 	description={m.invoices_credit_new_description()}

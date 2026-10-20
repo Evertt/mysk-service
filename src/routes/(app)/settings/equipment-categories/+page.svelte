@@ -13,10 +13,6 @@
 	const categories = $derived(await getCategorySettings());
 </script>
 
-<svelte:head>
-	<title>{m.equipment_categories_title()} · {m.common_organization_settings()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.equipment_categories_title()}
 	description={m.equipment_categories_description()}

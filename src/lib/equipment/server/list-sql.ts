@@ -81,7 +81,7 @@ export const locationRecords = (): RecordSource => ({
 /**
  * The equipment list's columns in SQL, checked against its definition (`equipmentList`). Call it
  * for each request, not at module scope: `inTenant()` reads the request. The columns of the
- * tenant's modules (`listColumns`) are added to it.
+ * tenant's modules (`points.list.columns`) are added to it.
  */
 export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 	// The unit's open orders, whether it's their only unit or one of several.

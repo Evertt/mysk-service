@@ -31,10 +31,6 @@
 	const billable = $derived(customerId ? await getBillable(Number(customerId)) : undefined);
 </script>
 
-<svelte:head>
-	<title>{m.invoices_new()} · {m.invoices_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.invoices_new()}
 	description={m.invoices_new_description()}

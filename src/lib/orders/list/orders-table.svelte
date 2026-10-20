@@ -3,7 +3,7 @@
 	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 	import { extensionBulkActions } from "#lib/extensions/bulk-actions.svelte.ts";
 
-	import { list as bulkTable } from "../extensions.ts";
+	import { points } from "../extensions.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
 	import {
@@ -44,7 +44,7 @@
 	setStatusCellQuery((id) => table.pages.queryOf(id));
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
-	const moduleActions = extensionBulkActions(bulkTable);
+	const moduleActions = extensionBulkActions(points.list.bulk);
 	const actions = $derived([assignEngineer, changeStatus, ...moduleActions.current, deleteOrders]);
 </script>
 

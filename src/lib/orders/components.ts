@@ -1,6 +1,8 @@
 export { default as AcceptanceCard } from "./detail/acceptance-card.svelte";
+export { default as EngineerCard } from "./detail/engineer-card.svelte";
 export { default as EquipmentHistoryCard } from "./detail/equipment-history-card.svelte";
 export { default as OrderLinesCard } from "./detail/order-lines-card.svelte";
+export { default as ScheduleCard } from "./detail/schedule-card.svelte";
 export { default as UnitsCard } from "./detail/units-card.svelte";
 export { default as WorkReport } from "./detail/work-report.svelte";
 export { default as OrderForm } from "./form/order-form.svelte";

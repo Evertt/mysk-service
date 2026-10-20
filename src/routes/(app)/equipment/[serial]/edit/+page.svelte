@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { EquipmentForm } from "#lib/equipment/components.ts";
 	import {
@@ -15,11 +16,9 @@
 
 	const { unit, orderCount } = $derived(await getEquipment(params.serial));
 	const unitHref = $derived(resolve("/(app)/equipment/[serial]", { serial: unit.serialNumber }));
+	// Counts the reloads of the latest version, which start the form afresh.
+	let loaded = $state(0);
 </script>
-
-<svelte:head>
-	<title>{m.equipment_edit_title({ serial: unit.serialNumber })} · {m.equipment_title()}</title>
-</svelte:head>
 
 <PageHeader
 	title={m.equipment_edit_title({ serial: unit.serialNumber })}
@@ -31,10 +30,14 @@
 	]}
 />
 
-<EquipmentForm
-	form={updateEquipment}
-	{unit}
-	{orderCount}
-	options={await getEquipmentFormOptions()}
-	cancelHref={unitHref}
-/>
+<ChangedElsewhere type="equipment" id={unit.id} onreload={() => loaded++} />
+
+{#key loaded}
+	<EquipmentForm
+		form={updateEquipment}
+		{unit}
+		{orderCount}
+		options={await getEquipmentFormOptions()}
+		cancelHref={unitHref}
+	/>
+{/key}
