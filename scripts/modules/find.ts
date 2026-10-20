@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 
-import { readManifestGraph } from "./manifest.ts";
+import { findContributionFiles } from "./extensions.ts";
+import { readManifest } from "./manifest.ts";
 import { byName, type ModuleFolder, walk } from "./shared.ts";
 
 const MODULE_ID = /^[a-z][a-z0-9-]*$/;
@@ -33,33 +34,18 @@ export function discoverModules(root: string, locales: string[]) {
 			walk(join(dir, "messages", locale))
 				.filter((file) => !file.includes("/") && file.endsWith(".json"))
 				.map((file) => file.slice(0, -".json".length));
-		const source = readFileSync(join(dir, "module.ts"), "utf8");
-		const { problems: graphProblems, ...graph } = readManifestGraph(source);
-		for (const problem of graphProblems) problems.push(`src/modules/${id}/module.ts: ${problem}`);
+		const { problems: manifestProblems, ...manifest } = readManifest(
+			readFileSync(join(dir, "module.ts"), "utf8"),
+		);
+		for (const problem of manifestProblems)
+			problems.push(`src/modules/${id}/module.ts: ${problem}`);
 		modules.push({
 			id,
-			declaredId: /\bid:\s*["'`]([^"'`]+)["'`]/.exec(source)?.[1],
-			declaresPortal: /^\s*portal:/m.test(source),
-			declaredPages: [...source.matchAll(/^\s*(route|settings):/gm)].map((match) => match[1]),
-			...graph,
+			...manifest,
 			routeFiles: walk(join(dir, "routes")).filter((file) => posix.basename(file).startsWith("+")),
 			// (The module's specs, test harnesses and end-to-end tests are in its `tests/` folder, which
-			// the generator never reads: only `routes/`, `slots/`, `bulk-actions/`, `form-parts/`, `skeletons/`, `messages/`, ...)
-			slotFiles: walk(join(dir, "slots"))
-				.filter((file) => file.endsWith(".svelte"))
-				.map((file) => `slots/${file}`),
-			bulkFiles: walk(join(dir, "bulk-actions"))
-				.filter((file) => file.endsWith(".ts"))
-				.map((file) => `bulk-actions/${file}`),
-			columnFiles: walk(join(dir, "columns"))
-				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
-				.map((file) => `columns/${file}`),
-			serverColumnFiles: walk(join(dir, "server/columns"))
-				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
-				.map((file) => `server/columns/${file}`),
-			formPartFiles: walk(join(dir, "form-parts"))
-				.filter((file) => file.endsWith(".ts") && !file.endsWith(".spec.ts"))
-				.map((file) => `form-parts/${file}`),
+			// the generator never reads: only `routes/`, the contributions', `skeletons/`, `messages/`, ...)
+			...findContributionFiles(dir),
 			skeletonFiles: walk(join(dir, "skeletons"))
 				.filter((file) => file.endsWith(".svelte"))
 				.map((file) => `skeletons/${file}`),

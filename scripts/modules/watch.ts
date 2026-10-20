@@ -3,11 +3,16 @@ import { relative } from "node:path";
 
 import type { Plugin } from "vite-plus";
 
+import { contributionFolders } from "./extensions.ts";
 import { generateModules } from "./generate.ts";
 
+/** The folders of a module's whose files all are inputs: its routes, skeletons, messages, contributions. */
+const folders = ["routes", "skeletons", "messages", ...contributionFolders].join("|");
+
 /** The files whose coming and going changes what the generator writes. */
-const inputs =
-	/^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|routes(?:\/.*)?|slots(?:\/.*)?|skeletons(?:\/.*)?|bulk-actions(?:\/.*)?|columns(?:\/.*)?|api(?:\/extensions\.ts)?|server(?:\/(?:index\.ts|schema\.ts|seed\.ts|columns(?:\/.*)?))?|messages(?:\/.*)?))?)?$/;
+const inputs = new RegExp(
+	String.raw`^src\/modules(?:\/[^/]+(?:\/(?:module\.ts|api(?:\/extensions\.ts)?|server(?:\/(?:index|schema|seed)\.ts)?|(?:${folders})(?:\/.*)?))?)?$`,
+);
 
 /** The files that declare extension points, whose ids and names the generator reads. */
 const pointFiles = /^src\/(?:lib\/[^/]+|modules\/[^/]+\/api)\/extensions\.ts$/;

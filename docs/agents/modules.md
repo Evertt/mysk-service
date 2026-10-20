@@ -157,8 +157,8 @@ migration committed.
   didn't write, or message sections are missing in a language or not unique.
 - **Dependencies**: `module.ts` may list `requires` (modules it can't work without) and `enhances`
   (modules it only adds to when they're on) as string-literal arrays, and `alwaysOn: true`; the
-  generator reads them with a pattern, and `manifests.spec.ts` compares them with the runtime
-  values. A module whose requirement is off is off everywhere (`effectiveModules()` in
+  generator reads them from the syntax (oxc's AST, `readManifest()` in `scripts/modules/manifest.ts`),
+  and `manifests.spec.ts` compares them with the runtime values. A module whose requirement is off is off everywhere (`effectiveModules()` in
   `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
   The settings page switches a module on together with its requirements and off together with its
   dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a change
@@ -241,7 +241,11 @@ migration committed.
   (an array of `BulkAction`s). The generator lists them in `src/lib/extensions/contributions.gen.ts`
   with `slotContribution()` and `bulkContribution()`, which hold each to its point's types, and
   checks that the point exists and that its owner is core, the module itself, or a module it
-  `requires` or `enhances`. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
+  `requires` or `enhances`. Each kind of contribution file (its folder, the kinds of point it goes
+  to, the file it comes with, its registry) is one row of `contributionKinds` in
+  `scripts/modules/extensions.ts`, which drives the generator's discovery, checks, registries and
+  watcher: a new kind is a row there, its constructor in `#lib/extensions/define.ts`, and
+  `loadContributions()` loads it. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
   contribution's helper components live outside `slots/` (next to the module's other components). A
   slot's component must declare the slot's props (optional is fine): a component without them is
   refused by the type check at a slot that passes props. A record's page renders its slots through

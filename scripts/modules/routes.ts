@@ -1,6 +1,4 @@
-import { parseSync } from "vite-plus";
-
-import type { ModuleFolder } from "./shared.ts";
+import { type ModuleFolder, parseProgram } from "./shared.ts";
 
 export type RouteFileKind = "page" | "layout" | "error" | "script";
 
@@ -90,8 +88,7 @@ export interface RouteExports {
 
 /** The exports of a `+page.ts`, `+server.ts`, …; throws on forms the stubs can't repeat. */
 export function routeExports(file: string, source: string): RouteExports {
-	const { program, errors } = parseSync(file, source, { sourceType: "module" });
-	if (errors.length) throw new Error(`${file}: ${errors[0].message}`);
+	const program = parseProgram(file, source);
 	const names: string[] = [];
 	const literals: Record<string, string> = {};
 	const nameOf = (node: { type: string; name?: string; value?: unknown }) =>

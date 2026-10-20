@@ -42,7 +42,7 @@ interface ModuleParts {
 	actions?: Record<string, Sentence>;
 	/**
 	 * Modules that must be on for this one to be on. Literal ids: the generator reads them from
-	 * `module.ts` with a pattern, and orders the registries by them.
+	 * `module.ts`'s syntax, and orders the registries by them.
 	 */
 	requires?: readonly ModuleId[];
 	/** Modules this one adds to when they're on, but doesn't need. Literal ids, like `requires`. */
