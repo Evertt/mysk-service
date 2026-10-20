@@ -8,7 +8,6 @@ import { unitTitle } from "#lib/equipment/index.ts";
 import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
-import { getUnitComponents } from "./components.remote.ts";
 import { conditionSchema } from "./form/condition-schema.ts";
 import { form, query } from "./remote-functions.ts";
 import { conditionsOf, recordOfficeCondition } from "./server/conditions.ts";
@@ -38,14 +37,9 @@ export const getUnitCondition = query(v.string(), async (serialNumber) => {
 });
 
 /**
- * Records a unit's condition in the office, or one of its components' (`componentId`); refreshes
- * its cards.
+ * Records a unit's condition in the office, or one of its components' (`componentId`), logged on
+ * the unit, which its cards watch (`watchRecord`).
  */
-export const recordCondition = form(
-	conditionSchema,
-	async ({ serialNumber, componentId, ...input }) => {
-		await recordOfficeCondition(serialNumber, input, componentId ?? null);
-		void getUnitCondition(serialNumber).refresh();
-		if (componentId) void getUnitComponents(serialNumber).refresh();
-	},
+export const recordCondition = form(conditionSchema, ({ serialNumber, componentId, ...input }) =>
+	recordOfficeCondition(serialNumber, input, componentId ?? null),
 );

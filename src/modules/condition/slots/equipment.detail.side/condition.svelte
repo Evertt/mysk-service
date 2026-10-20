@@ -7,6 +7,9 @@
 <script lang="ts">
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+
 	import { getUnitCondition } from "../../condition.remote.ts";
 	import ConditionHistory from "../../detail/condition-history.svelte";
 	import RecordDialog from "../../detail/record-dialog.svelte";
@@ -17,6 +20,13 @@
 	let { serialNumber }: { serialNumber: string } = $props();
 
 	const data = $derived(await getUnitCondition(serialNumber));
+	// A number, so a refresh that answers the same unit keeps watching it.
+	const unitId = $derived(data.unit.id);
+	// Logged on the unit: a condition recorded or a component changed, here or elsewhere.
+	refreshOnChange(
+		() => watchRecord({ type: "equipment", id: unitId }),
+		() => getUnitCondition(serialNumber).refresh(),
+	);
 	const latest = $derived(data.history[0] ?? null);
 	let recording = $state(false);
 </script>

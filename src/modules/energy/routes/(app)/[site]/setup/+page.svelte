@@ -4,6 +4,7 @@
 	import { toast } from "svelte-sonner";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -22,7 +23,6 @@
 		deleteEnergyZone,
 		getEnergySetup,
 		saveEnergySite,
-		watchEnergySetup,
 	} from "#modules/energy/setup/setup.remote.ts";
 	import SiteFields from "#modules/energy/setup/site-fields.svelte";
 	import ZoneDialog from "#modules/energy/setup/zone-dialog.svelte";
@@ -32,7 +32,7 @@
 	const siteId = $derived(Number(params.site));
 	const setup = $derived(await getEnergySetup(siteId));
 	refreshOnChange(
-		() => watchEnergySetup(siteId),
+		() => watchRecord({ type: "energy_site", id: siteId }),
 		() => getEnergySetup(siteId).refresh(),
 	);
 	const site = $derived(setup.site);

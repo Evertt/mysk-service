@@ -188,7 +188,7 @@ describe("North's templates, to its owner", () => {
 		const saved = await as(north.owner, () =>
 			submit(saveTemplateCategories, { id: String(added.id), categoryIds: [compressor, pomp] }),
 		);
-		expect(saved).toMatchObject({ status: 200, refreshed: ["getTemplates", "getTemplate"] });
+		expect(saved).toMatchObject({ status: 200 });
 		expect(await categoriesOf(added.id)).toEqual(["Compressor", "Pomp"]);
 		const { uncovered } = await as(north.owner, () => data(getTemplates));
 		expect(uncovered).toEqual([]);
@@ -204,7 +204,6 @@ describe("North's templates, to its owner", () => {
 			]) {
 				expect(await submit(createPoint, { templateId, group, text })).toMatchObject({
 					status: 200,
-					refreshed: ["getTemplates", "getTemplate"],
 				});
 			}
 		});

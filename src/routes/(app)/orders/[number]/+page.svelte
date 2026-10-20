@@ -50,7 +50,7 @@
 		: undefined}
 	subject={{ type: "order", id: order.id }}
 	slots={points.detail}
-	slotProps={{ number: order.number }}
+	slotProps={{ number: order.number, id: order.id }}
 >
 	{#snippet badges()}
 		<EnumBadge display={orderStatusDisplay} value={order.status} />

@@ -9,9 +9,11 @@
 	import { resolve } from "$app/paths";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 
 	import { orderRejected } from "../../api/extensions.ts";
@@ -22,9 +24,14 @@
 	import { progress } from "../../model.ts";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
 
-	let { number }: { number: string } = $props();
+	let { number, id }: { number: string; id: number } = $props();
 
 	const data = $derived(await getOrderChecklists(number));
+	// The order saved with other units, and its checklists completed in the field.
+	refreshOnChange(
+		() => watchRecord({ type: "order", id }),
+		() => getOrderChecklists(number).refresh(),
+	);
 	/** The checklists' rejected points, for the modules that suggest what they need. */
 	const rejected = $derived(
 		data.checklists.flatMap((checklist) =>

@@ -1,26 +1,19 @@
 /**
  * The service contracts module's contributions (see `#lib/server/extensions.ts`): contracts make
  * the work they include free of charge in an order's price, flag orders whose response is at risk,
- * refresh the coverage an order's page shows once it's saved, and offer their monthly fees to
+ * and offer their monthly fees to
  * invoicing, when the tenant has it (contracts enhance invoicing). The rules themselves are in
  * `../coverage.ts` and `../billing.ts`.
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 
 import { formatDate, formatDateTime } from "#lib/i18n/format.ts";
-import {
-	adjustPrices,
-	committed,
-	type OrderFacts,
-	type OrderTag,
-	tag,
-} from "#lib/orders/extensions.ts";
+import { adjustPrices, type OrderFacts, type OrderTag, tag } from "#lib/orders/extensions.ts";
 import { inTenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 import { billableItems } from "#modules/invoices/api/extensions.ts";
 
-import { getOrderCoverage } from "../coverage.remote.ts";
 import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.ts";
 import { contractLabels } from "../labels.ts";
 import { contractMonths, monthlyFee } from "./billing.ts";
@@ -75,10 +68,6 @@ export default defineServerModule("contracts", [
 				return found ? [[order.id, [found]]] : [];
 			}),
 		);
-	}),
-
-	contribute(committed, ({ number }) => {
-		void getOrderCoverage(number).refresh();
 	}),
 
 	// A month's fee for each month of the customer's contracts.

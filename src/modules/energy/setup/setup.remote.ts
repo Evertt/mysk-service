@@ -1,14 +1,13 @@
 /**
  * A site's setup page (`/energy/<site>/setup`), for managers only: its settings, and its zones,
  * consumers and monitored doors to add, edit and delete (`../server/sites.ts`,
- * `../server/parts.ts`). The page watches the site (`watchEnergySetup`), so a change, also
- * another manager's, shows.
+ * `../server/parts.ts`). The page watches the site (`watchRecord`), so a change, also another
+ * manager's, shows.
  */
 import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
 
 import { recordId } from "#lib/schema.ts";
-import { live } from "#lib/server/live.ts";
 
 import { forManagers } from "../remote-functions.ts";
 import {
@@ -31,11 +30,6 @@ import {
 
 /** The site's settings, zones, consumers and doors, and the units at its customer site. */
 export const getEnergySetup = forManagers.query(recordId(), (id) => siteSetup(id));
-
-/** When the site or one of its parts last changed. */
-export const watchEnergySetup = forManagers.query.live(recordId(), (id) =>
-	live({ type: "energy_site", id }),
-);
 
 /** Saves the site's own settings. */
 export const saveEnergySite = forManagers.form(energySiteSchema, ({ energySiteId, ...input }) =>

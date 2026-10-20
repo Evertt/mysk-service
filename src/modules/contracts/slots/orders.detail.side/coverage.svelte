@@ -4,17 +4,24 @@
 	the contract that covered the order and its response deadline. Nothing if no contract did.
 -->
 <script lang="ts">
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import { getOrderCoverage } from "../../coverage.remote.ts";
 	import { contractLevelDisplay, slaStateDisplay } from "../../display.ts";
 	import ContractLink from "../../ui/contract-link.svelte";
 
-	let { number }: { number: string } = $props();
+	let { number, id }: { number: string; id: number } = $props();
 
 	const coverage = $derived(await getOrderCoverage(number));
+	// The order saved with other units or another type.
+	refreshOnChange(
+		() => watchRecord({ type: "order", id }),
+		() => getOrderCoverage(number).refresh(),
+	);
 
 	// The message around the link to the contract, e.g. ["Covered by ", " (Premium)"].
 	const marker = "\u0000";

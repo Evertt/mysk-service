@@ -15,7 +15,6 @@ import { equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 import { articleCheckpoints, articles, checkpoints } from "./api/extensions.ts";
-import { getUnitCondition } from "./condition.remote.ts";
 import { componentIdSchema, componentSchema } from "./form/component-schema.ts";
 import { form, query } from "./remote-functions.ts";
 import {
@@ -116,28 +115,17 @@ export const findArticles = query(v.pipe(v.string(), v.maxLength(100)), async (s
 	};
 });
 
-/** Refreshes what shows a unit's components: their card and the unit's condition card. */
-function refreshUnit(serialNumber: string) {
-	void getUnitComponents(serialNumber).refresh();
-	void getUnitCondition(serialNumber).refresh();
-}
-
-/** Adds a component to a unit, or changes one (with its id). */
+/**
+ * Adds a component to a unit, or changes one (with its id). Like the others below, logged on the
+ * unit, which its cards watch (`watchRecord`).
+ */
 export const saveComponent = form(componentSchema, async ({ serialNumber, id, ...input }) => {
 	const fields = { ...input, materialId: input.materialId ?? null };
-	const saved =
-		id === null ? await addComponent(serialNumber, fields) : await changeComponent(id, fields);
-	refreshUnit(saved.serialNumber);
+	await (id === null ? addComponent(serialNumber, fields) : changeComponent(id, fields));
 });
 
 /** Removes a component, with its conditions. */
-export const removeComponent = form(componentIdSchema, async ({ id }) => {
-	const { serialNumber } = await removeOne(id);
-	refreshUnit(serialNumber);
-});
+export const removeComponent = form(componentIdSchema, ({ id }) => removeOne(id));
 
 /** Moves a component one place up or down among its unit's. */
-export const moveComponent = form(moveSchema, async ({ id, direction }) => {
-	const { serialNumber } = await moveOne(id, direction);
-	void getUnitComponents(serialNumber).refresh();
-});
+export const moveComponent = form(moveSchema, ({ id, direction }) => moveOne(id, direction));

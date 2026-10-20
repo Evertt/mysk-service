@@ -137,7 +137,6 @@ describe("a unit's components, in SHLTR's office", () => {
 		);
 		expect(answer).toMatchObject({
 			status: 200,
-			refreshed: ["getUnitComponents", "getUnitCondition"],
 		});
 		const after = await componentsOf(unit.id);
 		const added = after.at(-1)!;
@@ -249,7 +248,6 @@ describe("a unit's components, in SHLTR's office", () => {
 		);
 		expect(answer).toMatchObject({
 			status: 200,
-			refreshed: ["getUnitCondition", "getUnitComponents"],
 		});
 		const janId = await value<string>(`select id from user where email = ?`, [jan.email]);
 		expect(
@@ -289,7 +287,7 @@ describe("a unit's components, in SHLTR's office", () => {
 		const answer = await as(jan, () =>
 			submit(moveComponent, { id: String(made.id), direction: "up" }),
 		);
-		expect(answer).toMatchObject({ status: 200, refreshed: ["getUnitComponents"] });
+		expect(answer).toMatchObject({ status: 200 });
 		const expected = [...before];
 		[expected[at - 1], expected[at]] = [expected[at], expected[at - 1]];
 		expect((await componentsOf(unit.id)).map((part) => part.number)).toEqual(expected);

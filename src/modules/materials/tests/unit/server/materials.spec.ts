@@ -251,7 +251,6 @@ describe("stock", () => {
 			submit(receiveStock, { id: String(created.id), quantity: 2.25, note: " Delivery 1234 " }),
 		);
 		expect(answer).toMatchObject({ status: 200 });
-		expect(answer.refreshed).toEqual(expect.arrayContaining(["getMaterial", "getSubjectActivity"]));
 		expect((await material(created.sku)).stock).toBeCloseTo(created.stock + 2.25, 2);
 		expect((await movements(created.id))[0]).toEqual({
 			kind: "receipt",

@@ -1,7 +1,6 @@
 import { invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
@@ -9,7 +8,6 @@ import { db } from "#lib/server/db/index.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
 import { countFields, receiveFields } from "../form/material-schema.ts";
-import { getMaterial } from "../material.remote.ts";
 import { fitsUnit, roundQuantity } from "../model.ts";
 import { form } from "../remote-functions.ts";
 import { findMaterial } from "../server/materials.ts";
@@ -35,8 +33,6 @@ export const receiveStock = form(
 				note,
 			});
 		});
-		void getMaterial(existing.sku).refresh();
-		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},
 );
 
@@ -61,7 +57,5 @@ export const countStock = form(
 			const [before, after] = [{ stock: current.stock }, { stock: counted }];
 			await recordActivity(tx, { action: "stock_adjusted", subject, before, after, note });
 		});
-		void getMaterial(existing.sku).refresh();
-		void getSubjectActivity({ type: "material", id: String(id) }).refresh();
 	},
 );

@@ -8,12 +8,20 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+
 	import FieldChecklist from "../../portal/field-checklist.svelte";
 	import { getFieldChecklists } from "../../portal/field-checklists.remote.ts";
 
-	let { number, changed }: { number: string; changed: () => void } = $props();
+	let { number, id, changed }: { number: string; id: number; changed: () => void } = $props();
 
 	const data = $derived(await getFieldChecklists(number));
+	// A checklist completed (here or in another tab), and the order's units changed.
+	refreshOnChange(
+		() => watchRecord({ type: "order", id }),
+		() => getFieldChecklists(number).refresh(),
+	);
 
 	const statuses = $derived(data.checklists.map((checklist) => checklist.status).join());
 	let seen: string | undefined;

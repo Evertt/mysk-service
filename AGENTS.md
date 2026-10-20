@@ -129,7 +129,12 @@ Details and the shared server helpers: `docs/agents/tenancy.md`.
 Every mutation calls `recordActivity(tx, { action, subject, before, after })` inside the
 `db.transaction` that makes it, after the change, so a rolled-back change logs nothing. The log also
 announces the change to live queries, which return `live()` (`src/lib/server/live.ts`; `watchSchedule` and
-`<ChangedElsewhere>` are the examples) and refresh their page with `refreshOnChange()`. Orders, customers and
+`<ChangedElsewhere>` are the examples) and refresh their page with `refreshOnChange()`. A page or card
+that shows one record stays live by it: `refreshOnChange(() => watchRecord({ type, id }), () =>
+getX(key).refresh())` (`#lib/components/activity/activity.remote.ts`; a part is logged with its record as
+its parent, so it counts). So a form or command keeps no list of queries to refresh (a form without one
+refreshes its page; a refresh sent along with a redirect stays), and no `server/` file imports a
+`*.remote.ts` to refresh a card from a hook (`src/tests/unit/live-by-subject.spec.ts`). Orders, customers and
 units are logged by `orderSubject()`, `customerSubject()` and `equipmentSubject()`. Keep outside I/O (mail, `fetch`) out of transactions:
 on Cloudflare a transaction holds every other request. The bells' notifications are log entries
 that rules pick (`#lib/server/notifications/`, a module's through `notifications.rules`): a rule that
