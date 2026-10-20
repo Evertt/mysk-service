@@ -128,11 +128,12 @@ Details and the shared server helpers: `docs/agents/tenancy.md`.
 
 Every mutation calls `recordActivity(tx, { action, subject, before, after })` inside the
 `db.transaction` that makes it, after the change, so a rolled-back change logs nothing. The log also
-announces the change to live queries, which return `live()` (`src/lib/server/live.ts`; `watchSchedule` and
-`<ChangedElsewhere>` are the examples) and refresh their page with `refreshOnChange()`. A page or card
-that shows one record stays live by it: `refreshOnChange(() => watchRecord({ type, id }), () =>
-getX(key).refresh())` (`#lib/components/activity/activity.remote.ts`; a part is logged with its record as
-its parent, so it counts). So a form or command keeps no list of queries to refresh (a form without one
+announces the change to live queries, which return `live()` (`src/lib/server/live.ts`; `watchSchedule` is
+the example) and refresh their page with `refreshOnChange()`. A page or card that shows one record stays
+live by it through its shell's one feed of changes: `refreshOnRecordChange(() => ({ type, id }), () =>
+getX(key).refresh())` (`#lib/components/activity/change-feed.svelte.ts`, in the office and the engineer
+portal; a part is logged with its record as its parent, so it counts). Never a live query per record:
+SvelteKit keeps its stream open until the browser collects it (`docs/upstream-bugs/README.md`, 14). So a form or command keeps no list of queries to refresh (a form without one
 refreshes its page; a refresh sent along with a redirect stays), and no `server/` file imports a
 `*.remote.ts` to refresh a card from a hook (`src/tests/unit/live-by-subject.spec.ts`). Orders, customers and
 units are logged by `orderSubject()`, `customerSubject()` and `equipmentSubject()`. Keep outside I/O (mail, `fetch`) out of transactions:

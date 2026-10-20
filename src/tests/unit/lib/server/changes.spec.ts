@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { announceChange, changedAt, watchChanges, watchSubject } from "#lib/server/changes.ts";
+import {
+	announceChange,
+	changedAt,
+	watchChanges,
+	watchEvery,
+	watchSubject,
+} from "#lib/server/changes.ts";
 
 /** Lets pending promise callbacks run. */
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -82,6 +88,33 @@ describe("watchSubject", () => {
 		announceChange("org-l", "order", { id: "7", action: "updated", user: anna });
 		expect(await changes.next()).toMatchObject({ value: { type: "order", id: "7" } });
 		changes.stop();
+	});
+});
+
+describe("watchEvery", () => {
+	it("yields every record's latest change of a burst, in the order they came", async () => {
+		const changes = watchEvery("org-m", ["order", "customer"]);
+		announceChange("org-m", "order", { id: "1", action: "updated" });
+		announceChange("org-m", "customer", { id: "1", action: "updated" });
+		announceChange("org-m", "order", { id: "1", action: "scheduled" });
+		announceChange("org-m", "order");
+		announceChange("org-m", "engineer", { id: "1" });
+		announceChange("org-n", "order", { id: "2" });
+		const { value } = await changes.next();
+		expect(value?.map(({ type, id, action }) => [type, id, action])).toEqual([
+			["customer", "1", "updated"],
+			["order", "1", "scheduled"],
+			["order", undefined, undefined],
+		]);
+		expect(await Promise.race([changes.next(), tick().then(() => "waiting")])).toBe("waiting");
+		changes.stop();
+	});
+
+	it("ends when stopped, also while waiting", async () => {
+		const changes = watchEvery("org-o", ["order"]);
+		const waiting = changes.next();
+		changes.stop();
+		expect(await waiting).toEqual({ value: undefined, done: true });
 	});
 });
 

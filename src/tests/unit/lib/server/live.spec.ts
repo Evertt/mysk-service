@@ -7,9 +7,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { announceChange } from "#lib/server/changes.ts";
+import type { FeedAnswer } from "#lib/activity/index.ts";
+import { announceChange, type Change } from "#lib/server/changes.ts";
 import type { DurableRequest } from "#lib/server/db/durable.ts";
-import { live, readAt } from "#lib/server/live.ts";
+import { FEED_WINDOW, live, liveFeed, readAt } from "#lib/server/live.ts";
 
 const event = vi.hoisted(() => ({
 	locals: {} as Record<string, unknown>,
@@ -146,6 +147,77 @@ describe("live(watched, answer)", () => {
 	});
 });
 
+describe("liveFeed(types, present)", () => {
+	beforeEach(() => signIn("org-feed"));
+
+	/** A change as the specs present it: its record and what was done. */
+	const shown = (change: Change) => ({
+		type: change.type,
+		id: change.id ?? null,
+		at: change.at,
+		action: change.action,
+	});
+	const all = (changes: Change[]) => changes.map(shown);
+	/** An answer's records, as `type/id`. */
+	const records = (answer: IteratorResult<FeedAnswer<ReturnType<typeof shown>>, void>) =>
+		answer.done ? undefined : answer.value.changes.map((change) => `${change.type}/${change.id}`);
+
+	test("answers no changes at first, then each burst's of its types, as `present` makes them", async () => {
+		vi.useFakeTimers({ now: 3_000_000, toFake: ["Date"] });
+		announceChange("org-feed", "order", { id: "1" });
+		const answers = liveFeed(["order"], all);
+		expect((await answers.next()).value).toEqual({ since: 3_000_000, now: 3_000_000, changes: [] });
+
+		vi.setSystemTime(3_000_010);
+		const pending = answers.next();
+		announceChange("org-feed", "order", { id: "2" });
+		announceChange("org-feed", "energy_reading");
+		announceChange("org-elsewhere", "order", { id: "3" });
+		const answer = await pending;
+		expect(answer.value).toMatchObject({ since: 3_000_000, now: 3_000_010 });
+		expect(records(answer)).toEqual(["order/2"]);
+	});
+
+	test("repeats the changes of its window, the latest of each record, then lets them go", async () => {
+		vi.useFakeTimers({ now: 4_000_000, toFake: ["Date"] });
+		const answers = liveFeed(["order", "customer", "engineer"], all);
+		await answers.next();
+		announceChange("org-feed", "order", { id: "1", action: "updated" });
+		expect(records(await answers.next())).toEqual(["order/1"]);
+
+		vi.setSystemTime(4_000_000 + FEED_WINDOW - 1);
+		announceChange("org-feed", "customer", { id: "1", action: "updated" });
+		announceChange("org-feed", "order", { id: "1", action: "scheduled" });
+		const both = await answers.next();
+		expect(records(both)).toEqual(["customer/1", "order/1"]);
+		expect(both.value?.changes[1]).toMatchObject({ action: "scheduled" });
+
+		vi.setSystemTime(4_000_000 + 2 * FEED_WINDOW);
+		announceChange("org-feed", "engineer", { id: "1", action: "updated" });
+		expect(records(await answers.next())).toEqual(["engineer/1"]);
+	});
+
+	test("answers nothing for a burst `present` leaves nothing of", async () => {
+		const answers = liveFeed(["order"], (changes) =>
+			all(changes.filter((change) => change.id === "mine")),
+		);
+		await answers.next();
+		const pending = answers.next();
+		announceChange("org-feed", "order", { id: "theirs" });
+		expect(await nextOf(answers, pending)).toBe("waiting");
+		announceChange("org-feed", "order", { id: "mine" });
+		expect(records(await pending)).toEqual(["order/mine"]);
+	});
+
+	test("stops when its request ends", async () => {
+		const answers = liveFeed(["order"], all);
+		await answers.next();
+		const waiting = answers.next();
+		request.abort();
+		expect(await waiting).toEqual({ value: undefined, done: true });
+	});
+});
+
 describe("when its request ends", () => {
 	beforeEach(() => signIn("org-end"));
 
@@ -166,23 +238,7 @@ describe("when its request ends", () => {
 	});
 });
 
-describe("readAt", () => {
-	beforeEach(() => signIn("org-read"));
-
-	test("is when the types last changed, or a millisecond before in that same millisecond", () => {
-		vi.useFakeTimers({ now: 1_000_000 });
-		expect(readAt(["order"])).toBe(0);
-		announceChange("org-read", "order");
-		expect(readAt(["order", "customer"])).toBe(999_999);
-		vi.setSystemTime(1_000_005);
-		expect(readAt(["order"])).toBe(1_000_000);
-	});
-
-	test("is when one record last changed, by its id", () => {
-		vi.useFakeTimers({ now: 2_000_000 });
-		announceChange("org-read", "order", { id: "9" });
-		vi.setSystemTime(2_000_005);
-		expect(readAt({ type: "order", id: 9 })).toBe(2_000_000);
-		expect(readAt({ type: "order", id: 10 })).toBe(0);
-	});
+test("readAt is a millisecond before now, so a change in the same millisecond counts", () => {
+	vi.useFakeTimers({ now: 1_000_000 });
+	expect(readAt()).toBe(999_999);
 });

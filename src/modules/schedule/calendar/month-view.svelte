@@ -22,11 +22,11 @@
 	const days = $derived(groupByDay(schedule.orders));
 	const names = $derived(new Map(schedule.engineers.map((e) => [e.id, e.name])));
 
-	// Its first answer too, if it's later than the month's (`changedAt`): see the board's.
+	// Its first answer too, if it's later than the month's read (`readAt`): see the board's.
 	refreshOnChange(
 		watchSchedule,
 		() => getScheduleMonth(schedule.month.toString()).refresh(),
-		() => schedule.changedAt,
+		() => schedule.readAt,
 	);
 </script>
 

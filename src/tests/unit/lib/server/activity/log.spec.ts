@@ -10,6 +10,7 @@ import {
 	recordActivity,
 } from "#lib/server/activity/log.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
+import { watchSubject } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
@@ -181,6 +182,26 @@ describe("recordActivity", () => {
 		const [entry, ...rest] = await log();
 		expect(rest).toEqual([]);
 		expect(entry.changes).toEqual({ status: ["scheduled", "in_progress"], engineerId: [null, 3] });
+	});
+
+	test("announces a part's change to its parent as an update of it, once committed", async () => {
+		const site = watchSubject("north", { type: "site", id: "3" });
+		const owner = watchSubject("north", { type: "customer", id: "7" });
+		try {
+			await record({
+				action: "deleted",
+				subject: { type: "site", id: 3, label: "Depot" },
+				parent: { type: "customer", id: 7, label: "CUST-0007" },
+			});
+			expect((await site.next()).value).toMatchObject({ action: "deleted" });
+			expect((await owner.next()).value).toMatchObject({
+				action: "updated",
+				user: { id: "u1", name: "Avery Admin" },
+			});
+		} finally {
+			site.stop();
+			owner.stop();
+		}
 	});
 
 	test("logs nothing when the transaction is rolled back", async () => {

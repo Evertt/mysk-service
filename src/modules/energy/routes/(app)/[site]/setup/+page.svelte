@@ -4,12 +4,11 @@
 	import { toast } from "svelte-sonner";
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
-	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatKw } from "#modules/energy/display.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
@@ -31,8 +30,8 @@
 
 	const siteId = $derived(Number(params.site));
 	const setup = $derived(await getEnergySetup(siteId));
-	refreshOnChange(
-		() => watchRecord({ type: "energy_site", id: siteId }),
+	refreshOnRecordChange(
+		() => ({ type: "energy_site", id: siteId }),
 		() => getEnergySetup(siteId).refresh(),
 	);
 	const site = $derived(setup.site);

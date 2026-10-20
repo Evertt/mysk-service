@@ -169,8 +169,8 @@ describe("the live query's first answer", () => {
 	});
 
 	/** Whether a board that read `week` would ask for it again on the live query's first answer. */
-	const outdates = async (week: { changedAt: number }) =>
-		(await as(north.member, () => data(watchSchedule))) > week.changedAt;
+	const outdates = async (week: { readAt: number }) =>
+		(await as(north.member, () => data(watchSchedule))) > week.readAt;
 
 	test("is later than the board's for a change after the read, also in the same millisecond", async () => {
 		vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);

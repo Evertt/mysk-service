@@ -50,7 +50,7 @@ export const getFieldCondition = forEngineers.query(unitOnOrder, async (input) =
 
 /**
  * Gives the condition a unit's checklist gave it the engineer's advice, while the order is in
- * progress; logged on the unit, which the card watches (`watchRecord`).
+ * progress; logged on the unit, which the card watches (`refreshOnRecordChange()`).
  */
 export const adviseFieldConditionForm = forEngineers.form(
 	v.object({

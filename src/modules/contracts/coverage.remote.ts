@@ -25,8 +25,8 @@ import { contract, contractEquipment } from "./server/schema.ts";
 const EXPIRING_DAYS = 60;
 
 /**
- * The contract that covered an order and its response deadline (`null` if none did), and when the
- * order last changed as it was read (`readAt()`, for its card's `refreshOnChange()`).
+ * The contract that covered an order and its response deadline (`null` if none did), and when it
+ * was read (`readAt()`, for its card's `refreshOnRecordChange()`).
  */
 export const getOrderCoverage = query(v.string(), async (number) => {
 	const found = await orderByNumber(number, {
@@ -36,7 +36,7 @@ export const getOrderCoverage = query(v.string(), async (number) => {
 		createdAt: order.createdAt,
 	});
 
-	const readTime = readAt({ type: "order", id: found.id });
+	const readTime = readAt();
 	const coverage = (await coverageOf(await withUnitIds([found]))).get(found.id);
 	return {
 		readAt: readTime,

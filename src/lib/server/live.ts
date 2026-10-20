@@ -12,13 +12,14 @@
  */
 import { getRequestEvent } from "$app/server";
 
-import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
+import { type ChangeType, type FeedAnswer, isGone, type LoggedType } from "#lib/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import {
 	type Change,
 	changedAt,
 	recordChangedAt,
 	watchChanges,
+	watchEvery,
 	watchSubject,
 } from "#lib/server/changes.ts";
 import { inThisRequest } from "#lib/server/db/index.ts";
@@ -54,16 +55,76 @@ export function live(
 		"type" in watched
 			? watchSubject(organizationId, { type: watched.type, id: String(watched.id) })
 			: watchChanges(organizationId, watched);
+	return answering(changes, answer ?? answerWhen(organizationId, watched));
+}
+
+/** How long a change stays in `liveFeed()`'s answers (ms). */
+export const FEED_WINDOW = 10_000;
+
+/** A change as a feed presents it: its record, and when it was made. */
+interface FeedChange {
+	type: string;
+	id: string | null;
+	at: number;
+}
+
+/**
+ * Every change to the current tenant's records of `types`, for the one live query a tab shares
+ * (`watchTenantChanges`, `watchFieldChanges`): no changes at first, then after each burst, as
+ * `present` makes them of its changes (leaving out those the user mustn't hear of: a burst with
+ * none left answers nothing). An answer repeats the changes of the last `FEED_WINDOW` ms, so a
+ * client that reads only the latest answer (a live query's `current`) misses none that came in
+ * quick succession; it tells them apart by when they were made.
+ */
+export function liveFeed<T extends FeedChange>(
+	types: readonly ChangeType[],
+	present: (changes: Change[]) => T[] | Promise<T[]>,
+): AsyncGenerator<FeedAnswer<T>, void> {
+	const { organizationId } = currentTenant();
+	const since = Date.now();
+	/** The changes in the window, by record, oldest first. */
+	const recent = new Map<string, T>();
+	return answering(watchEvery(organizationId, types), async (batch) => {
+		const presented = batch ? await present(batch) : [];
+		if (batch && !presented.length) return skip;
+		const now = Date.now();
+		for (const change of presented) {
+			const key = `${change.type}/${change.id ?? ""}`;
+			recent.delete(key);
+			recent.set(key, change);
+		}
+		for (const [key, change] of recent) {
+			if (change.at >= now - FEED_WINDOW) break;
+			recent.delete(key);
+		}
+		return { since, now, changes: [...recent.values()] };
+	});
+}
+
+/** What a live query's `respond` returns to answer nothing this time (`answering()`). */
+const skip = Symbol("skip");
+
+/**
+ * What every live query does with what it watches (`changes`): answers at first, then after each
+ * change, inside the request; stops watching when the request ends.
+ */
+function answering<C, T>(
+	changes: AsyncGenerator<C, void> & { stop: () => void },
+	respond: (change: C | null) => T | typeof skip | Promise<T | typeof skip>,
+): AsyncGenerator<Awaited<T>, void> {
 	const event = getRequestEvent();
 	event.request.signal.addEventListener("abort", changes.stop, { once: true });
 	// How long the stream was open, with `TIMING_LOGS` (`#lib/server/logs/timing.ts`).
 	const closed = timeLiveStream(event);
 	const again = inThisRequest();
-	const respond = answer ?? answerWhen(organizationId, watched);
 	return (async function* () {
 		try {
-			yield await respond(null);
-			for await (const change of changes) yield await again(() => respond(change));
+			// The first answer is never skipped.
+			yield (await respond(null)) as Awaited<T>;
+			for await (const change of changes) {
+				const answer = await again(() => respond(change));
+				if (answer !== skip) yield answer as Awaited<T>;
+			}
 		} finally {
 			changes.stop();
 			closed();
@@ -77,23 +138,15 @@ function answerWhen(organizationId: string, watched: Watched) {
 	const record = { type: watched.type, id: String(watched.id) };
 	let at = recordChangedAt(organizationId, record);
 	return (change: Change | null) => {
-		if (change && change.action !== "deleted" && change.action !== "removed") at = change.at;
+		if (change && !isGone(change.action)) at = change.at;
 		return at;
 	};
 }
 
 /**
- * When the tenant's records of `types` (or one record) last changed, for a query's data to carry, so its page can
- * tell whether its live query's first answer is newer than the data (`refreshOnChange()`'s read
- * time). Changes are timed in milliseconds, so one in this millisecond reads a millisecond earlier:
- * another change in the same millisecond, after the read, still counts as newer. That asks once
- * too many when there's none, which takes reading in the millisecond of a change.
+ * When a query's data was read (epoch ms, the server's clock), for the data to carry, so its page
+ * can tell a change made after the read (`refreshOnChange()`'s and `onRecordChange()`'s read time):
+ * one timed later is news. A millisecond earlier, so a change in the same millisecond, after the
+ * read, still counts; that asks once too many for one before the read in that millisecond.
  */
-export function readAt(watched: Watched) {
-	const { organizationId } = currentTenant();
-	const changed =
-		"type" in watched
-			? recordChangedAt(organizationId, { type: watched.type, id: String(watched.id) })
-			: changedAt(organizationId, watched);
-	return changed && changed >= Date.now() ? changed - 1 : changed;
-}
+export const readAt = () => Date.now() - 1;

@@ -6,6 +6,8 @@
 	import { type Component, onMount } from "svelte";
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
+	import { watchTenantChanges } from "#lib/components/activity/activity.remote.ts";
+	import { provideChangeFeed } from "#lib/components/activity/change-feed.svelte.ts";
 	import { showRecordPreviews } from "#lib/components/record-link/previews.ts";
 
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
@@ -21,6 +23,9 @@
 
 	// The office's links to orders, customers, units and engineers show a hover card of the record.
 	showRecordPreviews();
+
+	// One feed of the tenant's changes for the tab, which the pages' records follow.
+	provideChangeFeed(watchTenantChanges);
 
 	const orderTypes = useTenantOrderTypes();
 

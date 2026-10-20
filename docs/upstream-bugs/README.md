@@ -309,3 +309,71 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Reproduction:** not cut down yet. Likely: a page `[id]` with `$derived(await getThing(id))`, a
   link to it preloaded on hover, and a component outside the page that awaits `getThing(id)` after
   the preload started: its `then` rejects, or it never commits.
+
+## 14. SvelteKit: a live query's connection stays open until its proxy is garbage-collected
+
+- **Versions:** @sveltejs/kit 3.0.0 (the client's `remote-functions/` are the same in 3.1.0),
+  svelte 5.57.1.
+- **What happens:** a `query.live` read by a component (`watchRecord(...).current`) keeps its
+  `text/event-stream` request open after a client-side navigation has destroyed that component,
+  until the browser happens to collect garbage: seconds, or minutes on an idle page. Coming back
+  before that reuses the open stream. With HTTP/1.1 (`vp dev` and `vp preview` here), the
+  browser's six connections per origin fill up after a few record pages, and every later request
+  queues behind them, the next page's own data too, until a collection frees one.
+- **Cause:** the live-query cache evicts an entry, which aborts its connection (`LiveQuery#destroy()`
+  → `#interrupt()`), only when its `proxy_count` reaches 0 (`CacheController.deref()` in
+  `runtime/client/remote-functions/cache.svelte.js`). Every `LiveQueryProxy` adds one to it in its
+  constructor and gives it back from a `FinalizationRegistry` callback when the proxy is collected
+  (`cache.ref()`). `pin_in_effect()` only adds a reference while an effect awaits the proxy
+  (`then`/`catch`/`finally`); `.current` reads add none. So nothing ends the connection when the
+  last effect reading it is destroyed: that's left to the collector. For a plain `query` that
+  only keeps memory; for `query.live` it keeps a connection (and on the server, a request and
+  whatever the generator holds).
+- **Evidence:** `kit-live-query-closes-on-gc/` (run on a production build, `vp preview`, SHLTR's
+  planner):
+  - `order-unit-back.json`: order → its unit → back. 3 s on the unit, the order's
+    `watchRecord`/`watchRecordChanges` were still open; a forced collection aborted both at once
+    (`how: "abort"`). Back on the order, the same for the unit's.
+  - `distinct-orders.json`: seven orders in a row by client-side navigation, no forced collection.
+    From the third on, six streams are open (`watchShell` and the earlier orders') and the
+    current order's `getOrder` waits for a connection: each page took 5 s to go quiet (the e2e
+    helper's limit) while its own `getOrder`s piled up unanswered. A forced collection let the
+    `getOrder`s through, then the streams of the orders already left took the freed connections
+    (presumably their pages were still referenced by the navigations that had waited); a second one let the
+    current order's streams in.
+- **Not our code:** the server stops on abort (`src/lib/server/live.ts` listens to the request's
+  signal), and `refreshOnChange()` keeps the proxy only in a `$derived` of the component. Two
+  components asking for the same record share one stream, as they should.
+- **Workaround:** the public API has no way to close a live query (the `pagehide`/`offline`
+  listeners close every live query, the page's own too), so the app has no live query per record:
+  each shell has one feed of the tenant's changes (the office's `watchTenantChanges`, the engineer
+  portal's `watchFieldChanges`, keys that never change), and components subscribe to their record
+  in it for as long as they're mounted (`src/lib/components/activity/change-feed.ts`).
+  `orders.live.test.ts` checks that going from record to record opens no stream. The live queries
+  of a whole type (`watchSchedule`, `watchEnergy`, the portals' `watchMyWork` and `watchPortal`)
+  still stay open after their page until a collection, one each at most.
+- **Expected / possible fix:** a live query's connection follows the effects that read it: when
+  the last one is destroyed, interrupt the connection (after a tick, so a navigation that reads it
+  again keeps it), keep the entry and its last value, and connect again on the next read. E.g.
+  count effect readers in `LiveQueryProxy`'s getters as `pin_in_effect()` does for `then`, and
+  have the live cache interrupt (not evict) at zero.
+- **Reproduction:** not cut down yet. Likely: a page with `{watch().current}`, where `watch` is a
+  `query.live` whose generator yields once and then waits; a link to another page. Follow the link
+  and the stream stays open in the network panel until DevTools' "Collect garbage"; on HTTP/1.1,
+  follow links to six differently-keyed copies and the seventh page's data never loads.
+
+## 15. SvelteKit: a batch query asked twice for one argument in a task sends an empty batch too
+
+- **Versions:** @sveltejs/kit 3.0.0 (`runtime/client/remote-functions/query-batch.svelte.js`, the
+  same in 3.1.0).
+- **What happens:** two calls of a `query.batch` with the same argument in one macrotask (two
+  components refreshing the same query, e.g. `getRecordChangedAt(order)` from two cards of one
+  order) send two POSTs: the batch with that argument, and a second with `{"payloads":[]}`.
+- **Cause:** the function schedules the request when `batching.size` is 1 after adding the call
+  (`if (batching.size > 1) return;`). A second call with the same payload leaves the size at 1, so
+  it schedules another `setTimeout`, which finds the map already sent and emptied.
+- **Fix (not patched):** schedule only when the map was empty before the call, e.g. check
+  `batching.size === 0` before `batching.set()`.
+- **Workaround:** `ChangeFeed` (`src/lib/components/activity/change-feed.ts`) asks once per record.
+- **Reproduction:** a component that calls `getThing(1).refresh()` twice in one handler: the network
+  panel shows the empty POST.

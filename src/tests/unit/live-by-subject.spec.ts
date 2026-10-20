@@ -1,6 +1,6 @@
 /**
- * A page stays up to date by the records it shows, live (`refreshOnChange()` on a live query, by
- * subject `watchRecord`): the server's own code (every `server/` folder and `*.server.ts`) never
+ * A page stays up to date by the records it shows, live (`refreshOnChange()` on a live query, or
+ * by record, `refreshOnRecordChange()`): the server's own code (every `server/` folder and `*.server.ts`) never
  * imports a remote file to refresh a query from a hook or a service. The exceptions below say why.
  */
 import { readdirSync, readFileSync } from "node:fs";

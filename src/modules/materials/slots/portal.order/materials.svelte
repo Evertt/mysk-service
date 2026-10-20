@@ -4,8 +4,7 @@
 	which they can change while the job is in progress.
 -->
 <script lang="ts">
-	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 
 	import { formatQuantity } from "../../display.ts";
 	import FieldMaterialsForm from "../../portal/field-materials-form.svelte";
@@ -15,8 +14,8 @@
 
 	const data = $derived(await getFieldMaterials(number));
 	// The order's lines saved, here or by the office.
-	refreshOnChange(
-		() => watchRecord({ type: "order", id }),
+	refreshOnRecordChange(
+		() => ({ type: "order", id }),
 		() => getFieldMaterials(number).refresh(),
 	);
 </script>

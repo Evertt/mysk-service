@@ -8,8 +8,7 @@
 <script lang="ts">
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
-	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 
 	import { getUnitComponents } from "../../components.remote.ts";
 	import ComponentDialog from "../../detail/component-dialog.svelte";
@@ -22,8 +21,8 @@
 	// A number, so a refresh that answers the same unit keeps watching it.
 	const unitId = $derived(data.unit.id);
 	// Logged on the unit: a component changed or a condition recorded, here or elsewhere.
-	refreshOnChange(
-		() => watchRecord({ type: "equipment", id: unitId }),
+	refreshOnRecordChange(
+		() => ({ type: "equipment", id: unitId }),
 		() => getUnitComponents(serialNumber).refresh(),
 	);
 

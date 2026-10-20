@@ -3,7 +3,7 @@
  * changed field (and nothing for a refused or empty save), an order's status and its lines
  * against it (and nothing for a change refused for want of stock); the feed filtered by record
  * type, user, days and one record with its parts; South seeing none of it, also by North's ids;
- * and the changes announced to a record's open pages (`watchRecordChanges`). The server side of
+ * and the changes announced to a record's open pages (`watchTenantChanges`). The server side of
  * `src/tests/e2e/activity.test.ts` and `orders.live.test.ts`, which keep the feed, the cards and
  * the live notice.
  */
@@ -12,9 +12,10 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 import {
 	getActivity,
 	getRecentActivity,
+	getRecordChangedAt,
 	getSubjectActivity,
 	watchActivity,
-	watchRecordChanges,
+	watchTenantChanges,
 } from "#lib/components/activity/activity.remote.ts";
 import { updateCustomer } from "#lib/customers/customers.remote.ts";
 import { updateOrder } from "#lib/orders/order.remote.ts";
@@ -312,19 +313,31 @@ describe("a record's open pages", () => {
 		}
 	});
 
-	test("start with nothing for the tenant's record, and are a 404 for another tenant's", async () => {
+	test("share a feed of the tenant's changes, which starts with none", async () => {
+		const { since, now, changes } = await as(north.member, () => data(watchTenantChanges));
+		expect(changes).toEqual([]);
+		expect(now).toBeGreaterThanOrEqual(since);
+	});
+
+	test("can ask when the tenant's record last changed, but not another tenant's", async () => {
 		const theirs = await value<number>(
 			`select id from "order" where organization_id = ? order by id limit 1`,
 			[southId],
 		);
+		const before = Date.now();
+		announceChange(southId, "order", { id: String(theirs) });
+		announceChange(northId, "order", { id: String(fromNorth.order) });
 		await as(north.owner, async () => {
-			expect(await call(watchRecordChanges, { type: "order", id: fromNorth.order })).toEqual({
-				status: 200,
-				data: null,
-			});
-			expect(await call(watchRecordChanges, { type: "order", id: theirs })).toMatchObject({
-				status: 404,
-			});
+			expect(
+				await data(getRecordChangedAt, { type: "order", id: fromNorth.order }),
+			).toBeGreaterThanOrEqual(before);
+			expect(await data(getRecordChangedAt, { type: "order", id: theirs })).toBe(0);
+		});
+	});
+
+	test("are the office's: a field engineer gets no feed", async () => {
+		expect(await as(north.engineer, () => call(watchTenantChanges))).toMatchObject({
+			status: 403,
 		});
 	});
 });

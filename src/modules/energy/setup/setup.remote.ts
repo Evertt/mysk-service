@@ -1,7 +1,7 @@
 /**
  * A site's setup page (`/energy/<site>/setup`), for managers only: its settings, and its zones,
  * consumers and monitored doors to add, edit and delete (`../server/sites.ts`,
- * `../server/parts.ts`). The page watches the site (`watchRecord`), so a change, also another
+ * `../server/parts.ts`). The page watches the site (`refreshOnRecordChange()`), so a change, also another
  * manager's, shows.
  */
 import { resolve } from "$app/paths";
