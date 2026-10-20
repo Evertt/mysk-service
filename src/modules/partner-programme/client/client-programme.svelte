@@ -8,9 +8,8 @@
 <script lang="ts">
 	import { Tabs } from "bits-ui";
 
-	import { formatCents } from "#lib/i18n/index.ts";
+	import { formatCents, formatPercent, formatWholeEuros } from "#lib/i18n/index.ts";
 
-	import { formatEuros, formatRate } from "../display.ts";
 	import { partnerLabels } from "../labels.ts";
 	import { atRate, type CategoryRule, type Tier } from "../model.ts";
 
@@ -80,14 +79,16 @@
 					<Table.Body>
 						{#each rules.tiers as tier (tier.level)}
 							<Table.Row data-tier={tier.level}>
-								<Table.Cell class="tabular-nums">{formatEuros(tier.threshold)}</Table.Cell>
+								<Table.Cell class="tabular-nums">{formatWholeEuros(tier.threshold)}</Table.Cell>
 								<Table.Cell class="font-medium">{tier.level}</Table.Cell>
-								<Table.Cell class="text-right tabular-nums">{formatRate(tier.cashRate)}</Table.Cell>
+								<Table.Cell class="text-right tabular-nums"
+									>{formatPercent(tier.cashRate, { basis: "basisPoints" })}</Table.Cell
+								>
 								<Table.Cell class="text-right tabular-nums">
 									{formatCents(atRate(tier.threshold, tier.cashRate))}
 								</Table.Cell>
 								<Table.Cell class="text-right tabular-nums"
-									>{formatRate(tier.creditRate)}</Table.Cell
+									>{formatPercent(tier.creditRate, { basis: "basisPoints" })}</Table.Cell
 								>
 								<Table.Cell class="text-right tabular-nums">
 									{formatCents(atRate(tier.threshold, tier.creditRate))}

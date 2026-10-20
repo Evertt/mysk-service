@@ -9,7 +9,6 @@ import {
 	doorAlertDue,
 	doorBand,
 	doorOpenFor,
-	formatDuration,
 	initialFacts,
 	type SessionFacts,
 } from "#modules/docks/model.ts";
@@ -181,13 +180,5 @@ describe("dockFigures", () => {
 			doorsOpen: 2,
 			longestOpen: 61 * 60,
 		});
-	});
-
-	test("formatDuration reads mm:ss below an hour, as the mockup's timers, else h:mm:ss", () => {
-		expect(formatDuration(0)).toBe("00:00");
-		expect(formatDuration(23 * 60 + 40)).toBe("23:40");
-		expect(formatDuration(41 * 60 + 7)).toBe("41:07");
-		expect(formatDuration(3600 + 27 * 60 + 20)).toBe("1:27:20");
-		expect(formatDuration(3 * 3600 + 5)).toBe("3:00:05");
 	});
 });

@@ -4,9 +4,8 @@
 	at the threshold, and the revenue that counts.
 -->
 <script lang="ts">
-	import { formatCents } from "#lib/i18n/index.ts";
+	import { formatCents, formatPercent, formatWholeEuros } from "#lib/i18n/index.ts";
 
-	import { formatEuros, formatRate } from "../display.ts";
 	import { partnerLabels } from "../labels.ts";
 	import { atRate, type ProgrammeRules } from "../model.ts";
 	import LevelBadge from "../ui/level-badge.svelte";
@@ -35,13 +34,17 @@
 				<Table.Body>
 					{#each rules.tiers as tier (tier.level)}
 						<Table.Row>
-							<Table.Cell class="tabular-nums">{formatEuros(tier.threshold)}</Table.Cell>
+							<Table.Cell class="tabular-nums">{formatWholeEuros(tier.threshold)}</Table.Cell>
 							<Table.Cell><LevelBadge level={tier.level} colour={tier.colour} /></Table.Cell>
-							<Table.Cell class="text-right tabular-nums">{formatRate(tier.cashRate)}</Table.Cell>
+							<Table.Cell class="text-right tabular-nums"
+								>{formatPercent(tier.cashRate, { basis: "basisPoints" })}</Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">
 								{formatCents(atRate(tier.threshold, tier.cashRate))}
 							</Table.Cell>
-							<Table.Cell class="text-right tabular-nums">{formatRate(tier.creditRate)}</Table.Cell>
+							<Table.Cell class="text-right tabular-nums"
+								>{formatPercent(tier.creditRate, { basis: "basisPoints" })}</Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">
 								{formatCents(atRate(tier.threshold, tier.creditRate))}
 							</Table.Cell>

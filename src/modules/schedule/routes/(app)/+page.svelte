@@ -8,11 +8,10 @@
 
 	import ToolbarBand, { bandButton } from "#lib/components/toolbar-band.svelte";
 	import { currentDay, dayOf, mondayOf } from "#lib/dates.ts";
-	import { formatNumber } from "#lib/i18n/index.ts";
-	import { formatLongDay, formatWeek } from "#modules/schedule/board/board.ts";
+	import { formatLongDay, formatMonth, formatNumber } from "#lib/i18n/index.ts";
+	import { formatWeek } from "#modules/schedule/board/board.ts";
 	import ScheduleBoard from "#modules/schedule/board/schedule-board.svelte";
 	import {
-		formatMonth,
 		inMonth,
 		periodOf,
 		type ScheduleView,

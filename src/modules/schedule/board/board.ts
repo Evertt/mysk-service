@@ -28,13 +28,9 @@ export const weekDays = (start: Temporal.PlainDate) =>
 	Array.from({ length: 7 }, (_, i) => start.add({ days: i }));
 
 const shortDay = dateFormatter({ weekday: "short", day: "numeric", month: "short" });
-const longDay = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
 
 /** A day in a column header, e.g. `Mon 5 Oct` (in Dutch `ma 5 okt`). */
 export const formatDay = (day: Temporal.PlainDate) => shortDay(day);
-
-/** A day in full, e.g. `Monday 5 October` (in Dutch `maandag 5 oktober`). */
-export const formatLongDay = (day: Temporal.PlainDate) => longDay(day);
 
 /** The week starting at `start`, e.g. `5–11 Oct 2026`. */
 export const formatWeek = (start: Temporal.PlainDate) =>

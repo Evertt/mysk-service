@@ -6,10 +6,7 @@
 import * as v from "valibot";
 
 import { currentDay, dayOf } from "#lib/dates.ts";
-import { dateFormatter, formatTime } from "#lib/i18n/index.ts";
-
-const dayFormat = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
-const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });
+import { formatLongDay, formatShortDay, formatTime } from "#lib/i18n/index.ts";
 
 /** A moment's day, in the user's time zone. */
 
@@ -21,7 +18,7 @@ const shortDayFormat = dateFormatter({ day: "numeric", month: "short" });
  */
 export function plannedTime(moment: Temporal.Instant, today = currentDay()) {
 	return Temporal.PlainDate.compare(dayOf(moment), today) < 0
-		? `${shortDayFormat(moment)}, ${formatTime(moment)}`
+		? `${formatShortDay(moment)}, ${formatTime(moment)}`
 		: formatTime(moment);
 }
 
@@ -30,7 +27,7 @@ export function dayLabel(day: Temporal.PlainDate, today = currentDay()) {
 	const days = today.until(day).days;
 	if (days === 0) return m.portal_today();
 	if (days === 1) return m.portal_tomorrow();
-	return dayFormat(day);
+	return formatLongDay(day);
 }
 
 export interface DayGroup<T> {

@@ -4,8 +4,7 @@ import ClockAlertIcon from "@lucide/svelte/icons/clock-alert";
 import FilePenLineIcon from "@lucide/svelte/icons/file-pen-line";
 import SendIcon from "@lucide/svelte/icons/send";
 
-import { type BadgeDisplay, numberFormatter } from "#lib/i18n/index.ts";
-import type { Locale } from "#lib/paraglide/runtime.js";
+import type { BadgeDisplay } from "#lib/i18n/index.ts";
 
 import type { CreditNoteState } from "./credit-note.ts";
 import type { InvoiceState } from "./invoice.ts";
@@ -34,8 +33,3 @@ export const creditNoteStateDisplay = invoicingLabels.withLabels(
 	"creditNoteState",
 	creditStateDetails,
 );
-
-const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
-
-/** A VAT rate (in percent) as shown, e.g. `21%` or `5.5%`; in Dutch `5,5%`. */
-export const formatRate = (rate: number, locale?: Locale) => percent(rate / 100, locale);

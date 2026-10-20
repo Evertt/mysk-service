@@ -7,7 +7,7 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { dateFormatter, formatNumber } from "#lib/i18n/index.ts";
+	import { formatDate, formatNumber, formatShortDay } from "#lib/i18n/index.ts";
 	import { orderStatuses } from "#lib/models.ts";
 	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
@@ -21,10 +21,8 @@
 	const bars = $derived(data.map((week) => ({ ...week, week: week.week.toString() })));
 	const monday = (week: string) => Temporal.PlainDate.from(week);
 
-	const tick = dateFormatter({ day: "numeric", month: "short" });
-	const days = dateFormatter({ day: "numeric", month: "short", year: "numeric" });
 	/** A week by its days, e.g. `5 – 11 Oct 2026`. */
-	const weekLabel = (week: Temporal.PlainDate) => days.range(week, week.add({ days: 6 }));
+	const weekLabel = (week: Temporal.PlainDate) => formatDate.range(week, week.add({ days: 6 }));
 	/** Whole numbers only on the count axis. */
 	const countTick = (value: number) => (Number.isInteger(value) ? formatNumber(value) : "");
 	/**
@@ -74,7 +72,7 @@
 						// Only as many week labels as fit, evenly spaced, the latest for sure; the occlusion
 						// check is the backstop for a label that still turns out wider.
 						xAxis: {
-							format: (week: string) => tick(monday(week)),
+							format: (week: string) => formatShortDay(monday(week)),
 							ticks: weekTicks,
 							tickOcclusion: { padding: 8 },
 						},

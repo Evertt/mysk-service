@@ -11,7 +11,7 @@ import { customerSubject } from "#lib/activity/index.ts";
  * through `chooseBonus()`.
  */
 import { currentDay } from "#lib/dates.ts";
-import { formatCents } from "#lib/i18n/index.ts";
+import { formatCents, formatWholeEuros } from "#lib/i18n/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -21,7 +21,6 @@ import { Refused } from "#lib/server/refused.ts";
 import { createCreditNote, creditNotesOf } from "#modules/invoices/api/credit-notes.server.ts";
 import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
-import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
 import {
 	type BonusForm,
@@ -121,7 +120,7 @@ export async function closeYear(year: number, customerId?: number): Promise<numb
 				parent: customerSubject(partner),
 				note: m.partners_close_note({
 					level: figures.level?.level ?? m.partners_no_level(),
-					revenue: formatEuros(figures.partnerRevenue),
+					revenue: formatWholeEuros(figures.partnerRevenue),
 					cash: formatCents(figures.bonus.cash),
 					credit: formatCents(figures.bonus.credit),
 				}),
@@ -209,7 +208,7 @@ export async function payBonusByCreditNote(customerId: number, year: number) {
 					detail: closed.level
 						? m.partners_credit_note_detail({
 								level: closed.level,
-								revenue: formatEuros(closed.bonusRevenueCash),
+								revenue: formatWholeEuros(closed.bonusRevenueCash),
 							})
 						: null,
 					amount: closed.cashAmount,

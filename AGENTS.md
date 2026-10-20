@@ -129,8 +129,11 @@ Before you change the schema, add a migration, or log a new subject or action: r
 - Every user-facing text is a Paraglide message (`m.orders_title()`), added to `en` and `nl`
   together. Call messages where they're read (component, `$derived`, function body), and pass the
   message function itself where a module-scope value needs a label.
-- Format through `#lib/i18n/format.ts`, and show enum values with `label(kind, value)`: as a badge
-  with `<EnumBadge display={…Display} value />`, as a table column with `column.enum()`.
+- Format through `#lib/i18n/format.ts`, by its named formats where one fits (`formatShortDay`,
+  `formatLongDay`, `formatMonth`, `formatWholeEuros`, `formatPercent(value, { basis })`,
+  `formatStopwatch(ms, { hours })`; `named-formats.spec.ts` refuses a copy), and show enum values
+  with `label(kind, value)`: as a badge with `<EnumBadge display={…Display} value />`, as a table
+  column with `column.enum()`.
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
   `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
   `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.

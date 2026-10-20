@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
 
-import { formatRate } from "#modules/invoices/display.ts";
 import {
 	canChange,
 	invoiceState,
@@ -53,12 +52,6 @@ describe("amounts", () => {
 			total: 75_135,
 		});
 		expect(invoiceTotals([], 21)).toEqual({ subtotal: 0, vat: 0, total: 0 });
-	});
-
-	test("rates show without trailing zeros, in the language's notation", () => {
-		expect(formatRate(21)).toBe("21%");
-		expect(formatRate(5.5)).toBe("5.5%");
-		expect(formatRate(5.5, "nl")).toBe("5,5%");
 	});
 });
 
