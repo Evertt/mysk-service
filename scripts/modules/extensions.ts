@@ -63,7 +63,7 @@ export interface ExtensionPoint {
  * `list` is its registry in `contributions.gen.ts`, made with its constructor (`call`) from
  * `#lib/extensions/define.ts`. A new kind is a row here.
  */
-export const contributionKinds = {
+const contributionKinds = {
 	slot: {
 		field: "slotFiles",
 		folder: "slots",

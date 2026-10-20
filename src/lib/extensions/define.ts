@@ -264,7 +264,7 @@ export function defineRecordPoints<
  * (`loadContributions()`), so a tenant without the module doesn't download it. Its constructors
  * (`slotContribution()`, …) hold `Loaded` to the point's types.
  */
-export interface Contribution<Loaded> {
+interface Contribution<Loaded> {
 	/** `<module>/<point id>`, and `/<name>` for a slot's component: its key, for error reports. */
 	readonly id: string;
 	readonly module: ModuleId;
