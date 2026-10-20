@@ -13,7 +13,7 @@ const generic = new Set(["Internal Error", "Not Found", "Forbidden"]);
  * server's own failure (a 5xx: a handler that crashed, or a proxy's error page, whose message is its
  * status text, often empty), SvelteKit's own messages and anything else have none for the user.
  */
-export function ownMessage(error: unknown): string | undefined {
+function ownMessage(error: unknown): string | undefined {
 	const status = statusOf(error);
 	if (status === undefined || status < 400 || status >= 500) return undefined;
 	const message = isHttpError(error)
