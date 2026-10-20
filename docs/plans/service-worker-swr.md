@@ -5,6 +5,10 @@ because each page waits for its remote queries' round trips to the database. Can
 make the office feel snappy? SvelteKit registers the worker on every page, the canonical way (its
 default `serviceWorker.register`, a module worker, so in `vp dev` too).
 
+The scripts that measured and checked it by hand (`scripts/sw-*.ts`, named below) were deleted on
+2026-10-20; they're in git history, before the commit "Delete the service worker experiment's
+scripts".
+
 ## What it does
 
 - **It replays answers, it doesn't run remote functions.** A worker can't run them: they need the

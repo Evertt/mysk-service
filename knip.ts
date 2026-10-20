@@ -36,8 +36,6 @@ const config: KnipConfig = {
 		// The Worker on Cloudflare (`wrangler.jsonc`'s `main`), its migrations' config (run by
 		// drizzle-kit through `scripts/db-generate.ts`) and its export script, run by hand.
 		"cloudflare/{entry,drizzle.config,export-database}.ts",
-		// The service worker experiment's measurements, run by hand (`node scripts/sw-benchmark.ts`).
-		"scripts/sw-{benchmark,check,deploy,files,probe}.ts",
 		// The energy module's simulator, run by hand (`node src/modules/energy/server/simulator.ts`).
 		"src/modules/energy/server/simulator.ts",
 	],

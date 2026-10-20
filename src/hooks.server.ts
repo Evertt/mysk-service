@@ -26,7 +26,7 @@ nameOrderTypesOnServer();
  * With `DEV_REMOTE_DELAY_MS` set, holds up each remote function call (and each page's server data,
  * `__data.json`, which a module's pages have) that long: a slow server, to try what navigations do
  * while they wait (an experiment, see "Skeletons" in `docs/agents/modules.md`). Also in a production build (`vp preview`), to
- * measure the service worker (`scripts/sw-benchmark.ts`).
+ * measure the service worker.
  */
 const delayRemoteCalls: Handle = async ({ event, resolve }) => {
 	// The request's own URL: a remote call's `event.url` is the calling page's.
