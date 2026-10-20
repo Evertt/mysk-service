@@ -23,7 +23,10 @@ import type { InvoiceStatus } from "./model.ts";
 
 // --- Status ----------------------------------------------------------------------------------
 
-/** What an invoice shows: its status, with sent ones past their due date as overdue. */
+/**
+ * What an invoice shows: its status, with sent ones past their due date as overdue.
+ * @labels invoiceState
+ */
 export const invoiceStates = ["draft", "sent", "overdue", "paid", "void"] as const;
 export type InvoiceState = (typeof invoiceStates)[number];
 

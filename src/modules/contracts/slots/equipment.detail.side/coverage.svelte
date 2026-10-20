@@ -4,13 +4,13 @@
 	`#lib/equipment/extensions.ts`): the contracts covering the unit, with their level and end date.
 -->
 <script lang="ts">
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { getUnitCoverage } from "../../coverage.remote.ts";
+	import { contractLevelDisplay, contractStatusDisplay } from "../../display.ts";
 	import { contractStatus } from "../../model.ts";
 	import ContractLink from "../../ui/contract-link.svelte";
-	import LevelBadge from "../../ui/level-badge.svelte";
-	import ContractStatusBadge from "../../ui/status-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
 
@@ -30,8 +30,8 @@
 						<div class="flex flex-col items-start gap-1.5">
 							<ContractLink number={contract.number} />
 							<div class="flex flex-wrap gap-1">
-								<ContractStatusBadge status={contractStatus(contract)} />
-								<LevelBadge level={contract.level} />
+								<EnumBadge display={contractStatusDisplay} value={contractStatus(contract)} />
+								<EnumBadge display={contractLevelDisplay} value={contract.level} />
 							</div>
 						</div>
 						<dl class="flex flex-col items-end gap-0.5 text-right">

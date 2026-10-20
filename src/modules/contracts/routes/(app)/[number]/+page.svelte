@@ -5,20 +5,24 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
-	import { StatusBadge as EquipmentStatusBadge, EquipmentLink } from "#lib/equipment/components.ts";
+	import { EquipmentLink } from "#lib/equipment/components.ts";
+	import { equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, label } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge as OrderStatusBadge, TypeLabel } from "#lib/orders/components.ts";
-	import { unitsSummary } from "#lib/orders/index.ts";
+	import { OrderLink, TypeLabel } from "#lib/orders/components.ts";
+	import { unitsSummary, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { detailSide } from "#modules/contracts/api/extensions.ts";
 	import { deleteContract, getContract } from "#modules/contracts/contracts.remote.ts";
-	import { formatTerm, levels } from "#modules/contracts/display.ts";
+	import {
+		formatTerm,
+		contractLevelDisplay,
+		contractStatusDisplay,
+	} from "#modules/contracts/display.ts";
 	import { contractStatus } from "#modules/contracts/model.ts";
-	import LevelBadge from "#modules/contracts/ui/level-badge.svelte";
-	import ContractStatusBadge from "#modules/contracts/ui/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/contracts/[number]"> } = $props();
 
@@ -36,7 +40,7 @@
 <PageHeader
 	title={contract.number}
 	description={m.contracts_detail_description({
-		level: levels[contract.level].label,
+		level: contractLevelDisplay[contract.level].label,
 		customer: customer.name,
 	})}
 	breadcrumbs={[
@@ -45,8 +49,8 @@
 	]}
 >
 	{#snippet badges()}
-		<ContractStatusBadge {status} />
-		<LevelBadge level={contract.level} />
+		<EnumBadge display={contractStatusDisplay} value={status} />
+		<EnumBadge display={contractLevelDisplay} value={contract.level} />
 	{/snippet}
 	{#snippet actions()}
 		<Button
@@ -93,7 +97,9 @@
 									</Table.Cell>
 									<Table.Cell>{unit.manufacturer} {unit.model}</Table.Cell>
 									<Table.Cell>{unit.category.name}</Table.Cell>
-									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
+									<Table.Cell
+										><EnumBadge display={equipmentStatusDisplay} value={unit.status} /></Table.Cell
+									>
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -139,7 +145,9 @@
 										{unitsSummary(order.unit, order.unitCount)}
 									</Table.Cell>
 									<Table.Cell><TypeLabel type={order.type} /></Table.Cell>
-									<Table.Cell><OrderStatusBadge status={order.status} /></Table.Cell>
+									<Table.Cell
+										><EnumBadge display={orderStatusDisplay} value={order.status} /></Table.Cell
+									>
 									<Table.Cell class="text-right tabular-nums">
 										{formatDate(order.createdAt)}
 									</Table.Cell>

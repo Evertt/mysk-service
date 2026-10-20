@@ -10,7 +10,7 @@
 	import { label, languageNames, standardLabel } from "#lib/i18n/index.ts";
 	import { locales } from "#lib/paraglide/runtime.js";
 
-	import { types as typeDisplay } from "../display.ts";
+	import { orderTypeDisplay as typeDisplay } from "../display.ts";
 	import OrderTypeDialog from "./order-type-dialog.svelte";
 	import type { getOrderTypeSetup } from "./type-settings.remote.ts";
 

@@ -5,8 +5,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 
 	import PlaceCard from "../../place-card.svelte";
 	import { getMyLocation } from "../../places.remote.ts";
@@ -47,7 +47,7 @@
 						<span class="truncate font-medium">{unitTitle(unit)}</span>
 						<span class="text-xs text-muted-foreground">{unitLine(unit)}</span>
 					</a>
-					<StatusBadge status={unit.status} />
+					<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 				</li>
 			{:else}
 				<li class="text-sm text-muted-foreground">{m.equipment_location_units_empty()}</li>

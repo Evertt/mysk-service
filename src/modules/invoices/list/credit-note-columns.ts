@@ -9,9 +9,9 @@ import { formatCents } from "#lib/i18n/index.ts";
 
 import { creditNoteStates, creditSettlements } from "../credit-note.ts";
 import type { getCreditNotes } from "../credit-notes.remote.ts";
+import { creditNoteStateDisplay } from "../display.ts";
 import { invoicingLabels } from "../labels.ts";
 import CreditNoteLink from "../ui/credit-note-link.svelte";
-import CreditStatusBadge from "../ui/credit-status-badge.svelte";
 
 export type CreditNoteRow = Awaited<ReturnType<typeof getCreditNotes>>[number];
 
@@ -53,32 +53,20 @@ export const creditNoteColumns = column.columns([
 	column.accessor("reason", {
 		meta: { label: m.invoices_credit_column_reason },
 	}),
-	column.accessor("status", {
-		cell: ({ getValue }) => renderComponent(CreditStatusBadge, { state: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		sortFn: (a, b, id) =>
-			creditNoteStates.indexOf(a.getValue(id)) - creditNoteStates.indexOf(b.getValue(id)),
-		meta: {
-			label: m.invoices_column_status,
-			filterValues: creditNoteStates,
-			clickFilter: (state) => invoicingLabels.labelOrValue("creditNoteState", state),
-		},
+	column.enum("status", {
+		values: creditNoteStates,
+		display: creditNoteStateDisplay,
+		sortByOrder: true,
+		meta: { label: m.invoices_column_status },
 	}),
 	// How a sent one is still to be settled: refunded, or offset against its (sent) invoice. Hidden
 	// unless asked for; the dashboard links to the ones to refund (`?settlement=refund`).
-	column.accessor("settlement", {
-		cell: ({ getValue }) => {
-			const settlement = getValue();
-			return settlement ? invoicingLabels.label("creditSettlement", settlement) : "";
-		},
-		filterFn: "oneOf",
+	column.enum("settlement", {
+		values: creditSettlements,
+		label: (settlement) => invoicingLabels.label("creditSettlement", settlement),
+		enableGrouping: false,
 		enableGlobalFilter: false,
-		meta: {
-			label: m.invoices_credit_column_settlement,
-			filterValues: creditSettlements,
-			clickFilter: (settlement) => invoicingLabels.labelOrValue("creditSettlement", settlement),
-		},
+		meta: { label: m.invoices_credit_column_settlement },
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {

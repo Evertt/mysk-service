@@ -6,11 +6,11 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 
+	import { orderPriorityDisplay, orderStatusDisplay } from "../display.ts";
 	import type { getOrder } from "../order.remote.ts";
-	import PriorityBadge from "./priority-badge.svelte";
-	import StatusBadge from "./status-badge.svelte";
 	import TypeLabel from "./type-label.svelte";
 
 	let { order, sites }: Pick<Awaited<ReturnType<typeof getOrder>>, "order" | "sites"> = $props();
@@ -28,14 +28,14 @@
 	<div class="flex flex-col gap-1">
 		<div class="flex items-center justify-between gap-2">
 			<span class="font-medium">{order.number}</span>
-			<StatusBadge status={order.status} />
+			<EnumBadge display={orderStatusDisplay} value={order.status} />
 		</div>
 		{#if firstLine}
 			<p class="line-clamp-2 text-muted-foreground">{firstLine}</p>
 		{/if}
 		<div class="flex flex-wrap items-center gap-2">
 			<TypeLabel type={order.type} />
-			<PriorityBadge priority={order.priority} />
+			<EnumBadge display={orderPriorityDisplay} value={order.priority} />
 		</div>
 	</div>
 	<dl class="grid grid-cols-2 gap-3">

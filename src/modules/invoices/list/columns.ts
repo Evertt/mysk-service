@@ -6,11 +6,10 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import { CustomerLink } from "#lib/customers/components.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
+import { invoiceStateDisplay } from "../display.ts";
 import { invoiceStates } from "../invoice.ts";
 import type { getInvoices } from "../invoices.remote.ts";
-import { invoicingLabels } from "../labels.ts";
 import InvoiceLink from "../ui/invoice-link.svelte";
-import StatusBadge from "../ui/status-badge.svelte";
 import CreditedCell from "./credited-cell.svelte";
 
 export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
@@ -39,19 +38,13 @@ export const columns = column.columns([
 		meta: { label: m.invoices_column_customer, filter: "set" },
 	}),
 	// The status, with sent invoices past their due date as overdue.
-	column.accessor("state", {
+	column.enum("state", {
 		id: "status",
-		cell: ({ getValue }) => renderComponent(StatusBadge, { state: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
+		values: invoiceStates,
+		display: invoiceStateDisplay,
 		// In the order an invoice goes through them rather than alphabetically.
-		sortFn: (a, b, id) =>
-			invoiceStates.indexOf(a.getValue(id)) - invoiceStates.indexOf(b.getValue(id)),
-		meta: {
-			label: m.invoices_column_status,
-			filterValues: invoiceStates,
-			clickFilter: (state) => invoicingLabels.labelOrValue("invoiceState", state),
-		},
+		sortByOrder: true,
+		meta: { label: m.invoices_column_status },
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
 	column.accessor((row) => row.issuedOn ?? undefined, {

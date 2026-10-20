@@ -4,13 +4,13 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import { intlLocale, labelOrValue } from "#lib/i18n/index.ts";
+import { intlLocale } from "#lib/i18n/index.ts";
 import { customerSegments } from "#lib/models.ts";
 
 import { countryName } from "../countries.ts";
 import type { getCustomers } from "../customers.remote.ts";
+import { customerSegmentDisplay } from "../display.ts";
 import CustomerLink from "../ui/customer-link.svelte";
-import SegmentBadge from "../ui/segment-badge.svelte";
 
 export type CustomerRow = Awaited<ReturnType<typeof getCustomers>>[number];
 
@@ -65,19 +65,13 @@ export const columns = column.columns([
 			groupLabel: (country) => countryName(String(country)),
 		},
 	}),
-	column.accessor("segment", {
-		cell: ({ getValue }) => renderComponent(SegmentBadge, { segment: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
+	column.enum("segment", {
+		values: customerSegments,
+		display: customerSegmentDisplay,
 		// By size rather than alphabetically.
-		sortFn: (a, b, id) =>
-			customerSegments.indexOf(a.getValue(id)) - customerSegments.indexOf(b.getValue(id)),
+		sortByOrder: true,
 		enableGlobalFilter: false,
-		meta: {
-			label: m.customers_column_segment,
-			filterValues: customerSegments,
-			clickFilter: (segment) => labelOrValue("customerSegment", segment),
-		},
+		meta: { label: m.customers_column_segment },
 	}),
 	column.accessor("equipmentCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),

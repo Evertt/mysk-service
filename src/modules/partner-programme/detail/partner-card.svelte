@@ -50,7 +50,12 @@
 				: m.partners_card_since_date({ date: formatDate(card.partner.acceptedOn) })}
 		</Card.Description>
 		{#if figures}
-			<Card.Action><LevelBadge level={figures.level?.level ?? null} /></Card.Action>
+			<Card.Action
+				><LevelBadge
+					level={figures.level?.level ?? null}
+					colour={figures.level?.colour}
+				/></Card.Action
+			>
 		{/if}
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
@@ -118,7 +123,7 @@
 					<h3 class="text-sm font-medium">
 						{m.partners_closed_title({ year: String(closed.year) })}
 					</h3>
-					<LevelBadge level={closed.level} />
+					<LevelBadge level={closed.level} colour={closed.colour} />
 				</div>
 				<p class="text-xs text-muted-foreground tabular-nums">
 					{m.partners_closed_figures({

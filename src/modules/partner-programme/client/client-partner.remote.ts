@@ -35,6 +35,7 @@ export const getClientPartner = forCustomers.query(async () => {
 	const years = (await closedYearsOf(customer.id)).map((year) => ({
 		year: year.year,
 		level: year.level,
+		colour: year.colour,
 		partnerRevenue: year.partnerRevenue,
 		bonusRevenue: year.bonusRevenueCredit,
 		cashAmount: year.cashAmount,

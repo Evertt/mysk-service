@@ -11,9 +11,8 @@ import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import HourglassIcon from "@lucide/svelte/icons/hourglass";
 import ThumbsUpIcon from "@lucide/svelte/icons/thumbs-up";
 import TimerIcon from "@lucide/svelte/icons/timer";
-import type { Component } from "svelte";
 
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
+import { type BadgeDisplay, labelled } from "#lib/i18n/index.ts";
 import type { OrderStatus } from "#lib/models.ts";
 
 export const clientStatuses = [
@@ -48,11 +47,8 @@ export function clientStatus(status: OrderStatus, rejectionReason: string | null
 	}
 }
 
-/** Each status's label (read when shown), icon and badge tone. */
-export const clientStatusDisplay: Record<
-	ClientStatus,
-	{ label: () => string; icon: Component; tone: BadgeTone }
-> = {
+/** Each status's translated `label`, icon and badge tone. */
+export const clientStatusDisplay = labelled({
 	awaiting: { label: m.client_status_awaiting, icon: HourglassIcon, tone: "warning" },
 	accepted: { label: m.client_status_accepted, icon: ThumbsUpIcon, tone: "info" },
 	scheduled: { label: m.client_status_scheduled, icon: CalendarClockIcon, tone: "info" },
@@ -60,4 +56,4 @@ export const clientStatusDisplay: Record<
 	done: { label: m.client_status_done, icon: CircleCheckIcon, tone: "success" },
 	rejected: { label: m.client_status_rejected, icon: CircleXIcon, tone: "danger" },
 	cancelled: { label: m.client_status_cancelled, icon: CircleSlashIcon, tone: "neutral" },
-};
+} satisfies Record<ClientStatus, BadgeDisplay & { label: () => string }>);

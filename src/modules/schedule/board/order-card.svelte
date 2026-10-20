@@ -10,7 +10,12 @@
 	import { formatDate, formatTime } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderPriority } from "#lib/models.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
-	import { priorities, statuses, types, unitsSummary } from "#lib/orders/index.ts";
+	import {
+		orderPriorityDisplay,
+		orderStatusDisplay,
+		orderTypeDisplay,
+		unitsSummary,
+	} from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import type { getSchedule } from "../schedule.remote.ts";
@@ -36,8 +41,8 @@
 	} = $props();
 
 	const open = $derived(isOpenOrder(order.status));
-	const priority = $derived(priorities[order.priority]);
-	const type = $derived(types[order.type]);
+	const priority = $derived(orderPriorityDisplay[order.priority]);
+	const type = $derived(orderTypeDisplay[order.type]);
 	// Its first unit and how many more, e.g. "Deur 07 +14".
 	const units = $derived(unitsSummary(order.unit, order.unitCount));
 	// E.g. `ORD-`, shown only to screen readers.
@@ -79,7 +84,7 @@
 			<span class="sr-only">{m.schedule_priority({ priority: priority.label })}</span>
 		</span>
 		{#if !open}
-			<span class="text-muted-foreground">{statuses[order.status].label}</span>
+			<span class="text-muted-foreground">{orderStatusDisplay[order.status].label}</span>
 		{/if}
 		{#if open && onschedule}
 			<Button

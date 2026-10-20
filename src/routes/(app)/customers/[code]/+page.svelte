@@ -9,13 +9,14 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatTile from "#lib/components/stat-tile.svelte";
-	import { PortalAccessCard, SegmentBadge, SitesCard } from "#lib/customers/components.ts";
+	import { PortalAccessCard, SitesCard } from "#lib/customers/components.ts";
 	import { RecentActivity } from "#lib/customers/components.ts";
 	import { detailMain, detailSide } from "#lib/customers/extensions.ts";
-	import { countryName } from "#lib/customers/index.ts";
+	import { countryName, customerSegmentDisplay } from "#lib/customers/index.ts";
 	import {
 		deleteCustomer,
 		getCustomer,
@@ -23,12 +24,8 @@
 		getCustomerRevenue,
 	} from "#lib/customers/remotes.ts";
 	import { getTimeZone } from "#lib/dates.ts";
-	import {
-		StatusBadge as EquipmentStatusBadge,
-		EquipmentLink,
-		SiteLocations,
-	} from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import { EquipmentLink, SiteLocations } from "#lib/equipment/components.ts";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { getCustomerLocations } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
@@ -68,7 +65,7 @@
 	]}
 >
 	{#snippet badges()}
-		<SegmentBadge segment={customer.segment} />
+		<EnumBadge display={customerSegmentDisplay} value={customer.segment} />
 	{/snippet}
 	{#snippet actions()}
 		<Button
@@ -192,7 +189,9 @@
 									</Table.Cell>
 									<Table.Cell>{unit.category.name}</Table.Cell>
 									<Table.Cell class="tabular-nums">{formatDate(unit.installedAt)}</Table.Cell>
-									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
+									<Table.Cell
+										><EnumBadge display={equipmentStatusDisplay} value={unit.status} /></Table.Cell
+									>
 								</Table.Row>
 							{/each}
 						</Table.Body>

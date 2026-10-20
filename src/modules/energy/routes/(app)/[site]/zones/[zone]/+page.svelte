@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
@@ -13,11 +14,10 @@
 		formatKw,
 		formatKwh,
 		formatPercent,
-		stateBadges,
-		toneBadges,
+		thresholdStateDisplay,
+		zoneToneDisplay,
 	} from "#modules/energy/display.ts";
 	import { getEnergyZone, watchEnergy } from "#modules/energy/energy.remote.ts";
-	import { energyLabels } from "#modules/energy/labels.ts";
 	import { changePercent } from "#modules/energy/model.ts";
 	import DoorCard from "#modules/energy/overview/door-card.svelte";
 	import EnergyChart from "#modules/energy/overview/energy-chart.svelte";
@@ -56,9 +56,7 @@
 		]}
 	>
 		{#snippet actions()}
-			<Badge variant={toneBadges[zone.tone]} data-zone-tone={zone.tone}>
-				{energyLabels.label("zoneTone", zone.tone)}
-			</Badge>
+			<EnumBadge display={zoneToneDisplay} value={zone.tone} data-zone-tone={zone.tone} />
 		{/snippet}
 	</PageHeader>
 
@@ -92,9 +90,7 @@
 				<Card.Title class="text-2xl tabular-nums">{formatPercent(zone.ratio * 100)}</Card.Title>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-1 text-xs">
-				<Badge variant={stateBadges[zone.state]}>
-					{energyLabels.label("thresholdState", zone.state)}
-				</Badge>
+				<EnumBadge display={thresholdStateDisplay} value={zone.state} />
 				{#if zone.threshold}
 					<span class="text-muted-foreground">
 						{m.energy_zone_threshold_values({
@@ -112,7 +108,7 @@
 		current={zone.series}
 		previous={zone.previousSeries}
 		bucket="hour"
-		currentLabel={m.energy_period_day()}
+		currentLabel={m.energy_enum_period_day()}
 		previousLabel={m.energy_yesterday()}
 	/>
 

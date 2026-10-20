@@ -6,12 +6,10 @@ import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.t
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { CustomerLink } from "#lib/customers/components.ts";
-import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
-import { unitLine, unitTitle } from "../display.ts";
+import { unitLine, unitTitle, equipmentStatusDisplay } from "../display.ts";
 import EquipmentLink from "../ui/equipment-link.svelte";
-import StatusBadge from "../ui/status-badge.svelte";
 import type { getEquipmentList } from "./equipment-list.remote.ts";
 import WarrantyCell from "./warranty-cell.svelte";
 
@@ -58,15 +56,10 @@ export const columns = column.columns([
 		getGroupingValue: (row) => row.category.id,
 		meta: { label: m.equipment_column_category, filter: "set" },
 	}),
-	column.accessor("status", {
-		cell: ({ getValue }) => renderComponent(StatusBadge, { status: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		meta: {
-			label: m.equipment_column_status,
-			filterValues: equipmentStatuses,
-			clickFilter: (status) => labelOrValue("equipmentStatus", status),
-		},
+	column.enum("status", {
+		values: equipmentStatuses,
+		display: equipmentStatusDisplay,
+		meta: { label: m.equipment_column_status },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",

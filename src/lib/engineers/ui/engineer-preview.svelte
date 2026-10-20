@@ -5,10 +5,11 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
+	import { engineerSpecialtyDisplay } from "../display.ts";
 	import type { getEngineer } from "../engineers.remote.ts";
-	import SpecialtyBadge from "./specialty-badge.svelte";
 
 	let { engineer, counts }: Awaited<ReturnType<typeof getEngineer>> = $props();
 </script>
@@ -16,7 +17,7 @@
 <div class="flex flex-col gap-3" data-engineer-preview={engineer.id}>
 	<div class="flex items-center justify-between gap-2">
 		<span class="font-medium">{engineer.name}</span>
-		<SpecialtyBadge specialty={engineer.specialty} />
+		<EnumBadge display={engineerSpecialtyDisplay} value={engineer.specialty} />
 	</div>
 	<!-- An email address has the card's width. -->
 	<dl class="grid gap-3">

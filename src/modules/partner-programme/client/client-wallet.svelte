@@ -60,7 +60,7 @@
 
 <DarkPanel
 	title={m.partners_client_wallet_title()}
-	eyebrow={m.partners_form_credit()}
+	eyebrow={m.partners_enum_bonus_form_credit()}
 	icon={WalletCardsIcon}
 	{lines}
 	data-client-wallet

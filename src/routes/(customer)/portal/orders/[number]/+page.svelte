@@ -13,15 +13,14 @@
 
 	import { order as orderParts } from "#lib/client/extensions.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { StatusBadge as UnitStatusBadge } from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
 	import { SignOff } from "#lib/orders/components.ts";
 
-	import ClientStatusBadge from "../../client-status-badge.svelte";
-	import { clientStatus } from "../../client-status.ts";
+	import { clientStatus, clientStatusDisplay } from "../../client-status.ts";
 	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
 	import type { PageProps } from "./$types";
 
@@ -67,7 +66,7 @@
 			{label("orderType", order.type)}
 			<span class="text-muted-foreground tabular-nums">{order.number}</span>
 		</h1>
-		<ClientStatusBadge status={order.status} rejectionReason={order.rejectionReason} />
+		<EnumBadge display={clientStatusDisplay} value={status} data-client-status={status} />
 	</div>
 	<p class="whitespace-pre-line">{order.description}</p>
 </header>
@@ -132,7 +131,7 @@
 								{unitLine(unit, { site: unit.site.name, location: unit.location })}
 							</span>
 						</span>
-						<UnitStatusBadge status={unit.status} />
+						<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 					</a>
 				{/each}
 			</section>

@@ -5,8 +5,9 @@
 	is what it's for.
 -->
 <script lang="ts">
-	import { statusTones } from "../display.ts";
-	import { conditionLabels } from "../labels.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+
+	import { unitStatusDisplay } from "../display.ts";
 	import type { Concern, UnitStatus } from "../model.ts";
 
 	let { status, concern }: { status: UnitStatus; concern?: Concern } = $props();
@@ -15,10 +16,10 @@
 </script>
 
 <span class="inline-flex items-center gap-1.5" data-status={status}>
-	<Badge variant={statusTones[status]}>{conditionLabels.label("unitStatus", status)}</Badge>
+	<EnumBadge display={unitStatusDisplay} value={status} />
 	{#if marked}
 		{@const text = m.condition_underlying({
-			status: conditionLabels.label("unitStatus", marked),
+			status: unitStatusDisplay[marked].label,
 		})}
 		<span
 			class={[

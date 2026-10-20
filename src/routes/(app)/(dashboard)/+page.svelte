@@ -9,6 +9,7 @@
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import { getRecentActivity } from "#lib/components/activity/activity.remote.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { masonry } from "#lib/components/masonry.ts";
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import {
@@ -25,8 +26,8 @@
 	import { crashSwitches } from "#lib/errors/crash-switch.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { OrderLink, PriorityBadge } from "#lib/orders/components.ts";
-	import { unitsSummary } from "#lib/orders/index.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
+	import { unitsSummary, orderPriorityDisplay } from "#lib/orders/index.ts";
 
 	import { cardGrid, statGrid } from "./dashboard-grids.ts";
 	import { getCharts, getDashboard } from "./dashboard.remote.ts";
@@ -189,7 +190,9 @@
 									<span class="text-muted-foreground">{m.common_unassigned()}</span>
 								{/if}
 							</Table.Cell>
-							<Table.Cell><PriorityBadge priority={order.priority} /></Table.Cell>
+							<Table.Cell
+								><EnumBadge display={orderPriorityDisplay} value={order.priority} /></Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">
 								{order.scheduledFor && formatDate(order.scheduledFor)}
 							</Table.Cell>

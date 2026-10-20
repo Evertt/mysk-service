@@ -4,15 +4,17 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
-	import { ActiveBadge, SpecialtyBadge } from "#lib/engineers/components.ts";
-	import { regionLabel } from "#lib/engineers/index.ts";
+	import { ActiveBadge } from "#lib/engineers/components.ts";
+	import { regionLabel, engineerSpecialtyDisplay } from "#lib/engineers/index.ts";
 	import { deleteEngineer, getEngineer, getEngineerWork } from "#lib/engineers/remotes.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge } from "#lib/orders/components.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import type { PageProps } from "./$types";
 
@@ -56,7 +58,7 @@
 					<Table.Cell>
 						<CustomerLink code={row.customer.code} name={row.customer.name} withCode />
 					</Table.Cell>
-					<Table.Cell><StatusBadge status={row.status} /></Table.Cell>
+					<Table.Cell><EnumBadge display={orderStatusDisplay} value={row.status} /></Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
 						{#if value}
 							{formatDate(value)}
@@ -80,7 +82,7 @@
 >
 	{#snippet badges()}
 		<ActiveBadge active={engineer.active} />
-		<SpecialtyBadge specialty={engineer.specialty} />
+		<EnumBadge display={engineerSpecialtyDisplay} value={engineer.specialty} />
 	{/snippet}
 	{#snippet actions()}
 		<Button
@@ -196,7 +198,7 @@
 						href={`tel:${engineer.phone}`}
 					/>
 					<DetailItem label={m.engineers_field_specialty()}>
-						<SpecialtyBadge specialty={engineer.specialty} />
+						<EnumBadge display={engineerSpecialtyDisplay} value={engineer.specialty} />
 					</DetailItem>
 					<DetailItem label={m.engineers_field_region()} value={regionLabel(engineer.region)} />
 					<DetailItem

@@ -7,7 +7,10 @@
  * figures (`dockFigures()`). The event feed itself is described in `docs/salvo-events.md`.
  */
 
-/** What the Salvo integration reports, see `docs/salvo-events.md`. */
+/**
+ * What the Salvo integration reports, see `docs/salvo-events.md`.
+ * @labels dockEvent
+ */
 export const dockEventTypes = [
 	"check_in",
 	"lock",
@@ -21,15 +24,24 @@ export const dockEventTypes = [
 ] as const;
 export type DockEventType = (typeof dockEventTypes)[number];
 
-/** Vrij, Bezet, Laden, Storing: derived from the facts (`dockState()`). */
+/**
+ * Vrij, Bezet, Laden, Storing: derived from the facts (`dockState()`).
+ * @labels dockState
+ */
 const dockStates = ["free", "occupied", "loading", "fault"] as const;
 export type DockState = (typeof dockStates)[number];
 
-/** Where the dock's Salvo key is: in its SCP, with the driver, or in the key storage unit. */
+/**
+ * Where the dock's Salvo key is: in its SCP, with the driver, or in the key storage unit.
+ * @labels keyLocation
+ */
 export const keyLocations = ["scp", "driver", "storage"] as const;
 export type KeyLocation = (typeof keyLocations)[number];
 
-/** The beacon outside the dock: rood, oranje, groen, uit. */
+/**
+ * The beacon outside the dock: rood, oranje, groen, uit.
+ * @labels beacon
+ */
 const beacons = ["green", "orange", "red", "off"] as const;
 export type Beacon = (typeof beacons)[number];
 

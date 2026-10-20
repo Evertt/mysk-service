@@ -8,11 +8,11 @@ import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { CustomerLink } from "#lib/customers/components.ts";
 import { EngineerLink } from "#lib/engineers/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
-import { labelOrValue } from "#lib/i18n/index.ts";
+import { label } from "#lib/i18n/index.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 
+import { orderPriorityDisplay, orderStatusDisplay } from "../display.ts";
 import OrderLink from "../ui/order-link.svelte";
-import PriorityBadge from "../ui/priority-badge.svelte";
 import TypeLabel from "../ui/type-label.svelte";
 import type { getOrders } from "./order-list.remote.ts";
 import StatusCell from "./status-cell.svelte";
@@ -65,42 +65,34 @@ export const columns = column.columns([
 			meta: { label: m.orders_column_equipment, filter: "set" },
 		},
 	),
-	column.accessor("type", {
-		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		meta: {
-			label: m.orders_column_type,
-			filterValues: orderTypes,
-			clickFilter: (type) => labelOrValue("orderType", type),
-		},
+	column.enum("type", {
+		values: orderTypes,
+		label: (type) => label("orderType", type),
+		cell: ({ getValue }) => renderComponent(TypeLabel, { type: getValue()! }),
+		meta: { label: m.orders_column_type },
 	}),
-	column.accessor("status", {
+	column.enum("status", {
+		values: orderStatuses,
+		display: orderStatusDisplay,
+		// The status cell's badge filters by its value itself.
+		clickFilter: false,
 		cell: ({ getValue, row, column }) =>
 			renderComponent(StatusCell, {
 				id: row.original.id,
 				number: row.original.number,
-				status: getValue(),
+				status: getValue()!,
 				tags: row.original.tags,
 				// Grouped by status, it's the group's heading, which changes no order.
 				fixed: column.getIsGrouped(),
 			}),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		meta: { label: m.orders_column_status, filterValues: orderStatuses },
+		meta: { label: m.orders_column_status },
 	}),
-	column.accessor("priority", {
-		cell: ({ getValue }) => renderComponent(PriorityBadge, { priority: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
+	column.enum("priority", {
+		values: orderPriorities,
+		display: orderPriorityDisplay,
 		// By urgency rather than alphabetically.
-		sortFn: (a, b, id) =>
-			orderPriorities.indexOf(a.getValue(id)) - orderPriorities.indexOf(b.getValue(id)),
-		meta: {
-			label: m.orders_column_priority,
-			filterValues: orderPriorities,
-			clickFilter: (priority) => labelOrValue("orderPriority", priority),
-		},
+		sortByOrder: true,
+		meta: { label: m.orders_column_priority },
 	}),
 	column.accessor((row) => row.engineer?.name, {
 		id: "engineer",

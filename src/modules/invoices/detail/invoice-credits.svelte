@@ -8,12 +8,13 @@
 	import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents } from "#lib/i18n/index.ts";
 
 	import { canCredit } from "../credit-note.ts";
+	import { creditNoteStateDisplay } from "../display.ts";
 	import type { getInvoice } from "../invoices.remote.ts";
 	import CreditNoteLink from "../ui/credit-note-link.svelte";
-	import CreditStatusBadge from "../ui/credit-status-badge.svelte";
 
 	let { data }: { data: Awaited<ReturnType<typeof getInvoice>> } = $props();
 
@@ -35,7 +36,7 @@
 					<li class="flex items-center justify-between gap-3 py-1.5" data-credit-note={note.number}>
 						<span class="flex items-center gap-2">
 							<CreditNoteLink number={note.number} />
-							<CreditStatusBadge state={note.status} />
+							<EnumBadge display={creditNoteStateDisplay} value={note.status} />
 						</span>
 						<span class="tabular-nums">{formatCents(note.total)}</span>
 					</li>

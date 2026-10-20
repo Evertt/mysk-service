@@ -17,13 +17,13 @@
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 	import type { Snippet } from "svelte";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
 
-	import { timerClass } from "../display.ts";
+	import { timerClass, dockStateDisplay } from "../display.ts";
 	import { dockLabels } from "../labels.ts";
 	import { formatDuration } from "../model.ts";
 	import BeaconLight from "../ui/beacon-light.svelte";
-	import StateBadge from "../ui/state-badge.svelte";
 	import { type BoardDock, dockView } from "./board.ts";
 	import DockDrawing from "./dock-drawing.svelte";
 
@@ -82,7 +82,7 @@
 		<Card.Description>{dock.position}</Card.Description>
 		<Card.Action>
 			{#if dock.reported}
-				<StateBadge state={view.state} />
+				<EnumBadge display={dockStateDisplay} value={view.state} data-dock-state={view.state} />
 			{:else}
 				<Badge variant="outline">{dock.scpCode ? m.docks_no_state() : m.docks_no_salvo()}</Badge>
 			{/if}

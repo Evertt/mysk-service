@@ -23,9 +23,15 @@ import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
 import { formatEuros } from "../display.ts";
 import { partnerLabels } from "../labels.ts";
-import { type BonusForm, bonusLineSource, creditValidUntil, isClosable } from "../model.ts";
+import {
+	type BonusForm,
+	bonusLineSource,
+	creditValidUntil,
+	isClosable,
+	levelColour,
+} from "../model.ts";
 import { figuresOf, partnersOf } from "./partners.ts";
-import { rulesFor } from "./rules.ts";
+import { programmeYears, rulesFor } from "./rules.ts";
 import { bonusCreditNote, bonusYear } from "./schema.ts";
 import { addEntry } from "./wallet.ts";
 
@@ -126,8 +132,8 @@ export async function closeYear(year: number, customerId?: number): Promise<numb
 }
 
 /**
- * A partner's closed years, latest first, each with the credit note its cash bonus is paid out
- * with (where it stands), if there is one.
+ * A partner's closed years, latest first, each with its level's colour (by the year's rules) and
+ * the credit note its cash bonus is paid out with (where it stands), if there is one.
  */
 export async function closedYearsOf(customerId: number) {
 	const rows = await db
@@ -139,9 +145,15 @@ export async function closedYearsOf(customerId: number) {
 		)
 		.where(and(inTenant(bonusYear), eq(bonusYear.customerId, customerId)))
 		.orderBy(desc(bonusYear.year));
-	const notes = await creditNotesOf(rows.flatMap((row) => row.creditNoteId ?? []));
+	const [notes, years] = await Promise.all([
+		creditNotesOf(rows.flatMap((row) => row.creditNoteId ?? [])),
+		programmeYears(),
+	]);
+	// A year goes by its own rules, else the latest before it's (`rulesFor()`).
+	const tiersOf = (year: number) => years.find((rules) => rules.year <= year)?.tiers ?? [];
 	return rows.map((row) => ({
 		...row.year,
+		colour: row.year.level ? levelColour(row.year.level, tiersOf(row.year.year)) : undefined,
 		creditNote: (row.creditNoteId && notes.get(row.creditNoteId)) || null,
 	}));
 }

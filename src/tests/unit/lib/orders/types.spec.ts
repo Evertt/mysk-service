@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { label, labelOptions, labelOrValue, overwriteTenantNames } from "#lib/i18n/labels.ts";
 import { orderTypes } from "#lib/models.ts";
-import { types, typeOptions } from "#lib/orders/display.ts";
+import { orderTypeDisplay, typeOptions } from "#lib/orders/display.ts";
 import {
 	effectiveOrderTypes,
 	nameOrderTypes,
@@ -47,7 +47,7 @@ describe("labels with the tenant's names", () => {
 
 	test("reaches what's made with the labels: display maps, options, labelOrValue", () => {
 		nameOrderTypes(() => shltr);
-		expect(types.project.label).toBe("Job");
+		expect(orderTypeDisplay.project.label).toBe("Job");
 		expect(typeOptions.find((option) => option.value === "project")?.label).toBe("Job");
 		expect(labelOptions("orderType", ["project"])[0].label).toBe("Job");
 		expect(labelOrValue("orderType", "project")).toBe("Job");

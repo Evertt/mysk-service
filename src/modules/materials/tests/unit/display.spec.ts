@@ -3,12 +3,13 @@ import { describe, expect, test } from "vite-plus/test";
 import {
 	formatQuantity,
 	stockLevel,
+	stockLevelDisplay,
 	stockLevelOptions,
 	stockLevels,
 	unitOptions,
 } from "#modules/materials/display.ts";
 import { materialUnits } from "#modules/materials/model.ts";
-import { describeOptions } from "#unit/lib/display.test-support.ts";
+import { describeBadges, describeOptions } from "#unit/lib/display.test-support.ts";
 
 // Material units are shown as plain text.
 describeOptions("material units", unitOptions, materialUnits, { icons: false });
@@ -40,3 +41,9 @@ test("a quantity is shown with its unit", () => {
 	expect(formatQuantity(0.1 + 0.2, "l")).toBe("0.3 l");
 	expect(formatQuantity(1250.75, "m")).toBe("1,250.75 m");
 });
+
+describeBadges("stock level badges", stockLevelDisplay, [
+	["out", "Out of stock", "danger"],
+	["low", "Low", "warning"],
+	["in_stock", "In stock", "success"],
+]);

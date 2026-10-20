@@ -186,7 +186,12 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 					? [[m.invoices_credit_credits(), credit.invoice] as [string, string]]
 					: []),
 				...(credit.settledOn
-					? [[m.invoices_credit_state_settled(), formatDate(credit.settledOn)] as [string, string]]
+					? [
+							[m.invoices_enum_credit_note_state_paid(), formatDate(credit.settledOn)] as [
+								string,
+								string,
+							],
+						]
 					: []),
 			]
 		: [

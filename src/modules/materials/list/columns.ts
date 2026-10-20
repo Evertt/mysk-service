@@ -29,16 +29,11 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.materials_sku },
 	}),
-	column.accessor("unit", {
-		cell: ({ getValue }) => materialLabels.label("materialUnit", getValue()),
-		filterFn: "oneOf",
-		enableGrouping: true,
+	column.enum("unit", {
+		values: materialUnits,
+		label: (unit) => materialLabels.label("materialUnit", unit),
 		enableGlobalFilter: false,
-		meta: {
-			label: m.materials_unit,
-			filterValues: materialUnits,
-			clickFilter: (unit) => materialLabels.labelOrValue("materialUnit", unit),
-		},
+		meta: { label: m.materials_unit },
 	}),
 	column.accessor("unitPrice", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
@@ -56,17 +51,17 @@ export const columns = column.columns([
 		meta: { label: m.materials_stock, align: "end", param: "quantity" },
 	}),
 	// Not shown; the stock level filter filters on it, and the rows can be grouped by it.
-	column.accessor((row) => stockLevel(row.stock, row.unit), {
+	column.enum((row) => stockLevel(row.stock, row.unit), {
 		id: "stockLevel",
-		cell: ({ getValue }) => materialLabels.label("stockLevel", getValue()),
-		filterFn: "oneOf",
-		enableGrouping: true,
+		values: stockLevels,
+		label: (level) => materialLabels.label("stockLevel", level),
 		// From out of stock to in stock rather than alphabetically.
-		sortFn: (a, b, id) => stockLevels.indexOf(a.getValue(id)) - stockLevels.indexOf(b.getValue(id)),
+		sortByOrder: true,
+		clickFilter: false,
 		enableHiding: false,
 		enableGlobalFilter: false,
 		// `?stock=out,low`, e.g. from the dashboard.
-		meta: { label: m.materials_stock_level, param: "stock", filterValues: stockLevels },
+		meta: { label: m.materials_stock_level, param: "stock" },
 	}),
 	column.accessor("orderCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),

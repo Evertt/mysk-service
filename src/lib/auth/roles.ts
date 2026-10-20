@@ -6,6 +6,7 @@
  * `label("memberRoleDescription", role)` from `#lib/i18n/labels.ts`.
  */
 
+/** @labels memberRole memberRoleDescription */
 export const memberRoles = ["owner", "admin", "member", "engineer", "customer"] as const;
 export type MemberRole = (typeof memberRoles)[number];
 

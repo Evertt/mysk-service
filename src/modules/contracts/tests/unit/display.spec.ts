@@ -1,8 +1,16 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { formatTerm, levelOptions, statusOptions } from "#modules/contracts/display.ts";
+import {
+	contractLevelDisplay,
+	contractStatusDisplay,
+	formatTerm,
+	levelOptions,
+	slaStateDisplay,
+	statusOptions,
+} from "#modules/contracts/display.ts";
 import { contractLevels, contractStatuses } from "#modules/contracts/model.ts";
+import { describeBadges } from "#unit/lib/display.test-support.ts";
 
 const day = (value: string) => Temporal.PlainDate.from(value);
 
@@ -78,3 +86,22 @@ describe.each([
 		expect(options.every((option) => typeof option.icon === "function")).toBe(true);
 	});
 });
+
+describeBadges("contract level badges", contractLevelDisplay, [
+	["basic", "Basic", "outline"],
+	["standard", "Standard", "outline"],
+	["premium", "Premium", "secondary"],
+]);
+
+describeBadges("contract status badges", contractStatusDisplay, [
+	["upcoming", "Upcoming", "info"],
+	["active", "Active", "success"],
+	["expired", "Expired", "neutral"],
+]);
+
+describeBadges("response time badges", slaStateDisplay, [
+	["on_track", "On track", "info"],
+	["at_risk", "At risk", "warning"],
+	["overdue", "Overdue", "danger"],
+	["responded", "Responded", "success"],
+]);

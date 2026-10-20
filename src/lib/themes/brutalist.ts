@@ -81,6 +81,11 @@ export default defineTheme({
 				info: "bg-sky-300 text-black",
 				danger: "bg-destructive text-white dark:bg-destructive",
 				neutral: "border-dashed bg-muted text-foreground",
+				bronze: "bg-orange-300 text-black",
+				silver: "bg-slate-300 text-black",
+				gold: "bg-yellow-300 text-black",
+				platinum: "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-black",
+				diamond: "bg-cyan-300 text-black",
 			},
 		},
 		button: {

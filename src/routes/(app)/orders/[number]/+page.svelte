@@ -5,13 +5,15 @@
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
-	import { EngineerLink, SpecialtyBadge } from "#lib/engineers/components.ts";
+	import { EngineerLink } from "#lib/engineers/components.ts";
+	import { engineerSpecialtyDisplay } from "#lib/engineers/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
-	import { PriorityBadge, StatusBadge, TypeLabel } from "#lib/orders/components.ts";
+	import { TypeLabel } from "#lib/orders/components.ts";
 	import {
 		AcceptanceCard,
 		EquipmentHistoryCard,
@@ -21,7 +23,12 @@
 		WorkReport,
 	} from "#lib/orders/components.ts";
 	import { detailSide } from "#lib/orders/extensions.ts";
-	import { mayDeleteOrder, mayEditOrder } from "#lib/orders/index.ts";
+	import {
+		mayDeleteOrder,
+		mayEditOrder,
+		orderPriorityDisplay,
+		orderStatusDisplay,
+	} from "#lib/orders/index.ts";
 	import { deleteOrder, getOrder, getOrderHistory } from "#lib/orders/remotes.ts";
 
 	import type { PageProps } from "./$types";
@@ -47,9 +54,9 @@
 	]}
 >
 	{#snippet badges()}
-		<StatusBadge status={order.status} />
+		<EnumBadge display={orderStatusDisplay} value={order.status} />
 		<OrderTags tags={data.tags} />
-		<PriorityBadge priority={order.priority} />
+		<EnumBadge display={orderPriorityDisplay} value={order.priority} />
 		<TypeLabel type={order.type} />
 	{/snippet}
 	{#snippet actions()}
@@ -129,7 +136,7 @@
 						>{m.orders_engineer_region({ region: engineer.region })}</Card.Description
 					>
 					<Card.Action>
-						<SpecialtyBadge specialty={engineer.specialty} />
+						<EnumBadge display={engineerSpecialtyDisplay} value={engineer.specialty} />
 					</Card.Action>
 				{/if}
 			</Card.Header>

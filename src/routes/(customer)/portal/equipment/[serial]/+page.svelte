@@ -8,8 +8,8 @@
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
 	import { unit as unitParts } from "#lib/client/extensions.ts";
-	import { StatusBadge } from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
@@ -32,7 +32,7 @@
 <header class="flex flex-col gap-2">
 	<div class="flex flex-wrap items-center justify-between gap-2">
 		<h1 class="text-2xl font-semibold tracking-tight">{unitTitle(unit)}</h1>
-		<StatusBadge status={unit.status} />
+		<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 	</div>
 	<p class="text-sm text-muted-foreground">
 		{unitLine(unit, { category: unit.category, site: unit.site, location: unit.location })}

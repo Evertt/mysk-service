@@ -10,13 +10,17 @@
  */
 import type { NumberFormat } from "#lib/numbering.ts";
 
-/** How a product is sold: a set, one piece, or a pair ("per set", "per stuk", "per paar"). */
+/**
+ * How a product is sold: a set, one piece, or a pair ("per set", "per stuk", "per paar").
+ * @labels productUnit
+ */
 export const productUnits = ["set", "piece", "pair"] as const;
 export type ProductUnit = (typeof productUnits)[number];
 
 /**
  * A shop order's way: placed (its credit and stock set aside, "gereserveerd"), confirmed by the
  * office, shipped, delivered; or cancelled before it's shipped.
+ * @labels shopOrderStatus
  */
 export const shopOrderStatuses = [
 	"placed",
@@ -38,7 +42,10 @@ export const openShopOrderStatuses = [
 export const isOpenShopOrder = (status: ShopOrderStatus) =>
 	(openShopOrderStatuses as readonly ShopOrderStatus[]).includes(status);
 
-/** What the office can do with an order next. */
+/**
+ * What the office can do with an order next.
+ * @labels shopOrderStep
+ */
 export const shopOrderSteps = ["confirm", "ship", "deliver", "cancel"] as const;
 export type ShopOrderStep = (typeof shopOrderSteps)[number];
 
@@ -90,6 +97,7 @@ export const isOrderable = (product: Pick<CatalogueProduct, "onRequest" | "credi
  * What the portal shows of a product's stock ("Op voorraad", "Laag voorraad", "Op aanvraag"): on
  * request when it's ordered so, or out; else low below the low threshold (as the materials' levels
  * have it), or in stock.
+ * @labels productStock
  */
 const productStocks = ["in_stock", "low", "on_request"] as const;
 export type ProductStock = (typeof productStocks)[number];

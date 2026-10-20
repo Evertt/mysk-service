@@ -1,4 +1,6 @@
 import {
+	type AccessorFn,
+	type AppColumnDefBase,
 	createTableHook,
 	functionalUpdate,
 	makeStateUpdater,
@@ -8,12 +10,15 @@ import {
 } from "@tanstack/svelte-table";
 import { type Component, getAllContexts, type Snippet, untrack } from "svelte";
 
+import type { BadgeDisplay } from "#lib/i18n/labels.ts";
+
+import EnumBadge from "../enum-badge.svelte";
 import AfterMount from "./after-mount.svelte";
 import ColumnHeader from "./column-header.svelte";
 import CurrencyCell from "./currency-cell.svelte";
 import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
-import { features } from "./features.ts";
+import { type DataTableColumnMeta, type Features, features } from "./features.ts";
 import NumberCell from "./number-cell.svelte";
 import { setRowBulkActions } from "./row-bulk-actions.svelte.ts";
 import {
@@ -42,6 +47,9 @@ export function isMultiSortEvent(event: unknown) {
  * or header; they read it from context with `useTableContext`, `useCellContext` and
  * `useHeaderContext`.
  */
+const cellComponents = { SelectCell, DateCell, CurrencyCell, NumberCell };
+const headerComponents = { ColumnHeader, SelectAllHeader };
+
 const hook = createTableHook({
 	features,
 	// Each word of the search in one of the row's columns (see `search-filter.ts`).
@@ -64,15 +72,55 @@ const hook = createTableHook({
 	},
 	groupedColumnMode: false,
 	tableComponents: { Table: DataTable, Toolbar, ViewOptions },
-	cellComponents: { SelectCell, DateCell, CurrencyCell, NumberCell },
-	headerComponents: { ColumnHeader, SelectAllHeader },
+	cellComponents,
+	headerComponents,
 });
 
 export const { useTableContext, useCellContext, useHeaderContext } = hook;
 
+/** A kind's display map, as `withLabels()` makes it: each value's label, icon and tone. */
+type EnumDisplay<V extends string> = Readonly<Record<V, BadgeDisplay & { readonly label: string }>>;
+
+/** The keys of `TData` whose values are among `V` (or empty). */
+type EnumKey<TData, V extends string> = {
+	[K in keyof TData & string]: TData[K] extends V | null ? K : never;
+}[keyof TData & string];
+
+/** What `column.enum()` takes: how it shows the values, which ones, and the column's other options. */
+export type EnumColumnDef<TData extends RowData, V extends string> = Omit<
+	AppColumnDefBase<Features, TData, V | null, typeof cellComponents, typeof headerComponents>,
+	"id" | "filterFn" | "sortFn" | "meta"
+> &
+	(
+		| {
+				/** Shows each value as its badge (`EnumBadge`), named by its label. */
+				display: EnumDisplay<V>;
+				label?: never;
+		  }
+		| {
+				/** Shows each value as this text, its label. */
+				label: (value: V) => string;
+				display?: never;
+		  }
+	) & {
+		/** The column's id; an accessor key's own by default. */
+		id?: string;
+		/** The values, in order: the filter's, and with `sortByOrder` the sort's. */
+		values: readonly V[];
+		/** Sorts by the values' order (e.g. by urgency) rather than alphabetically. */
+		sortByOrder?: boolean;
+		/**
+		 * Whether clicking a value filters the table by it (`meta.clickFilter`, which the search also
+		 * finds it by); `true` by default. Off for a cell that filters in its own way.
+		 */
+		clickFilter?: boolean;
+		meta: DataTableColumnMeta;
+	};
+
 /**
  * A column helper for a table of `TData` rows, with `select()` for the selection column: a
- * checkbox to select the row, and one in the header to select all the rows loaded.
+ * checkbox to select the row, and one in the header to select all the rows loaded; and `enum()`
+ * for a column of an enum's values.
  */
 export function createAppColumnHelper<TData extends RowData>() {
 	const helper = hook.createAppColumnHelper<TData>();
@@ -86,6 +134,59 @@ export function createAppColumnHelper<TData extends RowData>() {
 				enableSorting: false,
 				enableHiding: false,
 			}),
+		/**
+		 * A column of an enum's values, by an accessor key or function: each shown as its badge
+		 * (`display`) or label, filtered by a set of values (`?status=quote,scheduled`), grouped by
+		 * value, and clicking a value filters by it. E.g.
+		 * `column.enum("priority", { values: orderPriorities, display: orderPriorityDisplay,
+		 * sortByOrder: true, meta: { label: m.orders_column_priority } })`. Other options (a `cell`
+		 * of its own, `enableGlobalFilter`, `enableGrouping: false`, …) are the column's.
+		 */
+		enum: <V extends string>(
+			accessor: EnumKey<TData, V> | ((row: TData) => V | null),
+			{
+				id,
+				values,
+				display,
+				label,
+				sortByOrder,
+				clickFilter = true,
+				meta,
+				...column
+			}: EnumColumnDef<TData, V>,
+		) => {
+			const named = (value: V) => (display ? display[value].label : label!(value));
+			const known = (value: string): value is V => (values as readonly string[]).includes(value);
+			return helper.accessor(
+				(typeof accessor === "function"
+					? accessor
+					: (row: TData) => row[accessor] as V | null) as AccessorFn<TData, V | null>,
+				{
+					id: id ?? (accessor as string),
+					cell: ({ getValue }) => {
+						const value = getValue();
+						if (value === null || value === undefined) return "";
+						return display ? renderComponent(EnumBadge, { display, value }) : named(value);
+					},
+					filterFn: "oneOf",
+					enableGrouping: true,
+					...(sortByOrder
+						? {
+								sortFn: (a, b, columnId) =>
+									values.indexOf(a.getValue<V>(columnId)) - values.indexOf(b.getValue<V>(columnId)),
+							}
+						: {}),
+					...column,
+					meta: {
+						filterValues: values,
+						...(clickFilter
+							? { clickFilter: (value: string) => (known(value) ? named(value) : value) }
+							: {}),
+						...meta,
+					},
+				},
+			);
+		},
 	};
 }
 

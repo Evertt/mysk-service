@@ -8,11 +8,12 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
+	import { shopOrderStatusDisplay } from "#modules/parts-shop/display.ts";
 	import { getShopOrders } from "#modules/parts-shop/orders.remote.ts";
-	import StatusBadge from "#modules/parts-shop/ui/status-badge.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop"> } = $props();
@@ -86,7 +87,13 @@
 								/>
 							</Table.Cell>
 							<Table.Cell class="tabular-nums">{formatDate(order.createdAt)}</Table.Cell>
-							<Table.Cell><StatusBadge status={order.status} /></Table.Cell>
+							<Table.Cell
+								><EnumBadge
+									display={shopOrderStatusDisplay}
+									value={order.status}
+									data-shop-status={order.status}
+								/></Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">{formatCents(order.total)}</Table.Cell>
 						</Table.Row>
 					{/each}

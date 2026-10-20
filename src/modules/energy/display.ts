@@ -3,8 +3,7 @@
  * period, a tone's badge and colour, and an alert's recommendation (§2.5's texts, in the reader's
  * language) and what it measured. Isomorphic.
  */
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
-import { formatNumber, numberFormatter } from "#lib/i18n/index.ts";
+import { type BadgeDisplay, formatNumber, numberFormatter } from "#lib/i18n/index.ts";
 
 import { energyLabels } from "./labels.ts";
 import type { AlertMetric, DoorKind, ThresholdState, ZoneTone } from "./model.ts";
@@ -46,12 +45,13 @@ export function changeClass(change: number | null) {
 	return change < 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400";
 }
 
-export const toneBadges: Record<ZoneTone, BadgeTone> = {
-	nominal: "success",
-	elevated: "warning",
-	peak: "danger",
-	offline: "neutral",
-};
+/** A zone's tone as a badge. */
+export const zoneToneDisplay = energyLabels.withLabels("zoneTone", {
+	nominal: { tone: "success" },
+	elevated: { tone: "warning" },
+	peak: { tone: "danger" },
+	offline: { tone: "neutral" },
+} satisfies Record<ZoneTone, BadgeDisplay>);
 
 /** A zone's tone as the border of its block on the floor plan. */
 export const toneBorders: Record<ZoneTone, string> = {
@@ -69,12 +69,13 @@ export const toneColours: Record<ZoneTone, string> = {
 	offline: "bg-muted-foreground/40",
 };
 
-export const stateBadges: Record<ThresholdState, BadgeTone> = {
-	active: "danger",
-	near: "warning",
-	normal: "success",
-	off: "neutral",
-};
+/** A zone's state against its thresholds as a badge. */
+export const thresholdStateDisplay = energyLabels.withLabels("thresholdState", {
+	active: { tone: "danger" },
+	near: { tone: "warning" },
+	normal: { tone: "success" },
+	off: { tone: "neutral" },
+} satisfies Record<ThresholdState, BadgeDisplay>);
 
 /** What an alert is about, for its recommendation and detail. */
 interface AlertSubject {

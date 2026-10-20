@@ -5,15 +5,15 @@
 	first (date, kind, engineer, outcome), each opening its points and remarks.
 -->
 <script lang="ts">
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getUnitChecklists } from "../../checklists.remote.ts";
 	import ChecklistHistory from "../../detail/checklist-history.svelte";
 	import ChecklistPoints from "../../detail/checklist-points.svelte";
-	import { completerName } from "../../display.ts";
+	import { completerName, inspectionStatusDisplay } from "../../display.ts";
 	import { checklistLabels } from "../../labels.ts";
-	import InspectionBadge from "../../ui/inspection-badge.svelte";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
@@ -38,7 +38,11 @@
 			{/if}
 		</Card.Description>
 		<Card.Action>
-			<InspectionBadge status={data.status} />
+			<EnumBadge
+				display={inspectionStatusDisplay}
+				value={data.status}
+				data-inspection={data.status}
+			/>
 		</Card.Action>
 	</Card.Header>
 	{#if data.checklists.length}

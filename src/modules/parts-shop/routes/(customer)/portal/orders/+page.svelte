@@ -7,9 +7,10 @@
 	import type { RouteParams } from "$app/types";
 	import ShoppingCartIcon from "@lucide/svelte/icons/shopping-cart";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { getClientShopOrders } from "#modules/parts-shop/client/client-shop.remote.ts";
-	import StatusBadge from "#modules/parts-shop/ui/status-badge.svelte";
+	import { shopOrderStatusDisplay } from "#modules/parts-shop/display.ts";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(customer)/(modules)/parts-shop/portal/orders"> } =
@@ -50,7 +51,11 @@
 						</span>
 					</span>
 					<span class="flex shrink-0 flex-col items-end gap-1 @2xl:contents">
-						<StatusBadge status={order.status} />
+						<EnumBadge
+							display={shopOrderStatusDisplay}
+							value={order.status}
+							data-shop-status={order.status}
+						/>
 						<span class="text-sm tabular-nums @2xl:justify-self-end">
 							{formatCents(order.total)}
 						</span>

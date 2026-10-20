@@ -105,6 +105,7 @@ export const coveredBy = (contract: { number: string; level: ContractLevel }) =>
 
 // --- Response time ---------------------------------------------------------------------------
 
+/** @labels slaState */
 const slaStates = ["on_track", "at_risk", "overdue", "responded"] as const;
 export type SlaState = (typeof slaStates)[number];
 

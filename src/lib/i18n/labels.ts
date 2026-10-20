@@ -1,27 +1,40 @@
-import type { MemberRole } from "#lib/auth/index.ts";
 /**
  * The translated names of the domain's enum values (statuses, types, units, roles, …): the one
  * place that maps a stored value to what users read. Show one with `label("orderStatus", status)`;
  * build select or filter options with `labelOptions("orderStatus", orderStatuses)`.
  *
+ * The maps are generated (`labels.gen.ts`, by `scripts/modules.ts`) from the enum arrays tagged
+ * `@labels <kind>` in their doc comment (`orderStatuses` in `#lib/models.ts` names `orderStatus`):
+ * each value's message is `enum_<kind>_<value>` in snake_case, `enum_order_status_in_progress`, in
+ * `messages/<locale>/enum.json`; a module's are `<section>_enum_<kind>_<value>`.
+ *
  * Labels are read when they're shown, in the current language, so these are safe to use at module
  * scope only through `withLabels`/`labelOptions`, whose `label` is a getter. Never store the text of
  * a label: store the value.
  */
-import type {
-	ContactChannel,
-	CustomerSegment,
-	EngineerSpecialty,
-	EquipmentStatus,
-	OrderPriority,
-	OrderStatus,
-	OrderType,
-	SitePriority,
-	Weekday,
-} from "#lib/models.ts";
+import type { Component } from "svelte";
+
 import type { Locale } from "#lib/paraglide/runtime.js";
 
+import { labels as coreLabels } from "./labels.gen.ts";
+
+/**
+ * A kind's map of each value to its message.
+ * @public The generated `labels.gen.ts` files hold their maps to it, which knip doesn't see.
+ */
 export type Labels<T extends string> = Record<T, () => string>;
+
+/**
+ * How an enum value shows as a badge (`EnumBadge`): its icon, if it has one, and its tone: what it
+ * means (a `BadgeTone`: done, needs attention, planned, critical, out of the picture), or for a
+ * value without a meaning, such as a customer's segment, a plain variant. A kind's display map is
+ * `withLabels(kind, { [value]: BadgeDisplay })`, which adds each value's `label`.
+ */
+export interface BadgeDisplay {
+	icon?: Component;
+	/** `BadgeTone`'s, or a plain variant (written out: the linter can't read a `.svelte` file's types). */
+	tone: "success" | "warning" | "info" | "danger" | "neutral" | "default" | "secondary" | "outline";
+}
 
 /**
  * The name a tenant gave a value in the current language, if it gave it one (e.g. its own name for
@@ -40,93 +53,10 @@ export function overwriteTenantNames(get: TenantName) {
 	tenantName = get;
 }
 
-const coreLabels = {
-	orderStatus: {
-		awaiting_acceptance: m.enum_order_status_awaiting_acceptance,
-		quote: m.enum_order_status_quote,
-		scheduled: m.enum_order_status_scheduled,
-		in_progress: m.enum_order_status_in_progress,
-		completed: m.enum_order_status_completed,
-		invoiced: m.enum_order_status_invoiced,
-		cancelled: m.enum_order_status_cancelled,
-	} satisfies Labels<OrderStatus>,
-	orderPriority: {
-		low: m.enum_order_priority_low,
-		normal: m.enum_order_priority_normal,
-		high: m.enum_order_priority_high,
-		urgent: m.enum_order_priority_urgent,
-	} satisfies Labels<OrderPriority>,
-	orderType: {
-		breakdown: m.enum_order_type_breakdown,
-		repair: m.enum_order_type_repair,
-		maintenance: m.enum_order_type_maintenance,
-		inspection: m.enum_order_type_inspection,
-		installation: m.enum_order_type_installation,
-		survey: m.enum_order_type_survey,
-		damage: m.enum_order_type_damage,
-		project: m.enum_order_type_project,
-		other: m.enum_order_type_other,
-	} satisfies Labels<OrderType>,
-	customerSegment: {
-		enterprise: m.enum_customer_segment_enterprise,
-		mid_market: m.enum_customer_segment_mid_market,
-		small_business: m.enum_customer_segment_small_business,
-	} satisfies Labels<CustomerSegment>,
-	engineerSpecialty: {
-		electrical: m.enum_engineer_specialty_electrical,
-		mechanical: m.enum_engineer_specialty_mechanical,
-		hvac: m.enum_engineer_specialty_hvac,
-		plumbing: m.enum_engineer_specialty_plumbing,
-		controls: m.enum_engineer_specialty_controls,
-	} satisfies Labels<EngineerSpecialty>,
-
-	equipmentStatus: {
-		operational: m.enum_equipment_status_operational,
-		needs_service: m.enum_equipment_status_needs_service,
-		out_of_service: m.enum_equipment_status_out_of_service,
-		decommissioned: m.enum_equipment_status_decommissioned,
-	} satisfies Labels<EquipmentStatus>,
-	contactChannel: {
-		email: m.enum_contact_channel_email,
-		phone: m.enum_contact_channel_phone,
-		whatsapp: m.enum_contact_channel_whatsapp,
-		portal: m.enum_contact_channel_portal,
-	} satisfies Labels<ContactChannel>,
-	weekday: {
-		monday: m.enum_weekday_monday,
-		tuesday: m.enum_weekday_tuesday,
-		wednesday: m.enum_weekday_wednesday,
-		thursday: m.enum_weekday_thursday,
-		friday: m.enum_weekday_friday,
-		saturday: m.enum_weekday_saturday,
-		sunday: m.enum_weekday_sunday,
-	} satisfies Labels<Weekday>,
-	sitePriority: {
-		normal: m.enum_site_priority_normal,
-		high: m.enum_site_priority_high,
-	} satisfies Labels<SitePriority>,
-	/** A unit's name, e.g. `Pieces`. */
-	memberRole: {
-		owner: m.enum_member_role_owner,
-		admin: m.enum_member_role_admin,
-		member: m.enum_member_role_member,
-		engineer: m.enum_member_role_engineer,
-		customer: m.enum_member_role_customer,
-	} satisfies Labels<MemberRole>,
-	/** What a role is for, e.g. to explain a choice of role. */
-	memberRoleDescription: {
-		owner: m.enum_member_role_description_owner,
-		admin: m.enum_member_role_description_admin,
-		member: m.enum_member_role_description_member,
-		engineer: m.enum_member_role_description_engineer,
-		customer: m.enum_member_role_description_customer,
-	} satisfies Labels<MemberRole>,
-};
-
 /**
  * Binds the label functions to a map of label kinds. The core's kinds are bound below; an optional
- * module defines its own next to its code (e.g. `src/modules/contracts/labels.ts`), so this
- * file doesn't import the modules.
+ * module binds its own generated map next to its code (e.g. `src/modules/contracts/labels.ts`), so
+ * this file doesn't import the modules.
  */
 export function defineLabels<L extends Record<string, Record<string, () => string>>>(labels: L) {
 	type Kind = keyof L & string;
@@ -186,6 +116,21 @@ const withLabel = <T extends object>(entry: T, get: () => string) =>
 	Object.defineProperty({ ...entry }, "label", { get, enumerable: true }) as T & {
 		readonly label: string;
 	};
+
+/**
+ * A display map like `withLabels()`'s for values that aren't a label kind, whose entries name their
+ * message: `labelled({ done: { label: m.client_status_done, tone: "success" } })[value].label`.
+ */
+export function labelled<V extends string, const D extends { label: () => string }>(
+	entries: Record<V, D>,
+) {
+	return Object.fromEntries(
+		Object.entries<D>(entries).map(([value, { label, ...entry }]) => [
+			value,
+			withLabel(entry, label),
+		]),
+	) as Record<V, Omit<D, "label"> & { readonly label: string }>;
+}
 
 export type LabelKind = keyof typeof coreLabels;
 

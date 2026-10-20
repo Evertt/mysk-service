@@ -9,6 +9,7 @@ import type { NumberFormat } from "#lib/numbering.ts";
 /** What a contract's number looks like, e.g. `CTR-2026-0007` (see `#lib/numbering.ts`). */
 export const contractNumberFormat: NumberFormat = { prefix: "CTR-", digits: 4, yearly: true };
 
+/** @labels contractLevel */
 export const contractLevels = ["basic", "standard", "premium"] as const;
 export type ContractLevel = (typeof contractLevels)[number];
 
@@ -19,7 +20,10 @@ export const defaultResponseHours: Record<ContractLevel, number> = {
 	premium: 4,
 };
 
-/** Not stored: derived from the contract's period, see `contractStatus`. */
+/**
+ * Not stored: derived from the contract's period, see `contractStatus`.
+ * @labels contractStatus
+ */
 export const contractStatuses = ["upcoming", "active", "expired"] as const;
 export type ContractStatus = (typeof contractStatuses)[number];
 

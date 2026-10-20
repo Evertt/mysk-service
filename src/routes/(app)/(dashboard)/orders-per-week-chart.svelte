@@ -9,7 +9,7 @@
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
 	import { dateFormatter, formatNumber } from "#lib/i18n/index.ts";
 	import { orderStatuses } from "#lib/models.ts";
-	import { statuses } from "#lib/orders/index.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import ChartTable from "./chart-table.svelte";
 	import type { OrdersInWeek } from "./dashboard-charts.ts";
@@ -43,15 +43,15 @@
 		Object.fromEntries(
 			orderStatuses.map((status) => [
 				status,
-				{ label: statuses[status].label, color: statuses[status].color },
+				{ label: orderStatusDisplay[status].label, color: orderStatusDisplay[status].color },
 			]),
 		) satisfies ChartConfig,
 	);
 	const series = $derived(
 		orderStatuses.map((status) => ({
 			key: status,
-			label: statuses[status].label,
-			color: statuses[status].color,
+			label: orderStatusDisplay[status].label,
+			color: orderStatusDisplay[status].color,
 		})),
 	);
 </script>
@@ -100,7 +100,7 @@
 			caption={m.dashboard_orders_per_week()}
 			columns={[
 				m.dashboard_column_week(),
-				...orderStatuses.map((status) => statuses[status].label),
+				...orderStatuses.map((status) => orderStatusDisplay[status].label),
 			]}
 			rows={data.map((week) => [
 				weekLabel(week.week),

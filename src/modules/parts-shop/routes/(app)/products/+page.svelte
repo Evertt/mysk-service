@@ -86,7 +86,7 @@
 										>{shopLabels.label("productUnit", each.product.unit)}</Badge
 									>
 									{#if each.product.onRequest}
-										<Badge variant="neutral">{m.shop_stock_on_request()}</Badge>
+										<Badge variant="neutral">{m.shop_enum_product_stock_on_request()}</Badge>
 									{/if}
 									{#if each.product.creditEligible}
 										<Badge variant="success">{m.shop_credit_eligible()}</Badge>

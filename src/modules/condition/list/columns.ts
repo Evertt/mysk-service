@@ -6,8 +6,8 @@ import { CustomerLink } from "#lib/customers/components.ts";
 import { EquipmentLink } from "#lib/equipment/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 
-import { conditionLabels } from "../labels.ts";
-import { type Concern, type ScoreBand, type UnitStatus, unitStatuses } from "../model.ts";
+import { unitStatusDisplay } from "../display.ts";
+import { type Concern, type ScoreBand, unitStatuses } from "../model.ts";
 import ConditionBar from "../ui/condition-bar.svelte";
 import InspectionBadge from "../ui/inspection-badge.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
@@ -89,19 +89,18 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		meta: { label: m.condition_column_inspection },
 	}),
-	column.accessor("status", {
+	column.enum("status", {
+		values: unitStatuses,
+		display: unitStatusDisplay,
+		// With the mark of what a planned unit's condition asks for.
 		cell: ({ getValue, row }) =>
 			renderComponent(StatusBadge, {
-				status: getValue(),
+				status: getValue()!,
 				concern: row.original.concern as Concern,
 			}),
+		enableGrouping: false,
 		enableGlobalFilter: false,
-		filterFn: "oneOf",
-		meta: {
-			label: m.condition_column_status,
-			filterValues: unitStatuses,
-			clickFilter: (status) => conditionLabels.label("unitStatus", status as UnitStatus),
-		},
+		meta: { label: m.condition_column_status },
 	}),
 	column.accessor("advice", {
 		cell: ({ getValue }) => getValue() ?? "",

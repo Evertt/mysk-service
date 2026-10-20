@@ -7,7 +7,7 @@ import * as v from "valibot";
 
 import { text } from "#lib/schema.ts";
 
-import { categoryRuleValues, revenueCategories, ruleLimits } from "../model.ts";
+import { categoryRuleValues, levelColours, revenueCategories, ruleLimits } from "../model.ts";
 import { yearField } from "./wallet-schema.ts";
 
 /** A percentage with at most two decimals, as basis points (3.8 → 380). */
@@ -29,6 +29,11 @@ const tier = v.object({
 	),
 	cashRate: rate(),
 	creditRate: rate(),
+	// Empty: by its name (`levelColour()`).
+	colour: v.pipe(
+		v.optional(v.picklist(["", ...levelColours]), ""),
+		v.transform((colour) => colour || undefined),
+	),
 });
 
 const categoryRule = v.object({

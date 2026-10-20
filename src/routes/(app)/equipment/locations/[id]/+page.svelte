@@ -6,17 +6,17 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import {
-		StatusBadge as EquipmentStatusBadge,
 		EquipmentLink,
 		LocationDialog,
 		LocationHistory,
 		QrCard,
 	} from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
+	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { deleteLocation, getLocation } from "#lib/equipment/remotes.ts";
 
 	import type { PageProps } from "./$types";
@@ -100,7 +100,9 @@
 										</div>
 									</Table.Cell>
 									<Table.Cell>{unit.category}</Table.Cell>
-									<Table.Cell><EquipmentStatusBadge status={unit.status} /></Table.Cell>
+									<Table.Cell
+										><EnumBadge display={equipmentStatusDisplay} value={unit.status} /></Table.Cell
+									>
 								</Table.Row>
 							{/each}
 						</Table.Body>

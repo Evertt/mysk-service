@@ -7,11 +7,12 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { getClientUnitInspection } from "../../client/client-checklists.remote.ts";
+	import { inspectionStatusDisplay } from "../../display.ts";
 	import { checklistLabels } from "../../labels.ts";
-	import InspectionBadge from "../../ui/inspection-badge.svelte";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
@@ -34,7 +35,11 @@
 			{/if}
 		</Card.Description>
 		<Card.Action>
-			<InspectionBadge status={data.status} />
+			<EnumBadge
+				display={inspectionStatusDisplay}
+				value={data.status}
+				data-inspection={data.status}
+			/>
 		</Card.Action>
 	</Card.Header>
 	{#if completed.length}

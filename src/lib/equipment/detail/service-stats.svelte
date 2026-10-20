@@ -7,7 +7,7 @@
 <script lang="ts">
 	import StatCard from "#lib/components/stat-card.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { types } from "#lib/orders/index.ts";
+	import { orderTypeDisplay } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
 
@@ -42,7 +42,7 @@
 				class="flex flex-wrap gap-x-3 gap-y-1 text-sm"
 			>
 				{#each stats.ordersByType as { type, count } (type)}
-					{@const display = types[type]}
+					{@const display = orderTypeDisplay[type]}
 					<li class="inline-flex items-center gap-1 text-muted-foreground">
 						<display.icon class="size-3.5" />
 						{display.label}

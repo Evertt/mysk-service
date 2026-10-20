@@ -4,9 +4,11 @@
  */
 import type { ModuleAction } from "#lib/modules/manifests.ts";
 
+/** @labels customerSegment */
 export const customerSegments = ["enterprise", "mid_market", "small_business"] as const;
 export type CustomerSegment = (typeof customerSegments)[number];
 
+/** @labels engineerSpecialty */
 export const engineerSpecialties = [
 	"electrical",
 	"mechanical",
@@ -16,6 +18,7 @@ export const engineerSpecialties = [
 ] as const;
 export type EngineerSpecialty = (typeof engineerSpecialties)[number];
 
+/** @labels equipmentStatus */
 export const equipmentStatuses = [
 	"operational",
 	"needs_service",
@@ -27,6 +30,7 @@ export type EquipmentStatus = (typeof equipmentStatuses)[number];
 /**
  * In the order people pick them: breakdowns (SHLTR's "storing") are half the work, repairs a
  * quarter. An urgent breakdown ("storing prio") is a breakdown with priority `urgent`.
+ * @labels orderType
  */
 export const orderTypes = [
 	"breakdown",
@@ -58,6 +62,7 @@ export const isCorrectiveWork = (type: OrderType) =>
  * it's no open work: off the planning board and its backlog, holding no stock, and changed by
  * nothing but accepting, rejecting or deleting it (`acceptance.ts` in `#lib/orders/server/`).
  * Orders made in the office start as quotes, past acceptance.
+ * @labels orderStatus
  */
 export const orderStatuses = [
 	"awaiting_acceptance",
@@ -125,6 +130,7 @@ export const reportUrgencies = [
 	"urgent",
 ] as const satisfies readonly OrderPriority[];
 
+/** @labels orderPriority */
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];
 
@@ -168,11 +174,17 @@ export type ActivityAction = CoreActivityAction | ModuleAction;
 
 // --- Customer sites ------------------------------------------------------------------------------
 
-/** How a site (`customer_site`) prefers to be contacted, e.g. to agree a visit. */
+/**
+ * How a site (`customer_site`) prefers to be contacted, e.g. to agree a visit.
+ * @labels contactChannel
+ */
 export const contactChannels = ["email", "phone", "whatsapp", "portal"] as const;
 export type ContactChannel = (typeof contactChannels)[number];
 
-/** The days of the week, Monday first, e.g. a site's preferred day for visits. */
+/**
+ * The days of the week, Monday first, e.g. a site's preferred day for visits.
+ * @labels weekday
+ */
 export const weekdays = [
 	"monday",
 	"tuesday",
@@ -184,6 +196,9 @@ export const weekdays = [
 ] as const;
 export type Weekday = (typeof weekdays)[number];
 
-/** How urgently a site's work is handled, besides each order's own priority. */
+/**
+ * How urgently a site's work is handled, besides each order's own priority.
+ * @labels sitePriority
+ */
 export const sitePriorities = ["normal", "high"] as const;
 export type SitePriority = (typeof sitePriorities)[number];

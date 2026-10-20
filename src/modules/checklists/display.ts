@@ -3,7 +3,9 @@
  * outcome, and a checklist's outcome in words ("Approved", "2 rejected"). Isomorphic.
  */
 import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
+import type { BadgeDisplay } from "#lib/i18n/index.ts";
 
+import { checklistLabels } from "./labels.ts";
 import {
 	type ChecklistStatus,
 	type InspectionStatus,
@@ -15,13 +17,13 @@ import {
  * The tone of a unit's inspection status: valid is fine, expiring and rejected need attention
  * (phase 2's "Aandacht"), expired is critical ("Kritiek").
  */
-export const inspectionTones: Record<InspectionStatus, BadgeTone> = {
-	valid: "success",
-	expiring: "warning",
-	rejected: "warning",
-	expired: "danger",
-	none: "neutral",
-};
+export const inspectionStatusDisplay = checklistLabels.withLabels("inspectionStatus", {
+	valid: { tone: "success" },
+	expiring: { tone: "warning" },
+	rejected: { tone: "warning" },
+	expired: { tone: "danger" },
+	none: { tone: "neutral" },
+} satisfies Record<InspectionStatus, BadgeDisplay>);
 
 /** A checklist's outcome: a draft is open, a completed one approved or with rejected points. */
 export function outcome(checklist: {

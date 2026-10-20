@@ -18,6 +18,12 @@
 				info: "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
 				danger: "bg-destructive/10 text-destructive dark:bg-destructive/20",
 				neutral: "bg-muted text-muted-foreground",
+				// Colours: a value named after one, e.g. a partner level (see `BadgeColour`).
+				bronze: "bg-orange-700/15 text-orange-800 dark:bg-orange-400/15 dark:text-orange-300",
+				silver: "bg-slate-400/20 text-slate-700 dark:bg-slate-300/15 dark:text-slate-200",
+				gold: "bg-yellow-400/30 text-yellow-800 dark:bg-yellow-300/15 dark:text-yellow-200",
+				platinum: "bg-zinc-700 text-zinc-50 dark:bg-zinc-200 dark:text-zinc-900",
+				diamond: "bg-cyan-400/20 text-cyan-800 dark:bg-cyan-300/15 dark:text-cyan-200",
 			},
 		},
 		defaultVariants: {
@@ -32,6 +38,12 @@
 	 * needing attention, new or planned, critical, and over or out of the picture.
 	 */
 	export type BadgeTone = "success" | "warning" | "info" | "danger" | "neutral";
+
+	/**
+	 * The variants that colour a value by its name rather than its meaning: a partner's level
+	 * "Gold" in gold.
+	 */
+	export type BadgeColour = "bronze" | "silver" | "gold" | "platinum" | "diamond";
 </script>
 
 <script lang="ts">

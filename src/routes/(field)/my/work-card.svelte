@@ -7,9 +7,10 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import MapPinIcon from "@lucide/svelte/icons/map-pin";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import type { OrderPriority, OrderStatus } from "#lib/models.ts";
-	import { PriorityBadge, StatusBadge } from "#lib/orders/components.ts";
+	import { orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { plannedTime } from "./work.ts";
 
@@ -54,8 +55,8 @@
 		</div>
 		<p class="line-clamp-2 text-sm">{order.description}</p>
 		<div class="flex flex-wrap gap-2">
-			<StatusBadge status={order.status} />
-			<PriorityBadge priority={order.priority} />
+			<EnumBadge display={orderStatusDisplay} value={order.status} />
+			<EnumBadge display={orderPriorityDisplay} value={order.priority} />
 		</div>
 	</div>
 	<ChevronRightIcon class="size-5 shrink-0 text-muted-foreground" />

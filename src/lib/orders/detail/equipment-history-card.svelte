@@ -3,11 +3,12 @@
 	Other orders for the same units as an order (any of them), for context.
 -->
 <script lang="ts">
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 
+	import { orderStatusDisplay } from "../display.ts";
 	import type { getOrderHistory } from "../order.remote.ts";
 	import OrderLink from "../ui/order-link.svelte";
-	import StatusBadge from "../ui/status-badge.svelte";
 	import TypeLabel from "../ui/type-label.svelte";
 
 	let {
@@ -47,7 +48,9 @@
 								<OrderLink number={other.number} />
 							</Table.Cell>
 							<Table.Cell><TypeLabel type={other.type} /></Table.Cell>
-							<Table.Cell><StatusBadge status={other.status} /></Table.Cell>
+							<Table.Cell
+								><EnumBadge display={orderStatusDisplay} value={other.status} /></Table.Cell
+							>
 							<Table.Cell class="text-right tabular-nums">
 								{formatDate(other.createdAt)}
 							</Table.Cell>

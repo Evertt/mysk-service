@@ -9,11 +9,12 @@
 	import MailIcon from "@lucide/svelte/icons/mail";
 	import { toast } from "svelte-sonner";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDate } from "#lib/i18n/index.ts";
+	import { type BadgeDisplay, formatDate, labelled } from "#lib/i18n/index.ts";
 
 	import {
 		getPortalAccess,
@@ -27,16 +28,11 @@
 	const access = $derived(await getPortalAccess(code));
 	const form = $derived(invitePortalContact.for(`customer-${access.customer.id}`));
 
-	const stateLabel: Record<PortalContactState, () => string> = {
-		invited: m.customers_portal_state_invited,
-		expired: m.customers_portal_state_expired,
-		active: m.customers_portal_state_active,
-	};
-	const stateVariant: Record<PortalContactState, "info" | "danger" | "success"> = {
-		invited: "info",
-		expired: "danger",
-		active: "success",
-	};
+	const stateDisplay = labelled({
+		invited: { label: m.customers_portal_state_invited, tone: "info" },
+		expired: { label: m.customers_portal_state_expired, tone: "danger" },
+		active: { label: m.customers_portal_state_active, tone: "success" },
+	} satisfies Record<PortalContactState, BadgeDisplay & { label: () => string }>);
 </script>
 
 <Card.Root data-portal-access>
@@ -67,7 +63,7 @@
 							</span>
 						</div>
 						<div class="flex items-center gap-2">
-							<Badge variant={stateVariant[contact.state]}>{stateLabel[contact.state]()}</Badge>
+							<EnumBadge display={stateDisplay} value={contact.state} />
 							{#if access.canManage}
 								<DeleteDialog
 									form={revokePortalContact.for(String(contact.id))}

@@ -10,11 +10,12 @@
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LockOpenIcon from "@lucide/svelte/icons/lock-open";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
+	import { dockStateDisplay } from "../../display.ts";
 	import { getDoorDock, watchDocks } from "../../docks.remote.ts";
 	import { dockState } from "../../model.ts";
-	import StateBadge from "../../ui/state-badge.svelte";
 
 	let {
 		equipmentId,
@@ -49,7 +50,7 @@
 	>
 		<span class="font-mono font-medium">{dock.code}</span>
 		{#if dock.reported}
-			<StateBadge {state} />
+			<EnumBadge display={dockStateDisplay} value={state} data-dock-state={state} />
 			<span class="inline-flex items-center gap-1" data-door-dock-locked={dock.locked}>
 				{#if dock.locked}
 					<LockIcon class="size-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />

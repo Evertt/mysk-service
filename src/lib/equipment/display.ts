@@ -1,6 +1,5 @@
-import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import { dayOf } from "#lib/dates.ts";
-import { labelOptions, withLabels } from "#lib/i18n/index.ts";
+import { type BadgeDisplay, labelOptions, withLabels } from "#lib/i18n/index.ts";
 import { type EquipmentStatus, equipmentStatuses } from "#lib/models.ts";
 
 /** Options for the status filter, in the order of the enum. */
@@ -11,7 +10,7 @@ export const statusOptions = labelOptions("equipmentStatus", equipmentStatuses);
  * primary colour for units in service, destructive for those out of it (like its badge), and the
  * muted one for decommissioned units, which are out of the picture.
  */
-const statusDetails: Record<EquipmentStatus, { tone: BadgeTone; color: string }> = {
+const statusDetails: Record<EquipmentStatus, BadgeDisplay & { color: string }> = {
 	operational: { tone: "success", color: "var(--primary)" },
 	needs_service: { tone: "warning", color: "var(--chart-3)" },
 	out_of_service: { tone: "danger", color: "var(--destructive)" },
@@ -19,7 +18,7 @@ const statusDetails: Record<EquipmentStatus, { tone: BadgeTone; color: string }>
 };
 
 /** Each status's translated `label`, badge tone and chart colour. */
-export const statuses = withLabels("equipmentStatus", statusDetails);
+export const equipmentStatusDisplay = withLabels("equipmentStatus", statusDetails);
 
 /**
  * Whether the unit's warranty still covers work done on `at` (a day, or the day of a moment in

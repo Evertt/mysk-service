@@ -9,6 +9,7 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import { isMadeElsewhere } from "#modules/invoices/credit-note.ts";
@@ -22,8 +23,8 @@
 		settleCreditNote,
 		voidCreditNote,
 	} from "#modules/invoices/detail/credit-note.remote.ts";
+	import { creditNoteStateDisplay } from "#modules/invoices/display.ts";
 	import { canChange, isEditable } from "#modules/invoices/invoice.ts";
-	import CreditStatusBadge from "#modules/invoices/ui/credit-status-badge.svelte";
 	import InvoiceLink from "#modules/invoices/ui/invoice-link.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/invoices/credit-notes/[number]"> } =
@@ -59,7 +60,7 @@
 		]}
 	>
 		{#snippet badges()}
-			<CreditStatusBadge state={credit.status} />
+			<EnumBadge display={creditNoteStateDisplay} value={credit.status} />
 		{/snippet}
 		{#snippet actions()}
 			<Button variant="outline" onclick={() => window.print()}>
@@ -181,7 +182,7 @@
 							value={credit.issuedOn && formatDate(credit.issuedOn)}
 						/>
 						<DetailItem
-							label={m.invoices_credit_state_settled()}
+							label={m.invoices_enum_credit_note_state_paid()}
 							value={credit.settledOn && formatDate(credit.settledOn)}
 						/>
 						{#if credit.voidedAt}

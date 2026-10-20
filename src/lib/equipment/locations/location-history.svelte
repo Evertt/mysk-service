@@ -4,9 +4,11 @@
 	it's about, its type, status, engineer and when it happened.
 -->
 <script lang="ts">
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import { formatDate, label } from "#lib/i18n/index.ts";
-	import { OrderLink, StatusBadge as OrderStatusBadge } from "#lib/orders/components.ts";
+	import { OrderLink } from "#lib/orders/components.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { orderDate } from "../detail/service-history.ts";
 	import type { getLocation } from "./locations.remote.ts";
@@ -29,7 +31,7 @@
 								<OrderLink number={order.number} />
 								<span class="text-muted-foreground">{label("orderType", order.type)}</span>
 							</span>
-							<OrderStatusBadge status={order.status} />
+							<EnumBadge display={orderStatusDisplay} value={order.status} />
 						</div>
 						<p class="line-clamp-2">{order.description}</p>
 						<p class="flex flex-wrap gap-x-2 text-muted-foreground">

@@ -113,15 +113,19 @@
 						<Table.Row>
 							<Table.Head>{m.partners_field_category()}</Table.Head>
 							<Table.Head>{m.partners_column_counts_level()}</Table.Head>
-							<Table.Head>{m.partners_form_cash()}</Table.Head>
-							<Table.Head>{m.partners_form_credit()}</Table.Head>
+							<Table.Head>{m.partners_enum_bonus_form_cash()}</Table.Head>
+							<Table.Head>{m.partners_enum_bonus_form_credit()}</Table.Head>
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
 						{#each rules.categories as rule (rule.category)}
 							<Table.Row>
 								<Table.Cell>{partnerLabels.label("revenueCategory", rule.category)}</Table.Cell>
-								<Table.Cell>{rule.level ? m.partners_rule_yes() : m.partners_rule_no()}</Table.Cell>
+								<Table.Cell
+									>{rule.level
+										? m.partners_enum_category_rule_yes()
+										: m.partners_enum_category_rule_no()}</Table.Cell
+								>
 								<Table.Cell>{partnerLabels.label("categoryRule", rule.cash)}</Table.Cell>
 								<Table.Cell>{partnerLabels.label("categoryRule", rule.credit)}</Table.Cell>
 							</Table.Row>

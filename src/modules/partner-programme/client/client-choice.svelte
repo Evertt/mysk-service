@@ -9,13 +9,14 @@
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { partnerLabels } from "../labels.ts";
-	import type { BonusForm } from "../model.ts";
+	import type { BonusForm, LevelColour } from "../model.ts";
 	import LevelBadge from "../ui/level-badge.svelte";
 	import { chooseClientBonus } from "./client-partner.remote.ts";
 
 	interface Awaiting {
 		year: number;
 		level: string | null;
+		colour?: LevelColour;
 		cashAmount: number;
 		creditAmount: number;
 		creditValidUntil: Temporal.PlainDate;
@@ -37,7 +38,7 @@
 	<Card.Header>
 		<Card.Title>{m.partners_client_choice_title({ year: String(awaiting.year) })}</Card.Title>
 		<Card.Description>{m.partners_client_choice_description()}</Card.Description>
-		<Card.Action><LevelBadge level={awaiting.level} /></Card.Action>
+		<Card.Action><LevelBadge level={awaiting.level} colour={awaiting.colour} /></Card.Action>
 	</Card.Header>
 	<Card.Content class="grid gap-3 sm:grid-cols-2">
 		{#each options as option (option)}

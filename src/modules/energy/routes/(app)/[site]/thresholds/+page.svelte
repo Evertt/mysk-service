@@ -3,13 +3,18 @@
 	import type { RouteParams } from "$app/types";
 	import { toast } from "svelte-sonner";
 
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatKw, formatKwh, formatPercent, stateBadges } from "#modules/energy/display.ts";
-	import { energyLabels } from "#modules/energy/labels.ts";
+	import {
+		formatKw,
+		formatKwh,
+		formatPercent,
+		thresholdStateDisplay,
+	} from "#modules/energy/display.ts";
 	import { getEnergyThresholds, saveEnergyThreshold } from "#modules/energy/thresholds.remote.ts";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/thresholds"> } = $props();
@@ -55,9 +60,11 @@
 							})}
 						</Card.Description>
 						<Card.Action>
-							<Badge variant={stateBadges[zone.state]} data-state={zone.state}>
-								{energyLabels.label("thresholdState", zone.state)}
-							</Badge>
+							<EnumBadge
+								display={thresholdStateDisplay}
+								value={zone.state}
+								data-state={zone.state}
+							/>
 						</Card.Action>
 					</Card.Header>
 					<Card.Content>

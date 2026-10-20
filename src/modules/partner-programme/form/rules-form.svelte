@@ -14,7 +14,13 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { partnerLabels } from "../labels.ts";
-	import { categoryRuleValues, type ProgrammeRules, ruleLimits } from "../model.ts";
+	import {
+		categoryRuleValues,
+		type LevelColour,
+		levelColours,
+		type ProgrammeRules,
+		ruleLimits,
+	} from "../model.ts";
 	import { saveYearRules } from "../years.remote.ts";
 
 	let { year, rules }: { year: number; rules: ProgrammeRules } = $props();
@@ -28,6 +34,7 @@
 		threshold: number | null;
 		cashRate: number | null;
 		creditRate: number | null;
+		colour: LevelColour | "";
 	}
 
 	// Kept here so levels can be added and removed.
@@ -38,6 +45,7 @@
 			threshold: tier.threshold / 100,
 			cashRate: tier.cashRate / 100,
 			creditRate: tier.creditRate / 100,
+			colour: tier.colour ?? "",
 		}));
 	let tiers = $state(initialTiers());
 
@@ -57,10 +65,12 @@
 			threshold: last?.threshold == null ? 50_000 : last.threshold * 2,
 			cashRate: last?.cashRate ?? 2.5,
 			creditRate: last?.creditRate ?? 3,
+			colour: "",
 		});
 	}
 
 	const ruleOptions = $derived(partnerLabels.labelOptions("categoryRule", categoryRuleValues));
+	const colourOptions = $derived(partnerLabels.labelOptions("levelColour", levelColours));
 </script>
 
 <form
@@ -97,6 +107,7 @@
 						<Table.Head>{m.partners_column_level()}</Table.Head>
 						<Table.Head>{m.partners_column_cash_rate()}</Table.Head>
 						<Table.Head>{m.partners_column_credit_rate()}</Table.Head>
+						<Table.Head>{m.partners_column_colour()}</Table.Head>
 						<Table.Head class="w-10"
 							><span class="sr-only">{m.partners_rules_remove_level()}</span></Table.Head
 						>
@@ -161,6 +172,21 @@
 								</InputGroup.Root>
 							</Table.Cell>
 							<Table.Cell>
+								<NativeSelect.Root
+									class="min-w-32"
+									aria-label={m.partners_column_colour()}
+									{...withoutValue(fields.colour.as("select"))}
+									bind:value={tier.colour}
+								>
+									<NativeSelect.Option value=""
+										>{m.partners_rules_colour_by_name()}</NativeSelect.Option
+									>
+									{#each colourOptions as option (option.value)}
+										<NativeSelect.Option value={option.value}>{option.label}</NativeSelect.Option>
+									{/each}
+								</NativeSelect.Root>
+							</Table.Cell>
+							<Table.Cell>
 								<Button
 									type="button"
 									variant="ghost"
@@ -191,8 +217,8 @@
 					<Table.Row>
 						<Table.Head>{m.partners_field_category()}</Table.Head>
 						<Table.Head>{m.partners_column_counts_level()}</Table.Head>
-						<Table.Head>{m.partners_form_cash()}</Table.Head>
-						<Table.Head>{m.partners_form_credit()}</Table.Head>
+						<Table.Head>{m.partners_enum_bonus_form_cash()}</Table.Head>
+						<Table.Head>{m.partners_enum_bonus_form_credit()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>

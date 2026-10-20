@@ -9,6 +9,7 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import ConfirmButton from "#modules/invoices/detail/confirm-button.svelte";
@@ -16,10 +17,10 @@
 	import { removeLine } from "#modules/invoices/detail/draft.remote.ts";
 	import InvoiceCredits from "#modules/invoices/detail/invoice-credits.svelte";
 	import InvoiceDocument from "#modules/invoices/detail/invoice-document.svelte";
+	import { invoiceStateDisplay } from "#modules/invoices/display.ts";
 	import { issueInvoice, markPaid, voidInvoice } from "#modules/invoices/invoice-status.remote.ts";
 	import { canChange, isEditable } from "#modules/invoices/invoice.ts";
 	import { getInvoice } from "#modules/invoices/invoices.remote.ts";
-	import StatusBadge from "#modules/invoices/ui/status-badge.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/invoices/[number]"> } = $props();
 
@@ -45,7 +46,7 @@
 		]}
 	>
 		{#snippet badges()}
-			<StatusBadge state={invoice.state} />
+			<EnumBadge display={invoiceStateDisplay} value={invoice.state} />
 		{/snippet}
 		{#snippet actions()}
 			<Button variant="outline" onclick={() => window.print()}>

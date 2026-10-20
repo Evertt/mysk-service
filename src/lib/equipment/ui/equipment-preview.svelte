@@ -6,11 +6,11 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 
-	import { unitModel, unitTitle } from "../display.ts";
+	import { unitModel, unitTitle, equipmentStatusDisplay } from "../display.ts";
 	import type { getEquipment } from "../equipment.remote.ts";
-	import StatusBadge from "./status-badge.svelte";
 
 	let {
 		unit,
@@ -22,7 +22,7 @@
 	<div class="flex flex-col gap-0.5">
 		<div class="flex items-center justify-between gap-2">
 			<span class="font-medium">{unitTitle(unit)}</span>
-			<StatusBadge status={unit.status} />
+			<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 		</div>
 		<span class="text-muted-foreground">
 			{unit.name ? `${unitModel(unit)} · ${unit.serialNumber}` : unit.serialNumber}
