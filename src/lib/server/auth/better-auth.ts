@@ -1,4 +1,4 @@
-import { ORIGIN, BETTER_AUTH_SECRET, VERCEL_BRANCH_URL } from "$app/env/private";
+import { ORIGIN, BETTER_AUTH_SECRET } from "$app/env/private";
 import { getRequestEvent } from "$app/server";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
@@ -13,9 +13,6 @@ import * as authSchema from "#lib/server/db/auth.schema.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitationMail, sendMail } from "#lib/server/mail/index.ts";
 
-/** The app's public origin: `ORIGIN`, else Vercel's branch URL (a domain without the protocol). */
-const origin = ORIGIN || (VERCEL_BRANCH_URL && `https://${VERCEL_BRANCH_URL}`);
-
 /**
  * The organization a user works in when they sign in: the first one they joined, or none yet (e.g.
  * while accepting their invitation).
@@ -29,7 +26,7 @@ async function initialOrganizationId(userId: string) {
 }
 
 export const auth = betterAuth({
-	baseURL: origin,
+	baseURL: ORIGIN,
 	secret: BETTER_AUTH_SECRET,
 	// The schema given, so the adapter doesn't ask `db` for it while the module loads: on Cloudflare
 	// the database is reached only inside a request (`#lib/server/db/durable.ts`).
@@ -66,14 +63,13 @@ export const auth = betterAuth({
 			} satisfies Record<MemberRole, unknown>,
 			invitationExpiresIn: INVITATION_EXPIRES_IN,
 			sendInvitationEmail: async ({ id, email, role, organization, inviter, invitation }) => {
-				const origin = ORIGIN || getRequestEvent().url.origin;
 				await sendMail(
 					invitationMail({
 						to: email,
 						organization: organization.name,
 						inviter: inviter.user.name,
 						role,
-						url: new URL(`/invite/${id}`, origin || getRequestEvent().url.origin).href,
+						url: new URL(`/invite/${id}`, ORIGIN || getRequestEvent().url.origin).href,
 						expiresAt: invitation.expiresAt,
 					}),
 				);

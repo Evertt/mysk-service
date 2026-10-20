@@ -6,7 +6,6 @@ the contract the docks module offers, and what an adapter for Salvo's own API or
 For the demo, the app simulates SHLTR's docks by itself: its simulation (`server/simulation.ts`, on
 the board's simulation bar and the minute cron) hands batches of these events, with ids starting
 `sim-`, to the same code the endpoint runs (`server/feed.ts`), as the system in the tenant.
-`scripts/docks-simulator.ts` (`pnpm docks:simulate`) posts them over HTTP instead, to a dev server.
 
 ## Endpoint
 

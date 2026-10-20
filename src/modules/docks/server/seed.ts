@@ -5,7 +5,7 @@
  * Salvo, in the states of the mockup's sample (`mockupDocks()`: DOCK 05 Laden, DOCK 06 Bezet with
  * its door open 44 minutes, DOCK 07 Vrij, DOCK 08 Storing with its door open over an hour), with a
  * week of sessions behind them, which the app's simulation moves on from. And an integration token
- * for the script `scripts/docks-simulator.ts`, printed at the end: demo data only. North and South
+ * for posting to the feed by hand, printed at the end: demo data only. North and South
  * don't have the module. With a faker of its own, so the rest of the demo data stays the same.
  */
 import { en, Faker, nl } from "@faker-js/faker";
@@ -171,9 +171,7 @@ export default defineSeed({
 				token: demoDockToken,
 				createdAt: toMoment(new Date(now.getTime() - 30 * DAY)),
 			});
-			console.log(
-				`Docks: the Salvo simulator's token for ${tenant.slug} (demo only): ${demoDockToken}`,
-			);
+			console.log(`Docks: the Salvo feed's token for ${tenant.slug} (demo only): ${demoDockToken}`);
 		}
 	},
 });

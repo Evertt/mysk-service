@@ -12,14 +12,10 @@ import { day } from "#unit/temporal-support.ts";
 // No request: a member's request would have a user; the daily run must not need one.
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
 const env = vi.hoisted(() => ({
-	CRON_SECRET: undefined as string | undefined,
 	OPS_TOKEN: undefined as string | undefined,
 }));
 vi.mock(import("$app/env/private"), async (importOriginal) => ({
 	...(await importOriginal()),
-	get CRON_SECRET() {
-		return env.CRON_SECRET;
-	},
 	get OPS_TOKEN() {
 		return env.OPS_TOKEN;
 	},
@@ -79,7 +75,6 @@ afterAll(() => {
 
 beforeEach(() => {
 	registry.modules = [];
-	env.CRON_SECRET = undefined;
 	env.OPS_TOKEN = undefined;
 });
 
@@ -172,12 +167,10 @@ describe("mayRunDaily", () => {
 		expect(mayRunDaily(request("Bearer undefined"))).toBe(false);
 	});
 
-	test("with the cron secret or the ops token", () => {
-		env.CRON_SECRET = "cron";
+	test("with the ops token", () => {
 		env.OPS_TOKEN = "ops";
-		expect(mayRunDaily(request("Bearer cron"))).toBe(true);
 		expect(mayRunDaily(request("Bearer ops"))).toBe(true);
 		expect(mayRunDaily(request("Bearer other"))).toBe(false);
-		expect(mayRunDaily(request("cron"))).toBe(false);
+		expect(mayRunDaily(request("ops"))).toBe(false);
 	});
 });

@@ -28,7 +28,7 @@
 		"dev:cloudflare": "ADAPTER=cloudflare vp build && wrangler dev",
 		"deploy:cloudflare": "ADAPTER=cloudflare vp build && wrangler deploy",
 		"types:cloudflare": "wrangler types --env-file=.dev.vars.example cloudflare/worker-configuration.d.ts",
-		"prepare": "node scripts/prepare.ts",
+		"prepare": "vp config && vpr generate; playwright install chromium || true",
 		"generate": "node scripts/generate.ts",
 		"check": "vpr generate && vp check && svelte-check && tsc -p cloudflare",
 		"check:watch": "vpr check --watch",
@@ -42,8 +42,6 @@
 		"db:seed": "node --env-file=.env src/lib/server/db/seed/index.ts",
 		"org:create": "node --env-file=.env src/lib/server/db/create-organization.ts",
 		"db:reset": "node --env-file-if-exists=.env scripts/db-reset.ts",
-		"jobs:daily": "node --env-file-if-exists=.env scripts/daily.ts",
-		"docks:simulate": "node scripts/docks-simulator.ts",
 		"themes:sync": "node scripts/theme-components.ts && vp check --fix",
 		"knip": "knip"
 	},

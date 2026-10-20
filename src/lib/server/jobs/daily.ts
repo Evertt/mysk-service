@@ -3,9 +3,8 @@
  * `jobs.daily` point, `#lib/jobs/extensions.ts`), as the system (`asSystem()`). One entry point
  * for every target, always inside a request, where the database and the request's helpers are:
  *
- * - On Node (Vercel, a server of your own): a cron calls `GET` or `POST /_ops/daily` with
- *   `Authorization: Bearer <CRON_SECRET or OPS_TOKEN>` (`src/routes/_ops/daily/+server.ts`):
- *   Vercel Cron does it with `vercel.json`'s schedule and sends its `CRON_SECRET` itself.
+ * - On Node (a server of your own): a cron calls `POST /_ops/daily` with
+ *   `Authorization: Bearer <OPS_TOKEN>` (`src/routes/_ops/daily/+server.ts`).
  * - On Cloudflare: the Worker's Cron Trigger (`wrangler.jsonc`) has the Durable Object answer that
  *   same request (`scheduled()` in `cloudflare/entry.ts`), with the `OPS_TOKEN`.
  *
@@ -14,7 +13,7 @@
  */
 import { timingSafeEqual } from "node:crypto";
 
-import { CRON_SECRET, OPS_TOKEN } from "$app/env/private";
+import { OPS_TOKEN } from "$app/env/private";
 
 import { currentDay } from "#lib/dates.ts";
 import { daily, type DailyReport } from "#lib/jobs/extensions.ts";
@@ -54,19 +53,13 @@ export async function runDaily(today = currentDay()): Promise<DailyResult[]> {
 	return results;
 }
 
-/** Whether `header` is `Bearer <token>`, compared in constant time. */
-function bearer(header: string, token: string | undefined) {
-	if (!token) return false;
-	const given = new TextEncoder().encode(header);
-	const wanted = new TextEncoder().encode(`Bearer ${token}`);
-	return given.byteLength === wanted.byteLength && timingSafeEqual(given, wanted);
-}
-
 /**
- * Whether `request` may start the daily run: it carries `CRON_SECRET` (Vercel Cron sends it) or
- * `OPS_TOKEN` (Cloudflare's Cron Trigger, `cloudflare/entry.ts`). Never without one of them set.
+ * Whether `request` may start the daily run: it carries `Bearer <OPS_TOKEN>` (a cron, or
+ * Cloudflare's Cron Trigger, `cloudflare/entry.ts`), compared in constant time. Never without it.
  */
 export function mayRunDaily(request: Request) {
-	const header = request.headers.get("authorization") ?? "";
-	return bearer(header, CRON_SECRET) || bearer(header, OPS_TOKEN);
+	if (!OPS_TOKEN) return false;
+	const given = new TextEncoder().encode(request.headers.get("authorization") ?? "");
+	const wanted = new TextEncoder().encode(`Bearer ${OPS_TOKEN}`);
+	return given.byteLength === wanted.byteLength && timingSafeEqual(given, wanted);
 }

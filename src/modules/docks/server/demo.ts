@@ -1,6 +1,6 @@
 /**
  * What the demo's Salvo docks share (the seed, the app's simulation in `simulation.ts`, and the
- * script `scripts/docks-simulator.ts`): SHLTR's token, which the seed stores (its hash) and prints,
+ * tests): SHLTR's token, which the seed stores (its hash) and prints,
  * the docks with Salvo at Weggemans Logistiek, and the states the client's mockup shows them in,
  * which the seed and a reset of the simulation put them in. Known on purpose, for the demo tenant
  * only: a real tenant's tokens are made on its settings page.
