@@ -7,7 +7,7 @@ import { can } from "#lib/orders/index.ts";
 import { transitionOrder } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
@@ -70,8 +70,7 @@ const orderIdsOf = (found: { lines: { orderId: number | null }[] }) => [
  * and its orders become invoiced. Its lines keep the amounts they have.
  */
 export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
-	const { organizationId } = currentTenant();
-	const settings = await settingsOf(organizationId);
+	const settings = await settingsOf();
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "sent");
 		if (!found.lines.length) throw new Refused(m.invoices_add_before_issuing());

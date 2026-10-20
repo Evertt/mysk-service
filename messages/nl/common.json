@@ -307,5 +307,11 @@
 	"common_error_part": "Dit onderdeel kon niet worden getoond.",
 	"common_reload": "Opnieuw laden",
 	"common_back": "Terug",
-	"common_sign_in": "Inloggen"
+	"common_sign_in": "Inloggen",
+	"common_settings": "Instellingen",
+	"common_save_settings": "Instellingen opslaan",
+	"common_settings_saved": "Instellingen opgeslagen",
+	"common_settings_managers": "Alleen eigenaren en beheerders kunnen deze instellingen wijzigen.",
+	"common_on": "Aan",
+	"common_off": "Uit"
 }

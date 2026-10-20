@@ -9,6 +9,7 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { formatOnOff } from "#lib/i18n/index.ts";
 	import {
 		formatKw,
 		formatKwh,
@@ -101,7 +102,7 @@
 							<dl class="grid grid-cols-3 gap-3 text-sm">
 								<div>
 									<dt class="text-xs text-muted-foreground">{m.energy_threshold_enabled()}</dt>
-									<dd>{zone.threshold?.enabled ? m.energy_on() : m.energy_off()}</dd>
+									<dd>{formatOnOff(zone.threshold?.enabled)}</dd>
 								</div>
 								<div>
 									<dt class="text-xs text-muted-foreground">{m.energy_threshold_max_kw()}</dt>

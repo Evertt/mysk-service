@@ -11,10 +11,12 @@ import { maintenancePlan, maintenanceSettings } from "#modules/maintenance/serve
 import { day } from "#unit/temporal-support.ts";
 
 // No request: the system runs the job (`asSystem()`), so nothing may ask for one.
-vi.mock("$app/server", () => ({
+// The settings' remote functions (`defineTenantSettings()`) are made when it's imported.
+vi.mock("$app/server", async () => ({
 	getRequestEvent: () => {
 		throw new Error("The daily job asked for a request");
 	},
+	...(await import("#unit/lib/server/harness/stand-ins.ts")).remoteStandIns,
 }));
 // No module takes part in the core's hooks (an order's parts, prices).
 vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));

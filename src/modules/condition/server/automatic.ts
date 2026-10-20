@@ -12,15 +12,16 @@ import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
-import { currentTenant, idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { dailyOrderRun } from "#lib/server/jobs/automatic-orders.ts";
 
 import { addWorkingDays, PLAN_WITHIN_WORKING_DAYS } from "../model.ts";
 import { inCare } from "./list-sql.ts";
-import { component, conditionSettings } from "./schema.ts";
-import { settingsOf } from "./settings.ts";
+import { component } from "./schema.ts";
+import { settingsOf, updateSettings } from "./settings.ts";
 import { componentSql, conditionSql } from "./status-sql.ts";
 
 /** Whether the unit has an open order (quoted, scheduled or under way), in SQL. */
@@ -114,23 +115,21 @@ function describe(
 }
 
 /**
- * The tenant's daily condition job: plans its critical units, if it wants that. Each order in a
- * transaction of its own, which checks the unit again: one that fails is logged and the others go
- * ahead. Reports how many orders it made (and how many units failed, if any).
+ * The tenant's daily condition job: plans its critical units, if it wants that
+ * (`dailyOrderRun()`). Each order in a transaction of its own, which checks the unit again: one
+ * that fails is logged and the others go ahead.
  */
-export async function planCriticalUnits({ today }: DailyRun): Promise<DailyReport> {
-	const { organizationId } = currentTenant();
-	const settings = await settingsOf(organizationId);
-	if (!settings.autoPlan) return {};
-
+export function planCriticalUnits({ today }: DailyRun): Promise<DailyReport> {
 	const by = addWorkingDays(today, PLAN_WITHIN_WORKING_DAYS);
-	let made = 0;
-	let failed = 0;
-	for (const { id } of await criticalUnits(db)) {
-		try {
-			const planned = await db.transaction(async (tx) => {
+	return dailyOrderRun({
+		module: "condition",
+		settings: { settingsOf, updateSettings },
+		enabled: (settings) => settings.autoPlan,
+		candidates: () => criticalUnits(db),
+		order: ({ id }) =>
+			db.transaction(async (tx) => {
 				const [unit] = await criticalUnits(tx, id);
-				if (!unit) return false;
+				if (!unit) return null;
 				await createOrders(tx, [
 					{
 						customerId: unit.customerId,
@@ -140,17 +139,8 @@ export async function planCriticalUnits({ today }: DailyRun): Promise<DailyRepor
 						description: describe(unit, by),
 					},
 				]);
-				return true;
-			});
-			if (planned) made++;
-		} catch (error) {
-			failed++;
-			console.error(`Critical unit ${id} got no automatic order:`, error);
-		}
-	}
-	await db
-		.update(conditionSettings)
-		.set({ lastRunAt: Temporal.Now.instant(), lastRunOrders: made })
-		.where(eq(conditionSettings.organizationId, organizationId));
-	return { "condition.orders": made, ...(failed ? { "condition.failed": failed } : {}) };
+				return unit.id;
+			}),
+		name: ({ id }) => `Critical unit ${id}`,
+	});
 }

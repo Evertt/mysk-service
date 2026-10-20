@@ -1,23 +1,22 @@
 /** The tenant's condition settings: its thresholds, and whether critical units are planned by themselves. */
-import { eq } from "drizzle-orm";
+import { defineTenantSettings } from "#lib/server/modules/settings.ts";
 
-import { currentTenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
-
+import { settingsSchema } from "../form/settings-schema.ts";
 import type { Thresholds } from "../model.ts";
 import { conditionSettings } from "./schema.ts";
 
-/** The tenant's condition settings, made with the defaults (automatic planning off) when first read. */
-export async function settingsOf(organizationId = currentTenant().organizationId) {
-	const where = eq(conditionSettings.organizationId, organizationId);
-	const found = await db.query.conditionSettings.findFirst({ where });
-	if (found) return found;
-	await db.insert(conditionSettings).values({ organizationId }).onConflictDoNothing();
-	return (await db.query.conditionSettings.findFirst({ where }))!;
-}
+/**
+ * The tenant's condition settings, made with the defaults (automatic planning off) when first read,
+ * with the settings page's remote functions (`settings.remote.ts`).
+ */
+export const { settingsOf, updateSettings, getSettings, saveSettings } = defineTenantSettings(
+	"condition",
+	conditionSettings,
+	{ subject: "condition_settings", schema: settingsSchema },
+);
 
 /** The tenant's thresholds. */
-export async function thresholdsOf(organizationId?: string): Promise<Thresholds> {
-	const settings = await settingsOf(organizationId);
+export async function thresholdsOf(): Promise<Thresholds> {
+	const settings = await settingsOf();
 	return { critical: settings.criticalBelow, attention: settings.attentionBelow };
 }

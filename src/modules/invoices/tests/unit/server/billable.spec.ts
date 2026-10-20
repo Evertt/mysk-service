@@ -8,7 +8,11 @@ import { day } from "#unit/temporal-support.ts";
 
 // The modules' server code needs the app's database; these tests don't get that far.
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
-vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals: {} }) }));
+// The settings' remote functions (`defineTenantSettings()`) are made when it's imported.
+vi.mock("$app/server", async () => ({
+	getRequestEvent: () => ({ locals: {} }),
+	...(await import("#unit/lib/server/harness/stand-ins.ts")).remoteStandIns,
+}));
 // Made-up modules instead of the ones in `src/modules`.
 const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
 vi.mock("#lib/server/modules/hooks.gen.ts", () => ({

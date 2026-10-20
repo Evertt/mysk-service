@@ -264,7 +264,6 @@ export async function createStandalone(
 		parent?: Subject;
 	},
 ) {
-	const { organizationId } = currentTenant();
 	orNotFound(
 		await tx.query.customer.findFirst({
 			columns: { id: true },
@@ -274,7 +273,7 @@ export async function createStandalone(
 	);
 	if (input.lines.reduce((sum, line) => sum + line.amount, 0) >= 0)
 		throw new Refused(m.invoices_credit_nothing());
-	const settings = await settingsOf(organizationId, tx);
+	const settings = await settingsOf(tx);
 	return insertCreditNote(
 		tx,
 		{

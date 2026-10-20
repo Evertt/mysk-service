@@ -112,9 +112,6 @@
 	"maintenance_settings": "Settings",
 	"maintenance_settings_title": "Maintenance settings",
 	"maintenance_settings_description": "Whether the plans that are due become orders by themselves.",
-	"maintenance_settings_managers": "Only owners and admins can change these settings.",
-	"maintenance_settings_saved": "Settings saved",
-	"maintenance_save_settings": "Save settings",
 	"maintenance_activity_subject_settings": "maintenance settings",
 	"maintenance_auto_create": "Create orders automatically",
 	"maintenance_auto_create_description": "Every day, the plans that are due get their orders by themselves, as with “Create orders”. A plan gets no new order while its last one is still open.",
@@ -137,8 +134,6 @@
 			}
 		}
 	],
-	"maintenance_on": "On",
-	"maintenance_off": "Off",
 	"maintenance_last_run": "Last automatic run",
 	"maintenance_last_run_never": "Not yet",
 	"maintenance_last_run_result": "{when}: {orders} created",

@@ -2,8 +2,6 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"energy_module_name": "Energie",
 	"energy_module_description": "De gebouwen van je klanten live: vermogen en verbruik per zone, deuren die energie laten weglekken, grenswaarden en alerts die opdrachten worden.",
-	"energy_on": "Aan",
-	"energy_off": "Uit",
 	"energy_activity_action_ordered": "{user} maakte een opdracht van {subject}",
 	"energy_activity_action_resolved": "{user} handelde {subject} af",
 	"energy_activity_subject_site": "energielocatie",

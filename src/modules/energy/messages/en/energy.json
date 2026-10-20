@@ -2,8 +2,6 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"energy_module_name": "Energy",
 	"energy_module_description": "Your customers' buildings live: power and consumption per zone, doors that let energy out, thresholds and alerts that become orders.",
-	"energy_on": "On",
-	"energy_off": "Off",
 	"energy_activity_action_ordered": "{user} made an order of {subject}",
 	"energy_activity_action_resolved": "{user} resolved {subject}",
 	"energy_activity_subject_site": "energy site",

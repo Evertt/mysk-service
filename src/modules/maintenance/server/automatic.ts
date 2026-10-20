@@ -13,12 +13,13 @@ import { currentTenant, idsInTenant, inTenant, tenantJoin } from "#lib/server/au
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
+import { dailyOrderRun } from "#lib/server/jobs/automatic-orders.ts";
 import { sendMail } from "#lib/server/mail/index.ts";
 
 import { automaticHorizon, finishedStatuses } from "../model.ts";
 import { orderPlan, type PlanOrder } from "./orders.ts";
-import { maintenanceSettings, maintenancePlan } from "./schema.ts";
-import { settingsOf } from "./settings.ts";
+import { maintenancePlan } from "./schema.ts";
+import { settingsOf, updateSettings } from "./settings.ts";
 
 /**
  * The ids of the tenant's plans the daily run makes orders for before `horizon`, the earliest due
@@ -43,33 +44,22 @@ function plansDueBefore(horizon: Temporal.PlainDate) {
 
 /**
  * The tenant's daily maintenance job: makes the orders of the plans that are due, if the tenant
- * wants that, and tells their customers if it wants that too. Each plan in a transaction of its
- * own: one that fails (say, its unit moved to another customer meanwhile) is logged and the others
- * go ahead. Reports how many orders it made (and how many plans failed, if any).
+ * wants that, and tells their customers if it wants that too (`dailyOrderRun()`). Each plan in a
+ * transaction of its own: one that fails (say, its unit moved to another customer meanwhile) is
+ * logged and the others go ahead.
  */
-export async function runDueMaintenance({ today }: DailyRun): Promise<DailyReport> {
-	const { organizationId } = currentTenant();
-	const settings = await settingsOf(organizationId);
-	if (!settings.autoCreate) return {};
-
-	const horizon = automaticHorizon(today, settings.leadDays);
-	const made: PlanOrder[] = [];
-	let failed = 0;
-	for (const { id } of await plansDueBefore(horizon)) {
-		try {
-			const created = await orderPlan(id, { horizon });
-			if (created) made.push(created);
-		} catch (error) {
-			failed++;
-			console.error(`Maintenance plan ${id} got no automatic order:`, error);
-		}
-	}
-	await db
-		.update(maintenanceSettings)
-		.set({ lastRunAt: Temporal.Now.instant(), lastRunOrders: made.length })
-		.where(eq(maintenanceSettings.organizationId, organizationId));
-	if (settings.remindCustomers) await remindCustomers(made);
-	return { "maintenance.orders": made.length, ...(failed ? { "maintenance.failed": failed } : {}) };
+export function runDueMaintenance({ today }: DailyRun): Promise<DailyReport> {
+	const horizonOf = (settings: { leadDays: number }) => automaticHorizon(today, settings.leadDays);
+	return dailyOrderRun({
+		module: "maintenance",
+		settings: { settingsOf, updateSettings },
+		enabled: (settings) => settings.autoCreate,
+		candidates: (settings) => plansDueBefore(horizonOf(settings)),
+		order: ({ id }, settings) => orderPlan(id, { horizon: horizonOf(settings) }),
+		name: ({ id }) => `Maintenance plan ${id}`,
+		after: (made, settings) =>
+			settings.remindCustomers ? remindCustomers(made) : Promise.resolve(),
+	});
 }
 
 /**

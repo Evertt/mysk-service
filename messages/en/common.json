@@ -307,5 +307,11 @@
 	"common_error_part": "This part couldn't be shown.",
 	"common_reload": "Reload",
 	"common_back": "Back",
-	"common_sign_in": "Sign in"
+	"common_sign_in": "Sign in",
+	"common_settings": "Settings",
+	"common_save_settings": "Save settings",
+	"common_settings_saved": "Settings saved",
+	"common_settings_managers": "Only owners and admins can change these settings.",
+	"common_on": "On",
+	"common_off": "Off"
 }
