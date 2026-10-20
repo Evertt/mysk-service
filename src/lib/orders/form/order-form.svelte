@@ -6,13 +6,11 @@
 -->
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { toast } from "svelte-sonner";
 
-	import FormActions from "#lib/components/form/form-actions.svelte";
-	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
+	import FormSection from "#lib/components/form/form-section.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import RecordForm from "#lib/components/form/record-form.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { fittingFirst, engineerSpecialtyDisplay } from "#lib/engineers/index.ts";
@@ -50,8 +48,6 @@
 	const types = $derived(offeredOrderTypes(await getOrderTypes(), order?.type));
 	// A new order is maintenance unless the tenant hid that.
 	const defaultType = $derived(types.includes("maintenance") ? "maintenance" : types[0]);
-	// What's typed and not saved yet comes back with the page (back button, reload).
-	formSnapshot("order", () => form);
 	// When the order is scheduled for, on the user's clock.
 	const scheduled = $derived(order?.scheduledFor?.toZonedDateTimeISO(getTimeZone()));
 
@@ -82,121 +78,94 @@
 </script>
 
 <!-- The modules' parts are checked before submitting, so their fields show what's wrong at once. -->
-<form
-	{...form.preflight(orderFormPreflight).enhance(async ({ submit }) => {
-		// On success the server redirects to the order; otherwise the fields show what's wrong.
-		if (await submitted(submit)) toast.success(order ? m.orders_saved() : m.orders_created());
-	})}
-	class="flex flex-col gap-6"
+<RecordForm
+	{form}
+	record={order}
+	snapshot="order"
+	submitLabel={order ? m.orders_save() : m.orders_create()}
+	done={order ? m.orders_saved() : m.orders_created()}
+	preflight={orderFormPreflight}
+	{cancelHref}
 >
-	{#if order}
-		<!-- Only the edit form has an id field. -->
-		<input {...(form as typeof updateOrder).fields.id.as("hidden", String(order.id))} />
-	{/if}
+	<FormSection title={m.orders_form_work()} description={m.orders_form_work_description()}>
+		<SelectField
+			field={fields.customerId}
+			label={m.orders_field_customer()}
+			placeholder={m.orders_choose_customer()}
+			value={customerId}
+			options={options.customers.map((c) => ({
+				value: String(c.id),
+				label: `${c.name} (${c.code})`,
+			}))}
+			onchange={(value: string) => {
+				customerId = value;
+				// Another customer's units can't be on it.
+				fields.equipmentIds.set([]);
+			}}
+		/>
+		<SelectField
+			field={fields.type}
+			label={m.orders_field_type()}
+			value={order?.type ?? defaultType}
+			options={labelOptions("orderType", types)}
+		/>
+		<SelectField
+			field={fields.priority}
+			label={m.orders_field_priority()}
+			value={order?.priority ?? "normal"}
+			options={labelOptions("orderPriority", orderPriorities)}
+		/>
+		<TextField
+			field={fields.description}
+			label={m.orders_field_description()}
+			value={order?.description}
+			multiline
+			class="md:col-span-2"
+		/>
+		<UnitsField
+			field={fields.equipmentIds}
+			units={customerUnits}
+			initial={initialUnits}
+			disabled={!customerId}
+		/>
+	</FormSection>
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.orders_form_work()}</Card.Title>
-			<Card.Description>{m.orders_form_work_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<SelectField
-					field={fields.customerId}
-					label={m.orders_field_customer()}
-					placeholder={m.orders_choose_customer()}
-					value={customerId}
-					options={options.customers.map((c) => ({
-						value: String(c.id),
-						label: `${c.name} (${c.code})`,
-					}))}
-					onchange={(value: string) => {
-						customerId = value;
-						// Another customer's units can't be on it.
-						fields.equipmentIds.set([]);
-					}}
-				/>
-				<SelectField
-					field={fields.type}
-					label={m.orders_field_type()}
-					value={order?.type ?? defaultType}
-					options={labelOptions("orderType", types)}
-				/>
-				<SelectField
-					field={fields.priority}
-					label={m.orders_field_priority()}
-					value={order?.priority ?? "normal"}
-					options={labelOptions("orderPriority", orderPriorities)}
-				/>
-				<TextField
-					field={fields.description}
-					label={m.orders_field_description()}
-					value={order?.description}
-					multiline
-					class="md:col-span-2"
-				/>
-				<UnitsField
-					field={fields.equipmentIds}
-					units={customerUnits}
-					initial={initialUnits}
-					disabled={!customerId}
-				/>
-			</Field.FieldGroup>
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.orders_form_planning()}</Card.Title>
-			<Card.Description>{m.orders_form_planning_description()}</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<SelectField
-					field={fields.status}
-					label={m.orders_field_status()}
-					value={order?.status ?? "quote"}
-					options={labelOptions("orderStatus", manualOrderStatuses)}
-				/>
-				<SelectField
-					field={fields.engineerId}
-					label={m.orders_field_engineer()}
-					placeholder={m.common_unassigned()}
-					value={order?.engineerId ? String(order.engineerId) : ""}
-					options={engineerOptions}
-				/>
-				<div class="grid grid-cols-2 gap-4">
-					<TextField
-						field={fields.scheduledFor}
-						label={m.orders_field_scheduled_for()}
-						type="date"
-						value={scheduled?.toPlainDate().toString() ?? ""}
-					/>
-					<TextField
-						field={fields.scheduledTime}
-						label={m.orders_field_time()}
-						type="time"
-						value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? ""}
-					/>
-				</div>
-				<NumberField
-					field={fields.laborHours}
-					label={m.orders_field_labor()}
-					value={order?.laborHours ?? 0}
-					min={0}
-					step={0.25}
-				/>
-			</Field.FieldGroup>
-		</Card.Content>
-	</Card.Root>
+	<FormSection title={m.orders_form_planning()} description={m.orders_form_planning_description()}>
+		<SelectField
+			field={fields.status}
+			label={m.orders_field_status()}
+			value={order?.status ?? "quote"}
+			options={labelOptions("orderStatus", manualOrderStatuses)}
+		/>
+		<SelectField
+			field={fields.engineerId}
+			label={m.orders_field_engineer()}
+			placeholder={m.common_unassigned()}
+			value={order?.engineerId ? String(order.engineerId) : ""}
+			options={engineerOptions}
+		/>
+		<div class="grid grid-cols-2 gap-4">
+			<TextField
+				field={fields.scheduledFor}
+				label={m.orders_field_scheduled_for()}
+				type="date"
+				value={scheduled?.toPlainDate().toString() ?? ""}
+			/>
+			<TextField
+				field={fields.scheduledTime}
+				label={m.orders_field_time()}
+				type="time"
+				value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? ""}
+			/>
+		</div>
+		<NumberField
+			field={fields.laborHours}
+			label={m.orders_field_labor()}
+			value={order?.laborHours ?? 0}
+			min={0}
+			step={0.25}
+		/>
+	</FormSection>
 
 	{@render parts?.(fields.modules)}
-
-	<!-- E.g. when the order was invoiced meanwhile, and can't be changed any more. -->
-	<Field.FieldError errors={fields.issues()} />
-	<FormActions
-		pending={form.pending}
-		submitLabel={order ? m.orders_save() : m.orders_create()}
-		{cancelHref}
-	/>
-</form>
+</RecordForm>

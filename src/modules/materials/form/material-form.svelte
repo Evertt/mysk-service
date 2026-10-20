@@ -4,14 +4,11 @@
 	`material`) a material.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
-	import FormActions from "#lib/components/form/form-actions.svelte";
-	import { formSnapshot } from "#lib/components/form/form-snapshot.ts";
+	import FormSection from "#lib/components/form/form-section.svelte";
 	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
+	import RecordForm from "#lib/components/form/record-form.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { formatNumber, label } from "#lib/i18n/index.ts";
 
@@ -22,19 +19,14 @@
 
 	type Material = Awaited<ReturnType<typeof getMaterial>>["material"];
 
-	let {
-		form,
-		material,
-		cancelHref,
-	}: {
-		form: typeof createMaterial | typeof updateMaterial;
-		material?: Material;
-		cancelHref: string;
-	} = $props();
+	// A new material's form has its opening stock too.
+	let props: { cancelHref: string } & (
+		| { form: typeof createMaterial; material?: undefined }
+		| { form: typeof updateMaterial; material: Material }
+	) = $props();
 
+	const { form, material, cancelHref } = $derived(props);
 	const fields = $derived(form.fields);
-	// What's typed and not saved yet comes back with the page (back button, reload).
-	formSnapshot("material", () => form);
 
 	const unitOptions = materialUnits.map((value) => ({
 		value,
@@ -51,67 +43,49 @@
 	});
 </script>
 
-<form
-	{...form.enhance(async ({ submit }) => {
-		// On success the server redirects to the material; otherwise the fields show what's wrong.
-		if (await submitted(submit))
-			toast.success(material ? m.materials_saved() : m.materials_created());
-	})}
-	class="flex flex-col gap-6"
+<RecordForm
+	{form}
+	record={material}
+	snapshot="material"
+	submitLabel={material ? m.materials_form_save() : m.materials_form_create()}
+	done={material ? m.materials_saved() : m.materials_created()}
+	{cancelHref}
 >
-	{#if material}
-		<!-- Only the edit form has an id field. -->
-		<input {...(form as typeof updateMaterial).fields.id.as("hidden", String(material.id))} />
-	{/if}
-
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.materials_material()}</Card.Title>
-			<Card.Description>
-				{material
-					? m.materials_form_sku_fixed({ sku: material.sku })
-					: m.materials_form_sku_assigned()}
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<Field.FieldGroup class="grid gap-6 md:grid-cols-2">
-				<TextField
-					field={fields.name}
-					label={m.materials_name()}
-					value={material?.name}
-					class="md:col-span-2"
-				/>
-				<SelectField
-					field={fields.unit}
-					label={m.materials_unit()}
-					value={material?.unit ?? "pcs"}
-					options={unitOptions}
-					description={m.materials_form_unit_description()}
-				/>
-				<MoneyField
-					field={fields.unitPrice}
-					label={m.materials_unit_price()}
-					cents={material?.unitPrice}
-					description={m.materials_form_price_description()}
-				/>
-				{#if !material}
-					<!-- Only a new material takes its stock; after that it changes through movements. -->
-					<NumberField
-						field={(form as typeof createMaterial).fields.stock}
-						label={m.materials_form_opening_stock()}
-						value={0}
-						min={0}
-						step={quantityStep(unit)}
-						description={stockDescription}
-					/>
-				{/if}
-			</Field.FieldGroup>
-		</Card.Content>
-	</Card.Root>
-
-	<FormActions
-		pending={form.pending}
-		submitLabel={material ? m.materials_form_save() : m.materials_form_create()}
-		{cancelHref}
-	/>
-</form>
+	<FormSection
+		title={m.materials_material()}
+		description={material
+			? m.materials_form_sku_fixed({ sku: material.sku })
+			: m.materials_form_sku_assigned()}
+	>
+		<TextField
+			field={fields.name}
+			label={m.materials_name()}
+			value={material?.name}
+			class="md:col-span-2"
+		/>
+		<SelectField
+			field={fields.unit}
+			label={m.materials_unit()}
+			value={material?.unit ?? "pcs"}
+			options={unitOptions}
+			description={m.materials_form_unit_description()}
+		/>
+		<MoneyField
+			field={fields.unitPrice}
+			label={m.materials_unit_price()}
+			cents={material?.unitPrice}
+			description={m.materials_form_price_description()}
+		/>
+		{#if !props.material}
+			<!-- Only a new material takes its stock; after that it changes through movements. -->
+			<NumberField
+				field={props.form.fields.stock}
+				label={m.materials_form_opening_stock()}
+				value={0}
+				min={0}
+				step={quantityStep(unit)}
+				description={stockDescription}
+			/>
+		{/if}
+	</FormSection>
+</RecordForm>
