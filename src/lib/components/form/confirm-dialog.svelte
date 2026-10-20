@@ -3,16 +3,17 @@
 	The one way to ask before doing something (`FormDialog` is for a form with fields): a question,
 	Cancel and the confirm button. Confirming submits `form` with its `hidden` inputs (e.g. the
 	record's `id`), or runs `onconfirm`; `children` adds to the question (e.g. more hidden inputs).
+	`disabled` holds the confirm button back, e.g. until a choice in `children` is made.
 
 	Once it went through, it calls `ondone`, toasts `done`, and closes or `leave`s the page (see
-	`DialogDone`). If the server refused (`invalid("…")`), the reason is shown in the dialog; if it
+	`DialogDone`), each with the form's result or what `onconfirm` answered. If the server refused (`invalid("…")`), the reason is shown in the dialog; if it
 	failed, a toast says why and it stays open, as it does when `onconfirm` throws or answers
 	`false`. `updates` says which queries the submission refreshes, instead of all of the page's.
 
 	Open it with its `trigger`, or from outside with `bind:open`. The open dialog has a history
 	entry of its own (`historyDialog()`), so going back closes it.
 -->
-<script lang="ts" generics="Form extends DialogForm">
+<script lang="ts" generics="Form extends DialogForm = never, Confirmed = never">
 	import type { RemoteQueryUpdate } from "$app/server";
 	import type { Component, Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -37,6 +38,7 @@
 		confirmLabel,
 		confirmIcon,
 		destructive = false,
+		disabled = false,
 		open = $bindable(false),
 		trigger,
 		form,
@@ -45,7 +47,7 @@
 		onconfirm,
 		children,
 		...finished
-	}: DialogDone<FormResult<Form>> & {
+	}: DialogDone<FormResult<Form> | Confirmed> & {
 		title: string;
 		description?: string;
 		/** The confirm button's label: what it does, e.g. "Delete". */
@@ -53,6 +55,8 @@
 		confirmIcon?: Component;
 		/** Whether it destroys something, for the button's colour. */
 		destructive?: boolean;
+		/** Whether the confirm button is held back. */
+		disabled?: boolean;
 		open?: boolean;
 		/** The button that opens it; spread `props` on it. */
 		trigger?: Snippet<[Record<string, unknown>]>;
@@ -72,8 +76,8 @@
 					form?: never;
 					hidden?: never;
 					updates?: never;
-					/** What confirming does; `false` keeps the dialog open. */
-					onconfirm: () => Promise<unknown>;
+					/** What confirming does; its answer is the result, and `false` keeps the dialog open. */
+					onconfirm: () => Promise<Confirmed | false>;
 			  }
 		) = $props();
 
@@ -95,8 +99,9 @@
 	async function confirm() {
 		running = true;
 		try {
-			if ((await onconfirm!()) === false) return;
-			await finish(dialog(), undefined, finished);
+			const result = await onconfirm!();
+			if (result === false) return;
+			await finish<FormResult<Form> | Confirmed>(dialog(), result, finished);
 		} catch (error) {
 			toast.error(errorMessage(error, m.common_error_generic()));
 		} finally {
@@ -150,6 +155,7 @@
 					pending={form ? form.pending : running}
 					icon={confirmIcon}
 					variant={destructive ? "destructive" : "default"}
+					{disabled}
 				>
 					{confirmLabel}
 				</SubmitButton>

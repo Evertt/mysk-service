@@ -9,7 +9,7 @@
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 
-	type Props = ComponentProps<typeof ConfirmDialog<RemoteForm<{ id: string }, unknown>>>;
+	type Props = ComponentProps<typeof ConfirmDialog<RemoteForm<{ id: string }, unknown>, unknown>>;
 
 	let props: Props = $props();
 

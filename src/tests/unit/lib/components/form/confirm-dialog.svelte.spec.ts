@@ -83,6 +83,26 @@ test("without a form, confirming runs `onconfirm`", async () => {
 	expect(toast.success).toHaveBeenCalledWith("Retired.");
 });
 
+test("what `onconfirm` answers is the result `ondone`, `done` and `leave` read", async () => {
+	const result = { href: "/invoices/7" };
+	const ondone = vi.fn();
+	const leave = vi.fn((answer?: unknown) => (answer as typeof result).href);
+	render(Harness, {
+		...props,
+		onconfirm: async () => result,
+		ondone,
+		done: (answer) => `Opened ${(answer as typeof result).href}.`,
+		leave,
+	});
+
+	await confirm();
+
+	await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+	expect(ondone).toHaveBeenCalledWith(result);
+	expect(toast.success).toHaveBeenCalledWith("Opened /invoices/7.");
+	expect(leave).toHaveBeenCalledWith(result);
+});
+
 test("when `onconfirm` fails, a toast says why and it stays open", async () => {
 	render(Harness, {
 		onconfirm: async () => error(404, "The view was deleted elsewhere."),
