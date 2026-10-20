@@ -10,6 +10,7 @@ import { recordActivityAfter } from "#lib/server/activity/index.ts";
 import { auth, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, organization, portalContact, user } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forAnyone, forUsers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -63,7 +64,7 @@ export const getInvitation = forAnyone.query(v.string(), async (id) => {
 /** The invitation, if it can still be accepted; otherwise the form says why not. */
 async function pendingInvitation(id: string) {
 	const found = await findInvitation(id);
-	if (found?.state !== "pending") invalid(m.auth_invite_no_longer());
+	if (found?.state !== "pending") throw new Refused(m.auth_invite_no_longer());
 	return found;
 }
 
@@ -83,7 +84,8 @@ async function accept(
 		await auth.api.acceptInvitation({ body: { invitationId: found.id }, headers });
 	} catch (e) {
 		// better-auth's own messages are in English.
-		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_invite_accept_failed());
+		if (isAPIError(e) && e.statusCode < 500)
+			throw new Refused(e.message || m.auth_invite_accept_failed());
 		throw e;
 	}
 	if (isCustomerContact(parseRoles(found.role ?? "member"))) {
@@ -103,7 +105,7 @@ async function accept(
 			await db
 				.delete(member)
 				.where(and(eq(member.organizationId, found.organizationId), eq(member.userId, user.id)));
-			invalid(m.auth_invite_no_longer());
+			throw new Refused(m.auth_invite_no_longer());
 		}
 	}
 	await recordActivityAfter(
@@ -121,7 +123,7 @@ export const acceptInvitation = forUsers.form(v.object({ id: v.string() }), asyn
 	const signedIn = currentUser();
 	const found = await pendingInvitation(id);
 	if (found.email !== signedIn.email.toLowerCase()) {
-		invalid(m.auth_invite_wrong_email({ email: found.email, current: signedIn.email }));
+		throw new Refused(m.auth_invite_wrong_email({ email: found.email, current: signedIn.email }));
 	}
 	// Also makes the invitation's organization the active one.
 	await accept(found, signedIn, getRequestEvent().request.headers);
@@ -158,7 +160,7 @@ export const createAccount = forAnyone.form(
 			columns: { id: true },
 			where: eq(user.email, email),
 		});
-		if (existing) invalid(m.auth_invite_account_exists({ email }));
+		if (existing) throw new Refused(m.auth_invite_account_exists({ email }));
 
 		const context = await auth.$context;
 		const created = await context.internalAdapter.createUser(

@@ -2,6 +2,7 @@ export * from "./acceptance.ts";
 export * from "./creation.ts";
 export * from "./field.ts";
 export * from "./lifecycle.ts";
+export * from "./lookup.ts";
 export { orderCommitted } from "./hooks.ts";
 export * from "./order-changes.ts";
 export * from "./pricing.ts";

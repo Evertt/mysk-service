@@ -24,7 +24,8 @@ vi.mock(import("#lib/orders/server/hooks.ts"), async (importOriginal) => {
 		saveOrderParts: async (...args: Parameters<typeof real.saveOrderParts>) => {
 			const [change] = args;
 			if (change.order.id === refusing.orderId) {
-				throw new real.OrderRefused([{ message: "Its parts are on hold." }]);
+				const { Refused } = await import("#lib/server/refused.ts");
+				throw new Refused("Its parts are on hold.");
 			}
 			return real.saveOrderParts(...args);
 		},

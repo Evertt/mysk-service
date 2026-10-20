@@ -6,7 +6,7 @@
  * office, or cancelled before they're shipped: their credit given back piece by piece
  * (`giveBackCredit()`) and their stock released. Every change is logged against the customer.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, type SQL } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -24,6 +24,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer, user } from "#lib/server/db/schema.ts";
 import { type NumberTarget, nextNumber } from "#lib/server/numbering.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { releaseStock, reserveStock, StockShortage } from "#modules/materials/api/stock.server.ts";
 import {
 	giveBackCredit,
@@ -98,7 +99,8 @@ export async function placeShopOrder(access: CustomerAccess, cart: readonly Cart
 		);
 		const { available } = await walletToday(holder.id, tx);
 		const problems = checkoutProblems(lines, products, available);
-		if (problems.length) invalid(...problems.map((problem) => problemMessage(problem, products)));
+		if (problems.length)
+			throw new Refused(...problems.map((problem) => problemMessage(problem, products)));
 
 		const number = await nextNumber(tx, shopOrderNumbers);
 		const total = cartTotal(lines, products);
@@ -139,7 +141,7 @@ export async function placeShopOrder(access: CustomerAccess, cart: readonly Cart
 				await reserveStock(tx, product.materialId, line.quantity, number);
 			} catch (shortage) {
 				if (!(shortage instanceof StockShortage)) throw shortage;
-				invalid(
+				throw new Refused(
 					m.shop_checkout_stock({
 						name: product.name,
 						stock: formatNumber(shortage.material.stock),
@@ -230,13 +232,13 @@ export async function stepShopOrder(number: string, step: ShopOrderStep) {
 		if (!found) error(404, m.shop_order_not_found({ number }));
 		const { order, customer: holder } = found;
 		const status = statusAfter(order.status, step);
-		if (!status) invalid(m.shop_step_refused({ number }));
+		if (!status) throw new Refused(m.shop_step_refused({ number }));
 		const changed = await tx
 			.update(shopOrder)
 			.set({ status, updatedAt: Temporal.Now.instant() })
 			.where(and(idInTenant(shopOrder, order.id), eq(shopOrder.status, order.status)))
 			.returning({ id: shopOrder.id });
-		if (!changed.length) invalid(m.shop_step_refused({ number }));
+		if (!changed.length) throw new Refused(m.shop_step_refused({ number }));
 		if (step === "cancel") await cancelParts(tx, order, holder);
 		await recordActivity(tx, {
 			action: "updated",

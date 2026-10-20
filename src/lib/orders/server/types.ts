@@ -4,7 +4,6 @@
  * server renders, and saving a manager's change, logged.
  */
 import { getRequestEvent } from "$app/server";
-import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { type OrderType, orderTypes } from "#lib/models.ts";
@@ -14,6 +13,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant, systemTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { orderTypeSetting } from "#lib/server/db/schema.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import {
 	effectiveOrderTypes,
@@ -91,18 +91,18 @@ const logged = (setting: OrderTypeSetting | undefined) => ({
 	hidden: setting?.hidden ?? false,
 });
 
-/** Refuses a form with a message on one of its fields (`issue` of a remote form). */
-interface TypeIssue {
-	hidden(message: string): Parameters<typeof invalid>[number];
-	names: Record<(typeof locales)[number], (message: string) => Parameters<typeof invalid>[number]>;
-}
-
-/** A problem as the manager reads it, on its field. */
-function refusal(problem: OrderTypeProblem, issue: TypeIssue) {
+/** A problem as the manager reads it, on its field of the form. */
+function refusal(problem: OrderTypeProblem): Problem {
 	if (problem.reason === "required") {
-		return issue.hidden(m.orders_type_hide_required({ needs: problem.by.join(", ") }));
+		return {
+			path: ["hidden"],
+			message: m.orders_type_hide_required({ needs: problem.by.join(", ") }),
+		};
 	}
-	return issue.names[problem.locale](m.orders_type_name_taken({ name: problem.name }));
+	return {
+		path: ["names", problem.locale],
+		message: m.orders_type_name_taken({ name: problem.name }),
+	};
 }
 
 /**
@@ -110,11 +110,7 @@ function refusal(problem: OrderTypeProblem, issue: TypeIssue) {
  * and whether it's hidden), and logs it; refuses what `orderTypeProblems()` finds wrong. A setting
  * that's back to standard leaves no row.
  */
-export async function saveOrderTypeSetting(
-	type: OrderType,
-	next: OrderTypeSetting,
-	issue: TypeIssue,
-) {
+export async function saveOrderTypeSetting(type: OrderType, next: OrderTypeSetting) {
 	const tenant = currentTenant();
 	const names = Object.fromEntries(
 		Object.entries(next.names).flatMap(([locale, name]) =>
@@ -135,7 +131,7 @@ export async function saveOrderTypeSetting(
 			rows.map(({ type, names, hidden }) => [type, { names, hidden }]),
 		);
 		const problems = orderTypeProblems(stored, type, setting, requiredOrderTypes(tenant.modules));
-		if (problems.length) invalid(...problems.map((problem) => refusal(problem, issue)));
+		Refused.check(problems.map(refusal));
 
 		const where = and(inTenant(orderTypeSetting), eq(orderTypeSetting.type, type));
 		const standard = !setting.hidden && !Object.keys(names).length;

@@ -1,12 +1,13 @@
-import { error } from "@sveltejs/kit";
 import { and, count, desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { listedUnitsOf, priceOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, engineer, order } from "#lib/server/db/schema.ts";
+import { engineer, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
+
+import { customerByCode } from "../server/lookup.ts";
 
 /** How many orders the customer page lists; the orders list has them all. */
 const RECENT = 10;
@@ -16,11 +17,7 @@ const RECENT = 10;
  * and how many it has, and how many orders they have.
  */
 export const getCustomerActivity = forMembers.query(v.string(), async (code) => {
-	const [found] = await db
-		.select({ id: customer.id })
-		.from(customer)
-		.where(and(eq(customer.code, code), inTenant(customer)));
-	if (!found) error(404, m.customers_code_not_found({ code }));
+	const found = await customerByCode(code);
 
 	const [[{ total }], orders] = await Promise.all([
 		db

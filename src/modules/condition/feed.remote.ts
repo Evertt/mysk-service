@@ -2,13 +2,10 @@
  * The service history ("Activiteitenlog") of the tenant's units, or of a customer's (by code): on
  * the Connect page, for the chosen customer, and on a customer's page.
  */
-import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { customerByCode } from "#lib/customers/server/index.ts";
 import { customerCode } from "#lib/schema.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 
 import { query } from "./remote-functions.ts";
@@ -23,11 +20,10 @@ export const getServiceHistory = query(
 		let customerId: number | null = null;
 		let name: string | null = null;
 		if (input.customer !== null) {
-			const [found] = await db
-				.select({ id: customer.id, name: customer.name })
-				.from(customer)
-				.where(and(eq(customer.code, input.customer), inTenant(customer)));
-			if (!found) error(404, m.common_error_not_found());
+			const found = await customerByCode(input.customer, {
+				id: customer.id,
+				name: customer.name,
+			});
 			customerId = found.id;
 			name = found.name;
 		}

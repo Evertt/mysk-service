@@ -79,3 +79,6 @@ export function inThisRequest() {
 
 /** A transaction on the app's database, as `db.transaction` passes it to its callback. */
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** What runs a statement: the database, or a transaction on it. */
+export type Runner = Transaction | typeof db;

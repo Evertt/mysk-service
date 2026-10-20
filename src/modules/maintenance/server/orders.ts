@@ -5,7 +5,7 @@
  * as its last one. "Create orders" on the due list and the daily run (`automatic.ts`) both do it
  * here, so their orders are made, numbered and logged alike.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
@@ -13,6 +13,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { planLabel } from "../activity.ts";
 import { advanceDueDate, dueForAutomaticOrder } from "../model.ts";
@@ -28,7 +29,7 @@ export interface PlanOrder {
 /**
  * Makes the order for the tenant's plan `id` and moves the plan on, in one transaction: a quote of
  * normal priority for the plan's unit and its customer, with the plan's type and description, as a
- * new order from the order form without a date. Refuses a paused plan (`invalid()`); a plan that
+ * new order from the order form without a date. Refuses a paused plan (`Refused`); a plan that
  * isn't the tenant's is a 404.
  *
  * With `automatic` (the daily run), it first checks again, in the transaction, that the plan is
@@ -62,7 +63,7 @@ export function orderPlan(
 			return null;
 		}
 		const label = planLabel({ serialNumber: unit.serialNumber, description: plan.description });
-		if (plan.paused) invalid(m.maintenance_plan_paused({ label }));
+		if (plan.paused) throw new Refused(m.maintenance_plan_paused({ label }));
 
 		const [created] = await createOrders(tx, [
 			{

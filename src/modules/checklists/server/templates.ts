@@ -5,21 +5,27 @@
  * category has at most one template; a retired template has none, and isn't changed until it's
  * restored. Its points are in `points.ts`.
  */
-import { error, invalid } from "@sveltejs/kit";
-import { and, asc, count, eq, ne, sql } from "drizzle-orm";
+import { error } from "@sveltejs/kit";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	inTenant,
+	tenantJoin,
+	sameTenant,
+} from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { equipment, equipmentCategory } from "#lib/server/db/schema.ts";
+import { nameTaken, nextPosition } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import type { TemplateInput } from "../form/template-schema.ts";
 import { orderPoints } from "../model.ts";
 import { checklistTemplate, checklistTemplateCategory, checklistTemplateItem } from "./schema.ts";
-
-/** Refuses a form with a message on one of its fields (`issue.name` of a remote form). */
-type FieldIssue = (message: string) => Parameters<typeof invalid>[number];
 
 /** A template as the activity log knows it: by its name. */
 export const templateSubject = (template: { id: number; name: string }): Subject => ({
@@ -41,7 +47,7 @@ async function findTemplate(tx: Transaction | typeof db, id: number) {
 /** The tenant's template `id`, or a 404; refuses one that's retired, which isn't changed. */
 export async function findActiveTemplate(tx: Transaction, id: number) {
 	const found = await findTemplate(tx, id);
-	if (found.archived) invalid(m.checklists_retired_refused({ name: found.name }));
+	if (found.archived) throw new Refused(m.checklists_retired_refused({ name: found.name }));
 	return found;
 }
 
@@ -68,7 +74,7 @@ function categoriesWithTemplates(tx: Transaction | typeof db) {
 		.leftJoin(
 			checklistTemplateCategory,
 			and(
-				eq(checklistTemplateCategory.organizationId, equipmentCategory.organizationId),
+				sameTenant(checklistTemplateCategory, equipmentCategory),
 				eq(checklistTemplateCategory.categoryId, equipmentCategory.id),
 			),
 		)
@@ -166,46 +172,36 @@ export async function offeredTemplate(tx: Transaction | typeof db, categoryId: n
 
 /** The tenant's unit `serialNumber` (or a 404) with its category and the template it's offered. */
 export async function unitTemplate(serialNumber: string) {
-	const [unit] = await db
-		.select({
-			id: equipment.id,
-			categoryId: equipment.categoryId,
-			category: equipmentCategory.name,
-		})
-		.from(equipment)
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber, (where) =>
+		db
+			.select({ categoryId: equipment.categoryId, category: equipmentCategory.name })
+			.from(equipment)
+			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
+			.where(where),
+	);
 	return { category: unit.category, template: await offeredTemplate(db, unit.categoryId) };
 }
 
-/** Refuses `name` if another of the tenant's templates (than `except`) has it, in any case. */
-async function refuseTakenName(tx: Transaction, name: string, issue: FieldIssue, except?: number) {
-	const [taken] = await tx
-		.select({ name: checklistTemplate.name })
-		.from(checklistTemplate)
-		.where(
-			and(
-				inTenant(checklistTemplate),
-				eq(sql`lower(${checklistTemplate.name})`, name.toLowerCase()),
-				except === undefined ? undefined : ne(checklistTemplate.id, except),
-			),
-		);
-	if (taken) invalid(issue(m.checklists_name_taken({ name: taken.name })));
+/**
+ * Refuses `name`, on the form's name, if another of the tenant's templates (than `except`) has it,
+ * in any case.
+ */
+async function refuseTakenName(tx: Transaction, name: string, except?: number) {
+	const taken = await nameTaken(tx, checklistTemplate, name, { except });
+	if (taken) {
+		throw new Refused({ path: ["name"], message: m.checklists_name_taken({ name: taken.name }) });
+	}
 }
 
 /** Adds a template to the tenant's, last in their order and without points; returns its id. */
-export function createTemplate(input: TemplateInput, issue: FieldIssue) {
+export function createTemplate(input: TemplateInput) {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
-		await refuseTakenName(tx, input.name, issue);
-		const [{ last }] = await tx
-			.select({ last: sql<number | null>`max(${checklistTemplate.position})` })
-			.from(checklistTemplate)
-			.where(inTenant(checklistTemplate));
+		await refuseTakenName(tx, input.name);
+		const position = await nextPosition(tx, checklistTemplate);
 		const [created] = await tx
 			.insert(checklistTemplate)
-			.values({ ...input, organizationId, position: (last ?? -1) + 1 })
+			.values({ ...input, organizationId, position })
 			.returning({ id: checklistTemplate.id });
 		await recordActivity(tx, {
 			action: "created",
@@ -216,10 +212,10 @@ export function createTemplate(input: TemplateInput, issue: FieldIssue) {
 }
 
 /** Changes the details of the tenant's template `id`: its name, norm and validity. */
-export function updateTemplate(id: number, input: TemplateInput, issue: FieldIssue) {
+export function updateTemplate(id: number, input: TemplateInput) {
 	return db.transaction(async (tx) => {
 		const existing = await findActiveTemplate(tx, id);
-		await refuseTakenName(tx, input.name, issue, id);
+		await refuseTakenName(tx, input.name, id);
 		await tx.update(checklistTemplate).set(input).where(idInTenant(checklistTemplate, id));
 		await recordActivity(tx, {
 			action: "updated",
@@ -232,10 +228,10 @@ export function updateTemplate(id: number, input: TemplateInput, issue: FieldIss
 
 /**
  * Makes the tenant's template `id` the one for the categories `categoryIds` (and no others).
- * Refuses a category that isn't the tenant's (a 404) or that another template is for (with
- * `issue`, naming both).
+ * Refuses a category that isn't the tenant's (a 404) or that another template is for (on the
+ * form's `categoryIds`, naming both).
  */
-export function setTemplateCategories(id: number, categoryIds: number[], issue: FieldIssue) {
+export function setTemplateCategories(id: number, categoryIds: number[]) {
 	const { organizationId } = currentTenant();
 	const wanted = [...new Set(categoryIds)].toSorted((a, b) => a - b);
 	return db.transaction(async (tx) => {
@@ -246,14 +242,13 @@ export function setTemplateCategories(id: number, categoryIds: number[], issue: 
 			const category = categories.find((c) => c.id === categoryId);
 			if (!category) error(404, m.checklists_category_not_found());
 			if (category.templateId !== null && category.templateId !== id) {
-				invalid(
-					issue(
-						m.checklists_category_taken({
-							category: category.name,
-							template: category.templateName!,
-						}),
-					),
-				);
+				throw new Refused({
+					path: ["categoryIds"],
+					message: m.checklists_category_taken({
+						category: category.name,
+						template: category.templateName!,
+					}),
+				});
 			}
 		}
 		await tx

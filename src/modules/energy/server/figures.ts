@@ -10,7 +10,7 @@
 import { error } from "@sveltejs/kit";
 import { and, asc, eq, getTableName, type SQL, sql } from "drizzle-orm";
 
-import { inTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, idInTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
@@ -423,7 +423,7 @@ export async function sitesFigures(
 			.where(
 				and(
 					ofZones,
-					eq(energyReading.organizationId, energyZone.organizationId),
+					sameTenant(energyReading, energyZone),
 					eq(energyReading.zoneId, energyZone.id),
 					sql`${start} >= ${bound(json, "previousFrom")}`,
 					sql`${start} < ${bound(json, "to")}`,

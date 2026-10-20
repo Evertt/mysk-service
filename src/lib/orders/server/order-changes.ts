@@ -2,7 +2,7 @@
  * Changes to a single order that the order's own pages and the list's bulk actions share, so
  * changing, assigning or deleting many orders refuses what doing it to one refuses.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
@@ -11,9 +11,10 @@ import { idInTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { acceptFirst, notEditable } from "../lifecycle.ts";
-import { refuseRefused, saveOrderParts } from "./hooks.ts";
+import { refusedWhole, saveOrderParts } from "./hooks.ts";
 
 /**
  * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it
@@ -28,9 +29,9 @@ export async function removeOrder(id: number) {
 			where: idInTenant(order, id),
 		});
 		if (!found) error(404, m.orders_not_found_plain());
-		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "deleted"));
+		if (!isEditableOrder(found.status)) throw new Refused(notEditable(found.number, "deleted"));
 		await saveOrderParts({ tx, order: found, from: found.status, status: null }).catch(
-			refuseRefused,
+			refusedWhole,
 		);
 		await tx.delete(order).where(idInTenant(order, found.id));
 		await recordActivity(tx, {
@@ -73,9 +74,9 @@ export async function assignOrder(id: number, engineerId: number | null) {
 			where: idInTenant(order, id),
 		});
 		if (!found) error(404, m.orders_not_found_plain());
-		if (!isEditableOrder(found.status)) invalid(notEditable(found.number, "changed"));
+		if (!isEditableOrder(found.status)) throw new Refused(notEditable(found.number, "changed"));
 		if (found.engineerId === engineerId) return;
-		if (isAwaitingAcceptance(found.status)) invalid(acceptFirst(found.number));
+		if (isAwaitingAcceptance(found.status)) throw new Refused(acceptFirst(found.number));
 		await tx.update(order).set({ engineerId }).where(idInTenant(order, id));
 		const subject = orderSubject({ id, number: found.number });
 		await recordActivity(tx, { action: "updated", subject, before: found, after: { engineerId } });

@@ -74,7 +74,6 @@
 	"checklists_template_not_found": "Checklistsjabloon niet gevonden",
 	"checklists_point_not_found": "Checklistpunt niet gevonden",
 	"checklists_category_not_found": "Apparatuurcategorie niet gevonden",
-	"checklists_equipment_not_found": "Geen apparaat met serienummer {serial}",
 	"checklists_retired_refused": "{name} is buiten gebruik. Zet het terug om het te wijzigen.",
 	"checklists_category_taken": "{category} heeft al het sjabloon {template}. Haal het daar eerst af.",
 	"checklists_no_norm": "Geen norm",
@@ -181,7 +180,6 @@
 		}
 	],
 	"checklists_not_found": "Checklist niet gevonden",
-	"checklists_order_not_found": "Opdracht {number} niet gevonden",
 	"checklists_field_not_in_progress": "{number} is niet in behandeling: de checklists kun je niet wijzigen.",
 	"checklists_already_completed": "De checklist van {unit} is al afgerond.",
 	"checklists_complete_unanswered": [

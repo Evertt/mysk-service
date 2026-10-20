@@ -18,6 +18,7 @@ import {
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
 
 import { planLabel } from "../activity.ts";
 import { advanceDueDate, type PlanOrderType } from "../model.ts";
@@ -122,8 +123,7 @@ export function setPlanPaused(id: number, paused: boolean) {
 export function deletePlan(id: number) {
 	return db.transaction(async (tx) => {
 		const { plan, unit } = await findPlan(tx, id);
-		await tx.delete(maintenancePlan).where(idInTenant(maintenancePlan, id));
-		await recordActivity(tx, { action: "deleted", ...subjects(plan, unit) });
+		await deleteAndLog(maintenancePlan, { tx, ...subjects(plan, unit) });
 		return unit.serialNumber;
 	});
 }

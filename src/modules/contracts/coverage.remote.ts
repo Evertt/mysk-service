@@ -2,18 +2,18 @@
  * Data for what the contracts module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): an
  * order's coverage and response time, the contracts covering a unit, and the dashboard's cards.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, gt, gte, lt, lte, notExists, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { currentDay } from "#lib/dates.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { correctiveOrderTypes } from "#lib/models.ts";
-import { unitCount, withUnitIds } from "#lib/orders/server/index.ts";
+import { unitCount, withUnitIds, orderByNumber } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, equipment, order } from "#lib/server/db/schema.ts";
+import { customer, order } from "#lib/server/db/schema.ts";
 
 import { includedLabel, needsAttention, responseDeadline, waitingStatuses } from "./coverage.ts";
 import { query } from "./remote-functions.ts";
@@ -25,11 +25,12 @@ const EXPIRING_DAYS = 60;
 
 /** The contract that covered an order and its response deadline, or `null` if none did. */
 export const getOrderCoverage = query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		columns: { id: true, type: true, status: true, createdAt: true },
-		where: and(eq(order.number, number), inTenant(order)),
+	const found = await orderByNumber(number, {
+		id: order.id,
+		type: order.type,
+		status: order.status,
+		createdAt: order.createdAt,
 	});
-	if (!found) error(404, m.contracts_order_not_found({ number }));
 
 	const coverage = (await coverageOf(await withUnitIds([found]))).get(found.id);
 	if (!coverage) return null;
@@ -42,11 +43,7 @@ export const getOrderCoverage = query(v.string(), async (number) => {
 
 /** The contracts covering a unit, latest first. */
 export const getUnitCoverage = query(v.string(), async (serialNumber) => {
-	const unit = await db.query.equipment.findFirst({
-		columns: { id: true },
-		where: and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)),
-	});
-	if (!unit) error(404, m.contracts_equipment_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber);
 
 	return db
 		.select({

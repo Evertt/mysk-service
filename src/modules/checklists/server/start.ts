@@ -9,6 +9,7 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -49,8 +50,9 @@ async function openOrderOf(tx: Transaction, equipmentId: number, kind: Checklist
  */
 export function startChecklist(serialNumber: string, kind: ChecklistKind) {
 	return db.transaction(async (tx) => {
-		const [unit] = await tx
-			.select({
+		const unit = await unitBySerial(
+			serialNumber,
+			{
 				id: equipment.id,
 				customerId: equipment.customerId,
 				categoryId: equipment.categoryId,
@@ -58,10 +60,9 @@ export function startChecklist(serialNumber: string, kind: ChecklistKind) {
 				name: equipment.name,
 				manufacturer: equipment.manufacturer,
 				model: equipment.model,
-			})
-			.from(equipment)
-			.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-		if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+			},
+			tx,
+		);
 		const template =
 			unit.status === "decommissioned" ? null : await offeredTemplate(tx, unit.categoryId);
 		if (!template) error(400, m.checklists_start_no_template({ unit: unitTitle(unit) }));

@@ -10,6 +10,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import type { LoggedType } from "#lib/activity/index.ts";
 import type { ActivityAction } from "#lib/models.ts";
 import type { NotificationRule } from "#lib/notifications/extensions.ts";
+import { sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inLiterals, literal } from "#lib/server/db/parameters.ts";
 import { activity, orderRequest } from "#lib/server/db/schema.ts";
@@ -36,7 +37,7 @@ export const subjectNumber: SQL = sql`cast(${activity.subjectId} as integer)`;
 /** Another entry about the same subject as the entry the rules look at. */
 const sameSubject = alias(activity, "same_subject");
 const aboutSameSubject = and(
-	eq(sameSubject.organizationId, activity.organizationId),
+	sameTenant(sameSubject, activity),
 	eq(sameSubject.subjectType, activity.subjectType),
 	eq(sameSubject.subjectId, activity.subjectId),
 );
@@ -73,12 +74,7 @@ const reported = () =>
 	db
 		.select({ id: orderRequest.orderId })
 		.from(orderRequest)
-		.where(
-			and(
-				eq(orderRequest.orderId, subjectNumber),
-				eq(orderRequest.organizationId, activity.organizationId),
-			),
-		);
+		.where(and(eq(orderRequest.orderId, subjectNumber), sameTenant(orderRequest, activity)));
 
 /** An order's change whose status became `status` (`changes.status`, before and after). */
 const statusBecame = (status: string) =>

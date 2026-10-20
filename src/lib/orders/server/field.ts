@@ -1,7 +1,6 @@
-import { invalid } from "@sveltejs/kit";
-
 import { engineerOrder, engineerOrderNotFound, type OrderRef } from "#lib/server/auth/index.ts";
 import type { db, Transaction } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { type FieldAction, fieldActions, fieldRefusal } from "../lifecycle.ts";
 
@@ -21,6 +20,6 @@ export async function findEngineerOrder(
 		where: await engineerOrder(ref),
 	});
 	if (!found) engineerOrderNotFound(ref);
-	if (action && !fieldActions(found.status)[action]) invalid(fieldRefusal(found.status));
+	if (action && !fieldActions(found.status)[action]) throw new Refused(fieldRefusal(found.status));
 	return found;
 }

@@ -4,20 +4,23 @@
  * transaction that also logs it (`recordActivity`). Names are unique within the tenant, whatever
  * their case; a category that units have can't be deleted.
  */
-import { error, invalid } from "@sveltejs/kit";
-import { and, asc, count, eq, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 
+import type { MoveDirection } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
-import { db, type Transaction } from "#lib/server/db/index.ts";
+import { db, type Runner, type Transaction } from "#lib/server/db/index.ts";
 import { equipment, equipmentCategory } from "#lib/server/db/schema.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import {
+	defineRemoval,
+	nameTaken,
+	nextPosition,
+	orNotFound,
+	reorder,
+} from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
-import type { CategoryInput, MoveDirection } from "../categories/category-schema.ts";
-import { moved } from "../categories/positions.ts";
-
-/** Refuses a form with a message on its name field (`issue.name` of a remote form). */
-type NameIssue = (message: string) => Parameters<typeof invalid>[number];
+import type { CategoryInput } from "../categories/category-schema.ts";
 
 /** A category as the activity log knows it: by its name. */
 const subject = (category: { id: number; name: string }): Subject & { id: number } => ({
@@ -48,45 +51,35 @@ export async function categoriesWithUnits() {
 }
 
 /** The tenant's category `id`, or a 404. */
-async function findCategory(tx: Transaction | typeof db, id: number) {
+async function findCategory(tx: Runner, id: number) {
 	const [found] = await tx
 		.select()
 		.from(equipmentCategory)
 		.where(idInTenant(equipmentCategory, id));
-	if (!found) error(404, m.equipment_category_not_found());
-	return found;
+	return orNotFound(found, m.equipment_category_not_found());
 }
 
 /**
- * Refuses `name` if another of the tenant's categories (than `except`) has it, in any case.
- * Compared with SQLite's `lower()`, as the unique index compares them: it lowers ASCII letters only.
+ * Refuses `name`, on the form's name, if another of the tenant's categories (than `except`) has it.
  */
-async function refuseTakenName(tx: Transaction, name: string, issue: NameIssue, except?: number) {
-	const [taken] = await tx
-		.select({ name: equipmentCategory.name })
-		.from(equipmentCategory)
-		.where(
-			and(
-				inTenant(equipmentCategory),
-				eq(sql`lower(${equipmentCategory.name})`, sql`lower(${name})`),
-				except === undefined ? undefined : ne(equipmentCategory.id, except),
-			),
-		);
-	if (taken) invalid(issue(m.equipment_category_name_taken({ name: taken.name })));
+async function refuseTakenName(tx: Transaction, name: string, except?: number) {
+	const taken = await nameTaken(tx, equipmentCategory, name, { except });
+	if (taken) {
+		throw new Refused({
+			path: ["name"],
+			message: m.equipment_category_name_taken({ name: taken.name }),
+		});
+	}
 }
 
 /** Adds a category to the tenant's, last in their order; returns its id. */
-export function createCategory(input: CategoryInput, issue: NameIssue) {
+export function createCategory(input: CategoryInput) {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
-		await refuseTakenName(tx, input.name, issue);
-		const [{ last }] = await tx
-			.select({ last: sql<number | null>`max(${equipmentCategory.position})` })
-			.from(equipmentCategory)
-			.where(inTenant(equipmentCategory));
+		await refuseTakenName(tx, input.name);
 		const [created] = await tx
 			.insert(equipmentCategory)
-			.values({ ...input, organizationId, position: (last ?? -1) + 1 })
+			.values({ ...input, organizationId, position: await nextPosition(tx, equipmentCategory) })
 			.returning({ id: equipmentCategory.id });
 		await recordActivity(tx, {
 			action: "created",
@@ -97,10 +90,10 @@ export function createCategory(input: CategoryInput, issue: NameIssue) {
 }
 
 /** Renames the tenant's category `id`, or changes its specialty. */
-export function updateCategory(id: number, input: CategoryInput, issue: NameIssue) {
+export function updateCategory(id: number, input: CategoryInput) {
 	return db.transaction(async (tx) => {
 		const existing = await findCategory(tx, id);
-		await refuseTakenName(tx, input.name, issue, id);
+		await refuseTakenName(tx, input.name, id);
 		await tx.update(equipmentCategory).set(input).where(idInTenant(equipmentCategory, id));
 		await recordActivity(tx, {
 			action: "updated",
@@ -118,53 +111,41 @@ export function updateCategory(id: number, input: CategoryInput, issue: NameIssu
 export function moveCategory(id: number, direction: MoveDirection) {
 	return db.transaction(async (tx) => {
 		await findCategory(tx, id);
-		const rows = await tx
-			.select({
-				id: equipmentCategory.id,
-				name: equipmentCategory.name,
-				position: equipmentCategory.position,
-			})
-			.from(equipmentCategory)
-			.where(inTenant(equipmentCategory))
-			.orderBy(asc(equipmentCategory.position), asc(equipmentCategory.id));
-		const ids = rows.map((row) => row.id);
-		const order = moved(ids, id, direction);
-		if (order.every((rowId, i) => rowId === ids[i])) return;
-		// Numbered afresh from 0, so places that were equal or had gaps between them are in order.
-		for (const [position, rowId] of order.entries()) {
-			const row = rows.find((r) => r.id === rowId)!;
-			if (row.position === position) continue;
-			await tx
-				.update(equipmentCategory)
-				.set({ position })
-				.where(idInTenant(equipmentCategory, row.id));
+		for (const row of await reorder(tx, equipmentCategory, id, direction)) {
+			const category = await findCategory(tx, row.id);
 			await recordActivity(tx, {
 				action: "updated",
-				subject: subject(row),
-				before: row,
-				after: { position },
+				subject: subject(category),
+				before: { position: row.from },
+				after: { position: row.to },
 			});
 		}
 	});
 }
 
 /** Deletes the tenant's category `id`; refuses one that units have. */
-export async function removeCategory(id: number) {
-	const existing = await findCategory(db, id);
-	const [{ units }] = await db
-		.select({ units: count() })
-		.from(equipment)
-		.where(and(eq(equipment.categoryId, id), inTenant(equipment)));
-	if (units)
-		invalid(
-			m.equipment_category_delete_refused({
-				name: existing.name,
+export const removeCategory = defineRemoval({
+	table: equipmentCategory,
+	find: async (tx, id) => {
+		const [found] = await tx
+			.select({ id: equipmentCategory.id, name: equipmentCategory.name })
+			.from(equipmentCategory)
+			.where(idInTenant(equipmentCategory, id));
+		return found;
+	},
+	notFound: m.equipment_category_not_found,
+	subject,
+	blockers: async (found, tx) => {
+		const [{ units }] = await tx
+			.select({ units: count() })
+			.from(equipment)
+			.where(and(eq(equipment.categoryId, found.id), inTenant(equipment)));
+		if (units) {
+			return m.equipment_category_delete_refused({
+				name: found.name,
 				units: m.common_count_units({ count: units }),
-			}),
-		);
-	await deleteAndLog(
-		equipmentCategory,
-		subject(existing),
-		m.equipment_category_delete_referenced(),
-	);
-}
+			});
+		}
+	},
+	referenced: m.equipment_category_delete_referenced,
+});

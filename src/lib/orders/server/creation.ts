@@ -3,7 +3,6 @@
  * modules (e.g. maintenance plans turning what's due into orders) both call `createOrders()`, so
  * every new order is checked, numbered and logged the same way.
  */
-import { invalid } from "@sveltejs/kit";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import type { OrderPriority, OrderStatus, OrderType } from "#lib/models.ts";
@@ -12,6 +11,7 @@ import { currentTenant, idsInTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { setOrderUnits } from "./units.ts";
 
@@ -97,8 +97,8 @@ async function orderDraftProblems(
 }
 
 /**
- * Creates orders in the current tenant, in `tx`: checks their references (refusing the lot with
- * `invalid()` if any is wrong, so a form shows why and a bulk command skips the record with the
+ * Creates orders in the current tenant, in `tx`: checks their references (refusing the lot, a
+ * `Refused`, if any is wrong, so a form shows why and a bulk command skips the record with the
  * reason), gives each the tenant's next number, inserts them with their units and logs each one's
  * `created`. Returns their ids and numbers, in the drafts' order. What the modules add to an order
  * (e.g. its materials) isn't part of a draft: the order form saves its modules' parts right after,
@@ -115,7 +115,7 @@ export async function createOrders(
 ): Promise<{ id: number; number: string }[]> {
 	if (!drafts.length) return [];
 	const problems = await orderDraftProblems(tx, drafts);
-	if (problems.length) invalid(...new Set(problems.map((problem) => problem.message)));
+	Refused.check([...new Set(problems.map((problem) => problem.message))]);
 
 	const { organizationId } = currentTenant();
 	const created: { id: number; number: string }[] = [];

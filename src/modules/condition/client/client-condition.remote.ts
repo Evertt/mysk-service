@@ -7,7 +7,13 @@
  */
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { atSites, currentCustomer, ofCustomer, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	atSites,
+	currentCustomer,
+	ofCustomer,
+	tenantJoin,
+	sameTenant,
+} from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customerSite, equipment } from "#lib/server/db/schema.ts";
@@ -66,10 +72,7 @@ export const getClientAttention = forCustomers.query(async () => {
 				.from(component)
 				.innerJoin(
 					equipment,
-					and(
-						eq(equipment.organizationId, component.organizationId),
-						eq(equipment.id, component.equipmentId),
-					),
+					and(sameTenant(equipment, component), eq(equipment.id, component.equipmentId)),
 				)
 				.where(
 					and(

@@ -1,5 +1,4 @@
-import { error } from "@sveltejs/kit";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc } from "drizzle-orm";
 import * as v from "valibot";
 
 import { onUnit, priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
@@ -8,19 +7,16 @@ import { db } from "#lib/server/db/index.ts";
 import { engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
+import { unitBySerial } from "../server/lookup.ts";
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.ts";
 
 /** One of the tenant's units' service history: its timeline (newest first) and key figures. */
 export const getServiceHistory = forMembers.query(v.string(), async (serialNumber) => {
-	const [unit] = await db
-		.select({
-			id: equipment.id,
-			installedAt: equipment.installedAt,
-			warrantyUntil: equipment.warrantyUntil,
-		})
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber, {
+		id: equipment.id,
+		installedAt: equipment.installedAt,
+		warrantyUntil: equipment.warrantyUntil,
+	});
 
 	const orders = await db
 		.select({

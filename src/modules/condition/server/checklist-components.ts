@@ -7,7 +7,7 @@
  */
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { inTenant } from "#lib/server/auth/index.ts";
+import { inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
@@ -67,6 +67,6 @@ export const componentSearchText = () =>
 	sql<
 		string | null
 	>`(select group_concat(${component.number} || ' ' || ${component.name}, ' ') from ${component} where ${and(
-		eq(component.organizationId, equipment.organizationId),
+		sameTenant(component, equipment),
 		eq(component.equipmentId, equipment.id),
 	)})`;

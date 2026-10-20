@@ -7,7 +7,7 @@
  */
 import { and, eq, gte, isNotNull, isNull, or } from "drizzle-orm";
 
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -29,10 +29,7 @@ async function demoDocks(): Promise<(ScenarioDock & { id: number })[]> {
 		.from(dockPosition)
 		.leftJoin(
 			dockState,
-			and(
-				eq(dockState.organizationId, dockPosition.organizationId),
-				eq(dockState.dockId, dockPosition.id),
-			),
+			and(sameTenant(dockState, dockPosition), eq(dockState.dockId, dockPosition.id)),
 		)
 		.where(
 			and(

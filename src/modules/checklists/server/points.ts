@@ -7,14 +7,15 @@
 import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
+import type { MoveDirection } from "#lib/schema.ts";
 import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
 
 import type { PointInput } from "../form/template-schema.ts";
 import {
 	changedPlaces,
-	type MoveDirection,
 	moveGroup as movedGroup,
 	movePoint as movedPoint,
 	orderPoints,
@@ -167,8 +168,7 @@ export function moveGroup(templateId: number, group: string, direction: MoveDire
 export function deletePoint(id: number) {
 	return db.transaction(async (tx) => {
 		const { point, template } = await findPoint(tx, id);
-		await tx.delete(checklistTemplateItem).where(idInTenant(checklistTemplateItem, id));
-		await recordActivity(tx, { action: "deleted", ...subjects(point, template) });
+		await deleteAndLog(checklistTemplateItem, { tx, ...subjects(point, template) });
 		return template.id;
 	});
 }

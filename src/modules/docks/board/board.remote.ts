@@ -9,7 +9,7 @@ import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
 import { recordId } from "#lib/schema.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
@@ -73,10 +73,7 @@ export const getDockBoard = query(v.optional(recordId()), async (siteId) => {
 		.from(dockPosition)
 		.leftJoin(
 			dockState,
-			and(
-				eq(dockState.organizationId, dockPosition.organizationId),
-				eq(dockState.dockId, dockPosition.id),
-			),
+			and(sameTenant(dockState, dockPosition), eq(dockState.dockId, dockPosition.id)),
 		)
 		.where(and(inTenant(dockPosition), eq(dockPosition.siteId, site.id)))
 		.orderBy(asc(dockPosition.code));

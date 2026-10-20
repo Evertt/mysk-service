@@ -5,11 +5,12 @@
  * customers and scoped to their customer (`currentCustomer()`): another customer's order is a 404,
  * also by a tampered number, and a customer that isn't a partner has no credit to pay with.
  */
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { currentCustomer, ofCustomer } from "#lib/server/auth/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { isPartner, walletToday } from "#modules/partner-programme/api/wallet.server.ts";
 
 import { checkoutSchema } from "../form/schemas.ts";
@@ -70,7 +71,7 @@ export const getClientShop = forCustomers.query(async () => {
  */
 export const placeClientShopOrder = forCustomers.form(checkoutSchema, async (input) => {
 	const access = await currentCustomer();
-	if (!(await isPartner(access.customer.id))) invalid(m.shop_checkout_not_partner());
+	if (!(await isPartner(access.customer.id))) throw new Refused(m.shop_checkout_not_partner());
 	const number = await placeShopOrder(access, input.lines);
 	void getClientShop().refresh();
 	void getClientShopOrders().refresh();

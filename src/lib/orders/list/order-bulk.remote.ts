@@ -1,5 +1,5 @@
 // Bulk actions on the list's selected orders (see `bulk-actions.ts`).
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,6 +10,7 @@ import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
 import { bulkChange, listTarget, refreshRequested } from "#lib/server/lists/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { transitionOrder } from "../server/lifecycle.ts";
@@ -65,7 +66,7 @@ export const bulkSetOrderStatus = forMembers.command(
 				// `transitionOrder()` would leave it as it is, but say nothing of it.
 				if (o.status === status) {
 					const named = label("orderStatus", status).toLowerCase();
-					invalid(m.orders_bulk_status_unchanged({ number: o.label, status: named }));
+					throw new Refused(m.orders_bulk_status_unchanged({ number: o.label, status: named }));
 				}
 				await db.transaction((tx) => transitionOrder(tx, { verb: "set", id: o.id, to: status }));
 			},

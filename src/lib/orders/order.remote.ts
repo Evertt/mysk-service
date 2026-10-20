@@ -1,5 +1,4 @@
-import type { RemoteFormInvalidField } from "$app/server";
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
@@ -21,12 +20,14 @@ import {
 	user,
 } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { orderFields } from "./form/order-schema.ts";
 import { createOrders } from "./server/creation.ts";
-import { orderCommitted, refuseParts, tagOrders } from "./server/hooks.ts";
+import { orderCommitted, tagOrders } from "./server/hooks.ts";
 import { beginOrderChange } from "./server/lifecycle.ts";
+import { orderByNumber } from "./server/lookup.ts";
 import { removeOrder } from "./server/order-changes.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { tenantOrderTypes } from "./server/types.ts";
@@ -108,12 +109,13 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 
 /** Earlier and later work on an order's units, for context on its page: the latest eight. */
 export const getOrderHistory = forMembers.query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		where: and(eq(order.number, number), inTenant(order)),
-		columns: { id: true },
-		with: { units: { columns: { equipmentId: true } } },
-	});
-	if (!found) error(404, m.orders_not_found({ number }));
+	const found = await orderByNumber(number, (where) =>
+		db.query.order.findMany({
+			where,
+			columns: { id: true },
+			with: { units: { columns: { equipmentId: true } } },
+		}),
+	);
 	const equipmentIds = found.units.map((unit) => unit.equipmentId);
 	if (!equipmentIds.length) return [];
 	return db
@@ -183,14 +185,12 @@ const orderSchema = v.object(orderFields);
 
 type OrderInput = v.InferOutput<typeof orderSchema>;
 
-type OrderIssue = RemoteFormInvalidField<v.InferInput<typeof orderSchema>>;
-
 /**
  * Creates or updates an order in the current tenant, with the parts the tenant's modules add to the
  * form (`modules`, saved through `orders.saving`, see `beginOrderChange()`); returns its number.
- * Throws an `OrderRefused` when a module can't let go of a unit (see `refuseParts`).
+ * Throws a `Refused` when a module can't save its part or let go of a unit, on the form's fields.
  */
-async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue) {
+async function saveOrder(id: number | null, input: OrderInput) {
 	const { modules, scheduledTime, equipmentIds: units, ...fields } = input;
 	const equipmentIds = [...new Set(units)];
 
@@ -200,7 +200,7 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 		const existing = change.before;
 		// A type the tenant hid is no choice, unless the order has it already.
 		if (!offeredOrderTypes(tenantOrderTypes(), existing?.type).includes(fields.type)) {
-			invalid(issue.type(m.orders_type_hidden_refused()));
+			throw new Refused({ path: ["type"], message: m.orders_type_hidden_refused() });
 		}
 		const unitsBefore = existing
 			? ((await unitIdsOf([existing.id], tx)).get(existing.id) ?? [])
@@ -246,14 +246,9 @@ async function saveOrder(id: number | null, input: OrderInput, issue: OrderIssue
 	});
 }
 
-interface ReferenceProblem {
-	field: "customerId" | "equipmentIds" | "engineerId";
-	message: string;
-}
-
 /** Checks that the order's references exist in the current tenant and belong together. */
-async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
-	const problems: ReferenceProblem[] = [];
+async function checkReferences(input: OrderInput): Promise<Problem[]> {
+	const problems: Problem[] = [];
 	const [found, units, assignee] = await Promise.all([
 		db.query.customer.findFirst({
 			columns: { id: true },
@@ -272,14 +267,14 @@ async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
 				})
 			: undefined,
 	]);
-	if (!found) problems.push({ field: "customerId", message: m.orders_unknown_customer() });
+	if (!found) problems.push({ path: ["customerId"], message: m.orders_unknown_customer() });
 	// Another tenant's unit isn't found: it's no unit of this customer's either.
 	const ownerOf = new Map(units.map((unit) => [unit.id, unit.customerId]));
 	if (input.equipmentIds.some((unit) => ownerOf.get(unit) !== input.customerId)) {
-		problems.push({ field: "equipmentIds", message: m.orders_units_other_customer() });
+		problems.push({ path: ["equipmentIds"], message: m.orders_units_other_customer() });
 	}
 	if (input.engineerId && !assignee) {
-		problems.push({ field: "engineerId", message: m.orders_unknown_engineer() });
+		problems.push({ path: ["engineerId"], message: m.orders_unknown_engineer() });
 	}
 	return problems;
 }
@@ -288,31 +283,27 @@ async function checkReferences(input: OrderInput): Promise<ReferenceProblem[]> {
  * Refuses the form if it has a part of a module the tenant doesn't have, or the order's references
  * are wrong, each problem on its field.
  */
-async function refuseProblems(issue: OrderIssue, input: OrderInput) {
+async function refuseProblems(input: OrderInput) {
 	refuseOffParts(input.modules ?? {});
-	const problems = await checkReferences(input);
-	if (problems.length) invalid(...problems.map(({ field, message }) => issue[field](message)));
+	Refused.check(await checkReferences(input));
 }
 
-export const createOrder = forMembers.form(orderSchema, async (input, issue) => {
-	await refuseProblems(issue, input);
-	const number = await saveOrder(null, input, issue).catch(refuseParts);
+export const createOrder = forMembers.form(orderSchema, async (input) => {
+	await refuseProblems(input);
+	const number = await saveOrder(null, input);
 	redirect(303, `/orders/${number}`);
 });
 
-export const updateOrder = forMembers.form(
-	v.object({ id: id(), ...orderFields }),
-	async (data, issue) => {
-		const { id, ...input } = data;
-		await refuseProblems(issue, input);
-		const number = await saveOrder(id, input, issue).catch(refuseParts);
-		void getOrder(number).refresh();
-		// Its units may have changed.
-		void getOrderHistory(number).refresh();
-		orderCommitted({ number });
-		redirect(303, `/orders/${number}`);
-	},
-);
+export const updateOrder = forMembers.form(v.object({ id: id(), ...orderFields }), async (data) => {
+	const { id, ...input } = data;
+	await refuseProblems(input);
+	const number = await saveOrder(id, input);
+	void getOrder(number).refresh();
+	// Its units may have changed.
+	void getOrderHistory(number).refresh();
+	orderCommitted({ number });
+	redirect(303, `/orders/${number}`);
+});
 
 export const deleteOrder = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeOrder(id);

@@ -14,8 +14,8 @@ export const getOrderTypes = forAnyRole.query(async () => tenantOrderTypes());
 /** Each type with the tenant's setting and what needs it offered: the settings page's. */
 export const getOrderTypeSetup = forManagers.query(async () => orderTypeSetup());
 
-export const saveOrderType = forManagers.form(orderTypeSchema, async (input, issue) => {
-	await saveOrderTypeSetting(input.type, input, issue);
+export const saveOrderType = forManagers.form(orderTypeSchema, async (input) => {
+	await saveOrderTypeSetting(input.type, input);
 	void getOrderTypeSetup().refresh();
 	void getOrderTypes().refresh();
 });

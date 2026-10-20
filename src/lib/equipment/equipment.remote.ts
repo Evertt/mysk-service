@@ -1,5 +1,5 @@
 import { error, redirect } from "@sveltejs/kit";
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, sql, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
@@ -19,7 +19,7 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { equipmentFields, newLocationToken } from "./form/equipment-schema.ts";
@@ -124,15 +124,6 @@ export const getEquipmentFormOptions = forMembers.query(async () => {
 });
 
 type EquipmentInput = v.InferOutput<v.ObjectSchema<typeof equipmentFields, undefined>>;
-type UnitProblem = Problem<
-	| "serialNumber"
-	| "categoryId"
-	| "customerId"
-	| "siteId"
-	| "locationId"
-	| "newLocationName"
-	| "warrantyUntil"
->;
 
 /**
  * Checks what the schema can't: a serial number unique within the tenant, a category of the
@@ -143,21 +134,25 @@ type UnitProblem = Problem<
 async function checkUnit(
 	existing: typeof equipment.$inferSelect | undefined,
 	input: EquipmentInput,
-): Promise<UnitProblem[]> {
-	const problems: UnitProblem[] = [];
+): Promise<Problem[]> {
+	const problems: Problem[] = [];
 	const sameSerial = await db.query.equipment.findFirst({
 		columns: { id: true },
-		where: and(eq(equipment.serialNumber, input.serialNumber), inTenant(equipment)),
+		where: and(
+			inTenant(equipment),
+			eq(equipment.serialNumber, input.serialNumber),
+			existing ? ne(equipment.id, existing.id) : undefined,
+		),
 	});
-	if (sameSerial && sameSerial.id !== existing?.id) {
-		problems.push({ field: "serialNumber", message: m.equipment_serial_taken() });
+	if (sameSerial) {
+		problems.push({ path: ["serialNumber"], message: m.equipment_serial_taken() });
 	}
 	const category = await db.query.equipmentCategory.findFirst({
 		columns: { id: true },
 		where: idInTenant(equipmentCategory, input.categoryId),
 	});
 	if (!category) {
-		problems.push({ field: "categoryId", message: m.equipment_category_unknown() });
+		problems.push({ path: ["categoryId"], message: m.equipment_category_unknown() });
 	}
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
@@ -174,11 +169,11 @@ async function checkUnit(
 			})
 		: undefined;
 	if (owner && !site) {
-		problems.push({ field: "siteId", message: m.equipment_site_unknown() });
+		problems.push({ path: ["siteId"], message: m.equipment_site_unknown() });
 	}
 	if (input.locationId === newLocationToken) {
 		if (!input.newLocationName) {
-			problems.push({ field: "newLocationName", message: m.equipment_location_name_required() });
+			problems.push({ path: ["newLocationName"], message: m.equipment_location_name_required() });
 		}
 	} else if (site && input.locationId !== null) {
 		// One of the site's (which makes it the tenant's too).
@@ -190,22 +185,22 @@ async function checkUnit(
 			),
 		});
 		if (!location) {
-			problems.push({ field: "locationId", message: m.equipment_location_unknown() });
+			problems.push({ path: ["locationId"], message: m.equipment_location_unknown() });
 		}
 	}
 	if (!owner) {
-		problems.push({ field: "customerId", message: m.equipment_customer_unknown() });
+		problems.push({ path: ["customerId"], message: m.equipment_customer_unknown() });
 	} else if (existing && existing.customerId !== input.customerId) {
 		const [{ total }] = await db
 			.select({ total: count() })
 			.from(orderUnit)
 			.where(and(eq(orderUnit.equipmentId, existing.id), inTenant(orderUnit)));
 		if (total) {
-			problems.push({ field: "customerId", message: m.equipment_move_refused({ count: total }) });
+			problems.push({ path: ["customerId"], message: m.equipment_move_refused({ count: total }) });
 		}
 	}
 	if (Temporal.PlainDate.compare(input.warrantyUntil, input.installedAt) < 0) {
-		problems.push({ field: "warrantyUntil", message: m.equipment_warranty_before_installed() });
+		problems.push({ path: ["warrantyUntil"], message: m.equipment_warranty_before_installed() });
 	}
 	return problems;
 }
@@ -225,9 +220,9 @@ async function storedFields(tx: Transaction, input: EquipmentInput) {
 	};
 }
 
-export const createEquipment = forMembers.form(v.object(equipmentFields), async (input, issue) => {
+export const createEquipment = forMembers.form(v.object(equipmentFields), async (input) => {
 	const { organizationId } = currentTenant();
-	refuse(issue, await checkUnit(undefined, input));
+	Refused.check(await checkUnit(undefined, input));
 	await db.transaction(async (tx) => {
 		const fields = await storedFields(tx, input);
 		const [created] = await tx
@@ -243,11 +238,11 @@ export const createEquipment = forMembers.form(v.object(equipmentFields), async 
 
 export const updateEquipment = forMembers.form(
 	v.object({ id: id(), ...equipmentFields }),
-	async (data, issue) => {
+	async (data) => {
 		const { id, ...input } = data;
 		const existing = await db.query.equipment.findFirst({ where: idInTenant(equipment, id) });
 		if (!existing) error(404, m.equipment_not_found());
-		refuse(issue, await checkUnit(existing, input));
+		Refused.check(await checkUnit(existing, input));
 		// Records of optional modules (e.g. a service contract covering it) belong to the unit's
 		// current customer too; the database refuses the move while they exist.
 		await refuseIfReferenced(
@@ -258,7 +253,7 @@ export const updateEquipment = forMembers.form(
 					const subject = equipmentSubject({ id, serialNumber: input.serialNumber });
 					await recordActivity(tx, { action: "updated", subject, before: existing, after: fields });
 				}),
-			issue.customerId(m.equipment_move_refused_records()),
+			{ path: ["customerId"], message: m.equipment_move_refused_records() },
 		);
 		void getEquipment(input.serialNumber).refresh();
 		if (input.locationId === newLocationToken) void getEquipmentFormOptions().refresh();

@@ -8,7 +8,7 @@ import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
@@ -65,7 +65,7 @@ export const getCustomerLocations = forMembers.query(v.string(), async (code) =>
  */
 export const getLocation = forMembers.query(id(), async (locationId) => {
 	const location = await db.query.equipmentLocation.findFirst({
-		where: and(eq(equipmentLocation.id, locationId), inTenant(equipmentLocation)),
+		where: idInTenant(equipmentLocation, locationId),
 		with: { site: { with: { customer: { columns: { id: true, code: true, name: true } } } } },
 	});
 	if (!location) error(404, m.equipment_location_not_found());
@@ -120,16 +120,13 @@ export const getLocation = forMembers.query(id(), async (locationId) => {
 	};
 });
 
-export const addLocation = forMembers.form(
-	newLocationSchema,
-	async ({ siteId, ...input }, issue) => {
-		const { customerCode } = await createLocation(siteId, input, issue.name);
-		void getCustomerLocations(customerCode).refresh();
-	},
-);
+export const addLocation = forMembers.form(newLocationSchema, async ({ siteId, ...input }) => {
+	const { customerCode } = await createLocation(siteId, input);
+	void getCustomerLocations(customerCode).refresh();
+});
 
-export const editLocation = forMembers.form(locationSchema, async ({ id, ...input }, issue) => {
-	const code = await updateLocation(id, input, issue.name);
+export const editLocation = forMembers.form(locationSchema, async ({ id, ...input }) => {
+	const code = await updateLocation(id, input);
 	void getCustomerLocations(code).refresh();
 	void getLocation(String(id)).refresh();
 });

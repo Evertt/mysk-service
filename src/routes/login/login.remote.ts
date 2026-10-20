@@ -1,10 +1,11 @@
 import { getRequestEvent } from "$app/server";
-import { invalid, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
 import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
 
 import { safeRedirect } from "./redirect.ts";
@@ -36,8 +37,8 @@ export const login = forAnyone.form(
 				headers: getRequestEvent().request.headers,
 			}));
 		} catch (e) {
-			if (isAPIError(e) && e.statusCode === 401) invalid(m.auth_incorrect());
-			if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.auth_failed());
+			if (isAPIError(e) && e.statusCode === 401) throw new Refused(m.auth_incorrect());
+			if (isAPIError(e) && e.statusCode < 500) throw new Refused(e.message || m.auth_failed());
 			throw e;
 		}
 		// Field engineers start in their portal; the office app isn't theirs. A QR code they

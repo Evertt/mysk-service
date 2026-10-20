@@ -1,4 +1,4 @@
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, isNotNull, lt, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -17,12 +17,12 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { engineerFields } from "./form/engineer-schema.ts";
+import { removeEngineer } from "./server/engineers.ts";
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = forMembers.query(async () => {
@@ -194,15 +194,16 @@ async function emailTaken(email: string, exceptId?: number) {
 	return !!other;
 }
 
-/** The form problem of an email address another engineer uses, if there is one. */
-async function emailProblems(email: string, exceptId?: number): Promise<Problem<"email">[]> {
-	if (!(await emailTaken(email, exceptId))) return [];
-	return [{ field: "email", message: m.engineers_email_taken() }];
+/** Refuses an email address another engineer uses, on the form's `email` field. */
+async function refuseTakenEmail(email: string, exceptId?: number) {
+	if (await emailTaken(email, exceptId)) {
+		throw new Refused({ path: ["email"], message: m.engineers_email_taken() });
+	}
 }
 
-export const createEngineer = forMembers.form(v.object(engineerFields), async (input, issue) => {
+export const createEngineer = forMembers.form(v.object(engineerFields), async (input) => {
 	const { organizationId } = currentTenant();
-	refuse(issue, await emailProblems(input.email));
+	await refuseTakenEmail(input.email);
 	const created = await db.transaction(async (tx) => {
 		const [created] = await tx
 			.insert(engineer)
@@ -218,11 +219,11 @@ export const createEngineer = forMembers.form(v.object(engineerFields), async (i
 
 export const updateEngineer = forMembers.form(
 	v.object({ id: id(), ...engineerFields }),
-	async (data, issue) => {
+	async (data) => {
 		const { id, ...input } = data;
 		const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, id) });
 		if (!found) error(404, m.engineers_not_found());
-		refuse(issue, await emailProblems(input.email, id));
+		await refuseTakenEmail(input.email, id);
 		await db.transaction(async (tx) => {
 			await tx.update(engineer).set(input).where(idInTenant(engineer, id));
 			const subject: Subject = { type: "engineer", id, label: input.name };
@@ -280,32 +281,6 @@ export const setEngineerActive = forMembers.command(
 		void getEngineers().refresh();
 	},
 );
-
-/**
- * Deletes one of the tenant's engineers; refuses one with orders assigned (or other records
- * referring to it). A 404 if there's no such engineer.
- */
-async function removeEngineer(id: number) {
-	const found = await db.query.engineer.findFirst({
-		columns: { id: true, name: true },
-		where: idInTenant(engineer, id),
-	});
-	if (!found) error(404, m.engineers_not_found());
-
-	const [{ assigned }] = await db
-		.select({ assigned: count() })
-		.from(order)
-		.where(and(inTenant(order), eq(order.engineerId, id)));
-	if (assigned > 0) {
-		invalid(m.engineers_delete_refused({ name: found.name, count: assigned }));
-	}
-
-	await deleteAndLog(
-		engineer,
-		{ type: "engineer", id, label: found.name },
-		m.engineers_delete_referenced(),
-	);
-}
 
 export const deleteEngineer = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeEngineer(id);

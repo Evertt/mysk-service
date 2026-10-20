@@ -4,7 +4,7 @@
  * customer's activity card. A customer always keeps one site: its equipment has to be somewhere.
  * The modules have a say in a site's removal (`removingSite`, `#lib/customers/extensions.ts`).
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -13,6 +13,8 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
 import { vote } from "#lib/server/extensions.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { removingSite } from "../extensions.ts";
 import type { SiteInput } from "../form/site-schema.ts";
@@ -105,12 +107,11 @@ export function removeSite(id: number) {
 			.select({ n: count() })
 			.from(customerSite)
 			.where(and(eq(customerSite.customerId, owner.id), inTenant(customerSite)));
-		if (units.n) invalid(m.customers_site_delete_refused({ count: units.n }));
-		if (sites.n <= 1) invalid(m.customers_site_delete_last());
+		if (units.n) throw new Refused(m.customers_site_delete_refused({ count: units.n }));
+		if (sites.n <= 1) throw new Refused(m.customers_site_delete_last());
 		const refusals = await vote(removingSite, { tx, site: { id, customerId: owner.id } });
-		if (refusals.length) invalid(...refusals);
-		await tx.delete(customerSite).where(idInTenant(customerSite, id));
-		await recordActivity(tx, { action: "deleted", ...subjects(site, owner) });
+		if (refusals.length) throw new Refused(...refusals);
+		await deleteAndLog(customerSite, { tx, ...subjects(site, owner) });
 		return owner.code;
 	});
 }

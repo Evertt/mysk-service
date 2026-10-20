@@ -4,7 +4,6 @@
  * entry is logged against the customer, and keeps what's left of the credit it brought in
  * (`remaining`), so SQL adds up what's available (`creditAvailableOn()`).
  */
-import { invalid } from "@sveltejs/kit";
 import { and, asc, gte, isNull, or, sql } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -16,6 +15,7 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { creditLeft, type WalletEntryKind, walletSummary } from "../model.ts";
 import { walletEntry } from "./schema.ts";
@@ -108,7 +108,7 @@ export async function addEntry(
 	if (entry.amount < 0 && entry.kind !== "expiry") {
 		const { available } = walletSummary(entries, today);
 		if (-entry.amount > available) {
-			invalid(m.partners_wallet_not_enough({ available: formatCents(available) }));
+			throw new Refused(m.partners_wallet_not_enough({ available: formatCents(available) }));
 		}
 	}
 	const [added] = await tx

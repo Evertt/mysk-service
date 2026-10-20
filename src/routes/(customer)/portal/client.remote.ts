@@ -26,6 +26,7 @@ import {
 	ofCustomer,
 	seesSite,
 	tenantJoin,
+	sameTenant,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -74,10 +75,7 @@ const selectOrders = () =>
 		.from(order)
 		.leftJoin(
 			orderRequest,
-			and(
-				eq(orderRequest.orderId, order.id),
-				eq(orderRequest.organizationId, order.organizationId),
-			),
+			and(eq(orderRequest.orderId, order.id), sameTenant(orderRequest, order)),
 		);
 
 /** A unit as the portal shows it: what it's called, what it is and where. */

@@ -4,7 +4,7 @@
  * in the tenant's series after the ones invoicing seeded (its seed runs first, see
  * `#lib/server/db/seed/module-seed.ts`). Plain Node, like the seed.
  */
-import { eq, sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
 import { formatCode, sequenceStart } from "#lib/numbering.ts";
 import type { SeedTransaction } from "#lib/server/db/seed/module-seed.ts";

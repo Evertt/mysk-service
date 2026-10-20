@@ -1,4 +1,4 @@
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -17,6 +17,7 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { createCreditNote, creditNotesOf } from "#modules/invoices/api/credit-notes.server.ts";
 import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
@@ -76,14 +77,15 @@ const yearSubject = (row: { id: number; year: number }, code: string): Subject =
  * the year runs, or without rules for it. Answers how many it closed.
  */
 export async function closeYear(year: number, customerId?: number): Promise<number> {
-	if (!isClosable(year, currentDay())) invalid(m.partners_close_not_over({ year: String(year) }));
+	if (!isClosable(year, currentDay()))
+		throw new Refused(m.partners_close_not_over({ year: String(year) }));
 	return db.transaction(async (tx) => {
 		const preview = await closePreview(year, tx);
-		if (!preview.rules) invalid(m.partners_no_rules({ year: String(year) }));
+		if (!preview.rules) throw new Refused(m.partners_no_rules({ year: String(year) }));
 		const open = preview.partners.filter(
 			(partner) => !partner.closed && (customerId === undefined || partner.id === customerId),
 		);
-		if (customerId !== undefined && !open.length) invalid(m.partners_close_nothing());
+		if (customerId !== undefined && !open.length) throw new Refused(m.partners_close_nothing());
 		const validUntil = creditValidUntil(year, preview.rules.creditValidYears);
 		const finalisedAt = Temporal.Now.instant();
 		for (const partner of open) {
@@ -170,14 +172,15 @@ export async function payBonusByCreditNote(customerId: number, year: number) {
 			);
 		if (!row) error(404, m.partners_year_not_closed({ year: String(year) }));
 		const { closed, code } = row;
-		if (closed.choice !== "cash" || !closed.cashAmount) invalid(m.partners_credit_note_no_cash());
+		if (closed.choice !== "cash" || !closed.cashAmount)
+			throw new Refused(m.partners_credit_note_no_cash());
 		if (row.linked) {
 			const [linked] = await tx
 				.select({ status: creditNote.status, number: creditNote.number })
 				.from(creditNote)
-				.where(and(eq(creditNote.id, row.linked), inTenant(creditNote)));
+				.where(idInTenant(creditNote, row.linked));
 			if (linked && linked.status !== "void") {
-				invalid(m.partners_credit_note_exists({ number: linked.number }));
+				throw new Refused(m.partners_credit_note_exists({ number: linked.number }));
 			}
 		}
 		const holder = { id: customerId, code };
@@ -239,16 +242,16 @@ export async function chooseBonus(customerId: number, year: number, choice: Bonu
 			);
 		if (!row) error(404, m.partners_year_not_closed({ year: String(year) }));
 		const { closed, code } = row;
-		if (closed.choice) invalid(m.partners_choice_made());
+		if (closed.choice) throw new Refused(m.partners_choice_made());
 		const amount = choice === "cash" ? closed.cashAmount : closed.creditAmount;
-		if (!amount) invalid(m.partners_choice_nothing());
+		if (!amount) throw new Refused(m.partners_choice_nothing());
 		// Only if no one chose in the meantime: the choice can't be changed.
 		const chosen = await tx
 			.update(bonusYear)
 			.set({ choice, chosenAt: Temporal.Now.instant() })
 			.where(and(idInTenant(bonusYear, closed.id), isNull(bonusYear.choice)))
 			.returning({ id: bonusYear.id });
-		if (!chosen.length) invalid(m.partners_choice_made());
+		if (!chosen.length) throw new Refused(m.partners_choice_made());
 		const holder = { id: customerId, code };
 		await recordActivity(tx, {
 			action: "chosen",

@@ -74,7 +74,6 @@
 	"checklists_template_not_found": "Checklist template not found",
 	"checklists_point_not_found": "Checklist point not found",
 	"checklists_category_not_found": "Equipment category not found",
-	"checklists_equipment_not_found": "No equipment with serial number {serial}",
 	"checklists_retired_refused": "{name} is retired. Restore it to change it.",
 	"checklists_category_taken": "{category} has the template {template} already. Take it off there first.",
 	"checklists_no_norm": "No norm",
@@ -181,7 +180,6 @@
 		}
 	],
 	"checklists_not_found": "Checklist not found",
-	"checklists_order_not_found": "Order {number} not found",
 	"checklists_field_not_in_progress": "{number} isn't in progress: its checklists can't be changed.",
 	"checklists_already_completed": "The checklist of {unit} is completed already.",
 	"checklists_complete_unanswered": [

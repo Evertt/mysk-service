@@ -1,5 +1,4 @@
 import { getRequestEvent } from "$app/server";
-import { invalid } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -13,6 +12,7 @@ import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { member, organizationModule, user } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 export const getOrganizationSettings = forMembers.query(async () => {
@@ -102,7 +102,7 @@ export const setModules = forManagers.form(
 		if ("refused" in outcome) {
 			const { alwaysOn, unmet } = outcome.refused;
 			const names = (ids: string[]) => ids.map(moduleLabel).join(", ");
-			invalid(
+			throw new Refused(
 				alwaysOn.length
 					? m.settings_modules_always_on_refused({ modules: names(alwaysOn) })
 					: m.settings_modules_refused({ modules: names(unmet) }),

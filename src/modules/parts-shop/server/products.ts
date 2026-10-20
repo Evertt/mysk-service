@@ -3,14 +3,16 @@
  * are in the shop, with their category, description, unit, flags and the checklist points they fix;
  * and the categories, in their order. Every change is logged.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import type * as v from "valibot";
 
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
+import { deleteAndLog, defineRemoval, nameTaken, nextPosition } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { material } from "#modules/materials/api/tables.server.ts";
 
 import type { productSchema } from "../form/schemas.ts";
@@ -25,7 +27,7 @@ export async function shopCategories() {
 			name: shopCategory.name,
 			position: shopCategory.position,
 			products: sql<number>`(select count(*) from ${shopProduct} where ${and(
-				eq(shopProduct.organizationId, shopCategory.organizationId),
+				sameTenant(shopProduct, shopCategory),
 				eq(shopProduct.categoryId, shopCategory.id),
 			)})`,
 		})
@@ -40,26 +42,23 @@ const categorySubject = (row: { id: number; name: string }): Subject => ({
 	label: row.name,
 });
 
-/** Refuses a name another of the tenant's categories has (whatever the case). */
+/**
+ * Refuses a name another of the tenant's categories has (whatever the case), on the form's name.
+ */
 async function refuseTaken(tx: Transaction, name: string, except?: number) {
-	const [taken] = await tx
-		.select({ id: shopCategory.id })
-		.from(shopCategory)
-		.where(and(inTenant(shopCategory), sql`lower(${shopCategory.name}) = lower(${name})`));
-	if (taken && taken.id !== except) invalid(m.shop_category_taken({ name }));
+	if (await nameTaken(tx, shopCategory, name, { except })) {
+		throw new Refused({ path: ["name"], message: m.shop_category_taken({ name }) });
+	}
 }
 
 /** Adds a category after the tenant's others, logged. */
 export async function addCategory(name: string) {
 	await db.transaction(async (tx) => {
 		await refuseTaken(tx, name);
-		const [{ last }] = await tx
-			.select({ last: sql<number | null>`max(${shopCategory.position})` })
-			.from(shopCategory)
-			.where(inTenant(shopCategory));
+		const position = await nextPosition(tx, shopCategory);
 		const [added] = await tx
 			.insert(shopCategory)
-			.values({ organizationId: currentTenant().organizationId, name, position: (last ?? -1) + 1 })
+			.values({ organizationId: currentTenant().organizationId, name, position })
 			.returning({ id: shopCategory.id, name: shopCategory.name });
 		await recordActivity(tx, { action: "created", subject: categorySubject(added) });
 	});
@@ -82,19 +81,23 @@ export async function renameCategory(id: number, name: string) {
 }
 
 /** Deletes one of the tenant's categories, logged; refused while it has products. */
-export async function deleteCategory(id: number) {
-	await db.transaction(async (tx) => {
-		const [found] = await tx.select().from(shopCategory).where(idInTenant(shopCategory, id));
-		if (!found) error(404, m.shop_category_not_found());
+export const deleteCategory = defineRemoval({
+	table: shopCategory,
+	find: (tx, id) =>
+		tx.query.shopCategory.findFirst({
+			columns: { id: true, name: true },
+			where: idInTenant(shopCategory, id),
+		}),
+	notFound: m.shop_category_not_found,
+	subject: categorySubject,
+	blockers: async (found, tx) => {
 		const [used] = await tx
 			.select({ count: count() })
 			.from(shopProduct)
-			.where(and(inTenant(shopProduct), eq(shopProduct.categoryId, id)));
-		if (used.count) invalid(m.shop_category_in_use({ name: found.name }));
-		await tx.delete(shopCategory).where(idInTenant(shopCategory, id));
-		await recordActivity(tx, { action: "deleted", subject: categorySubject(found) });
-	});
-}
+			.where(and(inTenant(shopProduct), eq(shopProduct.categoryId, found.id)));
+		if (used.count) return m.shop_category_in_use({ name: found.name });
+	},
+});
 
 /**
  * The tenant's materials with their place in the shop, if they have one (its fields and the
@@ -165,8 +168,7 @@ export async function saveProduct(input: ProductInput) {
 
 		if (!input.inShop) {
 			if (!existing) return;
-			await tx.delete(shopProduct).where(idInTenant(shopProduct, existing.id));
-			await recordActivity(tx, { action: "deleted", subject: subject(existing.id) });
+			await deleteAndLog(shopProduct, { tx, subject: subject(existing.id) });
 			return;
 		}
 

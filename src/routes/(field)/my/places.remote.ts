@@ -11,7 +11,7 @@ import * as v from "valibot";
 import { openOrderStatuses } from "#lib/models.ts";
 import { onAnyUnit } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { engineerOrders, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { engineerOrders, inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -60,7 +60,7 @@ const siteOf = (siteId: number) =>
 		})
 		.from(customerSite)
 		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(and(eq(customerSite.id, siteId), inTenant(customerSite)))
+		.where(idInTenant(customerSite, siteId))
 		.then(([site]) => site);
 
 /** The signed-in engineer's open orders on any of the units `ids`, the next first. */
@@ -100,7 +100,7 @@ export const getMyLocation = forEngineers.query(id(), async (locationId) => {
 			siteId: equipmentLocation.siteId,
 		})
 		.from(equipmentLocation)
-		.where(and(eq(equipmentLocation.id, locationId), inTenant(equipmentLocation)));
+		.where(idInTenant(equipmentLocation, locationId));
 	if (!location) error(404, m.equipment_location_not_found());
 	const units = await unitsWhere(eq(equipment.locationId, location.id));
 	const [site, orders] = await Promise.all([

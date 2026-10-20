@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 
-import { isHttpError, isValidationError } from "@sveltejs/kit";
+import { isHttpError } from "@sveltejs/kit";
 import { asc, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
@@ -19,6 +19,7 @@ import {
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipmentLocation } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -82,9 +83,6 @@ const tenant = (organizationId: string): Tenant => ({
 	modules: [],
 });
 
-/** The name field's issue, as a remote form's `issue.name` makes it: here, the message. */
-const nameIssue = (message: string) => message;
-
 const unitToken = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const locationToken = "bbbbbbbbbbbbbbbbbbbbbbbb";
 const southToken = "cccccccccccccccccccccccc";
@@ -125,18 +123,17 @@ async function failure(change: () => Promise<unknown>) {
 		return null;
 	} catch (error) {
 		if (isHttpError(error)) return error.status;
-		if (isValidationError(error)) return error.issues.map((issue) => issue.message);
+		if (error instanceof Refused) return error.problems.map((problem) => problem.message);
 		throw error;
 	}
 }
 
 describe("locations", () => {
 	test("a new one comes last at its site, with a token of its own, logged against the customer", async () => {
-		const { id, customerCode } = await createLocation(
-			1,
-			{ name: "Expeditie noord", description: "Achter de kantine" },
-			nameIssue,
-		);
+		const { id, customerCode } = await createLocation(1, {
+			name: "Expeditie noord",
+			description: "Achter de kantine",
+		});
 		expect(customerCode).toBe("C-1");
 		expect(await locationsAt(1)).toEqual([
 			{ name: "Dock 03", description: null, position: 0, organizationId: "north" },
@@ -158,19 +155,19 @@ describe("locations", () => {
 			parent: { type: "customer", id: 1, label: "C-1" },
 		});
 		// Another site starts at 0.
-		await createLocation(3, { name: "Dock 03", description: null }, nameIssue);
+		await createLocation(3, { name: "Dock 03", description: null });
 		expect((await locationsAt(3)).map((location) => location.position)).toEqual([0]);
 	});
 
 	test("a site has each name once, whatever the case", async () => {
-		expect(
-			await failure(() => createLocation(1, { name: "dock 03", description: null }, nameIssue)),
-		).toEqual(["The site has a location called “Dock 03” already"]);
-		expect(
-			await failure(() => updateLocation(51, { name: "DOCK 03", description: null }, nameIssue)),
-		).toEqual(["The site has a location called “Dock 03” already"]);
+		expect(await failure(() => createLocation(1, { name: "dock 03", description: null }))).toEqual([
+			"The site has a location called “Dock 03” already",
+		]);
+		expect(await failure(() => updateLocation(51, { name: "DOCK 03", description: null }))).toEqual(
+			["The site has a location called “Dock 03” already"],
+		);
 		// Its own name, in another case, is fine.
-		await updateLocation(51, { name: "hal a", description: "Links" }, nameIssue);
+		await updateLocation(51, { name: "hal a", description: "Links" });
 		expect((await locationsAt(1))[1]).toMatchObject({ name: "hal a", description: "Links" });
 		expect(logged).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -183,13 +180,13 @@ describe("locations", () => {
 
 	test("a name with a letter beyond ASCII is taken as the unique index takes it", async () => {
 		// SQLite's `lower()`, which the index uses, leaves "É" as it is: the check must too.
-		await createLocation(1, { name: "Één", description: null }, nameIssue);
-		expect(
-			await failure(() => createLocation(1, { name: "ÉéN", description: null }, nameIssue)),
-		).toEqual(["The site has a location called “Één” already"]);
-		expect(
-			await failure(() => updateLocation(51, { name: "ÉéN", description: null }, nameIssue)),
-		).toEqual(["The site has a location called “Één” already"]);
+		await createLocation(1, { name: "Één", description: null });
+		expect(await failure(() => createLocation(1, { name: "ÉéN", description: null }))).toEqual([
+			"The site has a location called “Één” already",
+		]);
+		expect(await failure(() => updateLocation(51, { name: "ÉéN", description: null }))).toEqual([
+			"The site has a location called “Één” already",
+		]);
 		const [{ id }] = await db.all<{ id: number }>(
 			sql`select id from equipment_location where name = 'Één'`,
 		);
@@ -227,12 +224,10 @@ describe("locations", () => {
 	});
 
 	test("another tenant's sites and locations are a 404, also by their ids", async () => {
-		expect(
-			await failure(() => createLocation(2, { name: "Stolen", description: null }, nameIssue)),
-		).toBe(404);
-		expect(
-			await failure(() => updateLocation(60, { name: "Stolen", description: null }, nameIssue)),
-		).toBe(404);
+		expect(await failure(() => createLocation(2, { name: "Stolen", description: null }))).toBe(404);
+		expect(await failure(() => updateLocation(60, { name: "Stolen", description: null }))).toBe(
+			404,
+		);
 		expect(await failure(() => removeLocation(60))).toBe(404);
 		expect(await failure(() => db.transaction((tx) => locationAt(tx, 2, "Stolen")))).toBe(404);
 		expect(await locationsAt(2)).toEqual([

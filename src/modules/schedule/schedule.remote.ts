@@ -21,7 +21,6 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
-import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 import { live, readAt } from "#lib/server/live.ts";
 
@@ -185,6 +184,6 @@ export const scheduleOrder = form(v.object({ id: id(), ...scheduleFields }), asy
 
 /** A drag and drop move; the client shows it right away and undoes it on an error. */
 export const moveOrder = command(v.object(moveFields), async (input) => {
-	await refusedAsBadRequest(() => plan(input));
+	await plan(input);
 	await refreshRequested(getSchedule);
 });

@@ -1,6 +1,5 @@
 import { rmSync } from "node:fs";
 
-import { isValidationError } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
@@ -9,6 +8,7 @@ import { setOrderUnits } from "#lib/orders/server/units.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderUnit } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -120,8 +120,8 @@ async function refusal(drafts: OrderDraft[]) {
 		await db.transaction((tx) => createOrders(tx, drafts));
 		return [];
 	} catch (error) {
-		if (!isValidationError(error)) throw error;
-		return error.issues.map((issue) => issue.message);
+		if (!(error instanceof Refused)) throw error;
+		return error.problems.map((problem) => problem.message);
 	}
 }
 

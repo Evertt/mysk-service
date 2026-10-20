@@ -3,10 +3,10 @@
  * contract's covered units, for the card on a contract's page (contracts pass the unit ids in the
  * slot's props; they're checked to be the tenant's here).
  */
-import { error } from "@sveltejs/kit";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc } from "drizzle-orm";
 import * as v from "valibot";
 
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { id, recordId } from "#lib/schema.ts";
 import { idsInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -47,11 +47,10 @@ const plansOf = (ids: number[]) =>
 
 /** A unit (by serial number) and its plans, the next due first. */
 export const getUnitPlans = query(v.string(), async (serialNumber) => {
-	const [unit] = await db
-		.select({ id: equipment.id, serialNumber: equipment.serialNumber })
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.maintenance_equipment_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber, {
+		id: equipment.id,
+		serialNumber: equipment.serialNumber,
+	});
 	return { unit, plans: await plansOf([unit.id]) };
 });
 

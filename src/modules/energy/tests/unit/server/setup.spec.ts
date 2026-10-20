@@ -14,6 +14,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { parseBatch } from "#modules/energy/ingest/format.ts";
 import { storeBatch } from "#modules/energy/server/ingest.ts";
 import {
@@ -106,6 +107,15 @@ const tenant = (organizationId: string): Tenant => ({
 	modules: organizationId === "north" ? ["energy"] : [],
 });
 const north = <T>(work: () => Promise<T>) => asSystem(tenant("north"), work);
+/** What North's `work` was refused with (its problems), or `[]` when it was done. */
+const answered = (work: () => Promise<unknown>) =>
+	north(work).then(
+		() => [],
+		(error: unknown) => {
+			if (error instanceof Refused) return error.problems;
+			throw error;
+		},
+	);
 
 const contract = {
 	contractedPeakKw: 320,
@@ -184,12 +194,10 @@ describe("an energy site", () => {
 	test("is one per customer site", async () => {
 		await plant();
 		expect(
-			await north(() =>
+			await answered(() =>
 				createEnergySite({ siteId: 1, name: "Again", meterName: null, ...contract }),
 			),
-		).toEqual({
-			problems: [{ field: "siteId", message: "This site's energy is monitored already" }],
-		});
+		).toEqual([{ path: ["siteId"], message: "This site's energy is monitored already" }]);
 	});
 
 	test("is only for the tenant's own sites, and only its own are found", async () => {
@@ -231,11 +239,13 @@ describe("an energy site", () => {
 describe("zones, consumers and doors", () => {
 	test("a zone's code is unique in its site; a new zone comes last, without thresholds", async () => {
 		const { siteId, zoneId } = await plant();
-		expect(await north(() => saveZone(siteId, { ...zone, name: "Again" }))).toEqual([
-			{ field: "code", message: "Another zone of this site has this code" },
+		expect(await answered(() => saveZone(siteId, { ...zone, name: "Again" }))).toEqual([
+			{ path: ["code"], message: "Another zone of this site has this code" },
 		]);
 		// Its own code is fine when it's edited.
-		expect(await north(() => saveZone(siteId, { ...zone, zoneId, name: "Hall A1" }))).toEqual([]);
+		expect(await answered(() => saveZone(siteId, { ...zone, zoneId, name: "Hall A1" }))).toEqual(
+			[],
+		);
 		await north(() => saveZone(siteId, { ...zone, code: "Z-B", name: "Hall B" }));
 		const zones = await db
 			.select({ code: energyZone.code, name: energyZone.name, position: energyZone.position })
@@ -251,7 +261,7 @@ describe("zones, consumers and doors", () => {
 	test("a consumer and a door are in the site's zones, and units of the site only", async () => {
 		const { siteId, zoneId } = await plant();
 		expect(
-			await north(() =>
+			await answered(() =>
 				saveConsumer(siteId, {
 					consumerId: null,
 					zoneId,
@@ -264,12 +274,12 @@ describe("zones, consumers and doors", () => {
 		// A unit at the customer's other site, or another tenant's, isn't the site's.
 		for (const equipmentId of [11, 20]) {
 			expect(
-				await north(() =>
+				await answered(() =>
 					saveConsumer(siteId, { consumerId: null, zoneId, name: "X", ratedKw: 1, equipmentId }),
 				),
-			).toEqual([{ field: "equipmentId", message: "Choose one of this site's units" }]);
-			expect(await north(() => saveDoor(siteId, { ...door, zoneId, equipmentId }))).toEqual([
-				{ field: "equipmentId", message: "Choose one of this site's units" },
+			).toEqual([{ path: ["equipmentId"], message: "Choose one of this site's units" }]);
+			expect(await answered(() => saveDoor(siteId, { ...door, zoneId, equipmentId }))).toEqual([
+				{ path: ["equipmentId"], message: "Choose one of this site's units" },
 			]);
 		}
 		// A zone of another site.
@@ -279,13 +289,15 @@ describe("zones, consumers and doors", () => {
 		const otherId = "id" in other ? other.id : 0;
 		await north(() => saveZone(otherId, { ...zone, code: "Z-D" }));
 		const [otherZone] = await db.select().from(energyZone).where(eq(energyZone.code, "Z-D"));
-		expect(await north(() => saveDoor(siteId, { ...door, zoneId: otherZone.id }))).toEqual([
-			{ field: "zoneId", message: "Choose one of this site's zones" },
+		expect(await answered(() => saveDoor(siteId, { ...door, zoneId: otherZone.id }))).toEqual([
+			{ path: ["zoneId"], message: "Choose one of this site's zones" },
 		]);
 
-		expect(await north(() => saveDoor(siteId, { ...door, zoneId, equipmentId: 10 }))).toEqual([]);
-		expect(await north(() => saveDoor(siteId, { ...door, zoneId, name: "Again" }))).toEqual([
-			{ field: "code", message: "Another door of this site has this code" },
+		expect(await answered(() => saveDoor(siteId, { ...door, zoneId, equipmentId: 10 }))).toEqual(
+			[],
+		);
+		expect(await answered(() => saveDoor(siteId, { ...door, zoneId, name: "Again" }))).toEqual([
+			{ path: ["code"], message: "Another door of this site has this code" },
 		]);
 		const [saved] = await db.select().from(energyDoor);
 		expect(saved).toMatchObject({
@@ -336,9 +348,9 @@ describe("deleting", () => {
 		await north(() => deleteConsumer(siteId, consumer.id));
 		await north(() => saveDoor(siteId, { ...door, zoneId }));
 		const [saved] = await db.select().from(energyDoor);
-		expect(await north(() => deleteDoor(siteId, saved.id))).toEqual([]);
-		expect(await north(() => deleteZone(siteId, zoneId))).toEqual([]);
-		expect(await north(() => deleteEnergySite(siteId))).toEqual([]);
+		expect(await answered(() => deleteDoor(siteId, saved.id))).toEqual([]);
+		expect(await answered(() => deleteZone(siteId, zoneId))).toEqual([]);
+		expect(await answered(() => deleteEnergySite(siteId))).toEqual([]);
 		expect(await db.select().from(energySite)).toEqual([]);
 		expect((await entries()).filter((entry) => entry.action === "deleted")).toEqual([
 			{ action: "deleted", type: "energy_consumer", label: "Fan" },
@@ -359,9 +371,9 @@ describe("deleting", () => {
 		const doorRefused = [{ message: expect.stringContaining("The door has events or alerts") }];
 		const zoneRefused = [{ message: expect.stringContaining("The zone has readings or alerts") }];
 		const siteRefused = [{ message: expect.stringContaining("The site has readings") }];
-		expect(await north(() => deleteDoor(siteId, saved.id))).toEqual(doorRefused);
-		expect(await north(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
-		expect(await north(() => deleteEnergySite(siteId))).toEqual(siteRefused);
+		expect(await answered(() => deleteDoor(siteId, saved.id))).toEqual(doorRefused);
+		expect(await answered(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
+		expect(await answered(() => deleteEnergySite(siteId))).toEqual(siteRefused);
 
 		await db.delete(energyDoorEvent);
 		await db.insert(energyReading).values({
@@ -372,10 +384,10 @@ describe("deleting", () => {
 			peakKw: 5,
 			kwh: 1,
 		});
-		expect(await north(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
-		expect(await north(() => deleteEnergySite(siteId))).toEqual(siteRefused);
+		expect(await answered(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
+		expect(await answered(() => deleteEnergySite(siteId))).toEqual(siteRefused);
 		// The door has no measurements of its own.
-		expect(await north(() => deleteDoor(siteId, saved.id))).toEqual([]);
+		expect(await answered(() => deleteDoor(siteId, saved.id))).toEqual([]);
 
 		await db.delete(energyReading);
 		await db.insert(energyAlert).values({
@@ -389,8 +401,8 @@ describe("deleting", () => {
 			measured: 2,
 			at,
 		});
-		expect(await north(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
-		expect(await north(() => deleteEnergySite(siteId))).toEqual(siteRefused);
+		expect(await answered(() => deleteZone(siteId, zoneId))).toEqual(zoneRefused);
+		expect(await answered(() => deleteEnergySite(siteId))).toEqual(siteRefused);
 		expect(await db.select().from(energyZone).where(eq(energyZone.id, zoneId))).toHaveLength(1);
 		expect(
 			(await entries()).some((entry) => entry.action === "deleted" && entry.type !== "energy_door"),
@@ -415,17 +427,17 @@ describe("deleting", () => {
 		};
 
 		storedFirst((tx) => tx.insert(energyDoorEvent).values(event));
-		expect(await north(() => deleteDoor(siteId, saved.id))).toEqual([
+		expect(await answered(() => deleteDoor(siteId, saved.id))).toEqual([
 			{ message: expect.stringContaining("The door has events or alerts") },
 		]);
 		await db.delete(energyDoorEvent);
 		storedFirst((tx) => tx.insert(energyReading).values(reading));
-		expect(await north(() => deleteZone(siteId, zoneId))).toEqual([
+		expect(await answered(() => deleteZone(siteId, zoneId))).toEqual([
 			{ message: expect.stringContaining("The zone has readings or alerts") },
 		]);
 		await db.delete(energyReading);
 		storedFirst((tx) => tx.insert(energyReading).values(reading));
-		expect(await north(() => deleteEnergySite(siteId))).toEqual([
+		expect(await answered(() => deleteEnergySite(siteId))).toEqual([
 			{ message: expect.stringContaining("The site has readings") },
 		]);
 		expect(await db.select().from(energyReading)).toHaveLength(1);

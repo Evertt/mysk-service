@@ -4,12 +4,12 @@
  * before it; a manager adds it (a copy of that one) to change its rules, until a partner is closed
  * for a year that goes by them.
  */
-import { invalid } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gt, gte, lt, lte } from "drizzle-orm";
 
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import {
 	completeCategories,
@@ -144,7 +144,7 @@ export async function saveRules(
 	const [closed] = await closedUnder(tx, year);
 	if (closed) {
 		const refusal = { year: String(closed.year), count: closed.partners };
-		invalid(
+		throw new Refused(
 			closed.year === year
 				? m.partners_rules_closed(refusal)
 				: m.partners_rules_closed_later(refusal),

@@ -3,7 +3,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -30,7 +30,7 @@ export const getLabelSheet = forMembers.query(
 			})
 			.from(customerSite)
 			.innerJoin(...tenantJoin(customer, customerSite.customerId))
-			.where(and(eq(customerSite.id, siteId), inTenant(customerSite)));
+			.where(idInTenant(customerSite, siteId));
 		if (!site) error(404, m.customers_site_not_found());
 
 		const locations = serialNumber

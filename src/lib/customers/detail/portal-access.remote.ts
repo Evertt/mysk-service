@@ -8,7 +8,7 @@
 import { getRequestEvent } from "$app/server";
 import { error, invalid } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -27,17 +27,14 @@ import {
 	portalContactSite,
 	user,
 } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
-/** The tenant's customer for which `where` holds, or a 404. */
-async function findCustomer(where: SQL) {
-	const [found] = await db
-		.select({ id: customer.id, code: customer.code, name: customer.name })
-		.from(customer)
-		.where(and(where, inTenant(customer)));
-	if (!found) error(404, m.customers_not_found());
-	return found;
-}
+import { customerByCode } from "../server/lookup.ts";
+
+/** What the portal's access needs of a customer. */
+const ownerFields = { id: customer.id, code: customer.code, name: customer.name };
 
 /** Where a contact's access stands: invited (or the invitation expired), or signed up. */
 export type PortalContactState = "invited" | "expired" | "active";
@@ -47,7 +44,7 @@ export type PortalContactState = "invited" | "expired" | "active";
  * and whether the signed-in user may invite and revoke (an owner or admin).
  */
 export const getPortalAccess = forMembers.query(v.string(), async (code) => {
-	const owner = await findCustomer(eq(customer.code, code));
+	const owner = await customerByCode(code, ownerFields);
 	const [contacts, sites] = await Promise.all([
 		db.query.portalContact.findMany({
 			columns: { id: true, email: true, allSites: true, invitationId: true, createdAt: true },
@@ -107,7 +104,8 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 		return await call(getRequestEvent().request.headers);
 	} catch (e) {
 		// better-auth's own messages are in English.
-		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.customers_portal_failed());
+		if (isAPIError(e) && e.statusCode < 500)
+			throw new Refused(e.message || m.customers_portal_failed());
 		throw e;
 	}
 }
@@ -137,7 +135,11 @@ export const invitePortalContact = forManagers.form(
 	}),
 	async (input, issue) => {
 		const { organizationId } = currentTenant();
-		const owner = await findCustomer(idInTenant(customer, input.customerId));
+		const [one] = await db
+			.select(ownerFields)
+			.from(customer)
+			.where(idInTenant(customer, input.customerId));
+		const owner = orNotFound(one, m.customers_not_found());
 		const siteIds = [...new Set(input.siteIds)];
 		if (siteIds.length) {
 			const own = await db
@@ -230,7 +232,7 @@ export const revokePortalContact = forManagers.form(v.object({ id: id() }), asyn
 	} else if (found.invitationId) {
 		const sent = await db.query.invitation.findFirst({
 			columns: { id: true, status: true },
-			where: and(eq(invitation.id, found.invitationId), inTenant(invitation)),
+			where: idInTenant(invitation, found.invitationId),
 		});
 		if (sent?.status === "pending") {
 			await asUser((headers) =>

@@ -7,24 +7,25 @@
  */
 import { rmSync } from "node:fs";
 
-import { isHttpError, isValidationError } from "@sveltejs/kit";
+import { isHttpError } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { overwriteGetTimeZone } from "#lib/dates.ts";
 import { type OrderStatus, orderStatuses } from "#lib/models.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { type OrderProblem, saving } from "#lib/orders/extensions.ts";
+import { saving } from "#lib/orders/extensions.ts";
 import { beginOrderChange, transitionOrder } from "#lib/orders/server/lifecycle.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
 import { contribute, defineServerModule, type ServerModule } from "#lib/server/extensions.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
 /** What the made-up module saves of each change, and the problems it answers (none: it saves). */
-const parts = vi.fn(async (_change: unknown): Promise<OrderProblem[] | undefined> => undefined);
+const parts = vi.fn(async (_change: unknown): Promise<Problem[] | undefined> => undefined);
 // The made-up module instead of the ones in `src/modules` (see `hooks.spec.ts`).
 const registry = vi.hoisted(() => ({ modules: [] as ServerModule[] }));
 vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
@@ -163,7 +164,7 @@ async function refusal(move: () => Promise<unknown>) {
 	try {
 		await move();
 	} catch (error) {
-		if (isValidationError(error)) return error.issues.map((issue) => issue.message);
+		if (error instanceof Refused) return error.problems.map((problem) => problem.message);
 		if (isHttpError(error)) return error.status;
 		// Anything else is no refusal the caller can show.
 		return { thrown: String(error) };
@@ -303,7 +304,7 @@ describe("plan: the planner gives an open order an engineer and a time", () => {
 			try {
 				await plan(id, engineerId);
 			} catch (error) {
-				if (isValidationError(error)) return error.issues;
+				if (error instanceof Refused) return error.problems;
 				throw error;
 			}
 			return [];
@@ -705,7 +706,7 @@ describe("the order form's change (beginOrderChange)", () => {
 				await change.finish({ id, number }, { form: {}, after: change.columns });
 			});
 		} catch (error) {
-			issues = isValidationError(error) ? error.issues : error;
+			issues = error instanceof Refused ? error.problems : error;
 		}
 		expect(issues).toMatchObject([
 			{

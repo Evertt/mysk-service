@@ -2,7 +2,7 @@
  * The invoices themselves: making a draft from what can be billed (see `./billable.ts`) and
  * loading an invoice with its totals, for its page and its PDF. The rules are in `../invoice.ts`.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
@@ -12,8 +12,8 @@ import { idInTenant, inTenant, requireMember } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
-import type { Problem } from "#lib/server/forms.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { invoiceState, invoiceTotals } from "../invoice.ts";
 import { invoiceNumberFormat } from "../model.ts";
@@ -36,27 +36,24 @@ export const invoiceSubject = (found: { id: number; number: string }): Subject =
 	label: found.number,
 });
 
-/** Why a draft can't be made, at the field it's about (if any). */
-export type DraftProblem = Problem<"customerId" | "orderIds" | "items">;
-
 /**
  * Makes a draft invoice for one of the tenant's customers with the chosen completed orders and
  * other modules' items, all of which must be billable (see `linesFor`). It gets the tenant's next
- * number (see `nextNumber`), payment term and VAT rate. Returns its number, or what's wrong;
- * refuses with `invalid()` if another request billed some of it meanwhile. The new invoice form
- * and the orders list's "Create invoice" share it.
+ * number (see `nextNumber`), payment term and VAT rate. Returns its id and number; refuses
+ * (`Refused`) what's wrong, on the form's field, and if another request billed some of it
+ * meanwhile. The new invoice form and the orders list's "Create invoice" share it.
  */
 export async function createDraft(input: {
 	customerId: number;
 	orderIds: number[];
 	items: string[];
-}): Promise<{ id: number; number: string } | { problem: DraftProblem }> {
+}): Promise<{ id: number; number: string }> {
 	const { organizationId } = requireMember();
 	const owner = await db.query.customer.findFirst({
 		columns: { id: true },
 		where: idInTenant(customer, input.customerId),
 	});
-	if (!owner) return { problem: { field: "customerId", message: m.invoices_unknown_customer() } };
+	if (!owner) throw new Refused({ path: ["customerId"], message: m.invoices_unknown_customer() });
 
 	const { lines, unknownOrders, unknownItems } = await linesFor(
 		input.customerId,
@@ -64,16 +61,16 @@ export async function createDraft(input: {
 		input.items,
 	);
 	if (unknownOrders.length) {
-		return { problem: { field: "orderIds", message: m.invoices_only_billable_orders() } };
+		throw new Refused({ path: ["orderIds"], message: m.invoices_only_billable_orders() });
 	}
 	if (unknownItems.length) {
-		return { problem: { field: "items", message: m.invoices_only_billable_items() } };
+		throw new Refused({ path: ["items"], message: m.invoices_only_billable_items() });
 	}
-	if (!lines.length) return { problem: { message: m.invoices_choose_something() } };
+	if (!lines.length) throw new Refused(m.invoices_choose_something());
 
 	const settings = await settingsOf(organizationId);
 	return db.transaction(async (tx) => {
-		if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
+		if ((await alreadyBilled(tx, lines)).length) throw new Refused(m.invoices_billed_meanwhile());
 		const number = await nextNumber(tx, invoiceNumbers);
 		const [created] = await tx
 			.insert(invoice)

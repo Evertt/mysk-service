@@ -155,7 +155,6 @@
 	"condition_component_article_not_found": "That article isn't one of your materials.",
 	"condition_component_checkpoint_not_found": "Those checklist points aren't the unit's.",
 	"condition_components_max": "A unit has at most {max} components.",
-	"condition_unit_not_found": "Unit {serial} not found.",
 	"condition_not_in_progress": "Order {number} isn't in progress: conditions are recorded while the work is under way.",
 	"condition_unit_not_on_order": "That unit isn't on order {number}.",
 	"condition_portal_title": "Condition of the unit",

@@ -85,7 +85,6 @@
 	"maintenance_interval_range": "Between {min} and {max} months",
 	"maintenance_due_required": "Choose the day the next visit is due",
 	"maintenance_plan_not_found": "Plan not found",
-	"maintenance_equipment_not_found": "Unit {serial} not found",
 	"maintenance_unknown_equipment": "Unknown unit",
 	"maintenance_dashboard_description": "The visits your units' plans have due.",
 	"maintenance_dashboard_overdue": "Overdue",

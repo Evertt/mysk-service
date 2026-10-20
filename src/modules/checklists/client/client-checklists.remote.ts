@@ -51,7 +51,7 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
 		.select({ id: order.id, status: order.status })
 		.from(order)
 		.where(and(eq(order.number, number), customerOrders(access)));
-	if (!found) error(404, m.checklists_order_not_found({ number }));
+	if (!found) error(404, m.client_order_not_found({ number }));
 	const checklists = await withPointArticles(
 		await checklistRecords(
 			and(
@@ -76,7 +76,7 @@ export const getClientWorkOrder = forCustomers.query(v.string(), async (number) 
 		and(eq(order.number, number), customerOrders(access), inList(order.status, doneOrderStatuses))!,
 		atSites(access, equipment.siteId),
 	);
-	if (!found) error(404, m.checklists_order_not_found({ number }));
+	if (!found) error(404, m.client_order_not_found({ number }));
 	return { ...found, checklists: officeUnnamed(found.checklists) };
 });
 
@@ -96,7 +96,7 @@ export const getClientUnitInspection = forCustomers.query(v.string(), async (ser
 				atSites(access, equipment.siteId),
 			),
 		);
-	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+	if (!unit) error(404, m.client_unit_not_found({ serial: serialNumber }));
 	const inspection = await unitInspection(unit.id);
 	const completed = inspection.checklists.filter((each) => each.status === "completed");
 	return { ...inspection, checklists: forCustomer(completed) };

@@ -1,5 +1,5 @@
-import { error, invalid, redirect } from "@sveltejs/kit";
-import { and, asc, count, desc, eq, getTableColumns, max, sql } from "drizzle-orm";
+import { error, redirect } from "@sveltejs/kit";
+import { and, asc, count, eq, getTableColumns, max, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -11,15 +11,15 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
-import { refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { customerFields } from "./form/customer-schema.ts";
 import { siteAddressFields } from "./form/site-schema.ts";
-import { countryProblems, knownCountries } from "./server/countries.ts";
+import { knownCountries, refuseUnknownCountry } from "./server/countries.ts";
+import { removeCustomer } from "./server/customers.ts";
+import { customerByCode } from "./server/lookup.ts";
 import { addSite } from "./server/sites.ts";
 
 /** All customers with how many equipment units and open orders they have, by name. */
@@ -120,11 +120,7 @@ export const getCustomer = forMembers.query.batch(v.string(), async (codes) => {
  * reads too.
  */
 export const getCustomerRevenue = forMembers.query(v.string(), async (code) => {
-	const found = await db.query.customer.findFirst({
-		where: and(eq(customer.code, code), inTenant(customer)),
-		columns: { id: true },
-	});
-	if (!found) error(404, m.customers_code_not_found({ code }));
+	const found = await customerByCode(code);
 	const done = await db
 		.select({
 			id: order.id,
@@ -157,9 +153,9 @@ export const getCustomerFormOptions = forMembers.query(async () => {
  */
 export const createCustomer = forMembers.form(
 	v.object({ ...customerFields, ...siteAddressFields }),
-	async ({ address, postalCode, ...input }, issue) => {
+	async ({ address, postalCode, ...input }) => {
 		const { organizationId } = currentTenant();
-		refuse(issue, await countryProblems(input.country));
+		await refuseUnknownCountry(input.country);
 
 		const code = await db.transaction(async (tx) => {
 			const code = await nextNumber(tx, "customer");
@@ -196,10 +192,10 @@ export const createCustomer = forMembers.form(
 
 export const updateCustomer = forMembers.form(
 	v.object({ id: id(), ...customerFields }),
-	async ({ id, ...input }, issue) => {
+	async ({ id, ...input }) => {
 		const existing = await db.query.customer.findFirst({ where: idInTenant(customer, id) });
 		if (!existing) error(404, m.customers_not_found());
-		refuse(issue, await countryProblems(input.country));
+		await refuseUnknownCountry(input.country);
 
 		await db.transaction(async (tx) => {
 			await tx.update(customer).set(input).where(idInTenant(customer, id));
@@ -211,47 +207,6 @@ export const updateCustomer = forMembers.form(
 		redirect(303, `/customers/${existing.code}`);
 	},
 );
-
-/**
- * Deletes one of the tenant's customers; refuses one with equipment or orders (or other records
- * referring to it). A 404 if there's no such customer. The customer's page and the list's bulk
- * delete share it.
- */
-async function removeCustomer(id: number) {
-	const existing = await db.query.customer.findFirst({
-		columns: { id: true, code: true },
-		where: idInTenant(customer, id),
-	});
-	if (!existing) error(404, m.customers_not_found());
-
-	const [[units], [orders]] = await Promise.all([
-		db
-			.select({ n: count() })
-			.from(equipment)
-			.where(and(eq(equipment.customerId, id), inTenant(equipment))),
-		db
-			.select({ n: count() })
-			.from(order)
-			.where(and(eq(order.customerId, id), inTenant(order))),
-	]);
-	if (units.n || orders.n) {
-		const unitCount = m.customers_count_units({ count: units.n });
-		const orderCount = m.common_count_orders({ count: orders.n });
-		const references =
-			units.n && orders.n
-				? m.customers_references_both({ units: unitCount, orders: orderCount })
-				: units.n
-					? unitCount
-					: orderCount;
-		invalid(m.customers_delete_refused({ references }));
-	}
-
-	await deleteAndLog(
-		customer,
-		customerSubject({ id, code: existing.code }),
-		m.customers_delete_referenced(),
-	);
-}
 
 export const deleteCustomer = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeCustomer(id);

@@ -5,13 +5,14 @@
  * isn't logged in the activity log (there's a lot of it): the board hears of it through
  * `announceChange()`, and the rules (`checkDoors()`) log what they do.
  */
-import { and, eq, isNull } from "drizzle-orm";
+import { and, isNull } from "drizzle-orm";
 
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import {
 	applyEvent,
@@ -32,7 +33,7 @@ interface BatchResult {
 }
 
 /** A batch refused because it names docks the tenant doesn't have (another tenant's included). */
-export class UnknownDocks extends Error {
+export class UnknownDocks extends Refused {
 	constructor(readonly codes: string[]) {
 		super(`Unknown docks: ${codes.join(", ")}`);
 	}
@@ -76,10 +77,7 @@ async function saveSession(tx: Transaction, dockId: number, session: SessionFact
 	const { organizationId } = currentTenant();
 	const { id, ...values } = session;
 	if (id) {
-		await tx
-			.update(dockSession)
-			.set(values)
-			.where(and(inTenant(dockSession), eq(dockSession.id, id)));
+		await tx.update(dockSession).set(values).where(idInTenant(dockSession, id));
 	} else {
 		await tx.insert(dockSession).values({ ...values, organizationId, dockId });
 	}

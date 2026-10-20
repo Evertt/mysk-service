@@ -32,7 +32,7 @@ function tooLarge(): never {
 	error(413, m.bugs_error_too_large({ size: megabytes(maxReportBytes / 2 ** 20) }));
 }
 
-function invalid(): never {
+function malformed(): never {
 	error(400, m.bugs_error_invalid());
 }
 
@@ -71,18 +71,18 @@ export async function receiveBugReport(request: Request) {
 	try {
 		form = await request.formData();
 	} catch {
-		invalid();
+		malformed();
 	}
 	const events = form.get("events");
 	const report = form.get("report");
-	if (!(events instanceof File) || typeof report !== "string") invalid();
+	if (!(events instanceof File) || typeof report !== "string") malformed();
 	if (events.size > maxReportBytes) tooLarge();
 	const parsed = v.safeParse(reportSummarySchema, parseJson(report));
-	if (!parsed.success) invalid();
+	if (!parsed.success) malformed();
 	const summary = parsed.output;
 	const data = new Uint8Array(await events.arrayBuffer());
 	// gzip's magic number: the recording as the recorder packs it.
-	if (data[0] !== 0x1f || data[1] !== 0x8b) invalid();
+	if (data[0] !== 0x1f || data[1] !== 0x8b) malformed();
 
 	const id = crypto.randomUUID();
 	const createdAt = Temporal.Now.instant();

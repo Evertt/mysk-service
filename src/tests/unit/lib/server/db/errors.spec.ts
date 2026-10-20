@@ -1,10 +1,10 @@
 import { createClient } from "@libsql/client";
-import { isHttpError } from "@sveltejs/kit";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { isForeignKeyViolation, refuseIfReferenced } from "#lib/server/db/errors.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 describe("refuseIfReferenced", () => {
 	let db: ReturnType<typeof drizzle>;
@@ -34,11 +34,9 @@ describe("refuseIfReferenced", () => {
 			() => db.run(sql`delete from parent where id = 1`),
 			"Still referenced",
 		);
-		// `invalid()` throws SvelteKit's validation error rather than an HTTP error.
-		await expect(attempt).rejects.toSatisfy(
-			(error) => !isHttpError(error) && error instanceof Error,
-		);
-		await expect(attempt).rejects.toHaveProperty("issues", [{ message: "Still referenced" }]);
+		// A refusal (which a remote function answers as one) rather than an HTTP error.
+		await expect(attempt).rejects.toThrow(Refused);
+		await expect(attempt).rejects.toHaveProperty("problems", [{ message: "Still referenced" }]);
 		const rows = await db.all(sql`select id from parent`);
 		expect(rows).toHaveLength(2);
 	});
@@ -48,7 +46,7 @@ describe("refuseIfReferenced", () => {
 			() => db.run(sql`update child set parent_id = 3 where id = 1`),
 			"No such parent",
 		);
-		await expect(attempt).rejects.toHaveProperty("issues", [{ message: "No such parent" }]);
+		await expect(attempt).rejects.toHaveProperty("problems", [{ message: "No such parent" }]);
 	});
 
 	it("rethrows other errors", async () => {

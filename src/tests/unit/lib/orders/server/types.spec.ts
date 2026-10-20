@@ -1,6 +1,5 @@
 import { rmSync } from "node:fs";
 
-import { isValidationError } from "@sveltejs/kit";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import {
@@ -13,6 +12,7 @@ import type { OrderTypeSetting } from "#lib/orders/types.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { orderTypeSetting } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -60,27 +60,13 @@ const tenant = (organizationId: string, modules: string[] = []): Tenant => ({
 	orderTypes: {},
 });
 
-/** An `issue` as a remote form's, whose refusals say their field and message. */
-const issue = {
-	hidden: (message: string) => ({ path: ["hidden"], message }),
-	names: {
-		en: (message: string) => ({ path: ["names", "en"], message }),
-		nl: (message: string) => ({ path: ["names", "nl"], message }),
-	},
-};
-
 /** The refusal's messages by field, or none if it saved. */
 async function refusal(save: Promise<unknown>) {
 	try {
 		await save;
 	} catch (error) {
-		if (isValidationError(error)) {
-			return error.issues.map((found) => [
-				found.path
-					?.map((part) => (typeof part === "object" ? String(part.key) : String(part)))
-					.join("."),
-				found.message,
-			]);
+		if (error instanceof Refused) {
+			return error.problems.map((found) => [found.path?.join("."), found.message]);
 		}
 		throw error;
 	}
@@ -90,7 +76,7 @@ async function refusal(save: Promise<unknown>) {
 const stored = () => db.select().from(orderTypeSetting).orderBy(orderTypeSetting.organizationId);
 
 const save = (type: Parameters<typeof saveOrderTypeSetting>[0], setting: OrderTypeSetting) =>
-	saveOrderTypeSetting(type, setting, issue as never);
+	saveOrderTypeSetting(type, setting);
 
 beforeEach(async () => {
 	await db.delete(orderTypeSetting);

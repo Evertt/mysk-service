@@ -1,6 +1,5 @@
-import { invalid } from "@sveltejs/kit";
-
 import { collect, emit, save } from "#lib/server/extensions.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 /**
  * Where core asks the modules about orders, besides their prices (`priceOrders()` in
@@ -11,7 +10,6 @@ import {
 	committed,
 	type OrderChange,
 	type OrderFacts,
-	type OrderProblem,
 	type OrderSaving,
 	type OrderTag,
 	type OrderUnitsSaving,
@@ -39,26 +37,13 @@ export function orderCommitted(change: OrderChange, enabled?: readonly string[])
 	emit(committed, change, enabled);
 }
 
-/** A module refused its part of an order's change: thrown, so the transaction stores none of it. */
-export class OrderRefused extends Error {
-	constructor(readonly problems: OrderProblem[]) {
-		super(problems.map((problem) => problem.message).join(" "));
-	}
-}
-
-/** Refuses with what a module said when it refused its part of a change; rethrows anything else. */
-export function refuseRefused(thrown: unknown): never {
-	if (thrown instanceof OrderRefused) invalid(thrown.message);
-	throw thrown;
-}
-
 /**
- * Refuses the order form with the problems of a module that couldn't save its part, each on the
- * field of the form it names (a part's fields are under `modules.<its id>`), or for the whole form:
- * they're validation issues as they are. Rethrows anything else.
+ * Refuses a change that isn't the order form's (a status, a deletion) with what a module said when
+ * it refused its part, for the whole change: the fields it names aren't there. Rethrows anything
+ * else.
  */
-export function refuseParts(thrown: unknown): never {
-	if (thrown instanceof OrderRefused) invalid(...thrown.problems);
+export function refusedWhole(thrown: unknown): never {
+	if (thrown instanceof Refused) throw new Refused(thrown.message);
 	throw thrown;
 }
 
@@ -66,25 +51,24 @@ export function refuseParts(thrown: unknown): never {
  * Lets the modules save their part of an order that core is changing in `change.tx`, right after
  * core's own change to it (and before deleting it): e.g. the materials of the order form, and the
  * stock that follows the order's status. Every change to an order's status, its form and its
- * deletion goes through here. Throws an `OrderRefused` with the problems of a module that can't,
- * which rolls the transaction back; the caller shows them (on the form's fields, or as a message).
+ * deletion goes through here. Throws a `Refused` with the problems of a module that can't, on the
+ * order form's fields (a part's are under `modules.<its id>`), which rolls the transaction back; a
+ * change without the form refuses them for the whole change (`refusedWhole()`).
  */
 export async function saveOrderParts(change: OrderSaving, enabled?: readonly string[]) {
 	const problems = await save(saving, change, enabled);
-	if (problems.length) throw new OrderRefused(problems);
+	Refused.check(problems);
 }
 
 /**
  * Lets the modules save their part of an order's units (`orders.units`), which `setOrderUnits()`
  * is setting in `change.tx`: after the units it gets are in, before the ones it loses go. Throws
- * an `OrderRefused` with the problems of a module that can't let go of a unit; a problem without a
+ * a `Refused` with the problems of a module that can't let go of a unit; a problem without a
  * path is about the order form's units.
  */
 export async function saveUnitParts(change: OrderUnitsSaving, enabled?: readonly string[]) {
 	const problems = await save(units, change, enabled);
-	if (problems.length) {
-		throw new OrderRefused(
-			problems.map((problem) => ({ ...problem, path: problem.path ?? ["equipmentIds"] })),
-		);
-	}
+	Refused.check(
+		problems.map((problem) => ({ ...problem, path: problem.path ?? ["equipmentIds"] })),
+	);
 }

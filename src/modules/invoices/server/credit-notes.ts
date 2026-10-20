@@ -4,7 +4,7 @@
  * them, the credits of invoices, and their status changes. The rules are in `../credit-note.ts`,
  * paying an invoice with its credit notes in `./settlement.ts`.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
@@ -14,8 +14,8 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
-import type { Problem } from "#lib/server/forms.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
+import { Refused, type Problem } from "#lib/server/refused.ts";
 
 import {
 	canCredit,
@@ -161,23 +161,23 @@ export function creditSummary(
 // --- Making them -------------------------------------------------------------------------------
 
 /** Why a credit can't be made, as the form's messages. */
-const problemMessage = (problem: CreditProblem): Problem<"lines"> => {
+const problemMessage = (problem: CreditProblem): Problem => {
 	switch (problem.kind) {
 		case "unknown_line":
-			return { field: "lines", message: m.invoices_credit_unknown_line() };
+			return { path: ["lines"], message: m.invoices_credit_unknown_line() };
 		case "more_than_left":
 			return {
-				field: "lines",
+				path: ["lines"],
 				message: m.invoices_credit_more_than_line({
 					description: problem.description,
 					amount: formatCents(problem.left),
 				}),
 			};
 		case "nothing":
-			return { field: "lines", message: m.invoices_credit_nothing() };
+			return { path: ["lines"], message: m.invoices_credit_nothing() };
 		case "more_than_invoice":
 			return {
-				field: "lines",
+				path: ["lines"],
 				message: m.invoices_credit_more_than_invoice({ amount: formatCents(problem.left) }),
 			};
 	}
@@ -215,25 +215,23 @@ async function insertCreditNote(
 /**
  * Makes a draft credit note against one of the tenant's sent or paid invoices, for the chosen
  * amounts of its lines (see `creditLines()`), at the invoice's VAT rate, with the next number.
- * Returns its number, or the form's problems; a 404 for an invoice that isn't the tenant's.
+ * Returns its number; refuses (`Refused`) what's wrong with the lines, on the form's `lines`; a 404
+ * for an invoice that isn't the tenant's.
  */
 export async function creditInvoice(input: {
 	invoiceId: number;
 	reason: string;
 	lines: CreditChoice[];
-}): Promise<
-	| { id: number; number: string; invoice: { id: number; number: string } }
-	| { problems: Problem<"lines">[] }
-> {
+}): Promise<{ id: number; number: string; invoice: { id: number; number: string } }> {
 	return db.transaction(async (tx) => {
 		const found = await tx.query.invoice.findFirst({ where: idInTenant(invoice, input.invoiceId) });
 		if (!found) error(404, m.invoices_not_found());
 		if (!canCredit(found.status))
-			invalid(m.invoices_credit_not_creditable({ number: found.number }));
+			throw new Refused(m.invoices_credit_not_creditable({ number: found.number }));
 		const lines = await creditableLines(tx, found.id);
 		const left = lines.reduce((sum, line) => sum + line.amount + line.credited, 0);
 		const made = creditLines(lines, input.lines, left);
-		if ("problems" in made) return { problems: made.problems.map(problemMessage) };
+		if ("problems" in made) throw new Refused(...made.problems.map(problemMessage));
 		const created = await insertCreditNote(
 			tx,
 			{
@@ -271,7 +269,7 @@ export async function createStandalone(
 	});
 	if (!owner) error(404, m.invoices_customer_not_found());
 	if (input.lines.reduce((sum, line) => sum + line.amount, 0) >= 0)
-		invalid(m.invoices_credit_nothing());
+		throw new Refused(m.invoices_credit_nothing());
 	const settings = await settingsOf(organizationId, tx);
 	return insertCreditNote(
 		tx,
@@ -382,7 +380,7 @@ const changeLabel: Record<InvoiceStatus, () => string> = {
 export async function changingCredit(tx: Transaction, id: number, to: InvoiceStatus) {
 	const found = await creditNoteById(tx, id);
 	if (!canChange(found.status, to)) {
-		invalid(
+		throw new Refused(
 			m.invoices_cannot_change({
 				number: found.number,
 				status: statusLabel[found.status](),
@@ -422,7 +420,7 @@ export async function settleCredit(id: number) {
 	return db.transaction(async (tx) => {
 		const found = await changingCredit(tx, id, "paid");
 		if (found.invoice?.status === "sent") {
-			invalid(m.invoices_credit_settled_with_invoice({ number: found.invoice.number }));
+			throw new Refused(m.invoices_credit_settled_with_invoice({ number: found.invoice.number }));
 		}
 		await tx
 			.update(creditNote)

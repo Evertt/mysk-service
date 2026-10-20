@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 
-import { isHttpError, isValidationError } from "@sveltejs/kit";
+import { isHttpError } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
@@ -9,6 +9,7 @@ import { assignOrder } from "#lib/orders/server/order-changes.ts";
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderUnit } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -136,7 +137,7 @@ async function refusal(change: () => Promise<unknown>) {
 	try {
 		await change();
 	} catch (error) {
-		if (isValidationError(error)) return error.issues.map((issue) => issue.message);
+		if (error instanceof Refused) return error.problems.map((problem) => problem.message);
 		if (isHttpError(error)) return error.status;
 		throw error;
 	}

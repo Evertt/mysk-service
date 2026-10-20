@@ -8,10 +8,11 @@
  */
 import { requested } from "$app/server";
 import { error } from "@sveltejs/kit";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getOrder } from "#lib/orders/remotes.ts";
+import { orderByNumber } from "#lib/orders/server/index.ts";
 import { recordId } from "#lib/schema.ts";
 import { currentCustomer, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -71,11 +72,7 @@ async function partsFor(ids: readonly number[], articles: readonly number[]) {
 export const getSuggestedParts = query(
 	v.object({ number: v.pipe(v.string(), v.maxLength(32)), ...rejectedPoints.entries }),
 	async ({ number, ids, articles }) => {
-		const [found] = await db
-			.select({ status: order.status })
-			.from(order)
-			.where(and(eq(order.number, number), inTenant(order)));
-		if (!found) error(404, m.shop_order_not_found({ number }));
+		const found = await orderByNumber(number, { status: order.status });
 		return { parts: await partsFor(ids, articles), canAdd: canTakeLines(found.status) };
 	},
 );

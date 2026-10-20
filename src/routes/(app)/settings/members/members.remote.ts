@@ -18,9 +18,10 @@ import {
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
 import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
-import { auth, currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -129,7 +130,7 @@ async function memberSubject(memberId: string) {
 		.select({ name: user.name, role: member.role })
 		.from(member)
 		.innerJoin(user, eq(member.userId, user.id))
-		.where(and(eq(member.id, memberId), inTenant(member)));
+		.where(idInTenant(member, memberId));
 	if (!found) error(404, m.settings_member_not_found());
 	const subject: Subject = { type: "member", id: memberId, label: found.name };
 	return { subject, role: found.role };
@@ -172,7 +173,8 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 		return await call(getRequestEvent().request.headers);
 	} catch (e) {
 		// better-auth's own messages are in English.
-		if (isAPIError(e) && e.statusCode < 500) invalid(e.message || m.settings_not_possible());
+		if (isAPIError(e) && e.statusCode < 500)
+			throw new Refused(e.message || m.settings_not_possible());
 		throw e;
 	}
 }
@@ -182,7 +184,7 @@ export const changeRole = forManagers.form(
 	async ({ memberId, role }) => {
 		const { organizationId } = currentTenant();
 		const refusal = roleChangeRefusal(await memberChange(memberId), role);
-		if (refusal) invalid(refusal);
+		if (refusal) throw new Refused(refusal);
 		const { subject, role: before } = await memberSubject(memberId);
 		await asUser((headers) =>
 			auth.api.updateMemberRole({ body: { memberId, role, organizationId }, headers }),
@@ -200,7 +202,7 @@ export const changeRole = forManagers.form(
 export const removeMember = forManagers.form(v.object({ id: v.string() }), async ({ id }) => {
 	const { organizationId } = currentTenant();
 	const refusal = removalRefusal(await memberChange(id));
-	if (refusal) invalid(refusal);
+	if (refusal) throw new Refused(refusal);
 	const { subject } = await memberSubject(id);
 	// The removed user's next request finds them in another of their organizations, or not a member
 	// of any (see `loadTenant`).
@@ -265,7 +267,7 @@ export const resendInvitation = forManagers.form(v.object({ id: v.string() }), a
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
 	if (role.includes("owner") && !tenant.roles.includes("owner")) {
-		invalid(m.settings_only_owners_invite_owners());
+		throw new Refused(m.settings_only_owners_invite_owners());
 	}
 	await asUser(async (headers) => {
 		const body = { email: found.email, role, organizationId: tenant.organizationId };

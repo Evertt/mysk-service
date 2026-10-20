@@ -1,7 +1,7 @@
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, customerSite } from "#lib/server/db/schema.ts";
-import type { Problem } from "#lib/server/forms.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { europeanCountries } from "../countries.ts";
 
@@ -21,8 +21,8 @@ export async function knownCountries() {
 	return [...new Set([...europeanCountries, ...used])].sort((a, b) => a.localeCompare(b));
 }
 
-/** The form problem of a country that isn't one of the known ones, if it isn't. */
-export async function countryProblems(country: string): Promise<Problem<"country">[]> {
-	if ((await knownCountries()).includes(country)) return [];
-	return [{ field: "country", message: m.customers_country_unknown() }];
+/** Refuses a country that isn't one of the known ones, on the form's `country` field. */
+export async function refuseUnknownCountry(country: string) {
+	if ((await knownCountries()).includes(country)) return;
+	throw new Refused({ path: ["country"], message: m.customers_country_unknown() });
 }

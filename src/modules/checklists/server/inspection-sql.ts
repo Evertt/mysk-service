@@ -12,6 +12,7 @@
 import { and, desc, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
+import { sameTenant } from "#lib/server/auth/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
@@ -31,7 +32,7 @@ export function inspectionSql(today = currentDay()) {
 	const latest = (what: SQL) =>
 		sql`(select ${what} from ${checklist} where ${and(
 			eq(checklist.equipmentId, equipment.id),
-			eq(checklist.organizationId, equipment.organizationId),
+			sameTenant(checklist, equipment),
 			sql`${checklist.kind} = 'inspection'`,
 			sql`${checklist.status} = 'completed'`,
 			isNotNull(checklist.validUntil),

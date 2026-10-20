@@ -7,7 +7,6 @@ import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
 
 import { recordId } from "#lib/schema.ts";
-import { refuse } from "#lib/server/forms.ts";
 
 import { forManagers } from "../remote-functions.ts";
 import {
@@ -43,32 +42,29 @@ export const saveEnergySite = forManagers.form(
 );
 
 /** Deletes the site (refused while it holds measurements), and goes to the sites. */
-export const deleteEnergySite = forManagers.form(deleteSiteSchema, async ({ id }, issue) => {
-	refuse(issue, await remove(id));
+export const deleteEnergySite = forManagers.form(deleteSiteSchema, async ({ id }) => {
+	await remove(id);
 	redirect(303, resolve("/(app)/(modules)/energy"));
 });
 
 /** Adds or saves a zone of the site. */
-export const saveEnergyZone = forManagers.form(
-	zoneSchema,
-	async ({ energySiteId, ...input }, issue) => {
-		refuse(issue, await saveZone(energySiteId, input));
-		void getEnergySetup(energySiteId).refresh();
-		return { code: input.code };
-	},
-);
+export const saveEnergyZone = forManagers.form(zoneSchema, async ({ energySiteId, ...input }) => {
+	await saveZone(energySiteId, input);
+	void getEnergySetup(energySiteId).refresh();
+	return { code: input.code };
+});
 
 /** Deletes a zone of the site (refused while it holds measurements). */
-export const deleteEnergyZone = forManagers.form(deletePartSchema, async (input, issue) => {
-	refuse(issue, await deleteZone(input.energySiteId, input.id));
+export const deleteEnergyZone = forManagers.form(deletePartSchema, async (input) => {
+	await deleteZone(input.energySiteId, input.id);
 	void getEnergySetup(input.energySiteId).refresh();
 });
 
 /** Adds or saves a consumer in one of the site's zones. */
 export const saveEnergyConsumer = forManagers.form(
 	consumerSchema,
-	async ({ energySiteId, ...input }, issue) => {
-		refuse(issue, await saveConsumer(energySiteId, input));
+	async ({ energySiteId, ...input }) => {
+		await saveConsumer(energySiteId, input);
 		void getEnergySetup(energySiteId).refresh();
 		return { name: input.name };
 	},
@@ -81,17 +77,14 @@ export const deleteEnergyConsumer = forManagers.form(deletePartSchema, async (in
 });
 
 /** Adds or saves a monitored door in one of the site's zones. */
-export const saveEnergyDoor = forManagers.form(
-	doorSchema,
-	async ({ energySiteId, ...input }, issue) => {
-		refuse(issue, await saveDoor(energySiteId, input));
-		void getEnergySetup(energySiteId).refresh();
-		return { code: input.code };
-	},
-);
+export const saveEnergyDoor = forManagers.form(doorSchema, async ({ energySiteId, ...input }) => {
+	await saveDoor(energySiteId, input);
+	void getEnergySetup(energySiteId).refresh();
+	return { code: input.code };
+});
 
 /** Deletes a door of the site (refused while it holds measurements). */
-export const deleteEnergyDoor = forManagers.form(deletePartSchema, async (input, issue) => {
-	refuse(issue, await deleteDoor(input.energySiteId, input.id));
+export const deleteEnergyDoor = forManagers.form(deletePartSchema, async (input) => {
+	await deleteDoor(input.energySiteId, input.id);
 	void getEnergySetup(input.energySiteId).refresh();
 });

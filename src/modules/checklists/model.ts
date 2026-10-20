@@ -9,6 +9,8 @@
  * in the other.
  */
 import { isOpenOrder, type OrderStatus, type OrderType } from "#lib/models.ts";
+import { moved } from "#lib/ordering.ts";
+import type { MoveDirection } from "#lib/schema.ts";
 
 /** How many months an inspection by a template stays valid, unless the template says otherwise. */
 export const defaultValidityMonths = 12;
@@ -35,8 +37,6 @@ export interface PointPlace {
 	group: string;
 	position: number;
 }
-
-export type MoveDirection = "up" | "down";
 
 /**
  * The points in their order, each group's together: groups in the order of their first point
@@ -88,10 +88,7 @@ export function movePoint(points: readonly PointPlace[], id: number, direction: 
 export function moveGroup(points: readonly PointPlace[], group: string, direction: MoveDirection) {
 	const groups = [...Map.groupBy(asOrder(points), (point) => point.group).values()];
 	const at = groups.findIndex(([first]) => first.group === group);
-	const to = direction === "up" ? at - 1 : at + 1;
-	if (at < 0 || to < 0 || to >= groups.length) return groups.flat();
-	[groups[at], groups[to]] = [groups[to], groups[at]];
-	return groups.flat();
+	return moved(groups, at, direction).flat();
 }
 
 /**

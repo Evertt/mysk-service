@@ -2,13 +2,15 @@
  * What's done on a credit note's page: issuing, settling and voiding it, and changing a draft (its
  * lines and its reason, unless another module made it). See `../credit-note.ts` for the rules.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { deleteAndLog } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { lineNote } from "../activity.ts";
 import { isMadeElsewhere, typedCreditLine } from "../credit-note.ts";
@@ -30,14 +32,16 @@ import { issueCredit } from "../server/settlement.ts";
 /** The tenant's draft credit note by id, inside a transaction; refuses anything else. */
 async function draftById(tx: Transaction, id: number) {
 	const found = await creditNoteById(tx, id);
-	if (!isEditable(found.status)) invalid(m.invoices_not_editable({ number: found.number }));
+	if (!isEditable(found.status))
+		throw new Refused(m.invoices_not_editable({ number: found.number }));
 	return found;
 }
 
 /** The tenant's draft credit note by id whose lines may change: not another module's. */
 async function linesDraftById(tx: Transaction, id: number) {
 	const found = await draftById(tx, id);
-	if (isMadeElsewhere(found)) invalid(m.invoices_credit_lines_elsewhere({ number: found.number }));
+	if (isMadeElsewhere(found))
+		throw new Refused(m.invoices_credit_lines_elsewhere({ number: found.number }));
 	return found;
 }
 
@@ -73,7 +77,7 @@ export const addCreditLine = form(v.object({ id: id(), ...lineFields }), async (
 	const draft = await db.transaction(async (tx) => {
 		const draft = await linesDraftById(tx, input.id);
 		// One against an invoice credits the invoice's lines only (`creditLines()`).
-		if (draft.invoice) invalid(m.invoices_credit_lines_of_invoice());
+		if (draft.invoice) throw new Refused(m.invoices_credit_lines_of_invoice());
 		const line = typedCreditLine(input);
 		const [added] = await tx
 			.insert(creditNoteLine)
@@ -93,21 +97,17 @@ export const addCreditLine = form(v.object({ id: id(), ...lineFields }), async (
 /** Removes a line from a draft credit note. */
 export const removeCreditLine = form(v.object({ id: id() }), async ({ id }) => {
 	const draft = await db.transaction(async (tx) => {
-		const line = await tx.query.creditNoteLine.findFirst({
-			columns: { id: true, creditNoteId: true },
-			where: idInTenant(creditNoteLine, id),
-		});
+		const [line] = await tx
+			.select({ ...loggedLine, creditNoteId: creditNoteLine.creditNoteId })
+			.from(creditNoteLine)
+			.where(idInTenant(creditNoteLine, id));
 		if (!line) error(404, m.invoices_line_not_found());
 		const draft = await linesDraftById(tx, line.creditNoteId);
-		const [gone] = await tx
-			.delete(creditNoteLine)
-			.where(idInTenant(creditNoteLine, line.id))
-			.returning(loggedLine);
-		await recordActivity(tx, {
-			action: "deleted",
-			subject: { type: "credit_note_line", id: gone.id, label: gone.description },
+		await deleteAndLog(creditNoteLine, {
+			tx,
+			subject: { type: "credit_note_line", id: line.id, label: line.description },
 			parent: creditNoteSubject(draft),
-			note: lineNote(gone),
+			note: lineNote(line),
 		});
 		return draft;
 	});
@@ -119,7 +119,7 @@ export const updateCreditReason = form(v.object({ id: id(), ...reasonFields }), 
 	const draft = await db.transaction(async (tx) => {
 		const draft = await draftById(tx, input.id);
 		if (isMadeElsewhere(draft)) {
-			invalid(m.invoices_credit_reason_elsewhere({ number: draft.number }));
+			throw new Refused(m.invoices_credit_reason_elsewhere({ number: draft.number }));
 		}
 		const after = { reason: input.reason };
 		await tx.update(creditNote).set(after).where(idInTenant(creditNote, draft.id));

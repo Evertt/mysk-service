@@ -46,6 +46,7 @@ import {
 	requireUser,
 } from "#lib/server/auth/index.ts";
 import { requireDeveloper } from "#lib/server/bug-reports/developers.ts";
+import { answerRefusal } from "#lib/server/refused.ts";
 
 /** A remote function set, typed as SvelteKit's own so every overload and field type carries over. */
 interface RemoteSet {
@@ -62,18 +63,27 @@ type Make = (...args: unknown[]) => unknown;
 
 /**
  * `make` (`query`, `form`, …) with its handler, always the last argument, run after `gate`. Typed
- * as `make` itself, so every overload and the types it infers carry over.
+ * as `make` itself, so every overload and the types it infers carry over. What the handler refuses
+ * by throwing a `Refused` (`#lib/server/refused.ts`) becomes a form's issues, or a 400 for the
+ * others (`kind`).
  */
-function gated<F>(make: F, gate: Gate): F {
+function gated<F>(make: F, gate: Gate, kind: "form" | "call" = "call"): F {
 	const wrapped: Make = (...args) => {
 		const handler = args.pop() as (...handlerArgs: unknown[]) => unknown;
 		const guardedHandler = (...handlerArgs: unknown[]) => {
-			const admitted = gate();
-			// A gate that answers right away (all but the engineer's and the customer's) leaves the handler's start
-			// synchronous, as SvelteKit calls it.
-			return admitted instanceof Promise
-				? admitted.then(() => handler(...handlerArgs))
-				: handler(...handlerArgs);
+			const refused = (thrown: unknown) => answerRefusal(thrown, kind);
+			try {
+				const admitted = gate();
+				// A gate that answers right away (all but the engineer's and the customer's) leaves the
+				// handler's start synchronous, as SvelteKit calls it.
+				const answer =
+					admitted instanceof Promise
+						? admitted.then(() => handler(...handlerArgs))
+						: handler(...handlerArgs);
+				return answer instanceof Promise ? answer.catch(refused) : answer;
+			} catch (thrown) {
+				refused(thrown);
+			}
 		};
 		return (make as Make)(...args, guardedHandler);
 	};
@@ -88,7 +98,7 @@ export function remoteSet(gate: Gate): RemoteSet {
 		// The gate runs once per connection, before the handler starts the stream.
 		live: gated(query.live, gate),
 	});
-	return { query: gatedQuery, form: gated(form, gate), command: gated(command, gate) };
+	return { query: gatedQuery, form: gated(form, gate, "form"), command: gated(command, gate) };
 }
 
 export const forMembers = remoteSet(requireMember);

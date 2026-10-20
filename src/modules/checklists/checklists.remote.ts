@@ -3,13 +3,13 @@
  * to print with its signatures, and a unit's history and inspection status (its page). Every office
  * member reads them; only engineers change them, in the portal (`portal/field-checklists.remote.ts`).
  */
-import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { inTenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
-import { equipment, order } from "#lib/server/db/schema.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
+import { orderByNumber } from "#lib/orders/server/index.ts";
+import { order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { query } from "./remote-functions.ts";
 import { checklistRecords, withPointArticles } from "./server/records.ts";
@@ -18,14 +18,7 @@ import { unitInspection } from "./server/unit-inspection.ts";
 import { loadWorkOrder } from "./server/work-order.ts";
 
 /** The tenant's order `number`'s id, or a 404. */
-async function orderId(number: string) {
-	const [found] = await db
-		.select({ id: order.id })
-		.from(order)
-		.where(and(eq(order.number, number), inTenant(order)));
-	if (!found) error(404, m.checklists_order_not_found({ number }));
-	return found.id;
-}
+const orderId = async (number: string) => (await orderByNumber(number)).id;
 
 /** The checklists of the tenant's order `number`, one per unit that has one, in the units' order. */
 export const getOrderChecklists = query(v.string(), async (number) => ({
@@ -39,9 +32,7 @@ export const getOrderChecklists = query(v.string(), async (number) => ({
  * sites of its units, its engineer, every checklist and the sign-off with both signatures.
  */
 export const getWorkOrder = query(v.string(), async (number) => {
-	const found = await loadWorkOrder(eq(order.number, number));
-	if (!found) error(404, m.checklists_order_not_found({ number }));
-	return found;
+	return orNotFound(await loadWorkOrder(eq(order.number, number)), m.orders_not_found({ number }));
 });
 
 /**
@@ -49,10 +40,6 @@ export const getWorkOrder = query(v.string(), async (number) => {
  * status today, by its latest completed inspection.
  */
 export const getUnitChecklists = query(v.string(), async (serialNumber) => {
-	const [unit] = await db
-		.select({ id: equipment.id })
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber);
 	return unitInspection(unit.id);
 });

@@ -8,6 +8,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertBatches } from "#lib/server/db/parameters.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { lineNote } from "../activity.ts";
 import { billingFields, lineFields, termsFields } from "../form/invoice-schema.ts";
@@ -46,7 +47,8 @@ const loggedLine = {
 /** The tenant's draft by id, inside a transaction; refuses anything else. */
 async function draftById(tx: Transaction, id: number) {
 	const found = await invoiceById(tx, id);
-	if (!isEditable(found.status)) invalid(m.invoices_not_editable({ number: found.number }));
+	if (!isEditable(found.status))
+		throw new Refused(m.invoices_not_editable({ number: found.number }));
 	return found;
 }
 
@@ -68,11 +70,11 @@ export const addToInvoice = form(
 		);
 		if (unknownOrders.length) invalid(issue.orderIds(m.invoices_only_billable_orders()));
 		if (unknownItems.length) invalid(issue.items(m.invoices_only_billable_items()));
-		if (!lines.length) invalid(m.invoices_choose_to_add());
+		if (!lines.length) throw new Refused(m.invoices_choose_to_add());
 
 		const draft = await db.transaction(async (tx) => {
 			const draft = await draftById(tx, id);
-			if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
+			if ((await alreadyBilled(tx, lines)).length) throw new Refused(m.invoices_billed_meanwhile());
 			const rows = lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id }));
 			const added = [];
 			for (const batch of insertBatches(invoiceLine, rows)) {

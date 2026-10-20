@@ -53,7 +53,6 @@
 	"materials_usage": "Usage",
 	"materials_movement_kind_reservation": "Reserved for a shop order",
 	"materials_movement_kind_release": "Released from a shop order",
-	"materials_order_not_found": "Order {number} not found",
 	"materials_order_unchangeable": "{number}'s materials can't be changed now.",
 	"materials_usage_description": [
 		{
@@ -211,7 +210,6 @@
 	"materials_activity_field_quantity": "quantity",
 	"materials_order_line_amount": "Amount",
 	"materials_order_line_quantity": "Quantity",
-	"materials_equipment_not_found": "Unit {serial} not found",
 	"materials_parts_title": "Parts used",
 	"materials_parts_description": "The materials on this unit's completed orders.",
 	"materials_parts_empty": "No materials used on this unit yet.",

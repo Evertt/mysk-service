@@ -7,7 +7,6 @@ import { recordId } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
-import { refuse } from "#lib/server/forms.ts";
 
 import { newInvoiceFields } from "./form/invoice-schema.ts";
 import { invoiceState, invoiceTotals, lineAmount } from "./invoice.ts";
@@ -112,9 +111,8 @@ export const getBillable = query(recordId(), async (customerId) => {
  * Creates a draft for a customer with the chosen orders and items, then shows it. It gets the
  * tenant's next number (see `invoiceNumbers`), and the tenant's payment term and VAT rate.
  */
-export const createInvoice = form(v.object(newInvoiceFields), async (input, issue) => {
+export const createInvoice = form(v.object(newInvoiceFields), async (input) => {
 	const created = await createDraft(input);
-	if ("problem" in created) return refuse(issue, [created.problem]);
 	void getInvoices().refresh();
 	// The draft's page offers what's left to bill.
 	void getBillable(input.customerId).refresh();

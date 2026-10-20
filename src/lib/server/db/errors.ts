@@ -1,4 +1,4 @@
-import { invalid } from "@sveltejs/kit";
+import { type Problem, Refused } from "../refused.ts";
 
 /** Whether a database error (or its cause, when wrapped by drizzle) is a failed foreign key. */
 export function isForeignKeyViolation(error: unknown): boolean {
@@ -15,20 +15,19 @@ export function isForeignKeyViolation(error: unknown): boolean {
 }
 
 /**
- * Runs a write inside a remote form; if it breaks a reference (the database refuses it with a
- * foreign key error), refuses with `issues` instead of failing. E.g. deleting a record that other
- * rows still refer to. Sections check the references they know about first, with a specific
- * message; this catches the rest, e.g. rows of optional modules that the core sections don't know
- * about.
+ * Runs a write; if it breaks a reference (the database refuses it with a foreign key error),
+ * refuses (`Refused`) with `problems` instead of failing. E.g. deleting a record that other rows
+ * still refer to. Sections check the references they know about first, with a specific message;
+ * this catches the rest, e.g. rows of optional modules that the core sections don't know about.
  */
-export async function refuseIfReferenced(
-	run: () => Promise<unknown>,
-	...issues: Parameters<typeof invalid>
-) {
+export async function refuseIfReferenced<T>(
+	run: () => Promise<T>,
+	...problems: (Problem | string)[]
+): Promise<T> {
 	try {
-		await run();
+		return await run();
 	} catch (error) {
-		if (isForeignKeyViolation(error)) invalid(...issues);
+		if (isForeignKeyViolation(error)) throw new Refused(...problems);
 		throw error;
 	}
 }

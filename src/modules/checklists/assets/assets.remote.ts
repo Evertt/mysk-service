@@ -5,12 +5,11 @@
  * engineer's behalf (a paper form brought back), by the same rules as the portal.
  */
 import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { queryKey } from "#lib/components/data-table/list-definition.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { recordId } from "#lib/schema.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
@@ -86,11 +85,7 @@ export const getAsset = query(v.string(), (serialNumber) => assetView(serialNumb
 export const getComponentScores = query(
 	v.object({ serialNumber: v.string(), componentId: recordId() }),
 	async ({ serialNumber, componentId }) => {
-		const [unit] = await db
-			.select({ id: equipment.id })
-			.from(equipment)
-			.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-		if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+		const unit = await unitBySerial(serialNumber);
 		const own = (await componentsByUnit([unit.id])).get(unit.id) ?? [];
 		if (!own.some((part) => part.id === componentId))
 			error(404, m.checklists_component_not_found());

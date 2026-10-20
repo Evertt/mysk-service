@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { isManager } from "#lib/auth/index.ts";
 import { recordId } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { thresholdSchema } from "./form/threshold-schema.ts";
@@ -35,7 +35,7 @@ export const saveEnergyThreshold = forManagers.form(thresholdSchema, async (inpu
 			siteName: energySite.name,
 		})
 		.from(energyZone)
-		.innerJoin(energySite, and(eq(energySite.id, energyZone.energySiteId), inTenant(energySite)))
+		.innerJoin(...tenantJoin(energySite, energyZone.energySiteId))
 		.where(idInTenant(energyZone, input.zoneId));
 	if (!zone) error(404, m.energy_zone_not_found());
 	const [before] = await db
