@@ -10,13 +10,8 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatOnOff } from "#lib/i18n/index.ts";
-	import {
-		formatKw,
-		formatKwh,
-		formatPercent,
-		thresholdStateDisplay,
-	} from "#modules/energy/display.ts";
+	import { formatOnOff, formatPercent } from "#lib/i18n/index.ts";
+	import { formatKw, formatKwh, thresholdStateDisplay } from "#modules/energy/display.ts";
 	import { getEnergyThresholds, saveEnergyThreshold } from "#modules/energy/thresholds.remote.ts";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/thresholds"> } = $props();
@@ -55,7 +50,7 @@
 							{m.energy_thresholds_now({
 								kw: formatKw(zone.liveKw),
 								kwh: formatKwh(zone.kwhToday),
-								share: formatPercent(zone.ratio * 100),
+								share: formatPercent(zone.ratio * 100, { basis: "percent" }),
 							})}
 						</Card.Description>
 						<Card.Action>
