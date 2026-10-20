@@ -10,8 +10,6 @@ export default defineModule({
 	description: m.energy_module_description,
 	route: "/(app)/(modules)/energy",
 	settings: "/(app)/(modules)/energy/settings",
-	// Its integration tokens and the sites' codes.
-	settingsForManagers: true,
 	icon: ZapIcon,
 	subjects: energySubjects,
 	// Announced with each batch of meter readings, for the live pages; never logged.

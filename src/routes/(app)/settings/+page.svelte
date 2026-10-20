@@ -16,19 +16,10 @@
 	const categories = $derived(await getEquipmentCategories());
 	const typeSettings = $derived(await getOrderTypes());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
-	/** Where each module that has such a page is set up, and whether only managers may open it. */
-	const setUp = new Map<string, { href: string; managersOnly: boolean }>(
-		moduleRegistry.flatMap((m) =>
-			"settings" in m
-				? [[m.id, { href: resolve(m.settings), managersOnly: "settingsForManagers" in m }]]
-				: [],
-		),
+	/** Where each module that has such a page is set up. */
+	const setUp = new Map<string, string>(
+		moduleRegistry.flatMap((m) => ("settings" in m ? [[m.id, resolve(m.settings)]] : [])),
 	);
-	/** The page where `id` is set up, if it has one and the user may open it. */
-	const setUpHref = (id: string) => {
-		const page = setUp.get(id);
-		return page && (settings.canManage || !page.managersOnly) ? page.href : undefined;
-	};
 </script>
 
 <svelte:head>
@@ -64,7 +55,7 @@
 					modules={settings.modules}
 					canManage={settings.canManage}
 					icon={icons.get(module.id)}
-					settingsHref={setUpHref(module.id)}
+					settingsHref={setUp.get(module.id)}
 				/>
 			{/each}
 		</Card.Content>

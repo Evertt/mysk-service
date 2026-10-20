@@ -33,12 +33,6 @@ interface ModuleParts {
 	 * settings page links to while the module is on.
 	 */
 	settings?: RouteId;
-	/**
-	 * Only managers may open `settings` (its queries are `forManagers`, e.g. energy's integration
-	 * tokens), so the settings page links to it for them only. Without it, every member may, and
-	 * the page shows them the settings read-only.
-	 */
-	settingsForManagers?: true;
 	icon: Component;
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;

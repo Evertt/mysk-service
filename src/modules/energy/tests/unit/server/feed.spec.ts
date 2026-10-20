@@ -3,7 +3,7 @@
  * on the seeded demo database: what it answers a gateway (the token's sites and codes; a batch
  * stored; another tenant's or an unknown site; codes the site hasn't; a batch that isn't valid, isn't
  * JSON or is too large; a missing, unknown or other module's token), storing nothing of a refused
- * batch; and a manager making and revoking a token, which a planner may not. What a batch stores
+ * batch; and a manager making and revoking a token, which a planner may only see. What a batch stores
  * and the alerts it raises are `ingest.spec.ts`'s. The server side of `energy.tenancy.test.ts`.
  */
 import { describe, expect, test } from "vite-plus/test";
@@ -14,7 +14,7 @@ import {
 	getEnergySettings,
 	revokeEnergyToken,
 } from "#modules/energy/settings/settings.remote.ts";
-import { as, call, rows, shltr, submit, value } from "#unit/lib/server/harness/index.ts";
+import { as, data, rows, shltr, submit, value } from "#unit/lib/server/harness/index.ts";
 
 import { feed, lastQuarter, readingOf, riedel, shltrId } from "./energy.test-support.ts";
 
@@ -130,14 +130,19 @@ describe("the feed's tokens", () => {
 		expect((await feed({}, { token, method: "GET" })).status).toBe(401);
 	});
 
-	test("are no planner's to see, make or revoke", async () => {
+	test("are a planner's to see, by their first characters, but not to make or revoke", async () => {
 		const [demo] = await rows<{ id: number }>(
 			`select id from integration_token where organization_id = ? and module_id = 'energy'
 			 and revoked_at is null order by id limit 1`,
 			[shltrId],
 		);
 		await as(shltr.member, async () => {
-			expect(await call(getEnergySettings)).toMatchObject({ status: 403 });
+			const settings = await data(getEnergySettings);
+			expect(settings.canManage).toBe(false);
+			expect(settings.tokens.map((token) => token.id)).toContain(demo.id);
+			expect(Object.keys(settings.tokens[0]).toSorted()).toEqual(
+				["createdAt", "createdBy", "id", "lastUsedAt", "name", "prefix", "revokedAt"].toSorted(),
+			);
 			expect(await submit(createEnergyToken, { name: "Planner's" })).toMatchObject({
 				status: 403,
 			});

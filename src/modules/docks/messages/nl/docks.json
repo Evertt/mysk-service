@@ -134,6 +134,7 @@
 	"docks_settings_title": "Salvo-koppeling",
 	"docks_settings_description": "De tokens waarmee de Salvo-koppeling haar events stuurt, naar {url}.",
 	"docks_tokens_title": "Koppelingstokens",
+	"docks_tokens_managers": "Alleen eigenaren en beheerders maken tokens aan en trekken ze in.",
 	"docks_tokens_empty": "Nog geen tokens: maak er een voor de Salvo-koppeling.",
 	"docks_token_name": "Naam",
 	"docks_token_name_required": "Geef het token een naam, bijv. Salvo Barneveld",

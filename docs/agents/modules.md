@@ -115,8 +115,8 @@ makes or works with, which a tenant can't hide while it's on: a module that call
 declares every type it names, which `src/tests/unit/modules/order-types.spec.ts` checks),
 `liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and `settings`, the route of the page
 where it's set up, which its card on the settings page links to while it's on (a module with
-`routes/(app)/settings/+page.svelte` must name it, which the generator checks; `settingsForManagers:
-true` when that page is the managers' only, so members get no link to it); it is in every tenant's
+`routes/(app)/settings/+page.svelte` must name it, which the generator checks; every member may read
+that page, and only managers change what's on it); it is in every tenant's
 bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under

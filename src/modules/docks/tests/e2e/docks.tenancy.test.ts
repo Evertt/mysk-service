@@ -1,6 +1,6 @@
 /**
  * The docks and tenants: SHLTR's manager makes a feed token on the settings page, which the feed
- * takes until it's revoked, and a planner isn't offered that page; North, without the module, has
+ * takes until it's revoked, and a planner reads them there; North, without the module, has
  * none of its pages and cards. What the feed answers (a dock the tenant hasn't, a batch that isn't
  * valid, a missing or revoked token), how a token is stored, and that a planner may not manage
  * them, is `tests/unit/server/feed.spec.ts`'s.
@@ -45,17 +45,20 @@ describe("SHLTR's integration tokens", () => {
 		}
 	});
 
-	test("a planner, who's no manager, isn't offered them", async () => {
+	test("a planner, who's no manager, reads them, but makes and revokes none", async () => {
 		const { page } = await signedInPage(app, shltrPlanner);
 		try {
+			// The organization's settings link to the module's, as the board does.
+			await page.goto(`${baseURL}/settings`);
+			await page.locator('[data-module="docks"]').getByRole("link", { name: "Set up" }).waitFor();
 			await page.goto(`${baseURL}/docks`);
 			await page.locator('[data-dock="DOCK 05"]').waitFor();
-			expect(await page.getByRole("link", { name: "Salvo feed" }).count()).toBe(0);
-			// Nor do the organization's settings link to them (the page is the managers').
-			await page.goto(`${baseURL}/settings`);
-			const card = page.locator('[data-module="docks"]');
-			await card.waitFor();
-			expect(await card.getByRole("link", { name: "Set up" }).count()).toBe(0);
+			await page.getByRole("link", { name: "Salvo feed" }).click();
+			await page.waitForURL((url) => url.pathname === "/docks/settings");
+			await page.locator("[data-managers-only]").waitFor();
+			await page.locator('[data-token="Salvo Barneveld (demo)"]').waitFor();
+			expect(await page.getByLabel("Name").count()).toBe(0);
+			expect(await page.getByRole("button", { name: "Revoke" }).count()).toBe(0);
 		} finally {
 			await page.context().close();
 		}

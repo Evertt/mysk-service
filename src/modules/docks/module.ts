@@ -11,7 +11,6 @@ export default defineModule({
 	route: "/(app)/(modules)/docks",
 	// Managers make the Salvo feed's tokens there; the docks themselves are on the customers' pages.
 	settings: "/(app)/(modules)/docks/settings",
-	settingsForManagers: true,
 	icon: WarehouseIcon,
 	subjects: dockSubjects,
 	actions: dockActions,

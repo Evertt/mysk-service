@@ -25,11 +25,11 @@
 		{#snippet actions()}
 			{#if data.canManage}
 				<NewSiteDialog />
-				<Button variant="outline" href={resolve("/(app)/(modules)/energy/settings")}>
-					<SettingsIcon data-icon="inline-start" />
-					{m.energy_settings_title()}
-				</Button>
 			{/if}
+			<Button variant="outline" href={resolve("/(app)/(modules)/energy/settings")}>
+				<SettingsIcon data-icon="inline-start" />
+				{m.energy_settings_title()}
+			</Button>
 		{/snippet}
 	</PageHeader>
 

@@ -3,7 +3,7 @@
  * tokens on the seeded demo database: what it answers for a batch it applies, one naming a dock
  * the token's tenant doesn't have (nothing applied), one that isn't valid, a body that isn't JSON
  * or is too large, and a missing, unknown or revoked token; a manager makes a token (only its hash is stored) and
- * revokes it, which a planner may not. What a batch does to the docks is `ingest.spec.ts`'s. The
+ * revokes it, which a planner may only see. What a batch does to the docks is `ingest.spec.ts`'s. The
  * server side of `docks.tenancy.test.ts`, which keeps the settings page.
  */
 import type { RequestEvent } from "@sveltejs/kit";
@@ -21,7 +21,6 @@ import {
 import { POST } from "#routes/(api)/(modules)/docks/ingest/+server.ts";
 import {
 	as,
-	call,
 	data,
 	organizationId,
 	rows,
@@ -174,14 +173,19 @@ describe("the feed's tokens", () => {
 		expect((await post({ events: [] }, { token })).status).toBe(401);
 	});
 
-	test("are no planner's to see, make or revoke", async () => {
+	test("are a planner's to see, by their first characters, but not to make or revoke", async () => {
 		const [demo] = await rows<{ id: number; revoked_at: number | null }>(
 			`select id, revoked_at from integration_token where organization_id = ? and module_id = 'docks'
 			 order by id limit 1`,
 			[shltrId],
 		);
 		await as(shltr.member, async () => {
-			expect(await call(getDockSettings)).toMatchObject({ status: 403 });
+			const settings = await data(getDockSettings);
+			expect(settings.canManage).toBe(false);
+			expect(settings.tokens.map((token) => token.id)).toContain(demo.id);
+			expect(Object.keys(settings.tokens[0]).toSorted()).toEqual(
+				["createdAt", "createdBy", "id", "lastUsedAt", "name", "prefix", "revokedAt"].toSorted(),
+			);
 			expect(await submit(createDockToken, { name: "Planner's" })).toMatchObject({ status: 403 });
 			expect(await submit(revokeDockToken, { id: String(demo.id) })).toMatchObject({
 				status: 403,

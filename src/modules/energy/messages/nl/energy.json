@@ -71,6 +71,7 @@
 	"energy_column_zones": "Zones",
 	"energy_column_doors": "Deuren",
 	"energy_tokens_title": "Koppeltokens",
+	"energy_tokens_managers": "Alleen eigenaren en beheerders maken tokens aan en trekken ze in.",
 	"energy_tokens_empty": "Nog geen tokens: maak er een voor de gateway van een locatie.",
 	"energy_token_name": "Naam",
 	"energy_token_name_required": "Geef het token een naam, bijv. P1-gateway Ede",
