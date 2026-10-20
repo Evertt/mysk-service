@@ -4,12 +4,49 @@ Read before you change the schema, write a migration, bind a list of values, tou
 
 ## Schema and migrations
 
-The schema is `src/lib/server/db/schema.ts`; the database gets it through the migrations in
-`drizzle/`, never `drizzle-kit push`. After changing the schema, run
+The core's schema is `src/lib/server/db/schema.ts`, which exports the tables of `schema/` (by
+domain: customers, engineers, equipment, orders, the customer portal, and `infra.ts` for the app's
+own: modules, simulations, tokens, views, table memory, the activity log, notifications and bug
+reports; the core's relations are in `schema/relations.ts`); a module's is its
+`server/schema.ts`. The database gets it through the migrations in `drizzle/`, never
+`drizzle-kit push`. After changing the schema, run
 `pnpm db:generate --name <what-changed>` (e.g. `add-invoice-reference`), check the SQL it wrote,
 and commit it with the change; `pnpm db:migrate` applies it to `local.db` (`pnpm db:reset` starts
 over from the migrations and the seed). `src/tests/unit/lib/server/db/migrations.spec.ts` fails while the
 schema has changes no migration makes. Never edit a migration that's been committed: add another.
+
+### Tenant tables
+
+A tenant's table is declared one way, with the factories of `src/lib/server/db/columns.ts`;
+`tenant-tables.spec.ts` (next to `migrations.spec.ts`) refuses the hand-written forms:
+
+```ts
+export const customerSite = tenantTable(
+	"customer_site",
+	{ customerId: integer("customer_id").notNull(), name: text("name").notNull() },
+	(table) => [tenantRef(table, table.customerId, customer, { onDelete: "cascade" })],
+	{ referenced: true },
+);
+```
+
+- `tenantTable(name, columns, extra?, options?)` puts `id` (autoincrement) and `organization_id`
+  (deleted with the organization) before `columns`. `key: "tenant"` keys it by the tenant instead
+  (one row per tenant: a module's settings), `key: "own"` by its own columns (a `primaryKey()` in
+  `extra`, or a column's). `referenced: true` adds the unique index `<table>_organization_id` on
+  `(organization_id, id)` that other tables' keys point at.
+- `tenantRef(table, table.xId, x, { onDelete? })` is the composite key
+  `(organization_id, x_id)` → `x (organization_id, id)`; `to` points it at other columns (a
+  checklist's order unit). A key that pairs `customer_id` instead (a unit's site, an order's units)
+  stays a plain `foreignKey()`.
+- A reference that the deletion of its row clears (a dock's door) can't use `organization_id`:
+  `on delete set null` clears every column of a key. `...optionalTenantColumns("door")` adds
+  `doorId` and `doorOrganizationId`, and `...optionalTenantRef(table, "door", equipment)` in
+  `extra` their index `<table>_door` (`idFirst` puts the id first), the `set null` key and the
+  check `<table>_door_tenant` that holds the tenant to the row's. Write them with
+  `withTenantRefs(organizationId, { doorId })`, which sets `doorOrganizationId` where there's a
+  door.
+- Relations: `customer: tenantOne(one, customerSite.customerId, customer)`, on the key's column
+  pairs (an optional reference's too).
 
 Every foreign key has an index (or the primary key) whose first columns are the key's, in any
 order: deleting a parent row, or inserting one while deferred keys are violated (an import),
@@ -43,7 +80,8 @@ Cloudflare's limit, and `db` enforces it everywhere (a statement over it throws,
 a list of values is never bound one by one: `inList(column, values)` and `notInList()` instead of
 drizzle's `inArray()`/`notInArray()` (one JSON parameter; `parameters.spec.ts` refuses the
 latter), and `insertRows(tx, table, rows)` (or `insertBatches()` with `.returning()`) for a
-multi-row insert. The seed, which runs in Node only, is exempt. An expression a statement repeats
+multi-row insert; `insertRows()` takes the seed's transaction too. The seed, which runs in Node
+only, is otherwise exempt. An expression a statement repeats
 many times (the condition module's unit status, in a list's select, sort and filter) writes the
 code's own constants in with `literal()` and `inLiterals()` instead of binding them; never input.
 

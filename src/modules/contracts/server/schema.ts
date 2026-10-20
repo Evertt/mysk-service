@@ -9,7 +9,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, day, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, tenantOne, tenantRef, tenantTable } from "#lib/server/db/columns.ts";
 import { customer, equipment } from "#lib/server/db/schema.ts";
 
 import { contractLevels } from "../model.ts";
@@ -21,11 +21,9 @@ import { contractLevels } from "../model.ts";
  * a guaranteed response time. Its status (upcoming, active, expired) follows from the period,
  * see `contractStatus` in `../model.ts`.
  */
-export const contract = sqliteTable(
+export const contract = tenantTable(
 	"contract",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		number: text("number").notNull(),
 		customerId: integer("customer_id").notNull(),
 		level: text("level", { enum: contractLevels }).notNull(),
@@ -46,10 +44,7 @@ export const contract = sqliteTable(
 		// For coverage, which must be of the contract's customer's equipment.
 		uniqueIndex("contract_customer_id").on(table.customerId, table.id),
 		index("contract_customer").on(table.organizationId, table.customerId),
-		foreignKey({
-			columns: [table.organizationId, table.customerId],
-			foreignColumns: [customer.organizationId, customer.id],
-		}),
+		tenantRef(table, table.customerId, customer),
 	],
 );
 
@@ -81,10 +76,7 @@ export const contractEquipment = sqliteTable(
 );
 
 export const contractRelations = relations(contract, ({ one, many }) => ({
-	customer: one(customer, {
-		fields: [contract.organizationId, contract.customerId],
-		references: [customer.organizationId, customer.id],
-	}),
+	customer: tenantOne(one, contract.customerId, customer),
 	coverage: many(contractEquipment),
 }));
 

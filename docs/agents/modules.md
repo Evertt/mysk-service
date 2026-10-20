@@ -118,7 +118,9 @@ declares every type it names, which `src/tests/unit/modules/order-types.spec.ts`
 `liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and
 `portal` (below); it is in every tenant's bundle, so it imports only messages, icons, types,
 `import()` loaders and its own small scripts),
-`server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
+`server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, which inserts with `insertRows()` and numbers its rows after
+the tenants' before with the context's `ids.claim()`, and needs no clearing: deleting the
+organizations does it; its
 columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under
 the module's own URL, `/<id>`: `+` files only; see "A module's pages" below), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
@@ -322,8 +324,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares its extension points (`#lib/<domain>/extensions.ts`); core never
   imports a module (`#modules/…` is for the generated registries, and for a module's own route files), which
-  `src/tests/unit/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
-  `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
+  `src/tests/unit/modules/boundaries.spec.ts` checks. A module's tables reference core tables (declared with `tenantTable()` and
+  `tenantRef()` from `#lib/server/db/columns.ts`, see "Tenant tables" in `docs/agents/database.md`) and the tables of the modules it `requires` in its `module.ts`,
   never the reverse; one migration stream in `drizzle/`, and `src/tests/unit/lib/server/db/modules.spec.ts`
   checks that no core table has a foreign key to a module table, and that a module's tables
   reference only core tables and those of modules it requires (`module-schemas.gen.ts` lists each

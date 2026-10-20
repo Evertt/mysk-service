@@ -15,8 +15,6 @@
 import { type Column, getTableColumns, type SQL, type SQLWrapper, sql } from "drizzle-orm";
 import type { SQLiteInsertValue, SQLiteTable } from "drizzle-orm/sqlite-core";
 
-import type { Transaction } from "./index.ts";
-
 /** The most bound parameters a statement may have (a Durable Object's SQLite's limit). */
 export const maxParameters = 100;
 
@@ -105,9 +103,18 @@ export function insertBatches<TTable extends SQLiteTable, TRow>(table: TTable, r
 	);
 }
 
+/**
+ * What inserts: `db`, a transaction, or the seed's (whose database is another drizzle's).
+ */
+interface Inserter {
+	insert<TTable extends SQLiteTable>(
+		table: TTable,
+	): { values(rows: SQLiteInsertValue<TTable>[]): PromiseLike<unknown> };
+}
+
 /** Inserts `rows` into `table` in as few statements as fit within the limit, in `tx`. */
 export async function insertRows<TTable extends SQLiteTable>(
-	tx: Transaction,
+	tx: Inserter,
 	table: TTable,
 	rows: SQLiteInsertValue<TTable>[],
 ) {

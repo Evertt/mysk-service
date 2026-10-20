@@ -1,7 +1,8 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
+import { insertRows } from "#lib/server/db/parameters.ts";
 import type { SeedCategory } from "#lib/server/db/seed/categories.ts";
-import { addDays, now } from "#lib/server/db/seed/clock.ts";
+import { addDays, today } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 
@@ -81,7 +82,6 @@ const isPlanned = (category: SeedCategory) => category in kinds;
 function generatePlans(equipments: TenantDraft["equipments"], seed: number) {
 	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	return equipments
 		.filter((unit) => unit.status !== "decommissioned" && isPlanned(unit.category))
 		.filter(() => random.datatype.boolean(0.35))
@@ -112,23 +112,19 @@ function generatePlans(equipments: TenantDraft["equipments"], seed: number) {
 }
 
 export default defineSeed<TenantDraft["equipments"]>({
-	clear: async (tx) => {
-		await tx.delete(maintenancePlan);
-	},
-
 	// The units the plans are for; the plans themselves come from a faker of their own, in `run()`.
 	generate: ({ equipments }) => equipments,
 
-	async run({ tx, tenants, insertAll, count }) {
+	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const plans = generatePlans(tenant.data, tenant.seed + 7).map((plan) => ({
 				...plan,
 				organizationId: tenant.id,
-				equipmentId: tenant.equipmentIds[plan.equipmentId - 1],
+				equipmentId: tenant.equipmentId(plan.equipmentId),
 				nextDueOn: toDay(plan.nextDueOn),
 				createdAt: toMoment(plan.createdAt),
 			}));
-			await insertAll(plans, (chunk) => tx.insert(maintenancePlan).values(chunk));
+			await insertRows(tx, maintenancePlan, plans);
 			count("maintenancePlans", plans);
 		}
 	},

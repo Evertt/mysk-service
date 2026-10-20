@@ -189,14 +189,6 @@ interface ShopSeed {
 }
 
 export default defineSeed<ShopSeed>({
-	clear: async (tx) => {
-		await tx.delete(shopOrderLine);
-		await tx.delete(shopOrder);
-		await tx.delete(shopProductCheckpoint);
-		await tx.delete(shopProduct);
-		await tx.delete(shopCategory);
-	},
-
 	generate(draft) {
 		const materials = draft.modules.materials as MaterialsDraft | undefined;
 		const partners = draft.modules["partner-programme"] as PartnersDraft | undefined;
@@ -291,7 +283,7 @@ export default defineSeed<ShopSeed>({
 			count("shopProductCheckpoints", links);
 
 			for (const order of tenant.data.orders) {
-				const customerId = tenant.customerIds[order.customerId - 1];
+				const customerId = tenant.customerId(order.customerId);
 				const [spend] = await tx
 					.select({ id: walletEntry.id })
 					.from(walletEntry)

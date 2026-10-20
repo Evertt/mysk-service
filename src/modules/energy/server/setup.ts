@@ -21,6 +21,7 @@ import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { customerByCode } from "#lib/customers/server/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentCategory } from "#lib/server/db/schema.ts";
 import { deleteAndLog, nextPosition, orNotFound } from "#lib/server/records.ts";
@@ -319,10 +320,7 @@ async function unitAtSite(customerSiteId: number, unitId: number) {
 
 /** A unit's columns, with its tenant (see `./schema.ts`). */
 function unitColumns(unitId: number | null) {
-	return {
-		equipmentId: unitId,
-		equipmentOrganizationId: unitId ? currentTenant().organizationId : null,
-	};
+	return withTenantRefs(currentTenant().organizationId, { equipmentId: unitId });
 }
 
 /** Whether another of the site's zones (or doors) than `except` has `code`. */

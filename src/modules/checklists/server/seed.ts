@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 
+import { insertRows } from "#lib/server/db/parameters.ts";
 import { equipmentCategory } from "#lib/server/db/schema.ts";
 import {
 	type FieldworksCategory,
@@ -8,13 +9,7 @@ import {
 } from "#lib/server/db/seed/categories.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 
-import {
-	checklist,
-	checklistResult,
-	checklistTemplate,
-	checklistTemplateCategory,
-	checklistTemplateItem,
-} from "./schema.ts";
+import { checklistTemplate, checklistTemplateCategory, checklistTemplateItem } from "./schema.ts";
 import { seedChecklists } from "./seed-checklists.ts";
 
 type ShltrCategory = (typeof shltrCategories)[number]["key"];
@@ -184,18 +179,10 @@ const categoryName = (key: string) =>
 	[...seedCategories, ...shltrCategories].find((category) => category.key === key)!.name;
 
 export default defineSeed<TenantDraft["profile"]>({
-	clear: async (tx) => {
-		await tx.delete(checklistResult);
-		await tx.delete(checklist);
-		await tx.delete(checklistTemplateCategory);
-		await tx.delete(checklistTemplateItem);
-		await tx.delete(checklistTemplate);
-	},
-
 	// Whose business the tenant is, which says which templates it gets.
 	generate: ({ profile }) => profile,
 
-	async run({ tx, tenants, insertAll, count }) {
+	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
 			const templates: SeedTemplate<string>[] =
@@ -235,11 +222,11 @@ export default defineSeed<TenantDraft["profile"]>({
 						: [{ organizationId, templateId: rows[i].id, categoryId: id }];
 				}),
 			);
-			await insertAll(items, (chunk) => tx.insert(checklistTemplateItem).values(chunk));
-			await insertAll(links, (chunk) => tx.insert(checklistTemplateCategory).values(chunk));
+			await insertRows(tx, checklistTemplateItem, items);
+			await insertRows(tx, checklistTemplateCategory, links);
 			count("checklistTemplates", rows);
 			count("checklistTemplateItems", items);
-			await seedChecklists(tx, tenant, tenant.data === "shltr", insertAll, count);
+			await seedChecklists(tx, tenant, tenant.data === "shltr", count);
 		}
 	},
 });

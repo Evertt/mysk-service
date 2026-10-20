@@ -9,10 +9,12 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { withTenantRefs } from "#lib/server/db/columns.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
 import { seedIntegrationToken } from "#lib/server/db/seed/integrations.ts";
-import { defineSeed, type ModuleSeed } from "#lib/server/db/seed/module-seed.ts";
+import { defineSeed, type SeedTransaction } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 
 import {
@@ -46,15 +48,8 @@ import {
 /** How many days of history before today. */
 const HISTORY_DAYS = 30;
 
-type Transaction = Parameters<ModuleSeed["run"]>[0]["tx"];
-
-/** Rows in statements of `size` (the seed runs in Node, whose libsql takes many parameters). */
-async function insertMany<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>, size = 1000) {
-	for (let i = 0; i < rows.length; i += size) await insert(rows.slice(i, i + size));
-}
-
 /** Riedel's site in Ede and its units by name, in the tenant. */
-async function findRiedel(tx: Transaction, organizationId: string) {
+async function findRiedel(tx: SeedTransaction, organizationId: string) {
 	const [site] = await tx
 		.select({ id: customerSite.id, customerId: customer.id })
 		.from(customerSite)
@@ -75,31 +70,13 @@ async function findRiedel(tx: Transaction, organizationId: string) {
 }
 
 export default defineSeed({
-	clear: async (tx) => {
-		for (const table of [
-			energyAlert,
-			energyDoorEvent,
-			energyReading,
-			energyThreshold,
-			energyDoor,
-			energyConsumer,
-			energyZone,
-			energySite,
-		]) {
-			await tx.delete(table);
-		}
-	},
-
 	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
 			const riedel = await findRiedel(tx, organizationId);
 			if (!riedel) continue;
 			const unit = (name?: string) => (name ? (riedel.unitIds.get(name) ?? null) : null);
-			const link = (name?: string) => {
-				const id = unit(name);
-				return { equipmentId: id, equipmentOrganizationId: id ? organizationId : null };
-			};
+			const link = (name?: string) => withTenantRefs(organizationId, { equipmentId: unit(name) });
 
 			const { customer: _customer, site: _site, ...siteFields } = riedelSite;
 			const [site] = await tx
@@ -189,8 +166,8 @@ export default defineSeed({
 					events.push({ organizationId, doorId: doorId.get(door)!, ...event });
 				}
 			}
-			await insertMany(readings, (chunk) => tx.insert(energyReading).values(chunk));
-			await insertMany(events, (chunk) => tx.insert(energyDoorEvent).values(chunk));
+			await insertRows(tx, energyReading, readings);
+			await insertRows(tx, energyDoorEvent, events);
 			count("energyReadings", readings);
 			count("energyDoorEvents", events);
 

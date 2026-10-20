@@ -35,6 +35,7 @@ import type { PriceAdjustment } from "#lib/orders/extensions.ts";
 
 import type * as moduleSchema from "../modules.gen.ts";
 import type * as schema from "../schema.ts";
+import type { IdSpace } from "./ids.ts";
 import type { TenantData, TenantSteps } from "./tenant.ts";
 
 /** A transaction on the seed's database: the core's tables and the modules'. */
@@ -46,6 +47,8 @@ export type SeedTransaction = Parameters<
 export type TenantDraft = TenantData & {
 	/** The tenant's faker, where the core left it. */
 	faker: Faker;
+	/** The seed's ids, for a module whose ids must be known before `run()` (`IdSpace.claim()`). */
+	ids: IdSpace;
 };
 
 /** An order of a draft. */
@@ -75,10 +78,10 @@ export interface SeedTenant<Data = unknown> {
 	modules: string[];
 	/** The tenant's seed: `faker.seed(tenant.seed)` makes a module's data the same every time. */
 	seed: number;
-	/** The ids of the rows the core inserted: the draft's id `n` became `customerIds[n - 1]`. */
-	customerIds: number[];
-	equipmentIds: number[];
-	orderIds: number[];
+	/** The ids of the rows the core inserted, by the draft's ids. */
+	customerId(draftId: number): number;
+	equipmentId(draftId: number): number;
+	orderId(draftId: number): number;
 	/** What the module's `generate()` made for the tenant. */
 	data: Data;
 	/** What all of the tenant's modules say about prices and billing, see `SeedCollectors`. */
@@ -90,8 +93,8 @@ interface SeedContext<Data = unknown> {
 	faker: Faker;
 	/** Only the tenants that have the module. */
 	tenants: SeedTenant<Data>[];
-	/** Inserts in chunks to stay below SQLite's bound-parameter limit. */
-	insertAll: <T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) => Promise<void>;
+	/** The seed's ids: `ids.claim(table, count)` numbers a tenant's rows after the tenants' before. */
+	ids: IdSpace;
 	/** Adds to the summary the seed prints at the end. */
 	count: (table: string, rows: unknown[]) => void;
 }
@@ -101,11 +104,6 @@ interface SeedContext<Data = unknown> {
 export interface ModuleSeed<Data = any> {
 	/** Steps in the core's generation, for the tenants that have the module (see above). */
 	during?: TenantSteps;
-	/**
-	 * Empties the module's tables (children before parents), before the core's data is replaced.
-	 * Runs for every module, whether or not a tenant has it.
-	 */
-	clear?(tx: SeedTransaction): Promise<void>;
 	/**
 	 * Makes the module's data for a tenant that has it, once the core's is generated (see above).
 	 * Ids are the tenant's own, from 1, like the draft's; `previous` is what this made for the

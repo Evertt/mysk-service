@@ -22,6 +22,7 @@ import {
 	tenantJoin,
 	sameTenant,
 } from "#lib/server/auth/index.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, equipment, order, orderUnit, user } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
@@ -76,8 +77,7 @@ async function insertCondition(
 			score: input.score,
 			advice,
 			source: by.source,
-			orderId: by.orderId ?? null,
-			orderOrganizationId: by.orderId ? tenant.organizationId : null,
+			...withTenantRefs(tenant.organizationId, { orderId: by.orderId ?? null }),
 			engineerId: by.engineerId ?? null,
 			userId: isSystemUser(tenant.user) ? null : tenant.user.id,
 			recordedAt: Temporal.Now.instant(),

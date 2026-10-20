@@ -9,6 +9,7 @@ import { and, desc, eq, ne, type SQL } from "drizzle-orm";
 import { createOrders, type OrderDraft } from "#lib/orders/server/index.ts";
 import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customerSite, order } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
@@ -108,7 +109,7 @@ export async function orderAlert(id: number) {
 		const [created] = await createOrders(tx, [draft]);
 		await tx
 			.update(energyAlert)
-			.set({ orderId: created.id, orderOrganizationId: organizationId })
+			.set(withTenantRefs(organizationId, { orderId: created.id }))
 			.where(idInTenant(energyAlert, id));
 		await recordActivity(tx, { action: "alert_ordered", ...logged(alert), note: created.number });
 		return created.number;

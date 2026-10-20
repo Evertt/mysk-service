@@ -10,9 +10,10 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { and, asc, desc, eq, or } from "drizzle-orm";
 
 import { isDoneOrder } from "#lib/models.ts";
+import { insertBatches, insertRows } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
-import type { ModuleSeed, SeedTenant } from "#lib/server/db/seed/module-seed.ts";
+import type { SeedTenant, SeedTransaction } from "#lib/server/db/seed/module-seed.ts";
 import { toDay } from "#lib/server/db/seed/temporal.ts";
 
 import {
@@ -30,9 +31,6 @@ import {
 	checklistTemplateCategory,
 	checklistTemplateItem,
 } from "./schema.ts";
-
-/** The seed's transaction. */
-type Transaction = Parameters<ModuleSeed["run"]>[0]["tx"];
 
 /** What's wrong, by a point's group: the remarks a rejection gets. */
 const defects: Record<string, string[]> = {
@@ -97,10 +95,9 @@ const expiresSoon = (ends: Temporal.PlainDate, today: Temporal.PlainDate) =>
 
 /** The tenant's checklists on its orders (see above), in `tx`; counted for the summary. */
 export async function seedChecklists(
-	tx: Transaction,
+	tx: SeedTransaction,
 	tenant: SeedTenant<unknown>,
 	shltr: boolean,
-	insertAll: <T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) => Promise<void>,
 	count: (table: string, rows: unknown[]) => void,
 ) {
 	const organizationId = tenant.id;
@@ -226,14 +223,14 @@ export async function seedChecklists(
 		}
 	}
 	const ids: number[] = [];
-	await insertAll(checklists, async (chunk) => {
-		const inserted = await tx.insert(checklist).values(chunk).returning({ id: checklist.id });
+	for (const batch of insertBatches(checklist, checklists)) {
+		const inserted = await tx.insert(checklist).values(batch).returning({ id: checklist.id });
 		ids.push(...inserted.map((made) => made.id));
-	});
+	}
 	const results = answers.flatMap((points, i) =>
 		points.map((point, position) => ({ organizationId, checklistId: ids[i], position, ...point })),
 	);
-	await insertAll(results, (chunk) => tx.insert(checklistResult).values(chunk));
+	await insertRows(tx, checklistResult, results);
 	count("checklists", checklists);
 	count("checklistResults", results);
 }

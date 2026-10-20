@@ -20,14 +20,19 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { and, desc, eq, ne } from "drizzle-orm";
 
 import { doneOrderStatuses } from "#lib/models.ts";
-import { inList } from "#lib/server/db/parameters.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
+import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
-import { addDays, DAY, now } from "#lib/server/db/seed/clock.ts";
-import { defineSeed, type ModuleSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
+import { addDays, DAY, HOUR, now } from "#lib/server/db/seed/clock.ts";
+import {
+	defineSeed,
+	type SeedTransaction,
+	type TenantDraft,
+} from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 import { checklistScore } from "#modules/checklists/api/extensions.ts";
 
-import { component, componentCheckpoint, conditionSettings, unitCondition } from "./schema.ts";
+import { component, componentCheckpoint, unitCondition } from "./schema.ts";
 
 /** A unit the mockup names, with how its condition went: oldest first, the last one now. */
 interface FixedCondition {
@@ -298,10 +303,8 @@ const wear = [
 /** How many of North's units get conditions: the first critical, the next needing attention. */
 const NORTH = { critical: 2, attention: 3, healthy: 10 };
 
-type Transaction = Parameters<ModuleSeed["run"]>[0]["tx"];
-
 /** The tenant's units in use with their customer, and the last done order on each. */
-async function unitsOf(tx: Transaction, organizationId: string) {
+async function unitsOf(tx: SeedTransaction, organizationId: string) {
 	const units = await tx
 		.select({
 			id: equipment.id,
@@ -339,7 +342,7 @@ async function unitsOf(tx: Transaction, organizationId: string) {
  * transaction, whose schema has every module's tables, as the module only enhances checklists
  * (its tables aren't the module's to import). None while the tenant hasn't checklists.
  */
-async function completedChecklists(tx: Transaction, tenant: { id: string; modules: string[] }) {
+async function completedChecklists(tx: SeedTransaction, tenant: { id: string; modules: string[] }) {
 	if (!tenant.modules.includes("checklists")) return [];
 	const found = await tx.query.checklist.findMany({
 		columns: { id: true, orderId: true, equipmentId: true, completedBy: true, completedAt: true },
@@ -356,16 +359,13 @@ async function completedChecklists(tx: Transaction, tenant: { id: string; module
 	);
 }
 
-/** An hour, in milliseconds: how long after a unit's last checklist the office corrects it. */
-const HOUR = 60 * 60 * 1000;
-
 /**
  * Inserts SHLTR's components on its units (see `shltrComponents`), with their articles (the
  * tenant's materials by SKU, read like the checklists, as the module only enhances materials) and
  * points (its templates' by text); answers them with the points that check each.
  */
 async function seedComponents(
-	tx: Transaction,
+	tx: SeedTransaction,
 	tenant: { id: string; modules: string[] },
 	units: { id: number; name: string | null; customer: string; location: string | null }[],
 	count: (table: string, rows: unknown[]) => void,
@@ -427,20 +427,13 @@ async function seedComponents(
 }
 
 export default defineSeed<TenantDraft["profile"]>({
-	clear: async (tx) => {
-		await tx.delete(unitCondition);
-		await tx.delete(componentCheckpoint);
-		await tx.delete(component);
-		await tx.delete(conditionSettings);
-	},
-
 	// The components' articles are the materials', which have to be in.
 	after: ["materials"],
 
 	// Whose business the tenant is, which says which conditions it gets.
 	generate: ({ profile }) => profile,
 
-	async run({ tx, tenants, insertAll, count }) {
+	async run({ tx, tenants, count }) {
 		const rows: (typeof unitCondition.$inferInsert)[] = [];
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
@@ -459,8 +452,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					equipmentId: found.equipmentId,
 					advice: null,
 					source: "checklist" as const,
-					orderId: found.orderId,
-					orderOrganizationId: organizationId,
+					...withTenantRefs(organizationId, { orderId: found.orderId }),
 					engineerId: found.completedBy,
 					recordedAt: found.completedAt!,
 				};
@@ -504,8 +496,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					score,
 					advice: advice || null,
 					source: onVisit ? "checklist" : "office",
-					orderId: onVisit?.orderId ?? null,
-					orderOrganizationId: onVisit ? organizationId : null,
+					...withTenantRefs(organizationId, { orderId: onVisit?.orderId ?? null }),
 					engineerId: onVisit?.engineerId ?? null,
 					recordedAt,
 				});
@@ -576,7 +567,7 @@ export default defineSeed<TenantDraft["profile"]>({
 				});
 			}
 		}
-		await insertAll(rows, (chunk) => tx.insert(unitCondition).values(chunk));
+		await insertRows(tx, unitCondition, rows);
 		count("unitConditions", rows);
 	},
 });

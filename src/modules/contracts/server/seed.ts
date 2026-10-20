@@ -2,7 +2,8 @@ import type { Faker } from "@faker-js/faker";
 
 import type { customerSegments } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
-import { addDays, now } from "#lib/server/db/seed/clock.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
+import { addDays, HOUR, now, today } from "#lib/server/db/seed/clock.ts";
 import {
 	defineSeed,
 	type SeedBillableItem,
@@ -229,7 +230,6 @@ export function generateContractTerms(
 	// A running contract that ends soon and isn't renewed, for the module's "Contracts ending soon"
 	// on the dashboard: if no customer's latest term ends in the next 60 days, the one that ends
 	// first after that ends in 30 days instead. Fixed rather than random, like the call-outs below.
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const latestTerms = [...Map.groupBy(contractTerms, (c) => c.customerId).values()]
 		.map((terms) => terms.reduce((a, b) => (b.startsOn > a.startsOn ? b : a)))
 		.filter((c) => c.startsOn <= now && c.endsOn >= today)
@@ -262,7 +262,7 @@ export function generateCallOuts(
 	const running = contractTerms
 		.filter(
 			(c) =>
-				c.startsOn.getTime() <= now.getTime() - (c.responseHours + 2) * 60 * 60 * 1000 &&
+				c.startsOn.getTime() <= now.getTime() - (c.responseHours + 2) * HOUR &&
 				now < addDays(c.endsOn, 1),
 		)
 		.sort((a, b) => a.responseHours - b.responseHours || a.id - b.id);
@@ -288,7 +288,7 @@ export function generateCallOuts(
 			: [];
 	const orders = waiting.map(({ term, hoursAgo, description }, i) => {
 		const id = orderCount + i + 1;
-		const createdAt = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+		const createdAt = new Date(now.getTime() - hoursAgo * HOUR);
 		const unit = equipments[term.equipmentIds[0] - 1];
 		unit.status = "needs_service";
 		return {
@@ -371,18 +371,13 @@ interface ContractsSeed {
 	terms: ContractTerm[];
 	/** The terms by the units they cover, in the order of the terms. */
 	coverage: Map<number, ContractTerm[]>;
-	/** How many contracts the tenants before this one have: ids are global, so this one's follow. */
-	contractOffset: number;
+	/** A term's contract's id, after the tenants' before (claimed here: the collectors bill them). */
+	contractId: (termId: number) => number;
 }
 
 export default defineSeed<ContractsSeed>({
-	clear: async (tx) => {
-		await tx.delete(contractEquipment);
-		await tx.delete(contract);
-	},
-
 	// Right after the core's data, with its faker: the terms and the call-outs follow from it.
-	generate(draft, previous) {
+	generate(draft) {
 		const terms = generateContractTerms(
 			draft.faker,
 			draft.customers,
@@ -397,8 +392,7 @@ export default defineSeed<ContractsSeed>({
 		for (const term of terms) {
 			for (const id of term.equipmentIds) coverage.set(id, [...(coverage.get(id) ?? []), term]);
 		}
-		const contractOffset = previous.reduce((sum, earlier) => sum + earlier.terms.length, 0);
-		return { terms, coverage, contractOffset };
+		return { terms, coverage, contractId: draft.ids.claim(contract, terms.length) };
 	},
 
 	// The work a contract includes is free, like `orders.adjustPrices` in `server/index.ts`.
@@ -417,7 +411,7 @@ export default defineSeed<ContractsSeed>({
 	},
 
 	// A month's fee for each month of the customers' contracts, like `invoices.billableItems`.
-	billableItems({ terms, contractOffset }, { from, until }): SeedBillableItem[] {
+	billableItems({ terms, contractId }, { from, until }): SeedBillableItem[] {
 		return terms.flatMap((term) =>
 			contractMonths(
 				{ startsOn: toDay(term.startsOn), endsOn: toDay(term.endsOn) },
@@ -425,23 +419,19 @@ export default defineSeed<ContractsSeed>({
 				until,
 			).map((month) => ({
 				customerId: term.customerId,
-				...monthlyFee(
-					{ ...term, id: term.id + contractOffset },
-					month,
-					monthlyFeeText(term, month),
-				),
+				...monthlyFee({ ...term, id: contractId(term.id) }, month, monthlyFeeText(term, month)),
 			})),
 		);
 	},
 
-	async run({ tx, tenants, insertAll, count }) {
+	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
-			const { terms, contractOffset } = tenant.data;
-			const customerId = (term: { customerId: number }) => tenant.customerIds[term.customerId - 1];
+			const { terms, contractId } = tenant.data;
+			const customerId = (term: { customerId: number }) => tenant.customerId(term.customerId);
 			const contracts = terms.map(({ equipmentIds: _equipmentIds, ...term }) => ({
 				...term,
 				organizationId: tenant.id,
-				id: term.id + contractOffset,
+				id: contractId(term.id),
 				customerId: customerId(term),
 				startsOn: toDay(term.startsOn),
 				endsOn: toDay(term.endsOn),
@@ -450,12 +440,12 @@ export default defineSeed<ContractsSeed>({
 			const coverage = terms.flatMap((term) =>
 				term.equipmentIds.map((equipmentId) => ({
 					customerId: customerId(term),
-					contractId: term.id + contractOffset,
-					equipmentId: tenant.equipmentIds[equipmentId - 1],
+					contractId: contractId(term.id),
+					equipmentId: tenant.equipmentId(equipmentId),
 				})),
 			);
-			await insertAll(contracts, (chunk) => tx.insert(contract).values(chunk));
-			await insertAll(coverage, (chunk) => tx.insert(contractEquipment).values(chunk));
+			await insertRows(tx, contract, contracts);
+			await insertRows(tx, contractEquipment, coverage);
 			count("contracts", contracts);
 			count("coverage", coverage);
 		}

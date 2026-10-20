@@ -1,7 +1,8 @@
 import { en, Faker, nl } from "@faker-js/faker";
 
 import { formatCode } from "#lib/numbering.ts";
-import { addDays, DAY, now } from "#lib/server/db/seed/clock.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
+import { addDays, DAY, HOUR, now, today } from "#lib/server/db/seed/clock.ts";
 import {
 	defineSeed,
 	type SeedCollectors,
@@ -34,7 +35,6 @@ type InvoicedData = Pick<TenantData, "engineers" | "orders">;
 function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollectors) {
 	const random = new Faker({ locale: [nl, en] });
 	random.seed(seed);
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const engineers = new Map(data.engineers.map((e) => [e.id, e]));
 
 	/** An order's price, as `priceOrders()` makes it with the tenant's modules. */
@@ -107,7 +107,7 @@ function generateInvoices(data: InvoicedData, seed: number, collect: SeedCollect
 				...invoice,
 				status: "void" as const,
 				paidOn: null,
-				voidedAt: new Date(invoice.createdAt.getTime() + 2 * 60 * 60 * 1000),
+				voidedAt: new Date(invoice.createdAt.getTime() + 2 * HOUR),
 			};
 			return [voided, invoice];
 		});
@@ -254,31 +254,24 @@ function generateCredits(invoices: SeedInvoice[], random: Faker, today: Date): S
 }
 
 export default defineSeed<InvoicedData>({
-	clear: async (tx) => {
-		await tx.delete(creditNoteLine);
-		await tx.delete(creditNote);
-		await tx.delete(invoiceLine);
-		await tx.delete(invoice);
-		await tx.delete(invoicingSettings);
-	},
-
 	// What the invoices follow from; they are made in `run()`, when every module has made its data
 	// and can be asked what it adds to prices and what it bills (the collectors).
 	generate: ({ engineers, orders }) => ({ engineers, orders }),
 
-	async run({ tx, tenants, insertAll, count }) {
-		// Ids are global, so each tenant's invoices (and their lines, and the credit notes) follow
-		// the ones before.
-		let offset = 0;
-		let lineOffset = 0;
-		let creditOffset = 0;
+	async run({ tx, tenants, ids, count }) {
 		for (const tenant of tenants) {
 			const { invoices, credits } = generateInvoices(tenant.data, tenant.seed, tenant.collect);
+			const invoiceId = ids.claim(invoice, invoices.length);
+			const lineId = ids.claim(
+				invoiceLine,
+				invoices.reduce((sum, row) => sum + row.lines.length, 0),
+			);
+			const creditNoteId = ids.claim(creditNote, credits.length);
 			const invoiceRows = invoices.map(({ lines: _lines, ...row }) => ({
 				...row,
 				organizationId: tenant.id,
-				id: row.id + offset,
-				customerId: tenant.customerIds[row.customerId - 1],
+				id: invoiceId(row.id),
+				customerId: tenant.customerId(row.customerId),
 				issuedOn: row.issuedOn && toDay(row.issuedOn),
 				dueOn: row.dueOn && toDay(row.dueOn),
 				paidOn: row.paidOn && toDay(row.paidOn),
@@ -290,27 +283,27 @@ export default defineSeed<InvoicedData>({
 					row.lines.map((line) => ({
 						...line,
 						organizationId: tenant.id,
-						invoiceId: row.id + offset,
-						orderId: line.orderId && tenant.orderIds[line.orderId - 1],
+						invoiceId: invoiceId(row.id),
+						orderId: line.orderId && tenant.orderId(line.orderId),
 					})),
 				)
-				.map((row, i) => ({ ...row, id: lineOffset + i + 1 }));
+				.map((row, i) => ({ ...row, id: lineId(i + 1) }));
 			/** The id of an invoice's line, by the invoice's draft id and the line's place on it. */
 			const lineIds = new Map<string, number>();
-			let next = lineOffset;
+			let next = 0;
 			for (const row of invoices) {
-				for (const [i] of row.lines.entries()) lineIds.set(`${row.id}:${i}`, ++next);
+				for (const [i] of row.lines.entries()) lineIds.set(`${row.id}:${i}`, lineId(++next));
 			}
 			const creditRows = credits.map((credit, i) => ({
-				id: creditOffset + i + 1,
+				id: creditNoteId(i + 1),
 				organizationId: tenant.id,
 				number: formatCode(
 					creditNoteNumberFormat,
 					i + 1,
 					(credit.issuedOn ?? credit.createdAt).getFullYear(),
 				),
-				customerId: tenant.customerIds[credit.customerId - 1],
-				invoiceId: credit.invoiceId && credit.invoiceId + offset,
+				customerId: tenant.customerId(credit.customerId),
+				invoiceId: credit.invoiceId && invoiceId(credit.invoiceId),
 				status: credit.status,
 				vatRate: 21,
 				reason: credit.reason,
@@ -322,30 +315,27 @@ export default defineSeed<InvoicedData>({
 				credit.lines.map(({ lineIndex, ...line }) => ({
 					...line,
 					organizationId: tenant.id,
-					creditNoteId: creditOffset + i + 1,
+					creditNoteId: creditNoteId(i + 1),
 					invoiceLineId:
 						credit.invoiceId && lineIndex !== null
 							? lineIds.get(`${credit.invoiceId}:${lineIndex}`)!
 							: null,
-					orderId: line.orderId && tenant.orderIds[line.orderId - 1],
+					orderId: line.orderId && tenant.orderId(line.orderId),
 				})),
 			);
 			const settings = [
 				{ organizationId: tenant.id, vatRate: 21, paymentTermDays: 30, billFrom: toDay(billFrom) },
 			];
-			await insertAll(invoiceRows, (chunk) => tx.insert(invoice).values(chunk));
-			await insertAll(lineRows, (chunk) => tx.insert(invoiceLine).values(chunk));
-			await insertAll(settings, (chunk) => tx.insert(invoicingSettings).values(chunk));
-			await insertAll(creditRows, (chunk) => tx.insert(creditNote).values(chunk));
-			await insertAll(creditLineRows, (chunk) => tx.insert(creditNoteLine).values(chunk));
+			await insertRows(tx, invoice, invoiceRows);
+			await insertRows(tx, invoiceLine, lineRows);
+			await insertRows(tx, invoicingSettings, settings);
+			await insertRows(tx, creditNote, creditRows);
+			await insertRows(tx, creditNoteLine, creditLineRows);
 			count("invoices", invoiceRows);
 			count("invoiceLines", lineRows);
 			count("invoicingSettings", settings);
 			count("creditNotes", creditRows);
 			count("creditNoteLines", creditLineRows);
-			offset += invoiceRows.length;
-			lineOffset += lineRows.length;
-			creditOffset += creditRows.length;
 		}
 	},
 });

@@ -6,12 +6,18 @@ import {
 	integer,
 	primaryKey,
 	real,
-	sqliteTable,
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { createdAt, moment, organizationId } from "#lib/server/db/columns.ts";
+import {
+	createdAt,
+	moment,
+	optionalTenantColumns,
+	optionalTenantRef,
+	tenantRef,
+	tenantTable,
+} from "#lib/server/db/columns.ts";
 import { customerSite, equipment, order } from "#lib/server/db/schema.ts";
 
 import {
@@ -33,11 +39,9 @@ import {
  * "Productielocatie" in Ede: its main connection's contract, solar panels, tariff and CO₂ factor,
  * and the time zone its days are counted in. One per customer site.
  */
-export const energySite = sqliteTable(
+export const energySite = tenantTable(
 	"energy_site",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		siteId: integer("site_id").notNull(),
 		/** E.g. "Riedel Ede — Productielocatie". */
 		name: text("name").notNull(),
@@ -55,21 +59,16 @@ export const energySite = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("energy_site_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_site_site").on(table.organizationId, table.siteId),
-		foreignKey({
-			columns: [table.organizationId, table.siteId],
-			foreignColumns: [customerSite.organizationId, customerSite.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.siteId, customerSite, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );
 
 /** A part of the site with a meter of its own, e.g. `Z-R61` "Vul- en inpakafdeling" on the ground floor. */
-export const energyZone = sqliteTable(
+export const energyZone = tenantTable(
 	"energy_zone",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		energySiteId: integer("energy_site_id").notNull(),
 		/** Unique in the site; what the readings name the zone by. */
 		code: text("code").notNull(),
@@ -81,45 +80,28 @@ export const energyZone = sqliteTable(
 		position: integer("position").notNull().default(0),
 	},
 	(table) => [
-		uniqueIndex("energy_zone_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_zone_site_id").on(table.energySiteId, table.id),
 		uniqueIndex("energy_zone_site_code").on(table.energySiteId, table.code),
 		index("energy_zone_site").on(table.organizationId, table.energySiteId),
-		foreignKey({
-			columns: [table.organizationId, table.energySiteId],
-			foreignColumns: [energySite.organizationId, energySite.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.energySiteId, energySite, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );
 
 /** What uses the power in a zone, e.g. "CO₂-compressor 1" (24.6 kW), maybe one of the units. */
-export const energyConsumer = sqliteTable(
+export const energyConsumer = tenantTable(
 	"energy_consumer",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		zoneId: integer("zone_id").notNull(),
 		name: text("name").notNull(),
 		ratedKw: real("rated_kw").notNull(),
-		equipmentId: integer("equipment_id"),
-		equipmentOrganizationId: text("equipment_organization_id"),
+		...optionalTenantColumns("equipment"),
 		position: integer("position").notNull().default(0),
 	},
 	(table) => [
 		index("energy_consumer_zone").on(table.organizationId, table.zoneId),
-		index("energy_consumer_equipment").on(table.equipmentOrganizationId, table.equipmentId),
-		foreignKey({
-			columns: [table.organizationId, table.zoneId],
-			foreignColumns: [energyZone.organizationId, energyZone.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.equipmentOrganizationId, table.equipmentId],
-			foreignColumns: [equipment.organizationId, equipment.id],
-		}).onDelete("set null"),
-		check(
-			"energy_consumer_equipment_tenant",
-			sql`${table.equipmentOrganizationId} is null or ${table.equipmentOrganizationId} = ${table.organizationId}`,
-		),
+		...optionalTenantRef(table, "equipment", equipment),
+		tenantRef(table, table.zoneId, energyZone, { onDelete: "cascade" }),
 	],
 );
 
@@ -127,11 +109,9 @@ export const energyConsumer = sqliteTable(
  * A door whose open time costs energy, e.g. `D-05` "Sectionaaldeur Dock 05" (11.4 kW lost while
  * open, an alert after 10 minutes) or a freezer's: in a zone, maybe one of the units.
  */
-export const energyDoor = sqliteTable(
+export const energyDoor = tenantTable(
 	"energy_door",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		energySiteId: integer("energy_site_id").notNull(),
 		zoneId: integer("zone_id").notNull(),
 		/** Unique in the site; what the door events name it by. */
@@ -144,34 +124,22 @@ export const energyDoor = sqliteTable(
 		thresholdMinutes: integer("threshold_minutes").notNull(),
 		insideC: real("inside_c"),
 		outsideC: real("outside_c"),
-		equipmentId: integer("equipment_id"),
-		equipmentOrganizationId: text("equipment_organization_id"),
+		...optionalTenantColumns("equipment"),
 	},
 	(table) => [
-		uniqueIndex("energy_door_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_door_site_code").on(table.energySiteId, table.code),
 		index("energy_door_site").on(table.organizationId, table.energySiteId),
 		index("energy_door_zone").on(table.energySiteId, table.zoneId),
-		index("energy_door_equipment").on(table.equipmentOrganizationId, table.equipmentId),
-		foreignKey({
-			columns: [table.organizationId, table.energySiteId],
-			foreignColumns: [energySite.organizationId, energySite.id],
-		}).onDelete("cascade"),
+		...optionalTenantRef(table, "equipment", equipment),
+		tenantRef(table, table.energySiteId, energySite, { onDelete: "cascade" }),
 		// A zone of its own site.
 		foreignKey({
 			columns: [table.energySiteId, table.zoneId],
 			foreignColumns: [energyZone.energySiteId, energyZone.id],
 		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.equipmentOrganizationId, table.equipmentId],
-			foreignColumns: [equipment.organizationId, equipment.id],
-		}).onDelete("set null"),
 		check("energy_door_threshold", sql`${table.thresholdMinutes} > 0`),
-		check(
-			"energy_door_equipment_tenant",
-			sql`${table.equipmentOrganizationId} is null or ${table.equipmentOrganizationId} = ${table.organizationId}`,
-		),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -179,10 +147,9 @@ export const energyDoor = sqliteTable(
  * only (a gateway's raw telegrams stay out of the app's database, which on Cloudflare is one
  * Durable Object); one row per zone and interval, which a resent interval replaces.
  */
-export const energyReading = sqliteTable(
+export const energyReading = tenantTable(
 	"energy_reading",
 	{
-		organizationId: organizationId(),
 		zoneId: integer("zone_id").notNull(),
 		start: moment("start").notNull(),
 		avgKw: real("avg_kw").notNull(),
@@ -192,18 +159,15 @@ export const energyReading = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.zoneId, table.start] }),
 		index("energy_reading_zone").on(table.organizationId, table.zoneId),
-		foreignKey({
-			columns: [table.organizationId, table.zoneId],
-			foreignColumns: [energyZone.organizationId, energyZone.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.zoneId, energyZone, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /** A door opening or closing, as its sensor reported it. */
-export const energyDoorEvent = sqliteTable(
+export const energyDoorEvent = tenantTable(
 	"energy_door_event",
 	{
-		organizationId: organizationId(),
 		doorId: integer("door_id").notNull(),
 		at: moment("at").notNull(),
 		open: integer("open", { mode: "boolean" }).notNull(),
@@ -211,19 +175,16 @@ export const energyDoorEvent = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.doorId, table.at, table.open] }),
 		index("energy_door_event_door").on(table.organizationId, table.doorId),
-		foreignKey({
-			columns: [table.organizationId, table.doorId],
-			foreignColumns: [energyDoor.organizationId, energyDoor.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.doorId, energyDoor, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /** A zone's alert thresholds ("Energie-alerts per zone"): max power and consumption per day. */
-export const energyThreshold = sqliteTable(
+export const energyThreshold = tenantTable(
 	"energy_threshold",
 	{
 		zoneId: integer("zone_id").primaryKey(),
-		organizationId: organizationId(),
 		enabled: integer("enabled", { mode: "boolean" }).notNull(),
 		maxKw: real("max_kw").notNull(),
 		/** Per day. */
@@ -231,11 +192,9 @@ export const energyThreshold = sqliteTable(
 	},
 	(table) => [
 		index("energy_threshold_zone").on(table.organizationId, table.zoneId),
-		foreignKey({
-			columns: [table.organizationId, table.zoneId],
-			foreignColumns: [energyZone.organizationId, energyZone.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.zoneId, energyZone, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /**
@@ -244,11 +203,9 @@ export const energyThreshold = sqliteTable(
  * opening; `../model.ts`). Its recommendation follows
  * from what it's about and is shown in the reader's language. Made into an order, then dealt with.
  */
-export const energyAlert = sqliteTable(
+export const energyAlert = tenantTable(
 	"energy_alert",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		energySiteId: integer("energy_site_id").notNull(),
 		zoneId: integer("zone_id").notNull(),
 		doorId: integer("door_id"),
@@ -261,38 +218,20 @@ export const energyAlert = sqliteTable(
 		/** When it happened: the interval's start, or when the door opened. */
 		at: moment("at").notNull(),
 		status: text("status", { enum: alertStatuses }).notNull().default("open"),
-		orderId: integer("order_id"),
-		/** The alert's tenant while it has an order (see `unit_condition`). */
-		orderOrganizationId: text("order_organization_id"),
+		/** The order it was made into, with the alert's tenant while it has one. */
+		...optionalTenantColumns("order"),
 		doneAt: moment("done_at"),
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("energy_alert_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("energy_alert_key").on(table.organizationId, table.key),
 		index("energy_alert_site").on(table.organizationId, table.energySiteId, table.status, table.at),
 		index("energy_alert_zone").on(table.organizationId, table.zoneId),
 		index("energy_alert_door").on(table.organizationId, table.doorId),
-		index("energy_alert_order").on(table.orderOrganizationId, table.orderId),
-		foreignKey({
-			columns: [table.organizationId, table.energySiteId],
-			foreignColumns: [energySite.organizationId, energySite.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.organizationId, table.zoneId],
-			foreignColumns: [energyZone.organizationId, energyZone.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.organizationId, table.doorId],
-			foreignColumns: [energyDoor.organizationId, energyDoor.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.orderOrganizationId, table.orderId],
-			foreignColumns: [order.organizationId, order.id],
-		}).onDelete("set null"),
-		check(
-			"energy_alert_order_tenant",
-			sql`${table.orderOrganizationId} is null or ${table.orderOrganizationId} = ${table.organizationId}`,
-		),
+		...optionalTenantRef(table, "order", order),
+		tenantRef(table, table.energySiteId, energySite, { onDelete: "cascade" }),
+		tenantRef(table, table.zoneId, energyZone, { onDelete: "cascade" }),
+		tenantRef(table, table.doorId, energyDoor, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );

@@ -11,16 +11,15 @@
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, eq } from "drizzle-orm";
 
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
-import { DAY, now } from "#lib/server/db/seed/clock.ts";
+import { DAY, MINUTE, now } from "#lib/server/db/seed/clock.ts";
 import { seedIntegrationToken } from "#lib/server/db/seed/integrations.ts";
 import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 
 import { type DemoDock, demoDockToken, demoSalvoDocks, mockupDocks } from "./demo.ts";
-import { dockEvent, dockEscalation, dockPosition, dockSession, dockState } from "./schema.ts";
-
-const minutes = 60 * 1000;
+import { dockPosition, dockSession, dockState } from "./schema.ts";
 
 const carriers = [
 	"AMEX Transport",
@@ -37,14 +36,6 @@ const plate = (random: Faker) =>
 	`${random.number.int({ min: 10, max: 99 })}-${random.string.alpha({ length: 3, casing: "upper" })}-${random.number.int({ min: 1, max: 9 })}`;
 
 export default defineSeed({
-	clear: async (tx) => {
-		await tx.delete(dockEscalation);
-		await tx.delete(dockEvent);
-		await tx.delete(dockSession);
-		await tx.delete(dockState);
-		await tx.delete(dockPosition);
-	},
-
 	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
@@ -92,12 +83,7 @@ export default defineSeed({
 					siteId: site.id,
 					code: `DOCK ${n}`,
 					position: `P-${n} · ${!salvo ? "Expeditie zuid" : south ? "Dockstraat zuid" : "Expeditie noord"}`,
-					locationId,
-					locationOrganizationId: locationId ? organizationId : null,
-					doorId,
-					doorOrganizationId: doorId ? organizationId : null,
-					levellerId,
-					levellerOrganizationId: levellerId ? organizationId : null,
+					...withTenantRefs(organizationId, { locationId, doorId, levellerId }),
 					scpCode: salvo ? `SCP-${n}` : null,
 					keyId: salvo ? `SLV-K${n}` : null,
 					keyStorageUnit: salvo ? (south ? "KS-ZUID-2" : "KS-NOORD-1") : null,
@@ -122,8 +108,7 @@ export default defineSeed({
 				const { facts, session } = current[dock.code as DemoDock];
 				// The history ends a while before the truck at it now arrived (or before now).
 				const firstOpen =
-					(now.getTime() - (session?.checkedInAt.epochMilliseconds ?? now.getTime())) / minutes +
-					10;
+					(now.getTime() - (session?.checkedInAt.epochMilliseconds ?? now.getTime())) / MINUTE + 10;
 				for (let day = 7; day >= 0; day--) {
 					const date = new Date(now.getTime() - day * DAY);
 					let start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 6, 0).getTime();
@@ -135,13 +120,13 @@ export default defineSeed({
 						0,
 					).getTime();
 					while (start < end) {
-						start += random.number.int({ min: 10, max: 70 }) * minutes;
+						start += random.number.int({ min: 10, max: 70 }) * MINUTE;
 						const length = random.number.int({ min: 20, max: 75 });
-						const checkedOut = start + length * minutes;
+						const checkedOut = start + length * MINUTE;
 						// Stop before the current one (or a while before now).
-						if (checkedOut > now.getTime() - firstOpen * minutes) break;
-						const lockedAt = start + random.number.int({ min: 1, max: 4 }) * minutes;
-						const doorOpen = lockedAt + random.number.int({ min: 1, max: 3 }) * minutes;
+						if (checkedOut > now.getTime() - firstOpen * MINUTE) break;
+						const lockedAt = start + random.number.int({ min: 1, max: 4 }) * MINUTE;
+						const doorOpen = lockedAt + random.number.int({ min: 1, max: 3 }) * MINUTE;
 						const longOne = random.datatype.boolean(0.08);
 						const openFor = Math.min(
 							length - 3,
@@ -149,8 +134,8 @@ export default defineSeed({
 								? random.number.int({ min: 40, max: 55 })
 								: random.number.int({ min: 10, max: 35 }),
 						);
-						const doorClose = doorOpen + openFor * minutes;
-						const slotStart = new Date(Math.floor(start / (15 * minutes)) * 15 * minutes);
+						const doorClose = doorOpen + openFor * MINUTE;
+						const slotStart = new Date(Math.floor(start / (15 * MINUTE)) * 15 * MINUTE);
 						sessions.push({
 							organizationId,
 							dockId: dock.id,
@@ -158,12 +143,12 @@ export default defineSeed({
 							plate: plate(random),
 							reference: `WB-${random.number.int({ min: 20_100, max: 20_415 })}`,
 							slotStart: toMoment(slotStart),
-							slotEnd: toMoment(new Date(slotStart.getTime() + 45 * minutes)),
+							slotEnd: toMoment(new Date(slotStart.getTime() + 45 * MINUTE)),
 							checkedInAt: toMoment(new Date(start)),
 							lockedAt: toMoment(new Date(lockedAt)),
 							doorOpenedAt: toMoment(new Date(doorOpen)),
 							doorClosedAt: toMoment(new Date(doorClose)),
-							unlockedAt: toMoment(new Date(doorClose + minutes)),
+							unlockedAt: toMoment(new Date(doorClose + MINUTE)),
 							checkedOutAt: toMoment(new Date(checkedOut)),
 							doorOpenSeconds: openFor * 60,
 						});
@@ -178,7 +163,7 @@ export default defineSeed({
 			await tx.insert(dockState).values(states);
 			count("dockStates", states);
 
-			// The organization's deletion takes it away again (the core's seed clears them).
+			// Deleting the organization (the next seed does) takes it away again.
 			await seedIntegrationToken(tx, {
 				organizationId,
 				moduleId: "docks",
