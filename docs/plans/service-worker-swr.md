@@ -103,7 +103,7 @@ with the same body never reached the page. Now:
 - **The cache's scope includes the app's version**, so a tab of a newer version never gets an older
   one's answers.
 - **The root layout acts on `updated`**: the next navigation loads the page afresh (SvelteKit's own
-  pattern), and a tab nobody has touched for an hour reloads by itself (`idle.ts`); either way the
+  pattern), and a tab nobody has touched for an hour reloads by itself (runed's `IsIdle`); either way the
   new page says the app was updated (`new-version.ts`).
 - **A new tab** always runs the newest version: the worker keeps no pages, so the page and the
   files it names come from the current deployment.
