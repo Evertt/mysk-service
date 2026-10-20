@@ -7,6 +7,8 @@
  * Deterministic: the same seed and day give the same data, so posting a seeded day again changes
  * nothing. Pure, plain Node too (no SvelteKit, no messages).
  */
+import { fromMomentSeconds, later, momentSeconds } from "#lib/dates.ts";
+
 import { INTERVAL_MINUTES } from "./model.ts";
 
 /** A zone as the simulation runs it: its typical working day's peak and consumption. */
@@ -204,8 +206,8 @@ export function simulateReadings(options: {
 	const { zones, from, to, timeZone, seed, speed } = options;
 	const lively = liveliness(speed);
 	const quarter = INTERVAL_MINUTES * 60;
-	const fromSeconds = Math.floor(from.epochMilliseconds / 1000);
-	const toSeconds = Math.floor(to.epochMilliseconds / 1000);
+	const fromSeconds = momentSeconds(from);
+	const toSeconds = momentSeconds(to);
 	const readings: SimulatedReading[] = [];
 	// Every interval whose end is after `from` and no later than `to`.
 	for (
@@ -214,7 +216,7 @@ export function simulateReadings(options: {
 		start += quarter
 	) {
 		if (start + quarter <= fromSeconds) continue;
-		const instant = Temporal.Instant.fromEpochMilliseconds(start * 1000);
+		const instant = fromMomentSeconds(start);
 		const local = instant.toZonedDateTimeISO(timeZone);
 		const day = local.toPlainDate().toString();
 		const hour = local.hour + (local.minute + INTERVAL_MINUTES / 2) / 60;
@@ -275,9 +277,6 @@ function withinHours(door: SimulatedDoor, at: Temporal.Instant, timeZone: string
 	return at;
 }
 
-const later = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) >= 0 ? a : b;
-
 /**
  * A door's events in `(from, to]` as its sensor would send them live, going on from its `state`
  * (its latest event; closed since `from` without one): each opening lasts as `openingMinutes()`
@@ -296,9 +295,7 @@ export function simulateDoorEvents(options: {
 }): SimulatedDoorEvent[] {
 	const { door, from, to, timeZone, seed, speed } = options;
 	// In whole seconds, as moments are stored.
-	const earliest = Temporal.Instant.fromEpochMilliseconds(
-		(Math.floor(from.epochMilliseconds / 1000) + 1) * 1000,
-	);
+	const earliest = fromMomentSeconds(momentSeconds(from) + 1);
 	const cycle = Math.max(3, door.cycleMinutes / liveliness(speed));
 	let state = options.state ?? { open: false, since: from };
 	const events: SimulatedDoorEvent[] = [];

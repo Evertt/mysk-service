@@ -9,6 +9,7 @@
  */
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 
+import { earlier, later, momentSeconds } from "#lib/dates.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -71,9 +72,6 @@ export async function ingestSites() {
 	}));
 }
 
-/** A moment as the database keeps it: whole seconds (`moment` in `#lib/server/db/columns.ts`). */
-const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
-
 /**
  * Stores `batch` in the current tenant (see above). Refuses (storing nothing) a site the tenant
  * hasn't, a 404, and codes the site hasn't (`UnknownCodes`).
@@ -109,7 +107,7 @@ export async function storeBatch(
 	const stored = await db.transaction(async (tx) => {
 		if (readings.length) {
 			// A resent interval replaces the one in: delete, then insert, by (zone, start).
-			const keys = JSON.stringify(readings.map((r) => [r.zoneId, seconds(r.start)]));
+			const keys = JSON.stringify(readings.map((r) => [r.zoneId, momentSeconds(r.start)]));
 			await tx
 				.delete(energyReading)
 				.where(
@@ -124,8 +122,8 @@ export async function storeBatch(
 		let added: typeof events = [];
 		if (events.length) {
 			const times = events.map((e) => e.at);
-			const earliest = times.reduce((a, b) => (Temporal.Instant.compare(a, b) <= 0 ? a : b));
-			const latest = times.reduce((a, b) => (Temporal.Instant.compare(a, b) >= 0 ? a : b));
+			const earliest = times.reduce(earlier);
+			const latest = times.reduce(later);
 			const existing = await tx
 				.select({
 					doorId: energyDoorEvent.doorId,
@@ -145,7 +143,7 @@ export async function storeBatch(
 					),
 				);
 			const key = (e: { doorId: number; at: Temporal.Instant; open: boolean }) =>
-				`${e.doorId}|${seconds(e.at)}|${e.open}`;
+				`${e.doorId}|${momentSeconds(e.at)}|${e.open}`;
 			const known = new Set(existing.map(key));
 			added = events.filter((e) => !known.has(key(e)));
 			if (added.length) await insertRows(tx, energyDoorEvent, added);

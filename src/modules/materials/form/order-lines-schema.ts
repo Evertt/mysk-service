@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { id } from "#lib/schema.ts";
+import { id, numberIn } from "#lib/schema.ts";
 
 import { fitsUnit } from "../model.ts";
 
@@ -19,8 +19,11 @@ export const orderLines = () =>
 			v.object({
 				materialId: id(m.materials_line_material_required),
 				quantity: v.pipe(
-					v.number(m.validation_quantity_required),
-					v.gtValue(0, m.validation_more_than_zero),
+					numberIn({
+						above: true,
+						message: m.validation_quantity_required,
+						tooLow: m.validation_more_than_zero,
+					}),
 					v.check((quantity) => fitsUnit(quantity, "m"), m.validation_two_decimals),
 				),
 			}),

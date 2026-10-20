@@ -39,6 +39,22 @@ export const startOfDay = (day: Temporal.PlainDate) =>
 /** The Monday of `day`'s week: weeks run from Monday to Sunday. */
 export const mondayOf = (day: Temporal.PlainDate) => day.subtract({ days: day.dayOfWeek - 1 });
 
+/** The earlier of two moments. */
+export const earlier = (a: Temporal.Instant, b: Temporal.Instant) =>
+	Temporal.Instant.compare(a, b) <= 0 ? a : b;
+
+/** The later of two moments. */
+export const later = (a: Temporal.Instant, b: Temporal.Instant) =>
+	Temporal.Instant.compare(a, b) >= 0 ? a : b;
+
+/** A moment as the database keeps it: whole seconds since 1970, UTC (`moment` in `#lib/server/db/columns.ts`). */
+export const momentSeconds = (moment: Temporal.Instant) =>
+	Math.floor(moment.epochMilliseconds / 1000);
+
+/** The moment `momentSeconds()` gave `seconds` for. */
+export const fromMomentSeconds = (seconds: number) =>
+	Temporal.Instant.fromEpochMilliseconds(seconds * 1000);
+
 /** Whether `value` is a time zone `Intl` knows, e.g. `Europe/Amsterdam`. */
 export function isTimeZone(value: unknown): value is string {
 	if (typeof value !== "string" || !value || value.length > 64) return false;

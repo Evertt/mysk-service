@@ -11,6 +11,7 @@ import {
 import { type Component, getAllContexts, type Snippet, untrack } from "svelte";
 
 import type { BadgeDisplay } from "#lib/i18n/labels.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 import EnumBadge from "../enum-badge.svelte";
 import AfterMount from "./after-mount.svelte";
@@ -158,7 +159,6 @@ export function createAppColumnHelper<TData extends RowData>() {
 			}: EnumColumnDef<TData, V>,
 		) => {
 			const named = (value: V) => (display ? display[value].label : label!(value));
-			const known = (value: string): value is V => (values as readonly string[]).includes(value);
 			return helper.accessor(
 				(typeof accessor === "function"
 					? accessor
@@ -190,7 +190,7 @@ export function createAppColumnHelper<TData extends RowData>() {
 							...(display?.[value].icon ? { icon: display[value].icon } : {}),
 						})),
 						...(clickFilter
-							? { clickFilter: (value: string) => (known(value) ? named(value) : value) }
+							? { clickFilter: (value: string) => (isOneOf(values, value) ? named(value) : value) }
 							: {}),
 						...meta,
 					},

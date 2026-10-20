@@ -9,6 +9,7 @@
  * Amounts in cents.
  */
 import type { NumberFormat } from "#lib/numbering.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 /**
  * How a product is sold: a set, one piece, or a pair ("per set", "per stuk", "per paar").
@@ -39,8 +40,7 @@ export const openShopOrderStatuses = [
 ] as const satisfies ShopOrderStatus[];
 
 /** Whether an order is still to be handled: not delivered or cancelled. */
-export const isOpenShopOrder = (status: ShopOrderStatus) =>
-	(openShopOrderStatuses as readonly ShopOrderStatus[]).includes(status);
+export const isOpenShopOrder = (status: ShopOrderStatus) => isOneOf(openShopOrderStatuses, status);
 
 /**
  * What the office can do with an order next.

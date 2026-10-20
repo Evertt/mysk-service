@@ -5,12 +5,9 @@
  */
 import * as v from "valibot";
 
-import { id, optionalId, text } from "#lib/schema.ts";
+import { hiddenInt, id, optionalId, text } from "#lib/schema.ts";
 
 import { maxQuantity, productUnits, shopOrderSteps } from "../model.ts";
-
-/** A whole number from a hidden field. */
-const whole = () => v.pipe(v.string(), v.transform(Number), v.integer());
 
 /** A number of a shop order, from a hidden field. */
 const orderNumber = v.pipe(v.string(), v.nonEmpty(), v.maxLength(32));
@@ -22,7 +19,7 @@ export const checkoutSchema = v.object({
 			v.array(
 				v.object({
 					productId: id(),
-					quantity: v.pipe(whole(), v.minValue(1), v.maxValue(maxQuantity)),
+					quantity: hiddenInt({ min: 1, max: maxQuantity }),
 				}),
 			),
 			v.maxLength(100),

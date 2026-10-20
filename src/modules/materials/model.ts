@@ -1,10 +1,11 @@
 /**
  * The materials module's model: units and quantities, stock levels, which orders hold stock, the
- * kinds of stock movement, and how materials are numbered. Isomorphic, without imports at runtime,
- * so the seed script can use it too.
+ * kinds of stock movement, and how materials are numbered. Isomorphic, so the seed script can use
+ * it too.
  */
 import type { OrderStatus } from "#lib/models.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 /** @labels materialUnit materialUnitSymbol */
 export const materialUnits = ["pcs", "m", "kg", "l"] as const;
@@ -59,8 +60,7 @@ const stockHoldingStatuses = [
 ] as const satisfies OrderStatus[];
 
 /** Whether an order with `status` holds its lines' stock. */
-export const holdsStock = (status: OrderStatus) =>
-	(stockHoldingStatuses as readonly OrderStatus[]).includes(status);
+export const holdsStock = (status: OrderStatus) => isOneOf(stockHoldingStatuses, status);
 
 /**
  * Why a material's stock changed: its opening balance, a delivery, a count that found a different

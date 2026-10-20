@@ -8,6 +8,7 @@
 import * as v from "valibot";
 
 import { integrationModules } from "#lib/modules/manifests.ts";
+import { id } from "#lib/schema.ts";
 import { requireModule } from "#lib/server/auth/index.ts";
 import {
 	integrationTokens,
@@ -43,7 +44,7 @@ export const createIntegrationToken = forManagers.form(
 export const revokeIntegrationToken = forManagers.form(
 	v.object({
 		module: moduleId,
-		id: v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1)),
+		id: id(),
 	}),
 	({ module, id }) => {
 		requireModule(module);

@@ -6,6 +6,7 @@ import * as v from "valibot";
  * copy of the one before) and change its rules. Closing a year is in `close.remote.ts`.
  */
 import { currentDay } from "#lib/dates.ts";
+import { year } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { rulesSchema } from "./form/rules-schema.ts";
@@ -13,9 +14,6 @@ import { yearField } from "./form/wallet-schema.ts";
 import { defaultCategoryRules, defaultTiers } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { addYear, programmeYears, rulesFor, saveRules, storedRules } from "./server/rules.ts";
-
-/** A year as the client asks for it. */
-const year = v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100));
 
 /** The years set up, latest first, and the one to add next. */
 export const getProgrammeYears = query(async () => {
@@ -33,7 +31,7 @@ export const getProgrammeYears = query(async () => {
  * A year's rules: its own if it's set up (`setUp`), else the ones it goes by (the latest year's
  * before it, `from`), else the ones a first year starts with.
  */
-export const getYearRules = query(year, async (wanted) => {
+export const getYearRules = query(year(), async (wanted) => {
 	const own = await storedRules(wanted);
 	const before = own ? undefined : await rulesFor(wanted);
 	const fallback = {

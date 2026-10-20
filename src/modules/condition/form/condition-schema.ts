@@ -1,17 +1,11 @@
 import * as v from "valibot";
 
-import { optionalId } from "#lib/schema.ts";
+import { optionalId, wholeIn } from "#lib/schema.ts";
 
 import { ADVICE_MAX, scoreLimits } from "../model.ts";
 
 /** A condition score in whole percents, 0–100. */
-const score = () =>
-	v.pipe(
-		v.number(m.condition_score_range),
-		v.integer(m.condition_score_range),
-		v.minValue(scoreLimits.min, m.condition_score_range),
-		v.maxValue(scoreLimits.max, m.condition_score_range),
-	);
+const score = () => wholeIn({ ...scoreLimits, message: m.condition_score_range });
 
 /** The advice that goes with it; none when empty. */
 export const advice = () =>

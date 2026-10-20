@@ -114,7 +114,8 @@ Server code has one way per recurring problem (`docs/agents/tenancy.md`, "One wa
 (`gated()` turns it into the form's issues or a 400), and remote files hold no transactions; a
 record is looked up with `unitBySerial()`, `customerByCode()` or `orderByNumber()`, deleted with
 `deleteAndLog()` or `defineRemoval()`, ordered with `nextPosition()`/`reorder()`, and its name
-checked with `nameTaken()` (`src/lib/server/records.ts`).
+checked with `nameTaken()` (`src/lib/server/records.ts`). A lookup done once per request is
+`perRequest(find)` (`#lib/server/per-request.ts`).
 
 Details and the shared server helpers: `docs/agents/tenancy.md`.
 
@@ -145,9 +146,17 @@ Before you change the schema, add a migration, or log a new subject or action: r
   `formatStopwatch(ms, { hours })`; `named-formats.spec.ts` refuses a copy), and show enum values
   with `label(kind, value)`: as a badge with `<EnumBadge display={…Display} value />`, as a table
   column with `column.enum()`.
+- Ask whether a value is one of a list's with `isOneOf(values, value)` (`#lib/one-of.ts`, which
+  narrows it), never a cast `.includes()` (`is-one-of.spec.ts`).
+- A schema takes its fields from `#lib/schema.ts`: a number in bounds is
+  `numberIn({ min, max, above, message })` or `wholeIn()`, from a hidden field `hiddenInt()`, a
+  year `year()`, an id `id()` (a command's `recordId()`), an email address `email()`; never hand-built from
+  `v.minValue()`, `v.integer()` and the like (`schema-helpers.spec.ts`).
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
   `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
   `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.
+  The earlier or later of two moments is `earlier(a, b)`/`later(a, b)`, a moment's whole seconds as
+  the database keeps them `momentSeconds(moment)` (back: `fromMomentSeconds(seconds)`).
 
 Before you add a message file, an enum kind, a plural or a format, or write Dutch copy: read
 `docs/agents/i18n.md`.

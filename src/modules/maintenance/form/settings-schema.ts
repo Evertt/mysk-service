@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { wholeIn } from "#lib/schema.ts";
+
 import { leadDayLimits } from "../model.ts";
 
 const leadDaysMessage = () => m.maintenance_lead_days_range(leadDayLimits);
@@ -8,11 +10,6 @@ const leadDaysMessage = () => m.maintenance_lead_days_range(leadDayLimits);
 export const settingsSchema = v.object({
 	// Unchecked boxes aren't submitted.
 	autoCreate: v.optional(v.boolean(), false),
-	leadDays: v.pipe(
-		v.number(leadDaysMessage),
-		v.integer(leadDaysMessage),
-		v.minValue(leadDayLimits.min, leadDaysMessage),
-		v.maxValue(leadDayLimits.max, leadDaysMessage),
-	),
+	leadDays: wholeIn({ ...leadDayLimits, message: leadDaysMessage }),
 	remindCustomers: v.optional(v.boolean(), false),
 });

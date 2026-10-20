@@ -17,6 +17,7 @@ import {
 	teamRoles,
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
+import { email } from "#lib/schema.ts";
 import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -220,16 +221,7 @@ export const removeMember = forManagers.form(v.object({ id: v.string() }), async
 
 export const invite = forManagers.form(
 	v.object({
-		email: v.config(
-			v.pipe(
-				v.string(),
-				v.trim(),
-				v.nonEmpty(m.settings_email_required),
-				v.email(m.settings_email_invalid),
-				v.toLowerCase(),
-			),
-			{ abortPipeEarly: true },
-		),
+		email: email(m.settings_email_required, m.settings_email_invalid),
 		role: v.picklist(teamRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {

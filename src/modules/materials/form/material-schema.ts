@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { cents, text } from "#lib/schema.ts";
+import { cents, numberIn, text } from "#lib/schema.ts";
 
 import { fitsUnit, materialUnits } from "../model.ts";
 
@@ -25,8 +25,7 @@ export const materialFields = {
 export const newMaterialFields = {
 	...materialFields,
 	stock: v.pipe(
-		v.number(m.materials_stock_required),
-		v.minValue(0, m.validation_not_negative),
+		numberIn({ message: m.materials_stock_required, tooLow: m.validation_not_negative }),
 		twoDecimals(),
 	),
 };
@@ -42,8 +41,11 @@ const note = () =>
 /** Stock received, e.g. a delivery. */
 export const receiveFields = {
 	quantity: v.pipe(
-		v.number(m.materials_quantity_required),
-		v.gtValue(0, m.validation_more_than_zero),
+		numberIn({
+			above: true,
+			message: m.materials_quantity_required,
+			tooLow: m.validation_more_than_zero,
+		}),
 		twoDecimals(),
 	),
 	note: note(),
@@ -52,8 +54,7 @@ export const receiveFields = {
 /** The stock as counted; the difference with the recorded stock is the adjustment. */
 export const countFields = {
 	counted: v.pipe(
-		v.number(m.materials_counted_required),
-		v.minValue(0, m.validation_not_negative),
+		numberIn({ message: m.materials_counted_required, tooLow: m.validation_not_negative }),
 		twoDecimals(),
 	),
 	note: text(m.materials_reason_required),

@@ -18,10 +18,11 @@
 	import type { LoggedType } from "#lib/activity/index.ts";
 	import type { RecordPoints } from "#lib/extensions/define.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { isOneOf } from "#lib/one-of.ts";
 
 	import ActivityCard from "./activity/activity-card.svelte";
 	import ChangedElsewhere from "./activity/changed-elsewhere.svelte";
-	import { isWatched } from "./activity/watched.ts";
+	import { watchedTypes } from "./activity/watched.ts";
 	import DeleteDialog from "./form/delete-dialog.svelte";
 	import { masonry, masonryGrid } from "./masonry.ts";
 	import PageHeader, { type Crumb } from "./page-header.svelte";
@@ -105,7 +106,7 @@
 	</PageHeader>
 </div>
 
-{#if isWatched(subject.type)}
+{#if isOneOf(watchedTypes, subject.type)}
 	<ChangedElsewhere type={subject.type} id={subject.id} />
 {/if}
 

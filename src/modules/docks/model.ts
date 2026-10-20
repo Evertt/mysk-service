@@ -6,6 +6,7 @@
  * from the facts (`dockState()`, `beaconOf()`), the door-open bands (`doorBand()`) and the board's
  * figures (`dockFigures()`). The event feed itself is described in `docs/salvo-events.md`.
  */
+import { later } from "#lib/dates.ts";
 
 /**
  * What the Salvo integration reports, see `docs/salvo-events.md`.
@@ -147,8 +148,7 @@ const seconds = (from: Temporal.Instant, to: Temporal.Instant) =>
  */
 function closeDoor(session: SessionFacts | null, since: Temporal.Instant, at: Temporal.Instant) {
 	if (!session) return null;
-	const from =
-		Temporal.Instant.compare(since, session.checkedInAt) < 0 ? session.checkedInAt : since;
+	const from = later(since, session.checkedInAt);
 	return {
 		...session,
 		doorClosedAt: at,

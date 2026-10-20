@@ -5,6 +5,7 @@
  * it. Their names and what they're for are translated labels: `label("memberRole", role)` and
  * `label("memberRoleDescription", role)` from `#lib/i18n/labels.ts`.
  */
+import { isOneOf } from "#lib/one-of.ts";
 
 /** @labels memberRole memberRoleDescription */
 export const memberRoles = ["owner", "admin", "member", "engineer", "customer"] as const;
@@ -33,7 +34,7 @@ export const managerRoles: MemberRole[] = ["owner", "admin"];
 
 /** Whether a member with these roles is a manager (an owner or an admin). */
 export const isManager = (roles: readonly string[]) =>
-	roles.some((role) => (managerRoles as string[]).includes(role));
+	roles.some((role) => isOneOf(managerRoles, role));
 
 /**
  * Whether a member with these roles (in their current organization) is a field engineer only:
@@ -41,8 +42,7 @@ export const isManager = (roles: readonly string[]) =>
  * works in the office.
  */
 export const isFieldEngineer = (roles: readonly string[]) =>
-	roles.includes("engineer") &&
-	!roles.some((role) => (officeRoles as readonly string[]).includes(role));
+	roles.includes("engineer") && !roles.some((role) => isOneOf(officeRoles, role));
 
 /**
  * Whether a member with these roles is a customer contact only: they use the customer portal at
@@ -50,5 +50,4 @@ export const isFieldEngineer = (roles: readonly string[]) =>
  * Someone who also has a role of the team works as that (being both is out of scope for now).
  */
 export const isCustomerContact = (roles: readonly string[]) =>
-	roles.includes("customer") &&
-	!roles.some((role) => (teamRoles as readonly string[]).includes(role));
+	roles.includes("customer") && !roles.some((role) => isOneOf(teamRoles, role));

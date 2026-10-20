@@ -24,6 +24,7 @@
 import "temporal-polyfill/global";
 import { and, eq } from "drizzle-orm";
 
+import { later } from "#lib/dates.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
@@ -75,7 +76,7 @@ async function claimInterval(moduleId: string, now: Temporal.Instant) {
 		// one ends, and what's left of the second is the next tick's.
 		const to = now.round({ smallestUnit: "second", roundingMode: "floor" });
 		const earliest = to.subtract(tickCap);
-		const from = Temporal.Instant.compare(row.lastTickAt, earliest) < 0 ? earliest : row.lastTickAt;
+		const from = later(row.lastTickAt, earliest);
 		if (Temporal.Instant.compare(from, to) >= 0) return null;
 		await tx
 			.update(simulation)

@@ -4,6 +4,7 @@
  * The client sends only a role's name; the account is fixed here, never taken from the request.
  */
 import { isManager, type ShellName, shellOf, shells } from "#lib/auth/index.ts";
+import { isOneOf } from "#lib/one-of.ts";
 import { demoOrganizations } from "#lib/server/db/demo.ts";
 
 import { type DemoRole, demoRoles } from "./demo-roles.ts";
@@ -47,9 +48,7 @@ const demoAccounts: Record<DemoRole, DemoAccount> = {
 
 /** The account a demo button signs in as, or `undefined` for anything that isn't a demo role. */
 export const demoAccount = (role: unknown): DemoAccount | undefined =>
-	typeof role === "string" && (demoRoles as readonly string[]).includes(role)
-		? demoAccounts[role as DemoRole]
-		: undefined;
+	isOneOf(demoRoles, role) ? demoAccounts[role] : undefined;
 
 /** The demo role whose account has `email`, or `undefined` for anyone else. */
 export const demoRoleOf = (email: string): DemoRole | undefined =>

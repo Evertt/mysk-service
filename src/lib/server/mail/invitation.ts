@@ -1,13 +1,8 @@
 import { invitedAsText } from "#lib/auth/index.ts";
 import { dateFormatter } from "#lib/i18n/index.ts";
 
+import { escapeHtml } from "./html.ts";
 import type { Mail } from "./send.ts";
-
-const escape = (text: string) =>
-	text.replace(
-		/[&<>"']/g,
-		(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-	);
 
 const expiry = dateFormatter({ dateStyle: "long", timeStyle: "short", timeZone: "UTC" });
 
@@ -45,12 +40,12 @@ export function invitationMail({
 		].join("\n"),
 		html: [
 			`<p>${m.auth_invite_mail_intro({
-				inviter: escape(inviter),
-				organization: `<strong>${escape(organization)}</strong>`,
-				role: escape(as),
+				inviter: escapeHtml(inviter),
+				organization: `<strong>${escapeHtml(organization)}</strong>`,
+				role: escapeHtml(as),
 			})}</p>`,
-			`<p><a href="${escape(url)}">${escape(m.auth_invite_mail_accept())}</a></p>`,
-			`<p>${escape(m.auth_invite_mail_until({ until }))}</p>`,
+			`<p><a href="${escapeHtml(url)}">${escapeHtml(m.auth_invite_mail_accept())}</a></p>`,
+			`<p>${escapeHtml(m.auth_invite_mail_until({ until }))}</p>`,
 		].join("\n"),
 	};
 }

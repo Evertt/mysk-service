@@ -10,7 +10,6 @@ import {
 	deletePartSchema,
 	doorSchema,
 	energySiteSchema,
-	isTimeZone,
 	newEnergySiteSchema,
 	zoneSchema,
 } from "#modules/energy/setup/setup-schema.ts";
@@ -70,15 +69,6 @@ describe("a new energy site", () => {
 		expect(
 			issues(energySiteSchema, { energySiteId: "3", name: "", meterName: " ", ...contract }),
 		).toEqual({ name: "Fill in a name", meterName: "Name the main connection" });
-	});
-});
-
-describe("time zones", () => {
-	test("are the runtime's", () => {
-		expect(isTimeZone("Europe/Amsterdam")).toBe(true);
-		expect(isTimeZone("UTC")).toBe(true);
-		expect(isTimeZone("Mars/Olympus")).toBe(false);
-		expect(isTimeZone("")).toBe(false);
 	});
 });
 

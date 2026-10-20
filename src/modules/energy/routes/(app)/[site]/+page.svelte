@@ -21,6 +21,7 @@
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import { isOneOf } from "#lib/one-of.ts";
 	import { formatCo2, formatFactor, formatKw, formatKwh } from "#modules/energy/display.ts";
 	import { getEnergyOverview, watchEnergy } from "#modules/energy/energy.remote.ts";
 	import { type Period, periods } from "#modules/energy/model.ts";
@@ -53,11 +54,8 @@
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]"> } = $props();
 
 	const siteId = $derived(Number(params.site));
-	const period: Period = $derived(
-		(periods as readonly string[]).includes(page.url.searchParams.get("period") ?? "")
-			? (page.url.searchParams.get("period") as Period)
-			: "day",
-	);
+	const asked = $derived(page.url.searchParams.get("period"));
+	const period: Period = $derived(isOneOf(periods, asked) ? asked : "day");
 	const scope = $derived(parseScope(page.url.searchParams.get("scope")));
 	const overview = $derived(await getEnergyOverview({ site: siteId, period }));
 	const site = $derived(overview.site);

@@ -5,7 +5,7 @@
 import * as v from "valibot";
 
 import { customerByCode } from "#lib/customers/server/index.ts";
-import { customerCode } from "#lib/schema.ts";
+import { customerCode, wholeIn } from "#lib/schema.ts";
 import { customer } from "#lib/server/db/schema.ts";
 
 import { query } from "./remote-functions.ts";
@@ -14,7 +14,7 @@ import { serviceHistory } from "./server/feed.ts";
 export const getServiceHistory = query(
 	v.object({
 		customer: v.nullable(customerCode()),
-		limit: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50)),
+		limit: wholeIn({ min: 1, max: 50 }),
 	}),
 	async (input) => {
 		let customerId: number | null = null;

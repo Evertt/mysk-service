@@ -1,16 +1,17 @@
 import * as v from "valibot";
 
 import { formatNumber, formatPercent } from "#lib/i18n/index.ts";
-import { cents, date, id, text } from "#lib/schema.ts";
+import { cents, date, id, numberIn, text, wholeIn } from "#lib/schema.ts";
 
 /** Days to pay: whole days, up to a year. */
 const days = () =>
-	v.pipe(
-		v.number(m.invoices_days_required),
-		v.integer(m.invoices_days_whole),
-		v.minValue(0, m.validation_not_negative),
-		v.maxValue(365, (issue) => m.invoices_days_max({ max: formatNumber(issue.requirement) })),
-	);
+	wholeIn({
+		max: 365,
+		message: m.invoices_days_required,
+		fraction: m.invoices_days_whole,
+		tooLow: m.validation_not_negative,
+		tooHigh: () => m.invoices_days_max({ max: formatNumber(365) }),
+	});
 
 /**
  * What to bill: completed orders and other modules' items (by reference), as checkboxes;
@@ -30,10 +31,11 @@ export const newInvoiceFields = {
 /** A line typed in on a draft, e.g. call-out costs or a goodwill credit. */
 export const lineFields = {
 	description: text(m.invoices_line_description_required),
-	quantity: v.pipe(
-		v.number(m.validation_quantity_required),
-		v.gtValue(0, m.validation_more_than_zero),
-	),
+	quantity: numberIn({
+		above: true,
+		message: m.validation_quantity_required,
+		tooLow: m.validation_more_than_zero,
+	}),
 	unitPrice: cents(m.invoices_unit_price_required),
 };
 
@@ -49,13 +51,12 @@ export const termsFields = {
 
 /** The organization's invoicing settings. */
 export const settingsFields = {
-	vatRate: v.pipe(
-		v.number(m.invoices_rate_required),
-		v.minValue(0, m.validation_not_negative),
-		v.maxValue(100, (issue) =>
-			m.invoices_rate_max({ max: formatPercent(issue.requirement, { basis: "percent" }) }),
-		),
-	),
+	vatRate: numberIn({
+		max: 100,
+		message: m.invoices_rate_required,
+		tooLow: m.validation_not_negative,
+		tooHigh: () => m.invoices_rate_max({ max: formatPercent(100, { basis: "percent" }) }),
+	}),
 	paymentTermDays: days(),
 	billFrom: date(m.invoices_bill_from_required),
 };
