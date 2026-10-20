@@ -12,11 +12,10 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { dayOf } from "#lib/dates.ts";
-	import { unitLine, unitModel, unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
-	import { SignOff, TypeLabel } from "#lib/orders/components.ts";
+	import { formatTime } from "#lib/i18n/index.ts";
+	import { SignOff, TypeLabel, WorkUnits } from "#lib/orders/components.ts";
 	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
@@ -95,45 +94,11 @@
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<p class="whitespace-pre-line">{order.description}</p>
-		{#if order.units.length === 1}
-			{@const [unit] = order.units}
-			<dl class="grid grid-cols-2 gap-4">
-				<DetailItem
-					label={m.portal_equipment()}
-					value={unit.name ? `${unit.name} · ${unitModel(unit)}` : unitModel(unit)}
-				/>
-				<DetailItem label={m.portal_serial_number()} value={unit.serialNumber} />
-				{#if unit.location}
-					<DetailItem label={m.portal_location()} value={unit.location} />
-				{/if}
-			</dl>
-		{:else if order.units.length}
-			<!-- In the order they're worked on, with where each one is. -->
-			<div class="flex flex-col gap-2">
-				<h2 class="text-sm font-medium text-muted-foreground">
-					{m.common_count_units({ count: order.units.length })}
-				</h2>
-				<ol class="flex flex-col divide-y rounded-md border" aria-label={m.portal_equipment()}>
-					{#each order.units as unit, index (unit.id)}
-						<li class="flex gap-3 px-3 py-2 text-sm">
-							<span class="w-6 shrink-0 text-right text-muted-foreground tabular-nums">
-								{formatNumber(index + 1)}
-							</span>
-							<div class="flex min-w-0 flex-col">
-								<span class="font-medium">{unitTitle(unit)}</span>
-								<span class="text-muted-foreground">
-									{unitLine(unit, {
-										category: unit.category,
-										// The site only when the units are at more than one.
-										site: data.sites.length > 1 ? unit.site.name : null,
-										location: unit.location,
-									})}
-								</span>
-							</div>
-						</li>
-					{/each}
-				</ol>
-			</div>
+		{#if order.units.length}
+			<WorkUnits
+				units={order.units}
+				href={(unit) => resolve("/(field)/my/equipment/[serial]", { serial: unit.serialNumber })}
+			/>
 		{:else}
 			<dl class="grid grid-cols-2 gap-4">
 				<DetailItem label={m.portal_equipment()} value={m.portal_new_installation()} />

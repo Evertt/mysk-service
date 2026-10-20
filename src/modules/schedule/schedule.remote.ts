@@ -2,9 +2,9 @@ import { and, asc, isNull, ne } from "drizzle-orm";
 import * as v from "valibot";
 
 import { mondayOf } from "#lib/dates.ts";
-import { type EngineerSpecialty, openOrderStatuses } from "#lib/models.ts";
+import { openOrderStatuses } from "#lib/models.ts";
 import {
-	type ListedUnit,
+	listedUnitsOf,
 	type OrderPlan,
 	transitionOrder,
 	withFirstUnit,
@@ -13,14 +13,7 @@ import { date, id } from "#lib/schema.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import {
-	customer,
-	engineer,
-	equipment,
-	equipmentCategory,
-	order,
-	orderUnit,
-} from "#lib/server/db/schema.ts";
+import { customer, engineer, equipmentCategory, order } from "#lib/server/db/schema.ts";
 import { inDays, refreshRequested } from "#lib/server/lists/index.ts";
 import { live, readAt } from "#lib/server/live.ts";
 
@@ -63,39 +56,22 @@ const engineers = () =>
  * schedule dialog lists first. One query for both.
  */
 async function forBoard<T extends { id: number }>(orders: T[]) {
-	const units = new Map(
-		orders.map((row) => [
-			row.id,
-			[] as { unit: ListedUnit; specialty: EngineerSpecialty | null }[],
-		]),
+	const units = await listedUnitsOf(
+		orders.map((row) => row.id),
+		{ columns: { specialty: equipmentCategory.specialty } },
 	);
-	if (orders.length) {
-		const rows = await db
-			.select({
-				orderId: orderUnit.orderId,
-				specialty: equipmentCategory.specialty,
-				id: equipment.id,
-				serialNumber: equipment.serialNumber,
-				name: equipment.name,
-				manufacturer: equipment.manufacturer,
-				model: equipment.model,
-			})
-			.from(orderUnit)
-			.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-			.where(and(inList(orderUnit.orderId, [...units.keys()]), inTenant(orderUnit)))
-			.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
-		for (const { orderId, specialty, ...unit } of rows) {
-			units.get(orderId)?.push({ unit, specialty });
-		}
-	}
 	return orders.map((row) => {
 		const own = units.get(row.id) ?? [];
+		// As `withFirstUnit()` has it, for the card.
+		const [first] = own.map((unit) => {
+			const { specialty: _, ...listed } = unit;
+			return listed;
+		});
 		return {
 			...row,
-			unit: own[0]?.unit ?? null,
+			unit: first ?? null,
 			unitCount: own.length,
-			specialties: own.map((each) => each.specialty),
+			specialties: own.map((unit) => unit.specialty),
 		};
 	});
 }

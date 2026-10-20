@@ -6,9 +6,16 @@
  * isn't the work record stays with each caller: the order's own columns, its customer and request,
  * prices, tags, history and checklists.
  */
-import { and, asc, type Column, eq, type GetColumnData, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 
 import { firstName } from "#lib/engineers/index.ts";
+import {
+	type SiteOf,
+	siteColumnsOf,
+	type UnitAudience,
+	unitColumns,
+	type UnitOf,
+} from "#lib/equipment/server/index.ts";
 import {
 	atSites,
 	type CustomerAccess,
@@ -21,17 +28,17 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
+	customer,
 	customerSite,
 	engineer,
 	equipment,
-	equipmentCategory,
-	equipmentLocation,
 	order,
 	orderNote,
 	orderSignoff,
-	orderUnit,
 	user,
 } from "#lib/server/db/schema.ts";
+
+import { listedUnitsOf } from "./units.ts";
 
 /** What an audience sees of the work record. */
 interface Policy {
@@ -41,30 +48,21 @@ interface Policy {
 	collectedBy: boolean;
 	/** The order's engineer: by their full name, their first name only, or not at all. */
 	engineer: "full" | "first" | "omit";
-	/** Of a site, what's needed on it (contacts, time slot, access) or only its address. */
-	site: "onSite" | "address";
-	/** Until when each unit is under warranty. */
-	warranty: boolean;
+	/**
+	 * Its units and their sites as which audience sees them (`readUnits()`'s policy): the office's
+	 * (with the sites' `onSite` columns and the warranty), the engineer's (`onSite`, no warranty) or
+	 * the customer's (the sites' address only).
+	 */
+	units: UnitAudience;
 }
 
 /** What each audience sees of an order's work record: the only place it's declared. */
 const audiences = {
-	office: { notes: true, collectedBy: true, engineer: "full", site: "onSite", warranty: true },
-	engineer: { notes: true, collectedBy: false, engineer: "omit", site: "onSite", warranty: false },
-	customer: {
-		notes: false,
-		collectedBy: false,
-		engineer: "first",
-		site: "address",
-		warranty: false,
-	},
-	workOrder: {
-		notes: false,
-		collectedBy: false,
-		engineer: "full",
-		site: "address",
-		warranty: false,
-	},
+	office: { notes: true, collectedBy: true, engineer: "full", units: "office" },
+	engineer: { notes: true, collectedBy: false, engineer: "omit", units: "engineer" },
+	customer: { notes: false, collectedBy: false, engineer: "first", units: "customer" },
+	// Handed to the customer: their view of its units.
+	workOrder: { notes: false, collectedBy: false, engineer: "full", units: "customer" },
 } as const satisfies Record<string, Policy>;
 
 export type Audience = keyof typeof audiences;
@@ -106,76 +104,12 @@ export const customerWork = (access: CustomerAccess, number: string) =>
 export const printedWorkOrder = (where: SQL, unitsAt: SQL | undefined) =>
 	scope("workOrder", where, unitsAt);
 
-/** Where a site is. */
-const addressColumns = {
-	id: customerSite.id,
-	name: customerSite.name,
-	address: customerSite.address,
-	postalCode: customerSite.postalCode,
-	city: customerSite.city,
-} as const;
-
-/** A site's columns, by what the audience sees of it. */
-const siteColumns = {
-	address: addressColumns,
-	/** What the engineer needs of it: how to get there and in, and when to come. */
-	onSite: {
-		...addressColumns,
-		country: customerSite.country,
-		contactName: customerSite.contactName,
-		contactPhone: customerSite.contactPhone,
-		contactEmail: customerSite.contactEmail,
-		contactChannel: customerSite.contactChannel,
-		preferredDay: customerSite.preferredDay,
-		slotStart: customerSite.slotStart,
-		slotEnd: customerSite.slotEnd,
-		priority: customerSite.priority,
-		accessNotes: customerSite.accessNotes,
-	},
-} as const;
-
-type SiteDetail = keyof typeof siteColumns;
-
-/** A site as the audience sees it. */
-type Site<D extends SiteDetail> = {
-	[K in keyof (typeof siteColumns)[D]]: (typeof siteColumns)[D][K] extends Column
-		? GetColumnData<(typeof siteColumns)[D][K]>
-		: never;
-};
-
-/** The orders' units the scope sees, each order's in its order, at their sites. */
-const unitsOf = <D extends SiteDetail>(orderIds: number[], unitsAt: SQL | undefined, detail: D) =>
+/** The sites of these customers as `audience` sees them, for the orders without units. */
+const customerSitesOf = (customerIds: number[], audience: UnitAudience) =>
 	db
-		.select({
-			orderId: orderUnit.orderId,
-			id: equipment.id,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-			serialNumber: equipment.serialNumber,
-			status: equipment.status,
-			warrantyUntil: equipment.warrantyUntil,
-			category: equipmentCategory.name,
-			/** Where it is at the site, if that needs saying. */
-			location: equipmentLocation.name,
-			site: siteColumns[detail] as (typeof siteColumns)["onSite"],
-		})
-		.from(orderUnit)
-		.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
-		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
-		.where(and(inList(orderUnit.orderId, orderIds), inTenant(orderUnit), unitsAt))
-		.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
-
-/** The sites of these customers, for the orders without units. */
-const customerSitesOf = <D extends SiteDetail>(customerIds: number[], detail: D) =>
-	db
-		.select({
-			customerId: customerSite.customerId,
-			site: siteColumns[detail] as (typeof siteColumns)["onSite"],
-		})
+		.select({ customerId: customerSite.customerId, site: siteColumnsOf(audience) })
 		.from(customerSite)
+		.innerJoin(...tenantJoin(customer, customerSite.customerId))
 		.where(and(inList(customerSite.customerId, customerIds), inTenant(customerSite)));
 
 /**
@@ -229,21 +163,20 @@ function grouped<K, V>(entries: Iterable<readonly [K, V]>) {
 const byOrder = <T extends { orderId: number }>(rows: T[]) =>
 	grouped(rows.map(({ orderId, ...row }) => [orderId, row] as const));
 
-type Unit = Omit<Awaited<ReturnType<typeof unitsOf>>[number], "orderId">;
 type Note = Omit<Awaited<ReturnType<typeof notesOf>>[number], "orderId">;
 type Signoff = Omit<Awaited<ReturnType<typeof signoffsOf>>[number], "orderId" | "collectedBy">;
 
 type PolicyOf<A extends Audience> = (typeof audiences)[A];
 
-/** What audience `A` doesn't see of a unit, besides its site's detail. */
-type Withheld<A extends Audience> = PolicyOf<A>["warranty"] extends true ? never : "warrantyUntil";
+/** Whose view of the units audience `A` has. */
+type UnitsOf<A extends Audience> = PolicyOf<A>["units"];
 
 /** The work record as audience `A` sees it: a key its table says no to isn't in the type. */
 export type WorkRecord<A extends Audience> = {
 	/** In their order, each at its site. */
-	units: (Omit<Unit, "site" | Withheld<A>> & { site: Site<PolicyOf<A>["site"]> })[];
+	units: UnitOf<UnitsOf<A>>[];
 	/** Where the work is: the units' sites, or the customer's only one for an order without units. */
-	sites: Site<PolicyOf<A>["site"]>[];
+	sites: SiteOf<UnitsOf<A>>[];
 	signoff:
 		| (Signoff & (PolicyOf<A>["collectedBy"] extends true ? { collectedBy: string | null } : {}))
 		| null;
@@ -279,8 +212,8 @@ export async function readWorkRecords<A extends Audience>(
 	if (!found.length) return new Map();
 	const ids = found.map((one) => one.id);
 	const [units, customerSites, notes, signoffs] = await Promise.all([
-		unitsOf(ids, scope.unitsAt, policy.site).then(byOrder),
-		customerSitesOf([...new Set(found.map((one) => one.customerId))], policy.site).then((rows) =>
+		listedUnitsOf(ids, { columns: unitColumns(policy.units), where: scope.unitsAt }),
+		customerSitesOf([...new Set(found.map((one) => one.customerId))], policy.units).then((rows) =>
 			grouped(rows.map((row) => [row.customerId, row.site] as const)),
 		),
 		policy.notes ? notesOf(ids).then(byOrder) : undefined,
@@ -296,12 +229,7 @@ export async function readWorkRecords<A extends Audience>(
 				signoff = rest;
 			}
 			const record: Record<string, unknown> = {
-				units: policy.warranty
-					? own
-					: own.map((unit) => {
-							const { warrantyUntil: _, ...shown } = unit;
-							return shown;
-						}),
+				units: own,
 				sites: sitesOf(own, customerSites.get(one.customerId) ?? []),
 				signoff,
 			};

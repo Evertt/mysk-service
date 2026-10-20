@@ -76,10 +76,12 @@ printed work order (`loadWorkOrder`); each reads its own header beside it (the o
 customer, the request, prices, tags, history, checklists), on the scope's `where`.
 
 - **Who sees what** is the `audiences` table, the only place it's declared: `office` (the notes,
-  who in the office collected the sign-off, the engineer in full, the site's `onSite` columns),
-  `engineer` (the notes, not who collected it, no engineer: it's them), `customer` (no notes, the
-  engineer by first name, the site's address) and `workOrder` (no notes, the engineer in full, the
-  address); only the office sees a unit's warranty date. A key the table says no to isn't in
+  who in the office collected the sign-off, the engineer in full), `engineer` (the notes, not who
+  collected it, no engineer: it's them), `customer` (no notes, the engineer by first name) and
+  `workOrder` (no notes, the engineer in full). Its units and their sites are as the units'
+  audience it names sees them (`units`, see "Units and locations" below): the office's and the
+  engineer's with the sites' `onSite` columns, the customer's and the printed work order's with the
+  address; only the office sees a unit's warranty date. A key the table says no to isn't in
   `WorkRecord<A>`'s type: a customer's record has no `notes`. A new column a portal mustn't see is a key in the table, not a select of its own; a key
   that doesn't change the record's shape (prices) doesn't belong there.
 - **A scope** finds the order and names its audience, and only these make one: `officeOrder(number)`
@@ -91,7 +93,27 @@ customer, the request, prices, tags, history, checklists), on the scope's `where
   answers them by number (`getOrder`, which the order's page and its hover card share).
 - **Sites**: the units' distinct sites, or for an order without units the customer's site when it
   has just one, else none, for every audience.
-- **Showing it**: `<SignOff signoff />` ("Signed off by <signer> on <date>", both signatures side
+- **Showing it**: `<WorkUnits units href? showSite? />` (`#lib/orders/components.ts`) lays the
+  units out in every shell, each a `<UnitRow>` (`#lib/equipment/components.ts`) linked to its page
+  in the shell (`href`), the office's titled by `EquipmentLink` with its warranty below (snippets);
+  `<SignOff signoff />` ("Signed off by <signer> on <date>", both signatures side
   by side, "collected by" when the sign-off has it) and `<NotesList notes empty? footer? />`, in
   `#lib/orders/components.ts`; a unit's line under its title is `unitLine(unit, { category, site,
 location })` (`#lib/equipment/index.ts`), the extras the page shows, always in that order.
+
+## Units and locations
+
+A unit or location read for a page is read as its audience sees it, beside the work record:
+`readUnits(scope, where?)` and `readLocation(scope, id)` (`src/lib/equipment/server/units.ts`, in
+`#lib/equipment/server/index.ts`). Their `audiences` table says what each sees: the office the
+sites' `onSite` columns with their customer, the warranty and a location's QR token; the engineer
+the `onSite` columns and the customer; the customer's contact the sites' address. The scopes pick
+the rows: `officeUnits()` and `engineerUnits()` (the tenant's), `customerUnits(access)` (the
+customer's, at the contact's sites: `ofCustomer()`, `atSites()`). `UnitOf<A>` is the row's type,
+without the keys the table says no to.
+
+The units of a batch of orders are `listedUnitsOf(orderIds, options?)` (`#lib/orders/server`): what
+the lists show, plus `columns` (from the unit, its category, site and location) and `where` (on
+`equipment`); `listedUnitsOf(ids, seenBy(scope))` reads them as the scope's audience sees them, as
+the customer portal's lists and the work record do. Never a select of `orderUnit` joined to
+`equipment` of a page's own. One-line addresses are `siteAddressLine(site)` (`#lib/customers`).

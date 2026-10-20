@@ -5,12 +5,12 @@
 	warranty on the day the order was made. "New installation" for an order without units.
 -->
 <script lang="ts">
-	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { EquipmentLink, WarrantyBadge } from "#lib/equipment/components.ts";
-	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
+	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import type { getOrder } from "../order.remote.ts";
+	import WorkUnits from "../ui/work-units.svelte";
 
 	let {
 		order,
@@ -28,27 +28,17 @@
 	</Card.Header>
 	<Card.Content>
 		{#if order.units.length}
-			<ol class="flex flex-col divide-y" aria-label={m.orders_units()}>
-				{#each order.units as unit (unit.id)}
-					<li class="flex flex-col gap-1 py-3 text-sm first:pt-0 last:pb-0">
-						<div class="flex flex-wrap items-center justify-between gap-2">
-							<EquipmentLink serialNumber={unit.serialNumber}>{unitTitle(unit)}</EquipmentLink>
-							<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
-						</div>
-						<p class="text-muted-foreground">
-							{unitLine(unit, {
-								category: unit.category,
-								site: unit.site.name,
-								location: unit.location,
-							})}
-						</p>
-						<p class="flex flex-wrap items-center gap-2 text-muted-foreground">
-							{m.orders_warranty_until({ date: formatDate(unit.warrantyUntil) })}
-							<WarrantyBadge until={unit.warrantyUntil} at={order.createdAt} />
-						</p>
-					</li>
-				{/each}
-			</ol>
+			<WorkUnits units={order.units} showSite>
+				{#snippet title(unit)}
+					<EquipmentLink serialNumber={unit.serialNumber}>{unitTitle(unit)}</EquipmentLink>
+				{/snippet}
+				{#snippet children(unit)}
+					<p class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+						{m.orders_warranty_until({ date: formatDate(unit.warrantyUntil) })}
+						<WarrantyBadge until={unit.warrantyUntil} at={order.createdAt} />
+					</p>
+				{/snippet}
+			</WorkUnits>
 		{:else}
 			<p class="text-sm text-muted-foreground">{m.orders_equipment_unregistered()}</p>
 		{/if}

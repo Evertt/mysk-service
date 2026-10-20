@@ -11,34 +11,35 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, gte, isNotNull, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
+import { siteColumns } from "#lib/customers/server/index.ts";
+import {
+	customerUnits,
+	readLocation,
+	readLocations,
+	readUnits,
+	seenBy,
+} from "#lib/equipment/server/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { doneOrderStatuses, pendingOrderStatuses, reportUrgencies } from "#lib/models.ts";
-import { customerWork, onUnit, readWorkRecord, requestOrder } from "#lib/orders/server/index.ts";
+import {
+	customerWork,
+	listedUnitsOf,
+	onUnit,
+	readWorkRecord,
+	requestOrder,
+} from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
 import {
-	atSites,
 	auth,
 	currentCustomer,
 	currentTenant,
 	type CustomerAccess,
 	customerOrders,
-	inTenant,
-	ofCustomer,
-	seesSite,
-	tenantJoin,
 	sameTenant,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import {
-	customerSite,
-	equipment,
-	equipmentCategory,
-	equipmentLocation,
-	order,
-	orderRequest,
-	orderUnit,
-} from "#lib/server/db/schema.ts";
+import { customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forAnyone, forCustomers } from "#lib/server/remote-functions.ts";
@@ -79,71 +80,15 @@ const selectOrders = () =>
 			and(eq(orderRequest.orderId, order.id), sameTenant(orderRequest, order)),
 		);
 
-/** A unit as the portal shows it: what it's called, what it is and where. */
-const unitColumns = {
-	id: equipment.id,
-	serialNumber: equipment.serialNumber,
-	name: equipment.name,
-	manufacturer: equipment.manufacturer,
-	model: equipment.model,
-	status: equipment.status,
-	category: equipmentCategory.name,
-	siteId: equipment.siteId,
-	site: customerSite.name,
-	locationId: equipment.locationId,
-	location: equipmentLocation.name,
-};
-
-/** The customer's units for which `where` holds that the contact sees, with where they are. */
-const unitsWhere = (access: CustomerAccess, where?: SQL) =>
-	db
-		.select(unitColumns)
-		.from(equipment)
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
-		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
-		.where(and(ofCustomer(access, equipment), atSites(access, equipment.siteId), where))
-		.orderBy(
-			asc(customerSite.name),
-			asc(equipment.name),
-			asc(equipment.manufacturer),
-			asc(equipment.serialNumber),
-		);
-
-type PortalUnit = Awaited<ReturnType<typeof unitsWhere>>[number];
-
-/** The units of these orders the contact sees, in their order, by order id. */
-async function unitsOfOrders(access: CustomerAccess, orderIds: number[]) {
-	const units = new Map<number, PortalUnit[]>(orderIds.map((orderId) => [orderId, []]));
-	if (!orderIds.length) return units;
-	const rows = await db
-		.select({ orderId: orderUnit.orderId, ...unitColumns })
-		.from(orderUnit)
-		.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
-		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
-		.where(
-			and(
-				inList(orderUnit.orderId, orderIds),
-				ofCustomer(access, orderUnit),
-				atSites(access, equipment.siteId),
-			),
-		)
-		.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
-	for (const { orderId, ...unit } of rows) units.get(orderId)?.push(unit);
-	return units;
-}
-
 /** The customer's orders that `where` picks and the contact sees, newest first, with their units. */
 async function ordersWhere(access: CustomerAccess, where?: SQL, limit = 200) {
 	const rows = await selectOrders()
 		.where(and(customerOrders(access), where))
 		.orderBy(desc(order.createdAt), desc(order.id))
 		.limit(limit);
-	const units = await unitsOfOrders(
-		access,
+	const units = await listedUnitsOf(
 		rows.map((row) => row.id),
+		seenBy(customerUnits(access)),
 	);
 	return rows.map((row) => ({ ...row, units: units.get(row.id) ?? [] }));
 }
@@ -203,41 +148,20 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
  * order the office keeps them.
  */
 export const getPortalSites = forCustomers.query(async () => {
-	const access = await currentCustomer();
+	const scope = customerUnits(await currentCustomer());
 	const [sites, locations, units] = await Promise.all([
 		db
-			.select({
-				id: customerSite.id,
-				name: customerSite.name,
-				address: customerSite.address,
-				postalCode: customerSite.postalCode,
-				city: customerSite.city,
-			})
+			.select(siteColumns.address)
 			.from(customerSite)
-			.where(and(ofCustomer(access, customerSite), atSites(access, customerSite.id)))
+			.where(scope.sites)
 			.orderBy(asc(customerSite.name)),
-		db
-			.select({
-				id: equipmentLocation.id,
-				name: equipmentLocation.name,
-				siteId: equipmentLocation.siteId,
-			})
-			.from(equipmentLocation)
-			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-			.where(
-				and(
-					inTenant(equipmentLocation),
-					ofCustomer(access, customerSite),
-					atSites(access, equipmentLocation.siteId),
-				),
-			)
-			.orderBy(asc(equipmentLocation.position)),
-		unitsWhere(access),
+		readLocations(scope),
+		readUnits(scope),
 	]);
 	return sites.map((site) => ({
 		...site,
 		locations: locations.filter((location) => location.siteId === site.id),
-		units: units.filter((unit) => unit.siteId === site.id),
+		units: units.filter((unit) => unit.site.id === site.id),
 	}));
 });
 
@@ -248,7 +172,7 @@ export const getPortalSites = forCustomers.query(async () => {
 export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const unit = orNotFound(
-		await unitsWhere(access, eq(equipment.serialNumber, serialNumber)),
+		await readUnits(customerUnits(access), eq(equipment.serialNumber, serialNumber)),
 		m.client_unit_not_found({ serial: serialNumber }),
 	);
 	const orders = await ordersWhere(access, onUnit(unit.id), 50);
@@ -256,32 +180,12 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 });
 
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
-export const getPortalLocation = forCustomers.query(id(), async (locationId) => {
-	const access = await currentCustomer();
-	const location = orNotFound(
-		await db
-			.select({
-				id: equipmentLocation.id,
-				name: equipmentLocation.name,
-				description: equipmentLocation.description,
-				siteId: equipmentLocation.siteId,
-				site: customerSite.name,
-			})
-			.from(equipmentLocation)
-			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-			.where(
-				and(
-					eq(equipmentLocation.id, locationId),
-					inTenant(equipmentLocation),
-					ofCustomer(access, customerSite),
-					atSites(access, equipmentLocation.siteId),
-				),
-			),
+export const getPortalLocation = forCustomers.query(id(), async (locationId) =>
+	orNotFound(
+		await readLocation(customerUnits(await currentCustomer()), locationId),
 		m.client_location_not_found(),
-	);
-	const units = await unitsWhere(access, eq(equipment.locationId, location.id));
-	return { location, units };
-});
+	),
+);
 
 // --- Reporting a breakdown -----------------------------------------------------------------
 
@@ -308,11 +212,8 @@ export const reportBreakdown = forCustomers.form(
 				),
 			);
 		}
-		const [unit] = await db
-			.select({ id: equipment.id, siteId: equipment.siteId })
-			.from(equipment)
-			.where(and(eq(equipment.id, input.unitId), ofCustomer(access, equipment)));
-		if (!unit || !seesSite(access, unit.siteId)) {
+		const [unit] = await readUnits(customerUnits(access), eq(equipment.id, input.unitId));
+		if (!unit) {
 			invalid(issue.unitId(m.client_report_unit_unknown()));
 		}
 		const created = await db.transaction((tx) =>

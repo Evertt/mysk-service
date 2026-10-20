@@ -6,8 +6,9 @@
 	import { resolve } from "$app/paths";
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
+	import { UnitRow } from "#lib/equipment/components.ts";
+
 	import { getPortalLocation } from "../../client.remote.ts";
-	import UnitRow from "../../unit-row.svelte";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -23,7 +24,7 @@
 <header class="flex flex-col gap-1">
 	<h1 class="text-2xl font-semibold tracking-tight">{location.name}</h1>
 	<p class="text-sm text-muted-foreground">
-		{[location.site, location.description].filter(Boolean).join(" · ")}
+		{[location.site.name, location.description].filter(Boolean).join(" · ")}
 	</p>
 </header>
 
@@ -34,12 +35,16 @@
 			{m.client_report_here()}
 		</Button>
 	</div>
-	<Card.Root class="py-0">
-		<div class="flex flex-col divide-y">
+	<Card.Root>
+		<Card.Content class="flex flex-col divide-y">
 			{#each data.units as unit (unit.id)}
-				<UnitRow {unit} showLocation={false} />
+				<UnitRow
+					{unit}
+					href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
+					extras={{ category: unit.category }}
+				/>
 			{/each}
-		</div>
+		</Card.Content>
 	</Card.Root>
 {:else}
 	<p class="text-sm text-muted-foreground">{m.client_location_no_units()}</p>

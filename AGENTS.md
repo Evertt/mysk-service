@@ -134,7 +134,11 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
   endpoint `jsonIngest()` (`#lib/server/modules/integrations.ts`), never its own copy
   (`hand-written.spec.ts`).
 - **Orders** (the transition table, `transitionOrder()`, orders awaiting acceptance, the work
-  record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`.
+  record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`. Units and locations
+  are read the same way, by audience: `readUnits(scope, where)` and `readLocation(scope, id)` with
+  `officeUnits()`, `engineerUnits()` or `customerUnits(access)` (`#lib/equipment/server`), the units
+  of orders with `listedUnitsOf(ids, seenBy(scope))`, and shown with `<WorkUnits>` and `<UnitRow>`;
+  never a portal's own select of them (`hand-written.spec.ts`).
 - **Server-side lists** (filtering, sorting, range filters, module columns):
   `docs/agents/lists.md`.
 - **Tests** (where they go, e2e conventions, component harnesses): `docs/agents/tests.md`.

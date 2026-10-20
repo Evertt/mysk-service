@@ -6,8 +6,10 @@
 	import { resolve } from "$app/paths";
 	import MapPinIcon from "@lucide/svelte/icons/map-pin";
 
+	import { siteAddressLine } from "#lib/customers/index.ts";
+	import { UnitRow } from "#lib/equipment/components.ts";
+
 	import { getPortalSites } from "../client.remote.ts";
-	import UnitRow from "../unit-row.svelte";
 
 	const sites = $derived(await getPortalSites());
 </script>
@@ -25,9 +27,7 @@
 				<Card.Title>{site.name}</Card.Title>
 				<Card.Description class="flex items-center gap-1">
 					<MapPinIcon class="size-3.5 shrink-0" />
-					{[site.address, [site.postalCode, site.city].filter(Boolean).join(" ")]
-						.filter(Boolean)
-						.join(", ")}
+					{siteAddressLine(site)}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-4">
@@ -47,9 +47,15 @@
 					</ul>
 				{/if}
 				{#if site.units.length}
-					<div class="-mx-6 flex flex-col divide-y border-y">
+					<div class="flex flex-col divide-y">
 						{#each site.units as unit (unit.id)}
-							<UnitRow {unit} />
+							<UnitRow
+								{unit}
+								href={resolve("/(customer)/portal/equipment/[serial]", {
+									serial: unit.serialNumber,
+								})}
+								extras={{ category: unit.category, location: unit.location }}
+							/>
 						{/each}
 					</div>
 					<p class="text-xs text-muted-foreground">
