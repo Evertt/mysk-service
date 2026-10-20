@@ -77,7 +77,7 @@ describe("a shell's chrome", () => {
 		expect(
 			offenders(app(), /\bnameOrderTypes\(/, [
 				"src/lib/orders/types.ts",
-				"src/lib/orders/type-settings/tenant-order-types.ts",
+				"src/routes/tenant-order-types.ts",
 				"src/lib/orders/server/types.ts",
 			]),
 		).toEqual([]);

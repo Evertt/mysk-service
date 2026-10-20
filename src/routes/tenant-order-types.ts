@@ -1,7 +1,7 @@
 import { browser } from "$app/env";
 
-import { nameOrderTypes } from "../types.ts";
-import { getOrderTypes } from "./type-settings.remote.ts";
+import { nameOrderTypes } from "#lib/orders/index.ts";
+import { getOrderTypes } from "#lib/orders/remotes.ts";
 
 /**
  * Has the order types read as the tenant named them, in a shell's layout: call it in the script,

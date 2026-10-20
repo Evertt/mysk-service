@@ -6,12 +6,12 @@
 -->
 <script lang="ts">
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
-	import { useTenantOrderTypes } from "#lib/orders/index.ts";
 
 	import AppearanceSwitchers from "../appearance-switchers.svelte";
 	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
 	import SignOutButton from "../sign-out-button.svelte";
+	import { useTenantOrderTypes } from "../tenant-order-types.ts";
 	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import PortalSidebar from "./portal-sidebar.svelte";

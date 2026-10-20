@@ -7,9 +7,9 @@
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 	import { showRecordPreviews } from "#lib/components/record-link/previews.ts";
-	import { useTenantOrderTypes } from "#lib/orders/index.ts";
 
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
+	import { useTenantOrderTypes } from "../tenant-order-types.ts";
 	import type { LayoutProps } from "./$types";
 	import AppHeader from "./app-header.svelte";
 	import AppSidebar from "./app-sidebar.svelte";

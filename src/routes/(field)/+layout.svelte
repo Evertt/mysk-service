@@ -10,11 +10,11 @@
 
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
-	import { useTenantOrderTypes } from "#lib/orders/index.ts";
 
 	import BrandMark from "../brand-mark.svelte";
 	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
+	import { useTenantOrderTypes } from "../tenant-order-types.ts";
 	import type { LayoutProps } from "./$types";
 	import HeaderMenu from "./header-menu.svelte";
 	import NotificationBell from "./notification-bell.svelte";
