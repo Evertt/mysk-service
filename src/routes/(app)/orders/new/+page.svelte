@@ -8,10 +8,6 @@
 	import { createOrder, getOrderFormOptions } from "#lib/orders/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.orders_new_page_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.orders_new()}
 	description={m.orders_new_description()}

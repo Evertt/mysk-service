@@ -15,10 +15,6 @@
 	const data = $derived(await getYearRules(year));
 </script>
 
-<svelte:head>
-	<title>{m.partners_rules_title({ year: String(year) })} · {m.partners_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.partners_rules_title({ year: String(year) })}
 	description={data.setUp

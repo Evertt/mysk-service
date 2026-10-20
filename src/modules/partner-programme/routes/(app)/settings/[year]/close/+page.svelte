@@ -15,10 +15,6 @@
 	const preview = $derived(await getClosePreview(year));
 </script>
 
-<svelte:head>
-	<title>{m.partners_close_title({ year: String(year) })} · {m.partners_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.partners_close_title({ year: String(year) })}
 	description={m.partners_close_description()}

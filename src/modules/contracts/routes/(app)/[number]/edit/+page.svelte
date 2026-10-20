@@ -18,12 +18,6 @@
 	);
 </script>
 
-<svelte:head>
-	<title>
-		{m.contracts_head_title({ title: m.contracts_edit_title({ number: contract.number }) })}
-	</title>
-</svelte:head>
-
 <PageHeader
 	title={m.contracts_edit_title({ number: contract.number })}
 	description={contract.customer.name}

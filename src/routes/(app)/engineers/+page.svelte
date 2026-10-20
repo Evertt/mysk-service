@@ -7,10 +7,6 @@
 	import { getEngineers } from "#lib/engineers/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.engineers_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.engineers_title()} description={m.engineers_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/engineers/new")}>

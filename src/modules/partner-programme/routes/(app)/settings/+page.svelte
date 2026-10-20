@@ -14,10 +14,6 @@
 	const data = $derived(await getProgrammeYears());
 </script>
 
-<svelte:head>
-	<title>{m.partners_years_title()} · {m.partners_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.partners_years_title()}
 	description={m.partners_years_description()}

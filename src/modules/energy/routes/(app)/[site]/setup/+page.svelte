@@ -48,10 +48,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>{m.energy_setup_title()} · {site.name}</title>
-</svelte:head>
-
 <div class="flex max-w-5xl flex-col gap-6">
 	<PageHeader
 		title={m.energy_setup_title()}

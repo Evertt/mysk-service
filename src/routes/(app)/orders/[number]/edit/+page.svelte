@@ -20,10 +20,6 @@
 	let loaded = $state(0);
 </script>
 
-<svelte:head>
-	<title>{m.orders_edit_page_title({ number: order.number })}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.orders_edit_title({ number: order.number })}
 	description={order.customer.name}

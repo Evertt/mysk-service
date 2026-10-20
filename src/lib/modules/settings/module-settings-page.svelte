@@ -52,10 +52,6 @@
 	const homeHref = $derived(home ? resolve(home) : undefined);
 </script>
 
-<svelte:head>
-	<title>{title} · {label}</title>
-</svelte:head>
-
 <PageHeader
 	{title}
 	{description}

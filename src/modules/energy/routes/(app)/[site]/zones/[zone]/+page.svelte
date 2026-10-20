@@ -39,10 +39,6 @@
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 </script>
 
-<svelte:head>
-	<title>{zone.code} {zone.name} · {data.site.name}</title>
-</svelte:head>
-
 <div class="flex flex-col gap-6">
 	<PageHeader
 		title="{zone.code} · {zone.name}"

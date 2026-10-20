@@ -22,10 +22,6 @@
 	const orders = $derived(await getShopOrders(view));
 </script>
 
-<svelte:head>
-	<title>{m.shop_orders_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.shop_orders_title()} description={m.shop_orders_description()}>
 	{#snippet actions()}
 		<Button variant="outline" href={resolve("/(app)/(modules)/parts-shop/products")}>

@@ -7,10 +7,6 @@
 	import { getCustomers } from "#lib/customers/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.customers_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.customers_title()} description={m.customers_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/customers/new")}>

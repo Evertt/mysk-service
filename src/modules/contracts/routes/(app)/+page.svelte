@@ -11,10 +11,6 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/contracts"> } = $props();
 </script>
 
-<svelte:head>
-	<title>{m.contracts_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.contracts_title()} description={m.contracts_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/(modules)/contracts/new")}>

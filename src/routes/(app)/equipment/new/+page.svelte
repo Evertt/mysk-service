@@ -6,10 +6,6 @@
 	import { createEquipment, getEquipmentFormOptions } from "#lib/equipment/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.equipment_new()} · {m.equipment_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.equipment_new()}
 	description={m.equipment_new_description()}

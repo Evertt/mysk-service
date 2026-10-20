@@ -10,10 +10,6 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/contracts/new"> } = $props();
 </script>
 
-<svelte:head>
-	<title>{m.contracts_head_title({ title: m.contracts_new() })}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.contracts_new()}
 	description={m.contracts_new_description()}
