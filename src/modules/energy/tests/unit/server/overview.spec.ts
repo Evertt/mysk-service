@@ -1,6 +1,6 @@
 /**
  * The sites' overview and the customer portal read all their sites' figures at once
- * (`sitesFigures()`, in as many statements as one site's): each site's are what its own pages read
+ * (`zoneFigures()` and `doorFigures()`, in as many statements as one site's): each site's are what its own pages read
  * (`siteFigures()`), also next to sites in other time zones, with other readings and doors, or
  * none. On Riedel's site and two more of Riedel's: one in New York with a copy of two of its zones
  * (their thresholds, their readings up to three hours ago at half the power, their doors and the

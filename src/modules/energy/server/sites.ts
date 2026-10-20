@@ -22,9 +22,9 @@ import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import type { EnergySiteInput, NewEnergySiteInput } from "../setup/setup-schema.ts";
+import { siteConsumers } from "./figures.ts";
 import {
 	energyAlert,
-	energyConsumer,
 	energyDoor,
 	energyDoorEvent,
 	energyReading,
@@ -230,41 +230,13 @@ export async function siteSetup(id: number) {
 			.innerJoin(...tenantJoin(customer, customerSite.customerId))
 			.where(idInTenant(customerSite, site.siteId)),
 		db
-			.select({
-				id: energyZone.id,
-				code: energyZone.code,
-				name: energyZone.name,
-				floor: energyZone.floor,
-				areaM2: energyZone.areaM2,
-			})
+			.select()
 			.from(energyZone)
 			.where(and(inTenant(energyZone), eq(energyZone.energySiteId, id)))
 			.orderBy(asc(energyZone.position), asc(energyZone.id)),
+		siteConsumers(id),
 		db
-			.select({
-				id: energyConsumer.id,
-				zoneId: energyConsumer.zoneId,
-				name: energyConsumer.name,
-				ratedKw: energyConsumer.ratedKw,
-				equipmentId: energyConsumer.equipmentId,
-			})
-			.from(energyConsumer)
-			.innerJoin(...tenantJoin(energyZone, energyConsumer.zoneId))
-			.where(and(inTenant(energyConsumer), eq(energyZone.energySiteId, id)))
-			.orderBy(asc(energyZone.position), asc(energyConsumer.position), asc(energyConsumer.id)),
-		db
-			.select({
-				id: energyDoor.id,
-				zoneId: energyDoor.zoneId,
-				code: energyDoor.code,
-				name: energyDoor.name,
-				kind: energyDoor.kind,
-				lossKw: energyDoor.lossKw,
-				thresholdMinutes: energyDoor.thresholdMinutes,
-				insideC: energyDoor.insideC,
-				outsideC: energyDoor.outsideC,
-				equipmentId: energyDoor.equipmentId,
-			})
+			.select()
 			.from(energyDoor)
 			.where(and(inTenant(energyDoor), eq(energyDoor.energySiteId, id)))
 			.orderBy(asc(energyDoor.code)),

@@ -37,24 +37,18 @@ async function zoneOf(siteId: number, zoneId: number) {
 	return found;
 }
 
-/** The consumer `consumerId` of the energy site `siteId` (in one of its zones), with its zone's code. */
-async function consumerOf(siteId: number, consumerId: number) {
+/** The consumer or door `id` of the energy site `siteId` (in one of its zones), with its zone's code. */
+async function inZone<T extends typeof energyConsumer | typeof energyDoor>(
+	table: T,
+	siteId: number,
+	id: number,
+) {
 	const [found] = await db
-		.select({ consumer: energyConsumer, zone: energyZone.code })
-		.from(energyConsumer)
-		.innerJoin(...tenantJoin(energyZone, energyConsumer.zoneId))
-		.where(and(idInTenant(energyConsumer, consumerId), eq(energyZone.energySiteId, siteId)));
-	return found && { ...found.consumer, zone: found.zone };
-}
-
-/** The door `doorId` of the energy site `siteId`, with its zone's code. */
-async function doorOf(siteId: number, doorId: number) {
-	const [found] = await db
-		.select({ door: energyDoor, zone: energyZone.code })
-		.from(energyDoor)
-		.innerJoin(...tenantJoin(energyZone, energyDoor.zoneId))
-		.where(and(idInTenant(energyDoor, doorId), eq(energyDoor.energySiteId, siteId)));
-	return found && { ...found.door, zone: found.zone };
+		.select({ part: table, zone: energyZone.code })
+		.from(table)
+		.innerJoin(...tenantJoin(energyZone, table.zoneId))
+		.where(and(idInTenant(table, id), eq(energyZone.energySiteId, siteId)));
+	return found && { ...(found.part as T["$inferSelect"]), zone: found.zone };
 }
 
 /** The site's part `id` that `find` finds, or a 404; none without an id (a new one). */
@@ -191,7 +185,7 @@ export async function saveConsumer(siteId: number, input: ConsumerInput) {
 	const site = await siteRow(siteId);
 	const before = await existing(
 		input.consumerId,
-		(id) => consumerOf(site.id, id),
+		(id) => inZone(energyConsumer, site.id, id),
 		m.energy_setup_consumer_not_found(),
 	);
 	const { zone, unit } = await placeOf(site, input);
@@ -214,7 +208,7 @@ export async function saveDoor(siteId: number, input: DoorInput) {
 	const site = await siteRow(siteId);
 	const before = await existing(
 		input.doorId,
-		(id) => doorOf(site.id, id),
+		(id) => inZone(energyDoor, site.id, id),
 		m.energy_setup_door_not_found(),
 	);
 	const taken = { code: input.code, except: input.doorId };
@@ -266,10 +260,8 @@ export async function deleteZone(siteId: number, zoneId: number) {
 /** Deletes the consumer `consumerId` of the energy site `siteId`, and logs it. */
 export async function deleteConsumer(siteId: number, consumerId: number) {
 	const site = await siteRow(siteId);
-	const consumer = orNotFound(
-		await consumerOf(site.id, consumerId),
-		m.energy_setup_consumer_not_found(),
-	);
+	const found = await inZone(energyConsumer, site.id, consumerId);
+	const consumer = orNotFound(found, m.energy_setup_consumer_not_found());
 	await deleteAndLog(energyConsumer, {
 		subject: { type: "energy_consumer", id: consumer.id, label: consumer.name },
 		parent: siteSubject(site),
@@ -282,7 +274,10 @@ export async function deleteConsumer(siteId: number, consumerId: number) {
  */
 export async function deleteDoor(siteId: number, doorId: number) {
 	const site = await siteRow(siteId);
-	const door = orNotFound(await doorOf(site.id, doorId), m.energy_setup_door_not_found());
+	const door = orNotFound(
+		await inZone(energyDoor, site.id, doorId),
+		m.energy_setup_door_not_found(),
+	);
 	await db.transaction(async (tx) => {
 		const of = { door: eq(energyDoor.id, door.id), alert: eq(energyAlert.doorId, door.id) };
 		if (await measured(tx, of)) throw new Refused(m.energy_setup_door_measured());
