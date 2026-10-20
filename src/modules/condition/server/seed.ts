@@ -20,6 +20,7 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { and, desc, eq, ne } from "drizzle-orm";
 
 import { doneOrderStatuses } from "#lib/models.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
 import { addDays, DAY, now } from "#lib/server/db/seed/clock.ts";
@@ -459,8 +460,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					equipmentId: found.equipmentId,
 					advice: null,
 					source: "checklist" as const,
-					orderId: found.orderId,
-					orderOrganizationId: organizationId,
+					...withTenantRefs(organizationId, { orderId: found.orderId }),
 					engineerId: found.completedBy,
 					recordedAt: found.completedAt!,
 				};
@@ -504,8 +504,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					score,
 					advice: advice || null,
 					source: onVisit ? "checklist" : "office",
-					orderId: onVisit?.orderId ?? null,
-					orderOrganizationId: onVisit ? organizationId : null,
+					...withTenantRefs(organizationId, { orderId: onVisit?.orderId ?? null }),
 					engineerId: onVisit?.engineerId ?? null,
 					recordedAt,
 				});

@@ -1,16 +1,15 @@
 import { sql } from "drizzle-orm";
-import {
-	check,
-	foreignKey,
-	index,
-	integer,
-	primaryKey,
-	sqliteTable,
-	text,
-	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { createdAt, moment, momentMs, organizationId } from "#lib/server/db/columns.ts";
+import {
+	createdAt,
+	moment,
+	momentMs,
+	optionalTenantColumns,
+	optionalTenantRef,
+	tenantRef,
+	tenantTable,
+} from "#lib/server/db/columns.ts";
 import { customerSite, equipment, equipmentLocation, order } from "#lib/server/db/schema.ts";
 
 import { dockEventTypes, doorBands, eventOutcomes, keyLocations } from "../model.ts";
@@ -25,23 +24,18 @@ import { dockEventTypes, doorBands, eventOutcomes, keyLocations } from "../model
  * every column of a key, and `organization_id` can't be null, so each of those keys has a tenant
  * column of its own, which the checks hold to the dock's (as maintenance plans' last order).
  */
-export const dockPosition = sqliteTable(
+export const dockPosition = tenantTable(
 	"dock_position",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		siteId: integer("site_id").notNull(),
 		/** E.g. `DOCK 05`, as Salvo names it. */
 		code: text("code").notNull(),
 		/** E.g. `P-05 · Expeditie noord`. */
 		position: text("position").notNull().default(""),
-		locationId: integer("location_id"),
-		locationOrganizationId: text("location_organization_id"),
+		...optionalTenantColumns("location"),
 		/** The sectional door: a breakdown order goes on it when it's left open too long. */
-		doorId: integer("door_id"),
-		doorOrganizationId: text("door_organization_id"),
-		levellerId: integer("leveller_id"),
-		levellerOrganizationId: text("leveller_organization_id"),
+		...optionalTenantColumns("door"),
+		...optionalTenantColumns("leveller"),
 		/** The Salvo Control Panel, e.g. `SCP-05`; none for a dock without Salvo. */
 		scpCode: text("scp_code"),
 		/** The dock's Salvo key, e.g. `SLV-K05`. */
@@ -51,42 +45,15 @@ export const dockPosition = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("dock_position_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("dock_position_organization_code").on(table.organizationId, table.code),
 		index("dock_position_site").on(table.organizationId, table.siteId),
-		// A unit's docks; with their tenant columns, also the keys to the units and the location.
-		index("dock_position_door").on(table.doorId, table.doorOrganizationId),
-		index("dock_position_leveller").on(table.levellerId, table.levellerOrganizationId),
-		index("dock_position_location").on(table.locationOrganizationId, table.locationId),
-		foreignKey({
-			columns: [table.organizationId, table.siteId],
-			foreignColumns: [customerSite.organizationId, customerSite.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.locationOrganizationId, table.locationId],
-			foreignColumns: [equipmentLocation.organizationId, equipmentLocation.id],
-		}).onDelete("set null"),
-		foreignKey({
-			columns: [table.doorOrganizationId, table.doorId],
-			foreignColumns: [equipment.organizationId, equipment.id],
-		}).onDelete("set null"),
-		foreignKey({
-			columns: [table.levellerOrganizationId, table.levellerId],
-			foreignColumns: [equipment.organizationId, equipment.id],
-		}).onDelete("set null"),
-		check(
-			"dock_position_location_tenant",
-			sql`${table.locationOrganizationId} is null or ${table.locationOrganizationId} = ${table.organizationId}`,
-		),
-		check(
-			"dock_position_door_tenant",
-			sql`${table.doorOrganizationId} is null or ${table.doorOrganizationId} = ${table.organizationId}`,
-		),
-		check(
-			"dock_position_leveller_tenant",
-			sql`${table.levellerOrganizationId} is null or ${table.levellerOrganizationId} = ${table.organizationId}`,
-		),
+		tenantRef(table, table.siteId, customerSite, { onDelete: "cascade" }),
+		...optionalTenantRef(table, "location", equipmentLocation),
+		// A unit's docks; with their tenant columns, also the keys to the units.
+		...optionalTenantRef(table, "door", equipment, { idFirst: true }),
+		...optionalTenantRef(table, "leveller", equipment, { idFirst: true }),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -94,10 +61,9 @@ export const dockPosition = sqliteTable(
  * its first event. Its state (Vrij, Bezet, Laden, Storing) and beacon follow from these and from
  * whether a session is open (`dockState()`, `beaconOf()`).
  */
-export const dockState = sqliteTable(
+export const dockState = tenantTable(
 	"dock_state",
 	{
-		organizationId: organizationId(),
 		dockId: integer("dock_id").notNull(),
 		locked: integer("locked", { mode: "boolean" }).notNull().default(false),
 		doorOpenSince: moment("door_open_since"),
@@ -114,11 +80,9 @@ export const dockState = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.organizationId, table.dockId] }),
-		foreignKey({
-			columns: [table.organizationId, table.dockId],
-			foreignColumns: [dockPosition.organizationId, dockPosition.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.dockId, dockPosition, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /**
@@ -126,11 +90,9 @@ export const dockState = sqliteTable(
  * slot), locked, door opened and closed, check-out. A dock has at most one open session (not
  * checked out). The door-open time adds up over the visit (`doorOpenSeconds`).
  */
-export const dockSession = sqliteTable(
+export const dockSession = tenantTable(
 	"dock_session",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		dockId: integer("dock_id").notNull(),
 		carrier: text("carrier"),
 		plate: text("plate"),
@@ -146,16 +108,13 @@ export const dockSession = sqliteTable(
 		doorOpenSeconds: integer("door_open_seconds").notNull().default(0),
 	},
 	(table) => [
-		uniqueIndex("dock_session_organization_id").on(table.organizationId, table.id),
 		index("dock_session_dock").on(table.organizationId, table.dockId, table.checkedInAt),
 		uniqueIndex("dock_session_open")
 			.on(table.dockId)
 			.where(sql`${table.checkedOutAt} is null`),
-		foreignKey({
-			columns: [table.organizationId, table.dockId],
-			foreignColumns: [dockPosition.organizationId, dockPosition.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.dockId, dockPosition, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -163,10 +122,9 @@ export const dockSession = sqliteTable(
  * a duplicate and does nothing. Kept for a while (the daily job prunes old ones), with what came of
  * it: applied, or stale (older than what the dock had applied).
  */
-export const dockEvent = sqliteTable(
+export const dockEvent = tenantTable(
 	"dock_event",
 	{
-		organizationId: organizationId(),
 		eventId: text("event_id").notNull(),
 		dockId: integer("dock_id").notNull(),
 		type: text("type", { enum: dockEventTypes }).notNull(),
@@ -181,11 +139,9 @@ export const dockEvent = sqliteTable(
 		primaryKey({ columns: [table.organizationId, table.eventId] }),
 		index("dock_event_received").on(table.organizationId, table.receivedAt),
 		index("dock_event_dock").on(table.organizationId, table.dockId),
-		foreignKey({
-			columns: [table.organizationId, table.dockId],
-			foreignColumns: [dockPosition.organizationId, dockPosition.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.dockId, dockPosition, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /**
@@ -193,11 +149,9 @@ export const dockEvent = sqliteTable(
  * gets at most one such order while it's open (not completed, invoiced or cancelled). Deleting the
  * order deletes this, and the next hour-long opening makes a new one.
  */
-export const dockEscalation = sqliteTable(
+export const dockEscalation = tenantTable(
 	"dock_escalation",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		dockId: integer("dock_id").notNull(),
 		/** The door the order is on. */
 		equipmentId: integer("equipment_id").notNull(),
@@ -208,13 +162,7 @@ export const dockEscalation = sqliteTable(
 		index("dock_escalation_door").on(table.organizationId, table.equipmentId),
 		index("dock_escalation_dock").on(table.organizationId, table.dockId),
 		index("dock_escalation_order").on(table.organizationId, table.orderId),
-		foreignKey({
-			columns: [table.organizationId, table.dockId],
-			foreignColumns: [dockPosition.organizationId, dockPosition.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.organizationId, table.orderId],
-			foreignColumns: [order.organizationId, order.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.dockId, dockPosition, { onDelete: "cascade" }),
+		tenantRef(table, table.orderId, order, { onDelete: "cascade" }),
 	],
 );

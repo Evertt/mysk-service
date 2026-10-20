@@ -1,14 +1,6 @@
-import {
-	foreignKey,
-	index,
-	integer,
-	primaryKey,
-	sqliteTable,
-	text,
-	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
+import { createdAt, day, moment, tenantRef, tenantTable } from "#lib/server/db/columns.ts";
 import { customer, order, user } from "#lib/server/db/schema.ts";
 import { creditNote } from "#modules/invoices/api/schema.server.ts";
 
@@ -29,11 +21,9 @@ import {
  * A year of the tenant's programme: its levels, how each revenue category counts, and how long the
  * year's credit stays valid. A new year starts as a copy of the one before.
  */
-export const programmeYear = sqliteTable(
+export const programmeYear = tenantTable(
 	"partner_programme_year",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		year: integer("year").notNull(),
 		tiers: text("tiers", { mode: "json" }).$type<Tier[]>().notNull(),
 		categories: text("categories", { mode: "json" }).$type<CategoryRule[]>().notNull(),
@@ -47,11 +37,9 @@ export const programmeYear = sqliteTable(
 );
 
 /** A customer the tenant accepted into its programme: a partner. */
-export const partnerAccount = sqliteTable(
+export const partnerAccount = tenantTable(
 	"partner_account",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		customerId: integer("customer_id").notNull(),
 		acceptedOn: day("accepted_on").notNull(),
 		/** Who accepted it; none once their account is gone. */
@@ -61,10 +49,7 @@ export const partnerAccount = sqliteTable(
 	(table) => [
 		uniqueIndex("partner_account_organization_customer").on(table.organizationId, table.customerId),
 		index("partner_account_accepted_by").on(table.acceptedBy),
-		foreignKey({
-			columns: [table.organizationId, table.customerId],
-			foreignColumns: [customer.organizationId, customer.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.customerId, customer, { onDelete: "cascade" }),
 	],
 );
 
@@ -73,10 +58,9 @@ export const partnerAccount = sqliteTable(
  * its category and its eligibility, each left out for the default (by the order's type, see
  * `defaultCategories`, and by the category's rule).
  */
-export const orderClassification = sqliteTable(
+export const orderClassification = tenantTable(
 	"partner_order_classification",
 	{
-		organizationId: organizationId(),
 		orderId: integer("order_id").notNull(),
 		category: text("category", { enum: revenueCategories }),
 		eligibility: text("eligibility", { enum: eligibilities }),
@@ -85,11 +69,9 @@ export const orderClassification = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.organizationId, table.orderId] }),
-		foreignKey({
-			columns: [table.organizationId, table.orderId],
-			foreignColumns: [order.organizationId, order.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.orderId, order, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 /**
@@ -97,11 +79,9 @@ export const orderClassification = sqliteTable(
  * payments or rules don't change them), its level and bonus in each form, and the partner's choice
  * between them, made once. A year that's still running has no row: its figures are computed.
  */
-export const bonusYear = sqliteTable(
+export const bonusYear = tenantTable(
 	"partner_bonus_year",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		customerId: integer("customer_id").notNull(),
 		year: integer("year").notNull(),
 		status: text("status", { enum: bonusYearStatuses }).notNull(),
@@ -123,17 +103,14 @@ export const bonusYear = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("partner_bonus_year_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("partner_bonus_year_customer_year").on(
 			table.organizationId,
 			table.customerId,
 			table.year,
 		),
-		foreignKey({
-			columns: [table.organizationId, table.customerId],
-			foreignColumns: [customer.organizationId, customer.id],
-		}),
+		tenantRef(table, table.customerId, customer),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -142,10 +119,9 @@ export const bonusYear = sqliteTable(
  * `./close.ts`). A year without one is paid outside the app, as before. One per year; a voided
  * credit note's row is pointed at the one that replaces it.
  */
-export const bonusCreditNote = sqliteTable(
+export const bonusCreditNote = tenantTable(
 	"partner_bonus_credit_note",
 	{
-		organizationId: organizationId(),
 		bonusYearId: integer("bonus_year_id").notNull(),
 		creditNoteId: integer("credit_note_id").notNull(),
 		createdAt: createdAt(),
@@ -156,15 +132,10 @@ export const bonusCreditNote = sqliteTable(
 			table.organizationId,
 			table.creditNoteId,
 		),
-		foreignKey({
-			columns: [table.organizationId, table.bonusYearId],
-			foreignColumns: [bonusYear.organizationId, bonusYear.id],
-		}),
-		foreignKey({
-			columns: [table.organizationId, table.creditNoteId],
-			foreignColumns: [creditNote.organizationId, creditNote.id],
-		}),
+		tenantRef(table, table.bonusYearId, bonusYear),
+		tenantRef(table, table.creditNoteId, creditNote),
 	],
+	{ key: "own" },
 );
 
 /**
@@ -172,11 +143,9 @@ export const bonusCreditNote = sqliteTable(
  * a spend or an expiry takes). The balance is the sum, and never goes below zero: what goes out is
  * checked against what's available (see `walletSummary()`).
  */
-export const walletEntry = sqliteTable(
+export const walletEntry = tenantTable(
 	"partner_wallet_entry",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		customerId: integer("customer_id").notNull(),
 		/** The closed year it comes from (an award, or the expiry of its credit). */
 		bonusYearId: integer("bonus_year_id"),
@@ -195,16 +164,10 @@ export const walletEntry = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("partner_wallet_entry_organization_id").on(table.organizationId, table.id),
 		index("partner_wallet_entry_customer").on(table.organizationId, table.customerId),
 		index("partner_wallet_entry_bonus_year").on(table.organizationId, table.bonusYearId),
-		foreignKey({
-			columns: [table.organizationId, table.customerId],
-			foreignColumns: [customer.organizationId, customer.id],
-		}),
-		foreignKey({
-			columns: [table.organizationId, table.bonusYearId],
-			foreignColumns: [bonusYear.organizationId, bonusYear.id],
-		}),
+		tenantRef(table, table.customerId, customer),
+		tenantRef(table, table.bonusYearId, bonusYear),
 	],
+	{ referenced: true },
 );

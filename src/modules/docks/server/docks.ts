@@ -19,6 +19,7 @@ import {
 	tenantJoin,
 	sameTenant,
 } from "#lib/server/auth/index.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -228,18 +229,15 @@ async function dockProblems(input: DockInput, customerId: number, id?: number) {
 
 /** The columns a dock's form sets, with the tenant columns of its optional references. */
 function dockValues(input: DockInput) {
-	const { organizationId } = currentTenant();
-	const tenantOf = (value: number | null) => (value ? organizationId : null);
 	return {
 		siteId: input.siteId,
 		code: input.code,
 		position: input.position,
-		locationId: input.locationId,
-		locationOrganizationId: tenantOf(input.locationId),
-		doorId: input.doorId,
-		doorOrganizationId: tenantOf(input.doorId),
-		levellerId: input.levellerId,
-		levellerOrganizationId: tenantOf(input.levellerId),
+		...withTenantRefs(currentTenant().organizationId, {
+			locationId: input.locationId,
+			doorId: input.doorId,
+			levellerId: input.levellerId,
+		}),
 		scpCode: input.scpCode,
 		keyId: input.keyId,
 		keyStorageUnit: input.keyStorageUnit,

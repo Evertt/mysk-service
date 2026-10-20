@@ -69,7 +69,9 @@ Organizations own all business data.
 - Inserts take `organizationId` from `currentTenant()`. Numbers come from `nextNumber(tx, …)` in the
   same transaction. Orders are created only through `createOrders(tx, drafts)`, and change status
   only through `transitionOrder()` (the order form through `beginOrderChange()`).
-- References between tenant tables are composite foreign keys that include the tenant.
+- Declare a tenant's table with `tenantTable()`, its references with `tenantRef()` or
+  `optionalTenantRef()` and their relations with `tenantOne()` (`#lib/server/db/columns.ts`): the
+  references are composite foreign keys that include the tenant.
 - Every section's tests cover isolation: South can't see or change North's records, also by
   tampering with ids. In e2e one page and one tampered form per section; the rest in its server
   spec (`docs/agents/tests.md`).

@@ -11,6 +11,7 @@
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, eq } from "drizzle-orm";
 
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import { DAY, now } from "#lib/server/db/seed/clock.ts";
 import { seedIntegrationToken } from "#lib/server/db/seed/integrations.ts";
@@ -92,12 +93,7 @@ export default defineSeed({
 					siteId: site.id,
 					code: `DOCK ${n}`,
 					position: `P-${n} · ${!salvo ? "Expeditie zuid" : south ? "Dockstraat zuid" : "Expeditie noord"}`,
-					locationId,
-					locationOrganizationId: locationId ? organizationId : null,
-					doorId,
-					doorOrganizationId: doorId ? organizationId : null,
-					levellerId,
-					levellerOrganizationId: levellerId ? organizationId : null,
+					...withTenantRefs(organizationId, { locationId, doorId, levellerId }),
 					scpCode: salvo ? `SCP-${n}` : null,
 					keyId: salvo ? `SLV-K${n}` : null,
 					keyStorageUnit: salvo ? (south ? "KS-ZUID-2" : "KS-NOORD-1") : null,

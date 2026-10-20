@@ -306,8 +306,8 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   are guarded only by the set they're made with, which is what keeps their data safe.
 - Core declares its extension points (`#lib/<domain>/extensions.ts`); core never
   imports a module (`#modules/…` is for the generated registries, and for a module's own route files), which
-  `src/tests/unit/modules/boundaries.spec.ts` checks. A module's tables reference core tables (composite tenant keys, columns from
-  `#lib/server/db/columns.ts`) and the tables of the modules it `requires` in its `module.ts`,
+  `src/tests/unit/modules/boundaries.spec.ts` checks. A module's tables reference core tables (declared with `tenantTable()` and
+  `tenantRef()` from `#lib/server/db/columns.ts`, see "Tenant tables" in `docs/agents/database.md`) and the tables of the modules it `requires` in its `module.ts`,
   never the reverse; one migration stream in `drizzle/`, and `src/tests/unit/lib/server/db/modules.spec.ts`
   checks that no core table has a foreign key to a module table, and that a module's tables
   reference only core tables and those of modules it requires (`module-schemas.gen.ts` lists each

@@ -9,6 +9,7 @@
  */
 import { and, eq } from "drizzle-orm";
 
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
 import { seedIntegrationToken } from "#lib/server/db/seed/integrations.ts";
@@ -96,10 +97,7 @@ export default defineSeed({
 			const riedel = await findRiedel(tx, organizationId);
 			if (!riedel) continue;
 			const unit = (name?: string) => (name ? (riedel.unitIds.get(name) ?? null) : null);
-			const link = (name?: string) => {
-				const id = unit(name);
-				return { equipmentId: id, equipmentOrganizationId: id ? organizationId : null };
-			};
+			const link = (name?: string) => withTenantRefs(organizationId, { equipmentId: unit(name) });
 
 			const { customer: _customer, site: _site, ...siteFields } = riedelSite;
 			const [site] = await tx

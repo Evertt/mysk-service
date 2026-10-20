@@ -1,15 +1,14 @@
 import { relations, sql } from "drizzle-orm";
-import {
-	foreignKey,
-	index,
-	integer,
-	primaryKey,
-	sqliteTable,
-	text,
-	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { createdAt, day, moment, organizationId } from "#lib/server/db/columns.ts";
+import {
+	createdAt,
+	day,
+	moment,
+	tenantOne,
+	tenantRef,
+	tenantTable,
+} from "#lib/server/db/columns.ts";
 import { engineer, equipmentCategory, orderUnit, user } from "#lib/server/db/schema.ts";
 
 import {
@@ -28,11 +27,9 @@ import {
  * A template is never deleted, so the checklists made with it keep their template: it's retired
  * instead (`archived`), which frees its categories and stops it being offered.
  */
-export const checklistTemplate = sqliteTable(
+export const checklistTemplate = tenantTable(
 	"checklist_template",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		name: text("name").notNull(),
 		/** The norm it inspects by, e.g. "NEN-EN 12604/12453"; none for a general inspection. */
 		norm: text("norm"),
@@ -45,7 +42,6 @@ export const checklistTemplate = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("checklist_template_organization_id").on(table.organizationId, table.id),
 		// Unique within a tenant, whatever the case, like equipment categories.
 		uniqueIndex("checklist_template_organization_name").on(
 			table.organizationId,
@@ -53,6 +49,7 @@ export const checklistTemplate = sqliteTable(
 		),
 		index("checklist_template_organization_position").on(table.organizationId, table.position),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -61,11 +58,9 @@ export const checklistTemplate = sqliteTable(
  * their groups' headings). `position` orders all of a template's points, from 0, with each group's
  * together (see `orderPoints()` in `../model.ts`).
  */
-export const checklistTemplateItem = sqliteTable(
+export const checklistTemplateItem = tenantTable(
 	"checklist_template_item",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		templateId: integer("template_id").notNull(),
 		/** E.g. "Mechanisch"; empty for a point outside any group. */
 		group: text("group_name").notNull().default(""),
@@ -74,17 +69,14 @@ export const checklistTemplateItem = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("checklist_template_item_organization_id").on(table.organizationId, table.id),
 		index("checklist_template_item_template").on(
 			table.organizationId,
 			table.templateId,
 			table.position,
 		),
-		foreignKey({
-			columns: [table.organizationId, table.templateId],
-			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.templateId, checklistTemplate, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -92,25 +84,19 @@ export const checklistTemplateItem = sqliteTable(
  * inspected by it. A category has at most one template (the primary key); deleting either
  * removes the link.
  */
-export const checklistTemplateCategory = sqliteTable(
+export const checklistTemplateCategory = tenantTable(
 	"checklist_template_category",
 	{
-		organizationId: organizationId(),
 		categoryId: integer("category_id").notNull(),
 		templateId: integer("template_id").notNull(),
 	},
 	(table) => [
 		primaryKey({ columns: [table.organizationId, table.categoryId] }),
 		index("checklist_template_category_template").on(table.templateId, table.organizationId),
-		foreignKey({
-			columns: [table.organizationId, table.templateId],
-			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.organizationId, table.categoryId],
-			foreignColumns: [equipmentCategory.organizationId, equipmentCategory.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.templateId, checklistTemplate, { onDelete: "cascade" }),
+		tenantRef(table, table.categoryId, equipmentCategory, { onDelete: "cascade" }),
 	],
+	{ key: "own" },
 );
 
 export const checklistTemplateRelations = relations(checklistTemplate, ({ many }) => ({
@@ -119,23 +105,14 @@ export const checklistTemplateRelations = relations(checklistTemplate, ({ many }
 }));
 
 export const checklistTemplateItemRelations = relations(checklistTemplateItem, ({ one }) => ({
-	template: one(checklistTemplate, {
-		fields: [checklistTemplateItem.organizationId, checklistTemplateItem.templateId],
-		references: [checklistTemplate.organizationId, checklistTemplate.id],
-	}),
+	template: tenantOne(one, checklistTemplateItem.templateId, checklistTemplate),
 }));
 
 export const checklistTemplateCategoryRelations = relations(
 	checklistTemplateCategory,
 	({ one }) => ({
-		template: one(checklistTemplate, {
-			fields: [checklistTemplateCategory.organizationId, checklistTemplateCategory.templateId],
-			references: [checklistTemplate.organizationId, checklistTemplate.id],
-		}),
-		category: one(equipmentCategory, {
-			fields: [checklistTemplateCategory.organizationId, checklistTemplateCategory.categoryId],
-			references: [equipmentCategory.organizationId, equipmentCategory.id],
-		}),
+		template: tenantOne(one, checklistTemplateCategory.templateId, checklistTemplate),
+		category: tenantOne(one, checklistTemplateCategory.categoryId, equipmentCategory),
 	}),
 );
 
@@ -147,11 +124,9 @@ export const checklistTemplateCategoryRelations = relations(
  * points, `checklist_result`), so a later change to the template never rewrites an inspection.
  * While it's a draft the engineer fills it in; completed, it's on record and isn't changed again.
  */
-export const checklist = sqliteTable(
+export const checklist = tenantTable(
 	"checklist",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		orderId: integer("order_id").notNull(),
 		equipmentId: integer("equipment_id").notNull(),
 		/** The template it was made from. Templates are never deleted (they're retired). */
@@ -182,7 +157,6 @@ export const checklist = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		uniqueIndex("checklist_organization_id").on(table.organizationId, table.id),
 		// One per unit per order.
 		uniqueIndex("checklist_order_equipment").on(table.orderId, table.equipmentId),
 		// A unit's checklists: its history, its latest inspection.
@@ -192,19 +166,14 @@ export const checklist = sqliteTable(
 		index("checklist_by_template").on(table.organizationId, table.templateId),
 		index("checklist_completed_by").on(table.organizationId, table.completedBy),
 		index("checklist_completed_by_user").on(table.completedByUser),
-		foreignKey({
-			columns: [table.organizationId, table.orderId, table.equipmentId],
-			foreignColumns: [orderUnit.organizationId, orderUnit.orderId, orderUnit.equipmentId],
-		}).onDelete("cascade"),
-		foreignKey({
-			columns: [table.organizationId, table.templateId],
-			foreignColumns: [checklistTemplate.organizationId, checklistTemplate.id],
+		tenantRef(table, [table.orderId, table.equipmentId], orderUnit, {
+			onDelete: "cascade",
+			to: [orderUnit.orderId, orderUnit.equipmentId],
 		}),
-		foreignKey({
-			columns: [table.organizationId, table.completedBy],
-			foreignColumns: [engineer.organizationId, engineer.id],
-		}),
+		tenantRef(table, table.templateId, checklistTemplate),
+		tenantRef(table, table.completedBy, engineer),
 	],
+	{ referenced: true },
 );
 
 /**
@@ -212,11 +181,9 @@ export const checklist = sqliteTable(
  * place, the template point it came from, and what the engineer found (`result`, none until
  * answered) with a remark, which a rejection (`nok`) needs.
  */
-export const checklistResult = sqliteTable(
+export const checklistResult = tenantTable(
 	"checklist_result",
 	{
-		id: integer("id").primaryKey({ autoIncrement: true }),
-		organizationId: organizationId(),
 		checklistId: integer("checklist_id").notNull(),
 		/**
 		 * The template point it was copied from, by id without a key: a template's points may be
@@ -233,14 +200,11 @@ export const checklistResult = sqliteTable(
 		remark: text("remark"),
 	},
 	(table) => [
-		uniqueIndex("checklist_result_organization_id").on(table.organizationId, table.id),
 		uniqueIndex("checklist_result_checklist_position").on(table.checklistId, table.position),
 		index("checklist_result_checklist").on(table.organizationId, table.checklistId),
-		foreignKey({
-			columns: [table.organizationId, table.checklistId],
-			foreignColumns: [checklist.organizationId, checklist.id],
-		}).onDelete("cascade"),
+		tenantRef(table, table.checklistId, checklist, { onDelete: "cascade" }),
 	],
+	{ referenced: true },
 );
 
 export const checklistRelations = relations(checklist, ({ many }) => ({
@@ -248,8 +212,5 @@ export const checklistRelations = relations(checklist, ({ many }) => ({
 }));
 
 export const checklistResultRelations = relations(checklistResult, ({ one }) => ({
-	checklist: one(checklist, {
-		fields: [checklistResult.organizationId, checklistResult.checklistId],
-		references: [checklist.organizationId, checklist.id],
-	}),
+	checklist: tenantOne(one, checklistResult.checklistId, checklist),
 }));

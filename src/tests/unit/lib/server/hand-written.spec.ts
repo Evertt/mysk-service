@@ -37,10 +37,12 @@ function offenders(pattern: RegExp, except: readonly string[] = []) {
 
 /** The tables of the app's schemas, by their name in the code. */
 const tables = new Set(
-	globSync(["src/lib/server/db/schema.ts", "src/modules/*/server/schema.ts"], {
+	globSync(["src/lib/server/db/schema/*.ts", "src/modules/*/server/schema.ts"], {
 		cwd: root,
 	}).flatMap((file) =>
-		[...code(file).matchAll(/export const (\w+) = sqliteTable\(/g)].map(([, name]) => name),
+		[...code(file).matchAll(/export const (\w+) = (?:sqliteTable|tenantTable)\(/g)].map(
+			([, name]) => name,
+		),
 	),
 );
 

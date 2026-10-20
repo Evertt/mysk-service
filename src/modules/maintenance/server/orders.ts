@@ -10,6 +10,7 @@ import { equipmentSubject } from "#lib/activity/index.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
@@ -79,7 +80,7 @@ export function orderPlan(
 		const nextDueOn = advanceDueDate(plan.nextDueOn, plan.intervalMonths, plan.anchorDay);
 		await tx
 			.update(maintenancePlan)
-			.set({ nextDueOn, lastOrderId: created.id, lastOrderOrganizationId: organizationId })
+			.set({ nextDueOn, ...withTenantRefs(organizationId, { lastOrderId: created.id }) })
 			.where(idInTenant(maintenancePlan, id));
 		await recordActivity(tx, {
 			action: "updated",
