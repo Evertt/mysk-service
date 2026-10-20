@@ -7,21 +7,17 @@
 <script lang="ts">
 	import CloudIcon from "@lucide/svelte/icons/cloud";
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+	import { Debounced } from "runed";
 
 	import { revalidating } from "./swr-worker.ts";
 
 	/** How long the worker has to be checking before the indicator shows. */
 	const showAfter = 150;
 
-	let shown = $state(false);
-	$effect(() => {
-		if (revalidating.size === 0) {
-			shown = false;
-			return;
-		}
-		const timer = setTimeout(() => (shown = true), showAfter);
-		return () => clearTimeout(timer);
-	});
+	const checking = $derived(revalidating.size > 0);
+	const settled = new Debounced(() => checking, showAfter);
+	/** Hidden at once when the check is done. */
+	const shown = $derived(checking && settled.current);
 </script>
 
 <div role="status" class="flex size-8 items-center justify-center text-muted-foreground">
