@@ -1,5 +1,5 @@
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
-import { getContext, onDestroy, setContext, type Snippet } from "svelte";
+import { createContext, onDestroy, type Snippet } from "svelte";
 
 import { columnLabel, columnNone, type Features, noneLabel } from "./features.ts";
 
@@ -42,20 +42,14 @@ export class TableFilters {
 	}
 }
 
-const key = Symbol("table-filters");
+const [getFilters, setFilters] = createContext<TableFilters>();
 
 /** Makes the registry the toolbar's children register their filters with. */
-export function provideTableFilters() {
-	const filters = new TableFilters();
-	setContext(key, filters);
-	return filters;
-}
+export const provideTableFilters = () => setFilters(new TableFilters());
 
-/** Registers a filter with the toolbar for as long as the component calling this lives. */
+/** Registers a filter with the toolbar (it's inside) for as long as the component calling this lives. */
 export function registerTableFilter(filter: TableFilter) {
-	const filters = getContext<TableFilters | undefined>(key);
-	if (!filters) throw new Error("A table filter needs to be inside the table's Toolbar");
-	onDestroy(filters.register(filter));
+	onDestroy(getFilters().register(filter));
 }
 
 /** What a filter component is given of its column: which it is, and what to call it. */

@@ -8,6 +8,7 @@
 	import type { RemoteFormField } from "$app/server";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
+	import { Debounced, resource } from "runed";
 	import { untrack } from "svelte";
 
 	import FormField from "#lib/components/form/form-field.svelte";
@@ -16,8 +17,9 @@
 	import type { Article } from "../api/extensions.ts";
 	import { findArticles } from "../components.remote.ts";
 
+	type Articles = Awaited<ReturnType<typeof findArticles>>;
 	/** An article as a search finds it: with the points its shop product fixes. */
-	type Found = Awaited<ReturnType<typeof findArticles>>["articles"][number];
+	type Found = Articles["articles"][number];
 
 	let {
 		field,
@@ -42,33 +44,22 @@
 	let chosen = $state.raw<Article | null>(untrack(() => article));
 	let open = $state(false);
 	let search = $state("");
-	let found = $state.raw<Awaited<ReturnType<typeof findArticles>>>();
-	let searching = $state(false);
+	/** What's searched for: once typing pauses. */
+	const term = new Debounced(() => search.trim(), searchDelay);
 
-	// Searching, while open: right away when opened, then once typing pauses.
-	$effect(() => {
-		if (!open) return;
-		const term = search.trim();
-		let current = true;
-		searching = true;
-		const timer = setTimeout(
-			async () => {
-				try {
-					const result = await findArticles(term);
-					if (current) found = result;
-				} catch {
-					// Keep what was found before.
-				} finally {
-					if (current) searching = false;
-				}
-			},
-			term ? searchDelay : 0,
-		);
-		return () => {
-			current = false;
-			clearTimeout(timer);
-		};
-	});
+	// Searching, while open: right away when opened, and for each term. A failed search keeps what
+	// was found before.
+	const answer = resource(
+		[() => open, () => term.current],
+		async ([shown, words], _, { data, signal }): Promise<Articles | undefined> => {
+			if (!shown) return data;
+			const result = await findArticles(words);
+			signal.throwIfAborted();
+			return result;
+		},
+	);
+	const found = $derived(answer.current);
+	const searching = $derived(term.pending || answer.loading);
 
 	const name = (each: Article) => `${each.sku} · ${each.name}`;
 
@@ -76,6 +67,7 @@
 		chosen = next;
 		open = false;
 		search = "";
+		term.setImmediately("");
 		onchoose?.(next);
 	}
 </script>

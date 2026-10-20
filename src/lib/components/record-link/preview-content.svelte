@@ -11,7 +11,8 @@
 	computed, so it stayed off the screen). Links in it have no card of their own.
 -->
 <script lang="ts" generics="T">
-	import { type Snippet, untrack } from "svelte";
+	import { resource } from "runed";
+	import type { Snippet } from "svelte";
 
 	import { classify } from "#lib/errors/classify.ts";
 
@@ -20,13 +21,6 @@
 	let { load, children }: { load: () => PromiseLike<T>; children: Snippet<[T]> } = $props();
 
 	hideRecordPreviews();
-
-	type Answer =
-		| { status: "loading" }
-		| { status: "loaded"; record: T }
-		| { status: "failed"; error: unknown };
-
-	let answer = $state<Answer>({ status: "loading" });
 
 	/**
 	 * A query first asked for in SvelteKit's preload fork (the pointer rested on the link before it
@@ -37,25 +31,26 @@
 		(error as { body?: { message?: unknown } } | null)?.body?.message ===
 		"Query resolved without a value";
 
-	$effect(() => {
-		let current = true;
-		const query = load() as PromiseLike<T> & { refresh?: () => Promise<void> };
-		const loaded = (record: T) => current && (answer = { status: "loaded", record });
-		const failed = (error: unknown) => current && (answer = { status: "failed", error });
-		// Read outside the effect's tracking: the card shows the answer it got.
-		untrack(() =>
-			query.then(loaded, (error: unknown) => {
-				if (!forksAnswer(error) || !query.refresh) return failed(error);
-				query.refresh().then(() => query.then(loaded, failed), failed);
-			}),
-		);
-		return () => (current = false);
-	});
+	const answer = resource(
+		() => load() as PromiseLike<T> & { refresh?: () => Promise<void> },
+		async (query, _, { signal }): Promise<{ record: T }> => {
+			let record: T;
+			try {
+				record = await query;
+			} catch (error) {
+				if (!forksAnswer(error) || !query.refresh) throw error;
+				await query.refresh();
+				record = await query;
+			}
+			signal.throwIfAborted();
+			return { record };
+		},
+	);
 </script>
 
-{#if answer.status === "loaded"}
-	{@render children(answer.record)}
-{:else if answer.status === "failed"}
+{#if answer.current}
+	{@render children(answer.current.record)}
+{:else if answer.error}
 	<!-- A refusal is a record that's gone, or another tenant's. -->
 	<p class="text-muted-foreground" data-record-preview-failed>
 		{classify(answer.error) === "http" ? m.common_error_not_found() : m.common_preview_failed()}
